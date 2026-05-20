@@ -31,6 +31,11 @@
             public const string Files = Base + "/files";
 
             /// <summary>
+            /// Archive download endpoint path.
+            /// </summary>
+            public const string Archives = Base + "/archives";
+
+            /// <summary>
             /// Server endpoint path.
             /// </summary>
             public const string Server = Base + "/server";

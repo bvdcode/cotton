@@ -1210,6 +1210,8 @@
       "selectAll": "Select all",
       "deselectAll": "Deselect all",
       "deleteSelected": "Delete selected",
+      "downloadSelected": "Download selected",
+      "downloadFailed": "Failed to prepare archive.",
       "count_one": "{{count}} item selected",
       "count_other": "{{count}} items selected"
     },

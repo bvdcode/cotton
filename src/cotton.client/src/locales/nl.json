@@ -1,0 +1,2084 @@
+{
+  "search": {
+    "title": "Zoeken",
+    "searchPlaceholder": "Zoek in bestanden en mappen...",
+    "error": "Zoeken mislukt. Probeer het opnieuw.",
+    "enterQueryHint": "Begin met typen om te zoeken...",
+    "noResults": "Geen bestanden of mappen gevonden",
+    "open": "Zoeken",
+    "modal": {
+      "placeholder": "Zoek in bestanden, mappen, instellingen...",
+      "resultsCount": "{{count}} resultaten"
+    },
+    "types": {
+      "folder": "Map",
+      "file": "Bestand",
+      "setting": "Instelling"
+    },
+    "actions": {
+      "openFile": "Bestand openen",
+      "openFolder": "Map openen",
+      "openSetting": "Instellingen openen",
+      "downloadFile": "Bestand downloaden",
+      "shareFile": "Bestand delen",
+      "openContainingFolder": "Bovenliggende map openen"
+    },
+    "dictionary": [
+      {
+        "id": "privacy-deduplication",
+        "title": "Cross-user deduplication",
+        "description": "Privacy and security",
+        "path": "/admin/privacy-settings",
+        "keywords": [
+          "deduplication",
+          "deduplicate",
+          "dedup",
+          "duplicates",
+          "privacy",
+          "security",
+          "cross-user",
+          "deduplicatie",
+          "ontdubbeling",
+          "duplicaten",
+          "privacy",
+          "beveiliging",
+          "tussen gebruikers"
+        ],
+        "highlightSettingId": "allowCrossUserDeduplication",
+        "adminOnly": true
+      },
+      {
+        "id": "privacy-global-indexing",
+        "title": "Global indexing",
+        "description": "Privacy and security",
+        "path": "/admin/privacy-settings",
+        "keywords": [
+          "global indexing",
+          "indexing",
+          "deep search",
+          "search index",
+          "globale indexering",
+          "indexering",
+          "diepgaand zoeken",
+          "zoekindex"
+        ],
+        "highlightSettingId": "allowGlobalIndexing",
+        "adminOnly": true
+      },
+      {
+        "id": "privacy-telemetry",
+        "title": "Telemetry",
+        "description": "Privacy and security",
+        "path": "/admin/privacy-settings",
+        "keywords": [
+          "telemetry",
+          "diagnostics",
+          "analytics",
+          "metrics",
+          "statistics",
+          "usage analytics",
+          "crash reports",
+          "bug reports",
+          "privacy",
+          "telemetrie",
+          "diagnostiek",
+          "analyse",
+          "statistieken",
+          "gebruiksgegevens",
+          "crashrapporten",
+          "foutrapporten"
+        ],
+        "highlightSettingId": "telemetry",
+        "adminOnly": true
+      },
+      {
+        "id": "notifications-smtp",
+        "title": "SMTP configuration",
+        "description": "Notifications",
+        "path": "/admin/notifications-settings",
+        "keywords": [
+          "smtp",
+          "mail",
+          "email",
+          "email settings",
+          "notifications",
+          "smtp server",
+          "from address",
+          "ssl",
+          "tls",
+          "e-mail",
+          "e-mailinstellingen",
+          "meldingen",
+          "afzenderadres",
+          "uitgaande mail"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "notifications-email-mode",
+        "title": "Notification mode",
+        "description": "Notifications",
+        "path": "/admin/notifications-settings",
+        "keywords": [
+          "notifications",
+          "email mode",
+          "mail mode",
+          "cotton cloud mail",
+          "custom smtp",
+          "meldingen",
+          "e-mailmodus",
+          "meldingsmodus",
+          "eigen smtp"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "storage-settings",
+        "title": "Storage settings",
+        "description": "Storage",
+        "path": "/admin/storage-settings",
+        "keywords": [
+          "storage",
+          "storage backend",
+          "s3",
+          "bucket",
+          "endpoint",
+          "region",
+          "access key",
+          "secret key",
+          "opslag",
+          "opslagback-end",
+          "bucket",
+          "eindpunt",
+          "regio",
+          "toegangssleutel",
+          "geheime sleutel"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "storage-statistics",
+        "title": "Storage statistics",
+        "description": "Storage and statistics",
+        "path": "/admin/storage-statistics",
+        "keywords": [
+          "storage statistics",
+          "stats",
+          "gc",
+          "garbage collector",
+          "chunks",
+          "dedup saved",
+          "compression saved",
+          "opslagstatistieken",
+          "statistieken",
+          "garbage collector",
+          "blokken",
+          "bespaard door deduplicatie",
+          "bespaard door compressie"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "database-backup",
+        "title": "Database backup",
+        "description": "Admin",
+        "path": "/admin/database-backup",
+        "keywords": [
+          "backup",
+          "database",
+          "restore",
+          "dump",
+          "manifest",
+          "back-up",
+          "databank",
+          "herstellen",
+          "dump",
+          "manifest"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "users",
+        "title": "Users",
+        "description": "Admin",
+        "path": "/admin/users",
+        "keywords": [
+          "users",
+          "accounts",
+          "admin users",
+          "role",
+          "sessions",
+          "gebruikers",
+          "accounts",
+          "beheerders",
+          "rol",
+          "sessies"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "groups",
+        "title": "Groups",
+        "description": "Admin",
+        "path": "/admin/groups",
+        "keywords": [
+          "groups",
+          "user groups",
+          "groepen",
+          "gebruikersgroepen"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "general-settings",
+        "title": "General settings",
+        "description": "Admin",
+        "path": "/admin/general-settings",
+        "keywords": [
+          "general settings",
+          "public url",
+          "public base url",
+          "timezone",
+          "server usage",
+          "setup wizard",
+          "computation mode",
+          "algemene instellingen",
+          "openbare url",
+          "publieke basis-url",
+          "tijdzone",
+          "servergebruik",
+          "installatiewizard",
+          "rekenmodus"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "profile-settings",
+        "title": "Profile settings",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "profile",
+          "settings",
+          "account",
+          "account settings",
+          "personal information",
+          "personal info",
+          "edit profile",
+          "name",
+          "first name",
+          "last name",
+          "birth date",
+          "birthday",
+          "email",
+          "e-mail",
+          "mail",
+          "avatar",
+          "picture",
+          "profiel",
+          "instellingen",
+          "account",
+          "accountinstellingen",
+          "persoonlijke gegevens",
+          "profiel bewerken",
+          "naam",
+          "voornaam",
+          "achternaam",
+          "geboortedatum",
+          "verjaardag",
+          "e-mail",
+          "avatar",
+          "profielfoto"
+        ]
+      },
+      {
+        "id": "profile-appearance",
+        "title": "Appearance",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "appearance",
+          "theme",
+          "theme mode",
+          "dark mode",
+          "light mode",
+          "system theme",
+          "language",
+          "gallery",
+          "gallery settings",
+          "smooth transitions",
+          "prefer previews",
+          "preview",
+          "image preview",
+          "originals",
+          "colors",
+          "colour",
+          "weergave",
+          "uiterlijk",
+          "thema",
+          "themamodus",
+          "donkere modus",
+          "lichte modus",
+          "systeemthema",
+          "taal",
+          "galerij",
+          "galerij-instellingen",
+          "vloeiende overgangen",
+          "voorvertoning",
+          "afbeeldingsvoorvertoning",
+          "originelen",
+          "kleuren"
+        ]
+      },
+      {
+        "id": "profile-security",
+        "title": "Account security",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "security",
+          "account security",
+          "password",
+          "change password",
+          "current password",
+          "new password",
+          "2fa",
+          "two factor",
+          "two-factor",
+          "totp",
+          "authenticator",
+          "verification code",
+          "sessions",
+          "devices",
+          "logout",
+          "sign out",
+          "email verification",
+          "verify email",
+          "beveiliging",
+          "accountbeveiliging",
+          "wachtwoord",
+          "wachtwoord wijzigen",
+          "huidig wachtwoord",
+          "nieuw wachtwoord",
+          "tweestapsverificatie",
+          "verificatiecode",
+          "sessies",
+          "apparaten",
+          "uitloggen",
+          "afmelden",
+          "e-mailverificatie",
+          "e-mail verifiëren"
+        ]
+      },
+      {
+        "id": "profile-share-links",
+        "title": "Share links",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "share links",
+          "sharing",
+          "public links",
+          "links",
+          "shared files",
+          "expiration",
+          "expires",
+          "expire",
+          "invalidate",
+          "token",
+          "deellinks",
+          "delen",
+          "openbare links",
+          "koppelingen",
+          "gedeelde bestanden",
+          "vervaldatum",
+          "verlopen",
+          "ongeldig maken",
+          "token"
+        ]
+      },
+      {
+        "id": "profile-webdav",
+        "title": "WebDAV access",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "webdav",
+          "dav",
+          "webdav access",
+          "webdav token",
+          "network drive",
+          "mount",
+          "mount_webdav",
+          "davfs",
+          "davfs2",
+          "cadaver",
+          "windows webdav",
+          "macos webdav",
+          "linux webdav",
+          "credentials",
+          "one-time token",
+          "webdav-toegang",
+          "webdav-token",
+          "netwerkschijf",
+          "koppelen",
+          "aankoppelen",
+          "inloggegevens",
+          "eenmalig token"
+        ]
+      }
+    ]
+  },
+  "notifications": {
+    "title": "Meldingen",
+    "markAllAsRead": "Alles markeren als gelezen",
+    "empty": "Geen meldingen",
+    "viewAll": "Alles bekijken",
+    "unreadCount": "{count} ongelezen",
+    "showOnlyUnread": "Alleen ongelezen tonen",
+    "showAll": "Alles tonen",
+    "muteSound": "Geluid dempen",
+    "unmuteSound": "Geluid inschakelen",
+    "notifications": {
+      "empty": "Geen meldingen"
+    }
+  },
+  "common": {
+    "languageName": "Nederlands",
+    "switchToThisLanguage": "Wissel naar Nederlands",
+    "placeholder": "—",
+    "yes": "Ja",
+    "no": "Nee",
+    "time": {
+      "justNow": "zojuist",
+      "secondsAgo_one": "{{count}} seconde geleden",
+      "secondsAgo_other": "{{count}} seconden geleden",
+      "minutesAgo_one": "{{count}} minuut geleden",
+      "minutesAgo_other": "{{count}} minuten geleden",
+      "hoursAgo_one": "{{count}} uur geleden",
+      "hoursAgo_other": "{{count}} uur geleden",
+      "daysAgo_one": "{{count}} dag geleden",
+      "daysAgo_other": "{{count}} dagen geleden",
+      "monthsAgo_one": "{{count}} maand geleden",
+      "monthsAgo_other": "{{count}} maanden geleden",
+      "yearsAgo_one": "{{count}} jaar geleden",
+      "yearsAgo_other": "{{count}} jaar geleden",
+      "durationMinutes_one": "{{count}} min",
+      "durationMinutes_other": "{{count}} min",
+      "durationHours_one": "{{count}} uur",
+      "durationHours_other": "{{count}} uur",
+      "durationDays_one": "{{count}} dag",
+      "durationDays_other": "{{count}} dagen",
+      "lessThanMinute": "minder dan een minuut"
+    },
+    "actions": {
+      "confirm": "Bevestigen",
+      "cancel": "Annuleren",
+      "close": "Sluiten",
+      "delete": "Verwijderen",
+      "rename": "Hernoemen",
+      "restore": "Herstellen",
+      "download": "Downloaden",
+      "share": "Delen",
+      "more": "Meer acties",
+      "play": "Afspelen",
+      "pause": "Pauzeren",
+      "copied": "Gekopieerd!",
+      "reload": "Vernieuwen"
+    },
+    "errors": {
+      "unexpectedTitle": "Er is iets misgegaan",
+      "unexpectedDescription": "Er is een onverwachte fout opgetreden. Laad de pagina opnieuw.",
+      "showDetails": "Details tonen",
+      "hideDetails": "Details verbergen",
+      "schemaValidationFailed": "De server heeft onverwachte gegevens geretourneerd"
+    },
+    "userMenu": {
+      "profile": "Profiel",
+      "settings": "Instellingen",
+      "admin": "Beheer",
+      "user": "Gebruiker",
+      "lightMode": "Lichte modus",
+      "darkMode": "Donkere modus",
+      "changeLanguage": "Taal wijzigen",
+      "logout": "Uitloggen",
+      "help": "Help",
+      "serverVersion": "Serverversie: {{version}}"
+    },
+    "app": {
+      "logoAlt": "Cotton-logo"
+    },
+    "title": "Cotton Cloud",
+    "subtitle": "Installatiewizard",
+    "ok": "OK",
+    "telemetryDetails": {
+      "tooltip": "Welke gegevens worden verzameld?",
+      "title": "Wat minimale telemetrie omvat",
+      "intro": "De telemetrie is opzettelijk minimaal en bevat geen bestandsnamen of bestandsinhoud. Alleen een klein aantal technische diagnostische gegevens wordt verzonden:",
+      "items": {
+        "instanceId": "Een willekeurige instantie-identificatie (een eenmalig gegenereerde GUID, niet aan u gekoppeld)",
+        "serverUrl": "Openbare server-URL, zodat wij weten of de cloud bereikbaar is",
+        "version": "Versie van de Cotton-server",
+        "users": "Totaal aantal gebruikersaccounts",
+        "nodes": "Totaal aantal mappen",
+        "files": "Totaal aantal bestanden"
+      },
+      "outro": "Dat is alles. Er worden geen bestandsinhoud, bestandsnamen, gebruikersnamen of e-mailadressen verzonden in telemetriepakketten. Standaard netwerkmetadata (zoals het bron-IP) kunnen nog wel aanwezig zijn op transportniveau."
+    },
+    "pwa": {
+      "updateAvailable": "Een nieuwe versie is gereed.",
+      "updateAction": "Vernieuwen"
+    },
+    "clientEncryption": {
+      "folderPolicyEnabledHint": "Deze map versleutelt nieuwe uploads op uw apparaat.",
+      "fileEncryptedHint": "Dit bestand is versleuteld op uw apparaat.",
+      "vaultLockedForDownload": "Ontgrendel de versleuteling aan clientzijde in uw profiel om dit bestand te downloaden.",
+      "fileTooLargeForDownload": "Dit versleutelde bestand is te groot voor de huidige browser-downloadpijplijn. Limiet: {{maxSize}}."
+    }
+  },
+  "audioPlayer": {
+    "actions": {
+      "scanRecursively": "Tracks zoeken in deze map en submappen",
+      "showQueue": "Wachtrij tonen",
+      "hideQueue": "Wachtrij verbergen",
+      "showLyrics": "Songtekst tonen",
+      "hideLyrics": "Songtekst verbergen",
+      "enableShuffle": "Willekeurig afspelen inschakelen",
+      "disableShuffle": "Willekeurig afspelen uitschakelen",
+      "close": "Speler sluiten"
+    },
+    "lyrics": {
+      "unavailable": "Voor dit nummer is geen songtekst beschikbaar.",
+      "notFound": "Geen .lrc-bestand gevonden naast dit nummer.",
+      "loadFailed": "Songtekst laden mislukt."
+    }
+  },
+  "share": {
+    "title": "Gedeeld bestand",
+    "loading": "Laden...",
+    "unsupported": "Voor dit bestandstype is geen voorvertoning beschikbaar.",
+    "encryptedFile": {
+      "title": "Dit bestand is end-to-end versleuteld",
+      "description": "Openbare links kunnen het bestand niet ontgrendelen in de browser. U kunt de versleutelde container downloaden of de eigenaar vragen om een ontsleutelde kopie te delen."
+    },
+    "message": "Bekijk \"{{name}}\" op Cotton Cloud",
+    "folder": {
+      "title": "Gedeelde map",
+      "message": "Bekijk de map \"{{name}}\" op Cotton Cloud",
+      "empty": "Deze map is leeg.",
+      "kind": "Map"
+    },
+    "toasts": {
+      "copied": "Link gekopieerd",
+      "shared": "Link gedeeld"
+    },
+    "errors": {
+      "invalidLink": "Ongeldige deellink.",
+      "notFound": "Bestand niet gevonden of link verlopen.",
+      "loadFailed": "Het gedeelde bestand kon niet worden geladen.",
+      "copyLink": "Link kon niet naar het klembord worden gekopieerd.",
+      "fileTooLargePreview": "Bestand is te groot voor een voorvertoning ({{size}}). Download het bestand om het te bekijken."
+    }
+  },
+  "login": {
+    "title": "Cotton Cloud",
+    "usernameLabel": "Gebruikersnaam",
+    "passwordLabel": "Wachtwoord",
+    "rememberMe": "Dit apparaat vertrouwen",
+    "twoFactor": {
+      "title": "Tweestapsverificatie",
+      "caption": "Voer de 6-cijferige code uit uw authenticator-app in.",
+      "digit": "Cijfer",
+      "required": "Code voor tweestapsverificatie is vereist.",
+      "invalid": "Ongeldige code voor tweestapsverificatie.",
+      "locked": "Te veel pogingen. Probeer het later opnieuw."
+    },
+    "loginButton": "Inloggen",
+    "loggingIn": "Bezig met inloggen...",
+    "errorMessage": "Inloggen mislukt. Controleer uw inloggegevens.",
+    "restoring": {
+      "title": "Sessie wordt hersteld...",
+      "caption": "Een moment geduld"
+    },
+    "forgotPassword": {
+      "link": "Wachtwoord vergeten?",
+      "enterEmail": "Voer uw e-mailadres in als gebruikersnaam om uw wachtwoord opnieuw in te stellen.",
+      "sent": "Als er een account met dat e-mailadres bestaat, is er een link voor wachtwoordherstel verzonden.",
+      "sending": "Bezig met verzenden...",
+      "error": "Verzenden van de herstellink mislukt. Probeer het later opnieuw."
+    },
+    "firstRun": {
+      "title": "Eerste installatie",
+      "message": "Er bestaan nog geen gebruikers. De inloggegevens die u invoert, worden gebruikt om het eerste beheerdersaccount aan te maken. Dit is alleen kort na het opstarten beschikbaar. Herstart de instantie indien nodig.",
+      "continueButton": "Doorgaan",
+      "continuing": "Eerste gebruiker wordt aangemaakt..."
+    }
+  },
+  "notFound": {
+    "title": "Pagina niet gevonden",
+    "message": "De pagina die u zoekt, bestaat niet.",
+    "backButton": "Terug naar startpagina"
+  },
+  "profile": {
+    "title": "Profiel",
+    "subtitle": "Uw accountgegevens en beveiligingsstatus.",
+    "notAuthenticated": "U bent niet ingelogd.",
+    "ageYears_one": "{{count}} jaar",
+    "ageYears_other": "{{count}} jaar",
+    "roles": {
+      "user": "Gebruiker",
+      "admin": "Beheerder"
+    },
+    "avatar": {
+      "upload": "Avatar uploaden",
+      "errors": {
+        "settingsNotLoaded": "De serverinstellingen zijn nog niet geladen.",
+        "fileTooLarge": "De avatar is te groot. De maximale grootte is {{maxSize}}.",
+        "unsupportedFormat": "Deze afbeeldingsindeling wordt niet door uw browser ondersteund. Gebruik JPG, PNG of WEBP.",
+        "failed": "Avatar bijwerken mislukt."
+      }
+    },
+    "editProfile": {
+      "title": "Profiel bewerken",
+      "description": "Werk uw persoonlijke gegevens bij.",
+      "firstName": "Voornaam",
+      "lastName": "Achternaam",
+      "email": "E-mail",
+      "birthDate": "Geboortedatum",
+      "save": "Opslaan",
+      "saving": "Bezig met opslaan...",
+      "success": "Profiel bijgewerkt.",
+      "emailWarning": "Door uw e-mailadres te wijzigen, wordt de verificatiestatus van het e-mailadres opnieuw ingesteld.",
+      "errors": {
+        "failed": "Profiel bijwerken mislukt."
+      }
+    },
+    "appearance": {
+      "title": "Weergave",
+      "description": "Voorkeuren voor de gebruikersinterface en personalisatie.",
+      "gallerySmoothTransitions": "Vloeiende overgangen in de galerij",
+      "galleryPreferPreview": "Originelen tonen in plaats van voorvertoningen",
+      "themeMode": {
+        "label": "Thema",
+        "light": "Licht",
+        "system": "Systeem",
+        "dark": "Donker"
+      },
+      "language": {
+        "label": "Taal",
+        "en": "Engels",
+        "ru": "Russisch",
+        "es": "Spaans",
+        "de": "Duits"
+      }
+    },
+    "shareLinks": {
+      "title": "Deellinks",
+      "description": "Bepaal hoe lang gegenereerde deellinks geldig blijven.",
+      "current": "Huidig: {{days}} dagen",
+      "presets": {
+        "week": "Week",
+        "month": "Maand",
+        "year": "Jaar",
+        "threeMonths": "3 maanden",
+        "tenYears": "10 jaar",
+        "oneDay": "Eén dag"
+      },
+      "invalidateAll": "Alle deellinks ongeldig maken",
+      "invalidating": "Bezig met ongeldig maken...",
+      "invalidated": "Alle deellinks zijn ongeldig gemaakt.",
+      "invalidateConfirmTitle": "Alle deellinks ongeldig maken?",
+      "invalidateConfirmDescription": "Alle actieve deellinks worden direct onbruikbaar. Dit kan niet ongedaan worden gemaakt.",
+      "errors": {
+        "invalidateFailed": "Deellinks ongeldig maken mislukt."
+      }
+    },
+    "totp": {
+      "enabled": "2FA ingeschakeld",
+      "disabled": "2FA uitgeschakeld",
+      "sectionTitle": "Tweestapsverificatie",
+      "enabledMessage": "Tweestapsverificatie is ingeschakeld.",
+      "enabledDescription": "Uw account is beveiligd met een extra beveiligingslaag.",
+      "setup": {
+        "title": "Tweestapsverificatie inschakelen (TOTP)",
+        "caption": "Gebruik een authenticator-app (Google Authenticator, Authy, enz.).",
+        "button": "QR-code genereren",
+        "loading": "Bezig met genereren...",
+        "qrTitle": "Scan deze QR-code",
+        "secretLabel": "Geheime sleutel:",
+        "copySecret": "Geheim kopiëren",
+        "success": "Tweestapsverificatie is ingeschakeld."
+      },
+      "confirm": {
+        "title": "Installatie bevestigen",
+        "caption": "Voer de 6-cijferige code uit uw authenticator-app in.",
+        "digit": "Cijfer",
+        "button": "Bevestigen",
+        "loading": "Bezig met bevestigen..."
+      },
+      "disable": {
+        "button": "2FA uitschakelen",
+        "dialogTitle": "Tweestapsverificatie uitschakelen",
+        "dialogDescription": "Voer uw wachtwoord in om het uitschakelen van tweestapsverificatie te bevestigen.",
+        "passwordLabel": "Wachtwoord",
+        "confirm": "Uitschakelen",
+        "confirming": "Bezig met uitschakelen...",
+        "success": "Tweestapsverificatie is uitgeschakeld."
+      },
+      "errors": {
+        "setupFailed": "Starten van 2FA-installatie mislukt.",
+        "confirmFailed": "Bevestigen van 2FA mislukt.",
+        "saveFailed": "2FA-instellingen opslaan mislukt.",
+        "codeRequired": "Voer de 6-cijferige code in.",
+        "invalidCode": "Ongeldige code voor tweestapsverificatie.",
+        "alreadyEnabled": "2FA is al ingeschakeld.",
+        "setupNotInitiated": "De 2FA-installatie is niet gestart. Genereer eerst een QR-code.",
+        "disableFailed": "2FA uitschakelen mislukt.",
+        "invalidPassword": "Ongeldig wachtwoord."
+      }
+    },
+    "fields": {
+      "id": "Gebruikers-ID",
+      "username": "Gebruikersnaam",
+      "firstName": "Voornaam",
+      "lastName": "Achternaam",
+      "birthDate": "Geboortedatum",
+      "role": "Rol",
+      "twoFactor": "Tweestapsverificatie",
+      "totpEnabledAt": "Ingeschakeld op",
+      "totpFailedAttempts": "Mislukte 2FA-pogingen",
+      "email": "E-mail",
+      "emailVerified": "Geverifieerd",
+      "emailNotVerified": "Niet geverifieerd",
+      "verify": "Verifiëren",
+      "createdAt": "Aangemaakt op",
+      "updatedAt": "Bijgewerkt op"
+    },
+    "emailVerification": {
+      "title": "E-mailverificatie",
+      "description": "Verifieer uw e-mailadres om wachtwoordherstel en meldingen mogelijk te maken.",
+      "verified": "E-mail geverifieerd",
+      "notVerified": "E-mail niet geverifieerd",
+      "sendButton": "Verificatie-e-mail verzenden",
+      "sending": "Bezig met verzenden...",
+      "sent": "Verificatie-e-mail verzonden. Controleer uw inbox.",
+      "noEmail": "Er is geen e-mailadres ingesteld voor uw account.",
+      "errors": {
+        "failed": "Verzenden van de verificatie-e-mail mislukt. Probeer het later opnieuw."
+      }
+    },
+    "password": {
+      "title": "Wachtwoord wijzigen",
+      "description": "Werk het wachtwoord van uw account bij.",
+      "old": "Oud wachtwoord",
+      "new": "Nieuw wachtwoord",
+      "confirm": "Nieuw wachtwoord bevestigen",
+      "show": "Wachtwoord tonen",
+      "hide": "Wachtwoord verbergen",
+      "save": "Opslaan",
+      "saving": "Bezig met opslaan...",
+      "success": "Wachtwoord gewijzigd.",
+      "errors": {
+        "mismatch": "Wachtwoorden komen niet overeen.",
+        "failed": "Wachtwoord wijzigen mislukt."
+      }
+    },
+    "sessions": {
+      "title": "Actieve sessies",
+      "description": "Beheer uw actieve sessies op verschillende apparaten",
+      "noActiveSessions": "Geen actieve sessies",
+      "currentSession": "Huidig",
+      "unknownDevice": "Onbekend apparaat",
+      "revokeSession": "Sessie beëindigen",
+      "elapsed": "{{duration}} verstreken",
+      "revokeConfirmTitle": "Sessie beëindigen?",
+      "revokeConfirmDescription": "Weet u zeker dat u deze sessie wilt beëindigen? Het apparaat wordt afgemeld.",
+      "revokeConfirmButton": "Sessie beëindigen",
+      "revokeCancelButton": "Annuleren",
+      "errors": {
+        "loadFailed": "Laden van sessies mislukt.",
+        "revokeFailed": "Beëindigen van de sessie mislukt."
+      }
+    },
+    "webdav": {
+      "title": "WebDAV-toegang",
+      "description": "Genereer een eenmalig token om via WebDAV verbinding te maken.",
+      "confirmTitle": "WebDAV-token genereren?",
+      "confirmDescription": "Hiermee wordt een nieuw token gegenereerd en wordt elk eerder token ongeldig. Het token wordt slechts één keer getoond.",
+      "confirmButton": "Genereren",
+      "cancelButton": "Annuleren",
+      "generateButton": "Token genereren",
+      "generating": "Bezig met genereren...",
+      "tokenLabel": "Token",
+      "usernameLabel": "Gebruikersnaam",
+      "connectUrlLabel": "WebDAV-eindpunt",
+      "modalTitle": "WebDAV-inloggegevens (eenmalig getoond)",
+      "closeButton": "Sluiten",
+      "copyToken": "Token kopiëren",
+      "copyUrl": "URL kopiëren",
+      "copyUsername": "Gebruikersnaam kopiëren",
+      "tokenWarning": "Kopieer dit token nu. Het wordt niet opnieuw getoond.",
+      "cardHelp": "Gebruik deze waarden om verbinding te maken met een WebDAV-client. Genereer een token om een eenmalig wachtwoord te verkrijgen.",
+      "examples": {
+        "title": "Voorbeelden",
+        "copy": "Kopiëren",
+        "windows": {
+          "title": "Windows (Command Prompt)",
+          "copy": "Kopiëren",
+          "caption": "Voer uit in een verhoogde Command Prompt of gebruik een toegewezen schijf in Verkenner."
+        },
+        "windowsRegistry": {
+          "title": "Windows (Registeraanpassing)",
+          "copy": "Kopiëren",
+          "caption": "Pas een registerwijziging toe om de WebDAV-bestandsgroottelimiet te verhogen."
+        },
+        "powershell": {
+          "title": "Windows (PowerShell-escape)",
+          "copy": "Kopiëren",
+          "caption": "Gebruiken bij uitvoering vanuit PowerShell; de opdracht is voor het gemak van escape-tekens voorzien."
+        },
+        "mac": {
+          "title": "macOS (mount_webdav)",
+          "copy": "Kopiëren",
+          "caption": "Koppelen via Finder en Terminal (mount_webdav)."
+        },
+        "linux": {
+          "title": "Linux (davfs2)",
+          "copy": "Kopiëren",
+          "caption": "Gebruik davfs2 of cadaver om het WebDAV-eindpunt aan te koppelen."
+        }
+      },
+      "placeholderPassword": "<wachtwoord>",
+      "errors": {
+        "failed": "Genereren van het WebDAV-token mislukt."
+      }
+    },
+    "email": {
+      "verified": "E-mail geverifieerd"
+    },
+    "clientEncryption": {
+      "sectionTitle": "Versleuteling aan clientzijde",
+      "description": "Bescherm geselecteerde bestanden met een sleutel die alleen in uw browser bewaard wordt.",
+      "invalidEnvelope": "De opgeslagen instellingen voor versleuteling kunnen niet worden gelezen. Upload geen versleutelde bestanden totdat dit is opgelost.",
+      "lockedHint": "Ontgrendel wanneer u versleutelde mappen of bestanden moet openen.",
+      "unlockedHint": "Versleutelde bestanden kunnen in dit browsertabblad worden geopend totdat u de sleutel vergrendelt of zich afmeldt.",
+      "status": {
+        "notSetUp": "Niet ingesteld",
+        "locked": "Vergrendeld",
+        "unlocked": "Ontgrendeld",
+        "invalid": "Vereist aandacht"
+      },
+      "actions": {
+        "setup": "Instellen",
+        "unlock": "Ontgrendelen",
+        "lock": "Vergrendelen",
+        "lockOnRefresh": "Vergrendelen bij paginavernieuwing"
+      },
+      "setupDialog": {
+        "title": "Versleuteling aan clientzijde instellen",
+        "warning": "Als u zowel het versleutelingswachtwoord als de back-upzin van 24 woorden verliest, kunnen versleutelde bestanden niet worden geopend. De server kan deze sleutel niet opnieuw instellen.",
+        "acknowledge": "Ik begrijp dat het verlies van beide leidt tot permanent gegevensverlies",
+        "cancel": "Annuleren",
+        "continue": "Doorgaan",
+        "back": "Terug",
+        "passwordHint": "Kies een sterk versleutelingswachtwoord. Het staat los van uw accountwachtwoord en wordt niet naar de server verzonden.",
+        "passwordLabel": "Versleutelingswachtwoord",
+        "confirmPasswordLabel": "Versleutelingswachtwoord bevestigen",
+        "passwordTooShort": "Gebruik ten minste {{min}} tekens.",
+        "passwordMismatch": "Wachtwoorden komen niet overeen.",
+        "next": "Volgende",
+        "generating": "Bezig met genereren...",
+        "phraseWarning": "Bewaar deze 24 woorden veilig voordat u de installatie voltooit. Iedereen met deze zin kan versleutelde bestanden ontgrendelen.",
+        "copy": "Zin kopiëren",
+        "copied": "Gekopieerd",
+        "download": "Zin downloaden",
+        "phraseStored": "Ik heb de back-upzin opgeslagen",
+        "saving": "Bezig met opslaan...",
+        "finish": "Installatie voltooien",
+        "errors": {
+          "generateFailed": "Genereren van de versleutelingssleutels mislukt.",
+          "saveFailed": "Opslaan van de versleutelingsinstellingen mislukt.",
+          "copyFailed": "Kopiëren van de zin mislukt.",
+          "downloadFailed": "Downloaden van de zin mislukt."
+        }
+      },
+      "unlockDialog": {
+        "title": "Versleuteling aan clientzijde ontgrendelen",
+        "passwordLabel": "Versleutelingswachtwoord",
+        "phraseLabel": "Back-upzin van 24 woorden",
+        "usePhrase": "Back-upzin gebruiken",
+        "usePassword": "Wachtwoord gebruiken",
+        "cancel": "Annuleren",
+        "submit": "Ontgrendelen",
+        "unlocking": "Bezig met ontgrendelen...",
+        "errors": {
+          "wrongPassword": "Onjuist versleutelingswachtwoord.",
+          "wrongPhrase": "Deze zin ontgrendelt de sleutel niet.",
+          "invalidPhrase": "De zin is ongeldig of bevat het verkeerde aantal woorden.",
+          "invalidEnvelope": "De opgeslagen instellingen voor versleuteling kunnen niet worden gelezen.",
+          "unknown": "Versleuteling kon niet worden ontgrendeld."
+        }
+      }
+    }
+  },
+  "setup": {
+    "title": "Wizard voor serverinstallatie",
+    "subtitle": "Voltooi de initiële serverconfiguratie om aan de slag te gaan. Dit duurt niet lang en personaliseert de app voor u.",
+    "repoLink": "Project op GitHub",
+    "errors": {
+      "saveFailed": "Instellingen opslaan mislukt.",
+      "saveChoiceFailed": "Er is iets misgegaan. Probeer een andere optie te kiezen."
+    },
+    "status": {
+      "hasUsers": "Heeft gebruikers",
+      "maxChunk": "Maximale chunkgrootte",
+      "hash": "Hash-algoritme",
+      "yes": "Ja",
+      "no": "Nee"
+    },
+    "actions": {
+      "start": "Aan de slag",
+      "later": "Later doen",
+      "back": "Terug",
+      "next": "Volgende",
+      "finish": "Klaar",
+      "cancel": "Annuleren",
+      "toggleLanguage": "Taal wijzigen",
+      "toggleTheme": "Thema wisselen"
+    },
+    "intro": "U krijgt enkele eenvoudige vragen over uw gebruiksvoorkeuren voor Cotton Cloud. Als u het niet zeker weet, geen zorgen: veel instellingen kunnen later worden gewijzigd.",
+    "onlyAdminCanSetup": "Alleen beheerders kunnen de applicatie configureren. Vraag een beheerder om de initiële installatie uit te voeren.",
+    "questions": {
+      "requiresTooltip": "Om deze optie in te schakelen, moet u selecteren:",
+      "inQuestion": "in vraag",
+      "multiuser": {
+        "title": "U bent van plan het te gebruiken:",
+        "subtitle": "Dit beïnvloedt opslagoptimalisatie en enkele beveiligingsinstellingen.",
+        "linkAria": "Help openen in een nieuw tabblad",
+        "options": {
+          "family": "Voor het gezin",
+          "many": "Met onbekenden",
+          "unknown": "Nog niet zeker"
+        },
+        "descriptions": {
+          "family": "Bestandsdeduplicatie, gedeelde zoekindex en voorgeïnstalleerde modules.",
+          "many": "Strengere modus voor beveiliging tussen onbekende gebruikers.",
+          "unknown": "Stelt de beste optimale standaardinstellingen in."
+        }
+      },
+      "usage": {
+        "title": "U bent van plan de cloud te gebruiken voor:",
+        "subtitle": "Selecteer een of meer opties",
+        "options": {
+          "photos": "Foto's",
+          "documents": "Documenten",
+          "media": "Films en series",
+          "other": "Overig"
+        },
+        "descriptions": {
+          "photos": "Installeert add-ons voor AI-zoekfunctionaliteit en tekstherkenning.",
+          "documents": "Optimalisatie voor kantoorbestanden en PDF's voor het thuisarchief.",
+          "media": "Optimalisatie voor videobestanden en streaming, integratie met filmdatabase.",
+          "other": "Algemene instellingen voor gemengde bestandstypen."
+        }
+      },
+      "storage": {
+        "title": "Waar wilt u uw gegevens opslaan?",
+        "subtitle": "Kies de opslaglocatie voor uw bestanden. Cotton Cloud gebruikt de serverschijf voor de hot cache, ongeacht uw keuze.",
+        "options": {
+          "local": "Lokale schijf van de server",
+          "s3": "S3-compatibele opslag"
+        },
+        "descriptions": {
+          "local": "Sla bestanden op in het lokale bestandssysteem van de server.",
+          "s3": "Sla bestanden op in externe S3-compatibele objectopslag."
+        }
+      },
+      "s3Config": {
+        "title": "S3-opslag configureren",
+        "subtitle": "Voer de inloggegevens voor uw S3-compatibele opslag in.",
+        "fields": {
+          "endpoint": "Eindpunt-URL",
+          "region": "Regio",
+          "bucket": "Bucket-naam",
+          "accessKey": "Toegangssleutel",
+          "secretKey": "Geheime sleutel"
+        },
+        "placeholders": {
+          "endpoint": "https://s3.example.com",
+          "region": "us-east-1",
+          "bucket": "mijn-bucket",
+          "accessKey": "Uw toegangssleutel",
+          "secretKey": "Uw geheime sleutel"
+        }
+      },
+      "email": {
+        "title": "E-mailconfiguratie",
+        "subtitle": "Kies vanwaar e-mailmeldingen worden verzonden.",
+        "options": {
+          "cloud": "Cloud Cotton Mail gebruiken",
+          "custom": "Eigen SMTP-server gebruiken",
+          "none": "Geen e-mailmeldingen"
+        },
+        "descriptions": {
+          "cloud": "De openbare SMTP-server van Cotton Cloud wordt gebruikt. Veilig en gratis. Kies deze optie als u twijfelt.",
+          "custom": "Configureer uw eigen SMTP-server voor het verzenden van e-mailmeldingen.",
+          "none": "De eenvoudigste optie, maar u kunt dan zelfs uw wachtwoord niet herstellen."
+        }
+      },
+      "emailConfig": {
+        "title": "SMTP-serverconfiguratie",
+        "subtitle": "Voer de gegevens van uw SMTP-server in.",
+        "fields": {
+          "smtpServer": "SMTP-server",
+          "port": "Poort",
+          "username": "Gebruikersnaam",
+          "password": "Wachtwoord",
+          "fromAddress": "Afzenderadres",
+          "useSSL": "SSL/TLS gebruiken"
+        },
+        "placeholders": {
+          "smtpServer": "smtp.example.com",
+          "port": "587",
+          "username": "uw@email.com",
+          "password": "Uw wachtwoord",
+          "fromAddress": "noreply@example.com",
+          "useSSL": "SSL/TLS-versleuteling inschakelen"
+        }
+      },
+      "telemetry": {
+        "title": "Verzenden van statistieken toestaan?",
+        "subtitle": "Deze gegevens helpen ons het product te verbeteren en zijn opzettelijk minimaal. Het is een van de weinige manieren om het project met automatische feedback te ondersteunen, en helpt ons te begrijpen hoe Cotton Cloud presteert op verschillende systemen en configuraties.",
+        "options": {
+          "allow": "Ja, verzenden",
+          "deny": "Nee, niet verzenden"
+        },
+        "descriptions": {
+          "allow": "Verzend minimale diagnostische gegevens voor softwarefeedback en foutoplossingen.",
+          "deny": "Dit is uw keuze."
+        },
+        "disabledTooltip": "Om telemetrie uit te schakelen, moet u de volgende services uitschakelen:"
+      },
+      "geoIpLookup": {
+        "title": "IP-adressen omzetten?",
+        "subtitle": "Cotton kan IP-adressen omzetten naar plaats- en landnamen. Dit kan bijvoorbeeld worden gebruikt in beveiligingsmeldingen om te tonen vanwaar een aanmelding plaatsvond en helpt ongebruikelijke toegang te detecteren.",
+        "options": {
+          "disabled": "Nee, uitgeschakeld laten",
+          "cottonCloud": "Clouddienst gebruiken",
+          "local": "GeoIP Light lokaal gebruiken",
+          "custom": "Mijn eigen resolver gebruiken"
+        },
+        "descriptions": {
+          "disabled": "Er wordt geen locatieopzoeking uitgevoerd. Functies die de aanmeldlocatie tonen, bewaren alleen de ruwe IP-adressen.",
+          "cottonCloud": "Zet IP-adressen om via de Cotton-provider. Vereist dat telemetrie is ingeschakeld.",
+          "local": "Zet IP-adressen op uw server om met een lokale GeoIP Light-database/pakket.",
+          "custom": "Plak een URL naar uw eigen service. Cotton probeert locatiegerelateerde velden automatisch uit JSON te extraheren."
+        }
+      },
+      "customGeoIpLookupUrl": {
+        "title": "Eigen IP-resolver",
+        "subtitle": "Voer een HTTP-eindpunt in dat land, regio en plaats als JSON retourneert.",
+        "fields": {
+          "url": "Opzoek-URL"
+        },
+        "placeholders": {
+          "url": "https://geo.example.com/lookup/{ip}"
+        }
+      },
+      "ai": {
+        "title": "AI en berekeningen",
+        "subtitle": "Kies waar AI-berekeningen worden uitgevoerd voor zoeken, herkenning en andere functies.",
+        "options": {
+          "local": "Lokale berekeningen",
+          "runner": "Eigen GPU-runner",
+          "cloud": "Cotton Cloud-berekeningen"
+        },
+        "descriptions": {
+          "local": "Traag, de meeste zware functies zijn uitgeschakeld en de modelkwaliteit is vereenvoudigd. Maar de kwaliteit is nog steeds prima — meer dan voldoende voor alle taken.",
+          "runner": "Sluit een aparte GPU-runner aan voor berekeningen. Snel, hoge kwaliteit — de beste modellen en ondersteuning voor alle functies.",
+          "cloud": "Optimale balans, maar kan beperkingen hebben. Ongelooflijk royaal en gratis. Vereist een internetverbinding."
+        }
+      },
+      "timezone": {
+        "title": "Tijdzone",
+        "subtitle": "Selecteer uw tijdzone om 's nachts niet gestoord te worden door meldingen of schijfgeluiden. Dit geldt alleen voor serverroutines; de webinterface toont tijden altijd in uw lokale tijdzone."
+      },
+      "storageSpace": {
+        "title": "Hoeveel ruimte geeft u de app?",
+        "subtitle": "Dit helpt ons het schijfgebruik te optimaliseren.",
+        "options": {
+          "all": "Alles wat u heeft",
+          "economical": "Ruimtebesparend",
+          "unknown": "Weet ik niet, laten we doorgaan",
+          "optimal": "Optimaal"
+        },
+        "descriptions": {
+          "all": "Gebruik alle beschikbare ruimte voor maximale prestaties.",
+          "economical": "Agressieve ruimtebesparing, compressie en deduplicatie.",
+          "unknown": "Er worden optimale instellingen voor u gekozen."
+        }
+      },
+      "importSources": {
+        "title": "Iets te importeren?",
+        "subtitle": "Selecteer bronnen waarvan u gegevens wilt migreren.",
+        "options": {
+          "webdav": "WebDAV",
+          "none": "Niets"
+        }
+      },
+      "nextcloudConfig": {
+        "title": "Nextcloud-importinstellingen",
+        "subtitle": "Voer inloggegevens in om verbinding te maken met Nextcloud.",
+        "fields": {
+          "serverUrl": "Server-URL",
+          "username": "Gebruikersnaam",
+          "password": "Wachtwoord"
+        },
+        "placeholders": {
+          "serverUrl": "https://nextcloud.example.com",
+          "username": "Uw gebruikersnaam",
+          "password": "Uw wachtwoord"
+        }
+      },
+      "webdavConfig": {
+        "title": "WebDAV-importinstellingen",
+        "subtitle": "Voer inloggegevens in om verbinding te maken met een WebDAV-server.",
+        "fields": {
+          "serverUrl": "Server-URL",
+          "username": "Gebruikersnaam",
+          "password": "Wachtwoord"
+        },
+        "placeholders": {
+          "serverUrl": "https://webdav.example.com",
+          "username": "Uw gebruikersnaam",
+          "password": "Uw wachtwoord"
+        }
+      }
+    },
+    "common": {
+      "author": "Vadim Belov"
+    }
+  },
+  "onboarding": {
+    "skip": "Aan de slag",
+    "features": {
+      "cloud": {
+        "title": "Uw persoonlijke cloud",
+        "description": "Sla uw bestanden veilig op en synchroniseer ze op al uw apparaten"
+      },
+      "storage": {
+        "title": "Onbeperkte opslag",
+        "description": "Maakt u zich nooit meer zorgen over opslagruimte dankzij flexibele opslagopties"
+      },
+      "security": {
+        "title": "Beveiliging op bankniveau",
+        "description": "Uw gegevens worden versleuteld en beschermd met toonaangevende beveiliging"
+      },
+      "speed": {
+        "title": "Razendsnel",
+        "description": "Ervaar bliksemsnelle uploads en downloads dankzij geoptimaliseerde prestaties"
+      }
+    }
+  },
+  "home": {
+    "title": "Start",
+    "layoutLabelWithValue": "Indeling: {{name}}",
+    "layoutLabelEmpty": "Indeling: —",
+    "loading": {
+      "title": "Laden",
+      "caption": "Indelingsstatistieken ophalen…"
+    },
+    "refreshing": "Vernieuwen…",
+    "cards": {
+      "folders": {
+        "title": "Mappen",
+        "caption": "Totaal aantal mappen in uw cloud",
+        "layoutTitle": "Indeling",
+        "layoutCaption": "Huidige standaardindeling"
+      },
+      "files": {
+        "title": "Bestanden",
+        "caption": "Totaal aantal bestanden in alle mappen"
+      },
+      "data": {
+        "title": "Data",
+        "caption": "Totale omvang van al uw bestanden"
+      },
+      "recentFiles": {
+        "title": "Recente bestanden",
+        "empty": "Geen recente bestanden"
+      }
+    }
+  },
+  "files": {
+    "title": "Bestanden",
+    "errors": {
+      "resolveRootFailed": "Het oplossen van de hoofdmap is mislukt",
+      "loadContentsFailed": "Inhoud van de map kon niet worden geladen",
+      "createFolderFailed": "Map aanmaken mislukt",
+      "deleteFolderFailed": "Map verwijderen mislukt",
+      "renameFolderFailed": "Map hernoemen mislukt",
+      "duplicateFolderName": "Er bestaat al een map met deze naam"
+    },
+    "move": {
+      "cut": "Knippen",
+      "pasteHere_one": "{{count}} item hier plakken",
+      "pasteHere_other": "{{count}} items hier plakken",
+      "toasts": {
+        "cut_one": "{{count}} item geknipt",
+        "cut_other": "{{count}} items geknipt",
+        "moved_one": "{{count}} item verplaatst",
+        "moved_other": "{{count}} items verplaatst",
+        "failed_one": "Verplaatsen van {{count}} item mislukt",
+        "failed_other": "Verplaatsen van {{count}} items mislukt"
+      }
+    },
+    "loading": {
+      "title": "Laden",
+      "caption": "Mapinhoud ophalen…"
+    },
+    "uploadDrop": {
+      "scanning": {
+        "title": "Bestanden scannen…"
+      },
+      "preparing": {
+        "title": "Upload voorbereiden…",
+        "mapping": {
+          "title": "Upload voorbereiden…"
+        },
+        "folders": {
+          "title": "Mappen aanmaken…"
+        },
+        "conflicts": {
+          "title": "Conflicten controleren…"
+        },
+        "enqueue": {
+          "title": "Upload starten…"
+        }
+      },
+      "caption": "{{count}} bestanden gevonden",
+      "captionFound": "{{count}} bestanden gevonden",
+      "captionProgress": "{{processed}} / {{total}}",
+      "toasts": {
+        "noneCopied": "Er zijn geen bestanden geüpload (alles is overgeslagen).",
+        "someItemsSkipped_one": "{{count}} item overgeslagen dat niet kon worden gelezen.",
+        "someItemsSkipped_other": "{{count}} items overgeslagen die niet konden worden gelezen.",
+        "someItemsSkippedWithExamples_one": "{{count}} item overgeslagen (bijv. {{examples}}).",
+        "someItemsSkippedWithExamples_other": "{{count}} items overgeslagen (bijv. {{examples}}).",
+        "more_one": " +{{count}} meer",
+        "more_other": " +{{count}} meer",
+        "vaultLocked": "Voor versleutelde uploads moet u eerst uw versleutelingskluis ontgrendelen."
+      },
+      "errors": {
+        "dropFailed": "Verwerken van de gesleepte items is mislukt. Probeer het opnieuw."
+      }
+    },
+    "refreshing": "Vernieuwen…",
+    "actions": {
+      "upload": "Uploaden",
+      "newFolder": "Nieuwe map",
+      "folderNamePlaceholder": "Mapnaam",
+      "goToFolder": "Naar map gaan",
+      "goUp": "Omhoog",
+      "dropFiles": "Sleep bestanden hier om te uploaden",
+      "switchToTilesView": "Tegelweergave",
+      "switchToListView": "Lijstweergave",
+      "switchToTableView": "Tabelweergave",
+      "switchToSmallTilesView": "Kleine tegels",
+      "switchToMediumTilesView": "Middelgrote tegels",
+      "switchToLargeTilesView": "Grote tegels"
+    },
+    "breadcrumbs": {
+      "ariaLabel": "Kruimelpad",
+      "root": "Bestanden"
+    },
+    "empty": {
+      "all": "Deze map is leeg"
+    },
+    "selection": {
+      "enter": "Selectiemodus",
+      "exit": "Selectie afsluiten",
+      "selectAll": "Alles selecteren",
+      "deselectAll": "Alles deselecteren",
+      "deleteSelected": "Selectie verwijderen",
+      "downloadSelected": "Geselecteerde downloaden",
+      "downloadFailed": "Archief voorbereiden is mislukt.",
+      "count_one": "{{count}} item geselecteerd",
+      "count_other": "{{count}} items geselecteerd"
+    },
+    "deleteSelected": {
+      "confirmTitle_one": "{{count}} item verwijderen?",
+      "confirmTitle_other": "{{count}} items verwijderen?",
+      "confirmDescription": "Geselecteerde items worden naar de prullenbak verplaatst en kunnen later worden hersteld."
+    },
+    "conflicts": {
+      "title": "Bestand bestaat al",
+      "description": "Een bestand met deze naam bestaat al in deze map. Uploaden als {{newName}}?",
+      "skip": "Overslaan",
+      "skipAll": "Alles overslaan"
+    },
+    "deleteFolder": {
+      "confirmTitle": "Map \"{{name}}\" verwijderen?",
+      "confirmDescription": "De map wordt naar de prullenbak verplaatst en kan later worden hersteld."
+    },
+    "deleteFile": {
+      "confirmTitle": "Bestand \"{{name}}\" verwijderen?",
+      "confirmDescription": "Het bestand wordt naar de prullenbak verplaatst en kan later worden hersteld."
+    },
+    "stats": {
+      "summary": "{{folders}} mappen • {{files}} bestanden • {{size}}"
+    },
+    "rename": {
+      "fileNamePlaceholder": "Bestandsnaam"
+    },
+    "share": {
+      "copied": "Deellink gekopieerd: {{name}}",
+      "shared": "Bezig met delen: {{name}}",
+      "folderCopied": "Maplink gekopieerd: {{name}}",
+      "folderShared": "Map wordt gedeeld: {{name}}",
+      "message": "Bekijk \"{{name}}\" op Cotton Cloud",
+      "folderMessage": "Bekijk de map \"{{name}}\" op Cotton Cloud",
+      "errors": {
+        "link": "Genereren van deellink mislukt.",
+        "token": "Extractie van het deeltoken mislukt.",
+        "copy": "Kopiëren van de link naar het klembord mislukt."
+      }
+    },
+    "preview": {
+      "actions": {
+        "edit": "Bewerken",
+        "save": "Opslaan",
+        "saving": "Bezig met opslaan..."
+      },
+      "editorModes": {
+        "text": {
+          "label": "Tekst",
+          "description": "Platte tekst met behoud van opmaak"
+        },
+        "markdown": {
+          "label": "Markdown",
+          "description": "Markdown met voorvertoning"
+        },
+        "code": {
+          "label": "Code",
+          "description": "Code-editor met syntaxismarkering"
+        }
+      },
+      "pdf": {
+        "loading": {
+          "link": "Link ophalen...",
+          "download": "PDF downloaden...",
+          "render": "PDF weergeven..."
+        }
+      },
+      "model": {
+        "loading": "3D-model laden...",
+        "actions": {
+          "autoAlign": "Uitlijnen op grondvlak",
+          "autoOrient": "Automatisch oriënteren",
+          "cycleLighting": "Verlichting: {{preset}}",
+          "cycleSurface": "Oppervlak: {{preset}}",
+          "flipModel": "Model omdraaien",
+          "resetColor": "Originele kleuren gebruiken",
+          "toggleShadows": "Schaduwen: {{state}}",
+          "togglePalette": "Kleurenpalet"
+        },
+        "lighting": {
+          "balanced": "Gebalanceerd",
+          "studio": "Studio",
+          "dramatic": "Dramatisch"
+        },
+        "surface": {
+          "original": "Origineel",
+          "matte": "Mat",
+          "glossy": "Glanzend",
+          "metal": "Metaal",
+          "satin": "Satijn",
+          "smooth": "Glad"
+        },
+        "states": {
+          "on": "Aan",
+          "off": "Uit"
+        }
+      },
+      "language": {
+        "label": "Taal"
+      },
+      "mediaQuality": {
+        "previewMode": "Modus: voorvertoning",
+        "originalMode": "Modus: origineel",
+        "switchToOriginal": "Wissel naar origineel",
+        "switchToPreview": "Wissel naar voorvertoning"
+      },
+      "video": {
+        "transcodeNotice": "Deze video wordt voorbereid voor weergave in de browser. De eerste start of het terugspoelen kan even duren.",
+        "transcodeError": "Deze browser kan de voorbereide videostream niet afspelen."
+      },
+      "errors": {
+        "loadFailed": "Laden van bestand mislukt{{error}}",
+        "saveFailed": "Opslaan van de bestandsinhoud is mislukt",
+        "downloadFailed": "Download mislukt",
+        "pdfLoadFailed": "Laden van PDF mislukt",
+        "pdfDisplayFailed": "Weergeven van PDF mislukt",
+        "modelLoadFailed": "Laden van het 3D-model mislukt",
+        "modelUnsupportedType": "Deze 3D-bestandsindeling wordt niet ondersteund voor voorvertoning in de browser",
+        "pdfTooLarge": "PDF is te groot voor voorvertoning ({{size}}). De maximale grootte is {{maxSize}}. Download het bestand om het te bekijken.",
+        "fileTooLarge": "Bestand is te groot voor voorvertoning ({{size}}). De maximale grootte voor tekstvoorvertoning is {{maxSize}}. Download het bestand om het te bekijken."
+      }
+    },
+    "actionsTitle": "Acties",
+    "size": "Grootte",
+    "name": "Naam",
+    "location": "Locatie",
+    "noFilesOrFolders": "Geen bestanden of mappen",
+    "clientEncryption": {
+      "enablePolicy": "E2E inschakelen",
+      "disablePolicy": "E2E uitschakelen",
+      "unlockDialog": {
+        "title": "Versleuteling aan clientzijde ontgrendelen",
+        "currentTitle": "Deze map is versleuteld",
+        "goHome": "Naar start"
+      },
+      "mixedPlain": {
+        "title": "Sommige bestanden zijn niet E2E-versleuteld",
+        "description_one": "{{count}} bestaand bestand wordt nog steeds zonder E2E-versleuteling opgeslagen.",
+        "description_other": "{{count}} bestaande bestanden worden nog steeds zonder E2E-versleuteling opgeslagen.",
+        "toast_one": "{{count}} bestand in deze map is niet E2E-versleuteld.",
+        "toast_other": "{{count}} bestanden in deze map zijn niet E2E-versleuteld.",
+        "action": "Versleutelen",
+        "running": "Bezig met versleutelen"
+      },
+      "movedEncrypted": {
+        "toast_one": "{{count}} versleuteld bestand is verplaatst naar een map zonder automatische E2E.",
+        "toast_other": "{{count}} versleutelde bestanden zijn verplaatst naar een map zonder automatische E2E.",
+        "action": "Ontsleutelen"
+      },
+      "encryptedFilesRemain": {
+        "title": "Versleutelde bestanden blijven versleuteld",
+        "description_one": "{{count}} bestand blijft versleuteld, ook al worden nieuwe uploads niet meer automatisch versleuteld.",
+        "description_other": "{{count}} bestanden blijven versleuteld, ook al worden nieuwe uploads niet meer automatisch versleuteld.",
+        "toast_one": "{{count}} versleuteld bestand blijft in deze map.",
+        "toast_other": "{{count}} versleutelde bestanden blijven in deze map.",
+        "action": "Ontsleutelen"
+      },
+      "toasts": {
+        "policyEnabled": "Nieuwe uploads naar deze map worden op dit apparaat versleuteld.",
+        "policyDisabled": "Nieuwe uploads naar deze map worden niet langer automatisch versleuteld.",
+        "policyToggleFailed": "Bijwerken van het versleutelingsbeleid mislukt.",
+        "setupRequired": "Stel versleuteling aan clientzijde in voordat u deze map opent.",
+        "unlockRequired": "Ontgrendel eerst de versleuteling aan clientzijde.",
+        "encryptExistingComplete_one": "{{count}} bestaand bestand versleuteld.",
+        "encryptExistingComplete_other": "{{count}} bestaande bestanden versleuteld.",
+        "encryptExistingFailed_one": "Kon {{count}} bestand niet versleutelen. Controleer het taakpaneel.",
+        "encryptExistingFailed_other": "Kon {{count}} bestanden niet versleutelen. Controleer het taakpaneel.",
+        "decryptExistingComplete_one": "{{count}} bestand ontsleuteld.",
+        "decryptExistingComplete_other": "{{count}} bestanden ontsleuteld.",
+        "decryptExistingFailed_one": "Kon {{count}} bestand niet ontsleutelen. Controleer het taakpaneel.",
+        "decryptExistingFailed_other": "Kon {{count}} bestanden niet ontsleutelen. Controleer het taakpaneel."
+      }
+    }
+  },
+  "tasks": {
+    "title": "Taken",
+    "error": "Fout",
+    "errors": {
+      "serverSettingsNotLoaded": "Serverinstellingen zijn niet geladen",
+      "uploadFailed": "Upload mislukt",
+      "storageQuotaExceeded": "Onvoldoende opslagruimte. Beschikbaar: {{available}}.",
+      "encryptionVaultLocked": "Versleutelingskluis is vergrendeld",
+      "encryptionFailed": "Versleutelen mislukt",
+      "decryptionFailed": "Ontsleutelen mislukt",
+      "clientEncryptionFileTooLarge": "Dit bestand is te groot voor de huidige verwerking van versleutelde bestanden. Limiet: {{maxSize}}."
+    },
+    "titleWithTotal": "Taken ({{total}})",
+    "titleWithProgress": "Taken ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithErrors": "Taken ({{total}} • {{failed}} mislukt)",
+    "actions": {
+      "expand": "Uitvouwen",
+      "collapse": "Samenvouwen",
+      "close": "Sluiten",
+      "clearFinished": "Voltooide wissen"
+    },
+    "status": {
+      "queued": "In wachtrij",
+      "running": "Wordt uitgevoerd",
+      "finalizing": "Wordt afgerond",
+      "completed": "Voltooid",
+      "failed": "Mislukt"
+    }
+  },
+  "trash": {
+    "title": "Prullenbak",
+    "loading": {
+      "title": "Prullenbak laden...",
+      "caption": "Een moment geduld terwijl de inhoud van de prullenbak wordt geladen."
+    },
+    "error": "Inhoud van de prullenbak kon niet worden geladen",
+    "empty": "De prullenbak is leeg",
+    "actions": {
+      "goUp": "Omhoog",
+      "trashRoot": "Hoofdmap van prullenbak",
+      "switchToList": "Lijstweergave",
+      "switchToTiles": "Tegelweergave",
+      "switchToListView": "Lijstweergave",
+      "switchToTilesView": "Tegelweergave",
+      "switchToTableView": "Tabelweergave",
+      "switchToSmallTilesView": "Kleine tegels",
+      "switchToMediumTilesView": "Middelgrote tegels",
+      "switchToLargeTilesView": "Grote tegels",
+      "emptyTrash": "Prullenbak legen"
+    },
+    "breadcrumbs": {
+      "root": "Prullenbak"
+    },
+    "stats": {
+      "summary": "{{folders}} mappen, {{files}} bestanden, {{size}}"
+    },
+    "deleteFolderForever": {
+      "confirmTitle": "Map \"{{name}}\" verwijderen?",
+      "confirmDescription": "Deze actie kan niet ongedaan worden gemaakt. De volledige inhoud van de map wordt verwijderd."
+    },
+    "deleteFile": {
+      "confirmTitle": "Bestand \"{{name}}\" verwijderen?",
+      "confirmDescription": "Deze actie kan niet ongedaan worden gemaakt."
+    },
+    "deleteFileForever": {
+      "confirmTitle": "Bestand \"{{name}}\" verwijderen?",
+      "confirmDescription": "Deze actie kan niet ongedaan worden gemaakt."
+    },
+    "deleteSelectedForever": {
+      "confirmTitle_one": "{{count}} item definitief verwijderen?",
+      "confirmTitle_other": "{{count}} items definitief verwijderen?",
+      "confirmDescription": "Deze actie kan niet ongedaan worden gemaakt. Geselecteerde items worden definitief verwijderd."
+    },
+    "emptyTrash": {
+      "confirmTitle": "Prullenbak legen?",
+      "confirmDescription": "Deze actie kan niet ongedaan worden gemaakt. Alle items in de prullenbak worden definitief verwijderd.",
+      "inProgress": "{{current}} van {{total}} items verwijderen...",
+      "completed": "Prullenbak is geleegd"
+    },
+    "restore": {
+      "action": "Herstellen",
+      "inProgress": "Herstellen {{current}} van {{total}}: {{name}}",
+      "failed": "Herstellen van \"{{name}}\" mislukt",
+      "notRestorable": "Item kan niet worden hersteld.",
+      "rootFolder": "de hoofdmap",
+      "confirm": {
+        "title": "Item herstellen?",
+        "description": "\"{{name}}\" wordt hersteld naar \"{{path}}\".",
+        "confirm": "Herstellen"
+      },
+      "applyToAll": "Deze keuze toepassen op de resterende items",
+      "skip": "Overslaan",
+      "parentMissing": {
+        "title": "Herstellocatie ontbreekt",
+        "description": "\"{{name}}\" is verwijderd uit \"{{path}}\", maar die map bestaat niet meer. Het ontbrekende mappad aanmaken en het item daar herstellen?",
+        "confirm": "Aanmaken en herstellen"
+      },
+      "conflict": {
+        "title": "Item bestaat al",
+        "description": "\"{{name}}\" botst met een bestaande {{kind}} genaamd \"{{conflictName}}\". Het bestaande item naar de prullenbak verplaatsen en dit item herstellen?",
+        "confirm": "Vervangen",
+        "folderKind": "map",
+        "fileKind": "bestand"
+      }
+    }
+  },
+  "admin": {
+    "title": "Beheer",
+    "menu": {
+      "navigate": "Sectie",
+      "users": "Gebruikers",
+      "usersAndGroups": "Gebruikers en groepen",
+      "generalSettings": "Algemene instellingen",
+      "privacySettings": "Privacy en beveiliging",
+      "storageSettings": "Opslag",
+      "storageAndStatistics": "Opslag en statistieken",
+      "notificationsSettings": "Meldingen",
+      "databaseBackup": "Databaseback-up",
+      "storageStatistics": "Opslagstatistieken",
+      "securityDiagnostics": "Beveiligingscontrole",
+      "groups": "Groepen"
+    },
+    "roles": {
+      "user": "Gebruiker",
+      "admin": "Beheerder",
+      "unknown": "Onbekend"
+    },
+    "users": {
+      "title": "Gebruikers",
+      "refresh": "Vernieuwen",
+      "loading": "Gebruikers laden...",
+      "empty": "Geen gebruikers",
+      "columns": {
+        "username": "Gebruikersnaam",
+        "email": "E-mail",
+        "role": "Rol",
+        "firstName": "Voornaam",
+        "lastName": "Achternaam",
+        "birthDate": "Geboortedatum",
+        "totp": "2FA",
+        "sessions": "Sessies",
+        "storageUsed": "Gebruikte opslag",
+        "lastActivity": "Laatste activiteit",
+        "actions": "Acties"
+      },
+      "actions": {
+        "edit": "Bewerken"
+      },
+      "errors": {
+        "loadFailed": "Laden van gebruikers mislukt.",
+        "createFailed": "Aanmaken van gebruiker mislukt.",
+        "updateFailed": "Bijwerken van gebruiker mislukt."
+      },
+      "create": {
+        "title": "Gebruiker aanmaken",
+        "username": "Gebruikersnaam",
+        "email": "E-mail",
+        "password": "Wachtwoord",
+        "role": "Rol",
+        "firstName": "Voornaam",
+        "lastName": "Achternaam",
+        "birthDate": "Geboortedatum",
+        "button": "Aanmaken",
+        "creating": "Bezig met aanmaken...",
+        "success": "Gebruiker aangemaakt."
+      },
+      "edit": {
+        "title": "Gebruiker bewerken",
+        "save": "Opslaan",
+        "saving": "Bezig met opslaan...",
+        "success": "Gebruiker bijgewerkt."
+      },
+      "storageUsage": {
+        "calculating": "Opslaggebruik berekenen"
+      }
+    },
+    "settings": {
+      "actions": {
+        "save": "Opslaan",
+        "saving": "Bezig met opslaan...",
+        "close": "Sluiten"
+      },
+      "state": {
+        "saved": "Instellingen opgeslagen."
+      },
+      "errors": {
+        "loadFailed": "Laden van instellingen mislukt.",
+        "saveFailed": "Opslaan van instellingen mislukt."
+      },
+      "general": {
+        "title": "Algemene instellingen",
+        "description": "Algemeen servergedrag en locatieopzoeking voor meldingen.",
+        "fields": {
+          "publicBaseUrl": "Openbare basis-URL",
+          "timezone": "Tijdzone",
+          "telemetry": "Telemetrie",
+          "allowDeduplication": "Deduplicatie tussen gebruikers",
+          "allowGlobalIndexing": "Globale indexering",
+          "serverUsage": "Servergebruik",
+          "storageSpaceMode": "Opslagruimtemodus",
+          "computionMode": "Rekenmodus",
+          "geoIpLookupMode": "IP-opzoekmodus",
+          "customGeoIpLookupUrl": "Eigen IP-opzoek-URL"
+        },
+        "validation": {
+          "required": "Dit veld is verplicht.",
+          "publicBaseUrlInvalid": "Voer een geldige HTTP- of HTTPS-basis-URL in zonder inloggegevens, query of hash.",
+          "publicBaseUrlMismatch": "Het huidige adres is {{current}}, maar gegenereerde openbare links gebruiken {{configured}}. Wees voorzichtig voordat u deze waarde opslaat.",
+          "timezoneInvalid": "Kies een geldige IANA-tijdzone uit de lijst.",
+          "customGeoIpLookupUrlInvalid": "Voer een geldige HTTP- of HTTPS-opzoek-URL in."
+        },
+        "help": {
+          "publicBaseUrl": "Ondanks deze instelling bepaalt Cotton de openbare URL bijna overal automatisch. Stel deze alleen in wanneer de automatische detectie onjuist is.",
+          "timezone": "Dit helpt ons om geen achtergrondtaken uit te voeren terwijl u slaapt, zodat uw schijven 's nachts geen geluid maken.",
+          "telemetry": "Cotton verzamelt minimale technische diagnostische gegevens, zodat de ontwikkelaar fouten kan zien en oplossen, omdat niet iedereen problemen meldt. Het inschakelen van telemetrie ontgrendelt ook clouddiensten standaard.",
+          "allowDeduplication": "Bepaalt of een gebruiker kan vernemen dat een andere gebruiker hetzelfde bestand al opslaat. Wanneer uitgeschakeld worden identieke gegevens nog steeds gededupliceerd op de server na de upload, maar worden ze onnodig eerst overgedragen. Wanneer ingeschakeld, kan een andere gebruiker vernemen dat iemand in deze cloud dat bestand eerder heeft geüpload. Dit is veilig voor familie en vertrouwde vrienden.",
+          "allowGlobalIndexing": "Staat de server toe gebruikersbestanden te ontsleutelen en een diepgaande zoekindex op te bouwen. Zonder dit gebruikt het zoeken alleen bestands- en mapnamen.",
+          "serverUsage": "Optimaliseert aanbevelingen voor functies en enkele instellingen. Het is geen kritieke parameter, dus kies wat goed voelt."
+        },
+        "serverUsage": {
+          "Photos": "Foto's",
+          "Documents": "Documenten",
+          "Media": "Media",
+          "Other": "Overig"
+        },
+        "storageSpaceMode": {
+          "Optimal": "Gebalanceerd",
+          "Limited": "Ruimtebesparend",
+          "Unlimited": "Onbeperkt"
+        },
+        "storageSpaceHelp": {
+          "open": "Wat beïnvloedt de opslagruimtemodus?",
+          "title": "Opslagruimtemodus",
+          "description": "Dit bepaalt hoe agressief Cotton opslag gebruikt en vrijgeeft: timing van garbage collection, opruimen van niet-gerefereerde data, hergebruik van cache/data en hoeveel oude bestandsversies beschikbaar mogen blijven. Telkens wanneer een bestand wordt bijgewerkt, behoudt Cotton een schaduwkopie door een verwijzing naar de vorige bestandsdata te bewaren totdat de opruiming deze verwijdert. Onbeperkt behoudt data langer en ruimt vooral op wanneer er ruimte nodig is; Ruimtebesparend geeft opslag eerder vrij. Gebalanceerd zit tussen die twee in."
+        },
+        "computionMode": {
+          "Local": "Lokaal",
+          "Remote": "Externe runner",
+          "Cloud": "Cotton Cloud",
+          "inDevelopment": "Deze functie is nog in ontwikkeling."
+        },
+        "geoIpLookupMode": {
+          "Disabled": "Uitgeschakeld",
+          "CottonCloud": "Clouddienst",
+          "MaxMindLocal": "GeoIP Light",
+          "CustomHttp": "Eigen HTTP"
+        },
+        "geoIpLookupModeDescription": {
+          "Disabled": "IP-adressen niet omzetten.",
+          "CottonCloud": "IP-adressen omzetten via de Cotton-provider. Dit kan worden gebruikt door functies zoals beveiligingsmeldingen.",
+          "MaxMindLocal": "IP-adressen lokaal omzetten met een GeoIP Light-database/pakket.",
+          "CustomHttp": "Plak een URL naar uw eigen service. Cotton probeert locatiegerelateerde velden automatisch uit JSON te extraheren."
+        },
+        "actions": {
+          "testGeoIpProvider": "Provider testen"
+        },
+        "state": {
+          "geoIpTestPassed": "Test van eigen resolver geslaagd."
+        },
+        "openSetupWizard": {
+          "title": "Installatiewizard openen",
+          "description": "Doorloop de installatiewizard voor de eerste keer opnieuw.",
+          "button": "Openen"
+        }
+      },
+      "privacy": {
+        "title": "Privacy en beveiliging",
+        "description": "Bepaalt hoe gegevens de server verlaten en hoe gebruikersbestanden toegankelijk zijn voor gedeelde functies."
+      }
+    },
+    "storageSettings": {
+      "title": "Opslag",
+      "description": "Configureer eerst de inloggegevens voor opslag en wissel daarna de actieve opslagback-end.",
+      "fields": {
+        "storageType": "Opslagback-end"
+      },
+      "quota": {
+        "title": "Standaardquota per gebruiker",
+        "description": "Beperkt hoeveel unieke geüploade inhoud elke gebruiker mag bezitten. Laat leeg voor onbeperkte accounts.",
+        "fields": {
+          "defaultUserQuotaGiB": "Quotum per gebruiker, GiB"
+        },
+        "help": "Gebruik 0 of laat leeg voor onbeperkt."
+      },
+      "template": {
+        "title": "Standaardbestanden",
+        "description": "Kopieert de inhoud van deze map naar elk nieuw aangemaakt gebruikersaccount.",
+        "fields": {
+          "nodeId": "Knooppunt-ID van de sjabloonmap"
+        },
+        "help": "Laat leeg om uit te schakelen. Stel dit in op een knooppunt-ID van een map met onboarding- of demobestanden."
+      },
+      "storageType": {
+        "Local": "Lokale schijf",
+        "S3": "S3-compatibele opslag"
+      },
+      "s3": {
+        "title": "S3-configuratie",
+        "fields": {
+          "endpoint": "Eindpunt-URL",
+          "region": "Regio",
+          "bucket": "Bucket",
+          "accessKey": "Toegangssleutel",
+          "secretKey": "Geheime sleutel"
+        }
+      },
+      "actions": {
+        "saveS3": "S3-config opslaan",
+        "useLocal": "Lokale opslag gebruiken",
+        "useS3": "Config opslaan en S3 gebruiken"
+      },
+      "state": {
+        "s3Saved": "S3-configuratie opgeslagen.",
+        "storageSaved": "Opslagmodus bijgewerkt."
+      },
+      "errors": {
+        "loadFailed": "Laden van opslaginstellingen mislukt.",
+        "s3SaveFailed": "Opslaan van S3-configuratie mislukt.",
+        "storageSaveFailed": "Wisselen van opslagmodus mislukt.",
+        "quotaSaveFailed": "Opslaan van het standaardquotum per gebruiker mislukt.",
+        "templateSaveFailed": "Opslaan van het standaardbestandensjabloon mislukt."
+      }
+    },
+    "notificationsSettings": {
+      "title": "Meldingen",
+      "description": "Configureer hoe Cotton account- en beveiligingsmeldingen verzendt.",
+      "fields": {
+        "emailMode": "Meldingsmodus"
+      },
+      "emailMode": {
+        "None": "Uitgeschakeld",
+        "Cloud": "Cotton Cloud Mail",
+        "Custom": "Eigen SMTP"
+      },
+      "smtp": {
+        "title": "SMTP-configuratie",
+        "fields": {
+          "smtpServer": "SMTP-server",
+          "port": "Poort",
+          "username": "Gebruikersnaam",
+          "password": "Wachtwoord",
+          "fromAddress": "Afzenderadres",
+          "useSSL": "SSL/TLS gebruiken"
+        }
+      },
+      "actions": {
+        "saveSmtp": "SMTP-config opslaan",
+        "testSmtp": "SMTP testen",
+        "saveMode": "E-mailmodus opslaan",
+        "saving": "Bezig met opslaan...",
+        "testSmtpShort": "Testen"
+      },
+      "state": {
+        "smtpSaved": "SMTP-configuratie opgeslagen.",
+        "testSent": "Test-e-mail verzonden.",
+        "modeSaved": "Meldingsmodus bijgewerkt."
+      },
+      "errors": {
+        "loadFailed": "Laden van meldingsinstellingen mislukt.",
+        "smtpSaveFailed": "Opslaan van SMTP-configuratie mislukt.",
+        "testFailed": "Verzenden van test-e-mail mislukt.",
+        "modeSaveFailed": "Opslaan van meldingsmodus mislukt."
+      }
+    },
+    "databaseBackup": {
+      "title": "Databaseback-up",
+      "description": "Laatste back-upmanifest van de server.",
+      "actions": {
+        "refresh": "Vernieuwen",
+        "trigger": "Back-up starten",
+        "triggering": "Bezig met starten..."
+      },
+      "state": {
+        "loading": "Back-upinformatie laden...",
+        "empty": "Er zijn nog geen back-ups gevonden.",
+        "triggerSuccess": "De back-uptaak is gestart.",
+        "restoreIfEmptyHint": "Als de database verloren gaat en u wilt dat deze automatisch wordt hersteld, stel dan COTTON_RESTORE_DATABASE_IF_EMPTY=true in in de containeromgeving. De database moet leeg zijn, zonder enige tabel, om dit te laten werken."
+      },
+      "fields": {
+        "backupId": "Back-up-ID",
+        "createdAtUtc": "Aangemaakt",
+        "pointerUpdatedAtUtc": "Pointer bijgewerkt",
+        "dumpSizeBytes": "Dumpgrootte",
+        "chunkCount": "Aantal chunks",
+        "dumpContentHash": "Hash van dumpinhoud",
+        "sourceDatabase": "Brondatabase",
+        "sourceHost": "Bronhost",
+        "sourcePort": "Bronpoort"
+      },
+      "errors": {
+        "loadFailed": "Laden van back-upinformatie mislukt.",
+        "triggerFailed": "Starten van back-up mislukt."
+      }
+    },
+    "storageStatistics": {
+      "title": "Opslagstatistieken",
+      "description": "Huidig opslaggebruik en geplande tijdlijn voor GC-vrijgave.",
+      "actions": {
+        "refresh": "Vernieuwen",
+        "triggerGc": "GC uitvoeren",
+        "triggeringGc": "Bezig met starten..."
+      },
+      "bucket": {
+        "hour": "Uur",
+        "day": "Dag"
+      },
+      "state": {
+        "loading": "Opslagstatistieken laden...",
+        "empty": "Geen geplande GC-buckets in de gekozen periode.",
+        "triggerGcSuccess": "De taak van de garbage collector is gestart."
+      },
+      "summary": {
+        "fromUtc": "Vanaf",
+        "toUtc": "Tot",
+        "totalChunks": "Totaal aantal vrij te geven chunks",
+        "totalSizeBytes": "Totale vrij te geven omvang",
+        "generatedAtUtc": "Gegenereerd op"
+      },
+      "storage": {
+        "title": "Totaal opslaggebruik",
+        "fields": {
+          "storageType": "Opslagtype",
+          "totalUniqueChunkCount": "Totaal aantal unieke chunks",
+          "totalUniqueChunkPlainSizeBytes": "Totale platte omvang (uniek)",
+          "totalUniqueChunkStoredSizeBytes": "Totale opgeslagen omvang (uniek)",
+          "referencedUniqueChunkCount": "Gerefereerde unieke chunks",
+          "referencedLogicalChunkCount": "Gerefereerde logische chunks",
+          "deduplicatedUniqueChunkCount": "Gededupliceerde unieke chunks",
+          "dedupSavedBytes": "Bespaard door deduplicatie",
+          "compressionSavedBytes": "Bespaard door compressie",
+          "pendingGcChunkCount": "Chunks in afwachting van GC",
+          "pendingGcStoredSizeBytes": "Opgeslagen omvang in afwachting van GC",
+          "overdueGcChunkCount": "Achterstallige GC-chunks",
+          "overdueGcStoredSizeBytes": "Opgeslagen omvang van achterstallige GC"
+        }
+      },
+      "timeline": {
+        "title": "Tijdlijn van GC-vrijgave",
+        "columns": {
+          "bucketStartUtc": "Tijd van vrijgave",
+          "chunkCount": "Chunks",
+          "sizeBytes": "Grootte"
+        }
+      },
+      "errors": {
+        "loadFailed": "Laden van opslagstatistieken mislukt.",
+        "triggerGcFailed": "Starten van garbage collector mislukt."
+      }
+    },
+    "securityDiagnostics": {
+      "title": "Beveiligingscontrole",
+      "description": "Controles aan de serverzijde voor accounthygiëne, behandeling van de hoofdsleutel en blootstelling van procesgeheugen.",
+      "errors": {
+        "loadFailed": "Laden van beveiligingsdiagnostiek mislukt."
+      },
+      "severity": {
+        "critical": "Kritiek",
+        "warning": "Waarschuwing",
+        "info": "Info"
+      },
+      "levels": {
+        "strong": {
+          "title": "Sterke beveiliging",
+          "summary": "Deze instantie heeft de verwachte productieharding. Geschikt voor publieke blootstelling wanneer u ook de host en back-ups vertrouwt."
+        },
+        "good": {
+          "title": "Goede basis voor zelfhosting",
+          "summary": "Dit is goed voor een gezin of klein team. De resterende punten betreffen vooral operationele harding en accounthygiëne."
+        },
+        "home": {
+          "title": "Basis voor thuisgebruik",
+          "summary": "Dit is redelijk voor thuis en dagelijks gebruik, maar beschouw de host niet als vijandig. Een servercompromittering kan nog steeds sleutels of beheerderstoegang blootleggen."
+        },
+        "exposed": {
+          "title": "Praktische aanvalspaden blijven bestaan",
+          "summary": "De instantie heeft problemen die een lokale aanvaller, een gecompromitteerde container of een gestolen beheerderswachtwoord realistisch zou kunnen gebruiken."
+        },
+        "unsafe": {
+          "title": "Onveilig voor gevoelige gegevens",
+          "summary": "Los de kritieke waarschuwingen op voordat u waardevolle persoonlijke gegevens opslaat. Op dit niveau is de hoofdsleutel of beheerderscontrole mogelijk te eenvoudig te bereiken."
+        }
+      },
+      "chips": {
+        "publicInstance": "Openbare instantie",
+        "privateInstance": "Privé-instantie",
+        "envKey": "Sleutel uit omgeving",
+        "memoryUnlock": "Ontgrendeling in geheugen",
+        "adminTotp": "{{withTotp}}/{{total}} beheerders hebben 2FA"
+      },
+      "sections": {
+        "risks": "Dreigingsvectoren",
+        "instance": "Instantie en accounts",
+        "masterKey": "Hoofdsleutel",
+        "memory": "Blootstelling van procesgeheugen",
+        "runtime": "Runtime-feiten"
+      },
+      "risks": {
+        "empty": "Er zijn door de huidige controles aan de serverzijde geen waarschuwingen gedetecteerd."
+      },
+      "fields": {
+        "publicInstance": "Openbare registratie",
+        "admins": "Beheerders met 2FA",
+        "adminsWithoutTotp": "Beheerders zonder 2FA",
+        "masterKeySource": "Bron",
+        "envWasConfigured": "Omgevingsvariabele geconfigureerd",
+        "envPresent": "Omgevingsvariabele nog steeds aanwezig",
+        "dotnetDiagnostics": ".NET-diagnostiek uitgeschakeld",
+        "processHardening": "Procesharding toegepast",
+        "dumpable": "Dumpbare status",
+        "sysPtrace": "CAP_SYS_PTRACE",
+        "os": "Besturingssysteem",
+        "container": "Container gedetecteerd",
+        "euid": "Effectieve UID",
+        "noNewPrivileges": "Geen nieuwe privileges",
+        "seccomp": "Seccomp-modus",
+        "capabilities": "Effectieve capabilities"
+      },
+      "values": {
+        "unknown": "Onbekend",
+        "yes": "Ja",
+        "no": "Nee",
+        "notDumpable": "Niet dumpbaar",
+        "dumpable": "Dumpbaar"
+      },
+      "threatVectors": {
+        "public-instance": "Internetbezoekers kunnen accounts aanmaken en inhoud opslaan. Quota, standaard demogegevens en misbruikmonitoring worden onderdeel van de beveiligingsgrens.",
+        "master-key-from-environment": "Als deploymetadata, shell-geschiedenis of containerinspectie omgevingsvariabelen blootstelt, kan de hoofdsleutel dicht bij de versleutelde gegevens liggen die hij beschermt.",
+        "admins-without-2fa": "Het beheerderswachtwoord wordt de enige factor. Hergebruik van wachtwoorden, phishing of gelekte browsersessies kunnen uitmonden in volledige controle over de instantie.",
+        "dotnet-diagnostics-enabled": "Een lokaal proces met voldoende rechten kan de .NET-runtime om dumps of traces vragen, en die dumps kunnen actieve geheimen uit het geheugen bevatten.",
+        "process-dumpable": "Een proces met dezelfde UID of een debugger met ptrace-mogelijkheden kan het servergeheugen dumpen en zoeken naar de hoofdsleutel in het geheugen.",
+        "sys-ptrace-capability": "Een debug- of bevoorrechte container kan procesgeheugen inspecteren en wijzigen. Precies de mogelijkheid die sleutels die alleen in het geheugen bestaan, proberen te vermijden.",
+        "new-privileges-allowed": "Als gecompromitteerde code een setuid-helper of een binaire bestand met capabilities vindt, heeft het een bredere weg om privileges binnen de container te verkrijgen.",
+        "seccomp-disabled": "Het kerneloppervlak voor systeemaanroepen is groter dan Docker's normale productiebasis, dus een containerontsnappingsbug krijgt meer ruimte.",
+        "running-as-root": "Externe code-uitvoering zou als root binnen de container worden uitgevoerd, wat de schade aan aangekoppelde volumes en helperprocessen vergroot.",
+        "process-hardening-failed": "Cotton heeft procesharding aangevraagd, maar het proces is toch gestart zonder de verwachte dump- of ptrace-bescherming."
+      }
+    },
+    "groups": {
+      "title": "Groepen",
+      "description": "Beheer toegangsgroepen los van individuele gebruikers.",
+      "inDevelopment": "Groepsbeheer is in ontwikkeling."
+    }
+  },
+  "routes": {
+    "login": "Inloggen",
+    "home": "Start",
+    "files": "Bestanden",
+    "trash": "Prullenbak",
+    "profile": "Profiel",
+    "settings": "Instellingen",
+    "admin": "Beheer"
+  },
+  "resetPassword": {
+    "title": "Wachtwoord opnieuw instellen",
+    "newPassword": "Nieuw wachtwoord",
+    "confirmPassword": "Nieuw wachtwoord bevestigen",
+    "submit": "Wachtwoord opnieuw instellen",
+    "submitting": "Bezig met opnieuw instellen...",
+    "success": "Het wachtwoord is opnieuw ingesteld. U kunt nu inloggen met uw nieuwe wachtwoord.",
+    "goToLogin": "Naar de applicatie",
+    "errors": {
+      "mismatch": "Wachtwoorden komen niet overeen.",
+      "invalidToken": "De herstellink is ongeldig of verlopen.",
+      "failed": "Opnieuw instellen van het wachtwoord is mislukt. Probeer het opnieuw."
+    }
+  },
+  "verifyEmail": {
+    "title": "E-mailverificatie",
+    "verifying": "Uw e-mailadres wordt geverifieerd...",
+    "success": "Uw e-mailadres is geverifieerd!",
+    "goToLogin": "Naar de applicatie",
+    "goToSettings": "Naar instellingen",
+    "errors": {
+      "invalidToken": "De verificatielink is ongeldig of verlopen.",
+      "failed": "Verifiëren van het e-mailadres is mislukt. Probeer het opnieuw."
+    }
+  },
+  "unlock": {
+    "title": "Cotton ontgrendelen",
+    "caption": "De server wacht op de hoofdsleutel voordat de app wordt gestart.",
+    "checking": {
+      "title": "Vergrendelingsstatus controleren",
+      "caption": "Cotton bereidt de beveiligde opstartprocedure voor."
+    },
+    "masterKey": "Hoofdsleutel",
+    "bootstrapToken": "Bootstrap-token",
+    "bootstrapRequired": "De eerste ontgrendeling vereist het bootstrap-token uit de serverlogs.",
+    "bootstrapRequiredWithExpiry": "De eerste ontgrendeling vereist het bootstrap-token uit de serverlogs. Het verloopt om {{expiresAt}}.",
+    "unlock": "Ontgrendelen",
+    "unlocking": "Bezig met ontgrendelen",
+    "generate": "Genereren",
+    "generating": "Bezig met genereren",
+    "generated": "Gegenereerd. Bewaar deze sleutel voordat u ontgrendelt.",
+    "generatedToast": "Hoofdsleutel gegenereerd",
+    "generateFailed": "Sleutel genereren mislukt.",
+    "unlocked": "Hoofdsleutel geaccepteerd. Cotton wordt gestart.",
+    "unlockFailed": "Ontgrendelen mislukt.",
+    "showKey": "Sleutel tonen",
+    "hideKey": "Sleutel verbergen",
+    "copyKey": "Sleutel kopiëren",
+    "copied": "Gekopieerd",
+    "copyFailed": "Sleutel kon niet worden gekopieerd"
+  }
+}

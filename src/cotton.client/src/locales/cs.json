@@ -1,0 +1,2133 @@
+{
+  "search": {
+    "title": "Hledání",
+    "searchPlaceholder": "Hledat soubory a složky...",
+    "error": "Hledání selhalo. Zkuste to prosím znovu.",
+    "enterQueryHint": "Začněte psát pro vyhledávání...",
+    "noResults": "Žádné soubory ani složky nebyly nalezeny",
+    "open": "Hledat",
+    "modal": {
+      "placeholder": "Hledat soubory, složky, nastavení...",
+      "resultsCount": "{{count}} výsledků"
+    },
+    "types": {
+      "folder": "Složka",
+      "file": "Soubor",
+      "setting": "Nastavení"
+    },
+    "actions": {
+      "openFile": "Otevřít soubor",
+      "openFolder": "Otevřít složku",
+      "openSetting": "Otevřít nastavení",
+      "downloadFile": "Stáhnout soubor",
+      "shareFile": "Sdílet soubor",
+      "openContainingFolder": "Otevřít nadřazenou složku"
+    },
+    "dictionary": [
+      {
+        "id": "privacy-deduplication",
+        "title": "Cross-user deduplication",
+        "description": "Privacy and security",
+        "path": "/admin/privacy-settings",
+        "keywords": [
+          "deduplication",
+          "deduplicate",
+          "dedup",
+          "duplicates",
+          "privacy",
+          "security",
+          "cross-user",
+          "deduplikace",
+          "duplicity",
+          "duplikáty",
+          "soukromí",
+          "bezpečnost"
+        ],
+        "highlightSettingId": "allowCrossUserDeduplication",
+        "adminOnly": true
+      },
+      {
+        "id": "privacy-global-indexing",
+        "title": "Global indexing",
+        "description": "Privacy and security",
+        "path": "/admin/privacy-settings",
+        "keywords": [
+          "global indexing",
+          "indexing",
+          "deep search",
+          "search index",
+          "globální indexace",
+          "indexování",
+          "hluboké hledání",
+          "vyhledávací index"
+        ],
+        "highlightSettingId": "allowGlobalIndexing",
+        "adminOnly": true
+      },
+      {
+        "id": "privacy-telemetry",
+        "title": "Telemetry",
+        "description": "Privacy and security",
+        "path": "/admin/privacy-settings",
+        "keywords": [
+          "telemetry",
+          "diagnostics",
+          "analytics",
+          "metrics",
+          "statistics",
+          "usage analytics",
+          "crash reports",
+          "bug reports",
+          "privacy",
+          "telemetrie",
+          "diagnostika",
+          "analytika",
+          "metriky",
+          "statistiky",
+          "hlášení chyb",
+          "soukromí"
+        ],
+        "highlightSettingId": "telemetry",
+        "adminOnly": true
+      },
+      {
+        "id": "notifications-smtp",
+        "title": "SMTP configuration",
+        "description": "Notifications",
+        "path": "/admin/notifications-settings",
+        "keywords": [
+          "smtp",
+          "mail",
+          "email",
+          "email settings",
+          "notifications",
+          "smtp server",
+          "from address",
+          "ssl",
+          "tls",
+          "pošta",
+          "e-mail",
+          "oznámení",
+          "smtp server",
+          "adresa odesílatele"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "notifications-email-mode",
+        "title": "Notification mode",
+        "description": "Notifications",
+        "path": "/admin/notifications-settings",
+        "keywords": [
+          "notifications",
+          "email mode",
+          "mail mode",
+          "cotton cloud mail",
+          "custom smtp",
+          "oznámení",
+          "režim e-mailu",
+          "režim pošty",
+          "vlastní smtp"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "storage-settings",
+        "title": "Storage settings",
+        "description": "Storage",
+        "path": "/admin/storage-settings",
+        "keywords": [
+          "storage",
+          "storage backend",
+          "s3",
+          "bucket",
+          "endpoint",
+          "region",
+          "access key",
+          "secret key",
+          "úložiště",
+          "backend úložiště",
+          "bucket",
+          "endpoint",
+          "region",
+          "přístupový klíč",
+          "tajný klíč"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "storage-statistics",
+        "title": "Storage statistics",
+        "description": "Storage and statistics",
+        "path": "/admin/storage-statistics",
+        "keywords": [
+          "storage statistics",
+          "stats",
+          "gc",
+          "garbage collector",
+          "chunks",
+          "dedup saved",
+          "compression saved",
+          "statistiky úložiště",
+          "statistiky",
+          "uvolňování paměti",
+          "garbage collector",
+          "bloky",
+          "úspora deduplikací",
+          "úspora kompresí"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "database-backup",
+        "title": "Database backup",
+        "description": "Admin",
+        "path": "/admin/database-backup",
+        "keywords": [
+          "backup",
+          "database",
+          "restore",
+          "dump",
+          "manifest",
+          "záloha",
+          "databáze",
+          "obnovení",
+          "dump",
+          "manifest"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "users",
+        "title": "Users",
+        "description": "Admin",
+        "path": "/admin/users",
+        "keywords": [
+          "users",
+          "accounts",
+          "admin users",
+          "role",
+          "sessions",
+          "uživatelé",
+          "účty",
+          "administrátoři",
+          "role",
+          "relace"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "groups",
+        "title": "Groups",
+        "description": "Admin",
+        "path": "/admin/groups",
+        "keywords": [
+          "groups",
+          "user groups",
+          "skupiny",
+          "uživatelské skupiny"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "general-settings",
+        "title": "General settings",
+        "description": "Admin",
+        "path": "/admin/general-settings",
+        "keywords": [
+          "general settings",
+          "public url",
+          "public base url",
+          "timezone",
+          "server usage",
+          "setup wizard",
+          "computation mode",
+          "obecná nastavení",
+          "veřejná url",
+          "veřejná základní url",
+          "časové pásmo",
+          "využití serveru",
+          "průvodce nastavením",
+          "režim výpočtů"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "profile-settings",
+        "title": "Profile settings",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "profile",
+          "settings",
+          "account",
+          "account settings",
+          "personal information",
+          "personal info",
+          "edit profile",
+          "name",
+          "first name",
+          "last name",
+          "birth date",
+          "birthday",
+          "email",
+          "e-mail",
+          "mail",
+          "avatar",
+          "picture",
+          "profil",
+          "nastavení",
+          "účet",
+          "osobní údaje",
+          "úprava profilu",
+          "jméno",
+          "příjmení",
+          "datum narození",
+          "narozeniny",
+          "pošta",
+          "avatar",
+          "obrázek"
+        ]
+      },
+      {
+        "id": "profile-appearance",
+        "title": "Appearance",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "appearance",
+          "theme",
+          "theme mode",
+          "dark mode",
+          "light mode",
+          "system theme",
+          "language",
+          "gallery",
+          "gallery settings",
+          "smooth transitions",
+          "prefer previews",
+          "preview",
+          "image preview",
+          "originals",
+          "colors",
+          "colour",
+          "vzhled",
+          "motiv",
+          "tmavý režim",
+          "světlý režim",
+          "systémový motiv",
+          "jazyk",
+          "galerie",
+          "plynulé přechody",
+          "náhled",
+          "originály",
+          "barvy"
+        ]
+      },
+      {
+        "id": "profile-security",
+        "title": "Account security",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "security",
+          "account security",
+          "password",
+          "change password",
+          "current password",
+          "new password",
+          "2fa",
+          "two factor",
+          "two-factor",
+          "totp",
+          "authenticator",
+          "verification code",
+          "sessions",
+          "devices",
+          "logout",
+          "sign out",
+          "email verification",
+          "verify email",
+          "bezpečnost",
+          "zabezpečení účtu",
+          "heslo",
+          "změna hesla",
+          "současné heslo",
+          "nové heslo",
+          "dvoufaktorové",
+          "dvoufázové ověření",
+          "ověřovací kód",
+          "relace",
+          "zařízení",
+          "odhlášení",
+          "ověření e-mailu"
+        ]
+      },
+      {
+        "id": "profile-share-links",
+        "title": "Share links",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "share links",
+          "sharing",
+          "public links",
+          "links",
+          "shared files",
+          "expiration",
+          "expires",
+          "expire",
+          "invalidate",
+          "token",
+          "odkazy ke sdílení",
+          "sdílení",
+          "veřejné odkazy",
+          "odkazy",
+          "sdílené soubory",
+          "platnost",
+          "vypršení",
+          "zneplatnit",
+          "token"
+        ]
+      },
+      {
+        "id": "profile-webdav",
+        "title": "WebDAV access",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "webdav",
+          "dav",
+          "webdav access",
+          "webdav token",
+          "network drive",
+          "mount",
+          "mount_webdav",
+          "davfs",
+          "davfs2",
+          "cadaver",
+          "windows webdav",
+          "macos webdav",
+          "linux webdav",
+          "credentials",
+          "one-time token",
+          "přístup webdav",
+          "síťová jednotka",
+          "připojit",
+          "přihlašovací údaje",
+          "jednorázový token"
+        ]
+      }
+    ]
+  },
+  "notifications": {
+    "title": "Oznámení",
+    "markAllAsRead": "Označit vše jako přečtené",
+    "empty": "Žádná oznámení",
+    "viewAll": "Zobrazit vše",
+    "unreadCount": "{count} nepřečtených",
+    "showOnlyUnread": "Zobrazit jen nepřečtené",
+    "showAll": "Zobrazit vše",
+    "muteSound": "Vypnout zvuk",
+    "unmuteSound": "Zapnout zvuk",
+    "notifications": {
+      "empty": "Žádná oznámení"
+    }
+  },
+  "common": {
+    "languageName": "Čeština",
+    "switchToThisLanguage": "Přepnout na češtinu",
+    "placeholder": "—",
+    "yes": "Ano",
+    "no": "Ne",
+    "time": {
+      "justNow": "právě teď",
+      "secondsAgo_one": "před {{count}} sekundou",
+      "secondsAgo_few": "před {{count}} sekundami",
+      "secondsAgo_many": "před {{count}} sekundami",
+      "secondsAgo_other": "před {{count}} sekundami",
+      "minutesAgo_one": "před {{count}} minutou",
+      "minutesAgo_few": "před {{count}} minutami",
+      "minutesAgo_many": "před {{count}} minutami",
+      "minutesAgo_other": "před {{count}} minutami",
+      "hoursAgo_one": "před {{count}} hodinou",
+      "hoursAgo_few": "před {{count}} hodinami",
+      "hoursAgo_many": "před {{count}} hodinami",
+      "hoursAgo_other": "před {{count}} hodinami",
+      "daysAgo_one": "před {{count}} dnem",
+      "daysAgo_few": "před {{count}} dny",
+      "daysAgo_many": "před {{count}} dny",
+      "daysAgo_other": "před {{count}} dny",
+      "monthsAgo_one": "před {{count}} měsícem",
+      "monthsAgo_few": "před {{count}} měsíci",
+      "monthsAgo_many": "před {{count}} měsíci",
+      "monthsAgo_other": "před {{count}} měsíci",
+      "yearsAgo_one": "před {{count}} rokem",
+      "yearsAgo_few": "před {{count}} lety",
+      "yearsAgo_many": "před {{count}} lety",
+      "yearsAgo_other": "před {{count}} lety",
+      "durationMinutes_one": "{{count}} min",
+      "durationMinutes_few": "{{count}} min",
+      "durationMinutes_many": "{{count}} min",
+      "durationMinutes_other": "{{count}} min",
+      "durationHours_one": "{{count}} hodina",
+      "durationHours_few": "{{count}} hodiny",
+      "durationHours_many": "{{count}} hodiny",
+      "durationHours_other": "{{count}} hodin",
+      "durationDays_one": "{{count}} den",
+      "durationDays_few": "{{count}} dny",
+      "durationDays_many": "{{count}} dne",
+      "durationDays_other": "{{count}} dní",
+      "lessThanMinute": "méně než minuta"
+    },
+    "actions": {
+      "confirm": "Potvrdit",
+      "cancel": "Zrušit",
+      "close": "Zavřít",
+      "delete": "Smazat",
+      "rename": "Přejmenovat",
+      "restore": "Obnovit",
+      "download": "Stáhnout",
+      "share": "Sdílet",
+      "more": "Další akce",
+      "play": "Přehrát",
+      "pause": "Pozastavit",
+      "copied": "Zkopírováno!",
+      "reload": "Obnovit"
+    },
+    "errors": {
+      "unexpectedTitle": "Něco se pokazilo",
+      "unexpectedDescription": "Došlo k neočekávané chybě. Obnovte prosím stránku.",
+      "showDetails": "Zobrazit podrobnosti",
+      "hideDetails": "Skrýt podrobnosti",
+      "schemaValidationFailed": "Server vrátil neočekávaná data"
+    },
+    "userMenu": {
+      "profile": "Profil",
+      "settings": "Nastavení",
+      "admin": "Správa",
+      "user": "Uživatel",
+      "lightMode": "Světlý režim",
+      "darkMode": "Tmavý režim",
+      "changeLanguage": "Změnit jazyk",
+      "logout": "Odhlásit se",
+      "help": "Nápověda",
+      "serverVersion": "Verze serveru: {{version}}"
+    },
+    "app": {
+      "logoAlt": "Logo Cotton"
+    },
+    "title": "Cotton Cloud",
+    "subtitle": "Průvodce nastavením",
+    "ok": "OK",
+    "telemetryDetails": {
+      "tooltip": "Jaká data se shromažďují?",
+      "title": "Co obsahuje minimální telemetrie",
+      "intro": "Telemetrie je záměrně minimální a nezahrnuje názvy ani obsah souborů. Odesílá se pouze malá sada technických diagnostických údajů:",
+      "items": {
+        "instanceId": "Náhodný identifikátor instance (jednorázově vygenerovaný GUID, není spojen s vaší osobou)",
+        "serverUrl": "Veřejná URL serveru, abychom věděli, zda je cloud dostupný",
+        "version": "Verze serveru Cotton",
+        "users": "Celkový počet uživatelských účtů",
+        "nodes": "Celkový počet složek",
+        "files": "Celkový počet souborů"
+      },
+      "outro": "To je vše. V telemetrických datech se neodesílá žádný obsah souborů, názvy souborů, uživatelská jména ani e-mailové adresy. Standardní síťová metadata (například zdrojová IP) mohou nadále existovat na transportní vrstvě."
+    },
+    "pwa": {
+      "updateAvailable": "Je připravena nová verze.",
+      "updateAction": "Obnovit"
+    },
+    "clientEncryption": {
+      "folderPolicyEnabledHint": "Tato složka šifruje nová nahrávání ve vašem zařízení.",
+      "fileEncryptedHint": "Tento soubor je zašifrován ve vašem zařízení.",
+      "vaultLockedForDownload": "Pro stažení tohoto souboru odemkněte ve svém profilu klientské šifrování.",
+      "fileTooLargeForDownload": "Tento šifrovaný soubor je pro stahování v prohlížeči příliš velký. Limit: {{maxSize}}."
+    }
+  },
+  "audioPlayer": {
+    "actions": {
+      "scanRecursively": "Najít skladby v této složce a podsložkách",
+      "showQueue": "Zobrazit frontu",
+      "hideQueue": "Skrýt frontu",
+      "showLyrics": "Zobrazit text",
+      "hideLyrics": "Skrýt text",
+      "enableShuffle": "Zapnout náhodné přehrávání",
+      "disableShuffle": "Vypnout náhodné přehrávání",
+      "close": "Zavřít přehrávač"
+    },
+    "lyrics": {
+      "unavailable": "Text k této skladbě není k dispozici.",
+      "notFound": "Vedle této skladby nebyl nalezen žádný soubor .lrc.",
+      "loadFailed": "Načtení textu selhalo."
+    }
+  },
+  "share": {
+    "title": "Sdílený soubor",
+    "loading": "Načítání...",
+    "unsupported": "Náhled není pro tento typ souboru k dispozici.",
+    "encryptedFile": {
+      "title": "Tento soubor je end-to-end šifrovaný",
+      "description": "Veřejné odkazy jej v prohlížeči nedokážou odemknout. Můžete stáhnout šifrovaný kontejner nebo požádat vlastníka o sdílení dešifrované kopie."
+    },
+    "message": "Podívejte se na \"{{name}}\" v Cotton Cloud",
+    "folder": {
+      "title": "Sdílená složka",
+      "message": "Podívejte se na složku \"{{name}}\" v Cotton Cloud",
+      "empty": "Tato složka je prázdná.",
+      "kind": "Složka"
+    },
+    "toasts": {
+      "copied": "Odkaz zkopírován",
+      "shared": "Odkaz sdílen"
+    },
+    "errors": {
+      "invalidLink": "Neplatný odkaz ke sdílení.",
+      "notFound": "Soubor nenalezen nebo platnost odkazu vypršela.",
+      "loadFailed": "Načtení sdíleného souboru selhalo.",
+      "copyLink": "Zkopírování odkazu do schránky selhalo.",
+      "fileTooLargePreview": "Soubor je příliš velký pro náhled ({{size}}). Pro zobrazení jej prosím stáhněte."
+    }
+  },
+  "login": {
+    "title": "Cotton Cloud",
+    "usernameLabel": "Uživatelské jméno",
+    "passwordLabel": "Heslo",
+    "rememberMe": "Důvěřovat tomuto zařízení",
+    "twoFactor": {
+      "title": "Dvoufaktorové ověření",
+      "caption": "Zadejte šestimístný kód z aplikace autentizátoru.",
+      "digit": "Číslice",
+      "required": "Kód dvoufaktorového ověření je vyžadován.",
+      "invalid": "Neplatný kód dvoufaktorového ověření.",
+      "locked": "Příliš mnoho pokusů. Zkuste to prosím později."
+    },
+    "loginButton": "Přihlásit se",
+    "loggingIn": "Přihlašování...",
+    "errorMessage": "Přihlášení se nezdařilo. Zkontrolujte své přihlašovací údaje.",
+    "restoring": {
+      "title": "Obnovování relace...",
+      "caption": "Počkejte prosím"
+    },
+    "forgotPassword": {
+      "link": "Zapomněli jste heslo?",
+      "enterEmail": "Pro obnovení hesla zadejte prosím svůj e-mail jako uživatelské jméno.",
+      "sent": "Pokud účet s tímto e-mailem existuje, byl odeslán odkaz pro obnovení hesla.",
+      "sending": "Odesílání...",
+      "error": "Odeslání odkazu pro obnovení selhalo. Zkuste to prosím později."
+    },
+    "firstRun": {
+      "title": "Úvodní nastavení",
+      "message": "Žádní uživatelé zatím neexistují. Údaje, které zadáte, vytvoří první administrátorský účet. Tato možnost je dostupná pouze krátce po spuštění. V případě potřeby instanci restartujte.",
+      "continueButton": "Pokračovat",
+      "continuing": "Vytváření prvního uživatele..."
+    }
+  },
+  "notFound": {
+    "title": "Stránka nenalezena",
+    "message": "Stránka, kterou hledáte, neexistuje.",
+    "backButton": "Zpět na domovskou stránku"
+  },
+  "profile": {
+    "title": "Profil",
+    "subtitle": "Informace o účtu a stav zabezpečení.",
+    "notAuthenticated": "Nejste přihlášen(a).",
+    "ageYears_one": "{{count}} rok",
+    "ageYears_few": "{{count}} roky",
+    "ageYears_many": "{{count}} roku",
+    "ageYears_other": "{{count}} let",
+    "roles": {
+      "user": "Uživatel",
+      "admin": "Administrátor"
+    },
+    "avatar": {
+      "upload": "Nahrát avatar",
+      "errors": {
+        "settingsNotLoaded": "Nastavení serveru ještě nebyla načtena.",
+        "fileTooLarge": "Avatar je příliš velký. Maximální velikost je {{maxSize}}.",
+        "unsupportedFormat": "Tento formát obrázku váš prohlížeč nepodporuje. Použijte prosím JPG, PNG nebo WEBP.",
+        "failed": "Aktualizace avataru se nezdařila."
+      }
+    },
+    "editProfile": {
+      "title": "Upravit profil",
+      "description": "Aktualizujte své osobní údaje.",
+      "firstName": "Jméno",
+      "lastName": "Příjmení",
+      "email": "E-mail",
+      "birthDate": "Datum narození",
+      "save": "Uložit",
+      "saving": "Ukládání...",
+      "success": "Profil byl aktualizován.",
+      "emailWarning": "Změna e-mailu resetuje stav ověření e-mailu.",
+      "errors": {
+        "failed": "Aktualizace profilu se nezdařila."
+      }
+    },
+    "appearance": {
+      "title": "Vzhled",
+      "description": "Předvolby uživatelského rozhraní a personalizace.",
+      "gallerySmoothTransitions": "Plynulé přechody v galerii",
+      "galleryPreferPreview": "Zobrazovat originály místo náhledů",
+      "themeMode": {
+        "label": "Motiv",
+        "light": "Světlý",
+        "system": "Systémový",
+        "dark": "Tmavý"
+      },
+      "language": {
+        "label": "Jazyk",
+        "en": "Angličtina",
+        "ru": "Ruština",
+        "es": "Španělština",
+        "de": "Němčina"
+      }
+    },
+    "shareLinks": {
+      "title": "Odkazy ke sdílení",
+      "description": "Ovlivněte, jak dlouho zůstanou vygenerované odkazy ke sdílení platné.",
+      "current": "Aktuálně: {{days}} dní",
+      "presets": {
+        "week": "Týden",
+        "month": "Měsíc",
+        "year": "Rok",
+        "threeMonths": "3 měsíce",
+        "tenYears": "10 let",
+        "oneDay": "Jeden den"
+      },
+      "invalidateAll": "Zneplatnit všechny odkazy ke sdílení",
+      "invalidating": "Probíhá zneplatňování...",
+      "invalidated": "Všechny odkazy ke sdílení byly zneplatněny.",
+      "invalidateConfirmTitle": "Zneplatnit všechny odkazy ke sdílení?",
+      "invalidateConfirmDescription": "Všechny aktivní odkazy ke sdílení okamžitě přestanou fungovat. Tuto akci nelze vrátit.",
+      "errors": {
+        "invalidateFailed": "Zneplatnění odkazů ke sdílení se nezdařilo."
+      }
+    },
+    "totp": {
+      "enabled": "2FA zapnuto",
+      "disabled": "2FA vypnuto",
+      "sectionTitle": "Dvoufaktorové ověření",
+      "enabledMessage": "Dvoufaktorové ověření je zapnuto.",
+      "enabledDescription": "Váš účet je chráněn další vrstvou zabezpečení.",
+      "setup": {
+        "title": "Zapnout dvoufaktorové ověření (TOTP)",
+        "caption": "Použijte aplikaci autentizátoru (Google Authenticator, Authy atd.).",
+        "button": "Vygenerovat QR kód",
+        "loading": "Generování...",
+        "qrTitle": "Naskenujte tento QR kód",
+        "secretLabel": "Tajný klíč:",
+        "copySecret": "Zkopírovat tajný klíč",
+        "success": "Dvoufaktorové ověření je zapnuto."
+      },
+      "confirm": {
+        "title": "Potvrdit nastavení",
+        "caption": "Zadejte šestimístný kód z aplikace autentizátoru.",
+        "digit": "Číslice",
+        "button": "Potvrdit",
+        "loading": "Potvrzování..."
+      },
+      "disable": {
+        "button": "Vypnout 2FA",
+        "dialogTitle": "Vypnout dvoufaktorové ověření",
+        "dialogDescription": "Pro potvrzení vypnutí dvoufaktorového ověření zadejte své heslo.",
+        "passwordLabel": "Heslo",
+        "confirm": "Vypnout",
+        "confirming": "Vypínání...",
+        "success": "Dvoufaktorové ověření bylo vypnuto."
+      },
+      "errors": {
+        "setupFailed": "Spuštění nastavení 2FA se nezdařilo.",
+        "confirmFailed": "Potvrzení 2FA se nezdařilo.",
+        "saveFailed": "Uložení nastavení 2FA se nezdařilo.",
+        "codeRequired": "Zadejte prosím šestimístný kód.",
+        "invalidCode": "Neplatný kód dvoufaktorového ověření.",
+        "alreadyEnabled": "2FA je již zapnuto.",
+        "setupNotInitiated": "Nastavení 2FA nebylo zahájeno. Nejprve vygenerujte QR kód.",
+        "disableFailed": "Vypnutí 2FA se nezdařilo.",
+        "invalidPassword": "Neplatné heslo."
+      }
+    },
+    "fields": {
+      "id": "ID uživatele",
+      "username": "Uživatelské jméno",
+      "firstName": "Jméno",
+      "lastName": "Příjmení",
+      "birthDate": "Datum narození",
+      "role": "Role",
+      "twoFactor": "Dvoufaktorové ověření",
+      "totpEnabledAt": "Zapnuto dne",
+      "totpFailedAttempts": "Neúspěšné pokusy 2FA",
+      "email": "E-mail",
+      "emailVerified": "Ověřeno",
+      "emailNotVerified": "Neověřeno",
+      "verify": "Ověřit",
+      "createdAt": "Vytvořeno",
+      "updatedAt": "Aktualizováno"
+    },
+    "emailVerification": {
+      "title": "Ověření e-mailu",
+      "description": "Ověřte svoji e-mailovou adresu pro obnovení hesla a oznámení.",
+      "verified": "E-mail ověřen",
+      "notVerified": "E-mail neověřen",
+      "sendButton": "Odeslat ověřovací e-mail",
+      "sending": "Odesílání...",
+      "sent": "Ověřovací e-mail byl odeslán. Zkontrolujte prosím svou schránku.",
+      "noEmail": "Pro váš účet není nastavena žádná e-mailová adresa.",
+      "errors": {
+        "failed": "Odeslání ověřovacího e-mailu se nezdařilo. Zkuste to prosím později."
+      }
+    },
+    "password": {
+      "title": "Změnit heslo",
+      "description": "Aktualizujte heslo svého účtu.",
+      "old": "Staré heslo",
+      "new": "Nové heslo",
+      "confirm": "Potvrdit nové heslo",
+      "show": "Zobrazit heslo",
+      "hide": "Skrýt heslo",
+      "save": "Uložit",
+      "saving": "Ukládání...",
+      "success": "Heslo bylo změněno.",
+      "errors": {
+        "mismatch": "Hesla se neshodují.",
+        "failed": "Změna hesla se nezdařila."
+      }
+    },
+    "sessions": {
+      "title": "Aktivní relace",
+      "description": "Spravujte své aktivní relace na různých zařízeních",
+      "noActiveSessions": "Žádné aktivní relace",
+      "currentSession": "Aktuální",
+      "unknownDevice": "Neznámé zařízení",
+      "revokeSession": "Ukončit relaci",
+      "elapsed": "uplynulo {{duration}}",
+      "revokeConfirmTitle": "Ukončit relaci?",
+      "revokeConfirmDescription": "Opravdu chcete tuto relaci ukončit? Zařízení bude odhlášeno.",
+      "revokeConfirmButton": "Ukončit relaci",
+      "revokeCancelButton": "Zrušit",
+      "errors": {
+        "loadFailed": "Načtení relací se nezdařilo.",
+        "revokeFailed": "Ukončení relace se nezdařilo."
+      }
+    },
+    "webdav": {
+      "title": "WebDAV přístup",
+      "description": "Vygenerujte jednorázový token pro připojení přes WebDAV.",
+      "confirmTitle": "Vygenerovat token WebDAV?",
+      "confirmDescription": "Tímto se vygeneruje nový token a všechny předchozí budou zneplatněny. Token bude zobrazen pouze jednou.",
+      "confirmButton": "Vygenerovat",
+      "cancelButton": "Zrušit",
+      "generateButton": "Vygenerovat token",
+      "generating": "Generování...",
+      "tokenLabel": "Token",
+      "usernameLabel": "Uživatelské jméno",
+      "connectUrlLabel": "Koncový bod WebDAV",
+      "modalTitle": "Přihlašovací údaje WebDAV (zobrazeno jednou)",
+      "closeButton": "Zavřít",
+      "copyToken": "Zkopírovat token",
+      "copyUrl": "Zkopírovat URL",
+      "copyUsername": "Zkopírovat uživatelské jméno",
+      "tokenWarning": "Tento token nyní zkopírujte. Již nebude znovu zobrazen.",
+      "cardHelp": "Pomocí těchto hodnot se připojte WebDAV klientem. Pro získání jednorázového hesla vygenerujte token.",
+      "examples": {
+        "title": "Příklady",
+        "copy": "Kopírovat",
+        "windows": {
+          "title": "Windows (Command Prompt)",
+          "copy": "Kopírovat",
+          "caption": "Spusťte v Command Prompt se zvýšenými právy nebo použijte mapovanou jednotku v Průzkumníku."
+        },
+        "windowsRegistry": {
+          "title": "Windows (úprava registru)",
+          "copy": "Kopírovat",
+          "caption": "Použitím úpravy registru zvýšíte limit velikosti souborů přes WebDAV."
+        },
+        "powershell": {
+          "title": "Windows (PowerShell escape)",
+          "copy": "Kopírovat",
+          "caption": "Použijte při spouštění z PowerShell; příkaz je pro pohodlí již escapován."
+        },
+        "mac": {
+          "title": "macOS (mount_webdav)",
+          "copy": "Kopírovat",
+          "caption": "Připojení přes Finder a Terminál (mount_webdav)."
+        },
+        "linux": {
+          "title": "Linux (davfs2)",
+          "copy": "Kopírovat",
+          "caption": "Pro připojení koncového bodu WebDAV použijte davfs2 nebo cadaver."
+        }
+      },
+      "placeholderPassword": "<heslo>",
+      "errors": {
+        "failed": "Vygenerování tokenu WebDAV se nezdařilo."
+      }
+    },
+    "email": {
+      "verified": "E-mail ověřen"
+    },
+    "clientEncryption": {
+      "sectionTitle": "Klientské šifrování",
+      "description": "Chraňte vybrané soubory klíčem uloženým v prohlížeči.",
+      "invalidEnvelope": "Uložená data nastavení šifrování nelze přečíst. Dokud se to neopraví, nenahrávejte šifrované soubory.",
+      "lockedHint": "Odemkněte, když potřebujete otevřít šifrované složky nebo soubory.",
+      "unlockedHint": "Šifrované soubory lze v tomto panelu prohlížeče otevírat, dokud klíč nezamknete nebo se neodhlásíte.",
+      "status": {
+        "notSetUp": "Nenastaveno",
+        "locked": "Uzamčeno",
+        "unlocked": "Odemčeno",
+        "invalid": "Vyžaduje pozornost"
+      },
+      "actions": {
+        "setup": "Nastavit",
+        "unlock": "Odemknout",
+        "lock": "Uzamknout",
+        "lockOnRefresh": "Uzamknout při obnovení stránky"
+      },
+      "setupDialog": {
+        "title": "Nastavit klientské šifrování",
+        "warning": "Pokud ztratíte jak heslo k šifrování, tak 24slovnou záložní frázi, šifrované soubory nepůjde otevřít. Server tento klíč nedokáže resetovat.",
+        "acknowledge": "Rozumím, že ztráta obojího znamená trvalou ztrátu dat",
+        "cancel": "Zrušit",
+        "continue": "Pokračovat",
+        "back": "Zpět",
+        "passwordHint": "Zvolte silné šifrovací heslo. Je oddělené od hesla k účtu a neodesílá se na server.",
+        "passwordLabel": "Šifrovací heslo",
+        "confirmPasswordLabel": "Potvrďte šifrovací heslo",
+        "passwordTooShort": "Použijte alespoň {{min}} znaků.",
+        "passwordMismatch": "Hesla se neshodují.",
+        "next": "Další",
+        "generating": "Generování...",
+        "phraseWarning": "Než dokončíte nastavení, uložte si těchto 24 slov na bezpečné místo. Kdokoli s touto frází může odemknout šifrované soubory.",
+        "copy": "Zkopírovat frázi",
+        "copied": "Zkopírováno",
+        "download": "Stáhnout frázi",
+        "phraseStored": "Záložní frázi jsem si uložil(a)",
+        "saving": "Ukládání...",
+        "finish": "Dokončit nastavení",
+        "errors": {
+          "generateFailed": "Šifrovací klíče se nepodařilo vygenerovat.",
+          "saveFailed": "Nastavení šifrování se nepodařilo uložit.",
+          "copyFailed": "Frázi se nepodařilo zkopírovat.",
+          "downloadFailed": "Frázi se nepodařilo stáhnout."
+        }
+      },
+      "unlockDialog": {
+        "title": "Odemknout klientské šifrování",
+        "passwordLabel": "Šifrovací heslo",
+        "phraseLabel": "24slovná záložní fráze",
+        "usePhrase": "Použít záložní frázi",
+        "usePassword": "Použít místo toho heslo",
+        "cancel": "Zrušit",
+        "submit": "Odemknout",
+        "unlocking": "Odemykání...",
+        "errors": {
+          "wrongPassword": "Nesprávné šifrovací heslo.",
+          "wrongPhrase": "Tato fráze klíč neodemyká.",
+          "invalidPhrase": "Fráze je neplatná nebo má nesprávný počet slov.",
+          "invalidEnvelope": "Uložená data nastavení šifrování nelze přečíst.",
+          "unknown": "Šifrování se nepodařilo odemknout."
+        }
+      }
+    }
+  },
+  "setup": {
+    "title": "Průvodce nastavením serveru",
+    "subtitle": "Pro začátek dokončete úvodní konfiguraci serveru. Nezabere to mnoho času a aplikaci si tím přizpůsobíte.",
+    "repoLink": "Projekt na GitHubu",
+    "errors": {
+      "saveFailed": "Uložení nastavení se nezdařilo.",
+      "saveChoiceFailed": "Něco se pokazilo. Zkuste vybrat jinou možnost."
+    },
+    "status": {
+      "hasUsers": "Existují uživatelé",
+      "maxChunk": "Maximální velikost bloku",
+      "hash": "Hashovací algoritmus",
+      "yes": "Ano",
+      "no": "Ne"
+    },
+    "actions": {
+      "start": "Jdeme na to",
+      "later": "Udělat později",
+      "back": "Zpět",
+      "next": "Další",
+      "finish": "Hotovo",
+      "cancel": "Zrušit",
+      "toggleLanguage": "Změnit jazyk",
+      "toggleTheme": "Přepnout motiv"
+    },
+    "intro": "Položíme vám několik jednoduchých otázek o tom, jak budete Cotton Cloud používat. Pokud si nejste jisti, nevadí – mnoho nastavení lze později změnit.",
+    "onlyAdminCanSetup": "Aplikaci mohou konfigurovat pouze administrátoři. Požádejte prosím administrátora, aby provedl úvodní nastavení.",
+    "questions": {
+      "requiresTooltip": "Pro povolení této možnosti musíte vybrat:",
+      "inQuestion": "v otázce",
+      "multiuser": {
+        "title": "Plánujete používat:",
+        "subtitle": "To ovlivňuje optimalizaci úložiště a některá nastavení zabezpečení.",
+        "linkAria": "Otevřít nápovědu v nové záložce",
+        "options": {
+          "family": "Pro rodinu",
+          "many": "S cizími lidmi",
+          "unknown": "Zatím nevím"
+        },
+        "descriptions": {
+          "family": "Deduplikace souborů, sdílený vyhledávací index a předinstalované moduly.",
+          "many": "Přísnější režim pro zabezpečení mezi neznámými uživateli.",
+          "unknown": "Nastaví nejlepší optimální výchozí hodnoty."
+        }
+      },
+      "usage": {
+        "title": "Cloud plánujete využívat pro:",
+        "subtitle": "Vyberte jednu nebo více možností",
+        "options": {
+          "photos": "Fotografie",
+          "documents": "Dokumenty",
+          "media": "Filmy a seriály",
+          "other": "Jiné"
+        },
+        "descriptions": {
+          "photos": "Nainstaluje doplňky pro AI vyhledávání a rozpoznávání textu.",
+          "documents": "Optimalizace pro kancelářské soubory a PDF jako domácí archiv",
+          "media": "Optimalizace pro video soubory a streamování, integrace s filmovou databází.",
+          "other": "Obecné nastavení pro smíšené typy souborů."
+        }
+      },
+      "storage": {
+        "title": "Kde chcete ukládat svá data?",
+        "subtitle": "Vyberte umístění úložiště pro vaše soubory. Cotton Cloud bude bez ohledu na vaši volbu používat serverový disk pro horkou cache.",
+        "options": {
+          "local": "Lokální disk serveru",
+          "s3": "Úložiště kompatibilní s S3"
+        },
+        "descriptions": {
+          "local": "Ukládat soubory na lokální souborový systém serveru.",
+          "s3": "Ukládat soubory ve vzdáleném objektovém úložišti kompatibilním s S3."
+        }
+      },
+      "s3Config": {
+        "title": "Konfigurace úložiště S3",
+        "subtitle": "Zadejte přihlašovací údaje vašeho úložiště kompatibilního s S3.",
+        "fields": {
+          "endpoint": "URL endpointu",
+          "region": "Region",
+          "bucket": "Název bucketu",
+          "accessKey": "Přístupový klíč",
+          "secretKey": "Tajný klíč"
+        },
+        "placeholders": {
+          "endpoint": "https://s3.example.com",
+          "region": "us-east-1",
+          "bucket": "my-bucket",
+          "accessKey": "Váš přístupový klíč",
+          "secretKey": "Váš tajný klíč"
+        }
+      },
+      "email": {
+        "title": "Konfigurace e-mailu",
+        "subtitle": "Vyberte, odkud budou odesílána e-mailová oznámení.",
+        "options": {
+          "cloud": "Použít cloudový Cotton Mail",
+          "custom": "Použít vlastní SMTP server",
+          "none": "Bez e-mailových oznámení"
+        },
+        "descriptions": {
+          "cloud": "Bude použit veřejný SMTP server Cotton Cloud. Je bezpečný a zdarma. Pokud si nejste jisti, zvolte tuto možnost.",
+          "custom": "Nakonfigurujte vlastní SMTP server pro odesílání e-mailových oznámení.",
+          "none": "Nejjednodušší možnost, ale nebudete moci ani obnovit heslo."
+        }
+      },
+      "emailConfig": {
+        "title": "Konfigurace SMTP serveru",
+        "subtitle": "Zadejte údaje vašeho SMTP serveru.",
+        "fields": {
+          "smtpServer": "SMTP server",
+          "port": "Port",
+          "username": "Uživatelské jméno",
+          "password": "Heslo",
+          "fromAddress": "Adresa odesílatele",
+          "useSSL": "Použít SSL/TLS"
+        },
+        "placeholders": {
+          "smtpServer": "smtp.example.com",
+          "port": "587",
+          "username": "vy@example.com",
+          "password": "Vaše heslo",
+          "fromAddress": "noreply@example.com",
+          "useSSL": "Povolit šifrování SSL/TLS"
+        }
+      },
+      "telemetry": {
+        "title": "Povolit odesílání statistik?",
+        "subtitle": "Tato data nám pomáhají vylepšovat produkt a jsou záměrně minimální. Je to jeden z mála způsobů, jak projekt podpořit automatickou zpětnou vazbou, a pomáhá nám pochopit, jak si Cotton Cloud vede na různých systémech a konfiguracích.",
+        "options": {
+          "allow": "Ano, odesílat",
+          "deny": "Ne, neodesílat"
+        },
+        "descriptions": {
+          "allow": "Odesílat minimální diagnostiku pro zpětnou vazbu k software a opravy chyb.",
+          "deny": "Je to vaše volba."
+        },
+        "disabledTooltip": "Pro vypnutí telemetrie musíte vypnout tyto služby:"
+      },
+      "geoIpLookup": {
+        "title": "Překládat IP adresy?",
+        "subtitle": "Cotton dokáže IP adresy převést na názvy měst a zemí. To lze využít například v bezpečnostních oznámeních, aby bylo vidět, odkud bylo přihlášení provedeno, a pro odhalení neobvyklých přístupů.",
+        "options": {
+          "disabled": "Ne, ponechat vypnuté",
+          "cottonCloud": "Použít cloudovou službu",
+          "local": "Použít GeoIP Light lokálně",
+          "custom": "Použít vlastní resolver"
+        },
+        "descriptions": {
+          "disabled": "Nebude prováděno žádné vyhledávání polohy. Funkce, které mohou zobrazovat polohu přihlášení, ponechají pouze hrubé IP adresy.",
+          "cottonCloud": "Překládat IP adresy přes poskytovatele Cotton. Vyžaduje zapnutou telemetrii.",
+          "local": "Překládat IP adresy na vašem serveru pomocí lokální databáze/balíčku GeoIP Light.",
+          "custom": "Vložte URL vlastní služby. Cotton se pokusí automaticky extrahovat pole související s polohou z JSON."
+        }
+      },
+      "customGeoIpLookupUrl": {
+        "title": "Vlastní resolver IP",
+        "subtitle": "Zadejte HTTP endpoint, který vrací zemi, region a město jako JSON.",
+        "fields": {
+          "url": "URL pro vyhledávání"
+        },
+        "placeholders": {
+          "url": "https://geo.example.com/lookup/{ip}"
+        }
+      },
+      "ai": {
+        "title": "AI a výpočty",
+        "subtitle": "Vyberte, kde se budou provádět výpočty AI pro vyhledávání, rozpoznávání a další funkce.",
+        "options": {
+          "local": "Lokální výpočty",
+          "runner": "Vlastní GPU runner",
+          "cloud": "Výpočty Cotton Cloud"
+        },
+        "descriptions": {
+          "local": "Pomalé, většina náročných funkcí je vypnuta a kvalita modelu je zjednodušena. Kvalita je však stále výborná – víc než dostatečná pro jakékoli úlohy.",
+          "runner": "Připojte samostatný GPU runner pro výpočty. Rychlé, vysoce kvalitní – nejlepší modely a podpora všech funkcí.",
+          "cloud": "Optimální rovnováha, ale může mít omezení. Neuvěřitelná štědrost zdarma. Vyžaduje připojení k internetu."
+        }
+      },
+      "timezone": {
+        "title": "Časové pásmo",
+        "subtitle": "Vyberte své časové pásmo, abyste nebyli v noci rušeni oznámeními a hlukem disků. Toto se týká pouze serverových úloh; webové rozhraní bude vždy zobrazovat časy ve vašem místním pásmu."
+      },
+      "storageSpace": {
+        "title": "Kolik prostoru chcete aplikaci dát?",
+        "subtitle": "To nám pomůže optimalizovat využití disku.",
+        "options": {
+          "all": "Vše, co máte",
+          "economical": "Úspora místa",
+          "unknown": "Nevím, pokračujme",
+          "optimal": "Optimální"
+        },
+        "descriptions": {
+          "all": "Využít veškeré dostupné místo pro maximální výkon.",
+          "economical": "Agresivní úspora místa, komprese a deduplikace.",
+          "unknown": "Zvolí pro vás optimální nastavení."
+        }
+      },
+      "importSources": {
+        "title": "Chcete něco naimportovat?",
+        "subtitle": "Vyberte zdroje, ze kterých chcete migrovat data.",
+        "options": {
+          "webdav": "WebDAV",
+          "none": "Nic"
+        }
+      },
+      "nextcloudConfig": {
+        "title": "Nastavení importu z Nextcloud",
+        "subtitle": "Zadejte přihlašovací údaje pro připojení k Nextcloud.",
+        "fields": {
+          "serverUrl": "URL serveru",
+          "username": "Uživatelské jméno",
+          "password": "Heslo"
+        },
+        "placeholders": {
+          "serverUrl": "https://nextcloud.example.com",
+          "username": "Vaše uživatelské jméno",
+          "password": "Vaše heslo"
+        }
+      },
+      "webdavConfig": {
+        "title": "Nastavení importu z WebDAV",
+        "subtitle": "Zadejte přihlašovací údaje pro připojení k WebDAV serveru.",
+        "fields": {
+          "serverUrl": "URL serveru",
+          "username": "Uživatelské jméno",
+          "password": "Heslo"
+        },
+        "placeholders": {
+          "serverUrl": "https://webdav.example.com",
+          "username": "Vaše uživatelské jméno",
+          "password": "Vaše heslo"
+        }
+      }
+    },
+    "common": {
+      "author": "Vadim Belov"
+    }
+  },
+  "onboarding": {
+    "skip": "Začít",
+    "features": {
+      "cloud": {
+        "title": "Váš osobní cloud",
+        "description": "Ukládejte a synchronizujte své soubory bezpečně mezi všemi zařízeními"
+      },
+      "storage": {
+        "title": "Neomezené úložiště",
+        "description": "S flexibilními možnostmi úložiště se nemusíte bát, že vám dojde místo"
+      },
+      "security": {
+        "title": "Bankovní úroveň zabezpečení",
+        "description": "Vaše data jsou šifrována a chráněna zabezpečením na špičkové úrovni"
+      },
+      "speed": {
+        "title": "Bleskově rychlé",
+        "description": "Užijte si bleskově rychlé nahrávání a stahování s optimalizovaným výkonem"
+      }
+    }
+  },
+  "home": {
+    "title": "Domů",
+    "layoutLabelWithValue": "Rozložení: {{name}}",
+    "layoutLabelEmpty": "Rozložení: —",
+    "loading": {
+      "title": "Načítání",
+      "caption": "Načítání statistik rozložení…"
+    },
+    "refreshing": "Obnovování…",
+    "cards": {
+      "folders": {
+        "title": "Složky",
+        "caption": "Celkový počet složek ve vašem cloudu",
+        "layoutTitle": "Rozložení",
+        "layoutCaption": "Aktuální výchozí rozložení"
+      },
+      "files": {
+        "title": "Soubory",
+        "caption": "Celkový počet souborů ve všech složkách"
+      },
+      "data": {
+        "title": "Data",
+        "caption": "Celková velikost všech vašich souborů"
+      },
+      "recentFiles": {
+        "title": "Nedávné soubory",
+        "empty": "Žádné nedávné soubory"
+      }
+    }
+  },
+  "files": {
+    "title": "Soubory",
+    "errors": {
+      "resolveRootFailed": "Nepodařilo se určit kořenovou složku",
+      "loadContentsFailed": "Načtení obsahu složky se nezdařilo",
+      "createFolderFailed": "Vytvoření složky se nezdařilo",
+      "deleteFolderFailed": "Smazání složky se nezdařilo",
+      "renameFolderFailed": "Přejmenování složky se nezdařilo",
+      "duplicateFolderName": "Složka s tímto názvem již existuje"
+    },
+    "move": {
+      "cut": "Vyjmout",
+      "pasteHere_one": "Vložit sem {{count}} položku",
+      "pasteHere_few": "Vložit sem {{count}} položky",
+      "pasteHere_many": "Vložit sem {{count}} položky",
+      "pasteHere_other": "Vložit sem {{count}} položek",
+      "toasts": {
+        "cut_one": "Vyjmuta {{count}} položka",
+        "cut_few": "Vyjmuty {{count}} položky",
+        "cut_many": "Vyjmuto {{count}} položky",
+        "cut_other": "Vyjmuto {{count}} položek",
+        "moved_one": "Přesunuta {{count}} položka",
+        "moved_few": "Přesunuty {{count}} položky",
+        "moved_many": "Přesunuto {{count}} položky",
+        "moved_other": "Přesunuto {{count}} položek",
+        "failed_one": "Přesunutí {{count}} položky se nezdařilo",
+        "failed_few": "Přesunutí {{count}} položek se nezdařilo",
+        "failed_many": "Přesunutí {{count}} položky se nezdařilo",
+        "failed_other": "Přesunutí {{count}} položek se nezdařilo"
+      }
+    },
+    "loading": {
+      "title": "Načítání",
+      "caption": "Načítání obsahu složky…"
+    },
+    "uploadDrop": {
+      "scanning": {
+        "title": "Skenování souborů…"
+      },
+      "preparing": {
+        "title": "Příprava nahrávání…",
+        "mapping": {
+          "title": "Příprava nahrávání…"
+        },
+        "folders": {
+          "title": "Vytváření složek…"
+        },
+        "conflicts": {
+          "title": "Kontrola konfliktů…"
+        },
+        "enqueue": {
+          "title": "Spouštění nahrávání…"
+        }
+      },
+      "caption": "Nalezeno {{count}} souborů",
+      "captionFound": "Nalezeno {{count}} souborů",
+      "captionProgress": "{{processed}} / {{total}}",
+      "toasts": {
+        "noneCopied": "Žádné soubory nebyly nahrány (vše bylo přeskočeno).",
+        "someItemsSkipped_one": "Přeskočena {{count}} položka, kterou nebylo možné přečíst.",
+        "someItemsSkipped_few": "Přeskočeny {{count}} položky, které nebylo možné přečíst.",
+        "someItemsSkipped_many": "Přeskočeno {{count}} položky, kterou nebylo možné přečíst.",
+        "someItemsSkipped_other": "Přeskočeno {{count}} položek, které nebylo možné přečíst.",
+        "someItemsSkippedWithExamples_one": "Přeskočena {{count}} položka (např. {{examples}}).",
+        "someItemsSkippedWithExamples_few": "Přeskočeny {{count}} položky (např. {{examples}}).",
+        "someItemsSkippedWithExamples_many": "Přeskočeno {{count}} položky (např. {{examples}}).",
+        "someItemsSkippedWithExamples_other": "Přeskočeno {{count}} položek (např. {{examples}}).",
+        "more_one": " +{{count}} další",
+        "more_few": " +{{count}} další",
+        "more_many": " +{{count}} dalšího",
+        "more_other": " +{{count}} dalších",
+        "vaultLocked": "Šifrovaná nahrávání vyžadují nejprve odemčení šifrovacího trezoru."
+      },
+      "errors": {
+        "dropFailed": "Zpracování přetažených položek se nezdařilo. Zkuste to prosím znovu."
+      }
+    },
+    "refreshing": "Obnovování…",
+    "actions": {
+      "upload": "Nahrát",
+      "newFolder": "Nová složka",
+      "folderNamePlaceholder": "Název složky",
+      "goToFolder": "Přejít do složky",
+      "goUp": "O úroveň výš",
+      "dropFiles": "Přetáhněte soubory k nahrání",
+      "switchToTilesView": "Přepnout na dlaždice",
+      "switchToListView": "Přepnout na seznam",
+      "switchToTableView": "Přepnout na tabulku",
+      "switchToSmallTilesView": "Malé dlaždice",
+      "switchToMediumTilesView": "Střední dlaždice",
+      "switchToLargeTilesView": "Velké dlaždice"
+    },
+    "breadcrumbs": {
+      "ariaLabel": "Drobečková navigace",
+      "root": "Soubory"
+    },
+    "empty": {
+      "all": "Tato složka je prázdná"
+    },
+    "selection": {
+      "enter": "Režim výběru",
+      "exit": "Ukončit výběr",
+      "selectAll": "Vybrat vše",
+      "deselectAll": "Zrušit výběr",
+      "deleteSelected": "Smazat vybrané",
+      "downloadSelected": "Stáhnout vybrané",
+      "downloadFailed": "Archiv se nepodařilo připravit.",
+      "count_one": "Vybrána {{count}} položka",
+      "count_few": "Vybrány {{count}} položky",
+      "count_many": "Vybráno {{count}} položky",
+      "count_other": "Vybráno {{count}} položek"
+    },
+    "deleteSelected": {
+      "confirmTitle_one": "Smazat {{count}} položku?",
+      "confirmTitle_few": "Smazat {{count}} položky?",
+      "confirmTitle_many": "Smazat {{count}} položky?",
+      "confirmTitle_other": "Smazat {{count}} položek?",
+      "confirmDescription": "Vybrané položky budou přesunuty do koše a lze je později obnovit."
+    },
+    "conflicts": {
+      "title": "Soubor již existuje",
+      "description": "V této složce již existuje soubor s tímto názvem. Nahrát jako {{newName}}?",
+      "skip": "Přeskočit",
+      "skipAll": "Přeskočit vše"
+    },
+    "deleteFolder": {
+      "confirmTitle": "Smazat složku \"{{name}}\"?",
+      "confirmDescription": "Složka bude přesunuta do koše a lze ji později obnovit."
+    },
+    "deleteFile": {
+      "confirmTitle": "Smazat soubor \"{{name}}\"?",
+      "confirmDescription": "Bude přesunut do koše a lze jej později obnovit."
+    },
+    "stats": {
+      "summary": "{{folders}} složek • {{files}} souborů • {{size}}"
+    },
+    "rename": {
+      "fileNamePlaceholder": "Název souboru"
+    },
+    "share": {
+      "copied": "Odkaz ke sdílení zkopírován: {{name}}",
+      "shared": "Sdílení: {{name}}",
+      "folderCopied": "Odkaz na složku zkopírován: {{name}}",
+      "folderShared": "Sdílení složky: {{name}}",
+      "message": "Podívejte se na \"{{name}}\" v Cotton Cloud",
+      "folderMessage": "Podívejte se na složku \"{{name}}\" v Cotton Cloud",
+      "errors": {
+        "link": "Vygenerování odkazu ke sdílení se nezdařilo.",
+        "token": "Extrakce tokenu ke sdílení se nezdařila.",
+        "copy": "Zkopírování odkazu do schránky se nezdařilo."
+      }
+    },
+    "preview": {
+      "actions": {
+        "edit": "Upravit",
+        "save": "Uložit",
+        "saving": "Ukládání..."
+      },
+      "editorModes": {
+        "text": {
+          "label": "Text",
+          "description": "Prostý text se zachovaným formátováním"
+        },
+        "markdown": {
+          "label": "Markdown",
+          "description": "Markdown s náhledem"
+        },
+        "code": {
+          "label": "Kód",
+          "description": "Editor kódu se zvýrazněním syntaxe"
+        }
+      },
+      "pdf": {
+        "loading": {
+          "link": "Získávání odkazu...",
+          "download": "Stahování PDF...",
+          "render": "Vykreslování PDF..."
+        }
+      },
+      "model": {
+        "loading": "Načítání 3D modelu...",
+        "actions": {
+          "autoAlign": "Zarovnat k podlaze",
+          "autoOrient": "Automatická orientace",
+          "cycleLighting": "Osvětlení: {{preset}}",
+          "cycleSurface": "Povrch: {{preset}}",
+          "flipModel": "Otočit model",
+          "resetColor": "Použít původní barvy",
+          "toggleShadows": "Stíny: {{state}}",
+          "togglePalette": "Barevná paleta"
+        },
+        "lighting": {
+          "balanced": "Vyvážené",
+          "studio": "Studiové",
+          "dramatic": "Dramatické"
+        },
+        "surface": {
+          "original": "Původní",
+          "matte": "Matný",
+          "glossy": "Lesklý",
+          "metal": "Kov",
+          "satin": "Saténový",
+          "smooth": "Hladký"
+        },
+        "states": {
+          "on": "Zapnuto",
+          "off": "Vypnuto"
+        }
+      },
+      "language": {
+        "label": "Jazyk"
+      },
+      "mediaQuality": {
+        "previewMode": "Režim: náhled",
+        "originalMode": "Režim: originál",
+        "switchToOriginal": "Přepnout na originál",
+        "switchToPreview": "Přepnout na náhled"
+      },
+      "video": {
+        "transcodeNotice": "Připravujeme toto video pro přehrávání v prohlížeči. První spuštění nebo přetočení může chvíli trvat.",
+        "transcodeError": "Tento prohlížeč nedokáže přehrát připravený video stream."
+      },
+      "errors": {
+        "loadFailed": "Načtení souboru se nezdařilo{{error}}",
+        "saveFailed": "Uložení obsahu souboru se nezdařilo",
+        "downloadFailed": "Stažení se nezdařilo",
+        "pdfLoadFailed": "Načtení PDF se nezdařilo",
+        "pdfDisplayFailed": "Zobrazení PDF se nezdařilo",
+        "modelLoadFailed": "Načtení 3D modelu se nezdařilo",
+        "modelUnsupportedType": "Tento formát 3D souboru není pro náhled v prohlížeči podporován",
+        "pdfTooLarge": "PDF je pro náhled příliš velké ({{size}}). Maximální velikost je {{maxSize}}. Pro zobrazení jej prosím stáhněte.",
+        "fileTooLarge": "Soubor je pro náhled příliš velký ({{size}}). Maximální velikost pro textový náhled je {{maxSize}}. Pro zobrazení jej prosím stáhněte."
+      }
+    },
+    "actionsTitle": "Akce",
+    "size": "Velikost",
+    "name": "Název",
+    "location": "Umístění",
+    "noFilesOrFolders": "Žádné soubory ani složky",
+    "clientEncryption": {
+      "enablePolicy": "Zapnout E2E",
+      "disablePolicy": "Vypnout E2E",
+      "unlockDialog": {
+        "title": "Odemknout klientské šifrování",
+        "currentTitle": "Tato složka je šifrovaná",
+        "goHome": "Domů"
+      },
+      "mixedPlain": {
+        "title": "Některé soubory nejsou E2E šifrované",
+        "description_one": "{{count}} existující soubor je stále uložen bez E2E šifrování.",
+        "description_few": "{{count}} existující soubory jsou stále uloženy bez E2E šifrování.",
+        "description_many": "{{count}} existujícího souboru je stále uloženo bez E2E šifrování.",
+        "description_other": "{{count}} existujících souborů je stále uloženo bez E2E šifrování.",
+        "toast_one": "{{count}} soubor v této složce není E2E šifrovaný.",
+        "toast_few": "{{count}} soubory v této složce nejsou E2E šifrované.",
+        "toast_many": "{{count}} souboru v této složce není E2E šifrováno.",
+        "toast_other": "{{count}} souborů v této složce není E2E šifrováno.",
+        "action": "Zašifrovat",
+        "running": "Šifrování"
+      },
+      "movedEncrypted": {
+        "toast_one": "{{count}} šifrovaný soubor byl přesunut do složky bez automatického E2E.",
+        "toast_few": "{{count}} šifrované soubory byly přesunuty do složky bez automatického E2E.",
+        "toast_many": "{{count}} šifrovaného souboru bylo přesunuto do složky bez automatického E2E.",
+        "toast_other": "{{count}} šifrovaných souborů bylo přesunuto do složky bez automatického E2E.",
+        "action": "Dešifrovat"
+      },
+      "encryptedFilesRemain": {
+        "title": "Šifrované soubory zůstávají šifrované",
+        "description_one": "{{count}} soubor zůstává šifrovaný, i když se nová nahrávání již automaticky nešifrují.",
+        "description_few": "{{count}} soubory zůstávají šifrované, i když se nová nahrávání již automaticky nešifrují.",
+        "description_many": "{{count}} souboru zůstává šifrovaného, i když se nová nahrávání již automaticky nešifrují.",
+        "description_other": "{{count}} souborů zůstává šifrovaných, i když se nová nahrávání již automaticky nešifrují.",
+        "toast_one": "{{count}} šifrovaný soubor zůstává v této složce.",
+        "toast_few": "{{count}} šifrované soubory zůstávají v této složce.",
+        "toast_many": "{{count}} šifrovaného souboru zůstává v této složce.",
+        "toast_other": "{{count}} šifrovaných souborů zůstává v této složce.",
+        "action": "Dešifrovat"
+      },
+      "toasts": {
+        "policyEnabled": "Nová nahrávání do této složky budou na tomto zařízení šifrována.",
+        "policyDisabled": "Nová nahrávání do této složky již nebudou automaticky šifrována.",
+        "policyToggleFailed": "Zásady šifrování se nepodařilo aktualizovat.",
+        "setupRequired": "Před otevřením této složky nastavte klientské šifrování.",
+        "unlockRequired": "Nejprve odemkněte klientské šifrování.",
+        "encryptExistingComplete_one": "Zašifrován {{count}} existující soubor.",
+        "encryptExistingComplete_few": "Zašifrovány {{count}} existující soubory.",
+        "encryptExistingComplete_many": "Zašifrováno {{count}} existujícího souboru.",
+        "encryptExistingComplete_other": "Zašifrováno {{count}} existujících souborů.",
+        "encryptExistingFailed_one": "Nepodařilo se zašifrovat {{count}} soubor. Zkontrolujte panel úloh.",
+        "encryptExistingFailed_few": "Nepodařilo se zašifrovat {{count}} soubory. Zkontrolujte panel úloh.",
+        "encryptExistingFailed_many": "Nepodařilo se zašifrovat {{count}} souboru. Zkontrolujte panel úloh.",
+        "encryptExistingFailed_other": "Nepodařilo se zašifrovat {{count}} souborů. Zkontrolujte panel úloh.",
+        "decryptExistingComplete_one": "Dešifrován {{count}} soubor.",
+        "decryptExistingComplete_few": "Dešifrovány {{count}} soubory.",
+        "decryptExistingComplete_many": "Dešifrováno {{count}} souboru.",
+        "decryptExistingComplete_other": "Dešifrováno {{count}} souborů.",
+        "decryptExistingFailed_one": "Nepodařilo se dešifrovat {{count}} soubor. Zkontrolujte panel úloh.",
+        "decryptExistingFailed_few": "Nepodařilo se dešifrovat {{count}} soubory. Zkontrolujte panel úloh.",
+        "decryptExistingFailed_many": "Nepodařilo se dešifrovat {{count}} souboru. Zkontrolujte panel úloh.",
+        "decryptExistingFailed_other": "Nepodařilo se dešifrovat {{count}} souborů. Zkontrolujte panel úloh."
+      }
+    }
+  },
+  "tasks": {
+    "title": "Úlohy",
+    "error": "Chyba",
+    "errors": {
+      "serverSettingsNotLoaded": "Nastavení serveru není načteno",
+      "uploadFailed": "Nahrávání selhalo",
+      "storageQuotaExceeded": "Nedostatek místa v úložišti. K dispozici: {{available}}.",
+      "encryptionVaultLocked": "Šifrovací trezor je uzamčen",
+      "encryptionFailed": "Šifrování selhalo",
+      "decryptionFailed": "Dešifrování selhalo",
+      "clientEncryptionFileTooLarge": "Tento soubor je pro aktuální zpracování šifrovaných souborů příliš velký. Limit: {{maxSize}}."
+    },
+    "titleWithTotal": "Úlohy ({{total}})",
+    "titleWithProgress": "Úlohy ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithErrors": "Úlohy ({{total}} • {{failed}} selhalo)",
+    "actions": {
+      "expand": "Rozbalit",
+      "collapse": "Sbalit",
+      "close": "Zavřít",
+      "clearFinished": "Vymazat dokončené"
+    },
+    "status": {
+      "queued": "Ve frontě",
+      "running": "Probíhá",
+      "finalizing": "Dokončování",
+      "completed": "Dokončeno",
+      "failed": "Selhalo"
+    }
+  },
+  "trash": {
+    "title": "Koš",
+    "loading": {
+      "title": "Načítání koše...",
+      "caption": "Počkejte prosím, načítáme obsah koše."
+    },
+    "error": "Načtení obsahu koše se nezdařilo",
+    "empty": "Koš je prázdný",
+    "actions": {
+      "goUp": "O úroveň výš",
+      "trashRoot": "Kořen koše",
+      "switchToList": "Přepnout na seznam",
+      "switchToTiles": "Přepnout na dlaždice",
+      "switchToListView": "Přepnout na seznam",
+      "switchToTilesView": "Přepnout na dlaždice",
+      "switchToTableView": "Přepnout na tabulku",
+      "switchToSmallTilesView": "Malé dlaždice",
+      "switchToMediumTilesView": "Střední dlaždice",
+      "switchToLargeTilesView": "Velké dlaždice",
+      "emptyTrash": "Vysypat koš"
+    },
+    "breadcrumbs": {
+      "root": "Koš"
+    },
+    "stats": {
+      "summary": "{{folders}} složek, {{files}} souborů, {{size}}"
+    },
+    "deleteFolderForever": {
+      "confirmTitle": "Smazat složku \"{{name}}\"?",
+      "confirmDescription": "Tuto akci nelze vrátit zpět. Veškerý obsah složky bude smazán."
+    },
+    "deleteFile": {
+      "confirmTitle": "Smazat soubor \"{{name}}\"?",
+      "confirmDescription": "Tuto akci nelze vrátit zpět."
+    },
+    "deleteFileForever": {
+      "confirmTitle": "Smazat soubor \"{{name}}\"?",
+      "confirmDescription": "Tuto akci nelze vrátit zpět."
+    },
+    "deleteSelectedForever": {
+      "confirmTitle_one": "Smazat {{count}} položku natrvalo?",
+      "confirmTitle_few": "Smazat {{count}} položky natrvalo?",
+      "confirmTitle_many": "Smazat {{count}} položky natrvalo?",
+      "confirmTitle_other": "Smazat {{count}} položek natrvalo?",
+      "confirmDescription": "Tuto akci nelze vrátit zpět. Vybrané položky budou navždy smazány."
+    },
+    "emptyTrash": {
+      "confirmTitle": "Vysypat koš?",
+      "confirmDescription": "Tuto akci nelze vrátit zpět. Všechny položky v koši budou trvale smazány.",
+      "inProgress": "Mazání {{current}} z {{total}} položek...",
+      "completed": "Koš byl úspěšně vysypán"
+    },
+    "restore": {
+      "action": "Obnovit",
+      "inProgress": "Obnovování {{current}} z {{total}}: {{name}}",
+      "failed": "Obnovení \"{{name}}\" se nezdařilo",
+      "notRestorable": "Položku nelze obnovit.",
+      "rootFolder": "kořenovou složku",
+      "confirm": {
+        "title": "Obnovit položku?",
+        "description": "\"{{name}}\" bude obnoveno do \"{{path}}\".",
+        "confirm": "Obnovit"
+      },
+      "applyToAll": "Použít tuto volbu na zbývající položky",
+      "skip": "Přeskočit",
+      "parentMissing": {
+        "title": "Cílové umístění chybí",
+        "description": "\"{{name}}\" bylo smazáno z \"{{path}}\", ale tato složka již neexistuje. Vytvořit chybějící cestu a obnovit tam?",
+        "confirm": "Vytvořit a obnovit"
+      },
+      "conflict": {
+        "title": "Položka již existuje",
+        "description": "\"{{name}}\" koliduje s existující {{kind}} s názvem \"{{conflictName}}\". Přesunout existující položku do koše a obnovit tuto?",
+        "confirm": "Nahradit",
+        "folderKind": "složkou",
+        "fileKind": "souborem"
+      }
+    }
+  },
+  "admin": {
+    "title": "Správa",
+    "menu": {
+      "navigate": "Sekce",
+      "users": "Uživatelé",
+      "usersAndGroups": "Uživatelé a skupiny",
+      "generalSettings": "Obecná nastavení",
+      "privacySettings": "Soukromí a bezpečnost",
+      "storageSettings": "Úložiště",
+      "storageAndStatistics": "Úložiště a statistiky",
+      "notificationsSettings": "Oznámení",
+      "databaseBackup": "Záloha databáze",
+      "storageStatistics": "Statistiky úložiště",
+      "securityDiagnostics": "Kontrola zabezpečení",
+      "groups": "Skupiny"
+    },
+    "roles": {
+      "user": "Uživatel",
+      "admin": "Administrátor",
+      "unknown": "Neznámá"
+    },
+    "users": {
+      "title": "Uživatelé",
+      "refresh": "Obnovit",
+      "loading": "Načítání uživatelů...",
+      "empty": "Žádní uživatelé",
+      "columns": {
+        "username": "Uživatelské jméno",
+        "email": "E-mail",
+        "role": "Role",
+        "firstName": "Jméno",
+        "lastName": "Příjmení",
+        "birthDate": "Datum narození",
+        "totp": "2FA",
+        "sessions": "Relace",
+        "storageUsed": "Využité úložiště",
+        "lastActivity": "Poslední aktivita",
+        "actions": "Akce"
+      },
+      "actions": {
+        "edit": "Upravit"
+      },
+      "errors": {
+        "loadFailed": "Načtení uživatelů se nezdařilo.",
+        "createFailed": "Vytvoření uživatele se nezdařilo.",
+        "updateFailed": "Aktualizace uživatele se nezdařila."
+      },
+      "create": {
+        "title": "Vytvořit uživatele",
+        "username": "Uživatelské jméno",
+        "email": "E-mail",
+        "password": "Heslo",
+        "role": "Role",
+        "firstName": "Jméno",
+        "lastName": "Příjmení",
+        "birthDate": "Datum narození",
+        "button": "Vytvořit",
+        "creating": "Vytváření...",
+        "success": "Uživatel byl vytvořen."
+      },
+      "edit": {
+        "title": "Upravit uživatele",
+        "save": "Uložit",
+        "saving": "Ukládání...",
+        "success": "Uživatel byl aktualizován."
+      },
+      "storageUsage": {
+        "calculating": "Výpočet využití úložiště"
+      }
+    },
+    "settings": {
+      "actions": {
+        "save": "Uložit",
+        "saving": "Ukládání...",
+        "close": "Zavřít"
+      },
+      "state": {
+        "saved": "Nastavení uloženo."
+      },
+      "errors": {
+        "loadFailed": "Načtení nastavení se nezdařilo.",
+        "saveFailed": "Uložení nastavení se nezdařilo."
+      },
+      "general": {
+        "title": "Obecná nastavení",
+        "description": "Základní chování serveru a vyhledávání polohy pro oznámení.",
+        "fields": {
+          "publicBaseUrl": "Veřejná základní URL",
+          "timezone": "Časové pásmo",
+          "telemetry": "Telemetrie",
+          "allowDeduplication": "Deduplikace mezi uživateli",
+          "allowGlobalIndexing": "Globální indexace",
+          "serverUsage": "Využití serveru",
+          "storageSpaceMode": "Režim prostoru úložiště",
+          "computionMode": "Režim výpočtů",
+          "geoIpLookupMode": "Režim překladu IP",
+          "customGeoIpLookupUrl": "URL vlastního překladu IP"
+        },
+        "validation": {
+          "required": "Toto pole je povinné.",
+          "publicBaseUrlInvalid": "Zadejte platnou základní URL HTTP nebo HTTPS bez přihlašovacích údajů, dotazu nebo hashe.",
+          "publicBaseUrlMismatch": "Aktuální adresa je {{current}}, ale generované veřejné odkazy budou používat {{configured}}. Před uložením této hodnoty buďte opatrní.",
+          "timezoneInvalid": "Vyberte ze seznamu platné časové pásmo IANA.",
+          "customGeoIpLookupUrlInvalid": "Zadejte platnou URL HTTP nebo HTTPS pro vyhledávání."
+        },
+        "help": {
+          "publicBaseUrl": "I přes toto nastavení Cotton téměř všude určuje veřejnou URL automaticky. Nastavte ji jen tehdy, když je automatická detekce nesprávná.",
+          "timezone": "Pomáhá nám neprovádět úlohy na pozadí, když spíte, aby vaše disky v noci nehlučely.",
+          "telemetry": "Cotton sbírá minimální technickou diagnostiku, aby vývojář mohl vidět chyby a opravovat je, protože ne každý problémy hlásí. Zapnutí telemetrie také odemyká cloudové služby ihned.",
+          "allowDeduplication": "Řídí, zda jeden uživatel může zjistit, že jiný uživatel již ukládá stejný soubor. Když je vypnuto, identická data jsou na serveru po nahrání stále deduplikována, ale jsou zbytečně nejprve přenášena. Když je zapnuto, jiný uživatel se může dozvědět, že někdo v tomto cloudu tento soubor již dříve nahrál. To je bezpečné pro rodinu a důvěryhodné přátele.",
+          "allowGlobalIndexing": "Umožňuje serveru dešifrovat uživatelské soubory a vytvořit hluboký vyhledávací index. Bez toho hledání používá pouze názvy souborů a složek.",
+          "serverUsage": "Optimalizuje doporučení funkcí a několik nastavení. Není to kritický parametr, takže zvolte, co vám vyhovuje."
+        },
+        "serverUsage": {
+          "Photos": "Fotografie",
+          "Documents": "Dokumenty",
+          "Media": "Média",
+          "Other": "Jiné"
+        },
+        "storageSpaceMode": {
+          "Optimal": "Vyvážený",
+          "Limited": "Šetřič místa",
+          "Unlimited": "Neomezený"
+        },
+        "storageSpaceHelp": {
+          "open": "Co ovlivňuje režim prostoru úložiště?",
+          "title": "Režim prostoru úložiště",
+          "description": "Tento režim určuje, jak agresivně Cotton používá a uvolňuje úložiště: načasování garbage collectionu, čištění neodkazovaných dat, opětovné využití cache/dat a kolik starých verzí souborů může zůstat dostupných. Kdykoli je soubor aktualizován, Cotton udržuje stínovou kopii tím, že si ponechá referenci na předchozí data souboru, dokud je čištění neodstraní. Neomezený režim uchovává data déle a uklízí převážně, když je potřeba místo; Šetřič místa uvolňuje úložiště dříve. Vyvážený zůstává mezi nimi."
+        },
+        "computionMode": {
+          "Local": "Lokální",
+          "Remote": "Vzdálený runner",
+          "Cloud": "Cotton Cloud",
+          "inDevelopment": "Tato funkce je stále ve vývoji."
+        },
+        "geoIpLookupMode": {
+          "Disabled": "Vypnuto",
+          "CottonCloud": "Cloudová služba",
+          "MaxMindLocal": "GeoIP Light",
+          "CustomHttp": "Vlastní HTTP"
+        },
+        "geoIpLookupModeDescription": {
+          "Disabled": "Nepřekládat IP adresy.",
+          "CottonCloud": "Překládat IP adresy přes poskytovatele Cotton. To lze využít funkcemi, jako jsou bezpečnostní oznámení.",
+          "MaxMindLocal": "Překládat IP adresy lokálně s databází/balíčkem GeoIP Light.",
+          "CustomHttp": "Vložte URL vlastní služby. Cotton se pokusí automaticky extrahovat pole související s polohou z JSON."
+        },
+        "actions": {
+          "testGeoIpProvider": "Otestovat poskytovatele"
+        },
+        "state": {
+          "geoIpTestPassed": "Test vlastního resolveru proběhl úspěšně."
+        },
+        "openSetupWizard": {
+          "title": "Otevřít průvodce nastavením",
+          "description": "Projděte si znovu úvodního průvodce nastavením.",
+          "button": "Otevřít"
+        }
+      },
+      "privacy": {
+        "title": "Soukromí a bezpečnost",
+        "description": "Ovlivňuje, jak data opouštějí server a jak lze přistupovat k uživatelským souborům pro sdílené funkce."
+      }
+    },
+    "storageSettings": {
+      "title": "Úložiště",
+      "description": "Nejprve nakonfigurujte přihlašovací údaje úložiště a poté přepněte aktivní backend úložiště.",
+      "fields": {
+        "storageType": "Backend úložiště"
+      },
+      "quota": {
+        "title": "Výchozí kvóta uživatele",
+        "description": "Omezuje, kolik unikátně nahraného obsahu může každý uživatel vlastnit. Pro neomezené účty ponechte prázdné.",
+        "fields": {
+          "defaultUserQuotaGiB": "Kvóta na uživatele, GiB"
+        },
+        "help": "Pro neomezené použijte 0 nebo nechte prázdné."
+      },
+      "template": {
+        "title": "Výchozí soubory",
+        "description": "Kopíruje obsah této složky do každého nově vytvořeného uživatelského účtu.",
+        "fields": {
+          "nodeId": "ID uzlu šablonové složky"
+        },
+        "help": "Pro vypnutí ponechte prázdné. Nastavte ID uzlu složky obsahující úvodní nebo ukázkové soubory."
+      },
+      "storageType": {
+        "Local": "Lokální disk",
+        "S3": "Úložiště kompatibilní s S3"
+      },
+      "s3": {
+        "title": "Konfigurace S3",
+        "fields": {
+          "endpoint": "URL endpointu",
+          "region": "Region",
+          "bucket": "Bucket",
+          "accessKey": "Přístupový klíč",
+          "secretKey": "Tajný klíč"
+        }
+      },
+      "actions": {
+        "saveS3": "Uložit konfiguraci S3",
+        "useLocal": "Použít lokální úložiště",
+        "useS3": "Uložit konfiguraci a použít S3"
+      },
+      "state": {
+        "s3Saved": "Konfigurace S3 uložena.",
+        "storageSaved": "Režim úložiště aktualizován."
+      },
+      "errors": {
+        "loadFailed": "Načtení nastavení úložiště se nezdařilo.",
+        "s3SaveFailed": "Uložení konfigurace S3 se nezdařilo.",
+        "storageSaveFailed": "Přepnutí režimu úložiště se nezdařilo.",
+        "quotaSaveFailed": "Uložení výchozí kvóty uživatele se nezdařilo.",
+        "templateSaveFailed": "Uložení šablony výchozích souborů se nezdařilo."
+      }
+    },
+    "notificationsSettings": {
+      "title": "Oznámení",
+      "description": "Nakonfigurujte, jak Cotton odesílá oznámení o účtu a zabezpečení.",
+      "fields": {
+        "emailMode": "Režim oznámení"
+      },
+      "emailMode": {
+        "None": "Vypnuto",
+        "Cloud": "Cotton Cloud Mail",
+        "Custom": "Vlastní SMTP"
+      },
+      "smtp": {
+        "title": "Konfigurace SMTP",
+        "fields": {
+          "smtpServer": "SMTP server",
+          "port": "Port",
+          "username": "Uživatelské jméno",
+          "password": "Heslo",
+          "fromAddress": "Adresa odesílatele",
+          "useSSL": "Použít SSL/TLS"
+        }
+      },
+      "actions": {
+        "saveSmtp": "Uložit konfiguraci SMTP",
+        "testSmtp": "Otestovat SMTP",
+        "saveMode": "Uložit režim e-mailu",
+        "saving": "Ukládání...",
+        "testSmtpShort": "Otestovat"
+      },
+      "state": {
+        "smtpSaved": "Konfigurace SMTP uložena.",
+        "testSent": "Testovací e-mail odeslán.",
+        "modeSaved": "Režim oznámení aktualizován."
+      },
+      "errors": {
+        "loadFailed": "Načtení nastavení oznámení se nezdařilo.",
+        "smtpSaveFailed": "Uložení konfigurace SMTP se nezdařilo.",
+        "testFailed": "Odeslání testovacího e-mailu se nezdařilo.",
+        "modeSaveFailed": "Uložení režimu oznámení se nezdařilo."
+      }
+    },
+    "databaseBackup": {
+      "title": "Záloha databáze",
+      "description": "Nejnovější manifest zálohy ze serveru.",
+      "actions": {
+        "refresh": "Obnovit",
+        "trigger": "Spustit zálohu",
+        "triggering": "Spouštění..."
+      },
+      "state": {
+        "loading": "Načítání informací o záloze...",
+        "empty": "Zatím nebyly nalezeny žádné zálohy.",
+        "triggerSuccess": "Úloha zálohování byla spuštěna.",
+        "restoreIfEmptyHint": "Pokud bude databáze ztracena a chcete, aby se obnovila automaticky, nastavte v prostředí kontejneru COTTON_RESTORE_DATABASE_IF_EMPTY=true. Aby to fungovalo, musí být databáze prázdná, bez jakýchkoli tabulek."
+      },
+      "fields": {
+        "backupId": "ID zálohy",
+        "createdAtUtc": "Vytvořeno",
+        "pointerUpdatedAtUtc": "Aktualizace ukazatele",
+        "dumpSizeBytes": "Velikost dumpu",
+        "chunkCount": "Počet bloků",
+        "dumpContentHash": "Hash obsahu dumpu",
+        "sourceDatabase": "Zdrojová databáze",
+        "sourceHost": "Zdrojový host",
+        "sourcePort": "Zdrojový port"
+      },
+      "errors": {
+        "loadFailed": "Načtení informací o záloze se nezdařilo.",
+        "triggerFailed": "Spuštění zálohy se nezdařilo."
+      }
+    },
+    "storageStatistics": {
+      "title": "Statistiky úložiště",
+      "description": "Aktuální využití úložiště a časová osa naplánovaných uvolnění GC.",
+      "actions": {
+        "refresh": "Obnovit",
+        "triggerGc": "Spustit GC",
+        "triggeringGc": "Spouštění..."
+      },
+      "bucket": {
+        "hour": "Hodina",
+        "day": "Den"
+      },
+      "state": {
+        "loading": "Načítání statistik úložiště...",
+        "empty": "Ve vybraném období nejsou naplánovány žádné dávky GC.",
+        "triggerGcSuccess": "Úloha garbage collectoru byla spuštěna."
+      },
+      "summary": {
+        "fromUtc": "Od",
+        "toUtc": "Do",
+        "totalChunks": "Celkem bloků k uvolnění",
+        "totalSizeBytes": "Celková velikost k uvolnění",
+        "generatedAtUtc": "Vygenerováno"
+      },
+      "storage": {
+        "title": "Celkové využití úložiště",
+        "fields": {
+          "storageType": "Typ úložiště",
+          "totalUniqueChunkCount": "Celkem unikátních bloků",
+          "totalUniqueChunkPlainSizeBytes": "Celková nezkomprimovaná velikost (unikátní)",
+          "totalUniqueChunkStoredSizeBytes": "Celková uložená velikost (unikátní)",
+          "referencedUniqueChunkCount": "Odkazované unikátní bloky",
+          "referencedLogicalChunkCount": "Odkazované logické bloky",
+          "deduplicatedUniqueChunkCount": "Deduplikované unikátní bloky",
+          "dedupSavedBytes": "Uspořeno deduplikací",
+          "compressionSavedBytes": "Uspořeno kompresí",
+          "pendingGcChunkCount": "Bloky čekající na GC",
+          "pendingGcStoredSizeBytes": "Uložená velikost čekající na GC",
+          "overdueGcChunkCount": "Zpožděné bloky GC",
+          "overdueGcStoredSizeBytes": "Zpožděná uložená velikost GC"
+        }
+      },
+      "timeline": {
+        "title": "Časová osa uvolnění GC",
+        "columns": {
+          "bucketStartUtc": "Čas uvolnění",
+          "chunkCount": "Bloky",
+          "sizeBytes": "Velikost"
+        }
+      },
+      "errors": {
+        "loadFailed": "Načtení statistik úložiště se nezdařilo.",
+        "triggerGcFailed": "Spuštění garbage collectoru se nezdařilo."
+      }
+    },
+    "securityDiagnostics": {
+      "title": "Kontrola zabezpečení",
+      "description": "Serverové kontroly hygieny účtu, zacházení s hlavním klíčem a expozice paměti procesu.",
+      "errors": {
+        "loadFailed": "Načtení diagnostiky zabezpečení se nezdařilo."
+      },
+      "severity": {
+        "critical": "Kritické",
+        "warning": "Varování",
+        "info": "Informace"
+      },
+      "levels": {
+        "strong": {
+          "title": "Silná úroveň",
+          "summary": "Tato instance má očekávané produkční zpevnění. Hodí se pro veřejné nasazení, pokud zároveň důvěřujete hostiteli a zálohám."
+        },
+        "good": {
+          "title": "Dobrá výchozí úroveň pro self-hosting",
+          "summary": "Toto je dobré pro rodinu nebo malý tým. Zbývající položky jsou převážně provozní zpevnění a hygiena účtu."
+        },
+        "home": {
+          "title": "Úroveň pro domácí použití",
+          "summary": "Toto je rozumné pro domácí a každodenní použití, ale nepovažujte hostitele za nepřátelského. Kompromitace serveru může i tak odhalit klíče nebo administrátorský přístup."
+        },
+        "exposed": {
+          "title": "Zůstávají praktické cesty útoku",
+          "summary": "Instance má problémy, které by lokální útočník, kompromitovaný kontejner nebo ukradené heslo administrátora mohly reálně využít."
+        },
+        "unsafe": {
+          "title": "Nebezpečné pro citlivá data",
+          "summary": "Před uložením cenných soukromých dat opravte kritická varování. Na této úrovni může být hlavní klíč nebo administrátorská kontrola příliš snadno dosažitelná."
+        }
+      },
+      "chips": {
+        "publicInstance": "Veřejná instance",
+        "privateInstance": "Soukromá instance",
+        "envKey": "Klíč z prostředí",
+        "memoryUnlock": "Odemčení v paměti",
+        "adminTotp": "{{withTotp}}/{{total}} administrátorů má 2FA"
+      },
+      "sections": {
+        "risks": "Vektory hrozeb",
+        "instance": "Instance a účty",
+        "masterKey": "Hlavní klíč",
+        "memory": "Expozice paměti procesu",
+        "runtime": "Fakta o běhovém prostředí"
+      },
+      "risks": {
+        "empty": "Aktuální serverové kontroly neodhalily žádná varování."
+      },
+      "fields": {
+        "publicInstance": "Veřejná registrace",
+        "admins": "Administrátoři s 2FA",
+        "adminsWithoutTotp": "Administrátoři bez 2FA",
+        "masterKeySource": "Zdroj",
+        "envWasConfigured": "Proměnná prostředí nakonfigurována",
+        "envPresent": "Proměnná prostředí stále přítomna",
+        "dotnetDiagnostics": ".NET diagnostika vypnuta",
+        "processHardening": "Zpevnění procesu aplikováno",
+        "dumpable": "Stav dumpovatelnosti",
+        "sysPtrace": "CAP_SYS_PTRACE",
+        "os": "Operační systém",
+        "container": "Detekován kontejner",
+        "euid": "Efektivní UID",
+        "noNewPrivileges": "Žádná nová oprávnění",
+        "seccomp": "Režim Seccomp",
+        "capabilities": "Efektivní schopnosti"
+      },
+      "values": {
+        "unknown": "Neznámé",
+        "yes": "Ano",
+        "no": "Ne",
+        "notDumpable": "Nelze dumpovat",
+        "dumpable": "Lze dumpovat"
+      },
+      "threatVectors": {
+        "public-instance": "Návštěvníci z internetu si mohou vytvářet účty a ukládat obsah. Součástí bezpečnostní hranice se stávají kvóty, výchozí demo data a monitorování zneužití.",
+        "master-key-from-environment": "Pokud metadata nasazení, historie shellu nebo inspekce kontejneru odhalují proměnné prostředí, hlavní klíč může být blízko šifrovaných dat, která chrání.",
+        "admins-without-2fa": "Heslo administrátora se stává jediným faktorem. Opakované použití hesla, phishing nebo uniklé prohlížečové relace se mohou stát plnou kontrolou instance.",
+        "dotnet-diagnostics-enabled": "Lokální proces s dostatečnými právy si může od běhového prostředí .NET vyžádat dumpy nebo trasování, a ty mohou obsahovat živá tajemství z paměti.",
+        "process-dumpable": "Proces se stejným UID nebo debugger schopný ptrace může vytvořit dump paměti serveru a hledat hlavní klíč v paměti.",
+        "sys-ptrace-capability": "Ladicí nebo privilegovaný kontejner může zkoumat a měnit paměť procesu. Přesně téhle schopnosti se klíče existující jen v paměti snaží vyhnout.",
+        "new-privileges-allowed": "Pokud kompromitovaný kód najde setuid pomocníka nebo binární soubor s capabilities, má širší cestu k získání oprávnění uvnitř kontejneru.",
+        "seccomp-disabled": "Plocha jaderných systémových volání je širší než běžná produkční úroveň Dockeru, takže chyba úniku z kontejneru má více prostoru k dýchání.",
+        "running-as-root": "Vzdálené spuštění kódu by uvnitř kontejneru běželo jako root, což zvyšuje škody na připojených svazcích a pomocných procesech.",
+        "process-hardening-failed": "Cotton si vyžádal zpevnění procesu, ale proces se přesto spustil bez očekávané ochrany proti dumpu nebo ptrace."
+      }
+    },
+    "groups": {
+      "title": "Skupiny",
+      "description": "Spravujte přístupové skupiny odděleně od jednotlivých uživatelů.",
+      "inDevelopment": "Správa skupin je ve vývoji."
+    }
+  },
+  "routes": {
+    "login": "Přihlášení",
+    "home": "Domů",
+    "files": "Soubory",
+    "trash": "Koš",
+    "profile": "Profil",
+    "settings": "Nastavení",
+    "admin": "Správa"
+  },
+  "resetPassword": {
+    "title": "Obnovit heslo",
+    "newPassword": "Nové heslo",
+    "confirmPassword": "Potvrďte nové heslo",
+    "submit": "Obnovit heslo",
+    "submitting": "Obnovování...",
+    "success": "Heslo bylo úspěšně obnoveno. Nyní se můžete přihlásit s novým heslem.",
+    "goToLogin": "Přejít do aplikace",
+    "errors": {
+      "mismatch": "Hesla se neshodují.",
+      "invalidToken": "Odkaz pro obnovení je neplatný nebo vypršela jeho platnost.",
+      "failed": "Obnovení hesla se nezdařilo. Zkuste to prosím znovu."
+    }
+  },
+  "verifyEmail": {
+    "title": "Ověření e-mailu",
+    "verifying": "Ověřování vašeho e-mailu...",
+    "success": "Váš e-mail byl úspěšně ověřen!",
+    "goToLogin": "Přejít do aplikace",
+    "goToSettings": "Přejít do nastavení",
+    "errors": {
+      "invalidToken": "Ověřovací odkaz je neplatný nebo vypršela jeho platnost.",
+      "failed": "Ověření e-mailu se nezdařilo. Zkuste to prosím znovu."
+    }
+  },
+  "unlock": {
+    "title": "Odemknout Cotton",
+    "caption": "Server před spuštěním aplikace čeká na hlavní klíč.",
+    "checking": {
+      "title": "Kontrola stavu zámku",
+      "caption": "Cotton připravuje zabezpečený start."
+    },
+    "masterKey": "Hlavní klíč",
+    "bootstrapToken": "Bootstrap token",
+    "bootstrapRequired": "První odemčení vyžaduje bootstrap token z logů serveru.",
+    "bootstrapRequiredWithExpiry": "První odemčení vyžaduje bootstrap token z logů serveru. Jeho platnost vyprší v {{expiresAt}}.",
+    "unlock": "Odemknout",
+    "unlocking": "Odemykání",
+    "generate": "Vygenerovat",
+    "generating": "Generování",
+    "generated": "Vygenerováno. Před odemčením tento klíč uložte.",
+    "generatedToast": "Hlavní klíč vygenerován",
+    "generateFailed": "Vygenerování klíče se nezdařilo.",
+    "unlocked": "Hlavní klíč přijat. Cotton se spouští.",
+    "unlockFailed": "Odemčení se nezdařilo.",
+    "showKey": "Zobrazit klíč",
+    "hideKey": "Skrýt klíč",
+    "copyKey": "Zkopírovat klíč",
+    "copied": "Zkopírováno",
+    "copyFailed": "Klíč se nepodařilo zkopírovat"
+  }
+}

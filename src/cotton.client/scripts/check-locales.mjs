@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -31,6 +31,16 @@ const loadLocale = (language) =>
     JSON.parse(readFileSync(resolve(localesDir, `${language}.json`), "utf8")),
   );
 
+const languages = readdirSync(localesDir)
+  .filter((file) => file.endsWith(".json"))
+  .map((file) => file.slice(0, -".json".length))
+  .sort();
+
+if (!languages.includes("en")) {
+  console.error("FAIL: en.json is required as the locale baseline.");
+  process.exit(1);
+}
+
 const en = loadLocale("en");
 const enKeys = Object.keys(en);
 const enKeySet = new Set(enKeys);
@@ -38,7 +48,7 @@ const enBaseSet = new Set(enKeys.map(stripPlural));
 
 let exitCode = 0;
 
-for (const language of ["ru", "es", "de"]) {
+for (const language of languages.filter((language) => language !== "en")) {
   const flat = loadLocale(language);
   const keys = Object.keys(flat);
   const keySet = new Set(keys);

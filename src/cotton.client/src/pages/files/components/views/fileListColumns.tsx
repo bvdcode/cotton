@@ -93,6 +93,7 @@ interface ColumnOptions {
     onStartRename?: (id: string, name: string) => void;
     onRestore?: (id: string, name: string) => void;
     onDelete?: (id: string, name: string) => void;
+    onDownload?: (id: string, name: string) => void;
     onShare?: (id: string, name: string) => void;
     onCut?: (id: string) => void;
     onToggleEncryptionPolicy?: (
@@ -437,6 +438,18 @@ export const createActionsColumn = (
             justifyContent: "flex-end",
           }}
         >
+          {options.folderOperations.onDownload && (
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                options.folderOperations.onDownload?.(row.id, row.name);
+              }}
+              title={options.labels.download}
+            >
+              <Download fontSize="small" />
+            </IconButton>
+          )}
           {!options.readOnly && (
             <>
               {options.folderOperations.onStartRename && (

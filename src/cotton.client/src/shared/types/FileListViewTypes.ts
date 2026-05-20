@@ -56,6 +56,7 @@ export interface FolderOperations {
   onStartRename?: (folderId: string, name: string) => void;
   onRestore?: (folderId: string, name: string) => void;
   onDelete?: (folderId: string, name: string) => void;
+  onDownload?: (folderId: string, name: string) => void;
   onShare?: (folderId: string, name: string) => void;
   onCut?: (folderId: string) => void;
   onToggleEncryptionPolicy?: (

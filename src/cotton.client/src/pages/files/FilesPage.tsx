@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from "react";
 import { Alert, Box, Dialog, DialogTitle } from "@mui/material";
-import { ContentCut, ContentPaste, Delete } from "@mui/icons-material";
+import { ContentCut, ContentPaste, Delete, Download } from "@mui/icons-material";
 import { toast } from "@shared/ui/notifications";
 import {
   FileListViewFactory,
@@ -62,6 +62,7 @@ import { useFileMoveController } from "./hooks/useFileMoveController";
 import { useFileListPageLogic } from "./hooks/useFileListPageLogic";
 import { useFolderClientEncryptionActions } from "./hooks/useFolderClientEncryptionActions";
 import { ClientEncryptionUnlockForm } from "../profile/components/ClientEncryptionUnlockForm";
+import { downloadArchive } from "@shared/utils/fileHandlers";
 
 const HUGE_FOLDER_THRESHOLD = 100_000;
 
@@ -494,6 +495,58 @@ export const FilesPage: React.FC = () => {
     [showToast, t],
   );
 
+  const handleDownloadFolder = React.useCallback(
+    async (folderId: string, folderName: string) => {
+      try {
+        await downloadArchive({
+          fileIds: [],
+          nodeIds: [folderId],
+          archiveName: folderName,
+        });
+      } catch {
+        showToast(t("selection.downloadFailed", { ns: "files" }), "error");
+      }
+    },
+    [showToast, t],
+  );
+
+  const handleDownloadSelection = React.useCallback(async () => {
+    const selectedTiles = tiles.filter((tile) => {
+      const id = tile.kind === "folder" ? tile.node.id : tile.file.id;
+      return fileSelection.selectedIds.has(id);
+    });
+
+    if (selectedTiles.length === 0) {
+      return;
+    }
+
+    const fileIds = selectedTiles.flatMap((tile) =>
+      tile.kind === "file" ? [tile.file.id] : [],
+    );
+    const nodeIds = selectedTiles.flatMap((tile) =>
+      tile.kind === "folder" ? [tile.node.id] : [],
+    );
+    const archiveName =
+      selectedTiles.length === 1
+        ? selectedTiles[0].kind === "folder"
+          ? selectedTiles[0].node.name
+          : selectedTiles[0].file.name
+        : currentNode?.name;
+
+    try {
+      await downloadArchive({ fileIds, nodeIds, archiveName });
+      fileSelection.deselectAll();
+    } catch {
+      showToast(t("selection.downloadFailed", { ns: "files" }), "error");
+    }
+  }, [
+    currentNode?.name,
+    fileSelection,
+    showToast,
+    t,
+    tiles,
+  ]);
+
   // Build folder operations adapter
   const folderOperations = buildFolderOperations(
     folderOps,
@@ -502,6 +555,7 @@ export const FilesPage: React.FC = () => {
     handleCutFolder,
     handleToggleFolderEncryption,
     getChildFolderEncryptionPolicyState,
+    handleDownloadFolder,
   );
 
   // Build file operations adapter
@@ -534,6 +588,15 @@ export const FilesPage: React.FC = () => {
       React.ComponentProps<typeof PageHeader>["customActionItems"]
     > = [];
     if (fileSelection.selectionMode && fileSelection.selectedCount > 0) {
+      items.push({
+        key: "download-selected",
+        icon: <Download />,
+        title: t("selection.downloadSelected", { ns: "files" }),
+        onClick: () => {
+          void handleDownloadSelection();
+        },
+        disabled: loading,
+      });
       items.push({
         key: "cut-selected",
         icon: <ContentCut />,
@@ -571,6 +634,7 @@ export const FilesPage: React.FC = () => {
     fileSelection.selectedCount,
     handleCutSelection,
     handleDeleteSelected,
+    handleDownloadSelection,
     handlePasteHere,
     loading,
     nodeId,

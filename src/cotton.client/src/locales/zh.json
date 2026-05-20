@@ -1,0 +1,2071 @@
+{
+  "search": {
+    "title": "搜索",
+    "searchPlaceholder": "搜索文件和文件夹……",
+    "error": "搜索失败，请重试。",
+    "enterQueryHint": "开始输入即可搜索……",
+    "noResults": "未找到任何文件或文件夹",
+    "open": "搜索",
+    "modal": {
+      "placeholder": "搜索文件、文件夹、设置……",
+      "resultsCount": "{{count}} 项结果"
+    },
+    "types": {
+      "folder": "文件夹",
+      "file": "文件",
+      "setting": "设置"
+    },
+    "actions": {
+      "openFile": "打开文件",
+      "openFolder": "打开文件夹",
+      "openSetting": "打开设置",
+      "downloadFile": "下载文件",
+      "shareFile": "分享文件",
+      "openContainingFolder": "打开所在文件夹"
+    },
+    "dictionary": [
+      {
+        "id": "privacy-deduplication",
+        "title": "Cross-user deduplication",
+        "description": "Privacy and security",
+        "path": "/admin/privacy-settings",
+        "keywords": [
+          "deduplication",
+          "deduplicate",
+          "dedup",
+          "duplicates",
+          "privacy",
+          "security",
+          "cross-user",
+          "去重",
+          "重复数据删除",
+          "跨用户",
+          "隐私",
+          "安全"
+        ],
+        "highlightSettingId": "allowCrossUserDeduplication",
+        "adminOnly": true
+      },
+      {
+        "id": "privacy-global-indexing",
+        "title": "Global indexing",
+        "description": "Privacy and security",
+        "path": "/admin/privacy-settings",
+        "keywords": [
+          "global indexing",
+          "indexing",
+          "deep search",
+          "search index",
+          "全局索引",
+          "索引",
+          "深度搜索",
+          "搜索索引"
+        ],
+        "highlightSettingId": "allowGlobalIndexing",
+        "adminOnly": true
+      },
+      {
+        "id": "privacy-telemetry",
+        "title": "Telemetry",
+        "description": "Privacy and security",
+        "path": "/admin/privacy-settings",
+        "keywords": [
+          "telemetry",
+          "diagnostics",
+          "analytics",
+          "metrics",
+          "statistics",
+          "usage analytics",
+          "crash reports",
+          "bug reports",
+          "privacy",
+          "遥测",
+          "诊断",
+          "统计",
+          "崩溃报告",
+          "隐私"
+        ],
+        "highlightSettingId": "telemetry",
+        "adminOnly": true
+      },
+      {
+        "id": "notifications-smtp",
+        "title": "SMTP configuration",
+        "description": "Notifications",
+        "path": "/admin/notifications-settings",
+        "keywords": [
+          "smtp",
+          "mail",
+          "email",
+          "email settings",
+          "notifications",
+          "smtp server",
+          "from address",
+          "ssl",
+          "tls",
+          "邮件",
+          "邮箱",
+          "通知",
+          "发件人地址"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "notifications-email-mode",
+        "title": "Notification mode",
+        "description": "Notifications",
+        "path": "/admin/notifications-settings",
+        "keywords": [
+          "notifications",
+          "email mode",
+          "mail mode",
+          "cotton cloud mail",
+          "custom smtp",
+          "通知",
+          "邮件模式",
+          "自定义 SMTP"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "storage-settings",
+        "title": "Storage settings",
+        "description": "Storage",
+        "path": "/admin/storage-settings",
+        "keywords": [
+          "storage",
+          "storage backend",
+          "s3",
+          "bucket",
+          "endpoint",
+          "region",
+          "access key",
+          "secret key",
+          "存储",
+          "存储后端",
+          "存储桶",
+          "终端节点",
+          "区域",
+          "访问密钥",
+          "密钥"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "storage-statistics",
+        "title": "Storage statistics",
+        "description": "Storage and statistics",
+        "path": "/admin/storage-statistics",
+        "keywords": [
+          "storage statistics",
+          "stats",
+          "gc",
+          "garbage collector",
+          "chunks",
+          "dedup saved",
+          "compression saved",
+          "存储统计",
+          "统计",
+          "垃圾回收",
+          "数据块",
+          "去重节省",
+          "压缩节省"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "database-backup",
+        "title": "Database backup",
+        "description": "Admin",
+        "path": "/admin/database-backup",
+        "keywords": [
+          "backup",
+          "database",
+          "restore",
+          "dump",
+          "manifest",
+          "备份",
+          "数据库",
+          "恢复",
+          "转储",
+          "清单"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "users",
+        "title": "Users",
+        "description": "Admin",
+        "path": "/admin/users",
+        "keywords": [
+          "users",
+          "accounts",
+          "admin users",
+          "role",
+          "sessions",
+          "用户",
+          "账户",
+          "管理员",
+          "角色",
+          "会话"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "groups",
+        "title": "Groups",
+        "description": "Admin",
+        "path": "/admin/groups",
+        "keywords": [
+          "groups",
+          "user groups",
+          "组",
+          "用户组"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "general-settings",
+        "title": "General settings",
+        "description": "Admin",
+        "path": "/admin/general-settings",
+        "keywords": [
+          "general settings",
+          "public url",
+          "public base url",
+          "timezone",
+          "server usage",
+          "setup wizard",
+          "computation mode",
+          "常规设置",
+          "公共 URL",
+          "时区",
+          "服务器用途",
+          "安装向导",
+          "计算模式"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "profile-settings",
+        "title": "Profile settings",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "profile",
+          "settings",
+          "account",
+          "account settings",
+          "personal information",
+          "personal info",
+          "edit profile",
+          "name",
+          "first name",
+          "last name",
+          "birth date",
+          "birthday",
+          "email",
+          "e-mail",
+          "mail",
+          "avatar",
+          "picture",
+          "个人资料",
+          "设置",
+          "账户",
+          "个人信息",
+          "姓名",
+          "名字",
+          "姓氏",
+          "出生日期",
+          "生日",
+          "邮箱",
+          "头像"
+        ]
+      },
+      {
+        "id": "profile-appearance",
+        "title": "Appearance",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "appearance",
+          "theme",
+          "theme mode",
+          "dark mode",
+          "light mode",
+          "system theme",
+          "language",
+          "gallery",
+          "gallery settings",
+          "smooth transitions",
+          "prefer previews",
+          "preview",
+          "image preview",
+          "originals",
+          "colors",
+          "colour",
+          "外观",
+          "主题",
+          "深色模式",
+          "浅色模式",
+          "跟随系统",
+          "语言",
+          "图库",
+          "图库设置",
+          "平滑过渡",
+          "预览",
+          "原图",
+          "颜色"
+        ]
+      },
+      {
+        "id": "profile-security",
+        "title": "Account security",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "security",
+          "account security",
+          "password",
+          "change password",
+          "current password",
+          "new password",
+          "2fa",
+          "two factor",
+          "two-factor",
+          "totp",
+          "authenticator",
+          "verification code",
+          "sessions",
+          "devices",
+          "logout",
+          "sign out",
+          "email verification",
+          "verify email",
+          "安全",
+          "账户安全",
+          "密码",
+          "修改密码",
+          "当前密码",
+          "新密码",
+          "双重认证",
+          "两步验证",
+          "验证器",
+          "验证码",
+          "会话",
+          "设备",
+          "退出登录",
+          "邮箱验证",
+          "验证邮箱"
+        ]
+      },
+      {
+        "id": "profile-share-links",
+        "title": "Share links",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "share links",
+          "sharing",
+          "public links",
+          "links",
+          "shared files",
+          "expiration",
+          "expires",
+          "expire",
+          "invalidate",
+          "token",
+          "分享链接",
+          "共享",
+          "公开链接",
+          "链接",
+          "已分享文件",
+          "过期",
+          "失效",
+          "令牌"
+        ]
+      },
+      {
+        "id": "profile-webdav",
+        "title": "WebDAV access",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "webdav",
+          "dav",
+          "webdav access",
+          "webdav token",
+          "network drive",
+          "mount",
+          "mount_webdav",
+          "davfs",
+          "davfs2",
+          "cadaver",
+          "windows webdav",
+          "macos webdav",
+          "linux webdav",
+          "credentials",
+          "one-time token",
+          "WebDAV 访问",
+          "WebDAV 令牌",
+          "网络驱动器",
+          "挂载",
+          "凭据",
+          "一次性令牌"
+        ]
+      }
+    ]
+  },
+  "notifications": {
+    "title": "通知",
+    "markAllAsRead": "全部标记为已读",
+    "empty": "暂无通知",
+    "viewAll": "查看全部",
+    "unreadCount": "{count} 条未读",
+    "showOnlyUnread": "仅显示未读",
+    "showAll": "显示全部",
+    "muteSound": "静音提示音",
+    "unmuteSound": "取消静音",
+    "notifications": {
+      "empty": "暂无通知"
+    }
+  },
+  "common": {
+    "languageName": "中文",
+    "switchToThisLanguage": "切换到中文",
+    "placeholder": "—",
+    "yes": "是",
+    "no": "否",
+    "time": {
+      "justNow": "刚刚",
+      "secondsAgo_one": "{{count}} 秒前",
+      "secondsAgo_other": "{{count}} 秒前",
+      "minutesAgo_one": "{{count}} 分钟前",
+      "minutesAgo_other": "{{count}} 分钟前",
+      "hoursAgo_one": "{{count}} 小时前",
+      "hoursAgo_other": "{{count}} 小时前",
+      "daysAgo_one": "{{count}} 天前",
+      "daysAgo_other": "{{count}} 天前",
+      "monthsAgo_one": "{{count}} 个月前",
+      "monthsAgo_other": "{{count}} 个月前",
+      "yearsAgo_one": "{{count}} 年前",
+      "yearsAgo_other": "{{count}} 年前",
+      "durationMinutes_one": "{{count}} 分钟",
+      "durationMinutes_other": "{{count}} 分钟",
+      "durationHours_one": "{{count}} 小时",
+      "durationHours_other": "{{count}} 小时",
+      "durationDays_one": "{{count}} 天",
+      "durationDays_other": "{{count}} 天",
+      "lessThanMinute": "不到一分钟"
+    },
+    "actions": {
+      "confirm": "确认",
+      "cancel": "取消",
+      "close": "关闭",
+      "delete": "删除",
+      "rename": "重命名",
+      "restore": "还原",
+      "download": "下载",
+      "share": "分享",
+      "more": "更多操作",
+      "play": "播放",
+      "pause": "暂停",
+      "copied": "已复制！",
+      "reload": "刷新"
+    },
+    "errors": {
+      "unexpectedTitle": "出错了",
+      "unexpectedDescription": "发生了意外错误，请刷新页面。",
+      "showDetails": "显示详情",
+      "hideDetails": "隐藏详情",
+      "schemaValidationFailed": "服务器返回了意外的数据"
+    },
+    "userMenu": {
+      "profile": "个人资料",
+      "settings": "设置",
+      "admin": "管理",
+      "user": "用户",
+      "lightMode": "浅色模式",
+      "darkMode": "深色模式",
+      "changeLanguage": "更改语言",
+      "logout": "退出登录",
+      "help": "帮助",
+      "serverVersion": "服务器版本：{{version}}"
+    },
+    "app": {
+      "logoAlt": "Cotton 徽标"
+    },
+    "title": "Cotton Cloud",
+    "subtitle": "安装向导",
+    "ok": "确定",
+    "telemetryDetails": {
+      "tooltip": "会收集哪些数据？",
+      "title": "最小化遥测包含的内容",
+      "intro": "遥测内容刻意保持最少，不包含文件名和文件内容。仅发送少量技术诊断信息：",
+      "items": {
+        "instanceId": "随机生成的实例标识符（一次性生成的 GUID，与您无关联）",
+        "serverUrl": "公共服务器 URL，用于判断该云服务是否可达",
+        "version": "Cotton 服务器版本",
+        "users": "用户账户总数",
+        "nodes": "文件夹总数",
+        "files": "文件总数"
+      },
+      "outro": "仅此而已。遥测数据中不会发送任何文件内容、文件名、用户名或邮箱。传输层仍可能存在标准的网络元数据（例如来源 IP）。"
+    },
+    "pwa": {
+      "updateAvailable": "新版本已就绪。",
+      "updateAction": "刷新"
+    },
+    "clientEncryption": {
+      "folderPolicyEnabledHint": "此文件夹会在您的设备上加密新上传的文件。",
+      "fileEncryptedHint": "此文件已在您的设备上加密。",
+      "vaultLockedForDownload": "请在个人资料中解锁客户端加密，然后再下载此文件。",
+      "fileTooLargeForDownload": "此加密文件超出了当前浏览器下载流程的大小限制。限制：{{maxSize}}。"
+    }
+  },
+  "audioPlayer": {
+    "actions": {
+      "scanRecursively": "在此文件夹及其子文件夹中查找音轨",
+      "showQueue": "显示队列",
+      "hideQueue": "隐藏队列",
+      "showLyrics": "显示歌词",
+      "hideLyrics": "隐藏歌词",
+      "enableShuffle": "开启随机播放",
+      "disableShuffle": "关闭随机播放",
+      "close": "关闭播放器"
+    },
+    "lyrics": {
+      "unavailable": "此音轨没有歌词。",
+      "notFound": "未在此音轨旁找到 .lrc 文件。",
+      "loadFailed": "加载歌词失败。"
+    }
+  },
+  "share": {
+    "title": "已分享的文件",
+    "loading": "加载中……",
+    "unsupported": "此文件类型不支持预览。",
+    "encryptedFile": {
+      "title": "此文件已端到端加密",
+      "description": "公共链接无法在浏览器中解锁此文件。您可以下载加密容器，或请所有者分享解密后的副本。"
+    },
+    "message": "查看 Cotton Cloud 上的 \"{{name}}\"",
+    "folder": {
+      "title": "已分享的文件夹",
+      "message": "查看 Cotton Cloud 上的文件夹 \"{{name}}\"",
+      "empty": "此文件夹为空。",
+      "kind": "文件夹"
+    },
+    "toasts": {
+      "copied": "链接已复制",
+      "shared": "链接已分享"
+    },
+    "errors": {
+      "invalidLink": "分享链接无效。",
+      "notFound": "未找到文件，或链接已失效。",
+      "loadFailed": "加载分享文件失败。",
+      "copyLink": "复制链接到剪贴板失败。",
+      "fileTooLargePreview": "文件过大，无法预览（{{size}}）。请下载文件后查看。"
+    }
+  },
+  "login": {
+    "title": "Cotton Cloud",
+    "usernameLabel": "用户名",
+    "passwordLabel": "密码",
+    "rememberMe": "信任此设备",
+    "twoFactor": {
+      "title": "双重认证",
+      "caption": "请输入身份验证器应用中的 6 位验证码。",
+      "digit": "数字",
+      "required": "需要输入双重认证验证码。",
+      "invalid": "双重认证验证码无效。",
+      "locked": "尝试次数过多，请稍后再试。"
+    },
+    "loginButton": "登录",
+    "loggingIn": "正在登录……",
+    "errorMessage": "登录失败，请检查您的凭据。",
+    "restoring": {
+      "title": "正在恢复会话……",
+      "caption": "请稍候"
+    },
+    "forgotPassword": {
+      "link": "忘记密码？",
+      "enterEmail": "请输入您的邮箱作为用户名以重置密码。",
+      "sent": "如果该邮箱对应的账户存在，密码重置链接已发送。",
+      "sending": "正在发送……",
+      "error": "发送重置链接失败，请稍后再试。"
+    },
+    "firstRun": {
+      "title": "初始设置",
+      "message": "尚未有任何用户。您输入的凭据将用于创建第一个管理员账户。此功能仅在启动后的短时间内可用。如有需要，请重启实例。",
+      "continueButton": "继续",
+      "continuing": "正在创建第一个用户……"
+    }
+  },
+  "notFound": {
+    "title": "页面未找到",
+    "message": "您要查找的页面不存在。",
+    "backButton": "返回首页"
+  },
+  "profile": {
+    "title": "个人资料",
+    "subtitle": "您的账户信息和安全状态。",
+    "notAuthenticated": "您尚未登录。",
+    "ageYears_one": "{{count}} 岁",
+    "ageYears_other": "{{count}} 岁",
+    "roles": {
+      "user": "用户",
+      "admin": "管理员"
+    },
+    "avatar": {
+      "upload": "上传头像",
+      "errors": {
+        "settingsNotLoaded": "服务器设置尚未加载。",
+        "fileTooLarge": "头像文件过大。最大允许大小为 {{maxSize}}。",
+        "unsupportedFormat": "您的浏览器不支持此图片格式。请使用 JPG、PNG 或 WEBP。",
+        "failed": "更新头像失败。"
+      }
+    },
+    "editProfile": {
+      "title": "编辑个人资料",
+      "description": "更新您的个人信息。",
+      "firstName": "名字",
+      "lastName": "姓氏",
+      "email": "邮箱",
+      "birthDate": "出生日期",
+      "save": "保存",
+      "saving": "正在保存……",
+      "success": "个人资料已更新。",
+      "emailWarning": "更改邮箱将重置邮箱验证状态。",
+      "errors": {
+        "failed": "更新个人资料失败。"
+      }
+    },
+    "appearance": {
+      "title": "外观",
+      "description": "界面偏好与个性化设置。",
+      "gallerySmoothTransitions": "图库平滑过渡",
+      "galleryPreferPreview": "显示原图而非预览图",
+      "themeMode": {
+        "label": "主题",
+        "light": "浅色",
+        "system": "跟随系统",
+        "dark": "深色"
+      },
+      "language": {
+        "label": "语言",
+        "en": "英语",
+        "ru": "俄语",
+        "es": "西班牙语",
+        "de": "德语"
+      }
+    },
+    "shareLinks": {
+      "title": "分享链接",
+      "description": "控制生成的分享链接保持有效的时长。",
+      "current": "当前：{{days}} 天",
+      "presets": {
+        "week": "一周",
+        "month": "一个月",
+        "year": "一年",
+        "threeMonths": "3 个月",
+        "tenYears": "10 年",
+        "oneDay": "一天"
+      },
+      "invalidateAll": "使所有分享链接失效",
+      "invalidating": "正在使其失效……",
+      "invalidated": "所有分享链接已失效。",
+      "invalidateConfirmTitle": "使所有分享链接失效？",
+      "invalidateConfirmDescription": "所有有效的分享链接将立即停止工作。此操作无法撤销。",
+      "errors": {
+        "invalidateFailed": "使分享链接失效时出错。"
+      }
+    },
+    "totp": {
+      "enabled": "2FA 已启用",
+      "disabled": "2FA 已禁用",
+      "sectionTitle": "双重认证",
+      "enabledMessage": "双重认证已启用。",
+      "enabledDescription": "您的账户已受到额外一层的安全保护。",
+      "setup": {
+        "title": "启用双重认证（TOTP）",
+        "caption": "请使用身份验证器应用（Google Authenticator、Authy 等）。",
+        "button": "生成 QR 码",
+        "loading": "正在生成……",
+        "qrTitle": "请扫描此 QR 码",
+        "secretLabel": "密钥：",
+        "copySecret": "复制密钥",
+        "success": "双重认证已启用。"
+      },
+      "confirm": {
+        "title": "确认设置",
+        "caption": "请输入身份验证器应用中的 6 位验证码。",
+        "digit": "数字",
+        "button": "确认",
+        "loading": "正在确认……"
+      },
+      "disable": {
+        "button": "禁用 2FA",
+        "dialogTitle": "禁用双重认证",
+        "dialogDescription": "请输入密码以确认禁用双重认证。",
+        "passwordLabel": "密码",
+        "confirm": "禁用",
+        "confirming": "正在禁用……",
+        "success": "双重认证已禁用。"
+      },
+      "errors": {
+        "setupFailed": "启动 2FA 设置失败。",
+        "confirmFailed": "确认 2FA 失败。",
+        "saveFailed": "保存 2FA 设置失败。",
+        "codeRequired": "请输入 6 位验证码。",
+        "invalidCode": "双重认证验证码无效。",
+        "alreadyEnabled": "2FA 已启用。",
+        "setupNotInitiated": "尚未启动 2FA 设置，请先生成 QR 码。",
+        "disableFailed": "禁用 2FA 失败。",
+        "invalidPassword": "密码错误。"
+      }
+    },
+    "fields": {
+      "id": "用户 ID",
+      "username": "用户名",
+      "firstName": "名字",
+      "lastName": "姓氏",
+      "birthDate": "出生日期",
+      "role": "角色",
+      "twoFactor": "双重认证",
+      "totpEnabledAt": "启用时间",
+      "totpFailedAttempts": "2FA 失败尝试次数",
+      "email": "邮箱",
+      "emailVerified": "已验证",
+      "emailNotVerified": "未验证",
+      "verify": "验证",
+      "createdAt": "创建时间",
+      "updatedAt": "更新时间"
+    },
+    "emailVerification": {
+      "title": "邮箱验证",
+      "description": "验证您的邮箱地址，以启用密码恢复和通知功能。",
+      "verified": "邮箱已验证",
+      "notVerified": "邮箱未验证",
+      "sendButton": "发送验证邮件",
+      "sending": "正在发送……",
+      "sent": "验证邮件已发送，请检查您的收件箱。",
+      "noEmail": "您的账户未设置邮箱地址。",
+      "errors": {
+        "failed": "发送验证邮件失败，请稍后再试。"
+      }
+    },
+    "password": {
+      "title": "修改密码",
+      "description": "更新您的账户密码。",
+      "old": "旧密码",
+      "new": "新密码",
+      "confirm": "确认新密码",
+      "show": "显示密码",
+      "hide": "隐藏密码",
+      "save": "保存",
+      "saving": "正在保存……",
+      "success": "密码已修改。",
+      "errors": {
+        "mismatch": "两次输入的密码不一致。",
+        "failed": "修改密码失败。"
+      }
+    },
+    "sessions": {
+      "title": "活跃会话",
+      "description": "管理您在不同设备上的活跃会话",
+      "noActiveSessions": "暂无活跃会话",
+      "currentSession": "当前",
+      "unknownDevice": "未知设备",
+      "revokeSession": "结束会话",
+      "elapsed": "已持续 {{duration}}",
+      "revokeConfirmTitle": "结束会话？",
+      "revokeConfirmDescription": "确定要结束此会话吗？该设备将被注销。",
+      "revokeConfirmButton": "结束会话",
+      "revokeCancelButton": "取消",
+      "errors": {
+        "loadFailed": "加载会话失败。",
+        "revokeFailed": "结束会话失败。"
+      }
+    },
+    "webdav": {
+      "title": "WebDAV 访问",
+      "description": "生成一次性令牌以通过 WebDAV 连接。",
+      "confirmTitle": "生成 WebDAV 令牌？",
+      "confirmDescription": "这将生成一个新令牌，并使之前的令牌失效。新令牌仅显示一次。",
+      "confirmButton": "生成",
+      "cancelButton": "取消",
+      "generateButton": "生成令牌",
+      "generating": "正在生成……",
+      "tokenLabel": "令牌",
+      "usernameLabel": "用户名",
+      "connectUrlLabel": "WebDAV 端点",
+      "modalTitle": "WebDAV 凭据（仅显示一次）",
+      "closeButton": "关闭",
+      "copyToken": "复制令牌",
+      "copyUrl": "复制 URL",
+      "copyUsername": "复制用户名",
+      "tokenWarning": "请立即复制此令牌，它不会再次显示。",
+      "cardHelp": "使用这些值通过 WebDAV 客户端连接。请生成令牌以获取一次性密码。",
+      "examples": {
+        "title": "示例",
+        "copy": "复制",
+        "windows": {
+          "title": "Windows (Command Prompt)",
+          "copy": "复制",
+          "caption": "请在管理员权限的 Command Prompt 中运行，或在资源管理器中使用映射网络驱动器。"
+        },
+        "windowsRegistry": {
+          "title": "Windows (Registry tweak)",
+          "copy": "复制",
+          "caption": "应用注册表修改以提高 WebDAV 文件大小上限。"
+        },
+        "powershell": {
+          "title": "Windows (PowerShell escape)",
+          "copy": "复制",
+          "caption": "在 PowerShell 中运行时使用；该命令已为方便起见进行了转义。"
+        },
+        "mac": {
+          "title": "macOS (mount_webdav)",
+          "copy": "复制",
+          "caption": "通过 Finder 与 Terminal 使用 mount_webdav 挂载。"
+        },
+        "linux": {
+          "title": "Linux (davfs2)",
+          "copy": "复制",
+          "caption": "使用 davfs2 或 cadaver 挂载 WebDAV 端点。"
+        }
+      },
+      "placeholderPassword": "<password>",
+      "errors": {
+        "failed": "生成 WebDAV 令牌失败。"
+      }
+    },
+    "email": {
+      "verified": "邮箱已验证"
+    },
+    "clientEncryption": {
+      "sectionTitle": "客户端加密",
+      "description": "用浏览器持有的密钥保护选定文件。",
+      "invalidEnvelope": "已保存的加密设置数据无法读取。在修复之前请勿上传加密文件。",
+      "lockedHint": "需要打开加密的文件夹或文件时，请先解锁。",
+      "unlockedHint": "在此浏览器标签页中，加密文件可以打开，直到您锁定密钥或退出登录。",
+      "status": {
+        "notSetUp": "未设置",
+        "locked": "已锁定",
+        "unlocked": "已解锁",
+        "invalid": "需要处理"
+      },
+      "actions": {
+        "setup": "设置",
+        "unlock": "解锁",
+        "lock": "锁定",
+        "lockOnRefresh": "刷新页面时锁定"
+      },
+      "setupDialog": {
+        "title": "设置客户端加密",
+        "warning": "如果同时丢失加密密码和 24 个单词的备份短语，加密文件将无法被打开。服务器无法重置此密钥。",
+        "acknowledge": "我已了解同时丢失两者将导致数据永久丢失",
+        "cancel": "取消",
+        "continue": "继续",
+        "back": "返回",
+        "passwordHint": "请选择一个强加密密码。它与您的账户密码独立，不会发送到服务器。",
+        "passwordLabel": "加密密码",
+        "confirmPasswordLabel": "确认加密密码",
+        "passwordTooShort": "请至少使用 {{min}} 个字符。",
+        "passwordMismatch": "两次输入的密码不一致。",
+        "next": "下一步",
+        "generating": "正在生成……",
+        "phraseWarning": "完成设置之前，请将这 24 个单词妥善保存。任何持有此短语的人都可以解锁加密文件。",
+        "copy": "复制短语",
+        "copied": "已复制",
+        "download": "下载短语",
+        "phraseStored": "我已妥善保存备份短语",
+        "saving": "正在保存……",
+        "finish": "完成设置",
+        "errors": {
+          "generateFailed": "无法生成加密密钥。",
+          "saveFailed": "无法保存加密设置。",
+          "copyFailed": "无法复制短语。",
+          "downloadFailed": "无法下载短语。"
+        }
+      },
+      "unlockDialog": {
+        "title": "解锁客户端加密",
+        "passwordLabel": "加密密码",
+        "phraseLabel": "24 个单词的备份短语",
+        "usePhrase": "使用备份短语",
+        "usePassword": "改用密码",
+        "cancel": "取消",
+        "submit": "解锁",
+        "unlocking": "正在解锁……",
+        "errors": {
+          "wrongPassword": "加密密码错误。",
+          "wrongPhrase": "此短语无法解锁密钥。",
+          "invalidPhrase": "短语无效，或单词数量不正确。",
+          "invalidEnvelope": "已保存的加密设置数据无法读取。",
+          "unknown": "无法解锁加密。"
+        }
+      }
+    }
+  },
+  "setup": {
+    "title": "服务器安装向导",
+    "subtitle": "完成初始服务器配置即可开始使用。此过程不会花费太长时间，并会为您个性化应用。",
+    "repoLink": "GitHub 上的项目",
+    "errors": {
+      "saveFailed": "保存设置失败。",
+      "saveChoiceFailed": "出错了，请尝试选择其他选项。"
+    },
+    "status": {
+      "hasUsers": "已有用户",
+      "maxChunk": "最大分块大小",
+      "hash": "哈希算法",
+      "yes": "是",
+      "no": "否"
+    },
+    "actions": {
+      "start": "开始",
+      "later": "稍后再说",
+      "back": "返回",
+      "next": "下一步",
+      "finish": "完成",
+      "cancel": "取消",
+      "toggleLanguage": "更改语言",
+      "toggleTheme": "切换主题"
+    },
+    "intro": "我们将就您对 Cotton Cloud 的使用偏好提出几个简单问题。如果您不确定，也无需担心 —— 许多设置都可以稍后更改。",
+    "onlyAdminCanSetup": "只有管理员可以配置应用。请联系管理员执行初始设置。",
+    "questions": {
+      "requiresTooltip": "要启用此选项，您需要选择：",
+      "inQuestion": "在问题中",
+      "multiuser": {
+        "title": "您计划如何使用：",
+        "subtitle": "这会影响存储优化和部分安全设置。",
+        "linkAria": "在新标签页中打开帮助",
+        "options": {
+          "family": "家庭使用",
+          "many": "与陌生人共享",
+          "unknown": "暂不确定"
+        },
+        "descriptions": {
+          "family": "启用文件去重、共享搜索索引并预装相关模块。",
+          "many": "采用更严格的模式，加强陌生用户之间的安全隔离。",
+          "unknown": "将设置最优的默认值。"
+        }
+      },
+      "usage": {
+        "title": "您计划将云用于：",
+        "subtitle": "请选择一项或多项",
+        "options": {
+          "photos": "照片",
+          "documents": "文档",
+          "media": "电影与剧集",
+          "other": "其他"
+        },
+        "descriptions": {
+          "photos": "将安装 AI 搜索与文字识别附加组件。",
+          "documents": "针对办公文件和 PDF 优化，适合家庭归档",
+          "media": "针对视频文件和流媒体优化，并集成电影数据库。",
+          "other": "适用于混合文件类型的通用设置。"
+        }
+      },
+      "storage": {
+        "title": "您希望将数据存储在哪里？",
+        "subtitle": "为您的文件选择存储位置。无论选择何种方式，Cotton Cloud 都会使用服务器磁盘作为热缓存。",
+        "options": {
+          "local": "服务器本地磁盘",
+          "s3": "S3 兼容存储"
+        },
+        "descriptions": {
+          "local": "将文件存储在服务器的本地文件系统中。",
+          "s3": "将文件存储在远程 S3 兼容对象存储中。"
+        }
+      },
+      "s3Config": {
+        "title": "配置 S3 存储",
+        "subtitle": "请输入您的 S3 兼容存储凭据。",
+        "fields": {
+          "endpoint": "终端节点 URL",
+          "region": "区域",
+          "bucket": "存储桶名称",
+          "accessKey": "访问密钥",
+          "secretKey": "私有密钥"
+        },
+        "placeholders": {
+          "endpoint": "https://s3.example.com",
+          "region": "us-east-1",
+          "bucket": "my-bucket",
+          "accessKey": "您的访问密钥",
+          "secretKey": "您的私有密钥"
+        }
+      },
+      "email": {
+        "title": "邮件配置",
+        "subtitle": "选择邮件通知的发送来源。",
+        "options": {
+          "cloud": "使用云端 Cotton Mail",
+          "custom": "使用自定义 SMTP 服务器",
+          "none": "不发送邮件通知"
+        },
+        "descriptions": {
+          "cloud": "将使用公共 Cotton Cloud SMTP 服务器，安全且免费。如不确定可选择此项。",
+          "custom": "配置您自己的 SMTP 服务器以发送邮件通知。",
+          "none": "最简单的方式，但您将无法找回密码。"
+        }
+      },
+      "emailConfig": {
+        "title": "SMTP 服务器配置",
+        "subtitle": "请输入您的 SMTP 服务器详细信息。",
+        "fields": {
+          "smtpServer": "SMTP 服务器",
+          "port": "端口",
+          "username": "用户名",
+          "password": "密码",
+          "fromAddress": "发件人地址",
+          "useSSL": "使用 SSL/TLS"
+        },
+        "placeholders": {
+          "smtpServer": "smtp.example.com",
+          "port": "587",
+          "username": "your@email.com",
+          "password": "您的密码",
+          "fromAddress": "noreply@example.com",
+          "useSSL": "启用 SSL/TLS 加密"
+        }
+      },
+      "telemetry": {
+        "title": "允许发送统计信息？",
+        "subtitle": "这些数据有助于我们改进产品，且刻意保持最少。这是少数能通过自动反馈支持项目的方式之一，可以帮助我们了解 Cotton Cloud 在不同系统和配置下的表现。",
+        "options": {
+          "allow": "好的，发送",
+          "deny": "不发送"
+        },
+        "descriptions": {
+          "allow": "发送最少的诊断数据，用于软件反馈和缺陷修复。",
+          "deny": "这是您的选择。"
+        },
+        "disabledTooltip": "要禁用遥测，您需要关闭以下服务："
+      },
+      "geoIpLookup": {
+        "title": "解析 IP 地址？",
+        "subtitle": "Cotton 可以将 IP 地址解析为城市和国家/地区名称。例如，可在安全通知中显示登录来源位置，帮助识别异常访问。",
+        "options": {
+          "disabled": "不，保持关闭",
+          "cottonCloud": "使用云端服务",
+          "local": "在本地使用 GeoIP Light",
+          "custom": "使用我自己的解析器"
+        },
+        "descriptions": {
+          "disabled": "不进行位置解析。可显示登录位置的功能将仅保留原始 IP 地址。",
+          "cottonCloud": "通过 Cotton 提供商解析 IP 地址。需要启用遥测。",
+          "local": "使用本地 GeoIP Light 数据库/包在您的服务器上解析 IP 地址。",
+          "custom": "粘贴您自己的服务的 URL。Cotton 将尝试从 JSON 中自动提取与位置相关的字段。"
+        }
+      },
+      "customGeoIpLookupUrl": {
+        "title": "自定义 IP 解析器",
+        "subtitle": "请输入返回国家/地区、省份和城市的 JSON 的 HTTP 端点。",
+        "fields": {
+          "url": "查询 URL"
+        },
+        "placeholders": {
+          "url": "https://geo.example.com/lookup/{ip}"
+        }
+      },
+      "ai": {
+        "title": "AI 与计算",
+        "subtitle": "选择搜索、识别等功能的 AI 计算执行位置。",
+        "options": {
+          "local": "本地计算",
+          "runner": "自定义 GPU 计算节点",
+          "cloud": "Cotton Cloud 计算"
+        },
+        "descriptions": {
+          "local": "速度较慢，多数重型功能不可用，模型质量经过简化。但效果仍然不错 —— 应对任何任务都绰绰有余。",
+          "runner": "连接独立的 GPU 计算节点执行计算。速度快、质量高 —— 提供最佳模型并支持所有功能。",
+          "cloud": "在速度和质量上达到最佳平衡，但可能存在一定限制。免费额度非常慷慨。需要联网。"
+        }
+      },
+      "timezone": {
+        "title": "时区",
+        "subtitle": "请选择您的时区，以免夜间被通知和磁盘活动打扰。此设置仅用于服务器后台任务，Web 界面始终按您的本地时区显示时间。"
+      },
+      "storageSpace": {
+        "title": "您给应用分配了多少空间？",
+        "subtitle": "这将帮助我们优化磁盘使用。",
+        "options": {
+          "all": "全部可用空间",
+          "economical": "节省空间",
+          "unknown": "不知道，继续",
+          "optimal": "最优"
+        },
+        "descriptions": {
+          "all": "使用全部可用空间以获得最佳性能。",
+          "economical": "积极节省空间，启用压缩和去重。",
+          "unknown": "将为您选择最佳设置。"
+        }
+      },
+      "importSources": {
+        "title": "需要导入数据吗？",
+        "subtitle": "选择您希望迁移数据的来源。",
+        "options": {
+          "webdav": "WebDAV",
+          "none": "不需要"
+        }
+      },
+      "nextcloudConfig": {
+        "title": "Nextcloud 导入设置",
+        "subtitle": "请输入连接到 Nextcloud 的凭据。",
+        "fields": {
+          "serverUrl": "服务器 URL",
+          "username": "用户名",
+          "password": "密码"
+        },
+        "placeholders": {
+          "serverUrl": "https://nextcloud.example.com",
+          "username": "您的用户名",
+          "password": "您的密码"
+        }
+      },
+      "webdavConfig": {
+        "title": "WebDAV 导入设置",
+        "subtitle": "请输入连接到 WebDAV 服务器的凭据。",
+        "fields": {
+          "serverUrl": "服务器 URL",
+          "username": "用户名",
+          "password": "密码"
+        },
+        "placeholders": {
+          "serverUrl": "https://webdav.example.com",
+          "username": "您的用户名",
+          "password": "您的密码"
+        }
+      }
+    },
+    "common": {
+      "author": "Vadim Belov"
+    }
+  },
+  "onboarding": {
+    "skip": "开始使用",
+    "features": {
+      "cloud": {
+        "title": "您的个人云",
+        "description": "在所有设备间安全地存储和同步文件"
+      },
+      "storage": {
+        "title": "无限存储",
+        "description": "灵活的存储选项，让您无需担心空间不足"
+      },
+      "security": {
+        "title": "银行级安全",
+        "description": "您的数据由行业领先的安全技术加密保护"
+      },
+      "speed": {
+        "title": "极速体验",
+        "description": "经过优化的性能，带来闪电般的上传和下载速度"
+      }
+    }
+  },
+  "home": {
+    "title": "主页",
+    "layoutLabelWithValue": "布局：{{name}}",
+    "layoutLabelEmpty": "布局：—",
+    "loading": {
+      "title": "加载中",
+      "caption": "正在获取布局统计……"
+    },
+    "refreshing": "正在刷新……",
+    "cards": {
+      "folders": {
+        "title": "文件夹",
+        "caption": "您云端中的文件夹总数",
+        "layoutTitle": "布局",
+        "layoutCaption": "当前默认布局"
+      },
+      "files": {
+        "title": "文件",
+        "caption": "所有文件夹中的文件总数"
+      },
+      "data": {
+        "title": "数据",
+        "caption": "所有文件的总大小"
+      },
+      "recentFiles": {
+        "title": "最近的文件",
+        "empty": "暂无最近文件"
+      }
+    }
+  },
+  "files": {
+    "title": "文件",
+    "errors": {
+      "resolveRootFailed": "无法解析根文件夹",
+      "loadContentsFailed": "加载文件夹内容失败",
+      "createFolderFailed": "创建文件夹失败",
+      "deleteFolderFailed": "删除文件夹失败",
+      "renameFolderFailed": "重命名文件夹失败",
+      "duplicateFolderName": "已存在同名文件夹"
+    },
+    "move": {
+      "cut": "剪切",
+      "pasteHere_one": "在此粘贴 {{count}} 项",
+      "pasteHere_other": "在此粘贴 {{count}} 项",
+      "toasts": {
+        "cut_one": "已剪切 {{count}} 项",
+        "cut_other": "已剪切 {{count}} 项",
+        "moved_one": "已移动 {{count}} 项",
+        "moved_other": "已移动 {{count}} 项",
+        "failed_one": "移动 {{count}} 项失败",
+        "failed_other": "移动 {{count}} 项失败"
+      }
+    },
+    "loading": {
+      "title": "加载中",
+      "caption": "正在获取文件夹内容……"
+    },
+    "uploadDrop": {
+      "scanning": {
+        "title": "正在扫描文件……"
+      },
+      "preparing": {
+        "title": "正在准备上传……",
+        "mapping": {
+          "title": "正在准备上传……"
+        },
+        "folders": {
+          "title": "正在创建文件夹……"
+        },
+        "conflicts": {
+          "title": "正在检查冲突……"
+        },
+        "enqueue": {
+          "title": "正在开始上传……"
+        }
+      },
+      "caption": "已找到 {{count}} 个文件",
+      "captionFound": "已找到 {{count}} 个文件",
+      "captionProgress": "{{processed}} / {{total}}",
+      "toasts": {
+        "noneCopied": "未上传任何文件（全部已跳过）。",
+        "someItemsSkipped_one": "已跳过 {{count}} 项无法读取的内容。",
+        "someItemsSkipped_other": "已跳过 {{count}} 项无法读取的内容。",
+        "someItemsSkippedWithExamples_one": "已跳过 {{count}} 项（例如 {{examples}}）。",
+        "someItemsSkippedWithExamples_other": "已跳过 {{count}} 项（例如 {{examples}}）。",
+        "more_one": " 还有 +{{count}} 项",
+        "more_other": " 还有 +{{count}} 项",
+        "vaultLocked": "加密上传需要先解锁加密保险库。"
+      },
+      "errors": {
+        "dropFailed": "处理拖放项目失败，请重试。"
+      }
+    },
+    "refreshing": "正在刷新……",
+    "actions": {
+      "upload": "上传",
+      "newFolder": "新建文件夹",
+      "folderNamePlaceholder": "文件夹名称",
+      "goToFolder": "前往文件夹",
+      "goUp": "上一级",
+      "dropFiles": "拖放文件以上传",
+      "switchToTilesView": "切换为平铺视图",
+      "switchToListView": "切换为列表视图",
+      "switchToTableView": "切换为表格视图",
+      "switchToSmallTilesView": "小平铺",
+      "switchToMediumTilesView": "中平铺",
+      "switchToLargeTilesView": "大平铺"
+    },
+    "breadcrumbs": {
+      "ariaLabel": "面包屑导航",
+      "root": "文件"
+    },
+    "empty": {
+      "all": "此文件夹为空"
+    },
+    "selection": {
+      "enter": "选择模式",
+      "exit": "退出选择",
+      "selectAll": "全选",
+      "deselectAll": "取消全选",
+      "deleteSelected": "删除所选",
+      "downloadSelected": "下载所选",
+      "downloadFailed": "无法准备归档。",
+      "count_one": "已选择 {{count}} 项",
+      "count_other": "已选择 {{count}} 项"
+    },
+    "deleteSelected": {
+      "confirmTitle_one": "删除 {{count}} 项？",
+      "confirmTitle_other": "删除 {{count}} 项？",
+      "confirmDescription": "所选项目将被移到回收站，可在之后还原。"
+    },
+    "conflicts": {
+      "title": "文件已存在",
+      "description": "此文件夹中已存在同名文件。改为以 {{newName}} 上传？",
+      "skip": "跳过",
+      "skipAll": "全部跳过"
+    },
+    "deleteFolder": {
+      "confirmTitle": "删除文件夹 \"{{name}}\"？",
+      "confirmDescription": "该文件夹将被移到回收站，可在之后还原。"
+    },
+    "deleteFile": {
+      "confirmTitle": "删除文件 \"{{name}}\"？",
+      "confirmDescription": "该文件将被移到回收站，可在之后还原。"
+    },
+    "stats": {
+      "summary": "{{folders}} 个文件夹 · {{files}} 个文件 · {{size}}"
+    },
+    "rename": {
+      "fileNamePlaceholder": "文件名"
+    },
+    "share": {
+      "copied": "分享链接已复制：{{name}}",
+      "shared": "正在分享：{{name}}",
+      "folderCopied": "文件夹链接已复制：{{name}}",
+      "folderShared": "正在分享文件夹：{{name}}",
+      "message": "查看 Cotton Cloud 上的 \"{{name}}\"",
+      "folderMessage": "查看 Cotton Cloud 上的文件夹 \"{{name}}\"",
+      "errors": {
+        "link": "生成分享链接失败。",
+        "token": "提取分享令牌失败。",
+        "copy": "复制链接到剪贴板失败。"
+      }
+    },
+    "preview": {
+      "actions": {
+        "edit": "编辑",
+        "save": "保存",
+        "saving": "正在保存……"
+      },
+      "editorModes": {
+        "text": {
+          "label": "文本",
+          "description": "保留格式的纯文本"
+        },
+        "markdown": {
+          "label": "Markdown",
+          "description": "带预览的 Markdown"
+        },
+        "code": {
+          "label": "代码",
+          "description": "带语法高亮的代码编辑器"
+        }
+      },
+      "pdf": {
+        "loading": {
+          "link": "正在获取链接……",
+          "download": "正在下载 PDF……",
+          "render": "正在渲染 PDF……"
+        }
+      },
+      "model": {
+        "loading": "正在加载 3D 模型……",
+        "actions": {
+          "autoAlign": "对齐到地面",
+          "autoOrient": "自动定向",
+          "cycleLighting": "光照：{{preset}}",
+          "cycleSurface": "表面：{{preset}}",
+          "flipModel": "翻转模型",
+          "resetColor": "使用原始颜色",
+          "toggleShadows": "阴影：{{state}}",
+          "togglePalette": "调色板"
+        },
+        "lighting": {
+          "balanced": "均衡",
+          "studio": "影棚",
+          "dramatic": "强烈"
+        },
+        "surface": {
+          "original": "原始",
+          "matte": "哑光",
+          "glossy": "光泽",
+          "metal": "金属",
+          "satin": "缎面",
+          "smooth": "平滑"
+        },
+        "states": {
+          "on": "开启",
+          "off": "关闭"
+        }
+      },
+      "language": {
+        "label": "语言"
+      },
+      "mediaQuality": {
+        "previewMode": "模式：预览",
+        "originalMode": "模式：原始",
+        "switchToOriginal": "切换到原始",
+        "switchToPreview": "切换到预览"
+      },
+      "video": {
+        "transcodeNotice": "正在为浏览器播放准备此视频。首次启动或拖动进度时可能需要稍候。",
+        "transcodeError": "此浏览器无法播放已准备的视频流。"
+      },
+      "errors": {
+        "loadFailed": "加载文件失败{{error}}",
+        "saveFailed": "保存文件内容失败",
+        "downloadFailed": "下载失败",
+        "pdfLoadFailed": "加载 PDF 失败",
+        "pdfDisplayFailed": "显示 PDF 失败",
+        "modelLoadFailed": "加载 3D 模型失败",
+        "modelUnsupportedType": "此 3D 文件格式不支持在浏览器中预览",
+        "pdfTooLarge": "PDF 文件过大，无法预览（{{size}}）。最大允许大小为 {{maxSize}}。请下载文件后查看。",
+        "fileTooLarge": "文件过大，无法预览（{{size}}）。文本预览的最大大小为 {{maxSize}}。请下载文件后查看。"
+      }
+    },
+    "actionsTitle": "操作",
+    "size": "大小",
+    "name": "名称",
+    "location": "位置",
+    "noFilesOrFolders": "没有文件或文件夹",
+    "clientEncryption": {
+      "enablePolicy": "启用端到端加密",
+      "disablePolicy": "禁用端到端加密",
+      "unlockDialog": {
+        "title": "解锁客户端加密",
+        "currentTitle": "此文件夹已加密",
+        "goHome": "返回主页"
+      },
+      "mixedPlain": {
+        "title": "部分文件未启用端到端加密",
+        "description_one": "{{count}} 个已有文件仍未以端到端加密方式存储。",
+        "description_other": "{{count}} 个已有文件仍未以端到端加密方式存储。",
+        "toast_one": "此文件夹中有 {{count}} 个文件未启用端到端加密。",
+        "toast_other": "此文件夹中有 {{count}} 个文件未启用端到端加密。",
+        "action": "加密",
+        "running": "正在加密"
+      },
+      "movedEncrypted": {
+        "toast_one": "{{count}} 个加密文件被移动到不自动启用端到端加密的文件夹。",
+        "toast_other": "{{count}} 个加密文件被移动到不自动启用端到端加密的文件夹。",
+        "action": "解密"
+      },
+      "encryptedFilesRemain": {
+        "title": "已加密的文件仍保持加密",
+        "description_one": "即使新上传不再自动加密，{{count}} 个文件仍保持加密状态。",
+        "description_other": "即使新上传不再自动加密，{{count}} 个文件仍保持加密状态。",
+        "toast_one": "此文件夹中仍保留 {{count}} 个加密文件。",
+        "toast_other": "此文件夹中仍保留 {{count}} 个加密文件。",
+        "action": "解密"
+      },
+      "toasts": {
+        "policyEnabled": "新上传到此文件夹的文件将在本设备上加密。",
+        "policyDisabled": "新上传到此文件夹的文件将不再自动加密。",
+        "policyToggleFailed": "无法更新加密策略。",
+        "setupRequired": "请先设置客户端加密，然后再打开此文件夹。",
+        "unlockRequired": "请先解锁客户端加密。",
+        "encryptExistingComplete_one": "已加密 {{count}} 个已有文件。",
+        "encryptExistingComplete_other": "已加密 {{count}} 个已有文件。",
+        "encryptExistingFailed_one": "无法加密 {{count}} 个文件。请查看任务面板。",
+        "encryptExistingFailed_other": "无法加密 {{count}} 个文件。请查看任务面板。",
+        "decryptExistingComplete_one": "已解密 {{count}} 个文件。",
+        "decryptExistingComplete_other": "已解密 {{count}} 个文件。",
+        "decryptExistingFailed_one": "无法解密 {{count}} 个文件。请查看任务面板。",
+        "decryptExistingFailed_other": "无法解密 {{count}} 个文件。请查看任务面板。"
+      }
+    }
+  },
+  "tasks": {
+    "title": "任务",
+    "error": "错误",
+    "errors": {
+      "serverSettingsNotLoaded": "服务器设置尚未加载",
+      "uploadFailed": "上传失败",
+      "storageQuotaExceeded": "存储空间不足。可用：{{available}}。",
+      "encryptionVaultLocked": "加密保险库已锁定",
+      "encryptionFailed": "加密失败",
+      "decryptionFailed": "解密失败",
+      "clientEncryptionFileTooLarge": "此文件超出了当前加密文件处理的大小限制。限制：{{maxSize}}。"
+    },
+    "titleWithTotal": "任务 ({{total}})",
+    "titleWithProgress": "任务 ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithErrors": "任务 ({{total}} · 失败 {{failed}})",
+    "actions": {
+      "expand": "展开",
+      "collapse": "收起",
+      "close": "关闭",
+      "clearFinished": "清除已完成"
+    },
+    "status": {
+      "queued": "已排队",
+      "running": "运行中",
+      "finalizing": "正在收尾",
+      "completed": "已完成",
+      "failed": "失败"
+    }
+  },
+  "trash": {
+    "title": "回收站",
+    "loading": {
+      "title": "正在加载回收站……",
+      "caption": "正在加载回收站内容，请稍候。"
+    },
+    "error": "加载回收站内容失败",
+    "empty": "回收站为空",
+    "actions": {
+      "goUp": "上一级",
+      "trashRoot": "回收站根目录",
+      "switchToList": "切换为列表视图",
+      "switchToTiles": "切换为平铺视图",
+      "switchToListView": "切换为列表视图",
+      "switchToTilesView": "切换为平铺视图",
+      "switchToTableView": "切换为表格视图",
+      "switchToSmallTilesView": "小平铺",
+      "switchToMediumTilesView": "中平铺",
+      "switchToLargeTilesView": "大平铺",
+      "emptyTrash": "清空回收站"
+    },
+    "breadcrumbs": {
+      "root": "回收站"
+    },
+    "stats": {
+      "summary": "{{folders}} 个文件夹，{{files}} 个文件，{{size}}"
+    },
+    "deleteFolderForever": {
+      "confirmTitle": "删除文件夹 \"{{name}}\"？",
+      "confirmDescription": "此操作无法撤销。该文件夹中的所有内容都将被删除。"
+    },
+    "deleteFile": {
+      "confirmTitle": "删除文件 \"{{name}}\"？",
+      "confirmDescription": "此操作无法撤销。"
+    },
+    "deleteFileForever": {
+      "confirmTitle": "删除文件 \"{{name}}\"？",
+      "confirmDescription": "此操作无法撤销。"
+    },
+    "deleteSelectedForever": {
+      "confirmTitle_one": "永久删除 {{count}} 项？",
+      "confirmTitle_other": "永久删除 {{count}} 项？",
+      "confirmDescription": "此操作无法撤销。所选项目将被永久删除。"
+    },
+    "emptyTrash": {
+      "confirmTitle": "清空回收站？",
+      "confirmDescription": "此操作无法撤销。回收站中的所有项目都将被永久删除。",
+      "inProgress": "正在删除第 {{current}} 项，共 {{total}} 项……",
+      "completed": "回收站已成功清空"
+    },
+    "restore": {
+      "action": "还原",
+      "inProgress": "正在还原第 {{current}} 项，共 {{total}} 项：{{name}}",
+      "failed": "还原 \"{{name}}\" 失败",
+      "notRestorable": "该项目无法还原。",
+      "rootFolder": "根文件夹",
+      "confirm": {
+        "title": "还原项目？",
+        "description": "\"{{name}}\" 将被还原到 \"{{path}}\"。",
+        "confirm": "还原"
+      },
+      "applyToAll": "对其余项目应用此选择",
+      "skip": "跳过",
+      "parentMissing": {
+        "title": "还原位置不存在",
+        "description": "\"{{name}}\" 删除自 \"{{path}}\"，但该文件夹已不存在。是否创建缺失的文件夹路径并在此处还原？",
+        "confirm": "创建并还原"
+      },
+      "conflict": {
+        "title": "项目已存在",
+        "description": "\"{{name}}\" 与名为 \"{{conflictName}}\" 的现有{{kind}}冲突。是否将现有项目移到回收站，并还原此项？",
+        "confirm": "替换",
+        "folderKind": "文件夹",
+        "fileKind": "文件"
+      }
+    }
+  },
+  "admin": {
+    "title": "管理",
+    "menu": {
+      "navigate": "板块",
+      "users": "用户",
+      "usersAndGroups": "用户与用户组",
+      "generalSettings": "常规设置",
+      "privacySettings": "隐私与安全",
+      "storageSettings": "存储",
+      "storageAndStatistics": "存储与统计",
+      "notificationsSettings": "通知",
+      "databaseBackup": "数据库备份",
+      "storageStatistics": "存储统计",
+      "securityDiagnostics": "安全检查",
+      "groups": "用户组"
+    },
+    "roles": {
+      "user": "用户",
+      "admin": "管理员",
+      "unknown": "未知"
+    },
+    "users": {
+      "title": "用户",
+      "refresh": "刷新",
+      "loading": "正在加载用户……",
+      "empty": "暂无用户",
+      "columns": {
+        "username": "用户名",
+        "email": "邮箱",
+        "role": "角色",
+        "firstName": "名字",
+        "lastName": "姓氏",
+        "birthDate": "出生日期",
+        "totp": "2FA",
+        "sessions": "会话",
+        "storageUsed": "已用存储",
+        "lastActivity": "最近活动",
+        "actions": "操作"
+      },
+      "actions": {
+        "edit": "编辑"
+      },
+      "errors": {
+        "loadFailed": "加载用户失败。",
+        "createFailed": "创建用户失败。",
+        "updateFailed": "更新用户失败。"
+      },
+      "create": {
+        "title": "创建用户",
+        "username": "用户名",
+        "email": "邮箱",
+        "password": "密码",
+        "role": "角色",
+        "firstName": "名字",
+        "lastName": "姓氏",
+        "birthDate": "出生日期",
+        "button": "创建",
+        "creating": "正在创建……",
+        "success": "用户已创建。"
+      },
+      "edit": {
+        "title": "编辑用户",
+        "save": "保存",
+        "saving": "正在保存……",
+        "success": "用户已更新。"
+      },
+      "storageUsage": {
+        "calculating": "正在计算存储使用量"
+      }
+    },
+    "settings": {
+      "actions": {
+        "save": "保存",
+        "saving": "正在保存……",
+        "close": "关闭"
+      },
+      "state": {
+        "saved": "设置已保存。"
+      },
+      "errors": {
+        "loadFailed": "加载设置失败。",
+        "saveFailed": "保存设置失败。"
+      },
+      "general": {
+        "title": "常规设置",
+        "description": "核心服务器行为以及通知中的位置解析。",
+        "fields": {
+          "publicBaseUrl": "公共基础 URL",
+          "timezone": "时区",
+          "telemetry": "遥测",
+          "allowDeduplication": "跨用户去重",
+          "allowGlobalIndexing": "全局索引",
+          "serverUsage": "服务器用途",
+          "storageSpaceMode": "存储空间模式",
+          "computionMode": "计算模式",
+          "geoIpLookupMode": "IP 查询模式",
+          "customGeoIpLookupUrl": "自定义 IP 查询 URL"
+        },
+        "validation": {
+          "required": "此字段为必填项。",
+          "publicBaseUrlInvalid": "请输入一个有效的 HTTP 或 HTTPS 基础 URL，且不得包含凭据、查询参数或片段。",
+          "publicBaseUrlMismatch": "当前地址为 {{current}}，但生成的公共链接将使用 {{configured}}。保存此值前请谨慎确认。",
+          "timezoneInvalid": "请从列表中选择有效的 IANA 时区。",
+          "customGeoIpLookupUrlInvalid": "请输入有效的 HTTP 或 HTTPS 查询 URL。"
+        },
+        "help": {
+          "publicBaseUrl": "尽管有此设置，Cotton 在绝大多数情况下都会自动确定公共 URL。仅在自动检测出错时才需要设置。",
+          "timezone": "这有助于我们避免在您睡觉时运行后台任务，让磁盘在夜间保持安静。",
+          "telemetry": "Cotton 会收集最少的技术诊断数据，以便开发者能看到错误并修复，因为并非所有人都会主动反馈问题。启用遥测还能开箱即用地解锁云端服务。",
+          "allowDeduplication": "控制一个用户是否能得知另一个用户已存储了相同的文件。禁用后，相同的数据仍会在上传后在服务器上去重，但会先被不必要地传输一次。启用后，其他用户可能得知本云端中已有人上传过该文件。在家庭或可信好友之间使用是安全的。",
+          "allowGlobalIndexing": "允许服务器解密用户文件并构建深度搜索索引。未启用时，搜索仅基于文件名和文件夹名。",
+          "serverUsage": "用于优化功能推荐和少量设置。它并非关键参数，按您的需要选择即可。"
+        },
+        "serverUsage": {
+          "Photos": "照片",
+          "Documents": "文档",
+          "Media": "媒体",
+          "Other": "其他"
+        },
+        "storageSpaceMode": {
+          "Optimal": "均衡",
+          "Limited": "节省空间",
+          "Unlimited": "无限"
+        },
+        "storageSpaceHelp": {
+          "open": "存储空间模式会影响什么？",
+          "title": "存储空间模式",
+          "description": "此设置控制 Cotton 使用和释放存储的积极程度：垃圾回收的时机、未引用数据的清理、缓存与数据复用，以及可保留的旧文件版本数量。每次文件更新时，Cotton 会通过保留对先前数据的引用来留下一份影子副本，直到清理时才将其删除。\"无限\" 模式会更长时间地保留数据，主要在需要空间时才清理；\"节省空间\" 会更早地释放存储；\"均衡\" 介于两者之间。"
+        },
+        "computionMode": {
+          "Local": "本地",
+          "Remote": "远程计算节点",
+          "Cloud": "Cotton Cloud",
+          "inDevelopment": "此功能仍在开发中。"
+        },
+        "geoIpLookupMode": {
+          "Disabled": "已禁用",
+          "CottonCloud": "云端服务",
+          "MaxMindLocal": "GeoIP Light",
+          "CustomHttp": "自定义 HTTP"
+        },
+        "geoIpLookupModeDescription": {
+          "Disabled": "不解析 IP 地址。",
+          "CottonCloud": "通过 Cotton 提供商解析 IP 地址。可用于安全通知等功能。",
+          "MaxMindLocal": "使用本地 GeoIP Light 数据库/包在本地解析 IP 地址。",
+          "CustomHttp": "粘贴您自己的服务的 URL。Cotton 将尝试从 JSON 中自动提取与位置相关的字段。"
+        },
+        "actions": {
+          "testGeoIpProvider": "测试提供商"
+        },
+        "state": {
+          "geoIpTestPassed": "自定义解析器测试通过。"
+        },
+        "openSetupWizard": {
+          "title": "打开安装向导",
+          "description": "重新运行首次启动的安装向导。",
+          "button": "打开"
+        }
+      },
+      "privacy": {
+        "title": "隐私与安全",
+        "description": "控制数据离开服务器的方式，以及共享功能如何访问用户文件。"
+      }
+    },
+    "storageSettings": {
+      "title": "存储",
+      "description": "请先配置存储凭据，再切换当前使用的存储后端。",
+      "fields": {
+        "storageType": "存储后端"
+      },
+      "quota": {
+        "title": "默认用户配额",
+        "description": "限制每位用户可拥有的去重后上传内容总量。留空表示账户无上限。",
+        "fields": {
+          "defaultUserQuotaGiB": "每用户配额 (GiB)"
+        },
+        "help": "填 0 或留空表示无限制。"
+      },
+      "template": {
+        "title": "默认文件",
+        "description": "为每个新创建的用户账户复制此文件夹中的内容。",
+        "fields": {
+          "nodeId": "模板文件夹节点 ID"
+        },
+        "help": "留空以禁用。可将其设置为包含引导或示例文件的文件夹节点 ID。"
+      },
+      "storageType": {
+        "Local": "本地磁盘",
+        "S3": "S3 兼容存储"
+      },
+      "s3": {
+        "title": "S3 配置",
+        "fields": {
+          "endpoint": "终端节点 URL",
+          "region": "区域",
+          "bucket": "存储桶",
+          "accessKey": "访问密钥",
+          "secretKey": "私有密钥"
+        }
+      },
+      "actions": {
+        "saveS3": "保存 S3 配置",
+        "useLocal": "使用本地存储",
+        "useS3": "保存配置并使用 S3"
+      },
+      "state": {
+        "s3Saved": "S3 配置已保存。",
+        "storageSaved": "存储模式已更新。"
+      },
+      "errors": {
+        "loadFailed": "加载存储设置失败。",
+        "s3SaveFailed": "保存 S3 配置失败。",
+        "storageSaveFailed": "切换存储模式失败。",
+        "quotaSaveFailed": "保存默认用户配额失败。",
+        "templateSaveFailed": "保存默认文件模板失败。"
+      }
+    },
+    "notificationsSettings": {
+      "title": "通知",
+      "description": "配置 Cotton 发送账户和安全通知的方式。",
+      "fields": {
+        "emailMode": "通知模式"
+      },
+      "emailMode": {
+        "None": "已禁用",
+        "Cloud": "Cotton Cloud Mail",
+        "Custom": "自定义 SMTP"
+      },
+      "smtp": {
+        "title": "SMTP 配置",
+        "fields": {
+          "smtpServer": "SMTP 服务器",
+          "port": "端口",
+          "username": "用户名",
+          "password": "密码",
+          "fromAddress": "发件人地址",
+          "useSSL": "使用 SSL/TLS"
+        }
+      },
+      "actions": {
+        "saveSmtp": "保存 SMTP 配置",
+        "testSmtp": "测试 SMTP",
+        "saveMode": "保存邮件模式",
+        "saving": "正在保存……",
+        "testSmtpShort": "测试"
+      },
+      "state": {
+        "smtpSaved": "SMTP 配置已保存。",
+        "testSent": "测试邮件已发送。",
+        "modeSaved": "通知模式已更新。"
+      },
+      "errors": {
+        "loadFailed": "加载通知设置失败。",
+        "smtpSaveFailed": "保存 SMTP 配置失败。",
+        "testFailed": "发送测试邮件失败。",
+        "modeSaveFailed": "保存通知模式失败。"
+      }
+    },
+    "databaseBackup": {
+      "title": "数据库备份",
+      "description": "服务器上的最新备份清单。",
+      "actions": {
+        "refresh": "刷新",
+        "trigger": "触发备份",
+        "triggering": "正在触发……"
+      },
+      "state": {
+        "loading": "正在加载备份信息……",
+        "empty": "尚未找到任何备份。",
+        "triggerSuccess": "备份任务已触发。",
+        "restoreIfEmptyHint": "如果数据库丢失且希望自动还原，请在容器环境中设置 COTTON_RESTORE_DATABASE_IF_EMPTY=true。数据库必须为空且不含任何表才能生效。"
+      },
+      "fields": {
+        "backupId": "备份 ID",
+        "createdAtUtc": "创建时间",
+        "pointerUpdatedAtUtc": "指针更新时间",
+        "dumpSizeBytes": "转储大小",
+        "chunkCount": "分块数量",
+        "dumpContentHash": "转储内容哈希",
+        "sourceDatabase": "源数据库",
+        "sourceHost": "源主机",
+        "sourcePort": "源端口"
+      },
+      "errors": {
+        "loadFailed": "加载备份信息失败。",
+        "triggerFailed": "触发备份失败。"
+      }
+    },
+    "storageStatistics": {
+      "title": "存储统计",
+      "description": "当前的存储使用情况及计划中的 GC 释放时间线。",
+      "actions": {
+        "refresh": "刷新",
+        "triggerGc": "运行 GC",
+        "triggeringGc": "正在启动……"
+      },
+      "bucket": {
+        "hour": "小时",
+        "day": "天"
+      },
+      "state": {
+        "loading": "正在加载存储统计……",
+        "empty": "所选时段内没有计划中的 GC 分桶。",
+        "triggerGcSuccess": "垃圾回收任务已触发。"
+      },
+      "summary": {
+        "fromUtc": "起始",
+        "toUtc": "截至",
+        "totalChunks": "待释放分块总数",
+        "totalSizeBytes": "待释放总大小",
+        "generatedAtUtc": "生成时间"
+      },
+      "storage": {
+        "title": "总体存储使用",
+        "fields": {
+          "storageType": "存储类型",
+          "totalUniqueChunkCount": "唯一分块总数",
+          "totalUniqueChunkPlainSizeBytes": "唯一分块明文总大小",
+          "totalUniqueChunkStoredSizeBytes": "唯一分块存储总大小",
+          "referencedUniqueChunkCount": "被引用的唯一分块",
+          "referencedLogicalChunkCount": "被引用的逻辑分块",
+          "deduplicatedUniqueChunkCount": "已去重的唯一分块",
+          "dedupSavedBytes": "去重节省",
+          "compressionSavedBytes": "压缩节省",
+          "pendingGcChunkCount": "待 GC 分块",
+          "pendingGcStoredSizeBytes": "待 GC 存储大小",
+          "overdueGcChunkCount": "逾期 GC 分块",
+          "overdueGcStoredSizeBytes": "逾期 GC 存储大小"
+        }
+      },
+      "timeline": {
+        "title": "GC 释放时间线",
+        "columns": {
+          "bucketStartUtc": "释放时间",
+          "chunkCount": "分块数",
+          "sizeBytes": "大小"
+        }
+      },
+      "errors": {
+        "loadFailed": "加载存储统计失败。",
+        "triggerGcFailed": "触发垃圾回收器失败。"
+      }
+    },
+    "securityDiagnostics": {
+      "title": "安全检查",
+      "description": "对账户卫生、主密钥处理以及进程内存暴露进行的服务端检查。",
+      "errors": {
+        "loadFailed": "加载安全诊断信息失败。"
+      },
+      "severity": {
+        "critical": "严重",
+        "warning": "警告",
+        "info": "提示"
+      },
+      "levels": {
+        "strong": {
+          "title": "防护稳健",
+          "summary": "此实例已具备预期的生产级加固。若同时信任主机和备份，则适合公网部署。"
+        },
+        "good": {
+          "title": "良好的自托管基线",
+          "summary": "对于家庭或小团队而言已足够好。剩余的项目主要是运维加固和账户卫生。"
+        },
+        "home": {
+          "title": "家庭使用基线",
+          "summary": "对于家庭和日常使用是合理的，但不要把主机视为不可信。服务器被攻陷仍可能暴露密钥或管理员访问权限。"
+        },
+        "exposed": {
+          "title": "实际攻击路径仍然存在",
+          "summary": "本实例存在的问题可能被本地攻击者、被攻陷的容器或被盗的管理员密码切实利用。"
+        },
+        "unsafe": {
+          "title": "不适合存储敏感数据",
+          "summary": "在保存重要的私密数据之前，请先修复严重警告。在此级别下，主密钥或管理员控制权可能过于易得。"
+        }
+      },
+      "chips": {
+        "publicInstance": "公共实例",
+        "privateInstance": "私有实例",
+        "envKey": "密钥来自环境变量",
+        "memoryUnlock": "内存解锁",
+        "adminTotp": "{{withTotp}}/{{total}} 名管理员已启用 2FA"
+      },
+      "sections": {
+        "risks": "威胁向量",
+        "instance": "实例与账户",
+        "masterKey": "主密钥",
+        "memory": "进程内存暴露",
+        "runtime": "运行时信息"
+      },
+      "risks": {
+        "empty": "当前服务端检查未发现任何警告。"
+      },
+      "fields": {
+        "publicInstance": "公开注册",
+        "admins": "已启用 2FA 的管理员",
+        "adminsWithoutTotp": "未启用 2FA 的管理员",
+        "masterKeySource": "来源",
+        "envWasConfigured": "已配置环境变量",
+        "envPresent": "环境变量仍然存在",
+        "dotnetDiagnostics": ".NET 诊断已禁用",
+        "processHardening": "已应用进程加固",
+        "dumpable": "可转储状态",
+        "sysPtrace": "CAP_SYS_PTRACE",
+        "os": "操作系统",
+        "container": "检测到容器",
+        "euid": "有效 UID",
+        "noNewPrivileges": "禁止获取新特权",
+        "seccomp": "Seccomp 模式",
+        "capabilities": "有效能力"
+      },
+      "values": {
+        "unknown": "未知",
+        "yes": "是",
+        "no": "否",
+        "notDumpable": "不可转储",
+        "dumpable": "可转储"
+      },
+      "threatVectors": {
+        "public-instance": "互联网访客可以创建账户并存储内容。配额、默认演示数据和滥用监控将成为安全边界的一部分。",
+        "master-key-from-environment": "如果部署元数据、shell 历史或容器内省暴露了环境变量，主密钥可能会与它保护的加密数据近在咫尺。",
+        "admins-without-2fa": "管理员密码将成为唯一的认证因素。密码复用、钓鱼或泄露的浏览器会话都可能导致实例完全被控制。",
+        "dotnet-diagnostics-enabled": "拥有足够权限的本地进程可以请求 .NET 运行时进行内存转储或跟踪，而这些转储可能包含内存中的实时机密。",
+        "process-dumpable": "同 UID 的进程或具备 ptrace 能力的调试器可以转储服务器内存并搜索内存中的主密钥。",
+        "sys-ptrace-capability": "调试或特权容器可以检查并篡改进程内存。这正是仅存于内存的密钥所要避免的能力。",
+        "new-privileges-allowed": "如果被攻陷的代码找到 setuid 辅助程序或携带能力的二进制文件，它在容器内获取特权的途径会更多。",
+        "seccomp-disabled": "内核系统调用面比 Docker 常规生产基线更宽，容器逃逸漏洞将拥有更大的活动空间。",
+        "running-as-root": "远程代码执行将在容器内以 root 身份运行，从而对挂载卷和辅助进程造成更大破坏。",
+        "process-hardening-failed": "Cotton 已请求进程加固，但进程仍未启用预期的转储或 ptrace 防护。"
+      }
+    },
+    "groups": {
+      "title": "用户组",
+      "description": "独立于单个用户管理访问组。",
+      "inDevelopment": "用户组管理功能正在开发中。"
+    }
+  },
+  "routes": {
+    "login": "登录",
+    "home": "主页",
+    "files": "文件",
+    "trash": "回收站",
+    "profile": "个人资料",
+    "settings": "设置",
+    "admin": "管理"
+  },
+  "resetPassword": {
+    "title": "重置密码",
+    "newPassword": "新密码",
+    "confirmPassword": "确认新密码",
+    "submit": "重置密码",
+    "submitting": "正在重置……",
+    "success": "密码已重置成功，您现在可以使用新密码登录。",
+    "goToLogin": "前往应用",
+    "errors": {
+      "mismatch": "两次输入的密码不一致。",
+      "invalidToken": "重置链接无效或已过期。",
+      "failed": "重置密码失败，请重试。"
+    }
+  },
+  "verifyEmail": {
+    "title": "邮箱验证",
+    "verifying": "正在验证您的邮箱……",
+    "success": "您的邮箱已成功验证！",
+    "goToLogin": "前往应用",
+    "goToSettings": "前往设置",
+    "errors": {
+      "invalidToken": "验证链接无效或已过期。",
+      "failed": "邮箱验证失败，请重试。"
+    }
+  },
+  "unlock": {
+    "title": "解锁 Cotton",
+    "caption": "服务器正在等待主密钥以启动应用。",
+    "checking": {
+      "title": "正在检查锁定状态",
+      "caption": "Cotton 正在准备安全启动流程。"
+    },
+    "masterKey": "主密钥",
+    "bootstrapToken": "引导令牌",
+    "bootstrapRequired": "首次解锁需要服务器日志中的引导令牌。",
+    "bootstrapRequiredWithExpiry": "首次解锁需要服务器日志中的引导令牌。该令牌将于 {{expiresAt}} 过期。",
+    "unlock": "解锁",
+    "unlocking": "正在解锁",
+    "generate": "生成",
+    "generating": "正在生成",
+    "generated": "已生成。请在解锁前妥善保存此密钥。",
+    "generatedToast": "主密钥已生成",
+    "generateFailed": "生成密钥失败。",
+    "unlocked": "主密钥已接受，Cotton 正在启动。",
+    "unlockFailed": "解锁失败。",
+    "showKey": "显示密钥",
+    "hideKey": "隐藏密钥",
+    "copyKey": "复制密钥",
+    "copied": "已复制",
+    "copyFailed": "无法复制密钥"
+  }
+}
