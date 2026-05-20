@@ -511,7 +511,13 @@
       "changeLanguage": "Zmień język",
       "logout": "Wyloguj",
       "help": "Pomoc",
-      "serverVersion": "Wersja serwera: {{version}}"
+      "serverVersion": "Wersja serwera: {{version}}",
+      "storageQuota": {
+        "label": "Pamięć",
+        "loading": "Wczytywanie użycia pamięci",
+        "usedOfLimit": "Użyto {{used}} z {{quota}}",
+        "usedNoLimit": "Użyto {{used}}, bez limitu"
+      }
     },
     "app": {
       "logoAlt": "Logo Cotton"

@@ -506,7 +506,13 @@
       "changeLanguage": "Cambia lingua",
       "logout": "Esci",
       "help": "Aiuto",
-      "serverVersion": "Versione server: {{version}}"
+      "serverVersion": "Versione server: {{version}}",
+      "storageQuota": {
+        "label": "Archiviazione",
+        "loading": "Caricamento uso archiviazione",
+        "usedOfLimit": "{{used}} di {{quota}} usati",
+        "usedNoLimit": "{{used}} usati, nessun limite"
+      }
     },
     "app": {
       "logoAlt": "Logo Cotton"

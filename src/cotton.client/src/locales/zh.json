@@ -490,7 +490,13 @@
       "changeLanguage": "更改语言",
       "logout": "退出登录",
       "help": "帮助",
-      "serverVersion": "服务器版本：{{version}}"
+      "serverVersion": "服务器版本：{{version}}",
+      "storageQuota": {
+        "label": "存储",
+        "loading": "正在加载存储用量",
+        "usedOfLimit": "已使用 {{used}} / {{quota}}",
+        "usedNoLimit": "已使用 {{used}}，无限制"
+      }
     },
     "app": {
       "logoAlt": "Cotton 徽标"

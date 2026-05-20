@@ -4,6 +4,7 @@ import {
   ButtonBase,
   Divider,
   IconButton,
+  LinearProgress,
   ListItemIcon,
   ListItemText,
   Menu,
@@ -16,15 +17,46 @@ import {
   Logout,
   Person,
 } from "@mui/icons-material";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { UserRole, useAuth } from "../../../features/auth";
+import { queryKeys } from "../../../shared/api/queries/queryKeys";
+import { storageQuotaApi } from "../../../shared/api/storageQuotaApi";
 import { useServerSettings } from "../../../shared/store/useServerSettings";
+import { formatBytes } from "../../../shared/utils/formatBytes";
 import {
   buildBugReportUrl,
   initializeBugReportConsoleCapture,
 } from "./bugReportPrefill";
+
+const STORAGE_QUOTA_STALE_TIME_MS = 60_000;
+
+const getStorageQuotaPercent = (
+  usedBytes: number,
+  quotaBytes: number | null,
+): number | null => {
+  if (!quotaBytes || quotaBytes <= 0) {
+    return null;
+  }
+
+  return Math.min(100, Math.max(0, (usedBytes / quotaBytes) * 100));
+};
+
+const getStorageQuotaColor = (
+  percent: number | null,
+): "primary" | "warning" | "error" => {
+  if (percent === null) {
+    return "primary";
+  }
+
+  if (percent >= 95) {
+    return "error";
+  }
+
+  return percent >= 80 ? "warning" : "primary";
+};
 
 export const UserMenu = () => {
   const { user, logout } = useAuth();
@@ -33,6 +65,12 @@ export const UserMenu = () => {
   const { data: serverSettings } = useServerSettings();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const isOpen = Boolean(anchorEl);
+  const storageQuotaQuery = useQuery({
+    queryKey: queryKeys.storageQuota.current(),
+    queryFn: storageQuotaApi.getCurrent,
+    enabled: isOpen && Boolean(user),
+    staleTime: STORAGE_QUOTA_STALE_TIME_MS,
+  });
 
   useEffect(() => {
     initializeBugReportConsoleCapture();
@@ -116,6 +154,23 @@ export const UserMenu = () => {
     displayName,
   });
   const isAdmin = user?.role === UserRole.Admin;
+  const quota = storageQuotaQuery.data;
+  const storageQuotaPercent = quota
+    ? getStorageQuotaPercent(quota.usedBytes, quota.quotaBytes)
+    : null;
+  const storageQuotaColor = getStorageQuotaColor(storageQuotaPercent);
+  const storageQuotaText = quota
+    ? quota.quotaBytes && quota.quotaBytes > 0
+      ? t("userMenu.storageQuota.usedOfLimit", {
+          used: formatBytes(quota.usedBytes),
+          quota: formatBytes(quota.quotaBytes),
+        })
+      : t("userMenu.storageQuota.usedNoLimit", {
+          used: formatBytes(quota.usedBytes),
+        })
+    : t("userMenu.storageQuota.loading");
+  const showStorageQuota =
+    isOpen && (storageQuotaQuery.isPending || Boolean(quota));
 
   return (
     <>
@@ -154,7 +209,7 @@ export const UserMenu = () => {
             elevation: 3,
             sx: {
               mt: 1.5,
-              minWidth: 200,
+              minWidth: 240,
             },
           },
         }}
@@ -211,6 +266,46 @@ export const UserMenu = () => {
           </ListItemIcon>
           <ListItemText>{t("userMenu.logout")}</ListItemText>
         </MenuItem>
+
+        {showStorageQuota && <Divider />}
+        {showStorageQuota && (
+          <Box px={2} py={1.25}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 1.5,
+                mb: 0.5,
+              }}
+            >
+              <Typography variant="caption" color="text.secondary">
+                {t("userMenu.storageQuota.label")}
+              </Typography>
+              {storageQuotaPercent !== null && (
+                <Typography variant="caption" color="text.secondary">
+                  {Math.round(storageQuotaPercent)}%
+                </Typography>
+              )}
+            </Box>
+            <Typography variant="body2" noWrap>
+              {storageQuotaText}
+            </Typography>
+            {storageQuotaPercent !== null ? (
+              <LinearProgress
+                variant="determinate"
+                value={storageQuotaPercent}
+                color={storageQuotaColor}
+                aria-label={t("userMenu.storageQuota.label")}
+                sx={{ mt: 1, height: 4, borderRadius: 999 }}
+              />
+            ) : storageQuotaQuery.isPending ? (
+              <LinearProgress
+                aria-label={t("userMenu.storageQuota.loading")}
+                sx={{ mt: 1, height: 4, borderRadius: 999 }}
+              />
+            ) : null}
+          </Box>
+        )}
 
         {serverSettings?.version && <Divider />}
         {serverSettings?.version && (

@@ -496,7 +496,13 @@
       "changeLanguage": "Змінити мову",
       "logout": "Вийти",
       "help": "Довідка",
-      "serverVersion": "Версія сервера: {{version}}"
+      "serverVersion": "Версія сервера: {{version}}",
+      "storageQuota": {
+        "label": "Сховище",
+        "loading": "Завантаження використання сховища",
+        "usedOfLimit": "Використано {{used}} з {{quota}}",
+        "usedNoLimit": "Використано {{used}}, без ліміту"
+      }
     },
     "app": {
       "logoAlt": "Логотип Cotton"

@@ -466,7 +466,13 @@
       "changeLanguage": "Сменить язык",
       "logout": "Выйти",
       "help": "Помощь",
-      "serverVersion": "Версия сервера: {{version}}"
+      "serverVersion": "Версия сервера: {{version}}",
+      "storageQuota": {
+        "label": "Хранилище",
+        "loading": "Загрузка использования хранилища",
+        "usedOfLimit": "{{used}} из {{quota}} занято",
+        "usedNoLimit": "{{used}} занято, без лимита"
+      }
     },
     "app": {
       "logoAlt": "Логотип Cotton"

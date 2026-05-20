@@ -139,6 +139,10 @@ describe("queryKeys shape stability", () => {
       5,
     ]);
     expect(queryKeys.serverSettings.all()).toEqual(["serverSettings"]);
+    expect(queryKeys.storageQuota.current()).toEqual([
+      "storageQuota",
+      "current",
+    ]);
   });
 
   it("keeps admin variants encoded in object payloads", () => {
