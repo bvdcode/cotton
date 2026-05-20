@@ -404,7 +404,13 @@
       "changeLanguage": "Change language",
       "logout": "Logout",
       "help": "Help",
-      "serverVersion": "Server version: {{version}}"
+      "serverVersion": "Server version: {{version}}",
+      "storageQuota": {
+        "label": "Storage",
+        "loading": "Loading storage usage",
+        "usedOfLimit": "{{used}} of {{quota}} used",
+        "usedNoLimit": "{{used}} used, no limit"
+      }
     },
     "app": {
       "logoAlt": "Cotton logo"

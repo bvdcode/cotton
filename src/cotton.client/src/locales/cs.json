@@ -512,7 +512,13 @@
       "changeLanguage": "Změnit jazyk",
       "logout": "Odhlásit se",
       "help": "Nápověda",
-      "serverVersion": "Verze serveru: {{version}}"
+      "serverVersion": "Verze serveru: {{version}}",
+      "storageQuota": {
+        "label": "Úložiště",
+        "loading": "Načítání využití úložiště",
+        "usedOfLimit": "Využito {{used}} z {{quota}}",
+        "usedNoLimit": "Využito {{used}}, bez limitu"
+      }
     },
     "app": {
       "logoAlt": "Logo Cotton"

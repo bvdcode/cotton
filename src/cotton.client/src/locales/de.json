@@ -505,7 +505,13 @@
       "changeLanguage": "Sprache wechseln",
       "logout": "Abmelden",
       "help": "Hilfe",
-      "serverVersion": "Serverversion: {{version}}"
+      "serverVersion": "Serverversion: {{version}}",
+      "storageQuota": {
+        "label": "Speicher",
+        "loading": "Speichernutzung wird geladen",
+        "usedOfLimit": "{{used}} von {{quota}} belegt",
+        "usedNoLimit": "{{used}} belegt, kein Limit"
+      }
     },
     "app": {
       "logoAlt": "Cotton-Logo"

@@ -503,7 +503,13 @@
       "changeLanguage": "Taal wijzigen",
       "logout": "Uitloggen",
       "help": "Help",
-      "serverVersion": "Serverversie: {{version}}"
+      "serverVersion": "Serverversie: {{version}}",
+      "storageQuota": {
+        "label": "Opslag",
+        "loading": "Opslaggebruik laden",
+        "usedOfLimit": "{{used}} van {{quota}} gebruikt",
+        "usedNoLimit": "{{used}} gebruikt, geen limiet"
+      }
     },
     "app": {
       "logoAlt": "Cotton-logo"

@@ -503,7 +503,13 @@
       "changeLanguage": "Alterar idioma",
       "logout": "Sair",
       "help": "Ajuda",
-      "serverVersion": "Versão do servidor: {{version}}"
+      "serverVersion": "Versão do servidor: {{version}}",
+      "storageQuota": {
+        "label": "Armazenamento",
+        "loading": "Carregando uso do armazenamento",
+        "usedOfLimit": "{{used}} de {{quota}} usados",
+        "usedNoLimit": "{{used}} usados, sem limite"
+      }
     },
     "app": {
       "logoAlt": "Logotipo do Cotton"

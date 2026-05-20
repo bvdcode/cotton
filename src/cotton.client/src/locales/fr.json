@@ -515,7 +515,13 @@
       "changeLanguage": "Changer de langue",
       "logout": "Se déconnecter",
       "help": "Aide",
-      "serverVersion": "Version du serveur : {{version}}"
+      "serverVersion": "Version du serveur : {{version}}",
+      "storageQuota": {
+        "label": "Stockage",
+        "loading": "Chargement de l’utilisation du stockage",
+        "usedOfLimit": "{{used}} sur {{quota}} utilisés",
+        "usedNoLimit": "{{used}} utilisés, sans limite"
+      }
     },
     "app": {
       "logoAlt": "Logo Cotton"
