@@ -1325,6 +1325,8 @@
       "selectAll": "Zaznacz wszystko",
       "deselectAll": "Odznacz wszystko",
       "deleteSelected": "Usuń zaznaczone",
+      "downloadSelected": "Pobierz zaznaczone",
+      "downloadFailed": "Nie udało się przygotować archiwum.",
       "count_one": "Zaznaczono {{count}} element",
       "count_few": "Zaznaczono {{count}} elementy",
       "count_many": "Zaznaczono {{count}} elementów",

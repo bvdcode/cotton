@@ -1302,6 +1302,8 @@
       "selectAll": "Вибрати все",
       "deselectAll": "Зняти виділення",
       "deleteSelected": "Видалити виділене",
+      "downloadSelected": "Завантажити вибране",
+      "downloadFailed": "Не вдалося підготувати архів.",
       "count_one": "{{count}} елемент виділено",
       "count_other": "{{count}} елементів виділено"
     },

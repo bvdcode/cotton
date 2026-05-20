@@ -28,6 +28,7 @@ export const buildFolderOperations = (
   getEncryptionPolicyState?: (
     folder: NodeDto,
   ) => FolderEncryptionPolicyState,
+  onFolderDownload?: (folderId: string, folderName: string) => Promise<void>,
 ): FolderOperations => {
   return {
     isRenaming: (folderId: string) => folderOps.renamingFolderId === folderId,
@@ -41,6 +42,11 @@ export const buildFolderOperations = (
     onDelete: (folderId: string, folderName: string) => {
       void folderOps.handleDeleteFolder(folderId, folderName);
     },
+    onDownload: onFolderDownload
+      ? (folderId: string, folderName: string) => {
+          void onFolderDownload(folderId, folderName);
+        }
+      : undefined,
     onShare: onFolderShare
       ? (folderId: string, folderName: string) => {
           void onFolderShare(folderId, folderName);

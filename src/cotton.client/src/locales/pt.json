@@ -1301,6 +1301,8 @@
       "selectAll": "Selecionar tudo",
       "deselectAll": "Desmarcar tudo",
       "deleteSelected": "Excluir selecionados",
+      "downloadSelected": "Baixar selecionados",
+      "downloadFailed": "Não foi possível preparar o arquivo.",
       "count_one": "{{count}} item selecionado",
       "count_other": "{{count}} itens selecionados"
     },

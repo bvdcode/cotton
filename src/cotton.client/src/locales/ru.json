@@ -1280,6 +1280,8 @@
       "selectAll": "Выделить все",
       "deselectAll": "Снять выделение",
       "deleteSelected": "Удалить выбранные",
+      "downloadSelected": "Скачать выбранное",
+      "downloadFailed": "Не удалось подготовить архив.",
       "count_one": "{{count}} элемент выбран",
       "count_few": "{{count}} элемента выбрано",
       "count_many": "{{count}} элементов выбрано",

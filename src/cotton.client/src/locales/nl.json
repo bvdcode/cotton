@@ -1301,6 +1301,8 @@
       "selectAll": "Alles selecteren",
       "deselectAll": "Alles deselecteren",
       "deleteSelected": "Selectie verwijderen",
+      "downloadSelected": "Geselecteerde downloaden",
+      "downloadFailed": "Archief voorbereiden is mislukt.",
       "count_one": "{{count}} item geselecteerd",
       "count_other": "{{count}} items geselecteerd"
     },

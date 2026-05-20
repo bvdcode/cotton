@@ -1326,6 +1326,8 @@
       "selectAll": "Vybrat vše",
       "deselectAll": "Zrušit výběr",
       "deleteSelected": "Smazat vybrané",
+      "downloadSelected": "Stáhnout vybrané",
+      "downloadFailed": "Archiv se nepodařilo připravit.",
       "count_one": "Vybrána {{count}} položka",
       "count_few": "Vybrány {{count}} položky",
       "count_many": "Vybráno {{count}} položky",

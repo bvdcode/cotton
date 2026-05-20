@@ -14,6 +14,8 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
 using NUnit.Framework;
+using System.IO.Compression;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Reflection;
@@ -352,6 +354,110 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Download_Archive_For_Selected_Files_Streams_Uncompressed_Zip_With_Utf8_Names()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var cyrillicFile = await UploadTextFileAsync(root!, "долги.txt", "рубли");
+        var notesFile = await UploadTextFileAsync(root!, "notes.txt", "plain notes");
+
+        var linkResponse = await _client.PostAsJsonAsync("/api/v1/archives/download-link", new Cotton.Server.Models.Requests.CreateArchiveDownloadLinkRequest
+        {
+            FileIds = [cyrillicFile.Id, notesFile.Id],
+            NodeIds = [],
+            ArchiveName = "выгрузка",
+        });
+        linkResponse.EnsureSuccessStatusCode();
+        var archive = await linkResponse.Content.ReadFromJsonAsync<Cotton.Server.Models.Dto.ArchiveDownloadLinkDto>();
+        Assert.That(archive, Is.Not.Null);
+        Assert.That(archive!.FileName, Is.EqualTo("выгрузка.zip"));
+
+        var download = await _client.GetAsync(archive.Url);
+        download.EnsureSuccessStatusCode();
+        Assert.That(download.Content.Headers.ContentLength, Is.EqualTo(archive.SizeBytes));
+
+        byte[] bytes = await download.Content.ReadAsByteArrayAsync();
+        Assert.That(bytes.Length, Is.EqualTo(archive.SizeBytes));
+
+        using var zip = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+        AssertZipEntry(zip, "долги.txt", "рубли");
+        AssertZipEntry(zip, "notes.txt", "plain notes");
+        Assert.That(zip.GetEntry("долги.txt")!.CompressedLength, Is.EqualTo(zip.GetEntry("долги.txt")!.Length));
+    }
+
+    [Test]
+    public async Task Download_Archive_For_Folder_Includes_Nested_Files_And_Empty_Folders()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var folder = await CreateFolderAsync(root!.Id, "Папка");
+        var nested = await CreateFolderAsync(folder.Id, "nested");
+        _ = await CreateFolderAsync(folder.Id, "empty");
+        await UploadTextFileAsync(folder, "root.txt", "root body");
+        await UploadTextFileAsync(nested, "deep.txt", "deep body");
+
+        var linkResponse = await _client.PostAsJsonAsync("/api/v1/archives/download-link", new Cotton.Server.Models.Requests.CreateArchiveDownloadLinkRequest
+        {
+            FileIds = [],
+            NodeIds = [folder.Id],
+        });
+        linkResponse.EnsureSuccessStatusCode();
+        var archive = await linkResponse.Content.ReadFromJsonAsync<Cotton.Server.Models.Dto.ArchiveDownloadLinkDto>();
+        Assert.That(archive, Is.Not.Null);
+        Assert.That(archive!.FileName, Is.EqualTo("Папка.zip"));
+
+        var download = await _client.GetAsync(archive.Url);
+        download.EnsureSuccessStatusCode();
+        byte[] bytes = await download.Content.ReadAsByteArrayAsync();
+
+        using var zip = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+        Assert.That(zip.GetEntry("Папка/"), Is.Not.Null);
+        Assert.That(zip.GetEntry("Папка/empty/"), Is.Not.Null);
+        Assert.That(zip.GetEntry("Папка/nested/"), Is.Not.Null);
+        AssertZipEntry(zip, "Папка/root.txt", "root body");
+        AssertZipEntry(zip, "Папка/nested/deep.txt", "deep body");
+    }
+
+    [Test]
+    public async Task Download_Archive_Rejects_Another_Users_File()
+    {
+        var adminToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+        var file = await UploadTextFileAsync(root!, "private.txt", "secret");
+
+        var createUserResponse = await _client.PostAsJsonAsync("/api/v1/users", new
+        {
+            username = "archiveuser",
+            password = "archivepass",
+            role = UserRole.User,
+        });
+        createUserResponse.EnsureSuccessStatusCode();
+
+        _client.DefaultRequestHeaders.Authorization = null;
+        var otherToken = await LoginAsync("archiveuser", "archivepass");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", otherToken);
+
+        var linkResponse = await _client.PostAsJsonAsync("/api/v1/archives/download-link", new Cotton.Server.Models.Requests.CreateArchiveDownloadLinkRequest
+        {
+            FileIds = [file.Id],
+            NodeIds = [],
+        });
+
+        Assert.That(linkResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+    }
+
+    [Test]
     public async Task Update_File_Metadata_Merges_Metadata_For_Own_File()
     {
         var token = await LoginAsync();
@@ -498,6 +604,26 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         settingsProviderType.GetField("_cache", flags)?.SetValue(null, null);
         settingsProviderType.GetField("_isServerInitializedCache", flags)?.SetValue(null, null);
         settingsProviderType.GetField("_serverHasUsersCache", flags)?.SetValue(null, null);
+    }
+
+    private async Task<Models.Dto.NodeDto> CreateFolderAsync(Guid parentId, string name)
+    {
+        var response = await _client!.PutAsJsonAsync(
+            "/api/v1/layouts/nodes",
+            new Cotton.Server.Models.Requests.CreateNodeRequest { ParentId = parentId, Name = name });
+        response.EnsureSuccessStatusCode();
+        var node = await response.Content.ReadFromJsonAsync<Models.Dto.NodeDto>();
+        Assert.That(node, Is.Not.Null);
+        return node!;
+    }
+
+    private static void AssertZipEntry(ZipArchive zip, string path, string expectedText)
+    {
+        ZipArchiveEntry? entry = zip.GetEntry(path);
+        Assert.That(entry, Is.Not.Null, $"Archive entry '{path}' was not found.");
+        using Stream stream = entry!.Open();
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+        Assert.That(reader.ReadToEnd(), Is.EqualTo(expectedText));
     }
 
     private async Task<Cotton.Server.Models.Dto.NodeFileManifestDto> UploadTextFileAsync(

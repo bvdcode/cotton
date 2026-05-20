@@ -1288,6 +1288,8 @@
       "selectAll": "全选",
       "deselectAll": "取消全选",
       "deleteSelected": "删除所选",
+      "downloadSelected": "下载所选",
+      "downloadFailed": "无法准备归档。",
       "count_one": "已选择 {{count}} 项",
       "count_other": "已选择 {{count}} 项"
     },

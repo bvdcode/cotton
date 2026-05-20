@@ -1,6 +1,7 @@
 import {
   ContentCut,
   Delete,
+  Download,
   Edit,
   LockOpenOutlined,
   LockOutlined,
@@ -26,6 +27,7 @@ interface FolderCardProps {
   onStartRename?: () => void;
   onRestore?: () => void;
   onDelete?: () => void;
+  onDownload?: () => void;
   onShare?: () => void;
   onCut?: () => void;
   onToggleEncryptionPolicy?: () => void;
@@ -45,6 +47,7 @@ export const FolderCard = ({
   onStartRename,
   onRestore,
   onDelete,
+  onDownload,
   onShare,
   onCut,
   onToggleEncryptionPolicy,
@@ -78,6 +81,15 @@ export const FolderCard = ({
       onClick={onClick}
       variant={variant}
       actions={[
+        ...(onDownload
+          ? [
+              {
+                icon: <Download />,
+                onClick: onDownload,
+                tooltip: t("common:actions.download"),
+              },
+            ]
+          : []),
         ...(!readOnly && onShare
           ? [
               {

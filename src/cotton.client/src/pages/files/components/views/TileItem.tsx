@@ -188,6 +188,11 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
               ? () => folderOperations.onDelete?.(tile.node.id, tile.node.name)
               : undefined
           }
+          onDownload={
+            folderOperations.onDownload
+              ? () => folderOperations.onDownload?.(tile.node.id, tile.node.name)
+              : undefined
+          }
           onShare={
             folderOperations.onShare
               ? () => folderOperations.onShare?.(tile.node.id, tile.node.name)
