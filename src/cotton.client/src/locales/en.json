@@ -841,8 +841,6 @@
     "passkeys": {
       "title": "Passkeys",
       "description": "Use a security key, biometrics or device PIN to sign in without a password.",
-      "nameLabel": "Passkey name",
-      "namePlaceholder": "YubiKey, MacBook, phone...",
       "defaultName": "Passkey {{count}}",
       "add": "Add passkey",
       "adding": "Adding...",
@@ -856,7 +854,21 @@
         "notSupported": "This browser does not support passkeys.",
         "cancelled": "Passkey creation was cancelled.",
         "addFailed": "Failed to add passkey.",
-        "deleteFailed": "Failed to delete passkey."
+        "deleteFailed": "Failed to delete passkey.",
+        "renameFailed": "Failed to rename passkey."
+      },
+      "defaultNames": {
+        "securityKey": "Security key",
+        "device": "Device passkey"
+      },
+      "rename": {
+        "title": "Name this passkey",
+        "description": "Pick a name you will recognize later. Cotton can only detect the broad authenticator type, not the exact device model.",
+        "nameLabel": "Passkey name",
+        "button": "Rename passkey",
+        "save": "Save",
+        "saving": "Saving...",
+        "cancel": "Not now"
       }
     }
   },

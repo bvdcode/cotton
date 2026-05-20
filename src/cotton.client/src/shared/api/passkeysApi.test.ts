@@ -28,6 +28,19 @@ describe("passkeysApi", () => {
     expect(httpClient.get).toHaveBeenCalledWith("auth/passkeys");
   });
 
+  it("renames a passkey", async () => {
+    const put = vi.spyOn(httpClient, "put").mockResolvedValue({
+      data: { id: "credential-1", name: "YubiKey" },
+    });
+
+    await expect(
+      passkeysApi.rename("credential-1", "  YubiKey  "),
+    ).resolves.toEqual({ id: "credential-1", name: "YubiKey" });
+    expect(put).toHaveBeenCalledWith("auth/passkeys/credential-1", {
+      name: "YubiKey",
+    });
+  });
+
   it("stores the access token returned by passkey assertion verification", async () => {
     vi.spyOn(httpClient, "post").mockResolvedValue({
       data: { accessToken: "passkey-token" },

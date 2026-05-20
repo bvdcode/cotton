@@ -942,8 +942,6 @@
     "passkeys": {
       "title": "Passkeys",
       "description": "Melde dich mit Sicherheitsschlüssel, Biometrie oder Geräte-PIN ohne Passwort an.",
-      "nameLabel": "Passkey-Name",
-      "namePlaceholder": "YubiKey, MacBook, Telefon...",
       "defaultName": "Passkey {{count}}",
       "add": "Passkey hinzufügen",
       "adding": "Wird hinzugefügt...",
@@ -957,7 +955,21 @@
         "notSupported": "Dieser Browser unterstützt keine Passkeys.",
         "cancelled": "Passkey-Erstellung wurde abgebrochen.",
         "addFailed": "Passkey konnte nicht hinzugefügt werden.",
-        "deleteFailed": "Passkey konnte nicht gelöscht werden."
+        "deleteFailed": "Passkey konnte nicht gelöscht werden.",
+        "renameFailed": "Passkey konnte nicht umbenannt werden."
+      },
+      "defaultNames": {
+        "securityKey": "Sicherheitsschlüssel",
+        "device": "Geräte-Passkey"
+      },
+      "rename": {
+        "title": "Passkey benennen",
+        "description": "Wähle einen Namen, den du später wiedererkennst. Cotton erkennt nur den groben Authenticator-Typ, nicht das genaue Gerätemodell.",
+        "nameLabel": "Passkey-Name",
+        "button": "Passkey umbenennen",
+        "save": "Speichern",
+        "saving": "Speichern...",
+        "cancel": "Nicht jetzt"
       }
     }
   },

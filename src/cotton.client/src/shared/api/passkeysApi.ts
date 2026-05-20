@@ -63,6 +63,14 @@ export const passkeysApi = {
     await httpClient.delete(`auth/passkeys/${encodeURIComponent(credentialId)}`);
   },
 
+  rename: async (credentialId: string, name: string): Promise<PasskeyCredential> => {
+    const response = await httpClient.put<PasskeyCredential>(
+      `auth/passkeys/${encodeURIComponent(credentialId)}`,
+      { name: name.trim() },
+    );
+    return response.data;
+  },
+
   beginAssertion: async (
     username?: string | null,
   ): Promise<PasskeyAssertionOptionsResponse> => {

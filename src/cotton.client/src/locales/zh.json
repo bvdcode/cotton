@@ -925,8 +925,6 @@
     "passkeys": {
       "title": "通行密钥",
       "description": "使用安全密钥、生物识别或设备 PIN 免密码登录。",
-      "nameLabel": "通行密钥名称",
-      "namePlaceholder": "YubiKey、MacBook、手机...",
       "defaultName": "通行密钥 {{count}}",
       "add": "添加通行密钥",
       "adding": "正在添加...",
@@ -940,7 +938,21 @@
         "notSupported": "此浏览器不支持通行密钥。",
         "cancelled": "已取消创建通行密钥。",
         "addFailed": "无法添加通行密钥。",
-        "deleteFailed": "无法删除通行密钥。"
+        "deleteFailed": "无法删除通行密钥。",
+        "renameFailed": "无法重命名通行密钥。"
+      },
+      "defaultNames": {
+        "securityKey": "安全密钥",
+        "device": "设备通行密钥"
+      },
+      "rename": {
+        "title": "命名此通行密钥",
+        "description": "选择一个之后能认出的名称。Cotton 只能检测大致的验证器类型，无法识别具体设备型号。",
+        "nameLabel": "通行密钥名称",
+        "button": "重命名通行密钥",
+        "save": "保存",
+        "saving": "正在保存...",
+        "cancel": "暂不"
       }
     }
   },

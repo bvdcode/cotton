@@ -38,7 +38,7 @@ const getStorageQuotaPercent = (
   quotaBytes: number | null,
 ): number | null => {
   if (!quotaBytes || quotaBytes <= 0) {
-    return null;
+    return 100;
   }
 
   return Math.min(100, Math.max(0, (usedBytes / quotaBytes) * 100));
@@ -47,7 +47,7 @@ const getStorageQuotaPercent = (
 const getStorageQuotaColor = (
   percent: number | null,
 ): "primary" | "warning" | "error" => {
-  if (percent === null) {
+  if (percent === null || percent >= 100) {
     return "primary";
   }
 
@@ -270,24 +270,7 @@ export const UserMenu = () => {
         {showStorageQuota && <Divider />}
         {showStorageQuota && (
           <Box px={2} py={1.25}>
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 1.5,
-                mb: 0.5,
-              }}
-            >
-              <Typography variant="caption" color="text.secondary">
-                {t("userMenu.storageQuota.label")}
-              </Typography>
-              {storageQuotaPercent !== null && (
-                <Typography variant="caption" color="text.secondary">
-                  {Math.round(storageQuotaPercent)}%
-                </Typography>
-              )}
-            </Box>
-            <Typography variant="body2" noWrap>
+            <Typography variant="caption" color="text.secondary" noWrap>
               {storageQuotaText}
             </Typography>
             {storageQuotaPercent !== null ? (
@@ -296,12 +279,12 @@ export const UserMenu = () => {
                 value={storageQuotaPercent}
                 color={storageQuotaColor}
                 aria-label={t("userMenu.storageQuota.label")}
-                sx={{ mt: 1, height: 4, borderRadius: 999 }}
+                sx={{ mt: 0.75, height: 4, borderRadius: 999 }}
               />
             ) : storageQuotaQuery.isPending ? (
               <LinearProgress
                 aria-label={t("userMenu.storageQuota.loading")}
-                sx={{ mt: 1, height: 4, borderRadius: 999 }}
+                sx={{ mt: 0.75, height: 4, borderRadius: 999 }}
               />
             ) : null}
           </Box>

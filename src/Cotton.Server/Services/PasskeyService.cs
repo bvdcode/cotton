@@ -144,17 +144,7 @@ namespace Cotton.Server.Services
             await _dbContext.UserPasskeyCredentials.AddAsync(credential, ct);
             await _dbContext.SaveChangesAsync(ct);
 
-            return new()
-            {
-                Id = credential.Id,
-                Name = credential.Name,
-                CredentialId = WebEncoders.Base64UrlEncode(credential.CredentialId),
-                Transports = credential.Transports,
-                IsBackupEligible = credential.IsBackupEligible,
-                IsBackedUp = credential.IsBackedUp,
-                CreatedAt = credential.CreatedAt,
-                LastUsedAt = credential.LastUsedAt
-            };
+            return ToDto(credential);
         }
 
         public async Task<PasskeyAssertionOptionsResponseDto> BeginAssertionAsync(
@@ -262,6 +252,21 @@ namespace Cotton.Server.Services
             return credential.User;
         }
 
+        public async Task<PasskeyCredentialDto> RenameCredentialAsync(
+            Guid userId,
+            Guid credentialId,
+            string name,
+            CancellationToken ct)
+        {
+            UserPasskeyCredential credential = await _dbContext.UserPasskeyCredentials
+                .FirstOrDefaultAsync(x => x.UserId == userId && x.Id == credentialId, ct)
+                ?? throw new EntityNotFoundException<UserPasskeyCredential>();
+
+            credential.Name = NormalizeName(name);
+            await _dbContext.SaveChangesAsync(ct);
+            return ToDto(credential);
+        }
+
         public async Task DeleteCredentialAsync(Guid userId, Guid credentialId, CancellationToken ct)
         {
             int deleted = await _dbContext.UserPasskeyCredentials
@@ -272,6 +277,21 @@ namespace Cotton.Server.Services
             {
                 throw new EntityNotFoundException<UserPasskeyCredential>();
             }
+        }
+
+        private static PasskeyCredentialDto ToDto(UserPasskeyCredential credential)
+        {
+            return new()
+            {
+                Id = credential.Id,
+                Name = credential.Name,
+                CredentialId = WebEncoders.Base64UrlEncode(credential.CredentialId),
+                Transports = credential.Transports,
+                IsBackupEligible = credential.IsBackupEligible,
+                IsBackedUp = credential.IsBackedUp,
+                CreatedAt = credential.CreatedAt,
+                LastUsedAt = credential.LastUsedAt
+            };
         }
 
         private Fido2 CreateFido2()

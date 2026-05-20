@@ -949,8 +949,6 @@
     "passkeys": {
       "title": "Přístupové klíče",
       "description": "Použijte bezpečnostní klíč, biometriku nebo PIN zařízení pro přihlášení bez hesla.",
-      "nameLabel": "Název klíče",
-      "namePlaceholder": "YubiKey, MacBook, telefon...",
       "defaultName": "Přístupový klíč {{count}}",
       "add": "Přidat klíč",
       "adding": "Přidávání...",
@@ -964,7 +962,21 @@
         "notSupported": "Tento prohlížeč nepodporuje přístupové klíče.",
         "cancelled": "Vytvoření přístupového klíče bylo zrušeno.",
         "addFailed": "Nepodařilo se přidat přístupový klíč.",
-        "deleteFailed": "Nepodařilo se odstranit přístupový klíč."
+        "deleteFailed": "Nepodařilo se odstranit přístupový klíč.",
+        "renameFailed": "Nepodařilo se přejmenovat přístupový klíč."
+      },
+      "defaultNames": {
+        "securityKey": "Bezpečnostní klíč",
+        "device": "Klíč zařízení"
+      },
+      "rename": {
+        "title": "Pojmenujte tento klíč",
+        "description": "Zvolte název, který později poznáte. Cotton umí zjistit jen obecný typ autentizátoru, ne přesný model zařízení.",
+        "nameLabel": "Název klíče",
+        "button": "Přejmenovat klíč",
+        "save": "Uložit",
+        "saving": "Ukládání...",
+        "cancel": "Teď ne"
       }
     }
   },

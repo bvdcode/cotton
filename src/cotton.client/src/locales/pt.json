@@ -938,8 +938,6 @@
     "passkeys": {
       "title": "Passkeys",
       "description": "Use uma chave de segurança, biometria ou PIN do dispositivo para entrar sem senha.",
-      "nameLabel": "Nome da passkey",
-      "namePlaceholder": "YubiKey, MacBook, telefone...",
       "defaultName": "Passkey {{count}}",
       "add": "Adicionar passkey",
       "adding": "Adicionando...",
@@ -953,7 +951,21 @@
         "notSupported": "Este navegador não suporta passkeys.",
         "cancelled": "Criação da passkey cancelada.",
         "addFailed": "Falha ao adicionar passkey.",
-        "deleteFailed": "Falha ao excluir passkey."
+        "deleteFailed": "Falha ao excluir passkey.",
+        "renameFailed": "Falha ao renomear passkey."
+      },
+      "defaultNames": {
+        "securityKey": "Chave de segurança",
+        "device": "Passkey do dispositivo"
+      },
+      "rename": {
+        "title": "Nomeie esta passkey",
+        "description": "Escolha um nome que você reconheça depois. Cotton só detecta o tipo geral, não o modelo exato do dispositivo.",
+        "nameLabel": "Nome da passkey",
+        "button": "Renomear passkey",
+        "save": "Salvar",
+        "saving": "Salvando...",
+        "cancel": "Agora não"
       }
     }
   },

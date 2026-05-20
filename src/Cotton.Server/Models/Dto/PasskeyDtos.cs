@@ -46,6 +46,11 @@ namespace Cotton.Server.Models.Dto
         public string? Username { get; set; }
     }
 
+    public class RenamePasskeyRequestDto
+    {
+        public string Name { get; set; } = null!;
+    }
+
     public class FinishPasskeyAssertionRequestDto
     {
         public string RequestId { get; set; } = null!;

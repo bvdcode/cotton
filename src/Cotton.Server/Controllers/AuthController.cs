@@ -249,6 +249,21 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
+        [HttpPut("passkeys/{credentialId:guid}")]
+        public async Task<IActionResult> RenamePasskey(
+            [FromRoute] Guid credentialId,
+            [FromBody] RenamePasskeyRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            var response = await _passkeys.RenameCredentialAsync(
+                User.GetUserId(),
+                credentialId,
+                request.Name,
+                cancellationToken);
+            return Ok(response);
+        }
+
+        [Authorize]
         [HttpDelete("passkeys/{credentialId:guid}")]
         public async Task<IActionResult> DeletePasskey(
             [FromRoute] Guid credentialId,

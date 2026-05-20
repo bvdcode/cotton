@@ -938,8 +938,6 @@
     "passkeys": {
       "title": "Passkeys",
       "description": "Gebruik een beveiligingssleutel, biometrie of apparaat-pincode om zonder wachtwoord in te loggen.",
-      "nameLabel": "Passkeynaam",
-      "namePlaceholder": "YubiKey, MacBook, telefoon...",
       "defaultName": "Passkey {{count}}",
       "add": "Passkey toevoegen",
       "adding": "Toevoegen...",
@@ -953,7 +951,21 @@
         "notSupported": "Deze browser ondersteunt geen passkeys.",
         "cancelled": "Passkey aanmaken is geannuleerd.",
         "addFailed": "Passkey toevoegen is mislukt.",
-        "deleteFailed": "Passkey verwijderen is mislukt."
+        "deleteFailed": "Passkey verwijderen is mislukt.",
+        "renameFailed": "Passkey hernoemen is mislukt."
+      },
+      "defaultNames": {
+        "securityKey": "Beveiligingssleutel",
+        "device": "Apparaatpasskey"
+      },
+      "rename": {
+        "title": "Geef deze passkey een naam",
+        "description": "Kies een herkenbare naam. Cotton kan alleen het algemene authenticatortype detecteren, niet het exacte apparaatmodel.",
+        "nameLabel": "Passkeynaam",
+        "button": "Passkey hernoemen",
+        "save": "Opslaan",
+        "saving": "Opslaan...",
+        "cancel": "Niet nu"
       }
     }
   },
