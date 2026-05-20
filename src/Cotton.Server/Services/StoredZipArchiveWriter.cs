@@ -36,6 +36,11 @@ public sealed class StoredZipArchiveWriter
         return BuildPlan(entries).TotalLength;
     }
 
+    internal static bool RequiresZip64CentralDirectoryMetadata(long sizeBytes, long localHeaderOffset)
+    {
+        return sizeBytes > UInt32Max || localHeaderOffset > UInt32Max;
+    }
+
     public async Task WriteAsync(
         Stream destination,
         IReadOnlyList<StoredZipSourceEntry> entries,
@@ -263,7 +268,10 @@ public sealed class StoredZipArchiveWriter
         ZipEntryPlan entry = written.Plan;
         bool sizeNeedsZip64 = entry.SizeBytes > UInt32Max;
         bool offsetNeedsZip64 = entry.LocalHeaderOffset > UInt32Max;
-        ushort versionNeeded = sizeNeedsZip64 ? VersionZip64 : VersionStore;
+        bool requiresZip64CentralMetadata = RequiresZip64CentralDirectoryMetadata(
+            entry.SizeBytes,
+            entry.LocalHeaderOffset);
+        ushort versionNeeded = requiresZip64CentralMetadata ? VersionZip64 : VersionStore;
         ushort versionMadeBy = (ushort)((3 << 8) | versionNeeded);
         ushort flags = Utf8Flag;
         if (!entry.IsDirectory)
