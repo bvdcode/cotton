@@ -3,6 +3,7 @@ using Cotton.Database.Models;
 using Cotton.Server.IntegrationTests.Abstractions;
 using EasyExtensions.Models.Enums;
 using Cotton.Server.Services;
+using Cotton.Storage.Abstractions;
 using Cotton.Storage.Backends;
 using Cotton.Storage.Processors;
 using EasyExtensions.Crypto;
@@ -71,6 +72,35 @@ namespace Cotton.Server.IntegrationTests
             await DbContext.SaveChangesAsync();
             await StoreEncryptedChunkAsync(settings);
             var probe = CreateProbe();
+
+            MasterKeyCompatibilityResult result = await probe.ValidateAsync(
+                settings,
+                MasterKeyCompatibilityMode.RequireEvidenceForExistingData);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result.Success, Is.True);
+                Assert.That(result.ExistingDataFound, Is.True);
+                Assert.That(result.EvidenceFound, Is.True);
+            }
+        }
+
+        [Test]
+        public async Task ValidateAsync_Checks_Storage_Evidence_After_Corrupt_Database_Probe_With_Encrypted_Storage_Config()
+        {
+            CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+            DbContext.Users.Add(new User
+            {
+                Username = "corruptdb" + Guid.NewGuid().ToString("N")[..8],
+                PasswordPhc = "phc",
+                WebDavTokenPhc = "webdav",
+                Role = UserRole.Admin,
+                AvatarHashEncrypted = RandomNumberGenerator.GetBytes(48)
+            });
+            await DbContext.SaveChangesAsync();
+            await StoreEncryptedChunkAsync(settings);
+            var probe = CreateProbe(new EncryptedConfigurationStorageBackend(CreateStorageBackend()));
 
             MasterKeyCompatibilityResult result = await probe.ValidateAsync(
                 settings,
@@ -154,14 +184,30 @@ namespace Cotton.Server.IntegrationTests
             }
         }
 
-        private MasterKeyCompatibilityProbe CreateProbe()
+        private MasterKeyCompatibilityProbe CreateProbe(IStorageBackend? storage = null)
         {
             string connectionString = DbContext.Database.GetConnectionString()
                 ?? throw new InvalidOperationException("Test database connection string is not configured.");
             return new MasterKeyCompatibilityProbe(
                 NullLogger<MasterKeyCompatibilityProbe>.Instance,
-                new FileSystemStorageBackend(NullLogger<FileSystemStorageBackend>.Instance, _storageBasePath),
+                storage ?? CreateStorageBackend(),
                 connectionString);
+        }
+
+        private IStorageBackend CreateStorageBackend() =>
+            new FileSystemStorageBackend(NullLogger<FileSystemStorageBackend>.Instance, _storageBasePath);
+
+        private sealed class EncryptedConfigurationStorageBackend(IStorageBackend inner)
+            : IStorageBackend, IStorageBackendUsesEncryptedConfiguration
+        {
+            public void CleanupTempFiles(TimeSpan ttl) => inner.CleanupTempFiles(ttl);
+            public Task<bool> DeleteAsync(string uid) => inner.DeleteAsync(uid);
+            public Task<bool> ExistsAsync(string uid) => inner.ExistsAsync(uid);
+            public Task<long> GetSizeAsync(string uid) => inner.GetSizeAsync(uid);
+            public Task<Stream> ReadAsync(string uid) => inner.ReadAsync(uid);
+            public Task WriteAsync(string uid, Stream stream) => inner.WriteAsync(uid, stream);
+            public IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default) =>
+                inner.ListAllKeysAsync(ct);
         }
 
         private async Task StoreEncryptedChunkAsync(CottonEncryptionSettings settings)
