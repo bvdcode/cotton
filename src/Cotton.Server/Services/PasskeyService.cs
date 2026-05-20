@@ -71,11 +71,13 @@ namespace Cotton.Server.Services
                     .ToArray(),
                 AuthenticatorSelection = new AuthenticatorSelection
                 {
+                    AuthenticatorAttachment = AuthenticatorAttachment.CrossPlatform,
                     ResidentKey = ResidentKeyRequirement.Required,
                     UserVerification = UserVerificationRequirement.Required
                 },
                 AttestationPreference = AttestationConveyancePreference.None
             });
+            options.Hints = [PublicKeyCredentialHint.SecurityKey];
 
             string requestId = CreateRequestId();
             _cache.Set(

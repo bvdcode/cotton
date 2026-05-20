@@ -31,6 +31,16 @@ import {
 } from "../../../shared/passkeys/webauthn";
 import { ProfileAccordionCard } from "./ProfileAccordionCard";
 
+const passkeyCancellationErrorNames = new Set(["AbortError", "NotAllowedError"]);
+
+const isPasskeyCreationCancelled = (error: unknown): boolean => {
+  return (
+    typeof DOMException !== "undefined" &&
+    error instanceof DOMException &&
+    passkeyCancellationErrorNames.has(error.name)
+  );
+};
+
 const formatDateTime = (iso: string): string => {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) {
@@ -143,8 +153,12 @@ export const PasskeysCard = () => {
       );
       setCredentials((current) => [saved, ...current]);
       openRenameDialog(saved);
-    } catch {
-      setError(t("passkeys.errors.addFailed"));
+    } catch (caught) {
+      setError(
+        isPasskeyCreationCancelled(caught)
+          ? t("passkeys.errors.cancelled")
+          : t("passkeys.errors.addFailed"),
+      );
     } finally {
       setAdding(false);
     }
