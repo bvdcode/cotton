@@ -21,7 +21,6 @@ using EasyExtensions.EntityFrameworkCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
 using EasyExtensions.Quartz.Extensions;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace Cotton.Server
@@ -43,10 +42,6 @@ namespace Cotton.Server
             {
                 return;
             }
-
-            await MasterKeyStartupStorage
-                .CreateSentinelStore(encryptionSettings, NullLoggerFactory.Instance)
-                .EnsureValidOrThrowAsync(encryptionSettings);
 
             await RunApplicationAsync(args, encryptionSettings, masterKeyRuntimeState, processHardeningStatus);
         }

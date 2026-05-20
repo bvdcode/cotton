@@ -86,7 +86,7 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task ValidateAsync_Checks_Storage_Evidence_After_Corrupt_Database_Probe_With_Encrypted_Storage_Config()
+        public async Task ValidateAsync_Does_Not_Touch_Storage_When_Encrypted_Configuration_Probe_Fails()
         {
             CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(
                 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
@@ -99,8 +99,7 @@ namespace Cotton.Server.IntegrationTests
                 AvatarHashEncrypted = RandomNumberGenerator.GetBytes(48)
             });
             await DbContext.SaveChangesAsync();
-            await StoreEncryptedChunkAsync(settings);
-            var probe = CreateProbe(new EncryptedConfigurationStorageBackend(CreateStorageBackend()));
+            var probe = CreateProbe(new ThrowingEncryptedConfigurationStorageBackend());
 
             MasterKeyCompatibilityResult result = await probe.ValidateAsync(
                 settings,
@@ -108,9 +107,10 @@ namespace Cotton.Server.IntegrationTests
 
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(result.Success, Is.True);
+                Assert.That(result.Success, Is.False);
                 Assert.That(result.ExistingDataFound, Is.True);
                 Assert.That(result.EvidenceFound, Is.True);
+                Assert.That(result.Error, Does.Contain("does not match"));
             }
         }
 
@@ -197,17 +197,18 @@ namespace Cotton.Server.IntegrationTests
         private IStorageBackend CreateStorageBackend() =>
             new FileSystemStorageBackend(NullLogger<FileSystemStorageBackend>.Instance, _storageBasePath);
 
-        private sealed class EncryptedConfigurationStorageBackend(IStorageBackend inner)
-            : IStorageBackend, IStorageBackendUsesEncryptedConfiguration
+        private sealed class ThrowingEncryptedConfigurationStorageBackend : IStorageBackend, IStorageBackendUsesEncryptedConfiguration
         {
-            public void CleanupTempFiles(TimeSpan ttl) => inner.CleanupTempFiles(ttl);
-            public Task<bool> DeleteAsync(string uid) => inner.DeleteAsync(uid);
-            public Task<bool> ExistsAsync(string uid) => inner.ExistsAsync(uid);
-            public Task<long> GetSizeAsync(string uid) => inner.GetSizeAsync(uid);
-            public Task<Stream> ReadAsync(string uid) => inner.ReadAsync(uid);
-            public Task WriteAsync(string uid, Stream stream) => inner.WriteAsync(uid, stream);
-            public IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default) =>
-                inner.ListAllKeysAsync(ct);
+            public void CleanupTempFiles(TimeSpan ttl) => throw StorageTouched();
+            public Task<bool> DeleteAsync(string uid) => throw StorageTouched();
+            public Task<bool> ExistsAsync(string uid) => throw StorageTouched();
+            public Task<long> GetSizeAsync(string uid) => throw StorageTouched();
+            public Task<Stream> ReadAsync(string uid) => throw StorageTouched();
+            public Task WriteAsync(string uid, Stream stream) => throw StorageTouched();
+            public IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default) => throw StorageTouched();
+
+            private static InvalidOperationException StorageTouched() =>
+                new("Encrypted configuration storage should not be touched after failed database proof.");
         }
 
         private async Task StoreEncryptedChunkAsync(CottonEncryptionSettings settings)
