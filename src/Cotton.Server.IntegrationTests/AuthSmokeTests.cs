@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Server.IntegrationTests.Abstractions;
+using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Helpers;
 using Cotton.Storage.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
@@ -9,7 +10,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -21,17 +21,13 @@ namespace Cotton.Server.IntegrationTests;
 
 public class AuthSmokeTests : IntegrationTestBase
 {
-    private const string TestRootMasterKey = "testtesttesttesttesttesttesttest";
-    private WebApplicationFactory<Program>? _factory;
+    private TestAppFactory? _factory;
+    private WebApplicationFactory<Program>? _customFactory;
     private HttpClient? _client;
-    private string? _previousMasterKey;
 
     [SetUp]
     public void SetUp()
     {
-        _previousMasterKey = Environment.GetEnvironmentVariable("COTTON_MASTER_KEY");
-        Environment.SetEnvironmentVariable("COTTON_MASTER_KEY", TestRootMasterKey);
-
         // Reset DB to empty state
         var creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
@@ -52,28 +48,24 @@ public class AuthSmokeTests : IntegrationTestBase
             Password = "postgres"
         };
 
-        _factory = new WebApplicationFactory<Program>()
-        .WithWebHostBuilder(builder =>
+        var overrides = new Dictionary<string, string?>
         {
-            builder.UseSetting(WebHostDefaults.EnvironmentKey, "IntegrationTests");
-            builder.ConfigureAppConfiguration((ctx, cfg) =>
- {
-     var overrides = new Dictionary<string, string?>
-     {
-         ["DatabaseSettings:Host"] = csb.Host,
-         ["DatabaseSettings:Port"] = csb.Port.ToString(),
-         ["DatabaseSettings:Database"] = csb.Database,
-         ["DatabaseSettings:Username"] = csb.Username,
-         ["DatabaseSettings:Password"] = csb.Password,
-         ["MasterEncryptionKey"] = Convert.ToBase64String(Encoding.UTF8.GetBytes("0123456789ABCDEF0123456789ABCDEF")),
-         ["MasterEncryptionKeyId"] = "1",
-         ["EncryptionThreads"] = "1",
-         ["MaxChunkSizeBytes"] = "16777216",
-         ["CipherChunkSizeBytes"] = "20971520",
-         ["JwtSettings:Key"] = "T3wNTuKqmTXKjJKXHJRGUpG9sdrmpSX4"
-     };
-     cfg.AddInMemoryCollection(overrides!);
- });
+            ["DatabaseSettings:Host"] = csb.Host,
+            ["DatabaseSettings:Port"] = csb.Port.ToString(),
+            ["DatabaseSettings:Database"] = csb.Database,
+            ["DatabaseSettings:Username"] = csb.Username,
+            ["DatabaseSettings:Password"] = csb.Password,
+            ["MasterEncryptionKey"] = Convert.ToBase64String(Encoding.UTF8.GetBytes("0123456789ABCDEF0123456789ABCDEF")),
+            ["MasterEncryptionKeyId"] = "1",
+            ["EncryptionThreads"] = "1",
+            ["MaxChunkSizeBytes"] = "16777216",
+            ["CipherChunkSizeBytes"] = "20971520",
+            ["JwtSettings:Key"] = "T3wNTuKqmTXKjJKXHJRGUpG9sdrmpSX4"
+        };
+
+        _factory = new TestAppFactory(overrides);
+        _customFactory = _factory.WithWebHostBuilder(builder =>
+        {
             builder.ConfigureServices(services =>
             {
                 // Replace file storage with in-memory implementation for tests
@@ -89,7 +81,7 @@ public class AuthSmokeTests : IntegrationTestBase
             });
         });
 
-        _client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        _client = _customFactory.CreateClient(new WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false
         });
@@ -99,8 +91,8 @@ public class AuthSmokeTests : IntegrationTestBase
     public void TearDown()
     {
         _client?.Dispose();
+        _customFactory?.Dispose();
         _factory?.Dispose();
-        Environment.SetEnvironmentVariable("COTTON_MASTER_KEY", _previousMasterKey);
     }
 
     [Test]
