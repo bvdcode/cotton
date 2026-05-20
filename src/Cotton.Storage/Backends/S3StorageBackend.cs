@@ -8,7 +8,7 @@ using System.Net.Mime;
 
 namespace Cotton.Storage.Backends
 {
-    public class S3StorageBackend(IS3Provider _s3Provider) : IStorageBackend
+    public class S3StorageBackend(IS3Provider _s3Provider) : IStorageBackend, IStorageBackendUsesEncryptedConfiguration
     {
         private const int WriteBufferSize = 2 * 1024 * 1024;
 
