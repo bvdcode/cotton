@@ -45,8 +45,9 @@ namespace Cotton.Server.Services
             try
             {
                 using var cipher = CreateCipher(encryptionSettings);
+                bool storageDependsOnEncryptedConfiguration = _backend is IStorageBackendUsesEncryptedConfiguration;
 
-                if (await _backend.ExistsAsync(SentinelStorageKey))
+                if (!storageDependsOnEncryptedConfiguration && await _backend.ExistsAsync(SentinelStorageKey))
                 {
                     MasterKeySentinelResult existing = await ValidateExistingOrRepairAsync(
                         encryptionSettings,
@@ -77,6 +78,20 @@ namespace Cotton.Server.Services
                         "Existing Cotton data was found, but no encrypted data could be used to verify the submitted master key. Start Cotton once with COTTON_MASTER_KEY set to the original master key so it can seed the master-key sentinel safely.");
                 }
 
+                if (storageDependsOnEncryptedConfiguration)
+                {
+                    if (compatibility.EvidenceFound || !compatibility.ExistingDataFound)
+                    {
+                        _logger.LogInformation(
+                            "Master key accepted from compatibility evidence. Storage sentinel skipped because backend {BackendType} depends on encrypted configuration.",
+                            _backend.GetType().Name);
+                        return MasterKeySentinelResult.Ok(created: false);
+                    }
+
+                    return MasterKeySentinelResult.Fail(
+                        "Existing Cotton data was found, but no encrypted data could be used to verify the submitted master key.");
+                }
+
                 await WriteNewAsync(cipher, cancellationToken);
                 _logger.LogInformation("Master key sentinel created. StorageKey={StorageKey}", SentinelStorageKey);
                 return MasterKeySentinelResult.Ok(created: true);
@@ -93,16 +108,6 @@ namespace Cotton.Server.Services
             }
         }
 
-        public async Task EnsureValidOrThrowAsync(
-            CottonEncryptionSettings encryptionSettings,
-            CancellationToken cancellationToken = default)
-        {
-            MasterKeySentinelResult result = await ValidateOrInitializeAsync(encryptionSettings, cancellationToken);
-            if (!result.Success)
-            {
-                throw new InvalidOperationException(result.Error ?? "Master key sentinel validation failed.");
-            }
-        }
 
         private async Task<MasterKeySentinelResult> ValidateExistingOrRepairAsync(
             CottonEncryptionSettings encryptionSettings,

@@ -1,5 +1,6 @@
 using Cotton.Autoconfig.Extensions;
 using Cotton.Server.Services;
+using Cotton.Storage.Abstractions;
 using Cotton.Storage.Backends;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
@@ -56,6 +57,29 @@ namespace Cotton.Server.IntegrationTests
             var store = CreateStore(probe);
 
             MasterKeySentinelResult result = await store.ValidateOrInitializeAsync(settings);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result.Success, Is.True);
+                Assert.That(result.Created, Is.False);
+            }
+        }
+
+        [Test]
+        public async Task ValidateOrInitializeAsync_Uses_Compatibility_Before_Sentinel_For_Encrypted_Configuration_Backend()
+        {
+            var probe = new DelegateCompatibilityProbe((_, _) =>
+                MasterKeyCompatibilityResult.Compatible(existingDataFound: true, evidenceFound: true));
+            var store = new MasterKeySentinelStore(
+                NullLogger<MasterKeySentinelStore>.Instance,
+                new ThrowingEncryptedConfigurationStorageBackend(),
+                probe);
+            CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+
+            MasterKeySentinelResult result = await store.ValidateOrInitializeAsync(
+                settings,
+                MasterKeySentinelInitializationMode.RequireCompatibilityEvidenceForExistingData);
 
             using (Assert.EnterMultipleScope())
             {
@@ -161,6 +185,20 @@ namespace Cotton.Server.IntegrationTests
                 NullLogger<MasterKeySentinelStore>.Instance,
                 new FileSystemStorageBackend(NullLogger<FileSystemStorageBackend>.Instance, _storageBasePath),
                 compatibilityProbe);
+
+        private sealed class ThrowingEncryptedConfigurationStorageBackend : IStorageBackend, IStorageBackendUsesEncryptedConfiguration
+        {
+            public void CleanupTempFiles(TimeSpan ttl) => throw StorageTouched();
+            public Task<bool> DeleteAsync(string uid) => throw StorageTouched();
+            public Task<bool> ExistsAsync(string uid) => throw StorageTouched();
+            public Task<long> GetSizeAsync(string uid) => throw StorageTouched();
+            public Task<Stream> ReadAsync(string uid) => throw StorageTouched();
+            public Task WriteAsync(string uid, Stream stream) => throw StorageTouched();
+            public IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default) => throw StorageTouched();
+
+            private static InvalidOperationException StorageTouched() =>
+                new("Encrypted configuration storage should not be touched before compatibility proof.");
+        }
 
         private sealed class DelegateCompatibilityProbe(
             Func<CottonEncryptionSettings, MasterKeyCompatibilityMode, MasterKeyCompatibilityResult> _validate)

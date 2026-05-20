@@ -28,7 +28,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS with-node
 RUN set -eux \
 	&& apt-get update \
 	&& apt-get install -y --no-install-recommends curl ca-certificates gnupg \
-	&& curl -fsSL https://deb.nodesource.com/setup_25.x | bash - \
+	&& curl -fsSL https://deb.nodesource.com/setup_26.x | bash - \
 	&& apt-get install -y --no-install-recommends nodejs \
 	&& apt-get purge -y --auto-remove gnupg \
 	&& rm -rf /var/lib/apt/lists/*
@@ -38,11 +38,14 @@ ARG BUILD_CONFIGURATION=Release
 ARG BUILD_VERSION=dev
 WORKDIR /src
 ENV APP_VERSION=$BUILD_VERSION
+COPY ["Directory.Build.props", "./"]
 COPY ["Cotton.Server/Cotton.Server.csproj", "Cotton.Server/"]
 COPY ["cotton.client/cotton.client.esproj", "cotton.client/"]
 COPY ["Cotton.Shared/Cotton.csproj", "Cotton.Shared/"]
 COPY ["Cotton.Storage/Cotton.Storage.csproj", "Cotton.Storage/"]
 COPY ["Cotton.Topology/Cotton.Topology.csproj", "Cotton.Topology/"]
+COPY ["Cotton.Previews/Cotton.Previews.csproj", "Cotton.Previews/"]
+COPY ["Cotton.Autoconfig/Cotton.Autoconfig.csproj", "Cotton.Autoconfig/"]
 COPY ["Cotton.Database/Cotton.Database.csproj", "Cotton.Database/"]
 COPY ["Cotton.Validators/Cotton.Validators.csproj", "Cotton.Validators/"]
 COPY ["Cotton.Localization/Cotton.Localization.csproj", "Cotton.Localization/"]

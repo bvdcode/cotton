@@ -114,20 +114,32 @@ namespace Cotton.Server.Services
                     return MasterKeyCompatibilityResult.Compatible(existingDataFound: true, evidenceFound: true);
                 }
 
-                ProbeValidationState storageProbe = await ValidateStorageChunkProbeAsync(
-                    connection,
-                    cipher,
-                    cancellationToken);
-                if (storageProbe == ProbeValidationState.Validated)
-                {
-                    return MasterKeyCompatibilityResult.Compatible(existingDataFound: true, evidenceFound: true);
-                }
-                if (storageProbe == ProbeValidationState.FailedCandidates)
+                bool storageDependsOnEncryptedConfiguration = _storage is IStorageBackendUsesEncryptedConfiguration;
+                if (storageDependsOnEncryptedConfiguration && databaseProbe == ProbeValidationState.FailedCandidates)
                 {
                     return MasterKeyCompatibilityResult.Fail(
                         "Master key does not match existing encrypted Cotton data.",
                         existingDataFound: true,
                         evidenceFound: true);
+                }
+
+                if (!storageDependsOnEncryptedConfiguration)
+                {
+                    ProbeValidationState storageProbe = await ValidateStorageChunkProbeAsync(
+                        connection,
+                        cipher,
+                        cancellationToken);
+                    if (storageProbe == ProbeValidationState.Validated)
+                    {
+                        return MasterKeyCompatibilityResult.Compatible(existingDataFound: true, evidenceFound: true);
+                    }
+                    if (storageProbe == ProbeValidationState.FailedCandidates)
+                    {
+                        return MasterKeyCompatibilityResult.Fail(
+                            "Master key does not match existing encrypted Cotton data.",
+                            existingDataFound: true,
+                            evidenceFound: true);
+                    }
                 }
 
                 if (databaseProbe == ProbeValidationState.FailedCandidates)
