@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
+using Cotton.Autoconfig.Extensions;
 using Cotton.Database.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -15,19 +16,41 @@ public class TestAppFactory : WebApplicationFactory<Program>
 {
     private const string TestRootMasterKey = "testtesttesttesttesttesttesttest";
     private readonly Dictionary<string, string?> _overrides;
-    private readonly string? _previousMasterKey;
+    private readonly Dictionary<string, string?> _previousEnvironmentVariables = [];
 
     public TestAppFactory(Dictionary<string, string?> overrides)
     {
         _overrides = overrides;
-        _previousMasterKey = Environment.GetEnvironmentVariable("COTTON_MASTER_KEY");
-        Environment.SetEnvironmentVariable("COTTON_MASTER_KEY", TestRootMasterKey);
+        SetEnvironmentVariable(ConfigurationBuilderExtensions.MasterKeyEnvironmentVariable, TestRootMasterKey);
+        SetDatabaseEnvironmentVariable("COTTON_PG_HOST", "DatabaseSettings:Host");
+        SetDatabaseEnvironmentVariable("COTTON_PG_PORT", "DatabaseSettings:Port");
+        SetDatabaseEnvironmentVariable("COTTON_PG_DATABASE", "DatabaseSettings:Database");
+        SetDatabaseEnvironmentVariable("COTTON_PG_USERNAME", "DatabaseSettings:Username");
+        SetDatabaseEnvironmentVariable("COTTON_PG_PASSWORD", "DatabaseSettings:Password");
     }
 
     protected override void Dispose(bool disposing)
     {
-        Environment.SetEnvironmentVariable("COTTON_MASTER_KEY", _previousMasterKey);
+        foreach ((string key, string? value) in _previousEnvironmentVariables)
+        {
+            Environment.SetEnvironmentVariable(key, value);
+        }
+
         base.Dispose(disposing);
+    }
+
+    private void SetDatabaseEnvironmentVariable(string environmentVariable, string overrideKey)
+    {
+        if (_overrides.TryGetValue(overrideKey, out string? value))
+        {
+            SetEnvironmentVariable(environmentVariable, value);
+        }
+    }
+
+    private void SetEnvironmentVariable(string key, string? value)
+    {
+        _previousEnvironmentVariables.TryAdd(key, Environment.GetEnvironmentVariable(key));
+        Environment.SetEnvironmentVariable(key, value);
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
