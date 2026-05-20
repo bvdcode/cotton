@@ -4,7 +4,7 @@ import de from "./de.json";
 import en from "./en.json";
 import es from "./es.json";
 import fr from "./fr.json";
-import it from "./it.json";
+import itLocale from "./it.json";
 import { supportedLanguages } from ".";
 import { nativeLanguageNames } from "./languageDisplayNames";
 import nl from "./nl.json";
@@ -58,7 +58,7 @@ const nonEnLocales: ReadonlyArray<readonly [string, LocaleObject]> = [
   ["German", de as LocaleObject],
   ["Spanish", es as LocaleObject],
   ["French", fr as LocaleObject],
-  ["Italian", it as LocaleObject],
+  ["Italian", itLocale as LocaleObject],
   ["Dutch", nl as LocaleObject],
   ["Polish", pl as LocaleObject],
   ["Portuguese", pt as LocaleObject],
