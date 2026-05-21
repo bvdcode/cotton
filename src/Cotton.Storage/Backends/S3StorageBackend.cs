@@ -1,4 +1,7 @@
-﻿using Amazon.S3;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+using Amazon.S3;
 using Amazon.S3.Model;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Helpers;

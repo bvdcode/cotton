@@ -1,4 +1,7 @@
-﻿namespace Cotton.Models
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+namespace Cotton.Models
 {
     /// <summary>
     /// Represents publicly available information about the Cotton Cloud server.

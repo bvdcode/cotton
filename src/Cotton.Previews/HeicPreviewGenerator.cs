@@ -1,4 +1,7 @@
-﻿using PhotoSauce.MagicScaler;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+using PhotoSauce.MagicScaler;
 
 namespace Cotton.Previews
 {
