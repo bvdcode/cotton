@@ -276,12 +276,20 @@ namespace Cotton.Server.Services
                 ["createdAtLocal"] = createdAtLocal.ToString("O"),
                 ["restoreCompletedUtc"] = restoreCompletedUtc.ToString("O"),
                 ["restoreCompletedLocal"] = restoreCompletedLocal.ToString("O"),
+                ["backupCreatedUtc"] = backup.Manifest.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss"),
+                ["backupCreatedLocal"] = createdAtLocal.ToString("yyyy-MM-dd HH:mm:ss"),
+                ["restoreCompletedUtcDisplay"] = restoreCompletedUtc.ToString("yyyy-MM-dd HH:mm:ss"),
+                ["restoreCompletedLocalDisplay"] = restoreCompletedLocal.ToString("yyyy-MM-dd HH:mm:ss"),
                 ["sourceDatabase"] = backup.Manifest.SourceDatabase,
                 ["sourceHost"] = backup.Manifest.SourceHost,
                 ["sourcePort"] = backup.Manifest.SourcePort,
                 ["serverTimezone"] = serverTimeZone.Id,
                 ["manifestStorageKey"] = backup.ManifestStorageKey
             };
+            Dictionary<string, string> templateMetadata = NotificationTemplateMetadata.Create(
+                NotificationTemplateKeys.DatabaseRestoreCompletedTitle,
+                NotificationTemplateKeys.DatabaseRestoreCompletedContent,
+                metadata);
 
             foreach (Guid adminId in adminIds)
             {
@@ -290,7 +298,7 @@ namespace Cotton.Server.Services
                     title: title,
                     content: content,
                     priority: NotificationPriority.High,
-                    metadata: metadata);
+                    metadata: templateMetadata);
             }
         }
 

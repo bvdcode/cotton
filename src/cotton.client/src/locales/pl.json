@@ -431,6 +431,84 @@
     "unmuteSound": "Włącz dźwięk",
     "notifications": {
       "empty": "Brak powiadomień"
+    },
+    "server": {
+      "failedLoginAttempt": {
+        "title": "Nieudana próba logowania",
+        "content": {
+          "withDevice": "Ktoś próbował zalogować się na Twoje konto '{{username}}', ale próba się nie powiodła. Próba pochodziła z {{device}} w {{city}}, {{region}}, {{country}} ({{ip}}).",
+          "withoutDevice": "Ktoś próbował zalogować się na Twoje konto '{{username}}', ale próba się nie powiodła. Próba pochodziła z {{city}}, {{region}}, {{country}} ({{ip}})."
+        }
+      },
+      "successfulLogin": {
+        "title": "Nowe logowanie do Twojego konta",
+        "content": {
+          "withDevice": "Uzyskano dostęp do Twojego konta z {{device}} w {{city}}, {{region}}, {{country}} ({{ip}}). Jeśli to nie Ty, natychmiast zabezpiecz konto.",
+          "withoutDevice": "Uzyskano dostęp do Twojego konta z {{city}}, {{region}}, {{country}} ({{ip}}). Jeśli to nie Ty, natychmiast zabezpiecz konto."
+        }
+      },
+      "otpDisabled": {
+        "title": "Uwierzytelnianie dwuskładnikowe wyłączone",
+        "content": {
+          "withDevice": "Uwierzytelnianie dwuskładnikowe zostało wyłączone dla Twojego konta z {{device}} w {{city}}, {{region}}, {{country}} ({{ip}}). Konto jest teraz mniej bezpieczne. Jeśli to nie Ty, natychmiast je zabezpiecz.",
+          "withoutDevice": "Uwierzytelnianie dwuskładnikowe zostało wyłączone dla Twojego konta z {{city}}, {{region}}, {{country}} ({{ip}}). Konto jest teraz mniej bezpieczne. Jeśli to nie Ty, natychmiast je zabezpiecz."
+        }
+      },
+      "otpEnabled": {
+        "title": "Uwierzytelnianie dwuskładnikowe włączone",
+        "content": {
+          "withDevice": "Uwierzytelnianie dwuskładnikowe zostało włączone dla Twojego konta z {{device}} w {{city}}, {{region}}, {{country}} ({{ip}}). Konto jest teraz lepiej zabezpieczone.",
+          "withoutDevice": "Uwierzytelnianie dwuskładnikowe zostało włączone dla Twojego konta z {{city}}, {{region}}, {{country}} ({{ip}}). Konto jest teraz lepiej zabezpieczone."
+        }
+      },
+      "totpFailedAttempt": {
+        "title": "Nieprawidłowy kod uwierzytelniania",
+        "content": {
+          "withDevice": "Wprowadzono nieprawidłowy kod uwierzytelniania dwuskładnikowego (liczba nieudanych prób: {{totpFailedAttempts}}). Próba pochodziła z {{device}} w {{city}}, {{region}}, {{country}} ({{ip}}). Jeśli to nie Ty, konto może być atakowane.",
+          "withoutDevice": "Wprowadzono nieprawidłowy kod uwierzytelniania dwuskładnikowego (liczba nieudanych prób: {{totpFailedAttempts}}). Próba pochodziła z {{city}}, {{region}}, {{country}} ({{ip}}). Jeśli to nie Ty, konto może być atakowane."
+        }
+      },
+      "totpLockout": {
+        "title": "Konto tymczasowo zablokowane",
+        "content": {
+          "withDevice": "Twoje konto zostało tymczasowo zablokowane po {{maxFailedAttempts}} nieudanych próbach uwierzytelniania. Ostatnia próba pochodziła z {{device}} w {{city}}, {{region}}, {{country}} ({{ip}}). Poczekaj przed kolejną próbą.",
+          "withoutDevice": "Twoje konto zostało tymczasowo zablokowane po {{maxFailedAttempts}} nieudanych próbach uwierzytelniania. Ostatnia próba pochodziła z {{city}}, {{region}}, {{country}} ({{ip}}). Poczekaj przed kolejną próbą."
+        }
+      },
+      "webDavTokenReset": {
+        "title": "Token dostępu WebDAV został zmieniony",
+        "content": {
+          "withDevice": "Twój token dostępu WebDAV został zresetowany z {{device}} w {{city}}, {{region}}, {{country}} ({{ip}}). Zaktualizuj token w kliencie WebDAV.",
+          "withoutDevice": "Twój token dostępu WebDAV został zresetowany z {{city}}, {{region}}, {{country}} ({{ip}}). Zaktualizuj token w kliencie WebDAV."
+        }
+      },
+      "sharedFileDownloaded": {
+        "title": "Pobrano udostępniony plik",
+        "content": {
+          "withDevice": "Twój udostępniony plik '{{fileName}}' został pobrany z {{device}} w {{city}}, {{region}}, {{country}} ({{ip}}).",
+          "withoutDevice": "Twój udostępniony plik '{{fileName}}' został pobrany z {{city}}, {{region}}, {{country}} ({{ip}})."
+        }
+      },
+      "uploadHashMismatch": {
+        "title": "Weryfikacja przesyłania nie powiodła się",
+        "content": "Nie udało się zweryfikować integralności przesłanego pliku '{{fileName}}'. Prześlij plik ponownie.\n\nZaproponowany: {{proposedTail}}\nObliczony: {{computedTail}}"
+      },
+      "storageChunkMissing": {
+        "title": "Brakuje danych pliku w magazynie",
+        "content": "Kontrola spójności magazynu wykryła, że brakuje danych dla pliku '{{fileName}}' w magazynie bazowym. Sprawdź integralność magazynu i prześlij plik ponownie."
+      },
+      "appUpdateAvailable": {
+        "title": "Dostępna aktualizacja serwera Cotton",
+        "content": "Bieżąca wersja serwera: {{currentVersion}}\nDostępna wersja serwera: {{latestVersion}}\n\nInformacje o wydaniu:\n{{releaseNotes}}\n\nPełne wydanie: {{releaseUrl}}"
+      },
+      "storagePressure": {
+        "title": "W magazynie kończy się wolne miejsce",
+        "content": "Cotton wstrzymał nowe zapisy do magazynu, ponieważ zostałaby przekroczona lokalna rezerwa wolnego miejsca. Wolne miejsce: {{availableSpace}} ({{availablePercent}}%). Wymagana rezerwa: {{requiredReserve}}. Katalog główny magazynu: {{rootPath}}. Zwolnij miejsce albo powiększ wolumen, a następnie ponów przesyłanie."
+      },
+      "databaseRestoreCompleted": {
+        "title": "Baza danych została automatycznie przywrócona",
+        "content": "Automatyczne przywracanie bazy danych zakończyło się pomyślnie.\n\nID kopii zapasowej: {{backupId}}\nBaza źródłowa: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nKopia utworzona (UTC): {{backupCreatedUtc}} UTC\nKopia utworzona ({{serverTimezone}}): {{backupCreatedLocal}}\nPrzywracanie zakończone (UTC): {{restoreCompletedUtcDisplay}} UTC\nPrzywracanie zakończone ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+      }
     }
   },
   "common": {

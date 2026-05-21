@@ -206,13 +206,18 @@
 
         public static string UploadHashMismatchTitle => "Upload verification failed";
 
+        public static string FormatHashTail(string hash)
+        {
+            return "..." + hash[^4..];
+        }
+
         public static string UploadHashMismatchContent(
             string fileName,
             string proposedHash,
             string computedHash)
         {
-            string proposedTail = "..." + proposedHash[^4..];
-            string computedTail = "..." + computedHash[^4..];
+            string proposedTail = FormatHashTail(proposedHash);
+            string computedTail = FormatHashTail(computedHash);
             return $"We couldn't verify the integrity of your upload for '{fileName}'. " +
                    $"Please re-upload the file.\n\n" +
                    $"Proposed: {proposedTail}\n" +
@@ -244,7 +249,7 @@
                 $"\n\nFull release: {releaseUrl}";
         }
 
-        private static string FormatReleaseNotes(string? releaseNotes)
+        public static string FormatReleaseNotes(string? releaseNotes)
         {
             const int maxLength = 3000;
             string normalized = (releaseNotes ?? string.Empty).Replace("\r\n", "\n").Trim();

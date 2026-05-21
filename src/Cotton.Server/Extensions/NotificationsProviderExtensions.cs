@@ -1,8 +1,10 @@
 using Cotton.Database.Models.Enums;
 using Cotton.Localization;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Services;
 using EasyExtensions.Helpers;
 using Microsoft.Extensions.Primitives;
+using System.Globalization;
 using System.Net;
 
 namespace Cotton.Server.Extensions
@@ -62,6 +64,19 @@ namespace Cotton.Server.Extensions
             };
         }
 
+        private static Dictionary<string, string> CreateTemplateMetadata(
+            Dictionary<string, string> metadata,
+            string titleKey,
+            string contentKey)
+        {
+            return NotificationTemplateMetadata.Create(titleKey, contentKey, metadata);
+        }
+
+        private static string FormatInvariant(int value)
+        {
+            return value.ToString(CultureInfo.InvariantCulture);
+        }
+
         public static async Task SendFailedLoginAttemptAsync(
             this INotificationsProvider notifications,
             IGeoLookupService geoLookup,
@@ -75,6 +90,9 @@ namespace Cotton.Server.Extensions
             ClientNotificationContext context = await CreateClientContextAsync(geoLookup, ipAddress, userAgent);
             Dictionary<string, string> metadata = CreateBaseMetadata(context);
             metadata["username"] = username;
+            string contentKey = context.HasDevice
+                ? NotificationTemplateKeys.FailedLoginAttemptWithDeviceContent
+                : NotificationTemplateKeys.FailedLoginAttemptWithoutDeviceContent;
 
             await notifications.SendNotificationAsync(
                 userId: userId,
@@ -94,7 +112,7 @@ namespace Cotton.Server.Extensions
                         context.Region,
                         context.City),
                 priority: NotificationPriority.High,
-                metadata: metadata);
+                metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.FailedLoginAttemptTitle, contentKey));
         }
 
         public static async Task SendOtpDisabledAsync(
@@ -108,6 +126,9 @@ namespace Cotton.Server.Extensions
 
             ClientNotificationContext context = await CreateClientContextAsync(geoLookup, ipAddress, userAgent);
             Dictionary<string, string> metadata = CreateBaseMetadata(context);
+            string contentKey = context.HasDevice
+                ? NotificationTemplateKeys.OtpDisabledWithDeviceContent
+                : NotificationTemplateKeys.OtpDisabledWithoutDeviceContent;
 
             await notifications.SendNotificationAsync(
                 userId,
@@ -125,7 +146,7 @@ namespace Cotton.Server.Extensions
                         context.Region,
                         context.City),
                 priority: NotificationPriority.High,
-                metadata: metadata);
+                metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.OtpDisabledTitle, contentKey));
         }
 
         public static async Task SendOtpEnabledAsync(
@@ -139,6 +160,9 @@ namespace Cotton.Server.Extensions
 
             ClientNotificationContext context = await CreateClientContextAsync(geoLookup, ipAddress, userAgent);
             Dictionary<string, string> metadata = CreateBaseMetadata(context);
+            string contentKey = context.HasDevice
+                ? NotificationTemplateKeys.OtpEnabledWithDeviceContent
+                : NotificationTemplateKeys.OtpEnabledWithoutDeviceContent;
 
             await notifications.SendNotificationAsync(
                 userId,
@@ -156,7 +180,7 @@ namespace Cotton.Server.Extensions
                         context.Region,
                         context.City),
                 priority: NotificationPriority.Medium,
-                metadata: metadata);
+                metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.OtpEnabledTitle, contentKey));
         }
 
         public static async Task SendSuccessfulLoginAsync(
@@ -170,6 +194,9 @@ namespace Cotton.Server.Extensions
 
             ClientNotificationContext context = await CreateClientContextAsync(geoLookup, ipAddress, userAgent);
             Dictionary<string, string> metadata = CreateBaseMetadata(context);
+            string contentKey = context.HasDevice
+                ? NotificationTemplateKeys.SuccessfulLoginWithDeviceContent
+                : NotificationTemplateKeys.SuccessfulLoginWithoutDeviceContent;
 
             await notifications.SendNotificationAsync(
                 userId,
@@ -187,7 +214,7 @@ namespace Cotton.Server.Extensions
                         context.Region,
                         context.City),
                 priority: NotificationPriority.None,
-                metadata: metadata);
+                metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.SuccessfulLoginTitle, contentKey));
         }
 
         public static async Task SendTotpFailedAttemptAsync(
@@ -202,7 +229,10 @@ namespace Cotton.Server.Extensions
 
             ClientNotificationContext context = await CreateClientContextAsync(geoLookup, ipAddress, userAgent);
             Dictionary<string, string> metadata = CreateBaseMetadata(context);
-            metadata["totpFailedAttempts"] = totpFailedAttempts.ToString();
+            metadata["totpFailedAttempts"] = FormatInvariant(totpFailedAttempts);
+            string contentKey = context.HasDevice
+                ? NotificationTemplateKeys.TotpFailedAttemptWithDeviceContent
+                : NotificationTemplateKeys.TotpFailedAttemptWithoutDeviceContent;
 
             await notifications.SendNotificationAsync(
                 userId,
@@ -222,7 +252,7 @@ namespace Cotton.Server.Extensions
                         context.Region,
                         context.City),
                 priority: NotificationPriority.Medium,
-                metadata: metadata);
+                metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.TotpFailedAttemptTitle, contentKey));
         }
 
         public static async Task SendTotpLockoutAsync(
@@ -237,7 +267,10 @@ namespace Cotton.Server.Extensions
 
             ClientNotificationContext context = await CreateClientContextAsync(geoLookup, ipAddress, userAgent);
             Dictionary<string, string> metadata = CreateBaseMetadata(context);
-            metadata["maxFailedAttempts"] = maxFailedAttempts.ToString();
+            metadata["maxFailedAttempts"] = FormatInvariant(maxFailedAttempts);
+            string contentKey = context.HasDevice
+                ? NotificationTemplateKeys.TotpLockoutWithDeviceContent
+                : NotificationTemplateKeys.TotpLockoutWithoutDeviceContent;
 
             await notifications.SendNotificationAsync(
                 userId,
@@ -257,7 +290,7 @@ namespace Cotton.Server.Extensions
                         context.Region,
                         context.City),
                 priority: NotificationPriority.High,
-                metadata: metadata);
+                metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.TotpLockoutTitle, contentKey));
         }
 
         public static async Task SendWebDavTokenResetAsync(
@@ -271,6 +304,9 @@ namespace Cotton.Server.Extensions
 
             ClientNotificationContext context = await CreateClientContextAsync(geoLookup, ipAddress, userAgent);
             Dictionary<string, string> metadata = CreateBaseMetadata(context);
+            string contentKey = context.HasDevice
+                ? NotificationTemplateKeys.WebDavTokenResetWithDeviceContent
+                : NotificationTemplateKeys.WebDavTokenResetWithoutDeviceContent;
 
             await notifications.SendNotificationAsync(
                 userId,
@@ -288,7 +324,7 @@ namespace Cotton.Server.Extensions
                         context.Region,
                         context.City),
                 priority: NotificationPriority.Medium,
-                metadata: metadata);
+                metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.WebDavTokenResetTitle, contentKey));
         }
 
         public static async Task SendSharedFileDownloadedNotificationAsync(
@@ -304,6 +340,9 @@ namespace Cotton.Server.Extensions
             ClientNotificationContext context = await CreateClientContextAsync(geoLookup, ipAddress, userAgent);
             Dictionary<string, string> metadata = CreateBaseMetadata(context);
             metadata["fileName"] = fileName;
+            string contentKey = context.HasDevice
+                ? NotificationTemplateKeys.SharedFileDownloadedWithDeviceContent
+                : NotificationTemplateKeys.SharedFileDownloadedWithoutDeviceContent;
 
             await notifications.SendNotificationAsync(
                 userId,
@@ -323,7 +362,7 @@ namespace Cotton.Server.Extensions
                         context.Region,
                         context.City),
                 priority: NotificationPriority.None,
-                metadata: metadata);
+                metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.SharedFileDownloadedTitle, contentKey));
         }
 
         public static async Task SendUploadHashMismatchNotificationAsync(
@@ -335,6 +374,15 @@ namespace Cotton.Server.Extensions
         {
             ArgumentNullException.ThrowIfNull(notifications);
 
+            Dictionary<string, string> metadata = new()
+            {
+                ["fileName"] = fileName,
+                ["proposedHash"] = proposedHash,
+                ["computedHash"] = computedHash,
+                ["proposedTail"] = NotificationTemplates.FormatHashTail(proposedHash),
+                ["computedTail"] = NotificationTemplates.FormatHashTail(computedHash)
+            };
+
             await notifications.SendNotificationAsync(
                 userId,
                 title: NotificationTemplates.UploadHashMismatchTitle,
@@ -343,12 +391,7 @@ namespace Cotton.Server.Extensions
                     proposedHash,
                     computedHash),
                 priority: NotificationPriority.High,
-                metadata: new Dictionary<string, string>
-                {
-                    ["fileName"] = fileName,
-                    ["proposedHash"] = proposedHash,
-                    ["computedHash"] = computedHash
-                });
+                metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.UploadHashMismatchTitle, NotificationTemplateKeys.UploadHashMismatchContent));
         }
 
         public static async Task SendStorageChunkMissingNotificationAsync(
@@ -358,15 +401,17 @@ namespace Cotton.Server.Extensions
         {
             ArgumentNullException.ThrowIfNull(notifications);
 
+            Dictionary<string, string> metadata = new()
+            {
+                ["fileName"] = fileName
+            };
+
             await notifications.SendNotificationAsync(
                 userId,
                 title: NotificationTemplates.StorageChunkMissingTitle,
                 content: NotificationTemplates.StorageChunkMissingContent(fileName),
                 priority: NotificationPriority.High,
-                metadata: new Dictionary<string, string>
-                {
-                    ["fileName"] = fileName
-                });
+                metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.StorageChunkMissingTitle, NotificationTemplateKeys.StorageChunkMissingContent));
         }
     }
 }

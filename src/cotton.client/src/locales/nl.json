@@ -441,6 +441,84 @@
     "unmuteSound": "Geluid inschakelen",
     "notifications": {
       "empty": "Geen meldingen"
+    },
+    "server": {
+      "failedLoginAttempt": {
+        "title": "Mislukte aanmeldpoging",
+        "content": {
+          "withDevice": "Iemand probeerde in te loggen op je account '{{username}}', maar dat is mislukt. De poging kwam van {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}).",
+          "withoutDevice": "Iemand probeerde in te loggen op je account '{{username}}', maar dat is mislukt. De poging kwam uit {{city}}, {{region}}, {{country}} ({{ip}})."
+        }
+      },
+      "successfulLogin": {
+        "title": "Nieuwe aanmelding bij je account",
+        "content": {
+          "withDevice": "Je account is geopend vanaf {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}). Als jij dit niet was, beveilig je account dan direct.",
+          "withoutDevice": "Je account is geopend vanuit {{city}}, {{region}}, {{country}} ({{ip}}). Als jij dit niet was, beveilig je account dan direct."
+        }
+      },
+      "otpDisabled": {
+        "title": "Tweefactorauthenticatie uitgeschakeld",
+        "content": {
+          "withDevice": "Tweefactorauthenticatie is uitgeschakeld voor je account vanaf {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}). Je account is nu minder goed beveiligd. Als jij dit niet was, beveilig je account dan direct.",
+          "withoutDevice": "Tweefactorauthenticatie is uitgeschakeld voor je account vanuit {{city}}, {{region}}, {{country}} ({{ip}}). Je account is nu minder goed beveiligd. Als jij dit niet was, beveilig je account dan direct."
+        }
+      },
+      "otpEnabled": {
+        "title": "Tweefactorauthenticatie ingeschakeld",
+        "content": {
+          "withDevice": "Tweefactorauthenticatie is ingeschakeld voor je account vanaf {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}). Je account is nu beter beveiligd.",
+          "withoutDevice": "Tweefactorauthenticatie is ingeschakeld voor je account vanuit {{city}}, {{region}}, {{country}} ({{ip}}). Je account is nu beter beveiligd."
+        }
+      },
+      "totpFailedAttempt": {
+        "title": "Ongeldige authenticatiecode",
+        "content": {
+          "withDevice": "Er is een ongeldige tweefactorcode ingevoerd (mislukte pogingen: {{totpFailedAttempts}}). De poging kwam van {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}). Als jij dit niet was, kan je account worden aangevallen.",
+          "withoutDevice": "Er is een ongeldige tweefactorcode ingevoerd (mislukte pogingen: {{totpFailedAttempts}}). De poging kwam uit {{city}}, {{region}}, {{country}} ({{ip}}). Als jij dit niet was, kan je account worden aangevallen."
+        }
+      },
+      "totpLockout": {
+        "title": "Account tijdelijk vergrendeld",
+        "content": {
+          "withDevice": "Je account is tijdelijk vergrendeld na {{maxFailedAttempts}} mislukte authenticatiepogingen. De laatste poging kwam van {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}). Wacht even voordat je het opnieuw probeert.",
+          "withoutDevice": "Je account is tijdelijk vergrendeld na {{maxFailedAttempts}} mislukte authenticatiepogingen. De laatste poging kwam uit {{city}}, {{region}}, {{country}} ({{ip}}). Wacht even voordat je het opnieuw probeert."
+        }
+      },
+      "webDavTokenReset": {
+        "title": "WebDAV-toegangstoken gewijzigd",
+        "content": {
+          "withDevice": "Je WebDAV-toegangstoken is opnieuw ingesteld vanaf {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}). Werk de token bij in je WebDAV-client.",
+          "withoutDevice": "Je WebDAV-toegangstoken is opnieuw ingesteld vanuit {{city}}, {{region}}, {{country}} ({{ip}}). Werk de token bij in je WebDAV-client."
+        }
+      },
+      "sharedFileDownloaded": {
+        "title": "Gedeeld bestand gedownload",
+        "content": {
+          "withDevice": "Je gedeelde bestand '{{fileName}}' is gedownload vanaf {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}).",
+          "withoutDevice": "Je gedeelde bestand '{{fileName}}' is gedownload vanuit {{city}}, {{region}}, {{country}} ({{ip}})."
+        }
+      },
+      "uploadHashMismatch": {
+        "title": "Uploadverificatie mislukt",
+        "content": "We konden de integriteit van je upload voor '{{fileName}}' niet verifiëren. Upload het bestand opnieuw.\n\nVoorgesteld: {{proposedTail}}\nBerekend: {{computedTail}}"
+      },
+      "storageChunkMissing": {
+        "title": "Bestandsgegevens ontbreken in opslag",
+        "content": "Een opslagconsistentiecontrole heeft gedetecteerd dat gegevens voor je bestand '{{fileName}}' ontbreken in de onderliggende opslag. Controleer de integriteit van de opslag en upload dit bestand opnieuw."
+      },
+      "appUpdateAvailable": {
+        "title": "Cotton-serverupdate beschikbaar",
+        "content": "Huidige serverversie: {{currentVersion}}\nBeschikbare serverversie: {{latestVersion}}\n\nRelease-opmerkingen:\n{{releaseNotes}}\n\nVolledige release: {{releaseUrl}}"
+      },
+      "storagePressure": {
+        "title": "Opslag heeft bijna geen vrije ruimte meer",
+        "content": "Cotton heeft nieuwe schrijfacties naar opslag gepauzeerd omdat de lokale opslagreserve zou worden overschreden. Vrije ruimte: {{availableSpace}} ({{availablePercent}}%). Vereiste reserve: {{requiredReserve}}. Opslagroot: {{rootPath}}. Maak ruimte vrij of breid het volume uit en probeer de upload opnieuw."
+      },
+      "databaseRestoreCompleted": {
+        "title": "Database automatisch hersteld",
+        "content": "Automatisch databaseherstel is succesvol voltooid.\n\nBackup-ID: {{backupId}}\nBrondatabase: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup gemaakt (UTC): {{backupCreatedUtc}} UTC\nBackup gemaakt ({{serverTimezone}}): {{backupCreatedLocal}}\nHerstel voltooid (UTC): {{restoreCompletedUtcDisplay}} UTC\nHerstel voltooid ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+      }
     }
   },
   "common": {

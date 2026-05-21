@@ -24,6 +24,18 @@ describe("notification schemas", () => {
     expect(isNotificationDto({ ...notification, readAt: 1 })).toBe(false);
   });
 
+  it("accepts notification metadata for client-side rendering", () => {
+    expect(
+      isNotificationDto({
+        ...notification,
+        metadata: {
+          "i18n.titleKey": "notifications:server.storageChunkMissing.title",
+          "i18n.param.fileName": "report.xlsx",
+        },
+      }),
+    ).toBe(true);
+  });
+
   it("unwraps supported notification list envelopes", () => {
     expect(notificationListResponseSchema.parse([notification])).toEqual([
       notification,

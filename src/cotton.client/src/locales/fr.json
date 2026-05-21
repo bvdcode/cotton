@@ -435,6 +435,84 @@
     "unmuteSound": "Activer le son",
     "notifications": {
       "empty": "Aucune notification"
+    },
+    "server": {
+      "failedLoginAttempt": {
+        "title": "Tentative de connexion échouée",
+        "content": {
+          "withDevice": "Quelqu’un a tenté de se connecter à votre compte '{{username}}', mais la tentative a échoué. La tentative venait de {{device}} à {{city}}, {{region}}, {{country}} ({{ip}}).",
+          "withoutDevice": "Quelqu’un a tenté de se connecter à votre compte '{{username}}', mais la tentative a échoué. La tentative venait de {{city}}, {{region}}, {{country}} ({{ip}})."
+        }
+      },
+      "successfulLogin": {
+        "title": "Nouvelle connexion à votre compte",
+        "content": {
+          "withDevice": "Votre compte a été consulté depuis {{device}} à {{city}}, {{region}}, {{country}} ({{ip}}). Si ce n’était pas vous, sécurisez immédiatement votre compte.",
+          "withoutDevice": "Votre compte a été consulté depuis {{city}}, {{region}}, {{country}} ({{ip}}). Si ce n’était pas vous, sécurisez immédiatement votre compte."
+        }
+      },
+      "otpDisabled": {
+        "title": "Authentification à deux facteurs désactivée",
+        "content": {
+          "withDevice": "L’authentification à deux facteurs a été désactivée pour votre compte depuis {{device}} à {{city}}, {{region}}, {{country}} ({{ip}}). Votre compte est maintenant moins sécurisé. Si ce n’était pas vous, sécurisez-le immédiatement.",
+          "withoutDevice": "L’authentification à deux facteurs a été désactivée pour votre compte depuis {{city}}, {{region}}, {{country}} ({{ip}}). Votre compte est maintenant moins sécurisé. Si ce n’était pas vous, sécurisez-le immédiatement."
+        }
+      },
+      "otpEnabled": {
+        "title": "Authentification à deux facteurs activée",
+        "content": {
+          "withDevice": "L’authentification à deux facteurs a été activée pour votre compte depuis {{device}} à {{city}}, {{region}}, {{country}} ({{ip}}). Votre compte est maintenant mieux sécurisé.",
+          "withoutDevice": "L’authentification à deux facteurs a été activée pour votre compte depuis {{city}}, {{region}}, {{country}} ({{ip}}). Votre compte est maintenant mieux sécurisé."
+        }
+      },
+      "totpFailedAttempt": {
+        "title": "Code d’authentification invalide",
+        "content": {
+          "withDevice": "Un code d’authentification à deux facteurs invalide a été saisi (tentatives échouées : {{totpFailedAttempts}}). La tentative venait de {{device}} à {{city}}, {{region}}, {{country}} ({{ip}}). Si ce n’était pas vous, votre compte est peut-être attaqué.",
+          "withoutDevice": "Un code d’authentification à deux facteurs invalide a été saisi (tentatives échouées : {{totpFailedAttempts}}). La tentative venait de {{city}}, {{region}}, {{country}} ({{ip}}). Si ce n’était pas vous, votre compte est peut-être attaqué."
+        }
+      },
+      "totpLockout": {
+        "title": "Compte temporairement verrouillé",
+        "content": {
+          "withDevice": "Votre compte a été temporairement verrouillé après {{maxFailedAttempts}} tentatives d’authentification échouées. La dernière tentative venait de {{device}} à {{city}}, {{region}}, {{country}} ({{ip}}). Veuillez attendre avant de réessayer.",
+          "withoutDevice": "Votre compte a été temporairement verrouillé après {{maxFailedAttempts}} tentatives d’authentification échouées. La dernière tentative venait de {{city}}, {{region}}, {{country}} ({{ip}}). Veuillez attendre avant de réessayer."
+        }
+      },
+      "webDavTokenReset": {
+        "title": "Jeton d’accès WebDAV modifié",
+        "content": {
+          "withDevice": "Votre jeton d’accès WebDAV a été réinitialisé depuis {{device}} à {{city}}, {{region}}, {{country}} ({{ip}}). Mettez à jour le jeton dans votre client WebDAV.",
+          "withoutDevice": "Votre jeton d’accès WebDAV a été réinitialisé depuis {{city}}, {{region}}, {{country}} ({{ip}}). Mettez à jour le jeton dans votre client WebDAV."
+        }
+      },
+      "sharedFileDownloaded": {
+        "title": "Fichier partagé téléchargé",
+        "content": {
+          "withDevice": "Votre fichier partagé '{{fileName}}' a été téléchargé depuis {{device}} à {{city}}, {{region}}, {{country}} ({{ip}}).",
+          "withoutDevice": "Votre fichier partagé '{{fileName}}' a été téléchargé depuis {{city}}, {{region}}, {{country}} ({{ip}})."
+        }
+      },
+      "uploadHashMismatch": {
+        "title": "Échec de la vérification du téléversement",
+        "content": "Nous n’avons pas pu vérifier l’intégrité du téléversement de '{{fileName}}'. Téléversez à nouveau le fichier.\n\nProposé : {{proposedTail}}\nCalculé : {{computedTail}}"
+      },
+      "storageChunkMissing": {
+        "title": "Données du fichier manquantes dans le stockage",
+        "content": "Une vérification de cohérence du stockage a détecté que des données de votre fichier '{{fileName}}' manquent dans le stockage sous-jacent. Vérifiez l’intégrité du stockage et téléversez à nouveau ce fichier."
+      },
+      "appUpdateAvailable": {
+        "title": "Mise à jour du serveur Cotton disponible",
+        "content": "Version actuelle du serveur : {{currentVersion}}\nVersion disponible du serveur : {{latestVersion}}\n\nNotes de version :\n{{releaseNotes}}\n\nVersion complète : {{releaseUrl}}"
+      },
+      "storagePressure": {
+        "title": "Le stockage manque d’espace libre",
+        "content": "Cotton a suspendu les nouvelles écritures, car la réserve locale de stockage serait dépassée. Espace libre : {{availableSpace}} ({{availablePercent}} %). Réserve requise : {{requiredReserve}}. Racine du stockage : {{rootPath}}. Libérez de l’espace ou agrandissez le volume, puis réessayez le téléversement."
+      },
+      "databaseRestoreCompleted": {
+        "title": "Base de données restaurée automatiquement",
+        "content": "La restauration automatique de la base de données s’est terminée avec succès.\n\nID de sauvegarde : {{backupId}}\nBase source : {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nSauvegarde créée (UTC) : {{backupCreatedUtc}} UTC\nSauvegarde créée ({{serverTimezone}}) : {{backupCreatedLocal}}\nRestauration terminée (UTC) : {{restoreCompletedUtcDisplay}} UTC\nRestauration terminée ({{serverTimezone}}) : {{restoreCompletedLocalDisplay}}"
+      }
     }
   },
   "common": {

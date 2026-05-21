@@ -11,6 +11,7 @@ using EasyExtensions.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 
 namespace Cotton.Server.Services;
 
@@ -169,27 +170,38 @@ public sealed class StoragePressureGuard(
                     pressure.RequiredFreeBytes);
             }
 
+            string availableSpace = FormatBytes(pressure.Capacity.AvailableBytes);
+            string requiredReserve = FormatBytes(pressure.RequiredFreeBytes);
+            var metadata = new Dictionary<string, string>
+            {
+                ["kind"] = "storage-pressure",
+                ["backend"] = pressure.Capacity.Backend,
+                ["rootPath"] = pressure.Capacity.RootPath,
+                ["availableBytes"] = pressure.Capacity.AvailableBytes.ToString(CultureInfo.InvariantCulture),
+                ["totalBytes"] = pressure.Capacity.TotalBytes.ToString(CultureInfo.InvariantCulture),
+                ["requiredFreeBytes"] = pressure.RequiredFreeBytes.ToString(CultureInfo.InvariantCulture),
+                ["incomingBytes"] = pressure.IncomingBytes.ToString(CultureInfo.InvariantCulture),
+                ["availableSpace"] = availableSpace,
+                ["availablePercent"] = pressure.Capacity.AvailablePercent.ToString("F1", CultureInfo.InvariantCulture),
+                ["requiredReserve"] = requiredReserve,
+            };
+            Dictionary<string, string> templateMetadata = NotificationTemplateMetadata.Create(
+                NotificationTemplateKeys.StoragePressureTitle,
+                NotificationTemplateKeys.StoragePressureContent,
+                metadata);
+
             foreach (Guid adminId in adminIds)
             {
                 await _notifications.SendNotificationAsync(
                     adminId,
                     NotificationTemplates.StoragePressureTitle,
                     NotificationTemplates.StoragePressureContent(
-                        FormatBytes(pressure.Capacity.AvailableBytes),
+                        availableSpace,
                         pressure.Capacity.AvailablePercent,
-                        FormatBytes(pressure.RequiredFreeBytes),
+                        requiredReserve,
                         pressure.Capacity.RootPath),
                     NotificationPriority.High,
-                    new Dictionary<string, string>
-                    {
-                        ["kind"] = "storage-pressure",
-                        ["backend"] = pressure.Capacity.Backend,
-                        ["rootPath"] = pressure.Capacity.RootPath,
-                        ["availableBytes"] = pressure.Capacity.AvailableBytes.ToString(),
-                        ["totalBytes"] = pressure.Capacity.TotalBytes.ToString(),
-                        ["requiredFreeBytes"] = pressure.RequiredFreeBytes.ToString(),
-                        ["incomingBytes"] = pressure.IncomingBytes.ToString(),
-                    });
+                    templateMetadata);
             }
 
             _cache.Set(NotificationCacheKey, DateTimeOffset.UtcNow, options.AdminNotificationCooldown);

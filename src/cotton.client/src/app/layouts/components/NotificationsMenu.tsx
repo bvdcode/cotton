@@ -34,6 +34,7 @@ import {
   selectNotificationsShowOnlyUnread,
   useUserPreferencesStore,
 } from "../../../shared/store/userPreferencesStore";
+import { renderNotificationText } from "../../../shared/notifications/renderNotification";
 import { formatTimeAgo } from "../../../shared/utils/formatTimeAgo";
 
 export const NotificationsMenu = () => {
@@ -228,10 +229,11 @@ export const NotificationsMenu = () => {
         <List dense disablePadding ref={listRef} sx={menuListSx}>
           {notifications.length > 0 ? (
             notifications.map((n) => {
+              const rendered = renderNotificationText(n, t);
               const contentText =
-                n.content && n.content.length > maxTextLength
-                  ? n.content.slice(0, maxTextLength) + "..."
-                  : n.content;
+                rendered.content && rendered.content.length > maxTextLength
+                  ? rendered.content.slice(0, maxTextLength) + "..."
+                  : rendered.content;
 
               return (
                 <ListItem
@@ -240,14 +242,14 @@ export const NotificationsMenu = () => {
                   onClick={async () => {
                     try {
                       const result = await confirm({
-                        title: n.title,
-                        description: n.content ? (
+                        title: rendered.title,
+                        description: rendered.content ? (
                           <Typography
                             variant="body2"
                             color="text.secondary"
                             sx={{ whiteSpace: "pre-line" }}
                           >
-                            {n.content}
+                            {rendered.content}
                           </Typography>
                         ) : undefined,
                         hideCancelButton: true,
@@ -284,7 +286,7 @@ export const NotificationsMenu = () => {
                           noWrap
                           fontWeight={n.readAt ? 400 : 600}
                         >
-                          {n.title}
+                          {rendered.title}
                         </Typography>
                         <Box flex={1} />
                         <Typography

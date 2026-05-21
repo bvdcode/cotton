@@ -168,6 +168,20 @@ public class AppVersionTrackerService(
         }
 
         var notifications = serviceProvider.GetRequiredService<INotificationsProvider>();
+        string releaseNotes = NotificationTemplates.FormatReleaseNotes(latestRelease.Notes);
+        var metadata = new Dictionary<string, string>
+        {
+            ["kind"] = "app-update-available",
+            ["currentVersion"] = currentVersion,
+            ["latestVersion"] = latestRelease.Version,
+            ["releaseUrl"] = latestRelease.Url,
+            ["releaseNotes"] = releaseNotes,
+        };
+        Dictionary<string, string> templateMetadata = NotificationTemplateMetadata.Create(
+            NotificationTemplateKeys.AppUpdateAvailableTitle,
+            NotificationTemplateKeys.AppUpdateAvailableContent,
+            metadata);
+
         foreach (Guid adminId in adminIds)
         {
             await notifications.SendNotificationAsync(
@@ -179,13 +193,7 @@ public class AppVersionTrackerService(
                     latestRelease.Url,
                     latestRelease.Notes),
                 NotificationPriority.Medium,
-                new Dictionary<string, string>
-                {
-                    ["kind"] = "app-update-available",
-                    ["currentVersion"] = currentVersion,
-                    ["latestVersion"] = latestRelease.Version,
-                    ["releaseUrl"] = latestRelease.Url,
-                });
+                templateMetadata);
         }
 
         currentVersionRecord.LatestReleaseNotifiedAt = checkedAt;

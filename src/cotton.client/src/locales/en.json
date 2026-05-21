@@ -324,6 +324,84 @@
     "unmuteSound": "Unmute sound",
     "notifications": {
       "empty": "No notifications"
+    },
+    "server": {
+      "failedLoginAttempt": {
+        "title": "Failed login attempt",
+        "content": {
+          "withDevice": "Someone tried to log in to your account '{{username}}' but failed. The attempt was made from {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}).",
+          "withoutDevice": "Someone tried to log in to your account '{{username}}' but failed. The attempt was made from {{city}}, {{region}}, {{country}} ({{ip}})."
+        }
+      },
+      "successfulLogin": {
+        "title": "New login to your account",
+        "content": {
+          "withDevice": "Your account was accessed from {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}). If this wasn't you, please secure your account immediately.",
+          "withoutDevice": "Your account was accessed from {{city}}, {{region}}, {{country}} ({{ip}}). If this wasn't you, please secure your account immediately."
+        }
+      },
+      "otpDisabled": {
+        "title": "Two-factor authentication disabled",
+        "content": {
+          "withDevice": "Two-factor authentication has been disabled for your account from {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}). Your account is less secure now. If this wasn't you, please secure your account immediately.",
+          "withoutDevice": "Two-factor authentication has been disabled for your account from {{city}}, {{region}}, {{country}} ({{ip}}). Your account is less secure now. If this wasn't you, please secure your account immediately."
+        }
+      },
+      "otpEnabled": {
+        "title": "Two-factor authentication activated",
+        "content": {
+          "withDevice": "Two-factor authentication has been enabled for your account from {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}). Your account is now more secure.",
+          "withoutDevice": "Two-factor authentication has been enabled for your account from {{city}}, {{region}}, {{country}} ({{ip}}). Your account is now more secure."
+        }
+      },
+      "totpFailedAttempt": {
+        "title": "Invalid authentication code",
+        "content": {
+          "withDevice": "An invalid two-factor authentication code was entered ({{totpFailedAttempts}} failed attempt(s)). The attempt was made from {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}). If this wasn't you, your account may be under attack.",
+          "withoutDevice": "An invalid two-factor authentication code was entered ({{totpFailedAttempts}} failed attempt(s)). The attempt was made from {{city}}, {{region}}, {{country}} ({{ip}}). If this wasn't you, your account may be under attack."
+        }
+      },
+      "totpLockout": {
+        "title": "Account temporarily locked",
+        "content": {
+          "withDevice": "Your account has been temporarily locked due to {{maxFailedAttempts}} failed authentication attempts. The last attempt was from {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}). Please wait before trying again.",
+          "withoutDevice": "Your account has been temporarily locked due to {{maxFailedAttempts}} failed authentication attempts. The last attempt was from {{city}}, {{region}}, {{country}} ({{ip}}). Please wait before trying again."
+        }
+      },
+      "webDavTokenReset": {
+        "title": "WebDAV access token changed",
+        "content": {
+          "withDevice": "Your WebDAV access token has been reset from {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}). You will need to update your WebDAV client with the new token.",
+          "withoutDevice": "Your WebDAV access token has been reset from {{city}}, {{region}}, {{country}} ({{ip}}). You will need to update your WebDAV client with the new token."
+        }
+      },
+      "sharedFileDownloaded": {
+        "title": "Shared file downloaded",
+        "content": {
+          "withDevice": "Your shared file '{{fileName}}' was downloaded from {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}).",
+          "withoutDevice": "Your shared file '{{fileName}}' was downloaded from {{city}}, {{region}}, {{country}} ({{ip}})."
+        }
+      },
+      "uploadHashMismatch": {
+        "title": "Upload verification failed",
+        "content": "We couldn't verify the integrity of your upload for '{{fileName}}'. Please re-upload the file.\n\nProposed: {{proposedTail}}\nComputed: {{computedTail}}"
+      },
+      "storageChunkMissing": {
+        "title": "File data missing from storage",
+        "content": "A storage consistency check detected that data for your file '{{fileName}}' is missing from the underlying storage. Please verify your storage integrity and re-upload this file."
+      },
+      "appUpdateAvailable": {
+        "title": "Cotton server update available",
+        "content": "Current server version: {{currentVersion}}\nAvailable server version: {{latestVersion}}\n\nRelease notes:\n{{releaseNotes}}\n\nFull release: {{releaseUrl}}"
+      },
+      "storagePressure": {
+        "title": "Storage is running out of free space",
+        "content": "Cotton paused new storage writes because the local storage reserve would be crossed. Free space: {{availableSpace}} ({{availablePercent}}%). Required reserve: {{requiredReserve}}. Storage root: {{rootPath}}. Free disk space or expand the volume, then retry the upload."
+      },
+      "databaseRestoreCompleted": {
+        "title": "Database restored automatically",
+        "content": "Automatic database restore completed successfully.\n\nBackup ID: {{backupId}}\nSource database: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup created (UTC): {{backupCreatedUtc}} UTC\nBackup created ({{serverTimezone}}): {{backupCreatedLocal}}\nRestore completed (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestore completed ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+      }
     }
   },
   "common": {

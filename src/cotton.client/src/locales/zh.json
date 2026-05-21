@@ -428,6 +428,84 @@
     "unmuteSound": "取消静音",
     "notifications": {
       "empty": "暂无通知"
+    },
+    "server": {
+      "failedLoginAttempt": {
+        "title": "登录尝试失败",
+        "content": {
+          "withDevice": "有人尝试登录你的账户 '{{username}}'，但失败了。本次尝试来自 {{city}}、{{region}}、{{country}} 的 {{device}}（{{ip}}）。",
+          "withoutDevice": "有人尝试登录你的账户 '{{username}}'，但失败了。本次尝试来自 {{city}}、{{region}}、{{country}}（{{ip}}）。"
+        }
+      },
+      "successfulLogin": {
+        "title": "你的账户有新的登录",
+        "content": {
+          "withDevice": "你的账户已从 {{city}}、{{region}}、{{country}} 的 {{device}}（{{ip}}）访问。如果这不是你本人操作，请立即保护账户。",
+          "withoutDevice": "你的账户已从 {{city}}、{{region}}、{{country}}（{{ip}}）访问。如果这不是你本人操作，请立即保护账户。"
+        }
+      },
+      "otpDisabled": {
+        "title": "双重身份验证已关闭",
+        "content": {
+          "withDevice": "你的账户双重身份验证已从 {{city}}、{{region}}、{{country}} 的 {{device}}（{{ip}}）关闭。账户现在安全性较低。如果这不是你本人操作，请立即保护账户。",
+          "withoutDevice": "你的账户双重身份验证已从 {{city}}、{{region}}、{{country}}（{{ip}}）关闭。账户现在安全性较低。如果这不是你本人操作，请立即保护账户。"
+        }
+      },
+      "otpEnabled": {
+        "title": "双重身份验证已启用",
+        "content": {
+          "withDevice": "你的账户双重身份验证已从 {{city}}、{{region}}、{{country}} 的 {{device}}（{{ip}}）启用。账户现在更安全。",
+          "withoutDevice": "你的账户双重身份验证已从 {{city}}、{{region}}、{{country}}（{{ip}}）启用。账户现在更安全。"
+        }
+      },
+      "totpFailedAttempt": {
+        "title": "身份验证代码无效",
+        "content": {
+          "withDevice": "有人输入了无效的双重身份验证代码（失败次数：{{totpFailedAttempts}}）。本次尝试来自 {{city}}、{{region}}、{{country}} 的 {{device}}（{{ip}}）。如果这不是你本人操作，你的账户可能正在遭受攻击。",
+          "withoutDevice": "有人输入了无效的双重身份验证代码（失败次数：{{totpFailedAttempts}}）。本次尝试来自 {{city}}、{{region}}、{{country}}（{{ip}}）。如果这不是你本人操作，你的账户可能正在遭受攻击。"
+        }
+      },
+      "totpLockout": {
+        "title": "账户已临时锁定",
+        "content": {
+          "withDevice": "你的账户因 {{maxFailedAttempts}} 次身份验证失败而被临时锁定。最后一次尝试来自 {{city}}、{{region}}、{{country}} 的 {{device}}（{{ip}}）。请稍后再试。",
+          "withoutDevice": "你的账户因 {{maxFailedAttempts}} 次身份验证失败而被临时锁定。最后一次尝试来自 {{city}}、{{region}}、{{country}}（{{ip}}）。请稍后再试。"
+        }
+      },
+      "webDavTokenReset": {
+        "title": "WebDAV 访问令牌已更改",
+        "content": {
+          "withDevice": "你的 WebDAV 访问令牌已从 {{city}}、{{region}}、{{country}} 的 {{device}}（{{ip}}）重置。请在 WebDAV 客户端中更新令牌。",
+          "withoutDevice": "你的 WebDAV 访问令牌已从 {{city}}、{{region}}、{{country}}（{{ip}}）重置。请在 WebDAV 客户端中更新令牌。"
+        }
+      },
+      "sharedFileDownloaded": {
+        "title": "共享文件已下载",
+        "content": {
+          "withDevice": "你的共享文件 '{{fileName}}' 已从 {{city}}、{{region}}、{{country}} 的 {{device}}（{{ip}}）下载。",
+          "withoutDevice": "你的共享文件 '{{fileName}}' 已从 {{city}}、{{region}}、{{country}}（{{ip}}）下载。"
+        }
+      },
+      "uploadHashMismatch": {
+        "title": "上传验证失败",
+        "content": "无法验证 '{{fileName}}' 上传内容的完整性。请重新上传该文件。\n\n提交值：{{proposedTail}}\n计算值：{{computedTail}}"
+      },
+      "storageChunkMissing": {
+        "title": "存储中缺少文件数据",
+        "content": "存储一致性检查发现，底层存储中缺少文件 '{{fileName}}' 的数据。请验证存储完整性并重新上传该文件。"
+      },
+      "appUpdateAvailable": {
+        "title": "Cotton 服务器更新可用",
+        "content": "当前服务器版本：{{currentVersion}}\n可用服务器版本：{{latestVersion}}\n\n发行说明：\n{{releaseNotes}}\n\n完整发行页：{{releaseUrl}}"
+      },
+      "storagePressure": {
+        "title": "存储可用空间不足",
+        "content": "Cotton 已暂停新的存储写入，因为本地存储预留空间将被突破。可用空间：{{availableSpace}}（{{availablePercent}}%）。所需预留：{{requiredReserve}}。存储根目录：{{rootPath}}。请释放磁盘空间或扩容后重试上传。"
+      },
+      "databaseRestoreCompleted": {
+        "title": "数据库已自动恢复",
+        "content": "数据库自动恢复已成功完成。\n\n备份 ID：{{backupId}}\n源数据库：{{sourceDatabase}}（{{sourceHost}}:{{sourcePort}}）\n\n备份创建时间（UTC）：{{backupCreatedUtc}} UTC\n备份创建时间（{{serverTimezone}}）：{{backupCreatedLocal}}\n恢复完成时间（UTC）：{{restoreCompletedUtcDisplay}} UTC\n恢复完成时间（{{serverTimezone}}）：{{restoreCompletedLocalDisplay}}"
+      }
     }
   },
   "common": {

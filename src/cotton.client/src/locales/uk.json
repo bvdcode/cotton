@@ -416,6 +416,84 @@
     "unmuteSound": "Увімкнути звук",
     "notifications": {
       "empty": "Немає сповіщень"
+    },
+    "server": {
+      "failedLoginAttempt": {
+        "title": "Невдала спроба входу",
+        "content": {
+          "withDevice": "Хтось намагався ввійти у ваш акаунт '{{username}}', але спроба не вдалася. Спроба була з {{device}} у {{city}}, {{region}}, {{country}} ({{ip}}).",
+          "withoutDevice": "Хтось намагався ввійти у ваш акаунт '{{username}}', але спроба не вдалася. Спроба була з {{city}}, {{region}}, {{country}} ({{ip}})."
+        }
+      },
+      "successfulLogin": {
+        "title": "Новий вхід в акаунт",
+        "content": {
+          "withDevice": "До вашого акаунта увійшли з {{device}} у {{city}}, {{region}}, {{country}} ({{ip}}). Якщо це були не ви, негайно захистіть акаунт.",
+          "withoutDevice": "До вашого акаунта увійшли з {{city}}, {{region}}, {{country}} ({{ip}}). Якщо це були не ви, негайно захистіть акаунт."
+        }
+      },
+      "otpDisabled": {
+        "title": "Двофакторну автентифікацію вимкнено",
+        "content": {
+          "withDevice": "Двофакторну автентифікацію для вашого акаунта вимкнено з {{device}} у {{city}}, {{region}}, {{country}} ({{ip}}). Тепер акаунт менш захищений. Якщо це були не ви, негайно захистіть його.",
+          "withoutDevice": "Двофакторну автентифікацію для вашого акаунта вимкнено з {{city}}, {{region}}, {{country}} ({{ip}}). Тепер акаунт менш захищений. Якщо це були не ви, негайно захистіть його."
+        }
+      },
+      "otpEnabled": {
+        "title": "Двофакторну автентифікацію увімкнено",
+        "content": {
+          "withDevice": "Двофакторну автентифікацію для вашого акаунта увімкнено з {{device}} у {{city}}, {{region}}, {{country}} ({{ip}}). Тепер акаунт краще захищений.",
+          "withoutDevice": "Двофакторну автентифікацію для вашого акаунта увімкнено з {{city}}, {{region}}, {{country}} ({{ip}}). Тепер акаунт краще захищений."
+        }
+      },
+      "totpFailedAttempt": {
+        "title": "Недійсний код автентифікації",
+        "content": {
+          "withDevice": "Було введено недійсний код двофакторної автентифікації (невдалих спроб: {{totpFailedAttempts}}). Спроба була з {{device}} у {{city}}, {{region}}, {{country}} ({{ip}}). Якщо це були не ви, акаунт може бути під атакою.",
+          "withoutDevice": "Було введено недійсний код двофакторної автентифікації (невдалих спроб: {{totpFailedAttempts}}). Спроба була з {{city}}, {{region}}, {{country}} ({{ip}}). Якщо це були не ви, акаунт може бути під атакою."
+        }
+      },
+      "totpLockout": {
+        "title": "Акаунт тимчасово заблоковано",
+        "content": {
+          "withDevice": "Ваш акаунт тимчасово заблоковано через {{maxFailedAttempts}} невдалих спроб автентифікації. Остання спроба була з {{device}} у {{city}}, {{region}}, {{country}} ({{ip}}). Зачекайте перед наступною спробою.",
+          "withoutDevice": "Ваш акаунт тимчасово заблоковано через {{maxFailedAttempts}} невдалих спроб автентифікації. Остання спроба була з {{city}}, {{region}}, {{country}} ({{ip}}). Зачекайте перед наступною спробою."
+        }
+      },
+      "webDavTokenReset": {
+        "title": "Токен доступу WebDAV змінено",
+        "content": {
+          "withDevice": "Ваш токен доступу WebDAV було скинуто з {{device}} у {{city}}, {{region}}, {{country}} ({{ip}}). Оновіть токен у клієнті WebDAV.",
+          "withoutDevice": "Ваш токен доступу WebDAV було скинуто з {{city}}, {{region}}, {{country}} ({{ip}}). Оновіть токен у клієнті WebDAV."
+        }
+      },
+      "sharedFileDownloaded": {
+        "title": "Спільний файл завантажено",
+        "content": {
+          "withDevice": "Ваш спільний файл '{{fileName}}' було завантажено з {{device}} у {{city}}, {{region}}, {{country}} ({{ip}}).",
+          "withoutDevice": "Ваш спільний файл '{{fileName}}' було завантажено з {{city}}, {{region}}, {{country}} ({{ip}})."
+        }
+      },
+      "uploadHashMismatch": {
+        "title": "Перевірка завантаження не вдалася",
+        "content": "Не вдалося перевірити цілісність завантаження файлу '{{fileName}}'. Завантажте файл повторно.\n\nОчікувалося: {{proposedTail}}\nОбчислено: {{computedTail}}"
+      },
+      "storageChunkMissing": {
+        "title": "Дані файлу відсутні у сховищі",
+        "content": "Перевірка узгодженості сховища виявила, що дані файлу '{{fileName}}' відсутні в базовому сховищі. Перевірте цілісність сховища й завантажте файл повторно."
+      },
+      "appUpdateAvailable": {
+        "title": "Доступне оновлення сервера Cotton",
+        "content": "Поточна версія сервера: {{currentVersion}}\nДоступна версія сервера: {{latestVersion}}\n\nНотатки до релізу:\n{{releaseNotes}}\n\nПовний реліз: {{releaseUrl}}"
+      },
+      "storagePressure": {
+        "title": "У сховищі закінчується вільне місце",
+        "content": "Cotton призупинив нові записи в сховище, бо буде порушено резерв вільного місця. Вільно: {{availableSpace}} ({{availablePercent}}%). Потрібний резерв: {{requiredReserve}}. Корінь сховища: {{rootPath}}. Звільніть місце або розширте том, а потім повторіть завантаження."
+      },
+      "databaseRestoreCompleted": {
+        "title": "Базу даних автоматично відновлено",
+        "content": "Автоматичне відновлення бази даних успішно завершено.\n\nID резервної копії: {{backupId}}\nВихідна база даних: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nРезервну копію створено (UTC): {{backupCreatedUtc}} UTC\nРезервну копію створено ({{serverTimezone}}): {{backupCreatedLocal}}\nВідновлення завершено (UTC): {{restoreCompletedUtcDisplay}} UTC\nВідновлення завершено ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+      }
     }
   },
   "common": {

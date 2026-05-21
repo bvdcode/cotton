@@ -432,6 +432,84 @@
     "unmuteSound": "Zapnout zvuk",
     "notifications": {
       "empty": "Žádná oznámení"
+    },
+    "server": {
+      "failedLoginAttempt": {
+        "title": "Neúspěšný pokus o přihlášení",
+        "content": {
+          "withDevice": "Někdo se pokusil přihlásit k vašemu účtu '{{username}}', ale přihlášení selhalo. Pokus byl proveden ze zařízení {{device}} v {{city}}, {{region}}, {{country}} ({{ip}}).",
+          "withoutDevice": "Někdo se pokusil přihlásit k vašemu účtu '{{username}}', ale přihlášení selhalo. Pokus byl proveden z {{city}}, {{region}}, {{country}} ({{ip}})."
+        }
+      },
+      "successfulLogin": {
+        "title": "Nové přihlášení k vašemu účtu",
+        "content": {
+          "withDevice": "K vašemu účtu bylo přistoupeno ze zařízení {{device}} v {{city}}, {{region}}, {{country}} ({{ip}}). Pokud jste to nebyli vy, okamžitě účet zabezpečte.",
+          "withoutDevice": "K vašemu účtu bylo přistoupeno z {{city}}, {{region}}, {{country}} ({{ip}}). Pokud jste to nebyli vy, okamžitě účet zabezpečte."
+        }
+      },
+      "otpDisabled": {
+        "title": "Dvoufaktorové ověření bylo vypnuto",
+        "content": {
+          "withDevice": "Dvoufaktorové ověření vašeho účtu bylo vypnuto ze zařízení {{device}} v {{city}}, {{region}}, {{country}} ({{ip}}). Účet je nyní méně zabezpečený. Pokud jste to nebyli vy, okamžitě jej zabezpečte.",
+          "withoutDevice": "Dvoufaktorové ověření vašeho účtu bylo vypnuto z {{city}}, {{region}}, {{country}} ({{ip}}). Účet je nyní méně zabezpečený. Pokud jste to nebyli vy, okamžitě jej zabezpečte."
+        }
+      },
+      "otpEnabled": {
+        "title": "Dvoufaktorové ověření bylo zapnuto",
+        "content": {
+          "withDevice": "Dvoufaktorové ověření vašeho účtu bylo zapnuto ze zařízení {{device}} v {{city}}, {{region}}, {{country}} ({{ip}}). Účet je nyní lépe zabezpečený.",
+          "withoutDevice": "Dvoufaktorové ověření vašeho účtu bylo zapnuto z {{city}}, {{region}}, {{country}} ({{ip}}). Účet je nyní lépe zabezpečený."
+        }
+      },
+      "totpFailedAttempt": {
+        "title": "Neplatný ověřovací kód",
+        "content": {
+          "withDevice": "Byl zadán neplatný kód dvoufaktorového ověření (počet neúspěšných pokusů: {{totpFailedAttempts}}). Pokus byl proveden ze zařízení {{device}} v {{city}}, {{region}}, {{country}} ({{ip}}). Pokud jste to nebyli vy, účet může být pod útokem.",
+          "withoutDevice": "Byl zadán neplatný kód dvoufaktorového ověření (počet neúspěšných pokusů: {{totpFailedAttempts}}). Pokus byl proveden z {{city}}, {{region}}, {{country}} ({{ip}}). Pokud jste to nebyli vy, účet může být pod útokem."
+        }
+      },
+      "totpLockout": {
+        "title": "Účet je dočasně uzamčen",
+        "content": {
+          "withDevice": "Účet byl dočasně uzamčen kvůli neúspěšným pokusům o ověření: {{maxFailedAttempts}}. Poslední pokus byl ze zařízení {{device}} v {{city}}, {{region}}, {{country}} ({{ip}}). Před dalším pokusem chvíli počkejte.",
+          "withoutDevice": "Účet byl dočasně uzamčen kvůli neúspěšným pokusům o ověření: {{maxFailedAttempts}}. Poslední pokus byl z {{city}}, {{region}}, {{country}} ({{ip}}). Před dalším pokusem chvíli počkejte."
+        }
+      },
+      "webDavTokenReset": {
+        "title": "Přístupový token WebDAV byl změněn",
+        "content": {
+          "withDevice": "Váš přístupový token WebDAV byl resetován ze zařízení {{device}} v {{city}}, {{region}}, {{country}} ({{ip}}). Aktualizujte token ve svém WebDAV klientovi.",
+          "withoutDevice": "Váš přístupový token WebDAV byl resetován z {{city}}, {{region}}, {{country}} ({{ip}}). Aktualizujte token ve svém WebDAV klientovi."
+        }
+      },
+      "sharedFileDownloaded": {
+        "title": "Sdílený soubor byl stažen",
+        "content": {
+          "withDevice": "Váš sdílený soubor '{{fileName}}' byl stažen ze zařízení {{device}} v {{city}}, {{region}}, {{country}} ({{ip}}).",
+          "withoutDevice": "Váš sdílený soubor '{{fileName}}' byl stažen z {{city}}, {{region}}, {{country}} ({{ip}})."
+        }
+      },
+      "uploadHashMismatch": {
+        "title": "Ověření nahrání selhalo",
+        "content": "Nepodařilo se ověřit integritu nahrání souboru '{{fileName}}'. Nahrajte soubor znovu.\n\nOčekáváno: {{proposedTail}}\nVypočteno: {{computedTail}}"
+      },
+      "storageChunkMissing": {
+        "title": "Data souboru v úložišti chybí",
+        "content": "Kontrola konzistence úložiště zjistila, že data souboru '{{fileName}}' v podkladovém úložišti chybí. Ověřte integritu úložiště a nahrajte soubor znovu."
+      },
+      "appUpdateAvailable": {
+        "title": "Je dostupná aktualizace serveru Cotton",
+        "content": "Aktuální verze serveru: {{currentVersion}}\nDostupná verze serveru: {{latestVersion}}\n\nPoznámky k vydání:\n{{releaseNotes}}\n\nCelé vydání: {{releaseUrl}}"
+      },
+      "storagePressure": {
+        "title": "V úložišti dochází volné místo",
+        "content": "Cotton pozastavil nové zápisy do úložiště, protože by byla překročena rezerva volného místa. Volné místo: {{availableSpace}} ({{availablePercent}} %). Požadovaná rezerva: {{requiredReserve}}. Kořen úložiště: {{rootPath}}. Uvolněte místo nebo rozšiřte svazek a potom nahrání zopakujte."
+      },
+      "databaseRestoreCompleted": {
+        "title": "Databáze byla automaticky obnovena",
+        "content": "Automatická obnova databáze byla úspěšně dokončena.\n\nID zálohy: {{backupId}}\nZdrojová databáze: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nZáloha vytvořena (UTC): {{backupCreatedUtc}} UTC\nZáloha vytvořena ({{serverTimezone}}): {{backupCreatedLocal}}\nObnova dokončena (UTC): {{restoreCompletedUtcDisplay}} UTC\nObnova dokončena ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+      }
     }
   },
   "common": {

@@ -8,6 +8,7 @@ export const notificationSchema = z.object({
   title: z.string(),
   content: z.string().nullable(),
   readAt: z.string().nullable(),
+  metadata: z.record(z.string(), z.string()).nullable().optional(),
 });
 
 export type NotificationDto = z.infer<typeof notificationSchema>;

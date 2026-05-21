@@ -2100,6 +2100,84 @@
     "unmuteSound": "Включить звук",
     "notifications": {
       "empty": "Нет уведомлений"
+    },
+    "server": {
+      "failedLoginAttempt": {
+        "title": "Неудачная попытка входа",
+        "content": {
+          "withDevice": "Кто-то пытался войти в ваш аккаунт '{{username}}', но вход не удался. Попытка была с {{device}} из {{city}}, {{region}}, {{country}} ({{ip}}).",
+          "withoutDevice": "Кто-то пытался войти в ваш аккаунт '{{username}}', но вход не удался. Попытка была из {{city}}, {{region}}, {{country}} ({{ip}})."
+        }
+      },
+      "successfulLogin": {
+        "title": "Новый вход в аккаунт",
+        "content": {
+          "withDevice": "В ваш аккаунт вошли с {{device}} из {{city}}, {{region}}, {{country}} ({{ip}}). Если это были не вы, срочно защитите аккаунт.",
+          "withoutDevice": "В ваш аккаунт вошли из {{city}}, {{region}}, {{country}} ({{ip}}). Если это были не вы, срочно защитите аккаунт."
+        }
+      },
+      "otpDisabled": {
+        "title": "Двухфакторная аутентификация отключена",
+        "content": {
+          "withDevice": "Двухфакторная аутентификация была отключена с {{device}} из {{city}}, {{region}}, {{country}} ({{ip}}). Теперь аккаунт защищён слабее. Если это были не вы, срочно защитите аккаунт.",
+          "withoutDevice": "Двухфакторная аутентификация была отключена из {{city}}, {{region}}, {{country}} ({{ip}}). Теперь аккаунт защищён слабее. Если это были не вы, срочно защитите аккаунт."
+        }
+      },
+      "otpEnabled": {
+        "title": "Двухфакторная аутентификация включена",
+        "content": {
+          "withDevice": "Двухфакторная аутентификация была включена с {{device}} из {{city}}, {{region}}, {{country}} ({{ip}}). Теперь аккаунт защищён лучше.",
+          "withoutDevice": "Двухфакторная аутентификация была включена из {{city}}, {{region}}, {{country}} ({{ip}}). Теперь аккаунт защищён лучше."
+        }
+      },
+      "totpFailedAttempt": {
+        "title": "Неверный код аутентификации",
+        "content": {
+          "withDevice": "Был введён неверный код двухфакторной аутентификации (неудачных попыток: {{totpFailedAttempts}}). Попытка была с {{device}} из {{city}}, {{region}}, {{country}} ({{ip}}). Если это были не вы, аккаунт может быть под атакой.",
+          "withoutDevice": "Был введён неверный код двухфакторной аутентификации (неудачных попыток: {{totpFailedAttempts}}). Попытка была из {{city}}, {{region}}, {{country}} ({{ip}}). Если это были не вы, аккаунт может быть под атакой."
+        }
+      },
+      "totpLockout": {
+        "title": "Аккаунт временно заблокирован",
+        "content": {
+          "withDevice": "Аккаунт временно заблокирован из-за неудачных попыток аутентификации: {{maxFailedAttempts}}. Последняя попытка была с {{device}} из {{city}}, {{region}}, {{country}} ({{ip}}). Подождите перед следующей попыткой.",
+          "withoutDevice": "Аккаунт временно заблокирован из-за неудачных попыток аутентификации: {{maxFailedAttempts}}. Последняя попытка была из {{city}}, {{region}}, {{country}} ({{ip}}). Подождите перед следующей попыткой."
+        }
+      },
+      "webDavTokenReset": {
+        "title": "Токен доступа WebDAV изменён",
+        "content": {
+          "withDevice": "Ваш токен доступа WebDAV был сброшен с {{device}} из {{city}}, {{region}}, {{country}} ({{ip}}). Обновите токен в WebDAV-клиенте.",
+          "withoutDevice": "Ваш токен доступа WebDAV был сброшен из {{city}}, {{region}}, {{country}} ({{ip}}). Обновите токен в WebDAV-клиенте."
+        }
+      },
+      "sharedFileDownloaded": {
+        "title": "Файл по ссылке скачан",
+        "content": {
+          "withDevice": "Ваш файл '{{fileName}}' по публичной ссылке был скачан с {{device}} из {{city}}, {{region}}, {{country}} ({{ip}}).",
+          "withoutDevice": "Ваш файл '{{fileName}}' по публичной ссылке был скачан из {{city}}, {{region}}, {{country}} ({{ip}})."
+        }
+      },
+      "uploadHashMismatch": {
+        "title": "Проверка загрузки не прошла",
+        "content": "Не удалось проверить целостность загрузки файла '{{fileName}}'. Загрузите файл повторно.\n\nОжидалось: {{proposedTail}}\nПолучено: {{computedTail}}"
+      },
+      "storageChunkMissing": {
+        "title": "Данные файла отсутствуют в хранилище",
+        "content": "Проверка целостности хранилища обнаружила, что данные файла '{{fileName}}' отсутствуют в нижележащем хранилище. Проверьте целостность хранилища и загрузите файл повторно."
+      },
+      "appUpdateAvailable": {
+        "title": "Доступно обновление сервера Cotton",
+        "content": "Текущая версия сервера: {{currentVersion}}\nДоступная версия сервера: {{latestVersion}}\n\nЗаметки релиза:\n{{releaseNotes}}\n\nПолный релиз: {{releaseUrl}}"
+      },
+      "storagePressure": {
+        "title": "В хранилище заканчивается свободное место",
+        "content": "Cotton приостановил новые записи в хранилище, потому что будет нарушен резерв свободного места. Свободно: {{availableSpace}} ({{availablePercent}}%). Требуемый резерв: {{requiredReserve}}. Корень хранилища: {{rootPath}}. Освободите место или расширьте диск, затем повторите загрузку."
+      },
+      "databaseRestoreCompleted": {
+        "title": "База данных восстановлена автоматически",
+        "content": "Автоматическое восстановление базы данных успешно завершено.\n\nID бэкапа: {{backupId}}\nИсходная база: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nБэкап создан (UTC): {{backupCreatedUtc}} UTC\nБэкап создан ({{serverTimezone}}): {{backupCreatedLocal}}\nВосстановление завершено (UTC): {{restoreCompletedUtcDisplay}} UTC\nВосстановление завершено ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+      }
     }
   },
   "routes": {

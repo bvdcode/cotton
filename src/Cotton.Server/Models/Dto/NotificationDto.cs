@@ -8,7 +8,7 @@ namespace Cotton.Server.Models.Dto
         public string Title { get; set; } = null!;
         public string? Content { get; set; }
         public DateTime? ReadAt { get; set; }
-        public string? Metadata { get; set; }
+        public Dictionary<string, string>? Metadata { get; set; }
         public Guid UserId { get; set; }
         public NotificationPriority Priority { get; set; }
     }
