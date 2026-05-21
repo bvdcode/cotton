@@ -314,7 +314,7 @@ docker run -d --name cotton \
 
 After unlock the app applies EF migrations automatically, serves the UI at `http://localhost:8080` (or whatever port you mapped), and walks you through the in-browser setup wizard.
 
-The official Docker image uses a staged non-root migration. The entrypoint starts as root only long enough to prepare `/app/files`, repairs ownership for older root-owned volumes when needed, then runs Cotton as the .NET `app` user. Existing filesystem-backed instances may see a one-time ownership pass on first upgrade; operators who pre-manage volume permissions can set `COTTON_PERMISSION_FIX=never`. The expected runtime owner is the image `APP_UID` user, currently `1654` in Microsoft .NET images, so a manual bind-mount migration looks like `chown -R 1654:1654 /data/cotton`.
+The official Docker image uses a staged non-root migration. The entrypoint starts as root only long enough to prepare `/app/files`, checks that the runtime user can write to the storage temp directory, repairs ownership when that check fails, then runs Cotton as the .NET `app` user. Operators who pre-manage volume permissions can set `COTTON_PERMISSION_FIX=never`, or force a full ownership pass with `COTTON_PERMISSION_FIX=always`. The expected runtime owner is the image `APP_UID` user, currently `1654` in Microsoft .NET images, so a manual bind-mount migration looks like `chown -R 1654:1654 /data/cotton`.
 
 Upload settings are returned by the server; the frontend (`src/cotton.client`) uses them for chunking.
 

@@ -46,7 +46,6 @@ else
 fi
 
 ownership="$run_uid:$run_gid"
-marker="$COTTON_STORAGE_PATH/.cotton-permissions-v1"
 
 can_write_storage() {
     gosu "$run_as" sh -c '
@@ -64,19 +63,13 @@ can_write_storage() {
 repair_storage_permissions() {
     log "repairing storage ownership for $COTTON_STORAGE_PATH -> $ownership"
     chown -R "$ownership" "$COTTON_STORAGE_PATH"
-    gosu "$run_as" sh -c '
-        set -eu
-        marker="$1"
-        umask 077
-        printf "%s\n" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$marker"
-    ' sh "$marker"
 }
 
 mkdir -p "$COTTON_STORAGE_PATH/tmp"
 
 case "$COTTON_PERMISSION_FIX" in
     auto)
-        if [ ! -f "$marker" ] || ! can_write_storage; then
+        if ! can_write_storage; then
             repair_storage_permissions
         fi
         ;;
