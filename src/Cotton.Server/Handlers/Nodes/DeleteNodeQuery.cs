@@ -24,7 +24,8 @@ namespace Cotton.Server.Handlers.Nodes
         ILayoutNavigator _navigator,
         NodeSubtreeService _subtree,
         ILogger<DeleteNodeQueryHandler> _logger,
-        UserStorageQuotaService _quota)
+        UserStorageQuotaService _quota,
+        FileVersionService _versions)
             : IRequestHandler<DeleteNodeQuery>
     {
         public async Task Handle(DeleteNodeQuery request, CancellationToken ct)
@@ -112,6 +113,11 @@ namespace Cotton.Server.Handlers.Nodes
         private async Task DeletePermanentlyAsync(DeleteNodeQuery command, Node node, CancellationToken ct)
         {
             var nodeIds = await _subtree.CollectSubtreeIdsAsync(command.UserId, node.Id, ct);
+
+            if (await _versions.ContainsHistoricalVersionsAsync(command.UserId, nodeIds, ct))
+            {
+                throw new BadRequestException<Node>("File version containers cannot be deleted directly.");
+            }
 
             await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
 

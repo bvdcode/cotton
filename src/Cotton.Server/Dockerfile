@@ -16,7 +16,7 @@ RUN set -eux \
     && echo "deb [signed-by=/etc/apt/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
         > /etc/apt/sources.list.d/pgdg.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends postgresql-client-18 f3d xvfb xauth libosmesa6 libgl1 libgl1-mesa-dri libegl1 libglx-mesa0 \
+    && apt-get install -y --no-install-recommends postgresql-client-18 f3d xvfb xauth gosu libosmesa6 libgl1 libgl1-mesa-dri libegl1 libglx-mesa0 \
     && apt-get purge -y --auto-remove curl gnupg \
     && rm -rf /var/lib/apt/lists/*
 
@@ -70,8 +70,13 @@ WORKDIR /app
 ARG BUILD_VERSION=dev
 ENV APP_VERSION=$BUILD_VERSION
 COPY --from=publish /app/publish .
+COPY --chmod=0755 ["Cotton.Server/docker-entrypoint.sh", "/usr/local/bin/cotton-entrypoint"]
+RUN set -eux \
+    && mkdir -p /app/files \
+    && chown -R "${APP_UID:-1654}:${APP_UID:-1654}" /app/files
 ENV DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE=false \
     DOTNET_EnableDiagnostics=0 \
     COMPlus_EnableDiagnostics=0 \
     COTTON_PROCESS_HARDENING=true
-ENTRYPOINT ["dotnet", "Cotton.Server.dll"]
+ENTRYPOINT ["cotton-entrypoint"]
+CMD ["dotnet", "Cotton.Server.dll"]

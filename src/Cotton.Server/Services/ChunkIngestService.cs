@@ -32,6 +32,40 @@ public class ChunkIngestService(
         byte[] chunkHash = SHA256.HashData(buffer.AsSpan(0, length));
         string storageKey = Hasher.ToHexStringHash(chunkHash);
 
+        await WaitForGarbageCollectionAsync(storageKey, ct);
+
+        var settings = _settingsProvider.GetServerSettings();
+        var chunk = await _layouts.FindChunkAsync(chunkHash);
+        bool existsInStorage = await _storage.ExistsAsync(storageKey);
+
+        Chunk? reusedChunk = await TryReuseDeduplicatedChunkAsync(
+            chunk,
+            settings.AllowCrossUserDeduplication,
+            existsInStorage,
+            storageKey,
+            chunkHash,
+            userId,
+            ct);
+        if (reusedChunk is not null)
+        {
+            return reusedChunk;
+        }
+
+        if (!existsInStorage)
+        {
+            await WriteChunkAsync(storageKey, buffer, length, ct);
+        }
+
+        long storedSizeBytes = await _storage.GetSizeAsync(storageKey);
+        chunk = await UpsertChunkMetadataAsync(chunk, chunkHash, length, storedSizeBytes, ct);
+
+        await EnsureOwnershipAsync(chunkHash, userId, ct);
+        await _dbContext.SaveChangesAsync(ct);
+        return chunk;
+    }
+
+    private async Task WaitForGarbageCollectionAsync(string storageKey, CancellationToken ct)
+    {
         int waitedMs = 0;
         while (GarbageCollectorJob.IsChunkBeingDeleted(storageKey) && waitedMs < GcWaitMaxMs)
         {
@@ -44,81 +78,134 @@ public class ChunkIngestService(
         {
             throw new InvalidOperationException($"Chunk {storageKey} is currently being garbage collected. Please retry.");
         }
+    }
 
-        var settings = _settingsProvider.GetServerSettings();
-
-        var chunk = await _layouts.FindChunkAsync(chunkHash);
-        bool existsInStorage = await _storage.ExistsAsync(storageKey);
-        if (chunk is not null && settings.AllowCrossUserDeduplication && existsInStorage)
+    private async Task<Chunk?> TryReuseDeduplicatedChunkAsync(
+        Chunk? chunk,
+        bool allowCrossUserDeduplication,
+        bool existsInStorage,
+        string storageKey,
+        byte[] chunkHash,
+        Guid userId,
+        CancellationToken ct)
+    {
+        if (chunk is null || !allowCrossUserDeduplication || !existsInStorage)
         {
-            if (chunk.StoredSizeBytes <= 0)
-            {
-                chunk.StoredSizeBytes = await _storage.GetSizeAsync(storageKey);
-                _dbContext.Chunks.Update(chunk);
-            }
-
-            if (chunk.GCScheduledAfter.HasValue)
-            {
-                chunk.GCScheduledAfter = null;
-                _dbContext.Chunks.Update(chunk);
-            }
-
-            await EnsureOwnershipAsync(chunkHash, userId, ct);
-            await _dbContext.SaveChangesAsync(ct);
-            return chunk;
+            return null;
         }
 
-        if (!existsInStorage)
-        {
-            using var writeReservation = await _storagePressure.ReserveWriteAsync(length, ct);
-            using var chunkStream = new MemoryStream(buffer, 0, length, writable: false);
-            await _storage.WriteAsync(storageKey, chunkStream, new PipelineContext());
-            writeReservation.Commit();
-        }
-
-        long storedSizeBytes = await _storage.GetSizeAsync(storageKey);
-
-        if (chunk is null)
-        {
-            chunk = new Chunk
-            {
-                Hash = chunkHash,
-                PlainSizeBytes = length,
-                StoredSizeBytes = storedSizeBytes,
-                CompressionAlgorithm = CompressionProcessor.Algorithm
-            };
-            await _dbContext.Chunks.AddAsync(chunk, ct);
-        }
-        else
-        {
-            bool updated = false;
-            if (chunk.GCScheduledAfter.HasValue)
-            {
-                chunk.GCScheduledAfter = null;
-                updated = true;
-            }
-
-            if (chunk.PlainSizeBytes <= 0)
-            {
-                chunk.PlainSizeBytes = length;
-                updated = true;
-            }
-
-            if (chunk.StoredSizeBytes <= 0)
-            {
-                chunk.StoredSizeBytes = storedSizeBytes;
-                updated = true;
-            }
-
-            if (updated)
-            {
-                _dbContext.Chunks.Update(chunk);
-            }
-        }
-
+        await RefreshStoredChunkMetadataAsync(chunk, storageKey);
         await EnsureOwnershipAsync(chunkHash, userId, ct);
         await _dbContext.SaveChangesAsync(ct);
         return chunk;
+    }
+
+    private async Task RefreshStoredChunkMetadataAsync(Chunk chunk, string storageKey)
+    {
+        bool updated = false;
+        if (chunk.StoredSizeBytes <= 0)
+        {
+            chunk.StoredSizeBytes = await _storage.GetSizeAsync(storageKey);
+            updated = true;
+        }
+
+        if (chunk.GCScheduledAfter.HasValue)
+        {
+            chunk.GCScheduledAfter = null;
+            updated = true;
+        }
+
+        if (updated)
+        {
+            _dbContext.Chunks.Update(chunk);
+        }
+    }
+
+    private async Task WriteChunkAsync(string storageKey, byte[] buffer, int length, CancellationToken ct)
+    {
+        using var writeReservation = await _storagePressure.ReserveWriteAsync(length, ct);
+        using var chunkStream = new MemoryStream(buffer, 0, length, writable: false);
+        await _storage.WriteAsync(storageKey, chunkStream, new PipelineContext());
+        writeReservation.Commit();
+    }
+
+    private async Task<Chunk> UpsertChunkMetadataAsync(
+        Chunk? chunk,
+        byte[] chunkHash,
+        int plainSizeBytes,
+        long storedSizeBytes,
+        CancellationToken ct)
+    {
+        if (chunk is null)
+        {
+            return await AddChunkMetadataAsync(chunkHash, plainSizeBytes, storedSizeBytes, ct);
+        }
+
+        UpdateChunkMetadata(chunk, plainSizeBytes, storedSizeBytes);
+        return chunk;
+    }
+
+    private async Task<Chunk> AddChunkMetadataAsync(
+        byte[] chunkHash,
+        int plainSizeBytes,
+        long storedSizeBytes,
+        CancellationToken ct)
+    {
+        var chunk = new Chunk
+        {
+            Hash = chunkHash,
+            PlainSizeBytes = plainSizeBytes,
+            StoredSizeBytes = storedSizeBytes,
+            CompressionAlgorithm = CompressionProcessor.Algorithm
+        };
+        await _dbContext.Chunks.AddAsync(chunk, ct);
+        return chunk;
+    }
+
+    private void UpdateChunkMetadata(Chunk chunk, int plainSizeBytes, long storedSizeBytes)
+    {
+        bool updated = false;
+        updated |= ClearGcSchedule(chunk);
+        updated |= SetPlainSizeIfMissing(chunk, plainSizeBytes);
+        updated |= SetStoredSizeIfMissing(chunk, storedSizeBytes);
+
+        if (updated)
+        {
+            _dbContext.Chunks.Update(chunk);
+        }
+    }
+
+    private static bool ClearGcSchedule(Chunk chunk)
+    {
+        if (!chunk.GCScheduledAfter.HasValue)
+        {
+            return false;
+        }
+
+        chunk.GCScheduledAfter = null;
+        return true;
+    }
+
+    private static bool SetPlainSizeIfMissing(Chunk chunk, int plainSizeBytes)
+    {
+        if (chunk.PlainSizeBytes > 0)
+        {
+            return false;
+        }
+
+        chunk.PlainSizeBytes = plainSizeBytes;
+        return true;
+    }
+
+    private static bool SetStoredSizeIfMissing(Chunk chunk, long storedSizeBytes)
+    {
+        if (chunk.StoredSizeBytes > 0)
+        {
+            return false;
+        }
+
+        chunk.StoredSizeBytes = storedSizeBytes;
+        return true;
     }
 
     public async Task<Chunk> UpsertChunkAsync(Guid userId, Stream stream, long length, CancellationToken ct = default)

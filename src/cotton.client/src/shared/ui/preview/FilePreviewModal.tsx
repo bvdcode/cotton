@@ -8,6 +8,7 @@ import {
   Tooltip,
   useTheme,
 } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import {
   AutoFixHigh,
   ColorLens,
@@ -64,6 +65,18 @@ interface FilePreviewModalProps {
   onSaved?: () => void;
 }
 
+type PaletteColor = {
+  id: string;
+  color: string;
+};
+
+type FilePreviewSource = {
+  kind: "fileId";
+  fileId: string;
+};
+
+type ModelPreviewControls = ReturnType<typeof useModelPreviewControls>;
+
 /**
  * Shared file preview modal component
  * Displays PDF or Text preview based on file type
@@ -77,56 +90,16 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   onClose,
   onSaved,
 }) => {
-  const { t } = useTranslation(["files"]);
   const theme = useTheme();
   const isModel = fileType === "model";
-  const defaultModelColor = React.useMemo<string | null>(() => {
-    return theme.palette.error.main;
-  }, [theme]);
-
-  const paletteColors = React.useMemo<Array<{ id: string; color: string }>>(
-    () => [
-      { id: "grey-300", color: theme.palette.grey[300] },
-      { id: "grey-500", color: theme.palette.grey[500] },
-      { id: "grey-700", color: theme.palette.grey[700] },
-
-      { id: "primary-light", color: theme.palette.primary.light },
-      { id: "primary-main", color: theme.palette.primary.main },
-      { id: "primary-dark", color: theme.palette.primary.dark },
-
-      { id: "secondary-light", color: theme.palette.secondary.light },
-      { id: "secondary-main", color: theme.palette.secondary.main },
-      { id: "secondary-dark", color: theme.palette.secondary.dark },
-
-      { id: "info-light", color: theme.palette.info.light },
-      { id: "info-main", color: theme.palette.info.main },
-      { id: "info-dark", color: theme.palette.info.dark },
-
-      { id: "success-light", color: theme.palette.success.light },
-      { id: "success-main", color: theme.palette.success.main },
-      { id: "success-dark", color: theme.palette.success.dark },
-
-      { id: "warning-light", color: theme.palette.warning.light },
-      { id: "warning-main", color: theme.palette.warning.main },
-      { id: "warning-dark", color: theme.palette.warning.dark },
-
-      { id: "error-light", color: theme.palette.error.light },
-      { id: "error-main", color: theme.palette.error.main },
-      { id: "error-dark", color: theme.palette.error.dark },
-    ],
-    [theme],
-  );
-
-  const fileSource = React.useMemo(
-    () => (fileId ? { kind: "fileId" as const, fileId } : null),
+  const defaultModelColor = React.useMemo(() => theme.palette.error.main, [theme]);
+  const paletteColors = React.useMemo(() => buildPaletteColors(theme), [theme]);
+  const fileSource = React.useMemo<FilePreviewSource | null>(
+    () => (fileId ? { kind: "fileId", fileId } : null),
     [fileId],
   );
-  const modelControlsKey =
-    isOpen && isModel && fileId
-      ? [fileId, defaultModelColor ?? ""].join("\u0000")
-      : "";
   const modelControls = useModelPreviewControls({
-    stateKey: modelControlsKey,
+    stateKey: getModelControlsKey(isOpen, isModel, fileId, defaultModelColor),
     defaultMaterialColor: defaultModelColor,
   });
 
@@ -134,18 +107,94 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
     return null;
   }
 
-  const modelHeaderActions = isModel ? (
+  return (
+    <PreviewModal
+      open={isOpen}
+      onClose={onClose}
+      layout={getPreviewLayout(fileType, isModel)}
+      title={getPreviewTitle(fileName, fileType, isModel)}
+      forceFullScreen={isModel}
+      headerActions={
+        isModel ? <ModelHeaderActions modelControls={modelControls} /> : undefined
+      }
+    >
+      <FilePreviewBody
+        fileId={fileId}
+        fileName={fileName}
+        fileType={fileType}
+        fileSizeBytes={fileSizeBytes}
+        fileSource={fileSource}
+        modelControls={modelControls}
+        onSaved={onSaved}
+      />
+      {isModel && (
+        <ModelPalettePopover
+          paletteColors={paletteColors}
+          modelControls={modelControls}
+        />
+      )}
+    </PreviewModal>
+  );
+};
+
+const buildPaletteColors = (theme: Theme): PaletteColor[] => [
+  { id: "grey-300", color: theme.palette.grey[300] },
+  { id: "grey-500", color: theme.palette.grey[500] },
+  { id: "grey-700", color: theme.palette.grey[700] },
+  { id: "primary-light", color: theme.palette.primary.light },
+  { id: "primary-main", color: theme.palette.primary.main },
+  { id: "primary-dark", color: theme.palette.primary.dark },
+  { id: "secondary-light", color: theme.palette.secondary.light },
+  { id: "secondary-main", color: theme.palette.secondary.main },
+  { id: "secondary-dark", color: theme.palette.secondary.dark },
+  { id: "info-light", color: theme.palette.info.light },
+  { id: "info-main", color: theme.palette.info.main },
+  { id: "info-dark", color: theme.palette.info.dark },
+  { id: "success-light", color: theme.palette.success.light },
+  { id: "success-main", color: theme.palette.success.main },
+  { id: "success-dark", color: theme.palette.success.dark },
+  { id: "warning-light", color: theme.palette.warning.light },
+  { id: "warning-main", color: theme.palette.warning.main },
+  { id: "warning-dark", color: theme.palette.warning.dark },
+  { id: "error-light", color: theme.palette.error.light },
+  { id: "error-main", color: theme.palette.error.main },
+  { id: "error-dark", color: theme.palette.error.dark },
+];
+
+const getModelControlsKey = (
+  isOpen: boolean,
+  isModel: boolean,
+  fileId: string | null,
+  defaultModelColor: string,
+) => (isOpen && isModel && fileId ? [fileId, defaultModelColor].join("\u0000") : "");
+
+const getPreviewLayout = (fileType: FileType | null, isModel: boolean) =>
+  fileType === "pdf" || isModel ? "header" : "overlay";
+
+const getPreviewTitle = (
+  fileName: string,
+  fileType: FileType | null,
+  isModel: boolean,
+) => (fileType === "pdf" || isModel ? fileName : undefined);
+
+type ModelHeaderActionsProps = {
+  modelControls: ModelPreviewControls;
+};
+
+const ModelHeaderActions = ({ modelControls }: ModelHeaderActionsProps) => {
+  const { t } = useTranslation(["files"]);
+
+  return (
     <Stack direction="row" spacing={0.5} alignItems="center">
       <Tooltip
         title={t("preview.model.actions.cycleLighting", {
-          preset: t(`preview.model.lighting.${modelControls.lightingPreset}`),
+          preset: t("preview.model.lighting." + modelControls.lightingPreset),
         })}
       >
         <IconButton onClick={modelControls.cycleLightingPreset}>
           <WbSunny />
         </IconButton>
       </Tooltip>
-
       <Tooltip
         title={t("preview.model.actions.toggleShadows", {
           state: t(
@@ -162,35 +211,30 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
           <FilterDrama />
         </IconButton>
       </Tooltip>
-
       <Tooltip
         title={t("preview.model.actions.cycleSurface", {
-          preset: t(`preview.model.surface.${modelControls.surfacePreset}`),
+          preset: t("preview.model.surface." + modelControls.surfacePreset),
         })}
       >
         <IconButton onClick={modelControls.cycleSurfacePreset}>
           <Texture />
         </IconButton>
       </Tooltip>
-
       <Tooltip title={t("preview.model.actions.flipModel")}>
         <IconButton onClick={modelControls.requestFlip}>
           <SwapVert />
         </IconButton>
       </Tooltip>
-
       <Tooltip title={t("preview.model.actions.autoOrient")}>
         <IconButton onClick={modelControls.requestAutoOrient}>
           <AutoFixHigh />
         </IconButton>
       </Tooltip>
-
       <Tooltip title={t("preview.model.actions.autoAlign")}>
         <IconButton onClick={modelControls.requestAutoAlign}>
           <VerticalAlignBottom />
         </IconButton>
       </Tooltip>
-
       <Tooltip title={t("preview.model.actions.togglePalette")}>
         <IconButton
           onClick={(event) => {
@@ -201,126 +245,165 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
         </IconButton>
       </Tooltip>
     </Stack>
-  ) : undefined;
+  );
+};
+
+type FilePreviewBodyProps = {
+  fileId: string;
+  fileName: string;
+  fileType: FileType | null;
+  fileSizeBytes: number | null;
+  fileSource: FilePreviewSource | null;
+  modelControls: ModelPreviewControls;
+  onSaved?: () => void;
+};
+
+const FilePreviewBody = ({
+  fileId,
+  fileName,
+  fileType,
+  fileSizeBytes,
+  fileSource,
+  modelControls,
+  onSaved,
+}: FilePreviewBodyProps) => (
+  <>
+    {fileType === "pdf" && fileSource && (
+      <Suspense fallback={<PreviewFallback />}>
+        <PdfPreview
+          source={fileSource}
+          fileName={fileName}
+          fileSizeBytes={fileSizeBytes}
+        />
+      </Suspense>
+    )}
+    {fileType === "text" && (
+      <Suspense fallback={<PreviewFallback />}>
+        <TextPreview
+          nodeFileId={fileId}
+          fileName={fileName}
+          fileSizeBytes={fileSizeBytes}
+          onSaved={onSaved}
+        />
+      </Suspense>
+    )}
+    {fileType === "model" && fileSource && (
+      <ModelPreviewBody
+        fileName={fileName}
+        fileSizeBytes={fileSizeBytes}
+        fileSource={fileSource}
+        modelControls={modelControls}
+      />
+    )}
+  </>
+);
+
+type ModelPreviewBodyProps = {
+  fileName: string;
+  fileSizeBytes: number | null;
+  fileSource: FilePreviewSource;
+  modelControls: ModelPreviewControls;
+};
+
+const ModelPreviewBody = ({
+  fileName,
+  fileSizeBytes,
+  fileSource,
+  modelControls,
+}: ModelPreviewBodyProps) => (
+  <Box
+    sx={{
+      display: "flex",
+      flex: 1,
+      flexDirection: "column",
+      minHeight: 0,
+    }}
+  >
+    <Box sx={{ flex: 1, minHeight: 0 }}>
+      <Suspense fallback={<PreviewFallback />}>
+        <ModelPreview
+          source={fileSource}
+          fileName={fileName}
+          fileSizeBytes={fileSizeBytes}
+          materialColor={modelControls.materialColor}
+          autoAlignToken={modelControls.autoAlignToken}
+          autoOrientToken={modelControls.autoOrientToken}
+          flipToken={modelControls.flipToken}
+          lightingPreset={modelControls.lightingPreset}
+          shadowsEnabled={modelControls.shadowsEnabled}
+          surfacePreset={modelControls.surfacePreset}
+        />
+      </Suspense>
+    </Box>
+  </Box>
+);
+
+type ModelPalettePopoverProps = {
+  paletteColors: PaletteColor[];
+  modelControls: ModelPreviewControls;
+};
+
+const ModelPalettePopover = ({
+  paletteColors,
+  modelControls,
+}: ModelPalettePopoverProps) => {
+  const { t } = useTranslation(["files"]);
 
   return (
-    <PreviewModal
-      open={isOpen}
-      onClose={onClose}
-      layout={fileType === "pdf" || isModel ? "header" : "overlay"}
-      title={fileType === "pdf" || isModel ? fileName : undefined}
-      forceFullScreen={isModel}
-      headerActions={modelHeaderActions}
+    <Popover
+      open={Boolean(modelControls.paletteAnchorEl)}
+      anchorEl={modelControls.paletteAnchorEl}
+      onClose={modelControls.closePalette}
+      anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      transformOrigin={{ vertical: "top", horizontal: "right" }}
+      sx={{ mt: 0.5 }}
     >
-      {fileType === "pdf" && fileSource && (
-        <Suspense fallback={<PreviewFallback />}>
-          <PdfPreview
-            source={fileSource}
-            fileName={fileName}
-            fileSizeBytes={fileSizeBytes}
-          />
-        </Suspense>
-      )}
-      {fileType === "text" && (
-        <Suspense fallback={<PreviewFallback />}>
-          <TextPreview
-            nodeFileId={fileId}
-            fileName={fileName}
-            fileSizeBytes={fileSizeBytes}
-            onSaved={onSaved}
-          />
-        </Suspense>
-      )}
-
-      {isModel && fileSource && (
-        <Box
-          sx={{
-            display: "flex",
-            flex: 1,
-            flexDirection: "column",
-            minHeight: 0,
-          }}
-        >
-          <Box sx={{ flex: 1, minHeight: 0 }}>
-            <Suspense fallback={<PreviewFallback />}>
-              <ModelPreview
-                source={fileSource}
-                fileName={fileName}
-                fileSizeBytes={fileSizeBytes}
-                materialColor={modelControls.materialColor}
-                autoAlignToken={modelControls.autoAlignToken}
-                autoOrientToken={modelControls.autoOrientToken}
-                flipToken={modelControls.flipToken}
-                lightingPreset={modelControls.lightingPreset}
-                shadowsEnabled={modelControls.shadowsEnabled}
-                surfacePreset={modelControls.surfacePreset}
-              />
-            </Suspense>
-          </Box>
-        </Box>
-      )}
-
-      {isModel && (
-        <Popover
-          open={Boolean(modelControls.paletteAnchorEl)}
-          anchorEl={modelControls.paletteAnchorEl}
-          onClose={modelControls.closePalette}
-          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-          transformOrigin={{ vertical: "top", horizontal: "right" }}
-          sx={{ mt: 0.5 }}
-        >
-          <Box
-            sx={{
-              alignItems: "center",
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 0.5,
-              maxWidth: 360,
-              px: 1,
-              py: 0.75,
+      <Box
+        sx={{
+          alignItems: "center",
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 0.5,
+          maxWidth: 360,
+          px: 1,
+          py: 0.75,
+        }}
+      >
+        <Tooltip title={t("preview.model.actions.resetColor")}>
+          <IconButton
+            sx={{ height: 34, width: 34 }}
+            onClick={() => {
+              modelControls.setMaterialColor(null);
+              modelControls.closePalette();
             }}
           >
-            <Tooltip title={t("preview.model.actions.resetColor")}>
-              <IconButton
-                sx={{
-                  height: 34,
-                  width: 34,
-                }}
-                onClick={() => {
-                  modelControls.setMaterialColor(null);
-                  modelControls.closePalette();
-                }}
-              >
-                <FormatColorReset />
-              </IconButton>
-            </Tooltip>
-
-            {paletteColors.map((paletteOption) => (
-              <IconButton
-                key={paletteOption.id}
-                onClick={() => {
-                  modelControls.setMaterialColor(paletteOption.color);
-                  modelControls.closePalette();
-                }}
-              >
-                <Box
-                  sx={{
-                    backgroundColor: paletteOption.color,
-                    border: 1,
-                    borderColor:
-                      modelControls.materialColor === paletteOption.color
-                        ? "text.primary"
-                        : "divider",
-                    borderRadius: "50%",
-                    height: 18,
-                    width: 18,
-                  }}
-                />
-              </IconButton>
-            ))}
-          </Box>
-        </Popover>
-      )}
-    </PreviewModal>
+            <FormatColorReset />
+          </IconButton>
+        </Tooltip>
+        {paletteColors.map((paletteOption) => (
+          <IconButton
+            key={paletteOption.id}
+            onClick={() => {
+              modelControls.setMaterialColor(paletteOption.color);
+              modelControls.closePalette();
+            }}
+          >
+            <Box
+              sx={{
+                backgroundColor: paletteOption.color,
+                border: 1,
+                borderColor:
+                  modelControls.materialColor === paletteOption.color
+                    ? "text.primary"
+                    : "divider",
+                borderRadius: "50%",
+                height: 18,
+                width: 18,
+              }}
+            />
+          </IconButton>
+        ))}
+      </Box>
+    </Popover>
   );
 };

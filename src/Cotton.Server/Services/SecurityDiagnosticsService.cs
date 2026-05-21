@@ -96,111 +96,201 @@ namespace Cotton.Server.Services
             AdminTotpDiagnosticsDto adminTotp)
         {
             var warnings = new List<SecurityDiagnosticWarningDto>();
-
-            if (isPublicInstance)
-            {
-                warnings.Add(new SecurityDiagnosticWarningDto
-                {
-                    Code = "public-instance",
-                    Severity = "warning",
-                    Message = "This instance allows public/demo account creation. Keep quotas, default content, and abuse monitoring configured before exposing it on the internet.",
-                });
-            }
-
-            if (masterKey.EnvironmentVariableWasConfigured)
-            {
-                warnings.Add(new SecurityDiagnosticWarningDto
-                {
-                    Code = "master-key-from-environment",
-                    Severity = "warning",
-                    Message = "This process was unlocked from COTTON_MASTER_KEY. Cotton clears its own process environment after reading it, but container runtimes may still expose configured environment variables through deployment metadata or docker exec environments.",
-                });
-            }
-
-            if (adminTotp.AdminsWithoutTotp > 0)
-            {
-                warnings.Add(new SecurityDiagnosticWarningDto
-                {
-                    Code = "admins-without-2fa",
-                    Severity = "warning",
-                    Message = $"{adminTotp.AdminsWithoutTotp} of {adminTotp.AdminCount} admin accounts do not have 2FA enabled.",
-                });
-            }
-
-            if (!dotnetDiagnostics.Disabled)
-            {
-                warnings.Add(new SecurityDiagnosticWarningDto
-                {
-                    Code = "dotnet-diagnostics-enabled",
-                    Severity = "warning",
-                    Message = "DOTNET diagnostics appear enabled. Production containers should set DOTNET_EnableDiagnostics=0 to disable debugger, profiler, EventPipe, and dump collection endpoints.",
-                });
-            }
-
-            if (OperatingSystem.IsLinux())
-            {
-                if (linuxProcess.Dumpable != 0)
-                {
-                    warnings.Add(new SecurityDiagnosticWarningDto
-                    {
-                        Code = "process-dumpable",
-                        Severity = "warning",
-                        Message = "The Linux process is dumpable. Set COTTON_PROCESS_HARDENING=true or run the official container defaults to request PR_SET_DUMPABLE=0 early at startup.",
-                    });
-                }
-
-                if (linuxProcess.HasSysPtraceCapability == true)
-                {
-                    warnings.Add(new SecurityDiagnosticWarningDto
-                    {
-                        Code = "sys-ptrace-capability",
-                        Severity = "critical",
-                        Message = "CAP_SYS_PTRACE is effective for this process. Avoid SYS_PTRACE/privileged containers unless actively debugging.",
-                    });
-                }
-
-                if (linuxProcess.NoNewPrivileges == 0)
-                {
-                    warnings.Add(new SecurityDiagnosticWarningDto
-                    {
-                        Code = "new-privileges-allowed",
-                        Severity = isContainer ? "warning" : "info",
-                        Message = "no-new-privileges is not enabled. In Docker Compose, security_opt: [\"no-new-privileges:true\"] is a cheap hardening layer.",
-                    });
-                }
-
-                if (linuxProcess.SeccompMode == 0)
-                {
-                    warnings.Add(new SecurityDiagnosticWarningDto
-                    {
-                        Code = "seccomp-disabled",
-                        Severity = "warning",
-                        Message = "Seccomp appears disabled. Docker's default seccomp profile is a useful baseline; avoid seccomp=unconfined in production.",
-                    });
-                }
-
-                if (linuxProcess.RunningAsRoot == true)
-                {
-                    warnings.Add(new SecurityDiagnosticWarningDto
-                    {
-                        Code = "running-as-root",
-                        Severity = "info",
-                        Message = "The process is running as root. This may be acceptable for simple self-hosting, but a dedicated non-root UID is stronger when volume permissions are prepared for it.",
-                    });
-                }
-            }
-
-            if (linuxProcess.HardeningRequested && !linuxProcess.HardeningApplied)
-            {
-                warnings.Add(new SecurityDiagnosticWarningDto
-                {
-                    Code = "process-hardening-failed",
-                    Severity = "warning",
-                    Message = linuxProcess.HardeningError ?? "Process hardening was requested but did not apply.",
-                });
-            }
-
+            AddPublicInstanceWarning(warnings, isPublicInstance);
+            AddMasterKeyWarning(warnings, masterKey);
+            AddAdminTotpWarning(warnings, adminTotp);
+            AddDotNetDiagnosticsWarning(warnings, dotnetDiagnostics);
+            AddLinuxProcessWarnings(warnings, isContainer, linuxProcess);
+            AddHardeningWarning(warnings, linuxProcess);
             return warnings;
+        }
+
+        private static void AddPublicInstanceWarning(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            bool isPublicInstance)
+        {
+            if (!isPublicInstance)
+            {
+                return;
+            }
+
+            warnings.Add(new SecurityDiagnosticWarningDto
+            {
+                Code = "public-instance",
+                Severity = "warning",
+                Message = "This instance allows public/demo account creation. Keep quotas, default content, and abuse monitoring configured before exposing it on the internet.",
+            });
+        }
+
+        private static void AddMasterKeyWarning(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            MasterKeyRuntimeState masterKey)
+        {
+            if (!masterKey.EnvironmentVariableWasConfigured)
+            {
+                return;
+            }
+
+            warnings.Add(new SecurityDiagnosticWarningDto
+            {
+                Code = "master-key-from-environment",
+                Severity = "warning",
+                Message = "This process was unlocked from COTTON_MASTER_KEY. Cotton clears its own process environment after reading it, but container runtimes may still expose configured environment variables through deployment metadata or docker exec environments.",
+            });
+        }
+
+        private static void AddAdminTotpWarning(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            AdminTotpDiagnosticsDto adminTotp)
+        {
+            if (adminTotp.AdminsWithoutTotp <= 0)
+            {
+                return;
+            }
+
+            warnings.Add(new SecurityDiagnosticWarningDto
+            {
+                Code = "admins-without-2fa",
+                Severity = "warning",
+                Message = $"{adminTotp.AdminsWithoutTotp} of {adminTotp.AdminCount} admin accounts do not have 2FA enabled.",
+            });
+        }
+
+        private static void AddDotNetDiagnosticsWarning(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            DotNetDiagnosticsDto dotnetDiagnostics)
+        {
+            if (dotnetDiagnostics.Disabled)
+            {
+                return;
+            }
+
+            warnings.Add(new SecurityDiagnosticWarningDto
+            {
+                Code = "dotnet-diagnostics-enabled",
+                Severity = "warning",
+                Message = "DOTNET diagnostics appear enabled. Production containers should set DOTNET_EnableDiagnostics=0 to disable debugger, profiler, EventPipe, and dump collection endpoints.",
+            });
+        }
+
+        private static void AddLinuxProcessWarnings(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            bool isContainer,
+            LinuxProcessSecurityDto linuxProcess)
+        {
+            if (!OperatingSystem.IsLinux())
+            {
+                return;
+            }
+
+            AddDumpableWarning(warnings, linuxProcess);
+            AddPtraceWarning(warnings, linuxProcess);
+            AddNoNewPrivilegesWarning(warnings, isContainer, linuxProcess);
+            AddSeccompWarning(warnings, linuxProcess);
+            AddRootWarning(warnings, linuxProcess);
+        }
+
+        private static void AddDumpableWarning(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            LinuxProcessSecurityDto linuxProcess)
+        {
+            if (linuxProcess.Dumpable == 0)
+            {
+                return;
+            }
+
+            warnings.Add(new SecurityDiagnosticWarningDto
+            {
+                Code = "process-dumpable",
+                Severity = "warning",
+                Message = "The Linux process is dumpable. Set COTTON_PROCESS_HARDENING=true or run the official container defaults to request PR_SET_DUMPABLE=0 early at startup.",
+            });
+        }
+
+        private static void AddPtraceWarning(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            LinuxProcessSecurityDto linuxProcess)
+        {
+            if (linuxProcess.HasSysPtraceCapability != true)
+            {
+                return;
+            }
+
+            warnings.Add(new SecurityDiagnosticWarningDto
+            {
+                Code = "sys-ptrace-capability",
+                Severity = "critical",
+                Message = "CAP_SYS_PTRACE is effective for this process. Avoid SYS_PTRACE/privileged containers unless actively debugging.",
+            });
+        }
+
+        private static void AddNoNewPrivilegesWarning(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            bool isContainer,
+            LinuxProcessSecurityDto linuxProcess)
+        {
+            if (linuxProcess.NoNewPrivileges != 0)
+            {
+                return;
+            }
+
+            warnings.Add(new SecurityDiagnosticWarningDto
+            {
+                Code = "new-privileges-allowed",
+                Severity = isContainer ? "warning" : "info",
+                Message = "no-new-privileges is not enabled. In Docker Compose, security_opt: [\"no-new-privileges:true\"] is a cheap hardening layer.",
+            });
+        }
+
+        private static void AddSeccompWarning(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            LinuxProcessSecurityDto linuxProcess)
+        {
+            if (linuxProcess.SeccompMode != 0)
+            {
+                return;
+            }
+
+            warnings.Add(new SecurityDiagnosticWarningDto
+            {
+                Code = "seccomp-disabled",
+                Severity = "warning",
+                Message = "Seccomp appears disabled. Docker's default seccomp profile is a useful baseline; avoid seccomp=unconfined in production.",
+            });
+        }
+
+        private static void AddRootWarning(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            LinuxProcessSecurityDto linuxProcess)
+        {
+            if (linuxProcess.RunningAsRoot != true)
+            {
+                return;
+            }
+
+            warnings.Add(new SecurityDiagnosticWarningDto
+            {
+                Code = "running-as-root",
+                Severity = "info",
+                Message = "The process is running as root. This may be acceptable for simple self-hosting, but a dedicated non-root UID is stronger when volume permissions are prepared for it.",
+            });
+        }
+
+        private static void AddHardeningWarning(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            LinuxProcessSecurityDto linuxProcess)
+        {
+            if (!linuxProcess.HardeningRequested || linuxProcess.HardeningApplied)
+            {
+                return;
+            }
+
+            warnings.Add(new SecurityDiagnosticWarningDto
+            {
+                Code = "process-hardening-failed",
+                Severity = "warning",
+                Message = linuxProcess.HardeningError ?? "Process hardening was requested but did not apply.",
+            });
         }
 
         private static int CalculateSecurityScore(IReadOnlyList<SecurityDiagnosticWarningDto> warnings)

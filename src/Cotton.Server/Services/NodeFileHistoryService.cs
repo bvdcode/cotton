@@ -12,7 +12,7 @@ public class NodeFileHistoryService(
     CottonDbContext _dbContext,
     ILayoutService _layouts)
 {
-    public async Task SaveVersionAndUpdateManifestAsync(
+    public async Task<bool> SaveVersionAndUpdateManifestAsync(
         NodeFile nodeFile,
         Guid newFileManifestId,
         Guid userId,
@@ -20,7 +20,7 @@ public class NodeFileHistoryService(
     {
         if (nodeFile.FileManifestId == newFileManifestId)
         {
-            return;
+            return false;
         }
 
         bool shouldSaveVersion = await ShouldSaveVersionAsync(nodeFile.FileManifestId, newFileManifestId, ct);
@@ -35,6 +35,9 @@ public class NodeFileHistoryService(
                 OwnerId = userId,
                 FileManifestId = nodeFile.FileManifestId,
                 OriginalNodeFileId = nodeFile.OriginalNodeFileId,
+                Metadata = nodeFile.Metadata is null || nodeFile.Metadata.Count == 0
+                    ? []
+                    : new Dictionary<string, string>(nodeFile.Metadata),
             };
 
             if (versionFile.OriginalNodeFileId == Guid.Empty)
@@ -48,6 +51,7 @@ public class NodeFileHistoryService(
         }
 
         nodeFile.FileManifestId = newFileManifestId;
+        return shouldSaveVersion;
     }
 
     private async Task<bool> ShouldSaveVersionAsync(

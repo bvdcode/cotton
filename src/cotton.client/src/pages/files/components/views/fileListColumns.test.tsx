@@ -18,6 +18,7 @@ const labels = {
   delete: "Delete",
   restore: "Restore",
   download: "Download",
+  versions: "Versions",
   share: "Share",
   cut: "Cut",
   encryptedFile: "Encrypted file",

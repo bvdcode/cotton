@@ -51,80 +51,127 @@ namespace Cotton.Previews
 
             try
             {
-                if (stream.CanSeek)
+                await CopyInputToTempModelAsync(stream, modelFilePath).ConfigureAwait(false);
+                EnsureModelFileIsNotEmpty(modelFilePath);
+
+                byte[]? embeddedPreview = await TryExtractEmbeddedPreviewAsync(modelFilePath, size).ConfigureAwait(false);
+                if (embeddedPreview is not null)
                 {
-                    stream.Position = 0;
+                    return embeddedPreview;
                 }
 
-                await using (FileStream fileStream = new(
-                    modelFilePath,
-                    FileMode.CreateNew,
-                    FileAccess.Write,
-                    FileShare.None,
-                    bufferSize: 81920,
-                    options: FileOptions.Asynchronous))
-                {
-                    await stream.CopyToAsync(fileStream).ConfigureAwait(false);
-                }
-
-                if (new FileInfo(modelFilePath).Length == 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Failed to render {_modelExtension} preview with f3d. Input file is empty.");
-                }
-
-                if (string.Equals(_modelExtension, ThreeMfExtension, StringComparison.OrdinalIgnoreCase))
-                {
-                    byte[]? embeddedPreview = await TryExtractEmbeddedThreeMfThumbnailWebPAsync(modelFilePath, size).ConfigureAwait(false);
-                    if (embeddedPreview is not null)
-                    {
-                        return embeddedPreview;
-                    }
-                }
-
-                F3dRenderResult renderResult = await TryRenderWithF3dAsync(modelFilePath, renderedPngPath, size).ConfigureAwait(false);
-                bool rendered = renderResult.Success;
-                string? renderDiagnostics = renderResult.Diagnostics;
-
-                if (!rendered && string.Equals(_modelExtension, ThreeMfExtension, StringComparison.OrdinalIgnoreCase))
-                {
-                    normalizedThreeMfPath = await TryNormalizeThreeMfArchiveAsync(modelFilePath).ConfigureAwait(false);
-                    if (!string.IsNullOrWhiteSpace(normalizedThreeMfPath))
-                    {
-                        F3dRenderResult normalizedRenderResult = await TryRenderWithF3dAsync(normalizedThreeMfPath, renderedPngPath, size).ConfigureAwait(false);
-                        rendered = normalizedRenderResult.Success;
-                        renderDiagnostics = string.Join(" | ",
-                            new[] { renderDiagnostics, normalizedRenderResult.Diagnostics }
-                                .Where(x => !string.IsNullOrWhiteSpace(x)));
-                    }
-                }
-
-                if (!rendered)
-                {
-                    throw new InvalidOperationException(
-                        $"Failed to render {_modelExtension} preview with f3d. {renderDiagnostics}");
-                }
-
-                await using FileStream renderedPngStream = new(
-                    renderedPngPath,
-                    FileMode.Open,
-                    FileAccess.Read,
-                    FileShare.Read,
-                    bufferSize: 81920,
-                    options: FileOptions.Asynchronous);
-
-                ImagePreviewGenerator imagePreviewGenerator = new();
-                return await imagePreviewGenerator.GeneratePreviewWebPAsync(renderedPngStream, size).ConfigureAwait(false);
+                normalizedThreeMfPath = await RenderPreviewPngAsync(modelFilePath, renderedPngPath, size).ConfigureAwait(false);
+                return await ConvertRenderedPngToWebPAsync(renderedPngPath, size).ConfigureAwait(false);
             }
             finally
             {
-                TryDeleteFile(modelFilePath);
-                TryDeleteFile(renderedPngPath);
+                CleanupTempFiles(modelFilePath, renderedPngPath, normalizedThreeMfPath);
+            }
+        }
 
-                if (!string.IsNullOrWhiteSpace(normalizedThreeMfPath))
-                {
-                    TryDeleteFile(normalizedThreeMfPath);
-                }
+        private static async Task CopyInputToTempModelAsync(Stream stream, string modelFilePath)
+        {
+            if (stream.CanSeek)
+            {
+                stream.Position = 0;
+            }
+
+            await using FileStream fileStream = new(
+                modelFilePath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 81920,
+                options: FileOptions.Asynchronous);
+            await stream.CopyToAsync(fileStream).ConfigureAwait(false);
+        }
+
+        private void EnsureModelFileIsNotEmpty(string modelFilePath)
+        {
+            if (new FileInfo(modelFilePath).Length == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to render {_modelExtension} preview with f3d. Input file is empty.");
+            }
+        }
+
+        private async Task<byte[]?> TryExtractEmbeddedPreviewAsync(string modelFilePath, int size)
+        {
+            return string.Equals(_modelExtension, ThreeMfExtension, StringComparison.OrdinalIgnoreCase)
+                ? await TryExtractEmbeddedThreeMfThumbnailWebPAsync(modelFilePath, size).ConfigureAwait(false)
+                : null;
+        }
+
+        private async Task<string?> RenderPreviewPngAsync(string modelFilePath, string renderedPngPath, int size)
+        {
+            F3dRenderResult renderResult = await TryRenderWithF3dAsync(modelFilePath, renderedPngPath, size).ConfigureAwait(false);
+            if (renderResult.Success)
+            {
+                return null;
+            }
+
+            var normalizedRender = await TryRenderNormalizedThreeMfAsync(modelFilePath, renderedPngPath, size, renderResult.Diagnostics)
+                .ConfigureAwait(false);
+            if (normalizedRender.Result.Success)
+            {
+                return normalizedRender.NormalizedPath;
+            }
+
+            throw new InvalidOperationException(
+                $"Failed to render {_modelExtension} preview with f3d. {normalizedRender.Result.Diagnostics}");
+        }
+
+        private async Task<(F3dRenderResult Result, string? NormalizedPath)> TryRenderNormalizedThreeMfAsync(
+            string modelFilePath,
+            string renderedPngPath,
+            int size,
+            string? primaryDiagnostics)
+        {
+            if (!string.Equals(_modelExtension, ThreeMfExtension, StringComparison.OrdinalIgnoreCase))
+            {
+                return (new F3dRenderResult(false, primaryDiagnostics), null);
+            }
+
+            string? normalizedPath = await TryNormalizeThreeMfArchiveAsync(modelFilePath).ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(normalizedPath))
+            {
+                return (new F3dRenderResult(false, primaryDiagnostics), null);
+            }
+
+            F3dRenderResult normalizedResult = await TryRenderWithF3dAsync(normalizedPath, renderedPngPath, size).ConfigureAwait(false);
+            return (MergeRenderDiagnostics(primaryDiagnostics, normalizedResult), normalizedPath);
+        }
+
+        private static F3dRenderResult MergeRenderDiagnostics(string? primaryDiagnostics, F3dRenderResult normalizedResult)
+        {
+            string diagnostics = string.Join(" | ",
+                new[] { primaryDiagnostics, normalizedResult.Diagnostics }
+                    .Where(x => !string.IsNullOrWhiteSpace(x)));
+            return normalizedResult with { Diagnostics = diagnostics };
+        }
+
+        private static async Task<byte[]> ConvertRenderedPngToWebPAsync(string renderedPngPath, int size)
+        {
+            await using FileStream renderedPngStream = new(
+                renderedPngPath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                bufferSize: 81920,
+                options: FileOptions.Asynchronous);
+
+            ImagePreviewGenerator imagePreviewGenerator = new();
+            return await imagePreviewGenerator.GeneratePreviewWebPAsync(renderedPngStream, size).ConfigureAwait(false);
+        }
+
+        private static void CleanupTempFiles(string modelFilePath, string renderedPngPath, string? normalizedThreeMfPath)
+        {
+            TryDeleteFile(modelFilePath);
+            TryDeleteFile(renderedPngPath);
+
+            if (!string.IsNullOrWhiteSpace(normalizedThreeMfPath))
+            {
+                TryDeleteFile(normalizedThreeMfPath);
             }
         }
 
@@ -550,7 +597,6 @@ namespace Cotton.Previews
                 TryDeleteFile(normalizedPath);
                 return null;
             }
-
         }
 
         private static void TryDeleteFile(string filePath)
@@ -564,6 +610,5 @@ namespace Cotton.Previews
                 // Temporary-file cleanup failures must not hide the original render error.
             }
         }
-
     }
 }

@@ -78,6 +78,7 @@ export const buildFileOperations = (
   },
   handlers: {
     onDownload?: (fileId: string, fileName: string) => Promise<void>;
+    onVersions?: (fileId: string, fileName: string) => void;
     onShare?: (fileId: string, fileName: string) => Promise<void>;
     onCut?: (fileId: string) => void;
     onClick: (fileId: string, fileName: string, fileSizeBytes?: number) => void;
@@ -99,6 +100,7 @@ export const buildFileOperations = (
           void handlers.onDownload?.(fileId, fileName);
         }
       : undefined,
+    onVersions: handlers.onVersions,
     onShare: handlers.onShare
       ? (fileId: string, fileName: string) => {
           void handlers.onShare?.(fileId, fileName);

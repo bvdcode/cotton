@@ -90,6 +90,214 @@ export interface PageHeaderProps {
   };
 }
 
+type PageHeaderActionFactoryOptions = Pick<
+  PageHeaderProps,
+  | "canGoUp"
+  | "customActionItems"
+  | "goUpDropHandlers"
+  | "isCreatingFolder"
+  | "loading"
+  | "onDeselectAll"
+  | "onGoUp"
+  | "onHomeClick"
+  | "onNewFolderClick"
+  | "onSelectAll"
+  | "onToggleSelectionMode"
+  | "onUploadClick"
+  | "onViewModeCycle"
+  | "selectedCount"
+  | "selectionMode"
+  | "showNewFolder"
+  | "showUpload"
+  | "showViewModeToggle"
+> & {
+  nextViewTitleKey: string;
+  t: ReturnType<typeof useTranslation>["t"];
+  viewIcon: ReactElement;
+};
+
+const buildPageHeaderActions = ({
+  canGoUp,
+  customActionItems,
+  goUpDropHandlers,
+  isCreatingFolder,
+  loading,
+  nextViewTitleKey,
+  onDeselectAll,
+  onGoUp,
+  onHomeClick,
+  onNewFolderClick,
+  onSelectAll,
+  onToggleSelectionMode,
+  onUploadClick,
+  onViewModeCycle,
+  selectedCount,
+  selectionMode,
+  showNewFolder,
+  showUpload,
+  showViewModeToggle,
+  t,
+  viewIcon,
+}: PageHeaderActionFactoryOptions): PageHeaderActionItem[] => {
+  const actions: PageHeaderActionItem[] = [
+    createGoUpAction(canGoUp, loading, onGoUp, t, goUpDropHandlers),
+  ];
+
+  appendCreationActions(actions, {
+    isCreatingFolder,
+    loading,
+    onNewFolderClick,
+    onUploadClick,
+    showNewFolder,
+    showUpload,
+    t,
+  });
+  actions.push(createHomeAction(onHomeClick, t));
+  appendViewModeAction(actions, showViewModeToggle ?? true, onViewModeCycle, nextViewTitleKey, viewIcon, t);
+  appendSelectionActions(actions, {
+    onDeselectAll,
+    onSelectAll,
+    onToggleSelectionMode,
+    selectedCount,
+    selectionMode,
+    t,
+  });
+
+  return customActionItems?.length ? [...actions, ...customActionItems] : actions;
+};
+
+const createGoUpAction = (
+  canGoUp: boolean,
+  loading: boolean,
+  onGoUp: () => void,
+  t: ReturnType<typeof useTranslation>["t"],
+  goUpDropHandlers: PageHeaderProps["goUpDropHandlers"],
+): PageHeaderActionItem => ({
+  key: "go-up",
+  icon: <ArrowUpward />,
+  title: t("actions.goUp"),
+  onClick: onGoUp,
+  disabled: loading || !canGoUp,
+  onDragOver: goUpDropHandlers?.onDragOver,
+  onDragLeave: goUpDropHandlers?.onDragLeave,
+  onDrop: goUpDropHandlers?.onDrop,
+  dropActive: goUpDropHandlers?.active,
+});
+
+type CreationActionOptions = Pick<
+  PageHeaderActionFactoryOptions,
+  | "isCreatingFolder"
+  | "loading"
+  | "onNewFolderClick"
+  | "onUploadClick"
+  | "showNewFolder"
+  | "showUpload"
+  | "t"
+>;
+
+const appendCreationActions = (
+  actions: PageHeaderActionItem[],
+  options: CreationActionOptions,
+) => {
+  if (options.showUpload && options.onUploadClick) {
+    actions.push({
+      key: "upload",
+      icon: <UploadFile />,
+      title: options.t("actions.upload"),
+      onClick: options.onUploadClick,
+      disabled: options.loading,
+    });
+  }
+
+  if (options.showNewFolder && options.onNewFolderClick) {
+    actions.push({
+      key: "new-folder",
+      icon: <CreateNewFolder />,
+      title: options.t("actions.newFolder"),
+      onClick: options.onNewFolderClick,
+      disabled: options.loading || options.isCreatingFolder,
+    });
+  }
+};
+
+const createHomeAction = (
+  onHomeClick: () => void,
+  t: ReturnType<typeof useTranslation>["t"],
+): PageHeaderActionItem => ({
+  key: "home",
+  icon: <Home />,
+  title: t("breadcrumbs.root"),
+  onClick: onHomeClick,
+  disabled: false,
+});
+
+const appendViewModeAction = (
+  actions: PageHeaderActionItem[],
+  showViewModeToggle: boolean,
+  onViewModeCycle: () => void,
+  nextViewTitleKey: string,
+  viewIcon: ReactElement,
+  t: ReturnType<typeof useTranslation>["t"],
+) => {
+  if (!showViewModeToggle) {
+    return;
+  }
+
+  actions.push({
+    key: "view-mode",
+    icon: viewIcon,
+    title: t(nextViewTitleKey),
+    onClick: onViewModeCycle,
+    disabled: false,
+  });
+};
+
+type SelectionActionOptions = Pick<
+  PageHeaderActionFactoryOptions,
+  | "onDeselectAll"
+  | "onSelectAll"
+  | "onToggleSelectionMode"
+  | "selectedCount"
+  | "selectionMode"
+  | "t"
+>;
+
+const appendSelectionActions = (
+  actions: PageHeaderActionItem[],
+  options: SelectionActionOptions,
+) => {
+  if (options.onToggleSelectionMode) {
+    actions.push({
+      key: "selection-mode",
+      icon: options.selectionMode ? <CheckBox /> : <CheckBoxOutlineBlank />,
+      title: options.t(options.selectionMode ? "selection.exit" : "selection.enter"),
+      onClick: options.onToggleSelectionMode,
+      disabled: false,
+      active: options.selectionMode,
+    });
+  }
+
+  if (options.selectionMode && options.onSelectAll) {
+    actions.push({
+      key: "select-all",
+      icon: <SelectAll />,
+      title: options.t("selection.selectAll"),
+      onClick: options.onSelectAll,
+      disabled: false,
+    });
+  }
+
+  if (options.selectionMode && (options.selectedCount ?? 0) > 0 && options.onDeselectAll) {
+    actions.push({
+      key: "deselect-all",
+      icon: <Deselect />,
+      title: options.t("selection.deselectAll"),
+      onClick: options.onDeselectAll,
+      disabled: false,
+    });
+  }
+};
+
 /**
  * Shared sticky header for file/folder pages
  */
@@ -140,98 +348,34 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   );
 
   const actionTabs = React.useMemo(
-    (): PageHeaderActionItem[] => {
-      const actions: PageHeaderActionItem[] = [
-        {
-        key: "go-up",
-        icon: <ArrowUpward />,
-        title: t("actions.goUp"),
-        onClick: onGoUp,
-        disabled: loading || !canGoUp,
-        onDragOver: goUpDropHandlers?.onDragOver,
-        onDragLeave: goUpDropHandlers?.onDragLeave,
-        onDrop: goUpDropHandlers?.onDrop,
-        dropActive: goUpDropHandlers?.active,
-        },
-      ];
-
-      if (showUpload && onUploadClick) {
-        actions.push({
-          key: "upload",
-          icon: <UploadFile />,
-          title: t("actions.upload"),
-          onClick: onUploadClick,
-          disabled: loading,
-        });
-      }
-
-      if (showNewFolder && onNewFolderClick) {
-        actions.push({
-          key: "new-folder",
-          icon: <CreateNewFolder />,
-          title: t("actions.newFolder"),
-          onClick: onNewFolderClick,
-          disabled: loading || isCreatingFolder,
-        });
-      }
-
-      actions.push({
-        key: "home",
-        icon: <Home />,
-        title: t("breadcrumbs.root"),
-        onClick: onHomeClick,
-        disabled: false,
-      });
-
-      if (showViewModeToggle) {
-        actions.push({
-          key: "view-mode",
-          icon: viewIcon,
-          title: t(nextViewTitleKey),
-          onClick: onViewModeCycle,
-          disabled: false,
-        });
-      }
-
-      if (onToggleSelectionMode) {
-        actions.push({
-          key: "selection-mode",
-          icon: selectionMode ? <CheckBox /> : <CheckBoxOutlineBlank />,
-          title: t(selectionMode ? "selection.exit" : "selection.enter"),
-          onClick: onToggleSelectionMode,
-          disabled: false,
-          active: selectionMode,
-        });
-      }
-
-      if (selectionMode && onSelectAll) {
-        actions.push({
-          key: "select-all",
-          icon: <SelectAll />,
-          title: t("selection.selectAll"),
-          onClick: onSelectAll,
-          disabled: false,
-        });
-      }
-
-      if (selectionMode && selectedCount > 0 && onDeselectAll) {
-        actions.push({
-          key: "deselect-all",
-          icon: <Deselect />,
-          title: t("selection.deselectAll"),
-          onClick: onDeselectAll,
-          disabled: false,
-        });
-      }
-
-      if (customActionItems && customActionItems.length > 0) {
-        actions.push(...customActionItems);
-      }
-
-      return actions;
-    },
+    () =>
+      buildPageHeaderActions({
+        canGoUp,
+        customActionItems,
+        goUpDropHandlers,
+        isCreatingFolder,
+        loading,
+        nextViewTitleKey,
+        onDeselectAll,
+        onGoUp,
+        onHomeClick,
+        onNewFolderClick,
+        onSelectAll,
+        onToggleSelectionMode,
+        onUploadClick,
+        onViewModeCycle,
+        selectedCount,
+        selectionMode,
+        showNewFolder,
+        showUpload,
+        showViewModeToggle,
+        t,
+        viewIcon,
+      }),
     [
       canGoUp,
+      customActionItems,
+      goUpDropHandlers,
       isCreatingFolder,
       loading,
       nextViewTitleKey,
@@ -250,11 +394,6 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       showViewModeToggle,
       t,
       viewIcon,
-      customActionItems,
-      goUpDropHandlers?.onDragOver,
-      goUpDropHandlers?.onDragLeave,
-      goUpDropHandlers?.onDrop,
-      goUpDropHandlers?.active,
     ],
   );
 

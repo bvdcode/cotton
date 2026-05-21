@@ -29,6 +29,20 @@ export interface MoveFileRequest {
   parentId: Guid;
 }
 
+export interface FileVersionDto {
+  id: Guid;
+  nodeFileId: Guid;
+  fileManifestId: Guid;
+  name: string;
+  contentType: string;
+  sizeBytes: number;
+  createdAt: string;
+  versionNumber: number;
+  isCurrent: boolean;
+  isOriginal: boolean;
+  canDelete: boolean;
+}
+
 export const filesApi = {
   createFromChunks: async (
     request: CreateFileFromChunksRequest,
@@ -70,6 +84,39 @@ export const filesApi = {
     await httpClient.delete(`files/${nodeFileId}`, {
       params: skipTrash ? { skipTrash: true } : undefined,
     });
+  },
+
+  listVersions: async (nodeFileId: Guid): Promise<FileVersionDto[]> => {
+    const response = await httpClient.get<FileVersionDto[]>(
+      `files/${nodeFileId}/versions`,
+    );
+    return response.data;
+  },
+
+  restoreVersion: async (
+    nodeFileId: Guid,
+    versionId: Guid,
+  ): Promise<NodeFileManifestDto> => {
+    const response = await httpClient.post<NodeFileManifestDto>(
+      `files/${nodeFileId}/versions/${versionId}/restore`,
+    );
+    return response.data;
+  },
+
+  deleteVersion: async (nodeFileId: Guid, versionId: Guid): Promise<void> => {
+    await httpClient.delete(`files/${nodeFileId}/versions/${versionId}`);
+  },
+
+  getVersionDownloadLink: async (
+    nodeFileId: Guid,
+    versionId: Guid,
+    expireAfterMinutes = 1440,
+  ): Promise<string> => {
+    const response = await httpClient.get<string>(
+      `files/${nodeFileId}/versions/${versionId}/download-link`,
+      { params: { expireAfterMinutes } },
+    );
+    return response.data;
   },
 
   renameFile: async (

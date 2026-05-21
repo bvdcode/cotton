@@ -36,73 +36,101 @@ const parseTimeParts = (
   return h * 3600 + m * 60 + s + ms / 1000;
 };
 
-export const parseSrt = (content: string): LrcLine[] => {
-  if (!content) {
-    return [];
+const stripBom = (content: string): string =>
+  content.charCodeAt(0) === 0xfeff ? content.slice(1) : content;
+
+const skipBlankLines = (lines: string[], index: number): number => {
+  let nextIndex = index;
+  while (nextIndex < lines.length && lines[nextIndex]?.trim() === "") {
+    nextIndex += 1;
+  }
+  return nextIndex;
+};
+
+const skipInvalidCue = (lines: string[], index: number): number => {
+  let nextIndex = index;
+  while (nextIndex < lines.length && lines[nextIndex]?.trim() !== "") {
+    nextIndex += 1;
+  }
+  return nextIndex;
+};
+
+const skipCueIndex = (lines: string[], index: number): number =>
+  INDEX_ONLY_RE.test(lines[index] ?? "") ? index + 1 : index;
+
+const parseRange = (line: string): { start: number; end: number } | null => {
+  const timeMatch = RANGE_RE.exec(line);
+  if (!timeMatch) {
+    return null;
   }
 
-  const stripped =
-    content.charCodeAt(0) === 0xfeff ? content.slice(1) : content;
-  const lines = stripped.split(/\r?\n/);
-  const cues: Cue[] = [];
+  const start = parseTimeParts(
+    timeMatch[1] ?? "",
+    timeMatch[2] ?? "",
+    timeMatch[3] ?? "",
+    timeMatch[4] ?? "",
+  );
+  const end = parseTimeParts(
+    timeMatch[5] ?? "",
+    timeMatch[6] ?? "",
+    timeMatch[7] ?? "",
+    timeMatch[8] ?? "",
+  );
+  return { start, end };
+};
 
-  let index = 0;
-  while (index < lines.length) {
-    while (index < lines.length && lines[index]?.trim() === "") {
-      index += 1;
-    }
-    if (index >= lines.length) {
-      break;
-    }
-
-    if (INDEX_ONLY_RE.test(lines[index] ?? "")) {
-      index += 1;
-    }
-    if (index >= lines.length) {
-      break;
-    }
-
-    const timeMatch = RANGE_RE.exec(lines[index] ?? "");
-    if (!timeMatch) {
-      while (index < lines.length && lines[index]?.trim() !== "") {
-        index += 1;
-      }
-      continue;
-    }
-
-    const start = parseTimeParts(
-      timeMatch[1] ?? "",
-      timeMatch[2] ?? "",
-      timeMatch[3] ?? "",
-      timeMatch[4] ?? "",
-    );
-    const end = parseTimeParts(
-      timeMatch[5] ?? "",
-      timeMatch[6] ?? "",
-      timeMatch[7] ?? "",
-      timeMatch[8] ?? "",
-    );
-    index += 1;
-
-    const textLines: string[] = [];
-    while (index < lines.length && lines[index]?.trim() !== "") {
-      textLines.push(lines[index] ?? "");
-      index += 1;
-    }
-
-    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0) {
-      continue;
-    }
-
-    cues.push({
-      start,
-      end: Math.max(end, start),
-      text: textLines.join("\n").trimEnd(),
-    });
+const readCueText = (
+  lines: string[],
+  index: number,
+): { text: string; nextIndex: number } => {
+  const textLines: string[] = [];
+  let nextIndex = index;
+  while (nextIndex < lines.length && lines[nextIndex]?.trim() !== "") {
+    textLines.push(lines[nextIndex] ?? "");
+    nextIndex += 1;
   }
 
-  cues.sort((a, b) => a.start - b.start);
+  return { text: textLines.join("\n").trimEnd(), nextIndex };
+};
 
+const isValidCueRange = (start: number, end: number): boolean =>
+  Number.isFinite(start) && Number.isFinite(end) && start >= 0;
+
+const readNextCue = (
+  lines: string[],
+  index: number,
+): { cue: Cue | null; nextIndex: number } => {
+  let nextIndex = skipBlankLines(lines, index);
+  if (nextIndex >= lines.length) {
+    return { cue: null, nextIndex };
+  }
+
+  nextIndex = skipCueIndex(lines, nextIndex);
+  if (nextIndex >= lines.length) {
+    return { cue: null, nextIndex };
+  }
+
+  const range = parseRange(lines[nextIndex] ?? "");
+  if (!range) {
+    return { cue: null, nextIndex: skipInvalidCue(lines, nextIndex) };
+  }
+
+  const text = readCueText(lines, nextIndex + 1);
+  if (!isValidCueRange(range.start, range.end)) {
+    return { cue: null, nextIndex: text.nextIndex };
+  }
+
+  return {
+    cue: {
+      start: range.start,
+      end: Math.max(range.end, range.start),
+      text: text.text,
+    },
+    nextIndex: text.nextIndex,
+  };
+};
+
+const toLrcLines = (cues: Cue[]): LrcLine[] => {
   const result: LrcLine[] = [];
   for (let index = 0; index < cues.length; index += 1) {
     const cue = cues[index];
@@ -119,4 +147,26 @@ export const parseSrt = (content: string): LrcLine[] => {
   }
 
   return result;
+};
+
+export const parseSrt = (content: string): LrcLine[] => {
+  if (!content) {
+    return [];
+  }
+
+  const lines = stripBom(content).split(/\r?\n/);
+  const cues: Cue[] = [];
+
+  let index = 0;
+  while (index < lines.length) {
+    const parsed = readNextCue(lines, index);
+    if (parsed.cue) {
+      cues.push(parsed.cue);
+    }
+
+    index = Math.max(parsed.nextIndex, index + 1);
+  }
+
+  cues.sort((a, b) => a.start - b.start);
+  return toLrcLines(cues);
 };

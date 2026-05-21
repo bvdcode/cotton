@@ -5,6 +5,7 @@ import {
   ContentCut,
   Delete,
   Download,
+  History,
   Edit,
   Folder,
   Image as ImageIcon,
@@ -66,6 +67,7 @@ interface ColumnOptions {
     delete: string;
     restore: string;
     download: string;
+    versions: string;
     share: string;
     cut: string;
     encryptedFile: string;
@@ -110,6 +112,7 @@ interface ColumnOptions {
     onStartRename?: (id: string, name: string) => void;
     onRestore?: (id: string, name: string) => void;
     onDownload?: (id: string, name: string) => void;
+    onVersions?: (id: string, name: string) => void;
     onShare?: (id: string, name: string) => void;
     onCut?: (id: string) => void;
     onDelete?: (id: string, name: string) => void;
@@ -404,6 +407,208 @@ export const createLocationColumn = (
   },
 });
 
+type RowActionButton = {
+  key: string;
+  icon: React.ReactNode;
+  title: string;
+  onClick: () => void;
+};
+
+const actionButton = (action: RowActionButton): React.ReactElement => (
+  <IconButton
+    key={action.key}
+    size="small"
+    onClick={(event) => {
+      event.stopPropagation();
+      action.onClick();
+    }}
+    title={action.title}
+  >
+    {action.icon}
+  </IconButton>
+);
+
+const actionsCell = (
+  actions: ReadonlyArray<RowActionButton>,
+): React.ReactElement => (
+  <Box
+    sx={{
+      display: "flex",
+      alignItems: "center",
+      height: "100%",
+      width: "100%",
+      gap: 0.5,
+      justifyContent: "flex-end",
+    }}
+  >
+    {actions.map(actionButton)}
+  </Box>
+);
+
+const buildFolderActionButtons = (
+  row: FileListRow,
+  options: Pick<
+    ColumnOptions,
+    "labels" | "folderOperations" | "readOnly"
+  >,
+): RowActionButton[] => {
+  const operations = options.folderOperations;
+  const actions: RowActionButton[] = [];
+  const folderEncryptionPolicyEnabled =
+    row.encryptionPolicy?.explicitEnabled ??
+    isFolderEncryptionPolicyEnabled(row.metadata);
+  const folderEncryptionPolicyInherited =
+    row.encryptionPolicy?.inheritedEnabled ?? false;
+
+  if (operations.onDownload) {
+    actions.push({
+      key: "download",
+      icon: <Download fontSize="small" />,
+      title: options.labels.download,
+      onClick: () => operations.onDownload?.(row.id, row.name),
+    });
+  }
+
+  if (options.readOnly) {
+    return actions;
+  }
+
+  if (operations.onStartRename) {
+    actions.push({
+      key: "rename",
+      icon: <Edit fontSize="small" />,
+      title: options.labels.rename,
+      onClick: () => operations.onStartRename?.(row.id, row.name),
+    });
+  }
+  if (operations.onShare) {
+    actions.push({
+      key: "share",
+      icon: <Share fontSize="small" />,
+      title: options.labels.share,
+      onClick: () => operations.onShare?.(row.id, row.name),
+    });
+  }
+  if (operations.onCut) {
+    actions.push({
+      key: "cut",
+      icon: <ContentCut fontSize="small" />,
+      title: options.labels.cut,
+      onClick: () => operations.onCut?.(row.id),
+    });
+  }
+  if (operations.onToggleEncryptionPolicy && !folderEncryptionPolicyInherited) {
+    actions.push({
+      key: "toggle-encryption",
+      icon: folderEncryptionPolicyEnabled ? (
+        <LockOpenOutlined fontSize="small" />
+      ) : (
+        <LockOutlined fontSize="small" />
+      ),
+      title: folderEncryptionPolicyEnabled
+        ? options.labels.disableEncryptionPolicy
+        : options.labels.enableEncryptionPolicy,
+      onClick: () =>
+        operations.onToggleEncryptionPolicy?.(
+          row.id,
+          folderEncryptionPolicyEnabled,
+        ),
+    });
+  }
+  if (operations.onRestore) {
+    actions.push({
+      key: "restore",
+      icon: <Restore fontSize="small" />,
+      title: options.labels.restore,
+      onClick: () => operations.onRestore?.(row.id, row.name),
+    });
+  }
+  if (operations.onDelete) {
+    actions.push({
+      key: "delete",
+      icon: <Delete fontSize="small" />,
+      title: options.labels.delete,
+      onClick: () => operations.onDelete?.(row.id, row.name),
+    });
+  }
+
+  return actions;
+};
+
+const buildFileActionButtons = (
+  row: FileListRow,
+  options: Pick<ColumnOptions, "labels" | "fileOperations" | "readOnly">,
+): RowActionButton[] => {
+  const operations = options.fileOperations;
+  const actions: RowActionButton[] = [];
+  const fileEncrypted = isFileEncrypted(row.metadata);
+
+  if (operations.onDownload) {
+    actions.push({
+      key: "download",
+      icon: <Download fontSize="small" />,
+      title: options.labels.download,
+      onClick: () => operations.onDownload?.(row.id, row.name),
+    });
+  }
+
+  if (operations.onVersions) {
+    actions.push({
+      key: "versions",
+      icon: <History fontSize="small" />,
+      title: options.labels.versions,
+      onClick: () => operations.onVersions?.(row.id, row.name),
+    });
+  }
+
+  if (options.readOnly) {
+    return actions;
+  }
+
+  if (operations.onShare && !fileEncrypted) {
+    actions.push({
+      key: "share",
+      icon: <Share fontSize="small" />,
+      title: options.labels.share,
+      onClick: () => operations.onShare?.(row.id, row.name),
+    });
+  }
+  if (operations.onStartRename) {
+    actions.push({
+      key: "rename",
+      icon: <Edit fontSize="small" />,
+      title: options.labels.rename,
+      onClick: () => operations.onStartRename?.(row.id, row.name),
+    });
+  }
+  if (operations.onCut) {
+    actions.push({
+      key: "cut",
+      icon: <ContentCut fontSize="small" />,
+      title: options.labels.cut,
+      onClick: () => operations.onCut?.(row.id),
+    });
+  }
+  if (operations.onRestore) {
+    actions.push({
+      key: "restore",
+      icon: <Restore fontSize="small" />,
+      title: options.labels.restore,
+      onClick: () => operations.onRestore?.(row.id, row.name),
+    });
+  }
+  if (operations.onDelete) {
+    actions.push({
+      key: "delete",
+      icon: <Delete fontSize="small" />,
+      title: options.labels.delete,
+      onClick: () => operations.onDelete?.(row.id, row.name),
+    });
+  }
+
+  return actions;
+};
+
 export const createActionsColumn = (
   options: Pick<
     ColumnOptions,
@@ -420,219 +625,9 @@ export const createActionsColumn = (
     const row = params.row;
     if (row.type === "new-folder") return null;
 
-    if (row.type === "folder") {
-      const folderEncryptionPolicyEnabled =
-        row.encryptionPolicy?.explicitEnabled ??
-        isFolderEncryptionPolicyEnabled(row.metadata);
-      const folderEncryptionPolicyInherited =
-        row.encryptionPolicy?.inheritedEnabled ?? false;
-
-      return (
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            height: "100%",
-            width: "100%",
-            gap: 0.5,
-            justifyContent: "flex-end",
-          }}
-        >
-          {options.folderOperations.onDownload && (
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                options.folderOperations.onDownload?.(row.id, row.name);
-              }}
-              title={options.labels.download}
-            >
-              <Download fontSize="small" />
-            </IconButton>
-          )}
-          {!options.readOnly && (
-            <>
-              {options.folderOperations.onStartRename && (
-                <IconButton
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    options.folderOperations.onStartRename?.(row.id, row.name);
-                  }}
-                  title={options.labels.rename}
-                >
-                  <Edit fontSize="small" />
-                </IconButton>
-              )}
-              {options.folderOperations.onShare && (
-                <IconButton
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    options.folderOperations.onShare?.(row.id, row.name);
-                  }}
-                  title={options.labels.share}
-                >
-                  <Share fontSize="small" />
-                </IconButton>
-              )}
-              {options.folderOperations.onCut && (
-                <IconButton
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    options.folderOperations.onCut?.(row.id);
-                  }}
-                  title={options.labels.cut}
-                >
-                  <ContentCut fontSize="small" />
-                </IconButton>
-              )}
-              {options.folderOperations.onToggleEncryptionPolicy &&
-                !folderEncryptionPolicyInherited && (
-                <IconButton
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    options.folderOperations.onToggleEncryptionPolicy?.(
-                      row.id,
-                      folderEncryptionPolicyEnabled,
-                    );
-                  }}
-                  title={
-                    folderEncryptionPolicyEnabled
-                      ? options.labels.disableEncryptionPolicy
-                      : options.labels.enableEncryptionPolicy
-                  }
-                >
-                  {folderEncryptionPolicyEnabled ? (
-                    <LockOpenOutlined fontSize="small" />
-                  ) : (
-                    <LockOutlined fontSize="small" />
-                  )}
-                </IconButton>
-              )}
-              {options.folderOperations.onRestore && (
-                <IconButton
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    options.folderOperations.onRestore?.(row.id, row.name);
-                  }}
-                  title={options.labels.restore}
-                >
-                  <Restore fontSize="small" />
-                </IconButton>
-              )}
-              {options.folderOperations.onDelete && (
-                <IconButton
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    options.folderOperations.onDelete?.(row.id, row.name);
-                  }}
-                  title={options.labels.delete}
-                >
-                  <Delete fontSize="small" />
-                </IconButton>
-              )}
-            </>
-          )}
-        </Box>
-      );
-    }
-
-    const fileEncrypted = isFileEncrypted(row.metadata);
-
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          height: "100%",
-          width: "100%",
-          gap: 0.5,
-          justifyContent: "flex-end",
-        }}
-      >
-        {options.fileOperations.onDownload && (
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              options.fileOperations.onDownload?.(row.id, row.name);
-            }}
-            title={options.labels.download}
-          >
-            <Download fontSize="small" />
-          </IconButton>
-        )}
-        {!options.readOnly && (
-          <>
-            {options.fileOperations.onShare && !fileEncrypted && (
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  options.fileOperations.onShare?.(row.id, row.name);
-                }}
-                title={options.labels.share}
-              >
-                <Share fontSize="small" />
-              </IconButton>
-            )}
-            {options.fileOperations.onStartRename && (
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  options.fileOperations.onStartRename?.(row.id, row.name);
-                }}
-                title={options.labels.rename}
-              >
-                <Edit fontSize="small" />
-              </IconButton>
-            )}
-            {options.fileOperations.onCut && (
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  options.fileOperations.onCut?.(row.id);
-                }}
-                title={options.labels.cut}
-              >
-                <ContentCut fontSize="small" />
-              </IconButton>
-            )}
-            {options.fileOperations.onRestore && (
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  options.fileOperations.onRestore?.(row.id, row.name);
-                }}
-                title={options.labels.restore}
-              >
-                <Restore fontSize="small" />
-              </IconButton>
-            )}
-            {options.fileOperations.onDelete && (
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  options.fileOperations.onDelete?.(row.id, row.name);
-                }}
-                title={options.labels.delete}
-              >
-                <Delete fontSize="small" />
-              </IconButton>
-            )}
-          </>
-        )}
-      </Box>
-    );
+    return row.type === "folder"
+      ? actionsCell(buildFolderActionButtons(row, options))
+      : actionsCell(buildFileActionButtons(row, options));
   },
 });
 

@@ -633,7 +633,8 @@ export class UploadManager {
             const prevSpeedBytes = task._bytesTransferredForSpeed ?? 0;
             const nextSpeedBytes = Math.max(
               prevSpeedBytes,
-              snapshot?.bytesTransmitted ?? task.bytesUploaded,
+              snapshot?.bytesTransmitted ?? 0,
+              task.bytesUploaded,
             );
             const speedDelta = nextSpeedBytes - prevSpeedBytes;
             if (speedDelta > 0) {

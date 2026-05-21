@@ -236,6 +236,16 @@ interface MoveOutcome {
   lastErrorMessage: string | null;
 }
 
+interface MoveExecutionResult extends MoveOutcome {
+  movedFilesToEncrypt: ReadonlyArray<MoveClipboardItem>;
+  movedFilesToOfferDecrypt: ReadonlyArray<MoveClipboardItem>;
+  sourceParents: ReadonlySet<string>;
+}
+
+type MoveTranslation = ReturnType<
+  typeof useTranslation<["files", "common", "tasks"]>
+>["t"];
+
 interface UseMoveOperationsResult {
   cutItems: (items: ReadonlyArray<MoveClipboardItem>) => void;
   clearClipboard: () => void;
@@ -247,6 +257,235 @@ interface UseMoveOperationsResult {
     targetParentId: string,
   ) => Promise<void>;
 }
+
+const getMoveCandidates = (
+  items: ReadonlyArray<MoveClipboardItem>,
+  targetParentId: string,
+): MoveClipboardItem[] => {
+  // Only filter the truly impossible case (a folder dropped on itself).
+  // Do NOT filter by item.sourceParentId === target — that field is captured
+  // at cut-time and can go stale if another window/client moves the entity.
+  const target = normalizeDragId(targetParentId);
+  return items.filter((item) => normalizeDragId(item.id) !== target);
+};
+
+const loadEncryptionServerSettings = async (
+  filesToEncrypt: ReadonlyArray<MoveClipboardItem>,
+): Promise<Awaited<ReturnType<typeof fetchServerSettings>> | null> => {
+  if (filesToEncrypt.length === 0) return null;
+  if (!useVault.getState().isUnlocked) return null;
+
+  try {
+    return await fetchServerSettings(queryClient);
+  } catch {
+    return null;
+  }
+};
+
+const moveCandidatesToTarget = async (options: {
+  candidates: ReadonlyArray<MoveClipboardItem>;
+  targetEncryptsNewFiles: boolean;
+  targetParentId: string;
+}): Promise<MoveExecutionResult> => {
+  const sourceParents = new Set<string>();
+  const succeeded: MoveClipboardItem[] = [];
+  const failed: MoveClipboardItem[] = [];
+  const movedFilesToEncrypt: MoveClipboardItem[] = [];
+  const movedFilesToOfferDecrypt: MoveClipboardItem[] = [];
+  let lastErrorMessage: string | null = null;
+
+  // Serial loop: the server's collision/cycle checks are pre-update reads,
+  // so concurrent moves can still race in the small window before the unique
+  // index throws. Serial keeps the multi-item UX deterministic.
+  for (const item of options.candidates) {
+    try {
+      await moveSingleItem(item, options.targetParentId);
+      sourceParents.add(item.sourceParentId);
+      succeeded.push(item);
+      collectMovedEncryptionFollowups({
+        item,
+        movedFilesToEncrypt,
+        movedFilesToOfferDecrypt,
+        targetEncryptsNewFiles: options.targetEncryptsNewFiles,
+      });
+    } catch (error) {
+      failed.push(item);
+      lastErrorMessage = extractErrorMessage(error) ?? lastErrorMessage;
+      console.error(
+        "Failed to move " + item.kind + " " + item.id,
+        error,
+      );
+    }
+  }
+
+  return {
+    failed,
+    lastErrorMessage,
+    movedFilesToEncrypt,
+    movedFilesToOfferDecrypt,
+    sourceParents,
+    succeeded,
+  };
+};
+
+const moveSingleItem = async (
+  item: MoveClipboardItem,
+  targetParentId: string,
+): Promise<void> => {
+  if (item.kind === "folder") {
+    await nodesApi.moveNode(item.id, { parentId: targetParentId });
+    return;
+  }
+
+  await filesApi.moveFile(item.id, { parentId: targetParentId });
+};
+
+const collectMovedEncryptionFollowups = (options: {
+  item: MoveClipboardItem;
+  movedFilesToEncrypt: MoveClipboardItem[];
+  movedFilesToOfferDecrypt: MoveClipboardItem[];
+  targetEncryptsNewFiles: boolean;
+}): void => {
+  if (options.targetEncryptsNewFiles && needsEncryptionAfterMove(options.item)) {
+    options.movedFilesToEncrypt.push(options.item);
+    return;
+  }
+
+  if (!options.targetEncryptsNewFiles && needsDecryptionAfterMove(options.item)) {
+    options.movedFilesToOfferDecrypt.push(options.item);
+  }
+};
+
+const refreshMovedParents = (
+  sourceParents: ReadonlySet<string>,
+  targetParentId: string,
+): void => {
+  const parentsToRefresh = new Set<string>(sourceParents);
+  parentsToRefresh.add(targetParentId);
+
+  for (const id of parentsToRefresh) {
+    void refreshNodeContent(id);
+  }
+};
+
+const encryptMovedFiles = async (options: {
+  files: ReadonlyArray<MoveClipboardItem>;
+  settings: Awaited<ReturnType<typeof fetchServerSettings>> | null;
+  targetNodeName: string;
+  targetParentId: string;
+  t: MoveTranslation;
+}): Promise<number> => {
+  if (options.files.length === 0) return 0;
+
+  if (!options.settings) {
+    if (useVault.getState().isUnlocked) {
+      toast.error(options.t("errors.serverSettingsNotLoaded", { ns: "tasks" }));
+    }
+    void refreshNodeContent(options.targetParentId);
+    return 0;
+  }
+
+  let failedCount = 0;
+  for (const item of options.files) {
+    if (!item.file) continue;
+
+    try {
+      await encryptExistingFileWithTask({
+        file: {
+          id: item.id,
+          name: item.file.name,
+          contentType: item.file.contentType,
+          sizeBytes: item.file.sizeBytes,
+        },
+        targetNodeId: options.targetParentId,
+        scopeLabel: options.targetNodeName,
+        server: {
+          maxChunkSizeBytes: options.settings.maxChunkSizeBytes,
+          supportedHashAlgorithm: options.settings.supportedHashAlgorithm,
+        },
+      });
+    } catch {
+      failedCount += 1;
+    }
+  }
+
+  void refreshNodeContent(options.targetParentId);
+  return failedCount;
+};
+
+const offerDecryptForMovedFiles = (options: {
+  files: ReadonlyArray<MoveClipboardItem>;
+  targetNodeName: string;
+  targetParentId: string;
+  t: MoveTranslation;
+}): void => {
+  if (options.files.length === 0) return;
+
+  showActionToast({
+    toastId:
+      "files-cse-decrypt-moved-" + options.targetParentId + "-" + Date.now(),
+    message: options.t("clientEncryption.movedEncrypted.toast", {
+      ns: "files",
+      count: options.files.length,
+    }),
+    action: options.t("clientEncryption.movedEncrypted.action", { ns: "files" }),
+    onAction: () => {
+      void decryptMovedEncryptedFiles({
+        files: options.files,
+        targetParentId: options.targetParentId,
+        targetNodeName: options.targetNodeName,
+        t: options.t,
+      });
+    },
+  });
+};
+
+const showMoveOutcomeToasts = (options: {
+  encryptionFailedCount: number;
+  failed: ReadonlyArray<MoveClipboardItem>;
+  lastErrorMessage: string | null;
+  succeeded: ReadonlyArray<MoveClipboardItem>;
+  targetParentId: string;
+  t: MoveTranslation;
+}): void => {
+  if (options.succeeded.length > 0) {
+    toast.success(
+      options.t("move.toasts.moved", {
+        ns: "files",
+        count: options.succeeded.length,
+      }),
+      {
+        toastId: "move-success-" + options.targetParentId + "-" + Date.now(),
+      },
+    );
+  }
+
+  if (options.failed.length > 0) {
+    toast.error(
+      options.lastErrorMessage ??
+        options.t("move.toasts.failed", {
+          ns: "files",
+          count: options.failed.length,
+        }),
+      {
+        toastId: "move-error-" + options.targetParentId + "-" + Date.now(),
+      },
+    );
+  }
+
+  if (options.encryptionFailedCount > 0) {
+    toast.error(
+      options.t("clientEncryption.toasts.encryptExistingFailed", {
+        ns: "files",
+        count: options.encryptionFailedCount,
+      }),
+      {
+        toastId:
+          "move-encrypt-error-" + options.targetParentId + "-" + Date.now(),
+      },
+    );
+  }
+};
 
 export const useMoveOperations = (): UseMoveOperationsResult => {
   const { t } = useTranslation(["files", "common", "tasks"]);
@@ -269,15 +508,7 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
       items: ReadonlyArray<MoveClipboardItem>,
       targetParentId: string,
     ): Promise<MoveOutcome> => {
-      // Only filter the truly impossible case (a folder dropped on itself).
-      // Do NOT filter by item.sourceParentId === target — that field is
-      // captured at cut-time and goes stale if another window/client moves
-      // the entity in the meantime; a paste back into the original folder
-      // would then be silently skipped on the client even though the server
-      // could perform a valid move. Visual drop-target rejection still uses
-      // the stricter `filterMoveItemsForTarget` in TilesView/ListView.
-      const target = normalizeDragId(targetParentId);
-      const candidates = items.filter((item) => normalizeDragId(item.id) !== target);
+      const candidates = getMoveCandidates(items, targetParentId);
       if (candidates.length === 0) {
         return { succeeded: [], failed: [], lastErrorMessage: null };
       }
@@ -288,136 +519,44 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
       const filesToEncrypt = targetEncryptsNewFiles
         ? candidates.filter(needsEncryptionAfterMove)
         : [];
-      let encryptionServerSettings: Awaited<
-        ReturnType<typeof fetchServerSettings>
-      > | null = null;
+      const encryptionServerSettings = await loadEncryptionServerSettings(
+        filesToEncrypt,
+      );
+      const result = await moveCandidatesToTarget({
+        candidates,
+        targetEncryptsNewFiles,
+        targetParentId,
+      });
 
-      if (filesToEncrypt.length > 0 && useVault.getState().isUnlocked) {
-        try {
-          encryptionServerSettings = await fetchServerSettings(queryClient);
-        } catch {
-          encryptionServerSettings = null;
-        }
-      }
+      refreshMovedParents(result.sourceParents, targetParentId);
 
-      const sourceParents = new Set<string>();
-      const succeeded: MoveClipboardItem[] = [];
-      const failed: MoveClipboardItem[] = [];
-      const movedFilesToEncrypt: MoveClipboardItem[] = [];
-      const movedFilesToOfferDecrypt: MoveClipboardItem[] = [];
-      let encryptionFailedCount = 0;
-      let lastErrorMessage: string | null = null;
+      const encryptionFailedCount = await encryptMovedFiles({
+        files: result.movedFilesToEncrypt,
+        settings: encryptionServerSettings,
+        targetNodeName: targetNode?.name ?? "",
+        targetParentId,
+        t,
+      });
+      offerDecryptForMovedFiles({
+        files: result.movedFilesToOfferDecrypt,
+        targetNodeName: targetNode?.name ?? "",
+        targetParentId,
+        t,
+      });
+      showMoveOutcomeToasts({
+        encryptionFailedCount,
+        failed: result.failed,
+        lastErrorMessage: result.lastErrorMessage,
+        succeeded: result.succeeded,
+        targetParentId,
+        t,
+      });
 
-      // Serial loop: the server's collision/cycle checks are pre-update reads,
-      // so concurrent moves can still race in the small window before the unique
-      // index throws. Serial keeps the multi-item UX deterministic.
-      for (const item of candidates) {
-        try {
-          if (item.kind === "folder") {
-            await nodesApi.moveNode(item.id, { parentId: targetParentId });
-          } else {
-            await filesApi.moveFile(item.id, { parentId: targetParentId });
-          }
-          sourceParents.add(item.sourceParentId);
-          succeeded.push(item);
-          if (targetEncryptsNewFiles && needsEncryptionAfterMove(item)) {
-            movedFilesToEncrypt.push(item);
-          }
-          if (!targetEncryptsNewFiles && needsDecryptionAfterMove(item)) {
-            movedFilesToOfferDecrypt.push(item);
-          }
-        } catch (error) {
-          failed.push(item);
-          lastErrorMessage = extractErrorMessage(error) ?? lastErrorMessage;
-          console.error(`Failed to move ${item.kind} ${item.id}`, error);
-        }
-      }
-
-      // Always refresh both source(s) and target so caches stay correct.
-      const parentsToRefresh = new Set<string>(sourceParents);
-      parentsToRefresh.add(targetParentId);
-      for (const id of parentsToRefresh) {
-        void refreshNodeContent(id);
-      }
-
-      if (movedFilesToEncrypt.length > 0) {
-        const settings = encryptionServerSettings;
-        if (!settings) {
-          if (useVault.getState().isUnlocked) {
-            toast.error(t("errors.serverSettingsNotLoaded", { ns: "tasks" }));
-          }
-          void refreshNodeContent(targetParentId);
-        } else {
-          for (const item of movedFilesToEncrypt) {
-            if (!item.file) continue;
-
-            try {
-              await encryptExistingFileWithTask({
-                file: {
-                  id: item.id,
-                  name: item.file.name,
-                  contentType: item.file.contentType,
-                  sizeBytes: item.file.sizeBytes,
-                },
-                targetNodeId: targetParentId,
-                scopeLabel: targetNode?.name ?? "",
-                server: {
-                  maxChunkSizeBytes: settings.maxChunkSizeBytes,
-                  supportedHashAlgorithm: settings.supportedHashAlgorithm,
-                },
-              });
-            } catch {
-              encryptionFailedCount += 1;
-            }
-          }
-
-          void refreshNodeContent(targetParentId);
-        }
-      }
-
-      if (movedFilesToOfferDecrypt.length > 0) {
-        showActionToast({
-          toastId: `files-cse-decrypt-moved-${targetParentId}-${Date.now()}`,
-          message: t("clientEncryption.movedEncrypted.toast", {
-            ns: "files",
-            count: movedFilesToOfferDecrypt.length,
-          }),
-          action: t("clientEncryption.movedEncrypted.action", { ns: "files" }),
-          onAction: () => {
-            void decryptMovedEncryptedFiles({
-              files: movedFilesToOfferDecrypt,
-              targetParentId,
-              targetNodeName: targetNode?.name ?? "",
-              t,
-            });
-          },
-        });
-      }
-
-      if (succeeded.length > 0) {
-        toast.success(
-          t("move.toasts.moved", { ns: "files", count: succeeded.length }),
-          { toastId: `move-success-${targetParentId}-${Date.now()}` },
-        );
-      }
-      if (failed.length > 0) {
-        toast.error(
-          lastErrorMessage ??
-            t("move.toasts.failed", { ns: "files", count: failed.length }),
-          { toastId: `move-error-${targetParentId}-${Date.now()}` },
-        );
-      }
-      if (encryptionFailedCount > 0) {
-        toast.error(
-          t("clientEncryption.toasts.encryptExistingFailed", {
-            ns: "files",
-            count: encryptionFailedCount,
-          }),
-          { toastId: `move-encrypt-error-${targetParentId}-${Date.now()}` },
-        );
-      }
-
-      return { succeeded, failed, lastErrorMessage };
+      return {
+        succeeded: result.succeeded,
+        failed: result.failed,
+        lastErrorMessage: result.lastErrorMessage,
+      };
     },
     [t],
   );

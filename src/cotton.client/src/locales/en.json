@@ -379,6 +379,7 @@
       "delete": "Delete",
       "rename": "Rename",
       "restore": "Restore",
+      "versions": "Versions",
       "download": "Download",
       "share": "Share",
       "more": "More actions",
@@ -1281,6 +1282,21 @@
     "deleteFile": {
       "confirmTitle": "Delete file \"{{name}}\"?",
       "confirmDescription": "It will be moved to Trash and can be restored later."
+    },
+    "fileVersions": {
+      "title": "Versions of {{name}}",
+      "empty": "No previous versions yet.",
+      "loadFailed": "Failed to load versions.",
+      "restoreFailed": "Failed to restore version.",
+      "deleteFailed": "Failed to delete version.",
+      "downloadFailed": "Failed to prepare version download.",
+      "versionLabel": "Version {{version}}",
+      "current": "Current",
+      "original": "Original",
+      "restoreConfirmTitle": "Restore this version?",
+      "restoreConfirmDescription": "Current file content will be saved as a new version, then version {{version}} will become current.",
+      "deleteConfirmTitle": "Delete this version?",
+      "deleteConfirmDescription": "Version {{version}} will be deleted. The current file will not be changed."
     },
     "stats": {
       "summary": "{{folders}} folders • {{files}} files • {{size}}"

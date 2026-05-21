@@ -75,8 +75,8 @@ public class AudioPreviewGeneratorTests
         for (int i = 0; i < totalSamples; i++)
         {
             double t = (double)i / sampleRate;
-            double envelope = 0.25 + 0.75 * Math.Abs(Math.Sin(2 * Math.PI * 0.7 * t));
-            double tone = Math.Sin(2 * Math.PI * lowFreq * t) * 0.65 + Math.Sin(2 * Math.PI * highFreq * t) * 0.35;
+            double envelope = 0.25 + (0.75 * Math.Abs(Math.Sin(2 * Math.PI * 0.7 * t)));
+            double tone = (Math.Sin(2 * Math.PI * lowFreq * t) * 0.65) + (Math.Sin(2 * Math.PI * highFreq * t) * 0.35);
             samples[i] = (short)(tone * envelope * short.MaxValue * 0.85);
         }
 

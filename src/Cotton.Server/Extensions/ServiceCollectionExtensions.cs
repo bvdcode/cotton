@@ -40,6 +40,9 @@ namespace Cotton.Server.Extensions
         {
             services.AddScoped<IChunkIngestService, ChunkIngestService>();
             services.AddScoped<NodeFileHistoryService>();
+            services.AddScoped<FileVersionStorageService>();
+            services.AddScoped<FileVersionRetentionService>();
+            services.AddScoped<FileVersionService>();
             services.AddScoped<IEventNotificationService, EventNotificationService>();
             return services;
         }

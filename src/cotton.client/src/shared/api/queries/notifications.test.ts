@@ -73,7 +73,11 @@ describe("notification query cache helpers", () => {
     ]);
     expect(
       queryClient.getQueryData(queryKeys.notifications.unreadCount()),
-    ).toBe(2);
+    ).toBe(1);
+    expect(
+      queryClient.getQueryState(queryKeys.notifications.unreadCount())
+        ?.isInvalidated,
+    ).toBe(true);
   });
 
   it("does not duplicate notifications already present in later pages", () => {
@@ -122,7 +126,7 @@ describe("notification query cache helpers", () => {
     ).toBe(1);
   });
 
-  it("increments unread count even when lists are not cached yet", () => {
+  it("keeps unread count authoritative when lists are not cached yet", () => {
     const queryClient = createQueryClient();
     queryClient.setQueryData(queryKeys.notifications.unreadCount(), 1);
 
@@ -130,7 +134,11 @@ describe("notification query cache helpers", () => {
 
     expect(
       queryClient.getQueryData(queryKeys.notifications.unreadCount()),
-    ).toBe(2);
+    ).toBe(1);
+    expect(
+      queryClient.getQueryState(queryKeys.notifications.unreadCount())
+        ?.isInvalidated,
+    ).toBe(true);
   });
 
   it("keeps read notifications out of the unread list and count", () => {

@@ -171,6 +171,263 @@ const HoverMarqueeText = ({
   );
 };
 
+const useActionMenu = () => {
+  const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
+  const actionsOpen = Boolean(menuAnchorEl);
+
+  const handleToggleActions = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    setMenuAnchorEl(actionsOpen ? null : event.currentTarget);
+  };
+  const handleCloseMenu = () => {
+    setMenuAnchorEl(null);
+  };
+  const runAction = (action: FileSystemItemCardAction) => {
+    setMenuAnchorEl(null);
+    action.onClick();
+  };
+
+  return {
+    actionsOpen,
+    handleCloseMenu,
+    handleToggleActions,
+    menuAnchorEl,
+    runAction,
+  };
+};
+
+const CardArtwork = ({
+  cornerAdornment,
+  icon,
+  iconContainerSx,
+  variant,
+}: Pick<
+  FileSystemItemCardProps,
+  "cornerAdornment" | "icon" | "iconContainerSx" | "variant"
+>): React.ReactElement => (
+  <Box
+    sx={{
+      width: "100%",
+      ...(variant === "squareTile"
+        ? { flex: 1, minHeight: 0 }
+        : { aspectRatio: "1 / 1" }),
+      position: "relative",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    }}
+  >
+    {cornerAdornment && (
+      <Box
+        sx={{
+          position: "absolute",
+          top: 6,
+          right: 6,
+          zIndex: 2,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 22,
+          height: 22,
+          borderRadius: 0.75,
+          bgcolor: "background.paper",
+          color: "text.secondary",
+          border: "1px solid",
+          borderColor: "divider",
+          boxShadow: 1,
+          "& > svg": {
+            fontSize: 16,
+          },
+        }}
+      >
+        {cornerAdornment}
+      </Box>
+    )}
+    <Box
+      sx={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        "& > svg": {
+          width: "70%",
+          height: "70%",
+        },
+        ...iconContainerSx,
+      }}
+    >
+      {icon}
+    </Box>
+  </Box>
+);
+
+const CardActionButton = ({
+  actionsOpen,
+  onToggleActions,
+}: {
+  actionsOpen: boolean;
+  onToggleActions: (event: MouseEvent<HTMLButtonElement>) => void;
+}): React.ReactElement => (
+  <Box
+    className="card-menu-slot"
+    sx={{
+      width: 0,
+      height: 28,
+      overflow: "visible",
+      opacity: 0,
+      pointerEvents: "auto",
+      transition: "width 0.2s, opacity 0.2s",
+      flex: "0 0 auto",
+      ...(actionsOpen && {
+        width: 28,
+        opacity: 1,
+      }),
+    }}
+    onClick={(event) => event.stopPropagation()}
+  >
+    <Box sx={{ position: "relative", width: 28, height: 28 }}>
+      <IconButton
+        size="small"
+        onClick={onToggleActions}
+        aria-haspopup="menu"
+        aria-expanded={actionsOpen ? true : undefined}
+        className="card-menu-button"
+        sx={{
+          p: 0.5,
+          width: 28,
+          height: 28,
+          transition: "transform 0.3s",
+          transform: actionsOpen ? "rotate(90deg)" : "rotate(0deg)",
+        }}
+      >
+        <MoreVert />
+      </IconButton>
+    </Box>
+  </Box>
+);
+
+const CardText = ({
+  actionsOpen,
+  cardHovered,
+  hasActions,
+  onToggleActions,
+  subtitle,
+  title,
+  titleAdornment,
+}: {
+  actionsOpen: boolean;
+  cardHovered: boolean;
+  hasActions: boolean;
+  onToggleActions: (event: MouseEvent<HTMLButtonElement>) => void;
+  subtitle?: string;
+  title: string;
+  titleAdornment?: ReactNode;
+}): React.ReactElement => (
+  <Box sx={{ px: 0.75, pb: 0.75 }}>
+    <Box
+      sx={{
+        position: "relative",
+        display: "flex",
+        alignItems: "center",
+        minHeight: 28,
+        gap: 0.5,
+      }}
+    >
+      {titleAdornment && (
+        <Box
+          sx={{
+            display: "inline-flex",
+            alignItems: "center",
+            flexShrink: 0,
+            color: "text.secondary",
+          }}
+        >
+          {titleAdornment}
+        </Box>
+      )}
+      <Typography
+        component="div"
+        variant="body2"
+        fontWeight={500}
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          fontSize: { xs: "0.8rem", md: "0.85rem" },
+          lineHeight: 1.4,
+        }}
+      >
+        <HoverMarqueeText text={title} cardHovered={cardHovered} />
+      </Typography>
+      {hasActions && (
+        <CardActionButton
+          actionsOpen={actionsOpen}
+          onToggleActions={onToggleActions}
+        />
+      )}
+    </Box>
+    {subtitle && (
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        display="block"
+        noWrap
+        title={subtitle}
+        sx={{ fontSize: { xs: "0.7rem", md: "0.75rem" }, lineHeight: 1.4 }}
+      >
+        {subtitle}
+      </Typography>
+    )}
+  </Box>
+);
+
+const CardActionsMenu = ({
+  actions,
+  anchorEl,
+  onClose,
+  onRunAction,
+  open,
+}: {
+  actions: ReadonlyArray<FileSystemItemCardAction>;
+  anchorEl: HTMLElement | null;
+  onClose: () => void;
+  onRunAction: (action: FileSystemItemCardAction) => void;
+  open: boolean;
+}): React.ReactElement => (
+  <Menu
+    anchorEl={anchorEl}
+    open={open}
+    onClose={onClose}
+    onClick={(event) => event.stopPropagation()}
+    anchorOrigin={{ vertical: "top", horizontal: "right" }}
+    transformOrigin={{ vertical: "bottom", horizontal: "right" }}
+    disablePortal={false}
+    PaperProps={{
+      variant: "outlined",
+      sx: {
+        bgcolor: "background.default",
+        borderColor: "divider",
+      },
+    }}
+  >
+    {actions.map((action, index) => (
+      <MenuItem
+        key={index}
+        onClick={(event) => {
+          event.stopPropagation();
+          onRunAction(action);
+        }}
+        title={action.tooltip}
+        sx={{ gap: 1 }}
+      >
+        {action.icon}
+        <Typography variant="body2">{action.tooltip ?? ""}</Typography>
+      </MenuItem>
+    ))}
+  </Menu>
+);
+
 const FileSystemItemCardImpl = ({
   icon,
   title,
@@ -178,42 +435,37 @@ const FileSystemItemCardImpl = ({
   cornerAdornment,
   subtitle,
   onClick,
-  actions,
+  actions = [],
   iconContainerSx,
   sx,
   variant = "default",
 }: FileSystemItemCardProps) => {
   const clickable = typeof onClick === "function";
-  const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
   const [isHovered, setIsHovered] = useState(false);
-  const hasActions = Boolean(actions && actions.length > 0);
-
-  const actionsOpen = Boolean(menuAnchorEl);
-
-  const handleToggleActions = (e: MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    setMenuAnchorEl(actionsOpen ? null : e.currentTarget);
-  };
-
-  const handleCloseMenu = () => {
-    setMenuAnchorEl(null);
-  };
+  const hasActions = actions.length > 0;
+  const {
+    actionsOpen,
+    handleCloseMenu,
+    handleToggleActions,
+    menuAnchorEl,
+    runAction,
+  } = useActionMenu();
 
   return (
     <Box
       role={clickable ? "button" : undefined}
       tabIndex={clickable ? 0 : undefined}
       onClick={onClick}
-      onContextMenu={(e) => {
-        e.preventDefault();
+      onContextMenu={(event) => {
+        event.preventDefault();
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onKeyDown={(e) => {
+      onKeyDown={(event) => {
         if (!clickable) return;
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClick?.(e);
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onClick?.(event);
         }
       }}
       sx={{
@@ -251,192 +503,29 @@ const FileSystemItemCardImpl = ({
         ...sx,
       }}
     >
-      <Box
-        sx={{
-          width: "100%",
-          ...(variant === "squareTile"
-            ? { flex: 1, minHeight: 0 }
-            : { aspectRatio: "1 / 1" }),
-          position: "relative",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          overflow: "hidden",
-        }}
-      >
-        {cornerAdornment && (
-          <Box
-            sx={{
-              position: "absolute",
-              top: 6,
-              right: 6,
-              zIndex: 2,
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 22,
-              height: 22,
-              borderRadius: 0.75,
-              bgcolor: "background.paper",
-              color: "text.secondary",
-              border: "1px solid",
-              borderColor: "divider",
-              boxShadow: 1,
-              "& > svg": {
-                fontSize: 16,
-              },
-            }}
-          >
-            {cornerAdornment}
-          </Box>
-        )}
-        <Box
-          sx={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            "& > svg": {
-              width: "70%",
-              height: "70%",
-            },
-            ...iconContainerSx,
-          }}
-        >
-          {icon}
-        </Box>
-      </Box>
-      <Box
-        sx={{
-          px: 0.75,
-          pb: 0.75,
-        }}
-      >
-        <Box
-          sx={{
-            position: "relative",
-            display: "flex",
-            alignItems: "center",
-            minHeight: 28,
-            gap: 0.5,
-          }}
-        >
-          {titleAdornment && (
-            <Box
-              sx={{
-                display: "inline-flex",
-                alignItems: "center",
-                flexShrink: 0,
-                color: "text.secondary",
-              }}
-            >
-              {titleAdornment}
-            </Box>
-          )}
-          <Typography
-            component="div"
-            variant="body2"
-            fontWeight={500}
-            sx={{
-              flex: 1,
-              minWidth: 0,
-              fontSize: { xs: "0.8rem", md: "0.85rem" },
-              lineHeight: 1.4,
-            }}
-          >
-            <HoverMarqueeText text={title} cardHovered={isHovered} />
-          </Typography>
-
-          {hasActions && (
-            <Box
-              className="card-menu-slot"
-              sx={{
-                width: 0,
-                height: 28,
-                overflow: "visible",
-                opacity: 0,
-                pointerEvents: "auto",
-                transition: "width 0.2s, opacity 0.2s",
-                flex: "0 0 auto",
-                ...(actionsOpen && {
-                  width: 28,
-                  opacity: 1,
-                }),
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Box sx={{ position: "relative", width: 28, height: 28 }}>
-                <IconButton
-                  size="small"
-                  onClick={handleToggleActions}
-                  aria-haspopup="menu"
-                  aria-expanded={actionsOpen ? true : undefined}
-                  className="card-menu-button"
-                  sx={{
-                    p: 0.5,
-                    width: 28,
-                    height: 28,
-                    transition: "transform 0.3s",
-                    transform: actionsOpen ? "rotate(90deg)" : "rotate(0deg)",
-                  }}
-                >
-                  <MoreVert />
-                </IconButton>
-              </Box>
-            </Box>
-          )}
-        </Box>
-
-        {subtitle && (
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            display="block"
-            noWrap
-            title={subtitle}
-            sx={{ fontSize: { xs: "0.7rem", md: "0.75rem" }, lineHeight: 1.4 }}
-          >
-            {subtitle}
-          </Typography>
-        )}
-      </Box>
-
+      <CardArtwork
+        cornerAdornment={cornerAdornment}
+        icon={icon}
+        iconContainerSx={iconContainerSx}
+        variant={variant}
+      />
+      <CardText
+        actionsOpen={actionsOpen}
+        cardHovered={isHovered}
+        hasActions={hasActions}
+        onToggleActions={handleToggleActions}
+        subtitle={subtitle}
+        title={title}
+        titleAdornment={titleAdornment}
+      />
       {hasActions && (
-        <Menu
+        <CardActionsMenu
+          actions={actions}
           anchorEl={menuAnchorEl}
-          open={actionsOpen}
           onClose={handleCloseMenu}
-          onClick={(e) => e.stopPropagation()}
-          anchorOrigin={{ vertical: "top", horizontal: "right" }}
-          transformOrigin={{ vertical: "bottom", horizontal: "right" }}
-          disablePortal={false}
-          PaperProps={{
-            variant: "outlined",
-            sx: {
-              bgcolor: "background.default",
-              borderColor: "divider",
-            },
-          }}
-        >
-          {actions?.map((action, idx) => (
-            <MenuItem
-              key={idx}
-              onClick={(e) => {
-                e.stopPropagation();
-                setMenuAnchorEl(null);
-                action.onClick();
-              }}
-              title={action.tooltip}
-              sx={{ gap: 1 }}
-            >
-              {action.icon}
-              <Typography variant="body2">
-                {action.tooltip ?? ""}
-              </Typography>
-            </MenuItem>
-          ))}
-        </Menu>
+          onRunAction={runAction}
+          open={actionsOpen}
+        />
       )}
     </Box>
   );

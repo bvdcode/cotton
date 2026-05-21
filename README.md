@@ -314,6 +314,8 @@ docker run -d --name cotton \
 
 After unlock the app applies EF migrations automatically, serves the UI at `http://localhost:8080` (or whatever port you mapped), and walks you through the in-browser setup wizard.
 
+The official Docker image uses a staged non-root migration. The entrypoint starts as root only long enough to prepare `/app/files`, checks that the runtime user can write to the storage temp directory, repairs ownership when that check fails, then runs Cotton as the .NET `app` user. Operators who pre-manage volume permissions can set `COTTON_PERMISSION_FIX=never`, or force a full ownership pass with `COTTON_PERMISSION_FIX=always`. The expected runtime owner is the image `APP_UID` user, currently `1654` in Microsoft .NET images, so a manual bind-mount migration looks like `chown -R 1654:1654 /data/cotton`.
+
 Upload settings are returned by the server; the frontend (`src/cotton.client`) uses them for chunking.
 
 For deeper internals after the quick start, continue below. For benchmark details, see [src/Cotton.Benchmark/README.md](src/Cotton.Benchmark/README.md).
@@ -350,7 +352,7 @@ It reports process/container hardening signals such as .NET diagnostics state, L
 
 ### Paranoia Mode
 
-For operators who want the cheap hardening layers, the official Docker image now disables .NET diagnostics and requests Linux `PR_SET_DUMPABLE=0` by default:
+For operators who want the cheap hardening layers, the official Docker image now runs the Cotton process as the non-root .NET `app` user after its volume-permission entrypoint, disables .NET diagnostics, and requests Linux `PR_SET_DUMPABLE=0` by default:
 
 ```env
 DOTNET_EnableDiagnostics=0
@@ -377,7 +379,7 @@ services:
       COTTON_PROCESS_HARDENING: "true"
 ```
 
-Extra hardening such as `read_only: true`, custom seccomp/AppArmor profiles, non-root container users, encrypted swap, host `kernel.yama.ptrace_scope`, TPM/HSM/KMS, or a separate key-agent can be valuable, but those are expert choices. They can also break volume permissions, debugging, previews, or restore workflows when applied blindly. Treat them as a separate hardening pass after the basic instance works.
+Extra hardening such as `read_only: true`, custom seccomp/AppArmor profiles, encrypted swap, host `kernel.yama.ptrace_scope`, TPM/HSM/KMS, or a separate key-agent can be valuable, but those are expert choices. They can also break volume permissions, debugging, previews, or restore workflows when applied blindly. Treat them as a separate hardening pass after the basic instance works.
 
 The important boundary is honest: if an attacker can execute code inside the Cotton process, software flags cannot fully hide the in-memory key from that process. These settings mostly protect against accidental dumps, diagnostics surfaces, and neighboring processes with too much host/container privilege.
 

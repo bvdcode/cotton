@@ -32,7 +32,7 @@ export const downloadArchive = async (
   }
 };
 
-const openDownloadLink = (href: string, fileName: string): void => {
+export const openDownloadLink = (href: string, fileName: string): void => {
   const link = document.createElement("a");
   link.href = href;
   link.download = fileName;

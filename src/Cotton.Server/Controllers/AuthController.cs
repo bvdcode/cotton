@@ -4,10 +4,12 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Auth;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Auth;
 using Cotton.Server.Handlers.Users;
 using Cotton.Server.Helpers;
+using Cotton.Server.Hubs;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
@@ -29,11 +31,14 @@ using EasyExtensions.Models.Enums;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Security.Claims;
+using System.Text;
 
 namespace Cotton.Server.Controllers
 {
@@ -52,7 +57,9 @@ namespace Cotton.Server.Controllers
         IGeoLookupService _geoLookup,
         PasskeyService _passkeys,
         DefaultUserContentSeeder _defaultUserContentSeeder,
-        ApplicationStartupClock _startupClock) : ControllerBase
+        ApplicationStartupClock _startupClock,
+        SessionAccessTokenRevocationStore _sessionRevocations,
+        IHubContext<EventHub> _eventHub) : ControllerBase
     {
         public const int WebDavTokenLength = 32;
         public const int RefreshTokenLength = 32;
@@ -81,13 +88,21 @@ namespace Cotton.Server.Controllers
 
         [Authorize]
         [HttpDelete("sessions/{sessionId}")]
-        public async Task<IActionResult> RevokeSession([FromRoute] string sessionId)
+        public async Task<IActionResult> RevokeSession(
+            [FromRoute] string sessionId,
+            CancellationToken cancellationToken)
         {
             var userId = User.GetUserId();
-            var tokens = await _dbContext.RefreshTokens
+            DateTime revokedAt = DateTime.UtcNow;
+            int revokedTokens = await _dbContext.RefreshTokens
                 .Where(x => x.UserId == userId && x.SessionId == sessionId && x.RevokedAt == null)
-                .ExecuteUpdateAsync(x => x.SetProperty(t => t.RevokedAt, t => DateTime.UtcNow));
-            // TODO: Refuse all access tokens for this sessionId
+                .ExecuteUpdateAsync(
+                    x => x.SetProperty(t => t.RevokedAt, _ => revokedAt),
+                    cancellationToken);
+            if (revokedTokens > 0)
+            {
+                await NotifySessionRevokedAsync(userId, sessionId, cancellationToken);
+            }
             return Ok();
         }
 
@@ -273,6 +288,7 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
+        [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
         [HttpPost("passkeys/assertion/options")]
         public async Task<IActionResult> BeginPasskeyAssertion(
             [FromBody] BeginPasskeyAssertionRequestDto request,
@@ -282,6 +298,7 @@ namespace Cotton.Server.Controllers
             return Ok(response);
         }
 
+        [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
         [HttpPost("passkeys/assertion/verify")]
         public async Task<IActionResult> FinishPasskeyAssertion(
             [FromBody] FinishPasskeyAssertionRequestDto request,
@@ -298,7 +315,7 @@ namespace Cotton.Server.Controllers
             }
         }
 
-        //[EnableRateLimiting("auth")]
+        [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginRequest request)
         {
@@ -405,6 +422,7 @@ namespace Cotton.Server.Controllers
             return null;
         }
 
+        [EnableRateLimiting(AuthRateLimitPolicies.Refresh)]
         [HttpPost("refresh")]
         public async Task<IActionResult> GetRefreshToken([FromQuery] string? refreshToken = null)
         {
@@ -415,7 +433,13 @@ namespace Cotton.Server.Controllers
                     refreshToken = cookieToken;
                 }
             }
-            var dbToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x => x.Token == refreshToken);
+            if (string.IsNullOrEmpty(refreshToken))
+            {
+                return NotFound();
+            }
+
+            string refreshTokenHash = HashRefreshToken(refreshToken);
+            var dbToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x => x.Token == refreshTokenHash);
             if (dbToken == null || dbToken.RevokedAt != null)
             {
                 return NotFound();
@@ -427,16 +451,16 @@ namespace Cotton.Server.Controllers
             }
             var accessToken = CreateAccessToken(user, dbToken.SessionId!);
             dbToken.RevokedAt = DateTime.UtcNow;
-            ExtendedRefreshToken newDbToken = await CreateRefreshTokenAsync(
+            var (newDbToken, newRefreshToken) = await CreateRefreshTokenAsync(
                 user, dbToken.IsTrusted, dbToken.SessionId);
             await _dbContext.RefreshTokens.AddAsync(newDbToken);
             await _dbContext.SaveChangesAsync();
-            AddRefreshTokenToCookies(newDbToken.Token, dbToken.IsTrusted);
+            AddRefreshTokenToCookies(newRefreshToken, dbToken.IsTrusted);
             AddAccessTokenToCookies(accessToken);
             return Ok(new TokenPairResponseDto()
             {
                 AccessToken = accessToken,
-                RefreshToken = newDbToken.Token
+                RefreshToken = newRefreshToken
             });
         }
 
@@ -450,16 +474,25 @@ namespace Cotton.Server.Controllers
                     refreshToken = cookieToken;
                 }
             }
-            var dbToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x => x.Token == refreshToken);
-            if (dbToken != null && dbToken.RevokedAt == null)
+            if (!string.IsNullOrEmpty(refreshToken))
             {
-                dbToken.RevokedAt = DateTime.UtcNow;
-                await _dbContext.SaveChangesAsync();
+                string refreshTokenHash = HashRefreshToken(refreshToken);
+                var dbToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x => x.Token == refreshTokenHash);
+                if (dbToken != null && dbToken.RevokedAt == null)
+                {
+                    dbToken.RevokedAt = DateTime.UtcNow;
+                    await _dbContext.SaveChangesAsync();
+                    await NotifySessionRevokedAsync(
+                        dbToken.UserId,
+                        dbToken.SessionId,
+                        HttpContext.RequestAborted);
+                }
             }
             Response.Cookies.Delete(CookieRefreshTokenKey);
             return Ok();
         }
 
+        [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword(
             [FromBody] ForgotPasswordRequestDto request,
@@ -470,6 +503,7 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
+        [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword(
             [FromBody] ResetPasswordRequestDto request,
@@ -494,13 +528,29 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
+        private async Task NotifySessionRevokedAsync(
+            Guid userId,
+            string? sessionId,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                return;
+            }
+
+            _sessionRevocations.Revoke(userId, sessionId, _tokens.TokenLifetime);
+            await _eventHub.Clients
+                .Group(EventHub.GetSessionGroupName(userId, sessionId))
+                .SendCoreAsync(EventHub.SessionRevokedMethod, Array.Empty<object>(), cancellationToken);
+        }
+
         private async Task<TokenPairResponseDto> CreateSignedInResponseAsync(User user, bool trustDevice)
         {
-            ExtendedRefreshToken dbToken = await CreateRefreshTokenAsync(user, trustDevice);
+            var (dbToken, refreshToken) = await CreateRefreshTokenAsync(user, trustDevice);
             string accessToken = CreateAccessToken(user, dbToken.SessionId!);
             await _dbContext.RefreshTokens.AddAsync(dbToken);
             await _dbContext.SaveChangesAsync();
-            AddRefreshTokenToCookies(dbToken.Token, trustDevice);
+            AddRefreshTokenToCookies(refreshToken, trustDevice);
             AddAccessTokenToCookies(accessToken);
             await _notifications.SendSuccessfulLoginAsync(
                 _geoLookup,
@@ -511,7 +561,7 @@ namespace Cotton.Server.Controllers
             return new TokenPairResponseDto()
             {
                 AccessToken = accessToken,
-                RefreshToken = dbToken.Token
+                RefreshToken = refreshToken
             };
         }
 
@@ -582,6 +632,8 @@ namespace Cotton.Server.Controllers
                     Email = email,
                     Username = username,
                     Role = UserRole.User,
+                    FirstName = NormalizeOptionalName(request.FirstName),
+                    LastName = NormalizeOptionalName(request.LastName),
                     PasswordPhc = _hasher.Hash(request.Password),
                     WebDavTokenPhc = _hasher.Hash(request.Password),
                 };
@@ -620,7 +672,12 @@ namespace Cotton.Server.Controllers
             return user;
         }
 
-        private async Task<ExtendedRefreshToken> CreateRefreshTokenAsync(
+        private static string? NormalizeOptionalName(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        }
+
+        private async Task<(ExtendedRefreshToken DbToken, string RefreshToken)> CreateRefreshTokenAsync(
             User user,
             bool trustDevice,
             string? sessionId = null)
@@ -628,7 +685,8 @@ namespace Cotton.Server.Controllers
             IPAddress ipAddress = GetRequestIpAddress();
             var lookup = await _geoLookup.TryLookupAsync(ipAddress);
             sessionId ??= StringHelpers.CreateRandomString(RefreshTokenLength);
-            return new()
+            string refreshToken = StringHelpers.CreateRandomString(RefreshTokenLength);
+            ExtendedRefreshToken dbToken = new()
             {
                 RevokedAt = null,
                 UserId = user.Id,
@@ -640,9 +698,15 @@ namespace Cotton.Server.Controllers
                 AuthType = AuthType.Credentials,
                 IpAddress = ipAddress,
                 UserAgent = Request.Headers.UserAgent.ToString(),
-                Token = StringHelpers.CreateRandomString(RefreshTokenLength),
+                Token = HashRefreshToken(refreshToken),
                 Device = UserAgentHelpers.GetDevice(Request.Headers.UserAgent.ToString()),
             };
+            return (dbToken, refreshToken);
+        }
+
+        private static string HashRefreshToken(string refreshToken)
+        {
+            return Hasher.ToHexStringHash(Hasher.HashData(Encoding.UTF8.GetBytes(refreshToken)));
         }
     }
 }

@@ -55,62 +55,22 @@ public class WebDavMoveRequestHandler(
 {
     public async Task<WebDavMoveResult> Handle(WebDavMoveRequest request, CancellationToken ct)
     {
-        // First resolve: only used to compute the lock key. We re-resolve the
-        // source inside the lock to defeat the TOCTOU window: another request
-        // can move/delete/replace SourcePath between this read and the lock.
-        var preLockSource = await ResolveSourceAsync(request, ct);
-        var preLockFailure = TryGetSourceValidationFailure(request, preLockSource);
-        if (preLockFailure is not null)
+        var preLock = await ResolvePreLockSourceAsync(request, ct);
+        if (preLock.Failure is not null)
         {
-            return preLockFailure;
+            return preLock.Failure;
         }
-
-        Guid sourceLayoutId = await GetSourceLayoutIdAsync(preLockSource, ct);
 
         await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
-        await LayoutLocks.AcquireForLayoutAsync(_dbContext, sourceLayoutId, ct);
+        await LayoutLocks.AcquireForLayoutAsync(_dbContext, preLock.LayoutId!.Value, ct);
 
-        // Re-resolve inside the lock so descendant checks, oldParentId, and the
-        // mutated entity all reference the current state, not a stale snapshot.
-        var sourceResult = await ResolveSourceAsync(request, ct);
-        var sourceValidationFailure = TryGetSourceValidationFailure(request, sourceResult);
-        if (sourceValidationFailure is not null)
+        var lockedMove = await PrepareLockedMoveAsync(request, preLock.LayoutId.Value, ct);
+        if (lockedMove.Failure is not null)
         {
-            return sourceValidationFailure;
+            return lockedMove.Failure;
         }
 
-        if (await GetSourceLayoutIdAsync(sourceResult, ct) != sourceLayoutId)
-        {
-            _logger.LogDebug("WebDAV MOVE: Source layout changed while waiting for lock: {Path}", request.SourcePath);
-            return Fail(WebDavMoveError.SourceNotFound);
-        }
-
-        var destParentResult = await GetAndValidateDestinationParentAsync(request, ct);
-        var destParentFailure = TryGetDestinationParentFailure(destParentResult);
-        if (destParentFailure is not null)
-        {
-            return destParentFailure;
-        }
-
-        if (destParentResult.ParentNode!.LayoutId != sourceLayoutId)
-        {
-            _logger.LogDebug("WebDAV MOVE: Destination parent layout differs from locked source layout: {Path}", request.DestinationPath);
-            return Fail(WebDavMoveError.DestinationParentNotFound);
-        }
-
-        var overwriteResult = await HandleDestinationOverwriteAsync(request, ct);
-        if (!overwriteResult.Allowed)
-        {
-            return Fail(WebDavMoveError.DestinationExists);
-        }
-
-        // Capture the source's old parent before TryPerformMoveAsync mutates it,
-        // so the realtime notification can carry both old and new parent IDs.
-        Guid? oldParentId = sourceResult.IsCollection
-            ? sourceResult.Node?.ParentId
-            : sourceResult.NodeFile?.NodeId;
-
-        var moveFailure = await TryPerformMoveAsync(request, sourceResult, destParentResult, ct);
+        var moveFailure = await TryPerformMoveAsync(request, lockedMove.Source!, lockedMove.DestinationParent!, ct);
         if (moveFailure is not null)
         {
             return moveFailure;
@@ -118,11 +78,121 @@ public class WebDavMoveRequestHandler(
 
         await _dbContext.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await NotifyAfterCommitAsync(request, lockedMove.Source!, lockedMove.OldParentId, ct);
 
-        await NotifyAfterCommitAsync(request, sourceResult, oldParentId, ct);
+        var movedIds = GetMovedIds(lockedMove.Source!);
+        return Ok(lockedMove.Created, movedIds.NodeId, movedIds.NodeFileId);
+    }
 
-        var movedIds = GetMovedIds(sourceResult);
-        return Ok(overwriteResult.Created, movedIds.NodeId, movedIds.NodeFileId);
+    private async Task<PreLockSourceOutcome> ResolvePreLockSourceAsync(WebDavMoveRequest request, CancellationToken ct)
+    {
+        var source = await ResolveSourceAsync(request, ct);
+        var failure = TryGetSourceValidationFailure(request, source);
+        if (failure is not null)
+        {
+            return PreLockSourceOutcome.Failed(failure);
+        }
+
+        Guid layoutId = await GetSourceLayoutIdAsync(source, ct);
+        return PreLockSourceOutcome.Success(layoutId);
+    }
+
+    private async Task<LockedMoveOutcome> PrepareLockedMoveAsync(
+        WebDavMoveRequest request,
+        Guid sourceLayoutId,
+        CancellationToken ct)
+    {
+        var source = await ResolveSourceAsync(request, ct);
+        var sourceFailure = await ValidateLockedSourceAsync(request, source, sourceLayoutId, ct);
+        if (sourceFailure is not null)
+        {
+            return LockedMoveOutcome.Failed(sourceFailure);
+        }
+
+        var destination = await GetAndValidateDestinationParentAsync(request, ct);
+        var destinationFailure = ValidateLockedDestination(destination, request, sourceLayoutId);
+        if (destinationFailure is not null)
+        {
+            return LockedMoveOutcome.Failed(destinationFailure);
+        }
+
+        var overwriteResult = await HandleDestinationOverwriteAsync(request, ct);
+        if (!overwriteResult.Allowed)
+        {
+            return LockedMoveOutcome.Failed(Fail(WebDavMoveError.DestinationExists));
+        }
+
+        return LockedMoveOutcome.Success(source, destination, overwriteResult.Created, GetOldParentId(source));
+    }
+
+    private async Task<WebDavMoveResult?> ValidateLockedSourceAsync(
+        WebDavMoveRequest request,
+        WebDavResolveResult source,
+        Guid sourceLayoutId,
+        CancellationToken ct)
+    {
+        var sourceFailure = TryGetSourceValidationFailure(request, source);
+        if (sourceFailure is not null)
+        {
+            return sourceFailure;
+        }
+
+        if (await GetSourceLayoutIdAsync(source, ct) == sourceLayoutId)
+        {
+            return null;
+        }
+
+        _logger.LogDebug("WebDAV MOVE: Source layout changed while waiting for lock: {Path}", request.SourcePath);
+        return Fail(WebDavMoveError.SourceNotFound);
+    }
+
+    private WebDavMoveResult? ValidateLockedDestination(
+        WebDavParentResult destination,
+        WebDavMoveRequest request,
+        Guid sourceLayoutId)
+    {
+        var destinationFailure = TryGetDestinationParentFailure(destination);
+        if (destinationFailure is not null)
+        {
+            return destinationFailure;
+        }
+
+        if (destination.ParentNode!.LayoutId == sourceLayoutId)
+        {
+            return null;
+        }
+
+        _logger.LogDebug("WebDAV MOVE: Destination parent layout differs from locked source layout: {Path}", request.DestinationPath);
+        return Fail(WebDavMoveError.DestinationParentNotFound);
+    }
+
+    private static Guid? GetOldParentId(WebDavResolveResult source)
+    {
+        return source.IsCollection
+            ? source.Node?.ParentId
+            : source.NodeFile?.NodeId;
+    }
+
+    private sealed record PreLockSourceOutcome(Guid? LayoutId, WebDavMoveResult? Failure)
+    {
+        public static PreLockSourceOutcome Success(Guid layoutId) => new(layoutId, null);
+        public static PreLockSourceOutcome Failed(WebDavMoveResult failure) => new(null, failure);
+    }
+
+    private sealed record LockedMoveOutcome(
+        WebDavResolveResult? Source,
+        WebDavParentResult? DestinationParent,
+        bool Created,
+        Guid? OldParentId,
+        WebDavMoveResult? Failure)
+    {
+        public static LockedMoveOutcome Success(
+            WebDavResolveResult source,
+            WebDavParentResult destinationParent,
+            bool created,
+            Guid? oldParentId) => new(source, destinationParent, created, oldParentId, null);
+
+        public static LockedMoveOutcome Failed(WebDavMoveResult failure) => new(null, null, false, null, failure);
     }
 
     private async Task<Guid> GetSourceLayoutIdAsync(WebDavResolveResult source, CancellationToken ct)

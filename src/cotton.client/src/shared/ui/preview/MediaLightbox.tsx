@@ -27,6 +27,7 @@ import type {
 } from "@shared/types/mediaLightbox";
 import { HLS_VIDEO_SLIDE_TYPE } from "@shared/types/mediaLightbox";
 import { useMediaLightboxUrls } from "./useMediaLightboxUrls";
+import { stopLightboxMediaPlayback } from "./mediaLightboxPlayback";
 import { shareLinks } from "../../utils/shareLinks";
 import {
   selectGalleryPreferPreview,
@@ -103,7 +104,6 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     () => (open ? items[index]?.id ?? null : null),
     [index, items, open],
   );
-
   const isTouchDevice = React.useMemo(() => {
     if (typeof window === "undefined") return false;
     return window.matchMedia?.("(hover: none)")?.matches ?? false;
@@ -272,6 +272,8 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
           toggleTouchControls();
         }, 0);
       },
+      exiting: stopLightboxMediaPlayback,
+      exited: stopLightboxMediaPlayback,
     }),
     [
       ensureSlideHasOriginal,
@@ -439,9 +441,18 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   );
 
   const handleClose = React.useCallback(() => {
+    stopLightboxMediaPlayback();
     setTouchControlsVisible(true);
     onClose();
   }, [onClose]);
+
+  React.useEffect(() => {
+    if (!open) {
+      stopLightboxMediaPlayback();
+    }
+
+    return stopLightboxMediaPlayback;
+  }, [open]);
 
   const lightboxThumbnails = React.useMemo(() => {
     if (isTouchDevice) {

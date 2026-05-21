@@ -34,70 +34,109 @@ namespace Cotton.Server.Handlers.Files
     {
         public async Task<ShareFileResult> Handle(ShareFileQuery request, CancellationToken ct)
         {
-            bool isHead = HttpMethods.IsHead(request.HttpRequest.Method);
-            DateTime now = DateTime.UtcNow;
-
-            var viewModeResult = TryParseViewMode(request.View);
-            if (viewModeResult is null)
+            var viewMode = TryParseViewMode(request.View);
+            if (viewMode is null)
             {
                 return ShareFileResult.AsBadRequest("Invalid view mode. Valid values: page, download, inline.");
             }
 
-            var (isHtml, isInlineFile) = viewModeResult.Value;
+            DateTime now = DateTime.UtcNow;
+            bool isHead = HttpMethods.IsHead(request.HttpRequest.Method);
             string baseAppUrl = BuildBaseAppUrl(request.HttpRequest);
 
-            var query = BuildTokenQuery(request.Token, now, includeChunks: !isHtml && !isHead);
-            var downloadToken = await query.FirstOrDefaultAsync(cancellationToken: ct);
-
-            if (downloadToken == null)
+            var downloadToken = await LoadDownloadTokenAsync(request.Token, now, viewMode.Value.IsHtml, isHead, ct);
+            if (downloadToken is null)
             {
-                if (isHtml)
-                {
-                    var nodeShareToken = await _dbContext.NodeShareTokens
-                        .AsNoTracking()
-                        .Include(x => x.Node)
-                        .Where(x => x.Token == request.Token
-                            && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
-                        .SingleOrDefaultAsync(cancellationToken: ct);
-
-                    if (nodeShareToken != null && nodeShareToken.Node.Type == NodeType.Default)
-                    {
-                        string html = BuildRedirectHtml(
-                            baseAppUrl: baseAppUrl,
-                            token: request.Token,
-                            fileName: nodeShareToken.Name,
-                            previewHashEncryptedHex: null);
-                        return ShareFileResult.AsHtml(html);
-                    }
-
-                    return ShareFileResult.AsRedirect($"{baseAppUrl}/404");
-                }
-
-                return ShareFileResult.AsNotFound("File not found");
+                return await BuildMissingTokenResultAsync(request.Token, now, viewMode.Value.IsHtml, baseAppUrl, ct);
             }
 
             if (downloadToken.NodeFile.Node.Type != NodeType.Default)
             {
-                return isHtml
-                    ? ShareFileResult.AsRedirect($"{baseAppUrl}/404")
-                    : ShareFileResult.AsNotFound("File not found");
+                return BuildNotFoundResult(viewMode.Value.IsHtml, baseAppUrl);
             }
 
-            var file = downloadToken.NodeFile.FileManifest;
-            if (isHtml)
+            return await BuildDownloadTokenResultAsync(
+                request,
+                downloadToken,
+                viewMode.Value,
+                isHead,
+                baseAppUrl,
+                ct);
+        }
+
+        private async Task<DownloadToken?> LoadDownloadTokenAsync(
+            string token,
+            DateTime now,
+            bool isHtml,
+            bool isHead,
+            CancellationToken ct)
+        {
+            var query = BuildTokenQuery(token, now, includeChunks: !isHtml && !isHead);
+            return await query.FirstOrDefaultAsync(cancellationToken: ct);
+        }
+
+        private async Task<ShareFileResult> BuildMissingTokenResultAsync(
+            string token,
+            DateTime now,
+            bool isHtml,
+            string baseAppUrl,
+            CancellationToken ct)
+        {
+            if (!isHtml)
             {
-                string? previewHashEncryptedHex = file.GetPreviewHashEncryptedHex();
-                string html = BuildRedirectHtml(
-                    baseAppUrl: baseAppUrl,
-                    token: request.Token,
-                    fileName: downloadToken.FileName,
-                    previewHashEncryptedHex: previewHashEncryptedHex);
-                return ShareFileResult.AsHtml(html);
+                return ShareFileResult.AsNotFound("File not found");
+            }
+
+            var nodeShareToken = await LoadNodeShareTokenAsync(token, now, ct);
+            return nodeShareToken is not null && nodeShareToken.Node.Type == NodeType.Default
+                ? BuildNodeShareRedirect(nodeShareToken, token, baseAppUrl)
+                : ShareFileResult.AsRedirect($"{baseAppUrl}/404");
+        }
+
+        private async Task<NodeShareToken?> LoadNodeShareTokenAsync(string token, DateTime now, CancellationToken ct)
+        {
+            return await _dbContext.NodeShareTokens
+                .AsNoTracking()
+                .Include(x => x.Node)
+                .Where(x => x.Token == token && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
+                .SingleOrDefaultAsync(cancellationToken: ct);
+        }
+
+        private static ShareFileResult BuildNodeShareRedirect(
+            NodeShareToken nodeShareToken,
+            string token,
+            string baseAppUrl)
+        {
+            string html = BuildRedirectHtml(
+                baseAppUrl: baseAppUrl,
+                token: token,
+                fileName: nodeShareToken.Name,
+                previewHashEncryptedHex: null);
+            return ShareFileResult.AsHtml(html);
+        }
+
+        private static ShareFileResult BuildNotFoundResult(bool isHtml, string baseAppUrl)
+        {
+            return isHtml
+                ? ShareFileResult.AsRedirect($"{baseAppUrl}/404")
+                : ShareFileResult.AsNotFound("File not found");
+        }
+
+        private async Task<ShareFileResult> BuildDownloadTokenResultAsync(
+            ShareFileQuery request,
+            DownloadToken downloadToken,
+            (bool IsHtml, bool IsInlineFile) viewMode,
+            bool isHead,
+            string baseAppUrl,
+            CancellationToken ct)
+        {
+            var file = downloadToken.NodeFile.FileManifest;
+            if (viewMode.IsHtml)
+            {
+                return BuildFileRedirect(downloadToken, file, request.Token, baseAppUrl);
             }
 
             var entityTag = CreateEntityTag(file);
-            var lastModified = new DateTimeOffset(downloadToken.CreatedAt);
-
             if (isHead)
             {
                 return ShareFileResult.AsHead(
@@ -105,19 +144,33 @@ namespace Cotton.Server.Handlers.Files
                     contentLength: file.SizeBytes,
                     entityTag: entityTag.ToString(),
                     fileName: downloadToken.FileName,
-                    inline: isInlineFile);
+                    inline: viewMode.IsInlineFile);
             }
 
-            bool isMetadataRangeProbe = IsInlineMetadataRangeProbe(request.HttpRequest, isInlineFile);
+            bool isMetadataRangeProbe = IsInlineMetadataRangeProbe(request.HttpRequest, viewMode.IsInlineFile);
             return await CreateStreamResultAsync(
                 downloadToken,
                 file,
                 entityTag,
-                lastModified,
-                inline: isInlineFile,
+                new DateTimeOffset(downloadToken.CreatedAt),
+                inline: viewMode.IsInlineFile,
                 deleteAfterUse: downloadToken.DeleteAfterUse && !isMetadataRangeProbe,
                 notifyDownload: !isMetadataRangeProbe,
                 ct);
+        }
+
+        private static ShareFileResult BuildFileRedirect(
+            DownloadToken downloadToken,
+            FileManifest file,
+            string token,
+            string baseAppUrl)
+        {
+            string html = BuildRedirectHtml(
+                baseAppUrl: baseAppUrl,
+                token: token,
+                fileName: downloadToken.FileName,
+                previewHashEncryptedHex: file.GetPreviewHashEncryptedHex());
+            return ShareFileResult.AsHtml(html);
         }
 
         private static (bool IsHtml, bool IsInlineFile)? TryParseViewMode(string? view)

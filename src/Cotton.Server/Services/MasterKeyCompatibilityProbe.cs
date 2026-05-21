@@ -97,70 +97,7 @@ namespace Cotton.Server.Services
             {
                 await using var connection = new NpgsqlConnection(_connectionString ?? BuildConnectionStringFromEnvironment());
                 await connection.OpenAsync(cancellationToken);
-
-                bool existingDataFound = await HasExistingCottonDataAsync(connection, cancellationToken);
-                if (!existingDataFound)
-                {
-                    return MasterKeyCompatibilityResult.Compatible(existingDataFound: false, evidenceFound: false);
-                }
-
-                using AesGcmStreamCipher cipher = MasterKeySentinelStore.CreateCipher(encryptionSettings);
-                ProbeValidationState databaseProbe = await ValidateEncryptedDatabaseProbeAsync(
-                    connection,
-                    cipher,
-                    cancellationToken);
-                if (databaseProbe == ProbeValidationState.Validated)
-                {
-                    return MasterKeyCompatibilityResult.Compatible(existingDataFound: true, evidenceFound: true);
-                }
-
-                bool storageDependsOnEncryptedConfiguration = _storage is IStorageBackendUsesEncryptedConfiguration;
-                if (storageDependsOnEncryptedConfiguration && databaseProbe == ProbeValidationState.FailedCandidates)
-                {
-                    return MasterKeyCompatibilityResult.Fail(
-                        "Master key does not match existing encrypted Cotton data.",
-                        existingDataFound: true,
-                        evidenceFound: true);
-                }
-
-                if (!storageDependsOnEncryptedConfiguration)
-                {
-                    ProbeValidationState storageProbe = await ValidateStorageChunkProbeAsync(
-                        connection,
-                        cipher,
-                        cancellationToken);
-                    if (storageProbe == ProbeValidationState.Validated)
-                    {
-                        return MasterKeyCompatibilityResult.Compatible(existingDataFound: true, evidenceFound: true);
-                    }
-                    if (storageProbe == ProbeValidationState.FailedCandidates)
-                    {
-                        return MasterKeyCompatibilityResult.Fail(
-                            "Master key does not match existing encrypted Cotton data.",
-                            existingDataFound: true,
-                            evidenceFound: true);
-                    }
-                }
-
-                if (databaseProbe == ProbeValidationState.FailedCandidates)
-                {
-                    return MasterKeyCompatibilityResult.Fail(
-                        "Master key does not match existing encrypted Cotton data.",
-                        existingDataFound: true,
-                        evidenceFound: true);
-                }
-
-                if (mode == MasterKeyCompatibilityMode.RequireEvidenceForExistingData)
-                {
-                    return MasterKeyCompatibilityResult.Fail(
-                        "Existing Cotton data was found, but no encrypted data could be used to verify the submitted master key. Start Cotton once with COTTON_MASTER_KEY set to the original master key so it can seed the master-key sentinel safely.",
-                        existingDataFound: true,
-                        evidenceFound: false);
-                }
-
-                _logger.LogInformation(
-                    "Existing Cotton data found, but no encrypted compatibility probe was available. Trusting the existing master-key sentinel.");
-                return MasterKeyCompatibilityResult.Compatible(existingDataFound: true, evidenceFound: false);
+                return await ValidateOpenDatabaseAsync(connection, encryptionSettings, mode, cancellationToken);
             }
             catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.InvalidCatalogName)
             {
@@ -168,13 +105,11 @@ namespace Cotton.Server.Services
             }
             catch (CryptographicException ex)
             {
-                _logger.LogWarning(ex, "Submitted master key failed compatibility validation against existing encrypted Cotton data.");
-                return MasterKeyCompatibilityResult.Fail("Master key does not match existing encrypted Cotton data.", evidenceFound: true);
+                return FailInvalidMasterKey(ex);
             }
             catch (InvalidDataException ex)
             {
-                _logger.LogWarning(ex, "Submitted master key failed compatibility validation against existing encrypted Cotton data.");
-                return MasterKeyCompatibilityResult.Fail("Master key does not match existing encrypted Cotton data.", evidenceFound: true);
+                return FailInvalidMasterKey(ex);
             }
             catch (Exception ex) when (ex is NpgsqlException
                 or TimeoutException
@@ -188,6 +123,91 @@ namespace Cotton.Server.Services
                     existingDataFound: false,
                     evidenceFound: false);
             }
+        }
+
+        private async Task<MasterKeyCompatibilityResult> ValidateOpenDatabaseAsync(
+            NpgsqlConnection connection,
+            CottonEncryptionSettings encryptionSettings,
+            MasterKeyCompatibilityMode mode,
+            CancellationToken cancellationToken)
+        {
+            bool existingDataFound = await HasExistingCottonDataAsync(connection, cancellationToken);
+            if (!existingDataFound)
+            {
+                return MasterKeyCompatibilityResult.Compatible(existingDataFound: false, evidenceFound: false);
+            }
+
+            using AesGcmStreamCipher cipher = MasterKeySentinelStore.CreateCipher(encryptionSettings);
+            ProbeValidationState databaseProbe = await ValidateEncryptedDatabaseProbeAsync(
+                connection,
+                cipher,
+                cancellationToken);
+            if (databaseProbe == ProbeValidationState.Validated)
+            {
+                return MasterKeyCompatibilityResult.Compatible(existingDataFound: true, evidenceFound: true);
+            }
+
+            if (_storage is IStorageBackendUsesEncryptedConfiguration)
+            {
+                return EvaluateFailedProbe(databaseProbe) ?? EvaluateMissingStorageProbe(mode);
+            }
+
+            ProbeValidationState storageProbe = await ValidateStorageChunkProbeAsync(connection, cipher, cancellationToken);
+            if (storageProbe == ProbeValidationState.Validated)
+            {
+                return MasterKeyCompatibilityResult.Compatible(existingDataFound: true, evidenceFound: true);
+            }
+
+            MasterKeyCompatibilityResult? failedProbe = EvaluateFailedProbe(databaseProbe)
+                ?? EvaluateFailedProbe(storageProbe);
+            if (failedProbe is not null)
+            {
+                return failedProbe;
+            }
+
+            return EvaluateMissingEvidence(mode);
+        }
+
+        private static MasterKeyCompatibilityResult? EvaluateFailedProbe(ProbeValidationState probe) =>
+            probe == ProbeValidationState.FailedCandidates
+                ? MasterKeyCompatibilityResult.Fail(
+                    "Master key does not match existing encrypted Cotton data.",
+                    existingDataFound: true,
+                    evidenceFound: true)
+                : null;
+
+        private MasterKeyCompatibilityResult EvaluateMissingStorageProbe(MasterKeyCompatibilityMode mode)
+        {
+            return mode == MasterKeyCompatibilityMode.RequireEvidenceForExistingData
+                ? MasterKeyCompatibilityResult.Fail(
+                    "Existing Cotton data was found, but no encrypted data could be used to verify the submitted master key. Start Cotton once with COTTON_MASTER_KEY set to the original master key so it can seed the master-key sentinel safely.",
+                    existingDataFound: true,
+                    evidenceFound: false)
+                : CompatibleWithoutEvidence();
+        }
+
+
+        private MasterKeyCompatibilityResult EvaluateMissingEvidence(MasterKeyCompatibilityMode mode)
+        {
+            return mode == MasterKeyCompatibilityMode.RequireEvidenceForExistingData
+                ? MasterKeyCompatibilityResult.Fail(
+                    "Existing Cotton data was found, but no encrypted data could be used to verify the submitted master key. Start Cotton once with COTTON_MASTER_KEY set to the original master key so it can seed the master-key sentinel safely.",
+                    existingDataFound: true,
+                    evidenceFound: false)
+                : CompatibleWithoutEvidence();
+        }
+
+        private MasterKeyCompatibilityResult CompatibleWithoutEvidence()
+        {
+            _logger.LogInformation(
+                "Existing Cotton data found, but no encrypted compatibility probe was available. Trusting the existing master-key sentinel.");
+            return MasterKeyCompatibilityResult.Compatible(existingDataFound: true, evidenceFound: false);
+        }
+
+        private MasterKeyCompatibilityResult FailInvalidMasterKey(Exception ex)
+        {
+            _logger.LogWarning(ex, "Submitted master key failed compatibility validation against existing encrypted Cotton data.");
+            return MasterKeyCompatibilityResult.Fail("Master key does not match existing encrypted Cotton data.", evidenceFound: true);
         }
 
         internal static string BuildConnectionStringFromEnvironment()

@@ -42,7 +42,7 @@ namespace Cotton.Server.Controllers
         ISchedulerFactory _scheduler,
         IHubContext<EventHub> _hubContext,
         FileManifestService _fileManifestService,
-        NodeFileHistoryService _history,
+        FileVersionService _versions,
         UserStorageQuotaService _quota,
         VideoTranscoder _videoTranscoder,
         HlsSegmentCache _segmentCache,
@@ -311,6 +311,60 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
+        [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/versions")]
+        public async Task<IActionResult> GetFileVersions(
+            [FromRoute] Guid nodeFileId,
+            CancellationToken cancellationToken)
+        {
+            Guid userId = User.GetUserId();
+            IReadOnlyList<FileVersionDto> versions = await _versions.ListVersionsAsync(userId, nodeFileId, cancellationToken);
+            return Ok(versions);
+        }
+
+        [Authorize]
+        [HttpPost(Routes.V1.Files + "/{nodeFileId:guid}/versions/{versionId:guid}/restore")]
+        public async Task<IActionResult> RestoreFileVersion(
+            [FromRoute] Guid nodeFileId,
+            [FromRoute] Guid versionId,
+            CancellationToken cancellationToken)
+        {
+            Guid userId = User.GetUserId();
+            NodeFileManifestDto restored = await _versions.RestoreVersionAsync(userId, nodeFileId, versionId, cancellationToken);
+            await _hubContext.Clients.User(userId.ToString()).SendAsync("FileUpdated", restored, cancellationToken);
+            return Ok(restored);
+        }
+
+        [Authorize]
+        [HttpDelete(Routes.V1.Files + "/{nodeFileId:guid}/versions/{versionId:guid}")]
+        public async Task<IActionResult> DeleteFileVersion(
+            [FromRoute] Guid nodeFileId,
+            [FromRoute] Guid versionId,
+            CancellationToken cancellationToken)
+        {
+            Guid userId = User.GetUserId();
+            await _versions.DeleteVersionAsync(userId, nodeFileId, versionId, cancellationToken);
+            return NoContent();
+        }
+
+        [Authorize]
+        [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/versions/{versionId:guid}/download-link")]
+        public async Task<IActionResult> DownloadFileVersion(
+            [FromRoute] Guid nodeFileId,
+            [FromRoute] Guid versionId,
+            [FromQuery] int expireAfterMinutes = 1440,
+            CancellationToken cancellationToken = default)
+        {
+            Guid userId = User.GetUserId();
+            string link = await _versions.CreateVersionDownloadLinkAsync(
+                userId,
+                nodeFileId,
+                versionId,
+                expireAfterMinutes,
+                cancellationToken);
+            return Ok(link);
+        }
+
+        [Authorize]
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/download-link")]
         public async Task<IActionResult> DownloadFile(
             [FromRoute] Guid nodeFileId,
@@ -335,10 +389,11 @@ namespace Cotton.Server.Controllers
             var userId = User.GetUserId();
             var nodeFile = await _dbContext.NodeFiles
                 .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
+                .Include(x => x.Node)
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
                 .SingleOrDefaultAsync();
-            if (nodeFile == null)
+            if (nodeFile == null || nodeFile.Node.Type != NodeType.Default)
             {
                 return CottonResult.NotFound("Node file not found");
             }
@@ -375,80 +430,47 @@ namespace Cotton.Server.Controllers
             }
 
             Guid userId = User.GetUserId();
-            var layoutId = await _dbContext.NodeFiles
-                .AsNoTracking()
-                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
-                .Select(x => (Guid?)x.Node.LayoutId)
-                .SingleOrDefaultAsync();
+            Guid? layoutId = await GetOwnedFileLayoutIdAsync(nodeFileId, userId);
             if (layoutId is null)
             {
                 return this.ApiNotFound("Node file not found.");
             }
 
             byte[] proposedHash = Hasher.FromHexStringHash(request.Hash);
-            List<Chunk> chunks = await _fileManifestService.GetChunksAsync(request.ChunkHashes, userId);
-            var newFile = await _dbContext.FileManifests
-                .FirstOrDefaultAsync(x => x.ComputedContentHash == proposedHash || x.ProposedContentHash == proposedHash)
-                ?? await _fileManifestService.CreateNewFileManifestAsync(chunks, request.Name, request.ContentType, proposedHash);
+            FileManifest newFile = await ResolveUpdateManifestAsync(request, proposedHash, userId);
 
             await using var tx = await _dbContext.Database.BeginTransactionAsync();
             await LayoutLocks.AcquireForLayoutAsync(_dbContext, layoutId.Value, default);
 
-            var nodeFile = await _dbContext.NodeFiles
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
-                .SingleOrDefaultAsync();
-            if (nodeFile == null || nodeFile.Node.Type != NodeType.Default)
+            NodeFile? nodeFile = await LoadEditableNodeFileAsync(nodeFileId, userId);
+            if (nodeFile is null)
             {
                 return this.ApiNotFound("Node file not found.");
             }
 
             string nameKey = NameValidator.NormalizeAndGetNameKey(normalizedName);
-            if (!string.Equals(nodeFile.NameKey, nameKey, StringComparison.Ordinal))
+            string? conflictMessage = await FindUpdateNameConflictAsync(nodeFile, userId, nodeFileId, nameKey);
+            if (conflictMessage is not null)
             {
-                bool fileExists = await _dbContext.NodeFiles
-                    .AnyAsync(x =>
-                        x.NodeId == nodeFile.NodeId &&
-                        x.OwnerId == userId &&
-                        x.NameKey == nameKey &&
-                        x.Id != nodeFileId);
-                if (fileExists)
-                {
-                    return this.ApiConflict("A file with the same name key already exists in this folder: " + nameKey);
-                }
-
-                bool nodeExists = await _dbContext.Nodes
-                    .AnyAsync(x =>
-                        x.ParentId == nodeFile.NodeId &&
-                        x.OwnerId == userId &&
-                        x.Type == nodeFile.Node.Type &&
-                        x.NameKey == nameKey);
-                if (nodeExists)
-                {
-                    return this.ApiConflict("A folder with the same name key already exists in this folder: " + nameKey);
-                }
+                return this.ApiConflict(conflictMessage);
             }
 
             long addedBytes = await _quota.EnsureCanChangeFileManifestAsync(userId, nodeFile.Id, newFile.Id);
-
-            if (!nodeFile.FileManifest.ProposedContentHash.SequenceEqual(proposedHash))
-            {
-                await _history.SaveVersionAndUpdateManifestAsync(nodeFile, newFile.Id, userId);
-                nodeFile.FileManifest = newFile;
-            }
-
-            nodeFile.SetName(normalizedName);
-            if (request.Metadata is not null)
-            {
-                nodeFile.Metadata = request.Metadata.Count > 0
-                    ? new Dictionary<string, string>(request.Metadata)
-                    : [];
-            }
+            FileVersionCaptureResult capture = await ApplyUpdatedFileContentAsync(
+                nodeFile,
+                newFile,
+                proposedHash,
+                normalizedName,
+                request.Metadata,
+                userId);
 
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
             _quota.RecordLogicalBytesAdded(userId, addedBytes);
+            if (capture.RemovedBytes > 0)
+            {
+                _quota.RecordLogicalBytesRemoved(userId, capture.RemovedBytes);
+            }
 
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
@@ -456,6 +478,96 @@ namespace Cotton.Server.Controllers
             var mapped = nodeFile.Adapt<NodeFileManifestDto>();
             await _hubContext.Clients.User(userId.ToString()).SendAsync("FileUpdated", mapped);
             return Ok(mapped);
+        }
+
+        private async Task<Guid?> GetOwnedFileLayoutIdAsync(Guid nodeFileId, Guid userId)
+        {
+            return await _dbContext.NodeFiles
+                .AsNoTracking()
+                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
+                .Select(x => (Guid?)x.Node.LayoutId)
+                .SingleOrDefaultAsync();
+        }
+
+        private async Task<FileManifest> ResolveUpdateManifestAsync(
+            CreateFileRequest request,
+            byte[] proposedHash,
+            Guid userId)
+        {
+            List<Chunk> chunks = await _fileManifestService.GetChunksAsync(request.ChunkHashes, userId);
+            return await _dbContext.FileManifests
+                .FirstOrDefaultAsync(x => x.ComputedContentHash == proposedHash || x.ProposedContentHash == proposedHash)
+                ?? await _fileManifestService.CreateNewFileManifestAsync(
+                    chunks,
+                    request.Name,
+                    request.ContentType,
+                    proposedHash);
+        }
+
+        private async Task<NodeFile?> LoadEditableNodeFileAsync(Guid nodeFileId, Guid userId)
+        {
+            return await _dbContext.NodeFiles
+                .Include(x => x.Node)
+                .Include(x => x.FileManifest)
+                .Where(x => x.Id == nodeFileId && x.OwnerId == userId && x.Node.Type == NodeType.Default)
+                .SingleOrDefaultAsync();
+        }
+
+        private async Task<string?> FindUpdateNameConflictAsync(
+            NodeFile nodeFile,
+            Guid userId,
+            Guid nodeFileId,
+            string nameKey)
+        {
+            if (string.Equals(nodeFile.NameKey, nameKey, StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            bool fileExists = await _dbContext.NodeFiles.AnyAsync(x =>
+                x.NodeId == nodeFile.NodeId &&
+                x.OwnerId == userId &&
+                x.NameKey == nameKey &&
+                x.Id != nodeFileId);
+            if (fileExists)
+            {
+                return "A file with the same name key already exists in this folder: " + nameKey;
+            }
+
+            bool nodeExists = await _dbContext.Nodes.AnyAsync(x =>
+                x.ParentId == nodeFile.NodeId &&
+                x.OwnerId == userId &&
+                x.Type == nodeFile.Node.Type &&
+                x.NameKey == nameKey);
+            return nodeExists
+                ? "A folder with the same name key already exists in this folder: " + nameKey
+                : null;
+        }
+
+        private async Task<FileVersionCaptureResult> ApplyUpdatedFileContentAsync(
+            NodeFile nodeFile,
+            FileManifest newFile,
+            byte[] proposedHash,
+            string normalizedName,
+            Dictionary<string, string>? metadata,
+            Guid userId)
+        {
+            FileVersionCaptureResult capture = FileVersionCaptureResult.Empty;
+            if (!nodeFile.FileManifest.ProposedContentHash.SequenceEqual(proposedHash))
+            {
+                capture = await _versions.CaptureAndUpdateManifestAsync(nodeFile, newFile.Id, userId);
+                nodeFile.FileManifest = newFile;
+            }
+
+            nodeFile.SetName(normalizedName);
+            if (metadata is not null)
+            {
+                nodeFile.Metadata = metadata.Count > 0
+                    ? new Dictionary<string, string>(metadata)
+                    : [];
+            }
+
+            return capture;
         }
 
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/download")]
@@ -475,13 +587,17 @@ namespace Cotton.Server.Controllers
                 .ThenInclude(x => x.FileManifestChunks)
                 .ThenInclude(x => x.Chunk)
                 .SingleOrDefaultAsync(x => x.Id == nodeFileId);
-            if (nodeFile == null || nodeFile.Node.Type != NodeType.Default)
+            if (nodeFile == null)
             {
                 return CottonResult.NotFound("File not found");
             }
             var downloadToken = await _dbContext.DownloadTokens
                 .FirstOrDefaultAsync(x => x.Token == token && x.NodeFileId == nodeFile.Id);
             if (downloadToken == null || (downloadToken.ExpiresAt.HasValue && downloadToken.ExpiresAt.Value < DateTime.UtcNow))
+            {
+                return CottonResult.NotFound("File not found");
+            }
+            if (nodeFile.Node.Type != NodeType.Default && !FileVersionService.IsHistoricalVersion(nodeFile))
             {
                 return CottonResult.NotFound("File not found");
             }

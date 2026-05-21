@@ -43,160 +43,31 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
 
     public async Task<SearchLayoutsResultDto> Handle(SearchLayoutsQuery request, CancellationToken ct)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.Page);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.PageSize);
-
-        if (request.PageSize > MaxPageSize)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(request.PageSize),
-                $"PageSize cannot be greater than {MaxPageSize}.");
-        }
+        ValidatePaging(request.Page, request.PageSize);
 
         var criteria = BuildSearchCriteria(request.Query);
-
         if (!criteria.HasText && !criteria.HasIds)
         {
             return new SearchLayoutsResultDto();
         }
 
         int skip = checked((request.Page - 1) * request.PageSize);
-
-        var hasText = criteria.HasText;
-        var hasIds = criteria.HasIds;
-        var idQueries = criteria.IdQueries;
-        var nameKey = criteria.NameKey;
-        var containsPattern = criteria.ContainsPattern;
-        var prefixPattern = criteria.PrefixPattern;
-
-        var nodesBase = _dbContext.Nodes
-            .AsNoTracking()
-            .Where(x => x.OwnerId == request.UserId
-                && x.LayoutId == request.LayoutId
-                && x.Type == NodeType.Default);
-
-        if (hasIds)
-        {
-            // A GUID in the query is an exact lookup signal. Do not widen it with
-            // any leftover text from copied logs or notes.
-            nodesBase = nodesBase.Where(x => idQueries.Contains(x.Id));
-        }
-        else
-        {
-            nodesBase = nodesBase.Where(x =>
-                EF.Functions.Like(x.NameKey, containsPattern, LikeEscape));
-        }
-
-        var filesBase = _dbContext.NodeFiles
-            .AsNoTracking()
-            .Where(x => x.OwnerId == request.UserId
-                && x.Node.LayoutId == request.LayoutId
-                && x.Node.Type == NodeType.Default);
-
-        if (hasIds)
-        {
-            filesBase = filesBase.Where(x =>
-                idQueries.Contains(x.Id)
-                || idQueries.Contains(x.FileManifestId));
-        }
-        else
-        {
-            filesBase = filesBase.Where(x =>
-                EF.Functions.Like(x.NameKey, containsPattern, LikeEscape));
-        }
-
-        var nodeHits = nodesBase.Select(x => new SearchHitRow
-        {
-            Kind = HitKindNode,
-            Id = x.Id,
-            NodeIdForPath = x.Id,
-            Name = x.Name,
-            NameKey = x.NameKey,
-
-            // Exact id > exact name > prefix > substring.
-            Score =
-                hasIds && idQueries.Contains(x.Id) ? 100 :
-                hasText && x.NameKey == nameKey ? 80 :
-                hasText && EF.Functions.Like(x.NameKey, prefixPattern, LikeEscape) ? 60 :
-                20
-        });
-
-        var fileHits = filesBase.Select(x => new SearchHitRow
-        {
-            Kind = HitKindFile,
-            Id = x.Id,
-            NodeIdForPath = x.NodeId,
-            Name = x.Name,
-            NameKey = x.NameKey,
-
-            // File.Id чуть важнее FileManifestId, но оба выше текстовых совпадений.
-            Score =
-                hasIds && idQueries.Contains(x.Id) ? 100 :
-                hasIds && idQueries.Contains(x.FileManifestId) ? 95 :
-                hasText && x.NameKey == nameKey ? 80 :
-                hasText && EF.Functions.Like(x.NameKey, prefixPattern, LikeEscape) ? 60 :
-                20
-        });
-
-        var hitsQuery = nodeHits.Concat(fileHits);
+        var hitsQuery = BuildNodeHitsQuery(request, criteria)
+            .Concat(BuildFileHitsQuery(request, criteria));
 
         int totalCount = await hitsQuery.CountAsync(ct);
-
         if (totalCount == 0)
         {
-            return new SearchLayoutsResultDto
-            {
-                TotalCount = 0
-            };
+            return CreateEmptySearchResult(totalCount);
         }
 
-        var hits = await hitsQuery
-            .OrderByDescending(x => x.Score)
-            .ThenBy(x => x.Kind)       // при равном score папки выше файлов
-            .ThenBy(x => x.NameKey)
-            .ThenBy(x => x.Id)
-            .Skip(skip)
-            .Take(request.PageSize)
-            .ToListAsync(ct);
-
+        var hits = await LoadPagedHitsAsync(hitsQuery, skip, request.PageSize, ct);
         if (hits.Count == 0)
         {
-            return new SearchLayoutsResultDto
-            {
-                TotalCount = totalCount
-            };
+            return CreateEmptySearchResult(totalCount);
         }
 
-        var nodeIds = hits
-            .Where(x => x.Kind == HitKindNode)
-            .Select(x => x.Id)
-            .ToArray();
-
-        var fileIds = hits
-            .Where(x => x.Kind == HitKindFile)
-            .Select(x => x.Id)
-            .ToArray();
-
-        var nodes = nodeIds.Length == 0
-            ? []
-            : await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => nodeIds.Contains(x.Id))
-                .ProjectToType<NodeDto>()
-                .ToListAsync(ct);
-
-        var files = fileIds.Length == 0
-            ? []
-            : await _dbContext.NodeFiles
-                .AsNoTracking()
-                .Where(x => fileIds.Contains(x.Id))
-                .Include(x => x.FileManifest)
-                .ProjectToType<NodeFileManifestDto>()
-                .ToListAsync(ct);
-
-        nodes = OrderNodesLikeHits(nodes, nodeIds);
-        files = OrderFilesLikeHits(files, fileIds);
-
+        var (nodes, files) = await LoadHitModelsAsync(hits, ct);
         var (nodePaths, filePaths) = await ResolvePathsAsync(
             request.UserId,
             request.LayoutId,
@@ -211,6 +82,148 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
             FilePaths = filePaths,
             TotalCount = totalCount,
         };
+    }
+
+    private static void ValidatePaging(int page, int pageSize)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(page);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
+
+        if (pageSize > MaxPageSize)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(pageSize),
+                $"PageSize cannot be greater than {MaxPageSize}.");
+        }
+    }
+
+    private IQueryable<SearchHitRow> BuildNodeHitsQuery(SearchLayoutsQuery request, SearchCriteria criteria)
+    {
+        var query = _dbContext.Nodes
+            .AsNoTracking()
+            .Where(x => x.OwnerId == request.UserId
+                && x.LayoutId == request.LayoutId
+                && x.Type == NodeType.Default);
+
+        query = criteria.HasIds
+            ? query.Where(x => criteria.IdQueries.Contains(x.Id))
+            : query.Where(x => EF.Functions.Like(x.NameKey, criteria.ContainsPattern, LikeEscape));
+
+        return query.Select(x => new SearchHitRow
+        {
+            Kind = HitKindNode,
+            Id = x.Id,
+            NodeIdForPath = x.Id,
+            Name = x.Name,
+            NameKey = x.NameKey,
+            // Exact id > exact name > prefix > substring.
+            Score =
+                criteria.HasIds && criteria.IdQueries.Contains(x.Id) ? 100 :
+                criteria.HasText && x.NameKey == criteria.NameKey ? 80 :
+                criteria.HasText && EF.Functions.Like(x.NameKey, criteria.PrefixPattern, LikeEscape) ? 60 :
+                20,
+        });
+    }
+
+    private IQueryable<SearchHitRow> BuildFileHitsQuery(SearchLayoutsQuery request, SearchCriteria criteria)
+    {
+        var query = _dbContext.NodeFiles
+            .AsNoTracking()
+            .Where(x => x.OwnerId == request.UserId
+                && x.Node.LayoutId == request.LayoutId
+                && x.Node.Type == NodeType.Default);
+
+        query = criteria.HasIds
+            ? query.Where(x => criteria.IdQueries.Contains(x.Id) || criteria.IdQueries.Contains(x.FileManifestId))
+            : query.Where(x => EF.Functions.Like(x.NameKey, criteria.ContainsPattern, LikeEscape));
+
+        return query.Select(x => new SearchHitRow
+        {
+            Kind = HitKindFile,
+            Id = x.Id,
+            NodeIdForPath = x.NodeId,
+            Name = x.Name,
+            NameKey = x.NameKey,
+            // File.Id is slightly stronger than FileManifestId; both outrank text matches.
+            Score =
+                criteria.HasIds && criteria.IdQueries.Contains(x.Id) ? 100 :
+                criteria.HasIds && criteria.IdQueries.Contains(x.FileManifestId) ? 95 :
+                criteria.HasText && x.NameKey == criteria.NameKey ? 80 :
+                criteria.HasText && EF.Functions.Like(x.NameKey, criteria.PrefixPattern, LikeEscape) ? 60 :
+                20,
+        });
+    }
+
+    private static SearchLayoutsResultDto CreateEmptySearchResult(int totalCount)
+    {
+        return new SearchLayoutsResultDto
+        {
+            TotalCount = totalCount,
+        };
+    }
+
+    private static async Task<List<SearchHitRow>> LoadPagedHitsAsync(
+        IQueryable<SearchHitRow> hitsQuery,
+        int skip,
+        int pageSize,
+        CancellationToken ct)
+    {
+        return await hitsQuery
+            .OrderByDescending(x => x.Score)
+            .ThenBy(x => x.Kind)
+            .ThenBy(x => x.NameKey)
+            .ThenBy(x => x.Id)
+            .Skip(skip)
+            .Take(pageSize)
+            .ToListAsync(ct);
+    }
+
+    private async Task<(List<NodeDto> Nodes, List<NodeFileManifestDto> Files)> LoadHitModelsAsync(
+        IReadOnlyList<SearchHitRow> hits,
+        CancellationToken ct)
+    {
+        var nodeIds = hits
+            .Where(x => x.Kind == HitKindNode)
+            .Select(x => x.Id)
+            .ToArray();
+
+        var fileIds = hits
+            .Where(x => x.Kind == HitKindFile)
+            .Select(x => x.Id)
+            .ToArray();
+
+        var nodes = await LoadNodesAsync(nodeIds, ct);
+        var files = await LoadFilesAsync(fileIds, ct);
+        return (OrderNodesLikeHits(nodes, nodeIds), OrderFilesLikeHits(files, fileIds));
+    }
+
+    private async Task<List<NodeDto>> LoadNodesAsync(Guid[] nodeIds, CancellationToken ct)
+    {
+        if (nodeIds.Length == 0)
+        {
+            return [];
+        }
+
+        return await _dbContext.Nodes
+            .AsNoTracking()
+            .Where(x => nodeIds.Contains(x.Id))
+            .ProjectToType<NodeDto>()
+            .ToListAsync(ct);
+    }
+
+    private async Task<List<NodeFileManifestDto>> LoadFilesAsync(Guid[] fileIds, CancellationToken ct)
+    {
+        if (fileIds.Length == 0)
+        {
+            return [];
+        }
+
+        return await _dbContext.NodeFiles
+            .AsNoTracking()
+            .Where(x => fileIds.Contains(x.Id))
+            .Include(x => x.FileManifest)
+            .ProjectToType<NodeFileManifestDto>()
+            .ToListAsync(ct);
     }
 
     private static SearchCriteria BuildSearchCriteria(string query)

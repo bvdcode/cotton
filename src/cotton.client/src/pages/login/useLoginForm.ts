@@ -118,6 +118,8 @@ export const useLoginForm = (): UseLoginFormResult => {
       await authApi.login({
         username: trimmedUsername,
         password,
+        firstName: initialDemoCredentials?.firstName,
+        lastName: initialDemoCredentials?.lastName,
         twoFactorCode: requiresTwoFactor
           ? normalizeTwoFactorCode(twoFactorCode)
           : undefined,
@@ -166,6 +168,7 @@ export const useLoginForm = (): UseLoginFormResult => {
     username,
     password,
     trustDevice,
+    initialDemoCredentials,
     t,
     showToast,
     setAuthenticated,

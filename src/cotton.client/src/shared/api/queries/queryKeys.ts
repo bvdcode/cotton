@@ -5,6 +5,7 @@ const audioRoot = ["audio"] as const;
 const trashRoot = ["trash"] as const;
 const serverSettingsRoot = ["serverSettings"] as const;
 const storageQuotaRoot = ["storageQuota"] as const;
+const fileVersionsRoot = ["fileVersions"] as const;
 
 export const queryKeys = {
   notifications: {
@@ -61,5 +62,9 @@ export const queryKeys = {
   storageQuota: {
     all: () => storageQuotaRoot,
     current: () => [...storageQuotaRoot, "current"] as const,
+  },
+  fileVersions: {
+    all: () => fileVersionsRoot,
+    list: (fileId: string) => [...fileVersionsRoot, "list", fileId] as const,
   },
 } as const;

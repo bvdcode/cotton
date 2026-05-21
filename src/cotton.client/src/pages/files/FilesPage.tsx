@@ -53,6 +53,7 @@ import { shareFolder } from "../../shared/utils/shareFolder";
 import Loader from "../../shared/ui/Loader";
 import { blurredDialogBackdropSlotProps } from "../../shared/ui/dialogBackdrop";
 import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
+import { FileVersionsDialog } from "./components/FileVersionsDialog";
 import {
   selectGallerySmoothTransitions,
   useUserPreferencesStore,
@@ -63,12 +64,155 @@ import { useFileListPageLogic } from "./hooks/useFileListPageLogic";
 import { useFolderClientEncryptionActions } from "./hooks/useFolderClientEncryptionActions";
 import { ClientEncryptionUnlockForm } from "../profile/components/ClientEncryptionUnlockForm";
 import { downloadArchive } from "@shared/utils/fileHandlers";
+import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 
 const HUGE_FOLDER_THRESHOLD = 100_000;
 
 type ClientEncryptionUnlockPrompt =
   | { kind: "current" }
   | { kind: "open"; folderId: string };
+
+type FolderEncryptionPromptModel = {
+  severity: "info" | "warning";
+  message: string;
+  action: string;
+  disabled: boolean;
+  onAction: () => void;
+};
+
+type ArchiveDownloadRequest = Parameters<typeof downloadArchive>[0];
+
+const tileId = (tile: FileSystemTile): string =>
+  tile.kind === "folder" ? tile.node.id : tile.file.id;
+
+const buildFolderEncryptionPrompt = (options: {
+  decryptEncryptedFiles: () => Promise<void>;
+  encryptedFilesCount: number;
+  encryptedFilesMessage: string;
+  encryptedFilesAction: string;
+  encryptPlainFiles: () => Promise<void>;
+  folderPolicyEnabled: boolean;
+  isDecryptingEncryptedFiles: boolean;
+  isEncryptingPlainFiles: boolean;
+  plainFilesCount: number;
+  plainFilesMessage: string;
+  plainFilesAction: string;
+}): FolderEncryptionPromptModel | null => {
+  if (
+    options.folderPolicyEnabled &&
+    options.plainFilesCount > 0 &&
+    !options.isEncryptingPlainFiles
+  ) {
+    return {
+      severity: "warning",
+      message: options.plainFilesMessage,
+      action: options.plainFilesAction,
+      disabled: false,
+      onAction: () => {
+        void options.encryptPlainFiles();
+      },
+    };
+  }
+
+  if (
+    !options.folderPolicyEnabled &&
+    options.encryptedFilesCount > 0 &&
+    !options.isDecryptingEncryptedFiles
+  ) {
+    return {
+      severity: "info",
+      message: options.encryptedFilesMessage,
+      action: options.encryptedFilesAction,
+      disabled: false,
+      onAction: () => {
+        void options.decryptEncryptedFiles();
+      },
+    };
+  }
+
+  return null;
+};
+
+const buildSelectionArchiveRequest = (
+  tiles: ReadonlyArray<FileSystemTile>,
+  selectedIds: ReadonlySet<string>,
+  currentFolderName?: string | null,
+): ArchiveDownloadRequest | null => {
+  const selectedTiles = tiles.filter((tile) => selectedIds.has(tileId(tile)));
+  if (selectedTiles.length === 0) return null;
+
+  const fileIds = selectedTiles.flatMap((tile) =>
+    tile.kind === "file" ? [tile.file.id] : [],
+  );
+  const nodeIds = selectedTiles.flatMap((tile) =>
+    tile.kind === "folder" ? [tile.node.id] : [],
+  );
+  const archiveName =
+    selectedTiles.length === 1
+      ? selectedTiles[0].kind === "folder"
+        ? selectedTiles[0].node.name
+        : selectedTiles[0].file.name
+      : currentFolderName;
+
+  return { fileIds, nodeIds, archiveName: archiveName ?? undefined };
+};
+
+const buildFilesCustomActionItems = (options: {
+  clipboardCount: number;
+  cutTitle: string;
+  deleteSelectedTitle: string;
+  downloadSelectedTitle: string;
+  handleCutSelection: () => void;
+  handleDeleteSelected: () => void;
+  handleDownloadSelection: () => void;
+  handlePasteHere: () => void;
+  loading: boolean;
+  nodeId: string | null;
+  pasteHereTitle: string;
+  selectedCount: number;
+  selectionMode: boolean;
+}): React.ComponentProps<typeof PageHeader>["customActionItems"] => {
+  const items: NonNullable<
+    React.ComponentProps<typeof PageHeader>["customActionItems"]
+  > = [];
+
+  if (options.selectionMode && options.selectedCount > 0) {
+    items.push({
+      key: "download-selected",
+      icon: <Download />,
+      title: options.downloadSelectedTitle,
+      onClick: options.handleDownloadSelection,
+      disabled: options.loading,
+    });
+    items.push({
+      key: "cut-selected",
+      icon: <ContentCut />,
+      title: options.cutTitle,
+      onClick: options.handleCutSelection,
+      disabled: options.loading,
+    });
+    items.push({
+      key: "delete-selected",
+      icon: <Delete />,
+      title: options.deleteSelectedTitle,
+      onClick: options.handleDeleteSelected,
+      disabled: options.loading,
+      color: "error" as const,
+    });
+  }
+
+  if (options.clipboardCount > 0 && options.nodeId) {
+    items.push({
+      key: "paste-here",
+      icon: <ContentPaste />,
+      title: options.pasteHereTitle,
+      onClick: options.handlePasteHere,
+      disabled: options.loading,
+    });
+  }
+
+  return items.length > 0 ? items : undefined;
+};
 
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
@@ -270,58 +414,40 @@ export const FilesPage: React.FC = () => {
     plainFiles,
   } = folderEncryptionActions;
 
-  const folderEncryptionPrompt = useMemo(() => {
-    if (
-      folderPolicyEnabled &&
-      plainFiles.length > 0 &&
-      !isEncryptingPlainFiles
-    ) {
-      return {
-        severity: "warning" as const,
-        message: t("clientEncryption.mixedPlain.toast", {
-          ns: "files",
-          count: plainFiles.length,
-        }),
-        action: t("clientEncryption.mixedPlain.action", { ns: "files" }),
-        disabled: false,
-        onAction: () => {
-          void encryptPlainFiles();
-        },
-      };
-    }
-
-    if (
-      !folderPolicyEnabled &&
-      encryptedFiles.length > 0 &&
-      !isDecryptingEncryptedFiles
-    ) {
-      return {
-        severity: "info" as const,
-        message: t("clientEncryption.encryptedFilesRemain.toast", {
+  const folderEncryptionPrompt = useMemo(
+    () =>
+      buildFolderEncryptionPrompt({
+        decryptEncryptedFiles,
+        encryptedFilesCount: encryptedFiles.length,
+        encryptedFilesMessage: t("clientEncryption.encryptedFilesRemain.toast", {
           ns: "files",
           count: encryptedFiles.length,
         }),
-        action: t("clientEncryption.encryptedFilesRemain.action", {
+        encryptedFilesAction: t("clientEncryption.encryptedFilesRemain.action", {
           ns: "files",
         }),
-        disabled: false,
-        onAction: () => {
-          void decryptEncryptedFiles();
-        },
-      };
-    }
-
-    return null;
-  }, [
-    decryptEncryptedFiles,
-    encryptedFiles.length,
-    encryptPlainFiles,
-    folderPolicyEnabled,
-    isDecryptingEncryptedFiles,
-    isEncryptingPlainFiles,
-    plainFiles.length,
-    t,
-  ]);
+        encryptPlainFiles,
+        folderPolicyEnabled,
+        isDecryptingEncryptedFiles,
+        isEncryptingPlainFiles,
+        plainFilesCount: plainFiles.length,
+        plainFilesMessage: t("clientEncryption.mixedPlain.toast", {
+          ns: "files",
+          count: plainFiles.length,
+        }),
+        plainFilesAction: t("clientEncryption.mixedPlain.action", { ns: "files" }),
+      }),
+    [
+      decryptEncryptedFiles,
+      encryptedFiles.length,
+      encryptPlainFiles,
+      folderPolicyEnabled,
+      isDecryptingEncryptedFiles,
+      isEncryptingPlainFiles,
+      plainFiles.length,
+      t,
+    ],
+  );
 
   const folderOps = useFolderOperations(nodeId, handleFolderChanged);
   const fileUpload = useFileUpload(nodeId, breadcrumbs, content, {
@@ -329,6 +455,10 @@ export const FilesPage: React.FC = () => {
   });
   const fileOps = useFileOperations(reloadCurrentNode);
   const fileSelection = useFileSelection();
+  const [versionDialogFile, setVersionDialogFile] = React.useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const goUpParentId = ancestors.length > 0
     ? ancestors[ancestors.length - 1].id
@@ -511,41 +641,20 @@ export const FilesPage: React.FC = () => {
   );
 
   const handleDownloadSelection = React.useCallback(async () => {
-    const selectedTiles = tiles.filter((tile) => {
-      const id = tile.kind === "folder" ? tile.node.id : tile.file.id;
-      return fileSelection.selectedIds.has(id);
-    });
-
-    if (selectedTiles.length === 0) {
-      return;
-    }
-
-    const fileIds = selectedTiles.flatMap((tile) =>
-      tile.kind === "file" ? [tile.file.id] : [],
+    const request = buildSelectionArchiveRequest(
+      tiles,
+      fileSelection.selectedIds,
+      currentNode?.name,
     );
-    const nodeIds = selectedTiles.flatMap((tile) =>
-      tile.kind === "folder" ? [tile.node.id] : [],
-    );
-    const archiveName =
-      selectedTiles.length === 1
-        ? selectedTiles[0].kind === "folder"
-          ? selectedTiles[0].node.name
-          : selectedTiles[0].file.name
-        : currentNode?.name;
+    if (!request) return;
 
     try {
-      await downloadArchive({ fileIds, nodeIds, archiveName });
+      await downloadArchive(request);
       fileSelection.deselectAll();
     } catch {
       showToast(t("selection.downloadFailed", { ns: "files" }), "error");
     }
-  }, [
-    currentNode?.name,
-    fileSelection,
-    showToast,
-    t,
-    tiles,
-  ]);
+  }, [currentNode?.name, fileSelection, showToast, t, tiles]);
 
   // Build folder operations adapter
   const folderOperations = buildFolderOperations(
@@ -558,9 +667,24 @@ export const FilesPage: React.FC = () => {
     handleDownloadFolder,
   );
 
+  const handleOpenVersions = React.useCallback((fileId: string, fileName: string) => {
+    setVersionDialogFile({ id: fileId, name: fileName });
+  }, []);
+
+  const handleCloseVersions = React.useCallback(() => {
+    setVersionDialogFile(null);
+  }, []);
+
+  const handleVersionsChanged = React.useCallback(() => {
+    if (nodeId) {
+      void refreshNodeContent(nodeId);
+    }
+  }, [nodeId]);
+
   // Build file operations adapter
   const fileOperations = buildFileOperations(fileOps, {
     onDownload: handleDownloadFile,
+    onVersions: handleOpenVersions,
     onShare: handleShareFile,
     onCut: handleCutFile,
     onClick: handleFileClick,
@@ -581,65 +705,43 @@ export const FilesPage: React.FC = () => {
   const isCreatingInThisFolder =
     folderOps.isCreatingFolder && folderOps.newFolderParentId === nodeId;
 
-  const customActionItems = useMemo<
-    React.ComponentProps<typeof PageHeader>["customActionItems"]
-  >(() => {
-    const items: NonNullable<
-      React.ComponentProps<typeof PageHeader>["customActionItems"]
-    > = [];
-    if (fileSelection.selectionMode && fileSelection.selectedCount > 0) {
-      items.push({
-        key: "download-selected",
-        icon: <Download />,
-        title: t("selection.downloadSelected", { ns: "files" }),
-        onClick: () => {
-          void handleDownloadSelection();
-        },
-        disabled: loading,
-      });
-      items.push({
-        key: "cut-selected",
-        icon: <ContentCut />,
-        title: t("move.cut", { ns: "files" }),
-        onClick: handleCutSelection,
-        disabled: loading,
-      });
-      items.push({
-        key: "delete-selected",
-        icon: <Delete />,
-        title: t("selection.deleteSelected", { ns: "files" }),
-        onClick: () => {
+  const customActionItems = useMemo(
+    () =>
+      buildFilesCustomActionItems({
+        clipboardCount,
+        cutTitle: t("move.cut", { ns: "files" }),
+        deleteSelectedTitle: t("selection.deleteSelected", { ns: "files" }),
+        downloadSelectedTitle: t("selection.downloadSelected", { ns: "files" }),
+        handleCutSelection,
+        handleDeleteSelected: () => {
           void handleDeleteSelected();
         },
-        disabled: loading,
-        color: "error" as const,
-      });
-    }
-    if (clipboardCount > 0 && nodeId) {
-      items.push({
-        key: "paste-here",
-        icon: <ContentPaste />,
-        title: t("move.pasteHere", {
+        handleDownloadSelection: () => {
+          void handleDownloadSelection();
+        },
+        handlePasteHere,
+        loading,
+        nodeId,
+        pasteHereTitle: t("move.pasteHere", {
           ns: "files",
           count: clipboardCount,
         }),
-        onClick: handlePasteHere,
-        disabled: loading,
-      });
-    }
-    return items.length > 0 ? items : undefined;
-  }, [
-    clipboardCount,
-    fileSelection.selectionMode,
-    fileSelection.selectedCount,
-    handleCutSelection,
-    handleDeleteSelected,
-    handleDownloadSelection,
-    handlePasteHere,
-    loading,
-    nodeId,
-    t,
-  ]);
+        selectedCount: fileSelection.selectedCount,
+        selectionMode: fileSelection.selectionMode,
+      }),
+    [
+      clipboardCount,
+      fileSelection.selectedCount,
+      fileSelection.selectionMode,
+      handleCutSelection,
+      handleDeleteSelected,
+      handleDownloadSelection,
+      handlePasteHere,
+      loading,
+      nodeId,
+      t,
+    ],
+  );
 
   const pageHeaderProps = useMemo(
     (): React.ComponentProps<typeof PageHeader> => ({
@@ -854,6 +956,14 @@ export const FilesPage: React.FC = () => {
         newName={fileUpload.conflictDialog.state.newName}
         onResolve={fileUpload.conflictDialog.onResolve}
         onExited={fileUpload.conflictDialog.onExited}
+      />
+
+      <FileVersionsDialog
+        open={versionDialogFile !== null}
+        fileId={versionDialogFile?.id ?? null}
+        fileName={versionDialogFile?.name ?? ""}
+        onClose={handleCloseVersions}
+        onRestored={handleVersionsChanged}
       />
 
       {folderEncryptionPrompt && (

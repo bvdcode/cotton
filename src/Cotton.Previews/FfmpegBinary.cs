@@ -62,56 +62,13 @@ namespace Cotton.Previews
             TimeSpan? timeout = null,
             CancellationToken cancellationToken = default)
         {
-            await EnsureAvailableAsync(cancellationToken).ConfigureAwait(false);
-
             string arguments =
                 "-v error -analyzeduration 100M -probesize 100M " +
                 "-show_entries format=duration -of default=nw=1:nk=1 " +
                 $"\"{url}\"";
 
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = GetFfprobePath(),
-                Arguments = arguments,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-            };
-
-            using var process = new Process { StartInfo = startInfo };
-            if (!process.Start())
-            {
-                return null;
-            }
-
-            var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(timeout ?? TimeSpan.FromSeconds(60));
-
-            try
-            {
-                await process.WaitForExitAsync(cts.Token).ConfigureAwait(false);
-            }
-            catch
-            {
-                try { process.Kill(entireProcessTree: true); } catch { }
-                return null;
-            }
-
-            if (process.ExitCode != 0)
-            {
-                return null;
-            }
-
-            string raw = (await stdoutTask.ConfigureAwait(false)).Trim();
-            if (double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out double seconds)
-                && seconds > 0)
-            {
-                return seconds;
-            }
-
-            return null;
+            string? raw = await RunFfprobeAsync(arguments, timeout, cancellationToken).ConfigureAwait(false);
+            return raw is null ? null : ParsePositiveDuration(raw.Trim());
         }
 
         public static async Task<MediaProbeInfo?> TryGetMediaProbeAsync(
@@ -119,12 +76,21 @@ namespace Cotton.Previews
             TimeSpan? timeout = null,
             CancellationToken cancellationToken = default)
         {
-            await EnsureAvailableAsync(cancellationToken).ConfigureAwait(false);
-
             string arguments =
                 "-v error -analyzeduration 100M -probesize 100M " +
                 "-of json -show_entries format=duration:stream=codec_name,codec_type " +
                 $"\"{url}\"";
+
+            string? raw = await RunFfprobeAsync(arguments, timeout, cancellationToken).ConfigureAwait(false);
+            return string.IsNullOrWhiteSpace(raw) ? null : ParseMediaProbe(raw);
+        }
+
+        private static async Task<string?> RunFfprobeAsync(
+            string arguments,
+            TimeSpan? timeout,
+            CancellationToken cancellationToken)
+        {
+            await EnsureAvailableAsync(cancellationToken).ConfigureAwait(false);
 
             var startInfo = new ProcessStartInfo
             {
@@ -143,31 +109,44 @@ namespace Cotton.Previews
             }
 
             var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+            bool completed = await WaitForProcessAsync(process, timeout, cancellationToken).ConfigureAwait(false);
+            if (!completed || process.ExitCode != 0)
+            {
+                return null;
+            }
+
+            return await stdoutTask.ConfigureAwait(false);
+        }
+
+        private static async Task<bool> WaitForProcessAsync(
+            Process process,
+            TimeSpan? timeout,
+            CancellationToken cancellationToken)
+        {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(timeout ?? TimeSpan.FromSeconds(60));
 
             try
             {
                 await process.WaitForExitAsync(cts.Token).ConfigureAwait(false);
+                return true;
             }
             catch
             {
-                try { process.Kill(entireProcessTree: true); } catch { }
-                return null;
+                TryKillProcess(process);
+                return false;
             }
+        }
 
-            if (process.ExitCode != 0)
+        private static void TryKillProcess(Process process)
+        {
+            try
             {
-                return null;
+                process.Kill(entireProcessTree: true);
             }
-
-            string raw = await stdoutTask.ConfigureAwait(false);
-            if (string.IsNullOrWhiteSpace(raw))
+            catch
             {
-                return null;
             }
-
-            return ParseMediaProbe(raw);
         }
 
         private static MediaProbeInfo? ParseMediaProbe(string raw)
@@ -175,50 +154,8 @@ namespace Cotton.Previews
             try
             {
                 using JsonDocument doc = JsonDocument.Parse(raw);
-                double? duration = null;
-                if (doc.RootElement.TryGetProperty("format", out var format)
-                    && format.TryGetProperty("duration", out var durationElement)
-                    && durationElement.ValueKind == JsonValueKind.String
-                    && double.TryParse(
-                        durationElement.GetString(),
-                        NumberStyles.Float,
-                        CultureInfo.InvariantCulture,
-                        out double seconds)
-                    && seconds > 0)
-                {
-                    duration = seconds;
-                }
-
-                string? videoCodec = null;
-                string? audioCodec = null;
-                if (doc.RootElement.TryGetProperty("streams", out var streams)
-                    && streams.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (var stream in streams.EnumerateArray())
-                    {
-                        if (!stream.TryGetProperty("codec_type", out var typeElement)
-                            || !stream.TryGetProperty("codec_name", out var codecElement))
-                        {
-                            continue;
-                        }
-
-                        string? codec = codecElement.GetString();
-                        if (string.IsNullOrWhiteSpace(codec))
-                        {
-                            continue;
-                        }
-
-                        string? type = typeElement.GetString();
-                        if (type == "video" && videoCodec is null)
-                        {
-                            videoCodec = codec;
-                        }
-                        else if (type == "audio" && audioCodec is null)
-                        {
-                            audioCodec = codec;
-                        }
-                    }
-                }
+                double? duration = TryReadDuration(doc.RootElement);
+                var (videoCodec, audioCodec) = TryReadStreamCodecs(doc.RootElement);
 
                 return duration is null && videoCodec is null && audioCodec is null
                     ? null
@@ -228,6 +165,82 @@ namespace Cotton.Previews
             {
                 return null;
             }
+        }
+
+        private static double? TryReadDuration(JsonElement root)
+        {
+            if (!root.TryGetProperty("format", out var format)
+                || !format.TryGetProperty("duration", out var durationElement)
+                || durationElement.ValueKind != JsonValueKind.String)
+            {
+                return null;
+            }
+
+            return ParsePositiveDuration(durationElement.GetString());
+        }
+
+        private static double? ParsePositiveDuration(string? raw)
+        {
+            return double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out double seconds)
+                && seconds > 0
+                    ? seconds
+                    : null;
+        }
+
+        private static (string? VideoCodec, string? AudioCodec) TryReadStreamCodecs(JsonElement root)
+        {
+            if (!root.TryGetProperty("streams", out var streams)
+                || streams.ValueKind != JsonValueKind.Array)
+            {
+                return (null, null);
+            }
+
+            string? videoCodec = null;
+            string? audioCodec = null;
+            foreach (var stream in streams.EnumerateArray())
+            {
+                AssignCodec(stream, ref videoCodec, ref audioCodec);
+            }
+
+            return (videoCodec, audioCodec);
+        }
+
+        private static void AssignCodec(JsonElement stream, ref string? videoCodec, ref string? audioCodec)
+        {
+            if (!TryReadCodec(stream, out string? type, out string? codec))
+            {
+                return;
+            }
+
+            if (type == "video" && videoCodec is null)
+            {
+                videoCodec = codec;
+            }
+            else if (type == "audio" && audioCodec is null)
+            {
+                audioCodec = codec;
+            }
+        }
+
+        private static bool TryReadCodec(JsonElement stream, out string? type, out string? codec)
+        {
+            type = null;
+            codec = null;
+
+            if (!stream.TryGetProperty("codec_type", out var typeElement)
+                || !stream.TryGetProperty("codec_name", out var codecElement))
+            {
+                return false;
+            }
+
+            codec = codecElement.GetString();
+            if (string.IsNullOrWhiteSpace(codec))
+            {
+                return false;
+            }
+
+            type = typeElement.GetString();
+            return true;
         }
     }
 }

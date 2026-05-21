@@ -14,25 +14,20 @@ namespace Cotton.Server.IntegrationTests.Abstractions
         protected CottonDbContext DbContext { get; private set; }
 
         protected IntegrationTestBase()
-            : this(DatabaseName)
+            : this(GetTestSetting("COTTON_TEST_PG_DATABASE", DatabaseName))
         {
         }
 
         protected IntegrationTestBase(string databaseName)
         {
             CurrentDatabaseName = databaseName;
-            const ushort port = 5432;
-            const string host = "localhost";
-            const string username = "postgres";
-            const string password = "postgres";
-
             DbContextOptionsBuilder<CottonDbContext> optionsBuilder = new();
             var userBuilder = new NpgsqlConnectionStringBuilder
             {
-                Host = host,
-                Port = port,
-                Username = username,
-                Password = password,
+                Host = TestPostgresHost,
+                Port = TestPostgresPort,
+                Username = TestPostgresUsername,
+                Password = TestPostgresPassword,
                 Database = databaseName,
             };
             optionsBuilder.UseNpgsql(userBuilder.ConnectionString, x =>
@@ -40,6 +35,23 @@ namespace Cotton.Server.IntegrationTests.Abstractions
                 x.UseAdminDatabase("postgres");
             });
             DbContext = new(optionsBuilder.Options);
+        }
+
+        protected static string TestPostgresHost => GetTestSetting("COTTON_TEST_PG_HOST", "localhost");
+
+        protected static int TestPostgresPort
+            => int.Parse(GetTestSetting("COTTON_TEST_PG_PORT", "5432"));
+
+        protected static string TestPostgresUsername
+            => GetTestSetting("COTTON_TEST_PG_USERNAME", "postgres");
+
+        protected static string TestPostgresPassword
+            => GetTestSetting("COTTON_TEST_PG_PASSWORD", "postgres");
+
+        private static string GetTestSetting(string key, string fallback)
+        {
+            string? value = Environment.GetEnvironmentVariable(key);
+            return string.IsNullOrWhiteSpace(value) ? fallback : value;
         }
 
         public void Dispose()

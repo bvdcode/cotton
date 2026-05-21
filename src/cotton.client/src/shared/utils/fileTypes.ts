@@ -59,6 +59,23 @@ const TEXT_EXTENSIONS = [
 ];
 const DOCUMENT_EXTENSIONS = ["doc", "docx", "rtf", "odt"];
 const ARCHIVE_EXTENSIONS = ["zip", "rar", "7z", "tar", "gz"];
+const PREVIEWABLE_FILE_TYPES = new Set<FileType>([
+  "image",
+  "model",
+  "pdf",
+  "video",
+  "audio",
+  "text",
+]);
+const EXTENSION_TYPE_MATCHERS: Array<[readonly string[], FileType]> = [
+  [IMAGE_EXTENSIONS, "image"],
+  [PDF_EXTENSIONS, "pdf"],
+  [VIDEO_EXTENSIONS, "video"],
+  [AUDIO_EXTENSIONS, "audio"],
+  [TEXT_EXTENSIONS, "text"],
+  [DOCUMENT_EXTENSIONS, "document"],
+  [ARCHIVE_EXTENSIONS, "archive"],
+];
 
 const SUPPORTED_INLINE_VIDEO_MIME_TYPES = new Set<string>([
   "video/mp4",
@@ -131,6 +148,43 @@ const getFileTypeFromContentType = (contentType?: string): FileType | null => {
   return null;
 };
 
+const toFileTypeInfo = (type: FileType): FileTypeInfo => ({
+  type,
+  supportsPreview: PREVIEWABLE_FILE_TYPES.has(type),
+  supportsInlineView: PREVIEWABLE_FILE_TYPES.has(type),
+});
+
+const getFileTypeFromExtension = (
+  fileName: string,
+  ext: string,
+  contentType?: string | null,
+): FileType => {
+  if (resolveModelFormat(fileName, contentType)) {
+    return "model";
+  }
+
+  const match = EXTENSION_TYPE_MATCHERS.find(([extensions]) =>
+    extensions.includes(ext),
+  );
+  return match?.[1] ?? "other";
+};
+
+const shouldSuppressUnplayableVideo = (
+  ext: string,
+  contentType?: string | null,
+  requiresVideoTranscoding = false,
+): boolean =>
+  contentType?.toLowerCase().startsWith("video/") === true &&
+  !VIDEO_EXTENSIONS.includes(ext) &&
+  !requiresVideoTranscoding;
+
+const shouldForceVideoPreview = (
+  contentType?: string | null,
+  requiresVideoTranscoding = false,
+): boolean =>
+  requiresVideoTranscoding &&
+  contentType?.toLowerCase().startsWith("video/") === true;
+
 export const getFileTypeInfo = (
   fileName: string,
   contentType?: string | null,
@@ -139,85 +193,22 @@ export const getFileTypeInfo = (
   const ext = getFileExtension(fileName);
   const requiresVideoTranscoding = options?.requiresVideoTranscoding === true;
 
-  // Browser can't reliably play many containers inline; keep video preview conservative.
-  // If the extension is not in our allow-list, do not treat it as previewable video.
-  if (
-    contentType?.toLowerCase().startsWith("video/") === true &&
-    !VIDEO_EXTENSIONS.includes(ext) &&
-    !requiresVideoTranscoding
-  ) {
-    return { type: "other", supportsPreview: false, supportsInlineView: false };
+  if (shouldSuppressUnplayableVideo(ext, contentType, requiresVideoTranscoding)) {
+    return toFileTypeInfo("other");
   }
 
-  if (
-    requiresVideoTranscoding &&
-    contentType?.toLowerCase().startsWith("video/") === true
-  ) {
-    return { type: "video", supportsPreview: true, supportsInlineView: true };
+  if (shouldForceVideoPreview(contentType, requiresVideoTranscoding)) {
+    return toFileTypeInfo("video");
   }
 
-  // SVGs can arrive with XML/text MIME aliases, but they should still open in the image gallery.
   if (SVG_EXTENSIONS.includes(ext)) {
-    return { type: "image", supportsPreview: true, supportsInlineView: true };
+    return toFileTypeInfo("image");
   }
 
   const contentTypeMatch = getFileTypeFromContentType(contentType ?? undefined);
-
   if (contentTypeMatch) {
-    switch (contentTypeMatch) {
-      case "image":
-        return { type: "image", supportsPreview: true, supportsInlineView: true };
-      case "model":
-        return { type: "model", supportsPreview: true, supportsInlineView: true };
-      case "pdf":
-        return { type: "pdf", supportsPreview: true, supportsInlineView: true };
-      case "video":
-        return { type: "video", supportsPreview: true, supportsInlineView: true };
-      case "audio":
-        return { type: "audio", supportsPreview: true, supportsInlineView: true };
-      case "text":
-        return { type: "text", supportsPreview: true, supportsInlineView: true };
-      case "document":
-        return { type: "document", supportsPreview: false, supportsInlineView: false };
-      case "archive":
-        return { type: "archive", supportsPreview: false, supportsInlineView: false };
-      default:
-        return { type: "other", supportsPreview: false, supportsInlineView: false };
-    }
+    return toFileTypeInfo(contentTypeMatch);
   }
 
-  if (IMAGE_EXTENSIONS.includes(ext)) {
-    return { type: "image", supportsPreview: true, supportsInlineView: true };
-  }
-  if (resolveModelFormat(fileName, contentType)) {
-    return { type: "model", supportsPreview: true, supportsInlineView: true };
-  }
-  if (PDF_EXTENSIONS.includes(ext)) {
-    return { type: "pdf", supportsPreview: true, supportsInlineView: true };
-  }
-  if (VIDEO_EXTENSIONS.includes(ext)) {
-    return { type: "video", supportsPreview: true, supportsInlineView: true };
-  }
-  if (AUDIO_EXTENSIONS.includes(ext)) {
-    return { type: "audio", supportsPreview: true, supportsInlineView: true };
-  }
-  if (TEXT_EXTENSIONS.includes(ext)) {
-    return { type: "text", supportsPreview: true, supportsInlineView: true };
-  }
-  if (DOCUMENT_EXTENSIONS.includes(ext)) {
-    return {
-      type: "document",
-      supportsPreview: false,
-      supportsInlineView: false,
-    };
-  }
-  if (ARCHIVE_EXTENSIONS.includes(ext)) {
-    return {
-      type: "archive",
-      supportsPreview: false,
-      supportsInlineView: false,
-    };
-  }
-
-  return { type: "other", supportsPreview: false, supportsInlineView: false };
+  return toFileTypeInfo(getFileTypeFromExtension(fileName, ext, contentType));
 };

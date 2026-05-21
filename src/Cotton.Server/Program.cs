@@ -175,10 +175,12 @@ namespace Cotton.Server
                 .AddWebDavServices()
                 .AddWebDavAuth()
                 .AddJwt();
+            builder.Services.AddAuthHardening();
             builder.Services.AddHostedService<AppVersionTrackerService>();
 
             var app = builder.Build();
             app.UseForwardedHeaders();
+            app.UseAuthHardening();
             app.UseDefaultFiles();
             app.MapStaticAssets();
             app.UseAuthentication()

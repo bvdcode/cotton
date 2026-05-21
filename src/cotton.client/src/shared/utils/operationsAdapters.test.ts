@@ -103,12 +103,14 @@ describe("buildFileOperations", () => {
     const onClick = vi.fn();
     const onDownload = vi.fn().mockResolvedValue(undefined);
     const onShare = vi.fn().mockResolvedValue(undefined);
+    const onVersions = vi.fn();
     const onCut = vi.fn();
     const onMediaClick = vi.fn();
     const ops = buildFileOperations(hook, {
       onClick,
       onDownload,
       onShare,
+      onVersions,
       onCut,
       onMediaClick,
     });
@@ -120,6 +122,7 @@ describe("buildFileOperations", () => {
     ops.onDelete?.("file-1", "report.pdf");
     ops.onDownload?.("file-1", "report.pdf");
     ops.onShare?.("file-1", "report.pdf");
+    ops.onVersions?.("file-1", "report.pdf");
     ops.onCut?.("file-1");
     ops.onMediaClick?.("file-1");
 
@@ -130,6 +133,7 @@ describe("buildFileOperations", () => {
     expect(hook.handleDeleteFile).toHaveBeenCalledWith("file-1", "report.pdf");
     expect(onDownload).toHaveBeenCalledWith("file-1", "report.pdf");
     expect(onShare).toHaveBeenCalledWith("file-1", "report.pdf");
+    expect(onVersions).toHaveBeenCalledWith("file-1", "report.pdf");
     expect(onCut).toHaveBeenCalledWith("file-1");
     expect(onMediaClick).toHaveBeenCalledWith("file-1");
   });
@@ -139,6 +143,7 @@ describe("buildFileOperations", () => {
 
     expect(ops.onDownload).toBeUndefined();
     expect(ops.onShare).toBeUndefined();
+    expect(ops.onVersions).toBeUndefined();
     expect(ops.onCut).toBeUndefined();
     expect(ops.onMediaClick).toBeUndefined();
   });

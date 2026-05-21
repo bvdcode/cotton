@@ -10,6 +10,8 @@ import type { BaseDto } from "./types";
 interface LoginRequest {
   username: string;
   password: string;
+  firstName?: string;
+  lastName?: string;
   twoFactorCode?: string;
   trustDevice?: boolean;
 }

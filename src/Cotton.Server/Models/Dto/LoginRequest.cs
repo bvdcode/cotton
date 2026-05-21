@@ -17,6 +17,16 @@ namespace Cotton.Server.Models.Dto
         public string Password { get; set; } = null!;
 
         /// <summary>
+        /// Gets or sets the optional first name used when public instances auto-create a user.
+        /// </summary>
+        public string? FirstName { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional last name used when public instances auto-create a user.
+        /// </summary>
+        public string? LastName { get; set; }
+
+        /// <summary>
         /// Gets or sets the two-factor authentication code provided by the user.
         /// </summary>
         public string? TwoFactorCode { get; set; }
