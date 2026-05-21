@@ -9,6 +9,7 @@ const passwordLength = 32;
 const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
 const usernameNumberRange = 1000;
 const usernameNumberLength = 3;
+const usernameEntropyLength = 6;
 
 const demoAdjectives = [
   "amber",
@@ -53,7 +54,7 @@ export const DEMO_CREDENTIALS_STORAGE_KEY = STORAGE_KEY_PREFIX + "demo-credentia
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const demoUsernameRegex = /^[a-z]+_[a-z]+_[0-9]{3}$/;
+const demoUsernameRegex = /^[a-z]+_[a-z]+_[0-9]{3}_[a-z0-9]{6}$/;
 
 export const isDemoCredentials = (value: unknown): value is DemoCredentials => {
   if (!isRecord(value)) {
@@ -100,6 +101,7 @@ export const generateDemoCredentials = (): DemoCredentials => ({
     randomItem(demoAdjectives),
     randomItem(demoAnimals),
     randomUsernameNumber(),
+    randomString(usernameEntropyLength),
   ].join("_"),
   password: randomString(passwordLength),
 });

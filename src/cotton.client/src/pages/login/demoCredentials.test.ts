@@ -22,7 +22,7 @@ describe("demoCredentials", () => {
   it("generates valid public-instance login credentials", () => {
     const credentials = generateDemoCredentials();
 
-    expect(credentials.username).toMatch(/^[a-z]+_[a-z]+_[0-9]{3}$/);
+    expect(credentials.username).toMatch(/^[a-z]+_[a-z]+_[0-9]{3}_[a-z0-9]{6}$/);
     expect(credentials.password).toHaveLength(32);
     expect(isDemoCredentials(credentials)).toBe(true);
   });
@@ -45,7 +45,7 @@ describe("demoCredentials", () => {
 
     const credentials = getOrCreateDemoCredentials(storage);
 
-    expect(credentials.username).toMatch(/^[a-z]+_[a-z]+_[0-9]{3}$/);
+    expect(credentials.username).toMatch(/^[a-z]+_[a-z]+_[0-9]{3}_[a-z0-9]{6}$/);
     expect(credentials.password).toHaveLength(32);
   });
 });

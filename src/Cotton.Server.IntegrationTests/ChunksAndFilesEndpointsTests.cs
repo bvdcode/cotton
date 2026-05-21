@@ -623,6 +623,34 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task File_Versions_Restore_Rejects_When_Restored_Copy_Would_Exceed_Quota()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var quotaResponse = await _client.PatchAsJsonAsync(
+            "/api/v1/server/settings/default-user-storage-quota-bytes",
+            10L);
+        quotaResponse.EnsureSuccessStatusCode();
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var file = await UploadTextFileAsync(root!, "restore-quota.txt", "123456");
+        file = await UpdateTextFileAsync(file, root!, "x");
+
+        var versions = await GetVersionsAsync(file.Id);
+        FileVersionDto original = versions.Single(x => x.IsOriginal);
+
+        var restoreResponse = await _client.PostAsync($"/api/v1/files/{file.Id}/versions/{original.Id}/restore", null);
+        Assert.That(restoreResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+        var quota = await _client.GetFromJsonAsync<UserStorageQuotaDto>("/api/v1/users/me/storage-quota");
+        Assert.That(quota, Is.Not.Null);
+        Assert.That(quota!.UsedBytes, Is.EqualTo(7));
+    }
+
+    [Test]
     public async Task File_Versions_Retention_Keeps_Original_And_Prunes_Oldest_Middle()
     {
         var token = await LoginAsync();
