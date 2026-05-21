@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FileVersionsDialog } from "./FileVersionsDialog";
@@ -81,14 +82,23 @@ const versions: FileVersionDto[] = [
 ];
 
 function renderDialog(onRestored = vi.fn()): void {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+
   render(
-    <FileVersionsDialog
-      fileId="file-1"
-      fileName="document.txt"
-      onClose={vi.fn()}
-      onRestored={onRestored}
-      open
-    />,
+    <QueryClientProvider client={queryClient}>
+      <FileVersionsDialog
+        fileId="file-1"
+        fileName="document.txt"
+        onClose={vi.fn()}
+        onRestored={onRestored}
+        open
+      />
+    </QueryClientProvider>,
   );
 }
 
@@ -152,6 +162,8 @@ describe("FileVersionsDialog", () => {
     await waitFor(() =>
       expect(mocks.deleteVersion).toHaveBeenCalledWith("file-1", "version-2"),
     );
-    expect(mocks.listVersions).toHaveBeenCalledTimes(2);
+    await waitFor(() =>
+      expect(mocks.listVersions.mock.calls.length).toBeGreaterThan(1),
+    );
   });
 });

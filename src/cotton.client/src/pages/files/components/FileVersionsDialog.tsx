@@ -20,6 +20,11 @@ import { Delete, Download, Restore } from "@mui/icons-material";
 import { useConfirm } from "material-ui-confirm";
 import { useTranslation } from "react-i18next";
 import { filesApi, type FileVersionDto } from "../../../shared/api/filesApi";
+import {
+  useDeleteFileVersionMutation,
+  useFileVersionsQuery,
+  useRestoreFileVersionMutation,
+} from "../../../shared/api/queries/fileVersions";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import { openDownloadLink } from "../../../shared/utils/fileHandlers";
 
@@ -47,35 +52,32 @@ export const FileVersionsDialog: React.FC<FileVersionsDialogProps> = ({
 }) => {
   const { t } = useTranslation(["files", "common"]);
   const confirm = useConfirm();
-  const [versions, setVersions] = React.useState<FileVersionDto[]>([]);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const {
+    data: versions = [],
+    isError,
+    isFetching,
+    isLoading,
+    refetch,
+  } = useFileVersionsQuery(fileId, open);
+  const { mutateAsync: restoreFileVersion } = useRestoreFileVersionMutation();
+  const { mutateAsync: deleteFileVersion } = useDeleteFileVersionMutation();
+  const [actionError, setActionError] = React.useState<{
+    fileId: string;
+    message: string;
+  } | null>(null);
   const [busy, setBusy] = React.useState<BusyState | null>(null);
 
-  const loadVersions = React.useCallback(async () => {
-    if (!fileId) return;
+  const loading = isLoading || (isFetching && versions.length === 0);
+  const error = actionError?.fileId === fileId
+    ? actionError.message
+    : isError
+      ? t("fileVersions.loadFailed", { ns: "files" })
+      : null;
 
-    setLoading(true);
-    setError(null);
-    try {
-      setVersions(await filesApi.listVersions(fileId));
-    } catch (loadError) {
-      console.error("Failed to load file versions:", loadError);
-      setError(t("fileVersions.loadFailed", { ns: "files" }));
-    } finally {
-      setLoading(false);
-    }
-  }, [fileId, t]);
-
-  React.useEffect(() => {
-    if (!open) return undefined;
-
-    const handle = window.setTimeout(() => {
-      void loadVersions();
-    }, 0);
-
-    return () => window.clearTimeout(handle);
-  }, [loadVersions, open]);
+  const retryLoad = React.useCallback(() => {
+    setActionError(null);
+    void refetch();
+  }, [refetch]);
 
   const restoreVersion = React.useCallback(
     async (version: FileVersionDto) => {
@@ -94,17 +96,21 @@ export const FileVersionsDialog: React.FC<FileVersionsDialogProps> = ({
 
       setBusy({ versionId: version.id, action: "restore" });
       try {
-        await filesApi.restoreVersion(fileId, version.id);
+        setActionError(null);
+        await restoreFileVersion({ fileId, versionId: version.id });
         onRestored();
-        await loadVersions();
+        await refetch();
       } catch (restoreError) {
         console.error("Failed to restore file version:", restoreError);
-        setError(t("fileVersions.restoreFailed", { ns: "files" }));
+        setActionError({
+          fileId,
+          message: t("fileVersions.restoreFailed", { ns: "files" }),
+        });
       } finally {
         setBusy(null);
       }
     },
-    [confirm, fileId, loadVersions, onRestored, t],
+    [confirm, fileId, onRestored, refetch, restoreFileVersion, t],
   );
 
   const deleteVersion = React.useCallback(
@@ -125,16 +131,20 @@ export const FileVersionsDialog: React.FC<FileVersionsDialogProps> = ({
 
       setBusy({ versionId: version.id, action: "delete" });
       try {
-        await filesApi.deleteVersion(fileId, version.id);
-        await loadVersions();
+        setActionError(null);
+        await deleteFileVersion({ fileId, versionId: version.id });
+        await refetch();
       } catch (deleteError) {
         console.error("Failed to delete file version:", deleteError);
-        setError(t("fileVersions.deleteFailed", { ns: "files" }));
+        setActionError({
+          fileId,
+          message: t("fileVersions.deleteFailed", { ns: "files" }),
+        });
       } finally {
         setBusy(null);
       }
     },
-    [confirm, fileId, loadVersions, t],
+    [confirm, deleteFileVersion, fileId, refetch, t],
   );
 
   const downloadVersion = React.useCallback(
@@ -149,7 +159,10 @@ export const FileVersionsDialog: React.FC<FileVersionsDialogProps> = ({
         openDownloadLink(link, version.name);
       } catch (downloadError) {
         console.error("Failed to download file version:", downloadError);
-        setError(t("fileVersions.downloadFailed", { ns: "files" }));
+        setActionError({
+          fileId,
+          message: t("fileVersions.downloadFailed", { ns: "files" }),
+        });
       } finally {
         setBusy(null);
       }
@@ -170,7 +183,7 @@ export const FileVersionsDialog: React.FC<FileVersionsDialogProps> = ({
         {!loading && error ? (
           <Stack spacing={2} sx={{ py: 2 }}>
             <Typography color="error">{error}</Typography>
-            <Button onClick={() => void loadVersions()} variant="outlined">
+            <Button onClick={retryLoad} variant="outlined">
               {t("common:actions.reload")}
             </Button>
           </Stack>
