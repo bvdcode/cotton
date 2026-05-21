@@ -22,8 +22,10 @@ describe("demoCredentials", () => {
   it("generates valid public-instance login credentials", () => {
     const credentials = generateDemoCredentials();
 
-    expect(credentials.username).toMatch(/^[a-z]+_[a-z]+_[0-9]{3}_[a-z0-9]{6}$/);
+    expect(credentials.username).toMatch(/^u_[a-z0-9]{6}$/);
     expect(credentials.password).toHaveLength(32);
+    expect(credentials.firstName).toMatch(/^[A-Z][a-z]{1,31}$/);
+    expect(credentials.lastName).toMatch(/^[A-Z][a-z]{1,31}$/);
     expect(isDemoCredentials(credentials)).toBe(true);
   });
 
@@ -36,6 +38,20 @@ describe("demoCredentials", () => {
     expect(second).toEqual(first);
   });
 
+  it("replaces short stored credentials without a display name", () => {
+    const storage = new MemoryStorage();
+    storage.setItem(DEMO_CREDENTIALS_STORAGE_KEY, JSON.stringify({
+      username: "u_abc123",
+      password: "x".repeat(32),
+    }));
+
+    const credentials = getOrCreateDemoCredentials(storage);
+
+    expect(isDemoCredentials(credentials)).toBe(true);
+    expect(credentials.firstName).toMatch(/^[A-Z][a-z]{1,31}$/);
+    expect(credentials.lastName).toMatch(/^[A-Z][a-z]{1,31}$/);
+  });
+
   it("replaces malformed stored credentials", () => {
     const storage = new MemoryStorage();
     storage.setItem(DEMO_CREDENTIALS_STORAGE_KEY, JSON.stringify({
@@ -45,7 +61,9 @@ describe("demoCredentials", () => {
 
     const credentials = getOrCreateDemoCredentials(storage);
 
-    expect(credentials.username).toMatch(/^[a-z]+_[a-z]+_[0-9]{3}_[a-z0-9]{6}$/);
+    expect(credentials.username).toMatch(/^u_[a-z0-9]{6}$/);
     expect(credentials.password).toHaveLength(32);
+    expect(credentials.firstName).toMatch(/^[A-Z][a-z]{1,31}$/);
+    expect(credentials.lastName).toMatch(/^[A-Z][a-z]{1,31}$/);
   });
 });

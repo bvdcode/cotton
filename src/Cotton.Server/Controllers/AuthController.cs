@@ -632,6 +632,8 @@ namespace Cotton.Server.Controllers
                     Email = email,
                     Username = username,
                     Role = UserRole.User,
+                    FirstName = NormalizeOptionalName(request.FirstName),
+                    LastName = NormalizeOptionalName(request.LastName),
                     PasswordPhc = _hasher.Hash(request.Password),
                     WebDavTokenPhc = _hasher.Hash(request.Password),
                 };
@@ -668,6 +670,11 @@ namespace Cotton.Server.Controllers
             await _dbContext.SaveChangesAsync();
             _logger.LogInformation("Created initial admin user: {Username}", user.Username);
             return user;
+        }
+
+        private static string? NormalizeOptionalName(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         }
 
         private async Task<(ExtendedRefreshToken DbToken, string RefreshToken)> CreateRefreshTokenAsync(

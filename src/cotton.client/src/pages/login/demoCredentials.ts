@@ -3,50 +3,50 @@ import { STORAGE_KEY_PREFIX } from "../../shared/config/storageKeys";
 export interface DemoCredentials {
   username: string;
   password: string;
+  firstName: string;
+  lastName: string;
 }
 
 const passwordLength = 32;
 const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
-const usernameNumberRange = 1000;
-const usernameNumberLength = 3;
 const usernameEntropyLength = 6;
 
-const demoAdjectives = [
-  "amber",
-  "brave",
-  "bright",
-  "calm",
-  "cosmic",
-  "frosty",
-  "gentle",
-  "golden",
-  "lucky",
-  "mint",
-  "orange",
-  "quiet",
-  "rapid",
-  "silver",
-  "sunny",
-  "velvet",
+const demoFirstNames = [
+  "Amber",
+  "Brave",
+  "Bright",
+  "Calm",
+  "Cosmic",
+  "Frosty",
+  "Gentle",
+  "Golden",
+  "Lucky",
+  "Mint",
+  "Orange",
+  "Quiet",
+  "Rapid",
+  "Silver",
+  "Sunny",
+  "Velvet",
 ] as const;
 
-const demoAnimals = [
-  "badger",
-  "capybara",
-  "falcon",
-  "fox",
-  "koala",
-  "lemur",
-  "lynx",
-  "marten",
-  "otter",
-  "panda",
-  "quokka",
-  "raven",
-  "seal",
-  "sparrow",
-  "tiger",
-  "wombat",
+const demoLastNames = [
+  "Badger",
+  "Capybara",
+  "Falcon",
+  "Fox",
+  "Koala",
+  "Lemur",
+  "Lynx",
+  "Marten",
+  "Otter",
+  "Panda",
+  "Quokka",
+  "Raven",
+  "Seal",
+  "Sparrow",
+  "Tiger",
+  "Wombat",
 ] as const;
 
 export const DEMO_CREDENTIALS_STORAGE_KEY = STORAGE_KEY_PREFIX + "demo-credentials";
@@ -54,7 +54,8 @@ export const DEMO_CREDENTIALS_STORAGE_KEY = STORAGE_KEY_PREFIX + "demo-credentia
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const demoUsernameRegex = /^[a-z]+_[a-z]+_[0-9]{3}_[a-z0-9]{6}$/;
+const demoUsernameRegex = /^u_[a-z0-9]{6}$/;
+const demoNameRegex = /^[A-Z][a-z]{1,31}$/;
 
 export const isDemoCredentials = (value: unknown): value is DemoCredentials => {
   if (!isRecord(value)) {
@@ -64,8 +65,12 @@ export const isDemoCredentials = (value: unknown): value is DemoCredentials => {
   return (
     typeof value.username === "string" &&
     typeof value.password === "string" &&
+    typeof value.firstName === "string" &&
+    typeof value.lastName === "string" &&
     demoUsernameRegex.test(value.username) &&
-    value.password.length === passwordLength
+    value.password.length === passwordLength &&
+    demoNameRegex.test(value.firstName) &&
+    demoNameRegex.test(value.lastName)
   );
 };
 
@@ -90,20 +95,11 @@ const randomString = (length: number): string => {
 const randomItem = <T>(items: readonly T[]): T =>
   items[getRandomByte() % items.length];
 
-const randomInt = (maxExclusive: number): number =>
-  ((getRandomByte() << 8) | getRandomByte()) % maxExclusive;
-
-const randomUsernameNumber = (): string =>
-  String(randomInt(usernameNumberRange)).padStart(usernameNumberLength, "0");
-
 export const generateDemoCredentials = (): DemoCredentials => ({
-  username: [
-    randomItem(demoAdjectives),
-    randomItem(demoAnimals),
-    randomUsernameNumber(),
-    randomString(usernameEntropyLength),
-  ].join("_"),
+  username: "u_" + randomString(usernameEntropyLength),
   password: randomString(passwordLength),
+  firstName: randomItem(demoFirstNames),
+  lastName: randomItem(demoLastNames),
 });
 
 export const readStoredDemoCredentials = (
