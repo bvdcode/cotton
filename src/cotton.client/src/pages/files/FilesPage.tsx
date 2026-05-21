@@ -53,6 +53,7 @@ import { shareFolder } from "../../shared/utils/shareFolder";
 import Loader from "../../shared/ui/Loader";
 import { blurredDialogBackdropSlotProps } from "../../shared/ui/dialogBackdrop";
 import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
+import { FileVersionsDialog } from "./components/FileVersionsDialog";
 import {
   selectGallerySmoothTransitions,
   useUserPreferencesStore,
@@ -454,6 +455,10 @@ export const FilesPage: React.FC = () => {
   });
   const fileOps = useFileOperations(reloadCurrentNode);
   const fileSelection = useFileSelection();
+  const [versionDialogFile, setVersionDialogFile] = React.useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const goUpParentId = ancestors.length > 0
     ? ancestors[ancestors.length - 1].id
@@ -662,9 +667,24 @@ export const FilesPage: React.FC = () => {
     handleDownloadFolder,
   );
 
+  const handleOpenVersions = React.useCallback((fileId: string, fileName: string) => {
+    setVersionDialogFile({ id: fileId, name: fileName });
+  }, []);
+
+  const handleCloseVersions = React.useCallback(() => {
+    setVersionDialogFile(null);
+  }, []);
+
+  const handleVersionsChanged = React.useCallback(() => {
+    if (nodeId) {
+      void refreshNodeContent(nodeId);
+    }
+  }, [nodeId]);
+
   // Build file operations adapter
   const fileOperations = buildFileOperations(fileOps, {
     onDownload: handleDownloadFile,
+    onVersions: handleOpenVersions,
     onShare: handleShareFile,
     onCut: handleCutFile,
     onClick: handleFileClick,
@@ -936,6 +956,14 @@ export const FilesPage: React.FC = () => {
         newName={fileUpload.conflictDialog.state.newName}
         onResolve={fileUpload.conflictDialog.onResolve}
         onExited={fileUpload.conflictDialog.onExited}
+      />
+
+      <FileVersionsDialog
+        open={versionDialogFile !== null}
+        fileId={versionDialogFile?.id ?? null}
+        fileName={versionDialogFile?.name ?? ""}
+        onClose={handleCloseVersions}
+        onRestored={handleVersionsChanged}
       />
 
       {folderEncryptionPrompt && (

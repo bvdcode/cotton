@@ -42,7 +42,7 @@ namespace Cotton.Server.Controllers
         ISchedulerFactory _scheduler,
         IHubContext<EventHub> _hubContext,
         FileManifestService _fileManifestService,
-        NodeFileHistoryService _history,
+        FileVersionService _versions,
         UserStorageQuotaService _quota,
         VideoTranscoder _videoTranscoder,
         HlsSegmentCache _segmentCache,
@@ -311,6 +311,60 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
+        [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/versions")]
+        public async Task<IActionResult> GetFileVersions(
+            [FromRoute] Guid nodeFileId,
+            CancellationToken cancellationToken)
+        {
+            Guid userId = User.GetUserId();
+            IReadOnlyList<FileVersionDto> versions = await _versions.ListVersionsAsync(userId, nodeFileId, cancellationToken);
+            return Ok(versions);
+        }
+
+        [Authorize]
+        [HttpPost(Routes.V1.Files + "/{nodeFileId:guid}/versions/{versionId:guid}/restore")]
+        public async Task<IActionResult> RestoreFileVersion(
+            [FromRoute] Guid nodeFileId,
+            [FromRoute] Guid versionId,
+            CancellationToken cancellationToken)
+        {
+            Guid userId = User.GetUserId();
+            NodeFileManifestDto restored = await _versions.RestoreVersionAsync(userId, nodeFileId, versionId, cancellationToken);
+            await _hubContext.Clients.User(userId.ToString()).SendAsync("FileUpdated", restored, cancellationToken);
+            return Ok(restored);
+        }
+
+        [Authorize]
+        [HttpDelete(Routes.V1.Files + "/{nodeFileId:guid}/versions/{versionId:guid}")]
+        public async Task<IActionResult> DeleteFileVersion(
+            [FromRoute] Guid nodeFileId,
+            [FromRoute] Guid versionId,
+            CancellationToken cancellationToken)
+        {
+            Guid userId = User.GetUserId();
+            await _versions.DeleteVersionAsync(userId, nodeFileId, versionId, cancellationToken);
+            return NoContent();
+        }
+
+        [Authorize]
+        [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/versions/{versionId:guid}/download-link")]
+        public async Task<IActionResult> DownloadFileVersion(
+            [FromRoute] Guid nodeFileId,
+            [FromRoute] Guid versionId,
+            [FromQuery] int expireAfterMinutes = 1440,
+            CancellationToken cancellationToken = default)
+        {
+            Guid userId = User.GetUserId();
+            string link = await _versions.CreateVersionDownloadLinkAsync(
+                userId,
+                nodeFileId,
+                versionId,
+                expireAfterMinutes,
+                cancellationToken);
+            return Ok(link);
+        }
+
+        [Authorize]
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/download-link")]
         public async Task<IActionResult> DownloadFile(
             [FromRoute] Guid nodeFileId,
@@ -335,10 +389,11 @@ namespace Cotton.Server.Controllers
             var userId = User.GetUserId();
             var nodeFile = await _dbContext.NodeFiles
                 .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
+                .Include(x => x.Node)
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
                 .SingleOrDefaultAsync();
-            if (nodeFile == null)
+            if (nodeFile == null || nodeFile.Node.Type != NodeType.Default)
             {
                 return CottonResult.NotFound("Node file not found");
             }
@@ -401,11 +456,21 @@ namespace Cotton.Server.Controllers
             }
 
             long addedBytes = await _quota.EnsureCanChangeFileManifestAsync(userId, nodeFile.Id, newFile.Id);
-            await ApplyUpdatedFileContentAsync(nodeFile, newFile, proposedHash, normalizedName, request.Metadata, userId);
+            FileVersionCaptureResult capture = await ApplyUpdatedFileContentAsync(
+                nodeFile,
+                newFile,
+                proposedHash,
+                normalizedName,
+                request.Metadata,
+                userId);
 
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
             _quota.RecordLogicalBytesAdded(userId, addedBytes);
+            if (capture.RemovedBytes > 0)
+            {
+                _quota.RecordLogicalBytesRemoved(userId, capture.RemovedBytes);
+            }
 
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
@@ -479,7 +544,7 @@ namespace Cotton.Server.Controllers
                 : null;
         }
 
-        private async Task ApplyUpdatedFileContentAsync(
+        private async Task<FileVersionCaptureResult> ApplyUpdatedFileContentAsync(
             NodeFile nodeFile,
             FileManifest newFile,
             byte[] proposedHash,
@@ -487,9 +552,10 @@ namespace Cotton.Server.Controllers
             Dictionary<string, string>? metadata,
             Guid userId)
         {
+            FileVersionCaptureResult capture = FileVersionCaptureResult.Empty;
             if (!nodeFile.FileManifest.ProposedContentHash.SequenceEqual(proposedHash))
             {
-                await _history.SaveVersionAndUpdateManifestAsync(nodeFile, newFile.Id, userId);
+                capture = await _versions.CaptureAndUpdateManifestAsync(nodeFile, newFile.Id, userId);
                 nodeFile.FileManifest = newFile;
             }
 
@@ -500,6 +566,8 @@ namespace Cotton.Server.Controllers
                     ? new Dictionary<string, string>(metadata)
                     : [];
             }
+
+            return capture;
         }
 
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/download")]
@@ -519,13 +587,17 @@ namespace Cotton.Server.Controllers
                 .ThenInclude(x => x.FileManifestChunks)
                 .ThenInclude(x => x.Chunk)
                 .SingleOrDefaultAsync(x => x.Id == nodeFileId);
-            if (nodeFile == null || nodeFile.Node.Type != NodeType.Default)
+            if (nodeFile == null)
             {
                 return CottonResult.NotFound("File not found");
             }
             var downloadToken = await _dbContext.DownloadTokens
                 .FirstOrDefaultAsync(x => x.Token == token && x.NodeFileId == nodeFile.Id);
             if (downloadToken == null || (downloadToken.ExpiresAt.HasValue && downloadToken.ExpiresAt.Value < DateTime.UtcNow))
+            {
+                return CottonResult.NotFound("File not found");
+            }
+            if (nodeFile.Node.Type != NodeType.Default && !FileVersionService.IsHistoricalVersion(nodeFile))
             {
                 return CottonResult.NotFound("File not found");
             }

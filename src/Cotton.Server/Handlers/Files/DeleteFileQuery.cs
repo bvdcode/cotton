@@ -23,7 +23,8 @@ namespace Cotton.Server.Handlers.Files
         ILayoutService _layouts,
         ILayoutNavigator _navigator,
         ILogger<DeleteFileQueryHandler> _logger,
-        UserStorageQuotaService _quota)
+        UserStorageQuotaService _quota,
+        FileVersionService _versions)
             : IRequestHandler<DeleteFileQuery>
     {
         public async Task Handle(DeleteFileQuery request, CancellationToken ct)
@@ -36,6 +37,12 @@ namespace Cotton.Server.Handlers.Files
                     ?? throw new EntityNotFoundException(nameof(FileManifest));
             if (request.SkipTrash)
             {
+                if (FileVersionService.IsHistoricalVersion(nodeFile))
+                {
+                    await _versions.DeleteHistoricalVersionAsync(request.UserId, nodeFile.Id, ct);
+                    return;
+                }
+
                 await DeletePermanentlyAsync(request, nodeFile, ct);
             }
             else
@@ -46,12 +53,22 @@ namespace Cotton.Server.Handlers.Files
 
         private async Task DeletePermanentlyAsync(DeleteFileQuery command, NodeFile nodeFile, CancellationToken ct)
         {
+            await using IDbContextTransaction? tx = _dbContext.Database.CurrentTransaction is null
+                ? await _dbContext.Database.BeginTransactionAsync(ct)
+                : null;
+
+            long removedVersionBytes = await _versions.DeleteLineageVersionsAsync(command.UserId, nodeFile.Id, ct);
             await _dbContext.DownloadTokens
                 .Where(t => t.CreatedByUserId == command.UserId && t.NodeFileId == nodeFile.Id)
                 .ExecuteDeleteAsync(ct);
-            long removedBytes = nodeFile.FileManifest.SizeBytes;
+            long removedBytes = nodeFile.FileManifest.SizeBytes + removedVersionBytes;
             _dbContext.NodeFiles.Remove(nodeFile);
             await _dbContext.SaveChangesAsync(ct);
+            if (tx is not null)
+            {
+                await tx.CommitAsync(ct);
+            }
+
             _quota.RecordLogicalBytesRemoved(command.UserId, removedBytes);
             _logger.LogInformation("User {UserId} permanently deleted file {NodeFileId}.",
                 command.UserId, command.NodeFileId);

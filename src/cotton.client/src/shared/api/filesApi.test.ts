@@ -138,6 +138,77 @@ describe("filesApi.getDownloadLink", () => {
   });
 });
 
+describe("filesApi versions", () => {
+  it("lists versions for a file", async () => {
+    const versions = [
+      {
+        id: "version-1",
+        nodeFileId: fileId,
+        fileManifestId: "manifest-1",
+        name: "document.pdf",
+        contentType: "application/pdf",
+        sizeBytes: 12,
+        createdAt: "2026-05-21T00:00:00Z",
+        versionNumber: 1,
+        isCurrent: false,
+        isOriginal: true,
+        canDelete: false,
+      },
+    ];
+    const get = vi.spyOn(httpClient, "get").mockResolvedValue({ data: versions });
+
+    await expect(filesApi.listVersions(fileId)).resolves.toEqual(versions);
+
+    expect(get).toHaveBeenCalledWith(`files/${fileId}/versions`);
+  });
+
+  it("restores a selected version", async () => {
+    const restored = {
+      id: fileId,
+      createdAt: "2026-05-21T00:00:00Z",
+      updatedAt: "2026-05-21T00:00:01Z",
+      nodeId,
+      ownerId: "owner-1",
+      name: "document.pdf",
+      contentType: "application/pdf",
+      sizeBytes: 12,
+      metadata: {},
+      requiresVideoTranscoding: false,
+      previewHashEncryptedHex: null,
+    };
+    const post = vi.spyOn(httpClient, "post").mockResolvedValue({ data: restored });
+
+    await expect(filesApi.restoreVersion(fileId, "version-1")).resolves.toEqual(
+      restored,
+    );
+
+    expect(post).toHaveBeenCalledWith(`files/${fileId}/versions/version-1/restore`);
+  });
+
+  it("deletes a selected version", async () => {
+    const del = vi.spyOn(httpClient, "delete").mockResolvedValue({ data: undefined });
+
+    await filesApi.deleteVersion(fileId, "version-1");
+
+    expect(del).toHaveBeenCalledWith(`files/${fileId}/versions/version-1`);
+  });
+
+  it("creates a version download link", async () => {
+    const get = vi.spyOn(httpClient, "get").mockResolvedValue({
+      data: "https://download.example/version",
+    });
+
+    await expect(
+      filesApi.getVersionDownloadLink(fileId, "version-1", 60),
+    ).resolves.toBe("https://download.example/version");
+
+    expect(get).toHaveBeenCalledWith(
+      `files/${fileId}/versions/version-1/download-link`,
+      { params: { expireAfterMinutes: 60 } },
+    );
+  });
+});
+
 describe("filesApi file mutations", () => {
   it("deletes through trash by default", async () => {
     const del = vi.spyOn(httpClient, "delete").mockResolvedValue({

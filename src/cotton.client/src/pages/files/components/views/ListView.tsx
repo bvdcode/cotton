@@ -341,6 +341,7 @@ export const ListView: React.FC<IFileListView> = ({
           delete: t("common:actions.delete"),
           restore: t("common:actions.restore"),
           download: t("common:actions.download"),
+          versions: t("common:actions.versions"),
           share: t("common:actions.share"),
           cut: t("move.cut"),
           encryptedFile: t("common:clientEncryption.fileEncryptedHint"),

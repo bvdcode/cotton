@@ -5,6 +5,7 @@ import {
   Delete,
   Download,
   Edit,
+  History,
   LockOutlined,
   Restore,
   Share,
@@ -427,6 +428,13 @@ const buildFileTileActions = (options: {
       icon: <Download />,
       onClick: () => fileOperations.onDownload?.(file.id, file.name),
       tooltip: t("actions.download", { ns: "common" }),
+    });
+  }
+  if (fileOperations.onVersions) {
+    actions.push({
+      icon: <History />,
+      onClick: () => fileOperations.onVersions?.(file.id, file.name),
+      tooltip: t("common:actions.versions"),
     });
   }
   if (!readOnly && fileOperations.onShare && !fileEncrypted) {

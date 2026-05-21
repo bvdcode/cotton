@@ -5,6 +5,7 @@ import {
   ContentCut,
   Delete,
   Download,
+  History,
   Edit,
   Folder,
   Image as ImageIcon,
@@ -66,6 +67,7 @@ interface ColumnOptions {
     delete: string;
     restore: string;
     download: string;
+    versions: string;
     share: string;
     cut: string;
     encryptedFile: string;
@@ -110,6 +112,7 @@ interface ColumnOptions {
     onStartRename?: (id: string, name: string) => void;
     onRestore?: (id: string, name: string) => void;
     onDownload?: (id: string, name: string) => void;
+    onVersions?: (id: string, name: string) => void;
     onShare?: (id: string, name: string) => void;
     onCut?: (id: string) => void;
     onDelete?: (id: string, name: string) => void;
@@ -546,6 +549,15 @@ const buildFileActionButtons = (
       icon: <Download fontSize="small" />,
       title: options.labels.download,
       onClick: () => operations.onDownload?.(row.id, row.name),
+    });
+  }
+
+  if (operations.onVersions) {
+    actions.push({
+      key: "versions",
+      icon: <History fontSize="small" />,
+      title: options.labels.versions,
+      onClick: () => operations.onVersions?.(row.id, row.name),
     });
   }
 

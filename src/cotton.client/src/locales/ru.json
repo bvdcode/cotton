@@ -441,6 +441,7 @@
       "delete": "Удалить",
       "rename": "Переименовать",
       "restore": "Восстановить",
+      "versions": "Версии",
       "download": "Скачать",
       "share": "Поделиться",
       "more": "Другие действия",
@@ -1355,6 +1356,21 @@
     "deleteFile": {
       "confirmTitle": "Удалить файл \"{{name}}\"?",
       "confirmDescription": "Файл будет перемещён в корзину и его можно будет восстановить позже."
+    },
+    "fileVersions": {
+      "title": "Версии {{name}}",
+      "empty": "Предыдущих версий пока нет.",
+      "loadFailed": "Не удалось загрузить версии.",
+      "restoreFailed": "Не удалось восстановить версию.",
+      "deleteFailed": "Не удалось удалить версию.",
+      "downloadFailed": "Не удалось подготовить скачивание версии.",
+      "versionLabel": "Версия {{version}}",
+      "current": "Текущая",
+      "original": "Исходная",
+      "restoreConfirmTitle": "Восстановить эту версию?",
+      "restoreConfirmDescription": "Текущее содержимое файла будет сохранено как новая версия, затем версия {{version}} станет текущей.",
+      "deleteConfirmTitle": "Удалить эту версию?",
+      "deleteConfirmDescription": "Версия {{version}} будет удалена. Текущий файл не изменится."
     },
     "stats": {
       "summary": "{{folders}} папок • {{files}} файлов • {{size}}"

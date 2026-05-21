@@ -5,6 +5,7 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Jobs;
+using Cotton.Server.Models;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
@@ -59,7 +60,7 @@ public class WebDavPutFileRequestHandler(
     CottonDbContext _dbContext,
     SettingsProvider _settings,
     ISchedulerFactory _scheduler,
-    NodeFileHistoryService _history,
+    FileVersionService _versions,
     IChunkIngestService _chunkIngest,
     IWebDavPathResolver _pathResolver,
     FileManifestService _fileManifestService,
@@ -135,10 +136,14 @@ public class WebDavPutFileRequestHandler(
             return quotaError;
         }
 
-        var resultNodeFile = await UpsertNodeFileAsync(request, finalTarget, fileManifest.Id, ct);
+        var (resultNodeFile, capture) = await UpsertNodeFileAsync(request, finalTarget, fileManifest.Id, ct);
         await _dbContext.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         _quota.RecordLogicalBytesAdded(request.UserId, addedBytes);
+        if (capture.RemovedBytes > 0)
+        {
+            _quota.RecordLogicalBytesRemoved(request.UserId, capture.RemovedBytes);
+        }
 
         await NotifyPutCompletedAsync(request, created: finalTarget.Created, chunkCount: content.Chunks.Count, nodeFileId: resultNodeFile.Id, ct);
         return new WebDavPutFileResult(true, finalTarget.Created, null, resultNodeFile.Id);
@@ -379,7 +384,7 @@ public class WebDavPutFileRequestHandler(
         }
     }
 
-    private async Task<NodeFile> UpsertNodeFileAsync(WebDavPutFileRequest request, PutTarget target, Guid fileManifestId, CancellationToken ct)
+    private async Task<(NodeFile NodeFile, FileVersionCaptureResult Capture)> UpsertNodeFileAsync(WebDavPutFileRequest request, PutTarget target, Guid fileManifestId, CancellationToken ct)
     {
         if (target.Existing.Found && target.Existing.NodeFile is not null)
         {
@@ -393,13 +398,15 @@ public class WebDavPutFileRequestHandler(
             if (previousManifest?.SizeBytes == 0)
             {
                 nodeFile.FileManifestId = fileManifestId;
-            }
-            else
-            {
-                await _history.SaveVersionAndUpdateManifestAsync(nodeFile, fileManifestId, request.UserId, ct);
+                return (nodeFile, FileVersionCaptureResult.Empty);
             }
 
-            return nodeFile;
+            FileVersionCaptureResult capture = await _versions.CaptureAndUpdateManifestAsync(
+                nodeFile,
+                fileManifestId,
+                request.UserId,
+                ct);
+            return (nodeFile, capture);
         }
 
         var createdNodeFile = new NodeFile
@@ -414,7 +421,7 @@ public class WebDavPutFileRequestHandler(
         await _dbContext.SaveChangesAsync(ct);
 
         createdNodeFile.OriginalNodeFileId = createdNodeFile.Id;
-        return createdNodeFile;
+        return (createdNodeFile, FileVersionCaptureResult.Empty);
     }
 
     private async Task NotifyPutCompletedAsync(

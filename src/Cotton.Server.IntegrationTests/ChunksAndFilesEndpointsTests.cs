@@ -4,6 +4,7 @@
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
+using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
@@ -568,6 +569,142 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         Assert.That(existsAfterDownload, Is.False);
     }
 
+    [Test]
+    public async Task File_Versions_List_Download_And_Restore_Previous_Content()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var file = await UploadTextFileAsync(root!, "versioned.txt", "first");
+        file = await UpdateTextFileAsync(file, root!, "second");
+        file = await UpdateTextFileAsync(file, root!, "third");
+
+        var versions = await GetVersionsAsync(file.Id);
+        Assert.That(versions, Has.Count.EqualTo(3));
+        Assert.That(versions[0].IsCurrent, Is.True);
+        Assert.That(versions[0].VersionNumber, Is.EqualTo(3));
+
+        FileVersionDto original = versions.Single(x => x.IsOriginal);
+        Assert.Multiple(() =>
+        {
+            Assert.That(original.VersionNumber, Is.EqualTo(1));
+            Assert.That(original.CanDelete, Is.False);
+            Assert.That(versions.Single(x => x.VersionNumber == 2).CanDelete, Is.True);
+        });
+
+        string originalText = await DownloadVersionTextAsync(file.Id, original.Id);
+        Assert.That(originalText, Is.EqualTo("first"));
+
+        var restoreResponse = await _client.PostAsync($"/api/v1/files/{file.Id}/versions/{original.Id}/restore", null);
+        restoreResponse.EnsureSuccessStatusCode();
+
+        var currentLinkResponse = await _client.GetAsync($"/api/v1/files/{file.Id}/download-link");
+        currentLinkResponse.EnsureSuccessStatusCode();
+        string currentLink = (await currentLinkResponse.Content.ReadAsStringAsync()).Trim().Trim('"');
+        var currentDownload = await _client.GetAsync(currentLink);
+        currentDownload.EnsureSuccessStatusCode();
+        string restoredText = Encoding.UTF8.GetString(await currentDownload.Content.ReadAsByteArrayAsync());
+        Assert.That(restoredText, Is.EqualTo("first"));
+
+        var versionsAfterRestore = await GetVersionsAsync(file.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(versionsAfterRestore, Has.Count.EqualTo(4));
+            Assert.That(versionsAfterRestore[0].IsCurrent, Is.True);
+            Assert.That(versionsAfterRestore[0].VersionNumber, Is.EqualTo(4));
+            Assert.That(versionsAfterRestore.Single(x => x.IsOriginal).Id, Is.EqualTo(original.Id));
+        });
+    }
+
+    [Test]
+    public async Task File_Versions_Retention_Keeps_Original_And_Prunes_Oldest_Middle()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var file = await UploadTextFileAsync(root!, "retention.txt", "v0");
+        for (int i = 1; i <= 12; i++)
+        {
+            file = await UpdateTextFileAsync(file, root!, "v" + i);
+        }
+
+        var versions = await GetVersionsAsync(file.Id);
+        FileVersionDto original = versions.Single(x => x.IsOriginal);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(versions, Has.Count.EqualTo(11));
+            Assert.That(versions.Count(x => !x.IsCurrent), Is.EqualTo(10));
+            Assert.That(versions[0].IsCurrent, Is.True);
+            Assert.That(original.CanDelete, Is.False);
+        });
+
+        string originalText = await DownloadVersionTextAsync(file.Id, original.Id);
+        Assert.That(originalText, Is.EqualTo("v0"));
+    }
+
+    [Test]
+    public async Task File_Versions_Delete_Allows_NonOriginal_Only()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var file = await UploadTextFileAsync(root!, "retained.txt", "one");
+        file = await UpdateTextFileAsync(file, root!, "two");
+        file = await UpdateTextFileAsync(file, root!, "three");
+
+        var versions = await GetVersionsAsync(file.Id);
+        FileVersionDto original = versions.Single(x => x.IsOriginal);
+        FileVersionDto middle = versions.Single(x => !x.IsCurrent && !x.IsOriginal);
+
+        Guid[] versionWrapperNodeIds = await DbContext.NodeFiles
+            .AsNoTracking()
+            .Where(x => x.Id == original.Id || x.Id == middle.Id)
+            .Select(x => x.NodeId)
+            .ToArrayAsync();
+
+        var trashRoot = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver?nodeType=Trash");
+        Assert.That(trashRoot, Is.Not.Null);
+        var directTrashContent = await _client.GetFromJsonAsync<NodeContentDto>(
+            $"/api/v1/layouts/nodes/{trashRoot!.Id}/children?nodeType=Trash");
+        var trashContent = await _client.GetFromJsonAsync<NodeContentDto>(
+            $"/api/v1/layouts/nodes/{trashRoot.Id}/children?nodeType=Trash&depth=1");
+        Assert.That(directTrashContent, Is.Not.Null);
+        Assert.That(trashContent, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(directTrashContent!.Nodes.Select(x => x.Id).Intersect(versionWrapperNodeIds), Is.Empty);
+            Assert.That(trashContent!.Files.Select(x => x.Id), Does.Not.Contain(original.Id));
+            Assert.That(trashContent.Files.Select(x => x.Id), Does.Not.Contain(middle.Id));
+        });
+
+        var directDeleteOriginal = await _client.DeleteAsync($"/api/v1/files/{original.Id}?skipTrash=true");
+        Assert.That(directDeleteOriginal.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+        var deleteOriginal = await _client.DeleteAsync($"/api/v1/files/{file.Id}/versions/{original.Id}");
+        Assert.That(deleteOriginal.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+        var deleteMiddle = await _client.DeleteAsync($"/api/v1/files/{file.Id}/versions/{middle.Id}");
+        deleteMiddle.EnsureSuccessStatusCode();
+
+        var remaining = await GetVersionsAsync(file.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(remaining.Select(x => x.Id), Does.Not.Contain(middle.Id));
+            Assert.That(remaining.Select(x => x.Id), Does.Contain(original.Id));
+            Assert.That(remaining.Single(x => x.IsOriginal).CanDelete, Is.False);
+        });
+    }
+
     private async Task<HttpResponseMessage> UploadRawChunkAsync(string text)
     {
         var content = Encoding.UTF8.GetBytes(text);
@@ -603,6 +740,43 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         settingsProviderType.GetField("_cache", flags)?.SetValue(null, null);
         settingsProviderType.GetField("_isServerInitializedCache", flags)?.SetValue(null, null);
         settingsProviderType.GetField("_serverHasUsersCache", flags)?.SetValue(null, null);
+    }
+
+    private async Task<List<FileVersionDto>> GetVersionsAsync(Guid fileId)
+    {
+        var versions = await _client!.GetFromJsonAsync<List<FileVersionDto>>($"/api/v1/files/{fileId}/versions");
+        Assert.That(versions, Is.Not.Null);
+        return versions!;
+    }
+
+    private async Task<string> DownloadVersionTextAsync(Guid fileId, Guid versionId)
+    {
+        var linkResponse = await _client!.GetAsync($"/api/v1/files/{fileId}/versions/{versionId}/download-link");
+        linkResponse.EnsureSuccessStatusCode();
+        string link = (await linkResponse.Content.ReadAsStringAsync()).Trim().Trim('"');
+        var download = await _client.GetAsync(link);
+        download.EnsureSuccessStatusCode();
+        return Encoding.UTF8.GetString(await download.Content.ReadAsByteArrayAsync());
+    }
+
+    private async Task<Cotton.Server.Models.Dto.NodeFileManifestDto> UpdateTextFileAsync(
+        Cotton.Server.Models.Dto.NodeFileManifestDto file,
+        Models.Dto.NodeDto root,
+        string text)
+    {
+        string hash = await UploadChunkAndGetHashAsync(text);
+        var updateResponse = await _client!.PatchAsJsonAsync($"/api/v1/files/{file.Id}/update-content", new CreateFileRequest
+        {
+            ChunkHashes = [hash],
+            Name = file.Name,
+            ContentType = "text/plain",
+            Hash = hash,
+            NodeId = root.Id,
+        });
+        updateResponse.EnsureSuccessStatusCode();
+        var updated = await updateResponse.Content.ReadFromJsonAsync<Cotton.Server.Models.Dto.NodeFileManifestDto>();
+        Assert.That(updated, Is.Not.Null);
+        return updated!;
     }
 
     private async Task<Models.Dto.NodeDto> CreateFolderAsync(Guid parentId, string name)

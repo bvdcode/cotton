@@ -77,19 +77,29 @@ namespace Cotton.Server.Handlers.Nodes
             }
 
             int skip = (request.Page - 1) * request.PageSize;
-            IQueryable<NodeDto> nodesQuery = _dbContext.Nodes
+            IQueryable<Node> nodesBaseQuery = _dbContext.Nodes
                 .AsNoTracking()
                 .OrderBy(x => x.NameKey)
                 .Where(x => x.ParentId != null
                     && currentParentIds.Contains(x.ParentId.Value)
                     && x.OwnerId == request.UserId
                     && x.LayoutId == layout.Id
-                    && x.Type == request.NodeType)
-                .ProjectToType<NodeDto>();
+                    && x.Type == request.NodeType);
 
-            var filesBaseQuery = _dbContext.NodeFiles
+            IQueryable<NodeFile> filesBaseQuery = _dbContext.NodeFiles
                 .AsNoTracking()
-                .Where(x => currentParentIds.Contains(x.NodeId));
+                .Where(x => currentParentIds.Contains(x.NodeId)
+                    && x.OwnerId == request.UserId);
+
+            if (request.NodeType == NodeType.Trash)
+            {
+                nodesBaseQuery = HideVersionOnlyTrashWrappers(nodesBaseQuery, request.UserId);
+                filesBaseQuery = filesBaseQuery
+                    .Where(x => x.OriginalNodeFileId == Guid.Empty || x.Id == x.OriginalNodeFileId);
+            }
+
+            IQueryable<NodeDto> nodesQuery = nodesBaseQuery
+                .ProjectToType<NodeDto>();
 
             int nodesCount = await nodesQuery.CountAsync(cancellationToken: ct);
             int filesCount = await filesBaseQuery.CountAsync(cancellationToken: ct);
@@ -119,6 +129,19 @@ namespace Cotton.Server.Handlers.Nodes
                 UpdatedAt = parentNode.UpdatedAt,
                 TotalCount = nodesCount + filesCount,
             };
+        }
+
+        private IQueryable<Node> HideVersionOnlyTrashWrappers(IQueryable<Node> nodesQuery, Guid userId)
+        {
+            return nodesQuery.Where(node =>
+                _dbContext.Nodes.Any(child => child.ParentId == node.Id && child.OwnerId == userId)
+                || _dbContext.NodeFiles.Any(file => file.NodeId == node.Id
+                    && file.OwnerId == userId
+                    && (file.OriginalNodeFileId == Guid.Empty || file.Id == file.OriginalNodeFileId))
+                || !_dbContext.NodeFiles.Any(file => file.NodeId == node.Id
+                    && file.OwnerId == userId
+                    && file.OriginalNodeFileId != Guid.Empty
+                    && file.Id != file.OriginalNodeFileId));
         }
     }
 }
