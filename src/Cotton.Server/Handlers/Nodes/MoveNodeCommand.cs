@@ -30,6 +30,32 @@ namespace Cotton.Server.Handlers.Nodes
     {
         public async Task<NodeDto> Handle(MoveNodeCommand request, CancellationToken cancellationToken)
         {
+            ValidateRequest(request);
+            Guid sourceLayoutId = await GetSourceLayoutIdOrThrowAsync(request, cancellationToken);
+
+            await using var tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            await LayoutLocks.AcquireForLayoutAsync(_dbContext, sourceLayoutId, cancellationToken);
+
+            var node = await LoadSourceNodeOrThrowAsync(request, cancellationToken);
+            ValidateSourceNode(node);
+            if (node.ParentId == request.ParentId)
+            {
+                return node.Adapt<NodeDto>();
+            }
+
+            var targetParent = await LoadTargetParentOrThrowAsync(request, cancellationToken);
+            await ValidateTargetParentAsync(request, node, targetParent, cancellationToken);
+
+            Guid oldParentId = node.ParentId!.Value;
+            await MoveNodeAsync(node, targetParent.Id, cancellationToken);
+            await tx.CommitAsync(cancellationToken);
+
+            await NotifyMoveAsync(node.Id, oldParentId, cancellationToken);
+            return node.Adapt<NodeDto>();
+        }
+
+        private static void ValidateRequest(MoveNodeCommand request)
+        {
             if (request.ParentId == Guid.Empty)
             {
                 throw new BadRequestException<Node>("Target parent id is required.");
@@ -39,29 +65,28 @@ namespace Cotton.Server.Handlers.Nodes
             {
                 throw new BadRequestException<Node>("Cannot move a node into itself.");
             }
+        }
 
-            // Folder moves mutate tree topology; without a serialization point two
-            // concurrent requests can each pass IsDescendantAsync against the pre-update
-            // tree and then commit, creating a cycle (A.parent=B and B.parent=A).
-            // We serialize per-layout via a Postgres transaction-scoped advisory lock,
-            // re-read state inside the lock, and run all checks before SaveChanges.
-            var sourceLayoutId = await _dbContext.Nodes
+        private async Task<Guid> GetSourceLayoutIdOrThrowAsync(MoveNodeCommand request, CancellationToken ct)
+        {
+            return await _dbContext.Nodes
                 .AsNoTracking()
                 .Where(x => x.Id == request.NodeId && x.OwnerId == request.UserId)
                 .Select(x => (Guid?)x.LayoutId)
-                .SingleOrDefaultAsync(cancellationToken)
+                .SingleOrDefaultAsync(ct)
                 ?? throw new EntityNotFoundException<Node>();
+        }
 
-            await using var tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-            await LayoutLocks.AcquireForLayoutAsync(_dbContext, sourceLayoutId, cancellationToken);
-
-            var node = await _dbContext.Nodes
+        private async Task<Node> LoadSourceNodeOrThrowAsync(MoveNodeCommand request, CancellationToken ct)
+        {
+            return await _dbContext.Nodes
                 .Where(x => x.Id == request.NodeId && x.OwnerId == request.UserId)
-                .SingleOrDefaultAsync(cancellationToken)
+                .SingleOrDefaultAsync(ct)
                 ?? throw new EntityNotFoundException<Node>();
+        }
 
-            // Public move endpoint only handles user folders. Trash and any future
-            // special node types are managed by their own dedicated flows.
+        private static void ValidateSourceNode(Node node)
+        {
             if (node.Type != NodeType.Default)
             {
                 throw new EntityNotFoundException<Node>();
@@ -71,17 +96,33 @@ namespace Cotton.Server.Handlers.Nodes
             {
                 throw new AccessDeniedException<Node>("Cannot move the root node.");
             }
+        }
 
-            if (node.ParentId == request.ParentId)
+        private async Task<Node> LoadTargetParentOrThrowAsync(MoveNodeCommand request, CancellationToken ct)
+        {
+            return await _dbContext.Nodes
+                .Where(x => x.Id == request.ParentId && x.OwnerId == request.UserId)
+                .SingleOrDefaultAsync(ct)
+                ?? throw new EntityNotFoundException<Node>();
+        }
+
+        private async Task ValidateTargetParentAsync(
+            MoveNodeCommand request,
+            Node node,
+            Node targetParent,
+            CancellationToken ct)
+        {
+            EnsureCompatibleTargetParent(node, targetParent);
+            if (await IsDescendantAsync(targetParent.Id, node.Id, request.UserId, ct))
             {
-                return node.Adapt<NodeDto>();
+                throw new BadRequestException<Node>("Cannot move a folder into its descendant.");
             }
 
-            var targetParent = await _dbContext.Nodes
-                .Where(x => x.Id == request.ParentId && x.OwnerId == request.UserId)
-                .SingleOrDefaultAsync(cancellationToken)
-                ?? throw new EntityNotFoundException<Node>();
+            await EnsureNoSiblingCollisionAsync(targetParent.Id, request.UserId, node.NameKey, node.Type, node.Id, ct);
+        }
 
+        private static void EnsureCompatibleTargetParent(Node node, Node targetParent)
+        {
             if (targetParent.LayoutId != node.LayoutId)
             {
                 throw new BadRequestException<Node>("Cannot move a node across layouts.");
@@ -91,31 +132,20 @@ namespace Cotton.Server.Handlers.Nodes
             {
                 throw new BadRequestException<Node>("Target parent has incompatible node type.");
             }
+        }
 
-            if (await IsDescendantAsync(targetParent.Id, node.Id, request.UserId, cancellationToken))
-            {
-                throw new BadRequestException<Node>("Cannot move a folder into its descendant.");
-            }
-
-            await EnsureNoSiblingCollisionAsync(targetParent.Id, request.UserId, node.NameKey, node.Type, node.Id, cancellationToken);
-
-            // node.ParentId is non-null here (root-move was rejected above).
-            Guid oldParentId = node.ParentId!.Value;
-            node.ParentId = targetParent.Id;
+        private async Task MoveNodeAsync(Node node, Guid targetParentId, CancellationToken ct)
+        {
+            node.ParentId = targetParentId;
             try
             {
-                await _dbContext.SaveChangesAsync(cancellationToken);
+                await _dbContext.SaveChangesAsync(ct);
             }
             catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg
                 && pg.SqlState == PostgresErrorCodes.UniqueViolation)
             {
                 throw new DuplicateException(node.NameKey);
             }
-
-            await tx.CommitAsync(cancellationToken);
-
-            await NotifyMoveAsync(node.Id, oldParentId, cancellationToken);
-            return node.Adapt<NodeDto>();
         }
 
         private async Task<bool> IsDescendantAsync(Guid candidateChildId, Guid possibleAncestorId, Guid userId, CancellationToken ct)

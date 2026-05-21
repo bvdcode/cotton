@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { filesApi } from "../../../shared/api/filesApi";
 import {
@@ -38,6 +38,17 @@ type PromptState = {
   item: RestorableItem;
   prompt: PromptKind;
 };
+
+type RestoreSingleResult = "restored" | "skipped" | "failed";
+
+type RestoreOptions = {
+  createMissingParents: boolean;
+  overwrite: boolean;
+};
+
+type RestoreOutcomeDecision =
+  | { done: true; result: RestoreSingleResult }
+  | { done: false; options: RestoreOptions };
 
 export type PromptDecision = {
   action: "apply" | "skip";
@@ -129,102 +140,136 @@ export const useTrashRestoreActions = ({
     [],
   );
 
+  const requestStickyDecision = useCallback(
+    async (
+      sticky: MutableRefObject<PromptDecision["action"] | null>,
+      item: RestorableItem,
+      prompt: PromptKind,
+    ): Promise<PromptDecision["action"]> => {
+      if (sticky.current === "skip" || sticky.current === "apply") {
+        return sticky.current;
+      }
+
+      const decision = await requestDecision(item, prompt);
+      if (decision.applyToAll) {
+        sticky.current = decision.action;
+      }
+      return decision.action;
+    },
+    [requestDecision],
+  );
+
+  const reportRestoreFailure = useCallback(
+    (item: RestorableItem) => {
+      setErrors((prev) => [...prev, t("restore.failed", { name: item.name })]);
+    },
+    [t],
+  );
+
+  const confirmRestore = useCallback(
+    async (
+      item: RestorableItem,
+      restorePath: string,
+    ): Promise<RestoreSingleResult | null> => {
+      const action = await requestStickyDecision(stickyConfirm, item, {
+        kind: "confirm",
+        restorePath,
+      });
+      return action === "skip" ? "skipped" : null;
+    },
+    [requestStickyDecision],
+  );
+
+  const handleParentMissingOutcome = useCallback(
+    async (
+      item: RestorableItem,
+      outcome: RestoreOutcomeDto,
+      options: RestoreOptions,
+    ): Promise<RestoreOutcomeDecision> => {
+      const action = await requestStickyDecision(stickyParentMissing, item, {
+        kind: "parentMissing",
+        missingPath: outcome.missingPath ?? "",
+      });
+
+      return action === "skip"
+        ? { done: true, result: "skipped" }
+        : { done: false, options: { ...options, createMissingParents: true } };
+    },
+    [requestStickyDecision],
+  );
+
+  const handleConflictOutcome = useCallback(
+    async (
+      item: RestorableItem,
+      outcome: RestoreOutcomeDto,
+      options: RestoreOptions,
+    ): Promise<RestoreOutcomeDecision> => {
+      const action = await requestStickyDecision(stickyConflict, item, {
+        kind: "conflict",
+        conflictKind: outcome.conflictKind ?? "File",
+        conflictName: outcome.conflictName ?? item.name,
+      });
+
+      return action === "skip"
+        ? { done: true, result: "skipped" }
+        : { done: false, options: { ...options, overwrite: true } };
+    },
+    [requestStickyDecision],
+  );
+
+  const handleRestoreOutcome = useCallback(
+    async (
+      item: RestorableItem,
+      outcome: RestoreOutcomeDto,
+      options: RestoreOptions,
+    ): Promise<RestoreOutcomeDecision> => {
+      switch (outcome.status) {
+        case "Restored":
+          return { done: true, result: "restored" };
+        case "NotRestorable":
+          setErrors((prev) => [
+            ...prev,
+            item.name + ": " + (outcome.reason ?? t("restore.notRestorable")),
+          ]);
+          return { done: true, result: "failed" };
+        case "ParentMissing":
+          return handleParentMissingOutcome(item, outcome, options);
+        case "Conflict":
+          return handleConflictOutcome(item, outcome, options);
+        default:
+          return { done: true, result: "failed" };
+      }
+    },
+    [handleConflictOutcome, handleParentMissingOutcome, t],
+  );
+
   const restoreSingle = useCallback(
-    async (item: RestorableItem): Promise<"restored" | "skipped" | "failed"> => {
-      const restorePath = getRestorePath(item);
-
-      if (stickyConfirm.current === "skip") {
-        return "skipped";
+    async (item: RestorableItem): Promise<RestoreSingleResult> => {
+      const confirmed = await confirmRestore(item, getRestorePath(item));
+      if (confirmed) {
+        return confirmed;
       }
 
-      if (stickyConfirm.current !== "apply") {
-        const decision = await requestDecision(item, {
-          kind: "confirm",
-          restorePath,
-        });
-        if (decision.applyToAll) {
-          stickyConfirm.current = decision.action;
-        }
-        if (decision.action === "skip") {
-          return "skipped";
-        }
-      }
-
-      let createMissingParents = false;
-      let overwrite = false;
-
+      let options: RestoreOptions = { createMissingParents: false, overwrite: false };
       for (let attempt = 0; attempt < maxPromptHops; attempt += 1) {
-        let outcome: RestoreOutcomeDto;
         try {
-          outcome = await callRestore(item, { createMissingParents, overwrite });
+          const outcome = await callRestore(item, options);
+          const decision = await handleRestoreOutcome(item, outcome, options);
+          if (decision.done) {
+            return decision.result;
+          }
+          options = decision.options;
         } catch (error) {
           console.error("Restore call failed", error);
-          setErrors((prev) => [...prev, t("restore.failed", { name: item.name })]);
+          reportRestoreFailure(item);
           return "failed";
         }
-
-        if (outcome.status === "Restored") {
-          return "restored";
-        }
-
-        if (outcome.status === "NotRestorable") {
-          const reason = outcome.reason ?? t("restore.notRestorable");
-          setErrors((prev) => [...prev, `${item.name}: ${reason}`]);
-          return "failed";
-        }
-
-        if (outcome.status === "ParentMissing") {
-          if (stickyParentMissing.current === "skip") {
-            return "skipped";
-          }
-
-          if (stickyParentMissing.current !== "apply") {
-            const decision = await requestDecision(item, {
-              kind: "parentMissing",
-              missingPath: outcome.missingPath ?? "",
-            });
-            if (decision.applyToAll) {
-              stickyParentMissing.current = decision.action;
-            }
-            if (decision.action === "skip") {
-              return "skipped";
-            }
-          }
-
-          createMissingParents = true;
-          continue;
-        }
-
-        if (outcome.status === "Conflict") {
-          if (stickyConflict.current === "skip") {
-            return "skipped";
-          }
-
-          if (stickyConflict.current !== "apply") {
-            const decision = await requestDecision(item, {
-              kind: "conflict",
-              conflictKind: outcome.conflictKind ?? "File",
-              conflictName: outcome.conflictName ?? item.name,
-            });
-            if (decision.applyToAll) {
-              stickyConflict.current = decision.action;
-            }
-            if (decision.action === "skip") {
-              return "skipped";
-            }
-          }
-
-          overwrite = true;
-          continue;
-        }
-
-        return "failed";
       }
 
-      setErrors((prev) => [...prev, t("restore.failed", { name: item.name })]);
+      reportRestoreFailure(item);
       return "failed";
     },
-    [callRestore, getRestorePath, requestDecision, t],
+    [callRestore, confirmRestore, getRestorePath, handleRestoreOutcome, reportRestoreFailure],
   );
 
   const restoreItems = useCallback(

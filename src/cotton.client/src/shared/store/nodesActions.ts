@@ -248,6 +248,186 @@ export const loadRoot = async (options?: {
   }
 };
 
+type LoadNodeOptions = {
+  loadChildren: boolean;
+  allowRootRecovery: boolean;
+  force: boolean;
+};
+
+const resolveLoadNodeOptions = (options?: {
+  loadChildren?: boolean;
+  allowRootRecovery?: boolean;
+  force?: boolean;
+}): LoadNodeOptions => ({
+  loadChildren: options?.loadChildren ?? true,
+  allowRootRecovery: options?.allowRootRecovery ?? true,
+  force: options?.force ?? false,
+});
+
+const updateLoadState = (
+  nodeId: string,
+  force: boolean,
+): NodeContentDto | undefined => {
+  const cachedContent = force
+    ? undefined
+    : useNodesStore.getState().contentByNodeId[nodeId];
+
+  useNodesStore.setState(
+    cachedContent
+      ? { error: null }
+      : { loading: true, error: null },
+  );
+  return cachedContent;
+};
+
+const refreshChildrenInBackground = (
+  nodeId: string,
+  cachedContent: NodeContentDto | undefined,
+  loadChildren: boolean,
+): void => {
+  if (!loadChildren || !cachedContent) return;
+
+  void (async () => {
+    try {
+      const fresh = await fetchAllNodeChildren(nodeId);
+      useNodesStore.setState((prev) => ({
+        contentByNodeId: {
+          ...prev.contentByNodeId,
+          [nodeId]: fresh,
+        },
+        lastUpdatedByNodeId: {
+          ...prev.lastUpdatedByNodeId,
+          [nodeId]: Date.now(),
+        },
+      }));
+    } catch {
+      // Cached content is still usable if the background refresh fails.
+    }
+  })();
+};
+
+const tryRecoverRootNodeAsync = async (
+  nodeId: string,
+  statusCode: number | undefined,
+  options: LoadNodeOptions,
+): Promise<boolean> => {
+  if (!shouldAttemptRootRecovery(nodeId, statusCode, options.allowRootRecovery)) {
+    return false;
+  }
+
+  try {
+    clearRootCache();
+    const root = await layoutsApi.resolve();
+    useNodesStore.setState({ rootNodeId: root.id });
+    await loadNode(root.id, {
+      loadChildren: options.loadChildren,
+      allowRootRecovery: false,
+    });
+    return true;
+  } catch (recoveryError) {
+    console.error("Failed to recover root node", recoveryError);
+    useNodesStore.setState({
+      loading: false,
+      error: tFileError("errors.resolveRootFailed"),
+    });
+    return true;
+  }
+};
+
+const shouldAttemptRootRecovery = (
+  nodeId: string,
+  statusCode: number | undefined,
+  allowRootRecovery: boolean,
+): boolean =>
+  allowRootRecovery &&
+  statusCode === 404 &&
+  useNodesStore.getState().rootNodeId === nodeId;
+
+const clearRootCache = () => {
+  useNodesStore.setState({
+    rootNodeId: null,
+    currentNode: null,
+    ancestors: [],
+    contentByNodeId: {},
+    ancestorsByNodeId: {},
+    lastUpdatedByNodeId: {},
+  });
+};
+
+const resolveNodeViewAsync = async (
+  nodeId: string,
+  state: ResolveSnapshot,
+  force: boolean,
+): Promise<{ node: NodeDto; ancestors: NodeDto[] }> =>
+  force
+    ? {
+        node: await nodesApi.getNode(nodeId),
+        ancestors: await nodesApi.getAncestors(nodeId),
+      }
+    : resolveNodeAndAncestors(nodeId, state);
+
+const resolveNodeContentAsync = async (
+  nodeId: string,
+  cachedContent: NodeContentDto | undefined,
+  loadChildren: boolean,
+): Promise<NodeContentDto | undefined> => {
+  if (!loadChildren) {
+    return undefined;
+  }
+
+  return cachedContent ?? fetchAllNodeChildren(nodeId);
+};
+
+const applyLoadedNodeState = (
+  nodeId: string,
+  resolved: { node: NodeDto; ancestors: NodeDto[] },
+  content: NodeContentDto | undefined,
+  loadChildren: boolean,
+) => {
+  useNodesStore.setState((prev) => ({
+    currentNode: resolved.node,
+    ancestors: resolved.ancestors,
+    ancestorsByNodeId: {
+      ...prev.ancestorsByNodeId,
+      [nodeId]: resolved.ancestors,
+    },
+    contentByNodeId: loadChildren
+      ? {
+          ...prev.contentByNodeId,
+          [nodeId]: content,
+        }
+      : prev.contentByNodeId,
+    lastUpdatedByNodeId: {
+      ...prev.lastUpdatedByNodeId,
+      [nodeId]: Date.now(),
+    },
+    loading: false,
+    error: null,
+  }));
+};
+
+const scheduleRootResolveIfNeeded = (nodeId: string, options: LoadNodeOptions) => {
+  if (options.allowRootRecovery && useNodesStore.getState().rootNodeId === nodeId) {
+    scheduleRootResolve({ loadChildren: options.loadChildren });
+  }
+};
+
+const handleLoadNodeFailureAsync = async (
+  nodeId: string,
+  error: unknown,
+  options: LoadNodeOptions,
+): Promise<void> => {
+  const statusCode = isAxiosError(error) ? error.response?.status : undefined;
+  const recovered = await tryRecoverRootNodeAsync(nodeId, statusCode, options);
+  if (recovered) return;
+
+  console.error("Failed to load node view", error);
+  useNodesStore.setState({
+    loading: false,
+    error: tFileError("errors.loadContentsFailed"),
+  });
+};
+
 export const loadNode = async (
   nodeId: string,
   options?: {
@@ -257,121 +437,23 @@ export const loadNode = async (
   },
 ): Promise<void> => {
   const state = useNodesStore.getState();
-  const loadChildren = options?.loadChildren ?? true;
-  const allowRootRecovery = options?.allowRootRecovery ?? true;
-  const force = options?.force ?? false;
+  const resolvedOptions = resolveLoadNodeOptions(options);
   if (state.loading && state.currentNode?.id === nodeId) return;
 
-  const cachedContent = force ? undefined : state.contentByNodeId[nodeId];
-
-  if (cachedContent) {
-    useNodesStore.setState({ error: null });
-  } else {
-    useNodesStore.setState({ loading: true, error: null });
-  }
-
-  const refreshChildrenInBackground = (): void => {
-    if (!loadChildren || !cachedContent) return;
-
-    void (async () => {
-      try {
-        const fresh = await fetchAllNodeChildren(nodeId);
-        useNodesStore.setState((prev) => ({
-          contentByNodeId: {
-            ...prev.contentByNodeId,
-            [nodeId]: fresh,
-          },
-          lastUpdatedByNodeId: {
-            ...prev.lastUpdatedByNodeId,
-            [nodeId]: Date.now(),
-          },
-        }));
-      } catch {
-        // Cached content is still usable if the background refresh fails.
-      }
-    })();
-  };
-
-  const tryRecoverRootNodeAsync = async (statusCode?: number): Promise<boolean> => {
-    if (!allowRootRecovery) return false;
-    if (statusCode !== 404) return false;
-    if (useNodesStore.getState().rootNodeId !== nodeId) return false;
-
-    try {
-      useNodesStore.setState({
-        rootNodeId: null,
-        currentNode: null,
-        ancestors: [],
-        contentByNodeId: {},
-        ancestorsByNodeId: {},
-        lastUpdatedByNodeId: {},
-      });
-
-      const root = await layoutsApi.resolve();
-      useNodesStore.setState({ rootNodeId: root.id });
-      await loadNode(root.id, {
-        loadChildren,
-        allowRootRecovery: false,
-      });
-      return true;
-    } catch (recoveryError) {
-      console.error("Failed to recover root node", recoveryError);
-      useNodesStore.setState({
-        loading: false,
-        error: tFileError("errors.resolveRootFailed"),
-      });
-      return true;
-    }
-  };
-
+  const cachedContent = updateLoadState(nodeId, resolvedOptions.force);
   try {
-    const resolved = force
-      ? {
-          node: await nodesApi.getNode(nodeId),
-          ancestors: await nodesApi.getAncestors(nodeId),
-        }
-      : await resolveNodeAndAncestors(nodeId, state);
-    const content = loadChildren
-      ? (cachedContent ?? (await fetchAllNodeChildren(nodeId)))
-      : undefined;
+    const resolved = await resolveNodeViewAsync(nodeId, state, resolvedOptions.force);
+    const content = await resolveNodeContentAsync(
+      nodeId,
+      cachedContent,
+      resolvedOptions.loadChildren,
+    );
 
-    useNodesStore.setState((prev) => ({
-      currentNode: resolved.node,
-      ancestors: resolved.ancestors,
-      ancestorsByNodeId: {
-        ...prev.ancestorsByNodeId,
-        [nodeId]: resolved.ancestors,
-      },
-      contentByNodeId: loadChildren
-        ? {
-            ...prev.contentByNodeId,
-            [nodeId]: content,
-          }
-        : prev.contentByNodeId,
-      lastUpdatedByNodeId: {
-        ...prev.lastUpdatedByNodeId,
-        [nodeId]: Date.now(),
-      },
-      loading: false,
-      error: null,
-    }));
-
-    refreshChildrenInBackground();
-
-    if (allowRootRecovery && useNodesStore.getState().rootNodeId === nodeId) {
-      scheduleRootResolve({ loadChildren });
-    }
+    applyLoadedNodeState(nodeId, resolved, content, resolvedOptions.loadChildren);
+    refreshChildrenInBackground(nodeId, cachedContent, resolvedOptions.loadChildren);
+    scheduleRootResolveIfNeeded(nodeId, resolvedOptions);
   } catch (error) {
-    const statusCode = isAxiosError(error) ? error.response?.status : undefined;
-
-    const recovered = await tryRecoverRootNodeAsync(statusCode);
-    if (recovered) return;
-
-    console.error("Failed to load node view", error);
-    useNodesStore.setState({
-      loading: false,
-      error: tFileError("errors.loadContentsFailed"),
-    });
+    await handleLoadNodeFailureAsync(nodeId, error, resolvedOptions);
   }
 };
 

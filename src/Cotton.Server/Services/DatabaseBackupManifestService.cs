@@ -39,7 +39,6 @@ namespace Cotton.Server.Services
             return new ResolvedBackupManifest(pointer.LatestManifestStorageKey, pointer, manifest);
         }
 
-
         private async Task<T?> ReadJsonAsync<T>(string storageKey, CancellationToken cancellationToken)
         {
             if (!await storage.ExistsAsync(storageKey))

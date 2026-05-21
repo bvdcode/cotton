@@ -58,84 +58,169 @@ public class WebDavCopyRequestHandler(
 {
     public async Task<WebDavCopyResult> Handle(WebDavCopyRequest request, CancellationToken ct)
     {
-        var preLockSource = await ResolveSourceAsync(request, ct);
-        var sourceValidation = ValidateSourceOrGetFailure(request, preLockSource);
-        if (sourceValidation is not null)
+        var preconditions = await ResolvePreLockPreconditionsAsync(request, ct);
+        if (preconditions.Failure is not null)
         {
-            return sourceValidation;
+            return preconditions.Failure;
         }
 
-        var destParentResult = await GetAndValidateDestinationParentAsync(request, ct);
-        var destParentFailure = TryGetDestinationParentFailure(destParentResult);
-        if (destParentFailure is not null)
-        {
-            return destParentFailure;
-        }
-
-        // Per-layout namespace serialization: COPY creates new entries in the
-        // destination parent that can collide cross-table with a concurrent
-        // create/move. For a recursive folder copy, the entire subtree creation
-        // runs inside the lock - once an intermediate node hits the DB outside
-        // the lock, concurrent operations can target it. Re-resolve source and
-        // destination parent inside the lock so stale pre-lock objects never
-        // drive the actual copy.
-        Guid lockedLayoutId = destParentResult.ParentNode!.LayoutId;
         await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
-        await LayoutLocks.AcquireForLayoutAsync(_dbContext, lockedLayoutId, ct);
+        await LayoutLocks.AcquireForLayoutAsync(_dbContext, preconditions.LayoutId!.Value, ct);
 
-        var sourceResult = await ResolveSourceAsync(request, ct);
-        sourceValidation = ValidateSourceOrGetFailure(request, sourceResult);
-        if (sourceValidation is not null)
+        var lockedCopy = await PrepareLockedCopyAsync(request, preconditions.LayoutId.Value, ct);
+        if (lockedCopy.Failure is not null)
         {
-            return sourceValidation;
+            return lockedCopy.Failure;
         }
 
-        if (await GetSourceLayoutIdAsync(sourceResult, ct) != lockedLayoutId)
+        var copyResult = await TryPerformCopyAsync(request, lockedCopy.Source!, lockedCopy.DestinationParent!, ct);
+        if (copyResult.Failure is not null)
         {
-            _logger.LogDebug("WebDAV COPY: Source layout changed while waiting for lock: {Path}", request.SourcePath);
-            return Fail(WebDavCopyError.SourceNotFound);
+            return copyResult.Failure;
         }
 
-        destParentResult = await GetAndValidateDestinationParentAsync(request, ct);
-        destParentFailure = TryGetDestinationParentFailure(destParentResult);
-        if (destParentFailure is not null)
+        await _dbContext.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        _quota.RecordLogicalBytesAdded(request.UserId, copyResult.AddedBytes);
+
+        await NotifyCopyCompletedAsync(request, copyResult.NodeId, copyResult.NodeFileId, ct);
+        return Ok(lockedCopy.Created, copyResult.NodeId, copyResult.NodeFileId);
+    }
+
+    private async Task<PreLockCopyOutcome> ResolvePreLockPreconditionsAsync(WebDavCopyRequest request, CancellationToken ct)
+    {
+        var source = await ResolveSourceAsync(request, ct);
+        var sourceFailure = ValidateSourceOrGetFailure(request, source);
+        if (sourceFailure is not null)
         {
-            return destParentFailure;
+            return PreLockCopyOutcome.Failed(sourceFailure);
         }
 
-        if (destParentResult.ParentNode!.LayoutId != lockedLayoutId)
+        var destinationParent = await GetAndValidateDestinationParentAsync(request, ct);
+        var destinationFailure = TryGetDestinationParentFailure(destinationParent);
+        return destinationFailure is null
+            ? PreLockCopyOutcome.Success(destinationParent.ParentNode!.LayoutId)
+            : PreLockCopyOutcome.Failed(destinationFailure);
+    }
+
+    private async Task<LockedCopyOutcome> PrepareLockedCopyAsync(
+        WebDavCopyRequest request,
+        Guid lockedLayoutId,
+        CancellationToken ct)
+    {
+        var source = await ResolveSourceAsync(request, ct);
+        var sourceFailure = await ValidateLockedSourceAsync(request, source, lockedLayoutId, ct);
+        if (sourceFailure is not null)
         {
-            _logger.LogDebug("WebDAV COPY: Destination parent layout changed while waiting for lock: {Path}", request.DestinationPath);
-            return Fail(WebDavCopyError.DestinationParentNotFound);
+            return LockedCopyOutcome.Failed(sourceFailure);
         }
 
-        var (created, allowed) = await HandleDestinationOverwriteAsync(request, ct);
-        if (!allowed)
+        var destinationParent = await GetAndValidateDestinationParentAsync(request, ct);
+        var destinationFailure = ValidateLockedDestination(destinationParent, request, lockedLayoutId);
+        if (destinationFailure is not null)
         {
-            return Fail(WebDavCopyError.DestinationExists);
+            return LockedCopyOutcome.Failed(destinationFailure);
         }
 
-        Guid? copiedNodeId;
-        Guid? copiedNodeFileId;
-        long addedBytes;
+        var overwriteResult = await HandleDestinationOverwriteAsync(request, ct);
+        return overwriteResult.Allowed
+            ? LockedCopyOutcome.Success(source, destinationParent, overwriteResult.Created)
+            : LockedCopyOutcome.Failed(Fail(WebDavCopyError.DestinationExists));
+    }
+
+    private async Task<WebDavCopyResult?> ValidateLockedSourceAsync(
+        WebDavCopyRequest request,
+        WebDavResolveResult source,
+        Guid lockedLayoutId,
+        CancellationToken ct)
+    {
+        var sourceFailure = ValidateSourceOrGetFailure(request, source);
+        if (sourceFailure is not null)
+        {
+            return sourceFailure;
+        }
+
+        if (await GetSourceLayoutIdAsync(source, ct) == lockedLayoutId)
+        {
+            return null;
+        }
+
+        _logger.LogDebug("WebDAV COPY: Source layout changed while waiting for lock: {Path}", request.SourcePath);
+        return Fail(WebDavCopyError.SourceNotFound);
+    }
+
+    private WebDavCopyResult? ValidateLockedDestination(
+        WebDavParentResult destinationParent,
+        WebDavCopyRequest request,
+        Guid lockedLayoutId)
+    {
+        var destinationFailure = TryGetDestinationParentFailure(destinationParent);
+        if (destinationFailure is not null)
+        {
+            return destinationFailure;
+        }
+
+        if (destinationParent.ParentNode!.LayoutId == lockedLayoutId)
+        {
+            return null;
+        }
+
+        _logger.LogDebug("WebDAV COPY: Destination parent layout changed while waiting for lock: {Path}", request.DestinationPath);
+        return Fail(WebDavCopyError.DestinationParentNotFound);
+    }
+
+    private async Task<CopyOperationOutcome> TryPerformCopyAsync(
+        WebDavCopyRequest request,
+        WebDavResolveResult source,
+        WebDavParentResult destinationParent,
+        CancellationToken ct)
+    {
         try
         {
-            (copiedNodeId, copiedNodeFileId, addedBytes) = await PerformCopyAsync(request, sourceResult, destParentResult, destParentResult.ParentNode!.LayoutId, ct);
+            var (nodeId, nodeFileId, addedBytes) = await PerformCopyAsync(
+                request,
+                source,
+                destinationParent,
+                destinationParent.ParentNode!.LayoutId,
+                ct);
+            return CopyOperationOutcome.Success(nodeId, nodeFileId, addedBytes);
         }
         catch (BadRequestException<User>)
         {
-            return Fail(WebDavCopyError.QuotaExceeded);
+            return CopyOperationOutcome.Failed(Fail(WebDavCopyError.QuotaExceeded));
         }
-        await _dbContext.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
-        _quota.RecordLogicalBytesAdded(request.UserId, addedBytes);
+    }
 
-        await NotifyCopyCompletedAsync(
-            request,
-            copiedNodeId,
-            copiedNodeFileId,
-            ct);
-        return Ok(created, copiedNodeId, copiedNodeFileId);
+    private sealed record PreLockCopyOutcome(Guid? LayoutId, WebDavCopyResult? Failure)
+    {
+        public static PreLockCopyOutcome Success(Guid layoutId) => new(layoutId, null);
+        public static PreLockCopyOutcome Failed(WebDavCopyResult failure) => new(null, failure);
+    }
+
+    private sealed record LockedCopyOutcome(
+        WebDavResolveResult? Source,
+        WebDavParentResult? DestinationParent,
+        bool Created,
+        WebDavCopyResult? Failure)
+    {
+        public static LockedCopyOutcome Success(
+            WebDavResolveResult source,
+            WebDavParentResult destinationParent,
+            bool created) => new(source, destinationParent, created, null);
+
+        public static LockedCopyOutcome Failed(WebDavCopyResult failure) => new(null, null, false, failure);
+    }
+
+    private sealed record CopyOperationOutcome(
+        Guid? NodeId,
+        Guid? NodeFileId,
+        long AddedBytes,
+        WebDavCopyResult? Failure)
+    {
+        public static CopyOperationOutcome Success(Guid? nodeId, Guid? nodeFileId, long addedBytes) =>
+            new(nodeId, nodeFileId, addedBytes, null);
+
+        public static CopyOperationOutcome Failed(WebDavCopyResult failure) => new(null, null, 0, failure);
     }
 
     private static WebDavCopyResult Fail(WebDavCopyError error)

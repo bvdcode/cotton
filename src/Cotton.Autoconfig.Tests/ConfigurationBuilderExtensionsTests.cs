@@ -102,7 +102,6 @@ namespace Cotton.Autoconfig.Tests
             }
         }
 
-
         [Test]
         public void AddCottonOptions_With_Derived_Settings_Does_Not_Require_Env_MasterKey()
         {
@@ -119,6 +118,5 @@ namespace Cotton.Autoconfig.Tests
                 Assert.That(cfg[nameof(CottonEncryptionSettings.MasterEncryptionKeyId)], Is.EqualTo("1"));
             }
         }
-
     }
 }

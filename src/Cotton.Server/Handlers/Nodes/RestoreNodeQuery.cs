@@ -12,6 +12,7 @@ using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
 
 namespace Cotton.Server.Handlers.Nodes
@@ -35,124 +36,221 @@ namespace Cotton.Server.Handlers.Nodes
     {
         public async Task<RestoreOutcomeDto> Handle(RestoreNodeQuery request, CancellationToken ct)
         {
+            Guid layoutId = await GetLayoutIdOrThrowAsync(request, ct);
+
+            await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+            await LayoutLocks.AcquireForLayoutAsync(_dbContext, layoutId, ct);
+
+            var node = await LoadNodeOrThrowAsync(request, ct);
+            var wrapperOutcome = await ResolveTopLevelTrashWrapperAsync(request, node, ct);
+            if (wrapperOutcome.Failure is not null)
+            {
+                await tx.RollbackAsync(ct);
+                return wrapperOutcome.Failure;
+            }
+
+            string originalParentPath = TrashRestoreCoordinator.GetOriginalParentPath(node.Metadata);
+            try
+            {
+                var parentOutcome = await ResolveRestoreParentAsync(request, originalParentPath, ct);
+                if (parentOutcome.Failure is not null)
+                {
+                    await tx.RollbackAsync(ct);
+                    return parentOutcome.Failure;
+                }
+
+                var conflictOutcome = await ResolveConflictAsync(request, parentOutcome.Parent!, node, originalParentPath, ct);
+                if (conflictOutcome is not null)
+                {
+                    await tx.RollbackAsync(ct);
+                    return conflictOutcome;
+                }
+
+                await RestoreNodeAsync(request, node, wrapperOutcome.Wrapper!, parentOutcome.Parent!, ct);
+                await tx.CommitAsync(ct);
+
+                return BuildRestoredOutcome(request, node, parentOutcome.Parent!, originalParentPath);
+            }
+            catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+            {
+                await tx.RollbackAsync(ct);
+                return BuildConcurrentConflictOutcome(request, node, originalParentPath, ex);
+            }
+        }
+
+        private async Task<Guid> GetLayoutIdOrThrowAsync(RestoreNodeQuery request, CancellationToken ct)
+        {
             Guid layoutId = await _dbContext.Nodes
                 .AsNoTracking()
                 .Where(x => x.Id == request.NodeId && x.OwnerId == request.UserId)
                 .Select(x => x.LayoutId)
                 .SingleOrDefaultAsync(ct);
-            if (layoutId == Guid.Empty)
-            {
-                throw new EntityNotFoundException<Node>();
-            }
 
-            await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
-            await LayoutLocks.AcquireForLayoutAsync(_dbContext, layoutId, ct);
+            return layoutId != Guid.Empty
+                ? layoutId
+                : throw new EntityNotFoundException<Node>();
+        }
 
-            var node = await _dbContext.Nodes
+        private async Task<Node> LoadNodeOrThrowAsync(RestoreNodeQuery request, CancellationToken ct)
+        {
+            return await _dbContext.Nodes
                 .Where(x => x.Id == request.NodeId && x.OwnerId == request.UserId)
                 .SingleOrDefaultAsync(ct)
                 ?? throw new EntityNotFoundException<Node>();
+        }
 
+        private async Task<TopLevelTrashWrapperOutcome> ResolveTopLevelTrashWrapperAsync(
+            RestoreNodeQuery request,
+            Node node,
+            CancellationToken ct)
+        {
             if (node.Type != NodeType.Trash)
             {
-                await tx.RollbackAsync(ct);
-                return NotRestorable("Node is not in trash.");
+                return TopLevelTrashWrapperOutcome.NotRestorable("Node is not in trash.");
             }
 
-            var wrapper = node.ParentId.HasValue
-                ? await _dbContext.Nodes
-                    .Where(x => x.Id == node.ParentId.Value && x.OwnerId == request.UserId)
-                    .SingleOrDefaultAsync(ct)
-                : null;
+            var wrapper = await LoadWrapperAsync(request.UserId, node.ParentId, ct);
             var trashRoot = await _layouts.GetUserTrashRootAsync(request.UserId);
             if (wrapper is null || wrapper.ParentId != trashRoot.Id)
             {
-                await tx.RollbackAsync(ct);
-                return NotRestorable("Item can only be restored from the top level of trash.");
+                return TopLevelTrashWrapperOutcome.NotRestorable("Item can only be restored from the top level of trash.");
             }
 
-            string originalParentPath = TrashRestoreCoordinator.GetOriginalParentPath(node.Metadata);
+            return TopLevelTrashWrapperOutcome.Success(wrapper);
+        }
 
-            try
+        private async Task<Node?> LoadWrapperAsync(Guid userId, Guid? wrapperId, CancellationToken ct)
+        {
+            if (!wrapperId.HasValue)
             {
-                var resolution = await _restore.ResolveOrCreateParentAsync(
-                    request.UserId,
-                    originalParentPath,
-                    request.CreateMissingParents,
-                    ct);
-                if (resolution.InvalidPathReason is not null)
-                {
-                    await tx.RollbackAsync(ct);
-                    return NotRestorable(resolution.InvalidPathReason, originalParentPath);
-                }
-
-                var targetParent = resolution.Parent;
-                if (targetParent is null)
-                {
-                    await tx.RollbackAsync(ct);
-                    return new RestoreOutcomeDto
-                    {
-                        Status = RestoreStatus.ParentMissing,
-                        OriginalParentPath = originalParentPath,
-                        MissingPath = originalParentPath,
-                    };
-                }
-
-                var conflict = await _restore.FindConflictAsync(request.UserId, targetParent.Id, node.NameKey, ct);
-                if (conflict.HasValue)
-                {
-                    if (!request.Overwrite)
-                    {
-                        await tx.RollbackAsync(ct);
-                        return new RestoreOutcomeDto
-                        {
-                            Status = RestoreStatus.Conflict,
-                            OriginalParentPath = originalParentPath,
-                            ConflictKind = conflict.Value.Kind,
-                            ConflictName = conflict.Value.Name,
-                        };
-                    }
-
-                    await _restore.SendConflictToTrashAsync(request.UserId, conflict.Value, ct);
-                }
-
-                node.ParentId = targetParent.Id;
-                node.Metadata = TrashRestoreCoordinator.RemoveOriginalParentPath(node.Metadata);
-                await _subtree.SetSubtreeTypeAsync(request.UserId, node.Id, NodeType.Default, ct);
-                await _dbContext.SaveChangesAsync(ct);
-
-                await _restore.DeleteWrapperIfEmptyAsync(request.UserId, wrapper, ct);
-                await tx.CommitAsync(ct);
-
-                _logger.LogInformation(
-                    "User {UserId} restored node {NodeId} into parent {ParentId}.",
-                    request.UserId,
-                    node.Id,
-                    targetParent.Id);
-
-                return new RestoreOutcomeDto
-                {
-                    Status = RestoreStatus.Restored,
-                    OriginalParentPath = originalParentPath,
-                    RestoredNode = node.Adapt<NodeDto>(),
-                };
+                return null;
             }
-            catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+
+            return await _dbContext.Nodes
+                .Where(x => x.Id == wrapperId.Value && x.OwnerId == userId)
+                .SingleOrDefaultAsync(ct);
+        }
+
+        private async Task<RestoreParentOutcome> ResolveRestoreParentAsync(
+            RestoreNodeQuery request,
+            string originalParentPath,
+            CancellationToken ct)
+        {
+            var resolution = await _restore.ResolveOrCreateParentAsync(
+                request.UserId,
+                originalParentPath,
+                request.CreateMissingParents,
+                ct);
+
+            if (resolution.InvalidPathReason is not null)
             {
-                await tx.RollbackAsync(ct);
-                _logger.LogWarning(
-                    ex,
-                    "Concurrent unique violation while restoring node {NodeId} for user {UserId}.",
-                    request.NodeId,
-                    request.UserId);
-                return new RestoreOutcomeDto
-                {
-                    Status = RestoreStatus.Conflict,
-                    OriginalParentPath = originalParentPath,
-                    ConflictKind = RestoreConflictKind.Folder,
-                    ConflictName = node.Name,
-                };
+                return RestoreParentOutcome.Failed(NotRestorable(resolution.InvalidPathReason, originalParentPath));
             }
+
+            return resolution.Parent is null
+                ? RestoreParentOutcome.Failed(ParentMissing(originalParentPath))
+                : RestoreParentOutcome.Success(resolution.Parent);
+        }
+
+        private async Task<RestoreOutcomeDto?> ResolveConflictAsync(
+            RestoreNodeQuery request,
+            Node targetParent,
+            Node node,
+            string originalParentPath,
+            CancellationToken ct)
+        {
+            var conflict = await _restore.FindConflictAsync(request.UserId, targetParent.Id, node.NameKey, ct);
+            if (!conflict.HasValue)
+            {
+                return null;
+            }
+
+            if (!request.Overwrite)
+            {
+                return Conflict(originalParentPath, conflict.Value.Kind, conflict.Value.Name);
+            }
+
+            await _restore.SendConflictToTrashAsync(request.UserId, conflict.Value, ct);
+            return null;
+        }
+
+        private async Task RestoreNodeAsync(
+            RestoreNodeQuery request,
+            Node node,
+            Node wrapper,
+            Node targetParent,
+            CancellationToken ct)
+        {
+            node.ParentId = targetParent.Id;
+            node.Metadata = TrashRestoreCoordinator.RemoveOriginalParentPath(node.Metadata);
+            await _subtree.SetSubtreeTypeAsync(request.UserId, node.Id, NodeType.Default, ct);
+            await _dbContext.SaveChangesAsync(ct);
+            await _restore.DeleteWrapperIfEmptyAsync(request.UserId, wrapper, ct);
+        }
+
+        private RestoreOutcomeDto BuildRestoredOutcome(
+            RestoreNodeQuery request,
+            Node node,
+            Node targetParent,
+            string originalParentPath)
+        {
+            _logger.LogInformation(
+                "User {UserId} restored node {NodeId} into parent {ParentId}.",
+                request.UserId,
+                node.Id,
+                targetParent.Id);
+
+            return new RestoreOutcomeDto
+            {
+                Status = RestoreStatus.Restored,
+                OriginalParentPath = originalParentPath,
+                RestoredNode = node.Adapt<NodeDto>(),
+            };
+        }
+
+        private RestoreOutcomeDto BuildConcurrentConflictOutcome(
+            RestoreNodeQuery request,
+            Node node,
+            string originalParentPath,
+            DbUpdateException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Concurrent unique violation while restoring node {NodeId} for user {UserId}.",
+                request.NodeId,
+                request.UserId);
+
+            return Conflict(originalParentPath, RestoreConflictKind.Folder, node.Name);
+        }
+
+        private static RestoreOutcomeDto ParentMissing(string originalParentPath) => new()
+        {
+            Status = RestoreStatus.ParentMissing,
+            OriginalParentPath = originalParentPath,
+            MissingPath = originalParentPath,
+        };
+
+        private static RestoreOutcomeDto Conflict(
+            string originalParentPath,
+            RestoreConflictKind kind,
+            string name) => new()
+        {
+            Status = RestoreStatus.Conflict,
+            OriginalParentPath = originalParentPath,
+            ConflictKind = kind,
+            ConflictName = name,
+        };
+
+        private sealed record TopLevelTrashWrapperOutcome(Node? Wrapper, RestoreOutcomeDto? Failure)
+        {
+            public static TopLevelTrashWrapperOutcome Success(Node wrapper) => new(wrapper, null);
+            public static TopLevelTrashWrapperOutcome NotRestorable(string reason) => new(null, RestoreNodeQueryHandler.NotRestorable(reason));
+        }
+
+        private sealed record RestoreParentOutcome(Node? Parent, RestoreOutcomeDto? Failure)
+        {
+            public static RestoreParentOutcome Success(Node parent) => new(parent, null);
+            public static RestoreParentOutcome Failed(RestoreOutcomeDto failure) => new(null, failure);
         }
 
         private static RestoreOutcomeDto NotRestorable(string reason, string? originalParentPath = null) => new()

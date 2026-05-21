@@ -8,6 +8,7 @@ import {
   Restore,
   Share,
 } from "@mui/icons-material";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { NodeDto } from "../../../shared/api/layoutsApi";
 import {
@@ -37,6 +38,121 @@ interface FolderCardProps {
   readOnly?: boolean;
 }
 
+type FolderAction = NonNullable<React.ComponentProps<typeof RenamableItemCard>["actions"]>[number];
+
+type FolderActionOptions = Pick<
+  FolderCardProps,
+  | "onCut"
+  | "onDelete"
+  | "onDownload"
+  | "onRestore"
+  | "onShare"
+  | "onStartRename"
+  | "onToggleEncryptionPolicy"
+  | "readOnly"
+> & {
+  encryptionPolicyInherited: boolean;
+  explicitEncryptionPolicyEnabled: boolean;
+  t: ReturnType<typeof useTranslation>["t"];
+};
+
+const buildFolderActions = (options: FolderActionOptions): FolderAction[] => {
+  const actions: FolderAction[] = [];
+  addDownloadAction(actions, options);
+  if (options.readOnly) {
+    return actions;
+  }
+
+  addShareAction(actions, options);
+  addRenameAction(actions, options);
+  addCutAction(actions, options);
+  addEncryptionPolicyAction(actions, options);
+  addRestoreAction(actions, options);
+  addDeleteAction(actions, options);
+  return actions;
+};
+
+const addDownloadAction = (actions: FolderAction[], options: FolderActionOptions) => {
+  if (options.onDownload) {
+    actions.push({
+      icon: <Download />,
+      onClick: options.onDownload,
+      tooltip: options.t("common:actions.download"),
+    });
+  }
+};
+
+const addShareAction = (actions: FolderAction[], options: FolderActionOptions) => {
+  if (options.onShare) {
+    actions.push({
+      icon: <Share />,
+      onClick: options.onShare,
+      tooltip: options.t("common:actions.share"),
+    });
+  }
+};
+
+const addRenameAction = (actions: FolderAction[], options: FolderActionOptions) => {
+  if (options.onStartRename) {
+    actions.push({
+      icon: <Edit />,
+      onClick: options.onStartRename,
+      tooltip: options.t("common:actions.rename"),
+    });
+  }
+};
+
+const addCutAction = (actions: FolderAction[], options: FolderActionOptions) => {
+  if (options.onCut) {
+    actions.push({
+      icon: <ContentCut />,
+      onClick: options.onCut,
+      tooltip: options.t("files:move.cut"),
+    });
+  }
+};
+
+const addEncryptionPolicyAction = (
+  actions: FolderAction[],
+  options: FolderActionOptions,
+) => {
+  if (!options.onToggleEncryptionPolicy || options.encryptionPolicyInherited) {
+    return;
+  }
+
+  actions.push({
+    icon: options.explicitEncryptionPolicyEnabled ? (
+      <LockOpenOutlined />
+    ) : (
+      <LockOutlined />
+    ),
+    onClick: options.onToggleEncryptionPolicy,
+    tooltip: options.explicitEncryptionPolicyEnabled
+      ? options.t("files:clientEncryption.disablePolicy")
+      : options.t("files:clientEncryption.enablePolicy"),
+  });
+};
+
+const addRestoreAction = (actions: FolderAction[], options: FolderActionOptions) => {
+  if (options.onRestore) {
+    actions.push({
+      icon: <Restore />,
+      onClick: options.onRestore,
+      tooltip: options.t("common:actions.restore"),
+    });
+  }
+};
+
+const addDeleteAction = (actions: FolderAction[], options: FolderActionOptions) => {
+  if (options.onDelete) {
+    actions.push({
+      icon: <Delete />,
+      onClick: options.onDelete,
+      tooltip: options.t("common:actions.delete"),
+    });
+  }
+};
+
 export const FolderCard = ({
   folder,
   isRenaming,
@@ -64,6 +180,36 @@ export const FolderCard = ({
     encryptionPolicy?.effectiveEnabled ?? explicitEncryptionPolicyEnabled;
   const encryptionPolicyInherited = encryptionPolicy?.inheritedEnabled ?? false;
 
+  const actions = useMemo(
+    () =>
+      buildFolderActions({
+        encryptionPolicyInherited,
+        explicitEncryptionPolicyEnabled,
+        onCut,
+        onDelete,
+        onDownload,
+        onRestore,
+        onShare,
+        onStartRename,
+        onToggleEncryptionPolicy,
+        readOnly,
+        t,
+      }),
+    [
+      encryptionPolicyInherited,
+      explicitEncryptionPolicyEnabled,
+      onCut,
+      onDelete,
+      onDownload,
+      onRestore,
+      onShare,
+      onStartRename,
+      onToggleEncryptionPolicy,
+      readOnly,
+      t,
+    ],
+  );
+
   return (
     <RenamableItemCard
       icon={getFolderIcon()}
@@ -80,77 +226,7 @@ export const FolderCard = ({
       subtitle={new Date(folder.createdAt).toLocaleDateString()}
       onClick={onClick}
       variant={variant}
-      actions={[
-        ...(onDownload
-          ? [
-              {
-                icon: <Download />,
-                onClick: onDownload,
-                tooltip: t("common:actions.download"),
-              },
-            ]
-          : []),
-        ...(!readOnly && onShare
-          ? [
-              {
-                icon: <Share />,
-                onClick: onShare,
-                tooltip: t("common:actions.share"),
-              },
-            ]
-          : []),
-        ...(!readOnly && onStartRename
-          ? [
-              {
-                icon: <Edit />,
-                onClick: onStartRename,
-                tooltip: t("common:actions.rename"),
-              },
-            ]
-          : []),
-        ...(!readOnly && onCut
-          ? [
-              {
-                icon: <ContentCut />,
-                onClick: onCut,
-                tooltip: t("files:move.cut"),
-              },
-            ]
-          : []),
-        ...(!readOnly && onToggleEncryptionPolicy && !encryptionPolicyInherited
-          ? [
-              {
-                icon: explicitEncryptionPolicyEnabled ? (
-                  <LockOpenOutlined />
-                ) : (
-                  <LockOutlined />
-                ),
-                onClick: onToggleEncryptionPolicy,
-                tooltip: explicitEncryptionPolicyEnabled
-                  ? t("files:clientEncryption.disablePolicy")
-                  : t("files:clientEncryption.enablePolicy"),
-              },
-            ]
-          : []),
-        ...(!readOnly && onRestore
-          ? [
-              {
-                icon: <Restore />,
-                onClick: onRestore,
-                tooltip: t("common:actions.restore"),
-              },
-            ]
-          : []),
-        ...(!readOnly && onDelete
-          ? [
-              {
-                icon: <Delete />,
-                onClick: onDelete,
-                tooltip: t("common:actions.delete"),
-              },
-            ]
-          : []),
-      ]}
+      actions={actions}
       isRenaming={isRenaming}
       renamingValue={renamingName}
       onRenamingValueChange={onRenamingNameChange}

@@ -1,4 +1,5 @@
 using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
@@ -31,18 +32,38 @@ namespace Cotton.Server.Handlers.Server
 
         public async Task<GcChunkTimelineDto> Handle(GetGcChunksTimelineQuery request, CancellationToken cancellationToken)
         {
-            string normalizedBucket = request.Bucket.Trim().ToLowerInvariant();
-            if (normalizedBucket is not ("hour" or "day"))
-            {
-                throw new BadRequestException("Invalid bucket value. Supported values: 'hour', 'day'.");
-            }
-
+            string normalizedBucket = NormalizeBucket(request.Bucket);
             TimeZoneInfo effectiveTimeZone = ResolveTimelineTimeZone(request.TimezoneId, _settings);
-
             DateTime now = DateTime.UtcNow;
-            DateTime rangeStartUtc = (request.FromUtc ?? now).ToUniversalTime();
-            DateTime rangeEndUtc = (request.ToUtc ?? rangeStartUtc.AddDays(DefaultGcTimelineHorizonDays)).ToUniversalTime();
+            var range = ResolveRange(request, now);
 
+            HashSet<string> protectedStorageKeys = await _chunkUsage.GetProtectedStorageKeysAsync(cancellationToken);
+            var gcBaseQuery = BuildGcBaseQuery(protectedStorageKeys, range.EndUtc);
+            var aggregates = await LoadHourlyAggregatesAsync(gcBaseQuery, range.StartUtc, cancellationToken);
+            List<GcChunkTimelineBucketDto> buckets = BuildTimelineBuckets(aggregates, normalizedBucket, effectiveTimeZone);
+            var storageStats = await GetStorageUsageStatsAsync(now, protectedStorageKeys, cancellationToken);
+
+            return BuildTimelineDto(normalizedBucket, range, now, buckets, storageStats);
+        }
+
+        private static string NormalizeBucket(string bucket)
+        {
+            string normalizedBucket = bucket.Trim().ToLowerInvariant();
+            return normalizedBucket is "hour" or "day"
+                ? normalizedBucket
+                : throw new BadRequestException("Invalid bucket value. Supported values: 'hour', 'day'.");
+        }
+
+        private static TimelineRange ResolveRange(GetGcChunksTimelineQuery request, DateTime nowUtc)
+        {
+            DateTime rangeStartUtc = (request.FromUtc ?? nowUtc).ToUniversalTime();
+            DateTime rangeEndUtc = (request.ToUtc ?? rangeStartUtc.AddDays(DefaultGcTimelineHorizonDays)).ToUniversalTime();
+            ValidateRange(rangeStartUtc, rangeEndUtc);
+            return new TimelineRange(rangeStartUtc, rangeEndUtc);
+        }
+
+        private static void ValidateRange(DateTime rangeStartUtc, DateTime rangeEndUtc)
+        {
             if (rangeEndUtc <= rangeStartUtc)
             {
                 throw new BadRequestException("toUtc must be greater than fromUtc.");
@@ -52,26 +73,125 @@ namespace Cotton.Server.Handlers.Server
             {
                 throw new BadRequestException($"Requested range is too large. Maximum is {MaxGcTimelineHorizonDays} days.");
             }
+        }
 
-            HashSet<string> protectedStorageKeys = await _chunkUsage.GetProtectedStorageKeysAsync(cancellationToken);
-            var gcBaseQuery = _chunkUsage
+        private IQueryable<Chunk> BuildGcBaseQuery(
+            IReadOnlyCollection<string> protectedStorageKeys,
+            DateTime rangeEndUtc)
+        {
+            return _chunkUsage
                 .WhereNotProtectedByStorageKeys(
                     _chunkUsage.WhereUnreferencedByDatabase(_dbContext.Chunks.AsNoTracking()),
                     protectedStorageKeys)
                 .Where(c => c.GCScheduledAfter != null
                     && c.GCScheduledAfter < rangeEndUtc);
+        }
 
-            var overdueAggregate = await gcBaseQuery
+        private static GcChunkTimelineDto BuildTimelineDto(
+            string bucket,
+            TimelineRange range,
+            DateTime generatedAtUtc,
+            IReadOnlyCollection<GcChunkTimelineBucketDto> buckets,
+            StorageUsageStatsDto storageStats)
+        {
+            return new GcChunkTimelineDto
+            {
+                Bucket = bucket,
+                From = range.StartUtc,
+                To = range.EndUtc,
+                GeneratedAt = generatedAtUtc,
+                TotalChunks = buckets.Sum(x => x.ChunkCount),
+                TotalSizeBytes = buckets.Sum(x => x.SizeBytes),
+                Buckets = [.. buckets],
+                Storage = storageStats,
+            };
+        }
+
+        private static List<GcChunkTimelineBucketDto> BuildTimelineBuckets(
+            IEnumerable<HourlyGcAggregate> hourlyAggregates,
+            string bucket,
+            TimeZoneInfo timeZone)
+        {
+            Dictionary<DateTime, (long ChunkCount, long SizeBytes)> bucketsMap = [];
+            foreach (var item in hourlyAggregates)
+            {
+                AddAggregateToBucket(bucketsMap, item, bucket, timeZone);
+            }
+
+            return [.. bucketsMap
+                .OrderBy(x => x.Key)
+                .Select(x => new GcChunkTimelineBucketDto
+                {
+                    BucketStartUtc = x.Key,
+                    ChunkCount = x.Value.ChunkCount,
+                    SizeBytes = x.Value.SizeBytes,
+                })];
+        }
+
+        private static void AddAggregateToBucket(
+            IDictionary<DateTime, (long ChunkCount, long SizeBytes)> bucketsMap,
+            HourlyGcAggregate item,
+            string bucket,
+            TimeZoneInfo timeZone)
+        {
+            DateTime bucketUtc = ResolveBucketStartUtc(item, bucket, timeZone);
+            bucketsMap[bucketUtc] = bucketsMap.TryGetValue(bucketUtc, out var existing)
+                ? (existing.ChunkCount + item.ChunkCount, existing.SizeBytes + item.SizeBytes)
+                : (item.ChunkCount, item.SizeBytes);
+        }
+
+        private static DateTime ResolveBucketStartUtc(HourlyGcAggregate item, string bucket, TimeZoneInfo timeZone)
+        {
+            DateTime hourStartUtc = new(item.Year, item.Month, item.Day, item.Hour, 0, 0, DateTimeKind.Utc);
+            DateTime local = TimeZoneInfo.ConvertTimeFromUtc(hourStartUtc, timeZone);
+            DateTime localBucketStart = bucket == "day"
+                ? new DateTime(local.Year, local.Month, local.Day, 0, 0, 0, DateTimeKind.Unspecified)
+                : new DateTime(local.Year, local.Month, local.Day, local.Hour, 0, 0, DateTimeKind.Unspecified);
+            TimeSpan bucketOffset = timeZone.GetUtcOffset(localBucketStart);
+            return new DateTimeOffset(localBucketStart, bucketOffset).UtcDateTime;
+        }
+
+        private async Task<List<HourlyGcAggregate>> LoadHourlyAggregatesAsync(
+            IQueryable<Chunk> gcBaseQuery,
+            DateTime rangeStartUtc,
+            CancellationToken cancellationToken)
+        {
+            var hourlyAggregates = await LoadScheduledHourlyAggregatesAsync(gcBaseQuery, rangeStartUtc, cancellationToken);
+            var overdueAggregate = await LoadOverdueAggregateAsync(gcBaseQuery, rangeStartUtc, cancellationToken);
+            if (overdueAggregate is not null && overdueAggregate.ChunkCount > 0)
+            {
+                hourlyAggregates.Add(HourlyGcAggregate.From(rangeStartUtc, overdueAggregate.ChunkCount, overdueAggregate.SizeBytes));
+            }
+
+            return hourlyAggregates;
+        }
+
+        private static Task<HourlyGcAggregate?> LoadOverdueAggregateAsync(
+            IQueryable<Chunk> gcBaseQuery,
+            DateTime rangeStartUtc,
+            CancellationToken cancellationToken)
+        {
+            return gcBaseQuery
                 .Where(c => c.GCScheduledAfter < rangeStartUtc)
                 .GroupBy(_ => 1)
-                .Select(g => new
+                .Select(g => new HourlyGcAggregate
                 {
+                    Year = rangeStartUtc.Year,
+                    Month = rangeStartUtc.Month,
+                    Day = rangeStartUtc.Day,
+                    Hour = rangeStartUtc.Hour,
                     ChunkCount = g.LongCount(),
                     SizeBytes = g.Sum(x => x.StoredSizeBytes),
                 })
                 .FirstOrDefaultAsync(cancellationToken);
+        }
 
-            var hourlyAggregates = await gcBaseQuery
+        private static Task<List<HourlyGcAggregate>> LoadScheduledHourlyAggregatesAsync(
+            IQueryable<Chunk> gcBaseQuery,
+            DateTime rangeStartUtc,
+            CancellationToken cancellationToken)
+        {
+            return gcBaseQuery
                 .Where(c => c.GCScheduledAfter >= rangeStartUtc)
                 .GroupBy(x => new
                 {
@@ -80,76 +200,16 @@ namespace Cotton.Server.Handlers.Server
                     x.GCScheduledAfter!.Value.Day,
                     x.GCScheduledAfter!.Value.Hour,
                 })
-                .Select(g => new
+                .Select(g => new HourlyGcAggregate
                 {
-                    g.Key.Year,
-                    g.Key.Month,
-                    g.Key.Day,
-                    g.Key.Hour,
+                    Year = g.Key.Year,
+                    Month = g.Key.Month,
+                    Day = g.Key.Day,
+                    Hour = g.Key.Hour,
                     ChunkCount = g.LongCount(),
                     SizeBytes = g.Sum(x => x.StoredSizeBytes),
                 })
                 .ToListAsync(cancellationToken);
-
-            Dictionary<DateTime, (long ChunkCount, long SizeBytes)> bucketsMap = [];
-
-            if (overdueAggregate is not null && overdueAggregate.ChunkCount > 0)
-            {
-                hourlyAggregates.Add(new
-                {
-                    rangeStartUtc.Year,
-                    rangeStartUtc.Month,
-                    rangeStartUtc.Day,
-                    rangeStartUtc.Hour,
-                    overdueAggregate.ChunkCount,
-                    overdueAggregate.SizeBytes,
-                });
-            }
-
-            foreach (var item in hourlyAggregates)
-            {
-                DateTime hourStartUtc = new(item.Year, item.Month, item.Day, item.Hour, 0, 0, DateTimeKind.Utc);
-                DateTime local = TimeZoneInfo.ConvertTimeFromUtc(hourStartUtc, effectiveTimeZone);
-                DateTime localBucketStart = normalizedBucket == "day"
-                    ? new DateTime(local.Year, local.Month, local.Day, 0, 0, 0, DateTimeKind.Unspecified)
-                    : new DateTime(local.Year, local.Month, local.Day, local.Hour, 0, 0, DateTimeKind.Unspecified);
-                TimeSpan bucketOffset = effectiveTimeZone.GetUtcOffset(localBucketStart);
-                DateTime bucketUtc = new DateTimeOffset(localBucketStart, bucketOffset).UtcDateTime;
-
-                if (!bucketsMap.TryGetValue(bucketUtc, out var existing))
-                {
-                    bucketsMap[bucketUtc] = (item.ChunkCount, item.SizeBytes);
-                }
-                else
-                {
-                    bucketsMap[bucketUtc] = (existing.ChunkCount + item.ChunkCount, existing.SizeBytes + item.SizeBytes);
-                }
-            }
-
-            List<GcChunkTimelineBucketDto> buckets = [.. bucketsMap
-                .OrderBy(x => x.Key)
-                .Select(x => new GcChunkTimelineBucketDto
-                {
-                    BucketStartUtc = x.Key,
-                    ChunkCount = x.Value.ChunkCount,
-                    SizeBytes = x.Value.SizeBytes,
-                })];
-
-            long totalChunks = buckets.Sum(x => x.ChunkCount);
-            long totalSizeBytes = buckets.Sum(x => x.SizeBytes);
-            var storageStats = await GetStorageUsageStatsAsync(now, protectedStorageKeys, cancellationToken);
-
-            return new GcChunkTimelineDto
-            {
-                Bucket = normalizedBucket,
-                From = rangeStartUtc,
-                To = rangeEndUtc,
-                GeneratedAt = now,
-                TotalChunks = totalChunks,
-                TotalSizeBytes = totalSizeBytes,
-                Buckets = buckets,
-                Storage = storageStats,
-            };
         }
 
         private async Task<StorageUsageStatsDto> GetStorageUsageStatsAsync(
@@ -231,6 +291,28 @@ namespace Cotton.Server.Handlers.Server
                 PendingGcStoredSizeBytes = pendingGcStoredSizeBytes,
                 OverdueGcChunkCount = overdueGcChunkCount,
                 OverdueGcStoredSizeBytes = overdueGcStoredSizeBytes,
+            };
+        }
+
+        private sealed record TimelineRange(DateTime StartUtc, DateTime EndUtc);
+
+        private sealed class HourlyGcAggregate
+        {
+            public int Year { get; init; }
+            public int Month { get; init; }
+            public int Day { get; init; }
+            public int Hour { get; init; }
+            public long ChunkCount { get; init; }
+            public long SizeBytes { get; init; }
+
+            public static HourlyGcAggregate From(DateTime hourStartUtc, long chunkCount, long sizeBytes) => new()
+            {
+                Year = hourStartUtc.Year,
+                Month = hourStartUtc.Month,
+                Day = hourStartUtc.Day,
+                Hour = hourStartUtc.Hour,
+                ChunkCount = chunkCount,
+                SizeBytes = sizeBytes,
             };
         }
 

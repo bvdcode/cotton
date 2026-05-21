@@ -78,7 +78,7 @@ namespace Cotton.Database.Migrations
                 table: "user_crypto_envelopes",
                 type: "bytea",
                 nullable: false,
-                defaultValue: new byte[0]);
+                defaultValue: Array.Empty<byte>());
 
             migrationBuilder.AddColumn<string>(
                 name: "recovery_kdf_params",
@@ -92,14 +92,14 @@ namespace Cotton.Database.Migrations
                 table: "user_crypto_envelopes",
                 type: "bytea",
                 nullable: false,
-                defaultValue: new byte[0]);
+                defaultValue: Array.Empty<byte>());
 
             migrationBuilder.AddColumn<byte[]>(
                 name: "wrapped_master_key",
                 table: "user_crypto_envelopes",
                 type: "bytea",
                 nullable: false,
-                defaultValue: new byte[0]);
+                defaultValue: Array.Empty<byte>());
         }
     }
 }

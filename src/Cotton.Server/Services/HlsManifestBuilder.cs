@@ -33,7 +33,7 @@ namespace Cotton.Server.Services
             }
 
             int fullSegments = (int)Math.Floor(durationSeconds / SegmentDurationSeconds);
-            double remainder = durationSeconds - fullSegments * SegmentDurationSeconds;
+            double remainder = durationSeconds - (fullSegments * SegmentDurationSeconds);
             if (remainder > 1e-6)
             {
                 return new HlsManifestPlan(fullSegments + 1, remainder);
@@ -48,7 +48,7 @@ namespace Cotton.Server.Services
 
             var plan = Plan(durationSeconds);
             int targetDuration = (int)Math.Ceiling(SegmentDurationSeconds);
-            var sb = new StringBuilder(256 + 64 * plan.SegmentCount);
+            var sb = new StringBuilder(256 + (64 * plan.SegmentCount));
 
             sb.Append("#EXTM3U\n");
             sb.Append("#EXT-X-VERSION:4\n");

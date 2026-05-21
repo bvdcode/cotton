@@ -68,21 +68,48 @@ public static class SemanticVersionComparer
 
     private static int Compare(ParsedVersion left, ParsedVersion right)
     {
-        int numberLength = Math.Max(left.Numbers.Length, right.Numbers.Length);
+        int numberComparison = CompareNumbers(left.Numbers, right.Numbers);
+        if (numberComparison != 0)
+        {
+            return numberComparison;
+        }
+
+        return ComparePrerelease(left.Prerelease, right.Prerelease);
+    }
+
+    private static int CompareNumbers(IReadOnlyList<int> left, IReadOnlyList<int> right)
+    {
+        int numberLength = Math.Max(left.Count, right.Count);
         for (int i = 0; i < numberLength; i++)
         {
-            int l = i < left.Numbers.Length ? left.Numbers[i] : 0;
-            int r = i < right.Numbers.Length ? right.Numbers[i] : 0;
-            int cmp = l.CompareTo(r);
-            if (cmp != 0)
+            int comparison = GetNumberPart(left, i).CompareTo(GetNumberPart(right, i));
+            if (comparison != 0)
             {
-                return cmp;
+                return comparison;
             }
         }
 
-        bool leftHasPrerelease = left.Prerelease.Length > 0;
-        bool rightHasPrerelease = right.Prerelease.Length > 0;
+        return 0;
+    }
 
+    private static int GetNumberPart(IReadOnlyList<int> numbers, int index)
+    {
+        return index < numbers.Count ? numbers[index] : 0;
+    }
+
+    private static int ComparePrerelease(IReadOnlyList<string> left, IReadOnlyList<string> right)
+    {
+        int releaseComparison = CompareReleasePresence(left.Count > 0, right.Count > 0);
+        if (releaseComparison != 0 || left.Count == 0)
+        {
+            return releaseComparison;
+        }
+
+        return ComparePrereleaseParts(left, right);
+    }
+
+    private static int CompareReleasePresence(bool leftHasPrerelease, bool rightHasPrerelease)
+    {
         if (!leftHasPrerelease && !rightHasPrerelease)
         {
             return 0;
@@ -93,55 +120,55 @@ public static class SemanticVersionComparer
             return 1;
         }
 
-        if (!rightHasPrerelease)
-        {
-            return -1;
-        }
+        return !rightHasPrerelease ? -1 : 0;
+    }
 
-        int prereleaseLength = Math.Max(left.Prerelease.Length, right.Prerelease.Length);
+    private static int ComparePrereleaseParts(IReadOnlyList<string> left, IReadOnlyList<string> right)
+    {
+        int prereleaseLength = Math.Max(left.Count, right.Count);
         for (int i = 0; i < prereleaseLength; i++)
         {
-            if (i >= left.Prerelease.Length)
+            int comparison = ComparePrereleasePartAt(left, right, i);
+            if (comparison != 0)
             {
-                return -1;
-            }
-
-            if (i >= right.Prerelease.Length)
-            {
-                return 1;
-            }
-
-            string l = left.Prerelease[i];
-            string r = right.Prerelease[i];
-
-            bool lIsNumber = int.TryParse(l, out int lNumber);
-            bool rIsNumber = int.TryParse(r, out int rNumber);
-
-            int cmp;
-            if (lIsNumber && rIsNumber)
-            {
-                cmp = lNumber.CompareTo(rNumber);
-            }
-            else if (lIsNumber)
-            {
-                cmp = -1;
-            }
-            else if (rIsNumber)
-            {
-                cmp = 1;
-            }
-            else
-            {
-                cmp = string.CompareOrdinal(l, r);
-            }
-
-            if (cmp != 0)
-            {
-                return cmp;
+                return comparison;
             }
         }
 
         return 0;
+    }
+
+    private static int ComparePrereleasePartAt(IReadOnlyList<string> left, IReadOnlyList<string> right, int index)
+    {
+        if (index >= left.Count)
+        {
+            return -1;
+        }
+
+        if (index >= right.Count)
+        {
+            return 1;
+        }
+
+        return ComparePrereleasePart(left[index], right[index]);
+    }
+
+    private static int ComparePrereleasePart(string left, string right)
+    {
+        bool leftIsNumber = int.TryParse(left, out int leftNumber);
+        bool rightIsNumber = int.TryParse(right, out int rightNumber);
+
+        if (leftIsNumber && rightIsNumber)
+        {
+            return leftNumber.CompareTo(rightNumber);
+        }
+
+        if (leftIsNumber)
+        {
+            return -1;
+        }
+
+        return rightIsNumber ? 1 : string.CompareOrdinal(left, right);
     }
 
     private readonly record struct ParsedVersion(int[] Numbers, string[] Prerelease);

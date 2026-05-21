@@ -534,7 +534,6 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         Assert.That(file!.ContentType, Is.EqualTo("text/plain"));
     }
 
-
     [Test]
     public async Task Share_RangeMetadataProbe_DoesNotConsume_DeleteAfterUse_Token()
     {
@@ -667,7 +666,6 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         Assert.That(file, Is.Not.Null);
         return file!;
     }
-
 
     private static string ExtractToken(string downloadLink)
     {

@@ -217,268 +217,267 @@ interface SecurityDiagnosticsContentProps {
 const SecurityDiagnosticsContent = ({
   diagnostics,
   t,
-}: SecurityDiagnosticsContentProps) => {
+}: SecurityDiagnosticsContentProps) => (
+  <Stack spacing={3} divider={<Divider flexItem />}>
+    <SecurityScoreSummary diagnostics={diagnostics} t={t} />
+    <SecurityRiskSection warnings={diagnostics.warnings} t={t} />
+    <InstanceDiagnosticsSection diagnostics={diagnostics} t={t} />
+    <MasterKeyDiagnosticsSection diagnostics={diagnostics} t={t} />
+    <MemoryDiagnosticsSection diagnostics={diagnostics} t={t} />
+    <RuntimeDiagnosticsSection diagnostics={diagnostics} t={t} />
+  </Stack>
+);
+
+type DiagnosticsContentSectionProps = {
+  diagnostics: SecurityDiagnosticsDto;
+  t: TFunction<"admin">;
+};
+
+const SecurityScoreSummary = ({
+  diagnostics,
+  t,
+}: DiagnosticsContentSectionProps) => {
   const level = getSecurityLevel(
     diagnostics.securityScore,
     diagnostics.maxSecurityScore,
     t,
   );
-  const scorePercent =
-    diagnostics.maxSecurityScore > 0
-      ? (diagnostics.securityScore / diagnostics.maxSecurityScore) * 100
-      : 0;
-  const hasWarnings = diagnostics.warnings.length > 0;
+  const scorePercent = getScorePercent(diagnostics);
 
   return (
-    <Stack spacing={3} divider={<Divider flexItem />}>
-      <Stack spacing={2}>
-        <Alert
-          severity={level.color}
-          icon={level.color === "success" ? <CheckCircleIcon /> : undefined}
-        >
-          <Typography variant="subtitle2" fontWeight={700}>
-            {diagnostics.securityScore}/{diagnostics.maxSecurityScore} -{" "}
-            {level.title}
-          </Typography>
-          <Typography variant="body2">{level.summary}</Typography>
-        </Alert>
-
-        <Box>
-          <LinearProgress
-            variant="determinate"
-            value={Math.max(0, Math.min(100, scorePercent))}
-            color={level.color}
-            sx={{ height: 8, borderRadius: 1 }}
-          />
-        </Box>
-
-        <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
-          <Chip
-            size="small"
-            color={diagnostics.isPublicInstance ? "warning" : "success"}
-            label={
-              diagnostics.isPublicInstance
-                ? t("securityDiagnostics.chips.publicInstance")
-                : t("securityDiagnostics.chips.privateInstance")
-            }
-          />
-          <Chip
-            size="small"
-            color={
-              diagnostics.masterKeyEnvironmentVariableWasConfigured
-                ? "warning"
-                : "success"
-            }
-            label={
-              diagnostics.masterKeyEnvironmentVariableWasConfigured
-                ? t("securityDiagnostics.chips.envKey")
-                : t("securityDiagnostics.chips.memoryUnlock")
-            }
-          />
-          <Chip
-            size="small"
-            color={
-              diagnostics.adminTotp.adminsWithoutTotp > 0
-                ? "warning"
-                : "success"
-            }
-            label={t("securityDiagnostics.chips.adminTotp", {
-              withTotp: diagnostics.adminTotp.adminsWithTotp,
-              total: diagnostics.adminTotp.adminCount,
-            })}
-          />
-        </Stack>
-      </Stack>
-
-      <DiagnosticsSection
-        title={t("securityDiagnostics.sections.risks")}
+    <Stack spacing={2}>
+      <Alert
+        severity={level.color}
+        icon={level.color === "success" ? <CheckCircleIcon /> : undefined}
       >
-        {hasWarnings ? (
-          diagnostics.warnings.map((warning) => (
-            <Alert
-              key={warning.code}
-              severity={getSeverityColor(warning)}
-              icon={<WarningAmberIcon />}
-            >
-              <Stack spacing={0.5}>
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  alignItems="center"
-                  useFlexGap
-                  sx={{ flexWrap: "wrap" }}
-                >
-                  <Typography variant="subtitle2" fontWeight={700}>
-                    {getSeverityLabel(warning.severity, t)}
-                  </Typography>
-                  <Chip
-                    size="small"
-                    variant="outlined"
-                    label={warning.code}
-                  />
-                </Stack>
-                <Typography variant="body2">{warning.message}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {getThreatVector(warning, t)}
-                </Typography>
-              </Stack>
-            </Alert>
-          ))
-        ) : (
-          <Alert severity="success">
-            {t("securityDiagnostics.risks.empty")}
-          </Alert>
-        )}
-      </DiagnosticsSection>
-
-      <DiagnosticsSection
-        title={t("securityDiagnostics.sections.instance")}
-      >
-        <DiagnosticsRow
-          label={t("securityDiagnostics.fields.publicInstance")}
-          value={yesNo(diagnostics.isPublicInstance, t)}
-          color={diagnostics.isPublicInstance ? "warning" : "success"}
+        <Typography variant="subtitle2" fontWeight={700}>
+          {diagnostics.securityScore}/{diagnostics.maxSecurityScore} - {level.title}
+        </Typography>
+        <Typography variant="body2">{level.summary}</Typography>
+      </Alert>
+      <Box>
+        <LinearProgress
+          variant="determinate"
+          value={Math.max(0, Math.min(100, scorePercent))}
+          color={level.color}
+          sx={{ height: 8, borderRadius: 1 }}
         />
-        <DiagnosticsRow
-          label={t("securityDiagnostics.fields.admins")}
-          value={`${diagnostics.adminTotp.adminsWithTotp}/${diagnostics.adminTotp.adminCount}`}
-          color={
-            diagnostics.adminTotp.adminsWithoutTotp > 0
-              ? "warning"
-              : "success"
-          }
-        />
-        <DiagnosticsRow
-          label={t("securityDiagnostics.fields.adminsWithoutTotp")}
-          value={String(diagnostics.adminTotp.adminsWithoutTotp)}
-          color={
-            diagnostics.adminTotp.adminsWithoutTotp > 0 ? "warning" : "success"
-          }
-        />
-      </DiagnosticsSection>
-
-      <DiagnosticsSection
-        title={t("securityDiagnostics.sections.masterKey")}
-      >
-        <DiagnosticsRow
-          label={t("securityDiagnostics.fields.masterKeySource")}
-          value={formatNullable(diagnostics.masterKeySource, t)}
-          color={
-            diagnostics.masterKeyEnvironmentVariableWasConfigured
-              ? "warning"
-              : "success"
-          }
-        />
-        <DiagnosticsRow
-          label={t("securityDiagnostics.fields.envWasConfigured")}
-          value={yesNo(
-            diagnostics.masterKeyEnvironmentVariableWasConfigured,
-            t,
-          )}
-          color={
-            diagnostics.masterKeyEnvironmentVariableWasConfigured
-              ? "warning"
-              : "success"
-          }
-        />
-        <DiagnosticsRow
-          label={t("securityDiagnostics.fields.envPresent")}
-          value={yesNo(
-            diagnostics.masterKeyEnvironmentVariablePresentInProcess,
-            t,
-          )}
-          color={
-            diagnostics.masterKeyEnvironmentVariablePresentInProcess
-              ? "warning"
-              : "success"
-          }
-        />
-      </DiagnosticsSection>
-
-      <DiagnosticsSection
-        title={t("securityDiagnostics.sections.memory")}
-      >
-        <DiagnosticsRow
-          label={t("securityDiagnostics.fields.dotnetDiagnostics")}
-          value={yesNo(diagnostics.dotNetDiagnostics.disabled, t)}
-          color={diagnostics.dotNetDiagnostics.disabled ? "success" : "warning"}
-        />
-        <DiagnosticsRow
-          label={t("securityDiagnostics.fields.processHardening")}
-          value={yesNo(diagnostics.linuxProcess.hardeningApplied, t)}
-          color={
-            diagnostics.linuxProcess.hardeningApplied ? "success" : "warning"
-          }
-        />
-        <DiagnosticsRow
-          label={t("securityDiagnostics.fields.dumpable")}
-          value={getDumpableLabel(diagnostics.linuxProcess, t)}
-          color={diagnostics.linuxProcess.dumpable === 0 ? "success" : "warning"}
-        />
-        <DiagnosticsRow
-          label={t("securityDiagnostics.fields.sysPtrace")}
-          value={yesNo(diagnostics.linuxProcess.hasSysPtraceCapability, t)}
-          color={
-            diagnostics.linuxProcess.hasSysPtraceCapability
-              ? "error"
-              : "success"
-          }
-        />
-      </DiagnosticsSection>
-
-      <DiagnosticsSection
-        title={t("securityDiagnostics.sections.runtime")}
-      >
-        <DiagnosticsRow
-          label={t("securityDiagnostics.fields.os")}
-          value={diagnostics.operatingSystem}
-        />
-        <DiagnosticsRow
-          label={t("securityDiagnostics.fields.container")}
-          value={yesNo(diagnostics.isContainer, t)}
-        />
-        <DiagnosticsRow
-          label={t("securityDiagnostics.fields.euid")}
-          value={formatNullable(
-            diagnostics.linuxProcess.effectiveUserId,
-            t,
-          )}
-          color={
-            diagnostics.linuxProcess.runningAsRoot === true
-              ? "warning"
-              : "default"
-          }
-        />
-        <DiagnosticsRow
-          label={t("securityDiagnostics.fields.noNewPrivileges")}
-          value={formatNullable(
-            diagnostics.linuxProcess.noNewPrivileges,
-            t,
-          )}
-          color={
-            diagnostics.linuxProcess.noNewPrivileges === 1
-              ? "success"
-              : "warning"
-          }
-        />
-        <DiagnosticsRow
-          label={t("securityDiagnostics.fields.seccomp")}
-          value={formatNullable(diagnostics.linuxProcess.seccompMode, t)}
-          color={
-            diagnostics.linuxProcess.seccompMode === 0 ? "warning" : "success"
-          }
-        />
-        <DiagnosticsRow
-          label={t("securityDiagnostics.fields.capabilities")}
-          value={formatNullable(
-            diagnostics.linuxProcess.effectiveCapabilitiesHex,
-            t,
-          )}
-        />
-      </DiagnosticsSection>
+      </Box>
+      <SecuritySummaryChips diagnostics={diagnostics} t={t} />
     </Stack>
   );
 };
+
+const getScorePercent = (diagnostics: SecurityDiagnosticsDto) =>
+  diagnostics.maxSecurityScore > 0
+    ? (diagnostics.securityScore / diagnostics.maxSecurityScore) * 100
+    : 0;
+
+const SecuritySummaryChips = ({
+  diagnostics,
+  t,
+}: DiagnosticsContentSectionProps) => (
+  <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
+    <Chip
+      size="small"
+      color={diagnostics.isPublicInstance ? "warning" : "success"}
+      label={
+        diagnostics.isPublicInstance
+          ? t("securityDiagnostics.chips.publicInstance")
+          : t("securityDiagnostics.chips.privateInstance")
+      }
+    />
+    <Chip
+      size="small"
+      color={
+        diagnostics.masterKeyEnvironmentVariableWasConfigured
+          ? "warning"
+          : "success"
+      }
+      label={
+        diagnostics.masterKeyEnvironmentVariableWasConfigured
+          ? t("securityDiagnostics.chips.envKey")
+          : t("securityDiagnostics.chips.memoryUnlock")
+      }
+    />
+    <Chip
+      size="small"
+      color={
+        diagnostics.adminTotp.adminsWithoutTotp > 0 ? "warning" : "success"
+      }
+      label={t("securityDiagnostics.chips.adminTotp", {
+        withTotp: diagnostics.adminTotp.adminsWithTotp,
+        total: diagnostics.adminTotp.adminCount,
+      })}
+    />
+  </Stack>
+);
+
+type SecurityRiskSectionProps = {
+  warnings: SecurityDiagnosticWarningDto[];
+  t: TFunction<"admin">;
+};
+
+const SecurityRiskSection = ({ warnings, t }: SecurityRiskSectionProps) => (
+  <DiagnosticsSection title={t("securityDiagnostics.sections.risks")}>
+    {warnings.length > 0 ? (
+      warnings.map((warning) => (
+        <SecurityRiskAlert key={warning.code} warning={warning} t={t} />
+      ))
+    ) : (
+      <Alert severity="success">{t("securityDiagnostics.risks.empty")}</Alert>
+    )}
+  </DiagnosticsSection>
+);
+
+type SecurityRiskAlertProps = {
+  warning: SecurityDiagnosticWarningDto;
+  t: TFunction<"admin">;
+};
+
+const SecurityRiskAlert = ({ warning, t }: SecurityRiskAlertProps) => (
+  <Alert severity={getSeverityColor(warning)} icon={<WarningAmberIcon />}>
+    <Stack spacing={0.5}>
+      <Stack direction="row" spacing={1} alignItems="center" useFlexGap sx={{ flexWrap: "wrap" }}>
+        <Typography variant="subtitle2" fontWeight={700}>
+          {getSeverityLabel(warning.severity, t)}
+        </Typography>
+        <Chip size="small" variant="outlined" label={warning.code} />
+      </Stack>
+      <Typography variant="body2">{warning.message}</Typography>
+      <Typography variant="body2" color="text.secondary">
+        {getThreatVector(warning, t)}
+      </Typography>
+    </Stack>
+  </Alert>
+);
+
+const InstanceDiagnosticsSection = ({
+  diagnostics,
+  t,
+}: DiagnosticsContentSectionProps) => (
+  <DiagnosticsSection title={t("securityDiagnostics.sections.instance")}>
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.publicInstance")}
+      value={yesNo(diagnostics.isPublicInstance, t)}
+      color={diagnostics.isPublicInstance ? "warning" : "success"}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.admins")}
+      value={
+        String(diagnostics.adminTotp.adminsWithTotp) +
+        "/" +
+        String(diagnostics.adminTotp.adminCount)
+      }
+      color={diagnostics.adminTotp.adminsWithoutTotp > 0 ? "warning" : "success"}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.adminsWithoutTotp")}
+      value={String(diagnostics.adminTotp.adminsWithoutTotp)}
+      color={diagnostics.adminTotp.adminsWithoutTotp > 0 ? "warning" : "success"}
+    />
+  </DiagnosticsSection>
+);
+
+const MasterKeyDiagnosticsSection = ({
+  diagnostics,
+  t,
+}: DiagnosticsContentSectionProps) => (
+  <DiagnosticsSection title={t("securityDiagnostics.sections.masterKey")}>
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.masterKeySource")}
+      value={formatNullable(diagnostics.masterKeySource, t)}
+      color={
+        diagnostics.masterKeyEnvironmentVariableWasConfigured
+          ? "warning"
+          : "success"
+      }
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.envWasConfigured")}
+      value={yesNo(diagnostics.masterKeyEnvironmentVariableWasConfigured, t)}
+      color={
+        diagnostics.masterKeyEnvironmentVariableWasConfigured
+          ? "warning"
+          : "success"
+      }
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.envPresent")}
+      value={yesNo(diagnostics.masterKeyEnvironmentVariablePresentInProcess, t)}
+      color={
+        diagnostics.masterKeyEnvironmentVariablePresentInProcess
+          ? "warning"
+          : "success"
+      }
+    />
+  </DiagnosticsSection>
+);
+
+const MemoryDiagnosticsSection = ({
+  diagnostics,
+  t,
+}: DiagnosticsContentSectionProps) => (
+  <DiagnosticsSection title={t("securityDiagnostics.sections.memory")}>
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.dotnetDiagnostics")}
+      value={yesNo(diagnostics.dotNetDiagnostics.disabled, t)}
+      color={diagnostics.dotNetDiagnostics.disabled ? "success" : "warning"}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.processHardening")}
+      value={yesNo(diagnostics.linuxProcess.hardeningApplied, t)}
+      color={diagnostics.linuxProcess.hardeningApplied ? "success" : "warning"}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.dumpable")}
+      value={getDumpableLabel(diagnostics.linuxProcess, t)}
+      color={diagnostics.linuxProcess.dumpable === 0 ? "success" : "warning"}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.sysPtrace")}
+      value={yesNo(diagnostics.linuxProcess.hasSysPtraceCapability, t)}
+      color={
+        diagnostics.linuxProcess.hasSysPtraceCapability ? "error" : "success"
+      }
+    />
+  </DiagnosticsSection>
+);
+
+const RuntimeDiagnosticsSection = ({
+  diagnostics,
+  t,
+}: DiagnosticsContentSectionProps) => (
+  <DiagnosticsSection title={t("securityDiagnostics.sections.runtime")}>
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.os")}
+      value={diagnostics.operatingSystem}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.container")}
+      value={yesNo(diagnostics.isContainer, t)}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.euid")}
+      value={formatNullable(diagnostics.linuxProcess.effectiveUserId, t)}
+      color={diagnostics.linuxProcess.runningAsRoot === true ? "warning" : "default"}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.noNewPrivileges")}
+      value={formatNullable(diagnostics.linuxProcess.noNewPrivileges, t)}
+      color={diagnostics.linuxProcess.noNewPrivileges === 1 ? "success" : "warning"}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.seccomp")}
+      value={formatNullable(diagnostics.linuxProcess.seccompMode, t)}
+      color={diagnostics.linuxProcess.seccompMode === 0 ? "warning" : "success"}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.capabilities")}
+      value={formatNullable(diagnostics.linuxProcess.effectiveCapabilitiesHex, t)}
+    />
+  </DiagnosticsSection>
+);
 
 export const AdminSecurityDiagnosticsPage = () => {
   const { t } = useTranslation("admin");

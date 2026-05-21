@@ -70,7 +70,7 @@ namespace Cotton.Attributes
             {
                 throw new ArgumentException("Website cannot be null or empty.", nameof(website));
             }
-            if (pluginId.Contains(" "))
+            if (pluginId.Contains(' '))
             {
                 throw new ArgumentException("Plugin ID cannot contain spaces.", nameof(pluginId));
             }

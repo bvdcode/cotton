@@ -33,19 +33,15 @@ type UnlockPageProps = {
   initialStatus?: UnlockStatusResponse;
 };
 
-export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
-  const { t } = useTranslation("unlock");
+type UnlockFormState = ReturnType<typeof useUnlockFormState>;
+
+const useUnlockStatus = (
+  initialStatus?: UnlockStatusResponse,
+): { loaded: boolean; status: UnlockStatusResponse | null } => {
   const [status, setStatus] = useState<UnlockStatusResponse | null>(
     initialStatus ?? null,
   );
   const [loaded, setLoaded] = useState(initialStatus !== undefined);
-  const [masterKey, setMasterKey] = useState("");
-  const [bootstrapToken, setBootstrapToken] = useState("");
-  const [showMasterKey, setShowMasterKey] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialStatus !== undefined) {
@@ -57,12 +53,14 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
     unlockApi
       .getStatus()
       .then((nextStatus) => {
-        if (cancelled) return;
-        setStatus(nextStatus);
+        if (!cancelled) {
+          setStatus(nextStatus);
+        }
       })
       .catch(() => {
-        if (cancelled) return;
-        setStatus(null);
+        if (!cancelled) {
+          setStatus(null);
+        }
       })
       .finally(() => {
         if (!cancelled) {
@@ -75,9 +73,13 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
     };
   }, [initialStatus]);
 
-  const requiresBootstrapToken = status?.requiresBootstrapToken === true;
+  return { loaded, status };
+};
+
+const useFormattedExpiry = (status: UnlockStatusResponse | null): string | null => {
   const firstUnlockExpiresAtUtc = status?.firstUnlockExpiresAtUtc ?? null;
-  const expiresAt = useMemo(() => {
+
+  return useMemo(() => {
     if (!firstUnlockExpiresAtUtc) {
       return null;
     }
@@ -91,20 +93,31 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
       return firstUnlockExpiresAtUtc;
     }
   }, [firstUnlockExpiresAtUtc]);
+};
 
-  if (loaded && status === null) {
-    return <Navigate to="/" replace />;
-  }
-
+const useUnlockFormState = (status: UnlockStatusResponse | null) => {
+  const { t } = useTranslation("unlock");
+  const [masterKey, setMasterKey] = useState("");
+  const [bootstrapToken, setBootstrapToken] = useState("");
+  const [showMasterKey, setShowMasterKey] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const requiresBootstrapToken = status?.requiresBootstrapToken === true;
   const canSubmit =
     masterKey.trim().length === masterKeyLength &&
     (!requiresBootstrapToken || bootstrapToken.trim().length > 0) &&
     !submitting;
 
-  const handleGenerate = async () => {
-    setGenerating(true);
+  const resetMessages = () => {
     setError(null);
     setSuccess(null);
+  };
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    resetMessages();
     try {
       const key = await unlockApi.generateKey();
       setMasterKey(key);
@@ -122,6 +135,7 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
 
   const handleCopy = async () => {
     if (!masterKey) return;
+
     try {
       await navigator.clipboard.writeText(masterKey);
       toast.success(t("copied"), { toastId: "unlock-copy" });
@@ -135,8 +149,7 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
     if (!canSubmit) return;
 
     setSubmitting(true);
-    setError(null);
-    setSuccess(null);
+    resetMessages();
     try {
       const response = await unlockApi.unlock({
         masterKey: masterKey.trim(),
@@ -149,14 +162,7 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
         toastId: "unlock-success",
       });
       await unlockApi.waitUntilAppReady();
-      try {
-        window.sessionStorage.setItem(
-          JUST_UNLOCKED_STORAGE_KEY,
-          Date.now().toString(),
-        );
-      } catch {
-        // Session storage can be unavailable in strict privacy modes.
-      }
+      rememberJustUnlocked();
       window.location.replace("/");
     } catch (err) {
       const message = err instanceof Error ? err.message : t("unlockFailed");
@@ -165,6 +171,228 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
       setSubmitting(false);
     }
   };
+
+  return {
+    bootstrapToken,
+    canSubmit,
+    error,
+    generating,
+    handleCopy,
+    handleGenerate,
+    handleSubmit,
+    masterKey,
+    requiresBootstrapToken,
+    setBootstrapToken,
+    setMasterKey,
+    setShowMasterKey,
+    showMasterKey,
+    submitting,
+    success,
+  };
+};
+
+const rememberJustUnlocked = (): void => {
+  try {
+    window.sessionStorage.setItem(
+      JUST_UNLOCKED_STORAGE_KEY,
+      Date.now().toString(),
+    );
+  } catch {
+    // Session storage can be unavailable in strict privacy modes.
+  }
+};
+
+const UnlockHeader = (): React.ReactElement => {
+  const { t } = useTranslation("unlock");
+
+  return (
+    <Box
+      display="flex"
+      justifyContent="space-between"
+      alignItems="center"
+      sx={{ mb: 3 }}
+    >
+      <Box>
+        <Typography variant="h4" component="h1">
+          {t("title")}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+          {t("caption")}
+        </Typography>
+      </Box>
+      <Avatar src="/assets/icons/icon.svg" alt="Cotton" />
+    </Box>
+  );
+};
+
+const MasterKeyField = ({
+  form,
+}: {
+  form: UnlockFormState;
+}): React.ReactElement => {
+  const { t } = useTranslation("unlock");
+
+  return (
+    <TextField
+      label={t("masterKey")}
+      value={form.masterKey}
+      onChange={(event) => form.setMasterKey(event.target.value)}
+      disabled={form.submitting}
+      type={form.showMasterKey ? "text" : "password"}
+      required
+      autoComplete="off"
+      slotProps={{
+        htmlInput: {
+          maxLength: masterKeyLength,
+          spellCheck: false,
+        },
+        input: {
+          endAdornment: (
+            <InputAdornment position="end">
+              <Tooltip title={form.generating ? t("generating") : t("generate")}>
+                <span>
+                  <IconButton
+                    aria-label={t("generate")}
+                    edge="end"
+                    onClick={form.handleGenerate}
+                    disabled={form.generating || form.submitting}
+                  >
+                    {form.generating ? (
+                      <CircularProgress color="inherit" size={18} thickness={5} />
+                    ) : (
+                      <Key />
+                    )}
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <Tooltip title={form.showMasterKey ? t("hideKey") : t("showKey")}>
+                <IconButton
+                  aria-label={form.showMasterKey ? t("hideKey") : t("showKey")}
+                  edge="end"
+                  onClick={() => form.setShowMasterKey((value) => !value)}
+                  disabled={form.submitting}
+                >
+                  {form.showMasterKey ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </Tooltip>
+              <Tooltip title={t("copyKey")}>
+                <span>
+                  <IconButton
+                    aria-label={t("copyKey")}
+                    edge="end"
+                    onClick={form.handleCopy}
+                    disabled={!form.masterKey || form.submitting}
+                  >
+                    <ContentCopy />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </InputAdornment>
+          ),
+        },
+      }}
+    />
+  );
+};
+
+const BootstrapTokenField = ({
+  form,
+}: {
+  form: UnlockFormState;
+}): React.ReactElement => {
+  const { t } = useTranslation("unlock");
+
+  return (
+    <TextField
+      label={t("bootstrapToken")}
+      value={form.bootstrapToken}
+      onChange={(event) => form.setBootstrapToken(event.target.value)}
+      disabled={form.submitting}
+      type="password"
+      required
+      autoComplete="off"
+      slotProps={{
+        htmlInput: {
+          spellCheck: false,
+        },
+      }}
+    />
+  );
+};
+
+const UnlockSubmitButton = ({
+  form,
+}: {
+  form: UnlockFormState;
+}): React.ReactElement => {
+  const { t } = useTranslation("unlock");
+
+  return (
+    <Button
+      type="submit"
+      variant="contained"
+      color="primary"
+      disabled={!form.canSubmit}
+      startIcon={
+        form.submitting ? (
+          <CircularProgress color="inherit" size={18} thickness={5} />
+        ) : (
+          <LockOpen />
+        )
+      }
+    >
+      {form.submitting ? t("unlocking") : t("unlock")}
+    </Button>
+  );
+};
+
+const UnlockForm = ({
+  expiresAt,
+  form,
+}: {
+  expiresAt: string | null;
+  form: UnlockFormState;
+}): React.ReactElement => {
+  const { t } = useTranslation("unlock");
+
+  return (
+    <Box component="form" onSubmit={form.handleSubmit} noValidate autoComplete="off">
+      <Stack spacing={2.5}>
+        {form.requiresBootstrapToken && (
+          <Alert severity="warning">
+            {expiresAt
+              ? t("bootstrapRequiredWithExpiry", { expiresAt })
+              : t("bootstrapRequired")}
+          </Alert>
+        )}
+        {form.error && <Alert severity="error">{form.error}</Alert>}
+        {form.success && <Alert severity="success">{form.success}</Alert>}
+        <MasterKeyField form={form} />
+        {form.requiresBootstrapToken && <BootstrapTokenField form={form} />}
+        <Box
+          sx={{
+            display: "flex",
+            gap: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          <UnlockSubmitButton form={form} />
+        </Box>
+      </Stack>
+    </Box>
+  );
+};
+
+export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
+  const { loaded, status } = useUnlockStatus(initialStatus);
+  const expiresAt = useFormattedExpiry(status);
+  const form = useUnlockFormState(status);
+
+  if (loaded && status === null) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <Box
@@ -185,140 +413,8 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
         }}
       >
         <Paper sx={{ p: { xs: 3, sm: 4 } }}>
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            sx={{ mb: 3 }}
-          >
-            <Box>
-              <Typography variant="h4" component="h1">
-                {t("title")}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-                {t("caption")}
-              </Typography>
-            </Box>
-            <Avatar src="/assets/icons/icon.svg" alt="Cotton" />
-          </Box>
-
-          <Box component="form" onSubmit={handleSubmit} noValidate autoComplete="off">
-            <Stack spacing={2.5}>
-              {requiresBootstrapToken && (
-                <Alert severity="warning">
-                  {expiresAt
-                    ? t("bootstrapRequiredWithExpiry", { expiresAt })
-                    : t("bootstrapRequired")}
-                </Alert>
-              )}
-
-              {error && <Alert severity="error">{error}</Alert>}
-              {success && <Alert severity="success">{success}</Alert>}
-
-              <TextField
-                label={t("masterKey")}
-                value={masterKey}
-                onChange={(event) => setMasterKey(event.target.value)}
-                disabled={submitting}
-                type={showMasterKey ? "text" : "password"}
-                required
-                autoComplete="off"
-                slotProps={{
-                  htmlInput: {
-                    maxLength: masterKeyLength,
-                    spellCheck: false,
-                  },
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <Tooltip title={generating ? t("generating") : t("generate")}>
-                          <span>
-                            <IconButton
-                              aria-label={t("generate")}
-                              edge="end"
-                              onClick={handleGenerate}
-                              disabled={generating || submitting}
-                            >
-                              {generating ? (
-                                <CircularProgress color="inherit" size={18} thickness={5} />
-                              ) : (
-                                <Key />
-                              )}
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                        <Tooltip title={showMasterKey ? t("hideKey") : t("showKey")}>
-                          <IconButton
-                            aria-label={showMasterKey ? t("hideKey") : t("showKey")}
-                            edge="end"
-                            onClick={() => setShowMasterKey((value) => !value)}
-                            disabled={submitting}
-                          >
-                            {showMasterKey ? <VisibilityOff /> : <Visibility />}
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title={t("copyKey")}>
-                          <span>
-                            <IconButton
-                              aria-label={t("copyKey")}
-                              edge="end"
-                              onClick={handleCopy}
-                              disabled={!masterKey || submitting}
-                            >
-                              <ContentCopy />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-              />
-
-              {requiresBootstrapToken && (
-                <TextField
-                  label={t("bootstrapToken")}
-                  value={bootstrapToken}
-                  onChange={(event) => setBootstrapToken(event.target.value)}
-                  disabled={submitting}
-                  type="password"
-                  required
-                  autoComplete="off"
-                  slotProps={{
-                    htmlInput: {
-                      spellCheck: false,
-                    },
-                  }}
-                />
-              )}
-
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: 1,
-                  justifyContent: "center",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                }}
-              >
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                  disabled={!canSubmit}
-                  startIcon={
-                    submitting ? (
-                      <CircularProgress color="inherit" size={18} thickness={5} />
-                    ) : (
-                      <LockOpen />
-                    )
-                  }
-                >
-                  {submitting ? t("unlocking") : t("unlock")}
-                </Button>
-              </Box>
-            </Stack>
-          </Box>
+          <UnlockHeader />
+          <UnlockForm expiresAt={expiresAt} form={form} />
         </Paper>
       </Container>
     </Box>

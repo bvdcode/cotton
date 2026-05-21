@@ -75,6 +75,75 @@ const TrashProgressDialog: React.FC<EmptyTrashProgressDialogProps> = ({
   );
 };
 
+const calculateProgressPercent = (current: number, total: number): number =>
+  total > 0 ? (current / total) * 100 : 0;
+
+const resolveTrashPageTitle = (options: {
+  ancestorsLength: number;
+  folderName?: string | null;
+  isRootRoute: boolean;
+  title: string;
+}): string | null => {
+  if (options.isRootRoute || options.ancestorsLength === 0) {
+    return options.title;
+  }
+
+  return options.folderName ?? null;
+};
+
+const buildTrashCustomActionItems = (options: {
+  deleteSelectedTitle: string;
+  emptyTrashTitle: string;
+  emptyingTrash: boolean;
+  handleDeleteSelected: () => void;
+  handleEmptyTrash: () => void;
+  loading: boolean;
+  restoreSelected: () => void;
+  restoreSelectedTitle: string;
+  restoring: boolean;
+  rootLevel: boolean;
+  selectedCount: number;
+  selectionMode: boolean;
+  totalItems: number;
+}): React.ComponentProps<typeof PageHeader>["customActionItems"] => {
+  if (options.selectionMode && options.selectedCount > 0) {
+    return [
+      {
+        key: "restore-selected-trash",
+        icon: <Restore />,
+        title: options.restoreSelectedTitle,
+        onClick: options.restoreSelected,
+        disabled: options.loading || options.restoring,
+        color: "primary" as const,
+      },
+      {
+        key: "delete-selected-trash",
+        icon: <Delete />,
+        title: options.deleteSelectedTitle,
+        onClick: options.handleDeleteSelected,
+        disabled: options.loading || options.restoring,
+        color: "error" as const,
+      },
+    ];
+  }
+
+  if (!options.rootLevel) {
+    return undefined;
+  }
+
+  return [
+    {
+      key: "empty-trash",
+      icon: <Delete />,
+      title: options.emptyTrashTitle,
+      onClick: options.handleEmptyTrash,
+      disabled:
+        options.loading || options.emptyingTrash || options.totalItems === 0,
+      color: "error" as const,
+    },
+  ];
+};
+
 export const TrashPage: React.FC = () => {
   const { t } = useTranslation(["trash", "common", "files"]);
   const navigate = useNavigate();
@@ -149,16 +218,16 @@ export const TrashPage: React.FC = () => {
     await invalidateTrashChildren(queryClient, nodeId);
   }, [layoutType, nodeId, queryClient, reloadListPage]);
 
-  const pageTitle = useMemo(() => {
-    const folderName = currentNode?.name;
-    const isRoot = !routeNodeId || ancestors.length === 0;
-
-    if (isRoot) {
-      return t("title");
-    }
-
-    return folderName ?? null;
-  }, [currentNode?.name, routeNodeId, ancestors.length, t]);
+  const pageTitle = useMemo(
+    () =>
+      resolveTrashPageTitle({
+        ancestorsLength: ancestors.length,
+        folderName: currentNode?.name,
+        isRootRoute: !routeNodeId,
+        title: t("title"),
+      }),
+    [ancestors.length, currentNode?.name, routeNodeId, t],
+  );
 
   usePageTitle(pageTitle);
 
@@ -322,6 +391,44 @@ export const TrashPage: React.FC = () => {
     refreshContent,
   });
 
+
+  const customActionItems = useMemo(
+    () =>
+      buildTrashCustomActionItems({
+        deleteSelectedTitle: t("selection.deleteSelected", { ns: "files" }),
+        emptyTrashTitle: t("actions.emptyTrash"),
+        emptyingTrash,
+        handleDeleteSelected: () => {
+          void handleDeleteSelected();
+        },
+        handleEmptyTrash,
+        loading,
+        restoreSelected: () => {
+          void restoreSelected();
+        },
+        restoreSelectedTitle: t("restore.action"),
+        restoring,
+        rootLevel: breadcrumbs.length <= 1,
+        selectedCount: fileSelection.selectedCount,
+        selectionMode: fileSelection.selectionMode,
+        totalItems: stats.folders + stats.files,
+      }),
+    [
+      breadcrumbs.length,
+      emptyingTrash,
+      fileSelection.selectedCount,
+      fileSelection.selectionMode,
+      handleDeleteSelected,
+      handleEmptyTrash,
+      loading,
+      restoreSelected,
+      restoring,
+      stats.files,
+      stats.folders,
+      t,
+    ],
+  );
+
   const handleToggleItem = React.useCallback(
     (
       id: string,
@@ -353,60 +460,19 @@ export const TrashPage: React.FC = () => {
       selectedCount: fileSelection.selectedCount,
       onSelectAll: () => fileSelection.selectAll(tiles),
       onDeselectAll: fileSelection.deselectAll,
-      customActionItems:
-        fileSelection.selectionMode && fileSelection.selectedCount > 0 ? (
-          [
-            {
-              key: "restore-selected-trash",
-              icon: <Restore />,
-              title: t("restore.action"),
-              onClick: () => {
-                void restoreSelected();
-              },
-              disabled: loading || restoring,
-              color: "primary" as const,
-            },
-            {
-              key: "delete-selected-trash",
-              icon: <Delete />,
-              title: t("selection.deleteSelected", { ns: "files" }),
-              onClick: () => {
-                void handleDeleteSelected();
-              },
-              disabled: loading || restoring,
-              color: "error" as const,
-            },
-          ]
-        ) : breadcrumbs.length <= 1 ? (
-          [
-            {
-              key: "empty-trash",
-              icon: <Delete />,
-              title: t("actions.emptyTrash"),
-              onClick: handleEmptyTrash,
-              disabled:
-                loading || emptyingTrash || stats.folders + stats.files === 0,
-              color: "error" as const,
-            },
-          ]
-        ) : undefined,
+      customActionItems,
     }),
     [
       breadcrumbs,
       navigateToBreadcrumb,
+      customActionItems,
       cycleViewMode,
-      emptyingTrash,
       fileSelection,
       goHome,
-      handleDeleteSelected,
-      handleEmptyTrash,
       handleGoUp,
       layoutType,
       loading,
-      restoreSelected,
-      restoring,
       stats,
-      t,
       tiles,
       viewMode,
     ],
@@ -534,9 +600,10 @@ export const TrashPage: React.FC = () => {
           total: emptyTrashProgress.total,
         })}
         progressPercent={
-          emptyTrashProgress.total > 0
-            ? (emptyTrashProgress.current / emptyTrashProgress.total) * 100
-            : 0
+          calculateProgressPercent(
+            emptyTrashProgress.current,
+            emptyTrashProgress.total,
+          )
         }
       />
       <TrashProgressDialog
@@ -547,9 +614,10 @@ export const TrashPage: React.FC = () => {
           name: restoreProgress.itemName,
         })}
         progressPercent={
-          restoreProgress.total > 0
-            ? (restoreProgress.current / restoreProgress.total) * 100
-            : 0
+          calculateProgressPercent(
+            restoreProgress.current,
+            restoreProgress.total,
+          )
         }
       />
       <RestoreConflictDialog

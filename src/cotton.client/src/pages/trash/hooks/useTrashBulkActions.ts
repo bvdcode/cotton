@@ -10,60 +10,110 @@ type ConfirmFn = (options?: ConfirmOptions) => Promise<ConfirmResult>;
 
 const isConfirmed = (result: ConfirmResult): boolean => result.confirmed;
 
+const collectTrashWrapperIds = (content: NodeContentDto): string[] => {
+  const wrapperIds = new Set<string>();
+  for (const node of content.nodes ?? []) {
+    if (node.parentId) wrapperIds.add(node.parentId);
+  }
+  for (const file of content.files ?? []) {
+    if (file.nodeId) wrapperIds.add(file.nodeId);
+  }
+  return [...wrapperIds];
+};
+
+async function deleteNodeWithProgress(args: {
+  nodeId: string;
+  label: string;
+  deleted: number;
+  total: number;
+  onProgress: (current: number, total: number) => void;
+}): Promise<number> {
+  const { nodeId, label, deleted, total, onProgress } = args;
+  try {
+    await nodesApi.deleteNode(nodeId, true);
+    const nextDeleted = deleted + 1;
+    onProgress(nextDeleted, total);
+    return nextDeleted;
+  } catch (error) {
+    console.error("Failed to delete " + label + " " + nodeId + ":", error);
+    return deleted;
+  }
+}
+
+async function deleteFileWithProgress(args: {
+  fileId: string;
+  deleted: number;
+  total: number;
+  onProgress: (current: number, total: number) => void;
+}): Promise<number> {
+  const { fileId, deleted, total, onProgress } = args;
+  try {
+    await filesApi.deleteFile(fileId, true);
+    const nextDeleted = deleted + 1;
+    onProgress(nextDeleted, total);
+    return nextDeleted;
+  } catch (error) {
+    console.error("Failed to delete file " + fileId + ":", error);
+    return deleted;
+  }
+}
+
+async function deleteTrashRootWrappers(
+  content: NodeContentDto,
+  onProgress: (current: number, total: number) => void,
+): Promise<void> {
+  const wrappers = collectTrashWrapperIds(content);
+  let deleted = 0;
+  for (const wrapperId of wrappers) {
+    deleted = await deleteNodeWithProgress({
+      nodeId: wrapperId,
+      label: "trash wrapper",
+      deleted,
+      total: wrappers.length,
+      onProgress,
+    });
+  }
+}
+
+async function deleteTrashFolderContents(
+  content: NodeContentDto,
+  onProgress: (current: number, total: number) => void,
+): Promise<void> {
+  const total = (content.nodes?.length ?? 0) + (content.files?.length ?? 0);
+  let deleted = 0;
+
+  for (const folder of content.nodes ?? []) {
+    deleted = await deleteNodeWithProgress({
+      nodeId: folder.id,
+      label: "folder",
+      deleted,
+      total,
+      onProgress,
+    });
+  }
+
+  for (const file of content.files ?? []) {
+    deleted = await deleteFileWithProgress({
+      fileId: file.id,
+      deleted,
+      total,
+      onProgress,
+    });
+  }
+}
+
 async function deleteAllTrashItems(args: {
   content: NodeContentDto;
   isTrashRoot: boolean;
   onProgress: (current: number, total: number) => void;
 }): Promise<void> {
   const { content, isTrashRoot, onProgress } = args;
-
   if (isTrashRoot) {
-    const wrapperIds = new Set<string>();
-    for (const node of content.nodes ?? []) {
-      if (node.parentId) wrapperIds.add(node.parentId);
-    }
-    for (const file of content.files ?? []) {
-      if (file.nodeId) wrapperIds.add(file.nodeId);
-    }
-
-    const wrappers = [...wrapperIds];
-    let deleted = 0;
-
-    for (const wrapperId of wrappers) {
-      try {
-        await nodesApi.deleteNode(wrapperId, true);
-        deleted += 1;
-        onProgress(deleted, wrappers.length);
-      } catch (error) {
-        console.error(`Failed to delete trash wrapper ${wrapperId}:`, error);
-      }
-    }
-
+    await deleteTrashRootWrappers(content, onProgress);
     return;
   }
 
-  const totalItems = (content.nodes?.length ?? 0) + (content.files?.length ?? 0);
-  let deleted = 0;
-
-  for (const folder of content.nodes ?? []) {
-    try {
-      await nodesApi.deleteNode(folder.id, true);
-      deleted += 1;
-      onProgress(deleted, totalItems);
-    } catch (error) {
-      console.error(`Failed to delete folder ${folder.id}:`, error);
-    }
-  }
-
-  for (const file of content.files ?? []) {
-    try {
-      await filesApi.deleteFile(file.id, true);
-      deleted += 1;
-      onProgress(deleted, totalItems);
-    } catch (error) {
-      console.error(`Failed to delete file ${file.id}:`, error);
-    }
-  }
+  await deleteTrashFolderContents(content, onProgress);
 }
 
 type UseTrashBulkActionsParams = {
