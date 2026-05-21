@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { NotificationDto } from "../notificationsApi";
 import {
   clearNotificationCaches,
+  invalidateNotificationQueries,
   prependCachedNotification,
 } from "./notifications";
 import { queryKeys } from "./queryKeys";
@@ -169,6 +170,37 @@ describe("notification query cache helpers", () => {
     expect(
       queryClient.getQueryData(queryKeys.notifications.unreadCount()),
     ).toBe(4);
+  });
+
+  it("invalidates notification lists and unread count together", () => {
+    const queryClient = createQueryClient();
+
+    queryClient.setQueryData(
+      queryKeys.notifications.list({ unreadOnly: false }),
+      createInfiniteData([[createNotification("existing")]]),
+    );
+    queryClient.setQueryData(
+      queryKeys.notifications.list({ unreadOnly: true }),
+      createInfiniteData([[createNotification("existing")]]),
+    );
+    queryClient.setQueryData(queryKeys.notifications.unreadCount(), 5);
+
+    invalidateNotificationQueries(queryClient);
+
+    expect(
+      queryClient.getQueryState(
+        queryKeys.notifications.list({ unreadOnly: false }),
+      )?.isInvalidated,
+    ).toBe(true);
+    expect(
+      queryClient.getQueryState(
+        queryKeys.notifications.list({ unreadOnly: true }),
+      )?.isInvalidated,
+    ).toBe(true);
+    expect(
+      queryClient.getQueryState(queryKeys.notifications.unreadCount())
+        ?.isInvalidated,
+    ).toBe(true);
   });
 
   it("clears all notification query caches", () => {

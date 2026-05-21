@@ -1,6 +1,9 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { prependCachedNotification } from "../../shared/api/queries/notifications";
+import {
+  invalidateNotificationQueries,
+  prependCachedNotification,
+} from "../../shared/api/queries/notifications";
 import { notificationSchema } from "../../shared/api/schemas/notification";
 import { eventHub, HUB_METHODS } from "../../shared/signalr";
 import { selectNotificationSoundEnabled, useUserPreferencesStore } from "../../shared/store/userPreferencesStore";
@@ -29,6 +32,10 @@ export function useEventHub() {
       return;
     }
 
+    const unsubscribeConnected = eventHub.onConnected(() => {
+      invalidateNotificationQueries(queryClient);
+    });
+
     eventHub.start().catch(() => {
       // connection will retry automatically
     });
@@ -48,6 +55,7 @@ export function useEventHub() {
 
     return () => {
       unsubscribe();
+      unsubscribeConnected();
     };
   }, [isAuthenticated, queryClient, soundEnabled]);
 }

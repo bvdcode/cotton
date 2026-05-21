@@ -15,10 +15,12 @@ import type { JsonValue } from "../types/json";
 import { HUB_METHODS, SILENCED_HUB_METHODS, type HubMethodOrLower } from "./hubMethods";
 
 type HubEventCallback = (...args: JsonValue[]) => void;
+type HubConnectionCallback = () => void;
 
 class EventHubService {
   private connection: HubConnection | null = null;
   private listeners = new Map<HubMethodOrLower, Set<HubEventCallback>>();
+  private connectionListeners = new Set<HubConnectionCallback>();
   private started = false;
   private startPromise: Promise<void> | null = null;
 
@@ -114,6 +116,7 @@ class EventHubService {
 
         this.connection.onreconnected(() => {
           this.resubscribeAll();
+          this.notifyConnected();
         });
 
         for (const [method, callbacks] of this.listeners) {
@@ -124,6 +127,7 @@ class EventHubService {
 
         await this.connection.start();
         this.started = true;
+        this.notifyConnected();
         return;
       } catch (e) {
         lastError = e instanceof Error ? e : new Error("Failed to start hub");
@@ -132,6 +136,14 @@ class EventHubService {
     }
 
     throw lastError ?? new Error("Failed to start hub");
+  }
+
+  onConnected(callback: HubConnectionCallback): () => void {
+    this.connectionListeners.add(callback);
+
+    return () => {
+      this.connectionListeners.delete(callback);
+    };
   }
 
   on(method: HubMethodOrLower, callback: HubEventCallback): () => void {
@@ -157,6 +169,12 @@ class EventHubService {
       }
       this.connection?.off(method, wrapped);
     };
+  }
+
+  private notifyConnected(): void {
+    for (const callback of this.connectionListeners) {
+      callback();
+    }
   }
 
   private resubscribeAll(): void {

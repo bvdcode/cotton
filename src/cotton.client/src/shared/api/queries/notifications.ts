@@ -162,6 +162,12 @@ export const prependCachedNotification = (
   }
 };
 
+export const invalidateNotificationQueries = (queryClient: QueryClient): void => {
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.notifications.all(),
+  });
+};
+
 export const clearNotificationCaches = (queryClient: QueryClient): void => {
   queryClient.removeQueries({ queryKey: queryKeys.notifications.all() });
 };
