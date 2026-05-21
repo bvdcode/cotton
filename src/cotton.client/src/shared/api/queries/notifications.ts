@@ -43,6 +43,12 @@ export const useUnreadCountQuery = (options: { enabled?: boolean } = {}) =>
     enabled: options.enabled ?? true,
   });
 
+const invalidateUnreadCount = (queryClient: QueryClient): void => {
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.notifications.unreadCount(),
+  });
+};
+
 const stampReadAt = (notification: NotificationDto): NotificationDto =>
   notification.readAt
     ? notification
@@ -84,10 +90,7 @@ export const useMarkAsReadMutation = () => {
         (notification) => notification.id === id && !notification.readAt,
         stampReadAt,
       );
-      queryClient.setQueryData<number>(
-        queryKeys.notifications.unreadCount(),
-        (old) => Math.max(0, (old ?? 0) - 1),
-      );
+      invalidateUnreadCount(queryClient);
     },
   });
 };
@@ -107,6 +110,7 @@ export const useMarkAllAsReadMutation = () => {
         queryKeys.notifications.unreadCount(),
         () => 0,
       );
+      invalidateUnreadCount(queryClient);
     },
   });
 };
@@ -154,10 +158,7 @@ export const prependCachedNotification = (
   }
 
   if (!notification.readAt && !wasAlreadyCached) {
-    queryClient.setQueryData<number>(
-      queryKeys.notifications.unreadCount(),
-      (old) => (old ?? 0) + 1,
-    );
+    invalidateUnreadCount(queryClient);
   }
 };
 
