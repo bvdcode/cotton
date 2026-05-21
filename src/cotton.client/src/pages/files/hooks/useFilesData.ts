@@ -71,10 +71,10 @@ export const useFilesData = ({
   const optimisticUpdateCurrentNodeFilePreviewHash = useCallback(
     (nodeFileId: string, previewHashEncryptedHex: string) => {
       if (!nodeId) {
-        return;
+        return false;
       }
 
-      optimisticSetFilePreviewHash(
+      return optimisticSetFilePreviewHash(
         nodeId,
         nodeFileId,
         previewHashEncryptedHex,

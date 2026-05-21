@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { GUID_PATTERN } from "../../utils/guid";
 
 const makeEnumSchema = <T extends string>(values: readonly T[], fallback: T) =>
   z.unknown().transform((value): T => {
@@ -166,7 +167,7 @@ export const defaultUserStorageQuotaBytesSchema = z
 
 export const defaultUserTemplateNodeIdSchema = z
   .object({
-    defaultUserTemplateNodeId: z.string().uuid().nullable().optional(),
+    defaultUserTemplateNodeId: z.string().regex(GUID_PATTERN).nullable().optional(),
   })
   .transform((value) => value.defaultUserTemplateNodeId ?? null);
 

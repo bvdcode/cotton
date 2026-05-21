@@ -1,6 +1,7 @@
 import * as React from "react";
 import { looksLikeContainer } from "../../../shared/crypto/container";
 import { previewConfig } from "../../../shared/config/previewConfig";
+import { isGuidString } from "../../../shared/utils/guid";
 import { tryParseFileName } from "../utils/tryParseFileName";
 
 export type ShareFileInfoError = "invalidLink" | "notFound" | "loadFailed";
@@ -54,10 +55,7 @@ function isOctetStream(contentType: string | null): boolean {
 
 function looksLikeOpaqueServerFileName(fileName: string | null): boolean {
   return (
-    fileName !== null &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      fileName,
-    )
+    fileName !== null && isGuidString(fileName)
   );
 }
 

@@ -37,6 +37,18 @@ describe("shouldInvalidateCurrentNode", () => {
     ).toBe(true);
   });
 
+  it("accepts version-agnostic .NET Guid node ids", () => {
+    const uuidV7NodeId = "019e5176-5482-7e90-04b9-fded5783ada4";
+
+    expect(
+      shouldInvalidateCurrentNode(
+        HUB_METHODS.FileCreated,
+        [{ id: deletedFileId, nodeId: uuidV7NodeId, name: "audio.ogg" }],
+        uuidV7NodeId,
+      ),
+    ).toBe(true);
+  });
+
   it("invalidates when an externally-updated file belongs to the current node", () => {
     expect(
       shouldInvalidateCurrentNode(

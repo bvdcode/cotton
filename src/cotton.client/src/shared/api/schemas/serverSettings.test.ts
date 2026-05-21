@@ -10,6 +10,7 @@ import {
   storageTypeResponseSchema,
   telemetrySettingSchema,
   timezoneSchema,
+  defaultUserTemplateNodeIdSchema,
 } from "./serverSettings";
 
 describe("server settings schemas", () => {
@@ -111,6 +112,20 @@ describe("server settings schemas", () => {
     expect(telemetrySettingSchema.parse({ telemetryEnabled: true })).toBe(true);
     expect(() =>
       telemetrySettingSchema.parse({ telemetryEnabled: "true" }),
+    ).toThrow();
+  });
+
+  it("accepts version-agnostic .NET Guid template node ids", () => {
+    expect(
+      defaultUserTemplateNodeIdSchema.parse({
+        defaultUserTemplateNodeId: "019e5176-5482-7e90-04b9-fded5783ada4",
+      }),
+    ).toBe("019e5176-5482-7e90-04b9-fded5783ada4");
+
+    expect(() =>
+      defaultUserTemplateNodeIdSchema.parse({
+        defaultUserTemplateNodeId: "not-a-guid",
+      }),
     ).toThrow();
   });
 });

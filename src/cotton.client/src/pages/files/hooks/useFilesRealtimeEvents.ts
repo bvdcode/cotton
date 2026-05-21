@@ -9,20 +9,20 @@ import {
 } from "../../../shared/signalr";
 import { useAuth } from "../../../features/auth";
 import { isJsonObject, type JsonValue } from "../../../shared/types/json";
+import { isGuidString } from "../../../shared/utils/guid";
 
 interface UseFilesRealtimeEventsOptions {
   nodeId: string | null;
   onInvalidate: () => void;
-  onPreviewGenerated?: (nodeFileId: string, previewHashEncryptedHex: string) => void;
+  onPreviewGenerated?: (
+    nodeFileId: string,
+    previewHashEncryptedHex: string,
+  ) => boolean;
 }
 
 const PREVIEW_GENERATED_METHODS = getHubMethodVariants([
   HUB_METHODS.PreviewGenerated,
 ]);
-const GUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-const isGuid = (value: string): boolean => GUID_REGEX.test(value);
 
 const HUB_METHOD_BY_WIRE_NAME = new Map<string, HubMethod>(
   Object.values(HUB_METHODS).map((method) => [method.toLowerCase(), method]),
@@ -55,7 +55,7 @@ const getAffectedNodeIds = (
 
   const addPayloadGuid = (key: string): void => {
     const value = payload[key];
-    if (typeof value === "string" && isGuid(value)) {
+    if (typeof value === "string" && isGuidString(value)) {
       affected.add(value);
     }
   };
@@ -67,7 +67,7 @@ const getAffectedNodeIds = (
     }
 
     const value = nested[nestedKey];
-    if (typeof value === "string" && isGuid(value)) {
+    if (typeof value === "string" && isGuidString(value)) {
       affected.add(value);
     }
   };
@@ -199,10 +199,13 @@ export function useFilesRealtimeEvents({
 
       const handler = onPreviewGeneratedRef.current;
       if (handler) {
-        handler(nodeFileId, previewHashHex);
-      } else {
-        scheduleInvalidate();
+        const updated = handler(nodeFileId, previewHashHex);
+        if (updated) {
+          return;
+        }
       }
+
+      scheduleInvalidate();
     };
 
     const unsubscribePreviewGenerated = PREVIEW_GENERATED_METHODS.map(

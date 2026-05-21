@@ -30,7 +30,7 @@ type NodesState = {
     parentNodeId: string,
     fileId: string,
     previewHashEncryptedHex: string,
-  ) => void;
+  ) => boolean;
   optimisticDeleteFile: (parentNodeId: string, fileId: string) => void;
   refreshCachedFileDisplayMetadata: () => Promise<void>;
   reset: (cacheOwnerUserId?: string | null) => void;
@@ -240,6 +240,7 @@ export const useNodesStore = create<NodesState>()(
         fileId,
         previewHashEncryptedHex,
       ) => {
+        let updated = false;
         set((prev) => {
           const existing = prev.contentByNodeId[parentNodeId];
           if (!existing) return {};
@@ -250,6 +251,7 @@ export const useNodesStore = create<NodesState>()(
             return {};
           }
 
+          updated = true;
           return {
             contentByNodeId: {
               ...prev.contentByNodeId,
@@ -262,6 +264,7 @@ export const useNodesStore = create<NodesState>()(
             },
           };
         });
+        return updated;
       },
 
       optimisticDeleteFile: (parentNodeId, fileId) => {

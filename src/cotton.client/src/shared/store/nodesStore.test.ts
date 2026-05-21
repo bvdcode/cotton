@@ -233,11 +233,28 @@ describe("optimisticSetFilePreviewHash", () => {
     ]);
     const before = useNodesStore.getState().contentByNodeId["parent-1"];
 
-    useNodesStore
+    const updated = useNodesStore
       .getState()
       .optimisticSetFilePreviewHash("parent-1", "f1", "stable");
 
+    expect(updated).toBe(false);
     expect(useNodesStore.getState().contentByNodeId["parent-1"]).toBe(before);
+  });
+
+  it("reports whether a matching file was updated", () => {
+    seedParent("parent-1", [], [
+      makeFile("f1", "a.txt", { previewHashEncryptedHex: "old" }),
+    ]);
+
+    const updated = useNodesStore
+      .getState()
+      .optimisticSetFilePreviewHash("parent-1", "f1", "new-hash");
+    const missing = useNodesStore
+      .getState()
+      .optimisticSetFilePreviewHash("parent-1", "missing", "new-hash");
+
+    expect(updated).toBe(true);
+    expect(missing).toBe(false);
   });
 });
 

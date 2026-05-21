@@ -28,6 +28,7 @@ import {
 } from "../../../shared/api/settingsApi";
 import { showApiErrorToast } from "../../../shared/api/httpClient";
 import { SettingsSection } from "./SettingsSection";
+import { isGuidString } from "../../../shared/utils/guid";
 import { storageSpaceOptions } from "./adminGeneralSettingsModel";
 import type { SaveStatus } from "./useAutoSavedSetting";
 import { AdminPageSurface } from "../components/AdminPageSurface";
@@ -42,7 +43,6 @@ type FlashTimers = {
 };
 
 const bytesPerGiB = 1024 ** 3;
-const guidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const formatQuotaInput = (quotaBytes: number | null): string => {
   if (!quotaBytes || quotaBytes <= 0) {
@@ -76,7 +76,7 @@ const parseTemplateNodeIdInput = (input: string): string | null => {
     return null;
   }
 
-  if (!guidPattern.test(trimmed)) {
+  if (!isGuidString(trimmed)) {
     throw new Error("invalid-template-node-id");
   }
 
