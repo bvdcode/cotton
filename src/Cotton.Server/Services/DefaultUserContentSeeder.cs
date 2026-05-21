@@ -43,7 +43,7 @@ public class DefaultUserContentSeeder(
 
             var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
             var targetRoot = await _layouts.GetOrCreateRootNodeAsync(layout.Id, userId, NodeType.Default);
-            await CopyNodeContentsAsync(templateNodeId.Value, targetRoot.Id, layout.Id, userId, ct);
+            await CopyNodeContentsAsync(templateNodeId.Value, targetRoot, layout.Id, userId, ct);
 
             await transaction.CommitAsync(ct);
         });
@@ -51,12 +51,12 @@ public class DefaultUserContentSeeder(
 
     private async Task CopyNodeContentsAsync(
         Guid sourceNodeId,
-        Guid targetParentNodeId,
+        Node targetParentNode,
         Guid targetLayoutId,
         Guid targetUserId,
         CancellationToken ct)
     {
-        await CopyFilesAsync(sourceNodeId, targetParentNodeId, targetUserId, ct);
+        await CopyFilesAsync(sourceNodeId, targetParentNode.Id, targetUserId, ct);
 
         var sourceChildren = await _dbContext.Nodes
             .AsNoTracking()
@@ -76,16 +76,16 @@ public class DefaultUserContentSeeder(
             {
                 OwnerId = targetUserId,
                 LayoutId = targetLayoutId,
-                ParentId = targetParentNodeId,
                 Type = NodeType.Default,
                 Metadata = CopyMetadata(sourceChild.Metadata),
             };
+            targetChild.SetParent(targetParentNode);
             targetChild.SetName(sourceChild.Name);
 
             await _dbContext.Nodes.AddAsync(targetChild, ct);
             await _dbContext.SaveChangesAsync(ct);
 
-            await CopyNodeContentsAsync(sourceChild.Id, targetChild.Id, targetLayoutId, targetUserId, ct);
+            await CopyNodeContentsAsync(sourceChild.Id, targetChild, targetLayoutId, targetUserId, ct);
         }
     }
 

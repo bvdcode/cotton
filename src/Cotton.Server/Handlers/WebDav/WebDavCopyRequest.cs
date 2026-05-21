@@ -366,7 +366,7 @@ public class WebDavCopyRequestHandler(
         {
             var (newNodeId, addedBytes) = await CopyNodeRecursivelyAsync(
                 sourceResult.Node.Id,
-                destParentResult.ParentNode!.Id,
+                destParentResult.ParentNode!,
                 destParentResult.ResourceName!,
                 request.UserId,
                 layoutId,
@@ -397,7 +397,7 @@ public class WebDavCopyRequestHandler(
 
     private async Task<(Guid NodeId, long AddedBytes)> CopyNodeRecursivelyAsync(
         Guid sourceNodeId,
-        Guid destParentId,
+        Node destParent,
         string newName,
         Guid userId,
         Guid layoutId,
@@ -411,10 +411,10 @@ public class WebDavCopyRequestHandler(
         var newNode = new Node
         {
             OwnerId = userId,
-            ParentId = destParentId,
             Type = sourceNode.Type,
             LayoutId = layoutId
         };
+        newNode.SetParent(destParent, sourceNode.Type);
         newNode.SetName(newName);
 
         await _dbContext.Nodes.AddAsync(newNode, ct);
@@ -433,7 +433,7 @@ public class WebDavCopyRequestHandler(
 
         foreach (var child in childNodes)
         {
-            var (_, childAddedBytes) = await CopyNodeRecursivelyAsync(child.Id, newNode.Id, child.Name, userId, layoutId, ct);
+            var (_, childAddedBytes) = await CopyNodeRecursivelyAsync(child.Id, newNode, child.Name, userId, layoutId, ct);
             addedBytes += childAddedBytes;
         }
 

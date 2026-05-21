@@ -362,7 +362,7 @@ public class WebDavMoveRequestHandler(
             var node = await _dbContext.Nodes
                 .FirstAsync(n => n.Id == sourceResult.Node.Id, ct);
 
-            node.ParentId = destParentResult.ParentNode!.Id;
+            node.SetParent(destParentResult.ParentNode!);
             node.SetName(destParentResult.ResourceName!);
             return null;
         }

@@ -20,7 +20,6 @@ namespace Cotton.Database.Models
         public Guid? ParentId { get; set; }
 
         [Column("type")]
-        // TODO: make sure the parent node type is the same as this node type
         public NodeType Type { get; set; }
 
         [Column("name")]
@@ -38,6 +37,37 @@ namespace Cotton.Database.Models
             }
             Name = normalized;
             NameKey = NameValidator.GetNameKey(normalized);
+        }
+
+        public void SetParent(Node parent)
+        {
+            EnsureParentMatches(parent, Type);
+            ParentId = parent.Id;
+        }
+
+        public void SetParent(Node parent, NodeType nodeType)
+        {
+            EnsureParentMatches(parent, nodeType);
+            Type = nodeType;
+            ParentId = parent.Id;
+        }
+
+        private void EnsureParentMatches(Node parent, NodeType nodeType)
+        {
+            if (parent.OwnerId != OwnerId)
+            {
+                throw new InvalidOperationException("Parent node belongs to another owner.");
+            }
+
+            if (parent.LayoutId != LayoutId)
+            {
+                throw new InvalidOperationException("Parent node belongs to another layout.");
+            }
+
+            if (parent.Type != nodeType)
+            {
+                throw new InvalidOperationException("Parent node type must match child node type.");
+            }
         }
 
         [Column("metadata")]

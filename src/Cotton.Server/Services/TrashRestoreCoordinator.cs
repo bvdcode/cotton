@@ -172,10 +172,10 @@ public class TrashRestoreCoordinator(
             var created = new Node
             {
                 OwnerId = userId,
-                ParentId = current.Id,
                 Type = NodeType.Default,
                 LayoutId = layout.Id,
             };
+            created.SetParent(current);
             created.SetName(normalized);
             await _dbContext.Nodes.AddAsync(created, ct);
             await _dbContext.SaveChangesAsync(ct);

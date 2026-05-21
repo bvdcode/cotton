@@ -79,7 +79,7 @@ namespace Cotton.Server.Handlers.Nodes
             }
 
             Node trashItem = await _layouts.CreateTrashItemAsync(command.UserId);
-            node.ParentId = trashItem.Id;
+            node.SetParent(trashItem, NodeType.Trash);
 
             // Ensure the whole subtree is considered trash for browsing/search/filtering.
             await MoveDescendantsToTrashAsync(command.UserId, node.Id, ct);

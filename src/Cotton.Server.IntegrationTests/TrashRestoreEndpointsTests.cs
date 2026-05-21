@@ -207,6 +207,7 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
             Assert.That(trashedFolder.Type, Is.EqualTo(NodeType.Trash));
             Assert.That(trashedChild.Type, Is.EqualTo(NodeType.Trash));
             Assert.That(await GetMetadataValueAsync("nodes", folder.Id, OriginalParentPathMetadataKey), Is.EqualTo("parent"));
+            await AssertNoMixedNodeTypesAsync();
         }
 
         var restored = await RestoreNodeAsync(folder.Id);
@@ -236,6 +237,7 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
             Assert.That(restoredChild.Type, Is.EqualTo(NodeType.Default));
             Assert.That(nestedFile.NodeId, Is.EqualTo(child.Id));
             Assert.That(await MetadataContainsKeyAsync("nodes", folder.Id, OriginalParentPathMetadataKey), Is.False);
+            await AssertNoMixedNodeTypesAsync();
         }
     }
 
@@ -355,6 +357,28 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
             });
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<RestoreOutcomeDto>())!;
+    }
+
+    private async Task AssertNoMixedNodeTypesAsync()
+    {
+        await using var db = NewReadOnlyDbContext();
+        var mismatches = await db.Nodes
+            .AsNoTracking()
+            .Where(child => child.ParentId != null)
+            .Join(
+                db.Nodes.AsNoTracking(),
+                child => child.ParentId!.Value,
+                parent => parent.Id,
+                (child, parent) => new
+                {
+                    child.Id,
+                    ChildType = child.Type,
+                    ParentType = parent.Type,
+                })
+            .Where(x => x.ChildType != x.ParentType)
+            .ToListAsync();
+
+        Assert.That(mismatches, Is.Empty);
     }
 
     private async Task<string?> GetMetadataValueAsync(string tableName, Guid id, string key)

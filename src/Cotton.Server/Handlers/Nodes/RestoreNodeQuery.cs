@@ -181,7 +181,7 @@ namespace Cotton.Server.Handlers.Nodes
             Node targetParent,
             CancellationToken ct)
         {
-            node.ParentId = targetParent.Id;
+            node.SetParent(targetParent, NodeType.Default);
             node.Metadata = TrashRestoreCoordinator.RemoveOriginalParentPath(node.Metadata);
             await _subtree.SetSubtreeTypeAsync(request.UserId, node.Id, NodeType.Default, ct);
             await _dbContext.SaveChangesAsync(ct);

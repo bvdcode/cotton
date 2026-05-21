@@ -47,7 +47,7 @@ namespace Cotton.Server.Handlers.Nodes
             await ValidateTargetParentAsync(request, node, targetParent, cancellationToken);
 
             Guid oldParentId = node.ParentId!.Value;
-            await MoveNodeAsync(node, targetParent.Id, cancellationToken);
+            await MoveNodeAsync(node, targetParent, cancellationToken);
             await tx.CommitAsync(cancellationToken);
 
             await NotifyMoveAsync(node.Id, oldParentId, cancellationToken);
@@ -134,9 +134,9 @@ namespace Cotton.Server.Handlers.Nodes
             }
         }
 
-        private async Task MoveNodeAsync(Node node, Guid targetParentId, CancellationToken ct)
+        private async Task MoveNodeAsync(Node node, Node targetParent, CancellationToken ct)
         {
-            node.ParentId = targetParentId;
+            node.SetParent(targetParent);
             try
             {
                 await _dbContext.SaveChangesAsync(ct);

@@ -161,10 +161,10 @@ public class WebDavMkColRequestHandler(
         var newNode = new Node
         {
             OwnerId = userId,
-            ParentId = parentResult.ParentNode!.Id,
             Type = WebDavPathResolver.DefaultNodeType,
-            LayoutId = parentResult.ParentNode.LayoutId,
+            LayoutId = parentResult.ParentNode!.LayoutId,
         };
+        newNode.SetParent(parentResult.ParentNode);
         newNode.SetName(parentResult.ResourceName!);
         return newNode;
     }

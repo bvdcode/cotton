@@ -392,10 +392,10 @@ namespace Cotton.Server.Controllers
             var newNode = new Node
             {
                 OwnerId = userId,
-                ParentId = parentNode.Id,
                 Type = NodeType.Default,
                 LayoutId = layout.Id,
             };
+            newNode.SetParent(parentNode);
             newNode.SetName(request.Name);
             await _dbContext.Nodes.AddAsync(newNode);
             await _dbContext.SaveChangesAsync();
