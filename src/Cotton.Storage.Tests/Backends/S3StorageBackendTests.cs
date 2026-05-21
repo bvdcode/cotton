@@ -6,7 +6,7 @@ using Cotton.Storage.Abstractions;
 using Cotton.Storage.Backends;
 using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
-using EasyExtensions.Crypto;
+using Cotton.Crypto;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Security.Cryptography;

@@ -4,7 +4,7 @@
 using Cotton.Benchmark.Infrastructure;
 using Cotton.Benchmark.Models;
 using Cotton.Storage.Processors;
-using EasyExtensions.Crypto;
+using Cotton.Crypto;
 using System.Diagnostics;
 using System.Security.Cryptography;
 

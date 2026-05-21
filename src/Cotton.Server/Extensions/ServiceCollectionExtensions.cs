@@ -5,8 +5,8 @@ using Cotton.Server.Abstractions;
 using Cotton.Server.Auth;
 using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
+using Cotton.Crypto;
 using EasyExtensions.Abstractions;
-using EasyExtensions.Crypto;
 using Microsoft.AspNetCore.Authentication;
 
 namespace Cotton.Server.Extensions

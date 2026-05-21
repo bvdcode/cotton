@@ -1,5 +1,5 @@
 using Cotton.Storage.Abstractions;
-using EasyExtensions.Crypto;
+using Cotton.Crypto;
 using EasyExtensions.Extensions;
 using Npgsql;
 using System.Security.Cryptography;

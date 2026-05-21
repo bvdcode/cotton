@@ -3,7 +3,7 @@ using Cotton.Database.Models.Enums;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Backends;
 using Cotton.Storage.Helpers;
-using EasyExtensions.Crypto;
+using Cotton.Crypto;
 using EasyExtensions.Extensions;
 using Npgsql;
 using System.Security.Cryptography;

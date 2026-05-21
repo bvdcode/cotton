@@ -1,12 +1,12 @@
 using Cotton.Autoconfig.Extensions;
+using Cotton.Crypto;
 using Cotton.Database.Models;
 using Cotton.Server.IntegrationTests.Abstractions;
-using EasyExtensions.Models.Enums;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Backends;
 using Cotton.Storage.Processors;
-using EasyExtensions.Crypto;
+using EasyExtensions.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;

@@ -1,7 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
-using EasyExtensions.Crypto;
+using Cotton.Crypto;
 using EasyExtensions.Helpers;
 using Microsoft.Extensions.Configuration;
 

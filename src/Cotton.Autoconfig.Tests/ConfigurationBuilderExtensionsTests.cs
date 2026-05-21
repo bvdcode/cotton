@@ -2,7 +2,7 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Autoconfig.Extensions;
-using EasyExtensions.Crypto;
+using Cotton.Crypto;
 using Microsoft.Extensions.Configuration;
 
 namespace Cotton.Autoconfig.Tests

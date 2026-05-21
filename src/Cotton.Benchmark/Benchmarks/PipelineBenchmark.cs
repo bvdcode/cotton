@@ -6,7 +6,7 @@ using Cotton.Benchmark.Models;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
-using EasyExtensions.Crypto;
+using Cotton.Crypto;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Diagnostics;
 using System.Security.Cryptography;

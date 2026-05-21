@@ -1,5 +1,5 @@
 using Cotton.Storage.Abstractions;
-using EasyExtensions.Crypto;
+using Cotton.Crypto;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;

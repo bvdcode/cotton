@@ -76,7 +76,7 @@ dotnet run --project Cotton.Benchmark -- --help
 
 ### 1. Real Components
 - Uses **actual** `CompressionProcessor` from `Cotton.Storage.Processors`
-- Uses **actual** `CryptoProcessor` with `AesGcmStreamCipher` from `EasyExtensions.Crypto`
+- Uses **actual** `CryptoProcessor` with `AesGcmStreamCipher` from `Cotton.Crypto`
 - Uses **actual** `FileSystemStorageBackend` from `Cotton.Storage.Backends`
 - Uses **actual** `FileStoragePipeline` from `Cotton.Storage.Pipelines`
 
@@ -183,7 +183,7 @@ Memory Statistics:
 - **Cotton.Storage** - Storage pipeline components (REAL)
   - Includes `CompressionProcessor`, `CryptoProcessor`
   - Includes `FileSystemStorageBackend`, `FileStoragePipeline`
-  - Includes `EasyExtensions.Crypto` for `AesGcmStreamCipher`
+  - Includes `Cotton.Crypto` for `AesGcmStreamCipher`
 
 ## Performance Considerations
 
