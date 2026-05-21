@@ -3,13 +3,12 @@
 
 using Cotton.Database;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace Cotton.Server.Services
 {
     public sealed class SessionAccessTokenRevocationStore(
         CottonDbContext _dbContext,
-        IMemoryCache _cache)
+        SessionAccessTokenRevocationCache _cache)
     {
         private static readonly TimeSpan ActiveSessionCacheDuration = TimeSpan.FromSeconds(30);
         private static readonly TimeSpan RevokedSessionCacheDuration = TimeSpan.FromMinutes(65);
@@ -26,8 +25,7 @@ namespace Cotton.Server.Services
                 ? accessTokenLifetime + AccessTokenClockSkew
                 : RevokedSessionCacheDuration;
 
-            _cache.Set(RevokedKey(userId, sessionId), true, ttl);
-            _cache.Remove(ActiveKey(userId, sessionId));
+            _cache.MarkRevoked(userId, sessionId, ttl);
         }
 
         public async Task<bool> IsRevokedAsync(
@@ -40,12 +38,12 @@ namespace Cotton.Server.Services
                 return true;
             }
 
-            if (_cache.TryGetValue(RevokedKey(userId, sessionId), out bool revoked) && revoked)
+            if (_cache.IsRevoked(userId, sessionId))
             {
                 return true;
             }
 
-            if (_cache.TryGetValue(ActiveKey(userId, sessionId), out bool active))
+            if (_cache.TryGetActive(userId, sessionId, out bool active))
             {
                 return !active;
             }
@@ -60,18 +58,12 @@ namespace Cotton.Server.Services
 
             if (hasActiveRefreshToken)
             {
-                _cache.Set(ActiveKey(userId, sessionId), true, ActiveSessionCacheDuration);
+                _cache.MarkActive(userId, sessionId, ActiveSessionCacheDuration);
                 return false;
             }
 
-            _cache.Set(RevokedKey(userId, sessionId), true, RevokedSessionCacheDuration);
+            _cache.MarkRevoked(userId, sessionId, RevokedSessionCacheDuration);
             return true;
         }
-
-        private static string ActiveKey(Guid userId, string sessionId)
-            => $"auth-session-active:{userId:N}:{sessionId}";
-
-        private static string RevokedKey(Guid userId, string sessionId)
-            => $"auth-session-revoked:{userId:N}:{sessionId}";
     }
 }

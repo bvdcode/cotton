@@ -5,10 +5,14 @@ import {
   type HubConnection,
   HttpTransportType,
 } from "@microsoft/signalr";
-import { getAccessToken, refreshAccessToken } from "../api/httpClient";
-import { getRefreshEnabled } from "../store/authStore";
+import {
+  clearAccessToken,
+  getAccessToken,
+  refreshAccessToken,
+} from "../api/httpClient";
+import { getRefreshEnabled, useAuthStore } from "../store/authStore";
 import type { JsonValue } from "../types/json";
-import { SILENCED_HUB_METHODS, type HubMethodOrLower } from "./hubMethods";
+import { HUB_METHODS, SILENCED_HUB_METHODS, type HubMethodOrLower } from "./hubMethods";
 
 type HubEventCallback = (...args: JsonValue[]) => void;
 
@@ -101,6 +105,12 @@ class EventHubService {
             // no-op
           });
         }
+
+        this.connection.on(HUB_METHODS.SessionRevoked, () => {
+          clearAccessToken();
+          useAuthStore.getState().logoutLocal();
+          this.dispose();
+        });
 
         this.connection.onreconnected(() => {
           this.resubscribeAll();

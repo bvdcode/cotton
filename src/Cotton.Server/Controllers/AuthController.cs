@@ -4,10 +4,12 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Auth;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Auth;
 using Cotton.Server.Handlers.Users;
 using Cotton.Server.Helpers;
+using Cotton.Server.Hubs;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
@@ -30,6 +32,7 @@ using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
@@ -55,7 +58,8 @@ namespace Cotton.Server.Controllers
         PasskeyService _passkeys,
         DefaultUserContentSeeder _defaultUserContentSeeder,
         ApplicationStartupClock _startupClock,
-        SessionAccessTokenRevocationStore _sessionRevocations) : ControllerBase
+        SessionAccessTokenRevocationStore _sessionRevocations,
+        IHubContext<EventHub> _eventHub) : ControllerBase
     {
         public const int WebDavTokenLength = 32;
         public const int RefreshTokenLength = 32;
@@ -84,15 +88,20 @@ namespace Cotton.Server.Controllers
 
         [Authorize]
         [HttpDelete("sessions/{sessionId}")]
-        public async Task<IActionResult> RevokeSession([FromRoute] string sessionId)
+        public async Task<IActionResult> RevokeSession(
+            [FromRoute] string sessionId,
+            CancellationToken cancellationToken)
         {
             var userId = User.GetUserId();
+            DateTime revokedAt = DateTime.UtcNow;
             int revokedTokens = await _dbContext.RefreshTokens
                 .Where(x => x.UserId == userId && x.SessionId == sessionId && x.RevokedAt == null)
-                .ExecuteUpdateAsync(x => x.SetProperty(t => t.RevokedAt, t => DateTime.UtcNow));
+                .ExecuteUpdateAsync(
+                    x => x.SetProperty(t => t.RevokedAt, _ => revokedAt),
+                    cancellationToken);
             if (revokedTokens > 0)
             {
-                _sessionRevocations.Revoke(userId, sessionId, _tokens.TokenLifetime);
+                await NotifySessionRevokedAsync(userId, sessionId, cancellationToken);
             }
             return Ok();
         }
@@ -279,6 +288,7 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
+        [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
         [HttpPost("passkeys/assertion/options")]
         public async Task<IActionResult> BeginPasskeyAssertion(
             [FromBody] BeginPasskeyAssertionRequestDto request,
@@ -288,6 +298,7 @@ namespace Cotton.Server.Controllers
             return Ok(response);
         }
 
+        [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
         [HttpPost("passkeys/assertion/verify")]
         public async Task<IActionResult> FinishPasskeyAssertion(
             [FromBody] FinishPasskeyAssertionRequestDto request,
@@ -304,7 +315,7 @@ namespace Cotton.Server.Controllers
             }
         }
 
-        [EnableRateLimiting("auth")]
+        [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginRequest request)
         {
@@ -411,6 +422,7 @@ namespace Cotton.Server.Controllers
             return null;
         }
 
+        [EnableRateLimiting(AuthRateLimitPolicies.Refresh)]
         [HttpPost("refresh")]
         public async Task<IActionResult> GetRefreshToken([FromQuery] string? refreshToken = null)
         {
@@ -470,12 +482,17 @@ namespace Cotton.Server.Controllers
                 {
                     dbToken.RevokedAt = DateTime.UtcNow;
                     await _dbContext.SaveChangesAsync();
+                    await NotifySessionRevokedAsync(
+                        dbToken.UserId,
+                        dbToken.SessionId,
+                        HttpContext.RequestAborted);
                 }
             }
             Response.Cookies.Delete(CookieRefreshTokenKey);
             return Ok();
         }
 
+        [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword(
             [FromBody] ForgotPasswordRequestDto request,
@@ -486,6 +503,7 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
+        [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword(
             [FromBody] ResetPasswordRequestDto request,
@@ -508,6 +526,22 @@ namespace Cotton.Server.Controllers
                     s => s.SetProperty(dt => dt.ExpiresAt, DateTime.UtcNow),
                     cancellationToken);
             return Ok();
+        }
+
+        private async Task NotifySessionRevokedAsync(
+            Guid userId,
+            string? sessionId,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                return;
+            }
+
+            _sessionRevocations.Revoke(userId, sessionId, _tokens.TokenLifetime);
+            await _eventHub.Clients
+                .Group(EventHub.GetSessionGroupName(userId, sessionId))
+                .SendCoreAsync(EventHub.SessionRevokedMethod, Array.Empty<object>(), cancellationToken);
         }
 
         private async Task<TokenPairResponseDto> CreateSignedInResponseAsync(User user, bool trustDevice)

@@ -42,11 +42,11 @@ public class AuthSmokeTests : IntegrationTestBase
 
         var csb = new NpgsqlConnectionStringBuilder
         {
-            Host = "localhost",
-            Port = 5432,
-            Database = DatabaseName,
-            Username = "postgres",
-            Password = "postgres"
+            Host = TestPostgresHost,
+            Port = TestPostgresPort,
+            Database = CurrentDatabaseName,
+            Username = TestPostgresUsername,
+            Password = TestPostgresPassword
         };
 
         var overrides = new Dictionary<string, string?>
@@ -110,6 +110,34 @@ public class AuthSmokeTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Login_IsRateLimited()
+    {
+        Assert.That(_client, Is.Not.Null);
+
+        const string ipAddress = "9.9.9.9";
+        using HttpResponseMessage firstLogin = await PostLoginAsync(
+            "limiteduser",
+            "testpassword",
+            ipAddress);
+        Assert.That(firstLogin.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        for (int i = 0; i < 9; i++)
+        {
+            using HttpResponseMessage failedLogin = await PostLoginAsync(
+                "limiteduser",
+                "wrong-password",
+                ipAddress);
+            Assert.That(failedLogin.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        }
+
+        using HttpResponseMessage limitedLogin = await PostLoginAsync(
+            "limiteduser",
+            "wrong-password",
+            ipAddress);
+        Assert.That(limitedLogin.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
+    }
+
+    [Test]
     public async Task RevokeSession_Invalidates_Current_AccessToken()
     {
         Assert.That(_client, Is.Not.Null);
@@ -134,7 +162,17 @@ public class AuthSmokeTests : IntegrationTestBase
 
     private async Task<TokenPairResponseDto> LoginAsync(string username, string password)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+        using HttpResponseMessage response = await PostLoginAsync(username, password, "8.8.8.8");
+        response.EnsureSuccessStatusCode();
+
+        TokenPairResponseDto? payload = await response.Content.ReadFromJsonAsync<TokenPairResponseDto>();
+        Assert.That(payload, Is.Not.Null);
+        return payload!;
+    }
+
+    private Task<HttpResponseMessage> PostLoginAsync(string username, string password, string ipAddress)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
         {
             Content = JsonContent.Create(new LoginRequestDto
             {
@@ -142,13 +180,7 @@ public class AuthSmokeTests : IntegrationTestBase
                 Password = password
             })
         };
-        request.Headers.Add("X-Forwarded-For", "8.8.8.8");
-
-        using HttpResponseMessage response = await _client!.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-
-        TokenPairResponseDto? payload = await response.Content.ReadFromJsonAsync<TokenPairResponseDto>();
-        Assert.That(payload, Is.Not.Null);
-        return payload!;
+        request.Headers.Add("X-Forwarded-For", ipAddress);
+        return _client!.SendAsync(request);
     }
 }

@@ -6,6 +6,7 @@
  */
 export const HUB_METHODS = {
   NotificationReceived: "OnNotificationReceived",
+  SessionRevoked: "SessionRevoked",
   PreferencesUpdated: "PreferencesUpdated",
   PreviewGenerated: "PreviewGenerated",
   FileCreated: "FileCreated",
