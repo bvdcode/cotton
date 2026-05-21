@@ -44,19 +44,40 @@ namespace Cotton.Crypto.Internals.Pipelines
             long maxBytes = estSize * maxCount;
             using var scope = new BufferScope(pool, maxCount: maxCount, maxBytes: maxBytes);
 
-            var producer = ProduceAsync(jobCh.Writer, scope, ct);
-            var workers = StartWorkersAsync(jobCh.Reader, resCh.Writer, scope, ct);
-            var consumer = ConsumeAsync(resCh.Reader, scope, ct);
+            using var pipelineCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            CancellationToken pipelineCt = pipelineCts.Token;
+
+            var producer = ProduceAsync(jobCh.Writer, scope, pipelineCt);
+            var workers = StartWorkersAsync(jobCh.Reader, resCh.Writer, scope, pipelineCt);
+            var workersDone = Task.WhenAll(workers);
+            var resultsDone = PipelineTaskHelpers.CompleteWhenFinishedAsync(workersDone, resCh.Writer);
+            var consumer = ConsumeAsync(resCh.Reader, scope, pipelineCt);
+
+            PipelineTaskHelpers.CancelOnFailure(producer, pipelineCts);
+            PipelineTaskHelpers.CancelOnFailure(workersDone, pipelineCts);
+            PipelineTaskHelpers.CancelOnFailure(consumer, pipelineCts);
 
             try
             {
-                await producer.ConfigureAwait(false);
-                await Task.WhenAll(workers).ConfigureAwait(false);
+                await Task.WhenAll(producer, workersDone, resultsDone, consumer).ConfigureAwait(false);
             }
-            finally
+            catch (OperationCanceledException ex) when (ct.IsCancellationRequested)
             {
+                await CleanupAfterFailureAsync().ConfigureAwait(false);
+                throw new TaskCanceledException("Encryption pipeline canceled.", ex);
+            }
+            catch
+            {
+                await CleanupAfterFailureAsync().ConfigureAwait(false);
+                throw;
+            }
+
+            async Task CleanupAfterFailureAsync()
+            {
+                pipelineCts.Cancel();
+                jobCh.Writer.TryComplete();
                 resCh.Writer.TryComplete();
-                await consumer.ConfigureAwait(false);
+                await PipelineTaskHelpers.ObserveAllAsync(producer, workersDone, resultsDone, consumer).ConfigureAwait(false);
             }
         }
 
@@ -65,6 +86,7 @@ namespace Cotton.Crypto.Internals.Pipelines
             return Task.Run(async () =>
             {
                 long idx = 0;
+                Exception? completionError = null;
                 try
                 {
                     while (true)
@@ -91,14 +113,32 @@ namespace Cotton.Crypto.Internals.Pipelines
                             scope.Recycle(buffer);
                             throw new InvalidOperationException("Maximum number of chunks per file is 2^64-1. Counter reached ulong.MaxValue.");
                         }
-                        await writer.WriteAsync(new EncryptionJob(idx++, buffer, read), ct).ConfigureAwait(false);
+                        bool published = false;
+                        try
+                        {
+                            await writer.WriteAsync(new EncryptionJob(idx, buffer, read), ct).ConfigureAwait(false);
+                            published = true;
+                            idx++;
+                        }
+                        finally
+                        {
+                            if (!published)
+                            {
+                                scope.Recycle(buffer);
+                            }
+                        }
                     }
+                }
+                catch (Exception ex)
+                {
+                    completionError = ex;
+                    throw;
                 }
                 finally
                 {
-                    writer.TryComplete();
+                    writer.TryComplete(completionError);
                 }
-            }, ct);
+            });
         }
 
         private Task[] StartWorkersAsync(ChannelReader<EncryptionJob> reader, ChannelWriter<EncryptionResult> writer, BufferScope scope, CancellationToken ct)
@@ -116,6 +156,7 @@ namespace Cotton.Crypto.Internals.Pipelines
                     {
                         ct.ThrowIfCancellationRequested();
                         byte[] cipher = scope.Rent(job.DataLength);
+                        bool published = false;
                         try
                         {
                             AesGcmStreamFormat.ComposeNonce(nonceBuffer, noncePrefix, job.Index);
@@ -124,15 +165,43 @@ namespace Cotton.Crypto.Internals.Pipelines
                             Span<byte> tagSpan = MemoryMarshal.AsBytes(MemoryMarshal.CreateSpan(ref tag, 1));
                             gcm.Encrypt(nonceBuffer, job.DataBuffer.AsSpan(0, job.DataLength), cipher.AsSpan(0, job.DataLength), tagSpan, aad);
                             await writer.WriteAsync(new EncryptionResult(job.Index, tag, cipher, job.DataLength), ct).ConfigureAwait(false);
+                            published = true;
                         }
                         finally
                         {
+                            if (!published)
+                            {
+                                scope.Recycle(cipher);
+                            }
                             scope.Recycle(job.DataBuffer);
                         }
                     }
-                }, ct);
+                });
             }
             return tasks;
+        }
+
+        private async Task WriteResultAsync(EncryptionResult result, BufferScope scope, CancellationToken ct)
+        {
+            try
+            {
+                int headerLen = AesGcmStreamFormat.ComputeChunkHeaderLength(tagSize);
+                byte[] headerBuf = pool.Rent(headerLen);
+                try
+                {
+                    AesGcmStreamFormat.BuildChunkHeader(headerBuf.AsSpan(0, headerLen), keyId, result.Tag, result.DataLength, tagSize);
+                    await output.WriteAsync(headerBuf.AsMemory(0, headerLen), ct).ConfigureAwait(false);
+                }
+                finally
+                {
+                    pool.Return(headerBuf, clearArray: false);
+                }
+                await output.WriteAsync(result.Data.AsMemory(0, result.DataLength), ct).ConfigureAwait(false);
+            }
+            finally
+            {
+                scope.Recycle(result.Data);
+            }
         }
 
         private Task ConsumeAsync(ChannelReader<EncryptionResult> reader, BufferScope scope, CancellationToken ct)
@@ -141,54 +210,37 @@ namespace Cotton.Crypto.Internals.Pipelines
             {
                 var pending = new SortedDictionary<long, EncryptionResult>();
                 long next = 0;
-                while (await reader.WaitToReadAsync(ct).ConfigureAwait(false))
+                try
                 {
-                    while (reader.TryRead(out var res))
+                    while (await reader.WaitToReadAsync(ct).ConfigureAwait(false))
                     {
-                        pending[res.Index] = res;
-                        while (pending.TryGetValue(next, out var ready))
+                        while (reader.TryRead(out var res))
                         {
-                            int headerLen = AesGcmStreamFormat.ComputeChunkHeaderLength(tagSize);
-                            byte[] headerBuf = pool.Rent(headerLen);
-                            try
+                            pending[res.Index] = res;
+                            while (pending.TryGetValue(next, out var ready))
                             {
-                                AesGcmStreamFormat.BuildChunkHeader(headerBuf.AsSpan(0, headerLen), keyId, ready.Tag, ready.DataLength, tagSize);
-                                await output.WriteAsync(headerBuf.AsMemory(0, headerLen), ct).ConfigureAwait(false);
+                                pending.Remove(next);
+                                await WriteResultAsync(ready, scope, ct).ConfigureAwait(false);
+                                next++;
                             }
-                            finally
-                            {
-                                pool.Return(headerBuf, clearArray: false);
-                            }
-                            await output.WriteAsync(ready.Data.AsMemory(0, ready.DataLength), ct).ConfigureAwait(false);
-                            scope.Recycle(ready.Data);
-                            pending.Remove(next);
-                            next++;
                         }
                     }
-                }
-                while (pending.TryGetValue(next, out var tail))
-                {
-                    int headerLen = AesGcmStreamFormat.ComputeChunkHeaderLength(tagSize);
-                    byte[] headerBuf = pool.Rent(headerLen);
-                    try
+
+                    while (pending.TryGetValue(next, out var tail))
                     {
-                        AesGcmStreamFormat.BuildChunkHeader(headerBuf.AsSpan(0, headerLen), keyId, tail.Tag, tail.DataLength, tagSize);
-                        await output.WriteAsync(headerBuf.AsMemory(0, headerLen), ct).ConfigureAwait(false);
+                        pending.Remove(next);
+                        await WriteResultAsync(tail, scope, ct).ConfigureAwait(false);
+                        next++;
                     }
-                    finally
-                    {
-                        pool.Return(headerBuf, clearArray: false);
-                    }
-                    await output.WriteAsync(tail.Data.AsMemory(0, tail.DataLength), ct).ConfigureAwait(false);
-                    scope.Recycle(tail.Data);
-                    pending.Remove(next);
-                    next++;
                 }
-                foreach (var kv in pending.Values)
+                finally
                 {
-                    scope.Recycle(kv.Data);
+                    foreach (var kv in pending.Values)
+                    {
+                        scope.Recycle(kv.Data);
+                    }
                 }
-            }, ct);
+            });
         }
     }
 }

@@ -94,6 +94,24 @@ public class AesGcmStreamCipherPipeTests
     }
 
     [Test]
+    public async Task EncryptAsync_StreamOverload_PreCanceledToken_CompletesReader()
+    {
+        var key = Key();
+        var cipher = new AesGcmStreamCipher(key, keyId: 131, threads: 2);
+        byte[] data = [.. Enumerable.Range(0, 2 * AesGcmStreamCipher.MinChunkSize).Select(i => (byte)(i & 0xFF))];
+        using var input = new MemoryStream(data);
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var stream = await cipher.EncryptAsync(input, chunkSize: AesGcmStreamCipher.MinChunkSize, ct: cts.Token);
+        using var sink = new MemoryStream();
+
+        Assert.That(
+            async () => await stream.CopyToAsync(sink).WaitAsync(TimeSpan.FromSeconds(3)),
+            Throws.InstanceOf<OperationCanceledException>());
+    }
+
+    [Test]
     public async Task DecryptAsync_StreamOverload_Cancellation()
     {
         var key = Key();
@@ -127,6 +145,28 @@ public class AesGcmStreamCipherPipeTests
         }
 
         Assert.That(caught != null || (cts.IsCancellationRequested && totalRead < data.Length), "Expected cancellation to abort or truncate decryption stream.");
+    }
+
+    [Test]
+    public async Task DecryptAsync_StreamOverload_PreCanceledToken_CompletesReader()
+    {
+        var key = Key();
+        var encCipher = new AesGcmStreamCipher(key, keyId: 141, threads: 2);
+        var decCipher = new AesGcmStreamCipher(key, keyId: 141, threads: 2);
+        byte[] data = [.. Enumerable.Range(0, 2 * AesGcmStreamCipher.MinChunkSize).Select(i => (byte)(i & 0xFF))];
+        using var input = new MemoryStream(data);
+        using var encrypted = new MemoryStream();
+        await encCipher.EncryptAsync(input, encrypted, chunkSize: AesGcmStreamCipher.MinChunkSize);
+        encrypted.Position = 0;
+
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        var stream = await decCipher.DecryptAsync(encrypted, ct: cts.Token);
+        using var sink = new MemoryStream();
+
+        Assert.That(
+            async () => await stream.CopyToAsync(sink).WaitAsync(TimeSpan.FromSeconds(3)),
+            Throws.InstanceOf<OperationCanceledException>());
     }
 
     [Test]
@@ -169,5 +209,66 @@ public class AesGcmStreamCipherPipeTests
         using var sink = new MemoryStream();
         Assert.That(async () => await decStream.CopyToAsync(sink),
             Throws.TypeOf<InvalidDataException>().Or.TypeOf<CryptographicException>());
+    }
+
+    [Test]
+    public async Task EncryptAsync_OutputFailure_DoesNotHang()
+    {
+        var key = Key();
+        var cipher = new AesGcmStreamCipher(key, keyId: 17, threads: 4);
+        byte[] data = [.. Enumerable.Range(0, 64 * AesGcmStreamCipher.MinChunkSize).Select(i => (byte)(i & 0xFF))];
+        using var input = new MemoryStream(data);
+        int fileHeaderLen = Cotton.Crypto.Internals.AesGcmStreamFormat.ComputeFileHeaderLength(
+            AesGcmStreamCipher.NonceSize,
+            AesGcmStreamCipher.TagSize,
+            AesGcmStreamCipher.KeySize);
+        using var output = new ThrowingWriteStream(fileHeaderLen + 8);
+
+        Assert.That(
+            async () => await cipher.EncryptAsync(input, output, chunkSize: AesGcmStreamCipher.MinChunkSize).WaitAsync(TimeSpan.FromSeconds(5)),
+            Throws.InstanceOf<IOException>());
+    }
+
+    [Test]
+    public async Task DecryptAsync_OutputFailure_DoesNotHang()
+    {
+        var key = Key();
+        var cipher = new AesGcmStreamCipher(key, keyId: 18, threads: 4);
+        byte[] data = [.. Enumerable.Range(0, 64 * AesGcmStreamCipher.MinChunkSize).Select(i => (byte)(i & 0xFF))];
+        using var input = new MemoryStream(data);
+        using var encrypted = new MemoryStream();
+        await cipher.EncryptAsync(input, encrypted, chunkSize: AesGcmStreamCipher.MinChunkSize);
+        encrypted.Position = 0;
+        using var output = new ThrowingWriteStream(AesGcmStreamCipher.MinChunkSize / 2);
+
+        Assert.That(
+            async () => await cipher.DecryptAsync(encrypted, output).WaitAsync(TimeSpan.FromSeconds(5)),
+            Throws.InstanceOf<IOException>());
+    }
+
+    [Test]
+    public async Task DecryptAsync_NonSeekablePartialChunkHeader_Throws()
+    {
+        var key = Key();
+        var cipher = new AesGcmStreamCipher(key, keyId: 19, threads: 2);
+        byte[] data = [.. Enumerable.Range(0, AesGcmStreamCipher.MinChunkSize).Select(i => (byte)(i & 0xFF))];
+        using var inputInner = new MemoryStream(data);
+        using var input = new NonSeekableReadStream(inputInner);
+        using var encrypted = new MemoryStream();
+        await cipher.EncryptAsync(input, encrypted, chunkSize: AesGcmStreamCipher.MinChunkSize);
+
+        byte[] bytes = encrypted.ToArray();
+        int fileHeaderLen = Cotton.Crypto.Internals.AesGcmStreamFormat.ComputeFileHeaderLength(
+            AesGcmStreamCipher.NonceSize,
+            AesGcmStreamCipher.TagSize,
+            AesGcmStreamCipher.KeySize);
+        byte[] truncated = bytes[..(fileHeaderLen + 5)];
+        using var tamperedInner = new MemoryStream(truncated, writable: false);
+        using var tampered = new NonSeekableReadStream(tamperedInner);
+        using var output = new MemoryStream();
+
+        Assert.That(
+            async () => await cipher.DecryptAsync(tampered, output).WaitAsync(TimeSpan.FromSeconds(5)),
+            Throws.InstanceOf<EndOfStreamException>());
     }
 }

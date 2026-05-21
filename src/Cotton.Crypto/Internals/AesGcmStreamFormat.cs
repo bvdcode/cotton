@@ -182,6 +182,37 @@ namespace Cotton.Crypto.Internals
             }
         }
 
+        public static async Task<ChunkHeader?> TryReadChunkHeaderAsync(Stream input, int tagSize, CancellationToken ct)
+        {
+            int headerLen = ComputeChunkHeaderLength(tagSize);
+            byte[] header = ArrayPool<byte>.Shared.Rent(headerLen);
+            try
+            {
+                int bytesRead = await ReadExactlyOrEndAsync(input, header, headerLen, ct).ConfigureAwait(false);
+                if (bytesRead == 0)
+                {
+                    return null;
+                }
+                if (bytesRead < headerLen)
+                {
+                    throw new EndOfStreamException("Unexpected end of stream while reading chunk header.");
+                }
+                if (!header.AsSpan(0, 4).SequenceEqual(MagicBytes))
+                {
+                    throw new InvalidDataException("Invalid or unsupported chunk magic.");
+                }
+                if (!ChunkHeader.TryRead(header, tagSize, out var ch))
+                {
+                    throw new InvalidDataException("Invalid or corrupted chunk header.");
+                }
+                return ch;
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(header, clearArray: false);
+            }
+        }
+
         public static async Task ReadExactlyAsync(Stream stream, byte[] buffer, int count, CancellationToken ct)
         {
             int offset = 0;
@@ -194,6 +225,21 @@ namespace Cotton.Crypto.Internals
                 }
                 offset += bytesRead;
             }
+        }
+
+        private static async Task<int> ReadExactlyOrEndAsync(Stream stream, byte[] buffer, int count, CancellationToken ct)
+        {
+            int offset = 0;
+            while (offset < count)
+            {
+                int bytesRead = await stream.ReadAsync(buffer.AsMemory(offset, count - offset), ct).ConfigureAwait(false);
+                if (bytesRead == 0)
+                {
+                    return offset;
+                }
+                offset += bytesRead;
+            }
+            return offset;
         }
     }
 }

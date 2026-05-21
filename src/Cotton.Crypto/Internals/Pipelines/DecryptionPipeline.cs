@@ -79,12 +79,25 @@ namespace Cotton.Crypto.Internals.Pipelines
                     if (_filled[slot] && _slotIndex[slot] == _nextToWrite)
                     {
                         var res = _ring[slot];
-                        await _output.WriteAsync(res.Data.AsMemory(0, res.DataLength), ct).ConfigureAwait(false);
-                        _scope.Recycle(res.Data);
-                        TotalWritten += res.DataLength;
-                        _filled[slot] = false; _nextToWrite++;
+                        _ring[slot] = default;
+                        _filled[slot] = false;
+                        await WriteAndRecycleAsync(res, ct).ConfigureAwait(false);
+                        _nextToWrite++;
                     }
                     else break;
+                }
+            }
+
+            private async Task WriteAndRecycleAsync(DecryptionResult result, CancellationToken ct)
+            {
+                try
+                {
+                    await _output.WriteAsync(result.Data.AsMemory(0, result.DataLength), ct).ConfigureAwait(false);
+                    TotalWritten += result.DataLength;
+                }
+                finally
+                {
+                    _scope.Recycle(result.Data);
                 }
             }
 
@@ -92,9 +105,7 @@ namespace Cotton.Crypto.Internals.Pipelines
             {
                 if (result.Index == _nextToWrite)
                 {
-                    await _output.WriteAsync(result.Data.AsMemory(0, result.DataLength), ct).ConfigureAwait(false);
-                    _scope.Recycle(result.Data);
-                    TotalWritten += result.DataLength;
+                    await WriteAndRecycleAsync(result, ct).ConfigureAwait(false);
                     _nextToWrite++;
                     await FlushReadyAsync(ct).ConfigureAwait(false);
                 }
@@ -102,12 +113,22 @@ namespace Cotton.Crypto.Internals.Pipelines
                 {
                     if (result.Index < _nextToWrite)
                     {
+                        _scope.Recycle(result.Data);
                         throw new InvalidDataException($"Duplicate chunk index detected. Received {result.Index}, next expected {_nextToWrite}.");
                     }
-                    EnsureCapacity(result.Index);
+                    try
+                    {
+                        EnsureCapacity(result.Index);
+                    }
+                    catch
+                    {
+                        _scope.Recycle(result.Data);
+                        throw;
+                    }
                     int slot = (int)(result.Index % _window);
                     if (_filled[slot])
                     {
+                        _scope.Recycle(result.Data);
                         throw new InvalidDataException($"Reorder buffer slot collision. Slot {slot} already filled for index {_slotIndex[slot]}, tried to place {result.Index}.");
                     }
                     _ring[slot] = result; _slotIndex[slot] = result.Index; _filled[slot] = true;
@@ -115,6 +136,21 @@ namespace Cotton.Crypto.Internals.Pipelines
             }
 
             public Task FlushAsync(CancellationToken ct) => FlushReadyAsync(ct);
+
+            public void RecycleBuffered()
+            {
+                for (int i = 0; i < _filled.Length; i++)
+                {
+                    if (!_filled[i])
+                    {
+                        continue;
+                    }
+
+                    _scope.Recycle(_ring[i].Data);
+                    _ring[i] = default;
+                    _filled[i] = false;
+                }
+            }
         }
 
         public async Task RunAsync(CancellationToken ct)
@@ -140,20 +176,34 @@ namespace Cotton.Crypto.Internals.Pipelines
             long maxBytes = (long)maxChunkSize * maxCount * 4;
             using var scope = new BufferScope(pool, maxCount: maxCount, maxBytes: maxBytes);
 
-            var producer = ProduceAsync(jobCh.Writer, scope, ct);
-            var workers = StartWorkersAsync(jobCh.Reader, resCh.Writer, scope, ct);
-            var consumerTask = ConsumeAsync(resCh.Reader, scope, ct);
+            using var pipelineCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            CancellationToken pipelineCt = pipelineCts.Token;
+
+            var producer = ProduceAsync(jobCh.Writer, scope, pipelineCt);
+            var workers = StartWorkersAsync(jobCh.Reader, resCh.Writer, scope, pipelineCt);
+            var workersDone = Task.WhenAll(workers);
+            var resultsDone = PipelineTaskHelpers.CompleteWhenFinishedAsync(workersDone, resCh.Writer);
+            var consumerTask = ConsumeAsync(resCh.Reader, scope, pipelineCt);
+
+            PipelineTaskHelpers.CancelOnFailure(producer, pipelineCts);
+            PipelineTaskHelpers.CancelOnFailure(workersDone, pipelineCts);
+            PipelineTaskHelpers.CancelOnFailure(consumerTask, pipelineCts);
 
             long written = 0;
             try
             {
-                await producer.ConfigureAwait(false);
-                await Task.WhenAll(workers).ConfigureAwait(false);
-            }
-            finally
-            {
-                resCh.Writer.TryComplete();
+                await Task.WhenAll(producer, workersDone, resultsDone, consumerTask).ConfigureAwait(false);
                 written = await consumerTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException ex) when (ct.IsCancellationRequested)
+            {
+                await CleanupAfterFailureAsync().ConfigureAwait(false);
+                throw new TaskCanceledException("Decryption pipeline canceled.", ex);
+            }
+            catch
+            {
+                await CleanupAfterFailureAsync().ConfigureAwait(false);
+                throw;
             }
 
             if (ct.IsCancellationRequested)
@@ -164,6 +214,14 @@ namespace Cotton.Crypto.Internals.Pipelines
             {
                 throw new InvalidDataException($"Decrypted length mismatch. Expected: {expectedTotal}, Actual: {written}");
             }
+
+            async Task CleanupAfterFailureAsync()
+            {
+                pipelineCts.Cancel();
+                jobCh.Writer.TryComplete();
+                resCh.Writer.TryComplete();
+                await PipelineTaskHelpers.ObserveAllAsync(producer, workersDone, resultsDone, consumerTask).ConfigureAwait(false);
+            }
         }
 
         private Task ProduceAsync(ChannelWriter<DecryptionJob> writer, BufferScope scope, CancellationToken ct)
@@ -171,6 +229,7 @@ namespace Cotton.Crypto.Internals.Pipelines
             return Task.Run(async () =>
             {
                 long idx = 0;
+                Exception? completionError = null;
                 try
                 {
                     while (true)
@@ -179,24 +238,21 @@ namespace Cotton.Crypto.Internals.Pipelines
                         if (input.CanSeek)
                         {
                             long bytesRemaining = input.Length - input.Position;
-                            int minHeader = 4 + 4 + 8 + 4 + tagSize;
+                            int minHeader = AesGcmStreamFormat.ComputeChunkHeaderLength(tagSize);
                             if (bytesRemaining == 0) break;
                             if (bytesRemaining < minHeader)
                             {
                                 throw new EndOfStreamException("Unexpected end of stream while reading chunk header.");
                             }
                         }
-                        ChunkHeader chunkHeader;
-                        try
-                        {
-                            chunkHeader = await AesGcmStreamFormat
-                                .ReadChunkHeaderAsync(input, tagSize, ct)
-                                .ConfigureAwait(false);
-                        }
-                        catch (EndOfStreamException)
+                        ChunkHeader? maybeChunkHeader = await AesGcmStreamFormat
+                            .TryReadChunkHeaderAsync(input, tagSize, ct)
+                            .ConfigureAwait(false);
+                        if (!maybeChunkHeader.HasValue)
                         {
                             break;
                         }
+                        ChunkHeader chunkHeader = maybeChunkHeader.Value;
 
                         if (chunkHeader.KeyId != keyId)
                         {
@@ -217,24 +273,50 @@ namespace Cotton.Crypto.Internals.Pipelines
 
                         int cipherLength = (int)chunkHeader.PlaintextLength;
                         byte[] cipher = scope.Rent(cipherLength);
-                        await AesGcmStreamFormat
-                            .ReadExactlyAsync(input, cipher, cipherLength, ct)
-                            .ConfigureAwait(false);
+                        try
+                        {
+                            await AesGcmStreamFormat
+                                .ReadExactlyAsync(input, cipher, cipherLength, ct)
+                                .ConfigureAwait(false);
+                        }
+                        catch
+                        {
+                            scope.Recycle(cipher);
+                            throw;
+                        }
                         if (unchecked((ulong)idx) == ulong.MaxValue)
                         {
                             scope.Recycle(cipher);
                             throw new InvalidOperationException("Maximum number of chunks per file is 2^64-1. Counter reached ulong.MaxValue.");
                         }
-                        await writer
-                            .WriteAsync(new DecryptionJob(idx++, chunkHeader.Tag, cipher, cipherLength), ct)
-                            .ConfigureAwait(false);
+                        bool published = false;
+                        try
+                        {
+                            await writer
+                                .WriteAsync(new DecryptionJob(idx, chunkHeader.Tag, cipher, cipherLength), ct)
+                                .ConfigureAwait(false);
+                            published = true;
+                            idx++;
+                        }
+                        finally
+                        {
+                            if (!published)
+                            {
+                                scope.Recycle(cipher);
+                            }
+                        }
                     }
+                }
+                catch (Exception ex)
+                {
+                    completionError = ex;
+                    throw;
                 }
                 finally
                 {
-                    writer.TryComplete();
+                    writer.TryComplete(completionError);
                 }
-            }, ct);
+            });
         }
 
         private Task[] StartWorkersAsync(ChannelReader<DecryptionJob> reader,
@@ -253,6 +335,7 @@ namespace Cotton.Crypto.Internals.Pipelines
                     {
                         ct.ThrowIfCancellationRequested();
                         byte[] plain = scope.Rent(job.DataLength);
+                        bool published = false;
                         try
                         {
                             AesGcmStreamFormat.ComposeNonce(nonceBuffer, noncePrefix, job.Index);
@@ -260,18 +343,22 @@ namespace Cotton.Crypto.Internals.Pipelines
                             Tag128 tagCopy = job.Tag; Span<byte> tagSpan = MemoryMarshal.AsBytes(MemoryMarshal.CreateSpan(ref tagCopy, 1));
                             gcm.Decrypt(nonceBuffer, job.Cipher.AsSpan(0, job.DataLength), tagSpan, plain.AsSpan(0, job.DataLength), aad);
                             await writer.WriteAsync(new DecryptionResult(job.Index, plain, job.DataLength), ct).ConfigureAwait(false);
+                            published = true;
                         }
                         catch (CryptographicException ex)
                         {
-                            scope.Recycle(plain);
                             throw new AuthenticationTagMismatchException("Chunk authentication failed.", ex);
                         }
                         finally
                         {
+                            if (!published)
+                            {
+                                scope.Recycle(plain);
+                            }
                             scope.Recycle(job.Cipher);
                         }
                     }
-                }, ct);
+                });
             }
             return tasks;
         }
@@ -281,13 +368,20 @@ namespace Cotton.Crypto.Internals.Pipelines
             return Task.Run(async () =>
             {
                 var writer = new ReorderWriter(output, scope, threads, windowCap);
-                await foreach (var result in reader.ReadAllAsync(ct))
+                try
                 {
-                    await writer.AcceptAsync(result, ct).ConfigureAwait(false);
+                    await foreach (var result in reader.ReadAllAsync(ct))
+                    {
+                        await writer.AcceptAsync(result, ct).ConfigureAwait(false);
+                    }
+                    await writer.FlushAsync(ct).ConfigureAwait(false);
+                    return writer.TotalWritten;
                 }
-                await writer.FlushAsync(ct).ConfigureAwait(false);
-                return writer.TotalWritten;
-            }, ct);
+                finally
+                {
+                    writer.RecycleBuffered();
+                }
+            });
         }
     }
 }

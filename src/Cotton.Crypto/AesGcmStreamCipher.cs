@@ -339,7 +339,7 @@ namespace Cotton.Crypto
                         input.Dispose();
                     }
                 }
-            }, ct);
+            });
 
             return Task.FromResult<Stream>(readerStream);
         }
@@ -389,7 +389,7 @@ namespace Cotton.Crypto
                         input.Dispose();
                     }
                 }
-            }, ct);
+            });
 
             return Task.FromResult<Stream>(readerStream);
         }

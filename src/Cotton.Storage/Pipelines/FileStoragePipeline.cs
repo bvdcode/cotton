@@ -54,11 +54,16 @@ namespace Cotton.Storage.Pipelines
             try
             {
                 var backend = _backendProvider.GetBackend();
-                if (!_processors.Any())
+                var orderedProcessors = _processors.OrderByDescending(p => p.Priority).ToArray();
+                if (orderedProcessors.Length == 0)
                 {
                     _logger.LogWarning("No storage processors are registered. Writing the stream directly to the backend.");
                 }
-                var orderedProcessors = _processors.OrderByDescending(p => p.Priority);
+                if (orderedProcessors.Length > 0 && await backend.ExistsAsync(uid).ConfigureAwait(false))
+                {
+                    _logger.LogDebug("File {Uid} deduplicated, skipping processor pipeline", uid);
+                    return;
+                }
                 Stream currentStream = stream;
                 foreach (var processor in orderedProcessors)
                 {
