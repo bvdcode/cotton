@@ -142,42 +142,39 @@ namespace Cotton.Server.Services
                 connection,
                 cipher,
                 cancellationToken);
-
-            MasterKeyCompatibilityResult? databaseResult = EvaluateDatabaseProbe(databaseProbe);
-            if (databaseResult is not null)
+            if (databaseProbe == ProbeValidationState.Validated)
             {
-                return databaseResult;
+                return MasterKeyCompatibilityResult.Compatible(existingDataFound: true, evidenceFound: true);
             }
 
             if (_storage is IStorageBackendUsesEncryptedConfiguration)
             {
-                return EvaluateMissingStorageProbe(mode);
+                return EvaluateFailedProbe(databaseProbe) ?? EvaluateMissingStorageProbe(mode);
             }
 
             ProbeValidationState storageProbe = await ValidateStorageChunkProbeAsync(connection, cipher, cancellationToken);
-            MasterKeyCompatibilityResult? storageResult = EvaluateStorageProbe(storageProbe);
-            if (storageResult is not null)
+            if (storageProbe == ProbeValidationState.Validated)
             {
-                return storageResult;
+                return MasterKeyCompatibilityResult.Compatible(existingDataFound: true, evidenceFound: true);
+            }
+
+            MasterKeyCompatibilityResult? failedProbe = EvaluateFailedProbe(databaseProbe)
+                ?? EvaluateFailedProbe(storageProbe);
+            if (failedProbe is not null)
+            {
+                return failedProbe;
             }
 
             return EvaluateMissingEvidence(mode);
         }
 
-        private static MasterKeyCompatibilityResult? EvaluateDatabaseProbe(ProbeValidationState databaseProbe)
-        {
-            return databaseProbe switch
-            {
-                ProbeValidationState.Validated => MasterKeyCompatibilityResult.Compatible(
-                    existingDataFound: true,
-                    evidenceFound: true),
-                ProbeValidationState.FailedCandidates => MasterKeyCompatibilityResult.Fail(
+        private static MasterKeyCompatibilityResult? EvaluateFailedProbe(ProbeValidationState probe) =>
+            probe == ProbeValidationState.FailedCandidates
+                ? MasterKeyCompatibilityResult.Fail(
                     "Master key does not match existing encrypted Cotton data.",
                     existingDataFound: true,
-                    evidenceFound: true),
-                _ => null,
-            };
-        }
+                    evidenceFound: true)
+                : null;
 
         private MasterKeyCompatibilityResult EvaluateMissingStorageProbe(MasterKeyCompatibilityMode mode)
         {
@@ -189,20 +186,6 @@ namespace Cotton.Server.Services
                 : CompatibleWithoutEvidence();
         }
 
-        private static MasterKeyCompatibilityResult? EvaluateStorageProbe(ProbeValidationState storageProbe)
-        {
-            return storageProbe switch
-            {
-                ProbeValidationState.Validated => MasterKeyCompatibilityResult.Compatible(
-                    existingDataFound: true,
-                    evidenceFound: true),
-                ProbeValidationState.FailedCandidates => MasterKeyCompatibilityResult.Fail(
-                    "Master key does not match existing encrypted Cotton data.",
-                    existingDataFound: true,
-                    evidenceFound: true),
-                _ => null,
-            };
-        }
 
         private MasterKeyCompatibilityResult EvaluateMissingEvidence(MasterKeyCompatibilityMode mode)
         {
