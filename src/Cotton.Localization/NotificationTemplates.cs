@@ -233,15 +233,29 @@
         public static string AppUpdateAvailableContent(
             string currentVersion,
             string latestVersion,
-            string releaseUrl)
+            string releaseUrl,
+            string? releaseNotes)
         {
             return
-                $"A newer Cotton server release is available.\n\n" +
                 $"Current server version: {currentVersion}\n" +
-                $"Latest release: {latestVersion}\n\n" +
-                $"Refreshing the browser will only reload the frontend served by this instance; " +
-                $"it will not install the server update. Update the server or container when you are ready.\n\n" +
-                $"Release notes: {releaseUrl}";
+                $"Available server version: {latestVersion}\n\n" +
+                $"Release notes:\n" +
+                FormatReleaseNotes(releaseNotes) +
+                $"\n\nFull release: {releaseUrl}";
+        }
+
+        private static string FormatReleaseNotes(string? releaseNotes)
+        {
+            const int maxLength = 3000;
+            string normalized = (releaseNotes ?? string.Empty).Replace("\r\n", "\n").Trim();
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                return "No release notes were published for this release.";
+            }
+
+            return normalized.Length <= maxLength
+                ? normalized
+                : normalized[..maxLength].TrimEnd() + "...";
         }
 
         public static string StoragePressureTitle => "Storage is running out of free space";

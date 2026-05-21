@@ -176,7 +176,8 @@ public class AppVersionTrackerService(
                 NotificationTemplates.AppUpdateAvailableContent(
                     currentVersion,
                     latestRelease.Version,
-                    latestRelease.Url),
+                    latestRelease.Url,
+                    latestRelease.Notes),
                 NotificationPriority.Medium,
                 new Dictionary<string, string>
                 {
@@ -216,7 +217,7 @@ public class AppVersionTrackerService(
                 ? $"https://github.com/bvdcode/cotton/releases/tag/{Uri.EscapeDataString(release.TagName)}"
                 : release.HtmlUrl;
 
-            return new LatestRelease(version, url);
+            return new LatestRelease(version, url, release.Body);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -237,11 +238,12 @@ public class AppVersionTrackerService(
             : normalized;
     }
 
-    private sealed record LatestRelease(string Version, string Url);
+    private sealed record LatestRelease(string Version, string Url, string? Notes);
 
     private sealed record GitHubReleaseResponse(
         [property: JsonPropertyName("tag_name")] string? TagName,
         [property: JsonPropertyName("html_url")] string? HtmlUrl,
+        [property: JsonPropertyName("body")] string? Body,
         [property: JsonPropertyName("draft")] bool Draft,
         [property: JsonPropertyName("prerelease")] bool Prerelease);
 }

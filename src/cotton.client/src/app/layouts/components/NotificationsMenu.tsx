@@ -241,7 +241,15 @@ export const NotificationsMenu = () => {
                     try {
                       const result = await confirm({
                         title: n.title,
-                        description: n.content ?? undefined,
+                        description: n.content ? (
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ whiteSpace: "pre-line" }}
+                          >
+                            {n.content}
+                          </Typography>
+                        ) : undefined,
                         hideCancelButton: true,
                         confirmationText: t("common:ok"),
                       });
