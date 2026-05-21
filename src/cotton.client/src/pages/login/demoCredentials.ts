@@ -5,15 +5,55 @@ export interface DemoCredentials {
   password: string;
 }
 
-const usernamePrefix = "demo";
-const usernameRandomLength = 16;
 const passwordLength = 32;
 const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
+const usernameNumberRange = 1000;
+const usernameNumberLength = 3;
 
-export const DEMO_CREDENTIALS_STORAGE_KEY = `${STORAGE_KEY_PREFIX}demo-credentials`;
+const demoAdjectives = [
+  "amber",
+  "brave",
+  "bright",
+  "calm",
+  "cosmic",
+  "frosty",
+  "gentle",
+  "golden",
+  "lucky",
+  "mint",
+  "orange",
+  "quiet",
+  "rapid",
+  "silver",
+  "sunny",
+  "velvet",
+] as const;
+
+const demoAnimals = [
+  "badger",
+  "capybara",
+  "falcon",
+  "fox",
+  "koala",
+  "lemur",
+  "lynx",
+  "marten",
+  "otter",
+  "panda",
+  "quokka",
+  "raven",
+  "seal",
+  "sparrow",
+  "tiger",
+  "wombat",
+] as const;
+
+export const DEMO_CREDENTIALS_STORAGE_KEY = STORAGE_KEY_PREFIX + "demo-credentials";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+const demoUsernameRegex = /^[a-z]+_[a-z]+_[0-9]{3}$/;
 
 export const isDemoCredentials = (value: unknown): value is DemoCredentials => {
   if (!isRecord(value)) {
@@ -23,9 +63,7 @@ export const isDemoCredentials = (value: unknown): value is DemoCredentials => {
   return (
     typeof value.username === "string" &&
     typeof value.password === "string" &&
-    new RegExp(`^${usernamePrefix}[a-z0-9]{${usernameRandomLength}}$`).test(
-      value.username,
-    ) &&
+    demoUsernameRegex.test(value.username) &&
     value.password.length === passwordLength
   );
 };
@@ -48,8 +86,21 @@ const randomString = (length: number): string => {
   return value;
 };
 
+const randomItem = <T>(items: readonly T[]): T =>
+  items[getRandomByte() % items.length];
+
+const randomInt = (maxExclusive: number): number =>
+  ((getRandomByte() << 8) | getRandomByte()) % maxExclusive;
+
+const randomUsernameNumber = (): string =>
+  String(randomInt(usernameNumberRange)).padStart(usernameNumberLength, "0");
+
 export const generateDemoCredentials = (): DemoCredentials => ({
-  username: `${usernamePrefix}${randomString(usernameRandomLength)}`,
+  username: [
+    randomItem(demoAdjectives),
+    randomItem(demoAnimals),
+    randomUsernameNumber(),
+  ].join("_"),
   password: randomString(passwordLength),
 });
 

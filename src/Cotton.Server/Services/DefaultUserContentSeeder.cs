@@ -61,7 +61,7 @@ public class DefaultUserContentSeeder(
         var sourceChildren = await _dbContext.Nodes
             .AsNoTracking()
             .Where(x => x.ParentId == sourceNodeId && x.Type == NodeType.Default)
-            .OrderBy(x => x.NameKey)
+            .OrderByDescending(x => x.NameKey)
             .Select(x => new
             {
                 x.Id,
@@ -98,7 +98,7 @@ public class DefaultUserContentSeeder(
         var sourceFiles = await _dbContext.NodeFiles
             .AsNoTracking()
             .Where(x => x.NodeId == sourceNodeId)
-            .OrderBy(x => x.NameKey)
+            .OrderByDescending(x => x.NameKey)
             .Select(x => new
             {
                 x.FileManifestId,
