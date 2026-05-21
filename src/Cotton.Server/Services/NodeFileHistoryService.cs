@@ -35,6 +35,9 @@ public class NodeFileHistoryService(
                 OwnerId = userId,
                 FileManifestId = nodeFile.FileManifestId,
                 OriginalNodeFileId = nodeFile.OriginalNodeFileId,
+                Metadata = nodeFile.Metadata is null || nodeFile.Metadata.Count == 0
+                    ? []
+                    : new Dictionary<string, string>(nodeFile.Metadata),
             };
 
             if (versionFile.OriginalNodeFileId == Guid.Empty)

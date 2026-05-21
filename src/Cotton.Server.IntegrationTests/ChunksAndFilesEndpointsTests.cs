@@ -578,7 +578,10 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
-        var file = await UploadTextFileAsync(root!, "versioned.txt", "first");
+        var file = await UploadTextFileAsync(root!, "versioned.txt", "first", new Dictionary<string, string>
+        {
+            ["originalContentType"] = "text/plain",
+        });
         file = await UpdateTextFileAsync(file, root!, "second");
         file = await UpdateTextFileAsync(file, root!, "third");
 
