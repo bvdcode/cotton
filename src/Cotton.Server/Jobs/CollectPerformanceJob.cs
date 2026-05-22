@@ -45,7 +45,7 @@ namespace Cotton.Server.Jobs
                 return;
             }
 
-            StoragePipelineProbeResult? storagePipelineProbe = await TryRunStoragePipelineProbeAsync(context.CancellationToken).ConfigureAwait(false);
+            StoragePipelineProbeResult? storagePipelineProbe = await TryRunStoragePipelineProbeAsync(settings.StorageType.ToString().ToLowerInvariant(), context.CancellationToken).ConfigureAwait(false);
 
             TelemetryRequest request = new()
             {
@@ -62,11 +62,11 @@ namespace Cotton.Server.Jobs
             _logger.LogInformation("CollectPerformanceJob completed - telemetry data was sent to Cotton Cloud");
         }
 
-        private async Task<StoragePipelineProbeResult?> TryRunStoragePipelineProbeAsync(CancellationToken cancellationToken)
+        private async Task<StoragePipelineProbeResult?> TryRunStoragePipelineProbeAsync(string storageBackend, CancellationToken cancellationToken)
         {
             try
             {
-                return await _storagePipelineProbe.RunAsync(cancellationToken).ConfigureAwait(false);
+                return await _storagePipelineProbe.RunAsync(storageBackend, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {

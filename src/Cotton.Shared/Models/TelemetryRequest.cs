@@ -62,6 +62,11 @@ namespace Cotton.Models
         public int PayloadSizeBytes { get; set; }
 
         /// <summary>
+        /// Gets or sets the coarse storage backend category measured by the probe.
+        /// </summary>
+        public string StorageBackend { get; set; } = string.Empty;
+
+        /// <summary>
         /// Gets or sets the warmup iteration result.
         /// </summary>
         public StoragePipelineProbeIteration Warmup { get; set; } = new StoragePipelineProbeIteration();

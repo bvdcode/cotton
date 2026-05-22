@@ -18,7 +18,7 @@ public sealed class StoragePipelineProbeServiceTests
             storage,
             NullLogger<StoragePipelineProbeService>.Instance);
 
-        var result = await service.RunAsync(CancellationToken.None);
+        var result = await service.RunAsync("local", CancellationToken.None);
 
         var keys = new List<string>();
         await foreach (string key in storage.ListAllKeysAsync())
@@ -29,6 +29,7 @@ public sealed class StoragePipelineProbeServiceTests
         using (Assert.EnterMultipleScope())
         {
             Assert.That(result.PayloadSizeBytes, Is.EqualTo(StoragePipelineProbeService.PayloadSizeBytes));
+            Assert.That(result.StorageBackend, Is.EqualTo("local"));
             Assert.That(result.CompletedAtUtc, Is.Not.EqualTo(default(DateTimeOffset)));
             Assert.That(result.Warmup.IsWarmup, Is.True);
             Assert.That(result.Measured.IsWarmup, Is.False);

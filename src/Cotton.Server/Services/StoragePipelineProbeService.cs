@@ -28,7 +28,7 @@ namespace Cotton.Server.Services
         /// <summary>
         /// Runs one warmup iteration and one measured iteration through the real storage pipeline.
         /// </summary>
-        public async Task<StoragePipelineProbeResult> RunAsync(CancellationToken cancellationToken)
+        public async Task<StoragePipelineProbeResult> RunAsync(string storageBackend, CancellationToken cancellationToken)
         {
             await ProbeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
@@ -40,6 +40,7 @@ namespace Cotton.Server.Services
                 {
                     CompletedAtUtc = DateTimeOffset.UtcNow,
                     PayloadSizeBytes = PayloadSizeBytes,
+                    StorageBackend = storageBackend,
                     Warmup = warmup,
                     Measured = measured,
                 };
