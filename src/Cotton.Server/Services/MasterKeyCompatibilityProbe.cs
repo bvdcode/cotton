@@ -225,7 +225,6 @@ namespace Cotton.Server.Services
                 : CompatibleWithoutEvidence();
         }
 
-
         private MasterKeyCompatibilityResult EvaluateMissingEvidence(MasterKeyCompatibilityMode mode)
         {
             return mode == MasterKeyCompatibilityMode.RequireEvidenceForExistingData

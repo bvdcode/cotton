@@ -6,9 +6,7 @@ import {
   Popover,
   Stack,
   Tooltip,
-  useTheme,
 } from "@mui/material";
-import type { Theme } from "@mui/material/styles";
 import {
   AutoFixHigh,
   ColorLens,
@@ -22,6 +20,11 @@ import {
 import { useTranslation } from "react-i18next";
 import { PreviewModal } from "./PreviewModal";
 import { useModelPreviewControls } from "./hooks/useModelPreviewControls";
+import {
+  useDefaultModelColor,
+  useModelPaletteColors,
+  type PaletteColor,
+} from "./modelPalette";
 import type { FileType } from "@shared/utils/fileTypes";
 
 const PdfPreview = lazy(() =>
@@ -65,11 +68,6 @@ interface FilePreviewModalProps {
   onSaved?: () => void;
 }
 
-type PaletteColor = {
-  id: string;
-  color: string;
-};
-
 type FilePreviewSource = {
   kind: "fileId";
   fileId: string;
@@ -90,10 +88,9 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   onClose,
   onSaved,
 }) => {
-  const theme = useTheme();
   const isModel = fileType === "model";
-  const defaultModelColor = React.useMemo(() => theme.palette.error.main, [theme]);
-  const paletteColors = React.useMemo(() => buildPaletteColors(theme), [theme]);
+  const defaultModelColor = useDefaultModelColor();
+  const paletteColors = useModelPaletteColors();
   const fileSource = React.useMemo<FilePreviewSource | null>(
     () => (fileId ? { kind: "fileId", fileId } : null),
     [fileId],
@@ -136,30 +133,6 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
     </PreviewModal>
   );
 };
-
-const buildPaletteColors = (theme: Theme): PaletteColor[] => [
-  { id: "grey-300", color: theme.palette.grey[300] },
-  { id: "grey-500", color: theme.palette.grey[500] },
-  { id: "grey-700", color: theme.palette.grey[700] },
-  { id: "primary-light", color: theme.palette.primary.light },
-  { id: "primary-main", color: theme.palette.primary.main },
-  { id: "primary-dark", color: theme.palette.primary.dark },
-  { id: "secondary-light", color: theme.palette.secondary.light },
-  { id: "secondary-main", color: theme.palette.secondary.main },
-  { id: "secondary-dark", color: theme.palette.secondary.dark },
-  { id: "info-light", color: theme.palette.info.light },
-  { id: "info-main", color: theme.palette.info.main },
-  { id: "info-dark", color: theme.palette.info.dark },
-  { id: "success-light", color: theme.palette.success.light },
-  { id: "success-main", color: theme.palette.success.main },
-  { id: "success-dark", color: theme.palette.success.dark },
-  { id: "warning-light", color: theme.palette.warning.light },
-  { id: "warning-main", color: theme.palette.warning.main },
-  { id: "warning-dark", color: theme.palette.warning.dark },
-  { id: "error-light", color: theme.palette.error.light },
-  { id: "error-main", color: theme.palette.error.main },
-  { id: "error-dark", color: theme.palette.error.dark },
-];
 
 const getModelControlsKey = (
   isOpen: boolean,

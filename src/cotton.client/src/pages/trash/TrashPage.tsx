@@ -58,6 +58,25 @@ type EmptyTrashProgressDialogProps = {
   progressPercent: number;
 };
 
+type TrashPageViewProps = {
+  clearRestoreErrors: () => void;
+  emptyingTrash: boolean;
+  emptyTrashProgress: ReturnType<typeof useTrashBulkActions>["emptyTrashProgress"];
+  fileListViewProps: React.ComponentProps<typeof FileListViewFactory>;
+  handlePromptAnswer: ReturnType<typeof useTrashRestoreActions>["handlePromptAnswer"];
+  hasContent: boolean;
+  layoutType: InterfaceLayoutType;
+  loadError: string | null;
+  loading: boolean;
+  pageHeaderProps: React.ComponentProps<typeof PageHeader>;
+  restoreErrors: string[];
+  restoreProgress: ReturnType<typeof useTrashRestoreActions>["progress"];
+  restorePrompt: ReturnType<typeof useTrashRestoreActions>["activePrompt"];
+  restoring: boolean;
+  shouldRenderFileList: boolean;
+  t: ReturnType<typeof useTranslation>["t"];
+};
+
 const TrashProgressDialog: React.FC<EmptyTrashProgressDialogProps> = ({
   open,
   title,
@@ -77,6 +96,148 @@ const TrashProgressDialog: React.FC<EmptyTrashProgressDialogProps> = ({
 
 const calculateProgressPercent = (current: number, total: number): number =>
   total > 0 ? (current / total) * 100 : 0;
+
+const isTrashRootRoute = (routeNodeId: string | undefined): boolean =>
+  !routeNodeId;
+
+const resolveTrashLayoutType = (
+  storedLayoutType: InterfaceLayoutType | null,
+): InterfaceLayoutType => storedLayoutType ?? InterfaceLayoutType.Tiles;
+
+const resolveTrashNodeId = (
+  routeNodeId: string | undefined,
+  rootNodeId?: string | null,
+): string | null => routeNodeId ?? rootNodeId ?? null;
+
+const resolveTrashCurrentNode = <TNode,>(
+  node: TNode | null | undefined,
+  root: TNode | null | undefined,
+  isRoot: boolean,
+): TNode | null => node ?? (isRoot ? root ?? null : null);
+
+const resolveTrashAncestors = <TAncestor,>(
+  isRoot: boolean,
+  ancestors: TAncestor[] | null | undefined,
+): TAncestor[] => (isRoot ? [] : (ancestors ?? []));
+
+const shouldLoadTrashChildren = (
+  layoutType: InterfaceLayoutType,
+  nodeId: string | null,
+): boolean => layoutType !== InterfaceLayoutType.List && Boolean(nodeId);
+
+const resolveTrashLoading = (options: {
+  childrenPending: boolean;
+  isRoot: boolean;
+  layoutType: InterfaceLayoutType;
+  nodeId: string | null;
+  nodePending: boolean;
+  rootPending: boolean;
+}): boolean =>
+  (options.isRoot && options.rootPending) ||
+  (Boolean(options.nodeId) && options.nodePending) ||
+  (shouldLoadTrashChildren(options.layoutType, options.nodeId) &&
+    options.childrenPending);
+
+const resolveTrashError = (options: {
+  childrenError: boolean;
+  errorText: string;
+  nodeError: boolean;
+  rootError: boolean;
+}): string | null =>
+  options.rootError || options.nodeError || options.childrenError
+    ? options.errorText
+    : null;
+
+const resolveEffectiveTrashContent = <TContent,>(
+  layoutType: InterfaceLayoutType,
+  listContent: TContent | null | undefined,
+  content: TContent | null | undefined,
+): TContent | null | undefined =>
+  layoutType === InterfaceLayoutType.List ? listContent ?? content : content;
+
+type TrashWrapperContent = {
+  nodes?: Array<{ id: string; parentId?: string | null }>;
+  files?: Array<{ id: string; nodeId?: string | null }>;
+};
+
+const resolveTrashWrapperNodeId = (
+  isRoot: boolean,
+  effectiveContent: TrashWrapperContent | null | undefined,
+  itemId: string,
+): string | null => {
+  if (!isRoot || !effectiveContent) return null;
+
+  const node = effectiveContent.nodes?.find((n) => n.id === itemId);
+  if (node?.parentId) return node.parentId;
+
+  const file = effectiveContent.files?.find((f) => f.id === itemId);
+  return file?.nodeId ?? null;
+};
+
+const getOptionalWrapperResolver = (
+  isRoot: boolean,
+  resolveWrapperNodeId: (itemId: string) => string | null,
+) => (isRoot ? resolveWrapperNodeId : undefined);
+
+const resolveTrashLoadError = (
+  error: string | null,
+  listLoadError: string | null,
+): string | null => error ?? listLoadError;
+
+const shouldRenderTrashFileList = (
+  loadError: string | null,
+  hasContent: boolean,
+): boolean => !loadError || hasContent;
+
+const shouldShowTrashInitialLoader = (options: {
+  error: string | null;
+  hasContent: boolean;
+  layoutType: InterfaceLayoutType;
+  loading: boolean;
+}): boolean =>
+  options.loading &&
+  !options.hasContent &&
+  !options.error &&
+  options.layoutType !== InterfaceLayoutType.List;
+
+const getTrashFileListLoading = (options: {
+  error: string | null;
+  hasContent: boolean;
+  layoutType: InterfaceLayoutType;
+  listContent: unknown;
+  listLoadError: string | null;
+  listLoading: boolean;
+  loading: boolean;
+}): boolean =>
+  options.layoutType === InterfaceLayoutType.List
+    ? (!options.listContent && !options.listLoadError) || options.listLoading
+    : options.loading && !options.hasContent && !options.error;
+
+const getTrashEmptyStateText = (options: {
+  emptyText: string;
+  error: string | null;
+  layoutType: InterfaceLayoutType;
+  listLoadError: string | null;
+}): string | undefined =>
+  !options.error &&
+  !options.listLoadError &&
+  options.layoutType === InterfaceLayoutType.Tiles
+    ? options.emptyText
+    : undefined;
+
+const getTrashPagination = (options: {
+  layoutType: InterfaceLayoutType;
+  listLoading: boolean;
+  listTotalCount: number;
+  onPaginationModelChange: (model: { page: number; pageSize: number }) => void;
+}): React.ComponentProps<typeof FileListViewFactory>["pagination"] =>
+  options.layoutType === InterfaceLayoutType.List
+    ? {
+        totalCount: options.listTotalCount,
+        loading: options.listLoading,
+        onPaginationModelChange: options.onPaginationModelChange,
+      }
+    : undefined;
 
 const resolveTrashPageTitle = (options: {
   ancestorsLength: number;
@@ -151,49 +312,56 @@ export const TrashPage: React.FC = () => {
   const confirm = useConfirm();
 
   const routeNodeId = params.nodeId;
-  const isTrashRoot = !routeNodeId;
+  const isTrashRoot = isTrashRootRoute(routeNodeId);
 
   const storedLayoutType = useLocalPreferencesStore(selectTrashLayoutType);
-  const layoutType = storedLayoutType ?? InterfaceLayoutType.Tiles;
+  const layoutType = resolveTrashLayoutType(storedLayoutType);
   const tilesSize = useLocalPreferencesStore(selectTrashTilesSize) as TilesSize;
   const setLayoutType = useLocalPreferencesStore((s) => s.setTrashLayoutType);
   const setTilesSize = useLocalPreferencesStore((s) => s.setTrashTilesSize);
 
   const viewMode = getFileBrowserViewMode(layoutType, tilesSize);
 
-  const cycleViewMode = React.useCallback(() => {
+  const cycleViewMode = () => {
     cycleFileBrowserViewMode(viewMode, setLayoutType, setTilesSize);
-  }, [setLayoutType, setTilesSize, viewMode]);
+  };
 
   const queryClient = useQueryClient();
   const rootQuery = useTrashRootQuery(isTrashRoot);
-  const nodeId = routeNodeId ?? rootQuery.data?.id ?? null;
+  const nodeId = resolveTrashNodeId(routeNodeId, rootQuery.data?.id);
   const nodeMetaQuery = useTrashNodeMetaQuery(nodeId, {
     isRoot: isTrashRoot,
     enabled: !!nodeId,
   });
-  const currentNode =
-    nodeMetaQuery.data?.node ?? (isTrashRoot ? rootQuery.data ?? null : null);
+  const currentNode = resolveTrashCurrentNode(
+    nodeMetaQuery.data?.node,
+    rootQuery.data,
+    isTrashRoot,
+  );
   const ancestors = useMemo(
-    () => (isTrashRoot ? [] : (nodeMetaQuery.data?.ancestors ?? [])),
+    () => resolveTrashAncestors(isTrashRoot, nodeMetaQuery.data?.ancestors),
     [isTrashRoot, nodeMetaQuery.data?.ancestors],
   );
   const childrenQuery = useTrashChildrenQuery({
     nodeId,
     isRoot: isTrashRoot,
-    enabled: layoutType !== InterfaceLayoutType.List && !!nodeId,
+    enabled: shouldLoadTrashChildren(layoutType, nodeId),
   });
   const content = childrenQuery.data?.content;
-  const loading =
-    (isTrashRoot && rootQuery.isPending) ||
-    (!!nodeId && nodeMetaQuery.isPending) ||
-    (layoutType !== InterfaceLayoutType.List &&
-      !!nodeId &&
-      childrenQuery.isPending);
-  const error =
-    rootQuery.isError || nodeMetaQuery.isError || childrenQuery.isError
-      ? t("error")
-      : null;
+  const loading = resolveTrashLoading({
+    childrenPending: childrenQuery.isPending,
+    isRoot: isTrashRoot,
+    layoutType,
+    nodeId,
+    nodePending: nodeMetaQuery.isPending,
+    rootPending: rootQuery.isPending,
+  });
+  const error = resolveTrashError({
+    childrenError: childrenQuery.isError,
+    errorText: t("error"),
+    nodeError: nodeMetaQuery.isError,
+    rootError: rootQuery.isError,
+  });
 
   const {
     listTotalCount,
@@ -263,10 +431,11 @@ export const TrashPage: React.FC = () => {
     [breadcrumbs, navigate],
   );
 
-  const effectiveContent =
-    layoutType === InterfaceLayoutType.List
-      ? (listContent ?? content)
-      : content;
+  const effectiveContent = resolveEffectiveTrashContent(
+    layoutType,
+    listContent,
+    content,
+  );
 
   const trashFileListSource = useTrashFileList({
     nodeId,
@@ -290,14 +459,8 @@ export const TrashPage: React.FC = () => {
   const goHome = React.useMemo(() => () => navigate("/trash"), [navigate]);
 
   const resolveWrapperNodeId = React.useCallback(
-    (itemId: string): string | null => {
-      if (!isTrashRoot || !effectiveContent) return null;
-      const node = effectiveContent.nodes?.find((n) => n.id === itemId);
-      if (node?.parentId) return node.parentId;
-      const file = effectiveContent.files?.find((f) => f.id === itemId);
-      if (file?.nodeId) return file.nodeId;
-      return null;
-    },
+    (itemId: string): string | null =>
+      resolveTrashWrapperNodeId(isTrashRoot, effectiveContent, itemId),
     [isTrashRoot, effectiveContent],
   );
 
@@ -316,15 +479,17 @@ export const TrashPage: React.FC = () => {
     refreshContent,
   });
 
+  const optionalWrapperResolver = getOptionalWrapperResolver(
+    isTrashRoot,
+    resolveWrapperNodeId,
+  );
+
   const folderOps = useTrashFolderOperations(
     nodeId,
     refreshContent,
-    isTrashRoot ? resolveWrapperNodeId : undefined,
+    optionalWrapperResolver,
   );
-  const fileOps = useTrashFileOperations(
-    refreshContent,
-    isTrashRoot ? resolveWrapperNodeId : undefined,
-  );
+  const fileOps = useTrashFileOperations(refreshContent, optionalWrapperResolver);
 
   const folderOperations = React.useMemo<FolderOperations>(
     () => ({
@@ -494,16 +659,23 @@ export const TrashPage: React.FC = () => {
       onNavigateBack: handleGoUp,
       isCreatingFolder: isCreatingInThisFolder,
       tileSize: tilesSize,
-      loading:
-        layoutType === InterfaceLayoutType.List
-          ? (!listContent && !listLoadError) || listLoading
-          : loading && !hasContent && !error,
+      loading: getTrashFileListLoading({
+        error,
+        hasContent,
+        layoutType,
+        listContent,
+        listLoadError,
+        listLoading,
+        loading,
+      }),
       loadingTitle: t("loading.title"),
       loadingCaption: t("loading.caption"),
-      emptyStateText:
-        !error && !listLoadError && layoutType === InterfaceLayoutType.Tiles
-          ? t("empty")
-          : undefined,
+      emptyStateText: getTrashEmptyStateText({
+        emptyText: t("empty"),
+        error,
+        layoutType,
+        listLoadError,
+      }),
       newFolderName: "",
       onNewFolderNameChange: () => {},
       onConfirmNewFolder: () => Promise.resolve(),
@@ -513,14 +685,12 @@ export const TrashPage: React.FC = () => {
       selectionMode: fileSelection.selectionMode,
       selectedIds: fileSelection.selectedIds,
       onToggleItem: handleToggleItem,
-      pagination:
-        layoutType === InterfaceLayoutType.List
-          ? {
-              totalCount: listTotalCount,
-              loading: listLoading,
-              onPaginationModelChange,
-            }
-          : undefined,
+      pagination: getTrashPagination({
+        layoutType,
+        listLoading,
+        listTotalCount,
+        onPaginationModelChange,
+      }),
     }),
     [
       error,
@@ -545,10 +715,55 @@ export const TrashPage: React.FC = () => {
     ],
   );
 
-  const loadError = error ?? listLoadError;
-  const shouldRenderFileList = !loadError || hasContent;
+  const loadError = resolveTrashLoadError(error, listLoadError);
+  const shouldRenderFileList = shouldRenderTrashFileList(loadError, hasContent);
 
-  if (loading && !hasContent && !error && layoutType !== InterfaceLayoutType.List) {
+  return (
+    <TrashPageView
+      clearRestoreErrors={clearRestoreErrors}
+      emptyingTrash={emptyingTrash}
+      emptyTrashProgress={emptyTrashProgress}
+      fileListViewProps={fileListViewProps}
+      handlePromptAnswer={handlePromptAnswer}
+      hasContent={hasContent}
+      layoutType={layoutType}
+      loadError={loadError}
+      loading={loading}
+      pageHeaderProps={pageHeaderProps}
+      restoreErrors={restoreErrors}
+      restoreProgress={restoreProgress}
+      restorePrompt={restorePrompt}
+      restoring={restoring}
+      shouldRenderFileList={shouldRenderFileList}
+      t={t}
+    />
+  );
+};
+
+const TrashPageView: React.FC<TrashPageViewProps> = ({
+  clearRestoreErrors,
+  emptyingTrash,
+  emptyTrashProgress,
+  fileListViewProps,
+  handlePromptAnswer,
+  hasContent,
+  layoutType,
+  loadError,
+  loading,
+  pageHeaderProps,
+  restoreErrors,
+  restoreProgress,
+  restorePrompt,
+  restoring,
+  shouldRenderFileList,
+  t,
+}) => {
+  if (shouldShowTrashInitialLoader({
+    error: loadError,
+    hasContent,
+    layoutType,
+    loading,
+  })) {
     return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
   }
 
@@ -591,7 +806,6 @@ export const TrashPage: React.FC = () => {
             <FileListViewFactory {...fileListViewProps} />
           </Box>
         )}
-
       </Box>
       <TrashProgressDialog
         open={emptyingTrash}
@@ -599,12 +813,10 @@ export const TrashPage: React.FC = () => {
           current: emptyTrashProgress.current,
           total: emptyTrashProgress.total,
         })}
-        progressPercent={
-          calculateProgressPercent(
-            emptyTrashProgress.current,
-            emptyTrashProgress.total,
-          )
-        }
+        progressPercent={calculateProgressPercent(
+          emptyTrashProgress.current,
+          emptyTrashProgress.total,
+        )}
       />
       <TrashProgressDialog
         open={restoring}
@@ -613,12 +825,10 @@ export const TrashPage: React.FC = () => {
           total: restoreProgress.total,
           name: restoreProgress.itemName,
         })}
-        progressPercent={
-          calculateProgressPercent(
-            restoreProgress.current,
-            restoreProgress.total,
-          )
-        }
+        progressPercent={calculateProgressPercent(
+          restoreProgress.current,
+          restoreProgress.total,
+        )}
       />
       <RestoreConflictDialog
         open={!!restorePrompt}

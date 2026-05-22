@@ -226,97 +226,158 @@ namespace Cotton.Crypto.Internals.Pipelines
 
         private Task ProduceAsync(ChannelWriter<DecryptionJob> writer, BufferScope scope, CancellationToken ct)
         {
-            return Task.Run(async () =>
+            return Task.Run(() => ProduceCoreAsync(writer, scope, ct), ct);
+        }
+
+        private async Task ProduceCoreAsync(ChannelWriter<DecryptionJob> writer, BufferScope scope, CancellationToken ct)
+        {
+            long idx = 0;
+            Exception? completionError = null;
+            try
             {
-                long idx = 0;
-                Exception? completionError = null;
-                try
+                while (await TryReadAndPublishJobAsync(writer, scope, idx, ct).ConfigureAwait(false))
                 {
-                    while (true)
-                    {
-                        ct.ThrowIfCancellationRequested();
-                        if (input.CanSeek)
-                        {
-                            long bytesRemaining = input.Length - input.Position;
-                            int minHeader = AesGcmStreamFormat.ComputeChunkHeaderLength(tagSize);
-                            if (bytesRemaining == 0) break;
-                            if (bytesRemaining < minHeader)
-                            {
-                                throw new EndOfStreamException("Unexpected end of stream while reading chunk header.");
-                            }
-                        }
-                        ChunkHeader? maybeChunkHeader = await AesGcmStreamFormat
-                            .TryReadChunkHeaderAsync(input, tagSize, ct)
-                            .ConfigureAwait(false);
-                        if (!maybeChunkHeader.HasValue)
-                        {
-                            break;
-                        }
-                        ChunkHeader chunkHeader = maybeChunkHeader.Value;
+                    idx++;
+                }
+            }
+            catch (Exception ex)
+            {
+                completionError = ex;
+                throw;
+            }
+            finally
+            {
+                writer.TryComplete(completionError);
+            }
+        }
 
-                        if (chunkHeader.KeyId != keyId)
-                        {
-                            throw new InvalidDataException("Chunk key ID does not match file key ID.");
-                        }
-                        if (chunkHeader.PlaintextLength <= 0 || chunkHeader.PlaintextLength > maxChunkSize)
-                        {
-                            throw new InvalidDataException("Invalid chunk length in header.");
-                        }
-                        if (input.CanSeek)
-                        {
-                            long remaining = input.Length - input.Position;
-                            if (remaining < chunkHeader.PlaintextLength)
-                            {
-                                throw new EndOfStreamException("Unexpected end of stream while reading chunk ciphertext.");
-                            }
-                        }
+        private async Task<bool> TryReadAndPublishJobAsync(
+            ChannelWriter<DecryptionJob> writer,
+            BufferScope scope,
+            long idx,
+            CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            ChunkHeader? maybeChunkHeader = await ReadNextChunkHeaderAsync(ct).ConfigureAwait(false);
+            if (!maybeChunkHeader.HasValue)
+            {
+                return false;
+            }
 
-                        int cipherLength = (int)chunkHeader.PlaintextLength;
-                        byte[] cipher = scope.Rent(cipherLength);
-                        try
-                        {
-                            await AesGcmStreamFormat
-                                .ReadExactlyAsync(input, cipher, cipherLength, ct)
-                                .ConfigureAwait(false);
-                        }
-                        catch
-                        {
-                            scope.Recycle(cipher);
-                            throw;
-                        }
-                        if (unchecked((ulong)idx) == ulong.MaxValue)
-                        {
-                            scope.Recycle(cipher);
-                            throw new InvalidOperationException("Maximum number of chunks per file is 2^64-1. Counter reached ulong.MaxValue.");
-                        }
-                        bool published = false;
-                        try
-                        {
-                            await writer
-                                .WriteAsync(new DecryptionJob(idx, chunkHeader.Tag, cipher, cipherLength), ct)
-                                .ConfigureAwait(false);
-                            published = true;
-                            idx++;
-                        }
-                        finally
-                        {
-                            if (!published)
-                            {
-                                scope.Recycle(cipher);
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex)
+            ChunkHeader chunkHeader = maybeChunkHeader.Value;
+            ValidateChunkHeader(chunkHeader);
+
+            int cipherLength = (int)chunkHeader.PlaintextLength;
+            byte[] cipher = await ReadCiphertextAsync(scope, cipherLength, ct).ConfigureAwait(false);
+            EnsureChunkIndexCanBePublished(idx, cipher, scope);
+            await PublishJobAsync(writer, scope, idx, chunkHeader, cipher, cipherLength, ct).ConfigureAwait(false);
+            return true;
+        }
+
+        private async Task<ChunkHeader?> ReadNextChunkHeaderAsync(CancellationToken ct)
+        {
+            if (!HasReadableChunkHeader())
+            {
+                return null;
+            }
+
+            return await AesGcmStreamFormat
+                .TryReadChunkHeaderAsync(input, tagSize, ct)
+                .ConfigureAwait(false);
+        }
+
+        private bool HasReadableChunkHeader()
+        {
+            if (!input.CanSeek)
+            {
+                return true;
+            }
+
+            long bytesRemaining = input.Length - input.Position;
+            if (bytesRemaining == 0)
+            {
+                return false;
+            }
+
+            int minHeader = AesGcmStreamFormat.ComputeChunkHeaderLength(tagSize);
+            if (bytesRemaining < minHeader)
+            {
+                throw new EndOfStreamException("Unexpected end of stream while reading chunk header.");
+            }
+
+            return true;
+        }
+
+        private void ValidateChunkHeader(ChunkHeader chunkHeader)
+        {
+            if (chunkHeader.KeyId != keyId)
+            {
+                throw new InvalidDataException("Chunk key ID does not match file key ID.");
+            }
+
+            if (chunkHeader.PlaintextLength <= 0 || chunkHeader.PlaintextLength > maxChunkSize)
+            {
+                throw new InvalidDataException("Invalid chunk length in header.");
+            }
+
+            if (input.CanSeek && input.Length - input.Position < chunkHeader.PlaintextLength)
+            {
+                throw new EndOfStreamException("Unexpected end of stream while reading chunk ciphertext.");
+            }
+        }
+
+        private async Task<byte[]> ReadCiphertextAsync(BufferScope scope, int cipherLength, CancellationToken ct)
+        {
+            byte[] cipher = scope.Rent(cipherLength);
+            try
+            {
+                await AesGcmStreamFormat
+                    .ReadExactlyAsync(input, cipher, cipherLength, ct)
+                    .ConfigureAwait(false);
+                return cipher;
+            }
+            catch
+            {
+                scope.Recycle(cipher);
+                throw;
+            }
+        }
+
+        private static void EnsureChunkIndexCanBePublished(long idx, byte[] cipher, BufferScope scope)
+        {
+            if (unchecked((ulong)idx) != ulong.MaxValue)
+            {
+                return;
+            }
+
+            scope.Recycle(cipher);
+            throw new InvalidOperationException("Maximum number of chunks per file is 2^64-1. Counter reached ulong.MaxValue.");
+        }
+
+        private static async Task PublishJobAsync(
+            ChannelWriter<DecryptionJob> writer,
+            BufferScope scope,
+            long idx,
+            ChunkHeader chunkHeader,
+            byte[] cipher,
+            int cipherLength,
+            CancellationToken ct)
+        {
+            bool published = false;
+            try
+            {
+                await writer
+                    .WriteAsync(new DecryptionJob(idx, chunkHeader.Tag, cipher, cipherLength), ct)
+                    .ConfigureAwait(false);
+                published = true;
+            }
+            finally
+            {
+                if (!published)
                 {
-                    completionError = ex;
-                    throw;
+                    scope.Recycle(cipher);
                 }
-                finally
-                {
-                    writer.TryComplete(completionError);
-                }
-            });
+            }
         }
 
         private Task[] StartWorkersAsync(ChannelReader<DecryptionJob> reader,

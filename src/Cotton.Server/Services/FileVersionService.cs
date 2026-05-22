@@ -447,5 +447,4 @@ public sealed class FileVersionService(
     // back to that first visible file id, so this helper normalizes both cases before querying versions.
     private static Guid GetLineageId(NodeFile file)
         => file.OriginalNodeFileId == Guid.Empty ? file.Id : file.OriginalNodeFileId;
-
 }
