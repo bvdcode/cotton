@@ -110,29 +110,32 @@ namespace Cotton.Previews
                     PreviewColorPalette.AccentGreenGreen,
                     PreviewColorPalette.AccentGreenBlue)));
 
-                for (int i = 0; i < bars; i++)
+                ctx.Paint(canvas =>
                 {
-                    float amplitude = amplitudes[i];
-                    float barHeight = Math.Max(minBarHeight, amplitude * maxBarHeight);
-                    float x = left + (i * (barWidth + barGap));
-                    float y = centerY - (barHeight / 2f);
-                    float radius = barWidth / 2f;
-
-                    if (barHeight <= barWidth)
+                    for (int i = 0; i < bars; i++)
                     {
-                        ctx.Fill(barBrush, new EllipsePolygon(x + radius, centerY, radius));
-                        continue;
-                    }
+                        float amplitude = amplitudes[i];
+                        float barHeight = Math.Max(minBarHeight, amplitude * maxBarHeight);
+                        float x = left + (i * (barWidth + barGap));
+                        float y = centerY - (barHeight / 2f);
+                        float radius = barWidth / 2f;
 
-                    float bodyHeight = Math.Max(0, barHeight - barWidth);
-                    if (bodyHeight > 0)
-                    {
-                        ctx.Fill(barBrush, new RectangularPolygon(x, y + radius, barWidth, bodyHeight));
-                    }
+                        if (barHeight <= barWidth)
+                        {
+                            canvas.Fill(barBrush, new EllipsePolygon(x + radius, centerY, radius));
+                            continue;
+                        }
 
-                    ctx.Fill(barBrush, new EllipsePolygon(x + radius, y + radius, radius));
-                    ctx.Fill(barBrush, new EllipsePolygon(x + radius, y + barHeight - radius, radius));
-                }
+                        float bodyHeight = Math.Max(0, barHeight - barWidth);
+                        if (bodyHeight > 0)
+                        {
+                            canvas.Fill(barBrush, new RectanglePolygon(x, y + radius, barWidth, bodyHeight));
+                        }
+
+                        canvas.Fill(barBrush, new EllipsePolygon(x + radius, y + radius, radius));
+                        canvas.Fill(barBrush, new EllipsePolygon(x + radius, y + barHeight - radius, radius));
+                    }
+                });
             });
 
             await using var output = new MemoryStream();

@@ -91,10 +91,11 @@ namespace Cotton.Previews
             canvas.Mutate(ctx =>
             {
                 ctx.BackgroundColor(Color.White);
-                ctx.DrawText(
+                ctx.Paint(canvas => canvas.DrawText(
                     new RichTextOptions(font) { Origin = new PointF(padding, paddingTop) },
                     text,
-                    Color.Black);
+                    Brushes.Solid(Color.Black),
+                    null));
             });
 
             using var output = canvas.Clone(x => x.Resize(new ResizeOptions
