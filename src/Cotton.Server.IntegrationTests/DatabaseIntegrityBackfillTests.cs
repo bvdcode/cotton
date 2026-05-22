@@ -58,6 +58,37 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
         }
     }
 
+
+
+    [Test]
+    public async Task Verifier_RejectsDirectDatabaseTampering()
+    {
+        var user = new User
+        {
+            Username = "bob",
+            PasswordPhc = "password-phc",
+            WebDavTokenPhc = "webdav-phc",
+            Role = UserRole.User
+        };
+        await DbContext.Users.AddAsync(user);
+        await DbContext.SaveChangesAsync();
+        DbContext.ChangeTracker.Clear();
+
+        await CreateBackfillService().BackfillUnsignedPhaseOneRowsAsync(CancellationToken.None);
+        await DbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"UPDATE users SET role = {(int)UserRole.Admin} WHERE id = {user.Id}");
+        DbContext.ChangeTracker.Clear();
+
+        User tampered = await DbContext.Users.SingleAsync(x => x.Id == user.Id);
+        var verifier = new DatabaseIntegrityVerifier(
+            CreateProtector(),
+            new DatabaseIntegrityDescriptorRegistry(CreateDescriptors()),
+            NullLogger<DatabaseIntegrityVerifier>.Instance);
+
+        Assert.Throws<DatabaseIntegrityException>(() =>
+            verifier.RequireValid(DbContext, tampered, "test.direct-tamper"));
+    }
+
     private byte[]? ReadMac(User user)
     {
         return (byte[]?)DbContext.Entry(user)
@@ -70,7 +101,7 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
         return new DatabaseIntegrityBridgeBackfillService(
             DbContext,
             CreateProtector(),
-            CreateDescriptors(),
+            new DatabaseIntegrityDescriptorRegistry(CreateDescriptors()),
             NullLogger<DatabaseIntegrityBridgeBackfillService>.Instance);
     }
 

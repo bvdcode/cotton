@@ -14,7 +14,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity;
 public sealed class DatabaseIntegrityBridgeBackfillService(
     CottonDbContext _dbContext,
     IDatabaseIntegrityProtector _protector,
-    IEnumerable<IDatabaseIntegrityDescriptor> _descriptors,
+    IDatabaseIntegrityDescriptorRegistry _descriptors,
     ILogger<DatabaseIntegrityBridgeBackfillService> _logger) : IDatabaseIntegrityBridgeBackfillService
 {
     private const int BatchSize = 250;
@@ -26,9 +26,7 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
             nameof(DatabaseIntegrityBridgeBackfillService),
             nameof(LoadUnsignedBatchCoreAsync));
 
-    private readonly IReadOnlyList<IDatabaseIntegrityDescriptor> _phaseOneDescriptors = _descriptors
-        .OrderBy(x => x.EntityName, StringComparer.Ordinal)
-        .ToArray();
+    private readonly IReadOnlyCollection<IDatabaseIntegrityDescriptor> _phaseOneDescriptors = _descriptors.All;
 
     public async Task<int> BackfillUnsignedPhaseOneRowsAsync(CancellationToken cancellationToken)
     {

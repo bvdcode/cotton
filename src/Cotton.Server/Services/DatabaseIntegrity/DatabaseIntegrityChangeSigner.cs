@@ -10,14 +10,14 @@ namespace Cotton.Server.Services.DatabaseIntegrity;
 public sealed class DatabaseIntegrityChangeSigner : IDatabaseIntegrityChangeSigner
 {
     private readonly IDatabaseIntegrityProtector _protector;
-    private readonly IReadOnlyDictionary<Type, IDatabaseIntegrityDescriptor> _descriptors;
+    private readonly IDatabaseIntegrityDescriptorRegistry _descriptors;
 
     public DatabaseIntegrityChangeSigner(
         IDatabaseIntegrityProtector protector,
-        IEnumerable<IDatabaseIntegrityDescriptor> descriptors)
+        IDatabaseIntegrityDescriptorRegistry descriptors)
     {
         _protector = protector;
-        _descriptors = descriptors.ToDictionary(x => x.EntityType);
+        _descriptors = descriptors;
     }
 
     public void SignPendingChanges(DbContext dbContext)
@@ -31,7 +31,7 @@ public sealed class DatabaseIntegrityChangeSigner : IDatabaseIntegrityChangeSign
                 continue;
             }
 
-            if (!TryGetDescriptor(entry.Entity.GetType(), out IDatabaseIntegrityDescriptor? descriptor))
+            if (!_descriptors.TryGet(entry.Entity.GetType(), out IDatabaseIntegrityDescriptor? descriptor))
             {
                 continue;
             }
@@ -46,28 +46,6 @@ public sealed class DatabaseIntegrityChangeSigner : IDatabaseIntegrityChangeSign
             entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue = descriptor.SchemaVersion;
             entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue = mac;
         }
-    }
-
-    private bool TryGetDescriptor(
-        Type entityType,
-        out IDatabaseIntegrityDescriptor descriptor)
-    {
-        if (_descriptors.TryGetValue(entityType, out descriptor!))
-        {
-            return true;
-        }
-
-        foreach ((Type descriptorType, IDatabaseIntegrityDescriptor candidate) in _descriptors)
-        {
-            if (descriptorType.IsAssignableFrom(entityType))
-            {
-                descriptor = candidate;
-                return true;
-            }
-        }
-
-        descriptor = null!;
-        return false;
     }
 
     private static bool HasIntegrityShadowProperties(EntityEntry entry)

@@ -6,6 +6,7 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
+using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -16,7 +17,8 @@ namespace Cotton.Server.Providers
 {
     public class SettingsProvider(
         CottonDbContext _dbContext,
-        IStorageBackendTypeCache? _storageTypeCache = null)
+        IStorageBackendTypeCache? _storageTypeCache = null,
+        IDatabaseIntegrityVerifier? _integrity = null)
     {
         private static readonly Lock _cacheLock = new();
         private static readonly SemaphoreSlim _settingsCreationLock = new(1, 1);
@@ -50,7 +52,6 @@ namespace Cotton.Server.Providers
                 try
                 {
                     settings = _dbContext.ServerSettings
-                        .AsNoTracking()
                         .OrderByDescending(s => s.CreatedAt)
                         .FirstOrDefault();
                 }
@@ -60,6 +61,7 @@ namespace Cotton.Server.Providers
                 }
                 if (settings is not null)
                 {
+                    _integrity?.RequireValid(_dbContext, settings, "settings.cache-load");
                     _cache = settings;
                     return _cache;
                 }
@@ -635,7 +637,13 @@ namespace Cotton.Server.Providers
 
             try
             {
-                return await query.FirstOrDefaultAsync(cancellationToken);
+                CottonServerSettings? settings = await query.FirstOrDefaultAsync(cancellationToken);
+                if (settings is not null && !asNoTracking)
+                {
+                    _integrity?.RequireValid(_dbContext, settings, "settings.load");
+                }
+
+                return settings;
             }
             catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
             {

@@ -7,6 +7,7 @@ using Cotton.Database.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Services;
+using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
@@ -30,7 +31,8 @@ namespace Cotton.Server.Handlers.Files
         CottonDbContext _dbContext,
         ISharedFileDownloadNotifier _sharedFileDownloadNotifier,
         IHttpContextAccessor _httpContextAccessor,
-        IStoragePipeline _storage) : IRequestHandler<ShareFileQuery, ShareFileResult>
+        IStoragePipeline _storage,
+        IDatabaseIntegrityVerifier _integrity) : IRequestHandler<ShareFileQuery, ShareFileResult>
     {
         public async Task<ShareFileResult> Handle(ShareFileQuery request, CancellationToken ct)
         {
@@ -50,6 +52,7 @@ namespace Cotton.Server.Handlers.Files
                 return await BuildMissingTokenResultAsync(request.Token, now, viewMode.Value.IsHtml, baseAppUrl, ct);
             }
 
+            _integrity.RequireValid(_dbContext, downloadToken, "share.download-token");
             if (downloadToken.NodeFile.Node.Type != NodeType.Default)
             {
                 return BuildNotFoundResult(viewMode.Value.IsHtml, baseAppUrl);
@@ -88,15 +91,18 @@ namespace Cotton.Server.Handlers.Files
             }
 
             var nodeShareToken = await LoadNodeShareTokenAsync(token, now, ct);
-            return nodeShareToken is not null && nodeShareToken.Node.Type == NodeType.Default
-                ? BuildNodeShareRedirect(nodeShareToken, token, baseAppUrl)
-                : ShareFileResult.AsRedirect($"{baseAppUrl}/404");
+            if (nodeShareToken is null || nodeShareToken.Node.Type != NodeType.Default)
+            {
+                return ShareFileResult.AsRedirect($"{baseAppUrl}/404");
+            }
+
+            _integrity.RequireValid(_dbContext, nodeShareToken, "share.node-token");
+            return BuildNodeShareRedirect(nodeShareToken, token, baseAppUrl);
         }
 
         private async Task<NodeShareToken?> LoadNodeShareTokenAsync(string token, DateTime now, CancellationToken ct)
         {
             return await _dbContext.NodeShareTokens
-                .AsNoTracking()
                 .Include(x => x.Node)
                 .Where(x => x.Token == token && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
                 .SingleOrDefaultAsync(cancellationToken: ct);

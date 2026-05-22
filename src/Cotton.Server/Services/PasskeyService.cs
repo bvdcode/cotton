@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.AspNetCore.Exceptions;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
@@ -17,7 +18,8 @@ namespace Cotton.Server.Services
     public class PasskeyService(
         CottonDbContext _dbContext,
         IHttpContextAccessor _httpContextAccessor,
-        IMemoryCache _cache)
+        IMemoryCache _cache,
+        IDatabaseIntegrityVerifier _integrity)
     {
         private static readonly TimeSpan OptionsLifetime = TimeSpan.FromMinutes(5);
         private const int MaxPasskeyNameLength = 120;
@@ -51,6 +53,7 @@ namespace Cotton.Server.Services
         {
             User user = await _dbContext.Users.FindAsync([userId], ct)
                 ?? throw new EntityNotFoundException<User>();
+            _integrity.RequireValid(_dbContext, user, "passkey.registration-options");
 
             var existingCredentials = await _dbContext.UserPasskeyCredentials
                 .AsNoTracking()
@@ -164,11 +167,11 @@ namespace Cotton.Server.Services
             if (!string.IsNullOrEmpty(normalizedUsername))
             {
                 User? user = await _dbContext.Users
-                    .AsNoTracking()
                     .FirstOrDefaultAsync(x => x.Username == normalizedUsername || x.Email == normalizedUsername, ct);
 
                 if (user != null)
                 {
+                    _integrity.RequireValid(_dbContext, user, "passkey.assertion-options");
                     scopedUserId = user.Id;
                     var userCredentials = await _dbContext.UserPasskeyCredentials
                         .AsNoTracking()
@@ -217,6 +220,8 @@ namespace Cotton.Server.Services
                 .Include(x => x.User)
                 .FirstOrDefaultAsync(x => x.CredentialId == credentialId, ct)
                 ?? throw new UnauthorizedAccessException("Passkey credential was not found");
+            _integrity.RequireValid(_dbContext, credential, "passkey.assertion-credential");
+            _integrity.RequireValid(_dbContext, credential.User, "passkey.assertion-user");
 
             if (state.ScopedUserId.HasValue && credential.UserId != state.ScopedUserId.Value)
             {
@@ -267,6 +272,7 @@ namespace Cotton.Server.Services
             UserPasskeyCredential credential = await _dbContext.UserPasskeyCredentials
                 .FirstOrDefaultAsync(x => x.UserId == userId && x.Id == credentialId, ct)
                 ?? throw new EntityNotFoundException<UserPasskeyCredential>();
+            _integrity.RequireValid(_dbContext, credential, "passkey.rename");
 
             credential.Name = NormalizeName(name);
             await _dbContext.SaveChangesAsync(ct);

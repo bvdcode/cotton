@@ -15,6 +15,7 @@ using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Server.Services.WebDav;
 using Cotton.Validators;
 using EasyExtensions;
@@ -60,6 +61,7 @@ namespace Cotton.Server.Controllers
         ApplicationStartupClock _startupClock,
         RefreshTokenRevocationService _refreshTokenRevocations,
         DownloadTokenExpirationService _downloadTokenExpirations,
+        IDatabaseIntegrityVerifier _integrity,
         SessionAccessTokenRevocationStore _sessionRevocations,
         IHubContext<EventHub> _eventHub) : ControllerBase
     {
@@ -76,6 +78,7 @@ namespace Cotton.Server.Controllers
             var userId = User.GetUserId();
             var user = _dbContext.Users.Find(userId)
                 ?? throw new EntityNotFoundException<User>();
+            _integrity.RequireValid(_dbContext, user, "auth.webdav-token");
             string token = StringHelpers.CreateRandomString(WebDavTokenLength);
             user.WebDavTokenPhc = _hasher.Hash(token);
             await _dbContext.SaveChangesAsync();
@@ -134,6 +137,7 @@ namespace Cotton.Server.Controllers
             {
                 return this.ApiUnauthorized("User not found");
             }
+            _integrity.RequireValid(_dbContext, user, "auth.disable-totp");
             if (string.IsNullOrEmpty(user.PasswordPhc) || !_hasher.Verify(request.Password, user.PasswordPhc))
             {
                 return this.ApiForbidden("Invalid password");
@@ -168,6 +172,7 @@ namespace Cotton.Server.Controllers
             {
                 return this.ApiUnauthorized("User not found");
             }
+            _integrity.RequireValid(_dbContext, user, "auth.confirm-totp");
             if (user.IsTotpEnabled)
             {
                 return this.ApiConflict("TOTP is already enabled for this user");
@@ -203,6 +208,7 @@ namespace Cotton.Server.Controllers
             {
                 return this.ApiUnauthorized("User not found");
             }
+            _integrity.RequireValid(_dbContext, user, "auth.setup-totp");
             if (user.IsTotpEnabled)
             {
                 return this.ApiConflict("TOTP is already enabled for this user");
@@ -227,6 +233,7 @@ namespace Cotton.Server.Controllers
             {
                 return this.ApiUnauthorized("User not found");
             }
+            _integrity.RequireValid(_dbContext, user, "auth.me");
             return Ok(user.Adapt<UserDto>());
         }
 
@@ -354,6 +361,7 @@ namespace Cotton.Server.Controllers
                 .FirstOrDefaultAsync(x => x.Username == request.Username || x.Email == request.Username);
             if (user != null)
             {
+                _integrity.RequireValid(_dbContext, user, "auth.login");
                 return user;
             }
 
@@ -446,11 +454,13 @@ namespace Cotton.Server.Controllers
             {
                 return NotFound();
             }
+            _integrity.RequireValid(_dbContext, dbToken, "auth.refresh-token");
             var user = await _dbContext.Users.FindAsync(dbToken.UserId);
             if (user == null)
             {
                 return NotFound();
             }
+            _integrity.RequireValid(_dbContext, user, "auth.refresh-user");
             var accessToken = CreateAccessToken(user, dbToken.SessionId!);
             dbToken.RevokedAt = DateTime.UtcNow;
             var (newDbToken, newRefreshToken) = await CreateRefreshTokenAsync(
@@ -482,6 +492,7 @@ namespace Cotton.Server.Controllers
                 var dbToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x => x.Token == refreshTokenHash);
                 if (dbToken != null && dbToken.RevokedAt == null)
                 {
+                    _integrity.RequireValid(_dbContext, dbToken, "auth.logout");
                     dbToken.RevokedAt = DateTime.UtcNow;
                     await _dbContext.SaveChangesAsync();
                     await NotifySessionRevokedAsync(
