@@ -17,7 +17,7 @@
 		<PackageReference Include="SixLabors.ImageSharp" Version="4.0.0" />
 		<PackageReference Include="SixLabors.ImageSharp.Drawing" Version="3.0.0" />
 		<PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.2" />
-      <PackageReference Include="Svg.Skia" Version="4.9.0" />
+      <PackageReference Include="Svg.Skia" Version="5.0.0" />
 		<PackageReference Include="Xabe.FFmpeg" Version="6.0.2" />
 		<PackageReference Include="Xabe.FFmpeg.Downloader" Version="6.0.2" />
 	</ItemGroup>
