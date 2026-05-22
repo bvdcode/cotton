@@ -15,9 +15,9 @@ public class StlThumbPreviewGeneratorTests
     {
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(new StlThumbPreviewGenerator().Version, Is.EqualTo(7));
-            Assert.That(StlThumbPreviewGenerator.CreateObjGenerator().Version, Is.EqualTo(7));
-            Assert.That(StlThumbPreviewGenerator.CreateThreeMfGenerator().Version, Is.EqualTo(7));
+            Assert.That(new StlThumbPreviewGenerator().Version, Is.EqualTo(8));
+            Assert.That(StlThumbPreviewGenerator.CreateObjGenerator().Version, Is.EqualTo(8));
+            Assert.That(StlThumbPreviewGenerator.CreateThreeMfGenerator().Version, Is.EqualTo(8));
         }
     }
 
