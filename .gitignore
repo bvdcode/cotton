@@ -42,7 +42,5 @@ msbuild.wrn
 *.trx
 *.key
 data
-src/cotton.client/.github/instructions/main.instructions.md
-src/.claude/settings.local.json
 notes/
 sixlabors.lic
