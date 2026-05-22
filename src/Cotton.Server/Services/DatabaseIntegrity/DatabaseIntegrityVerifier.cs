@@ -48,10 +48,21 @@ public sealed class DatabaseIntegrityVerifier(
         // instead of accepting detached DTO-like objects that no longer carry the database MAC/version.
         byte[]? mac = (byte[]?)entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue;
         int? version = (int?)entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue;
-        if (mac is null || version != descriptor.SchemaVersion)
+        if (mac is null || version is null)
+        {
+            _logger.LogDebug(
+                "Database integrity metadata is missing for {EntityName} {EntityKey} at {Boundary}; allowing legacy row during the integrity rollout window.",
+                descriptor.EntityName,
+                descriptor.GetEntityKey(entity),
+                boundary);
+            return;
+        }
+
+        if (version != descriptor.SchemaVersion)
         {
             _logger.LogError(
-                "Database integrity metadata is missing or stale for {EntityName} {EntityKey} at {Boundary}.",
+                "Database integrity metadata has unsupported schema version {Version} for {EntityName} {EntityKey} at {Boundary}.",
+                version,
                 descriptor.EntityName,
                 descriptor.GetEntityKey(entity),
                 boundary);

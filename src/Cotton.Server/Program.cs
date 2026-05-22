@@ -198,12 +198,12 @@ namespace Cotton.Server
             app.MapControllers();
             app.MapFallbackToFile("/index.html");
             app.ApplyMigrations<CottonDbContext>();
+            await app.ApplyDatabaseIntegrityBridgeBackfillAsync();
             using (IServiceScope scope = app.Services.CreateScope())
             {
                 var autoRestore = scope.ServiceProvider.GetRequiredService<IDatabaseAutoRestoreService>();
                 autoRestore.TryRestoreIfEmptyAsync().GetAwaiter().GetResult();
             }
-            await app.ApplyDatabaseIntegrityBridgeBackfillAsync();
             app.MapHub<EventHub>(Routes.V1.EventHub);
             await app.RunAsync();
         }

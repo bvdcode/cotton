@@ -91,7 +91,12 @@ public sealed class DatabaseIntegrityChangeSigner : IDatabaseIntegrityChangeSign
         byte[]? originalMac = entry.Property(DatabaseIntegrityColumns.MacProperty).OriginalValue as byte[];
         object? originalVersionValue = entry.Property(DatabaseIntegrityColumns.VersionProperty).OriginalValue;
         int? originalVersion = originalVersionValue is int version ? version : null;
-        if (originalMac is null || originalVersion != descriptor.SchemaVersion)
+        if (originalMac is null || originalVersion is null)
+        {
+            return;
+        }
+
+        if (originalVersion != descriptor.SchemaVersion)
         {
             throw new DatabaseIntegrityException(descriptor.EntityName, descriptor.GetEntityKey(entry.Entity));
         }

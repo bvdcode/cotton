@@ -61,6 +61,60 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task BridgeBackfill_SignsExistingUnsignedRows_WithSigningDbContext()
+    {
+        var user = new User
+        {
+            Username = "frank",
+            PasswordPhc = "password-phc",
+            WebDavTokenPhc = "webdav-phc",
+            Role = UserRole.User
+        };
+        await DbContext.Users.AddAsync(user);
+        await DbContext.SaveChangesAsync();
+        DbContext.ChangeTracker.Clear();
+
+        await using CottonDbContext signingDbContext = CreateSigningDbContext();
+        int signed = await CreateBackfillService(signingDbContext)
+            .BackfillUnsignedPhaseOneRowsAsync(CancellationToken.None);
+
+        DbContext.ChangeTracker.Clear();
+        User signedUser = await DbContext.Users.SingleAsync(x => x.Id == user.Id);
+        byte[]? mac = ReadMac(signedUser);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(signed, Is.EqualTo(1));
+            Assert.That(mac, Has.Length.EqualTo(32));
+            Assert.That(CreateProtector().Verify(signedUser, new UserIntegrityDescriptor(), mac!), Is.True);
+        }
+    }
+
+    [Test]
+    public async Task Verifier_AllowsUnsignedLegacyRowsDuringRollout()
+    {
+        var user = new User
+        {
+            Username = "legacy",
+            PasswordPhc = "password-phc",
+            WebDavTokenPhc = "webdav-phc",
+            Role = UserRole.User
+        };
+        await DbContext.Users.AddAsync(user);
+        await DbContext.SaveChangesAsync();
+        DbContext.ChangeTracker.Clear();
+
+        User unsignedUser = await DbContext.Users.SingleAsync(x => x.Id == user.Id);
+        var verifier = new DatabaseIntegrityVerifier(
+            CreateProtector(),
+            new DatabaseIntegrityDescriptorRegistry(CreateDescriptors()),
+            NullDatabaseIntegrityFailureReporter.Instance,
+            NullLogger<DatabaseIntegrityVerifier>.Instance);
+
+        Assert.DoesNotThrow(() => verifier.RequireValid(DbContext, unsignedUser, "test.legacy-row"));
+    }
+
+    [Test]
     public async Task Verifier_RejectsDirectDatabaseTampering()
     {
         var user = new User
@@ -91,7 +145,7 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task BridgeBackfill_RefusesUnsignedRowsAfterIntegrityMetadataExists()
+    public async Task BridgeBackfill_SignsUnsignedRowsAfterIntegrityMetadataExists()
     {
         var user = new User
         {
@@ -110,10 +164,17 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
             $"UPDATE users SET integrity_mac = NULL WHERE id = {user.Id}");
         DbContext.ChangeTracker.Clear();
 
-        InvalidOperationException? ex = Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await CreateBackfillService().BackfillUnsignedPhaseOneRowsAsync(CancellationToken.None));
+        int signed = await CreateBackfillService().BackfillUnsignedPhaseOneRowsAsync(CancellationToken.None);
 
-        Assert.That(ex!.Message, Does.Contain("Refusing to sign"));
+        DbContext.ChangeTracker.Clear();
+        User signedUser = await DbContext.Users.SingleAsync(x => x.Id == user.Id);
+        byte[]? mac = ReadMac(signedUser);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(signed, Is.EqualTo(1));
+            Assert.That(mac, Has.Length.EqualTo(32));
+        }
     }
 
     [Test]
@@ -170,10 +231,10 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
                 new DatabaseIntegrityDescriptorRegistry(CreateDescriptors())));
     }
 
-    private DatabaseIntegrityBridgeBackfillService CreateBackfillService()
+    private DatabaseIntegrityBridgeBackfillService CreateBackfillService(CottonDbContext? dbContext = null)
     {
         return new DatabaseIntegrityBridgeBackfillService(
-            DbContext,
+            dbContext ?? DbContext,
             CreateProtector(),
             new DatabaseIntegrityDescriptorRegistry(CreateDescriptors()),
             NullLogger<DatabaseIntegrityBridgeBackfillService>.Instance);

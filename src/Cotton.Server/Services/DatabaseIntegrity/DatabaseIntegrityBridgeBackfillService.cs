@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Integrity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using System.Reflection;
 
 namespace Cotton.Server.Services.DatabaseIntegrity;
@@ -12,9 +13,9 @@ namespace Cotton.Server.Services.DatabaseIntegrity;
 /// One-release bridge that signs protected rows created before integrity metadata existed.
 /// </summary>
 /// <remarks>
-/// This is not a general recovery path. It only runs when protected tables have no integrity metadata at all, which is the
-/// expected state for the first integrity rollout. Once any protected row has metadata, missing metadata on another
-/// protected row is treated as suspicious and the bridge refuses to bless it.
+/// This bridge signs rows that predate integrity metadata and any later legacy row that is still unsigned during the
+/// current rollout window. Existing metadata is never ignored: unsupported schema versions still stop startup rather than
+/// being re-signed blindly.
 /// </remarks>
 public sealed class DatabaseIntegrityBridgeBackfillService(
     CottonDbContext _dbContext,
@@ -30,13 +31,6 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
         ?? throw new MissingMethodException(
             nameof(DatabaseIntegrityBridgeBackfillService),
             nameof(CountMissingRowsCoreAsync));
-    private static readonly MethodInfo CountRowsWithAnyIntegrityMetadataCoreMethod = typeof(DatabaseIntegrityBridgeBackfillService)
-        .GetMethod(
-            nameof(CountRowsWithAnyIntegrityMetadataCoreAsync),
-            BindingFlags.Instance | BindingFlags.NonPublic)
-        ?? throw new MissingMethodException(
-            nameof(DatabaseIntegrityBridgeBackfillService),
-            nameof(CountRowsWithAnyIntegrityMetadataCoreAsync));
     private static readonly MethodInfo CountStaleRowsCoreMethod = typeof(DatabaseIntegrityBridgeBackfillService)
         .GetMethod(
             nameof(CountStaleRowsCoreAsync),
@@ -70,15 +64,6 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
                 "Refusing to re-sign existing data because that could bless database tampering.");
         }
 
-        // Mixed signed/unsigned state after rollout can mean someone stripped MAC columns from selected rows.
-        // Refusing here is the difference between a migration bridge and a tamper-forgiving recovery path.
-        if (state.MissingRows > 0 && state.RowsWithAnyIntegrityMetadata > 0)
-        {
-            throw new InvalidOperationException(
-                "Database integrity bridge found protected rows without integrity metadata after integrity metadata already exists. " +
-                "Refusing to sign existing data because that could bless database tampering.");
-        }
-
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         int total = 0;
         foreach (IDatabaseIntegrityDescriptor descriptor in _phaseOneDescriptors)
@@ -105,15 +90,13 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
     {
         int missingRows = 0;
         int staleRows = 0;
-        int rowsWithAnyIntegrityMetadata = 0;
         foreach (IDatabaseIntegrityDescriptor descriptor in _phaseOneDescriptors)
         {
             missingRows += await CountMissingRowsAsync(descriptor, cancellationToken);
             staleRows += await CountStaleRowsAsync(descriptor, cancellationToken);
-            rowsWithAnyIntegrityMetadata += await CountRowsWithAnyIntegrityMetadataAsync(descriptor, cancellationToken);
         }
 
-        return new BridgeState(missingRows, staleRows, rowsWithAnyIntegrityMetadata);
+        return new BridgeState(missingRows, staleRows);
     }
 
     private async Task<int> BackfillEntitySetAsync(
@@ -131,15 +114,86 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
 
             foreach (object row in rows)
             {
-                var entry = _dbContext.Entry(row);
-                entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue = descriptor.SchemaVersion;
-                entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue = _protector.Sign(row, descriptor);
+                byte[] mac = _protector.Sign(row, descriptor);
+                await UpdateIntegrityMetadataAsync(descriptor, row, mac, cancellationToken);
             }
 
             signed += rows.Count;
-            await _dbContext.SaveChangesAsync(cancellationToken);
             _dbContext.ChangeTracker.Clear();
         }
+    }
+
+    private async Task UpdateIntegrityMetadataAsync(
+        IDatabaseIntegrityDescriptor descriptor,
+        object row,
+        byte[] mac,
+        CancellationToken cancellationToken)
+    {
+        IEntityType entityType = _dbContext.Model.FindEntityType(descriptor.EntityType)
+            ?? throw new InvalidOperationException($"Protected entity type {descriptor.EntityType.Name} is not mapped.");
+        IKey primaryKey = entityType.FindPrimaryKey()
+            ?? throw new InvalidOperationException($"Protected entity type {descriptor.EntityName} has no primary key.");
+        StoreObjectIdentifier storeObject = GetStoreObject(entityType, descriptor);
+        string versionColumn = GetColumnName(entityType, DatabaseIntegrityColumns.VersionProperty, storeObject);
+        string macColumn = GetColumnName(entityType, DatabaseIntegrityColumns.MacProperty, storeObject);
+
+        var entry = _dbContext.Entry(row);
+        List<object> parameters = [descriptor.SchemaVersion, mac];
+        List<string> keyPredicates = new(primaryKey.Properties.Count);
+        for (int index = 0; index < primaryKey.Properties.Count; index++)
+        {
+            IProperty property = primaryKey.Properties[index];
+            string keyColumn = GetColumnName(property, storeObject);
+            object keyValue = entry.Property(property.Name).CurrentValue
+                ?? throw new InvalidOperationException($"Protected entity type {descriptor.EntityName} has a null primary key value.");
+            parameters.Add(keyValue);
+            keyPredicates.Add($"{QuoteIdentifier(keyColumn)} = {{{index + 2}}}");
+        }
+
+        string sql =
+            $"UPDATE {QuoteQualifiedTable(storeObject)} " +
+            $"SET {QuoteIdentifier(versionColumn)} = {{0}}, {QuoteIdentifier(macColumn)} = {{1}} " +
+            $"WHERE {string.Join(" AND ", keyPredicates)}";
+        int updatedRows = await _dbContext.Database.ExecuteSqlRawAsync(sql, parameters, cancellationToken);
+        if (updatedRows != 1)
+        {
+            throw new InvalidOperationException($"Expected to update one {descriptor.EntityName} integrity row, but updated {updatedRows}.");
+        }
+    }
+
+    private static StoreObjectIdentifier GetStoreObject(IEntityType entityType, IDatabaseIntegrityDescriptor descriptor)
+    {
+        string tableName = entityType.GetTableName()
+            ?? throw new InvalidOperationException($"Protected entity type {descriptor.EntityName} is not mapped to a table.");
+        return StoreObjectIdentifier.Table(tableName, entityType.GetSchema());
+    }
+
+    private static string GetColumnName(
+        IEntityType entityType,
+        string propertyName,
+        StoreObjectIdentifier storeObject)
+    {
+        IProperty property = entityType.FindProperty(propertyName)
+            ?? throw new InvalidOperationException($"Protected entity type {entityType.ClrType.Name} is missing {propertyName}.");
+        return GetColumnName(property, storeObject);
+    }
+
+    private static string GetColumnName(IProperty property, StoreObjectIdentifier storeObject)
+    {
+        return property.GetColumnName(storeObject)
+            ?? throw new InvalidOperationException($"Property {property.Name} is not mapped to a column.");
+    }
+
+    private static string QuoteQualifiedTable(StoreObjectIdentifier storeObject)
+    {
+        return string.IsNullOrEmpty(storeObject.Schema)
+            ? QuoteIdentifier(storeObject.Name)
+            : $"{QuoteIdentifier(storeObject.Schema)}.{QuoteIdentifier(storeObject.Name)}";
+    }
+
+    private static string QuoteIdentifier(string identifier)
+    {
+        return $"\"{identifier.Replace("\"", "\"\"")}\"";
     }
 
     private async Task<List<object>> LoadUnsignedBatchAsync(
@@ -156,15 +210,6 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
         CancellationToken cancellationToken)
     {
         var genericMethod = CountMissingRowsCoreMethod.MakeGenericMethod(descriptor.EntityType);
-        var task = (Task<int>)genericMethod.Invoke(this, [cancellationToken])!;
-        return await task;
-    }
-
-    private async Task<int> CountRowsWithAnyIntegrityMetadataAsync(
-        IDatabaseIntegrityDescriptor descriptor,
-        CancellationToken cancellationToken)
-    {
-        var genericMethod = CountRowsWithAnyIntegrityMetadataCoreMethod.MakeGenericMethod(descriptor.EntityType);
         var task = (Task<int>)genericMethod.Invoke(this, [cancellationToken])!;
         return await task;
     }
@@ -214,18 +259,7 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
                 cancellationToken);
     }
 
-    private Task<int> CountRowsWithAnyIntegrityMetadataCoreAsync<TEntity>(
-        CancellationToken cancellationToken)
-        where TEntity : class
-    {
-        return _dbContext.Set<TEntity>()
-            .CountAsync(x => EF.Property<byte[]?>(x, DatabaseIntegrityColumns.MacProperty) != null
-                || EF.Property<int?>(x, DatabaseIntegrityColumns.VersionProperty) != null,
-                cancellationToken);
-    }
-
     private readonly record struct BridgeState(
         int MissingRows,
-        int StaleRows,
-        int RowsWithAnyIntegrityMetadata);
+        int StaleRows);
 }
