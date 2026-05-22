@@ -99,6 +99,9 @@ namespace Cotton.Benchmark.Reporting
             return value switch
             {
                 TimeSpan ts => FormatDuration(ts),
+                double number => number.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
+                float number => number.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
+                decimal number => number.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
                 _ => TruncateString(value.ToString() ?? "", ValueWidth)
             };
         }

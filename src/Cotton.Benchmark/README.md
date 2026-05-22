@@ -60,7 +60,20 @@ dotnet run --project Cotton.Benchmark --configuration Release
 ### Command Line Options
 ```bash
 dotnet run --project Cotton.Benchmark -- --help
+dotnet run --project Cotton.Benchmark -- --mode machine --profile quick
+dotnet run --project Cotton.Benchmark -- --mode machine --profile standard --update-baseline
+dotnet run --project Cotton.Benchmark -- --mode machine --profile standard --compare
 ```
+
+### Regression Baselines
+
+Reviewed baselines live under `performance/baselines`. Raw run output is written to `performance/results` and ignored by git. Baselines are scoped by hardware key, benchmark mode, and profile so local machines can track their own history without pretending GitHub runner timings are stable.
+
+Modes:
+
+- `machine` runs portable benchmarks without PostgreSQL.
+- `development` is the local Cotton regression suite. It currently starts with filesystem and storage-pipeline scenarios; PostgreSQL-backed flows belong there next.
+
 
 ## Default Configuration
 

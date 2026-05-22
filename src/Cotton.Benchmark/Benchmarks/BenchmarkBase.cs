@@ -74,16 +74,47 @@ namespace Cotton.Benchmark.Benchmarks
             var minThroughput = metrics.Min(m => m.MegabytesPerSecond);
             var maxThroughput = metrics.Max(m => m.MegabytesPerSecond);
             var avgDuration = TimeSpan.FromMilliseconds(metrics.Average(m => m.Duration.TotalMilliseconds));
+            var durationsMs = metrics
+                .Select(m => m.Duration.TotalMilliseconds)
+                .OrderBy(x => x)
+                .ToArray();
 
             return new Dictionary<string, object>
             {
-                ["AvgThroughput"] = $"{avgThroughput:F2} MB/s",
-                ["MinThroughput"] = $"{minThroughput:F2} MB/s",
-                ["MaxThroughput"] = $"{maxThroughput:F2} MB/s",
-                ["AvgDuration"] = avgDuration,
+                ["AvgThroughputMBps"] = avgThroughput,
+                ["MinThroughputMBps"] = minThroughput,
+                ["MaxThroughputMBps"] = maxThroughput,
+                ["AvgDurationMs"] = avgDuration.TotalMilliseconds,
+                ["P50DurationMs"] = Percentile(durationsMs, 0.50),
+                ["P95DurationMs"] = Percentile(durationsMs, 0.95),
                 ["Iterations"] = metrics.Count,
+                ["DataSizeBytes"] = _configuration.DataSizeBytes,
                 ["DataSize"] = FormatBytes(_configuration.DataSizeBytes)
             };
+        }
+
+        private static double Percentile(IReadOnlyList<double> sortedValues, double percentile)
+        {
+            if (sortedValues.Count == 0)
+            {
+                return 0;
+            }
+
+            if (sortedValues.Count == 1)
+            {
+                return sortedValues[0];
+            }
+
+            double index = (sortedValues.Count - 1) * percentile;
+            int lowerIndex = (int)Math.Floor(index);
+            int upperIndex = (int)Math.Ceiling(index);
+            if (lowerIndex == upperIndex)
+            {
+                return sortedValues[lowerIndex];
+            }
+
+            double weight = index - lowerIndex;
+            return sortedValues[lowerIndex] * (1 - weight) + sortedValues[upperIndex] * weight;
         }
 
         /// <summary>

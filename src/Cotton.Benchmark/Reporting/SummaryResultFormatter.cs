@@ -20,7 +20,7 @@ namespace Cotton.Benchmark.Reporting
             {
                 sb.Append($"[?] {result.BenchmarkName,-40} ");
 
-                if (result.Metrics.TryGetValue("AvgThroughput", out var throughput))
+                if (result.Metrics.TryGetValue("AvgThroughputMBps", out var throughput))
                 {
                     sb.Append($"{throughput,15}");
                 }
