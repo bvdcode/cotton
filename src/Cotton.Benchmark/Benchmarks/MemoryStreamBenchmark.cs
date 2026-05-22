@@ -17,7 +17,7 @@ namespace Cotton.Benchmark.Benchmarks
         public override string Name => "Memory Stream Operations";
 
         /// <inheritdoc/>
-        public override string Description => "Tests memory allocation and stream copy performance";
+        public override string Description => "Measures memory allocation and stream copy throughput";
 
         /// <inheritdoc/>
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)

@@ -11,7 +11,7 @@ using System.Security.Cryptography;
 namespace Cotton.Benchmark.Benchmarks
 {
     /// <summary>
-    /// Benchmark for encryption performance using REAL CryptoProcessor from Cotton.Storage.
+    /// Benchmark for Cotton.Storage AES-GCM encryption throughput.
     /// </summary>
     public sealed class EncryptionBenchmark : BenchmarkBase, IDisposable
     {
@@ -26,7 +26,7 @@ namespace Cotton.Benchmark.Benchmarks
             // Use mixed data (more realistic than pure random)
             _testData = TestDataGenerator.GenerateMixedData(configuration.DataSizeBytes);
 
-            // Create REAL AesGcmStreamCipher with proper configuration
+            // Create AesGcmStreamCipher with proper configuration
             var key = new byte[configuration.EncryptionKeySize];
             RandomNumberGenerator.Fill(key);
             _cipher = new AesGcmStreamCipher(
@@ -34,15 +34,15 @@ namespace Cotton.Benchmark.Benchmarks
                 keyId: 1,
                 threads: configuration.EncryptionThreads);
 
-            // Create REAL CryptoProcessor from Cotton.Storage
+            // Create CryptoProcessor from Cotton.Storage
             _processor = new CryptoProcessor(_cipher);
         }
 
         /// <inheritdoc/>
-        public override string Name => "Encryption (Real AES-GCM Processor)";
+        public override string Name => "AES-GCM Encryption (Cotton processor)";
 
         /// <inheritdoc/>
-        public override string Description => $"Tests REAL Cotton.Storage.Processors.CryptoProcessor with {_configuration.EncryptionThreads} threads";
+        public override string Description => $"Measures Cotton.Storage AES-GCM throughput with {_configuration.EncryptionThreads} threads";
 
         /// <inheritdoc/>
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)

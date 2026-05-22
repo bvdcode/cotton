@@ -232,7 +232,7 @@ namespace Cotton.Benchmark
             Console.WriteLine("  --compare               Compare with the committed baseline for this hardware key");
             Console.WriteLine("  --update-baseline       Save this run as the reviewed baseline for this hardware key");
             Console.WriteLine("  --baseline-dir <path>   Baseline directory; default performance/baselines");
-            Console.WriteLine("  --results-dir <path>    Raw result directory; default performance/results");
+            Console.WriteLine("  --results-dir <path>    Unreviewed result directory; default performance/results");
             Console.WriteLine();
             Console.WriteLine("Modes:");
             Console.WriteLine("  machine      Portable benchmarks without PostgreSQL; useful for comparing hardware.");

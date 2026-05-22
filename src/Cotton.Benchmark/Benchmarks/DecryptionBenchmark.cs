@@ -11,7 +11,7 @@ using System.Security.Cryptography;
 namespace Cotton.Benchmark.Benchmarks
 {
     /// <summary>
-    /// Benchmark for decryption performance using REAL CryptoProcessor from Cotton.Storage.
+    /// Benchmark for Cotton.Storage AES-GCM decryption throughput.
     /// </summary>
     public sealed class DecryptionBenchmark : BenchmarkBase, IDisposable
     {
@@ -28,7 +28,7 @@ namespace Cotton.Benchmark.Benchmarks
             var testData = TestDataGenerator.GenerateMixedData(configuration.DataSizeBytes);
             _originalSize = testData.Length;
 
-            // Create REAL AesGcmStreamCipher
+            // Create AesGcmStreamCipher
             var key = new byte[configuration.EncryptionKeySize];
             RandomNumberGenerator.Fill(key);
             _cipher = new AesGcmStreamCipher(
@@ -36,10 +36,10 @@ namespace Cotton.Benchmark.Benchmarks
                 keyId: 1,
                 threads: configuration.EncryptionThreads);
 
-            // Create REAL CryptoProcessor
+            // Create CryptoProcessor
             _processor = new CryptoProcessor(_cipher);
 
-            // Pre-encrypt data using REAL processor
+            // Pre-encrypt data using processor
             using var inputStream = new MemoryStream(testData);
             var encryptedStream = _processor.WriteAsync("test-uid", inputStream).Result;
             using var outputStream = new MemoryStream();
@@ -48,10 +48,10 @@ namespace Cotton.Benchmark.Benchmarks
         }
 
         /// <inheritdoc/>
-        public override string Name => "Decryption (Real AES-GCM Processor)";
+        public override string Name => "AES-GCM Decryption (Cotton processor)";
 
         /// <inheritdoc/>
-        public override string Description => $"Tests REAL Cotton.Storage.Processors.CryptoProcessor with {_configuration.EncryptionThreads} threads";
+        public override string Description => $"Measures Cotton.Storage AES-GCM throughput with {_configuration.EncryptionThreads} threads";
 
         /// <inheritdoc/>
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)

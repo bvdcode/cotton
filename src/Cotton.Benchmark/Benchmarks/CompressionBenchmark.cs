@@ -9,7 +9,7 @@ using System.Diagnostics;
 namespace Cotton.Benchmark.Benchmarks
 {
     /// <summary>
-    /// Benchmark for compression performance using REAL CompressionProcessor from Cotton.Storage.
+    /// Benchmark for Cotton.Storage compression throughput.
     /// </summary>
     public sealed class CompressionBenchmark(BenchmarkConfiguration configuration) : BenchmarkBase(configuration)
     {
@@ -17,10 +17,10 @@ namespace Cotton.Benchmark.Benchmarks
         private readonly CompressionProcessor _processor = new();
 
         /// <inheritdoc/>
-        public override string Name => "Compression (Real Zstd Processor)";
+        public override string Name => "Zstd Compression (Cotton processor)";
 
         /// <inheritdoc/>
-        public override string Description => $"Tests REAL Cotton.Storage.Processors.CompressionProcessor with compressible text data";
+        public override string Description => $"Measures Cotton.Storage compression throughput on deterministic compressible text";
 
         /// <inheritdoc/>
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)

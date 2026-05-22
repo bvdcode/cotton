@@ -9,7 +9,7 @@ using System.Diagnostics;
 namespace Cotton.Benchmark.Benchmarks
 {
     /// <summary>
-    /// Benchmark for decompression performance using REAL CompressionProcessor from Cotton.Storage.
+    /// Benchmark for Cotton.Storage decompression throughput.
     /// </summary>
     public sealed class DecompressionBenchmark : BenchmarkBase
     {
@@ -21,10 +21,10 @@ namespace Cotton.Benchmark.Benchmarks
         public DecompressionBenchmark(BenchmarkConfiguration configuration)
             : base(configuration)
         {
-            // Use REAL CompressionProcessor
+            // Use CompressionProcessor
             _processor = new CompressionProcessor();
 
-            // Pre-compress REAL compressible data
+            // Pre-compress compressible data
             var testData = TestDataGenerator.GenerateCompressibleText(configuration.DataSizeBytes);
             _originalSize = testData.Length;
 
@@ -36,10 +36,10 @@ namespace Cotton.Benchmark.Benchmarks
         }
 
         /// <inheritdoc/>
-        public override string Name => "Decompression (Real Zstd Processor)";
+        public override string Name => "Zstd Decompression (Cotton processor)";
 
         /// <inheritdoc/>
-        public override string Description => "Tests REAL Cotton.Storage.Processors.CompressionProcessor decompression";
+        public override string Description => "Measures Cotton.Storage decompression throughput";
 
         /// <inheritdoc/>
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)

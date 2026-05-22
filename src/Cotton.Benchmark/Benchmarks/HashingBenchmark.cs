@@ -18,7 +18,7 @@ namespace Cotton.Benchmark.Benchmarks
         public override string Name => "Hashing (SHA-256)";
 
         /// <inheritdoc/>
-        public override string Description => "Tests SHA-256 hashing performance for content addressing";
+        public override string Description => "Measures SHA-256 hashing throughput for content addressing";
 
         /// <inheritdoc/>
         protected override Task ExecuteIterationAsync(CancellationToken cancellationToken)

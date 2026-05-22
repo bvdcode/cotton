@@ -14,7 +14,7 @@ using System.Security.Cryptography;
 namespace Cotton.Benchmark.Benchmarks
 {
     /// <summary>
-    /// Benchmark for REAL FileStoragePipeline with full processing chain.
+    /// Benchmark for the storage pipeline processing chain.
     /// </summary>
     public sealed class PipelineBenchmark : BenchmarkBase, IDisposable
     {
@@ -30,7 +30,7 @@ namespace Cotton.Benchmark.Benchmarks
             // Use compressible JSON data (realistic)
             _testData = TestDataGenerator.GenerateJsonData(configuration.DataSizeBytes);
 
-            // Create REAL AesGcmStreamCipher
+            // Create AesGcmStreamCipher
             var key = new byte[configuration.EncryptionKeySize];
             RandomNumberGenerator.Fill(key);
             _cipher = new AesGcmStreamCipher(
@@ -38,7 +38,7 @@ namespace Cotton.Benchmark.Benchmarks
                 keyId: 1,
                 threads: configuration.EncryptionThreads);
 
-            // Create REAL processors from Cotton.Storage
+            // Create processors from Cotton.Storage
             var cryptoProcessor = new CryptoProcessor(_cipher);
             var compressionProcessor = new CompressionProcessor();
 
@@ -46,7 +46,7 @@ namespace Cotton.Benchmark.Benchmarks
             _backend = new InMemoryBackend();
             var backendProvider = new SimpleBackendProvider(_backend);
 
-            // Create REAL FileStoragePipeline from Cotton.Storage
+            // Create FileStoragePipeline from Cotton.Storage
             _pipeline = new FileStoragePipeline(
                 NullLogger<FileStoragePipeline>.Instance,
                 backendProvider,
@@ -54,10 +54,10 @@ namespace Cotton.Benchmark.Benchmarks
         }
 
         /// <inheritdoc/>
-        public override string Name => "Full Pipeline (Real FileStoragePipeline)";
+        public override string Name => "Storage Pipeline (Compression + Encryption)";
 
         /// <inheritdoc/>
-        public override string Description => "Tests REAL Cotton.Storage.Pipelines.FileStoragePipeline with Compression + Encryption";
+        public override string Description => "Measures the storage pipeline with compression and encryption enabled";
 
         /// <inheritdoc/>
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)

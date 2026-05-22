@@ -9,7 +9,7 @@ using ZstdSharp;
 namespace Cotton.Benchmark.Benchmarks
 {
     /// <summary>
-    /// Raw ZstdSharp benchmark (independent from Cotton.Storage) that tests multiple compression levels.
+    /// Direct ZstdSharp compression sweep across multiple compression levels.
     /// </summary>
     public sealed class MultiSizeCompressionBenchmark(BenchmarkConfiguration configuration) : BenchmarkBase(configuration)
     {
@@ -17,10 +17,10 @@ namespace Cotton.Benchmark.Benchmarks
         private readonly int[] _levels = [1, 2, 3, 4, 5];
 
         /// <inheritdoc/>
-        public override string Name => "ZstdSharp (Raw) Levels 1-5";
+        public override string Name => "ZstdSharp Level Sweep 1-5";
 
         /// <inheritdoc/>
-        public override string Description => "Tests raw ZstdSharp compression at levels 1..5 (not Cotton.Storage processor)";
+        public override string Description => "Measures direct ZstdSharp compression throughput across levels 1..5";
 
         /// <inheritdoc/>
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)

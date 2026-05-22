@@ -10,7 +10,7 @@ using System.Diagnostics;
 namespace Cotton.Benchmark.Benchmarks
 {
     /// <summary>
-    /// Benchmark for REAL FileSystemStorageBackend testing actual disk I/O performance.
+    /// Benchmark for filesystem backend disk I/O throughput.
     /// </summary>
     public sealed class FileSystemBenchmark(BenchmarkConfiguration configuration) : BenchmarkBase(configuration)
     {
@@ -20,10 +20,10 @@ namespace Cotton.Benchmark.Benchmarks
         private int _uidCounter = 0;
 
         /// <inheritdoc/>
-        public override string Name => "FileSystem I/O (Real Backend)";
+        public override string Name => "Filesystem Backend I/O";
 
         /// <inheritdoc/>
-        public override string Description => "Tests REAL Cotton.Storage.Backends.FileSystemStorageBackend disk read/write performance";
+        public override string Description => "Measures filesystem backend write/read/delete throughput";
 
         /// <inheritdoc/>
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)
