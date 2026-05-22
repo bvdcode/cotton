@@ -32,6 +32,8 @@ public sealed class DatabaseIntegrityDescriptorRegistry : IDatabaseIntegrityDesc
             return true;
         }
 
+        // EF can hand us derived proxy/runtime types. Resolve them back to the descriptor for the mapped base entity
+        // instead of forcing every caller to normalize CLR types first.
         foreach ((Type descriptorType, IDatabaseIntegrityDescriptor candidate) in _descriptors)
         {
             if (descriptorType.IsAssignableFrom(entityType))

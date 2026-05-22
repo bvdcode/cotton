@@ -610,7 +610,7 @@ namespace Cotton.Server.Providers
         }
 
         /// <summary>
-        /// Sets property async<t property>.
+        /// Updates a single server setting property.
         /// </summary>
         public async Task SetPropertyAsync<TProperty>(Expression<Func<CottonServerSettings, TProperty>> selector, TProperty value, CancellationToken cancellationToken = default)
         {
@@ -618,7 +618,7 @@ namespace Cotton.Server.Providers
         }
 
         /// <summary>
-        /// Sets property async<t property>.
+        /// Updates a single server setting property.
         /// </summary>
         public async Task SetPropertyAsync<TProperty>(
             Expression<Func<CottonServerSettings, TProperty>> selector,

@@ -12,10 +12,17 @@ namespace Cotton.Server.Services.DatabaseIntegrity;
 /// <summary>
 /// Builds the security check-up snapshot for database integrity coverage and rollout state.
 /// </summary>
+/// <remarks>
+/// The diagnostics path intentionally counts metadata state instead of recomputing every row MAC. Large folders and
+/// administrative screens can contain tens of thousands of rows; integrity verification stays on security-sensitive
+/// read boundaries where the application is about to trust a protected row.
+/// </remarks>
 public sealed class DatabaseIntegrityDiagnosticsService(
     CottonDbContext _dbContext,
     IDatabaseIntegrityDescriptorRegistry _descriptors)
 {
+    // Descriptors are discovered at runtime, while EF's Set<TEntity>() API is generic. Reflection is contained in this
+    // adapter so descriptors can remain simple policy objects without knowing about DbSet plumbing.
     private static readonly MethodInfo CountUnsignedRowsCoreMethod = typeof(DatabaseIntegrityDiagnosticsService)
         .GetMethod(
             nameof(CountUnsignedRowsCoreAsync),
@@ -46,6 +53,8 @@ public sealed class DatabaseIntegrityDiagnosticsService(
         IDatabaseIntegrityDescriptor descriptor,
         CancellationToken cancellationToken)
     {
+        // Keep this query on the database side: we only need counts for the check-up score, not entity materialization
+        // or cryptographic verification.
         var genericMethod = CountUnsignedRowsCoreMethod.MakeGenericMethod(descriptor.EntityType);
         var task = (Task<int>)genericMethod.Invoke(this, [descriptor, cancellationToken])!;
         return await task;

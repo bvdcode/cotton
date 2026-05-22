@@ -3,6 +3,8 @@
 
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
+// Field tags are part of the signed binary format. Append new values only; changing existing numeric values invalidates
+// every stored row MAC for the current format version.
 internal enum DatabaseIntegrityFieldType : byte
 {
     String = 1,

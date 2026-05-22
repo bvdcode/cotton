@@ -4,14 +4,16 @@
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
 /// <summary>
-/// Signs and verifies protected entity payloads with the database-integrity HMAC key.
+/// Computes and verifies row MACs using descriptor-produced canonical payloads.
 /// </summary>
 public interface IDatabaseIntegrityProtector
 {
-    /// <summary>Computes the MAC for one entity using its descriptor.</summary>
+    /// <summary>Signs a protected entity with the current master-key-derived integrity key.</summary>
     byte[] Sign(object entity, IDatabaseIntegrityDescriptor descriptor);
-    /// <summary>Compares the expected row MAC with a freshly computed MAC in constant time.</summary>
+
+    /// <summary>Verifies a protected entity against a MAC stored in the database row.</summary>
     bool Verify(object entity, IDatabaseIntegrityDescriptor descriptor, byte[] expectedMac);
-    /// <summary>Throws <see cref="DatabaseIntegrityException"/> when a protected row MAC does not verify.</summary>
+
+    /// <summary>Throws when a protected entity does not match its stored MAC.</summary>
     void RequireValid(object entity, IDatabaseIntegrityDescriptor descriptor, byte[] expectedMac);
 }

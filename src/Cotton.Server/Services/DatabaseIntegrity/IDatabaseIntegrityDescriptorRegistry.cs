@@ -4,12 +4,13 @@
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
 /// <summary>
-/// Registry of all entity descriptors protected by database integrity signing.
+/// Resolves database-integrity descriptors by EF entity type.
 /// </summary>
 public interface IDatabaseIntegrityDescriptorRegistry
 {
-    /// <summary>Gets every registered descriptor.</summary>
+    /// <summary>Gets all registered descriptors in deterministic order for diagnostics and bridge backfill.</summary>
     IReadOnlyCollection<IDatabaseIntegrityDescriptor> All { get; }
-    /// <summary>Finds the descriptor for an EF entity CLR type.</summary>
+
+    /// <summary>Attempts to find the descriptor that protects the supplied EF entity type.</summary>
     bool TryGet(Type entityType, out IDatabaseIntegrityDescriptor descriptor);
 }

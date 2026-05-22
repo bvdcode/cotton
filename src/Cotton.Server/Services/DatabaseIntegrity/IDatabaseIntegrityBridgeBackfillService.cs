@@ -4,10 +4,10 @@
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
 /// <summary>
-/// Signs existing protected rows during the first deployment that introduces integrity metadata.
+/// Performs the one-release bridge that signs pre-existing rows during the first integrity rollout.
 /// </summary>
 public interface IDatabaseIntegrityBridgeBackfillService
 {
-    /// <summary>Backfills rows that predate integrity metadata and returns the number of signed rows.</summary>
+    /// <summary>Signs unsigned phase-one rows only when the database is still in a clean pre-integrity state.</summary>
     Task<int> BackfillUnsignedPhaseOneRowsAsync(CancellationToken cancellationToken);
 }

@@ -4,10 +4,10 @@
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
 /// <summary>
-/// Reports rejected integrity checks to administrators or a startup-safe placeholder.
+/// Reports database-integrity failures after a security-sensitive read rejects a row.
 /// </summary>
 public interface IDatabaseIntegrityFailureReporter
 {
-    /// <summary>Publishes one integrity failure event.</summary>
+    /// <summary>Queues or records a detected integrity failure for administrator visibility.</summary>
     void Report(DatabaseIntegrityFailure failure);
 }

@@ -8,6 +8,10 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 /// <summary>
 /// Describes public share-token rows protected by database integrity signing.
 /// </summary>
+/// <remarks>
+/// The MAC prevents a database-only edit from retargeting a public link, extending its lifetime, or changing the user who
+/// created the share.
+/// </remarks>
 public sealed class NodeShareTokenIntegrityDescriptor : DatabaseIntegrityDescriptor<NodeShareToken>
 {
     /// <inheritdoc />

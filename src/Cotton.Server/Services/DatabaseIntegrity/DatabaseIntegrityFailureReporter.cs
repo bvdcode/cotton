@@ -15,6 +15,11 @@ namespace Cotton.Server.Services.DatabaseIntegrity;
 /// <summary>
 /// Sends administrator notifications when Cotton rejects a protected database row.
 /// </summary>
+/// <remarks>
+/// Reporting must never become a second failure mode for authentication or token reads, so failures are pushed through a
+/// bounded in-memory queue and deduplicated. If the queue is full, the protected operation still fails and the drop is
+/// logged loudly for operators.
+/// </remarks>
 public sealed class DatabaseIntegrityFailureReporter(
     IServiceScopeFactory _scopeFactory,
     ILogger<DatabaseIntegrityFailureReporter> _logger) : BackgroundService, IDatabaseIntegrityFailureReporter
@@ -84,6 +89,8 @@ public sealed class DatabaseIntegrityFailureReporter(
         DatabaseIntegrityFailure failure,
         CancellationToken cancellationToken)
     {
+        // Notifications are rendered from template metadata on the client when translations are available. The plain
+        // strings remain as a safe display value for clients that do not yet know the template.
         using IServiceScope scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
         var notifications = scope.ServiceProvider.GetRequiredService<INotificationsProvider>();

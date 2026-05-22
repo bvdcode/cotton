@@ -8,6 +8,10 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 /// <summary>
 /// Describes one-time download-token rows protected by database integrity signing.
 /// </summary>
+/// <remarks>
+/// The MAC binds the token to its target file, creator, expiry, and consume-on-use behavior. Display filename metadata is
+/// excluded because changing it cannot grant access to a different file.
+/// </remarks>
 public sealed class DownloadTokenIntegrityDescriptor : DatabaseIntegrityDescriptor<DownloadToken>
 {
     /// <inheritdoc />

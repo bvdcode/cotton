@@ -12,7 +12,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity;
 /// One-release bridge that signs protected rows created before integrity metadata existed.
 /// </summary>
 /// <remarks>
-/// This is not a generic fallback. It only runs when protected tables have no integrity metadata at all, which is the
+/// This is not a general recovery path. It only runs when protected tables have no integrity metadata at all, which is the
 /// expected state for the first integrity rollout. Once any protected row has metadata, missing metadata on another
 /// protected row is treated as suspicious and the bridge refuses to bless it.
 /// </remarks>
@@ -71,7 +71,7 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
         }
 
         // Mixed signed/unsigned state after rollout can mean someone stripped MAC columns from selected rows.
-        // Refusing here is the difference between a migration bridge and a tamper-forgiving fallback.
+        // Refusing here is the difference between a migration bridge and a tamper-forgiving recovery path.
         if (state.MissingRows > 0 && state.RowsWithAnyIntegrityMetadata > 0)
         {
             throw new InvalidOperationException(
@@ -92,7 +92,7 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
             total += count;
             _logger.LogWarning(
                 "Database integrity bridge signed {Count} existing {EntityName} rows. " +
-                "This compatibility bridge is temporary and must be removed after the required upgrade window.",
+                "This migration bridge is temporary and must be removed after the required upgrade window.",
                 count,
                 descriptor.EntityName);
         }

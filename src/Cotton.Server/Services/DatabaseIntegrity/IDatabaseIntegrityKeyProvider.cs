@@ -6,10 +6,10 @@ using System.Security.Cryptography;
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
 /// <summary>
-/// Provides disposable HMAC instances keyed for database row integrity signatures.
+/// Creates HMAC instances keyed by a subkey derived from the Cotton master key.
 /// </summary>
 public interface IDatabaseIntegrityKeyProvider
 {
-    /// <summary>Creates a new HMAC instance. Callers own the returned disposable object.</summary>
+    /// <summary>Creates a new disposable HMAC instance for one signing or verification operation.</summary>
     HMACSHA256 CreateHmac();
 }

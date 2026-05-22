@@ -44,6 +44,8 @@ public sealed class DatabaseIntegrityVerifier(
                 $"Database integrity verification requires a tracked {descriptor.EntityName} entity.");
         }
 
+        // Integrity metadata is mapped as EF shadow properties. The verifier therefore requires the tracked entry
+        // instead of accepting detached DTO-like objects that no longer carry the database MAC/version.
         byte[]? mac = (byte[]?)entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue;
         int? version = (int?)entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue;
         if (mac is null || version != descriptor.SchemaVersion)

@@ -4,11 +4,11 @@
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
 /// <summary>
-/// Exception thrown when a protected database row fails integrity verification.
+/// Exception thrown when a protected database row does not match its integrity metadata.
 /// </summary>
 public sealed class DatabaseIntegrityException : Exception
 {
-    /// <summary>Initializes a new exception for the rejected protected row.</summary>
+    /// <summary>Initializes a failure for the protected entity and row key that failed verification.</summary>
     public DatabaseIntegrityException(string entityName, string entityKey)
         : base($"Database integrity verification failed for {entityName} '{entityKey}'.")
     {
@@ -16,8 +16,9 @@ public sealed class DatabaseIntegrityException : Exception
         EntityKey = entityKey;
     }
 
-    /// <summary>Gets the protected entity group that failed verification.</summary>
+    /// <summary>Gets the stable descriptor name for the protected table.</summary>
     public string EntityName { get; }
-    /// <summary>Gets the row diagnostics key that failed verification.</summary>
+
+    /// <summary>Gets the stable row key that failed verification.</summary>
     public string EntityKey { get; }
 }

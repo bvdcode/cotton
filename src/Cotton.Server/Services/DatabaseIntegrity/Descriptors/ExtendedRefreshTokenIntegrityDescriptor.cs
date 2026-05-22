@@ -8,6 +8,10 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 /// <summary>
 /// Describes refresh-token session rows protected by database integrity signing.
 /// </summary>
+/// <remarks>
+/// A database-only attacker must not be able to move a session to another user, restore a revoked session, or flip the
+/// authentication type/trust flag without knowing the integrity key.
+/// </remarks>
 public sealed class ExtendedRefreshTokenIntegrityDescriptor : DatabaseIntegrityDescriptor<ExtendedRefreshToken>
 {
     /// <inheritdoc />
