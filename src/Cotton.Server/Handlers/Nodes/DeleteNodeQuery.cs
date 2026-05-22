@@ -146,13 +146,16 @@ namespace Cotton.Server.Handlers.Nodes
                 .Where(t => t.CreatedByUserId == command.UserId && nodeIds.Contains(t.NodeFile.NodeId))
                 .ExecuteDeleteAsync(ct);
 
-            long removedBytes = await _dbContext.NodeFiles
-                .Where(x => x.OwnerId == command.UserId && nodeIds.Contains(x.NodeId))
-                .SumAsync(x => (long?)x.FileManifest.SizeBytes, ct) ?? 0;
-
             var nodeFiles = await _dbContext.NodeFiles
+                .Include(x => x.FileManifest)
                 .Where(x => x.OwnerId == command.UserId && nodeIds.Contains(x.NodeId))
                 .ToListAsync(ct);
+            Guid[] nodeFileIds = [.. nodeFiles.Select(x => x.Id)];
+            long removedVersionBytes = await _versions.DeleteLineageVersionsForCurrentFilesAsync(
+                command.UserId,
+                nodeFileIds,
+                ct);
+            long removedBytes = nodeFiles.Sum(x => x.FileManifest.SizeBytes) + removedVersionBytes;
             _dbContext.NodeFiles.RemoveRange(nodeFiles);
 
             var nodesToDelete = await _dbContext.Nodes

@@ -48,6 +48,8 @@ public sealed class DatabaseIntegrityVerifier(
         // instead of accepting detached DTO-like objects that no longer carry the database MAC/version.
         byte[]? mac = (byte[]?)entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue;
         int? version = (int?)entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue;
+        // Existing databases enter this release without row MACs. The startup bridge backfills them before
+        // normal traffic, but this read-side allowance keeps older rows from bricking the transition window.
         if (mac is null || version is null)
         {
             _logger.LogDebug(

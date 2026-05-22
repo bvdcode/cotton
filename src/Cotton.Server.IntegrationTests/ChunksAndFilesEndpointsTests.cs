@@ -736,6 +736,44 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         });
     }
 
+    [Test]
+    public async Task Folder_Permanent_Delete_Removes_File_Version_Lineages()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+        var folder = await CreateFolderAsync(root!.Id, "versioned-folder");
+        var file = await UploadTextFileAsync(folder, "versioned-in-folder.txt", "one");
+        file = await UpdateTextFileAsync(file, folder, "two");
+
+        var versions = await GetVersionsAsync(file.Id);
+        Assert.That(versions, Has.Count.EqualTo(2));
+
+        Guid[] versionWrapperNodeIds = await DbContext.NodeFiles
+            .AsNoTracking()
+            .Where(x => x.OriginalNodeFileId == file.Id && x.Id != file.Id)
+            .Select(x => x.NodeId)
+            .ToArrayAsync();
+        Assert.That(versionWrapperNodeIds, Is.Not.Empty);
+
+        var delete = await _client.DeleteAsync($"/api/v1/layouts/nodes/{folder.Id}?skipTrash=true");
+        delete.EnsureSuccessStatusCode();
+
+        DbContext.ChangeTracker.Clear();
+        bool lineageExists = await DbContext.NodeFiles
+            .AnyAsync(x => x.Id == file.Id || x.OriginalNodeFileId == file.Id);
+        bool wrapperExists = await DbContext.Nodes
+            .AnyAsync(x => versionWrapperNodeIds.Contains(x.Id));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(lineageExists, Is.False);
+            Assert.That(wrapperExists, Is.False);
+        });
+    }
+
     private async Task<HttpResponseMessage> UploadRawChunkAsync(string text)
     {
         var content = Encoding.UTF8.GetBytes(text);

@@ -244,6 +244,40 @@ public sealed class FileVersionService(
     }
 
     /// <summary>
+    /// Deletes historical versions for every current file in a folder subtree.
+    /// </summary>
+    public async Task<long> DeleteLineageVersionsForCurrentFilesAsync(
+        Guid userId,
+        IReadOnlyCollection<Guid> nodeFileIds,
+        CancellationToken ct = default)
+    {
+        if (nodeFileIds.Count == 0)
+        {
+            return 0;
+        }
+
+        Guid[] lineageIds = await _dbContext.NodeFiles
+            .AsNoTracking()
+            .Where(x => x.OwnerId == userId && nodeFileIds.Contains(x.Id))
+            .Select(x => x.OriginalNodeFileId == Guid.Empty ? x.Id : x.OriginalNodeFileId)
+            .Distinct()
+            .ToArrayAsync(ct);
+        if (lineageIds.Length == 0)
+        {
+            return 0;
+        }
+
+        List<NodeFile> historicalVersions = await _dbContext.NodeFiles
+            .Include(x => x.FileManifest)
+            .Where(x => x.OwnerId == userId
+                && lineageIds.Contains(x.OriginalNodeFileId)
+                && x.Id != x.OriginalNodeFileId)
+            .ToListAsync(ct);
+
+        return await _storage.DeleteHistoricalVersionsAsync(userId, historicalVersions, ct);
+    }
+
+    /// <summary>
     /// Checks whether any files inside the selected nodes still have historical versions.
     /// </summary>
     public Task<bool> ContainsHistoricalVersionsAsync(

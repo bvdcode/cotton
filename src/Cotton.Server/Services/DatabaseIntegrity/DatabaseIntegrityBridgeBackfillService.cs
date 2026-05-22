@@ -228,6 +228,9 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
         CancellationToken cancellationToken)
         where TEntity : class
     {
+        // Transitional rollout bridge: existing installations started without integrity metadata.
+        // Startup signs missing rows only; stale non-null schema versions stay hard failures so
+        // Cotton never silently blesses data whose signed payload format is known to have changed.
         List<TEntity> rows = await _dbContext.Set<TEntity>()
             .Where(x => EF.Property<byte[]?>(x, DatabaseIntegrityColumns.MacProperty) == null
                 || EF.Property<int?>(x, DatabaseIntegrityColumns.VersionProperty) != descriptor.SchemaVersion)

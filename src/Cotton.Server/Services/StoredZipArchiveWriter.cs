@@ -308,12 +308,12 @@ public sealed class StoredZipArchiveWriter
             flags |= DataDescriptorFlag;
         }
 
-        int fixedLength = 46;
+        const int fixedLength = 46;
         int extraLength = checked((int)entry.CentralExtraLength);
-        byte[] buffer = ArrayPool<byte>.Shared.Rent(fixedLength + extraLength);
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(fixedLength);
         try
         {
-            Span<byte> header = buffer.AsSpan(0, fixedLength + extraLength);
+            Span<byte> header = buffer.AsSpan(0, fixedLength);
             BinaryPrimitives.WriteUInt32LittleEndian(header[0..4], 0x02014b50);
             BinaryPrimitives.WriteUInt16LittleEndian(header[4..6], versionMadeBy);
             BinaryPrimitives.WriteUInt16LittleEndian(header[6..8], versionNeeded);
@@ -332,11 +332,6 @@ public sealed class StoredZipArchiveWriter
             BinaryPrimitives.WriteUInt32LittleEndian(header[38..42], entry.IsDirectory ? 0x10u : 0u);
             BinaryPrimitives.WriteUInt32LittleEndian(header[42..46], offsetNeedsZip64 ? UInt32Max : checked((uint)entry.LocalHeaderOffset));
 
-            if (extraLength > 0)
-            {
-                WriteZip64CentralExtra(header[46..], entry, sizeNeedsZip64, offsetNeedsZip64);
-            }
-
             await destination.WriteAsync(header.ToArray(), cancellationToken).ConfigureAwait(false);
         }
         finally
@@ -345,6 +340,37 @@ public sealed class StoredZipArchiveWriter
         }
 
         await destination.WriteAsync(entry.PathBytes, cancellationToken).ConfigureAwait(false);
+        if (extraLength > 0)
+        {
+            await WriteZip64CentralExtraAsync(
+                destination,
+                entry,
+                sizeNeedsZip64,
+                offsetNeedsZip64,
+                extraLength,
+                cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task WriteZip64CentralExtraAsync(
+        Stream destination,
+        ZipEntryPlan entry,
+        bool sizeNeedsZip64,
+        bool offsetNeedsZip64,
+        int extraLength,
+        CancellationToken cancellationToken)
+    {
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(extraLength);
+        try
+        {
+            Span<byte> extra = buffer.AsSpan(0, extraLength);
+            WriteZip64CentralExtra(extra, entry, sizeNeedsZip64, offsetNeedsZip64);
+            await destination.WriteAsync(extra.ToArray(), cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
     }
 
     private static void WriteZip64CentralExtra(
