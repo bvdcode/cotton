@@ -20,6 +20,7 @@ namespace Cotton.Server.Jobs
         PerfTracker _perf,
         CottonDbContext _dbContext,
         SettingsProvider _settingsProvider,
+        StoragePipelineProbeService _storagePipelineProbe,
         ILogger<CollectPerformanceJob> _logger) : IJob
     {
         private const string CloudTelemetryUrl = "https://cotton-gateway.splidex.com/api/v1/telemetry";
@@ -44,7 +45,8 @@ namespace Cotton.Server.Jobs
                 return;
             }
 
-            // TODO: Collect metrics and send to monitoring system, if user has opted in to telemetry.
+            StoragePipelineProbeResult? storagePipelineProbe = await TryRunStoragePipelineProbeAsync(context.CancellationToken).ConfigureAwait(false);
+
             TelemetryRequest request = new()
             {
                 InstanceId = settings.InstanceId,
@@ -53,10 +55,24 @@ namespace Cotton.Server.Jobs
                 Users = await _dbContext.Users.CountAsync(),
                 Files = await _dbContext.FileManifests.CountAsync(),
                 Version = AppVersionHelpers.GetAppVersion() ?? "Unknown",
+                StoragePipelineProbe = storagePipelineProbe,
             };
             using var httpClient = new HttpClient();
             await httpClient.PostAsJsonAsync(CloudTelemetryUrl, request);
             _logger.LogInformation("CollectPerformanceJob completed - telemetry data was sent to Cotton Cloud");
+        }
+
+        private async Task<StoragePipelineProbeResult?> TryRunStoragePipelineProbeAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                return await _storagePipelineProbe.RunAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Storage pipeline telemetry probe failed; sending telemetry without storage speed metrics.");
+                return null;
+            }
         }
     }
 }
