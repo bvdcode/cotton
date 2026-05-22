@@ -6,6 +6,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Cotton.Storage.Pipelines
 {
+    /// <summary>
+    /// Default storage pipeline implementation that applies processors around the configured backend.
+    /// </summary>
     public class FileStoragePipeline(
         ILogger<FileStoragePipeline> _logger,
         IStorageBackendProvider _backendProvider,
@@ -13,21 +16,25 @@ namespace Cotton.Storage.Pipelines
     {
         private static readonly SemaphoreSlim _maxParallel = new(initialCount: Environment.ProcessorCount);
 
+        /// <inheritdoc />
         public Task<bool> ExistsAsync(string uid)
         {
             return _backendProvider.GetBackend().ExistsAsync(uid);
         }
 
+        /// <inheritdoc />
         public Task<bool> DeleteAsync(string uid)
         {
             return _backendProvider.GetBackend().DeleteAsync(uid);
         }
 
+        /// <inheritdoc />
         public Task<long> GetSizeAsync(string uid)
         {
             return _backendProvider.GetBackend().GetSizeAsync(uid);
         }
 
+        /// <inheritdoc />
         public async Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
         {
             var backend = _backendProvider.GetBackend();
@@ -48,6 +55,7 @@ namespace Cotton.Storage.Pipelines
             return currentStream;
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(string uid, Stream stream, PipelineContext? context = null)
         {
             await _maxParallel.WaitAsync().ConfigureAwait(false);
@@ -85,6 +93,7 @@ namespace Cotton.Storage.Pipelines
             }
         }
 
+        /// <inheritdoc />
         public IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default)
         {
             return _backendProvider.GetBackend().ListAllKeysAsync(ct);

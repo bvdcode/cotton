@@ -7,16 +7,28 @@ using Microsoft.Extensions.Options;
 
 namespace Cotton.Server.Services
 {
+    /// <summary>
+    /// Configures hls segment cache.
+    /// </summary>
     public sealed class HlsSegmentCacheOptions
     {
+        /// <summary>
+        /// Gets or sets the size limit bytes.
+        /// </summary>
         public long SizeLimitBytes { get; set; } = 512L * 1024 * 1024;
     }
 
+    /// <summary>
+    /// Caches hls segment state.
+    /// </summary>
     public sealed class HlsSegmentCache : IDisposable
     {
         private readonly MemoryCache _cache;
         private readonly long _sizeLimit;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HlsSegmentCache"/> type.
+        /// </summary>
         public HlsSegmentCache(IOptions<HlsSegmentCacheOptions> options)
         {
             ArgumentNullException.ThrowIfNull(options);
@@ -28,11 +40,20 @@ namespace Cotton.Server.Services
             });
         }
 
+        /// <summary>
+        /// Gets the size limit bytes.
+        /// </summary>
         public long SizeLimitBytes => _sizeLimit;
 
+        /// <summary>
+        /// Builds key.
+        /// </summary>
         public static string BuildKey(Guid fileManifestId, string quality, int segmentIndex) =>
             $"{fileManifestId:N}:{quality}:{segmentIndex}";
 
+        /// <summary>
+        /// Attempts to get value.
+        /// </summary>
         public bool TryGet(string key, [NotNullWhen(true)] out byte[]? bytes)
         {
             if (_cache.TryGetValue<byte[]>(key, out var value) && value is { Length: > 0 })
@@ -45,6 +66,9 @@ namespace Cotton.Server.Services
             return false;
         }
 
+        /// <summary>
+        /// Sets value.
+        /// </summary>
         public void Set(string key, byte[] bytes)
         {
             ArgumentException.ThrowIfNullOrEmpty(key);
@@ -61,6 +85,9 @@ namespace Cotton.Server.Services
             });
         }
 
+        /// <summary>
+        /// Releases resources held by this instance.
+        /// </summary>
         public void Dispose() => _cache.Dispose();
     }
 }

@@ -12,6 +12,9 @@ using System.Threading.Channels;
 
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
+/// <summary>
+/// Sends administrator notifications when Cotton rejects a protected database row.
+/// </summary>
 public sealed class DatabaseIntegrityFailureReporter(
     IServiceScopeFactory _scopeFactory,
     ILogger<DatabaseIntegrityFailureReporter> _logger) : BackgroundService, IDatabaseIntegrityFailureReporter
@@ -27,6 +30,7 @@ public sealed class DatabaseIntegrityFailureReporter(
         });
     private readonly ConcurrentDictionary<string, DateTime> _recentFailures = new(StringComparer.Ordinal);
 
+    /// <inheritdoc />
     public void Report(DatabaseIntegrityFailure failure)
     {
         ArgumentNullException.ThrowIfNull(failure);
@@ -52,6 +56,7 @@ public sealed class DatabaseIntegrityFailureReporter(
         }
     }
 
+    /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await foreach (DatabaseIntegrityFailure failure in _queue.Reader.ReadAllAsync(stoppingToken))

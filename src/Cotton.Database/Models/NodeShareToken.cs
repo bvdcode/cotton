@@ -45,9 +45,11 @@ namespace Cotton.Database.Models
         [Column("created_by_user_id")]
         public Guid CreatedByUserId { get; set; }
 
+        /// <summary>Navigation property for the user who created the row.</summary>
         [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual User CreatedByUser { get; set; } = null!;
 
+        /// <summary>Navigation property for the referenced node.</summary>
         [DeleteBehavior(DeleteBehavior.Cascade)]
         public virtual Node Node { get; set; } = null!;
     }

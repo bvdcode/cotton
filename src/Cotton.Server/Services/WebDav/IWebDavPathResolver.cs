@@ -32,9 +32,21 @@ public interface IWebDavPathResolver
 /// </summary>
 public record WebDavResolveResult
 {
+    /// <summary>
+    /// Gets or sets whether the WebDAV resource was found.
+    /// </summary>
     public bool Found { get; init; }
+    /// <summary>
+    /// Indicates whether collection.
+    /// </summary>
     public bool IsCollection { get; init; }
+    /// <summary>
+    /// Gets or sets the node.
+    /// </summary>
     public Node? Node { get; init; }
+    /// <summary>
+    /// Gets or sets the node file.
+    /// </summary>
     public NodeFile? NodeFile { get; init; }
 }
 
@@ -43,7 +55,16 @@ public record WebDavResolveResult
 /// </summary>
 public record WebDavParentResult
 {
+    /// <summary>
+    /// Gets or sets whether the WebDAV resource was found.
+    /// </summary>
     public bool Found { get; init; }
+    /// <summary>
+    /// Gets or sets the resolved WebDAV parent node.
+    /// </summary>
     public Node? ParentNode { get; init; }
+    /// <summary>
+    /// Gets or sets the final WebDAV path segment.
+    /// </summary>
     public string? ResourceName { get; init; }
 }

@@ -8,12 +8,21 @@ using System.Globalization;
 
 namespace Cotton.Server.Services
 {
+    /// <summary>
+    /// Represents video transcoder.
+    /// </summary>
     public sealed class VideoTranscoder(ILogger<VideoTranscoder> logger)
     {
+        /// <summary>
+        /// Defines the segment content type.
+        /// </summary>
         public const string SegmentContentType = "video/mp2t";
 
         private const int PipeBufferSize = 64 * 1024;
 
+        /// <summary>
+        /// Transcodes one HLS segment with ffmpeg.
+        /// </summary>
         public async Task TranscodeSegmentAsync(
             Stream source,
             Stream destination,

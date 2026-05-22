@@ -5,6 +5,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Cotton.Server.Models.Dto
 {
+    /// <summary>
+    /// Represents the login request request payload accepted by the API.
+    /// </summary>
     public class LoginRequest
     {
         /// <summary>

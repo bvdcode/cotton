@@ -10,23 +10,59 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services;
 
+/// <summary>
+/// Defines the event notification service contract used by the server runtime.
+/// </summary>
 public interface IEventNotificationService
 {
+    /// <summary>
+    /// Notifies connected clients that file created occurred.
+    /// </summary>
     Task NotifyFileCreatedAsync(Guid nodeFileId, CancellationToken ct = default);
+    /// <summary>
+    /// Notifies connected clients that file updated occurred.
+    /// </summary>
     Task NotifyFileUpdatedAsync(Guid nodeFileId, CancellationToken ct = default);
+    /// <summary>
+    /// Notifies connected clients that file deleted occurred.
+    /// </summary>
     Task NotifyFileDeletedAsync(Guid userId, Guid nodeFileId, Guid? parentNodeId, CancellationToken ct = default);
+    /// <summary>
+    /// Notifies connected clients that file moved occurred.
+    /// </summary>
     Task NotifyFileMovedAsync(Guid nodeFileId, Guid oldParentId, CancellationToken ct = default);
+    /// <summary>
+    /// Notifies connected clients that file renamed occurred.
+    /// </summary>
     Task NotifyFileRenamedAsync(Guid nodeFileId, CancellationToken ct = default);
+    /// <summary>
+    /// Notifies connected clients that node created occurred.
+    /// </summary>
     Task NotifyNodeCreatedAsync(Guid nodeId, CancellationToken ct = default);
+    /// <summary>
+    /// Notifies connected clients that node deleted occurred.
+    /// </summary>
     Task NotifyNodeDeletedAsync(Guid userId, Guid nodeId, Guid? parentNodeId, CancellationToken ct = default);
+    /// <summary>
+    /// Notifies connected clients that node moved occurred.
+    /// </summary>
     Task NotifyNodeMovedAsync(Guid nodeId, Guid oldParentId, CancellationToken ct = default);
+    /// <summary>
+    /// Notifies connected clients that node renamed occurred.
+    /// </summary>
     Task NotifyNodeRenamedAsync(Guid nodeId, CancellationToken ct = default);
 }
 
+/// <summary>
+/// Coordinates event notification.
+/// </summary>
 public class EventNotificationService(
     IHubContext<EventHub> _hubContext,
     CottonDbContext _dbContext) : IEventNotificationService
 {
+    /// <summary>
+    /// Notifies connected clients that file created occurred.
+    /// </summary>
     public async Task NotifyFileCreatedAsync(Guid nodeFileId, CancellationToken ct = default)
     {
         var nodeFile = await _dbContext.NodeFiles
@@ -41,6 +77,9 @@ public class EventNotificationService(
         }
     }
 
+    /// <summary>
+    /// Notifies connected clients that file updated occurred.
+    /// </summary>
     public async Task NotifyFileUpdatedAsync(Guid nodeFileId, CancellationToken ct = default)
     {
         var nodeFile = await _dbContext.NodeFiles
@@ -55,6 +94,9 @@ public class EventNotificationService(
         }
     }
 
+    /// <summary>
+    /// Notifies connected clients that file deleted occurred.
+    /// </summary>
     public async Task NotifyFileDeletedAsync(
         Guid userId,
         Guid nodeFileId,
@@ -65,6 +107,9 @@ public class EventNotificationService(
         await _hubContext.Clients.User(userId.ToString()).SendAsync("FileDeleted", payload, ct);
     }
 
+    /// <summary>
+    /// Notifies connected clients that file moved occurred.
+    /// </summary>
     public async Task NotifyFileMovedAsync(Guid nodeFileId, Guid oldParentId, CancellationToken ct = default)
     {
         var nodeFile = await _dbContext.NodeFiles
@@ -80,6 +125,9 @@ public class EventNotificationService(
         }
     }
 
+    /// <summary>
+    /// Notifies connected clients that file renamed occurred.
+    /// </summary>
     public async Task NotifyFileRenamedAsync(Guid nodeFileId, CancellationToken ct = default)
     {
         var nodeFile = await _dbContext.NodeFiles
@@ -94,6 +142,9 @@ public class EventNotificationService(
         }
     }
 
+    /// <summary>
+    /// Notifies connected clients that node created occurred.
+    /// </summary>
     public async Task NotifyNodeCreatedAsync(Guid nodeId, CancellationToken ct = default)
     {
         var node = await _dbContext.Nodes
@@ -107,6 +158,9 @@ public class EventNotificationService(
         }
     }
 
+    /// <summary>
+    /// Notifies connected clients that node deleted occurred.
+    /// </summary>
     public async Task NotifyNodeDeletedAsync(
         Guid userId,
         Guid nodeId,
@@ -117,6 +171,9 @@ public class EventNotificationService(
         await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeDeleted", payload, ct);
     }
 
+    /// <summary>
+    /// Notifies connected clients that node moved occurred.
+    /// </summary>
     public async Task NotifyNodeMovedAsync(Guid nodeId, Guid oldParentId, CancellationToken ct = default)
     {
         var node = await _dbContext.Nodes
@@ -131,6 +188,9 @@ public class EventNotificationService(
         }
     }
 
+    /// <summary>
+    /// Notifies connected clients that node renamed occurred.
+    /// </summary>
     public async Task NotifyNodeRenamedAsync(Guid nodeId, CancellationToken ct = default)
     {
         var node = await _dbContext.Nodes

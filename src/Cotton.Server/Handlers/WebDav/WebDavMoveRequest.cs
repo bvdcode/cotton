@@ -32,13 +32,34 @@ public record WebDavMoveResult(
     Guid? MovedNodeId = null,
     Guid? MovedNodeFileId = null);
 
+/// <summary>
+/// Lists the supported web dav move error values.
+/// </summary>
 public enum WebDavMoveError
 {
+    /// <summary>
+    /// Represents the source not found option.
+    /// </summary>
     SourceNotFound,
+    /// <summary>
+    /// Represents the destination parent not found option.
+    /// </summary>
     DestinationParentNotFound,
+    /// <summary>
+    /// Represents the destination exists option.
+    /// </summary>
     DestinationExists,
+    /// <summary>
+    /// Represents the invalid name option.
+    /// </summary>
     InvalidName,
+    /// <summary>
+    /// Represents the cannot move root option.
+    /// </summary>
     CannotMoveRoot,
+    /// <summary>
+    /// Represents the cannot move into descendant option.
+    /// </summary>
     CannotMoveIntoDescendant
 }
 
@@ -53,6 +74,9 @@ public class WebDavMoveRequestHandler(
     ILogger<WebDavMoveRequestHandler> _logger)
     : IRequestHandler<WebDavMoveRequest, WebDavMoveResult>
 {
+    /// <summary>
+    /// Handles the request through the mediator pipeline.
+    /// </summary>
     public async Task<WebDavMoveResult> Handle(WebDavMoveRequest request, CancellationToken ct)
     {
         var preLock = await ResolvePreLockSourceAsync(request, ct);
@@ -175,7 +199,13 @@ public class WebDavMoveRequestHandler(
 
     private sealed record PreLockSourceOutcome(Guid? LayoutId, WebDavMoveResult? Failure)
     {
+        /// <summary>
+        /// Creates a successful operation result.
+        /// </summary>
         public static PreLockSourceOutcome Success(Guid layoutId) => new(layoutId, null);
+        /// <summary>
+        /// Creates a failed operation result.
+        /// </summary>
         public static PreLockSourceOutcome Failed(WebDavMoveResult failure) => new(null, failure);
     }
 
@@ -186,12 +216,18 @@ public class WebDavMoveRequestHandler(
         Guid? OldParentId,
         WebDavMoveResult? Failure)
     {
+        /// <summary>
+        /// Creates a successful operation result.
+        /// </summary>
         public static LockedMoveOutcome Success(
             WebDavResolveResult source,
             WebDavParentResult destinationParent,
             bool created,
             Guid? oldParentId) => new(source, destinationParent, created, oldParentId, null);
 
+        /// <summary>
+        /// Creates a failed operation result.
+        /// </summary>
         public static LockedMoveOutcome Failed(WebDavMoveResult failure) => new(null, null, false, null, failure);
     }
 

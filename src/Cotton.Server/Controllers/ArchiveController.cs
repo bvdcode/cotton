@@ -14,6 +14,9 @@ using Microsoft.Net.Http.Headers;
 
 namespace Cotton.Server.Controllers;
 
+/// <summary>
+/// Exposes HTTP endpoints for archive operations.
+/// </summary>
 [ApiController]
 [Route(Routes.V1.Archives)]
 public sealed class ArchiveController(
@@ -22,6 +25,9 @@ public sealed class ArchiveController(
     StoredZipArchiveWriter _zipWriter,
     IStoragePipeline _storage) : ControllerBase
 {
+    /// <summary>
+    /// Creates download link.
+    /// </summary>
     [Authorize]
     [HttpPost("download-link")]
     public async Task<IActionResult> CreateDownloadLink(
@@ -42,6 +48,9 @@ public sealed class ArchiveController(
         };
     }
 
+    /// <summary>
+    /// Streams a previously prepared archive download by one-time ticket.
+    /// </summary>
     [AllowAnonymous]
     [HttpGet("{token}")]
     public async Task<IActionResult> Download([FromRoute] string token, CancellationToken cancellationToken)

@@ -11,16 +11,21 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Topology
 {
+    /// <summary>
+    /// EF-backed service that creates and retrieves Cotton layout roots.
+    /// </summary>
     public class StorageLayoutService(CottonDbContext _dbContext) : ILayoutService
     {
         private static readonly SemaphoreSlim _layoutSemaphore = new(1, 1);
 
+        /// <inheritdoc />
         public async Task<Node> GetUserTrashRootAsync(Guid ownerId)
         {
             var layout = await GetOrCreateLatestUserLayoutAsync(ownerId);
             return await GetOrCreateRootNodeAsync(layout.Id, ownerId, NodeType.Trash);
         }
 
+        /// <inheritdoc />
         public async Task<Node> GetOrCreateRootNodeAsync(Guid layoutId, Guid ownerId, NodeType nodeType)
         {
             await _layoutSemaphore.WaitAsync();
@@ -56,6 +61,7 @@ namespace Cotton.Topology
             }
         }
 
+        /// <inheritdoc />
         public async Task<Layout> GetOrCreateLatestUserLayoutAsync(Guid ownerId)
         {
             await _layoutSemaphore.WaitAsync();
@@ -84,11 +90,13 @@ namespace Cotton.Topology
             }
         }
 
+        /// <inheritdoc />
         public async Task<Chunk?> FindChunkAsync(byte[] hash)
         {
             return await _dbContext.Chunks.FindAsync(hash);
         }
 
+        /// <inheritdoc />
         public async Task<Node> CreateTrashItemAsync(Guid userId)
         {
             Node trashRoot = await GetUserTrashRootAsync(userId);

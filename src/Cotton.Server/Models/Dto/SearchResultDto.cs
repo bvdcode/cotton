@@ -3,9 +3,18 @@
 
 namespace Cotton.Server.Models.Dto
 {
+    /// <summary>
+    /// Represents the search result API payload.
+    /// </summary>
     public class SearchResultDto
     {
+        /// <summary>
+        /// Gets or sets nodes.
+        /// </summary>
         public IEnumerable<NodeDto> Nodes { get; set; } = [];
+        /// <summary>
+        /// Gets or sets files.
+        /// </summary>
         public IEnumerable<NodeFileManifestDto> Files { get; set; } = [];
 
         /// <summary>

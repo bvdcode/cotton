@@ -8,15 +8,23 @@ using SixLabors.ImageSharp.Processing;
 
 namespace Cotton.Previews
 {
+    /// <summary>
+    /// Generates previews for standard raster image formats.
+    /// </summary>
     public class ImagePreviewGenerator : IPreviewGenerator
     {
+        /// <inheritdoc />
         public int Version => 2;
+        /// <summary>WebP quality used for small image previews.</summary>
         public const int SmallPreviewQuality = 75;
+        /// <summary>WebP quality used for large image previews.</summary>
         public const int LargePreviewQuality = 82;
 
+        /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes =>
             Configuration.Default.ImageFormats.SelectMany(x => x.MimeTypes);
 
+        /// <inheritdoc />
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
         {
             if (stream.CanSeek)

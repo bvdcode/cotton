@@ -7,11 +7,19 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
+/// <summary>
+/// Signs pending EF changes for protected entities immediately before they are saved.
+/// </summary>
+/// <remarks>
+/// The signer lives in the database layer boundary rather than in individual handlers so every normal write path is
+/// covered consistently. Direct SQL changes still fail later at read-time verification.
+/// </remarks>
 public sealed class DatabaseIntegrityChangeSigner : IDatabaseIntegrityChangeSigner
 {
     private readonly IDatabaseIntegrityProtector _protector;
     private readonly IDatabaseIntegrityDescriptorRegistry _descriptors;
 
+    /// <summary>Initializes a new save-time integrity signer.</summary>
     public DatabaseIntegrityChangeSigner(
         IDatabaseIntegrityProtector protector,
         IDatabaseIntegrityDescriptorRegistry descriptors)
@@ -20,6 +28,7 @@ public sealed class DatabaseIntegrityChangeSigner : IDatabaseIntegrityChangeSign
         _descriptors = descriptors;
     }
 
+    /// <inheritdoc />
     public void SignPendingChanges(DbContext dbContext)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
@@ -41,6 +50,8 @@ public sealed class DatabaseIntegrityChangeSigner : IDatabaseIntegrityChangeSign
                 continue;
             }
 
+            // The primary key participates in the signed payload, so signing a temporary EF key would create
+            // a MAC that cannot verify after SaveChanges assigns the real key.
             EnsureStablePrimaryKey(entry, descriptor);
             byte[] mac = _protector.Sign(entry.Entity, descriptor);
             entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue = descriptor.SchemaVersion;

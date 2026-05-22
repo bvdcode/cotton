@@ -3,10 +3,14 @@
 
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
+/// <summary>
+/// Immutable lookup table for database-integrity descriptors.
+/// </summary>
 public sealed class DatabaseIntegrityDescriptorRegistry : IDatabaseIntegrityDescriptorRegistry
 {
     private readonly IReadOnlyDictionary<Type, IDatabaseIntegrityDescriptor> _descriptors;
 
+    /// <summary>Initializes the registry from dependency-injected descriptors.</summary>
     public DatabaseIntegrityDescriptorRegistry(IEnumerable<IDatabaseIntegrityDescriptor> descriptors)
     {
         _descriptors = descriptors.ToDictionary(x => x.EntityType);
@@ -15,8 +19,10 @@ public sealed class DatabaseIntegrityDescriptorRegistry : IDatabaseIntegrityDesc
             .ToArray();
     }
 
+    /// <inheritdoc />
     public IReadOnlyCollection<IDatabaseIntegrityDescriptor> All { get; }
 
+    /// <inheritdoc />
     public bool TryGet(Type entityType, out IDatabaseIntegrityDescriptor descriptor)
     {
         ArgumentNullException.ThrowIfNull(entityType);

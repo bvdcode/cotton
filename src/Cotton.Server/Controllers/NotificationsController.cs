@@ -14,11 +14,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Controllers
 {
+    /// <summary>
+    /// Exposes HTTP endpoints for notifications operations.
+    /// </summary>
     [ApiController]
     public class NotificationsController(
         CottonDbContext _dbContext,
         INotificationsProvider _notifications) : ControllerBase
     {
+        /// <summary>
+        /// Sends a test notification to the current user.
+        /// </summary>
         [Authorize]
         [HttpPost(Routes.V1.Notifications + "/test")]
         public async Task<IActionResult> TestNotification()
@@ -28,6 +34,9 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Gets notifications.
+        /// </summary>
         [Authorize]
         [HttpGet(Routes.V1.Notifications)]
         public async Task<IActionResult> GetNotifications([FromQuery] GridifyQuery query)
@@ -43,6 +52,9 @@ namespace Cotton.Server.Controllers
             return Ok(dto);
         }
 
+        /// <summary>
+        /// Marks every notification for the current user as read.
+        /// </summary>
         [Authorize]
         [HttpPatch(Routes.V1.Notifications + "/mark-all-read")]
         public async Task<IActionResult> MarkAllNotificationsAsRead()
@@ -63,6 +75,9 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Gets unread notifications count.
+        /// </summary>
         [Authorize]
         [HttpGet(Routes.V1.Notifications + "/unread/count")]
         public async Task<IActionResult> GetUnreadNotificationsCount()
@@ -74,6 +89,9 @@ namespace Cotton.Server.Controllers
             return Ok(new { UnreadCount = unreadCount });
         }
 
+        /// <summary>
+        /// Marks one notification for the current user as read.
+        /// </summary>
         [Authorize]
         [HttpPatch(Routes.V1.Notifications + "/{id:guid}/read")]
         public async Task<IActionResult> MarkNotificationAsRead(Guid id)

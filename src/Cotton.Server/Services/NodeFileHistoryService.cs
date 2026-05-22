@@ -8,10 +8,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services;
 
+/// <summary>
+/// Coordinates node file history.
+/// </summary>
 public class NodeFileHistoryService(
     CottonDbContext _dbContext,
     ILayoutService _layouts)
 {
+    /// <summary>
+    /// Saves version and update manifest.
+    /// </summary>
     public async Task<bool> SaveVersionAndUpdateManifestAsync(
         NodeFile nodeFile,
         Guid newFileManifestId,

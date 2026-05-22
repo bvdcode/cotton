@@ -8,11 +8,17 @@ using System.Text.Json;
 
 namespace Cotton.Server.Services
 {
+    /// <summary>
+    /// Represents master key unlock server.
+    /// </summary>
     public static class MasterKeyUnlockServer
     {
         private const string UnlockApiBase = Routes.V1.Base + "/unlock";
         private static readonly TimeSpan FirstUnlockWindow = TimeSpan.FromMinutes(Constants.AdminAutocreateMinutesDelay);
 
+        /// <summary>
+        /// Waits for for unlock.
+        /// </summary>
         public static async Task<CottonEncryptionSettings> WaitForUnlockAsync(string[] args)
         {
             var completion = new TaskCompletionSource<CottonEncryptionSettings>(TaskCreationOptions.RunContinuationsAsynchronously);

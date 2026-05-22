@@ -17,6 +17,7 @@ namespace Cotton.Benchmark.Benchmarks
         private readonly int _originalSize;
         private readonly CompressionProcessor _processor;
 
+        /// <summary>Initializes the benchmark with a fixed measurement configuration.</summary>
         public DecompressionBenchmark(BenchmarkConfiguration configuration)
             : base(configuration)
         {

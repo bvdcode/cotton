@@ -9,6 +9,9 @@ using System.Reflection;
 
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
+/// <summary>
+/// Builds the security check-up snapshot for database integrity coverage and rollout state.
+/// </summary>
 public sealed class DatabaseIntegrityDiagnosticsService(
     CottonDbContext _dbContext,
     IDatabaseIntegrityDescriptorRegistry _descriptors)
@@ -21,6 +24,7 @@ public sealed class DatabaseIntegrityDiagnosticsService(
             nameof(DatabaseIntegrityDiagnosticsService),
             nameof(CountUnsignedRowsCoreAsync));
 
+    /// <summary>Returns counts of protected rows, missing metadata, and unsupported integrity versions.</summary>
     public async Task<DatabaseIntegrityDiagnosticsDto> GetSnapshotAsync(CancellationToken cancellationToken)
     {
         int unsignedRows = 0;

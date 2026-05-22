@@ -14,6 +14,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services;
 
+/// <summary>
+/// Manages file-version lineages and restoration without introducing a separate version table.
+/// </summary>
+/// <remarks>
+/// Historical versions are ordinary <see cref="NodeFile"/> rows linked by <c>OriginalNodeFileId</c>.
+/// That keeps ownership, storage cleanup, quota accounting, and download authorization on the same
+/// domain model as regular files. The first historical row is treated as the immutable original.
+/// </remarks>
 public sealed class FileVersionService(
     CottonDbContext _dbContext,
     NodeFileHistoryService _history,
@@ -24,9 +32,15 @@ public sealed class FileVersionService(
 {
     private const int VersionDownloadTokenLength = 16;
 
+    /// <summary>
+    /// Indicates whether the file row is a historical version rather than the current visible file.
+    /// </summary>
     public static bool IsHistoricalVersion(NodeFile file)
         => file.OriginalNodeFileId != Guid.Empty && file.Id != file.OriginalNodeFileId;
 
+    /// <summary>
+    /// Lists the current file and its historical versions in display order.
+    /// </summary>
     public async Task<IReadOnlyList<FileVersionDto>> ListVersionsAsync(
         Guid userId,
         Guid nodeFileId,
@@ -37,6 +51,9 @@ public sealed class FileVersionService(
         return BuildVersionDtos(current, historicalVersions);
     }
 
+    /// <summary>
+    /// Captures the current manifest as a historical version, then points the visible file at a new manifest.
+    /// </summary>
     public Task<FileVersionCaptureResult> CaptureAndUpdateManifestAsync(
         NodeFile nodeFile,
         Guid newFileManifestId,
@@ -74,6 +91,9 @@ public sealed class FileVersionService(
         return new FileVersionCaptureResult(Captured: true, RemovedBytes: removedBytes);
     }
 
+    /// <summary>
+    /// Restores a historical version by first preserving the current state as the next version.
+    /// </summary>
     public async Task<NodeFileManifestDto> RestoreVersionAsync(
         Guid userId,
         Guid nodeFileId,
@@ -113,6 +133,9 @@ public sealed class FileVersionService(
         return current.Adapt<NodeFileManifestDto>();
     }
 
+    /// <summary>
+    /// Deletes a user-selected historical version while keeping the original version protected.
+    /// </summary>
     public async Task DeleteVersionAsync(
         Guid userId,
         Guid nodeFileId,
@@ -140,6 +163,9 @@ public sealed class FileVersionService(
             nodeFileId);
     }
 
+    /// <summary>
+    /// Deletes a historical version by version identifier regardless of its current file entry.
+    /// </summary>
     public async Task DeleteHistoricalVersionAsync(
         Guid userId,
         Guid versionId,
@@ -165,6 +191,9 @@ public sealed class FileVersionService(
             versionId);
     }
 
+    /// <summary>
+    /// Creates a temporary download link for a historical version.
+    /// </summary>
     public async Task<string> CreateVersionDownloadLinkAsync(
         Guid userId,
         Guid nodeFileId,
@@ -195,6 +224,9 @@ public sealed class FileVersionService(
         return Routes.V1.Files + $"/{version.Id}/download?token={token.Token}";
     }
 
+    /// <summary>
+    /// Deletes all historical versions that belong to a file lineage.
+    /// </summary>
     public async Task<long> DeleteLineageVersionsAsync(
         Guid userId,
         Guid nodeFileId,
@@ -211,6 +243,9 @@ public sealed class FileVersionService(
         return await _storage.DeleteHistoricalVersionsAsync(userId, historicalVersions, ct);
     }
 
+    /// <summary>
+    /// Checks whether any files inside the selected nodes still have historical versions.
+    /// </summary>
     public Task<bool> ContainsHistoricalVersionsAsync(
         Guid userId,
         IReadOnlyCollection<Guid> nodeIds,
@@ -408,6 +443,8 @@ public sealed class FileVersionService(
         };
     }
 
+    // The current file starts a lineage with an empty OriginalNodeFileId. Historical rows always point
+    // back to that first visible file id, so this helper normalizes both cases before querying versions.
     private static Guid GetLineageId(NodeFile file)
         => file.OriginalNodeFileId == Guid.Empty ? file.Id : file.OriginalNodeFileId;
 

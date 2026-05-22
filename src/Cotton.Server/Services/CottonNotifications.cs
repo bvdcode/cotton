@@ -20,6 +20,9 @@ using System.Text;
 
 namespace Cotton.Server.Services
 {
+    /// <summary>
+    /// Represents cotton notifications.
+    /// </summary>
     public class CottonNotifications(
         CottonDbContext _dbContext,
         SettingsProvider _settingsProvider,
@@ -27,6 +30,9 @@ namespace Cotton.Server.Services
         ILogger<CottonNotifications> _logger,
         IHubContext<EventHub> _hubContext) : INotificationsProvider
     {
+        /// <summary>
+        /// Sends email async.
+        /// </summary>
         public async Task<bool> SendEmailAsync(
             Guid userId,
             EmailTemplate template,
@@ -52,6 +58,9 @@ namespace Cotton.Server.Services
             }
         }
 
+        /// <summary>
+        /// Sends smtp test email async.
+        /// </summary>
         public async Task SendSmtpTestEmailAsync(
             Guid userId,
             string serverBaseUrl)
@@ -289,6 +298,9 @@ namespace Cotton.Server.Services
             client.Send(mailMessage);
         }
 
+        /// <summary>
+        /// Sends notification async.
+        /// </summary>
         public async Task SendNotificationAsync(
             Guid userId,
             string title,

@@ -33,6 +33,9 @@ public class WebDavHeadQueryHandler(
     ILogger<WebDavHeadQueryHandler> _logger)
     : IRequestHandler<WebDavHeadQuery, WebDavHeadResult>
 {
+    /// <summary>
+    /// Handles the request through the mediator pipeline.
+    /// </summary>
     public async Task<WebDavHeadResult> Handle(WebDavHeadQuery request, CancellationToken ct)
     {
         var resolveResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);

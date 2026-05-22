@@ -17,15 +17,33 @@ using Npgsql;
 
 namespace Cotton.Server.Handlers.Nodes
 {
+    /// <summary>
+    /// Represents a restore node query sent through the mediator pipeline.
+    /// </summary>
     public class RestoreNodeQuery(Guid userId, Guid nodeId, bool createMissingParents, bool overwrite)
         : IRequest<RestoreOutcomeDto>
     {
+        /// <summary>
+        /// Gets the owning user identifier.
+        /// </summary>
         public Guid UserId { get; } = userId;
+        /// <summary>
+        /// Gets the node identifier.
+        /// </summary>
         public Guid NodeId { get; } = nodeId;
+        /// <summary>
+        /// Creates missing parents.
+        /// </summary>
         public bool CreateMissingParents { get; } = createMissingParents;
+        /// <summary>
+        /// Gets whether restore should move an existing conflicting item to trash.
+        /// </summary>
         public bool Overwrite { get; } = overwrite;
     }
 
+    /// <summary>
+    /// Handles restore node queries in the mediator pipeline.
+    /// </summary>
     public class RestoreNodeQueryHandler(
         CottonDbContext _dbContext,
         ILayoutService _layouts,
@@ -34,6 +52,9 @@ namespace Cotton.Server.Handlers.Nodes
         ILogger<RestoreNodeQueryHandler> _logger)
         : IRequestHandler<RestoreNodeQuery, RestoreOutcomeDto>
     {
+        /// <summary>
+        /// Handles the request through the mediator pipeline.
+        /// </summary>
         public async Task<RestoreOutcomeDto> Handle(RestoreNodeQuery request, CancellationToken ct)
         {
             Guid layoutId = await GetLayoutIdOrThrowAsync(request, ct);
@@ -243,13 +264,25 @@ namespace Cotton.Server.Handlers.Nodes
 
         private sealed record TopLevelTrashWrapperOutcome(Node? Wrapper, RestoreOutcomeDto? Failure)
         {
+            /// <summary>
+            /// Creates a successful operation result.
+            /// </summary>
             public static TopLevelTrashWrapperOutcome Success(Node wrapper) => new(wrapper, null);
+            /// <summary>
+            /// Executes not restorable.
+            /// </summary>
             public static TopLevelTrashWrapperOutcome NotRestorable(string reason) => new(null, RestoreNodeQueryHandler.NotRestorable(reason));
         }
 
         private sealed record RestoreParentOutcome(Node? Parent, RestoreOutcomeDto? Failure)
         {
+            /// <summary>
+            /// Creates a successful operation result.
+            /// </summary>
             public static RestoreParentOutcome Success(Node parent) => new(parent, null);
+            /// <summary>
+            /// Creates a failed operation result.
+            /// </summary>
             public static RestoreParentOutcome Failed(RestoreOutcomeDto failure) => new(null, failure);
         }
 

@@ -3,17 +3,44 @@
 
 namespace Cotton.Server.Models.Configuration;
 
+/// <summary>
+/// Configures storage pressure.
+/// </summary>
 public sealed class StoragePressureOptions
 {
+    /// <summary>
+    /// Enables d.
+    /// </summary>
     public bool Enabled { get; set; } = true;
+    /// <summary>
+    /// Gets or sets the min free percent.
+    /// </summary>
     public int MinFreePercent { get; set; } = 5;
+    /// <summary>
+    /// Gets or sets the min free bytes.
+    /// </summary>
     public long MinFreeBytes { get; set; } = 512L * 1024 * 1024;
+    /// <summary>
+    /// Gets or sets the check interval seconds.
+    /// </summary>
     public int CheckIntervalSeconds { get; set; } = 10;
+    /// <summary>
+    /// Gets or sets the admin notification cooldown minutes.
+    /// </summary>
     public int AdminNotificationCooldownMinutes { get; set; } = 60;
 
+    /// <summary>
+    /// Checks interval.
+    /// </summary>
     public TimeSpan CheckInterval => TimeSpan.FromSeconds(Math.Clamp(CheckIntervalSeconds, 1, 300));
+    /// <summary>
+    /// Executes admin notification cooldown.
+    /// </summary>
     public TimeSpan AdminNotificationCooldown => TimeSpan.FromMinutes(Math.Clamp(AdminNotificationCooldownMinutes, 1, 24 * 60));
 
+    /// <summary>
+    /// Gets required free bytes.
+    /// </summary>
     public long GetRequiredFreeBytes(long totalBytes)
     {
         long safeMinFreeBytes = Math.Max(0, MinFreeBytes);

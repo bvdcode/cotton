@@ -25,8 +25,14 @@ using Microsoft.Extensions.Options;
 
 namespace Cotton.Server
 {
+    /// <summary>
+    /// Represents program.
+    /// </summary>
     public class Program
     {
+        /// <summary>
+        /// Starts the Cotton server process.
+        /// </summary>
         public static async Task Main(string[] args)
         {
             ConfigureProcessTimeZone();

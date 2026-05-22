@@ -5,8 +5,12 @@ using System.Security.Cryptography;
 
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
+/// <summary>
+/// Computes and verifies row integrity MACs over descriptor-produced canonical payloads.
+/// </summary>
 public sealed class DatabaseIntegrityProtector(IDatabaseIntegrityKeyProvider keyProvider) : IDatabaseIntegrityProtector
 {
+    /// <inheritdoc />
     public byte[] Sign(object entity, IDatabaseIntegrityDescriptor descriptor)
     {
         ArgumentNullException.ThrowIfNull(entity);
@@ -24,6 +28,7 @@ public sealed class DatabaseIntegrityProtector(IDatabaseIntegrityKeyProvider key
         }
     }
 
+    /// <inheritdoc />
     public bool Verify(object entity, IDatabaseIntegrityDescriptor descriptor, byte[] expectedMac)
     {
         ArgumentNullException.ThrowIfNull(expectedMac);
@@ -39,6 +44,7 @@ public sealed class DatabaseIntegrityProtector(IDatabaseIntegrityKeyProvider key
         }
     }
 
+    /// <inheritdoc />
     public void RequireValid(object entity, IDatabaseIntegrityDescriptor descriptor, byte[] expectedMac)
     {
         if (Verify(entity, descriptor, expectedMac))

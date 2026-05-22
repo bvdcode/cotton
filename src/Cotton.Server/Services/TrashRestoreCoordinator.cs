@@ -14,15 +14,32 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services;
 
+/// <summary>
+/// Coordinates restoring trashed files and folders back into the normal layout tree.
+/// </summary>
 public class TrashRestoreCoordinator(
     CottonDbContext _dbContext,
     ILayoutService _layouts,
     ILayoutNavigator _navigator,
     IMediator _mediator)
 {
+    /// <summary>
+    /// Describes an existing folder or file that blocks a restore target name.
+    /// </summary>
+    /// <param name="Kind">The conflicting resource kind.</param>
+    /// <param name="Name">The conflicting resource display name.</param>
+    /// <param name="Id">The conflicting resource identifier.</param>
     public readonly record struct ConflictInfo(RestoreConflictKind Kind, string Name, Guid Id);
+    /// <summary>
+    /// Describes the resolved restore parent or why the stored path could not be used.
+    /// </summary>
+    /// <param name="Parent">The resolved parent node, or null when it is missing or invalid.</param>
+    /// <param name="InvalidPathReason">A human-readable reason for invalid stored metadata.</param>
     public readonly record struct ParentResolution(Node? Parent, string? InvalidPathReason);
 
+    /// <summary>
+    /// Resolves the original parent path and optionally recreates missing folders.
+    /// </summary>
     public async Task<ParentResolution> ResolveOrCreateParentAsync(
         Guid userId,
         string originalParentPath,
@@ -47,6 +64,9 @@ public class TrashRestoreCoordinator(
         return await CreateMissingParentsAsync(userId, originalParentPath, ct);
     }
 
+    /// <summary>
+    /// Finds a file or folder that already occupies the restore destination name.
+    /// </summary>
     public async Task<ConflictInfo?> FindConflictAsync(Guid userId, Guid parentId, string nameKey, CancellationToken ct)
     {
         var folder = await _dbContext.Nodes
@@ -79,17 +99,26 @@ public class TrashRestoreCoordinator(
         return null;
     }
 
+    /// <summary>
+    /// Moves the conflicting destination resource to trash before overwriting it.
+    /// </summary>
     public Task SendConflictToTrashAsync(Guid userId, ConflictInfo conflict, CancellationToken ct)
         => conflict.Kind == RestoreConflictKind.Folder
             ? _mediator.Send(new DeleteNodeQuery(userId, conflict.Id, skipTrash: false), ct)
             : _mediator.Send(new DeleteFileQuery(userId, conflict.Id, skipTrash: false), ct);
 
+    /// <summary>
+    /// Gets the original parent path stored in trash metadata.
+    /// </summary>
     public static string GetOriginalParentPath(Dictionary<string, string>? metadata)
         => metadata is not null
             && metadata.TryGetValue(TrashMetadataKeys.OriginalParentPath, out string? path)
                 ? path
                 : string.Empty;
 
+    /// <summary>
+    /// Returns metadata with the original parent path recorded before trashing.
+    /// </summary>
     public static Dictionary<string, string> SetOriginalParentPath(
         Dictionary<string, string>? metadata,
         string originalParentPath)
@@ -101,6 +130,9 @@ public class TrashRestoreCoordinator(
         return copy;
     }
 
+    /// <summary>
+    /// Returns metadata with the original parent path marker removed after restore.
+    /// </summary>
     public static Dictionary<string, string> RemoveOriginalParentPath(Dictionary<string, string>? metadata)
     {
         var copy = metadata is null
@@ -110,6 +142,9 @@ public class TrashRestoreCoordinator(
         return copy;
     }
 
+    /// <summary>
+    /// Deletes an automatically recreated wrapper folder after the restored item leaves it empty.
+    /// </summary>
     public async Task DeleteWrapperIfEmptyAsync(Guid userId, Node wrapper, CancellationToken ct)
     {
         bool stillHasChildren = await _dbContext.Nodes

@@ -3,6 +3,9 @@
 
 namespace Cotton.Topology.Abstractions
 {
+    /// <summary>
+    /// Marker for services that provide topology database access.
+    /// </summary>
     public interface ITopologyDatabaseProvider
     {
     }

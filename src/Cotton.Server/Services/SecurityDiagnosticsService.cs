@@ -9,12 +9,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services
 {
+    /// <summary>
+    /// Coordinates security diagnostics.
+    /// </summary>
     public sealed class SecurityDiagnosticsService(
         CottonDbContext dbContext,
         ProcessHardeningStatus hardeningStatus,
         MasterKeyRuntimeState masterKeyRuntimeState,
         DatabaseIntegrityDiagnosticsService databaseIntegrityDiagnostics)
     {
+        /// <summary>
+        /// Gets snapshot async.
+        /// </summary>
         public async Task<SecurityDiagnosticsDto> GetSnapshotAsync(CancellationToken cancellationToken)
         {
             LinuxProcStatus procStatus = LinuxProcessHardening.SnapshotProcStatus();

@@ -5,9 +5,14 @@ using System.Text.RegularExpressions;
 
 namespace Cotton.Validators
 {
+    /// <summary>
+    /// Normalizes and validates account usernames.
+    /// </summary>
     public static partial class UsernameValidator
     {
+        /// <summary>Minimum username length.</summary>
         public const int MinLength = 2;
+        /// <summary>Maximum username length.</summary>
         public const int MaxLength = 32;
 
         /// <summary>
@@ -50,6 +55,7 @@ namespace Cotton.Validators
             return true;
         }
 
+        /// <summary>Validates a username without returning the normalized value.</summary>
         public static bool IsValid(string username, out string errorMessage)
             => TryNormalizeAndValidate(username, out _, out errorMessage);
 

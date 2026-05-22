@@ -6,17 +6,35 @@ using System.Text;
 
 namespace Cotton.Server.Services
 {
+    /// <summary>
+    /// Builds hls manifest values.
+    /// </summary>
     public static class HlsManifestBuilder
     {
+        /// <summary>
+        /// Gets or sets the segment duration seconds.
+        /// </summary>
         public const double SegmentDurationSeconds = 6.0;
+        /// <summary>
+        /// Defines the content type.
+        /// </summary>
         public const string ContentType = "application/vnd.apple.mpegurl";
 
+        /// <summary>
+        /// Represents hls manifest plan.
+        /// </summary>
         public sealed record HlsManifestPlan(int SegmentCount, double LastSegmentSeconds)
         {
+            /// <summary>
+            /// Gets the planned duration of a segment.
+            /// </summary>
             public double DurationOf(int segmentIndex) =>
                 segmentIndex == SegmentCount - 1 ? LastSegmentSeconds : SegmentDurationSeconds;
         }
 
+        /// <summary>
+        /// Represents hls variant.
+        /// </summary>
         public sealed record HlsVariant(
             string Name,
             int BandwidthBitsPerSecond,
@@ -25,6 +43,9 @@ namespace Cotton.Server.Services
             string Codecs,
             string PlaylistUrl);
 
+        /// <summary>
+        /// Builds the plan decision for video playback.
+        /// </summary>
         public static HlsManifestPlan Plan(double durationSeconds)
         {
             if (durationSeconds <= 0 || !double.IsFinite(durationSeconds))
@@ -42,6 +63,9 @@ namespace Cotton.Server.Services
             return new HlsManifestPlan(Math.Max(1, fullSegments), SegmentDurationSeconds);
         }
 
+        /// <summary>
+        /// Builds value.
+        /// </summary>
         public static string Build(double durationSeconds, Func<int, string> segmentUrlFactory)
         {
             ArgumentNullException.ThrowIfNull(segmentUrlFactory);
@@ -70,6 +94,9 @@ namespace Cotton.Server.Services
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Builds master.
+        /// </summary>
         public static string BuildMaster(IEnumerable<HlsVariant> variants)
         {
             ArgumentNullException.ThrowIfNull(variants);
@@ -94,6 +121,9 @@ namespace Cotton.Server.Services
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Gets the segment start time.
+        /// </summary>
         public static double StartTimeOf(int segmentIndex) =>
             segmentIndex < 0 ? 0 : segmentIndex * SegmentDurationSeconds;
     }

@@ -40,6 +40,9 @@ public class WebDavDeleteRequestHandler(
     ILogger<WebDavDeleteRequestHandler> _logger)
     : IRequestHandler<WebDavDeleteRequest, WebDavDeleteResult>
 {
+    /// <summary>
+    /// Handles the request through the mediator pipeline.
+    /// </summary>
     public async Task<WebDavDeleteResult> Handle(WebDavDeleteRequest request, CancellationToken ct)
     {
         var resolveResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);

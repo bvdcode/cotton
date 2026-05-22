@@ -67,16 +67,25 @@ namespace Cotton.Server.Services
             return SHA256.HashData(span);
         }
 
+        /// <summary>
+        /// Indicates whether h data async.
+        /// </summary>
         public static async Task<byte[]> HashDataAsync(Stream stream)
         {
             return await SHA256.HashDataAsync(stream);
         }
 
+        /// <summary>
+        /// Executes to hex string hash.
+        /// </summary>
         public static string ToHexStringHash(byte[] hash)
         {
             return Convert.ToHexString(hash).ToLowerInvariant();
         }
 
+        /// <summary>
+        /// Executes from hex string hash.
+        /// </summary>
         public static byte[] FromHexStringHash(string hexString)
         {
             if (string.IsNullOrWhiteSpace(hexString))
@@ -102,6 +111,9 @@ namespace Cotton.Server.Services
             return Convert.FromHexString(hexString);
         }
 
+        /// <summary>
+        /// Indicates whether valid hash.
+        /// </summary>
         public static bool IsValidHash(string hash)
         {
             if (string.IsNullOrWhiteSpace(hash))

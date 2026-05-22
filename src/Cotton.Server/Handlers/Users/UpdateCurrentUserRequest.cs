@@ -19,6 +19,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Users
 {
+    /// <summary>
+    /// Represents the update current user request request payload accepted by the API.
+    /// </summary>
     public class UpdateCurrentUserRequest(
         Guid userId,
         string? email,
@@ -28,15 +31,39 @@ namespace Cotton.Server.Handlers.Users
         DateOnly? birthDate,
         string? avatarHash) : IRequest<UserDto>
     {
+        /// <summary>
+        /// Gets the owning user identifier.
+        /// </summary>
         public Guid UserId { get; } = userId;
+        /// <summary>
+        /// Gets the user email address.
+        /// </summary>
         public string? Email { get; } = email;
+        /// <summary>
+        /// Gets the normalized username.
+        /// </summary>
         public string? Username { get; } = username;
+        /// <summary>
+        /// Gets the user first name.
+        /// </summary>
         public string? FirstName { get; } = firstName;
+        /// <summary>
+        /// Gets the user last name.
+        /// </summary>
         public string? LastName { get; } = lastName;
+        /// <summary>
+        /// Gets the birth date.
+        /// </summary>
         public DateOnly? BirthDate { get; } = birthDate;
+        /// <summary>
+        /// Gets the avatar hash.
+        /// </summary>
         public string? AvatarHash { get; } = avatarHash;
     }
 
+    /// <summary>
+    /// Handles update current user requests in the mediator pipeline.
+    /// </summary>
     public class UpdateCurrentUserRequestHandler(
         CottonDbContext _dbContext,
         IStreamCipher _crypto,
@@ -45,6 +72,9 @@ namespace Cotton.Server.Handlers.Users
     {
         private static readonly ImagePreviewGenerator _avatarGenerator = new();
 
+        /// <summary>
+        /// Handles the request through the mediator pipeline.
+        /// </summary>
         public async Task<UserDto> Handle(UpdateCurrentUserRequest request, CancellationToken cancellationToken)
         {
             User user = await LoadUserAsync(request.UserId, cancellationToken);

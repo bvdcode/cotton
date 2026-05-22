@@ -5,8 +5,14 @@ using Cotton.Server.Services.DatabaseIntegrity;
 
 namespace Cotton.Server.Extensions;
 
+/// <summary>
+/// Contains extension methods for configuring database integrity application.
+/// </summary>
 public static class DatabaseIntegrityApplicationExtensions
 {
+    /// <summary>
+    /// Applies database integrity bridge backfill.
+    /// </summary>
     public static async Task ApplyDatabaseIntegrityBridgeBackfillAsync(
         this WebApplication app,
         CancellationToken cancellationToken = default)

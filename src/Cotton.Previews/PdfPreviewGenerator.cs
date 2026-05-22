@@ -9,12 +9,18 @@ using SixLabors.ImageSharp.Processing;
 
 namespace Cotton.Previews
 {
+    /// <summary>
+    /// Generates previews for PDF documents.
+    /// </summary>
     public sealed class PdfPreviewGenerator : IPreviewGenerator
     {
+        /// <inheritdoc />
         public int Version => 0;
+        /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes => ["application/pdf"];
         private static readonly DocLib _docLib = DocLib.Instance;
 
+        /// <inheritdoc />
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
         {
             ArgumentNullException.ThrowIfNull(stream);

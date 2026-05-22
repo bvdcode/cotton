@@ -7,19 +7,37 @@ using System.Text;
 
 namespace Cotton.Server.Services;
 
+/// <summary>
+/// Describes an archive entry whose final byte length is known before the response starts.
+/// </summary>
 public interface IStoredZipEntry
 {
+    /// <summary>
+    /// Gets the ZIP entry path using forward slashes.
+    /// </summary>
     string Path { get; }
+    /// <summary>
+    /// Gets the uncompressed entry size in bytes.
+    /// </summary>
     long SizeBytes { get; }
+    /// <summary>
+    /// Indicates whether the ZIP entry represents a directory marker.
+    /// </summary>
     bool IsDirectory { get; }
 }
 
+/// <summary>
+/// Provides a ZIP entry path, fixed uncompressed length, and deferred stream opener.
+/// </summary>
 public sealed record StoredZipSourceEntry(
     string Path,
     long SizeBytes,
     bool IsDirectory,
     Func<CancellationToken, ValueTask<Stream>> OpenReadAsync) : IStoredZipEntry;
 
+/// <summary>
+/// Writes uncompressed UTF-8 ZIP archives directly to a response stream with a deterministic Content-Length.
+/// </summary>
 public sealed class StoredZipArchiveWriter
 {
     private const ushort Utf8Flag = 1 << 11;
@@ -30,6 +48,9 @@ public sealed class StoredZipArchiveWriter
     private const uint UInt32Max = uint.MaxValue;
     private const ushort UInt16Max = ushort.MaxValue;
 
+    /// <summary>
+    /// Calculates the exact number of bytes that <see cref="WriteAsync"/> will emit for the entries.
+    /// </summary>
     public static long CalculateLength<TEntry>(IReadOnlyList<TEntry> entries)
         where TEntry : IStoredZipEntry
     {
@@ -41,6 +62,9 @@ public sealed class StoredZipArchiveWriter
         return sizeBytes > UInt32Max || localHeaderOffset > UInt32Max;
     }
 
+    /// <summary>
+    /// Streams the entries as a STORED ZIP archive without buffering file contents in memory.
+    /// </summary>
     public async Task WriteAsync(
         Stream destination,
         IReadOnlyList<StoredZipSourceEntry> entries,
@@ -63,6 +87,9 @@ public sealed class StoredZipArchiveWriter
         await WriteCentralDirectoryAsync(destination, writtenEntries, plan, cancellationToken);
     }
 
+    // Planning is separate from writing so the API can set Content-Length before sending bytes.
+    // We deliberately use the STORED method: no compression means predictable size, lower CPU,
+    // and UTF-8 filenames via the ZIP language-encoding flag instead of platform code pages.
     private static ZipPlan BuildPlan<TEntry>(IReadOnlyList<TEntry> entries)
         where TEntry : IStoredZipEntry
     {
@@ -268,6 +295,8 @@ public sealed class StoredZipArchiveWriter
         ZipEntryPlan entry = written.Plan;
         bool sizeNeedsZip64 = entry.SizeBytes > UInt32Max;
         bool offsetNeedsZip64 = entry.LocalHeaderOffset > UInt32Max;
+        // ZIP64 central metadata is required even when each file is small if the local
+        // header offset crosses the 4 GiB boundary in a large folder archive.
         bool requiresZip64CentralMetadata = RequiresZip64CentralDirectoryMetadata(
             entry.SizeBytes,
             entry.LocalHeaderOffset);
@@ -435,6 +464,9 @@ public sealed class StoredZipArchiveWriter
         bool UsesZip64DataDescriptor,
         long LocalHeaderOffset)
     {
+        /// <summary>
+        /// Gets or sets the central extra length.
+        /// </summary>
         public long CentralExtraLength { get; init; }
     }
 

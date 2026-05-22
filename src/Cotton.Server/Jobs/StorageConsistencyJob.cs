@@ -14,6 +14,9 @@ using Quartz;
 
 namespace Cotton.Server.Jobs
 {
+    /// <summary>
+    /// Runs the scheduled storage consistency maintenance task.
+    /// </summary>
     [JobTrigger(days: 30)]
     public class StorageConsistencyJob(
         IStoragePipeline _storage,
@@ -24,6 +27,9 @@ namespace Cotton.Server.Jobs
     {
         private const int BatchSize = 10000;
 
+        /// <summary>
+        /// Executes the scheduled Quartz job.
+        /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
             await Task.Delay(300_000, context.CancellationToken); // Wait for 5 minutes for the server to start up and stabilize
@@ -31,6 +37,9 @@ namespace Cotton.Server.Jobs
             await RunOnceAsync(context.CancellationToken);
         }
 
+        /// <summary>
+        /// Runs one maintenance pass immediately.
+        /// </summary>
         public async Task RunOnceAsync(CancellationToken ct = default)
         {
             _logger.LogInformation("Storage consistency check started.");

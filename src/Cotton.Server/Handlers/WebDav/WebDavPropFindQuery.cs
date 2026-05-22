@@ -36,6 +36,9 @@ public class WebDavPropFindQueryHandler(
 {
     private const int MaxDepth = 32;
 
+    /// <summary>
+    /// Handles the request through the mediator pipeline.
+    /// </summary>
     public async Task<WebDavPropFindResult> Handle(WebDavPropFindQuery request, CancellationToken ct)
     {
         var resolveResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);

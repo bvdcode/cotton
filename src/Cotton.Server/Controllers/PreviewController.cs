@@ -12,6 +12,9 @@ using Microsoft.Net.Http.Headers;
 
 namespace Cotton.Server.Controllers
 {
+    /// <summary>
+    /// Exposes HTTP endpoints for preview operations.
+    /// </summary>
     [ApiController]
     [Route(Routes.V1.Previews)]
     public class PreviewController(
@@ -21,6 +24,9 @@ namespace Cotton.Server.Controllers
     {
         private static readonly SemaphoreSlim _previewGate = new(8);
 
+        /// <summary>
+        /// Gets file preview.
+        /// </summary>
         [HttpGet("{previewHashEncryptedHex}")]
         [HttpGet("{previewHashEncryptedHex}.webp")]
         public async Task<IActionResult> GetFilePreview([FromRoute] string previewHashEncryptedHex)

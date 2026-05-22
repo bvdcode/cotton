@@ -10,8 +10,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services
 {
+    /// <summary>
+    /// Coordinates file manifest.
+    /// </summary>
     public class FileManifestService(CottonDbContext _dbContext)
     {
+        /// <summary>
+        /// Defines the default content type.
+        /// </summary>
         public const string DefaultContentType = "application/octet-stream";
         private static readonly FileExtensionContentTypeProvider fileExtensionContentTypeProvider = new();
         private static readonly IReadOnlyDictionary<string, string> extensionContentTypeOverrides =
@@ -51,6 +57,9 @@ namespace Cotton.Server.Services
                 [".3mf"] = "model/3mf",
             };
 
+        /// <summary>
+        /// Resolves content type.
+        /// </summary>
         public static string ResolveContentType(string? fileName, string? contentType)
         {
             string normalizedContentType = NormalizeContentType(contentType);
@@ -111,6 +120,9 @@ namespace Cotton.Server.Services
             };
         }
 
+        /// <summary>
+        /// Gets chunks async.
+        /// </summary>
         public async Task<List<Chunk>> GetChunksAsync(string[] chunkHashes, Guid userId, CancellationToken cancellationToken = default)
         {
             List<byte[]> normalizedHashes = [.. chunkHashes.Select(Hasher.FromHexStringHash)];
@@ -132,6 +144,9 @@ namespace Cotton.Server.Services
             return result;
         }
 
+        /// <summary>
+        /// Creates new file manifest async.
+        /// </summary>
         public async Task<FileManifest> CreateNewFileManifestAsync(
             List<Chunk> chunks,
             string fileName,
@@ -167,6 +182,9 @@ namespace Cotton.Server.Services
             return newFileManifest;
         }
 
+        /// <summary>
+        /// Clears gc schedules for manifest references.
+        /// </summary>
         public async Task<int> ClearGcSchedulesForManifestReferencesAsync(
             Guid fileManifestId,
             CancellationToken cancellationToken = default)

@@ -5,16 +5,23 @@ using Cotton.Database.Models;
 
 namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 
+/// <summary>
+/// Describes public share-token rows protected by database integrity signing.
+/// </summary>
 public sealed class NodeShareTokenIntegrityDescriptor : DatabaseIntegrityDescriptor<NodeShareToken>
 {
+    /// <inheritdoc />
     public override string EntityName => "node_share_tokens";
+    /// <inheritdoc />
     public override int SchemaVersion => 1;
 
+    /// <inheritdoc />
     public override string GetEntityKey(NodeShareToken entity)
     {
         return entity.Id.ToString("D");
     }
 
+    /// <inheritdoc />
     public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, NodeShareToken entity)
     {
         writer.WriteGuidField(nameof(entity.Id), entity.Id);

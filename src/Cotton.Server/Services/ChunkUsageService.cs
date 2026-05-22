@@ -9,6 +9,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services
 {
+    /// <summary>
+    /// Coordinates chunk usage.
+    /// </summary>
     public sealed class ChunkUsageService(
         CottonDbContext _dbContext,
         IStoragePipeline _storage,
@@ -18,6 +21,9 @@ namespace Cotton.Server.Services
     {
         private const int ProtectedHashBatchSize = 500;
 
+        /// <summary>
+        /// Filters chunks unreferenced by database.
+        /// </summary>
         public IQueryable<Chunk> WhereUnreferencedByDatabase(IQueryable<Chunk> query)
         {
             return query.Where(c => !c.FileManifestChunks.Any()
@@ -25,6 +31,9 @@ namespace Cotton.Server.Services
                 && !_dbContext.Users.Any(u => u.AvatarHash == c.Hash));
         }
 
+        /// <summary>
+        /// Filters chunks referenced by database.
+        /// </summary>
         public IQueryable<Chunk> WhereReferencedByDatabase(IQueryable<Chunk> query)
         {
             return query.Where(c => c.FileManifestChunks.Any()
@@ -32,6 +41,9 @@ namespace Cotton.Server.Services
                 || _dbContext.Users.Any(u => u.AvatarHash == c.Hash));
         }
 
+        /// <summary>
+        /// Filters chunks not protected by storage keys.
+        /// </summary>
         public IQueryable<Chunk> WhereNotProtectedByStorageKeys(IQueryable<Chunk> query, IReadOnlyCollection<string> protectedStorageKeys)
         {
             List<byte[]> protectedChunkHashes = GetChunkHashesFromStorageKeys(protectedStorageKeys);
@@ -43,6 +55,9 @@ namespace Cotton.Server.Services
             return query.Where(c => !protectedChunkHashes.Contains(c.Hash));
         }
 
+        /// <summary>
+        /// Indicates whether database references async.
+        /// </summary>
         public async Task<bool> HasDatabaseReferencesAsync(byte[] chunkHash, CancellationToken ct)
         {
             return await _dbContext.FileManifestChunks.AnyAsync(m => m.ChunkHash == chunkHash, ct)
@@ -50,6 +65,9 @@ namespace Cotton.Server.Services
                 || await _dbContext.Users.AnyAsync(u => u.AvatarHash == chunkHash, ct);
         }
 
+        /// <summary>
+        /// Clears gc schedules for referenced chunks.
+        /// </summary>
         public async Task<int> ClearGcSchedulesForReferencedChunksAsync(CancellationToken ct)
         {
             return await WhereReferencedByDatabase(_dbContext.Chunks)
@@ -57,6 +75,9 @@ namespace Cotton.Server.Services
                 .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, (DateTime?)null), ct);
         }
 
+        /// <summary>
+        /// Clears gc schedules for protected chunks.
+        /// </summary>
         public async Task<int> ClearGcSchedulesForProtectedChunksAsync(
             IReadOnlyCollection<string> protectedStorageKeys,
             CancellationToken ct)
@@ -73,6 +94,9 @@ namespace Cotton.Server.Services
             return cleared;
         }
 
+        /// <summary>
+        /// Clears gc schedule.
+        /// </summary>
         public async Task<int> ClearGcScheduleAsync(byte[] chunkHash, CancellationToken ct)
         {
             return await _dbContext.Chunks
@@ -80,6 +104,9 @@ namespace Cotton.Server.Services
                 .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, (DateTime?)null), ct);
         }
 
+        /// <summary>
+        /// Gets protected storage keys async.
+        /// </summary>
         public async Task<HashSet<string>> GetProtectedStorageKeysAsync(CancellationToken ct)
         {
             string pointerStorageKey = _backupKeyProvider.GetScopedPointerStorageKey();

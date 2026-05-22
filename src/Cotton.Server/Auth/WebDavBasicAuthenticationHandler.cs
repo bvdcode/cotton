@@ -20,6 +20,9 @@ using System.Text.Encodings.Web;
 
 namespace Cotton.Server.Auth;
 
+/// <summary>
+/// Represents web dav basic authentication handler.
+/// </summary>
 public sealed class WebDavBasicAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
     ILoggerFactory logger,
@@ -33,7 +36,13 @@ public sealed class WebDavBasicAuthenticationHandler(
     IDatabaseIntegrityVerifier integrity)
     : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
+    /// <summary>
+    /// Defines the policy name.
+    /// </summary>
     public const string PolicyName = "WebDav";
+    /// <summary>
+    /// Defines the scheme name.
+    /// </summary>
     public const string SchemeName = "WebDavBasic";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(1);
 
@@ -44,6 +53,7 @@ public sealed class WebDavBasicAuthenticationHandler(
             : Request.GetRemoteIPAddress();
     }
 
+    /// <inheritdoc />
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         var authHeader = Request.Headers.Authorization.ToString();
@@ -88,6 +98,7 @@ public sealed class WebDavBasicAuthenticationHandler(
         return AuthenticateSuccess(user.Id, user.Username);
     }
 
+    /// <inheritdoc />
     protected override Task HandleChallengeAsync(AuthenticationProperties properties)
     {
         Response.Headers.WWWAuthenticate = "Basic realm=\"Cotton WebDAV\", charset=\"UTF-8\"";

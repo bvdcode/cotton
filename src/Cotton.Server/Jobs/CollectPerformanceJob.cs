@@ -12,6 +12,9 @@ using Quartz;
 
 namespace Cotton.Server.Jobs
 {
+    /// <summary>
+    /// Runs the scheduled collect performance maintenance task.
+    /// </summary>
     [JobTrigger(days: 1)]
     public class CollectPerformanceJob(
         PerfTracker _perf,
@@ -21,6 +24,9 @@ namespace Cotton.Server.Jobs
     {
         private const string CloudTelemetryUrl = "https://cotton-gateway.splidex.com/api/v1/telemetry";
 
+        /// <summary>
+        /// Executes the scheduled Quartz job.
+        /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
             await Task.Delay(360_000); // Wait for 6 minutes for the server to start up and stabilize

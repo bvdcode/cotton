@@ -8,18 +8,27 @@ using Xabe.FFmpeg.Downloader;
 
 namespace Cotton.Previews
 {
+    /// <summary>
+    /// Media metadata extracted by ffprobe for preview and playback planning.
+    /// </summary>
     public sealed record MediaProbeInfo(double? DurationSeconds, string? VideoCodec, string? AudioCodec);
 
+    /// <summary>
+    /// Locates, downloads, and queries ffmpeg/ffprobe binaries used by preview generation.
+    /// </summary>
     public static class FfmpegBinary
     {
         private static readonly SemaphoreSlim DownloadGate = new(1, 1);
 
+        /// <summary>Returns the expected ffmpeg executable path for the current OS.</summary>
         public static string GetFfmpegPath() =>
             Environment.OSVersion.Platform == PlatformID.Win32NT ? "ffmpeg.exe" : "./ffmpeg";
 
+        /// <summary>Returns the expected ffprobe executable path for the current OS.</summary>
         public static string GetFfprobePath() =>
             Environment.OSVersion.Platform == PlatformID.Win32NT ? "ffprobe.exe" : "./ffprobe";
 
+        /// <summary>Downloads ffmpeg and ffprobe if they are missing from the working directory.</summary>
         public static async Task EnsureAvailableAsync(CancellationToken cancellationToken = default)
         {
             if (File.Exists(GetFfmpegPath()) && File.Exists(GetFfprobePath()))
@@ -57,6 +66,7 @@ namespace Cotton.Previews
             }
         }
 
+        /// <summary>Returns media duration in seconds, or null when ffprobe cannot determine it.</summary>
         public static async Task<double?> TryGetDurationSecondsAsync(
             Uri url,
             TimeSpan? timeout = null,
@@ -71,6 +81,7 @@ namespace Cotton.Previews
             return raw is null ? null : ParsePositiveDuration(raw.Trim());
         }
 
+        /// <summary>Returns duration and primary audio/video codecs, or null when probing fails.</summary>
         public static async Task<MediaProbeInfo?> TryGetMediaProbeAsync(
             Uri url,
             TimeSpan? timeout = null,

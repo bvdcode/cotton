@@ -17,14 +17,26 @@ public class WebDavPathResolver(
     ILayoutService _layouts,
     ILayoutNavigator _navigator) : IWebDavPathResolver
 {
+    /// <summary>
+    /// Gets or sets the default node type.
+    /// </summary>
     public const NodeType DefaultNodeType = NodeType.Default;
+    /// <summary>
+    /// Gets or sets the path separator.
+    /// </summary>
     public const char PathSeparator = Constants.DefaultPathSeparator;
 
+    /// <summary>
+    /// Resolves path async.
+    /// </summary>
     public Task<WebDavResolveResult> ResolvePathAsync(Guid userId, string path, CancellationToken ct = default)
     {
         return ResolveInternalAsync(userId, path, includeFileContentGraph: true, ct);
     }
 
+    /// <summary>
+    /// Resolves metadata async.
+    /// </summary>
     public Task<WebDavResolveResult> ResolveMetadataAsync(Guid userId, string path, CancellationToken ct = default)
     {
         return ResolveInternalAsync(userId, path, includeFileContentGraph: false, ct);
@@ -121,6 +133,9 @@ public class WebDavPathResolver(
         return new WebDavResolveResult { Found = false };
     }
 
+    /// <summary>
+    /// Gets parent node async.
+    /// </summary>
     public async Task<WebDavParentResult> GetParentNodeAsync(Guid userId, string path, CancellationToken ct = default)
     {
         // Decode percent-encoded sequences so Windows WebDAV clients can upload names containing

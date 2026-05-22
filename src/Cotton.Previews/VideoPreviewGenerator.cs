@@ -6,9 +6,14 @@ using System.Diagnostics;
 
 namespace Cotton.Previews
 {
+    /// <summary>
+    /// Generates video previews from a representative frame.
+    /// </summary>
     public class VideoPreviewGenerator : IPreviewGenerator
     {
+        /// <inheritdoc />
         public int Version => 0;
+        /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes =>
         [
             "video/mp4",
@@ -24,6 +29,7 @@ namespace Cotton.Previews
             "video/x-matroska",
         ];
 
+        /// <inheritdoc />
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size = 150)
         {
             await FfmpegBinary.EnsureAvailableAsync().ConfigureAwait(false);

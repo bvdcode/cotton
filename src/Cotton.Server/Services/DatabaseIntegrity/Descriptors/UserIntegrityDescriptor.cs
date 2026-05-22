@@ -5,16 +5,23 @@ using Cotton.Database.Models;
 
 namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 
+/// <summary>
+/// Describes security-sensitive user account fields protected by database integrity signing.
+/// </summary>
 public sealed class UserIntegrityDescriptor : DatabaseIntegrityDescriptor<User>
 {
+    /// <inheritdoc />
     public override string EntityName => "users";
+    /// <inheritdoc />
     public override int SchemaVersion => 1;
 
+    /// <inheritdoc />
     public override string GetEntityKey(User entity)
     {
         return entity.Id.ToString("D");
     }
 
+    /// <inheritdoc />
     public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, User entity)
     {
         writer.WriteGuidField(nameof(entity.Id), entity.Id);

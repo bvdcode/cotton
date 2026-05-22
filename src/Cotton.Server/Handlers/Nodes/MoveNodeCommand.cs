@@ -15,19 +15,37 @@ using Npgsql;
 
 namespace Cotton.Server.Handlers.Nodes
 {
+    /// <summary>
+    /// Represents a move node command sent through the mediator pipeline.
+    /// </summary>
     public class MoveNodeCommand : IRequest<NodeDto>
     {
+        /// <summary>
+        /// Gets or sets the node identifier.
+        /// </summary>
         public Guid NodeId { get; set; }
+        /// <summary>
+        /// Gets or sets the parent folder identifier.
+        /// </summary>
         public Guid ParentId { get; set; }
+        /// <summary>
+        /// Gets or sets the owning user identifier.
+        /// </summary>
         public Guid UserId { get; set; }
     }
 
+    /// <summary>
+    /// Handles move node commands in the mediator pipeline.
+    /// </summary>
     public class MoveNodeCommandHandler(
         CottonDbContext _dbContext,
         IEventNotificationService _eventNotification,
         ILogger<MoveNodeCommandHandler> _logger)
         : IRequestHandler<MoveNodeCommand, NodeDto>
     {
+        /// <summary>
+        /// Handles the request through the mediator pipeline.
+        /// </summary>
         public async Task<NodeDto> Handle(MoveNodeCommand request, CancellationToken cancellationToken)
         {
             ValidateRequest(request);

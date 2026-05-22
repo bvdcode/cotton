@@ -3,6 +3,9 @@
 
 namespace Cotton.Storage.Abstractions
 {
+    /// <summary>
+    /// Marker for storage backends that require decrypted runtime configuration before use.
+    /// </summary>
     public interface IStorageBackendUsesEncryptedConfiguration
     {
     }

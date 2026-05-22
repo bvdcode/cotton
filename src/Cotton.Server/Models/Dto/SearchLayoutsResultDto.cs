@@ -3,7 +3,13 @@
 
 namespace Cotton.Server.Models.Dto;
 
+/// <summary>
+/// Represents the search layouts result API payload.
+/// </summary>
 public class SearchLayoutsResultDto : SearchResultDto
 {
+    /// <summary>
+    /// Gets or sets total count.
+    /// </summary>
     public int TotalCount { get; set; }
 }

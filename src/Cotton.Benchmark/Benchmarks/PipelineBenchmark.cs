@@ -23,6 +23,7 @@ namespace Cotton.Benchmark.Benchmarks
         private readonly AesGcmStreamCipher _cipher;
         private readonly InMemoryBackend _backend;
 
+        /// <summary>Initializes the benchmark with a fixed measurement configuration.</summary>
         public PipelineBenchmark(BenchmarkConfiguration configuration)
             : base(configuration)
         {
@@ -97,6 +98,7 @@ namespace Cotton.Benchmark.Benchmarks
             return baseMetrics;
         }
 
+        /// <inheritdoc />
         public void Dispose()
         {
             _cipher?.Dispose();

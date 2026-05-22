@@ -31,6 +31,9 @@ using Microsoft.Net.Http.Headers;
 
 namespace Cotton.Server.Controllers
 {
+    /// <summary>
+    /// Exposes HTTP endpoints for layout operations.
+    /// </summary>
     [ApiController]
     [Route(Routes.V1.Layouts)]
     public class LayoutController(
@@ -44,6 +47,9 @@ namespace Cotton.Server.Controllers
     {
         private const int DefaultSharedFolderTokenLength = 16;
 
+        /// <summary>
+        /// Gets recent nodes.
+        /// </summary>
         [Authorize]
         [HttpGet("{layoutId:guid}/recent")]
         public async Task<IActionResult> GetRecentNodes([FromRoute] Guid layoutId,
@@ -55,6 +61,9 @@ namespace Cotton.Server.Controllers
             return Ok(result);
         }
 
+        /// <summary>
+        /// Searches files and folders across a layout.
+        /// </summary>
         [Authorize]
         [HttpGet("{layoutId:guid}/search")]
         public async Task<IActionResult> SearchLayouts(
@@ -70,6 +79,9 @@ namespace Cotton.Server.Controllers
             return Ok(result);
         }
 
+        /// <summary>
+        /// Gets layout stats.
+        /// </summary>
         [Authorize]
         [HttpGet("{layoutId:guid}/stats")]
         public async Task<IActionResult> GetLayoutStats([FromRoute] Guid layoutId)
@@ -106,6 +118,9 @@ namespace Cotton.Server.Controllers
             return Ok(stats);
         }
 
+        /// <summary>
+        /// Moves layout node.
+        /// </summary>
         [Authorize]
         [HttpPatch("nodes/{nodeId:guid}/move")]
         public async Task<IActionResult> MoveLayoutNode(
@@ -122,6 +137,9 @@ namespace Cotton.Server.Controllers
             return Ok(dto);
         }
 
+        /// <summary>
+        /// Renames layout node.
+        /// </summary>
         [Authorize]
         [HttpPatch("nodes/{nodeId:guid}/rename")]
         public async Task<IActionResult> RenameLayoutNode(
@@ -197,6 +215,9 @@ namespace Cotton.Server.Controllers
             return Ok(mapped);
         }
 
+        /// <summary>
+        /// Gets layout node.
+        /// </summary>
         [Authorize]
         [HttpGet("nodes/{nodeId:guid}")]
         public async Task<IActionResult> GetLayoutNode([FromRoute] Guid nodeId)
@@ -214,6 +235,9 @@ namespace Cotton.Server.Controllers
             return Ok(mapped);
         }
 
+        /// <summary>
+        /// Updates layout node metadata.
+        /// </summary>
         [Authorize]
         [HttpPatch("nodes/{nodeId:guid}/metadata")]
         [ProducesResponseType<NodeDto>(StatusCodes.Status200OK)]
@@ -274,6 +298,9 @@ namespace Cotton.Server.Controllers
             return Ok(mapped);
         }
 
+        /// <summary>
+        /// Deletes layout node.
+        /// </summary>
         [Authorize]
         [HttpDelete("nodes/{nodeId:guid}")]
         public async Task<IActionResult> DeleteLayoutNode(
@@ -294,6 +321,9 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Restores layout node.
+        /// </summary>
         [Authorize]
         [HttpPost("nodes/{nodeId:guid}/restore")]
         public async Task<IActionResult> RestoreLayoutNode(
@@ -322,6 +352,9 @@ namespace Cotton.Server.Controllers
             return Ok(outcome);
         }
 
+        /// <summary>
+        /// Creates layout node.
+        /// </summary>
         [Authorize]
         [HttpPut("nodes")]
         public async Task<IActionResult> CreateLayoutNode([FromBody] CreateNodeRequest request)
@@ -405,6 +438,9 @@ namespace Cotton.Server.Controllers
             return Ok(mapped);
         }
 
+        /// <summary>
+        /// Gets ancestor nodes.
+        /// </summary>
         [Authorize]
         [HttpGet("nodes/{nodeId:guid}/ancestors")]
         public async Task<IActionResult> GetAncestorNodes(
@@ -456,6 +492,9 @@ namespace Cotton.Server.Controllers
             return Ok(ancestors);
         }
 
+        /// <summary>
+        /// Gets child nodes.
+        /// </summary>
         [Authorize]
         [HttpGet("nodes/{nodeId:guid}/children")]
         public async Task<IActionResult> GetChildNodes(
@@ -472,6 +511,9 @@ namespace Cotton.Server.Controllers
             return Ok(result);
         }
 
+        /// <summary>
+        /// Gets node share link.
+        /// </summary>
         [Authorize]
         [HttpGet("nodes/{nodeId:guid}/share-link")]
         public async Task<IActionResult> GetNodeShareLink(
@@ -523,6 +565,9 @@ namespace Cotton.Server.Controllers
             return Ok($"/s/{newToken.Token}");
         }
 
+        /// <summary>
+        /// Gets shared node info.
+        /// </summary>
         [AllowAnonymous]
         [HttpGet("shared/{token}")]
         public async Task<IActionResult> GetSharedNodeInfo([FromRoute] string token)
@@ -542,6 +587,9 @@ namespace Cotton.Server.Controllers
             });
         }
 
+        /// <summary>
+        /// Gets shared node children.
+        /// </summary>
         [AllowAnonymous]
         [HttpGet("shared/{token}/children")]
         public async Task<IActionResult> GetSharedNodeChildren(
@@ -622,6 +670,9 @@ namespace Cotton.Server.Controllers
             return Ok(response);
         }
 
+        /// <summary>
+        /// Gets shared node ancestors.
+        /// </summary>
         [AllowAnonymous]
         [HttpGet("shared/{token}/ancestors/{nodeId:guid}")]
         public async Task<IActionResult> GetSharedNodeAncestors(
@@ -698,6 +749,9 @@ namespace Cotton.Server.Controllers
             return Ok(ancestors);
         }
 
+        /// <summary>
+        /// Downloads shared node file.
+        /// </summary>
         [AllowAnonymous]
         [HttpGet("shared/{token}/files/{nodeFileId:guid}/content")]
         public async Task<IActionResult> DownloadSharedNodeFile(
@@ -777,6 +831,9 @@ namespace Cotton.Server.Controllers
                 enableRangeProcessing: true);
         }
 
+        /// <summary>
+        /// Resolves layout.
+        /// </summary>
         [Authorize]
         [HttpGet("resolver")]
         [HttpGet("resolver/{*path}")]

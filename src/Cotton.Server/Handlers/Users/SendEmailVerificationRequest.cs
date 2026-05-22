@@ -14,11 +14,20 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Users
 {
+    /// <summary>
+    /// Represents the send email verification request request payload accepted by the API.
+    /// </summary>
     public class SendEmailVerificationRequest(Guid userId) : IRequest
     {
+        /// <summary>
+        /// Gets the owning user identifier.
+        /// </summary>
         public Guid UserId { get; } = userId;
     }
 
+    /// <summary>
+    /// Handles send email verification requests in the mediator pipeline.
+    /// </summary>
     public class SendEmailVerificationRequestHandler(
         CottonDbContext _dbContext,
         INotificationsProvider _notifications,
@@ -28,6 +37,9 @@ namespace Cotton.Server.Handlers.Users
         private const int TokenLength = 32;
         private static readonly TimeSpan CooldownPeriod = TimeSpan.FromMinutes(2);
 
+        /// <summary>
+        /// Handles the request through the mediator pipeline.
+        /// </summary>
         public async Task Handle(SendEmailVerificationRequest request, CancellationToken cancellationToken)
         {
             var user = await _dbContext.Users

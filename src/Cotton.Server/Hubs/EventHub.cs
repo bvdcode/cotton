@@ -9,17 +9,30 @@ using System.Security.Claims;
 
 namespace Cotton.Server.Hubs
 {
+    /// <summary>
+    /// Publishes realtime event events to connected clients.
+    /// </summary>
     [Authorize]
     public class EventHub : Hub
     {
+        /// <summary>
+        /// Defines the notification method.
+        /// </summary>
         public const string NotificationMethod = "OnNotificationReceived";
+        /// <summary>
+        /// Defines the session revoked method.
+        /// </summary>
         public const string SessionRevokedMethod = "SessionRevoked";
 
+        /// <summary>
+        /// Gets session group name.
+        /// </summary>
         public static string GetSessionGroupName(Guid userId, string sessionId)
         {
             return $"auth-session:{userId:N}:{sessionId}";
         }
 
+        /// <inheritdoc />
         public override async Task OnConnectedAsync()
         {
             Guid userId = Context.User.GetUserId();

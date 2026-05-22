@@ -6,13 +6,22 @@ using Cotton.Server.Providers;
 
 namespace Cotton.Server.Services
 {
+    /// <summary>
+    /// Provides cotton public email dependencies to server components.
+    /// </summary>
     public class CottonPublicEmailProvider : IDisposable
     {
+        /// <summary>
+        /// Defines the gateway base URL.
+        /// </summary>
         public const string GatewayBaseUrl = "https://cotton-gateway.splidex.com/api/v1/";
         private readonly HttpClient _httpClient;
         private readonly Guid _instanceId;
         private readonly ILogger<CottonPublicEmailProvider> _logger;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CottonPublicEmailProvider"/> type.
+        /// </summary>
         public CottonPublicEmailProvider(
             IServiceProvider serviceProvider,
             ILogger<CottonPublicEmailProvider> logger)
@@ -29,6 +38,9 @@ namespace Cotton.Server.Services
             };
         }
 
+        /// <summary>
+        /// Checks health.
+        /// </summary>
         public async Task<bool> CheckHealthAsync()
         {
             try
@@ -43,6 +55,9 @@ namespace Cotton.Server.Services
             }
         }
 
+        /// <summary>
+        /// Sends email async.
+        /// </summary>
         public async Task<bool> SendEmailAsync(
             EmailTemplate template,
             string serverUrl,
@@ -84,6 +99,9 @@ namespace Cotton.Server.Services
             }
         }
 
+        /// <summary>
+        /// Releases resources held by this instance.
+        /// </summary>
         public void Dispose()
         {
             GC.SuppressFinalize(this);
@@ -98,26 +116,65 @@ namespace Cotton.Server.Services
 
         private sealed class GatewayEmailRequest
         {
+            /// <summary>
+            /// Gets or sets the template.
+            /// </summary>
             public string Template { get; set; } = null!;
+            /// <summary>
+            /// Gets or sets the instance id.
+            /// </summary>
             public Guid InstanceId { get; set; }
+            /// <summary>
+            /// Gets or sets the server URL.
+            /// </summary>
             public string ServerUrl { get; set; } = null!;
+            /// <summary>
+            /// Gets or sets the recipient email.
+            /// </summary>
             public string RecipientEmail { get; set; } = null!;
+            /// <summary>
+            /// Gets or sets the recipient name.
+            /// </summary>
             public string RecipientName { get; set; } = null!;
+            /// <summary>
+            /// Gets or sets the language.
+            /// </summary>
             public string Language { get; set; } = "English";
             public Dictionary<string, string> Parameters { get; set; } = [];
         }
     }
 
+    /// <summary>
+    /// Represents health response.
+    /// </summary>
     public class HealthResponse
     {
+        /// <summary>
+        /// Gets or sets the operation status.
+        /// </summary>
         public string Status { get; set; } = null!;
+        /// <summary>
+        /// Gets or sets the checks.
+        /// </summary>
         public Check[] Checks { get; set; } = [];
     }
 
+    /// <summary>
+    /// Represents check.
+    /// </summary>
     public class Check
     {
+        /// <summary>
+        /// Gets or sets the name.
+        /// </summary>
         public string Name { get; set; } = null!;
+        /// <summary>
+        /// Gets or sets the operation status.
+        /// </summary>
         public string Status { get; set; } = null!;
+        /// <summary>
+        /// Gets or sets the description.
+        /// </summary>
         public string Description { get; set; } = null!;
     }
 }

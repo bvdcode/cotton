@@ -15,6 +15,9 @@ using System.Net.Mail;
 
 namespace Cotton.Server.Providers
 {
+    /// <summary>
+    /// Provides settings dependencies to server components.
+    /// </summary>
     public class SettingsProvider(
         CottonDbContext _dbContext,
         IStorageBackendTypeCache? _storageTypeCache = null,
@@ -34,6 +37,9 @@ namespace Cotton.Server.Providers
         private const int defaultMaxChunkSizeBytes = 4 * 1024 * 1024;
         private const int defaultCipherChunkSizeBytes = 1 * 1024 * 1024;
 
+        /// <summary>
+        /// Gets server settings.
+        /// </summary>
         public CottonServerSettings GetServerSettings()
         {
             if (_cache is not null)
@@ -92,6 +98,9 @@ namespace Cotton.Server.Providers
             }
         }
 
+        /// <summary>
+        /// Ensures server settings async.
+        /// </summary>
         public async Task<CottonServerSettings> EnsureServerSettingsAsync(
             string? fallbackPublicBaseUrl,
             CancellationToken cancellationToken = default)
@@ -123,6 +132,9 @@ namespace Cotton.Server.Providers
             }
         }
 
+        /// <summary>
+        /// Indicates whether server initialized async.
+        /// </summary>
         public async Task<bool> IsServerInitializedAsync()
         {
             var now = DateTimeOffset.UtcNow;
@@ -151,6 +163,9 @@ namespace Cotton.Server.Providers
             return value;
         }
 
+        /// <summary>
+        /// Checks whether any user account exists.
+        /// </summary>
         public async Task<bool> ServerHasUsersAsync()
         {
             var now = DateTimeOffset.UtcNow;
@@ -179,6 +194,9 @@ namespace Cotton.Server.Providers
             return value;
         }
 
+        /// <summary>
+        /// Validates timezone.
+        /// </summary>
         public string? ValidateTimezone(string? timezone)
         {
             if (string.IsNullOrWhiteSpace(timezone))
@@ -194,6 +212,9 @@ namespace Cotton.Server.Providers
             return null;
         }
 
+        /// <summary>
+        /// Validates telemetry change.
+        /// </summary>
         public string? ValidateTelemetryChange(bool enabled)
         {
             if (enabled)
@@ -221,6 +242,9 @@ namespace Cotton.Server.Providers
             return null;
         }
 
+        /// <summary>
+        /// Validates email mode async.
+        /// </summary>
         public async Task<string?> ValidateEmailModeAsync(EmailMode mode)
         {
             var settings = GetServerSettings();
@@ -256,6 +280,9 @@ namespace Cotton.Server.Providers
             return "Invalid email mode: " + mode;
         }
 
+        /// <summary>
+        /// Validates compution mode.
+        /// </summary>
         public string? ValidateComputionMode(ComputionMode mode)
         {
             if (mode == ComputionMode.Cloud && !GetServerSettings().TelemetryEnabled)
@@ -268,6 +295,9 @@ namespace Cotton.Server.Providers
                 : "Invalid computation mode: " + mode;
         }
 
+        /// <summary>
+        /// Validates geo ip lookup mode.
+        /// </summary>
         public string? ValidateGeoIpLookupMode(GeoIpLookupMode mode)
         {
             var settings = GetServerSettings();
@@ -306,6 +336,9 @@ namespace Cotton.Server.Providers
             }
         }
 
+        /// <summary>
+        /// Validates storage type async.
+        /// </summary>
         public async Task<string?> ValidateStorageTypeAsync(StorageType type)
         {
             if (type == StorageType.Local)
@@ -337,6 +370,9 @@ namespace Cotton.Server.Providers
             return await ValidateS3ConnectivityAsync(s3Config);
         }
 
+        /// <summary>
+        /// Validates s3 config async.
+        /// </summary>
         public async Task<string?> ValidateS3ConfigAsync(S3Config? s3Config)
         {
             var shapeError = ValidateS3ConfigShape(s3Config);
@@ -451,6 +487,9 @@ namespace Cotton.Server.Providers
             await s3.DeleteObjectAsync(s3Config.Bucket, testKey);
         }
 
+        /// <summary>
+        /// Validates email config.
+        /// </summary>
         public string? ValidateEmailConfig(EmailConfig? emailConfig)
         {
             if (emailConfig is null)
@@ -495,6 +534,9 @@ namespace Cotton.Server.Providers
             return null;
         }
 
+        /// <summary>
+        /// Validates default user storage quota bytes.
+        /// </summary>
         public string? ValidateDefaultUserStorageQuotaBytes(long? quotaBytes)
         {
             if (quotaBytes is null or 0)
@@ -507,6 +549,9 @@ namespace Cotton.Server.Providers
                 : "Default user storage quota must be zero, empty, or a positive byte value.";
         }
 
+        /// <summary>
+        /// Validates default user template node id async.
+        /// </summary>
         public async Task<string?> ValidateDefaultUserTemplateNodeIdAsync(
             Guid? nodeId,
             Guid ownerId,
@@ -530,6 +575,9 @@ namespace Cotton.Server.Providers
                 : "Default user template folder was not found.";
         }
 
+        /// <summary>
+        /// Validates public base url.
+        /// </summary>
         public string? ValidatePublicBaseUrl(string? url)
         {
             return TryNormalizePublicBaseUrl(url, out _)
@@ -537,6 +585,9 @@ namespace Cotton.Server.Providers
                 : "Public base URL must be an absolute HTTP or HTTPS URL.";
         }
 
+        /// <summary>
+        /// Validates custom geo ip lookup url.
+        /// </summary>
         public string? ValidateCustomGeoIpLookupUrl(string? url)
         {
             return TryNormalizePublicBaseUrl(url, out _)
@@ -544,6 +595,9 @@ namespace Cotton.Server.Providers
                 : "Custom GeoIP lookup URL must be an absolute HTTP or HTTPS URL.";
         }
 
+        /// <summary>
+        /// Updates settings async.
+        /// </summary>
         public async Task UpdateSettingsAsync(
             Action<CottonServerSettings> update,
             string? fallbackPublicBaseUrl,
@@ -555,11 +609,17 @@ namespace Cotton.Server.Providers
             InvalidateSettingsCache(serverIsInitialized: true);
         }
 
+        /// <summary>
+        /// Sets property async<t property>.
+        /// </summary>
         public async Task SetPropertyAsync<TProperty>(Expression<Func<CottonServerSettings, TProperty>> selector, TProperty value, CancellationToken cancellationToken = default)
         {
             await SetPropertyAsync(selector, value, fallbackPublicBaseUrl: null, cancellationToken);
         }
 
+        /// <summary>
+        /// Sets property async<t property>.
+        /// </summary>
         public async Task SetPropertyAsync<TProperty>(
             Expression<Func<CottonServerSettings, TProperty>> selector,
             TProperty value,
@@ -584,6 +644,9 @@ namespace Cotton.Server.Providers
             InvalidateSettingsCache(serverIsInitialized: true);
         }
 
+        /// <summary>
+        /// Normalizes the public base URL for storage and comparison.
+        /// </summary>
         public static string NormalizePublicBaseUrl(string? url)
         {
             return TryNormalizePublicBaseUrl(url, out string? normalized)
@@ -591,6 +654,9 @@ namespace Cotton.Server.Providers
                 : defaultPublicBaseUrl;
         }
 
+        /// <summary>
+        /// Attempts to parse port.
+        /// </summary>
         public static bool TryParsePort(string? value, out int port)
         {
             return int.TryParse(value, out port) && port is >= 1 and <= 65535;

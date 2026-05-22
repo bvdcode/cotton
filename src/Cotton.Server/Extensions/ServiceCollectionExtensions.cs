@@ -14,8 +14,14 @@ using Microsoft.AspNetCore.Authentication;
 
 namespace Cotton.Server.Extensions
 {
+    /// <summary>
+    /// Contains extension methods for configuring service collection.
+    /// </summary>
     public static class ServiceCollectionExtensions
     {
+        /// <summary>
+        /// Registers stream cipher services.
+        /// </summary>
         public static IServiceCollection AddStreamCipher(this IServiceCollection services)
         {
             return services.AddScoped<IStreamCipher>(sp =>
@@ -33,12 +39,18 @@ namespace Cotton.Server.Extensions
             });
         }
 
+        /// <summary>
+        /// Registers web dav services services.
+        /// </summary>
         public static IServiceCollection AddWebDavServices(this IServiceCollection services)
         {
             services.AddScoped<IWebDavPathResolver, WebDavPathResolver>();
             return services;
         }
 
+        /// <summary>
+        /// Registers chunk services services.
+        /// </summary>
         public static IServiceCollection AddChunkServices(this IServiceCollection services)
         {
             services.AddScoped<IChunkIngestService, ChunkIngestService>();
@@ -50,6 +62,9 @@ namespace Cotton.Server.Extensions
             return services;
         }
 
+        /// <summary>
+        /// Registers database integrity services.
+        /// </summary>
         public static IServiceCollection AddDatabaseIntegrity(this IServiceCollection services)
         {
             services.AddSingleton<IDatabaseIntegrityKeyProvider, DatabaseIntegrityKeyProvider>();
@@ -74,12 +89,18 @@ namespace Cotton.Server.Extensions
             return services;
         }
 
+        /// <summary>
+        /// Registers layout path services services.
+        /// </summary>
         public static IServiceCollection AddLayoutPathServices(this IServiceCollection services)
         {
             services.AddScoped<ILayoutPathResolver, LayoutPathResolver>();
             return services;
         }
 
+        /// <summary>
+        /// Registers web dav auth services.
+        /// </summary>
         public static IServiceCollection AddWebDavAuth(this IServiceCollection services)
         {
             services.AddSingleton<Cotton.Server.Services.WebDav.WebDavAuthCache>();

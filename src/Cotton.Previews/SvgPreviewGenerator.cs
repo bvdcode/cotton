@@ -7,16 +7,22 @@ using System.IO.Compression;
 
 namespace Cotton.Previews
 {
+    /// <summary>
+    /// Generates previews for SVG documents.
+    /// </summary>
     public sealed class SvgPreviewGenerator : IPreviewGenerator
     {
+        /// <inheritdoc />
         public int Version => 1;
 
+        /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes =>
         [
             "image/svg+xml",
             "application/svg+xml"
         ];
 
+        /// <inheritdoc />
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
         {
             ArgumentNullException.ThrowIfNull(stream);

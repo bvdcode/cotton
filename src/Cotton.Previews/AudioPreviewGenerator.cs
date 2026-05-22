@@ -12,10 +12,15 @@ using Xabe.FFmpeg.Downloader;
 
 namespace Cotton.Previews
 {
+    /// <summary>
+    /// Generates audio previews from embedded cover art or waveform data.
+    /// </summary>
     public class AudioPreviewGenerator : IPreviewGenerator
     {
+        /// <inheritdoc />
         public int Version => 1;
 
+        /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes =>
         [
             "audio/mpeg",
@@ -34,6 +39,7 @@ namespace Cotton.Previews
             "audio/aiff",
         ];
 
+        /// <inheritdoc />
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size = 150)
         {
             await CheckFfmpegAsync();

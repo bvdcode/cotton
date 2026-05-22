@@ -13,18 +13,36 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Server
 {
+    /// <summary>
+    /// Represents a get gc chunks timeline query sent through the mediator pipeline.
+    /// </summary>
     public class GetGcChunksTimelineQuery(
         DateTime? fromUtc,
         DateTime? toUtc,
         string bucket,
         string? timezoneId) : IRequest<GcChunkTimelineDto>
     {
+        /// <summary>
+        /// Gets the from utc.
+        /// </summary>
         public DateTime? FromUtc { get; } = fromUtc;
+        /// <summary>
+        /// Gets the to utc.
+        /// </summary>
         public DateTime? ToUtc { get; } = toUtc;
+        /// <summary>
+        /// Gets the S3 bucket name.
+        /// </summary>
         public string Bucket { get; } = bucket;
+        /// <summary>
+        /// Gets the timezone id.
+        /// </summary>
         public string? TimezoneId { get; } = timezoneId;
     }
 
+    /// <summary>
+    /// Handles get gc chunks timeline queries in the mediator pipeline.
+    /// </summary>
     public class GetGcChunksTimelineQueryHandler(
         CottonDbContext _dbContext,
         SettingsProvider _settings,
@@ -33,6 +51,9 @@ namespace Cotton.Server.Handlers.Server
         private const int DefaultGcTimelineHorizonDays = 30;
         private const int MaxGcTimelineHorizonDays = 365;
 
+        /// <summary>
+        /// Handles the request through the mediator pipeline.
+        /// </summary>
         public async Task<GcChunkTimelineDto> Handle(GetGcChunksTimelineQuery request, CancellationToken cancellationToken)
         {
             string normalizedBucket = NormalizeBucket(request.Bucket);
@@ -301,13 +322,34 @@ namespace Cotton.Server.Handlers.Server
 
         private sealed class HourlyGcAggregate
         {
+            /// <summary>
+            /// Gets or sets the year.
+            /// </summary>
             public int Year { get; init; }
+            /// <summary>
+            /// Gets or sets the month.
+            /// </summary>
             public int Month { get; init; }
+            /// <summary>
+            /// Gets or sets the day.
+            /// </summary>
             public int Day { get; init; }
+            /// <summary>
+            /// Gets or sets the hour.
+            /// </summary>
             public int Hour { get; init; }
+            /// <summary>
+            /// Gets or sets the chunk count.
+            /// </summary>
             public long ChunkCount { get; init; }
+            /// <summary>
+            /// Gets or sets the size in bytes.
+            /// </summary>
             public long SizeBytes { get; init; }
 
+            /// <summary>
+            /// Executes from.
+            /// </summary>
             public static HourlyGcAggregate From(DateTime hourStartUtc, long chunkCount, long sizeBytes) => new()
             {
                 Year = hourStartUtc.Year,

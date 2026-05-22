@@ -7,10 +7,16 @@ using Mapster;
 
 namespace Cotton.Server.Mappings
 {
+    /// <summary>
+    /// Describes mapster configuration.
+    /// </summary>
     public static class MapsterConfig
     {
         private static bool _isConfigured;
 
+        /// <summary>
+        /// Registers Mapster mappings used by the API layer.
+        /// </summary>
         public static void Register()
         {
             if (_isConfigured)

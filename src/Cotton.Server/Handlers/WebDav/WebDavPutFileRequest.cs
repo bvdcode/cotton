@@ -40,15 +40,42 @@ public record WebDavPutFileResult(
     WebDavPutFileError? Error = null,
     Guid? NodeFileId = null);
 
+/// <summary>
+/// Lists the supported web dav put file error values.
+/// </summary>
 public enum WebDavPutFileError
 {
+    /// <summary>
+    /// Represents the parent not found option.
+    /// </summary>
     ParentNotFound,
+    /// <summary>
+    /// Represents the is collection option.
+    /// </summary>
     IsCollection,
+    /// <summary>
+    /// Represents the invalid name option.
+    /// </summary>
     InvalidName,
+    /// <summary>
+    /// Represents the conflict option.
+    /// </summary>
     Conflict,
+    /// <summary>
+    /// Represents the precondition failed option.
+    /// </summary>
     PreconditionFailed,
+    /// <summary>
+    /// Represents the upload aborted option.
+    /// </summary>
     UploadAborted,
+    /// <summary>
+    /// Represents the quota exceeded option.
+    /// </summary>
     QuotaExceeded,
+    /// <summary>
+    /// Represents the storage pressure option.
+    /// </summary>
     StoragePressure
 }
 
@@ -80,6 +107,9 @@ public class WebDavPutFileRequestHandler(
 
     private static WebDavPutFileResult Fail(WebDavPutFileError error) => new(false, false, error);
 
+    /// <summary>
+    /// Handles the request through the mediator pipeline.
+    /// </summary>
     public async Task<WebDavPutFileResult> Handle(WebDavPutFileRequest request, CancellationToken ct)
     {
         var (target, targetError) = await TryResolveAndValidateTargetAsync(request, ct);

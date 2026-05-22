@@ -9,6 +9,9 @@ using Quartz;
 
 namespace Cotton.Server.Jobs
 {
+    /// <summary>
+    /// Runs the scheduled fix mime types maintenance task.
+    /// </summary>
     [JobTrigger(days: 1)]
     public class FixMimeTypesJob(
         CottonDbContext _dbContext,
@@ -16,6 +19,9 @@ namespace Cotton.Server.Jobs
     {
         private const int BatchSize = 1000;
 
+        /// <summary>
+        /// Executes the scheduled Quartz job.
+        /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
             await Task.Delay(120_000); // Wait for 2 minutes for the server to start up and stabilize

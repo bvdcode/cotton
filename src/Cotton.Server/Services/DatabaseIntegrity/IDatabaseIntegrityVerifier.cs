@@ -5,8 +5,12 @@ using Cotton.Database;
 
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
+/// <summary>
+/// Verifies protected tracked entities before they are trusted by sensitive application flows.
+/// </summary>
 public interface IDatabaseIntegrityVerifier
 {
+    /// <summary>Requires the supplied tracked entity to have current and valid integrity metadata.</summary>
     void RequireValid<TEntity>(
         CottonDbContext dbContext,
         TEntity entity,

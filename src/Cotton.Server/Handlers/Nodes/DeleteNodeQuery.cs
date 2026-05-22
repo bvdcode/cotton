@@ -14,13 +14,28 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Nodes
 {
+    /// <summary>
+    /// Represents a delete node query sent through the mediator pipeline.
+    /// </summary>
     public class DeleteNodeQuery(Guid userId, Guid nodeId, bool skipTrash) : IRequest
     {
+        /// <summary>
+        /// Gets the owning user identifier.
+        /// </summary>
         public Guid UserId { get; } = userId;
+        /// <summary>
+        /// Gets the node identifier.
+        /// </summary>
         public Guid NodeId { get; } = nodeId;
+        /// <summary>
+        /// Gets whether deletion bypasses trash and permanently removes the resource.
+        /// </summary>
         public bool SkipTrash { get; } = skipTrash;
     }
 
+    /// <summary>
+    /// Handles delete node queries in the mediator pipeline.
+    /// </summary>
     public class DeleteNodeQueryHandler(
         CottonDbContext _dbContext,
         ILayoutService _layouts,
@@ -31,6 +46,9 @@ namespace Cotton.Server.Handlers.Nodes
         FileVersionService _versions)
             : IRequestHandler<DeleteNodeQuery>
     {
+        /// <summary>
+        /// Handles the request through the mediator pipeline.
+        /// </summary>
         public async Task Handle(DeleteNodeQuery request, CancellationToken ct)
         {
             var node = await _dbContext.Nodes

@@ -8,8 +8,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services;
 
+/// <summary>
+/// Coordinates file version storage.
+/// </summary>
 public sealed class FileVersionStorageService(CottonDbContext _dbContext)
 {
+    /// <summary>
+    /// Deletes historical versions async.
+    /// </summary>
     public async Task<long> DeleteHistoricalVersionsAsync(
         Guid userId,
         IReadOnlyCollection<NodeFile> versions,

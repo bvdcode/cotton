@@ -15,6 +15,9 @@ using System.Text.Json.Serialization;
 
 namespace Cotton.Server.Services;
 
+/// <summary>
+/// Coordinates app version tracker.
+/// </summary>
 public class AppVersionTrackerService(
     IServiceProvider _serviceProvider,
     IHttpClientFactory _httpClientFactory,
@@ -22,11 +25,15 @@ public class AppVersionTrackerService(
     IHostEnvironment _environment,
     ILogger<AppVersionTrackerService> _logger) : BackgroundService
 {
+    /// <summary>
+    /// Defines the git hub http client name.
+    /// </summary>
     public const string GitHubHttpClientName = "Cotton.GitHub";
 
     private const string LatestReleasePath = "repos/bvdcode/cotton/releases/latest";
     private static readonly TimeSpan StartupDelay = TimeSpan.FromSeconds(45);
 
+    /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try

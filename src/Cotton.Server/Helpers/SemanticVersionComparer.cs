@@ -3,13 +3,22 @@
 
 namespace Cotton.Server.Helpers;
 
+/// <summary>
+/// Compares semantic version values.
+/// </summary>
 public static class SemanticVersionComparer
 {
+    /// <summary>
+    /// Indicates whether downgrade.
+    /// </summary>
     public static bool IsDowngrade(string currentVersion, string latestVersion)
         => TryParse(currentVersion, out var current)
             && TryParse(latestVersion, out var latest)
             && Compare(latest, current) > 0;
 
+    /// <summary>
+    /// Indicates whether newer.
+    /// </summary>
     public static bool IsNewer(string candidateVersion, string currentVersion)
         => TryParse(candidateVersion, out var candidate)
             && TryParse(currentVersion, out var current)

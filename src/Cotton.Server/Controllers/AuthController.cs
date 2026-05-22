@@ -43,6 +43,9 @@ using System.Text;
 
 namespace Cotton.Server.Controllers
 {
+    /// <summary>
+    /// Exposes HTTP endpoints for auth operations.
+    /// </summary>
     [ApiController]
     [Route(Routes.V1.Auth)]
     public class AuthController(
@@ -65,12 +68,27 @@ namespace Cotton.Server.Controllers
         SessionAccessTokenRevocationStore _sessionRevocations,
         IHubContext<EventHub> _eventHub) : ControllerBase
     {
+        /// <summary>
+        /// Gets or sets the web dav token length.
+        /// </summary>
         public const int WebDavTokenLength = 32;
+        /// <summary>
+        /// Gets or sets the refresh token length.
+        /// </summary>
         public const int RefreshTokenLength = 32;
+        /// <summary>
+        /// Defines the cookie access token key.
+        /// </summary>
         public const string CookieAccessTokenKey = "access_token";
+        /// <summary>
+        /// Defines the cookie refresh token key.
+        /// </summary>
         public const string CookieRefreshTokenKey = "refresh_token";
         private static readonly EmailAddressAttribute EmailValidator = new();
 
+        /// <summary>
+        /// Gets web dav token.
+        /// </summary>
         [Authorize]
         [HttpGet("webdav/token")]
         public async Task<IActionResult> GetWebDavToken()
@@ -91,6 +109,9 @@ namespace Cotton.Server.Controllers
             return Ok(token);
         }
 
+        /// <summary>
+        /// Revokes session.
+        /// </summary>
         [Authorize]
         [HttpDelete("sessions/{sessionId}")]
         public async Task<IActionResult> RevokeSession(
@@ -111,6 +132,9 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Gets sessions.
+        /// </summary>
         [Authorize]
         [HttpGet("sessions")]
         public async Task<IActionResult> GetSessions()
@@ -123,6 +147,9 @@ namespace Cotton.Server.Controllers
             return Ok(sessions);
         }
 
+        /// <summary>
+        /// Disables totp.
+        /// </summary>
         [Authorize]
         [HttpDelete("totp/disable")]
         public async Task<IActionResult> DisableTotp([FromBody] DisableTotpRequestDto request)
@@ -158,6 +185,9 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Confirms totp.
+        /// </summary>
         [Authorize]
         [HttpPost("totp/confirm")]
         public async Task<IActionResult> ConfirmTotp([FromBody] ConfirmTotpRequestDto request)
@@ -198,6 +228,9 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Sets up totp.
+        /// </summary>
         [Authorize]
         [HttpPost("totp/setup")]
         public async Task<IActionResult> SetupTotp()
@@ -223,6 +256,9 @@ namespace Cotton.Server.Controllers
             return Ok(setup);
         }
 
+        /// <summary>
+        /// Returns the current authenticated user.
+        /// </summary>
         [Authorize]
         [HttpGet("me")]
         public async Task<IActionResult> Me()
@@ -237,6 +273,9 @@ namespace Cotton.Server.Controllers
             return Ok(user.Adapt<UserDto>());
         }
 
+        /// <summary>
+        /// Gets passkeys.
+        /// </summary>
         [Authorize]
         [HttpGet("passkeys")]
         public async Task<IActionResult> GetPasskeys(CancellationToken cancellationToken)
@@ -246,6 +285,9 @@ namespace Cotton.Server.Controllers
             return Ok(credentials);
         }
 
+        /// <summary>
+        /// Begins passkey registration.
+        /// </summary>
         [Authorize]
         [HttpPost("passkeys/registration/options")]
         public async Task<IActionResult> BeginPasskeyRegistration(
@@ -259,6 +301,9 @@ namespace Cotton.Server.Controllers
             return Ok(response);
         }
 
+        /// <summary>
+        /// Finishes passkey registration.
+        /// </summary>
         [Authorize]
         [HttpPost("passkeys/registration/verify")]
         public async Task<IActionResult> FinishPasskeyRegistration(
@@ -272,6 +317,9 @@ namespace Cotton.Server.Controllers
             return Ok(response);
         }
 
+        /// <summary>
+        /// Renames passkey.
+        /// </summary>
         [Authorize]
         [HttpPut("passkeys/{credentialId:guid}")]
         public async Task<IActionResult> RenamePasskey(
@@ -287,6 +335,9 @@ namespace Cotton.Server.Controllers
             return Ok(response);
         }
 
+        /// <summary>
+        /// Deletes passkey.
+        /// </summary>
         [Authorize]
         [HttpDelete("passkeys/{credentialId:guid}")]
         public async Task<IActionResult> DeletePasskey(
@@ -297,6 +348,9 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Begins passkey assertion.
+        /// </summary>
         [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
         [HttpPost("passkeys/assertion/options")]
         public async Task<IActionResult> BeginPasskeyAssertion(
@@ -307,6 +361,9 @@ namespace Cotton.Server.Controllers
             return Ok(response);
         }
 
+        /// <summary>
+        /// Finishes passkey assertion.
+        /// </summary>
         [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
         [HttpPost("passkeys/assertion/verify")]
         public async Task<IActionResult> FinishPasskeyAssertion(
@@ -324,6 +381,9 @@ namespace Cotton.Server.Controllers
             }
         }
 
+        /// <summary>
+        /// Authenticates a user and issues access and refresh tokens.
+        /// </summary>
         [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginRequest request)
@@ -432,6 +492,9 @@ namespace Cotton.Server.Controllers
             return null;
         }
 
+        /// <summary>
+        /// Gets refresh token.
+        /// </summary>
         [EnableRateLimiting(AuthRateLimitPolicies.Refresh)]
         [HttpPost("refresh")]
         public async Task<IActionResult> GetRefreshToken([FromQuery] string? refreshToken = null)
@@ -476,6 +539,9 @@ namespace Cotton.Server.Controllers
             });
         }
 
+        /// <summary>
+        /// Revokes the current refresh token and clears auth cookies.
+        /// </summary>
         [HttpPost("logout")]
         public async Task<IActionResult> Logout([FromQuery] string? refreshToken = null)
         {
@@ -505,6 +571,9 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Starts the password reset flow without revealing whether the account exists.
+        /// </summary>
         [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword(
@@ -516,6 +585,9 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Clears the cached value so it will be resolved again.
+        /// </summary>
         [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword(
@@ -527,6 +599,9 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Invalidates every share link owned by the current user.
+        /// </summary>
         [Authorize]
         [HttpPost("invalidate-share-links")]
         public async Task<IActionResult> InvalidateShareLinks(CancellationToken cancellationToken)

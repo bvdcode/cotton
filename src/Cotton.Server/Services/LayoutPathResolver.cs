@@ -11,11 +11,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services;
 
+/// <summary>
+/// Resolves layout path.
+/// </summary>
 public class LayoutPathResolver(
     CottonDbContext _dbContext,
     ILayoutService _layouts)
     : ILayoutPathResolver
 {
+    /// <summary>
+    /// Gets layout and root.
+    /// </summary>
     public async Task<(Layout Layout, Node Root)> GetLayoutAndRootAsync(Guid userId, NodeType nodeType, CancellationToken ct = default)
     {
         var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
@@ -23,6 +29,9 @@ public class LayoutPathResolver(
         return (layout, root);
     }
 
+    /// <summary>
+    /// Resolves node by path async.
+    /// </summary>
     public async Task<Node?> ResolveNodeByPathAsync(Guid userId, string? path, NodeType nodeType, CancellationToken ct = default)
     {
         var (layout, currentNode) = await GetLayoutAndRootAsync(userId, nodeType, ct);

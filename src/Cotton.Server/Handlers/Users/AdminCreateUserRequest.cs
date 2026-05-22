@@ -17,22 +17,52 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Users
 {
+    /// <summary>
+    /// Represents the admin create user request request payload accepted by the API.
+    /// </summary>
     public class AdminCreateUserRequest(string username, string? email, string? password, UserRole role) : IRequest<UserDto>
     {
+        /// <summary>
+        /// Gets the username.
+        /// </summary>
         public string Username { get; } = username;
+        /// <summary>
+        /// Gets the user email address.
+        /// </summary>
         public string? Email { get; } = email;
+        /// <summary>
+        /// Gets the password submitted by the client.
+        /// </summary>
         public string? Password { get; } = password;
+        /// <summary>
+        /// Gets or sets the user first name.
+        /// </summary>
         public string? FirstName { get; set; }
+        /// <summary>
+        /// Gets or sets the user last name.
+        /// </summary>
         public string? LastName { get; set; }
+        /// <summary>
+        /// Gets the role.
+        /// </summary>
         public UserRole Role { get; } = role;
+        /// <summary>
+        /// Gets or sets the birth date.
+        /// </summary>
         public DateOnly? BirthDate { get; set; }
     }
 
+    /// <summary>
+    /// Handles admin create user requests in the mediator pipeline.
+    /// </summary>
     public class AdminCreateUserRequestHandler(
         CottonDbContext _dbContext,
         IPasswordHashService _hasher,
         DefaultUserContentSeeder _defaultUserContentSeeder) : IRequestHandler<AdminCreateUserRequest, UserDto>
     {
+        /// <summary>
+        /// Handles the request through the mediator pipeline.
+        /// </summary>
         public async Task<UserDto> Handle(AdminCreateUserRequest request, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(request.Username))

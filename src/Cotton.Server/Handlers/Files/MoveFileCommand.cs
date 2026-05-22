@@ -15,19 +15,37 @@ using Npgsql;
 
 namespace Cotton.Server.Handlers.Files
 {
+    /// <summary>
+    /// Represents a move file command sent through the mediator pipeline.
+    /// </summary>
     public class MoveFileCommand : IRequest<NodeFileManifestDto>
     {
+        /// <summary>
+        /// Gets or sets the file entry identifier.
+        /// </summary>
         public Guid NodeFileId { get; set; }
+        /// <summary>
+        /// Gets or sets the parent folder identifier.
+        /// </summary>
         public Guid ParentId { get; set; }
+        /// <summary>
+        /// Gets or sets the owning user identifier.
+        /// </summary>
         public Guid UserId { get; set; }
     }
 
+    /// <summary>
+    /// Handles move file commands in the mediator pipeline.
+    /// </summary>
     public class MoveFileCommandHandler(
         CottonDbContext _dbContext,
         IEventNotificationService _eventNotification,
         ILogger<MoveFileCommandHandler> _logger)
         : IRequestHandler<MoveFileCommand, NodeFileManifestDto>
     {
+        /// <summary>
+        /// Handles the request through the mediator pipeline.
+        /// </summary>
         public async Task<NodeFileManifestDto> Handle(MoveFileCommand request, CancellationToken cancellationToken)
         {
             if (request.ParentId == Guid.Empty)

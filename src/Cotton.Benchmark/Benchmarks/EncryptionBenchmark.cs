@@ -19,6 +19,7 @@ namespace Cotton.Benchmark.Benchmarks
         private readonly CryptoProcessor _processor;
         private readonly AesGcmStreamCipher _cipher;
 
+        /// <summary>Initializes the benchmark with a fixed measurement configuration.</summary>
         public EncryptionBenchmark(BenchmarkConfiguration configuration)
             : base(configuration)
         {
@@ -79,6 +80,7 @@ namespace Cotton.Benchmark.Benchmarks
             return baseMetrics;
         }
 
+        /// <inheritdoc />
         public void Dispose()
         {
             _cipher?.Dispose();

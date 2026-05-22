@@ -21,6 +21,9 @@ using Quartz;
 
 namespace Cotton.Server.Jobs
 {
+    /// <summary>
+    /// Runs the scheduled generate preview maintenance task.
+    /// </summary>
     [JobTrigger(minutes: 15)]
     public class GeneratePreviewJob(
         PerfTracker _perf,
@@ -34,6 +37,9 @@ namespace Cotton.Server.Jobs
         private const int UnthrottledItemsCount = 1000;
         private const int ThrottleDelayMs = 250;
 
+        /// <summary>
+        /// Executes the scheduled Quartz job.
+        /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
             var allSupportedMimeTypes = PreviewGeneratorProvider.GetAllSupportedMimeTypes();

@@ -11,9 +11,14 @@ using SixLabors.ImageSharp.Processing;
 
 namespace Cotton.Previews
 {
+    /// <summary>
+    /// Generates previews for text-like documents.
+    /// </summary>
     public class TextPreviewGenerator : IPreviewGenerator
     {
+        /// <inheritdoc />
         public int Version => 0;
+        /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes =>
         [
             "text/plain",
@@ -31,6 +36,7 @@ namespace Cotton.Previews
 
         private static readonly FontFamily _fontFamily = LoadFontFamily();
 
+        /// <inheritdoc />
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);

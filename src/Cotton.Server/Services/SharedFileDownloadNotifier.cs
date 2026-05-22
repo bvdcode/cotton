@@ -9,6 +9,9 @@ using System.Net;
 
 namespace Cotton.Server.Services
 {
+    /// <summary>
+    /// Represents shared file download notifier.
+    /// </summary>
     public sealed class SharedFileDownloadNotifier(
         IMemoryCache _cache,
         INotificationsProvider _notifications,
@@ -24,6 +27,9 @@ namespace Cotton.Server.Services
         private static string BuildKey(Guid ownerId, Guid tokenId, string ip, string userAgent) =>
             $"shared-download:{ownerId:N}:{tokenId:N}:{ip}:{userAgent}";
 
+        /// <summary>
+        /// Executes notify once.
+        /// </summary>
         public async Task NotifyOnceAsync(Guid ownerId, Guid tokenId, string fileName, HttpContext httpContext, CancellationToken ct)
         {
             IPAddress requestIp = GetRequestIpAddress(httpContext);

@@ -13,6 +13,9 @@ public static class WebDavXmlBuilder
 {
     private const string DavNamespace = "DAV:";
 
+    /// <summary>
+    /// Builds multi status response.
+    /// </summary>
     public static string BuildMultiStatusResponse(IEnumerable<WebDavResource> resources)
     {
         var sb = new StringBuilder();
@@ -39,6 +42,9 @@ public static class WebDavXmlBuilder
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Builds prop patch ok response.
+    /// </summary>
     public static string BuildPropPatchOkResponse(string href)
     {
         var sb = new StringBuilder();
@@ -70,6 +76,9 @@ public static class WebDavXmlBuilder
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Builds lock discovery response.
+    /// </summary>
     public static string BuildLockDiscoveryResponse(string token, TimeSpan timeout)
     {
         var sb = new StringBuilder();

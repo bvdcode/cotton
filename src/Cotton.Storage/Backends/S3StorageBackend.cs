@@ -11,6 +11,9 @@ using System.Net.Mime;
 
 namespace Cotton.Storage.Backends
 {
+    /// <summary>
+    /// S3-compatible backend that stores opaque Cotton chunks as bucket objects.
+    /// </summary>
     public class S3StorageBackend(IS3Provider _s3Provider) : IStorageBackend, IStorageBackendUsesEncryptedConfiguration
     {
         private const int WriteBufferSize = 2 * 1024 * 1024;
@@ -21,6 +24,7 @@ namespace Cotton.Storage.Backends
             return $"{p1}/{p2}/{fileName}.ctn";
         }
 
+        /// <inheritdoc />
         public async Task<bool> DeleteAsync(string uid)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
@@ -37,6 +41,7 @@ namespace Cotton.Storage.Backends
             return response.HttpStatusCode == HttpStatusCode.NoContent;
         }
 
+        /// <inheritdoc />
         public async Task<Stream> ReadAsync(string uid)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
@@ -52,6 +57,7 @@ namespace Cotton.Storage.Backends
             return new S3ResponseStream(result);
         }
 
+        /// <inheritdoc />
         public async Task<bool> ExistsAsync(string uid)
         {
             ArgumentException.ThrowIfNullOrEmpty(uid);
@@ -76,6 +82,7 @@ namespace Cotton.Storage.Backends
             }
         }
 
+        /// <inheritdoc />
         public async Task<long> GetSizeAsync(string uid)
         {
             ArgumentException.ThrowIfNullOrEmpty(uid);
@@ -101,6 +108,7 @@ namespace Cotton.Storage.Backends
             }
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(string uid, Stream source)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
@@ -152,11 +160,13 @@ namespace Cotton.Storage.Backends
             }
         }
 
+        /// <inheritdoc />
         public void CleanupTempFiles(TimeSpan ttl)
         {
             // No-op for S3 backend
         }
 
+        /// <inheritdoc />
         public async IAsyncEnumerable<string> ListAllKeysAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
             IAmazonS3 s3 = _s3Provider.GetS3Client();

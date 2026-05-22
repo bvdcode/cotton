@@ -5,16 +5,23 @@ using Cotton.Database.Models;
 
 namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 
+/// <summary>
+/// Describes one-time download-token rows protected by database integrity signing.
+/// </summary>
 public sealed class DownloadTokenIntegrityDescriptor : DatabaseIntegrityDescriptor<DownloadToken>
 {
+    /// <inheritdoc />
     public override string EntityName => "download_tokens";
+    /// <inheritdoc />
     public override int SchemaVersion => 1;
 
+    /// <inheritdoc />
     public override string GetEntityKey(DownloadToken entity)
     {
         return entity.Id.ToString("D");
     }
 
+    /// <inheritdoc />
     public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, DownloadToken entity)
     {
         writer.WriteGuidField(nameof(entity.Id), entity.Id);

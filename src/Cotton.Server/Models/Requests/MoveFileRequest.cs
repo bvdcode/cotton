@@ -3,8 +3,14 @@
 
 namespace Cotton.Server.Models.Requests
 {
+    /// <summary>
+    /// Represents the move file request request payload accepted by the API.
+    /// </summary>
     public class MoveFileRequest
     {
+        /// <summary>
+        /// Gets or sets parent id.
+        /// </summary>
         public Guid ParentId { get; set; }
     }
 }

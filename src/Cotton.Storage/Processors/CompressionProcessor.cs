@@ -10,19 +10,27 @@ using ZstdSharp;
 
 namespace Cotton.Storage.Processors
 {
+    /// <summary>
+    /// Storage processor that compresses blobs with Zstandard before they reach the backend.
+    /// </summary>
     public class CompressionProcessor : IStorageProcessor
     {
+        /// <summary>Default Zstandard compression level used for stored blobs.</summary>
         public const int CompressionLevel = 3;
+        /// <summary>Compression algorithm used by this processor.</summary>
         public const CompressionAlgorithm Algorithm = CompressionAlgorithm.Zstd;
+        /// <inheritdoc />
         public int Priority => 10000;
         private const int CompressBufferSize = 1 * 1024 * 1024;
 
+        /// <inheritdoc />
         public Task<Stream> ReadAsync(string uid, Stream stream, PipelineContext? context = null)
         {
             var decompressor = new DecompressionStream(stream);
             return Task.FromResult<Stream>(decompressor);
         }
 
+        /// <inheritdoc />
         public Task<Stream> WriteAsync(string uid, Stream stream, PipelineContext? context = null)
         {
             ArgumentNullException.ThrowIfNull(stream);

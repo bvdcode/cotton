@@ -40,6 +40,9 @@ public class WebDavGetFileQueryHandler(
     ILogger<WebDavGetFileQueryHandler> _logger)
     : IRequestHandler<WebDavGetFileQuery, WebDavGetFileResult>
 {
+    /// <summary>
+    /// Handles the request through the mediator pipeline.
+    /// </summary>
     public async Task<WebDavGetFileResult> Handle(WebDavGetFileQuery request, CancellationToken ct)
     {
         var resolveResult = await _pathResolver.ResolvePathAsync(request.UserId, request.Path, ct);

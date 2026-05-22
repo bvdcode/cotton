@@ -20,13 +20,28 @@ using System.Text.Json;
 
 namespace Cotton.Server.Handlers.Files
 {
+    /// <summary>
+    /// Represents a share file query sent through the mediator pipeline.
+    /// </summary>
     public class ShareFileQuery(string token, string? view, HttpRequest httpRequest) : IRequest<ShareFileResult>
     {
+        /// <summary>
+        /// Gets the opaque token.
+        /// </summary>
         public string Token { get; } = token;
+        /// <summary>
+        /// Gets the view.
+        /// </summary>
         public string? View { get; } = view;
+        /// <summary>
+        /// Gets the http request.
+        /// </summary>
         public HttpRequest HttpRequest { get; } = httpRequest;
     }
 
+    /// <summary>
+    /// Handles share file queries in the mediator pipeline.
+    /// </summary>
     public class ShareFileQueryHandler(
         CottonDbContext _dbContext,
         ISharedFileDownloadNotifier _sharedFileDownloadNotifier,
@@ -34,6 +49,9 @@ namespace Cotton.Server.Handlers.Files
         IStoragePipeline _storage,
         IDatabaseIntegrityVerifier _integrity) : IRequestHandler<ShareFileQuery, ShareFileResult>
     {
+        /// <summary>
+        /// Handles the request through the mediator pipeline.
+        /// </summary>
         public async Task<ShareFileResult> Handle(ShareFileQuery request, CancellationToken ct)
         {
             var viewMode = TryParseViewMode(request.View);
@@ -318,31 +336,94 @@ namespace Cotton.Server.Handlers.Files
         }
     }
 
+    /// <summary>
+    /// Represents the result of share file.
+    /// </summary>
     public sealed record ShareFileResult
     {
+        /// <summary>
+        /// Gets or sets the kind.
+        /// </summary>
         public string Kind { get; init; } = "";
+        /// <summary>
+        /// Gets or sets the redirect url.
+        /// </summary>
         public string? RedirectUrl { get; init; }
+        /// <summary>
+        /// Gets or sets the html content.
+        /// </summary>
         public string? HtmlContent { get; init; }
 
+        /// <summary>
+        /// Gets or sets the response content type.
+        /// </summary>
         public string? ContentType { get; init; }
+        /// <summary>
+        /// Gets or sets the response content length in bytes.
+        /// </summary>
         public long? ContentLength { get; init; }
+        /// <summary>
+        /// Gets or sets the entity tag.
+        /// </summary>
         public string? EntityTag { get; init; }
+        /// <summary>
+        /// Gets or sets the file name shown to clients.
+        /// </summary>
         public string? FileName { get; init; }
+        /// <summary>
+        /// Gets or sets the inline.
+        /// </summary>
         public bool? Inline { get; init; }
 
+        /// <summary>
+        /// Gets or sets the file stream.
+        /// </summary>
         public Stream? FileStream { get; init; }
+        /// <summary>
+        /// Gets or sets the download name.
+        /// </summary>
         public string? DownloadName { get; init; }
+        /// <summary>
+        /// Gets or sets the last modified.
+        /// </summary>
         public DateTimeOffset? LastModified { get; init; }
+        /// <summary>
+        /// Gets or sets the entity tag value.
+        /// </summary>
         public EntityTagHeaderValue? EntityTagValue { get; init; }
+        /// <summary>
+        /// Deletes after use.
+        /// </summary>
         public bool DeleteAfterUse { get; init; }
+        /// <summary>
+        /// Deletes token id.
+        /// </summary>
         public Guid? DeleteTokenId { get; init; }
 
+        /// <summary>
+        /// Gets or sets the error message.
+        /// </summary>
         public string? ErrorMessage { get; init; }
 
+        /// <summary>
+        /// Converts the result to bad request.
+        /// </summary>
         public static ShareFileResult AsBadRequest(string message) => new() { Kind = "badRequest", ErrorMessage = message };
+        /// <summary>
+        /// Converts the result to not found.
+        /// </summary>
         public static ShareFileResult AsNotFound(string message) => new() { Kind = "notFound", ErrorMessage = message };
+        /// <summary>
+        /// Converts the result to redirect.
+        /// </summary>
         public static ShareFileResult AsRedirect(string url) => new() { Kind = "redirect", RedirectUrl = url };
+        /// <summary>
+        /// Converts the result to html.
+        /// </summary>
         public static ShareFileResult AsHtml(string html) => new() { Kind = "html", HtmlContent = html };
+        /// <summary>
+        /// Converts the result to head.
+        /// </summary>
         public static ShareFileResult AsHead(string contentType, long contentLength, string entityTag, string fileName, bool inline) =>
             new()
             {
@@ -354,6 +435,9 @@ namespace Cotton.Server.Handlers.Files
                 Inline = inline,
             };
 
+        /// <summary>
+        /// Converts the result to stream.
+        /// </summary>
         public static ShareFileResult AsStream(Stream stream, string contentType, string? downloadName, DateTimeOffset lastModified, EntityTagHeaderValue entityTag, bool deleteAfterUse, Guid deleteTokenId) =>
             new()
             {

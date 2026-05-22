@@ -7,6 +7,9 @@ using System.Globalization;
 
 namespace Cotton.Server.Services
 {
+    /// <summary>
+    /// Coordinates postgres dump.
+    /// </summary>
     public class PostgresDumpService(
         IConfiguration configuration,
         ILogger<PostgresDumpService> logger) : IPostgresDumpService
@@ -14,6 +17,9 @@ namespace Cotton.Server.Services
         private readonly IConfiguration _configuration = configuration;
         private readonly ILogger<PostgresDumpService> _logger = logger;
 
+        /// <summary>
+        /// Writes a PostgreSQL dump to the provided file path.
+        /// </summary>
         public async Task DumpToFileAsync(string outputFilePath, CancellationToken cancellationToken = default)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(outputFilePath);
@@ -61,6 +67,9 @@ namespace Cotton.Server.Services
             _logger.LogInformation("PostgreSQL dump created at {OutputFilePath}.", outputFilePath);
         }
 
+        /// <summary>
+        /// Restores from file async.
+        /// </summary>
         public async Task RestoreFromFileAsync(string inputFilePath, CancellationToken cancellationToken = default)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(inputFilePath);

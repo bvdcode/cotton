@@ -10,10 +10,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Topology;
 
+/// <summary>
+/// EF-backed implementation of path resolution for typed Cotton layout trees.
+/// </summary>
 public sealed class LayoutNavigator(
     CottonDbContext _dbContext,
     ILayoutService _layouts) : ILayoutNavigator
 {
+    /// <inheritdoc />
     public async Task<(Layout Layout, Node Root)> GetLayoutAndRootAsync(Guid userId, NodeType nodeType, CancellationToken ct = default)
     {
         var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
@@ -21,6 +25,7 @@ public sealed class LayoutNavigator(
         return (layout, root);
     }
 
+    /// <inheritdoc />
     public async Task<Node?> ResolveNodeByPathAsync(Guid userId, string? path, NodeType nodeType, CancellationToken ct = default)
     {
         var (layout, currentNode) = await GetLayoutAndRootAsync(userId, nodeType, ct);
@@ -56,6 +61,7 @@ public sealed class LayoutNavigator(
         return currentNode;
     }
 
+    /// <inheritdoc />
     public async Task<string?> GetNodePathFromRootAsync(Guid userId, Guid nodeId, NodeType nodeType, CancellationToken ct = default)
     {
         const int maxDepth = 256;
@@ -96,6 +102,7 @@ public sealed class LayoutNavigator(
         return string.Join(Constants.DefaultPathSeparator, parts);
     }
 
+    /// <inheritdoc />
     public async Task<(Node Parent, string ResourceName)?> ResolveParentAndNameAsync(Guid userId, string path, NodeType nodeType, CancellationToken ct = default)
     {
         var cleanPath = (path ?? string.Empty).Replace('\\', Constants.DefaultPathSeparator).Trim(Constants.DefaultPathSeparator);

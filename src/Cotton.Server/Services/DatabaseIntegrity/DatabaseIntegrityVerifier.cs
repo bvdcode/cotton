@@ -8,12 +8,20 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
+/// <summary>
+/// Verifies protected tracked entities when they cross a security-sensitive read boundary.
+/// </summary>
+/// <remarks>
+/// Save-time signing prevents Cotton from writing unsigned changes. Read-time verification prevents direct database
+/// edits from being trusted when authentication, token consumption, or other protected flows use the row.
+/// </remarks>
 public sealed class DatabaseIntegrityVerifier(
     IDatabaseIntegrityProtector _protector,
     IDatabaseIntegrityDescriptorRegistry _descriptors,
     IDatabaseIntegrityFailureReporter _failures,
     ILogger<DatabaseIntegrityVerifier> _logger) : IDatabaseIntegrityVerifier
 {
+    /// <inheritdoc />
     public void RequireValid<TEntity>(
         CottonDbContext dbContext,
         TEntity entity,
