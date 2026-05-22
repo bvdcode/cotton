@@ -195,6 +195,7 @@ namespace Cotton.Server
                 var autoRestore = scope.ServiceProvider.GetRequiredService<IDatabaseAutoRestoreService>();
                 autoRestore.TryRestoreIfEmptyAsync().GetAwaiter().GetResult();
             }
+            await app.ApplyDatabaseIntegrityBridgeBackfillAsync();
             app.MapHub<EventHub>(Routes.V1.EventHub);
             await app.RunAsync();
         }

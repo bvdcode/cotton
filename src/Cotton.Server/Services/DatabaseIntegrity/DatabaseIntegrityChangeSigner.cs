@@ -31,7 +31,7 @@ public sealed class DatabaseIntegrityChangeSigner : IDatabaseIntegrityChangeSign
                 continue;
             }
 
-            if (!_descriptors.TryGetValue(entry.Entity.GetType(), out IDatabaseIntegrityDescriptor? descriptor))
+            if (!TryGetDescriptor(entry.Entity.GetType(), out IDatabaseIntegrityDescriptor? descriptor))
             {
                 continue;
             }
@@ -46,6 +46,28 @@ public sealed class DatabaseIntegrityChangeSigner : IDatabaseIntegrityChangeSign
             entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue = descriptor.SchemaVersion;
             entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue = mac;
         }
+    }
+
+    private bool TryGetDescriptor(
+        Type entityType,
+        out IDatabaseIntegrityDescriptor descriptor)
+    {
+        if (_descriptors.TryGetValue(entityType, out descriptor!))
+        {
+            return true;
+        }
+
+        foreach ((Type descriptorType, IDatabaseIntegrityDescriptor candidate) in _descriptors)
+        {
+            if (descriptorType.IsAssignableFrom(entityType))
+            {
+                descriptor = candidate;
+                return true;
+            }
+        }
+
+        descriptor = null!;
+        return false;
     }
 
     private static bool HasIntegrityShadowProperties(EntityEntry entry)
