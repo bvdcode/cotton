@@ -322,10 +322,6 @@ export const TrashPage: React.FC = () => {
 
   const viewMode = getFileBrowserViewMode(layoutType, tilesSize);
 
-  const cycleViewMode = () => {
-    cycleFileBrowserViewMode(viewMode, setLayoutType, setTilesSize);
-  };
-
   const queryClient = useQueryClient();
   const rootQuery = useTrashRootQuery(isTrashRoot);
   const nodeId = resolveTrashNodeId(routeNodeId, rootQuery.data?.id);
@@ -619,7 +615,9 @@ export const TrashPage: React.FC = () => {
       canGoUp: breadcrumbs.length > 1,
       onGoUp: handleGoUp,
       onHomeClick: goHome,
-      onViewModeCycle: cycleViewMode,
+      onViewModeCycle: () => {
+        cycleFileBrowserViewMode(viewMode, setLayoutType, setTilesSize);
+      },
       statsNamespace: "trash",
       selectionMode: fileSelection.selectionMode,
       selectedCount: fileSelection.selectedCount,
@@ -631,13 +629,14 @@ export const TrashPage: React.FC = () => {
       breadcrumbs,
       navigateToBreadcrumb,
       customActionItems,
-      cycleViewMode,
       fileSelection,
       goHome,
       handleGoUp,
       layoutType,
       loading,
       stats,
+      setLayoutType,
+      setTilesSize,
       tiles,
       viewMode,
     ],
