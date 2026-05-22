@@ -123,15 +123,25 @@ namespace Cotton.Server.Jobs
 
             if (referencedByPreview)
             {
-                await _dbContext.FileManifests
-                    .Where(fm => fm.SmallFilePreviewHash == chunkHash)
-                    .ExecuteUpdateAsync(fm => fm
-                        .SetProperty(x => x.SmallFilePreviewHash, (byte[]?)null)
-                        .SetProperty(x => x.SmallFilePreviewHashEncrypted, (byte[]?)null), ct);
+                List<FileManifest> previewManifests = await _dbContext.FileManifests
+                    .Where(fm => fm.SmallFilePreviewHash == chunkHash || fm.LargeFilePreviewHash == chunkHash)
+                    .ToListAsync(ct);
 
-                await _dbContext.FileManifests
-                    .Where(fm => fm.LargeFilePreviewHash == chunkHash)
-                    .ExecuteUpdateAsync(fm => fm.SetProperty(x => x.LargeFilePreviewHash, (byte[]?)null), ct);
+                foreach (FileManifest manifest in previewManifests)
+                {
+                    if (manifest.SmallFilePreviewHash is not null && manifest.SmallFilePreviewHash.SequenceEqual(chunkHash))
+                    {
+                        manifest.SmallFilePreviewHash = null;
+                        manifest.SmallFilePreviewHashEncrypted = null;
+                    }
+
+                    if (manifest.LargeFilePreviewHash is not null && manifest.LargeFilePreviewHash.SequenceEqual(chunkHash))
+                    {
+                        manifest.LargeFilePreviewHash = null;
+                    }
+                }
+
+                await _dbContext.SaveChangesAsync(ct);
             }
 
             bool referencedByAvatar = await _dbContext.Users

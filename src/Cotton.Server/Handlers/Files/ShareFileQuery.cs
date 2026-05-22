@@ -47,7 +47,8 @@ namespace Cotton.Server.Handlers.Files
         ISharedFileDownloadNotifier _sharedFileDownloadNotifier,
         IHttpContextAccessor _httpContextAccessor,
         IStoragePipeline _storage,
-        IDatabaseIntegrityVerifier _integrity) : IRequestHandler<ShareFileQuery, ShareFileResult>
+        IDatabaseIntegrityVerifier _integrity,
+        FileGraphIntegrityVerifier _fileGraphIntegrity) : IRequestHandler<ShareFileQuery, ShareFileResult>
     {
         /// <summary>
         /// Handles the request through the mediator pipeline.
@@ -71,6 +72,15 @@ namespace Cotton.Server.Handlers.Files
             }
 
             _integrity.RequireValid(_dbContext, downloadToken, "share.download-token");
+            if (viewMode.Value.IsHtml || isHead)
+            {
+                _fileGraphIntegrity.RequireValidMetadata(_dbContext, downloadToken.NodeFile, "share.file-metadata");
+            }
+            else
+            {
+                _fileGraphIntegrity.RequireValidContent(_dbContext, downloadToken.NodeFile, "share.file-download");
+            }
+
             if (downloadToken.NodeFile.Node.Type != NodeType.Default)
             {
                 return BuildNotFoundResult(viewMode.Value.IsHtml, baseAppUrl);

@@ -119,16 +119,23 @@ namespace Cotton.Server.Handlers.Nodes
         {
             var ids = (await _subtree.CollectSubtreeIdsAsync(userId, rootId, ct)).ToArray();
 
-            await _dbContext.Nodes
+            List<Node> nodes = await _dbContext.Nodes
                 .Where(x => x.OwnerId == userId && ids.Contains(x.Id))
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(x => x.Type, NodeType.Trash), ct);
+                .ToListAsync(ct);
+            foreach (Node descendant in nodes)
+            {
+                descendant.Type = NodeType.Trash;
+            }
 
-            await _dbContext.DownloadTokens
+            DateTime now = DateTime.UtcNow;
+            List<DownloadToken> downloadTokens = await _dbContext.DownloadTokens
                 .Where(t => t.CreatedByUserId == userId && ids.Contains(t.NodeFile.NodeId)
-                    && (!t.ExpiresAt.HasValue || t.ExpiresAt.Value > DateTime.UtcNow))
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(t => t.ExpiresAt, DateTime.UtcNow), ct);
+                    && (!t.ExpiresAt.HasValue || t.ExpiresAt.Value > now))
+                .ToListAsync(ct);
+            foreach (DownloadToken token in downloadTokens)
+            {
+                token.ExpiresAt = now;
+            }
         }
 
         private async Task DeletePermanentlyAsync(DeleteNodeQuery command, Node node, CancellationToken ct)

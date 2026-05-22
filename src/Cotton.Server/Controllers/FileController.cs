@@ -52,6 +52,7 @@ namespace Cotton.Server.Controllers
         HlsSegmentCache _segmentCache,
         IMemoryCache _cache,
         IDatabaseIntegrityVerifier _integrity,
+        FileGraphIntegrityVerifier _fileGraphIntegrity,
         ILogger<FileController> _logger) : ControllerBase
     {
         private const int DefaultSharedFileTokenLength = 16;
@@ -642,6 +643,15 @@ namespace Cotton.Server.Controllers
                 return CottonResult.NotFound("File not found");
             }
             _integrity.RequireValid(_dbContext, downloadToken, "file.download-token");
+            bool servesPreview = preview && nodeFile.FileManifest.LargeFilePreviewHash != null;
+            if (servesPreview)
+            {
+                _fileGraphIntegrity.RequireValidMetadata(_dbContext, nodeFile, "file.preview");
+            }
+            else
+            {
+                _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "file.download");
+            }
 
             if (nodeFile.Node.Type != NodeType.Default && !FileVersionService.IsHistoricalVersion(nodeFile))
             {
@@ -905,7 +915,7 @@ namespace Cotton.Server.Controllers
                 .ThenInclude(x => x.FileManifestChunks)
                 .ThenInclude(x => x.Chunk)
                 .SingleOrDefaultAsync(x => x.Id == nodeFileId);
-            if (nodeFile == null || nodeFile.Node.Type != NodeType.Default)
+            if (nodeFile == null)
             {
                 return new TranscodableLookup(null, null, CottonResult.NotFound("File not found"));
             }
@@ -917,6 +927,11 @@ namespace Cotton.Server.Controllers
                 return new TranscodableLookup(null, null, CottonResult.NotFound("File not found"));
             }
             _integrity.RequireValid(_dbContext, downloadToken, "file.hls-token");
+            _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "file.hls-source");
+            if (nodeFile.Node.Type != NodeType.Default)
+            {
+                return new TranscodableLookup(null, null, CottonResult.NotFound("File not found"));
+            }
 
             var playbackMode = VideoPlaybackResolver.Resolve(
                 nodeFile.FileManifest.ContentType,

@@ -100,7 +100,6 @@ public class WebDavPathResolver(
 
         // Try to find as file
         var fileQuery = _dbContext.NodeFiles
-            .AsNoTracking()
             .Where(x => x.NodeId == currentNode.Id
                 && x.OwnerId == userId
                 && x.NameKey == lastNameKey);
@@ -108,6 +107,7 @@ public class WebDavPathResolver(
         if (includeFileContentGraph)
         {
             fileQuery = fileQuery
+                .Include(x => x.Node)
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
                 .ThenInclude(x => x.Chunk);
@@ -115,6 +115,7 @@ public class WebDavPathResolver(
         else
         {
             fileQuery = fileQuery
+                .AsNoTracking()
                 .Include(x => x.FileManifest);
         }
 

@@ -10,7 +10,7 @@ using System.Reflection;
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
 /// <summary>
-/// One-release bridge that signs protected rows created before integrity metadata existed.
+/// Rollout bridge that signs protected rows created before integrity metadata existed.
 /// </summary>
 /// <remarks>
 /// This bridge signs rows that predate integrity metadata and any later legacy row that is still unsigned during the
@@ -46,7 +46,7 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
             nameof(DatabaseIntegrityBridgeBackfillService),
             nameof(LoadUnsignedBatchCoreAsync));
 
-    private readonly IReadOnlyCollection<IDatabaseIntegrityDescriptor> _phaseOneDescriptors = _descriptors.All;
+    private readonly IReadOnlyCollection<IDatabaseIntegrityDescriptor> _descriptorsToBackfill = _descriptors.All;
 
     /// <inheritdoc />
     public async Task<int> BackfillUnsignedPhaseOneRowsAsync(CancellationToken cancellationToken)
@@ -66,7 +66,7 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         int total = 0;
-        foreach (IDatabaseIntegrityDescriptor descriptor in _phaseOneDescriptors)
+        foreach (IDatabaseIntegrityDescriptor descriptor in _descriptorsToBackfill)
         {
             int count = await BackfillEntitySetAsync(descriptor, cancellationToken);
             if (count == 0)
@@ -90,7 +90,7 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
     {
         int missingRows = 0;
         int staleRows = 0;
-        foreach (IDatabaseIntegrityDescriptor descriptor in _phaseOneDescriptors)
+        foreach (IDatabaseIntegrityDescriptor descriptor in _descriptorsToBackfill)
         {
             missingRows += await CountMissingRowsAsync(descriptor, cancellationToken);
             staleRows += await CountStaleRowsAsync(descriptor, cancellationToken);

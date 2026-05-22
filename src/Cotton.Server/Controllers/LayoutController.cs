@@ -12,6 +12,7 @@ using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
+using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
@@ -43,7 +44,9 @@ namespace Cotton.Server.Controllers
         IHubContext<EventHub> _hubContext,
         ILogger<LayoutController> _logger,
         ILayoutNavigator _navigator,
-        IStoragePipeline _storage) : ControllerBase
+        IStoragePipeline _storage,
+        IDatabaseIntegrityVerifier _integrity,
+        FileGraphIntegrityVerifier _fileGraphIntegrity) : ControllerBase
     {
         private const int DefaultSharedFolderTokenLength = 16;
 
@@ -774,7 +777,22 @@ namespace Cotton.Server.Controllers
                 .SingleOrDefaultAsync(x => x.Id == nodeFileId
                     && x.OwnerId == nodeShareToken.CreatedByUserId);
 
-            if (nodeFile == null || nodeFile.Node.Type != NodeType.Default)
+            if (nodeFile == null)
+            {
+                return this.ApiNotFound("File not found.");
+            }
+
+            bool servesPreview = preview && nodeFile.FileManifest.LargeFilePreviewHash != null;
+            if (servesPreview)
+            {
+                _fileGraphIntegrity.RequireValidMetadata(_dbContext, nodeFile, "shared-folder.preview");
+            }
+            else
+            {
+                _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "shared-folder.download");
+            }
+
+            if (nodeFile.Node.Type != NodeType.Default)
             {
                 return this.ApiNotFound("File not found.");
             }
@@ -854,13 +872,18 @@ namespace Cotton.Server.Controllers
         {
             DateTime now = DateTime.UtcNow;
             var nodeShareToken = await _dbContext.NodeShareTokens
-                .AsNoTracking()
                 .Include(x => x.Node)
                 .Where(x => x.Token == token
                     && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
                 .SingleOrDefaultAsync();
 
-            if (nodeShareToken == null || nodeShareToken.Node.Type != NodeType.Default)
+            if (nodeShareToken == null)
+            {
+                return null;
+            }
+
+            _integrity.RequireValid(_dbContext, nodeShareToken, "shared-folder.node-token");
+            if (nodeShareToken.Node.Type != NodeType.Default)
             {
                 return null;
             }

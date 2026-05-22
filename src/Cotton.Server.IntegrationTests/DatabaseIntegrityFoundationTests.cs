@@ -2,12 +2,15 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Autoconfig.Extensions;
+using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Database.Models.Enums;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 using EasyExtensions.EntityFrameworkCore.Database;
 using EasyExtensions.Models.Enums;
 using NUnit.Framework;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -254,6 +257,157 @@ public sealed class DatabaseIntegrityFoundationTests
         Assert.That(protector.Verify(token, descriptor, mac), Is.False);
     }
 
+    [Test]
+    public void NodeDescriptor_DetectsParentTampering()
+    {
+        var protector = CreateProtector();
+        var descriptor = new NodeIntegrityDescriptor();
+        var node = new Node
+        {
+            OwnerId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
+            LayoutId = Guid.Parse("70000000-0000-0000-0000-000000000001"),
+            ParentId = Guid.Parse("60000000-0000-0000-0000-000000000001"),
+            Type = NodeType.Default
+        };
+        node.SetName("Documents");
+        byte[] mac = protector.Sign(node, descriptor);
+
+        node.ParentId = Guid.Parse("60000000-0000-0000-0000-000000000003");
+
+        Assert.That(protector.Verify(node, descriptor, mac), Is.False);
+    }
+
+    [Test]
+    public void NodeFileDescriptor_DetectsManifestTampering()
+    {
+        var protector = CreateProtector();
+        var descriptor = new NodeFileIntegrityDescriptor();
+        var file = new NodeFile
+        {
+            OwnerId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
+            NodeId = Guid.Parse("60000000-0000-0000-0000-000000000002"),
+            OriginalNodeFileId = Guid.Parse("80000000-0000-0000-0000-000000000002"),
+            FileManifestId = Guid.Parse("90000000-0000-0000-0000-000000000001")
+        };
+        file.SetName("report.pdf");
+        byte[] mac = protector.Sign(file, descriptor);
+
+        file.FileManifestId = Guid.Parse("90000000-0000-0000-0000-000000000002");
+
+        Assert.That(protector.Verify(file, descriptor, mac), Is.False);
+    }
+
+    [Test]
+    public void FileManifestDescriptor_DetectsContentHashTampering()
+    {
+        var protector = CreateProtector();
+        var descriptor = new FileManifestIntegrityDescriptor();
+        var manifest = new FileManifest
+        {
+            ProposedContentHash = [1, 2, 3],
+            ComputedContentHash = [1, 2, 3],
+            ContentType = "text/plain",
+            SizeBytes = 3,
+            PreviewGeneratorVersion = 1
+        };
+        byte[] mac = protector.Sign(manifest, descriptor);
+
+        manifest.ProposedContentHash = [9, 9, 9];
+
+        Assert.That(protector.Verify(manifest, descriptor, mac), Is.False);
+    }
+
+    [Test]
+    public void FileManifestChunkDescriptor_DetectsOrderTampering()
+    {
+        var protector = CreateProtector();
+        var descriptor = new FileManifestChunkIntegrityDescriptor();
+        var mapping = new FileManifestChunk
+        {
+            FileManifestId = Guid.Parse("90000000-0000-0000-0000-000000000001"),
+            ChunkOrder = 0,
+            ChunkHash = [1, 2, 3]
+        };
+        byte[] mac = protector.Sign(mapping, descriptor);
+
+        mapping.ChunkOrder = 1;
+
+        Assert.That(protector.Verify(mapping, descriptor, mac), Is.False);
+    }
+
+    [Test]
+    public void ChunkDescriptor_DetectsSizeTampering()
+    {
+        var protector = CreateProtector();
+        var descriptor = new ChunkIntegrityDescriptor();
+        var chunk = new Chunk
+        {
+            Hash = [1, 2, 3],
+            PlainSizeBytes = 3,
+            StoredSizeBytes = 4,
+            CompressionAlgorithm = CompressionAlgorithm.Zstd
+        };
+        byte[] mac = protector.Sign(chunk, descriptor);
+
+        chunk.PlainSizeBytes = 5;
+
+        Assert.That(protector.Verify(chunk, descriptor, mac), Is.False);
+    }
+
+    [Test]
+    public void FileGraphVerifier_RejectsNonContiguousChunkOrder()
+    {
+        var options = new DbContextOptionsBuilder<CottonDbContext>()
+            .UseNpgsql("Host=localhost;Database=cotton_dev;Username=postgres;Password=postgres")
+            .Options;
+        using var dbContext = new CottonDbContext(options);
+        var verifier = new FileGraphIntegrityVerifier(new NoopDatabaseIntegrityVerifier());
+
+        var node = new Node
+        {
+            OwnerId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
+            LayoutId = Guid.Parse("70000000-0000-0000-0000-000000000001"),
+            Type = NodeType.Default
+        };
+        node.SetName("Documents");
+
+        var manifest = new FileManifest
+        {
+            ProposedContentHash = [1, 2, 3],
+            ContentType = "text/plain",
+            SizeBytes = 3
+        };
+        var chunk = new Chunk
+        {
+            Hash = [1, 2, 3],
+            PlainSizeBytes = 3,
+            StoredSizeBytes = 4,
+            CompressionAlgorithm = CompressionAlgorithm.Zstd
+        };
+        var manifestChunk = new FileManifestChunk
+        {
+            FileManifestId = manifest.Id,
+            ChunkOrder = 1,
+            ChunkHash = chunk.Hash,
+            Chunk = chunk
+        };
+        manifest.FileManifestChunks.Add(manifestChunk);
+
+        var nodeFile = new NodeFile
+        {
+            OwnerId = node.OwnerId,
+            NodeId = node.Id,
+            Node = node,
+            FileManifestId = manifest.Id,
+            FileManifest = manifest,
+            OriginalNodeFileId = Guid.Parse("80000000-0000-0000-0000-000000000002")
+        };
+        nodeFile.SetName("report.txt");
+
+        Assert.Throws<InvalidOperationException>(() =>
+            verifier.RequireValidContent(dbContext, nodeFile, "test.file-graph"));
+    }
+
     private static DatabaseIntegrityProtector CreateProtector(
         string rootMasterKey = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
     {
@@ -277,6 +431,14 @@ public sealed class DatabaseIntegrityFoundationTests
                 ["kind"] = "fixture"
             }
         };
+    }
+
+    private sealed class NoopDatabaseIntegrityVerifier : IDatabaseIntegrityVerifier
+    {
+        public void RequireValid<TEntity>(CottonDbContext dbContext, TEntity entity, string boundary)
+            where TEntity : class
+        {
+        }
     }
 
     private sealed record IntegrityTestEntity

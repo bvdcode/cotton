@@ -5,6 +5,7 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Extensions;
+using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Validators;
@@ -17,7 +18,8 @@ namespace Cotton.Server.Services;
 /// </summary>
 public sealed class ArchiveDownloadService(
     CottonDbContext _dbContext,
-    ArchiveDownloadTicketStore _tickets)
+    ArchiveDownloadTicketStore _tickets,
+    FileGraphIntegrityVerifier _fileGraphIntegrity)
 {
     private const string DefaultArchiveName = "cotton-download.zip";
 
@@ -50,6 +52,7 @@ public sealed class ArchiveDownloadService(
 
             foreach (NodeFile file in OrderByRequestedIds(files, fileIds, x => x.Id))
             {
+                _fileGraphIntegrity.RequireValidContent(_dbContext, file, "archive.selected-file");
                 AddFileEntry(entries, addedFileIds, uniquifier, file, file.Name);
             }
         }
@@ -119,8 +122,8 @@ public sealed class ArchiveDownloadService(
             Guid[] parentIds = [.. currentLevel.Keys];
 
             List<NodeFile> files = await _dbContext.NodeFiles
-                .AsNoTracking()
                 .Where(x => parentIds.Contains(x.NodeId) && x.OwnerId == userId && x.Node.Type == NodeType.Default)
+                .Include(x => x.Node)
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
                 .ThenInclude(x => x.Chunk)
@@ -130,6 +133,7 @@ public sealed class ArchiveDownloadService(
 
             foreach (NodeFile file in files)
             {
+                _fileGraphIntegrity.RequireValidContent(_dbContext, file, "archive.folder-file");
                 string parentPath = currentLevel[file.NodeId];
                 AddFileEntry(
                     entries,
@@ -184,8 +188,8 @@ public sealed class ArchiveDownloadService(
         CancellationToken cancellationToken)
     {
         return await _dbContext.NodeFiles
-            .AsNoTracking()
             .Where(x => fileIds.Contains(x.Id) && x.OwnerId == userId && x.Node.Type == NodeType.Default)
+            .Include(x => x.Node)
             .Include(x => x.FileManifest)
             .ThenInclude(x => x.FileManifestChunks)
             .ThenInclude(x => x.Chunk)

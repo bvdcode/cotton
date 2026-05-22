@@ -94,6 +94,11 @@ namespace Cotton.Database
             ConfigureIntegrityShadowProperties<DownloadToken>(modelBuilder);
             ConfigureIntegrityShadowProperties<NodeShareToken>(modelBuilder);
             ConfigureIntegrityShadowProperties<CottonServerSettings>(modelBuilder);
+            ConfigureIntegrityShadowProperties<Node>(modelBuilder);
+            ConfigureIntegrityShadowProperties<NodeFile>(modelBuilder);
+            ConfigureIntegrityShadowProperties<FileManifest>(modelBuilder);
+            ConfigureIntegrityShadowProperties<FileManifestChunk>(modelBuilder);
+            ConfigureIntegrityShadowProperties<Chunk>(modelBuilder);
 
             modelBuilder.Entity<FileManifest>()
                 .Property(x => x.PreviewGeneratorVersion)

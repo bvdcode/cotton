@@ -74,6 +74,7 @@ namespace Cotton.Server.Extensions
             services.AddScoped<IDatabaseIntegrityVerifier, DatabaseIntegrityVerifier>();
             services.AddScoped<IDatabaseIntegrityBridgeBackfillService, DatabaseIntegrityBridgeBackfillService>();
             services.AddScoped<DatabaseIntegrityDiagnosticsService>();
+            services.AddScoped<FileGraphIntegrityVerifier>();
             services.AddSingleton<DatabaseIntegrityFailureReporter>();
             services.AddSingleton<IDatabaseIntegrityFailureReporter>(sp =>
                 sp.GetRequiredService<DatabaseIntegrityFailureReporter>());
@@ -85,6 +86,11 @@ namespace Cotton.Server.Extensions
             services.AddSingleton<IDatabaseIntegrityDescriptor, DownloadTokenIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, NodeShareTokenIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, CottonServerSettingsIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, NodeIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, NodeFileIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, FileManifestIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, FileManifestChunkIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, ChunkIntegrityDescriptor>();
 
             return services;
         }

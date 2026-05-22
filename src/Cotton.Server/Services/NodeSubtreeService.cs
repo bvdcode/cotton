@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -51,8 +52,13 @@ public class NodeSubtreeService(CottonDbContext _dbContext)
     public async Task SetSubtreeTypeAsync(Guid userId, Guid rootId, NodeType newType, CancellationToken ct)
     {
         var ids = (await CollectSubtreeIdsAsync(userId, rootId, ct)).ToArray();
-        await _dbContext.Nodes
+        List<Node> nodes = await _dbContext.Nodes
             .Where(x => x.OwnerId == userId && ids.Contains(x.Id))
-            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.Type, newType), ct);
+            .ToListAsync(ct);
+
+        foreach (Node node in nodes)
+        {
+            node.Type = newType;
+        }
     }
 }

@@ -256,7 +256,12 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
             new ExtendedRefreshTokenIntegrityDescriptor(),
             new DownloadTokenIntegrityDescriptor(),
             new NodeShareTokenIntegrityDescriptor(),
-            new CottonServerSettingsIntegrityDescriptor()
+            new CottonServerSettingsIntegrityDescriptor(),
+            new NodeIntegrityDescriptor(),
+            new NodeFileIntegrityDescriptor(),
+            new FileManifestIntegrityDescriptor(),
+            new FileManifestChunkIntegrityDescriptor(),
+            new ChunkIntegrityDescriptor()
         ];
     }
 }
