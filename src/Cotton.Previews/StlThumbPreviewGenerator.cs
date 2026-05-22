@@ -468,7 +468,7 @@ namespace Cotton.Previews
                 process.StartInfo.ArgumentList.Add($"--input={modelFilePath}");
                 process.StartInfo.ArgumentList.Add($"--output={outputPngPath}");
                 process.StartInfo.ArgumentList.Add($"--resolution={size},{size}");
-                process.StartInfo.ArgumentList.Add($"--color={PreviewColorPalette.AccentGreenHex}");
+                process.StartInfo.ArgumentList.Add($"--color={PreviewColorPalette.AccentGreenF3dRgb}");
                 if (includeMaxSizeArgument)
                 {
                     process.StartInfo.ArgumentList.Add($"--max-size={PreviewGeneratorProvider.DefaultSmallPreviewSize}");
