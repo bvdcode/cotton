@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,7 +12,8 @@ namespace Cotton.Server.Services
     public sealed class SecurityDiagnosticsService(
         CottonDbContext dbContext,
         ProcessHardeningStatus hardeningStatus,
-        MasterKeyRuntimeState masterKeyRuntimeState)
+        MasterKeyRuntimeState masterKeyRuntimeState,
+        DatabaseIntegrityDiagnosticsService databaseIntegrityDiagnostics)
     {
         public async Task<SecurityDiagnosticsDto> GetSnapshotAsync(CancellationToken cancellationToken)
         {
@@ -24,6 +26,8 @@ namespace Cotton.Server.Services
             bool isContainer = IsContainer();
             bool isPublicInstance = Constants.IsPublicInstance;
             AdminTotpDiagnosticsDto adminTotp = await GetAdminTotpDiagnosticsAsync(cancellationToken);
+            DatabaseIntegrityDiagnosticsDto databaseIntegrity = await databaseIntegrityDiagnostics
+                .GetSnapshotAsync(cancellationToken);
 
             var linuxProcess = new LinuxProcessSecurityDto
             {
@@ -53,7 +57,8 @@ namespace Cotton.Server.Services
                 masterKeyRuntimeState,
                 dotnetDiagnostics,
                 linuxProcess,
-                adminTotp);
+                adminTotp,
+                databaseIntegrity);
 
             return new SecurityDiagnosticsDto
             {
@@ -67,6 +72,7 @@ namespace Cotton.Server.Services
                 DotNetDiagnostics = dotnetDiagnostics,
                 LinuxProcess = linuxProcess,
                 AdminTotp = adminTotp,
+                DatabaseIntegrity = databaseIntegrity,
                 SecurityScore = CalculateSecurityScore(warnings),
                 Warnings = warnings,
             };
@@ -93,7 +99,8 @@ namespace Cotton.Server.Services
             MasterKeyRuntimeState masterKey,
             DotNetDiagnosticsDto dotnetDiagnostics,
             LinuxProcessSecurityDto linuxProcess,
-            AdminTotpDiagnosticsDto adminTotp)
+            AdminTotpDiagnosticsDto adminTotp,
+            DatabaseIntegrityDiagnosticsDto databaseIntegrity)
         {
             var warnings = new List<SecurityDiagnosticWarningDto>();
             AddPublicInstanceWarning(warnings, isPublicInstance);
@@ -102,7 +109,35 @@ namespace Cotton.Server.Services
             AddDotNetDiagnosticsWarning(warnings, dotnetDiagnostics);
             AddLinuxProcessWarnings(warnings, isContainer, linuxProcess);
             AddHardeningWarning(warnings, linuxProcess);
+            AddDatabaseIntegrityWarnings(warnings, databaseIntegrity);
             return warnings;
+        }
+
+        private static void AddDatabaseIntegrityWarnings(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            DatabaseIntegrityDiagnosticsDto databaseIntegrity)
+        {
+            if (databaseIntegrity.UnsignedProtectedRows > 0)
+            {
+                warnings.Add(new SecurityDiagnosticWarningDto
+                {
+                    Code = "db-integrity-unsigned-rows",
+                    Severity = "critical",
+                    Message = $"{databaseIntegrity.UnsignedProtectedRows} protected database rows are missing valid integrity signatures. Run the bridge release backfill before trusting this instance.",
+                });
+            }
+
+            if (!databaseIntegrity.BridgeBackfillEnabled)
+            {
+                return;
+            }
+
+            warnings.Add(new SecurityDiagnosticWarningDto
+            {
+                Code = "db-integrity-bridge-mode",
+                Severity = "warning",
+                Message = "Database integrity is running in bridge mode for this release. Existing rows are signed on startup, but the compatibility bridge must be removed after the upgrade window so missing signatures become hard failures.",
+            });
         }
 
         private static void AddPublicInstanceWarning(

@@ -17,6 +17,7 @@ namespace Cotton.Server.Models.Dto
         public DotNetDiagnosticsDto DotNetDiagnostics { get; init; } = new();
         public LinuxProcessSecurityDto LinuxProcess { get; init; } = new();
         public AdminTotpDiagnosticsDto AdminTotp { get; init; } = new();
+        public DatabaseIntegrityDiagnosticsDto DatabaseIntegrity { get; init; } = new();
         public IReadOnlyList<SecurityDiagnosticWarningDto> Warnings { get; init; } = [];
     }
 
@@ -47,6 +48,14 @@ namespace Cotton.Server.Models.Dto
         public int AdminCount { get; init; }
         public int AdminsWithTotp { get; init; }
         public int AdminsWithoutTotp { get; init; }
+    }
+
+    public sealed class DatabaseIntegrityDiagnosticsDto
+    {
+        public bool Enabled { get; init; }
+        public bool BridgeBackfillEnabled { get; init; }
+        public int ProtectedEntityTypes { get; init; }
+        public int UnsignedProtectedRows { get; init; }
     }
 
     public sealed class SecurityDiagnosticWarningDto

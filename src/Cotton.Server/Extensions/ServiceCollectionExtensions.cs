@@ -58,6 +58,7 @@ namespace Cotton.Server.Extensions
             services.AddScoped<IDatabaseIntegrityChangeSigner, DatabaseIntegrityChangeSigner>();
             services.AddScoped<IDatabaseIntegrityVerifier, DatabaseIntegrityVerifier>();
             services.AddScoped<IDatabaseIntegrityBridgeBackfillService, DatabaseIntegrityBridgeBackfillService>();
+            services.AddScoped<DatabaseIntegrityDiagnosticsService>();
             services.AddSingleton<DatabaseIntegrityFailureReporter>();
             services.AddSingleton<IDatabaseIntegrityFailureReporter>(sp =>
                 sp.GetRequiredService<DatabaseIntegrityFailureReporter>());
