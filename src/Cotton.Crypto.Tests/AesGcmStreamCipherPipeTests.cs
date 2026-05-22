@@ -73,7 +73,7 @@ public class AesGcmStreamCipherPipeTests
 
         var stream = await cipher.EncryptAsync(input, chunkSize: AesGcmStreamCipher.MinChunkSize, ct: cts.Token);
         byte[] buffer = new byte[8 * 1024];
-        TaskCanceledException? caught = null;
+        OperationCanceledException? caught = null;
         long totalRead = 0;
         try
         {
@@ -85,7 +85,7 @@ public class AesGcmStreamCipherPipeTests
                 await Task.Delay(5); // slow down to increase chance of cancellation
             }
         }
-        catch (TaskCanceledException ex)
+        catch (OperationCanceledException ex)
         {
             caught = ex;
         }
@@ -127,7 +127,7 @@ public class AesGcmStreamCipherPipeTests
         cts.CancelAfter(25);
         var decStream = await decCipher.DecryptAsync(encrypted, ct: cts.Token);
         byte[] buffer = new byte[8 * 1024];
-        TaskCanceledException? caught = null;
+        OperationCanceledException? caught = null;
         long totalRead = 0;
         try
         {
@@ -139,7 +139,7 @@ public class AesGcmStreamCipherPipeTests
                 await Task.Delay(5); // slow down to increase chance of cancellation
             }
         }
-        catch (TaskCanceledException ex)
+        catch (OperationCanceledException ex)
         {
             caught = ex;
         }

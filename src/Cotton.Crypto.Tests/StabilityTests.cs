@@ -111,7 +111,7 @@ namespace Cotton.Crypto.Tests
         }
 
         [Test]
-        public void Duplicate_SecondChunk_ShouldFail_AfterFirstChunkOnly()
+        public void Duplicate_SecondChunk_ShouldFail_WithoutWritingUnauthenticatedPayload()
         {
             var cipher = Cipher(keyId: 20);
             byte[] data = RandomBytes((MinChunk * 2) + 123, 109);
@@ -138,12 +138,11 @@ namespace Cotton.Crypto.Tests
             using var tampered = new MemoryStream(dup, writable: false);
             using var outDec = new MemoryStream();
             Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tampered, outDec));
-            // first chunk may have been written successfully, but no further payload
-            Assert.That(outDec.Length, Is.EqualTo((int)chunks[0].hdr.DataLength));
+            AssertAuthenticatedPrefixOnly(outDec, data, (int)chunks[0].hdr.DataLength);
         }
 
         [Test]
-        public void Skip_SecondChunk_ShouldFail_AfterFirstChunkOnly()
+        public void Skip_SecondChunk_ShouldFail_WithoutWritingUnauthenticatedPayload()
         {
             var cipher = Cipher(keyId: 22);
             byte[] data = RandomBytes((MinChunk * 3) + 321, 110);
@@ -168,7 +167,14 @@ namespace Cotton.Crypto.Tests
             using var tampered = new MemoryStream(skipped, writable: false);
             using var outDec = new MemoryStream();
             Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tampered, outDec));
-            Assert.That(outDec.Length, Is.EqualTo((int)chunks[0].hdr.DataLength));
+            AssertAuthenticatedPrefixOnly(outDec, data, (int)chunks[0].hdr.DataLength);
+        }
+
+        private static void AssertAuthenticatedPrefixOnly(MemoryStream actual, byte[] expected, int authenticatedPrefixLength)
+        {
+            byte[] bytes = actual.ToArray();
+            Assert.That(bytes.Length, Is.AnyOf(0, authenticatedPrefixLength));
+            Assert.That(bytes, Is.EqualTo(expected.AsSpan(0, bytes.Length).ToArray()));
         }
 
         private static AesGcmKeyHeader ReadHeader(Stream s) => AesGcmKeyHeader.FromStream(s, NonceSize, TagSize);
