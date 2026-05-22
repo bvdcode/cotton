@@ -2,7 +2,11 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Autoconfig.Extensions;
+using Cotton.Database.Models;
 using Cotton.Server.Services.DatabaseIntegrity;
+using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
+using EasyExtensions.EntityFrameworkCore.Database;
+using EasyExtensions.Models.Enums;
 using NUnit.Framework;
 
 namespace Cotton.Server.IntegrationTests;
@@ -14,7 +18,6 @@ public sealed class DatabaseIntegrityFoundationTests
     {
         var first = new IntegrityTestEntity
         {
-            Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
             Name = "file.txt",
             Metadata = new Dictionary<string, string>
             {
@@ -44,7 +47,6 @@ public sealed class DatabaseIntegrityFoundationTests
         var descriptor = new IntegrityTestEntityDescriptor();
         var first = new IntegrityTestEntity
         {
-            Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
             Name = "file.txt",
             Transports = ["usb", "nfc"]
         };
@@ -106,6 +108,133 @@ public sealed class DatabaseIntegrityFoundationTests
         Assert.That(firstMac, Is.Not.EqualTo(secondMac));
     }
 
+    [Test]
+    public void UserDescriptor_DetectsRoleTampering()
+    {
+        var protector = CreateProtector();
+        var descriptor = new UserIntegrityDescriptor();
+        var user = new User
+        {
+            Username = "alice",
+            PasswordPhc = "password",
+            WebDavTokenPhc = "webdav",
+            Role = UserRole.User,
+            Email = "alice@example.test",
+            IsEmailVerified = true
+        };
+        byte[] mac = protector.Sign(user, descriptor);
+
+        user.Role = UserRole.Admin;
+
+        Assert.That(protector.Verify(user, descriptor, mac), Is.False);
+    }
+
+    [Test]
+    public void PasskeyDescriptor_DetectsPublicKeyTampering()
+    {
+        var protector = CreateProtector();
+        var descriptor = new UserPasskeyCredentialIntegrityDescriptor();
+        var credential = new UserPasskeyCredential
+        {
+            UserId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
+            CredentialId = [1, 2, 3],
+            PublicKey = [4, 5, 6],
+            UserHandle = [7, 8, 9],
+            SignatureCounter = 10,
+            Transports = ["usb"],
+            AaGuid = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+        };
+        byte[] mac = protector.Sign(credential, descriptor);
+
+        credential.PublicKey = [9, 9, 9];
+
+        Assert.That(protector.Verify(credential, descriptor, mac), Is.False);
+    }
+
+    [Test]
+    public void ServerSettingsDescriptor_DetectsStorageCredentialTampering()
+    {
+        var protector = CreateProtector();
+        var descriptor = new CottonServerSettingsIntegrityDescriptor();
+        var settings = new CottonServerSettings
+        {
+            InstanceId = Guid.Parse("30000000-0000-0000-0000-000000000002"),
+            PublicBaseUrl = "https://cloud.example.test",
+            S3AccessKeyId = "access-key",
+            S3BucketName = "bucket",
+            S3Region = "auto",
+            S3EndpointUrl = "https://s3.example.test",
+            S3SecretAccessKeyEncrypted = "encrypted-secret"
+        };
+        byte[] mac = protector.Sign(settings, descriptor);
+
+        settings.S3SecretAccessKeyEncrypted = "other-secret";
+
+        Assert.That(protector.Verify(settings, descriptor, mac), Is.False);
+    }
+
+    [Test]
+    public void DownloadTokenDescriptor_DetectsNodeFileTampering()
+    {
+        var protector = CreateProtector();
+        var descriptor = new DownloadTokenIntegrityDescriptor();
+        var token = new DownloadToken
+        {
+            Token = "share-token",
+            NodeFileId = Guid.Parse("40000000-0000-0000-0000-000000000002"),
+            CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000001")
+        };
+        byte[] mac = protector.Sign(token, descriptor);
+
+        token.NodeFileId = Guid.Parse("40000000-0000-0000-0000-000000000003");
+
+        Assert.That(protector.Verify(token, descriptor, mac), Is.False);
+    }
+
+    [Test]
+    public void NodeShareTokenDescriptor_DetectsNodeTampering()
+    {
+        var protector = CreateProtector();
+        var descriptor = new NodeShareTokenIntegrityDescriptor();
+        var token = new NodeShareToken
+        {
+            Token = "share-token",
+            NodeId = Guid.Parse("50000000-0000-0000-0000-000000000002"),
+            CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000001")
+        };
+        byte[] mac = protector.Sign(token, descriptor);
+
+        token.NodeId = Guid.Parse("50000000-0000-0000-0000-000000000003");
+
+        Assert.That(protector.Verify(token, descriptor, mac), Is.False);
+    }
+
+    [Test]
+    public void RefreshTokenDescriptor_DetectsSessionTampering()
+    {
+        var protector = CreateProtector();
+        var descriptor = new ExtendedRefreshTokenIntegrityDescriptor();
+        var token = new ExtendedRefreshToken
+        {
+            UserId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
+            Token = "refresh-token-hash",
+            SessionId = "session-a",
+            IsTrusted = true,
+            AuthType = AuthType.Credentials,
+            IpAddress = System.Net.IPAddress.Loopback,
+            UserAgent = "test",
+            Device = "test",
+            City = "test",
+            Region = "test",
+            Country = "test"
+        };
+        byte[] mac = protector.Sign(token, descriptor);
+
+        token.SessionId = "session-b";
+
+        Assert.That(protector.Verify(token, descriptor, mac), Is.False);
+    }
+
     private static DatabaseIntegrityProtector CreateProtector(
         string rootMasterKey = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
     {
@@ -117,7 +246,6 @@ public sealed class DatabaseIntegrityFoundationTests
     {
         return new IntegrityTestEntity
         {
-            Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
             OwnerId = Guid.Parse("22222222-2222-2222-2222-222222222222"),
             Name = "file.txt",
             SizeBytes = 12345,
