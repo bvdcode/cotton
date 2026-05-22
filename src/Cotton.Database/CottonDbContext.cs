@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Database.Integrity;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Attributes;
 using EasyExtensions.Abstractions;
@@ -15,7 +16,8 @@ namespace Cotton.Database
     public class CottonDbContext(
         DbContextOptions options,
         IStreamCipher? streamCipher = null,
-        ILogger<CottonDbContext>? logger = null) : AuditedDbContext(options)
+        ILogger<CottonDbContext>? logger = null,
+        IDatabaseIntegrityChangeSigner? integrityChangeSigner = null) : AuditedDbContext(options)
     {
         public DbSet<Node> Nodes => Set<Node>();
         public DbSet<User> Users => Set<User>();
@@ -34,9 +36,30 @@ namespace Cotton.Database
         public DbSet<ExtendedRefreshToken> RefreshTokens => Set<ExtendedRefreshToken>();
         public DbSet<CottonServerSettings> ServerSettings => Set<CottonServerSettings>();
 
+        public override int SaveChanges(bool acceptAllChangesOnSuccess)
+        {
+            integrityChangeSigner?.SignPendingChanges(this);
+            return base.SaveChanges(acceptAllChangesOnSuccess);
+        }
+
+        public override Task<int> SaveChangesAsync(
+            bool acceptAllChangesOnSuccess,
+            CancellationToken cancellationToken = default)
+        {
+            integrityChangeSigner?.SignPendingChanges(this);
+            return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            ConfigureIntegrityShadowProperties<User>(modelBuilder);
+            ConfigureIntegrityShadowProperties<UserPasskeyCredential>(modelBuilder);
+            ConfigureIntegrityShadowProperties<ExtendedRefreshToken>(modelBuilder);
+            ConfigureIntegrityShadowProperties<DownloadToken>(modelBuilder);
+            ConfigureIntegrityShadowProperties<NodeShareToken>(modelBuilder);
+            ConfigureIntegrityShadowProperties<CottonServerSettings>(modelBuilder);
 
             modelBuilder.Entity<FileManifest>()
                 .Property(x => x.PreviewGeneratorVersion)
@@ -73,6 +96,18 @@ namespace Cotton.Database
                         .HasConversion(encryptedStringConverter);
                 }
             }
+        }
+
+        private static void ConfigureIntegrityShadowProperties<TEntity>(ModelBuilder modelBuilder)
+            where TEntity : class
+        {
+            modelBuilder.Entity<TEntity>()
+                .Property<int?>(DatabaseIntegrityColumns.VersionProperty)
+                .HasColumnName(DatabaseIntegrityColumns.VersionColumn);
+
+            modelBuilder.Entity<TEntity>()
+                .Property<byte[]?>(DatabaseIntegrityColumns.MacProperty)
+                .HasColumnName(DatabaseIntegrityColumns.MacColumn);
         }
 
         private string? EncryptString(string? value)

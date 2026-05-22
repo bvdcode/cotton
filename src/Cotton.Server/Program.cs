@@ -170,6 +170,7 @@ namespace Cotton.Server
                 .AddPbkdf2PasswordHashService()
                 .AddControllers().Services
                 .AddStreamCipher()
+                .AddDatabaseIntegrity()
                 .AddChunkServices()
                 .AddLayoutPathServices()
                 .AddWebDavServices()

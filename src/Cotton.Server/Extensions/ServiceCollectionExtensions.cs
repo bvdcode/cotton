@@ -2,8 +2,11 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Abstractions;
+using Cotton.Database.Integrity;
 using Cotton.Server.Auth;
 using Cotton.Server.Services;
+using Cotton.Server.Services.DatabaseIntegrity;
+using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 using Cotton.Server.Services.WebDav;
 using Cotton.Crypto;
 using EasyExtensions.Abstractions;
@@ -44,6 +47,22 @@ namespace Cotton.Server.Extensions
             services.AddScoped<FileVersionRetentionService>();
             services.AddScoped<FileVersionService>();
             services.AddScoped<IEventNotificationService, EventNotificationService>();
+            return services;
+        }
+
+        public static IServiceCollection AddDatabaseIntegrity(this IServiceCollection services)
+        {
+            services.AddSingleton<IDatabaseIntegrityKeyProvider, DatabaseIntegrityKeyProvider>();
+            services.AddSingleton<IDatabaseIntegrityProtector, DatabaseIntegrityProtector>();
+            services.AddScoped<IDatabaseIntegrityChangeSigner, DatabaseIntegrityChangeSigner>();
+
+            services.AddSingleton<IDatabaseIntegrityDescriptor, UserIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, UserPasskeyCredentialIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, ExtendedRefreshTokenIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, DownloadTokenIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, NodeShareTokenIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, CottonServerSettingsIntegrityDescriptor>();
+
             return services;
         }
 
