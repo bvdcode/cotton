@@ -7,6 +7,7 @@ using System.Diagnostics;
 namespace Cotton.Crypto.Tests
 {
     [Category("Performance")]
+    [Explicit("Performance benchmarks allocate large buffers and are run manually, not in the normal test suite.")]
     [NonParallelizable]
     public class PerformanceTests
     {

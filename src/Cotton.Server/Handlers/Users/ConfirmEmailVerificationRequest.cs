@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -16,7 +17,8 @@ namespace Cotton.Server.Handlers.Users
     }
 
     public class ConfirmEmailVerificationRequestHandler(
-        CottonDbContext _dbContext) : IRequestHandler<ConfirmEmailVerificationRequest>
+        CottonDbContext _dbContext,
+        IDatabaseIntegrityVerifier _integrity) : IRequestHandler<ConfirmEmailVerificationRequest>
     {
         private static readonly TimeSpan TokenExpiration = TimeSpan.FromHours(24);
 
@@ -30,6 +32,7 @@ namespace Cotton.Server.Handlers.Users
             var user = await _dbContext.Users
                 .FirstOrDefaultAsync(x => x.EmailVerificationToken == request.Token, cancellationToken)
                 ?? throw new BadRequestException<User>("Invalid or expired token");
+            _integrity.RequireValid(_dbContext, user, "user.email-verification");
 
             if (user.EmailVerificationTokenSentAt == null ||
                 DateTime.UtcNow - user.EmailVerificationTokenSentAt.Value > TokenExpiration)

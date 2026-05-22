@@ -23,9 +23,14 @@ public sealed class UserIntegrityDescriptor : DatabaseIntegrityDescriptor<User>
         writer.WriteStringField(nameof(entity.WebDavTokenPhc), entity.WebDavTokenPhc);
         writer.WriteStringField(nameof(entity.Email), entity.Email);
         writer.WriteBooleanField(nameof(entity.IsEmailVerified), entity.IsEmailVerified);
+        writer.WriteStringField(nameof(entity.EmailVerificationToken), entity.EmailVerificationToken);
+        writer.WriteNullableDateTimeField(nameof(entity.EmailVerificationTokenSentAt), entity.EmailVerificationTokenSentAt);
+        writer.WriteStringField(nameof(entity.PasswordResetToken), entity.PasswordResetToken);
+        writer.WriteNullableDateTimeField(nameof(entity.PasswordResetTokenSentAt), entity.PasswordResetTokenSentAt);
         writer.WriteInt32Field(nameof(entity.Role), (int)entity.Role);
         writer.WriteBooleanField(nameof(entity.IsTotpEnabled), entity.IsTotpEnabled);
         writer.WriteBytesField(nameof(entity.TotpSecretEncrypted), entity.TotpSecretEncrypted);
         writer.WriteNullableDateTimeField(nameof(entity.TotpEnabledAt), entity.TotpEnabledAt);
+        writer.WriteInt32Field(nameof(entity.TotpFailedAttempts), entity.TotpFailedAttempts);
     }
 }

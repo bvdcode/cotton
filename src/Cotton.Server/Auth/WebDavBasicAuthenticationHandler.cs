@@ -5,6 +5,7 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
+using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Extensions;
 using Microsoft.AspNetCore.Authentication;
@@ -28,7 +29,8 @@ public sealed class WebDavBasicAuthenticationHandler(
     IMemoryCache cache,
     Cotton.Server.Services.WebDav.WebDavAuthCache authCache,
     INotificationsProvider notifications,
-    IGeoLookupService geoLookup)
+    IGeoLookupService geoLookup,
+    IDatabaseIntegrityVerifier integrity)
     : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
     public const string PolicyName = "WebDav";
@@ -63,13 +65,15 @@ public sealed class WebDavBasicAuthenticationHandler(
 
         Logger.LogDebug("WebDAV auth: cache miss for username '{Username}'.", username);
 
-        var user = await dbContext.Users.AsNoTracking()
+        var user = await dbContext.Users
             .FirstOrDefaultAsync(x => x.Username == username || x.Email == username);
         if (user is null)
         {
             Logger.LogInformation("WebDAV auth: user '{Username}' not found.", username);
             return AuthenticateResult.Fail("Invalid username or token.");
         }
+
+        integrity.RequireValid(dbContext, user, "webdav.auth");
 
         var tokenResult = await VerifyTokenOrFailAsync(user, username, token);
         if (tokenResult is not null)

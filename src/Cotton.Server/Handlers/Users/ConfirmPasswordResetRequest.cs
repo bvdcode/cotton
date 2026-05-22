@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Services;
+using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
@@ -21,7 +22,8 @@ namespace Cotton.Server.Handlers.Users
     public class ConfirmPasswordResetRequestHandler(
         CottonDbContext _dbContext,
         IPasswordHashService _hasher,
-        RefreshTokenRevocationService _refreshTokenRevocations) : IRequestHandler<ConfirmPasswordResetRequest>
+        RefreshTokenRevocationService _refreshTokenRevocations,
+        IDatabaseIntegrityVerifier _integrity) : IRequestHandler<ConfirmPasswordResetRequest>
     {
         private static readonly TimeSpan TokenExpiration = TimeSpan.FromHours(1);
 
@@ -40,6 +42,7 @@ namespace Cotton.Server.Handlers.Users
             var user = await _dbContext.Users
                 .FirstOrDefaultAsync(x => x.PasswordResetToken == request.Token, cancellationToken)
                 ?? throw new BadRequestException<User>("Invalid or expired token");
+            _integrity.RequireValid(_dbContext, user, "user.password-reset");
 
             if (user.PasswordResetTokenSentAt == null ||
                 DateTime.UtcNow - user.PasswordResetTokenSentAt.Value > TokenExpiration)

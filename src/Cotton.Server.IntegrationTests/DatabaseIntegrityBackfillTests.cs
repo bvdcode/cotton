@@ -58,8 +58,6 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
         }
     }
 
-
-
     [Test]
     public async Task Verifier_RejectsDirectDatabaseTampering()
     {
@@ -88,6 +86,32 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
 
         Assert.Throws<DatabaseIntegrityException>(() =>
             verifier.RequireValid(DbContext, tampered, "test.direct-tamper"));
+    }
+
+    [Test]
+    public async Task BridgeBackfill_RefusesUnsignedRowsAfterIntegrityMetadataExists()
+    {
+        var user = new User
+        {
+            Username = "dora",
+            PasswordPhc = "password-phc",
+            WebDavTokenPhc = "webdav-phc",
+            Role = UserRole.User
+        };
+        await DbContext.Users.AddAsync(user);
+        await DbContext.SaveChangesAsync();
+        DbContext.ChangeTracker.Clear();
+
+        await CreateBackfillService().BackfillUnsignedPhaseOneRowsAsync(CancellationToken.None);
+
+        await DbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"UPDATE users SET integrity_mac = NULL WHERE id = {user.Id}");
+        DbContext.ChangeTracker.Clear();
+
+        InvalidOperationException? ex = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await CreateBackfillService().BackfillUnsignedPhaseOneRowsAsync(CancellationToken.None));
+
+        Assert.That(ex!.Message, Does.Contain("Refusing to sign"));
     }
 
     private byte[]? ReadMac(User user)
