@@ -9,10 +9,50 @@ import {
   useTheme,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import QRCode from "react-qr-code";
+import QRCodeModule, { type QRCodeProps } from "react-qr-code";
+import type { ElementType } from "react";
 import { OneTimeCodeInput } from "../../../shared/ui/OneTimeCodeInput";
 import type { TotpSetup } from "../../../shared/api/totpApi";
 import { ContentCopy } from "@mui/icons-material";
+
+const QR_CODE_FORWARD_REF_TYPE = Symbol.for("react.forward_ref");
+
+const isQrCodeComponent = (value: unknown): value is ElementType<QRCodeProps> => {
+  if (typeof value === "function") {
+    return true;
+  }
+
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as { $$typeof?: symbol }).$$typeof === QR_CODE_FORWARD_REF_TYPE
+  );
+};
+
+const resolveQrCodeComponent = (module: unknown): ElementType<QRCodeProps> => {
+  if (isQrCodeComponent(module)) {
+    return module;
+  }
+
+  if (typeof module === "object" && module !== null) {
+    const candidate = module as {
+      default?: unknown;
+      QRCode?: unknown;
+    };
+
+    if (isQrCodeComponent(candidate.default)) {
+      return candidate.default;
+    }
+
+    if (isQrCodeComponent(candidate.QRCode)) {
+      return candidate.QRCode;
+    }
+  }
+
+  throw new TypeError("react-qr-code exported an unsupported module shape.");
+};
+
+const QRCode = resolveQrCodeComponent(QRCodeModule);
 
 interface TotpSetupFormProps {
   totpSetup: TotpSetup;
