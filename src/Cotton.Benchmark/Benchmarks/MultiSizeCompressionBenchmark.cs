@@ -88,6 +88,7 @@ namespace Cotton.Benchmark.Benchmarks
             dict["MaxThroughput"] = $"{resultsByLevel.Values.Max(v => v.mbps):F2} MB/s";
             dict["Iterations"] = metrics.Count;
             dict["DataSize"] = FormatBytes(_configuration.DataSizeBytes);
+            AddMemoryMetrics(dict, metrics);
 
             return dict;
         }

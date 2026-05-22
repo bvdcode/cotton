@@ -48,7 +48,7 @@ namespace Cotton.Benchmark.Benchmarks
         }
 
         /// <inheritdoc/>
-        public override string Name => "AES-GCM Decryption (Cotton processor)";
+        public override string Name => "Cotton.Storage AES-GCM Decryption";
 
         /// <inheritdoc/>
         public override string Description => $"Measures Cotton.Storage AES-GCM throughput with {_configuration.EncryptionThreads} threads";
@@ -82,7 +82,7 @@ namespace Cotton.Benchmark.Benchmarks
         protected override Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
             var baseMetrics = base.AggregateMetrics(metrics);
-            baseMetrics["Processor"] = "Cotton.Storage.Processors.CryptoProcessor";
+            baseMetrics["Implementation"] = "Cotton.Storage.Processors.CryptoProcessor";
             baseMetrics["Cipher"] = "AesGcmStreamCipher";
             baseMetrics["EncryptionThreads"] = _configuration.EncryptionThreads ?? 0;
             baseMetrics["EncryptedSize"] = FormatBytes(_encryptedData.Length);

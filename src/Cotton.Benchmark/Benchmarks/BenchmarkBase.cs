@@ -39,8 +39,15 @@ namespace Cotton.Benchmark.Benchmarks
                 for (int i = 0; i < _configuration.MeasuredIterations; i++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+                    long allocatedBefore = GC.GetTotalAllocatedBytes(precise: false);
                     var iterationMetrics = await MeasureIterationAsync(cancellationToken);
-                    metrics.Add(iterationMetrics);
+                    long managedAllocatedBytes = Math.Max(0, GC.GetTotalAllocatedBytes(precise: false) - allocatedBefore);
+                    using var process = Process.GetCurrentProcess();
+                    process.Refresh();
+                    metrics.Add(iterationMetrics.WithMemory(
+                        managedAllocatedBytes,
+                        process.WorkingSet64,
+                        process.PeakWorkingSet64));
                 }
 
                 stopwatch.Stop();
@@ -79,7 +86,7 @@ namespace Cotton.Benchmark.Benchmarks
                 .OrderBy(x => x)
                 .ToArray();
 
-            return new Dictionary<string, object>
+            var aggregated = new Dictionary<string, object>
             {
                 ["AvgThroughputMBps"] = avgThroughput,
                 ["MinThroughputMBps"] = minThroughput,
@@ -91,6 +98,22 @@ namespace Cotton.Benchmark.Benchmarks
                 ["DataSizeBytes"] = _configuration.DataSizeBytes,
                 ["DataSize"] = FormatBytes(_configuration.DataSizeBytes)
             };
+
+            AddMemoryMetrics(aggregated, metrics);
+            return aggregated;
+        }
+
+        /// <summary>
+        /// Adds shared managed allocation and process working-set metrics to an aggregate result.
+        /// </summary>
+        protected static void AddMemoryMetrics(
+            IDictionary<string, object> target,
+            IReadOnlyList<PerformanceMetrics> metrics)
+        {
+            target["AvgManagedAllocatedBytes"] = metrics.Average(m => m.ManagedAllocatedBytes);
+            target["MaxManagedAllocatedBytes"] = metrics.Max(m => m.ManagedAllocatedBytes);
+            target["MaxWorkingSetBytes"] = metrics.Max(m => m.WorkingSetBytes);
+            target["MaxPeakWorkingSetBytes"] = metrics.Max(m => m.PeakWorkingSetBytes);
         }
 
         private static double Percentile(IReadOnlyList<double> sortedValues, double percentile)

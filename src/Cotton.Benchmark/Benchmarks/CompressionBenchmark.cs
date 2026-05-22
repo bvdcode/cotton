@@ -17,7 +17,7 @@ namespace Cotton.Benchmark.Benchmarks
         private readonly CompressionProcessor _processor = new();
 
         /// <inheritdoc/>
-        public override string Name => "Zstd Compression (Cotton processor)";
+        public override string Name => "Cotton.Storage Zstd Compression";
 
         /// <inheritdoc/>
         public override string Description => $"Measures Cotton.Storage compression throughput on deterministic compressible text";
@@ -51,7 +51,7 @@ namespace Cotton.Benchmark.Benchmarks
         protected override Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
             var baseMetrics = base.AggregateMetrics(metrics);
-            baseMetrics["Processor"] = "Cotton.Storage.Processors.CompressionProcessor";
+            baseMetrics["Implementation"] = "Cotton.Storage.Processors.CompressionProcessor";
             baseMetrics["DataType"] = "Compressible Text (Logs)";
             return baseMetrics;
         }

@@ -19,6 +19,21 @@ namespace Cotton.Benchmark.Models
         public TimeSpan Duration { get; init; }
 
         /// <summary>
+        /// Managed bytes allocated while the measured operation was running.
+        /// </summary>
+        public long ManagedAllocatedBytes { get; init; }
+
+        /// <summary>
+        /// Process working set observed after the measured operation completed.
+        /// </summary>
+        public long WorkingSetBytes { get; init; }
+
+        /// <summary>
+        /// Peak process working set observed after the measured operation completed.
+        /// </summary>
+        public long PeakWorkingSetBytes { get; init; }
+
+        /// <summary>
         /// Throughput in bytes per second.
         /// </summary>
         public double BytesPerSecond => TotalBytes / Duration.TotalSeconds;
@@ -64,6 +79,24 @@ namespace Cotton.Benchmark.Models
             {
                 TotalBytes = totalBytes,
                 Duration = duration
+            };
+        }
+
+        /// <summary>
+        /// Returns a copy of this metric enriched with process memory observations.
+        /// </summary>
+        public PerformanceMetrics WithMemory(
+            long managedAllocatedBytes,
+            long workingSetBytes,
+            long peakWorkingSetBytes)
+        {
+            return new PerformanceMetrics
+            {
+                TotalBytes = TotalBytes,
+                Duration = Duration,
+                ManagedAllocatedBytes = managedAllocatedBytes,
+                WorkingSetBytes = workingSetBytes,
+                PeakWorkingSetBytes = peakWorkingSetBytes
             };
         }
     }

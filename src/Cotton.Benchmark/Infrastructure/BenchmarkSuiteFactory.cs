@@ -13,7 +13,7 @@ namespace Cotton.Benchmark.Infrastructure
         {
             var benchmarks = options.Mode switch
             {
-                BenchmarkMode.Machine => CreateMachineBenchmarks(configuration),
+                BenchmarkMode.Machine => CreateMachineBenchmarks(configuration, options.Profile),
                 BenchmarkMode.Development => CreateDevelopmentBenchmarks(configuration),
                 _ => throw new ArgumentOutOfRangeException(nameof(options), options.Mode, "Unsupported benchmark mode.")
             };
@@ -21,21 +21,27 @@ namespace Cotton.Benchmark.Infrastructure
             return ApplyScenarioFilters(benchmarks, options.ScenarioFilters);
         }
 
-        private static List<IBenchmark> CreateMachineBenchmarks(BenchmarkConfiguration configuration)
+        private static List<IBenchmark> CreateMachineBenchmarks(BenchmarkConfiguration configuration, BenchmarkProfile profile)
         {
-            return
+            List<IBenchmark> benchmarks =
             [
                 new MemoryStreamBenchmark(configuration),
                 new HashingBenchmark(configuration),
                 new CompressionBenchmark(configuration),
                 new DecompressionBenchmark(configuration),
                 new MultiSizeCompressionBenchmark(configuration),
-                new CompressionLevelsBenchmark(configuration),
                 new EncryptionBenchmark(configuration),
                 new DecryptionBenchmark(configuration),
                 new FileSystemBenchmark(configuration),
                 new PipelineBenchmark(configuration)
             ];
+
+            if (profile != BenchmarkProfile.Quick)
+            {
+                benchmarks.Add(new CompressionLevelsBenchmark(configuration));
+            }
+
+            return benchmarks;
         }
 
         private static List<IBenchmark> CreateDevelopmentBenchmarks(BenchmarkConfiguration configuration)

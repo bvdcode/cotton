@@ -20,7 +20,7 @@ The application follows SOLID principles and object-oriented design:
 ### Domain Models (`Models/`)
 - **BenchmarkResult** - Concrete result implementation with success/failure factories
 - **BenchmarkConfiguration** - Configurable benchmark parameters
-- **PerformanceMetrics** - Performance measurement data with throughput calculations
+- **PerformanceMetrics** - Performance measurement data with throughput and memory observations
 
 ### Benchmarks (`Benchmarks/`)
 - **BenchmarkBase** - Abstract base with warmup/measurement logic
@@ -69,7 +69,7 @@ Reviewed baselines live under `performance/baselines`. Unreviewed run output is 
 
 Modes:
 
-- `machine` runs portable benchmarks without PostgreSQL.
+- `machine` runs portable benchmarks without PostgreSQL. The `quick` profile excludes the expensive Zstd -5..22 sweep and uses relaxed regression gates because it has few iterations; `standard` and `full` keep the sweep and stricter gates for reviewed regression checks.
 - `development` is the local Cotton regression suite. It currently starts with filesystem and storage-pipeline scenarios; PostgreSQL-backed flows belong there next.
 
 
@@ -140,7 +140,7 @@ Configuration:
 ======================================================================
 
 ----------------------------------------------------------------
-| Zstd Compression (Cotton processor)   | Status                      |
+| Cotton.Storage Zstd Compression   | Status                      |
 ----------------------------------------------------------------
 | Result                               | SUCCESS                     |
 | AvgThroughput                        | 2100.45 MB/s                |
@@ -222,6 +222,7 @@ Memory Statistics:
 - [x] JSON result and baseline output
 - [x] Comparative benchmarking across runs
 - [x] Percentile calculations (P50, P95)
+- [x] Managed allocation, working set, and peak working set metrics
 - [ ] GC pause time tracking
 - [ ] S3StorageBackend benchmarks
 - [ ] Concurrent operation benchmarks

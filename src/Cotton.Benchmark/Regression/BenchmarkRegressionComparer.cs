@@ -16,15 +16,54 @@ namespace Cotton.Benchmark.Regression
     {
         private const double DurationRegressionRatio = 1.20;
         private const double DurationRegressionGraceMs = 10;
+        private const double MemoryRegressionGraceBytes = 16 * 1024 * 1024;
         private const double ThroughputRegressionRatio = 0.85;
         private const double ThroughputRegressionGraceMBps = 5;
         private const double MinimumDurationForThroughputGateMs = 100;
+        private const int MinimumIterationsForPercentileGate = 5;
+
+        private sealed record RegressionTolerance(
+            double DurationRatio,
+            double DurationGraceMs,
+            double MemoryGraceBytes,
+            double ThroughputRatio,
+            double ThroughputGraceMBps,
+            int MinimumIterationsForPercentileGate,
+            int MinimumIterationsForThroughputGate)
+        {
+            private static readonly RegressionTolerance Strict = new(
+                DurationRegressionRatio,
+                DurationRegressionGraceMs,
+                MemoryRegressionGraceBytes,
+                ThroughputRegressionRatio,
+                ThroughputRegressionGraceMBps,
+                BenchmarkRegressionComparer.MinimumIterationsForPercentileGate,
+                BenchmarkRegressionComparer.MinimumIterationsForPercentileGate);
+
+            private static readonly RegressionTolerance Quick = new(
+                2.00,
+                50,
+                MemoryRegressionGraceBytes,
+                0.50,
+                ThroughputRegressionGraceMBps,
+                BenchmarkRegressionComparer.MinimumIterationsForPercentileGate,
+                BenchmarkRegressionComparer.MinimumIterationsForPercentileGate);
+
+            public static RegressionTolerance ForProfile(string profile)
+            {
+                return profile.Equals("quick", StringComparison.OrdinalIgnoreCase) ? Quick : Strict;
+            }
+        }
 
         private static readonly string[] LowerIsBetterMetrics =
         [
             "P50DurationMs",
             "P95DurationMs",
-            "AvgDurationMs"
+            "AvgDurationMs",
+            "AvgManagedAllocatedBytes",
+            "MaxManagedAllocatedBytes",
+            "MaxWorkingSetBytes",
+            "MaxPeakWorkingSetBytes"
         ];
 
         private static readonly string[] HigherIsBetterMetrics =
@@ -38,6 +77,7 @@ namespace Cotton.Benchmark.Regression
             var baselineByName = baseline.Results.ToDictionary(x => x.Name, StringComparer.Ordinal);
             var messages = new List<string>();
             bool passed = true;
+            var tolerance = RegressionTolerance.ForProfile(current.Profile);
 
             foreach (var currentResult in current.Results)
             {
@@ -56,20 +96,21 @@ namespace Cotton.Benchmark.Regression
 
                 foreach (string metricName in LowerIsBetterMetrics)
                 {
-                    if (TryGetPair(baselineResult, currentResult, metricName, out double baselineValue, out double currentValue)
-                        && IsLowerIsBetterRegression(baselineValue, currentValue))
+                    if (ShouldCompareMetric(baselineResult, currentResult, metricName, tolerance)
+                        && TryGetPair(baselineResult, currentResult, metricName, out double baselineValue, out double currentValue)
+                        && IsLowerIsBetterRegression(metricName, baselineValue, currentValue, tolerance))
                     {
                         passed = false;
                         messages.Add(FormatRegression(currentResult.Name, metricName, baselineValue, currentValue, "higher"));
                     }
                 }
 
-                if (IsStableEnoughForThroughputGate(baselineResult, currentResult))
+                if (IsStableEnoughForThroughputGate(baselineResult, currentResult, tolerance))
                 {
                     foreach (string metricName in HigherIsBetterMetrics)
                     {
                         if (TryGetPair(baselineResult, currentResult, metricName, out double baselineValue, out double currentValue)
-                            && IsHigherIsBetterRegression(baselineValue, currentValue))
+                            && IsHigherIsBetterRegression(baselineValue, currentValue, tolerance))
                         {
                             passed = false;
                             messages.Add(FormatRegression(currentResult.Name, metricName, baselineValue, currentValue, "lower"));
@@ -88,6 +129,22 @@ namespace Cotton.Benchmark.Regression
                 Passed = passed,
                 Messages = messages
             };
+        }
+
+        private static bool ShouldCompareMetric(
+            BenchmarkResultSnapshot baseline,
+            BenchmarkResultSnapshot current,
+            string metricName,
+            RegressionTolerance tolerance)
+        {
+            if (!metricName.Equals("P95DurationMs", StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            return TryGetPair(baseline, current, "Iterations", out double baselineIterations, out double currentIterations)
+                && baselineIterations >= tolerance.MinimumIterationsForPercentileGate
+                && currentIterations >= tolerance.MinimumIterationsForPercentileGate;
         }
 
         private static bool TryGetPair(
@@ -112,22 +169,30 @@ namespace Cotton.Benchmark.Regression
 
         private static bool IsStableEnoughForThroughputGate(
             BenchmarkResultSnapshot baseline,
-            BenchmarkResultSnapshot current)
+            BenchmarkResultSnapshot current,
+            RegressionTolerance tolerance)
         {
-            return TryGetPair(baseline, current, "AvgDurationMs", out double baselineDurationMs, out double currentDurationMs)
+            return TryGetPair(baseline, current, "Iterations", out double baselineIterations, out double currentIterations)
+                && baselineIterations >= tolerance.MinimumIterationsForThroughputGate
+                && currentIterations >= tolerance.MinimumIterationsForThroughputGate
+                && TryGetPair(baseline, current, "AvgDurationMs", out double baselineDurationMs, out double currentDurationMs)
                 && Math.Max(baselineDurationMs, currentDurationMs) >= MinimumDurationForThroughputGateMs;
         }
 
-        private static bool IsLowerIsBetterRegression(double baselineValue, double currentValue)
+        private static bool IsLowerIsBetterRegression(string metricName, double baselineValue, double currentValue, RegressionTolerance tolerance)
         {
-            return currentValue > baselineValue * DurationRegressionRatio
-                && currentValue - baselineValue > DurationRegressionGraceMs;
+            double grace = metricName.EndsWith("Bytes", StringComparison.Ordinal)
+                ? tolerance.MemoryGraceBytes
+                : tolerance.DurationGraceMs;
+
+            return currentValue > baselineValue * tolerance.DurationRatio
+                && currentValue - baselineValue > grace;
         }
 
-        private static bool IsHigherIsBetterRegression(double baselineValue, double currentValue)
+        private static bool IsHigherIsBetterRegression(double baselineValue, double currentValue, RegressionTolerance tolerance)
         {
-            return currentValue < baselineValue * ThroughputRegressionRatio
-                && baselineValue - currentValue > ThroughputRegressionGraceMBps;
+            return currentValue < baselineValue * tolerance.ThroughputRatio
+                && baselineValue - currentValue > tolerance.ThroughputGraceMBps;
         }
 
         private static string FormatRegression(

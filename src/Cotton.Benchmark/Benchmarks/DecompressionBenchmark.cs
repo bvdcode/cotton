@@ -36,7 +36,7 @@ namespace Cotton.Benchmark.Benchmarks
         }
 
         /// <inheritdoc/>
-        public override string Name => "Zstd Decompression (Cotton processor)";
+        public override string Name => "Cotton.Storage Zstd Decompression";
 
         /// <inheritdoc/>
         public override string Description => "Measures Cotton.Storage decompression throughput";
@@ -70,7 +70,7 @@ namespace Cotton.Benchmark.Benchmarks
         protected override Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
             var baseMetrics = base.AggregateMetrics(metrics);
-            baseMetrics["Processor"] = "Cotton.Storage.Processors.CompressionProcessor";
+            baseMetrics["Implementation"] = "Cotton.Storage.Processors.CompressionProcessor";
             baseMetrics["CompressedSize"] = FormatBytes(_compressedData.Length);
             baseMetrics["CompressionRatio"] = $"{(double)_originalSize / _compressedData.Length:F2}x";
             return baseMetrics;

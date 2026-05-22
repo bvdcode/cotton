@@ -4,7 +4,7 @@ Cotton keeps reviewed performance baselines in git, but raw benchmark runs stay 
 
 ## Modes
 
-- `machine` runs portable benchmarks without PostgreSQL. Use it to compare raw machine capability across CPUs, runtimes, and disks.
+- `machine` runs portable benchmarks without PostgreSQL. The `quick` profile excludes the expensive Zstd -5..22 sweep and uses relaxed regression gates because it has few iterations; `standard` and `full` keep the sweep and stricter gates for reviewed regression checks. Use it to compare raw machine capability across CPUs, runtimes, and disks.
 - `development` is the local Cotton regression suite. It currently starts with filesystem and storage-pipeline scenarios; PostgreSQL-backed listing, upload, download, WebDAV, archive, and integrity scenarios should be added here next.
 
 ## Common Commands
@@ -48,3 +48,4 @@ dotnet run --project src/Cotton.Benchmark -c Release -- --mode machine --profile
 - Upload many small files.
 - Upload one large chunked file.
 - Database integrity backfill and read-boundary verification.
+- Preview memory capacity scenarios, including very large image preview generation.

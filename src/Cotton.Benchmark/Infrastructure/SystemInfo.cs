@@ -37,11 +37,11 @@ namespace Cotton.Benchmark.Infrastructure
         {
             Console.ForegroundColor = ConsoleColor.Gray;
             Console.WriteLine("System Information:");
-            Console.WriteLine($"  � OS:          {OperatingSystem}");
-            Console.WriteLine($"  � Framework:   {Framework}");
-            Console.WriteLine($"  � Architecture: {Architecture}");
-            Console.WriteLine($"  � Processors:  {ProcessorCount}");
-            Console.WriteLine($"  � Memory:      {MemoryMonitor.FormatBytes(Environment.WorkingSet)}");
+            Console.WriteLine($"  OS:           {OperatingSystem}");
+            Console.WriteLine($"  Framework:    {Framework}");
+            Console.WriteLine($"  Architecture: {Architecture}");
+            Console.WriteLine($"  Processors:   {ProcessorCount}");
+            Console.WriteLine($"  Memory:       {MemoryMonitor.FormatBytes(Environment.WorkingSet)}");
             Console.ResetColor();
             Console.WriteLine();
         }

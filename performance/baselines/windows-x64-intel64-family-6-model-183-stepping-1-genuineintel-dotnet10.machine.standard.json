@@ -54,7 +54,7 @@
       }
     },
     {
-      "name": "Compression (Real Zstd Processor)",
+      "name": "Cotton.Storage Zstd Compression",
       "succeeded": true,
       "errorMessage": null,
       "totalDurationMs": 1724.3611,
@@ -70,12 +70,12 @@
       },
       "textMetrics": {
         "DataSize": "100.00 MB",
-        "Processor": "Cotton.Storage.Processors.CompressionProcessor",
+        "Implementation": "Cotton.Storage.Processors.CompressionProcessor",
         "DataType": "Compressible Text (Logs)"
       }
     },
     {
-      "name": "Decompression (Real Zstd Processor)",
+      "name": "Cotton.Storage Zstd Decompression",
       "succeeded": true,
       "errorMessage": null,
       "totalDurationMs": 923.1622,
@@ -91,13 +91,13 @@
       },
       "textMetrics": {
         "DataSize": "100.00 MB",
-        "Processor": "Cotton.Storage.Processors.CompressionProcessor",
+        "Implementation": "Cotton.Storage.Processors.CompressionProcessor",
         "CompressedSize": "10.59 MB",
         "CompressionRatio": "9.45x"
       }
     },
     {
-      "name": "ZstdSharp (Raw) Levels 1-5",
+      "name": "ZstdSharp Level Sweep 1-5",
       "succeeded": true,
       "errorMessage": null,
       "totalDurationMs": 4760.4091,
@@ -130,7 +130,7 @@
       }
     },
     {
-      "name": "Compression Levels (Extreme Range -5 to 22)",
+      "name": "ZstdSharp Extreme Level Sweep (-5..22)",
       "succeeded": true,
       "errorMessage": null,
       "totalDurationMs": 281110.0966,
@@ -194,7 +194,7 @@
       }
     },
     {
-      "name": "Encryption (Real AES-GCM Processor)",
+      "name": "Cotton.Storage AES-GCM Encryption",
       "succeeded": true,
       "errorMessage": null,
       "totalDurationMs": 536.1391,
@@ -211,13 +211,13 @@
       },
       "textMetrics": {
         "DataSize": "100.00 MB",
-        "Processor": "Cotton.Storage.Processors.CryptoProcessor",
+        "Implementation": "Cotton.Storage.Processors.CryptoProcessor",
         "Cipher": "AesGcmStreamCipher",
         "KeySize": "256 bits"
       }
     },
     {
-      "name": "Decryption (Real AES-GCM Processor)",
+      "name": "Cotton.Storage AES-GCM Decryption",
       "succeeded": true,
       "errorMessage": null,
       "totalDurationMs": 425.7371,
@@ -234,13 +234,13 @@
       },
       "textMetrics": {
         "DataSize": "100.00 MB",
-        "Processor": "Cotton.Storage.Processors.CryptoProcessor",
+        "Implementation": "Cotton.Storage.Processors.CryptoProcessor",
         "Cipher": "AesGcmStreamCipher",
         "EncryptedSize": "100.00 MB"
       }
     },
     {
-      "name": "FileSystem I/O (Real Backend)",
+      "name": "Filesystem Backend I/O",
       "succeeded": true,
       "errorMessage": null,
       "totalDurationMs": 1438.5839,
@@ -262,7 +262,7 @@
       }
     },
     {
-      "name": "Full Pipeline (Real FileStoragePipeline)",
+      "name": "Storage Pipeline (Compression + Encryption)",
       "succeeded": true,
       "errorMessage": null,
       "totalDurationMs": 838.1305,
