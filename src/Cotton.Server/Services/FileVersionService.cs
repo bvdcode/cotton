@@ -410,5 +410,4 @@ public sealed class FileVersionService(
 
     private static Guid GetLineageId(NodeFile file)
         => file.OriginalNodeFileId == Guid.Empty ? file.Id : file.OriginalNodeFileId;
-
 }
