@@ -84,6 +84,8 @@ namespace Cotton.Server.Controllers
         /// Defines the cookie refresh token key.
         /// </summary>
         public const string CookieRefreshTokenKey = "refresh_token";
+        private const string UnknownGeoLabel = "Unknown";
+        private const string DemoGeoLabel = "Demo";
         private static readonly EmailAddressAttribute EmailValidator = new();
 
         /// <summary>
@@ -770,17 +772,18 @@ namespace Cotton.Server.Controllers
         {
             IPAddress ipAddress = GetRequestIpAddress();
             var lookup = await _geoLookup.TryLookupAsync(ipAddress);
+            var geo = ResolveRefreshTokenGeoFields(lookup);
             sessionId ??= StringHelpers.CreateRandomString(RefreshTokenLength);
             string refreshToken = StringHelpers.CreateRandomString(RefreshTokenLength);
             ExtendedRefreshToken dbToken = new()
             {
                 RevokedAt = null,
                 UserId = user.Id,
-                City = lookup?.City ?? "Unknown",
+                City = geo.City,
                 SessionId = sessionId,
-                Region = lookup?.Region ?? "Unknown",
+                Region = geo.Region,
                 IsTrusted = trustDevice,
-                Country = lookup?.Country ?? "Unknown",
+                Country = geo.Country,
                 AuthType = AuthType.Credentials,
                 IpAddress = ipAddress,
                 UserAgent = Request.Headers.UserAgent.ToString(),
@@ -788,6 +791,25 @@ namespace Cotton.Server.Controllers
                 Device = UserAgentHelpers.GetDevice(Request.Headers.UserAgent.ToString()),
             };
             return (dbToken, refreshToken);
+        }
+
+        private static (string City, string Region, string Country) ResolveRefreshTokenGeoFields(
+            GeoLookupResult? lookup)
+        {
+            if (lookup is null && Constants.IsPublicInstance)
+            {
+                return (DemoGeoLabel, string.Empty, string.Empty);
+            }
+
+            return (
+                NormalizeGeoField(lookup?.City),
+                NormalizeGeoField(lookup?.Region),
+                NormalizeGeoField(lookup?.Country));
+        }
+
+        private static string NormalizeGeoField(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? UnknownGeoLabel : value;
         }
 
         private static string HashRefreshToken(string refreshToken)
