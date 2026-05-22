@@ -58,6 +58,10 @@ namespace Cotton.Server.Extensions
             services.AddScoped<IDatabaseIntegrityChangeSigner, DatabaseIntegrityChangeSigner>();
             services.AddScoped<IDatabaseIntegrityVerifier, DatabaseIntegrityVerifier>();
             services.AddScoped<IDatabaseIntegrityBridgeBackfillService, DatabaseIntegrityBridgeBackfillService>();
+            services.AddSingleton<DatabaseIntegrityFailureReporter>();
+            services.AddSingleton<IDatabaseIntegrityFailureReporter>(sp =>
+                sp.GetRequiredService<DatabaseIntegrityFailureReporter>());
+            services.AddHostedService(sp => sp.GetRequiredService<DatabaseIntegrityFailureReporter>());
 
             services.AddSingleton<IDatabaseIntegrityDescriptor, UserIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, UserPasskeyCredentialIntegrityDescriptor>();

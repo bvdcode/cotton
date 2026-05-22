@@ -83,6 +83,7 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
         var verifier = new DatabaseIntegrityVerifier(
             CreateProtector(),
             new DatabaseIntegrityDescriptorRegistry(CreateDescriptors()),
+            NullDatabaseIntegrityFailureReporter.Instance,
             NullLogger<DatabaseIntegrityVerifier>.Instance);
 
         Assert.Throws<DatabaseIntegrityException>(() =>

@@ -282,6 +282,23 @@ namespace Cotton.Localization
 
         public static string DatabaseRestoreCompletedTitle => "Database restored automatically";
 
+        public static string DatabaseIntegrityFailureTitle => "Database integrity issue detected";
+
+        public static string DatabaseIntegrityFailureContent(
+            string entityName,
+            string entityKey,
+            string boundary,
+            DateTime detectedAtUtc)
+        {
+            return
+                $"Cotton rejected a protected database row because its integrity signature did not match.\n\n" +
+                $"Entity: {entityName}\n" +
+                $"Row: {entityKey}\n" +
+                $"Boundary: {boundary}\n" +
+                $"Detected (UTC): {detectedAtUtc:yyyy-MM-dd HH:mm:ss}\n\n" +
+                "If you edited PostgreSQL manually, restore the row from a trusted backup or re-apply the change through Cotton.";
+        }
+
         public static string DatabaseRestoreCompletedContent(
             string backupId,
             string sourceDatabase,

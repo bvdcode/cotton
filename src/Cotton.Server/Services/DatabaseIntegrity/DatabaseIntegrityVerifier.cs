@@ -4,12 +4,14 @@
 using Cotton.Database;
 using Cotton.Database.Integrity;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
 public sealed class DatabaseIntegrityVerifier(
     IDatabaseIntegrityProtector _protector,
     IDatabaseIntegrityDescriptorRegistry _descriptors,
+    IDatabaseIntegrityFailureReporter _failures,
     ILogger<DatabaseIntegrityVerifier> _logger) : IDatabaseIntegrityVerifier
 {
     public void RequireValid<TEntity>(
@@ -43,7 +45,7 @@ public sealed class DatabaseIntegrityVerifier(
                 descriptor.EntityName,
                 descriptor.GetEntityKey(entity),
                 boundary);
-            throw new DatabaseIntegrityException(descriptor.EntityName, descriptor.GetEntityKey(entity));
+            Fail(descriptor, entity, boundary);
         }
 
         if (!_protector.Verify(entity, descriptor, mac))
@@ -53,7 +55,22 @@ public sealed class DatabaseIntegrityVerifier(
                 descriptor.EntityName,
                 descriptor.GetEntityKey(entity),
                 boundary);
-            throw new DatabaseIntegrityException(descriptor.EntityName, descriptor.GetEntityKey(entity));
+            Fail(descriptor, entity, boundary);
         }
+    }
+
+    [DoesNotReturn]
+    private void Fail(
+        IDatabaseIntegrityDescriptor descriptor,
+        object entity,
+        string boundary)
+    {
+        string entityKey = descriptor.GetEntityKey(entity);
+        _failures.Report(new DatabaseIntegrityFailure(
+            descriptor.EntityName,
+            entityKey,
+            boundary,
+            DateTime.UtcNow));
+        throw new DatabaseIntegrityException(descriptor.EntityName, entityKey);
     }
 }
