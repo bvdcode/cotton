@@ -91,15 +91,21 @@ public sealed class DatabaseIntegrityCanonicalWriter
         WriteBytes(buffer);
     }
 
-    /// <summary>Writes a nullable <see cref="DateTime"/> normalized to UTC ticks.</summary>
+    /// <summary>Writes a nullable <see cref="DateTime"/> normalized to UTC microsecond ticks.</summary>
     public void WriteNullableDateTimeField(string name, DateTime? value)
     {
         WriteFieldHeader(name, DatabaseIntegrityFieldType.DateTime);
         WriteNullableValue(value, static (writer, item) =>
         {
             DateTime utc = item.Kind == DateTimeKind.Utc ? item : item.ToUniversalTime();
-            writer.WriteInt64(utc.Ticks);
+            writer.WriteInt64(NormalizeToDatabasePrecision(utc).Ticks);
         });
+    }
+
+    private static DateTime NormalizeToDatabasePrecision(DateTime utc)
+    {
+        long ticks = utc.Ticks - utc.Ticks % TimeSpan.TicksPerMicrosecond;
+        return new DateTime(ticks, DateTimeKind.Utc);
     }
 
     /// <summary>Writes a nullable ordered string collection exactly as supplied by the descriptor.</summary>

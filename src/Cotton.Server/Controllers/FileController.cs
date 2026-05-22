@@ -14,6 +14,7 @@ using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
+using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
@@ -50,6 +51,7 @@ namespace Cotton.Server.Controllers
         VideoTranscoder _videoTranscoder,
         HlsSegmentCache _segmentCache,
         IMemoryCache _cache,
+        IDatabaseIntegrityVerifier _integrity,
         ILogger<FileController> _logger) : ControllerBase
     {
         private const int DefaultSharedFileTokenLength = 16;
@@ -639,6 +641,8 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.NotFound("File not found");
             }
+            _integrity.RequireValid(_dbContext, downloadToken, "file.download-token");
+
             if (nodeFile.Node.Type != NodeType.Default && !FileVersionService.IsHistoricalVersion(nodeFile))
             {
                 return CottonResult.NotFound("File not found");
@@ -912,6 +916,7 @@ namespace Cotton.Server.Controllers
             {
                 return new TranscodableLookup(null, null, CottonResult.NotFound("File not found"));
             }
+            _integrity.RequireValid(_dbContext, downloadToken, "file.hls-token");
 
             var playbackMode = VideoPlaybackResolver.Resolve(
                 nodeFile.FileManifest.ContentType,

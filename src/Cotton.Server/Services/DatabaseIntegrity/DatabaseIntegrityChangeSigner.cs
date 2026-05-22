@@ -53,6 +53,11 @@ public sealed class DatabaseIntegrityChangeSigner : IDatabaseIntegrityChangeSign
             // The primary key participates in the signed payload, so signing a temporary EF key would create
             // a MAC that cannot verify after SaveChanges assigns the real key.
             EnsureStablePrimaryKey(entry, descriptor);
+            if (entry.State == EntityState.Modified)
+            {
+                RequireOriginalStateValid(entry, descriptor);
+            }
+
             byte[] mac = _protector.Sign(entry.Entity, descriptor);
             entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue = descriptor.SchemaVersion;
             entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue = mac;
@@ -79,5 +84,19 @@ public sealed class DatabaseIntegrityChangeSigner : IDatabaseIntegrityChangeSign
             throw new InvalidOperationException(
                 $"Cannot sign {descriptor.EntityName} while its primary key is temporary.");
         }
+    }
+
+    private void RequireOriginalStateValid(EntityEntry entry, IDatabaseIntegrityDescriptor descriptor)
+    {
+        byte[]? originalMac = entry.Property(DatabaseIntegrityColumns.MacProperty).OriginalValue as byte[];
+        object? originalVersionValue = entry.Property(DatabaseIntegrityColumns.VersionProperty).OriginalValue;
+        int? originalVersion = originalVersionValue is int version ? version : null;
+        if (originalMac is null || originalVersion != descriptor.SchemaVersion)
+        {
+            throw new DatabaseIntegrityException(descriptor.EntityName, descriptor.GetEntityKey(entry.Entity));
+        }
+
+        object originalEntity = entry.OriginalValues.ToObject();
+        _protector.RequireValid(originalEntity, descriptor, originalMac);
     }
 }

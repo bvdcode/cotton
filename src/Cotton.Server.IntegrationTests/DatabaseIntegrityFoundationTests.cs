@@ -62,6 +62,25 @@ public sealed class DatabaseIntegrityFoundationTests
     }
 
     [Test]
+    public void CanonicalWriter_NormalizesDateTimeToDatabasePrecision()
+    {
+        var descriptor = new IntegrityTestEntityDescriptor();
+        var first = CreateEntity() with
+        {
+            SeenAt = new DateTime(2026, 5, 22, 12, 0, 0, DateTimeKind.Utc).AddTicks(1)
+        };
+        var second = first with
+        {
+            SeenAt = first.SeenAt!.Value.AddTicks(TimeSpan.TicksPerMicrosecond - 2)
+        };
+
+        byte[] firstPayload = descriptor.BuildCanonicalPayload(first);
+        byte[] secondPayload = descriptor.BuildCanonicalPayload(second);
+
+        Assert.That(firstPayload, Is.EqualTo(secondPayload));
+    }
+
+    [Test]
     public void Protector_VerifiesSignedEntity()
     {
         var protector = CreateProtector();

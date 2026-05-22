@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Autoconfig.Extensions;
+using Cotton.Database;
 using Cotton.Database.Integrity;
 using Cotton.Database.Models;
 using Cotton.Server.IntegrationTests.Abstractions;
@@ -10,6 +11,7 @@ using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 using EasyExtensions.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Npgsql;
 using NUnit.Framework;
 
 namespace Cotton.Server.IntegrationTests;
@@ -114,11 +116,58 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
         Assert.That(ex!.Message, Does.Contain("Refusing to sign"));
     }
 
+    [Test]
+    public async Task SaveChanges_RefusesToResignTamperedProtectedRow()
+    {
+        var user = new User
+        {
+            Username = "erin",
+            PasswordPhc = "password-phc",
+            WebDavTokenPhc = "webdav-phc",
+            Role = UserRole.User
+        };
+        await DbContext.Users.AddAsync(user);
+        await DbContext.SaveChangesAsync();
+        DbContext.ChangeTracker.Clear();
+
+        await CreateBackfillService().BackfillUnsignedPhaseOneRowsAsync(CancellationToken.None);
+        await DbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"UPDATE users SET role = {(int)UserRole.Admin} WHERE id = {user.Id}");
+        DbContext.ChangeTracker.Clear();
+
+        await using CottonDbContext signingDbContext = CreateSigningDbContext();
+        User tampered = await signingDbContext.Users.SingleAsync(x => x.Id == user.Id);
+        tampered.FirstName = "Legitimate edit";
+
+        Assert.ThrowsAsync<DatabaseIntegrityException>(async () =>
+            await signingDbContext.SaveChangesAsync(CancellationToken.None));
+    }
+
     private byte[]? ReadMac(User user)
     {
         return (byte[]?)DbContext.Entry(user)
             .Property(DatabaseIntegrityColumns.MacProperty)
             .CurrentValue;
+    }
+
+    private CottonDbContext CreateSigningDbContext()
+    {
+        DbContextOptionsBuilder<CottonDbContext> optionsBuilder = new();
+        var builder = new NpgsqlConnectionStringBuilder
+        {
+            Host = TestPostgresHost,
+            Port = TestPostgresPort,
+            Username = TestPostgresUsername,
+            Password = TestPostgresPassword,
+            Database = CurrentDatabaseName
+        };
+        optionsBuilder.UseNpgsql(builder.ConnectionString, x => x.UseAdminDatabase("postgres"));
+
+        return new CottonDbContext(
+            optionsBuilder.Options,
+            integrityChangeSigner: new DatabaseIntegrityChangeSigner(
+                CreateProtector(),
+                new DatabaseIntegrityDescriptorRegistry(CreateDescriptors())));
     }
 
     private DatabaseIntegrityBridgeBackfillService CreateBackfillService()
