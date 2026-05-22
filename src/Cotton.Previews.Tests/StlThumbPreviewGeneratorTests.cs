@@ -11,6 +11,17 @@ namespace Cotton.Previews.Tests;
 public class StlThumbPreviewGeneratorTests
 {
     [Test]
+    public void MeshGenerators_ReportCurrentPreviewVersion()
+    {
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(new StlThumbPreviewGenerator().Version, Is.EqualTo(7));
+            Assert.That(StlThumbPreviewGenerator.CreateObjGenerator().Version, Is.EqualTo(7));
+            Assert.That(StlThumbPreviewGenerator.CreateThreeMfGenerator().Version, Is.EqualTo(7));
+        }
+    }
+
+    [Test]
     public void GeneratePreviewWebPAsync_StlInvalidContent_Throws()
     {
         StlThumbPreviewGenerator generator = new();

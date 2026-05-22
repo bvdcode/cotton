@@ -14,7 +14,7 @@ namespace Cotton.Previews
     public class StlThumbPreviewGenerator : IPreviewGenerator
     {
         /// <inheritdoc />
-        public int Version => 6;
+        public int Version => 7;
         /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes => _supportedContentTypes;
 
@@ -468,6 +468,7 @@ namespace Cotton.Previews
                 process.StartInfo.ArgumentList.Add($"--input={modelFilePath}");
                 process.StartInfo.ArgumentList.Add($"--output={outputPngPath}");
                 process.StartInfo.ArgumentList.Add($"--resolution={size},{size}");
+                process.StartInfo.ArgumentList.Add($"--color={PreviewColorPalette.AccentGreenHex}");
                 if (includeMaxSizeArgument)
                 {
                     process.StartInfo.ArgumentList.Add($"--max-size={PreviewGeneratorProvider.DefaultSmallPreviewSize}");

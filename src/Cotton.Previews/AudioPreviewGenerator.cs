@@ -94,7 +94,7 @@ namespace Cotton.Previews
             float[] amplitudes = BuildAmplitudes(samples, bars);
 
             using var image = new Image<Rgba32>(size, size, new Rgba32(0, 0, 0, 0));
-            using (var drawing = image.Frames.RootFrame.CreateCanvas(image.Configuration, new DrawingOptions(), Array.Empty<IPath>()))
+            image.Mutate(ctx =>
             {
                 float barGap = Math.Max(5f, size / 48f);
                 float sidePadding = Math.Max(10f, barGap * 1.5f);
@@ -105,7 +105,10 @@ namespace Cotton.Previews
                 float centerY = size / 2f;
                 float minBarHeight = Math.Max(4f, size * 0.06f);
                 float maxBarHeight = size * 0.82f;
-                var barBrush = Brushes.Solid(Color.FromPixel(new Rgba32(0x96, 0xBE, 0x02)));
+                var barBrush = Brushes.Solid(Color.FromPixel(new Rgba32(
+                    PreviewColorPalette.AccentGreenRed,
+                    PreviewColorPalette.AccentGreenGreen,
+                    PreviewColorPalette.AccentGreenBlue)));
 
                 for (int i = 0; i < bars; i++)
                 {
@@ -117,20 +120,20 @@ namespace Cotton.Previews
 
                     if (barHeight <= barWidth)
                     {
-                        drawing.Fill(barBrush, new EllipsePolygon(x + radius, centerY, radius));
+                        ctx.Fill(barBrush, new EllipsePolygon(x + radius, centerY, radius));
                         continue;
                     }
 
                     float bodyHeight = Math.Max(0, barHeight - barWidth);
                     if (bodyHeight > 0)
                     {
-                        drawing.Fill(barBrush, new RectanglePolygon(x, y + radius, barWidth, bodyHeight));
+                        ctx.Fill(barBrush, new RectangularPolygon(x, y + radius, barWidth, bodyHeight));
                     }
 
-                    drawing.Fill(barBrush, new EllipsePolygon(x + radius, y + radius, radius));
-                    drawing.Fill(barBrush, new EllipsePolygon(x + radius, y + barHeight - radius, radius));
+                    ctx.Fill(barBrush, new EllipsePolygon(x + radius, y + radius, radius));
+                    ctx.Fill(barBrush, new EllipsePolygon(x + radius, y + barHeight - radius, radius));
                 }
-            }
+            });
 
             await using var output = new MemoryStream();
             await image.SaveAsWebpAsync(output).ConfigureAwait(false);

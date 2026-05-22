@@ -4,7 +4,6 @@
 using EasyExtensions.Fonts.Resources;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Drawing;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
@@ -89,15 +88,14 @@ namespace Cotton.Previews
             float fontSize = Math.Max(10f, renderSize * FontSizeRatio);
             var font = _fontFamily.CreateFont(fontSize, FontStyle.Regular);
 
-            canvas.Mutate(ctx => ctx.BackgroundColor(Color.White));
-            using (var drawing = canvas.Frames.RootFrame.CreateCanvas(canvas.Configuration, new DrawingOptions(), Array.Empty<IPath>()))
+            canvas.Mutate(ctx =>
             {
-                drawing.DrawText(
+                ctx.BackgroundColor(Color.White);
+                ctx.DrawText(
                     new RichTextOptions(font) { Origin = new PointF(padding, paddingTop) },
                     text,
-                    Brushes.Solid(Color.Black),
-                    null!);
-            }
+                    Color.Black);
+            });
 
             using var output = canvas.Clone(x => x.Resize(new ResizeOptions
             {
