@@ -58,6 +58,8 @@ namespace Cotton.Server.Controllers
         PasskeyService _passkeys,
         DefaultUserContentSeeder _defaultUserContentSeeder,
         ApplicationStartupClock _startupClock,
+        RefreshTokenRevocationService _refreshTokenRevocations,
+        DownloadTokenExpirationService _downloadTokenExpirations,
         SessionAccessTokenRevocationStore _sessionRevocations,
         IHubContext<EventHub> _eventHub) : ControllerBase
     {
@@ -94,11 +96,11 @@ namespace Cotton.Server.Controllers
         {
             var userId = User.GetUserId();
             DateTime revokedAt = DateTime.UtcNow;
-            int revokedTokens = await _dbContext.RefreshTokens
-                .Where(x => x.UserId == userId && x.SessionId == sessionId && x.RevokedAt == null)
-                .ExecuteUpdateAsync(
-                    x => x.SetProperty(t => t.RevokedAt, _ => revokedAt),
-                    cancellationToken);
+            int revokedTokens = await _refreshTokenRevocations.RevokeSessionAsync(
+                userId,
+                sessionId,
+                revokedAt,
+                cancellationToken);
             if (revokedTokens > 0)
             {
                 await NotifySessionRevokedAsync(userId, sessionId, cancellationToken);
@@ -519,12 +521,10 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> InvalidateShareLinks(CancellationToken cancellationToken)
         {
             var userId = User.GetUserId();
-            await _dbContext.DownloadTokens
-                .Where(dt => dt.CreatedByUserId == userId
-                    && (dt.ExpiresAt == null || dt.ExpiresAt > DateTime.UtcNow))
-                .ExecuteUpdateAsync(
-                    s => s.SetProperty(dt => dt.ExpiresAt, DateTime.UtcNow),
-                    cancellationToken);
+            await _downloadTokenExpirations.ExpireActiveTokensCreatedByUserAsync(
+                userId,
+                DateTime.UtcNow,
+                cancellationToken);
             return Ok();
         }
 

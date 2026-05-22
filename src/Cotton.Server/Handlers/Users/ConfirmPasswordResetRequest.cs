@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Server.Services;
 using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
@@ -19,7 +20,8 @@ namespace Cotton.Server.Handlers.Users
 
     public class ConfirmPasswordResetRequestHandler(
         CottonDbContext _dbContext,
-        IPasswordHashService _hasher) : IRequestHandler<ConfirmPasswordResetRequest>
+        IPasswordHashService _hasher,
+        RefreshTokenRevocationService _refreshTokenRevocations) : IRequestHandler<ConfirmPasswordResetRequest>
     {
         private static readonly TimeSpan TokenExpiration = TimeSpan.FromHours(1);
 
@@ -61,11 +63,10 @@ namespace Cotton.Server.Handlers.Users
 
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            await _dbContext.RefreshTokens
-                .Where(x => x.UserId == user.Id && x.RevokedAt == null)
-                .ExecuteUpdateAsync(
-                    s => s.SetProperty(t => t.RevokedAt, _ => DateTime.UtcNow),
-                    cancellationToken);
+            await _refreshTokenRevocations.RevokeUserSessionsAsync(
+                user.Id,
+                DateTime.UtcNow,
+                cancellationToken);
 
             await tx.CommitAsync(cancellationToken);
         }

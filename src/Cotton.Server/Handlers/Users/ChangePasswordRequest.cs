@@ -3,11 +3,11 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Server.Services;
 using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
-using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Users
 {
@@ -18,7 +18,10 @@ namespace Cotton.Server.Handlers.Users
         public string NewPassword { get; } = newPassword;
     }
 
-    public class ChangePasswordRequestHandler(CottonDbContext _dbContext, IPasswordHashService _hasher) : IRequestHandler<ChangePasswordRequest>
+    public class ChangePasswordRequestHandler(
+        CottonDbContext _dbContext,
+        IPasswordHashService _hasher,
+        RefreshTokenRevocationService _refreshTokenRevocations) : IRequestHandler<ChangePasswordRequest>
     {
         public async Task Handle(ChangePasswordRequest request, CancellationToken cancellationToken)
         {
@@ -45,11 +48,10 @@ namespace Cotton.Server.Handlers.Users
             user.PasswordPhc = _hasher.Hash(request.NewPassword);
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            await _dbContext.RefreshTokens
-                .Where(x => x.UserId == user.Id && x.RevokedAt == null)
-                .ExecuteUpdateAsync(
-                    s => s.SetProperty(t => t.RevokedAt, _ => DateTime.UtcNow),
-                    cancellationToken);
+            await _refreshTokenRevocations.RevokeUserSessionsAsync(
+                user.Id,
+                DateTime.UtcNow,
+                cancellationToken);
 
             await tx.CommitAsync(cancellationToken);
         }

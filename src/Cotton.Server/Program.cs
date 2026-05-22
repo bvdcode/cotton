@@ -140,6 +140,8 @@ namespace Cotton.Server
                 .AddScoped<SettingsProvider>()
                 .AddScoped<SecurityDiagnosticsService>()
                 .AddScoped<PasskeyService>()
+                .AddScoped<RefreshTokenRevocationService>()
+                .AddScoped<DownloadTokenExpirationService>()
                 .AddScoped<IPostgresDumpService, PostgresDumpService>()
                 .AddScoped<IDatabaseBackupManifestService, DatabaseBackupManifestService>()
                 .AddScoped<IDatabaseAutoRestoreService, DatabaseAutoRestoreService>()
