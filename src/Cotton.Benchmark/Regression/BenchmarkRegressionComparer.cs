@@ -18,6 +18,7 @@ namespace Cotton.Benchmark.Regression
         private const double DurationRegressionGraceMs = 10;
         private const double ThroughputRegressionRatio = 0.85;
         private const double ThroughputRegressionGraceMBps = 5;
+        private const double MinimumDurationForThroughputGateMs = 100;
 
         private static readonly string[] LowerIsBetterMetrics =
         [
@@ -63,13 +64,16 @@ namespace Cotton.Benchmark.Regression
                     }
                 }
 
-                foreach (string metricName in HigherIsBetterMetrics)
+                if (IsStableEnoughForThroughputGate(baselineResult, currentResult))
                 {
-                    if (TryGetPair(baselineResult, currentResult, metricName, out double baselineValue, out double currentValue)
-                        && IsHigherIsBetterRegression(baselineValue, currentValue))
+                    foreach (string metricName in HigherIsBetterMetrics)
                     {
-                        passed = false;
-                        messages.Add(FormatRegression(currentResult.Name, metricName, baselineValue, currentValue, "lower"));
+                        if (TryGetPair(baselineResult, currentResult, metricName, out double baselineValue, out double currentValue)
+                            && IsHigherIsBetterRegression(baselineValue, currentValue))
+                        {
+                            passed = false;
+                            messages.Add(FormatRegression(currentResult.Name, metricName, baselineValue, currentValue, "lower"));
+                        }
                     }
                 }
             }
@@ -104,6 +108,14 @@ namespace Cotton.Benchmark.Regression
             baselineValue = 0;
             currentValue = 0;
             return false;
+        }
+
+        private static bool IsStableEnoughForThroughputGate(
+            BenchmarkResultSnapshot baseline,
+            BenchmarkResultSnapshot current)
+        {
+            return TryGetPair(baseline, current, "AvgDurationMs", out double baselineDurationMs, out double currentDurationMs)
+                && Math.Max(baselineDurationMs, currentDurationMs) >= MinimumDurationForThroughputGateMs;
         }
 
         private static bool IsLowerIsBetterRegression(double baselineValue, double currentValue)
