@@ -63,6 +63,12 @@ dotnet run --project Cotton.Benchmark -- --mode machine --profile standard --upd
 dotnet run --project Cotton.Benchmark -- --mode machine --profile standard --compare
 ```
 
+Run the image preview memory capacity probe:
+
+```bash
+dotnet run --project Cotton.Benchmark -- --mode development --profile quick --scenario image-preview
+```
+
 ### Regression Baselines
 
 Reviewed baselines live under `performance/baselines`. Unreviewed run output is written to `performance/results` and ignored by git. Baselines are scoped by hardware key, benchmark mode, and profile so local machines can track their own history without pretending GitHub runner timings are stable.
@@ -70,7 +76,7 @@ Reviewed baselines live under `performance/baselines`. Unreviewed run output is 
 Modes:
 
 - `machine` runs portable benchmarks without PostgreSQL. The `quick` profile excludes the expensive Zstd -5..22 sweep and uses relaxed regression gates because it has few iterations; `standard` and `full` keep the sweep and stricter gates for reviewed regression checks.
-- `development` is the local Cotton regression suite. It currently starts with filesystem and storage-pipeline scenarios; PostgreSQL-backed flows belong there next.
+- `development` is the local Cotton regression suite. It includes filesystem, storage-pipeline, and image-preview memory capacity scenarios; PostgreSQL-backed flows belong there next.
 
 
 ## Default Configuration
@@ -223,6 +229,7 @@ Memory Statistics:
 - [x] Comparative benchmarking across runs
 - [x] Percentile calculations (P50, P95)
 - [x] Managed allocation, working set, and peak working set metrics
+- [x] Image preview memory capacity benchmark with isolated worker process
 - [ ] GC pause time tracking
 - [ ] S3StorageBackend benchmarks
 - [ ] Concurrent operation benchmarks

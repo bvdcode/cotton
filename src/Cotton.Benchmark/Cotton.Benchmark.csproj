@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Cotton.Crypto\Cotton.Crypto.csproj" />
+    <ProjectReference Include="..\Cotton.Previews\Cotton.Previews.csproj" />
     <ProjectReference Include="..\Cotton.Storage\Cotton.Storage.csproj" />
   </ItemGroup>
 

@@ -14,7 +14,7 @@ namespace Cotton.Benchmark.Infrastructure
             var benchmarks = options.Mode switch
             {
                 BenchmarkMode.Machine => CreateMachineBenchmarks(configuration, options.Profile),
-                BenchmarkMode.Development => CreateDevelopmentBenchmarks(configuration),
+                BenchmarkMode.Development => CreateDevelopmentBenchmarks(configuration, options.Profile),
                 _ => throw new ArgumentOutOfRangeException(nameof(options), options.Mode, "Unsupported benchmark mode.")
             };
 
@@ -44,12 +44,13 @@ namespace Cotton.Benchmark.Infrastructure
             return benchmarks;
         }
 
-        private static List<IBenchmark> CreateDevelopmentBenchmarks(BenchmarkConfiguration configuration)
+        private static List<IBenchmark> CreateDevelopmentBenchmarks(BenchmarkConfiguration configuration, BenchmarkProfile profile)
         {
             return
             [
                 new FileSystemBenchmark(configuration),
-                new PipelineBenchmark(configuration)
+                new PipelineBenchmark(configuration),
+                new ImagePreviewMemoryBenchmark(configuration, profile)
             ];
         }
 

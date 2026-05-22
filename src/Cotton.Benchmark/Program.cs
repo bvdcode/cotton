@@ -19,6 +19,11 @@ namespace Cotton.Benchmark
     {
         private static async Task<int> Main(string[] args)
         {
+            if (PreviewMemoryWorker.IsWorkerInvocation(args))
+            {
+                return await PreviewMemoryWorker.RunAsync(args, CancellationToken.None).ConfigureAwait(false);
+            }
+
             BenchmarkOptions options;
             try
             {
