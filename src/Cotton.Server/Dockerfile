@@ -72,6 +72,8 @@ ARG BUILD_VERSION=dev
 ENV APP_VERSION=$BUILD_VERSION
 COPY --from=publish /app/publish .
 COPY --chmod=0755 ["Cotton.Server/docker-entrypoint.sh", "/usr/local/bin/cotton-entrypoint"]
+# Compatibility bridge for existing root-owned self-hosted volumes.
+# Remove the APP_UID fallback and require explicit non-root ownership after the migration window closes.
 RUN set -eux \
     && mkdir -p /app/files \
     && chown -R "${APP_UID:-1654}:${APP_UID:-1654}" /app/files
