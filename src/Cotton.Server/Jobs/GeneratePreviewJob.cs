@@ -18,6 +18,7 @@ using EasyExtensions.Quartz.Attributes;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
+using System.Text.RegularExpressions;
 
 namespace Cotton.Server.Jobs
 {
@@ -46,7 +47,7 @@ namespace Cotton.Server.Jobs
             var generatorVersionsByContentType = PreviewGeneratorProvider.GetGeneratorVersionsByContentType();
             CancellationToken cancellationToken = context?.CancellationToken ?? CancellationToken.None;
 
-            await NormalizeLegacyCSharpContentTypesAsync(allSupportedMimeTypes, cancellationToken);
+            await NormalizeLegacySourceTextContentTypesAsync(allSupportedMimeTypes, cancellationToken);
 
             var processableItemsQuery = _dbContext.FileManifests
                 .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType));
@@ -183,7 +184,7 @@ namespace Cotton.Server.Jobs
             }
         }
 
-        private async Task NormalizeLegacyCSharpContentTypesAsync(
+        private async Task NormalizeLegacySourceTextContentTypesAsync(
             IReadOnlyCollection<string> supportedContentTypes,
             CancellationToken cancellationToken)
         {
@@ -192,9 +193,10 @@ namespace Cotton.Server.Jobs
                 .Where(m =>
                     (m.ContentType == FileManifestService.DefaultContentType
                         || m.ContentType == string.Empty) &&
-                    m.NodeFiles.Any(nf =>
-                        EF.Functions.ILike(nf.Name, "%.cs")
-                        || EF.Functions.ILike(nf.Name, "%.csx")))
+                    m.NodeFiles.Any(nf => Regex.IsMatch(
+                        nf.Name,
+                        FileManifestService.SourceTextFileNameRegexPattern,
+                        RegexOptions.IgnoreCase)))
                 .OrderBy(m => m.CreatedAt)
                 .Take(MaxItemsPerRun)
                 .ToListAsync(cancellationToken);
@@ -202,7 +204,7 @@ namespace Cotton.Server.Jobs
             int updated = 0;
             foreach (var manifest in manifests)
             {
-                string? fileName = manifest.NodeFiles.FirstOrDefault(IsLegacyCSharpFileName)?.Name;
+                string? fileName = manifest.NodeFiles.FirstOrDefault(nodeFile => FileManifestService.IsSourceTextFileName(nodeFile.Name))?.Name;
                 if (string.IsNullOrWhiteSpace(fileName))
                 {
                     continue;
@@ -221,15 +223,10 @@ namespace Cotton.Server.Jobs
             if (updated > 0)
             {
                 await _dbContext.SaveChangesAsync(cancellationToken);
-                _logger.LogInformation("Normalized {Count} legacy C# file manifest content types before preview generation.", updated);
+                _logger.LogInformation("Normalized {Count} legacy source-text file manifest content types before preview generation.", updated);
             }
         }
 
-        private static bool IsLegacyCSharpFileName(NodeFile nodeFile)
-        {
-            return nodeFile.Name.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
-                || nodeFile.Name.EndsWith(".csx", StringComparison.OrdinalIgnoreCase);
-        }
 
         private async Task EnsureChunkExistsAsync(byte[] hash, long sizeBytes)
         {

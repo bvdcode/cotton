@@ -7,6 +7,7 @@ using Cotton.Previews;
 using EasyExtensions.AspNetCore.Exceptions;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
 
 namespace Cotton.Server.Services
 {
@@ -59,6 +60,86 @@ namespace Cotton.Server.Services
                 [".3mf"] = "model/3mf",
             };
 
+        private static readonly IReadOnlySet<string> sourceTextExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".ts",
+            ".tsx",
+            ".js",
+            ".jsx",
+            ".mjs",
+            ".cjs",
+            ".json",
+            ".jsonc",
+            ".html",
+            ".htm",
+            ".css",
+            ".less",
+            ".scss",
+            ".sass",
+            ".xml",
+            ".php",
+            ".phtml",
+            ".cs",
+            ".csx",
+            ".cpp",
+            ".cc",
+            ".cxx",
+            ".c",
+            ".h",
+            ".hpp",
+            ".razor",
+            ".cshtml",
+            ".md",
+            ".markdown",
+            ".diff",
+            ".patch",
+            ".java",
+            ".vb",
+            ".coffee",
+            ".hbs",
+            ".handlebars",
+            ".bat",
+            ".cmd",
+            ".pug",
+            ".jade",
+            ".fs",
+            ".fsi",
+            ".fsx",
+            ".fsscript",
+            ".lua",
+            ".ps1",
+            ".psm1",
+            ".psd1",
+            ".py",
+            ".pyw",
+            ".pyi",
+            ".rb",
+            ".rbw",
+            ".r",
+            ".m",
+            ".mm",
+            ".go",
+            ".rs",
+            ".swift",
+            ".kt",
+            ".kts",
+            ".sh",
+            ".bash",
+            ".zsh",
+            ".yaml",
+            ".yml",
+            ".toml",
+            ".ini",
+            ".conf",
+            ".cfg",
+            ".sql",
+            ".vue",
+            ".svelte",
+        };
+
+        /// <summary>Regex pattern matching filenames that Cotton treats as source-code text previews.</summary>
+        public static string SourceTextFileNameRegexPattern { get; } = BuildSourceTextFileNameRegexPattern();
+
         /// <summary>
         /// Resolves content type.
         /// </summary>
@@ -78,19 +159,81 @@ namespace Cotton.Server.Services
             if (!string.IsNullOrWhiteSpace(normalizedContentType)
                 && !string.Equals(normalizedContentType, DefaultContentType, StringComparison.OrdinalIgnoreCase))
             {
-                return normalizedContentType;
+                return IsSourceTextFileName(fileName) && ShouldUseSourceTextContentType(normalizedContentType)
+                    ? "text/plain"
+                    : normalizedContentType;
             }
 
             if (!string.IsNullOrWhiteSpace(fileName)
                 && fileExtensionContentTypeProvider.TryGetContentType(fileName, out string? detectedContentType)
                 && !string.IsNullOrWhiteSpace(detectedContentType))
             {
-                return NormalizeContentType(detectedContentType);
+                string normalizedDetectedContentType = NormalizeContentType(detectedContentType);
+                return IsSourceTextFileName(fileName) && ShouldUseSourceTextContentType(normalizedDetectedContentType)
+                    ? "text/plain"
+                    : normalizedDetectedContentType;
+            }
+
+            if (IsSourceTextFileName(fileName))
+            {
+                return "text/plain";
             }
 
             return string.IsNullOrWhiteSpace(normalizedContentType)
                 ? DefaultContentType
                 : normalizedContentType;
+        }
+
+        /// <summary>Returns true when the filename should be treated as source-code text for preview generation.</summary>
+        public static bool IsSourceTextFileName(string? fileName)
+        {
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                return false;
+            }
+
+            string name = Path.GetFileName(fileName);
+            if (IsDockerfileName(name))
+            {
+                return true;
+            }
+
+            string extension = Path.GetExtension(name);
+            return !string.IsNullOrWhiteSpace(extension) && sourceTextExtensions.Contains(extension);
+        }
+
+        private static bool IsDockerfileName(string fileName)
+        {
+            return fileName.Equals("Dockerfile", StringComparison.OrdinalIgnoreCase)
+                || fileName.StartsWith("Dockerfile.", StringComparison.OrdinalIgnoreCase)
+                || fileName.Equals(".dockerignore", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool ShouldUseSourceTextContentType(string normalizedContentType)
+        {
+            if (string.IsNullOrWhiteSpace(normalizedContentType)
+                || string.Equals(normalizedContentType, DefaultContentType, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (PreviewGeneratorProvider.GetGeneratorByContentType(normalizedContentType) is not null)
+            {
+                return false;
+            }
+
+            return normalizedContentType.StartsWith("text/", StringComparison.OrdinalIgnoreCase)
+                || normalizedContentType.StartsWith("application/x-", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string BuildSourceTextFileNameRegexPattern()
+        {
+            var extensions = sourceTextExtensions
+                .Select(extension => Regex.Escape(extension.TrimStart('.')))
+                .OrderByDescending(extension => extension.Length)
+                .ThenBy(extension => extension, StringComparer.Ordinal);
+
+            return $"^(?:dockerfile(?:\\..*)?|\\.dockerignore|.+\\.(?:{string.Join("|", extensions)}))$";
         }
 
         private static bool ShouldForceExtensionContentType(string extension)

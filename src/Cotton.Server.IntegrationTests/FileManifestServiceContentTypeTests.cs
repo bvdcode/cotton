@@ -23,6 +23,12 @@ public class FileManifestServiceContentTypeTests
     [TestCase("README.md", "application/octet-stream", "text/markdown")]
     [TestCase("Program.cs", "application/octet-stream", "text/plain")]
     [TestCase("Script.csx", "", "text/plain")]
+    [TestCase("app.py", "text/x-python", "text/plain")]
+    [TestCase("styles.css", "text/css", "text/plain")]
+    [TestCase("script.ts", "application/x-typescript", "text/plain")]
+    [TestCase("Dockerfile", "application/octet-stream", "text/plain")]
+    [TestCase(".dockerignore", "", "text/plain")]
+    [TestCase("data.json", "application/octet-stream", "application/json")]
     [TestCase("MODEL_1.stl", "application/octet-stream", "model/stl")]
     [TestCase("MODEL_1.obj", "application/octet-stream", "model/obj")]
     [TestCase("MODEL_1.3mf", "application/octet-stream", "model/3mf")]
@@ -57,6 +63,20 @@ public class FileManifestServiceContentTypeTests
         string actual = FileManifestService.ResolveContentType("sample.bin", contentType);
 
         Assert.That(actual, Is.EqualTo(expectedContentType));
+    }
+
+    [TestCase("Program.cs", true)]
+    [TestCase("app.py", true)]
+    [TestCase("Dockerfile", true)]
+    [TestCase("Dockerfile.prod", true)]
+    [TestCase(".dockerignore", true)]
+    [TestCase("photo.png", false)]
+    [TestCase("archive.zip", false)]
+    public void IsSourceTextFileName_ClassifiesPreviewableSourceNames(string fileName, bool expected)
+    {
+        bool actual = FileManifestService.IsSourceTextFileName(fileName);
+
+        Assert.That(actual, Is.EqualTo(expected));
     }
 
     [Test]

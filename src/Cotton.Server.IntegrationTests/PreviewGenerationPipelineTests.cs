@@ -154,15 +154,15 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task PreviewPipeline_CSharpFile_WithLegacyOctetStreamContentType_GeneratesTextPreview()
+    public async Task PreviewPipeline_SourceTextFile_WithLegacyOctetStreamContentType_GeneratesTextPreview()
     {
         string token = await LoginAsync();
         SetBearer(token);
 
         NodeDto root = await GetRootNodeAsync();
-        byte[] source = Encoding.UTF8.GetBytes("using System;\npublic sealed class Program { public static void Main() => Console.WriteLine(\"Hello\"); }");
+        byte[] source = Encoding.UTF8.GetBytes("def hello():\n    print(\"Hello\")\n");
 
-        NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(root.Id, "Program.cs", FileManifestService.DefaultContentType, source);
+        NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(root.Id, "app.py", FileManifestService.DefaultContentType, source);
         await SetManifestContentTypeAsync(createdFile.Id, FileManifestService.DefaultContentType);
 
         await ExecuteGeneratePreviewJobAsync();
