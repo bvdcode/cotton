@@ -50,6 +50,8 @@ describe("file type predicates", () => {
     expect(isTextFile("notes.md")).toBe(true);
     expect(isTextFile("data.json")).toBe(true);
     expect(isTextFile("config.yml")).toBe(true);
+    expect(isTextFile("Program.cs")).toBe(true);
+    expect(isTextFile("Dockerfile")).toBe(true);
     expect(isTextFile("document.docx")).toBe(false);
   });
 });
@@ -100,6 +102,11 @@ describe("getFileTypeInfo", () => {
     expect(getFileTypeInfo("song.mp3").type).toBe("audio");
     expect(getFileTypeInfo("document.pdf").type).toBe("pdf");
     expect(getFileTypeInfo("notes.md").type).toBe("text");
+    expect(getFileTypeInfo("Program.cs", "application/octet-stream")).toEqual({
+      type: "text",
+      supportsPreview: true,
+      supportsInlineView: true,
+    });
   });
 
   it("classifies documents and archives as non-previewable", () => {

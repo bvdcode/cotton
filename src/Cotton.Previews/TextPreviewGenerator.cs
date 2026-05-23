@@ -22,6 +22,7 @@ namespace Cotton.Previews
         [
             "text/plain",
             "text/markdown",
+            "text/x-csharp",
             "application/xml",
             "application/json",
             "application/javascript",

@@ -48,6 +48,8 @@ namespace Cotton.Server.Services
 
                 [".md"] = "text/markdown",
                 [".markdown"] = "text/markdown",
+                [".cs"] = "text/plain",
+                [".csx"] = "text/plain",
 
                 [".svg"] = "image/svg+xml",
                 [".svgz"] = "image/svg+xml",

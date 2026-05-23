@@ -2,6 +2,7 @@
  * File type detection utilities for preview system
  */
 
+import { isCodePreviewFileName } from "./codeFileTypes";
 import { resolveModelFormat } from "./modelFormats";
 
 export type FileType =
@@ -112,7 +113,7 @@ export const isAudioFile = (fileName: string): boolean => {
 
 export const isTextFile = (fileName: string): boolean => {
   const ext = getFileExtension(fileName);
-  return TEXT_EXTENSIONS.includes(ext);
+  return TEXT_EXTENSIONS.includes(ext) || isCodePreviewFileName(fileName);
 };
 
 const getFileTypeFromContentType = (contentType?: string): FileType | null => {
@@ -161,6 +162,10 @@ const getFileTypeFromExtension = (
 ): FileType => {
   if (resolveModelFormat(fileName, contentType)) {
     return "model";
+  }
+
+  if (isCodePreviewFileName(fileName)) {
+    return "text";
   }
 
   const match = EXTENSION_TYPE_MATCHERS.find(([extensions]) =>
