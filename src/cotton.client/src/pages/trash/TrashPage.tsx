@@ -776,7 +776,10 @@ const TrashPageView: React.FC<TrashPageViewProps> = ({
           display: "flex",
           flexDirection: "column",
           flex: 1,
-          minHeight: 0,
+          ...(layoutType === InterfaceLayoutType.List && {
+            minHeight: 0,
+            overflow: "hidden",
+          }),
         }}
       >
         <PageHeader {...pageHeaderProps} />
