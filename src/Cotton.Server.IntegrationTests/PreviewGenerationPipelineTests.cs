@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Previews;
 using Cotton.Server.Handlers.Files;
@@ -46,7 +47,8 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         byte[]? SmallFilePreviewHash,
         byte[]? SmallFilePreviewHashEncrypted,
         byte[]? LargeFilePreviewHash,
-        string? PreviewGenerationError);
+        string? PreviewGenerationError,
+        string ContentType);
 
     [SetUp]
     public void SetUp()
@@ -149,6 +151,35 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
 
         HttpResponseMessage notModified = await _client.SendAsync(conditional);
         Assert.That(notModified.StatusCode, Is.EqualTo(HttpStatusCode.NotModified));
+    }
+
+    [Test]
+    public async Task PreviewPipeline_CSharpFile_WithLegacyOctetStreamContentType_GeneratesTextPreview()
+    {
+        string token = await LoginAsync();
+        SetBearer(token);
+
+        NodeDto root = await GetRootNodeAsync();
+        byte[] source = Encoding.UTF8.GetBytes("using System;\npublic sealed class Program { public static void Main() => Console.WriteLine(\"Hello\"); }");
+
+        NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(root.Id, "Program.cs", FileManifestService.DefaultContentType, source);
+        await SetManifestContentTypeAsync(createdFile.Id, FileManifestService.DefaultContentType);
+
+        await ExecuteGeneratePreviewJobAsync();
+
+        FileManifestPreviewState manifest = await GetFileManifestByNodeFileIdAsync(createdFile.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(manifest.ContentType, Is.EqualTo("text/plain"));
+            Assert.That(manifest.SmallFilePreviewHash, Is.Not.Null);
+            Assert.That(manifest.SmallFilePreviewHashEncrypted, Is.Not.Null);
+            Assert.That(manifest.LargeFilePreviewHash, Is.Null);
+            Assert.That(manifest.PreviewGenerationError, Is.Null);
+        });
+
+        byte[] smallPreview = await ReadPreviewBlobAsync(manifest.SmallFilePreviewHash!);
+        AssertWebpSignature(smallPreview);
     }
 
     [Test]
@@ -366,16 +397,38 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         return chunk!;
     }
 
+    private async Task SetManifestContentTypeAsync(Guid nodeFileId, string contentType)
+    {
+        await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+
+        Guid manifestId = await dbContext.NodeFiles
+            .AsNoTracking()
+            .Where(x => x.Id == nodeFileId)
+            .Select(x => x.FileManifestId)
+            .SingleAsync();
+
+        FileManifest? manifest = await dbContext.FileManifests.FindAsync(manifestId);
+        Assert.That(manifest, Is.Not.Null);
+
+        manifest!.ContentType = contentType;
+        await dbContext.SaveChangesAsync();
+    }
+
     private async Task<FileManifestPreviewState> GetFileManifestByNodeFileIdAsync(Guid nodeFileId)
     {
-        FileManifestPreviewState? manifest = await DbContext.NodeFiles
+        await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+
+        FileManifestPreviewState? manifest = await dbContext.NodeFiles
             .AsNoTracking()
             .Where(x => x.Id == nodeFileId)
             .Select(x => new FileManifestPreviewState(
                 x.FileManifest.SmallFilePreviewHash,
                 x.FileManifest.SmallFilePreviewHashEncrypted,
                 x.FileManifest.LargeFilePreviewHash,
-                x.FileManifest.PreviewGenerationError))
+                x.FileManifest.PreviewGenerationError,
+                x.FileManifest.ContentType))
             .SingleOrDefaultAsync();
 
         Assert.That(manifest, Is.Not.Null);

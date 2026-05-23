@@ -44,6 +44,9 @@ namespace Cotton.Server.Jobs
         {
             var allSupportedMimeTypes = PreviewGeneratorProvider.GetAllSupportedMimeTypes();
             var generatorVersionsByContentType = PreviewGeneratorProvider.GetGeneratorVersionsByContentType();
+            CancellationToken cancellationToken = context?.CancellationToken ?? CancellationToken.None;
+
+            await NormalizeLegacyCSharpContentTypesAsync(allSupportedMimeTypes, cancellationToken);
 
             var processableItemsQuery = _dbContext.FileManifests
                 .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType));
@@ -178,6 +181,54 @@ namespace Cotton.Server.Jobs
             {
                 _logger.LogInformation("Preview generation job completed successfully. Processed {Count} items", processed);
             }
+        }
+
+        private async Task NormalizeLegacyCSharpContentTypesAsync(
+            IReadOnlyCollection<string> supportedContentTypes,
+            CancellationToken cancellationToken)
+        {
+            var manifests = await _dbContext.FileManifests
+                .Include(m => m.NodeFiles)
+                .Where(m =>
+                    (m.ContentType == FileManifestService.DefaultContentType
+                        || m.ContentType == string.Empty) &&
+                    m.NodeFiles.Any(nf =>
+                        EF.Functions.ILike(nf.Name, "%.cs")
+                        || EF.Functions.ILike(nf.Name, "%.csx")))
+                .OrderBy(m => m.CreatedAt)
+                .Take(MaxItemsPerRun)
+                .ToListAsync(cancellationToken);
+
+            int updated = 0;
+            foreach (var manifest in manifests)
+            {
+                string? fileName = manifest.NodeFiles.FirstOrDefault(IsLegacyCSharpFileName)?.Name;
+                if (string.IsNullOrWhiteSpace(fileName))
+                {
+                    continue;
+                }
+
+                string contentType = FileManifestService.ResolveContentType(fileName, manifest.ContentType);
+                if (!supportedContentTypes.Contains(contentType))
+                {
+                    continue;
+                }
+
+                manifest.ContentType = contentType;
+                updated++;
+            }
+
+            if (updated > 0)
+            {
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Normalized {Count} legacy C# file manifest content types before preview generation.", updated);
+            }
+        }
+
+        private static bool IsLegacyCSharpFileName(NodeFile nodeFile)
+        {
+            return nodeFile.Name.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
+                || nodeFile.Name.EndsWith(".csx", StringComparison.OrdinalIgnoreCase);
         }
 
         private async Task EnsureChunkExistsAsync(byte[] hash, long sizeBytes)
