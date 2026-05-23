@@ -2023,7 +2023,8 @@
         "instance": "Instance and accounts",
         "masterKey": "Master key",
         "memory": "Process memory exposure",
-        "runtime": "Runtime facts"
+        "runtime": "Runtime facts",
+        "containerBoundary": "Container boundary"
       },
       "risks": {
         "empty": "No warnings were detected by the current server-side checks."
@@ -2044,7 +2045,16 @@
         "euid": "Effective UID",
         "noNewPrivileges": "No new privileges",
         "seccomp": "Seccomp mode",
-        "capabilities": "Effective capabilities"
+        "capabilities": "Effective capabilities",
+        "rootFilesystemReadOnly": "Read-only root filesystem",
+        "dockerSocketMounted": "Docker socket mounted",
+        "hostPidNamespace": "Host PID namespace",
+        "procOneCommandLine": "PID 1 command",
+        "coreDumpLimit": "Core dump limit",
+        "corePattern": "Core pattern",
+        "appArmorProfile": "AppArmor profile",
+        "selinuxContext": "SELinux context",
+        "selinuxEnforcing": "SELinux enforcing"
       },
       "values": {
         "unknown": "Unknown",
@@ -2063,7 +2073,14 @@
         "new-privileges-allowed": "If compromised code finds a setuid helper or capability-bearing binary, it has a wider path to gain privileges inside the container.",
         "seccomp-disabled": "The kernel syscall surface is wider than Docker's normal production baseline, so a container escape bug gets more room to breathe.",
         "running-as-root": "Remote code execution would run as root inside the container, which increases damage against mounted volumes and helper processes.",
-        "process-hardening-failed": "Cotton requested process hardening, but the process still started without the expected dump or ptrace protection."
+        "process-hardening-failed": "Cotton requested process hardening, but the process still started without the expected dump or ptrace protection.",
+        "db-integrity-unsigned-rows": "Unsigned protected rows can be modified directly in PostgreSQL without Cotton detecting the tampering at read boundaries.",
+        "db-integrity-bridge-mode": "During the bridge window, missing signatures are tolerated so existing installations can be signed. Leaving it on permanently weakens the database tamper boundary.",
+        "root-filesystem-writable": "A writable container root filesystem gives exploited code more places to drop tools, alter runtime files, or persist until the container is recreated.",
+        "docker-socket-mounted": "The Docker socket lets code inside the web container create privileged containers, mount host paths, and take over the host.",
+        "host-pid-namespace": "Sharing the host PID namespace exposes host processes through procfs and makes process-memory attacks easier to aim.",
+        "mandatory-access-control-unconfined": "Without an enforcing AppArmor or SELinux profile, a container escape or kernel-facing bug has fewer policy boundaries to cross.",
+        "core-dumps-enabled": "Core dumps are memory snapshots. If Cotton crashes while secrets are resident, a dump can preserve the master key or decrypted configuration."
       }
     },
     "groups": {

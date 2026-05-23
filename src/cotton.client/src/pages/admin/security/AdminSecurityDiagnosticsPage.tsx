@@ -37,6 +37,13 @@ const knownThreatVectorCodes = new Set([
   "seccomp-disabled",
   "running-as-root",
   "process-hardening-failed",
+  "db-integrity-unsigned-rows",
+  "db-integrity-bridge-mode",
+  "root-filesystem-writable",
+  "docker-socket-mounted",
+  "host-pid-namespace",
+  "mandatory-access-control-unconfined",
+  "core-dumps-enabled",
 ]);
 
 interface SecurityLevel {
@@ -123,10 +130,10 @@ const getSeverityLabel = (
 const getThreatVector = (
   warning: SecurityDiagnosticWarningDto,
   t: TFunction<"admin">,
-) =>
+): string | null =>
   knownThreatVectorCodes.has(warning.code)
     ? t(`securityDiagnostics.threatVectors.${warning.code}`)
-    : warning.message;
+    : null;
 
 const formatNullable = (
   value: string | number | boolean | null | undefined,
@@ -224,6 +231,7 @@ const SecurityDiagnosticsContent = ({
     <InstanceDiagnosticsSection diagnostics={diagnostics} t={t} />
     <MasterKeyDiagnosticsSection diagnostics={diagnostics} t={t} />
     <MemoryDiagnosticsSection diagnostics={diagnostics} t={t} />
+    <ContainerDiagnosticsSection diagnostics={diagnostics} t={t} />
     <RuntimeDiagnosticsSection diagnostics={diagnostics} t={t} />
   </Stack>
 );
@@ -335,22 +343,28 @@ type SecurityRiskAlertProps = {
   t: TFunction<"admin">;
 };
 
-const SecurityRiskAlert = ({ warning, t }: SecurityRiskAlertProps) => (
-  <Alert severity={getSeverityColor(warning)} icon={<WarningAmberIcon />}>
-    <Stack spacing={0.5}>
-      <Stack direction="row" spacing={1} alignItems="center" useFlexGap sx={{ flexWrap: "wrap" }}>
-        <Typography variant="subtitle2" fontWeight={700}>
-          {getSeverityLabel(warning.severity, t)}
-        </Typography>
-        <Chip size="small" variant="outlined" label={warning.code} />
+const SecurityRiskAlert = ({ warning, t }: SecurityRiskAlertProps) => {
+  const threatVector = getThreatVector(warning, t);
+
+  return (
+    <Alert severity={getSeverityColor(warning)} icon={<WarningAmberIcon />}>
+      <Stack spacing={0.5}>
+        <Stack direction="row" spacing={1} alignItems="center" useFlexGap sx={{ flexWrap: "wrap" }}>
+          <Typography variant="subtitle2" fontWeight={700}>
+            {getSeverityLabel(warning.severity, t)}
+          </Typography>
+          <Chip size="small" variant="outlined" label={warning.code} />
+        </Stack>
+        <Typography variant="body2">{warning.message}</Typography>
+        {threatVector && (
+          <Typography variant="body2" color="text.secondary">
+            {threatVector}
+          </Typography>
+        )}
       </Stack>
-      <Typography variant="body2">{warning.message}</Typography>
-      <Typography variant="body2" color="text.secondary">
-        {getThreatVector(warning, t)}
-      </Typography>
-    </Stack>
-  </Alert>
-);
+    </Alert>
+  );
+};
 
 const InstanceDiagnosticsSection = ({
   diagnostics,
@@ -440,6 +454,114 @@ const MemoryDiagnosticsSection = ({
       color={
         diagnostics.linuxProcess.hasSysPtraceCapability ? "error" : "success"
       }
+    />
+  </DiagnosticsSection>
+);
+
+
+const getLimitSummary = (
+  softLimit: string | null | undefined,
+  hardLimit: string | null | undefined,
+  t: TFunction<"admin">,
+) => {
+  const soft = formatNullable(softLimit, t);
+  const hard = formatNullable(hardLimit, t);
+  return `${soft} / ${hard}`;
+};
+
+const isUnconfinedAppArmorProfile = (profile: string | null | undefined) =>
+  profile?.toLowerCase().startsWith("unconfined") ?? false;
+
+const booleanStatusColor = (
+  value: boolean | null | undefined,
+  trueColor: AlertColor | "default",
+  falseColor: AlertColor | "default",
+): AlertColor | "default" => {
+  if (value === null || value === undefined) {
+    return "default";
+  }
+
+  return value ? trueColor : falseColor;
+};
+
+const ContainerDiagnosticsSection = ({
+  diagnostics,
+  t,
+}: DiagnosticsContentSectionProps) => (
+  <DiagnosticsSection title={t("securityDiagnostics.sections.containerBoundary")}>
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.rootFilesystemReadOnly")}
+      value={yesNo(diagnostics.linuxContainer.rootFilesystemReadOnly, t)}
+      color={booleanStatusColor(
+        diagnostics.linuxContainer.rootFilesystemReadOnly,
+        "success",
+        "warning",
+      )}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.dockerSocketMounted")}
+      value={yesNo(diagnostics.linuxContainer.dockerSocketMounted, t)}
+      color={booleanStatusColor(
+        diagnostics.linuxContainer.dockerSocketMounted,
+        "error",
+        "success",
+      )}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.hostPidNamespace")}
+      value={yesNo(diagnostics.linuxContainer.hostPidNamespaceLikely, t)}
+      color={booleanStatusColor(
+        diagnostics.linuxContainer.hostPidNamespaceLikely,
+        "error",
+        "success",
+      )}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.procOneCommandLine")}
+      value={formatNullable(diagnostics.linuxContainer.procOneCommandLine, t)}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.coreDumpLimit")}
+      value={getLimitSummary(
+        diagnostics.linuxContainer.coreDumpSoftLimit,
+        diagnostics.linuxContainer.coreDumpHardLimit,
+        t,
+      )}
+      color={booleanStatusColor(
+        diagnostics.linuxContainer.coreDumpSoftLimitDisabled,
+        "success",
+        "warning",
+      )}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.corePattern")}
+      value={formatNullable(diagnostics.linuxContainer.corePattern, t)}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.appArmorProfile")}
+      value={formatNullable(diagnostics.linuxContainer.appArmorProfile, t)}
+      color={
+        diagnostics.linuxContainer.appArmorProfile
+          ? booleanStatusColor(
+              isUnconfinedAppArmorProfile(diagnostics.linuxContainer.appArmorProfile),
+              "warning",
+              "success",
+            )
+          : "default"
+      }
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.selinuxContext")}
+      value={formatNullable(diagnostics.linuxContainer.selinuxContext, t)}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.selinuxEnforcing")}
+      value={yesNo(diagnostics.linuxContainer.selinuxEnforcing, t)}
+      color={booleanStatusColor(
+        diagnostics.linuxContainer.selinuxEnforcing,
+        "success",
+        "warning",
+      )}
     />
   </DiagnosticsSection>
 );
