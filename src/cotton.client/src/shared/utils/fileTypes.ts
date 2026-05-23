@@ -57,6 +57,8 @@ const TEXT_EXTENSIONS = [
   "conf",
   "config",
   "inf",
+  "lrc",
+  "srt",
 ];
 const DOCUMENT_EXTENSIONS = ["doc", "docx", "rtf", "odt"];
 const ARCHIVE_EXTENSIONS = ["zip", "rar", "7z", "tar", "gz"];

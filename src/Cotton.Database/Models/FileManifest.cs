@@ -15,6 +15,9 @@ namespace Cotton.Database.Models
     [Index(nameof(LargeFilePreviewHash))]
     public class FileManifest : BaseEntity<Guid>
     {
+        /// <summary>Prefix used by public preview tokens that are scoped to a file manifest row.</summary>
+        public const char PreviewTokenPrefix = 'f';
+
         /// <summary>Server-computed content hash used to verify uploads.</summary>
         [Column("computed_content_hash")]
         public byte[]? ComputedContentHash { get; set; }
@@ -51,14 +54,17 @@ namespace Cotton.Database.Models
         [Column("preview_generator_version")]
         public int PreviewGeneratorVersion { get; set; } = 0;
 
-        /// <summary>Returns the encrypted small-preview hash as lowercase hexadecimal.</summary>
+        /// <summary>Returns the row-scoped encrypted small-preview token as lowercase text.</summary>
         public string? GetPreviewHashEncryptedHex()
         {
             if (SmallFilePreviewHashEncrypted is null)
             {
                 return null;
             }
-            return Convert.ToHexStringLower(SmallFilePreviewHashEncrypted);
+            return string.Concat(
+                PreviewTokenPrefix,
+                Id.ToString("N"),
+                Convert.ToHexStringLower(SmallFilePreviewHashEncrypted));
         }
 
         /// <summary>Visible file entries stored by the server.</summary>

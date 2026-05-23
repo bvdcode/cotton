@@ -51,6 +51,8 @@ namespace Cotton.Server.Services
                 [".markdown"] = "text/markdown",
                 [".cs"] = "text/plain",
                 [".csx"] = "text/plain",
+                [".lrc"] = "text/plain",
+                [".srt"] = "text/plain",
 
                 [".svg"] = "image/svg+xml",
                 [".svgz"] = "image/svg+xml",
@@ -81,6 +83,8 @@ namespace Cotton.Server.Services
             ".phtml",
             ".cs",
             ".csx",
+            ".lrc",
+            ".srt",
             ".cpp",
             ".cc",
             ".cxx",

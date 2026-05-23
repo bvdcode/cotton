@@ -361,7 +361,7 @@ public sealed class DatabaseIntegrityFoundationTests
             .UseNpgsql("Host=localhost;Database=cotton_dev;Username=postgres;Password=postgres")
             .Options;
         using var dbContext = new CottonDbContext(options);
-        var verifier = new FileGraphIntegrityVerifier(new NoopDatabaseIntegrityVerifier());
+        var verifier = new FileGraphIntegrityVerifier(new NoopDatabaseIntegrityVerifier(), NullDatabaseIntegrityFailureReporter.Instance);
 
         var node = new Node
         {
@@ -404,7 +404,7 @@ public sealed class DatabaseIntegrityFoundationTests
         };
         nodeFile.SetName("report.txt");
 
-        Assert.Throws<InvalidOperationException>(() =>
+        Assert.Throws<DatabaseIntegrityException>(() =>
             verifier.RequireValidContent(dbContext, nodeFile, "test.file-graph"));
     }
 

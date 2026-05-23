@@ -23,6 +23,8 @@ public class FileManifestServiceContentTypeTests
     [TestCase("README.md", "application/octet-stream", "text/markdown")]
     [TestCase("Program.cs", "application/octet-stream", "text/plain")]
     [TestCase("Script.csx", "", "text/plain")]
+    [TestCase("lyrics.lrc", "application/octet-stream", "text/plain")]
+    [TestCase("captions.srt", "application/x-subrip", "text/plain")]
     [TestCase("app.py", "text/x-python", "text/plain")]
     [TestCase("styles.css", "text/css", "text/plain")]
     [TestCase("script.ts", "application/x-typescript", "text/plain")]
@@ -66,6 +68,8 @@ public class FileManifestServiceContentTypeTests
     }
 
     [TestCase("Program.cs", true)]
+    [TestCase("lyrics.lrc", true)]
+    [TestCase("captions.srt", true)]
     [TestCase("app.py", true)]
     [TestCase("Dockerfile", true)]
     [TestCase("Dockerfile.prod", true)]

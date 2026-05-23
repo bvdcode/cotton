@@ -13,8 +13,12 @@ namespace Cotton.Server.Services.DatabaseIntegrity;
 /// Listing large folders intentionally does not walk every child signature. This verifier is used at trust
 /// boundaries where Cotton opens a specific file, archive entry, preview, or stream.
 /// </remarks>
-public sealed class FileGraphIntegrityVerifier(IDatabaseIntegrityVerifier _integrity)
+public sealed class FileGraphIntegrityVerifier(
+    IDatabaseIntegrityVerifier _integrity,
+    IDatabaseIntegrityFailureReporter _failures)
 {
+    private const string StructuralGraphEntityName = "file_graph";
+
     /// <summary>
     /// Verifies the signed file metadata graph without requiring chunk rows to be loaded.
     /// </summary>
@@ -29,17 +33,17 @@ public sealed class FileGraphIntegrityVerifier(IDatabaseIntegrityVerifier _integ
 
         if (nodeFile.NodeId != nodeFile.Node.Id)
         {
-            throw CreateStructuralFailure(nameof(NodeFile.NodeId), boundary);
+            throw CreateStructuralFailure(nameof(NodeFile.NodeId), boundary, nodeFile.Id);
         }
 
         if (nodeFile.OwnerId != nodeFile.Node.OwnerId)
         {
-            throw CreateStructuralFailure(nameof(NodeFile.OwnerId), boundary);
+            throw CreateStructuralFailure(nameof(NodeFile.OwnerId), boundary, nodeFile.Id);
         }
 
         if (nodeFile.FileManifestId != nodeFile.FileManifest.Id)
         {
-            throw CreateStructuralFailure(nameof(NodeFile.FileManifestId), boundary);
+            throw CreateStructuralFailure(nameof(NodeFile.FileManifestId), boundary, nodeFile.Id);
         }
 
         _integrity.RequireValid(dbContext, nodeFile.Node, boundary + ".node");
@@ -65,17 +69,17 @@ public sealed class FileGraphIntegrityVerifier(IDatabaseIntegrityVerifier _integ
 
             if (manifestChunk.FileManifestId != manifest.Id)
             {
-                throw CreateStructuralFailure(nameof(FileManifestChunk.FileManifestId), boundary);
+                throw CreateStructuralFailure(nameof(FileManifestChunk.FileManifestId), boundary, manifest.Id);
             }
 
             if (manifestChunk.ChunkOrder != i)
             {
-                throw CreateStructuralFailure(nameof(FileManifestChunk.ChunkOrder), boundary);
+                throw CreateStructuralFailure(nameof(FileManifestChunk.ChunkOrder), boundary, manifest.Id);
             }
 
             if (!manifestChunk.ChunkHash.SequenceEqual(manifestChunk.Chunk.Hash))
             {
-                throw CreateStructuralFailure(nameof(FileManifestChunk.ChunkHash), boundary);
+                throw CreateStructuralFailure(nameof(FileManifestChunk.ChunkHash), boundary, manifest.Id);
             }
 
             plainSizeBytes = checked(plainSizeBytes + manifestChunk.Chunk.PlainSizeBytes);
@@ -86,7 +90,7 @@ public sealed class FileGraphIntegrityVerifier(IDatabaseIntegrityVerifier _integ
 
         if (plainSizeBytes != manifest.SizeBytes)
         {
-            throw CreateStructuralFailure(nameof(FileManifest.SizeBytes), boundary);
+            throw CreateStructuralFailure(nameof(FileManifest.SizeBytes), boundary, manifest.Id);
         }
     }
 
@@ -99,9 +103,18 @@ public sealed class FileGraphIntegrityVerifier(IDatabaseIntegrityVerifier _integ
         }
     }
 
-    private static InvalidOperationException CreateStructuralFailure(string fieldName, string boundary)
+    private DatabaseIntegrityException CreateStructuralFailure(
+        string fieldName,
+        string boundary,
+        Guid entityId)
     {
-        return new InvalidOperationException(
-            $"File graph integrity verification failed at {boundary}: inconsistent {fieldName} relationship.");
+        string entityKey = entityId.ToString("D");
+        _failures.Report(new DatabaseIntegrityFailure(
+            StructuralGraphEntityName,
+            entityKey,
+            boundary + "." + fieldName,
+            DateTime.UtcNow));
+
+        return new DatabaseIntegrityException(StructuralGraphEntityName, entityKey);
     }
 }

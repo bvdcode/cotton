@@ -44,6 +44,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         bool ExpectLargePreview);
 
     private sealed record FileManifestPreviewState(
+        Guid Id,
         byte[]? SmallFilePreviewHash,
         byte[]? SmallFilePreviewHashEncrypted,
         byte[]? LargeFilePreviewHash,
@@ -134,7 +135,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         Assert.That(Math.Max(smallWidth, smallHeight), Is.LessThanOrEqualTo(PreviewGeneratorProvider.DefaultSmallPreviewSize));
 
         NodeFileManifestDto listedFile = await GetNodeFileAsync(root.Id, "notes.txt");
-        Assert.That(listedFile.PreviewHashEncryptedHex, Is.EqualTo(GetPreviewHashEncryptedHex(manifest.SmallFilePreviewHashEncrypted)));
+        Assert.That(listedFile.PreviewHashEncryptedHex, Is.EqualTo(GetPreviewHashEncryptedHex(manifest.Id, manifest.SmallFilePreviewHashEncrypted)));
 
         HttpResponseMessage previewResponse = await _client!.GetAsync($"{PreviewRouteBase}/{listedFile.PreviewHashEncryptedHex}");
         previewResponse.EnsureSuccessStatusCode();
@@ -145,6 +146,9 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
 
         byte[] previewBytesFromApi = await previewResponse.Content.ReadAsByteArrayAsync();
         AssertWebpSignature(previewBytesFromApi);
+
+        HttpResponseMessage rawTokenResponse = await _client!.GetAsync($"{PreviewRouteBase}/{Convert.ToHexStringLower(manifest.SmallFilePreviewHashEncrypted!)}");
+        Assert.That(rawTokenResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
         using var conditional = new HttpRequestMessage(HttpMethod.Get, $"{PreviewRouteBase}/{listedFile.PreviewHashEncryptedHex}");
         conditional.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(etag!));
@@ -267,7 +271,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         (int width, int height) = GetImageSize(smallPreview);
         Assert.That(Math.Max(width, height), Is.LessThanOrEqualTo(PreviewGeneratorProvider.DefaultSmallPreviewSize));
 
-        HttpResponseMessage response = await _client!.GetAsync($"{PreviewRouteBase}/{GetPreviewHashEncryptedHex(manifest.SmallFilePreviewHashEncrypted)}");
+        HttpResponseMessage response = await _client!.GetAsync($"{PreviewRouteBase}/{GetPreviewHashEncryptedHex(manifest.Id, manifest.SmallFilePreviewHashEncrypted)}");
         response.EnsureSuccessStatusCode();
         Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("image/webp"));
     }
@@ -375,7 +379,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
             }
 
             NodeFileManifestDto listedFile = await GetNodeFileAsync(root.Id, upload.FileName);
-            Assert.That(listedFile.PreviewHashEncryptedHex, Is.EqualTo(GetPreviewHashEncryptedHex(manifest.SmallFilePreviewHashEncrypted)));
+            Assert.That(listedFile.PreviewHashEncryptedHex, Is.EqualTo(GetPreviewHashEncryptedHex(manifest.Id, manifest.SmallFilePreviewHashEncrypted)));
 
             HttpResponseMessage response = await _client!.GetAsync($"{PreviewRouteBase}/{listedFile.PreviewHashEncryptedHex}");
             response.EnsureSuccessStatusCode();
@@ -424,6 +428,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
             .AsNoTracking()
             .Where(x => x.Id == nodeFileId)
             .Select(x => new FileManifestPreviewState(
+                x.FileManifest.Id,
                 x.FileManifest.SmallFilePreviewHash,
                 x.FileManifest.SmallFilePreviewHashEncrypted,
                 x.FileManifest.LargeFilePreviewHash,
@@ -435,9 +440,11 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         return manifest!;
     }
 
-    private static string? GetPreviewHashEncryptedHex(byte[]? encryptedHash)
+    private static string? GetPreviewHashEncryptedHex(Guid manifestId, byte[]? encryptedHash)
     {
-        return encryptedHash is null ? null : Convert.ToHexStringLower(encryptedHash);
+        return encryptedHash is null
+            ? null
+            : string.Concat(FileManifest.PreviewTokenPrefix, manifestId.ToString("N"), Convert.ToHexStringLower(encryptedHash));
     }
 
     private async Task<byte[]> ReadPreviewBlobAsync(byte[] hash)

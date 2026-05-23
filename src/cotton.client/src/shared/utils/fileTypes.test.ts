@@ -51,6 +51,8 @@ describe("file type predicates", () => {
     expect(isTextFile("data.json")).toBe(true);
     expect(isTextFile("config.yml")).toBe(true);
     expect(isTextFile("Program.cs")).toBe(true);
+    expect(isTextFile("lyrics.lrc")).toBe(true);
+    expect(isTextFile("captions.srt")).toBe(true);
     expect(isTextFile("Dockerfile")).toBe(true);
     expect(isTextFile("document.docx")).toBe(false);
   });

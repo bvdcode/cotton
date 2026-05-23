@@ -1,13 +1,18 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Database;
+using Cotton.Database.Models;
+using DbUser = Cotton.Database.Models.User;
 using Cotton.Server.Services;
+using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
 using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
 
 namespace Cotton.Server.Controllers
@@ -18,10 +23,13 @@ namespace Cotton.Server.Controllers
     [ApiController]
     [Route(Routes.V1.Previews)]
     public class PreviewController(
+        CottonDbContext _dbContext,
+        IDatabaseIntegrityVerifier _integrity,
         IStreamCipher _crypto,
         ILogger<PreviewController> _logger,
         IStoragePipeline _storage) : ControllerBase
     {
+        private const int TokenOwnerIdLength = 32;
         private static readonly SemaphoreSlim _previewGate = new(8);
 
         /// <summary>
@@ -34,18 +42,23 @@ namespace Cotton.Server.Controllers
             await _previewGate.WaitAsync(HttpContext.RequestAborted);
             try
             {
-                string? decryptedPreviewHash;
-                try
+                if (!TryParsePreviewToken(previewHashEncryptedHex, out PreviewToken token))
                 {
-                    byte[] encrypted = Convert.FromHexString(previewHashEncryptedHex);
-                    var hashBytes = _crypto.Decrypt(encrypted);
-                    decryptedPreviewHash = Hasher.ToHexStringHash(hashBytes);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to decrypt preview token {Token}", previewHashEncryptedHex);
                     return this.ApiNotFound("Preview image not found.");
                 }
+
+                string? decryptedPreviewHash = token.Kind switch
+                {
+                    FileManifest.PreviewTokenPrefix => await GetFilePreviewHashAsync(token),
+                    DbUser.AvatarPreviewTokenPrefix => await GetAvatarPreviewHashAsync(token),
+                    _ => null
+                };
+
+                if (decryptedPreviewHash is null)
+                {
+                    return this.ApiNotFound("Preview image not found.");
+                }
+
                 bool validHash = Hasher.IsValidHash(decryptedPreviewHash);
                 if (!validHash)
                 {
@@ -84,5 +97,109 @@ namespace Cotton.Server.Controllers
                 _previewGate.Release();
             }
         }
+
+        private async Task<string?> GetFilePreviewHashAsync(PreviewToken token)
+        {
+            FileManifest? manifest = await _dbContext.FileManifests
+                .SingleOrDefaultAsync(x => x.Id == token.OwnerId, HttpContext.RequestAborted);
+            if (manifest?.SmallFilePreviewHashEncrypted is null || manifest.SmallFilePreviewHash is null)
+            {
+                return null;
+            }
+
+            _integrity.RequireValid(_dbContext, manifest, "preview.file-manifest");
+            return GetStoredPreviewHash(
+                token,
+                manifest.SmallFilePreviewHashEncrypted,
+                manifest.SmallFilePreviewHash,
+                "file preview");
+        }
+
+        private async Task<string?> GetAvatarPreviewHashAsync(PreviewToken token)
+        {
+            DbUser? user = await _dbContext.Users
+                .SingleOrDefaultAsync(x => x.Id == token.OwnerId, HttpContext.RequestAborted);
+            if (user?.AvatarHashEncrypted is null || user.AvatarHash is null)
+            {
+                return null;
+            }
+
+            _integrity.RequireValid(_dbContext, user, "preview.avatar-user");
+            return GetStoredPreviewHash(
+                token,
+                user.AvatarHashEncrypted,
+                user.AvatarHash,
+                "avatar preview");
+        }
+
+        private string? GetStoredPreviewHash(
+            PreviewToken token,
+            byte[] storedEncryptedHash,
+            byte[] storedPlainHash,
+            string previewKind)
+        {
+            if (!storedEncryptedHash.SequenceEqual(token.EncryptedHash))
+            {
+                _logger.LogWarning("Rejected {PreviewKind} token for {OwnerId}: encrypted hash does not match the signed row.", previewKind, token.OwnerId);
+                return null;
+            }
+
+            byte[] decryptedHashBytes;
+            try
+            {
+                decryptedHashBytes = _crypto.Decrypt(token.EncryptedHash);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to decrypt {PreviewKind} token for {OwnerId}.", previewKind, token.OwnerId);
+                return null;
+            }
+
+            if (!storedPlainHash.SequenceEqual(decryptedHashBytes))
+            {
+                _logger.LogWarning("Rejected {PreviewKind} token for {OwnerId}: decrypted hash does not match the signed row.", previewKind, token.OwnerId);
+                return null;
+            }
+
+            return Hasher.ToHexStringHash(decryptedHashBytes);
+        }
+
+        private static bool TryParsePreviewToken(string value, out PreviewToken token)
+        {
+            token = default;
+            if (value.Length <= TokenOwnerIdLength + 1)
+            {
+                return false;
+            }
+
+            char kind = value[0];
+            if (kind != FileManifest.PreviewTokenPrefix && kind != DbUser.AvatarPreviewTokenPrefix)
+            {
+                return false;
+            }
+
+            if (!Guid.TryParseExact(value.Substring(1, TokenOwnerIdLength), "N", out Guid ownerId))
+            {
+                return false;
+            }
+
+            string encryptedHashHex = value[(TokenOwnerIdLength + 1)..];
+            if (encryptedHashHex.Length == 0 || encryptedHashHex.Length % 2 != 0)
+            {
+                return false;
+            }
+
+            try
+            {
+                token = new PreviewToken(kind, ownerId, Convert.FromHexString(encryptedHashHex));
+                return true;
+            }
+            catch (FormatException)
+            {
+                return false;
+            }
+        }
+
+        private readonly record struct PreviewToken(char Kind, Guid OwnerId, byte[] EncryptedHash);
     }
 }

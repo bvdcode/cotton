@@ -14,6 +14,9 @@ namespace Cotton.Database.Models
     [Index(nameof(Username), IsUnique = true)]
     public class User : BaseEntity<Guid>
     {
+        /// <summary>Prefix used by public preview tokens that are scoped to a user avatar row.</summary>
+        public const char AvatarPreviewTokenPrefix = 'u';
+
         /// <summary>Normalized unique username used for login.</summary>
         [Column("username", TypeName = "citext")]
         [MinLength(2)]
@@ -93,14 +96,17 @@ namespace Cotton.Database.Models
         [Column("avatar_hash")]
         public byte[]? AvatarHash { get; set; }
 
-        /// <summary>Returns the encrypted avatar hash as lowercase hexadecimal.</summary>
+        /// <summary>Returns the row-scoped encrypted avatar token as lowercase text.</summary>
         public string? GetAvatarHashEncryptedHex()
         {
             if (AvatarHashEncrypted is null)
             {
                 return null;
             }
-            return Convert.ToHexStringLower(AvatarHashEncrypted);
+            return string.Concat(
+                AvatarPreviewTokenPrefix,
+                Id.ToString("N"),
+                Convert.ToHexStringLower(AvatarHashEncrypted));
         }
 
         /// <summary>User preference key-value data.</summary>

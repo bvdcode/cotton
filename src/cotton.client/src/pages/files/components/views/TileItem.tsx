@@ -372,7 +372,7 @@ const FilePreviewIcon = ({
     file.name,
     file.contentType,
     {
-      extensionLabelMaxLength: 4,
+      extensionLabelMaxLength: 3,
       hideLongExtensionLabel: true,
       hideInvalidExtensionLabel: true,
       hideExtensionLabel: tileSize === "small",
