@@ -3,12 +3,49 @@
 
 using System.Buffers.Binary;
 using System.Security.Cryptography;
+using System.Text.Json;
 
 namespace Cotton.Crypto.Tests;
 
 [Category("Format")]
 public class GoldenVectorsTests
 {
+    private const string SharedVectorsFileName = "cotton-container-vectors.json";
+
+    [Test]
+    public async Task Shared_Ctn2Vector_Decrypts()
+    {
+        SharedContainerVectors vectors = LoadSharedContainerVectors();
+        using var cipher = new AesGcmStreamCipher(vectors.MasterKey, keyId: 1, threads: 1);
+        using var input = new MemoryStream(vectors.Ctn2SingleChunk, writable: false);
+        using var output = new MemoryStream();
+
+        await cipher.DecryptAsync(input, output);
+
+        Assert.That(output.ToArray(), Is.EqualTo(vectors.Plaintext));
+    }
+
+    [Test]
+    public async Task Shared_Ctn2Vector_DeterministicWrite_MatchesFixture()
+    {
+        SharedContainerVectors vectors = LoadSharedContainerVectors();
+        using var rng = new SequenceRandomNumberGenerator(
+            vectors.FileKey,
+            vectors.NoncePrefix,
+            vectors.FileKeyNonce);
+        using var cipher = new AesGcmStreamCipher(
+            vectors.MasterKey,
+            keyId: 1,
+            threads: 1,
+            rng: rng);
+        using var input = new MemoryStream(vectors.Plaintext, writable: false);
+        using var output = new MemoryStream();
+
+        await cipher.EncryptAsync(input, output, chunkSize: vectors.Ctn2ChunkSize);
+
+        Assert.That(output.ToArray(), Is.EqualTo(vectors.Ctn2SingleChunk));
+    }
+
     [Test]
     public void Golden_Header_And_FirstChunk_Deterministic()
     {
@@ -55,6 +92,76 @@ public class GoldenVectorsTests
             Assert.That(chunk[1], Is.EqualTo((byte)'T'));
             Assert.That(chunk[2], Is.EqualTo((byte)'N'));
             Assert.That(chunk[3], Is.EqualTo((byte)'2'));
+        }
+    }
+
+    private static SharedContainerVectors LoadSharedContainerVectors()
+    {
+        string path = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            SharedVectorsFileName);
+        using var document = JsonDocument.Parse(File.ReadAllText(path));
+        JsonElement root = document.RootElement;
+        JsonElement ctn2 = root
+            .GetProperty("vectors")
+            .GetProperty("cottonCtn2SingleChunk");
+
+        return new SharedContainerVectors(
+            ReadHex(root, "masterKeyHex"),
+            ReadHex(root, "plaintextHex"),
+            ReadHex(root, "fileKeyHex"),
+            ReadHex(root, "noncePrefixHex"),
+            ReadHex(root, "fileKeyNonceHex"),
+            ctn2.GetProperty("chunkSize").GetInt32(),
+            ReadHex(ctn2, "hex"));
+    }
+
+    private static byte[] ReadHex(JsonElement element, string propertyName)
+    {
+        string value = element.GetProperty(propertyName).GetString()
+            ?? throw new InvalidDataException($"Shared vector field '{propertyName}' is missing.");
+        return Convert.FromHexString(value);
+    }
+
+    private sealed record SharedContainerVectors(
+        byte[] MasterKey,
+        byte[] Plaintext,
+        byte[] FileKey,
+        byte[] NoncePrefix,
+        byte[] FileKeyNonce,
+        int Ctn2ChunkSize,
+        byte[] Ctn2SingleChunk);
+
+    private sealed class SequenceRandomNumberGenerator : RandomNumberGenerator
+    {
+        private readonly byte[] _bytes;
+        private int _offset;
+
+        public SequenceRandomNumberGenerator(params byte[][] sequences)
+        {
+            _bytes = sequences.SelectMany(static sequence => sequence).ToArray();
+        }
+
+        public override void GetBytes(byte[] data)
+        {
+            GetBytes(data.AsSpan());
+        }
+
+        public override void GetBytes(byte[] data, int offset, int count)
+        {
+            GetBytes(data.AsSpan(offset, count));
+        }
+
+        public override void GetBytes(Span<byte> data)
+        {
+            if (_offset + data.Length > _bytes.Length)
+            {
+                throw new InvalidOperationException("Shared vector random source is exhausted.");
+            }
+
+            _bytes.AsSpan(_offset, data.Length).CopyTo(data);
+            _offset += data.Length;
         }
     }
 

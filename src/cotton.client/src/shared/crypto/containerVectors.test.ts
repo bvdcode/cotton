@@ -17,46 +17,19 @@ import {
 import { CorruptedContainerError } from "./errors";
 import { decryptBlobToBlob } from "./fileCipher";
 import { importMasterKey, wrapFileKey } from "./keys";
+import sharedVectors from "../../../../Cotton.Crypto.Tests/TestData/cotton-container-vectors.json";
 
-const GOLDEN_CONTAINER_HEX = [
-  "43544e315400000020000000000000000100000001020304101112131415161718191a1b",
-  "105a66b023aeb952c3b16a92055c1160dd5f3ab5ed6c9c1462dca2b6a3d4c7fc",
-  "67e1fcbdaf77e1065f4058dce2e9ea64",
-  "43544e3124000000100000000000000001000000063de420397031cdab567aa89be7f18d",
-  "86d0074dab5ecff2aa2da23f6adee0ef",
-  "43544e3124000000100000000000000001000000c5ef24a09009a9ed0ccc6edd0daa845f",
-  "92687f5a3ed888916cd851a46a61f41e",
-].join("");
-const COTTON_CTN2_SINGLE_CHUNK_HEX = [
-  "43544e325400000020000000000000000100000001020304101112131415161718191a1b",
-  "4f84036fe0e090e1b0b1e8b167429b33dd5f3ab5ed6c9c1462dca2b6a3d4c7fc",
-  "67e1fcbdaf77e1065f4058dce2e9ea64",
-  "43544e32240000002000000000000000010000003f3087cbd7d0fd43b6d653503c238d8e",
-  "86d0074dab5ecff2aa2da23f6adee0ef2bf2fe613fd6de9c493e03d29e28cda1",
-  "43544e32240000000000000000000000010000003f197f128dfdc96e06631fa0b8441187",
-].join("");
-const EASY_EXTENSIONS_SINGLE_CHUNK_HEX = [
-  "43544e315400000020000000000000000100000001020304101112131415161718191a1b",
-  "105a66b023aeb952c3b16a92055c1160dd5f3ab5ed6c9c1462dca2b6a3d4c7fc",
-  "67e1fcbdaf77e1065f4058dce2e9ea64",
-  "43544e3124000000200000000000000001000000f7cae02a9b0ba5f0b205f417676e555a",
-  "86d0074dab5ecff2aa2da23f6adee0ef2bf2fe613fd6de9c493e03d29e28cda1",
-].join("");
+const GOLDEN_CONTAINER_HEX = sharedVectors.vectors.legacyCtn1TwoChunk.hex;
+const COTTON_CTN2_SINGLE_CHUNK_HEX = sharedVectors.vectors.cottonCtn2SingleChunk.hex;
+const EASY_EXTENSIONS_SINGLE_CHUNK_HEX =
+  sharedVectors.vectors.legacyEasyExtensionsSingleChunk.hex;
 
-const GOLDEN_PLAINTEXT = new TextEncoder().encode(
-  "0123456789abcdefABCDEFGHIJKLMNOP",
-);
-const GOLDEN_CHUNK_SIZE = 16;
-const MASTER_KEY_BYTES = Uint8Array.from(
-  Array.from({ length: 32 }, (_, index) => index),
-);
-const FILE_KEY_BYTES = Uint8Array.from(
-  Array.from({ length: 32 }, (_, index) => 0xa0 + index),
-);
-const NONCE_PREFIX = new Uint8Array([1, 2, 3, 4]);
-const FILE_KEY_NONCE = Uint8Array.from(
-  Array.from({ length: 12 }, (_, index) => 0x10 + index),
-);
+const GOLDEN_PLAINTEXT = hexToBytes(sharedVectors.plaintextHex);
+const GOLDEN_CHUNK_SIZE = sharedVectors.vectors.legacyCtn1TwoChunk.chunkSize;
+const MASTER_KEY_BYTES = hexToBytes(sharedVectors.masterKeyHex);
+const FILE_KEY_BYTES = hexToBytes(sharedVectors.fileKeyHex);
+const NONCE_PREFIX = hexToBytes(sharedVectors.noncePrefixHex);
+const FILE_KEY_NONCE = hexToBytes(sharedVectors.fileKeyNonceHex);
 
 describe("Cotton container golden vectors", () => {
   it("decrypts the fixed EasyExtensions-compatible container", async () => {

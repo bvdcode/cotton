@@ -26,4 +26,8 @@
 		<Using Include="NUnit.Framework" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<None Update="TestData\cotton-container-vectors.json" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
+
 </Project>
