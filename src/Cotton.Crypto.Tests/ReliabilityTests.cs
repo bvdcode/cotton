@@ -185,7 +185,7 @@ public class ReliabilityTests
             Assert.That(bytes[0], Is.EqualTo((byte)'C'));
             Assert.That(bytes[1], Is.EqualTo((byte)'T'));
             Assert.That(bytes[2], Is.EqualTo((byte)'N'));
-            Assert.That(bytes[3], Is.EqualTo((byte)'1'));
+            Assert.That(bytes[3], Is.EqualTo((byte)'2'));
         }
         int hdrLen = BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(4, 4));
         headerLen = hdrLen;
@@ -200,7 +200,7 @@ public class ReliabilityTests
                 Assert.That(bytes[offset + 0], Is.EqualTo((byte)'C'));
                 Assert.That(bytes[offset + 1], Is.EqualTo((byte)'T'));
                 Assert.That(bytes[offset + 2], Is.EqualTo((byte)'N'));
-                Assert.That(bytes[offset + 3], Is.EqualTo((byte)'1'));
+                Assert.That(bytes[offset + 3], Is.EqualTo((byte)'2'));
             }
             int chLen = BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(offset + 4, 4));
             long plainLen = BinaryPrimitives.ReadInt64LittleEndian(bytes.AsSpan(offset + 8, 8));

@@ -69,7 +69,7 @@ namespace Cotton.Crypto.Models
             // Peek prefix and full header length
             Span<byte> prefix = stackalloc byte[8];
             stream.ReadExactly(prefix);
-            if (!prefix[..4].SequenceEqual(FormatConstants.MagicBytes))
+            if (!FormatConstants.TryGetVersion(prefix[..4], out _))
             {
                 throw new InvalidDataException("Invalid magic number in header.");
             }

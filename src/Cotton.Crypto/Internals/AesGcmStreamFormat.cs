@@ -14,9 +14,6 @@ namespace Cotton.Crypto.Internals
 
     internal static class AesGcmStreamFormat
     {
-        // Keep version number via FormatConstants
-        private static ReadOnlySpan<byte> MagicBytes => FormatConstants.MagicBytes;
-
         /// <summary>
         /// Compose the 12-byte nonce as: [4 bytes file prefix][8 bytes chunk counter].
         /// The chunk counter space is 64-bit. To avoid IV reuse, the maximum number of chunks per file is 2^64 - 1.
@@ -37,11 +34,11 @@ namespace Cotton.Crypto.Internals
             BinaryPrimitives.WriteUInt64LittleEndian(destination[4..], unchecked((ulong)chunkIndex));
         }
 
-        public static void InitAadPrefix(Span<byte> aad32, int keyId)
+        public static void InitAadPrefix(Span<byte> aad32, int keyId, int formatVersion = FormatConstants.CurrentVersion)
         {
             if (aad32.Length < 32) throw new ArgumentException("AAD buffer must be at least 32 bytes", nameof(aad32));
-            MagicBytes.CopyTo(aad32[..4]);
-            BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(4, 4), 1); // version stays 1
+            FormatConstants.GetMagicBytes(formatVersion).CopyTo(aad32[..4]);
+            BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(4, 4), formatVersion);
             BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(8, 4), keyId);
         }
 
@@ -65,15 +62,16 @@ namespace Cotton.Crypto.Internals
         /// <param name="nonceSize">Size of the nonce in bytes.</param>
         /// <param name="tagSize">Size of the tag in bytes (used to compute header length).</param>
         /// <param name="keySize">Size of the encrypted file key in bytes (used to compute header length).</param>
+        /// <param name="formatVersion">Cotton crypto stream format version used to bind the file-key AAD.</param>
         /// <returns>Byte array containing the AAD.</returns>
-        public static byte[] BuildKeyAad(int keyId, uint noncePrefix, ReadOnlySpan<byte> fileKeyNonce, long totalPlaintextLength, int nonceSize, int tagSize, int keySize)
+        public static byte[] BuildKeyAad(int keyId, uint noncePrefix, ReadOnlySpan<byte> fileKeyNonce, long totalPlaintextLength, int nonceSize, int tagSize, int keySize, int formatVersion = FormatConstants.CurrentVersion)
         {
             if (fileKeyNonce.Length < nonceSize) throw new ArgumentException("Nonce span shorter than nonce size", nameof(fileKeyNonce));
             int headerLen = ComputeFileHeaderLength(nonceSize, tagSize, keySize);
             int aadLen = 4 + 4 + 8 + 4 + 4 + nonceSize;
             byte[] aad = new byte[aadLen];
             int offset = 0;
-            MagicBytes.CopyTo(aad.AsSpan(offset)); offset += 4;
+            FormatConstants.GetMagicBytes(formatVersion).CopyTo(aad.AsSpan(offset)); offset += 4;
             BinaryPrimitives.WriteInt32LittleEndian(aad.AsSpan(offset), headerLen); offset += 4;
             BinaryPrimitives.WriteInt64LittleEndian(aad.AsSpan(offset), totalPlaintextLength); offset += 8;
             BinaryPrimitives.WriteInt32LittleEndian(aad.AsSpan(offset), keyId); offset += 4;
@@ -95,21 +93,11 @@ namespace Cotton.Crypto.Internals
         public static int ComputeChunkHeaderLength(int tagSize)
             => ChunkHeader.ComputeLength(tagSize); // magic + headerLen + plainLen + keyId + tag
 
-        public static void BuildChunkHeader(Span<byte> header, int keyId, Tag128 tag, int textLength, int tagSize)
+        public static void BuildChunkHeader(Span<byte> header, int keyId, Tag128 tag, int textLength, int tagSize, int formatVersion = FormatConstants.CurrentVersion)
         {
-            int required = ComputeChunkHeaderLength(tagSize);
-            if (header.Length < required) throw new ArgumentException("Header buffer too small", nameof(header));
-            int offset = 0;
-            MagicBytes.CopyTo(header[offset..]);
-            offset += MagicBytes.Length;
-            BinaryPrimitives.WriteInt32LittleEndian(header[offset..], required);
-            offset += sizeof(int);
-            BinaryPrimitives.WriteInt64LittleEndian(header[offset..], textLength);
-            offset += sizeof(long);
-            BinaryPrimitives.WriteInt32LittleEndian(header[offset..], keyId);
-            offset += sizeof(int);
-            // write tag
-            tag.CopyTo(header[offset..(offset + tagSize)]);
+            var chunkHeader = new ChunkHeader(textLength, keyId, tag);
+            if (!ChunkHeader.TryWrite(header, chunkHeader, tagSize, formatVersion))
+                throw new ArgumentException("Header buffer too small", nameof(header));
         }
 
         public static async Task<FileHeader> ReadFileHeaderAsync(Stream input, int nonceSize, int tagSize, int keySize, CancellationToken ct)
@@ -118,7 +106,7 @@ namespace Cotton.Crypto.Internals
             try
             {
                 await ReadExactlyAsync(input, headerPrefix, 8, ct).ConfigureAwait(false);
-                if (!headerPrefix.AsSpan(0, 4).SequenceEqual(MagicBytes))
+                if (!FormatConstants.TryGetVersion(headerPrefix.AsSpan(0, 4), out _))
                 {
                     throw new InvalidDataException("Invalid file format: magic header not found.");
                 }
@@ -158,19 +146,15 @@ namespace Cotton.Crypto.Internals
             }
         }
 
-        public static async Task<ChunkHeader> ReadChunkHeaderAsync(Stream input, int tagSize, CancellationToken ct)
+        public static async Task<ChunkHeader> ReadChunkHeaderAsync(Stream input, int tagSize, CancellationToken ct, int formatVersion = FormatConstants.CurrentVersion)
         {
             int headerLen = ComputeChunkHeaderLength(tagSize);
             byte[] header = ArrayPool<byte>.Shared.Rent(headerLen);
             try
             {
                 await ReadExactlyAsync(input, header, headerLen, ct).ConfigureAwait(false);
-                // Explicit magic check for fast-fail on wrong magic
-                if (!header.AsSpan(0, 4).SequenceEqual(MagicBytes))
-                {
-                    throw new InvalidDataException("Invalid or unsupported chunk magic.");
-                }
-                if (!ChunkHeader.TryRead(header, tagSize, out var ch))
+                // Explicit format check for fast-fail on mixed legacy/current chunks.
+                if (!ChunkHeader.TryRead(header, tagSize, formatVersion, out var ch))
                 {
                     throw new InvalidDataException("Invalid or corrupted chunk header.");
                 }
@@ -182,7 +166,7 @@ namespace Cotton.Crypto.Internals
             }
         }
 
-        public static async Task<ChunkHeader?> TryReadChunkHeaderAsync(Stream input, int tagSize, CancellationToken ct)
+        public static async Task<ChunkHeader?> TryReadChunkHeaderAsync(Stream input, int tagSize, CancellationToken ct, int formatVersion = FormatConstants.CurrentVersion)
         {
             int headerLen = ComputeChunkHeaderLength(tagSize);
             byte[] header = ArrayPool<byte>.Shared.Rent(headerLen);
@@ -197,11 +181,7 @@ namespace Cotton.Crypto.Internals
                 {
                     throw new EndOfStreamException("Unexpected end of stream while reading chunk header.");
                 }
-                if (!header.AsSpan(0, 4).SequenceEqual(MagicBytes))
-                {
-                    throw new InvalidDataException("Invalid or unsupported chunk magic.");
-                }
-                if (!ChunkHeader.TryRead(header, tagSize, out var ch))
+                if (!ChunkHeader.TryRead(header, tagSize, formatVersion, out var ch))
                 {
                     throw new InvalidDataException("Invalid or corrupted chunk header.");
                 }

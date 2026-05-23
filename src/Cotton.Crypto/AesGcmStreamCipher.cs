@@ -269,10 +269,10 @@ namespace Cotton.Crypto
                 {
                     Span<byte> tagSpan = stackalloc byte[TagSize];
                     header.Tag.CopyTo(tagSpan);
-                    byte[] aad = AesGcmStreamFormat.BuildKeyAad(header.KeyId, header.NoncePrefix, header.Nonce, header.TotalPlaintextLength, NonceSize, TagSize, KeySize);
+                    byte[] aad = AesGcmStreamFormat.BuildKeyAad(header.KeyId, header.NoncePrefix, header.Nonce, header.TotalPlaintextLength, NonceSize, TagSize, KeySize, header.FormatVersion);
                     gcm.Decrypt(header.Nonce, header.EncryptedKey, tagSpan, fileKey.AsSpan(0, KeySize), associatedData: aad);
                 }
-                var dec = new DecryptionPipeline(input, output, fileKey, header.NoncePrefix, ConcurrencyLevel, _keyId, NonceSize, TagSize, MaxChunkSize, effectiveWindowCap, header.TotalPlaintextLength, _strictLengthCheck, BufferPool);
+                var dec = new DecryptionPipeline(input, output, fileKey, header.NoncePrefix, ConcurrencyLevel, _keyId, NonceSize, TagSize, MaxChunkSize, effectiveWindowCap, header.TotalPlaintextLength, _strictLengthCheck, header.FormatVersion, BufferPool);
                 await dec.RunAsync(ct).ConfigureAwait(false);
             }
             finally

@@ -37,8 +37,8 @@ public class GoldenVectorsTests
         // Golden expected (frozen). If this test changes, format changed.
         // These constants computed once and embedded to lock the format.
         byte[] expectedHeader = [
-            // Magic CTN1, header length le32, total len le64, keyId le32, noncePrefix le32, nonce(12), tag(16), encryptedKey(32)
-            0x43,0x54,0x4E,0x31, 0x54,0x00,0x00,0x00, 0x80,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+            // Magic CTN2, header length le32, total len le64, keyId le32, noncePrefix le32, nonce(12), tag(16), encryptedKey(32)
+            0x43,0x54,0x4E,0x32, 0x54,0x00,0x00,0x00, 0x80,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
             0x4D,0x00,0x00,0x00, 0x7A,0x7A,0x7A,0x7A, // prefix deterministic
             // nonce 12, tag 16, encryptedKey 32 (fake but consistent with DeterministicRng)
         ];
@@ -54,7 +54,7 @@ public class GoldenVectorsTests
             Assert.That(chunk[0], Is.EqualTo((byte)'C'));
             Assert.That(chunk[1], Is.EqualTo((byte)'T'));
             Assert.That(chunk[2], Is.EqualTo((byte)'N'));
-            Assert.That(chunk[3], Is.EqualTo((byte)'1'));
+            Assert.That(chunk[3], Is.EqualTo((byte)'2'));
         }
     }
 

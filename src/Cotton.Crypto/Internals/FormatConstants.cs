@@ -2,12 +2,50 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using System;
+using System.IO;
 
 namespace Cotton.Crypto.Internals
 {
     internal static class FormatConstants
     {
-        public const int Version = 1;
-        public static ReadOnlySpan<byte> MagicBytes => "CTN1"u8;
+        // CTN1 was emitted by EasyExtensions.Crypto before authenticated stream terminators existed.
+        // New writes use CTN2, which lets readers require the terminator without breaking existing blobs.
+        public const int LegacyVersion = 1;
+        public const int CurrentVersion = 2;
+
+        public static ReadOnlySpan<byte> LegacyMagicBytes => "CTN1"u8;
+        public static ReadOnlySpan<byte> CurrentMagicBytes => "CTN2"u8;
+        public static ReadOnlySpan<byte> MagicBytes => CurrentMagicBytes;
+
+        public static ReadOnlySpan<byte> GetMagicBytes(int formatVersion)
+        {
+            return formatVersion switch
+            {
+                LegacyVersion => LegacyMagicBytes,
+                CurrentVersion => CurrentMagicBytes,
+                _ => throw new InvalidDataException($"Unsupported Cotton crypto format version {formatVersion}.")
+            };
+        }
+
+        public static bool TryGetVersion(ReadOnlySpan<byte> magic, out int formatVersion)
+        {
+            if (magic.SequenceEqual(CurrentMagicBytes))
+            {
+                formatVersion = CurrentVersion;
+                return true;
+            }
+
+            if (magic.SequenceEqual(LegacyMagicBytes))
+            {
+                formatVersion = LegacyVersion;
+                return true;
+            }
+
+            formatVersion = 0;
+            return false;
+        }
+
+        public static bool RequiresAuthenticatedTerminator(int formatVersion)
+            => formatVersion >= CurrentVersion;
     }
 }
