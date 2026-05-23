@@ -36,7 +36,8 @@ namespace Cotton.Server.Handlers.Users
     public class ChangePasswordRequestHandler(
         CottonDbContext _dbContext,
         IPasswordHashService _hasher,
-        RefreshTokenRevocationService _refreshTokenRevocations) : IRequestHandler<ChangePasswordRequest>
+        RefreshTokenRevocationService _refreshTokenRevocations,
+        SessionRevocationNotifier _sessionRevocationNotifier) : IRequestHandler<ChangePasswordRequest>
     {
         /// <summary>
         /// Handles the request through the mediator pipeline.
@@ -66,12 +67,17 @@ namespace Cotton.Server.Handlers.Users
             user.PasswordPhc = _hasher.Hash(request.NewPassword);
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            await _refreshTokenRevocations.RevokeUserSessionsAsync(
+            RefreshTokenRevocationResult revocation = await _refreshTokenRevocations.RevokeUserSessionsAsync(
                 user.Id,
                 DateTime.UtcNow,
                 cancellationToken);
 
             await tx.CommitAsync(cancellationToken);
+
+            await _sessionRevocationNotifier.NotifyRevokedAsync(
+                user.Id,
+                revocation.SessionIds,
+                CancellationToken.None);
         }
     }
 }

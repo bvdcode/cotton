@@ -17,7 +17,7 @@ public sealed class RefreshTokenRevocationService(CottonDbContext _dbContext)
     /// <summary>
     /// Revokes session.
     /// </summary>
-    public Task<int> RevokeSessionAsync(
+    public Task<RefreshTokenRevocationResult> RevokeSessionAsync(
         Guid userId,
         string sessionId,
         DateTime revokedAt,
@@ -33,7 +33,7 @@ public sealed class RefreshTokenRevocationService(CottonDbContext _dbContext)
     /// <summary>
     /// Revokes user sessions.
     /// </summary>
-    public Task<int> RevokeUserSessionsAsync(
+    public Task<RefreshTokenRevocationResult> RevokeUserSessionsAsync(
         Guid userId,
         DateTime revokedAt,
         CancellationToken cancellationToken)
@@ -45,12 +45,14 @@ public sealed class RefreshTokenRevocationService(CottonDbContext _dbContext)
             cancellationToken);
     }
 
-    private async Task<int> RevokeAsync(
+    private async Task<RefreshTokenRevocationResult> RevokeAsync(
         IQueryable<ExtendedRefreshToken> query,
         DateTime revokedAt,
         CancellationToken cancellationToken)
     {
         int revoked = 0;
+        var sessionIds = new List<string>();
+        var seenSessionIds = new HashSet<string>(StringComparer.Ordinal);
         while (true)
         {
             List<ExtendedRefreshToken> tokens = await query
@@ -59,11 +61,16 @@ public sealed class RefreshTokenRevocationService(CottonDbContext _dbContext)
                 .ToListAsync(cancellationToken);
             if (tokens.Count == 0)
             {
-                return revoked;
+                return new RefreshTokenRevocationResult(revoked, sessionIds);
             }
 
             foreach (ExtendedRefreshToken token in tokens)
             {
+                if (!string.IsNullOrWhiteSpace(token.SessionId) && seenSessionIds.Add(token.SessionId))
+                {
+                    sessionIds.Add(token.SessionId);
+                }
+
                 token.RevokedAt = revokedAt;
             }
 
@@ -73,3 +80,10 @@ public sealed class RefreshTokenRevocationService(CottonDbContext _dbContext)
         }
     }
 }
+
+/// <summary>
+/// Describes refresh-token revocation work completed by a revocation service call.
+/// </summary>
+public sealed record RefreshTokenRevocationResult(
+    int RevokedTokens,
+    IReadOnlyList<string> SessionIds);

@@ -9,7 +9,6 @@ using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Auth;
 using Cotton.Server.Handlers.Users;
 using Cotton.Server.Helpers;
-using Cotton.Server.Hubs;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
@@ -33,7 +32,6 @@ using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
@@ -65,8 +63,7 @@ namespace Cotton.Server.Controllers
         RefreshTokenRevocationService _refreshTokenRevocations,
         DownloadTokenExpirationService _downloadTokenExpirations,
         IDatabaseIntegrityVerifier _integrity,
-        SessionAccessTokenRevocationStore _sessionRevocations,
-        IHubContext<EventHub> _eventHub) : ControllerBase
+        SessionRevocationNotifier _sessionRevocationNotifier) : ControllerBase
     {
         /// <summary>
         /// Gets or sets the web dav token length.
@@ -122,14 +119,17 @@ namespace Cotton.Server.Controllers
         {
             var userId = User.GetUserId();
             DateTime revokedAt = DateTime.UtcNow;
-            int revokedTokens = await _refreshTokenRevocations.RevokeSessionAsync(
+            RefreshTokenRevocationResult revocation = await _refreshTokenRevocations.RevokeSessionAsync(
                 userId,
                 sessionId,
                 revokedAt,
                 cancellationToken);
-            if (revokedTokens > 0)
+            if (revocation.RevokedTokens > 0)
             {
-                await NotifySessionRevokedAsync(userId, sessionId, cancellationToken);
+                await _sessionRevocationNotifier.NotifyRevokedAsync(
+                    userId,
+                    revocation.SessionIds,
+                    cancellationToken);
             }
             return Ok();
         }
@@ -563,7 +563,7 @@ namespace Cotton.Server.Controllers
                     _integrity.RequireValid(_dbContext, dbToken, "auth.logout");
                     dbToken.RevokedAt = DateTime.UtcNow;
                     await _dbContext.SaveChangesAsync();
-                    await NotifySessionRevokedAsync(
+                    await _sessionRevocationNotifier.NotifyRevokedAsync(
                         dbToken.UserId,
                         dbToken.SessionId,
                         HttpContext.RequestAborted);
@@ -614,22 +614,6 @@ namespace Cotton.Server.Controllers
                 DateTime.UtcNow,
                 cancellationToken);
             return Ok();
-        }
-
-        private async Task NotifySessionRevokedAsync(
-            Guid userId,
-            string? sessionId,
-            CancellationToken cancellationToken)
-        {
-            if (string.IsNullOrWhiteSpace(sessionId))
-            {
-                return;
-            }
-
-            _sessionRevocations.Revoke(userId, sessionId, _tokens.TokenLifetime);
-            await _eventHub.Clients
-                .Group(EventHub.GetSessionGroupName(userId, sessionId))
-                .SendCoreAsync(EventHub.SessionRevokedMethod, Array.Empty<object>(), cancellationToken);
         }
 
         private async Task<TokenPairResponseDto> CreateSignedInResponseAsync(User user, bool trustDevice)

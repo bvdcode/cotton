@@ -4,6 +4,7 @@
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Helpers;
+using ServerChangePasswordRequestDto = Cotton.Server.Models.Requests.ChangePasswordRequestDto;
 using Cotton.Storage.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using Microsoft.AspNetCore.Hosting;
@@ -158,6 +159,30 @@ public class AuthSmokeTests : IntegrationTestBase
 
         using HttpResponseMessage afterRevoke = await _client.GetAsync("/api/v1/auth/me");
         Assert.That(afterRevoke.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task ChangePassword_Invalidates_Current_AccessToken()
+    {
+        Assert.That(_client, Is.Not.Null);
+
+        TokenPairResponseDto login = await LoginAsync("testuser", "testpassword");
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
+
+        using HttpResponseMessage beforeChange = await _client.GetAsync("/api/v1/auth/me");
+        Assert.That(beforeChange.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        using HttpResponseMessage change = await _client.PutAsJsonAsync(
+            "/api/v1/users/me/password",
+            new ServerChangePasswordRequestDto
+            {
+                OldPassword = "testpassword",
+                NewPassword = "changed-testpassword"
+            });
+        Assert.That(change.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        using HttpResponseMessage afterChange = await _client.GetAsync("/api/v1/auth/me");
+        Assert.That(afterChange.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     private async Task<TokenPairResponseDto> LoginAsync(string username, string password)

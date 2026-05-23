@@ -148,6 +148,7 @@ namespace Cotton.Server
                 .AddScoped<StoragePipelineProbeService>()
                 .AddScoped<PasskeyService>()
                 .AddScoped<RefreshTokenRevocationService>()
+                .AddScoped<SessionRevocationNotifier>()
                 .AddScoped<DownloadTokenExpirationService>()
                 .AddScoped<IPostgresDumpService, PostgresDumpService>()
                 .AddScoped<IDatabaseBackupManifestService, DatabaseBackupManifestService>()
