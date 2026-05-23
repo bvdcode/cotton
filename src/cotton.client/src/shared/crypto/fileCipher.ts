@@ -1,6 +1,7 @@
 import { decryptChunk, encryptChunk } from "./cipher";
 import {
   CHUNK_HEADER_BYTES,
+  CONTAINER_VERSION,
   DEFAULT_KEY_ID,
   DEFAULT_CHUNK_SIZE,
   FILE_HEADER_BYTES,
@@ -16,6 +17,7 @@ import {
   looksLikeContainer,
   parseChunkHeader,
   parseHeader,
+  requiresAuthenticatedTerminator,
   type ContainerHeader,
 } from "./container";
 import { CorruptedContainerError, NotAContainerError } from "./errors";
@@ -49,7 +51,11 @@ export async function encryptFileToBlob(
   const fileKey = await generateFileKey();
   const noncePrefix = randomBytes(GCM_NONCE_PREFIX_BYTES);
   const fileKeyNonce = randomBytes(GCM_NONCE_BYTES);
-  const keyHeader = {
+  const keyHeader: Pick<
+    ContainerHeader,
+    "formatVersion" | "keyId" | "noncePrefix" | "fileKeyNonce" | "plaintextSize"
+  > = {
+    formatVersion: CONTAINER_VERSION,
     keyId: DEFAULT_KEY_ID,
     noncePrefix,
     fileKeyNonce,
@@ -81,21 +87,44 @@ export async function encryptFileToBlob(
       noncePrefix,
       chunkIndex,
       plaintextChunk,
-      buildChunkAad(DEFAULT_KEY_ID, chunkIndex, chunkLength),
+      buildChunkAad(DEFAULT_KEY_ID, chunkIndex, chunkLength, keyHeader.formatVersion),
     );
     parts.push(
       asBlobPart(
-        buildChunkHeader({
-          keyId: DEFAULT_KEY_ID,
-          plaintextLength: chunkLength,
-          tag: ciphertextChunk.tag,
-        }),
+        buildChunkHeader(
+          {
+            keyId: DEFAULT_KEY_ID,
+            plaintextLength: chunkLength,
+            tag: ciphertextChunk.tag,
+          },
+          keyHeader.formatVersion,
+        ),
       ),
       asBlobPart(ciphertextChunk.ciphertext),
     );
     bytesProcessed += chunkLength;
     callbacks?.onProgress?.(bytesProcessed, plaintext.size);
   }
+
+  const terminatorChunk = await encryptChunk(
+    fileKey,
+    noncePrefix,
+    totalChunks,
+    new Uint8Array(),
+    buildChunkAad(DEFAULT_KEY_ID, totalChunks, 0, keyHeader.formatVersion),
+  );
+  parts.push(
+    asBlobPart(
+      buildChunkHeader(
+        {
+          keyId: DEFAULT_KEY_ID,
+          plaintextLength: 0,
+          tag: terminatorChunk.tag,
+        },
+        keyHeader.formatVersion,
+      ),
+    ),
+  );
 
   return new Blob(parts, { type: ENCRYPTED_CONTENT_TYPE });
 }
@@ -124,9 +153,10 @@ export async function decryptBlobToBlob(
   let cursor = headerLength;
   let remainingPlaintext = header.plaintextSize;
   let bytesProcessed = 0;
+  let chunkIndex = 0;
   callbacks?.onProgress?.(0, header.plaintextSize);
 
-  for (let chunkIndex = 0; remainingPlaintext > 0; chunkIndex += 1) {
+  for (; remainingPlaintext > 0; chunkIndex += 1) {
     const chunkHeaderBytes = await readBlobSlice(
       encrypted,
       cursor,
@@ -137,10 +167,14 @@ export async function decryptBlobToBlob(
       throw new CorruptedContainerError("Encrypted file is truncated.");
     }
 
-    const chunkHeader = parseChunkHeader(chunkHeaderBytes);
+    const chunkHeader = parseChunkHeader(chunkHeaderBytes, header.formatVersion);
 
     if (chunkHeader.keyId !== header.keyId) {
       throw new CorruptedContainerError("Chunk key id does not match file key id.");
+    }
+
+    if (chunkHeader.plaintextLength === 0) {
+      throw new CorruptedContainerError("Data chunk cannot be an encrypted terminator.");
     }
 
     if (chunkHeader.plaintextLength > remainingPlaintext) {
@@ -164,7 +198,12 @@ export async function decryptBlobToBlob(
       chunkIndex,
       ciphertextChunk,
       chunkHeader.tag,
-      buildChunkAad(header.keyId, chunkIndex, chunkHeader.plaintextLength),
+      buildChunkAad(
+        header.keyId,
+        chunkIndex,
+        chunkHeader.plaintextLength,
+        header.formatVersion,
+      ),
     );
     parts.push(asBlobPart(plaintextChunk));
     cursor += chunkHeader.plaintextLength;
@@ -173,11 +212,64 @@ export async function decryptBlobToBlob(
     callbacks?.onProgress?.(bytesProcessed, header.plaintextSize);
   }
 
+  cursor = await readAuthenticatedTerminatorIfPresent(
+    encrypted,
+    cursor,
+    fileKey,
+    header,
+    chunkIndex,
+  );
+
   if (cursor !== encrypted.size) {
     throw new CorruptedContainerError("Encrypted file has trailing bytes.");
   }
 
   return new Blob(parts, { type: resultContentType });
+}
+
+async function readAuthenticatedTerminatorIfPresent(
+  encrypted: Blob,
+  cursor: number,
+  fileKey: CryptoKey,
+  header: ContainerHeader,
+  chunkIndex: number,
+): Promise<number> {
+  if (cursor === encrypted.size && !requiresAuthenticatedTerminator(header.formatVersion)) {
+    return cursor;
+  }
+
+  const chunkHeaderBytes = await readBlobSlice(
+    encrypted,
+    cursor,
+    CHUNK_HEADER_BYTES,
+  );
+
+  if (chunkHeaderBytes.length !== CHUNK_HEADER_BYTES) {
+    throw new CorruptedContainerError("Encrypted file terminator is missing.");
+  }
+
+  const terminatorHeader = parseChunkHeader(
+    chunkHeaderBytes,
+    header.formatVersion,
+  );
+  if (terminatorHeader.keyId !== header.keyId) {
+    throw new CorruptedContainerError("Terminator key id does not match file key id.");
+  }
+
+  if (terminatorHeader.plaintextLength !== 0) {
+    throw new CorruptedContainerError("Encrypted file has trailing bytes.");
+  }
+
+  await decryptChunk(
+    fileKey,
+    header.noncePrefix,
+    chunkIndex,
+    new Uint8Array(),
+    terminatorHeader.tag,
+    buildChunkAad(header.keyId, chunkIndex, 0, header.formatVersion),
+  );
+
+  return cursor + CHUNK_HEADER_BYTES;
 }
 
 async function unwrapContainerFileKey(

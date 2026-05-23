@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CHUNK_HEADER_BYTES,
   CONTAINER_VERSION,
+  LEGACY_MAGIC,
   FILE_HEADER_BYTES,
   GCM_NONCE_BYTES,
   MAGIC,
@@ -16,6 +17,7 @@ import {
   looksLikeContainer,
   parseChunkHeader,
   parseHeader,
+  type ContainerHeader,
 } from "./container";
 import {
   CorruptedContainerError,
@@ -23,7 +25,8 @@ import {
   NotAContainerError,
 } from "./errors";
 
-const sampleHeader = {
+const sampleHeader: ContainerHeader = {
+  formatVersion: CONTAINER_VERSION,
   keyId: 7,
   noncePrefix: new Uint8Array([1, 2, 3, 4]),
   fileKeyNonce: new Uint8Array(12).map((_, index) => 10 + index),
@@ -33,8 +36,12 @@ const sampleHeader = {
 };
 
 describe("looksLikeContainer", () => {
-  it("accepts the CTN1 magic prefix", () => {
+  it("accepts the CTN2 magic prefix", () => {
     expect(looksLikeContainer(MAGIC)).toBe(true);
+  });
+
+  it("accepts the legacy CTN1 magic prefix", () => {
+    expect(looksLikeContainer(LEGACY_MAGIC)).toBe(true);
   });
 
   it("accepts buffers that start with the magic prefix", () => {
@@ -51,7 +58,7 @@ describe("looksLikeContainer", () => {
 });
 
 describe("buildHeader / parseHeader", () => {
-  it("writes the EasyExtensions-compatible file header layout", () => {
+  it("writes the current file header layout", () => {
     const bytes = buildHeader(sampleHeader);
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     const { header, headerLength } = parseHeader(bytes);

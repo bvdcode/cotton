@@ -38,7 +38,7 @@ describe("encryptFileToBlob / decryptBlobToBlob", () => {
     expect(Array.from(await blobToBytes(decrypted))).toEqual(Array.from(plaintext));
   });
 
-  it("writes CTN1 file and chunk headers", async () => {
+  it("writes CTN2 file, chunk, and terminator headers", async () => {
     const masterKey = await generateMasterKey();
     const plaintext = new Uint8Array(1024);
     crypto.getRandomValues(plaintext);
@@ -53,6 +53,13 @@ describe("encryptFileToBlob / decryptBlobToBlob", () => {
     );
     expect(new DataView(bytes.buffer).getInt32(FILE_HEADER_BYTES + 4, true)).toBe(
       CHUNK_HEADER_BYTES,
+    );
+    const terminatorOffset = encrypted.size - CHUNK_HEADER_BYTES;
+    expect(Array.from(bytes.slice(terminatorOffset, terminatorOffset + 4))).toEqual(
+      Array.from(MAGIC),
+    );
+    expect(new DataView(bytes.buffer).getBigInt64(terminatorOffset + 8, true)).toBe(
+      0n,
     );
   });
 
@@ -108,7 +115,7 @@ describe("encryptFileToBlob / decryptBlobToBlob", () => {
     const decrypted = await decryptBlobToBlob(encrypted, masterKey);
 
     expect(decrypted.size).toBe(0);
-    expect(encrypted.size).toBe(FILE_HEADER_BYTES);
+    expect(encrypted.size).toBe(FILE_HEADER_BYTES + CHUNK_HEADER_BYTES);
   });
 
   it("rejects a non-container blob", async () => {
