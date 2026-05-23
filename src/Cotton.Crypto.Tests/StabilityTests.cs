@@ -333,6 +333,12 @@ namespace Cotton.Crypto.Tests
                 {
                     copy[offset] ^= 0xFF;
                 }
+                else
+                {
+                    int headerLen = 4 + 4 + 8 + 4 + TagSize;
+                    int tagOffset = offset - headerLen + 4 + 4 + 8 + 4;
+                    copy[tagOffset] ^= 0xFF;
+                }
                 using var tampered = new MemoryStream(copy, writable: false);
                 using var output = new MemoryStream();
                 Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tampered, output), $"Tamper in chunk {i} should fail");

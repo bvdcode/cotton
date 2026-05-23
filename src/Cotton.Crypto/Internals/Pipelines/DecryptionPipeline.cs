@@ -261,11 +261,19 @@ namespace Cotton.Crypto.Internals.Pipelines
             ChunkHeader? maybeChunkHeader = await ReadNextChunkHeaderAsync(ct).ConfigureAwait(false);
             if (!maybeChunkHeader.HasValue)
             {
-                return false;
+                throw new EndOfStreamException("Encrypted stream ended before its authenticated terminator.");
             }
 
             ChunkHeader chunkHeader = maybeChunkHeader.Value;
-            ValidateChunkHeader(chunkHeader);
+            if (chunkHeader.PlaintextLength == 0)
+            {
+                // Zero-length records are authenticated terminators, never data chunks.
+                VerifyEndMarker(idx, chunkHeader);
+                await EnsureNoTrailingBytesAfterEndMarkerAsync(ct).ConfigureAwait(false);
+                return false;
+            }
+
+            ValidateDataChunkHeader(chunkHeader);
 
             int cipherLength = (int)chunkHeader.PlaintextLength;
             byte[] cipher = await ReadCiphertextAsync(scope, cipherLength, ct).ConfigureAwait(false);
@@ -308,7 +316,7 @@ namespace Cotton.Crypto.Internals.Pipelines
             return true;
         }
 
-        private void ValidateChunkHeader(ChunkHeader chunkHeader)
+        private void ValidateDataChunkHeader(ChunkHeader chunkHeader)
         {
             if (chunkHeader.KeyId != keyId)
             {
@@ -323,6 +331,72 @@ namespace Cotton.Crypto.Internals.Pipelines
             if (input.CanSeek && input.Length - input.Position < chunkHeader.PlaintextLength)
             {
                 throw new EndOfStreamException("Unexpected end of stream while reading chunk ciphertext.");
+            }
+        }
+
+        private void VerifyEndMarker(long idx, ChunkHeader chunkHeader)
+        {
+            if (chunkHeader.KeyId != keyId)
+            {
+                throw new InvalidDataException("Chunk key ID does not match file key ID.");
+            }
+
+            byte[] nonceBuffer = pool.Rent(nonceSize);
+            byte[] aad = pool.Rent(32);
+            try
+            {
+                AesGcmStreamFormat.ComposeNonce(nonceBuffer.AsSpan(0, nonceSize), noncePrefix, idx);
+                AesGcmStreamFormat.InitAadPrefix(aad.AsSpan(0, 32), keyId);
+                AesGcmStreamFormat.FillAadMutable(aad.AsSpan(0, 32), idx, 0);
+
+                Tag128 tagCopy = chunkHeader.Tag;
+                Span<byte> tagSpan = MemoryMarshal.AsBytes(MemoryMarshal.CreateSpan(ref tagCopy, 1));
+                using var gcm = new AesGcm(fileKey, tagSize);
+                try
+                {
+                    gcm.Decrypt(
+                        nonceBuffer.AsSpan(0, nonceSize),
+                        ReadOnlySpan<byte>.Empty,
+                        tagSpan,
+                        Span<byte>.Empty,
+                        aad.AsSpan(0, 32));
+                }
+                catch (CryptographicException ex)
+                {
+                    throw new AuthenticationTagMismatchException("Stream terminator authentication failed.", ex);
+                }
+            }
+            finally
+            {
+                pool.Return(aad, clearArray: true);
+                pool.Return(nonceBuffer, clearArray: true);
+            }
+        }
+
+        private async Task EnsureNoTrailingBytesAfterEndMarkerAsync(CancellationToken ct)
+        {
+            if (input.CanSeek)
+            {
+                if (input.Position != input.Length)
+                {
+                    throw new InvalidDataException("Unexpected data after encrypted stream terminator.");
+                }
+
+                return;
+            }
+
+            byte[] probe = pool.Rent(1);
+            try
+            {
+                int read = await input.ReadAsync(probe.AsMemory(0, 1), ct).ConfigureAwait(false);
+                if (read != 0)
+                {
+                    throw new InvalidDataException("Unexpected data after encrypted stream terminator.");
+                }
+            }
+            finally
+            {
+                pool.Return(probe, clearArray: false);
             }
         }
 

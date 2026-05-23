@@ -305,14 +305,13 @@ namespace Cotton.Server.Services
         /// </summary>
         public async Task DeleteCredentialAsync(Guid userId, Guid credentialId, CancellationToken ct)
         {
-            int deleted = await _dbContext.UserPasskeyCredentials
-                .Where(x => x.UserId == userId && x.Id == credentialId)
-                .ExecuteDeleteAsync(ct);
+            UserPasskeyCredential credential = await _dbContext.UserPasskeyCredentials
+                .FirstOrDefaultAsync(x => x.UserId == userId && x.Id == credentialId, ct)
+                ?? throw new EntityNotFoundException<UserPasskeyCredential>();
+            _integrity.RequireValid(_dbContext, credential, "passkey.delete");
 
-            if (deleted == 0)
-            {
-                throw new EntityNotFoundException<UserPasskeyCredential>();
-            }
+            _dbContext.UserPasskeyCredentials.Remove(credential);
+            await _dbContext.SaveChangesAsync(ct);
         }
 
         private static PasskeyCredentialDto ToDto(UserPasskeyCredential credential)

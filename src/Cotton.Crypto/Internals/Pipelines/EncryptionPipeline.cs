@@ -204,6 +204,41 @@ namespace Cotton.Crypto.Internals.Pipelines
             }
         }
 
+        // A zero-length chunk is reserved as an authenticated end-of-stream marker.
+        // It lets non-seekable inputs prove EOF without trusting transport EOF alone.
+        private async Task WriteEndMarkerAsync(long chunkIndex, CancellationToken ct)
+        {
+            byte[] nonceBuffer = pool.Rent(nonceSize);
+            byte[] aad = pool.Rent(32);
+            byte[] headerBuf = pool.Rent(AesGcmStreamFormat.ComputeChunkHeaderLength(tagSize));
+            try
+            {
+                AesGcmStreamFormat.ComposeNonce(nonceBuffer.AsSpan(0, nonceSize), noncePrefix, chunkIndex);
+                AesGcmStreamFormat.InitAadPrefix(aad.AsSpan(0, 32), keyId);
+                AesGcmStreamFormat.FillAadMutable(aad.AsSpan(0, 32), chunkIndex, 0);
+
+                Tag128 tag = default;
+                Span<byte> tagSpan = MemoryMarshal.AsBytes(MemoryMarshal.CreateSpan(ref tag, 1));
+                using var gcm = new AesGcm(fileKey, tagSize);
+                gcm.Encrypt(
+                    nonceBuffer.AsSpan(0, nonceSize),
+                    ReadOnlySpan<byte>.Empty,
+                    Span<byte>.Empty,
+                    tagSpan,
+                    aad.AsSpan(0, 32));
+
+                int headerLen = AesGcmStreamFormat.ComputeChunkHeaderLength(tagSize);
+                AesGcmStreamFormat.BuildChunkHeader(headerBuf.AsSpan(0, headerLen), keyId, tag, 0, tagSize);
+                await output.WriteAsync(headerBuf.AsMemory(0, headerLen), ct).ConfigureAwait(false);
+            }
+            finally
+            {
+                pool.Return(headerBuf, clearArray: false);
+                pool.Return(aad, clearArray: true);
+                pool.Return(nonceBuffer, clearArray: true);
+            }
+        }
+
         private Task ConsumeAsync(ChannelReader<EncryptionResult> reader, BufferScope scope, CancellationToken ct)
         {
             return Task.Run(async () =>
@@ -232,6 +267,8 @@ namespace Cotton.Crypto.Internals.Pipelines
                         await WriteResultAsync(tail, scope, ct).ConfigureAwait(false);
                         next++;
                     }
+
+                    await WriteEndMarkerAsync(next, ct).ConfigureAwait(false);
                 }
                 finally
                 {

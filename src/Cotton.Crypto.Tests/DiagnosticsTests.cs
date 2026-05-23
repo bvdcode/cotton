@@ -66,10 +66,12 @@ public class DiagnosticsTests
         // Duplicate chunk: copy first chunk payload to appear twice
         int fh = 4 + 4 + 8 + 4 + 4 + AesGcmStreamCipher.NonceSize + AesGcmStreamCipher.TagSize + AesGcmStreamCipher.KeySize;
         int ch = 4 + 4 + 8 + 4 + AesGcmStreamCipher.TagSize;
-        // Build stream with chunk0 twice
+        // Build stream with chunk0 twice, then keep the original terminal marker.
+        int terminalHeaderOffset = bytes.Length - ch;
         using var dup = new MemoryStream();
         dup.Write(bytes, 0, fh + ch + AesGcmStreamCipher.MinChunkSize);
         dup.Write(bytes, fh, ch + AesGcmStreamCipher.MinChunkSize);
+        dup.Write(bytes, terminalHeaderOffset, ch);
         dup.Position = 0;
         using var outDec = new MemoryStream();
         Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(dup, outDec));

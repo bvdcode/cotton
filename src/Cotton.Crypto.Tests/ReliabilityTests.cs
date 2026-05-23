@@ -15,7 +15,7 @@ public class ReliabilityTests
 
     // 10. Non-seekable empty file
     [Test]
-    public void NonSeekable_EmptyFile_RoundTrip_NoChunks()
+    public void NonSeekable_EmptyFile_RoundTrip_EndMarkerOnly()
     {
         var key = Key();
         var cipher = new AesGcmStreamCipher(key, keyId: 10, threads: 1);
@@ -25,10 +25,11 @@ public class ReliabilityTests
         cipher.EncryptAsync(nonSeek, outEnc, chunkSize: AesGcmStreamCipher.MinChunkSize).GetAwaiter().GetResult();
         outEnc.Position = 0;
         var hdr = AesGcmKeyHeader.FromStream(outEnc, AesGcmStreamCipher.NonceSize, AesGcmStreamCipher.TagSize);
+        var endMarker = AesGcmKeyHeader.FromStream(outEnc, AesGcmStreamCipher.NonceSize, AesGcmStreamCipher.TagSize);
         using (Assert.EnterMultipleScope())
         {
             Assert.That(hdr.DataLength, Is.Zero);
-            // There should be no more data
+            Assert.That(endMarker.DataLength, Is.Zero);
             Assert.That(outEnc.Position, Is.EqualTo(outEnc.Length));
         }
         // Decrypt back and verify 0 bytes
@@ -53,10 +54,13 @@ public class ReliabilityTests
         using var enc1 = new MemoryStream();
         cipher.EncryptAsync(input1, enc1, chunkSize: min).GetAwaiter().GetResult();
         var (chunksMin, lengthsMin) = ParseChunks(enc1.ToArray(), out _);
+        int[] dataLengthsMin = [.. lengthsMin.Where(x => x > 0)];
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(chunksMin, Is.EqualTo((data.Length / min) + ((data.Length % min == 0) ? 0 : 1)));
-            Assert.That(lengthsMin.Last(), Is.EqualTo(data.Length % min == 0 ? min : data.Length % min));
+            Assert.That(chunksMin, Is.EqualTo(dataLengthsMin.Length + 1));
+            Assert.That(lengthsMin.Last(), Is.Zero);
+            Assert.That(dataLengthsMin, Has.Length.EqualTo((data.Length / min) + ((data.Length % min == 0) ? 0 : 1)));
+            Assert.That(dataLengthsMin.Last(), Is.EqualTo(data.Length % min == 0 ? min : data.Length % min));
         }
 
         // Test with MaxChunkSize
@@ -64,10 +68,13 @@ public class ReliabilityTests
         using var enc2 = new MemoryStream();
         cipher.EncryptAsync(input2, enc2, chunkSize: max).GetAwaiter().GetResult();
         var (chunksMax, lengthsMax) = ParseChunks(enc2.ToArray(), out _);
+        int[] dataLengthsMax = [.. lengthsMax.Where(x => x > 0)];
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(chunksMax, Is.EqualTo((data.Length / max) + ((data.Length % max == 0) ? 0 : 1)));
-            Assert.That(lengthsMax.Last(), Is.EqualTo(data.Length % max == 0 ? max : data.Length % max));
+            Assert.That(chunksMax, Is.EqualTo(dataLengthsMax.Length + 1));
+            Assert.That(lengthsMax.Last(), Is.Zero);
+            Assert.That(dataLengthsMax, Has.Length.EqualTo((data.Length / max) + ((data.Length % max == 0) ? 0 : 1)));
+            Assert.That(dataLengthsMax.Last(), Is.EqualTo(data.Length % max == 0 ? max : data.Length % max));
         }
     }
 

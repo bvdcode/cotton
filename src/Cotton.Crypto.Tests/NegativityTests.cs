@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Crypto.Models;
+using Cotton.Crypto.Tests.TestUtils;
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 
@@ -125,5 +126,50 @@ public class NegativityTests
         using var truncated2 = new MemoryStream(full.AsSpan(0, cut2).ToArray(), writable: false);
         using var dec2 = new MemoryStream();
         Assert.ThrowsAsync<EndOfStreamException>(async () => await cipher.DecryptAsync(truncated2, dec2));
+    }
+
+    [Test]
+    public void Truncation_AfterWholeChunks_WithoutTerminator_ShouldFail()
+    {
+        var cipher = new AesGcmStreamCipher(ValidMasterKey(), keyId: 16);
+        byte[] data = [.. Enumerable.Range(0, MinChunk * 2).Select(i => (byte)(i & 0xFF))];
+        using var input = new NonSeekableReadStream(new MemoryStream(data));
+        using var outEnc = new MemoryStream();
+        cipher.EncryptAsync(input, outEnc, chunkSize: MinChunk).GetAwaiter().GetResult();
+
+        byte[] full = outEnc.ToArray();
+        var (fileHeader, chunks) = ParseAllHeaders(full);
+        Assert.That(fileHeader.DataLength, Is.Zero);
+        Assert.That(chunks, Has.Count.GreaterThan(0));
+        Assert.That(chunks[^1].hdr.DataLength, Is.Zero);
+
+        int headerLen = 4 + 4 + 8 + 4 + TagSize;
+        int endMarkerStart = chunks[^1].cipherOffset - headerLen;
+        using var truncated = new MemoryStream(full.AsSpan(0, endMarkerStart).ToArray(), writable: false);
+        using var dec = new MemoryStream();
+        Assert.ThrowsAsync<EndOfStreamException>(async () => await cipher.DecryptAsync(truncated, dec));
+    }
+
+    [Test]
+    public void Tamper_EndMarker_Tag_ShouldFail()
+    {
+        var cipher = new AesGcmStreamCipher(ValidMasterKey(), keyId: 17);
+        byte[] data = [.. Enumerable.Range(0, MinChunk).Select(i => (byte)(i & 0xFF))];
+        using var input = new MemoryStream(data);
+        using var outEnc = new MemoryStream();
+        cipher.EncryptAsync(input, outEnc, chunkSize: MinChunk).GetAwaiter().GetResult();
+
+        byte[] bytes = outEnc.ToArray();
+        var (_, chunks) = ParseAllHeaders(bytes);
+        Assert.That(chunks[^1].hdr.DataLength, Is.Zero);
+
+        int headerLen = 4 + 4 + 8 + 4 + TagSize;
+        int endMarkerHeaderStart = chunks[^1].cipherOffset - headerLen;
+        int tagOffset = endMarkerHeaderStart + 4 + 4 + 8 + 4;
+        bytes[tagOffset] ^= 0xFF;
+
+        using var tampered = new MemoryStream(bytes, writable: false);
+        using var dec = new MemoryStream();
+        Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tampered, dec));
     }
 }
