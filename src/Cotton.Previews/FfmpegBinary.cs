@@ -1,5 +1,5 @@
-﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Diagnostics;
 using System.Globalization;
@@ -14,51 +14,68 @@ namespace Cotton.Previews
     public sealed record MediaProbeInfo(double? DurationSeconds, string? VideoCodec, string? AudioCodec);
 
     /// <summary>
-    /// Locates, downloads, and queries ffmpeg/ffprobe binaries used by preview generation.
+    /// Locates ffmpeg/ffprobe binaries used by preview generation and downloads them to a writable cache only when needed.
     /// </summary>
     public static class FfmpegBinary
     {
+        private const string FfmpegPathEnvironmentVariable = "COTTON_FFMPEG_PATH";
+        private const string FfprobePathEnvironmentVariable = "COTTON_FFPROBE_PATH";
+        private const string FfmpegDirectoryEnvironmentVariable = "COTTON_FFMPEG_DIR";
+        private const string CacheDirectoryName = "cotton-ffmpeg";
+
         private static readonly SemaphoreSlim DownloadGate = new(1, 1);
+        private static string? _ffmpegPath;
+        private static string? _ffprobePath;
 
-        /// <summary>Returns the expected ffmpeg executable path for the current OS.</summary>
+        /// <summary>Returns the resolved ffmpeg executable path for the current OS.</summary>
         public static string GetFfmpegPath() =>
-            Environment.OSVersion.Platform == PlatformID.Win32NT ? "ffmpeg.exe" : "./ffmpeg";
+            _ffmpegPath ?? ResolveExistingExecutable(FfmpegPathEnvironmentVariable, GetExecutableName("ffmpeg")) ?? GetDownloadedExecutablePath("ffmpeg");
 
-        /// <summary>Returns the expected ffprobe executable path for the current OS.</summary>
+        /// <summary>Returns the resolved ffprobe executable path for the current OS.</summary>
         public static string GetFfprobePath() =>
-            Environment.OSVersion.Platform == PlatformID.Win32NT ? "ffprobe.exe" : "./ffprobe";
+            _ffprobePath ?? ResolveExistingExecutable(FfprobePathEnvironmentVariable, GetExecutableName("ffprobe")) ?? GetDownloadedExecutablePath("ffprobe");
 
-        /// <summary>Downloads ffmpeg and ffprobe if they are missing from the working directory.</summary>
+        /// <summary>Ensures ffmpeg and ffprobe are available without writing to the application directory.</summary>
         public static async Task EnsureAvailableAsync(CancellationToken cancellationToken = default)
         {
-            if (File.Exists(GetFfmpegPath()) && File.Exists(GetFfprobePath()))
+            if (TryResolveInstalledBinaries(out string ffmpegPath, out string ffprobePath))
             {
+                _ffmpegPath = ffmpegPath;
+                _ffprobePath = ffprobePath;
                 return;
             }
 
             await DownloadGate.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                if (File.Exists(GetFfmpegPath()) && File.Exists(GetFfprobePath()))
+                if (TryResolveInstalledBinaries(out ffmpegPath, out ffprobePath))
                 {
+                    _ffmpegPath = ffmpegPath;
+                    _ffprobePath = ffprobePath;
                     return;
                 }
 
-                await FFmpegDownloader.GetLatestVersion(FFmpegVersion.Official).ConfigureAwait(false);
+                string downloadDirectory = GetDownloadDirectory();
+                Directory.CreateDirectory(downloadDirectory);
+
+                await FFmpegDownloader.GetLatestVersion(FFmpegVersion.Official, downloadDirectory).ConfigureAwait(false);
+
+                ffmpegPath = Path.Combine(downloadDirectory, GetExecutableName("ffmpeg"));
+                ffprobePath = Path.Combine(downloadDirectory, GetExecutableName("ffprobe"));
+
+                if (!File.Exists(ffmpegPath) || !File.Exists(ffprobePath))
+                {
+                    throw new FileNotFoundException($"ffmpeg download did not produce both expected binaries in '{downloadDirectory}'.");
+                }
 
                 if (Environment.OSVersion.Platform == PlatformID.Unix)
                 {
-                    using var chmodFfmpeg = Process.Start("chmod", "+x ffmpeg");
-                    using var chmodFfprobe = Process.Start("chmod", "+x ffprobe");
-                    if (chmodFfmpeg is not null)
-                    {
-                        await chmodFfmpeg.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-                    }
-                    if (chmodFfprobe is not null)
-                    {
-                        await chmodFfprobe.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-                    }
+                    await ChmodExecutableAsync(ffmpegPath, cancellationToken).ConfigureAwait(false);
+                    await ChmodExecutableAsync(ffprobePath, cancellationToken).ConfigureAwait(false);
                 }
+
+                _ffmpegPath = ffmpegPath;
+                _ffprobePath = ffprobePath;
             }
             finally
             {
@@ -94,6 +111,126 @@ namespace Cotton.Previews
 
             string? raw = await RunFfprobeAsync(arguments, timeout, cancellationToken).ConfigureAwait(false);
             return string.IsNullOrWhiteSpace(raw) ? null : ParseMediaProbe(raw);
+        }
+
+        private static bool TryResolveInstalledBinaries(out string ffmpegPath, out string ffprobePath)
+        {
+            ffmpegPath = string.Empty;
+            ffprobePath = string.Empty;
+
+            string? resolvedFfmpeg = ResolveConfiguredExecutable(FfmpegPathEnvironmentVariable, GetExecutableName("ffmpeg"));
+            string? resolvedFfprobe = ResolveConfiguredExecutable(FfprobePathEnvironmentVariable, GetExecutableName("ffprobe"));
+
+            if (resolvedFfmpeg is null || resolvedFfprobe is null)
+            {
+                return false;
+            }
+
+            ffmpegPath = resolvedFfmpeg;
+            ffprobePath = resolvedFfprobe;
+            return true;
+        }
+
+        private static string? ResolveConfiguredExecutable(string environmentVariable, string executableName)
+        {
+            string? configured = Environment.GetEnvironmentVariable(environmentVariable);
+            if (string.IsNullOrWhiteSpace(configured))
+            {
+                return FindExecutableOnPath(executableName);
+            }
+
+            string trimmed = configured.Trim();
+            if (File.Exists(trimmed))
+            {
+                return Path.GetFullPath(trimmed);
+            }
+
+            string? fromPath = FindExecutableOnPath(trimmed);
+            if (fromPath is not null)
+            {
+                return fromPath;
+            }
+
+            throw new FileNotFoundException($"{environmentVariable} points to '{trimmed}', but that executable was not found.");
+        }
+
+        private static string? ResolveExistingExecutable(string environmentVariable, string executableName)
+        {
+            try
+            {
+                return ResolveConfiguredExecutable(environmentVariable, executableName);
+            }
+            catch (FileNotFoundException)
+            {
+                return null;
+            }
+        }
+
+        private static string? FindExecutableOnPath(string executableName)
+        {
+            if (Path.IsPathRooted(executableName) || executableName.Contains(Path.DirectorySeparatorChar) || executableName.Contains(Path.AltDirectorySeparatorChar))
+            {
+                return File.Exists(executableName) ? Path.GetFullPath(executableName) : null;
+            }
+
+            string? path = Environment.GetEnvironmentVariable("PATH");
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return null;
+            }
+
+            foreach (string directory in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                string candidate = Path.Combine(directory.Trim('"'), executableName);
+                if (File.Exists(candidate))
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        private static string GetDownloadedExecutablePath(string baseName) =>
+            Path.Combine(GetDownloadDirectory(), GetExecutableName(baseName));
+
+        private static string GetDownloadDirectory()
+        {
+            string? configured = Environment.GetEnvironmentVariable(FfmpegDirectoryEnvironmentVariable);
+            if (!string.IsNullOrWhiteSpace(configured))
+            {
+                return configured.Trim();
+            }
+
+            string? localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (!string.IsNullOrWhiteSpace(localAppData))
+            {
+                return Path.Combine(localAppData, CacheDirectoryName);
+            }
+
+            return Path.Combine(Path.GetTempPath(), CacheDirectoryName);
+        }
+
+        private static string GetExecutableName(string baseName) =>
+            Environment.OSVersion.Platform == PlatformID.Win32NT ? $"{baseName}.exe" : baseName;
+
+        private static async Task ChmodExecutableAsync(string path, CancellationToken cancellationToken)
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "chmod",
+                ArgumentList = { "+x", path },
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            };
+
+            using var process = new Process { StartInfo = startInfo };
+            if (process.Start())
+            {
+                await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            }
         }
 
         private static async Task<string?> RunFfprobeAsync(
@@ -142,116 +279,84 @@ namespace Cotton.Previews
                 await process.WaitForExitAsync(cts.Token).ConfigureAwait(false);
                 return true;
             }
-            catch
+            catch (OperationCanceledException)
             {
-                TryKillProcess(process);
+                try
+                {
+                    if (!process.HasExited)
+                    {
+                        process.Kill(entireProcessTree: true);
+                    }
+                }
+                catch
+                {
+                    // Best effort cleanup after a timed-out ffprobe process.
+                }
+
                 return false;
             }
         }
 
-        private static void TryKillProcess(Process process)
+        private static double? ParsePositiveDuration(string raw)
         {
-            try
-            {
-                process.Kill(entireProcessTree: true);
-            }
-            catch
-            {
-            }
+            return double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
+                && value > 0
+                    ? value
+                    : null;
         }
 
         private static MediaProbeInfo? ParseMediaProbe(string raw)
         {
             try
             {
-                using JsonDocument doc = JsonDocument.Parse(raw);
-                double? duration = TryReadDuration(doc.RootElement);
-                var (videoCodec, audioCodec) = TryReadStreamCodecs(doc.RootElement);
+                using JsonDocument document = JsonDocument.Parse(raw);
+                JsonElement root = document.RootElement;
 
-                return duration is null && videoCodec is null && audioCodec is null
-                    ? null
-                    : new MediaProbeInfo(duration, videoCodec, audioCodec);
+                double? duration = null;
+                if (root.TryGetProperty("format", out JsonElement format)
+                    && format.TryGetProperty("duration", out JsonElement durationElement)
+                    && double.TryParse(durationElement.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out double durationValue)
+                    && durationValue > 0)
+                {
+                    duration = durationValue;
+                }
+
+                string? videoCodec = null;
+                string? audioCodec = null;
+                if (root.TryGetProperty("streams", out JsonElement streams))
+                {
+                    foreach (JsonElement stream in streams.EnumerateArray())
+                    {
+                        if (!stream.TryGetProperty("codec_type", out JsonElement typeElement)
+                            || !stream.TryGetProperty("codec_name", out JsonElement codecElement))
+                        {
+                            continue;
+                        }
+
+                        string? codecType = typeElement.GetString();
+                        string? codecName = codecElement.GetString();
+                        if (codecName is null)
+                        {
+                            continue;
+                        }
+
+                        if (codecType == "video" && videoCodec is null)
+                        {
+                            videoCodec = codecName;
+                        }
+                        else if (codecType == "audio" && audioCodec is null)
+                        {
+                            audioCodec = codecName;
+                        }
+                    }
+                }
+
+                return new MediaProbeInfo(duration, videoCodec, audioCodec);
             }
             catch (JsonException)
             {
                 return null;
             }
-        }
-
-        private static double? TryReadDuration(JsonElement root)
-        {
-            if (!root.TryGetProperty("format", out var format)
-                || !format.TryGetProperty("duration", out var durationElement)
-                || durationElement.ValueKind != JsonValueKind.String)
-            {
-                return null;
-            }
-
-            return ParsePositiveDuration(durationElement.GetString());
-        }
-
-        private static double? ParsePositiveDuration(string? raw)
-        {
-            return double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out double seconds)
-                && seconds > 0
-                    ? seconds
-                    : null;
-        }
-
-        private static (string? VideoCodec, string? AudioCodec) TryReadStreamCodecs(JsonElement root)
-        {
-            if (!root.TryGetProperty("streams", out var streams)
-                || streams.ValueKind != JsonValueKind.Array)
-            {
-                return (null, null);
-            }
-
-            string? videoCodec = null;
-            string? audioCodec = null;
-            foreach (var stream in streams.EnumerateArray())
-            {
-                AssignCodec(stream, ref videoCodec, ref audioCodec);
-            }
-
-            return (videoCodec, audioCodec);
-        }
-
-        private static void AssignCodec(JsonElement stream, ref string? videoCodec, ref string? audioCodec)
-        {
-            if (!TryReadCodec(stream, out string? type, out string? codec))
-            {
-                return;
-            }
-
-            if (type == "video" && videoCodec is null)
-            {
-                videoCodec = codec;
-            }
-            else if (type == "audio" && audioCodec is null)
-            {
-                audioCodec = codec;
-            }
-        }
-
-        private static bool TryReadCodec(JsonElement stream, out string? type, out string? codec)
-        {
-            type = null;
-            codec = null;
-
-            if (!stream.TryGetProperty("codec_type", out var typeElement)
-                || !stream.TryGetProperty("codec_name", out var codecElement))
-            {
-                return false;
-            }
-
-            codec = codecElement.GetString();
-            if (string.IsNullOrWhiteSpace(codec))
-            {
-                return false;
-            }
-
-            type = typeElement.GetString();
-            return true;
         }
     }
 }

@@ -8,7 +8,6 @@ using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System.Diagnostics;
-using Xabe.FFmpeg.Downloader;
 
 namespace Cotton.Previews
 {
@@ -42,7 +41,7 @@ namespace Cotton.Previews
         /// <inheritdoc />
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size = 150)
         {
-            await CheckFfmpegAsync();
+            await FfmpegBinary.EnsureAvailableAsync().ConfigureAwait(false);
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
 
@@ -153,7 +152,7 @@ namespace Cotton.Previews
 
             var startInfo = new ProcessStartInfo
             {
-                FileName = GetFfmpegPath(),
+                FileName = FfmpegBinary.GetFfmpegPath(),
                 Arguments = args,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -262,7 +261,7 @@ namespace Cotton.Previews
 
             var startInfo = new ProcessStartInfo
             {
-                FileName = GetFfmpegPath(),
+                FileName = FfmpegBinary.GetFfmpegPath(),
                 Arguments = args,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -306,22 +305,5 @@ namespace Cotton.Previews
             return outputMs.ToArray();
         }
 
-        private static async Task CheckFfmpegAsync()
-        {
-            if (!File.Exists(GetFfmpegPath()))
-            {
-                await FFmpegDownloader.GetLatestVersion(FFmpegVersion.Official);
-
-                if (Environment.OSVersion.Platform == PlatformID.Unix)
-                {
-                    Process.Start("chmod", "+x ffmpeg");
-                }
-            }
-        }
-
-        private static string GetFfmpegPath()
-        {
-            return Environment.OSVersion.Platform == PlatformID.Win32NT ? "ffmpeg.exe" : "./ffmpeg";
-        }
     }
 }
