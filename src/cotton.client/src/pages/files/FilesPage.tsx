@@ -836,6 +836,7 @@ export const FilesPage: React.FC = () => {
       isCreatingFolder: folderOps.isCreatingFolder,
       selectionMode: fileSelection.selectionMode,
       selectedCount: fileSelection.selectedCount,
+      onToggleSelectionMode: fileSelection.toggleSelectionMode,
       onSelectAll: () => fileSelection.selectAll(tiles),
       onDeselectAll: fileSelection.deselectAll,
       customActionItems,

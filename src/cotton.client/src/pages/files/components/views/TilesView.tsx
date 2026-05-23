@@ -101,7 +101,12 @@ export const TilesView: React.FC<IFileListView> = ({
     handleMoveDragOver,
     handleMoveDragLeave,
     handleMoveDrop,
-  } = useTileDragAndDrop({ tiles, moveSupport });
+  } = useTileDragAndDrop({
+    tiles,
+    moveSupport,
+    selectedIds,
+    selectionMode,
+  });
 
   const shouldVirtualize = tiles.length > VIRTUALIZATION_THRESHOLD;
 
@@ -496,7 +501,7 @@ export const TilesView: React.FC<IFileListView> = ({
                 : undefined
             }
             dimmed={dimmed}
-            draggable={!!moveSupport && !readOnly && !selectionMode}
+            draggable={!!moveSupport && !readOnly}
             onMoveDragStart={
               moveSupport
                 ? (e) => handleMoveDragStart(tileId, e)
