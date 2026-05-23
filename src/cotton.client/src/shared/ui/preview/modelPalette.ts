@@ -31,9 +31,13 @@ export const buildModelPaletteColors = (theme: Theme): PaletteColor[] => [
   { id: "error-dark", color: theme.palette.error.dark },
 ];
 
+export const resolveDefaultModelColor = (theme: Theme): string => {
+  return theme.palette.primary.main;
+};
+
 export const useDefaultModelColor = (): string => {
   const theme = useTheme();
-  return theme.palette.error.main;
+  return resolveDefaultModelColor(theme);
 };
 
 export const useModelPaletteColors = (): PaletteColor[] => {
