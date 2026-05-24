@@ -18,7 +18,7 @@ namespace Cotton.Storage.Processors
         private readonly ICompressionLevelProvider _compressionLevelProvider;
 
         /// <summary>Default Zstandard compression level used for stored blobs.</summary>
-        public const int DefaultCompressionLevel = 3;
+        public const int DefaultCompressionLevel = 1;
         /// <summary>Minimum Zstandard compression level supported by the bundled ZstdSharp build.</summary>
         public static readonly int MinCompressionLevel = Compressor.MinCompressionLevel;
         /// <summary>Maximum Zstandard compression level supported by the bundled ZstdSharp build.</summary>

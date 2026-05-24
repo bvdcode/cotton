@@ -93,7 +93,7 @@ dotnet run --project Cotton.Benchmark -- --mode machine --profile quick --scenar
 - **Measured Iterations**: **10** (statistical validity)
 - **Encryption Threads**: **2**
 - **Cipher Chunk Size**: 1 MB
-- **Compression Level**: 3 (Zstd)
+- **Compression Level**: 1 (Zstd)
 - **Encryption Key**: 256-bit AES
 
 ## Benchmark Scope
@@ -147,7 +147,7 @@ Configuration:
   • Measured Iterations: 10
   • Encryption Threads:  2
   • Cipher Chunk Size:   1.00 MB
-  • Compression Level:   3
+  • Compression Level:   1
   • Encryption Key Size: 256 bits
 
 ======================================================================

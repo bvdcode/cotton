@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Benchmark.Models;
+using Cotton.Storage.Processors;
 
 namespace Cotton.Benchmark.Infrastructure
 {
@@ -18,7 +19,7 @@ namespace Cotton.Benchmark.Infrastructure
                     MeasuredIterations = 3,
                     EncryptionThreads = 2,
                     CipherChunkSizeBytes = 1 * 1024 * 1024,
-                    CompressionLevel = 3,
+                    CompressionLevel = CompressionProcessor.DefaultCompressionLevel,
                     EncryptionKeySize = 32
                 },
                 BenchmarkProfile.Standard => BenchmarkConfiguration.Default,
@@ -29,7 +30,7 @@ namespace Cotton.Benchmark.Infrastructure
                     MeasuredIterations = 5,
                     EncryptionThreads = null,
                     CipherChunkSizeBytes = 4 * 1024 * 1024,
-                    CompressionLevel = 3,
+                    CompressionLevel = CompressionProcessor.DefaultCompressionLevel,
                     EncryptionKeySize = 32
                 },
                 _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, "Unsupported benchmark profile.")

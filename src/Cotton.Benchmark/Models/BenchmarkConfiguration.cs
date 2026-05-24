@@ -36,7 +36,7 @@ namespace Cotton.Benchmark.Models
         /// <summary>
         /// Zstandard compression level used by configured pipeline benchmarks.
         /// </summary>
-        public int CompressionLevel { get; init; } = 3;
+        public int CompressionLevel { get; init; } = Cotton.Storage.Processors.CompressionProcessor.DefaultCompressionLevel;
 
         /// <summary>
         /// Encryption key size in bytes.
