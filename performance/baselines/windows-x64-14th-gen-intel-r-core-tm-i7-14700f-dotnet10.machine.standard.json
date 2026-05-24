@@ -1,0 +1,287 @@
+{
+  "schemaVersion": 1,
+  "createdAtUtc": "2026-05-22T22:07:28.0947377+00:00",
+  "mode": "machine",
+  "profile": "standard",
+  "hardwareKey": "windows-x64-14th-gen-intel-r-core-tm-i7-14700f-dotnet10",
+  "gitCommit": "009d980a91db",
+  "environment": {
+    "architecture": "X64",
+    "cpu": "14th Gen Intel(R) Core(TM) i7-14700F",
+    "dotnet": "10.0.7",
+    "logicalProcessors": "28",
+    "os": "Microsoft Windows 10.0.26200",
+    "runtime": ".NET 10.0.7"
+  },
+  "results": [
+    {
+      "name": "Memory Stream Operations",
+      "succeeded": true,
+      "errorMessage": null,
+      "totalDurationMs": 281.9789,
+      "numericMetrics": {
+        "AvgThroughputMBps": 4578.748449231946,
+        "MinThroughputMBps": 3567.5297710359396,
+        "MaxThroughputMBps": 5529.383142016677,
+        "AvgDurationMs": 22.1857,
+        "P50DurationMs": 22.77395,
+        "P95DurationMs": 26.375274999999995,
+        "Iterations": 10,
+        "DataSizeBytes": 104857600
+      },
+      "textMetrics": {
+        "DataSize": "100.00 MB",
+        "Operation": "Stream Copy"
+      }
+    },
+    {
+      "name": "Hashing (SHA-256)",
+      "succeeded": true,
+      "errorMessage": null,
+      "totalDurationMs": 545.852,
+      "numericMetrics": {
+        "AvgThroughputMBps": 2386.3893281918326,
+        "MinThroughputMBps": 2342.5732229825176,
+        "MaxThroughputMBps": 2412.9585526109418,
+        "AvgDurationMs": 41.9102,
+        "P50DurationMs": 41.6358,
+        "P95DurationMs": 42.66749,
+        "Iterations": 10,
+        "DataSizeBytes": 104857600
+      },
+      "textMetrics": {
+        "DataSize": "100.00 MB"
+      }
+    },
+    {
+      "name": "Cotton.Storage Zstd Compression",
+      "succeeded": true,
+      "errorMessage": null,
+      "totalDurationMs": 1724.3611,
+      "numericMetrics": {
+        "AvgThroughputMBps": 593.2579886273401,
+        "MinThroughputMBps": 441.2542740992125,
+        "MaxThroughputMBps": 688.1483647874483,
+        "AvgDurationMs": 172.3093,
+        "P50DurationMs": 161.0981,
+        "P95DurationMs": 219.98856999999998,
+        "Iterations": 10,
+        "DataSizeBytes": 104857600
+      },
+      "textMetrics": {
+        "DataSize": "100.00 MB",
+        "Implementation": "Cotton.Storage.Processors.CompressionProcessor",
+        "DataType": "Compressible Text (Logs)"
+      }
+    },
+    {
+      "name": "Cotton.Storage Zstd Decompression",
+      "succeeded": true,
+      "errorMessage": null,
+      "totalDurationMs": 923.1622,
+      "numericMetrics": {
+        "AvgThroughputMBps": 1142.2905505787235,
+        "MinThroughputMBps": 710.5810492297658,
+        "MaxThroughputMBps": 1406.764568102176,
+        "AvgDurationMs": 92.0603,
+        "P50DurationMs": 82.5221,
+        "P95DurationMs": 133.911365,
+        "Iterations": 10,
+        "DataSizeBytes": 104857600
+      },
+      "textMetrics": {
+        "DataSize": "100.00 MB",
+        "Implementation": "Cotton.Storage.Processors.CompressionProcessor",
+        "CompressedSize": "10.59 MB",
+        "CompressionRatio": "9.45x"
+      }
+    },
+    {
+      "name": "ZstdSharp Level Sweep 1-5",
+      "succeeded": true,
+      "errorMessage": null,
+      "totalDurationMs": 4760.4091,
+      "numericMetrics": {
+        "Iterations": 10
+      },
+      "textMetrics": {
+        "Engine": "ZstdSharp",
+        "DataType": "Compressible Text",
+        "InputSize": "100.00 MB",
+        "L1_Throughput": "832.60 MB/s",
+        "L1_Compressed": "10.77 MB",
+        "L1_Ratio": "9.29x",
+        "L2_Throughput": "870.99 MB/s",
+        "L2_Compressed": "10.92 MB",
+        "L2_Ratio": "9.16x",
+        "L3_Throughput": "757.60 MB/s",
+        "L3_Compressed": "10.59 MB",
+        "L3_Ratio": "9.45x",
+        "L4_Throughput": "711.21 MB/s",
+        "L4_Compressed": "10.54 MB",
+        "L4_Ratio": "9.49x",
+        "L5_Throughput": "179.32 MB/s",
+        "L5_Compressed": "9.73 MB",
+        "L5_Ratio": "10.28x",
+        "AvgThroughput": "670.34 MB/s",
+        "MinThroughput": "179.32 MB/s",
+        "MaxThroughput": "870.99 MB/s",
+        "DataSize": "100.00 MB"
+      }
+    },
+    {
+      "name": "ZstdSharp Extreme Level Sweep (-5..22)",
+      "succeeded": true,
+      "errorMessage": null,
+      "totalDurationMs": 281110.0966,
+      "numericMetrics": {
+        "Iterations": 10
+      },
+      "textMetrics": {
+        "Engine": "ZstdSharp (Extreme Levels)",
+        "DataType": "Compressible Text",
+        "InputSize": "100.00 MB",
+        "LevelsTested": "-5, -1, 1, 3, 9, 15, 19, 22",
+        "L-5_Throughput": "1068.35 MB/s",
+        "L-5_Compressed": "15.79 MB",
+        "L-5_Ratio": "6.33x",
+        "L-5_Reduction": "84.2%",
+        "L-5_Note": "Ultra-fast (practically no compression)",
+        "L-1_Throughput": "905.82 MB/s",
+        "L-1_Compressed": "12.56 MB",
+        "L-1_Ratio": "7.96x",
+        "L-1_Reduction": "87.4%",
+        "L-1_Note": "Very fast (minimal compression)",
+        "L1_Throughput": "867.14 MB/s",
+        "L1_Compressed": "10.77 MB",
+        "L1_Ratio": "9.29x",
+        "L1_Reduction": "89.2%",
+        "L1_Note": "Fast (low compression)",
+        "L3_Throughput": "780.62 MB/s",
+        "L3_Compressed": "10.59 MB",
+        "L3_Ratio": "9.45x",
+        "L3_Reduction": "89.4%",
+        "L3_Note": "Default (balanced)",
+        "L9_Throughput": "113.50 MB/s",
+        "L9_Compressed": "8.62 MB",
+        "L9_Ratio": "11.59x",
+        "L9_Reduction": "91.4%",
+        "L9_Note": "Balanced (good trade-off)",
+        "L15_Throughput": "12.95 MB/s",
+        "L15_Compressed": "7.58 MB",
+        "L15_Ratio": "13.19x",
+        "L15_Reduction": "92.4%",
+        "L15_Note": "High compression",
+        "L19_Throughput": "2.90 MB/s",
+        "L19_Compressed": "6.86 MB",
+        "L19_Ratio": "14.57x",
+        "L19_Reduction": "93.1%",
+        "L19_Note": "Very high compression",
+        "L22_Throughput": "2.14 MB/s",
+        "L22_Compressed": "6.63 MB",
+        "L22_Ratio": "15.09x",
+        "L22_Reduction": "93.4%",
+        "L22_Note": "Maximum compression (slowest)",
+        "FastestLevel": "Level -5 (1068.35 MB/s)",
+        "BestCompressionLevel": "Level 22 (15.09x)",
+        "SpeedDifference": "499.46x (L-5 vs L22)",
+        "CompressionDifference": "2.38x (L22 vs L-5)",
+        "NegativeVsPositive": "1.23x (L-5 vs L1)",
+        "AvgThroughput": "469.18 MB/s",
+        "MinThroughput": "2.14 MB/s",
+        "MaxThroughput": "1068.35 MB/s",
+        "DataSize": "100.00 MB"
+      }
+    },
+    {
+      "name": "Cotton.Storage AES-GCM Encryption",
+      "succeeded": true,
+      "errorMessage": null,
+      "totalDurationMs": 536.1391,
+      "numericMetrics": {
+        "AvgThroughputMBps": 2055.6131319625915,
+        "MinThroughputMBps": 898.5807815136773,
+        "MaxThroughputMBps": 2439.0600838061046,
+        "AvgDurationMs": 53.4152,
+        "P50DurationMs": 44.25595,
+        "P95DurationMs": 93.61437999999997,
+        "Iterations": 10,
+        "DataSizeBytes": 104857600,
+        "EncryptionThreads": 2
+      },
+      "textMetrics": {
+        "DataSize": "100.00 MB",
+        "Implementation": "Cotton.Storage.Processors.CryptoProcessor",
+        "Cipher": "AesGcmStreamCipher",
+        "KeySize": "256 bits"
+      }
+    },
+    {
+      "name": "Cotton.Storage AES-GCM Decryption",
+      "succeeded": true,
+      "errorMessage": null,
+      "totalDurationMs": 425.7371,
+      "numericMetrics": {
+        "AvgThroughputMBps": 2383.9846978900014,
+        "MinThroughputMBps": 1751.2950827136667,
+        "MaxThroughputMBps": 2614.2013876180968,
+        "AvgDurationMs": 42.4546,
+        "P50DurationMs": 41.453900000000004,
+        "P95DurationMs": 50.96232999999999,
+        "Iterations": 10,
+        "DataSizeBytes": 104857600,
+        "EncryptionThreads": 2
+      },
+      "textMetrics": {
+        "DataSize": "100.00 MB",
+        "Implementation": "Cotton.Storage.Processors.CryptoProcessor",
+        "Cipher": "AesGcmStreamCipher",
+        "EncryptedSize": "100.00 MB"
+      }
+    },
+    {
+      "name": "Filesystem Backend I/O",
+      "succeeded": true,
+      "errorMessage": null,
+      "totalDurationMs": 1438.5839,
+      "numericMetrics": {
+        "AvgThroughputMBps": 1912.5373714588648,
+        "MinThroughputMBps": 1718.0359413118922,
+        "MaxThroughputMBps": 2045.3055635379287,
+        "AvgDurationMs": 104.8426,
+        "P50DurationMs": 103.0112,
+        "P95DurationMs": 114.13418999999999,
+        "Iterations": 10,
+        "DataSizeBytes": 104857600
+      },
+      "textMetrics": {
+        "DataSize": "100.00 MB",
+        "Backend": "Cotton.Storage.Backends.FileSystemStorageBackend",
+        "StoragePath": "X:\\github\\cotton\\src\\Cotton.Benchmark\\bin\\Release\\net10.0\\files",
+        "Operation": "Write \u002B Read \u002B Delete"
+      }
+    },
+    {
+      "name": "Storage Pipeline (Compression + Encryption)",
+      "succeeded": true,
+      "errorMessage": null,
+      "totalDurationMs": 838.1305,
+      "numericMetrics": {
+        "AvgThroughputMBps": 3070.567748808598,
+        "MinThroughputMBps": 2813.5133044010386,
+        "MaxThroughputMBps": 3200.0460806635615,
+        "AvgDurationMs": 65.241,
+        "P50DurationMs": 64.4859,
+        "P95DurationMs": 70.04496499999999,
+        "Iterations": 10,
+        "DataSizeBytes": 104857600
+      },
+      "textMetrics": {
+        "DataSize": "100.00 MB",
+        "Pipeline": "Cotton.Storage.Pipelines.FileStoragePipeline",
+        "Processors": "CompressionProcessor \u002B CryptoProcessor",
+        "DataType": "Compressible JSON"
+      }
+    }
+  ]
+}
