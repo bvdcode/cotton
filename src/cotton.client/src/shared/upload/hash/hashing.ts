@@ -15,6 +15,10 @@ export type IncrementalHasher = {
 
 const normalize = (algorithm: string): string => algorithm.trim().toUpperCase();
 
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 export function toWebCryptoAlgorithm(serverAlgorithm: string): SupportedHashAlgorithm {
   const a = normalize(serverAlgorithm);
 
@@ -81,6 +85,15 @@ export async function hashBytes(bytes: Uint8Array, algorithm: SupportedHashAlgor
   const hasher = await createHashWasmHasher(algorithm);
   hasher.update(bytes);
   return hasher.digest('hex');
+}
+
+export async function hashBuffer(buffer: ArrayBuffer, algorithm: SupportedHashAlgorithm): Promise<string> {
+  if (globalThis.crypto?.subtle) {
+    const digest = await globalThis.crypto.subtle.digest(algorithm, buffer);
+    return bytesToHex(new Uint8Array(digest));
+  }
+
+  return hashBytes(new Uint8Array(buffer), algorithm);
 }
 
 /**

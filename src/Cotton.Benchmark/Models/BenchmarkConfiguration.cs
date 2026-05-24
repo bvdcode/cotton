@@ -34,9 +34,9 @@ namespace Cotton.Benchmark.Models
         public int CipherChunkSizeBytes { get; init; } = 1 * 1024 * 1024; // 1 MB
 
         /// <summary>
-        /// Compression level (1-22 for Zstd).
+        /// Zstandard compression level used by configured pipeline benchmarks.
         /// </summary>
-        public int CompressionLevel { get; init; } = 3;
+        public int CompressionLevel { get; init; } = Cotton.Storage.Processors.CompressionProcessor.DefaultCompressionLevel;
 
         /// <summary>
         /// Encryption key size in bytes.

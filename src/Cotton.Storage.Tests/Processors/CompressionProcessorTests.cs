@@ -225,10 +225,71 @@ namespace Cotton.Storage.Tests.Processors
         }
 
         [Test]
+        public async Task CompressionProcessor_UsesRuntimeCompressionLevelProvider_ForFutureWrites()
+        {
+            // Arrange
+            var provider = new TestCompressionLevelProvider();
+            var processor = new CompressionProcessor(provider);
+            byte[] originalData = CreateCompressionLevelSensitiveData();
+
+            // Act
+            provider.SetLevel(-5);
+            long fastCompressedLength = await CompressAndMeasureAsync(processor, originalData);
+
+            provider.SetLevel(22);
+            long highCompressedLength = await CompressAndMeasureAsync(processor, originalData);
+
+            // Assert
+            Assert.That(
+                highCompressedLength,
+                Is.LessThan(fastCompressedLength),
+                "The processor must read the provider during each write instead of capturing the initial level.");
+        }
+
+        [Test]
         public void CompressionProcessor_Priority_IsCorrect()
         {
             // Assert
             Assert.That(_processor.Priority, Is.EqualTo(10000));
+        }
+
+        private static async Task<long> CompressAndMeasureAsync(CompressionProcessor processor, byte[] originalData)
+        {
+            await using var originalStream = new MemoryStream(originalData);
+            await using Stream compressed = await processor.WriteAsync("test-uid", originalStream);
+            await using var compressedData = new MemoryStream();
+            await compressed.CopyToAsync(compressedData);
+            return compressedData.Length;
+        }
+
+        private static byte[] CreateCompressionLevelSensitiveData()
+        {
+            var builder = new StringBuilder(capacity: 512 * 1024);
+            for (int i = 0; i < 4096; i++)
+            {
+                builder.Append("node=");
+                builder.Append(i % 128);
+                builder.Append("; owner=");
+                builder.Append(i % 17);
+                builder.Append("; path=/library/photos/2026/events/shared-album/");
+                builder.Append(i % 43);
+                builder.Append("; checksum-prefix=");
+                builder.Append(i.ToString("x8"));
+                builder.Append("; repeated-payload=the quick brown fox jumps over the lazy dog;");
+                builder.AppendLine(" metadata=created updated renamed preview-ready");
+            }
+
+            return Encoding.UTF8.GetBytes(builder.ToString());
+        }
+
+        private sealed class TestCompressionLevelProvider : ICompressionLevelProvider
+        {
+            public int Level { get; private set; } = CompressionProcessor.DefaultCompressionLevel;
+
+            public void SetLevel(int compressionLevel)
+            {
+                Level = compressionLevel;
+            }
         }
     }
 }

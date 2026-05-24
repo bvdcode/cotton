@@ -3,6 +3,7 @@
 
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
+using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -11,6 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
 using NUnit.Framework;
 using System.Net;
+using System.Reflection;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
@@ -26,6 +28,8 @@ public class ServerEndpointsTests : IntegrationTestBase
     [SetUp]
     public void SetUp()
     {
+        ResetSettingsProviderCaches();
+
         var creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
         creator.Create();
@@ -67,6 +71,7 @@ public class ServerEndpointsTests : IntegrationTestBase
     {
         _client?.Dispose();
         _factory?.Dispose();
+        ResetSettingsProviderCaches();
     }
 
     [Test]
@@ -80,6 +85,34 @@ public class ServerEndpointsTests : IntegrationTestBase
         Assert.That(settings, Is.Not.Null);
         Assert.That(settings!.ContainsKey("maxChunkSizeBytes"), Is.True);
         Assert.That(settings!.ContainsKey("supportedHashAlgorithm"), Is.True);
+    }
+
+    [Test]
+    public async Task Set_Chunk_Size_IsAdminOnly_AndPersists()
+    {
+        using HttpResponseMessage unauthenticatedResponse = await _client!.PatchAsync(
+            "/api/v1/server/settings/chunk-size/16777216",
+            null);
+        Assert.That(unauthenticatedResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+
+        var token = await LoginAsync();
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        using HttpResponseMessage setResponse = await _client.PatchAsync(
+            "/api/v1/server/settings/chunk-size/16777216",
+            null);
+        setResponse.EnsureSuccessStatusCode();
+        JsonElement setPayload = await setResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.That(setPayload.GetProperty("maxChunkSizeBytes").GetInt32(), Is.EqualTo(16 * 1024 * 1024));
+        Assert.That(setPayload.GetProperty("supportedMaxChunkSizeBytes").GetArrayLength(), Is.EqualTo(3));
+
+        JsonElement getPayload = await _client.GetFromJsonAsync<JsonElement>("/api/v1/server/settings/chunk-size");
+        Assert.That(getPayload.GetProperty("maxChunkSizeBytes").GetInt32(), Is.EqualTo(16 * 1024 * 1024));
+
+        using HttpResponseMessage invalidResponse = await _client.PatchAsync(
+            "/api/v1/server/settings/chunk-size/33554432",
+            null);
+        Assert.That(invalidResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -146,6 +179,16 @@ public class ServerEndpointsTests : IntegrationTestBase
         var response = await _client.GetAsync("/api/v1/server/database-backup/latest");
 
         Assert.That(response.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.NotFound));
+    }
+
+    private static void ResetSettingsProviderCaches()
+    {
+        const BindingFlags flags = BindingFlags.Static | BindingFlags.NonPublic;
+        Type settingsProviderType = typeof(SettingsProvider);
+
+        settingsProviderType.GetField("_cache", flags)?.SetValue(null, null);
+        settingsProviderType.GetField("_isServerInitializedCache", flags)?.SetValue(null, null);
+        settingsProviderType.GetField("_serverHasUsersCache", flags)?.SetValue(null, null);
     }
 
     private async Task<string> LoginAsync()

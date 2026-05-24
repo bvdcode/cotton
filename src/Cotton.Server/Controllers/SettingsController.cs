@@ -29,6 +29,9 @@ namespace Cotton.Server.Controllers
         INotificationsProvider _notifications,
         IGeoLookupService _geoLookup) : ControllerBase
     {
+        private const int MiB = 1024 * 1024;
+        private static readonly int[] SupportedMaxChunkSizeBytes = [4 * MiB, 8 * MiB, 16 * MiB];
+
         /// <summary>
         /// Gets client settings.
         /// </summary>
@@ -64,9 +67,44 @@ namespace Cotton.Server.Controllers
         [HttpGet("chunk-size")]
         public IActionResult GetChunkSize()
         {
-            int maxChunkSizeBytes = _settings.GetServerSettings().MaxChunkSizeBytes;
-            return Ok(new { maxChunkSizeBytes });
+            return Ok(CreateChunkSizeResponse());
         }
+
+        /// <summary>
+        /// Sets the maximum upload chunk size used by clients.
+        /// </summary>
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPatch("chunk-size/{maxChunkSizeBytes:int}")]
+        public async Task<IActionResult> SetChunkSize([FromRoute] int maxChunkSizeBytes, CancellationToken cancellationToken)
+        {
+            if (!SupportedMaxChunkSizeBytes.Contains(maxChunkSizeBytes))
+            {
+                return BadRequest(new
+                {
+                    error = "Unsupported chunk size.",
+                    supportedMaxChunkSizeBytes = SupportedMaxChunkSizeBytes
+                });
+            }
+
+            await _settings.SetPropertyAsync(
+                x => x.MaxChunkSizeBytes,
+                maxChunkSizeBytes,
+                GetFallbackPublicBaseUrl(),
+                cancellationToken);
+
+            return Ok(CreateChunkSizeResponse());
+        }
+
+        private object CreateChunkSizeResponse()
+        {
+            int maxChunkSizeBytes = _settings.GetServerSettings().MaxChunkSizeBytes;
+            return new
+            {
+                maxChunkSizeBytes,
+                supportedMaxChunkSizeBytes = SupportedMaxChunkSizeBytes,
+            };
+        }
+
 
         /// <summary>
         /// Gets supported hash algorithms.

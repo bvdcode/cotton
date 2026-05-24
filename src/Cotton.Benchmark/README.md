@@ -26,6 +26,7 @@ The application follows SOLID principles and object-oriented design:
 - **BenchmarkBase** - Abstract base with warmup/measurement logic
 - **MemoryStreamBenchmark** - Baseline memory stream operations
 - **HashingBenchmark** - SHA-256 hashing for content addressing
+- **ChunkUploadProcessingBenchmark** - combined server write-path processing: SHA-256, buffering, compression, and encryption
 - **CompressionBenchmark** - `Cotton.Storage.Processors.CompressionProcessor` with compressible text
 - **DecompressionBenchmark** - Zstd decompression with compressible text
 - **EncryptionBenchmark** - `Cotton.Storage.Processors.CryptoProcessor` with AES-GCM streaming
@@ -92,7 +93,7 @@ dotnet run --project Cotton.Benchmark -- --mode machine --profile quick --scenar
 - **Measured Iterations**: **10** (statistical validity)
 - **Encryption Threads**: **2**
 - **Cipher Chunk Size**: 1 MB
-- **Compression Level**: 3 (Zstd)
+- **Compression Level**: `CompressionProcessor.DefaultCompressionLevel` (Zstd)
 - **Encryption Key**: 256-bit AES
 
 ## Benchmark Scope
@@ -100,13 +101,15 @@ dotnet run --project Cotton.Benchmark -- --mode machine --profile quick --scenar
 ### 1. Production Code Paths
 - Uses `CompressionProcessor` from `Cotton.Storage.Processors`
 - Uses `CryptoProcessor` with `AesGcmStreamCipher` from `Cotton.Crypto`
+- Includes combined chunk-upload processing scenarios for compressible text, mixed content, and random binary data
 - Uses `FileSystemStorageBackend` from `Cotton.Storage.Backends`
 - Uses `FileStoragePipeline` from `Cotton.Storage.Pipelines`
 
 ### 2. Deterministic Test Data
 - **Compressible Text**: Log-like patterns (compression benchmark)
 - **JSON Data**: Structured documents (pipeline benchmark)
-- **Mixed Data**: Semi-compressible file content (encryption benchmark)
+- **Mixed Data**: Semi-compressible file content (upload processing benchmark)
+- **Random Binary**: Already-compressed media/archive-like content (upload processing benchmark)
 - Avoids zero-filled arrays and trivial patterns
 
 ### 3. Large Workloads
@@ -144,7 +147,7 @@ Configuration:
   • Measured Iterations: 10
   • Encryption Threads:  2
   • Cipher Chunk Size:   1.00 MB
-  • Compression Level:   3
+  • Compression Level:   <DefaultCompressionLevel>
   • Encryption Key Size: 256 bits
 
 ======================================================================
@@ -160,8 +163,8 @@ Configuration:
 | DataType                             | Compressible Text (Logs)    |
 ...
 
-Total Benchmarks:  8
-Successful:        8
+Total Benchmarks:  11
+Successful:        11
 Failed:            0
 Total Time:        9.50 sec
 

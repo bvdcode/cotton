@@ -92,18 +92,14 @@ namespace Cotton.Server.Controllers
             }
 
             using var stream = file.OpenReadStream();
-            byte[] computedHash = await Hasher.HashDataAsync(stream);
-            stream.Seek(default, SeekOrigin.Begin);
-
-            if (!computedHash.SequenceEqual(hashBytes))
-            {
-                return CottonResult.BadRequest("Hash mismatch: the provided hash does not match the uploaded file.");
-            }
-
             Guid userId = User.GetUserId();
             try
             {
-                await _chunkIngest.UpsertChunkAsync(userId, stream, file.Length);
+                await _chunkIngest.UpsertChunkAsync(userId, stream, file.Length, hashBytes);
+            }
+            catch (InvalidDataException ex)
+            {
+                return CottonResult.BadRequest(ex.Message);
             }
             catch (StoragePressureException ex)
             {
@@ -112,6 +108,57 @@ namespace Cotton.Server.Controllers
             }
 
             _logger.LogDebug("Stored chunk {Hash} of size {Size} bytes", hash, file.Length);
+            _perf.OnChunkCreated();
+            return Created();
+        }
+
+        /// <summary>
+        /// Uploads a raw content-addressed chunk without multipart form parsing.
+        /// </summary>
+        [Authorize]
+        [HttpPost(Routes.V1.Chunks + "/raw")]
+        [RequestSizeLimit(AesGcmStreamCipher.MaxChunkSize)]
+        public async Task<IActionResult> UploadRawChunk([FromQuery] string hash)
+        {
+            long? contentLength = Request.ContentLength;
+            if (!contentLength.HasValue || contentLength.Value <= 0)
+            {
+                return CottonResult.BadRequest("No file uploaded.");
+            }
+
+            int maxChunkSizeBytes = _settings.GetServerSettings().MaxChunkSizeBytes;
+            if (contentLength.Value > maxChunkSizeBytes)
+            {
+                return CottonResult.BadRequest($"File size exceeds maximum chunk size of {maxChunkSizeBytes} bytes.");
+            }
+
+            if (string.IsNullOrWhiteSpace(hash))
+            {
+                return CottonResult.BadRequest("Invalid hash format.");
+            }
+
+            byte[] hashBytes = Hasher.FromHexStringHash(hash);
+            if (hashBytes.Length != Hasher.HashSizeInBytes)
+            {
+                return CottonResult.BadRequest("Invalid hash format.");
+            }
+
+            Guid userId = User.GetUserId();
+            try
+            {
+                await _chunkIngest.UpsertChunkAsync(userId, Request.Body, contentLength.Value, hashBytes, HttpContext.RequestAborted);
+            }
+            catch (InvalidDataException ex)
+            {
+                return CottonResult.BadRequest(ex.Message);
+            }
+            catch (StoragePressureException ex)
+            {
+                _logger.LogWarning(ex, "Rejected raw chunk upload because storage free space is below the configured reserve.");
+                return StatusCode(507, "Storage is running out of free space. Uploads are temporarily paused.");
+            }
+
+            _logger.LogDebug("Stored raw chunk {Hash} of size {Size} bytes", hash, contentLength.Value);
             _perf.OnChunkCreated();
             return Created();
         }

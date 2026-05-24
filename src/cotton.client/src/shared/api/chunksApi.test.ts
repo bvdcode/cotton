@@ -101,46 +101,49 @@ describe("chunksApi.exists", () => {
 describe("chunksApi.uploadChunk", () => {
   const makeBlob = () => new Blob(["chunk-bytes"], { type: "text/plain" });
 
-  it("posts a multipart payload with file and hash fields", async () => {
+  it("posts a raw chunk body with the hash in query params", async () => {
     const post = vi.spyOn(httpClient, "post").mockResolvedValue({
       data: undefined,
     });
+    const blob = makeBlob();
 
     await chunksApi.uploadChunk({
-      blob: makeBlob(),
+      blob,
       fileName: "chunk.bin",
       hash: "chunk-hash",
     });
 
     const [url, body, config] = post.mock.calls[0] as [
       string,
-      FormData,
-      { headers: Record<string, string> },
+      Blob,
+      { params: { hash: string }; headers: Record<string, string> },
     ];
-    expect(url).toBe("chunks");
-    expect(body).toBeInstanceOf(FormData);
-    expect(body.get("file")).toBeInstanceOf(Blob);
-    expect(body.get("hash")).toBe("chunk-hash");
-    expect(config.headers["Content-Type"]).toBe("multipart/form-data");
+    expect(url).toBe("chunks/raw");
+    expect(body).toBe(blob);
+    expect(config.params.hash).toBe("chunk-hash");
+    expect(config.headers["Content-Type"]).toBe("application/octet-stream");
   });
 
-  it("omits hash validation when hash is null or undefined", async () => {
+  it("requires a hash for raw chunk uploads", async () => {
     const post = vi.spyOn(httpClient, "post").mockResolvedValue({
       data: undefined,
     });
 
-    await chunksApi.uploadChunk({
-      blob: makeBlob(),
-      fileName: "without-null-hash.bin",
-      hash: null,
-    });
-    await chunksApi.uploadChunk({
-      blob: makeBlob(),
-      fileName: "without-undefined-hash.bin",
-    });
+    await expect(
+      chunksApi.uploadChunk({
+        blob: makeBlob(),
+        fileName: "without-null-hash.bin",
+        hash: null,
+      }),
+    ).rejects.toThrow("Chunk hash is required for raw chunk uploads.");
+    await expect(
+      chunksApi.uploadChunk({
+        blob: makeBlob(),
+        fileName: "without-undefined-hash.bin",
+      }),
+    ).rejects.toThrow("Chunk hash is required for raw chunk uploads.");
 
-    expect((post.mock.calls[0][1] as FormData).has("hash")).toBe(false);
-    expect((post.mock.calls[1][1] as FormData).has("hash")).toBe(false);
+    expect(post).not.toHaveBeenCalled();
   });
 
   it("forwards the abort signal to the upload request", async () => {
@@ -152,6 +155,7 @@ describe("chunksApi.uploadChunk", () => {
     await chunksApi.uploadChunk({
       blob: makeBlob(),
       fileName: "chunk.bin",
+      hash: "chunk-hash",
       signal: controller.signal,
     });
 
@@ -175,6 +179,7 @@ describe("chunksApi.uploadChunk", () => {
     await chunksApi.uploadChunk({
       blob,
       fileName: "chunk.bin",
+      hash: "chunk-hash",
       onProgress,
     });
 
@@ -199,6 +204,7 @@ describe("chunksApi.uploadChunk", () => {
       chunksApi.uploadChunk({
         blob: makeBlob(),
         fileName: "chunk.bin",
+        hash: "chunk-hash",
       }),
     ).resolves.toBeUndefined();
 

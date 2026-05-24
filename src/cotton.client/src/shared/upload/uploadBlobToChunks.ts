@@ -2,7 +2,7 @@ import { chunksApi } from "../api/chunksApi";
 import { isAxiosError } from "../api/httpClient";
 import { AdaptiveConcurrencyController } from "./AdaptiveConcurrencyController";
 import { uploadConfig } from "./config";
-import { createIncrementalHasher, hashBytes, toWebCryptoAlgorithm } from "./hash/hashing";
+import { createIncrementalHasher, hashBuffer, toWebCryptoAlgorithm } from "./hash/hashing";
 import { canUseHashWorker, HashWorkerClient } from "./hash/hashWorkerClient";
 import { globalHashWorkerPool } from "./hash/HashWorkerPool";
 import type { UploadFileToNodeOptions, UploadProgressSnapshot, UploadServerParams } from "./types";
@@ -326,21 +326,13 @@ export async function uploadBlobToChunks(options: {
       }
     };
 
-    const hashSegmentBuffer = async (
-      segment: ChunkSegment,
-      buffer: ArrayBuffer,
-    ): Promise<string> => {
+    const updateFileHashFromBuffer = async (buffer: ArrayBuffer): Promise<void> => {
       if (worker) {
-        return worker.hashChunk(buffer, {
-          updateFileHash: segment.updateFileHash,
-        });
+        await worker.updateFileHash(buffer);
+        return;
       }
 
-      const bytes = new Uint8Array(buffer);
-      if (segment.updateFileHash) {
-        blobHasher!.update(bytes);
-      }
-      return hashBytes(bytes, algorithm);
+      blobHasher!.update(new Uint8Array(buffer));
     };
 
     const uploadHashedChunk = async (
@@ -358,7 +350,7 @@ export async function uploadBlobToChunks(options: {
       await chunksApi.uploadChunk({
         blob: chunk,
         fileName,
-        hash: sendChunkHashForValidation ? chunkHash : null,
+        hash: chunkHash,
         signal: abortController.signal,
         onProgress: (bytesUploaded) => {
           setInFlightProgress(segment.id, bytesUploaded);
@@ -407,16 +399,16 @@ export async function uploadBlobToChunks(options: {
         }
 
         const buffer = await chunk.arrayBuffer();
+        const chunkHashPromise = hashBuffer(buffer, algorithm);
         if (segment.updateFileHash) {
           await waitForFileHashTurn(segment);
-        }
-
-        chunkHash = await hashSegmentBuffer(segment, buffer);
-        if (segment.updateFileHash) {
+          await updateFileHashFromBuffer(buffer);
           advanceFileHashOffset(segment);
         }
 
-        await uploadHashedChunk(segment, chunk, chunkHash);
+        chunkHash = await chunkHashPromise;
+        const uploadChunk = new Blob([buffer], { type: chunk.type });
+        await uploadHashedChunk(segment, uploadChunk, chunkHash);
         completeSegment(segment, chunkHash, startedAt);
       } catch (error) {
         handleSegmentUploadFailure(segment, chunkBytes, startedAt, chunkHash, error);

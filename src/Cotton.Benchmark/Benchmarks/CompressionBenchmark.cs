@@ -14,7 +14,7 @@ namespace Cotton.Benchmark.Benchmarks
     public sealed class CompressionBenchmark(BenchmarkConfiguration configuration) : BenchmarkBase(configuration)
     {
         private readonly byte[] _testData = TestDataGenerator.GenerateCompressibleText(configuration.DataSizeBytes);
-        private readonly CompressionProcessor _processor = new();
+        private readonly CompressionProcessor _processor = new(new FixedCompressionLevelProvider(configuration.CompressionLevel));
 
         /// <inheritdoc/>
         public override string Name => "Cotton.Storage Zstd Compression";
@@ -53,6 +53,7 @@ namespace Cotton.Benchmark.Benchmarks
             var baseMetrics = base.AggregateMetrics(metrics);
             baseMetrics["Implementation"] = "Cotton.Storage.Processors.CompressionProcessor";
             baseMetrics["DataType"] = "Compressible Text (Logs)";
+            baseMetrics["CompressionLevel"] = _configuration.CompressionLevel;
             return baseMetrics;
         }
     }

@@ -22,20 +22,15 @@ export const chunksApi = {
     signal?: AbortSignal;
     onProgress?: (bytesUploaded: number) => void;
   }): Promise<void> => {
-    const form = new FormData();
-
-    // ASP.NET IFormFile binding expects a "file" field.
-    form.append("file", options.blob, options.fileName);
-
-    // When hash validation is disabled, omit the field entirely (-> null server-side).
-    if (options.hash != null) {
-      form.append("hash", options.hash);
+    if (!options.hash) {
+      throw new Error("Chunk hash is required for raw chunk uploads.");
     }
 
-    await httpClient.post("chunks", form, {
+    await httpClient.post("chunks/raw", options.blob, {
+      params: { hash: options.hash },
       signal: options.signal,
       headers: {
-        "Content-Type": "multipart/form-data",
+        "Content-Type": "application/octet-stream",
       },
       onUploadProgress: (event) => {
         if (!options.onProgress) {
