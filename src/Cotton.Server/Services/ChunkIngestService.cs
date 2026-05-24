@@ -12,6 +12,7 @@ using Cotton.Storage.Processors;
 using Cotton.Topology.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using System.Buffers;
 using System.Security.Cryptography;
 
 namespace Cotton.Server.Services;
@@ -37,6 +38,11 @@ public class ChunkIngestService(
     public async Task<Chunk> UpsertChunkAsync(Guid userId, byte[] buffer, int length, CancellationToken ct = default)
     {
         byte[] chunkHash = SHA256.HashData(buffer.AsSpan(0, length));
+        return await UpsertChunkAsync(userId, buffer, length, chunkHash, ct);
+    }
+
+    private async Task<Chunk> UpsertChunkAsync(Guid userId, byte[] buffer, int length, byte[] chunkHash, CancellationToken ct)
+    {
         string storageKey = Hasher.ToHexStringHash(chunkHash);
 
         await WaitForGarbageCollectionAsync(storageKey, ct);
@@ -290,11 +296,65 @@ public class ChunkIngestService(
     /// <summary>
     /// Stores a chunk if it does not already exist and records ownership.
     /// </summary>
-    public async Task<Chunk> UpsertChunkAsync(Guid userId, Stream stream, long length, CancellationToken ct = default)
+    public async Task<Chunk> UpsertChunkAsync(Guid userId, Stream stream, long length, byte[] expectedHash, CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(stream);
+        ArgumentNullException.ThrowIfNull(expectedHash);
         ArgumentOutOfRangeException.ThrowIfNegative(length);
 
-        using var ms = new MemoryStream(capacity: (int)Math.Min(length, int.MaxValue));
+        if (expectedHash.Length != SHA256.HashSizeInBytes)
+        {
+            throw new ArgumentException("Expected hash must be a SHA-256 digest.", nameof(expectedHash));
+        }
+
+        using var hasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        using var ms = new MemoryStream(capacity: checked((int)Math.Min(length, int.MaxValue)));
+        byte[] rented = ArrayPool<byte>.Shared.Rent(128 * 1024);
+        long totalBytesRead = 0;
+
+        try
+        {
+            int bytesRead;
+            while ((bytesRead = await stream.ReadAsync(rented, ct)) > 0)
+            {
+                totalBytesRead += bytesRead;
+                if (totalBytesRead > length)
+                {
+                    throw new InvalidOperationException("Unexpected stream length.");
+                }
+
+                hasher.AppendData(rented, 0, bytesRead);
+                await ms.WriteAsync(rented.AsMemory(0, bytesRead), ct);
+            }
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(rented);
+        }
+
+        if (totalBytesRead != length)
+        {
+            throw new InvalidOperationException("Unexpected stream length.");
+        }
+
+        byte[] computedHash = hasher.GetHashAndReset();
+        if (!CryptographicOperations.FixedTimeEquals(computedHash, expectedHash))
+        {
+            throw new InvalidDataException("Hash mismatch: the provided hash does not match the uploaded file.");
+        }
+
+        return await UpsertChunkAsync(userId, ms.GetBuffer(), (int)ms.Length, computedHash, ct);
+    }
+
+    /// <summary>
+    /// Stores a chunk from a stream when no caller-provided hash is available.
+    /// </summary>
+    public async Task<Chunk> UpsertChunkAsync(Guid userId, Stream stream, long length, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        ArgumentOutOfRangeException.ThrowIfNegative(length);
+
+        using var ms = new MemoryStream(capacity: checked((int)Math.Min(length, int.MaxValue)));
         await stream.CopyToAsync(ms, ct);
 
         if (ms.Length != length)

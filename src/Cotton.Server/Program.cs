@@ -170,6 +170,8 @@ namespace Cotton.Server
                 .AddScoped<ISharedFileDownloadNotifier, SharedFileDownloadNotifier>()
                 .AddScoped<NodeSubtreeService>()
                 .AddScoped<TrashRestoreCoordinator>()
+                .AddSingleton<MutableCompressionLevelProvider>()
+                .AddSingleton<ICompressionLevelProvider>(sp => sp.GetRequiredService<MutableCompressionLevelProvider>())
                 .AddScoped<IStorageProcessor, CryptoProcessor>()
                 .AddScoped<IStorageProcessor, CompressionProcessor>()
                 .AddScoped<IStoragePipeline, FileStoragePipeline>()

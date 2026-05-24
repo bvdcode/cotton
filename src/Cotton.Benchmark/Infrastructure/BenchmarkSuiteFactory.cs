@@ -27,6 +27,9 @@ namespace Cotton.Benchmark.Infrastructure
             [
                 new MemoryStreamBenchmark(configuration),
                 new HashingBenchmark(configuration),
+                new ChunkUploadProcessingBenchmark(configuration, ChunkUploadDataProfile.CompressibleText),
+                new ChunkUploadProcessingBenchmark(configuration, ChunkUploadDataProfile.MixedContent),
+                new ChunkUploadProcessingBenchmark(configuration, ChunkUploadDataProfile.RandomBinary),
                 new CompressionBenchmark(configuration),
                 new DecompressionBenchmark(configuration),
                 new MultiSizeCompressionBenchmark(configuration),
@@ -49,6 +52,7 @@ namespace Cotton.Benchmark.Infrastructure
             return
             [
                 new FileSystemBenchmark(configuration),
+                new ChunkUploadProcessingBenchmark(configuration, ChunkUploadDataProfile.MixedContent),
                 new PipelineBenchmark(configuration),
                 new ImagePreviewMemoryBenchmark(configuration, profile)
             ];

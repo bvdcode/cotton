@@ -8,6 +8,7 @@ using Cotton.Server.Helpers;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using Cotton.Storage.Processors;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.AspNetCore.Extensions;
@@ -27,7 +28,8 @@ namespace Cotton.Server.Controllers
     public class SettingsController(
         SettingsProvider _settings,
         INotificationsProvider _notifications,
-        IGeoLookupService _geoLookup) : ControllerBase
+        IGeoLookupService _geoLookup,
+        MutableCompressionLevelProvider _compressionLevelProvider) : ControllerBase
     {
         /// <summary>
         /// Gets client settings.
@@ -66,6 +68,58 @@ namespace Cotton.Server.Controllers
         {
             int maxChunkSizeBytes = _settings.GetServerSettings().MaxChunkSizeBytes;
             return Ok(new { maxChunkSizeBytes });
+        }
+
+        /// <summary>
+        /// Gets the current diagnostic Zstandard compression level.
+        /// </summary>
+        [AllowAnonymous]
+        [HttpGet("compression")]
+        public IActionResult GetCompressionLevel()
+        {
+            return Ok(CreateCompressionLevelResponse(previousCompressionLevel: null));
+        }
+
+        /// <summary>
+        /// Sets the diagnostic Zstandard compression level for newly written chunks.
+        /// </summary>
+        [AllowAnonymous]
+        [HttpPatch("compression/{level:int}")]
+        public IActionResult SetCompressionLevel([FromRoute] int level)
+        {
+            try
+            {
+                int previousLevel = _compressionLevelProvider.SetLevel(level);
+                return Ok(CreateCompressionLevelResponse(previousLevel));
+            }
+            catch (ArgumentOutOfRangeException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Restores the default diagnostic Zstandard compression level for newly written chunks.
+        /// </summary>
+        [AllowAnonymous]
+        [HttpPatch("compression/reset")]
+        public IActionResult ResetCompressionLevel()
+        {
+            int previousLevel = _compressionLevelProvider.Reset();
+            return Ok(CreateCompressionLevelResponse(previousLevel));
+        }
+
+        private object CreateCompressionLevelResponse(int? previousCompressionLevel)
+        {
+            return new
+            {
+                compressionLevel = _compressionLevelProvider.Level,
+                previousCompressionLevel,
+                defaultCompressionLevel = CompressionProcessor.DefaultCompressionLevel,
+                minCompressionLevel = CompressionProcessor.MinCompressionLevel,
+                maxCompressionLevel = CompressionProcessor.MaxCompressionLevel,
+                appliesTo = "newly written chunks"
+            };
         }
 
         /// <summary>

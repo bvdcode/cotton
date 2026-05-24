@@ -3,7 +3,6 @@
 
 using Cotton.Benchmark.Infrastructure;
 using Cotton.Benchmark.Models;
-using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
 using Cotton.Crypto;
@@ -21,7 +20,6 @@ namespace Cotton.Benchmark.Benchmarks
         private readonly byte[] _testData;
         private readonly FileStoragePipeline _pipeline;
         private readonly AesGcmStreamCipher _cipher;
-        private readonly InMemoryBackend _backend;
 
         /// <summary>Initializes the benchmark with a fixed measurement configuration.</summary>
         public PipelineBenchmark(BenchmarkConfiguration configuration)
@@ -43,13 +41,12 @@ namespace Cotton.Benchmark.Benchmarks
             var compressionProcessor = new CompressionProcessor();
 
             // Use in-memory backend for speed (avoiding disk I/O in this test)
-            _backend = new InMemoryBackend();
-            var backendProvider = new SimpleBackendProvider(_backend);
+            var backend = new InMemoryStorageBackend();
 
             // Create FileStoragePipeline from Cotton.Storage
             _pipeline = new FileStoragePipeline(
                 NullLogger<FileStoragePipeline>.Instance,
-                backendProvider,
+                new StaticStorageBackendProvider(backend),
                 [cryptoProcessor, compressionProcessor]);
         }
 
@@ -104,65 +101,5 @@ namespace Cotton.Benchmark.Benchmarks
             _cipher?.Dispose();
         }
 
-        /// <summary>
-        /// Simple in-memory backend for testing without disk I/O.
-        /// </summary>
-        private class InMemoryBackend : IStorageBackend
-        {
-            private readonly Dictionary<string, byte[]> _storage = [];
-
-            public void CleanupTempFiles(TimeSpan ttl)
-            {
-                // No-op for in-memory backend
-            }
-
-            public Task<bool> DeleteAsync(string uid)
-            {
-                return Task.FromResult(_storage.Remove(uid));
-            }
-
-            public Task<bool> ExistsAsync(string uid)
-            {
-                return Task.FromResult(_storage.ContainsKey(uid));
-            }
-
-            public Task<long> GetSizeAsync(string uid)
-            {
-                return Task.FromResult(_storage.TryGetValue(uid, out var data) ? data.Length : 0L);
-            }
-
-            public Task<Stream> ReadAsync(string uid)
-            {
-                if (!_storage.TryGetValue(uid, out var data))
-                {
-                    throw new FileNotFoundException($"UID not found: {uid}");
-                }
-                return Task.FromResult<Stream>(new MemoryStream(data));
-            }
-
-            public Task WriteAsync(string uid, Stream stream)
-            {
-                using var ms = new MemoryStream();
-                stream.CopyTo(ms);
-                _storage[uid] = ms.ToArray();
-                return Task.CompletedTask;
-            }
-
-            public async IAsyncEnumerable<string> ListAllKeysAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
-            {
-                foreach (var key in _storage.Keys)
-                {
-                    yield return key;
-                }
-                await Task.CompletedTask;
-            }
-        }
-
-        private class SimpleBackendProvider(IStorageBackend backend) : IStorageBackendProvider
-        {
-            private readonly IStorageBackend _backend = backend;
-
-            public IStorageBackend GetBackend() => _backend;
-        }
     }
 }

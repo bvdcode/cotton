@@ -15,13 +15,49 @@ namespace Cotton.Storage.Processors
     /// </summary>
     public class CompressionProcessor : IStorageProcessor
     {
+        private readonly ICompressionLevelProvider _compressionLevelProvider;
+
         /// <summary>Default Zstandard compression level used for stored blobs.</summary>
-        public const int CompressionLevel = 3;
+        public const int DefaultCompressionLevel = 3;
+        /// <summary>Minimum Zstandard compression level supported by the bundled ZstdSharp build.</summary>
+        public static readonly int MinCompressionLevel = Compressor.MinCompressionLevel;
+        /// <summary>Maximum Zstandard compression level supported by the bundled ZstdSharp build.</summary>
+        public static readonly int MaxCompressionLevel = Compressor.MaxCompressionLevel;
         /// <summary>Compression algorithm used by this processor.</summary>
         public const CompressionAlgorithm Algorithm = CompressionAlgorithm.Zstd;
         /// <inheritdoc />
         public int Priority => 10000;
         private const int CompressBufferSize = 1 * 1024 * 1024;
+
+        /// <summary>
+        /// Initializes the processor with the default compression level.
+        /// </summary>
+        public CompressionProcessor()
+            : this(new StaticCompressionLevelProvider(DefaultCompressionLevel))
+        {
+        }
+
+        /// <summary>
+        /// Initializes the processor with a runtime compression level provider.
+        /// </summary>
+        public CompressionProcessor(ICompressionLevelProvider compressionLevelProvider)
+        {
+            _compressionLevelProvider = compressionLevelProvider;
+        }
+
+        /// <summary>
+        /// Validates a Zstandard compression level supported by the bundled ZstdSharp build.
+        /// </summary>
+        public static void ThrowIfInvalidLevel(int level)
+        {
+            if (level < MinCompressionLevel || level > MaxCompressionLevel)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(level),
+                    level,
+                    $"Compression level must be between {MinCompressionLevel} and {MaxCompressionLevel}.");
+            }
+        }
 
         /// <inheritdoc />
         public Task<Stream> ReadAsync(string uid, Stream stream, PipelineContext? context = null)
@@ -52,7 +88,7 @@ namespace Cotton.Storage.Processors
                     await using var writerStream = pipe.Writer.AsStream(leaveOpen: true);
                     await using (var compressor = new CompressionStream(
                         writerStream,
-                        level: CompressionLevel,
+                        level: _compressionLevelProvider.Level,
                         leaveOpen: true))
                     {
                         await stream.CopyToAsync(compressor, CompressBufferSize).ConfigureAwait(false);
@@ -76,6 +112,11 @@ namespace Cotton.Storage.Processors
             });
 
             return Task.FromResult<Stream>(readerStream);
+        }
+
+        private sealed class StaticCompressionLevelProvider(int level) : ICompressionLevelProvider
+        {
+            public int Level { get; } = level;
         }
     }
 }

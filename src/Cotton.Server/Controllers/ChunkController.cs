@@ -92,18 +92,14 @@ namespace Cotton.Server.Controllers
             }
 
             using var stream = file.OpenReadStream();
-            byte[] computedHash = await Hasher.HashDataAsync(stream);
-            stream.Seek(default, SeekOrigin.Begin);
-
-            if (!computedHash.SequenceEqual(hashBytes))
-            {
-                return CottonResult.BadRequest("Hash mismatch: the provided hash does not match the uploaded file.");
-            }
-
             Guid userId = User.GetUserId();
             try
             {
-                await _chunkIngest.UpsertChunkAsync(userId, stream, file.Length);
+                await _chunkIngest.UpsertChunkAsync(userId, stream, file.Length, hashBytes);
+            }
+            catch (InvalidDataException ex)
+            {
+                return CottonResult.BadRequest(ex.Message);
             }
             catch (StoragePressureException ex)
             {
