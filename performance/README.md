@@ -21,13 +21,19 @@ Run a quick local check:
 dotnet run --project src/Cotton.Benchmark -c Release -- --mode machine --profile quick
 ```
 
+Create or refresh the reviewed baseline for the current hardware key with defaults:
+
+```bash
+dotnet run --project src/Cotton.Benchmark -c Release
+```
+
 Run the expensive Zstd extreme-level sweep only on purpose:
 
 ```bash
 dotnet run --project src/Cotton.Benchmark -c Release -- --mode machine --profile quick --scenario extreme
 ```
 
-Create or refresh a reviewed baseline for the current hardware key:
+Explicit equivalent of the default baseline command:
 
 ```bash
 dotnet run --project src/Cotton.Benchmark -c Release -- --mode machine --profile standard --update-baseline

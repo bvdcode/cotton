@@ -58,8 +58,8 @@ dotnet run --project Cotton.Benchmark --configuration Release
 ### Command Line Options
 ```bash
 dotnet run --project Cotton.Benchmark -- --help
-dotnet run --project Cotton.Benchmark -- --mode machine --profile quick
-dotnet run --project Cotton.Benchmark -- --mode machine --profile standard --update-baseline
+dotnet run --project Cotton.Benchmark --configuration Release
+dotnet run --project Cotton.Benchmark -- --mode machine --profile quick --no-update-baseline
 dotnet run --project Cotton.Benchmark -- --mode machine --profile standard --compare
 ```
 
@@ -71,7 +71,7 @@ dotnet run --project Cotton.Benchmark -- --mode development --profile quick --sc
 
 ### Regression Baselines
 
-Reviewed baselines live under `performance/baselines`. Unreviewed run output is written to `performance/results` and ignored by git. Baselines are scoped by hardware key, benchmark mode, and profile so local machines can track their own history without pretending GitHub runner timings are stable.
+Reviewed baselines live under `performance/baselines`. A full non-compare run updates the reviewed baseline by default; use `--no-update-baseline` to save only an unreviewed result. Unreviewed run output is written to `performance/results` and ignored by git. Baselines are scoped by hardware key, benchmark mode, and profile so local machines can track their own history without pretending GitHub runner timings are stable.
 
 Modes:
 

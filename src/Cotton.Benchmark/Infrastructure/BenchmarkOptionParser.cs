@@ -13,9 +13,9 @@ namespace Cotton.Benchmark.Infrastructure
             BenchmarkProfile profile = BenchmarkProfile.Standard;
             bool list = false;
             bool compare = false;
-            bool update = false;
-            string baselineDirectory = Path.Combine("performance", "baselines");
-            string resultsDirectory = Path.Combine("performance", "results");
+            bool? update = null;
+            string baselineDirectory = BenchmarkPathDefaults.BaselineDirectory;
+            string resultsDirectory = BenchmarkPathDefaults.ResultsDirectory;
             var scenarioFilters = new List<string>();
 
             for (int i = 0; i < args.Length; i++)
@@ -45,6 +45,9 @@ namespace Cotton.Benchmark.Infrastructure
                     case "--update-baseline":
                         update = true;
                         break;
+                    case "--no-update-baseline":
+                        update = false;
+                        break;
                     case "--baseline-dir":
                         baselineDirectory = ReadValue(args, ref i, arg);
                         break;
@@ -62,11 +65,21 @@ namespace Cotton.Benchmark.Infrastructure
                 Profile = profile,
                 ListBenchmarks = list,
                 CompareBaseline = compare,
-                UpdateBaseline = update,
+                UpdateBaseline = update ?? ShouldUpdateBaselineByDefault(list, compare, scenarioFilters),
                 BaselineDirectory = baselineDirectory,
                 ResultsDirectory = resultsDirectory,
                 ScenarioFilters = scenarioFilters
             };
+        }
+
+        private static bool ShouldUpdateBaselineByDefault(
+            bool list,
+            bool compare,
+            IReadOnlyCollection<string> scenarioFilters)
+        {
+            return !list
+                && !compare
+                && scenarioFilters.Count == 0;
         }
 
         private static TEnum ParseEnumValue<TEnum>(string value, string optionName)
