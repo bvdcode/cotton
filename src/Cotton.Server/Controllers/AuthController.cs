@@ -375,7 +375,7 @@ namespace Cotton.Server.Controllers
             try
             {
                 User user = await _passkeys.FinishAssertionAsync(request, cancellationToken);
-                return Ok(await CreateSignedInResponseAsync(user, request.TrustDevice));
+                return Ok(await CreateSignedInResponseAsync(user, request.TrustDevice, AuthType.Passkey));
             }
             catch (UnauthorizedAccessException)
             {
@@ -408,7 +408,7 @@ namespace Cotton.Server.Controllers
                 return totpFailure;
             }
 
-            return Ok(await CreateSignedInResponseAsync(user, request.TrustDevice));
+            return Ok(await CreateSignedInResponseAsync(user, request.TrustDevice, AuthType.Credentials));
         }
 
         private async Task<User?> GetUserOrTryGetNewAsync(LoginRequest request)
@@ -529,7 +529,10 @@ namespace Cotton.Server.Controllers
             var accessToken = CreateAccessToken(user, dbToken.SessionId!);
             dbToken.RevokedAt = DateTime.UtcNow;
             var (newDbToken, newRefreshToken) = await CreateRefreshTokenAsync(
-                user, dbToken.IsTrusted, dbToken.SessionId);
+                user,
+                dbToken.IsTrusted,
+                dbToken.AuthType,
+                dbToken.SessionId);
             await _dbContext.RefreshTokens.AddAsync(newDbToken);
             await _dbContext.SaveChangesAsync();
             AddRefreshTokenToCookies(newRefreshToken, dbToken.IsTrusted);
@@ -616,9 +619,9 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
-        private async Task<TokenPairResponseDto> CreateSignedInResponseAsync(User user, bool trustDevice)
+        private async Task<TokenPairResponseDto> CreateSignedInResponseAsync(User user, bool trustDevice, AuthType authType)
         {
-            var (dbToken, refreshToken) = await CreateRefreshTokenAsync(user, trustDevice);
+            var (dbToken, refreshToken) = await CreateRefreshTokenAsync(user, trustDevice, authType);
             string accessToken = CreateAccessToken(user, dbToken.SessionId!);
             await _dbContext.RefreshTokens.AddAsync(dbToken);
             await _dbContext.SaveChangesAsync();
@@ -752,6 +755,7 @@ namespace Cotton.Server.Controllers
         private async Task<(ExtendedRefreshToken DbToken, string RefreshToken)> CreateRefreshTokenAsync(
             User user,
             bool trustDevice,
+            AuthType authType,
             string? sessionId = null)
         {
             IPAddress ipAddress = GetRequestIpAddress();
@@ -768,7 +772,7 @@ namespace Cotton.Server.Controllers
                 Region = geo.Region,
                 IsTrusted = trustDevice,
                 Country = geo.Country,
-                AuthType = AuthType.Credentials,
+                AuthType = authType,
                 IpAddress = ipAddress,
                 UserAgent = Request.Headers.UserAgent.ToString(),
                 Token = HashRefreshToken(refreshToken),

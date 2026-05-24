@@ -14,7 +14,7 @@ namespace Cotton.Server.Services
         /// <summary>
         /// Defines the gateway base URL.
         /// </summary>
-        public const string GatewayBaseUrl = "https://cotton-gateway.splidex.com/api/v1/";
+        public const string GatewayBaseUrl = "https://bridge.cottoncloud.dev/api/v1/";
         private readonly HttpClient _httpClient;
         private readonly Guid _instanceId;
         private readonly ILogger<CottonPublicEmailProvider> _logger;

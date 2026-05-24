@@ -23,7 +23,7 @@ namespace Cotton.Server.Jobs
         StoragePipelineProbeService _storagePipelineProbe,
         ILogger<CollectPerformanceJob> _logger) : IJob
     {
-        private const string CloudTelemetryUrl = "https://cotton-gateway.splidex.com/api/v1/telemetry";
+        private const string CloudTelemetryUrl = "https://bridge.cottoncloud.dev/api/v1/telemetry";
 
         /// <summary>
         /// Executes the scheduled Quartz job.
