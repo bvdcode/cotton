@@ -883,6 +883,7 @@ namespace Cotton.Server.Controllers
             }
 
             _integrity.RequireValid(_dbContext, nodeShareToken, "shared-folder.node-token");
+            _integrity.RequireValid(_dbContext, nodeShareToken.Node, "shared-folder.root-node");
             if (nodeShareToken.Node.Type != NodeType.Default)
             {
                 return null;
@@ -898,13 +899,10 @@ namespace Cotton.Server.Controllers
         {
             const int maxDepth = 512;
 
-            var currentNode = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.Id == nodeId
-                    && x.OwnerId == ownerId
-                    && x.Type == NodeType.Default)
-                .Select(x => new { x.Id, x.ParentId })
-                .SingleOrDefaultAsync();
+            Node? currentNode = await LoadVerifiedSharedDefaultNodeAsync(
+                nodeId,
+                ownerId,
+                "shared-folder.subtree.node");
 
             if (currentNode == null)
             {
@@ -932,26 +930,43 @@ namespace Cotton.Server.Controllers
                     return false;
                 }
 
-                if (parentId == sharedRootNodeId)
-                {
-                    return true;
-                }
-
-                currentNode = await _dbContext.Nodes
-                    .AsNoTracking()
-                    .Where(x => x.Id == parentId
-                        && x.OwnerId == ownerId
-                        && x.Type == NodeType.Default)
-                    .Select(x => new { x.Id, x.ParentId })
-                    .SingleOrDefaultAsync();
+                currentNode = await LoadVerifiedSharedDefaultNodeAsync(
+                    parentId,
+                    ownerId,
+                    "shared-folder.subtree.ancestor");
 
                 if (currentNode == null)
                 {
                     return false;
                 }
+
+                if (currentNode.Id == sharedRootNodeId)
+                {
+                    return true;
+                }
             }
 
             return false;
+        }
+
+        private async Task<Node?> LoadVerifiedSharedDefaultNodeAsync(
+            Guid nodeId,
+            Guid ownerId,
+            string boundary)
+        {
+            var node = await _dbContext.Nodes
+                .Where(x => x.Id == nodeId
+                    && x.OwnerId == ownerId
+                    && x.Type == NodeType.Default)
+                .SingleOrDefaultAsync();
+
+            if (node == null)
+            {
+                return null;
+            }
+
+            _integrity.RequireValid(_dbContext, node, boundary);
+            return node;
         }
 
         private async Task<string> CreateUniqueShareTokenAsync(int length)
