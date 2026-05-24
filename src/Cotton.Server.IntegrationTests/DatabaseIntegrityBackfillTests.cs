@@ -196,12 +196,22 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
             $"UPDATE users SET role = {(int)UserRole.Admin} WHERE id = {user.Id}");
         DbContext.ChangeTracker.Clear();
 
-        await using CottonDbContext signingDbContext = CreateSigningDbContext();
+        var reporter = new CapturingDatabaseIntegrityFailureReporter();
+        await using CottonDbContext signingDbContext = CreateSigningDbContext(reporter);
         User tampered = await signingDbContext.Users.SingleAsync(x => x.Id == user.Id);
         tampered.FirstName = "Legitimate edit";
 
         Assert.ThrowsAsync<DatabaseIntegrityException>(async () =>
             await signingDbContext.SaveChangesAsync(CancellationToken.None));
+
+        Assert.That(reporter.Failures, Has.Count.EqualTo(1));
+        DatabaseIntegrityFailure failure = reporter.Failures[0];
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(failure.EntityName, Is.EqualTo("users"));
+            Assert.That(failure.EntityKey, Is.EqualTo(user.Id.ToString("D")));
+            Assert.That(failure.Boundary, Is.EqualTo("save.original-state"));
+        }
     }
 
     private byte[]? ReadMac(User user)
@@ -211,7 +221,7 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
             .CurrentValue;
     }
 
-    private CottonDbContext CreateSigningDbContext()
+    private CottonDbContext CreateSigningDbContext(IDatabaseIntegrityFailureReporter? reporter = null)
     {
         DbContextOptionsBuilder<CottonDbContext> optionsBuilder = new();
         var builder = new NpgsqlConnectionStringBuilder
@@ -228,7 +238,18 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
             optionsBuilder.Options,
             integrityChangeSigner: new DatabaseIntegrityChangeSigner(
                 CreateProtector(),
-                new DatabaseIntegrityDescriptorRegistry(CreateDescriptors())));
+                new DatabaseIntegrityDescriptorRegistry(CreateDescriptors()),
+                reporter));
+    }
+
+    private sealed class CapturingDatabaseIntegrityFailureReporter : IDatabaseIntegrityFailureReporter
+    {
+        public List<DatabaseIntegrityFailure> Failures { get; } = [];
+
+        public void Report(DatabaseIntegrityFailure failure)
+        {
+            Failures.Add(failure);
+        }
     }
 
     private DatabaseIntegrityBridgeBackfillService CreateBackfillService(CottonDbContext? dbContext = null)
