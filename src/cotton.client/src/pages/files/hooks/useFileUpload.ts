@@ -15,6 +15,7 @@ import {
   ConflictAction,
 } from "../utils/uploadConflicts";
 import { showActionToast } from "../../../shared/ui/ActionToast";
+import { toast } from "../../../shared/ui/notifications";
 import { useFileConflictDialog } from "./useFileConflictDialog";
 
 interface UseBreadcrumb {
@@ -105,6 +106,8 @@ export const useFileUpload = (
     emptySkippedItemsDialog,
   );
   const skipAllConflictsRef = useRef<boolean>(false);
+  const skippedItemsToastIdRef = useRef<string | null>(null);
+  const skippedItemsToastSequenceRef = useRef(0);
   const onToast = options?.onToast;
 
   const baseLabel = useMemo(() => {
@@ -686,8 +689,15 @@ export const useFileUpload = (
             truncated: scan.skippedItems.length < scan.skippedNotFound,
           };
           setSkippedItemsDialog(details);
+          if (skippedItemsToastIdRef.current) {
+            toast.dismiss(skippedItemsToastIdRef.current);
+          }
+          skippedItemsToastSequenceRef.current += 1;
+          const toastId = `files-upload-skipped-${skippedItemsToastSequenceRef.current}`;
+          skippedItemsToastIdRef.current = toastId;
+
           showActionToast({
-            toastId: `files-upload-skipped-${scan.skippedNotFound}`,
+            toastId,
             message: t("uploadDrop.toasts.someItemsSkipped", {
               ns: "files",
               count: scan.skippedNotFound,
