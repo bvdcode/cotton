@@ -142,6 +142,41 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Upload_Raw_Chunk_And_Create_File_From_It_Works()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client!.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var content = Encoding.UTF8.GetBytes("hello raw world");
+        var chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
+        using var body = new ByteArrayContent(content)
+        {
+            Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
+        };
+
+        var upRes = await _client.PostAsync($"/api/v1/chunks/raw?hash={chunkHashLower}", body);
+        upRes.EnsureSuccessStatusCode();
+
+        var fileReq = new CreateFileRequest
+        {
+            ChunkHashes = [chunkHashLower],
+            Name = "hello-raw.txt",
+            ContentType = "text/plain",
+            Hash = chunkHashLower,
+            NodeId = root!.Id
+        };
+        var createFileRes = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
+        createFileRes.EnsureSuccessStatusCode();
+
+        var created = await createFileRes.Content.ReadFromJsonAsync<Cotton.Server.Models.Dto.NodeFileManifestDto>();
+        Assert.That(created, Is.Not.Null);
+        Assert.That(created!.Name, Is.EqualTo("hello-raw.txt"));
+    }
+
+    [Test]
     public async Task Upload_Same_Chunk_In_Parallel_Deduplicates_Metadata()
     {
         var token = await LoginAsync();

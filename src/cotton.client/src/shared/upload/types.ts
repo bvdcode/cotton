@@ -4,7 +4,8 @@ export interface UploadServerParams {
 }
 
 export interface UploadFileToNodeOptions {
-  // When false, we omit the chunk hash field on upload (server sees null).
+  // When false, skip the pre-upload ownership probe. The upload request still
+  // sends the chunk hash so the server can validate the raw body.
   sendChunkHashForValidation?: boolean;
 
   // Parallel chunk uploads per file.

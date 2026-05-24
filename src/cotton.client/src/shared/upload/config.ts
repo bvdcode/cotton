@@ -1,7 +1,6 @@
 export const uploadConfig = {
-  // If false: the client omits the "hash" field on chunk upload (server sees null).
-  // Chunk hashes are still computed client-side because the final "from-chunks" request
-  // requires an ordered list of chunk hashes.
+  // If true, the client probes chunk ownership before uploading. The raw upload
+  // endpoint still receives the hash so the server can validate bytes on ingest.
   sendChunkHashForValidation: true,
 
   // Upload at most 4 chunks in parallel inside one large file.

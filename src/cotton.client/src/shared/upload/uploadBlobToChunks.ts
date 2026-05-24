@@ -358,7 +358,7 @@ export async function uploadBlobToChunks(options: {
       await chunksApi.uploadChunk({
         blob: chunk,
         fileName,
-        hash: sendChunkHashForValidation ? chunkHash : null,
+        hash: chunkHash,
         signal: abortController.signal,
         onProgress: (bytesUploaded) => {
           setInFlightProgress(segment.id, bytesUploaded);
