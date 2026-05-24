@@ -59,7 +59,7 @@ public sealed class StoredZipArchiveWriter
 
     internal static bool RequiresZip64CentralDirectoryMetadata(long sizeBytes, long localHeaderOffset)
     {
-        return sizeBytes > UInt32Max || localHeaderOffset > UInt32Max;
+        return RequiresZip64UInt32(sizeBytes) || RequiresZip64UInt32(localHeaderOffset);
     }
 
     /// <summary>
@@ -110,7 +110,7 @@ public sealed class StoredZipArchiveWriter
                 throw new InvalidOperationException($"Archive entry path has invalid UTF-8 length: '{entry.Path}'.");
             }
 
-            bool zip64DataDescriptor = !entry.IsDirectory && entry.SizeBytes > UInt32Max;
+            bool zip64DataDescriptor = !entry.IsDirectory && RequiresZip64UInt32(entry.SizeBytes);
             long localHeaderLength = 30 + pathBytes.Length;
             long dataDescriptorLength = entry.IsDirectory ? 0 : zip64DataDescriptor ? 24 : 16;
 
@@ -135,9 +135,9 @@ public sealed class StoredZipArchiveWriter
             centralDirectoryLength += 46 + entry.PathBytes.Length + centralExtraLength;
         }
 
-        bool needsZip64End = entries.Count > UInt16Max ||
-            centralDirectoryOffset > UInt32Max ||
-            centralDirectoryLength > UInt32Max;
+        bool needsZip64End = RequiresZip64UInt16(entries.Count) ||
+            RequiresZip64UInt32(centralDirectoryOffset) ||
+            RequiresZip64UInt32(centralDirectoryLength);
         long endLength = (needsZip64End ? 56 + 20 : 0) + 22;
         return new ZipPlan(
             plans,
@@ -293,8 +293,8 @@ public sealed class StoredZipArchiveWriter
         CancellationToken cancellationToken)
     {
         ZipEntryPlan entry = written.Plan;
-        bool sizeNeedsZip64 = entry.SizeBytes > UInt32Max;
-        bool offsetNeedsZip64 = entry.LocalHeaderOffset > UInt32Max;
+        bool sizeNeedsZip64 = RequiresZip64UInt32(entry.SizeBytes);
+        bool offsetNeedsZip64 = RequiresZip64UInt32(entry.LocalHeaderOffset);
         // ZIP64 central metadata is required even when each file is small if the local
         // header offset crosses the 4 GiB boundary in a large folder archive.
         bool requiresZip64CentralMetadata = RequiresZip64CentralDirectoryMetadata(
@@ -446,10 +446,10 @@ public sealed class StoredZipArchiveWriter
             BinaryPrimitives.WriteUInt32LittleEndian(eocd[0..4], 0x06054b50);
             BinaryPrimitives.WriteUInt16LittleEndian(eocd[4..6], 0);
             BinaryPrimitives.WriteUInt16LittleEndian(eocd[6..8], 0);
-            BinaryPrimitives.WriteUInt16LittleEndian(eocd[8..10], entryCount > UInt16Max ? UInt16Max : (ushort)entryCount);
-            BinaryPrimitives.WriteUInt16LittleEndian(eocd[10..12], entryCount > UInt16Max ? UInt16Max : (ushort)entryCount);
-            BinaryPrimitives.WriteUInt32LittleEndian(eocd[12..16], plan.CentralDirectoryLength > UInt32Max ? UInt32Max : (uint)plan.CentralDirectoryLength);
-            BinaryPrimitives.WriteUInt32LittleEndian(eocd[16..20], plan.CentralDirectoryOffset > UInt32Max ? UInt32Max : (uint)plan.CentralDirectoryOffset);
+            BinaryPrimitives.WriteUInt16LittleEndian(eocd[8..10], RequiresZip64UInt16(entryCount) ? UInt16Max : (ushort)entryCount);
+            BinaryPrimitives.WriteUInt16LittleEndian(eocd[10..12], RequiresZip64UInt16(entryCount) ? UInt16Max : (ushort)entryCount);
+            BinaryPrimitives.WriteUInt32LittleEndian(eocd[12..16], RequiresZip64UInt32(plan.CentralDirectoryLength) ? UInt32Max : (uint)plan.CentralDirectoryLength);
+            BinaryPrimitives.WriteUInt32LittleEndian(eocd[16..20], RequiresZip64UInt32(plan.CentralDirectoryOffset) ? UInt32Max : (uint)plan.CentralDirectoryOffset);
             BinaryPrimitives.WriteUInt16LittleEndian(eocd[20..22], 0);
             await destination.WriteAsync(eocd.ToArray(), cancellationToken).ConfigureAwait(false);
         }
@@ -462,17 +462,27 @@ public sealed class StoredZipArchiveWriter
     private static long GetCentralZip64ExtraLength(long sizeBytes, long localHeaderOffset)
     {
         int payloadLength = 0;
-        if (sizeBytes > UInt32Max)
+        if (RequiresZip64UInt32(sizeBytes))
         {
             payloadLength += 16;
         }
 
-        if (localHeaderOffset > UInt32Max)
+        if (RequiresZip64UInt32(localHeaderOffset))
         {
             payloadLength += 8;
         }
 
         return payloadLength == 0 ? 0 : 4 + payloadLength;
+    }
+
+    private static bool RequiresZip64UInt16(int value)
+    {
+        return value >= UInt16Max;
+    }
+
+    private static bool RequiresZip64UInt32(long value)
+    {
+        return value >= UInt32Max;
     }
 
     private sealed record ZipPlan(

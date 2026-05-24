@@ -12,11 +12,11 @@ namespace Cotton.Server.IntegrationTests;
 public class StoredZipArchiveWriterTests
 {
     [Test]
-    public async Task CentralDirectory_WritesZip64ExtraAfterFileName_WhenOnlyOffsetOverflows()
+    public async Task CentralDirectory_WritesZip64ExtraAfterFileName_WhenOnlyOffsetUsesZip64Sentinel()
     {
         const string path = "tiny.txt";
         byte[] pathBytes = Encoding.UTF8.GetBytes(path);
-        long overflowingOffset = (long)uint.MaxValue + 1;
+        long zip64Offset = uint.MaxValue;
 
         Type writerType = typeof(StoredZipArchiveWriter);
         Type planType = writerType.GetNestedType("ZipEntryPlan", BindingFlags.NonPublic)
@@ -25,7 +25,7 @@ public class StoredZipArchiveWriterTests
             planType,
             BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public,
             binder: null,
-            args: [path, pathBytes, 12L, false, false, overflowingOffset],
+            args: [path, pathBytes, 12L, false, false, zip64Offset],
             culture: null)
             ?? throw new InvalidOperationException("ZIP entry plan could not be created.");
         planType.GetProperty("CentralExtraLength")?.SetValue(plan, 12L);
@@ -58,7 +58,7 @@ public class StoredZipArchiveWriterTests
             Assert.That(bytes.AsSpan(46, pathBytes.Length).ToArray(), Is.EqualTo(pathBytes));
             Assert.That(BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(46 + pathBytes.Length, 2)), Is.EqualTo(0x0001));
             Assert.That(BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(48 + pathBytes.Length, 2)), Is.EqualTo(8));
-            Assert.That(BinaryPrimitives.ReadInt64LittleEndian(bytes.AsSpan(50 + pathBytes.Length, 8)), Is.EqualTo(overflowingOffset));
+            Assert.That(BinaryPrimitives.ReadInt64LittleEndian(bytes.AsSpan(50 + pathBytes.Length, 8)), Is.EqualTo(zip64Offset));
         });
     }
 
@@ -66,10 +66,30 @@ public class StoredZipArchiveWriterTests
     public void RequiresZip64CentralDirectoryMetadata_ReturnsFalse_WhenSizeAndOffsetFit()
     {
         bool requiresZip64 = StoredZipArchiveWriter.RequiresZip64CentralDirectoryMetadata(
-            uint.MaxValue,
-            uint.MaxValue);
+            (long)uint.MaxValue - 1,
+            (long)uint.MaxValue - 1);
 
         Assert.That(requiresZip64, Is.False);
+    }
+
+    [Test]
+    public void RequiresZip64CentralDirectoryMetadata_ReturnsTrue_WhenOffsetUsesZip64Sentinel()
+    {
+        bool requiresZip64 = StoredZipArchiveWriter.RequiresZip64CentralDirectoryMetadata(
+            1024,
+            uint.MaxValue);
+
+        Assert.That(requiresZip64, Is.True);
+    }
+
+    [Test]
+    public void RequiresZip64CentralDirectoryMetadata_ReturnsTrue_WhenSizeUsesZip64Sentinel()
+    {
+        bool requiresZip64 = StoredZipArchiveWriter.RequiresZip64CentralDirectoryMetadata(
+            uint.MaxValue,
+            1024);
+
+        Assert.That(requiresZip64, Is.True);
     }
 
     [Test]
