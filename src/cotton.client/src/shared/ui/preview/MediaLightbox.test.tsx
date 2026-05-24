@@ -70,13 +70,14 @@ describe("MediaLightbox", () => {
     capturedLightboxProps.length = 0;
     const onClose = vi.fn();
 
-    render(
+    const getSignedMediaUrl = vi.fn();
+    const { rerender } = render(
       <MediaLightbox
         items={mediaItems}
         open
         initialIndex={0}
         onClose={onClose}
-        getSignedMediaUrl={vi.fn()}
+        getSignedMediaUrl={getSignedMediaUrl}
       />,
     );
 
@@ -90,5 +91,32 @@ describe("MediaLightbox", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(capturedLightboxProps.at(-1)?.slides).toHaveLength(0);
     expect(capturedLightboxProps.at(-1)?.video?.autoPlay).toBe(false);
+
+    act(() => {
+      rerender(
+        <MediaLightbox
+          items={mediaItems}
+          open={false}
+          initialIndex={0}
+          onClose={onClose}
+          getSignedMediaUrl={getSignedMediaUrl}
+        />,
+      );
+    });
+
+    act(() => {
+      rerender(
+        <MediaLightbox
+          items={mediaItems}
+          open
+          initialIndex={0}
+          onClose={onClose}
+          getSignedMediaUrl={getSignedMediaUrl}
+        />,
+      );
+    });
+
+    expect(capturedLightboxProps.at(-1)?.slides).toHaveLength(1);
+    expect(capturedLightboxProps.at(-1)?.video?.autoPlay).toBe(true);
   });
 });
