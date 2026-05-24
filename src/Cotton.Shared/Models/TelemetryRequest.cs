@@ -41,6 +41,11 @@ namespace Cotton.Models
         public int Files { get; set; }
 
         /// <summary>
+        /// Gets or sets the maximum upload chunk size advertised to clients.
+        /// </summary>
+        public int MaxChunkSizeBytes { get; set; }
+
+        /// <summary>
         /// Gets or sets an optional synthetic measurement of the active storage pipeline.
         /// </summary>
         public StoragePipelineProbeResult? StoragePipelineProbe { get; set; }

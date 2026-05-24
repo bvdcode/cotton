@@ -53,6 +53,7 @@ namespace Cotton.Server.Jobs
                 Users = await _dbContext.Users.CountAsync(),
                 Files = await _dbContext.FileManifests.CountAsync(),
                 Version = AppVersionHelpers.GetAppVersion() ?? "Unknown",
+                MaxChunkSizeBytes = settings.MaxChunkSizeBytes,
                 StoragePipelineProbe = storagePipelineProbe,
             };
             using var httpClient = new HttpClient();
