@@ -6,6 +6,7 @@ using Cotton.Benchmark.Infrastructure;
 using Cotton.Benchmark.Models;
 using Cotton.Benchmark.Regression;
 using Cotton.Benchmark.Reporting;
+using Cotton.Storage.Processors;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
@@ -42,7 +43,9 @@ namespace Cotton.Benchmark
                 return 0;
             }
 
-            var configuration = BenchmarkConfigurationFactory.Create(options.Profile);
+            var configuration = ApplyConfigurationOverrides(
+                BenchmarkConfigurationFactory.Create(options.Profile),
+                options);
             var hardwareFingerprint = new HardwareFingerprintProvider().Create();
             List<IBenchmark> benchmarks = BenchmarkSuiteFactory.Create(configuration, options);
 
@@ -65,6 +68,29 @@ namespace Cotton.Benchmark
             }
 
             return await RunBenchmarksAsync(serviceProvider, benchmarks, options, hardwareFingerprint);
+        }
+
+        private static BenchmarkConfiguration ApplyConfigurationOverrides(
+            BenchmarkConfiguration configuration,
+            BenchmarkOptions options)
+        {
+            if (!options.CompressionLevel.HasValue)
+            {
+                return configuration;
+            }
+
+            int level = options.CompressionLevel.Value;
+            CompressionProcessor.ThrowIfInvalidLevel(level);
+            return new BenchmarkConfiguration
+            {
+                WarmupIterations = configuration.WarmupIterations,
+                MeasuredIterations = configuration.MeasuredIterations,
+                DataSizeBytes = configuration.DataSizeBytes,
+                EncryptionThreads = configuration.EncryptionThreads,
+                CipherChunkSizeBytes = configuration.CipherChunkSizeBytes,
+                CompressionLevel = level,
+                EncryptionKeySize = configuration.EncryptionKeySize
+            };
         }
 
         private static ServiceProvider CreateServiceProvider()
@@ -233,6 +259,7 @@ namespace Cotton.Benchmark
             Console.WriteLine("  --mode <value>          machine | development");
             Console.WriteLine("  --profile <value>       quick | standard | full");
             Console.WriteLine("  --scenario <filter>     Run only matching benchmark names; can be comma-separated");
+            Console.WriteLine("  --compression-level <n> Override Zstd level for configured pipeline benchmarks");
             Console.WriteLine("  --list                  List benchmarks for the selected mode");
             Console.WriteLine("  --compare               Compare with the committed baseline for this hardware key");
             Console.WriteLine("  --update-baseline       Save this run as the reviewed baseline; default for full non-compare runs");

@@ -55,7 +55,7 @@ namespace Cotton.Benchmark.Benchmarks
             _pipeline = new FileStoragePipeline(
                 NullLogger<FileStoragePipeline>.Instance,
                 new StaticStorageBackendProvider(_backend),
-                [new CryptoProcessor(_cipher), new CompressionProcessor()]);
+                [new CryptoProcessor(_cipher), new CompressionProcessor(new FixedCompressionLevelProvider(configuration.CompressionLevel))]);
         }
 
         /// <inheritdoc/>
@@ -89,6 +89,7 @@ namespace Cotton.Benchmark.Benchmarks
             baseMetrics["ServerHashPasses"] = 1;
             baseMetrics["ReadBack"] = false;
             baseMetrics["DataType"] = _dataType;
+            baseMetrics["CompressionLevel"] = _configuration.CompressionLevel;
             return baseMetrics;
         }
 

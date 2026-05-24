@@ -22,7 +22,7 @@ namespace Cotton.Benchmark.Benchmarks
             : base(configuration)
         {
             // Use CompressionProcessor
-            _processor = new CompressionProcessor();
+            _processor = new CompressionProcessor(new FixedCompressionLevelProvider(configuration.CompressionLevel));
 
             // Pre-compress compressible data
             var testData = TestDataGenerator.GenerateCompressibleText(configuration.DataSizeBytes);
@@ -73,6 +73,7 @@ namespace Cotton.Benchmark.Benchmarks
             baseMetrics["Implementation"] = "Cotton.Storage.Processors.CompressionProcessor";
             baseMetrics["CompressedSize"] = FormatBytes(_compressedData.Length);
             baseMetrics["CompressionRatio"] = $"{(double)_originalSize / _compressedData.Length:F2}x";
+            baseMetrics["CompressionLevel"] = _configuration.CompressionLevel;
             return baseMetrics;
         }
     }

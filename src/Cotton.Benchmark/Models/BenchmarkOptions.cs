@@ -21,6 +21,8 @@ namespace Cotton.Benchmark.Models
 
         public string ResultsDirectory { get; init; } = Path.Combine("performance", "results");
 
+        public int? CompressionLevel { get; init; }
+
         public IReadOnlyList<string> ScenarioFilters { get; init; } = [];
     }
 }

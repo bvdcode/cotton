@@ -16,6 +16,7 @@ namespace Cotton.Benchmark.Infrastructure
             bool? update = null;
             string baselineDirectory = BenchmarkPathDefaults.BaselineDirectory;
             string resultsDirectory = BenchmarkPathDefaults.ResultsDirectory;
+            int? compressionLevel = null;
             var scenarioFilters = new List<string>();
 
             for (int i = 0; i < args.Length; i++)
@@ -54,6 +55,9 @@ namespace Cotton.Benchmark.Infrastructure
                     case "--results-dir":
                         resultsDirectory = ReadValue(args, ref i, arg);
                         break;
+                    case "--compression-level":
+                        compressionLevel = ParseIntValue(ReadValue(args, ref i, arg), arg);
+                        break;
                     default:
                         throw new ArgumentException($"Unknown benchmark option: {arg}");
                 }
@@ -68,6 +72,7 @@ namespace Cotton.Benchmark.Infrastructure
                 UpdateBaseline = update ?? ShouldUpdateBaselineByDefault(list, compare, scenarioFilters),
                 BaselineDirectory = baselineDirectory,
                 ResultsDirectory = resultsDirectory,
+                CompressionLevel = compressionLevel,
                 ScenarioFilters = scenarioFilters
             };
         }
@@ -80,6 +85,16 @@ namespace Cotton.Benchmark.Infrastructure
             return !list
                 && !compare
                 && scenarioFilters.Count == 0;
+        }
+
+        private static int ParseIntValue(string value, string optionName)
+        {
+            if (int.TryParse(value, out int parsed))
+            {
+                return parsed;
+            }
+
+            throw new ArgumentException($"Invalid {optionName} value '{value}'. Expected an integer.");
         }
 
         private static TEnum ParseEnumValue<TEnum>(string value, string optionName)

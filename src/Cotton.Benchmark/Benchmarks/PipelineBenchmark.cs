@@ -38,7 +38,7 @@ namespace Cotton.Benchmark.Benchmarks
 
             // Create processors from Cotton.Storage
             var cryptoProcessor = new CryptoProcessor(_cipher);
-            var compressionProcessor = new CompressionProcessor();
+            var compressionProcessor = new CompressionProcessor(new FixedCompressionLevelProvider(configuration.CompressionLevel));
 
             // Use in-memory backend for speed (avoiding disk I/O in this test)
             var backend = new InMemoryStorageBackend();
@@ -92,6 +92,7 @@ namespace Cotton.Benchmark.Benchmarks
             baseMetrics["Pipeline"] = "Cotton.Storage.Pipelines.FileStoragePipeline";
             baseMetrics["Processors"] = "CompressionProcessor + CryptoProcessor";
             baseMetrics["DataType"] = "Compressible JSON";
+            baseMetrics["CompressionLevel"] = _configuration.CompressionLevel;
             return baseMetrics;
         }
 
