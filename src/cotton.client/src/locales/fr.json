@@ -124,7 +124,7 @@
           "notifications",
           "email mode",
           "mail mode",
-          "cotton cloud mail",
+          "cotton bridge mail",
           "custom smtp",
           "mode de notification",
           "mode courriel",
@@ -1156,12 +1156,12 @@
         "title": "Configuration de l'e-mail",
         "subtitle": "Choisissez d'où seront envoyées les notifications par e-mail.",
         "options": {
-          "cloud": "Utiliser Cotton Mail cloud",
+          "cloud": "Utiliser Cotton Bridge Mail",
           "custom": "Utiliser un serveur SMTP personnalisé",
           "none": "Pas de notifications par e-mail"
         },
         "descriptions": {
-          "cloud": "Le serveur SMTP public de Cotton Cloud sera utilisé. C'est sécurisé et gratuit. Choisissez cette option si vous n'êtes pas sûr.",
+          "cloud": "Cotton Bridge enverra les e-mails de notification de cette instance. La télémétrie doit être activée.",
           "custom": "Configurez votre propre serveur SMTP pour l'envoi de notifications par e-mail.",
           "none": "L'option la plus simple, mais vous ne pourrez même pas récupérer votre mot de passe."
         }
@@ -1204,13 +1204,13 @@
         "subtitle": "Cotton peut transformer les adresses IP en noms de villes et de pays. Cela peut être utilisé, par exemple, dans les notifications de sécurité pour montrer d'où provient une connexion et aider à détecter un accès inhabituel.",
         "options": {
           "disabled": "Non, le garder désactivé",
-          "cottonCloud": "Utiliser le service cloud",
+          "cottonCloud": "Cotton Bridge",
           "local": "Utiliser GeoIP Light localement",
           "custom": "Utiliser mon propre résolveur"
         },
         "descriptions": {
           "disabled": "Aucune recherche de localisation ne sera effectuée. Les fonctionnalités qui peuvent afficher l'emplacement de connexion ne conserveront que les adresses IP brutes.",
-          "cottonCloud": "Résoudre les adresses IP via le fournisseur Cotton. Nécessite que la télémétrie soit activée.",
+          "cottonCloud": "Résoudre les adresses IP via Cotton Bridge. La télémétrie doit être activée.",
           "local": "Résoudre les adresses IP sur votre serveur avec une base de données/un paquet GeoIP Light local.",
           "custom": "Collez une URL vers votre propre service. Cotton tentera d'extraire automatiquement les champs liés à la localisation depuis le JSON."
         }
@@ -1231,12 +1231,12 @@
         "options": {
           "local": "Calculs locaux",
           "runner": "Exécuteur GPU personnalisé",
-          "cloud": "Calculs Cotton Cloud"
+          "cloud": "Cotton Bridge AI"
         },
         "descriptions": {
           "local": "Lent, les fonctionnalités les plus lourdes sont désactivées et la qualité du modèle est simplifiée. Mais la qualité reste excellente - plus que suffisante pour toutes les tâches.",
           "runner": "Connectez un exécuteur GPU séparé pour les calculs. Rapide, haute qualité - meilleurs modèles et prise en charge de toutes les fonctionnalités.",
-          "cloud": "Équilibre optimal, mais peut avoir des limitations. Générosité incroyable et gratuite. Nécessite une connexion Internet."
+          "cloud": "Cotton Bridge peut exécuter les calculs IA pour cette instance. Une connexion Internet est requise et des limites peuvent s’appliquer."
         }
       },
       "timezone": {
@@ -1838,7 +1838,7 @@
         "help": {
           "publicBaseUrl": "Malgré ce paramètre, Cotton détermine l'URL publique automatiquement presque partout. Ne le définissez que si la détection automatique est erronée.",
           "timezone": "Cela nous aide à éviter d'exécuter des tâches d'arrière-plan pendant votre sommeil, afin que vos disques ne grincent pas la nuit.",
-          "telemetry": "Cotton collecte des diagnostics techniques minimaux pour que le développeur puisse voir les erreurs et les corriger, car tout le monde ne signale pas les problèmes. Activer la télémétrie débloque également les services cloud par défaut.",
+          "telemetry": "Cotton collecte des diagnostics techniques minimaux pour que le développeur puisse voir les erreurs et les corriger, car tout le monde ne signale pas les problèmes. Activer la télémétrie débloque également les services Cotton Bridge par défaut.",
           "allowDeduplication": "Contrôle si un utilisateur peut apprendre qu'un autre utilisateur stocke déjà le même fichier. Lorsque désactivée, les données identiques sont quand même dédupliquées sur le serveur après envoi, mais elles sont inutilement transférées d'abord. Lorsque activée, un autre utilisateur peut apprendre que quelqu'un dans ce cloud a déjà téléversé ce fichier. C'est sûr pour la famille et les amis de confiance.",
           "allowGlobalIndexing": "Permet au serveur de déchiffrer les fichiers utilisateurs et de construire un index de recherche approfondi. Sans cela, la recherche n'utilise que les noms de fichiers et de dossiers.",
           "serverUsage": "Optimise les recommandations de fonctionnalités et quelques paramètres. Ce n'est pas un paramètre critique, choisissez donc ce qui vous semble juste."
@@ -1862,18 +1862,18 @@
         "computionMode": {
           "Local": "Local",
           "Remote": "Exécuteur distant",
-          "Cloud": "Cotton Cloud",
+          "Cloud": "Cotton Bridge AI",
           "inDevelopment": "Cette fonctionnalité est encore en développement."
         },
         "geoIpLookupMode": {
           "Disabled": "Désactivé",
-          "CottonCloud": "Service cloud",
+          "CottonCloud": "Cotton Bridge",
           "MaxMindLocal": "GeoIP Light",
           "CustomHttp": "HTTP personnalisé"
         },
         "geoIpLookupModeDescription": {
           "Disabled": "Ne pas résoudre les adresses IP.",
-          "CottonCloud": "Résoudre les adresses IP via le fournisseur Cotton. Cela peut être utilisé par des fonctionnalités telles que les notifications de sécurité.",
+          "CottonCloud": "Résoudre les adresses IP via Cotton Bridge. Cela peut être utilisé par des fonctionnalités telles que les notifications de sécurité.",
           "MaxMindLocal": "Résoudre les adresses IP localement avec une base de données/un paquet GeoIP Light.",
           "CustomHttp": "Collez une URL vers votre propre service. Cotton tentera d'extraire automatiquement les champs liés à la localisation depuis le JSON."
         },
@@ -1955,7 +1955,7 @@
       },
       "emailMode": {
         "None": "Désactivé",
-        "Cloud": "Cotton Cloud Mail",
+        "Cloud": "Cotton Bridge Mail",
         "Custom": "SMTP personnalisé"
       },
       "smtp": {

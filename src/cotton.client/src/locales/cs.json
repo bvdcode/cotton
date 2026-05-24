@@ -122,7 +122,7 @@
           "notifications",
           "email mode",
           "mail mode",
-          "cotton cloud mail",
+          "cotton bridge mail",
           "custom smtp",
           "oznámení",
           "režim e-mailu",
@@ -1153,12 +1153,12 @@
         "title": "Konfigurace e-mailu",
         "subtitle": "Vyberte, odkud budou odesílána e-mailová oznámení.",
         "options": {
-          "cloud": "Použít cloudový Cotton Mail",
+          "cloud": "Použít Cotton Bridge Mail",
           "custom": "Použít vlastní SMTP server",
           "none": "Bez e-mailových oznámení"
         },
         "descriptions": {
-          "cloud": "Bude použit veřejný SMTP server Cotton Cloud. Je bezpečný a zdarma. Pokud si nejste jisti, zvolte tuto možnost.",
+          "cloud": "Cotton Bridge bude odesílat e-mailová oznámení pro tuto instanci. Vyžaduje zapnutou telemetrii.",
           "custom": "Nakonfigurujte vlastní SMTP server pro odesílání e-mailových oznámení.",
           "none": "Nejjednodušší možnost, ale nebudete moci ani obnovit heslo."
         }
@@ -1201,13 +1201,13 @@
         "subtitle": "Cotton dokáže IP adresy převést na názvy měst a zemí. To lze využít například v bezpečnostních oznámeních, aby bylo vidět, odkud bylo přihlášení provedeno, a pro odhalení neobvyklých přístupů.",
         "options": {
           "disabled": "Ne, ponechat vypnuté",
-          "cottonCloud": "Použít cloudovou službu",
+          "cottonCloud": "Cotton Bridge",
           "local": "Použít GeoIP Light lokálně",
           "custom": "Použít vlastní resolver"
         },
         "descriptions": {
           "disabled": "Nebude prováděno žádné vyhledávání polohy. Funkce, které mohou zobrazovat polohu přihlášení, ponechají pouze hrubé IP adresy.",
-          "cottonCloud": "Překládat IP adresy přes poskytovatele Cotton. Vyžaduje zapnutou telemetrii.",
+          "cottonCloud": "Překládat IP adresy přes Cotton Bridge. Vyžaduje zapnutou telemetrii.",
           "local": "Překládat IP adresy na vašem serveru pomocí lokální databáze/balíčku GeoIP Light.",
           "custom": "Vložte URL vlastní služby. Cotton se pokusí automaticky extrahovat pole související s polohou z JSON."
         }
@@ -1228,12 +1228,12 @@
         "options": {
           "local": "Lokální výpočty",
           "runner": "Vlastní GPU runner",
-          "cloud": "Výpočty Cotton Cloud"
+          "cloud": "Cotton Bridge AI"
         },
         "descriptions": {
           "local": "Pomalé, většina náročných funkcí je vypnuta a kvalita modelu je zjednodušena. Kvalita je však stále výborná – víc než dostatečná pro jakékoli úlohy.",
           "runner": "Připojte samostatný GPU runner pro výpočty. Rychlé, vysoce kvalitní – nejlepší modely a podpora všech funkcí.",
-          "cloud": "Optimální rovnováha, ale může mít omezení. Neuvěřitelná štědrost zdarma. Vyžaduje připojení k internetu."
+          "cloud": "Cotton Bridge může spouštět AI výpočty pro tuto instanci. Vyžaduje připojení k internetu a může mít limity."
         }
       },
       "timezone": {
@@ -1867,7 +1867,7 @@
         "help": {
           "publicBaseUrl": "I přes toto nastavení Cotton téměř všude určuje veřejnou URL automaticky. Nastavte ji jen tehdy, když je automatická detekce nesprávná.",
           "timezone": "Pomáhá nám neprovádět úlohy na pozadí, když spíte, aby vaše disky v noci nehlučely.",
-          "telemetry": "Cotton sbírá minimální technickou diagnostiku, aby vývojář mohl vidět chyby a opravovat je, protože ne každý problémy hlásí. Zapnutí telemetrie také odemyká cloudové služby ihned.",
+          "telemetry": "Cotton sbírá minimální technickou diagnostiku, aby vývojář mohl vidět chyby a opravovat je, protože ne každý problémy hlásí. Zapnutí telemetrie také odemyká služby Cotton Bridge ihned.",
           "allowDeduplication": "Řídí, zda jeden uživatel může zjistit, že jiný uživatel již ukládá stejný soubor. Když je vypnuto, identická data jsou na serveru po nahrání stále deduplikována, ale jsou zbytečně nejprve přenášena. Když je zapnuto, jiný uživatel se může dozvědět, že někdo v tomto cloudu tento soubor již dříve nahrál. To je bezpečné pro rodinu a důvěryhodné přátele.",
           "allowGlobalIndexing": "Umožňuje serveru dešifrovat uživatelské soubory a vytvořit hluboký vyhledávací index. Bez toho hledání používá pouze názvy souborů a složek.",
           "serverUsage": "Optimalizuje doporučení funkcí a několik nastavení. Není to kritický parametr, takže zvolte, co vám vyhovuje."
@@ -1891,18 +1891,18 @@
         "computionMode": {
           "Local": "Lokální",
           "Remote": "Vzdálený runner",
-          "Cloud": "Cotton Cloud",
+          "Cloud": "Cotton Bridge AI",
           "inDevelopment": "Tato funkce je stále ve vývoji."
         },
         "geoIpLookupMode": {
           "Disabled": "Vypnuto",
-          "CottonCloud": "Cloudová služba",
+          "CottonCloud": "Cotton Bridge",
           "MaxMindLocal": "GeoIP Light",
           "CustomHttp": "Vlastní HTTP"
         },
         "geoIpLookupModeDescription": {
           "Disabled": "Nepřekládat IP adresy.",
-          "CottonCloud": "Překládat IP adresy přes poskytovatele Cotton. To lze využít funkcemi, jako jsou bezpečnostní oznámení.",
+          "CottonCloud": "Překládat IP adresy přes Cotton Bridge. To lze využít funkcemi, jako jsou bezpečnostní oznámení.",
           "MaxMindLocal": "Překládat IP adresy lokálně s databází/balíčkem GeoIP Light.",
           "CustomHttp": "Vložte URL vlastní služby. Cotton se pokusí automaticky extrahovat pole související s polohou z JSON."
         },
@@ -1984,7 +1984,7 @@
       },
       "emailMode": {
         "None": "Vypnuto",
-        "Cloud": "Cotton Cloud Mail",
+        "Cloud": "Cotton Bridge Mail",
         "Custom": "Vlastní SMTP"
       },
       "smtp": {

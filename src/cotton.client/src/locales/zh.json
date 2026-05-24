@@ -119,7 +119,7 @@
           "notifications",
           "email mode",
           "mail mode",
-          "cotton cloud mail",
+          "cotton bridge mail",
           "custom smtp",
           "通知",
           "邮件模式",
@@ -1129,12 +1129,12 @@
         "title": "邮件配置",
         "subtitle": "选择邮件通知的发送来源。",
         "options": {
-          "cloud": "使用云端 Cotton Mail",
+          "cloud": "使用 Cotton Bridge Mail",
           "custom": "使用自定义 SMTP 服务器",
           "none": "不发送邮件通知"
         },
         "descriptions": {
-          "cloud": "将使用公共 Cotton Cloud SMTP 服务器，安全且免费。如不确定可选择此项。",
+          "cloud": "Cotton Bridge 将为此实例发送邮件通知。需要启用遥测。",
           "custom": "配置您自己的 SMTP 服务器以发送邮件通知。",
           "none": "最简单的方式，但您将无法找回密码。"
         }
@@ -1177,13 +1177,13 @@
         "subtitle": "Cotton 可以将 IP 地址解析为城市和国家/地区名称。例如，可在安全通知中显示登录来源位置，帮助识别异常访问。",
         "options": {
           "disabled": "不，保持关闭",
-          "cottonCloud": "使用云端服务",
+          "cottonCloud": "Cotton Bridge",
           "local": "在本地使用 GeoIP Light",
           "custom": "使用我自己的解析器"
         },
         "descriptions": {
           "disabled": "不进行位置解析。可显示登录位置的功能将仅保留原始 IP 地址。",
-          "cottonCloud": "通过 Cotton 提供商解析 IP 地址。需要启用遥测。",
+          "cottonCloud": "通过 Cotton Bridge 解析 IP 地址。需要启用遥测。",
           "local": "使用本地 GeoIP Light 数据库/包在您的服务器上解析 IP 地址。",
           "custom": "粘贴您自己的服务的 URL。Cotton 将尝试从 JSON 中自动提取与位置相关的字段。"
         }
@@ -1204,12 +1204,12 @@
         "options": {
           "local": "本地计算",
           "runner": "自定义 GPU 计算节点",
-          "cloud": "Cotton Cloud 计算"
+          "cloud": "Cotton Bridge AI"
         },
         "descriptions": {
           "local": "速度较慢，多数重型功能不可用，模型质量经过简化。但效果仍然不错 —— 应对任何任务都绰绰有余。",
           "runner": "连接独立的 GPU 计算节点执行计算。速度快、质量高 —— 提供最佳模型并支持所有功能。",
-          "cloud": "在速度和质量上达到最佳平衡，但可能存在一定限制。免费额度非常慷慨。需要联网。"
+          "cloud": "Cotton Bridge 可以为此实例运行 AI 计算。需要互联网连接，并且可能存在限制。"
         }
       },
       "timezone": {
@@ -1805,7 +1805,7 @@
         "help": {
           "publicBaseUrl": "尽管有此设置，Cotton 在绝大多数情况下都会自动确定公共 URL。仅在自动检测出错时才需要设置。",
           "timezone": "这有助于我们避免在您睡觉时运行后台任务，让磁盘在夜间保持安静。",
-          "telemetry": "Cotton 会收集最少的技术诊断数据，以便开发者能看到错误并修复，因为并非所有人都会主动反馈问题。启用遥测还能开箱即用地解锁云端服务。",
+          "telemetry": "Cotton 会收集最少的技术诊断数据，以便开发者能看到错误并修复，因为并非所有人都会主动反馈问题。启用遥测还能开箱即用地解锁 Cotton Bridge 服务。",
           "allowDeduplication": "控制一个用户是否能得知另一个用户已存储了相同的文件。禁用后，相同的数据仍会在上传后在服务器上去重，但会先被不必要地传输一次。启用后，其他用户可能得知本云端中已有人上传过该文件。在家庭或可信好友之间使用是安全的。",
           "allowGlobalIndexing": "允许服务器解密用户文件并构建深度搜索索引。未启用时，搜索仅基于文件名和文件夹名。",
           "serverUsage": "用于优化功能推荐和少量设置。它并非关键参数，按您的需要选择即可。"
@@ -1829,18 +1829,18 @@
         "computionMode": {
           "Local": "本地",
           "Remote": "远程计算节点",
-          "Cloud": "Cotton Cloud",
+          "Cloud": "Cotton Bridge AI",
           "inDevelopment": "此功能仍在开发中。"
         },
         "geoIpLookupMode": {
           "Disabled": "已禁用",
-          "CottonCloud": "云端服务",
+          "CottonCloud": "Cotton Bridge",
           "MaxMindLocal": "GeoIP Light",
           "CustomHttp": "自定义 HTTP"
         },
         "geoIpLookupModeDescription": {
           "Disabled": "不解析 IP 地址。",
-          "CottonCloud": "通过 Cotton 提供商解析 IP 地址。可用于安全通知等功能。",
+          "CottonCloud": "通过 Cotton Bridge 解析 IP 地址。可用于安全通知等功能。",
           "MaxMindLocal": "使用本地 GeoIP Light 数据库/包在本地解析 IP 地址。",
           "CustomHttp": "粘贴您自己的服务的 URL。Cotton 将尝试从 JSON 中自动提取与位置相关的字段。"
         },
@@ -1922,7 +1922,7 @@
       },
       "emailMode": {
         "None": "已禁用",
-        "Cloud": "Cotton Cloud Mail",
+        "Cloud": "Cotton Bridge Mail",
         "Custom": "自定义 SMTP"
       },
       "smtp": {

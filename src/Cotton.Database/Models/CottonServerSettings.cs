@@ -129,7 +129,7 @@ namespace Cotton.Database.Models
         [Column("oidc_issuer")]
         public string? OidcIssuer { get; set; }
 
-        /// <summary>Encrypted token used to access Cotton cloud services.</summary>
+        /// <summary>Encrypted token used to access Cotton Bridge services.</summary>
         [Encrypted]
         [Column("cloud_services_token_encrypted")]
         public string? CloudServicesTokenEncrypted { get; set; }

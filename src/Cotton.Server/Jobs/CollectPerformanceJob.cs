@@ -23,8 +23,6 @@ namespace Cotton.Server.Jobs
         StoragePipelineProbeService _storagePipelineProbe,
         ILogger<CollectPerformanceJob> _logger) : IJob
     {
-        private const string CloudTelemetryUrl = "https://bridge.cottoncloud.dev/api/v1/telemetry";
-
         /// <summary>
         /// Executes the scheduled Quartz job.
         /// </summary>
@@ -58,8 +56,8 @@ namespace Cotton.Server.Jobs
                 StoragePipelineProbe = storagePipelineProbe,
             };
             using var httpClient = new HttpClient();
-            await httpClient.PostAsJsonAsync(CloudTelemetryUrl, request);
-            _logger.LogInformation("CollectPerformanceJob completed - telemetry data was sent to Cotton Cloud");
+            await httpClient.PostAsJsonAsync(global::Cotton.Constants.CottonBridgeTelemetryUrl, request);
+            _logger.LogInformation("CollectPerformanceJob completed - telemetry data was sent to Cotton Bridge");
         }
 
         private async Task<StoragePipelineProbeResult?> TryRunStoragePipelineProbeAsync(string storageBackend, CancellationToken cancellationToken)

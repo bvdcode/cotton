@@ -8,7 +8,7 @@ namespace Cotton.Database.Models.Enums
     {
         /// <summary>Disable the feature.</summary>
         None = 0,
-        /// <summary>Use Cotton cloud services for the feature.</summary>
+        /// <summary>Use Cotton Bridge services for the feature.</summary>
         Cloud = 1,
         /// <summary>Use administrator-provided custom settings.</summary>
         Custom = 2,

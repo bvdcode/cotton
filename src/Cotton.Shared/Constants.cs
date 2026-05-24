@@ -31,6 +31,31 @@ namespace Cotton
         public const string ProductName = "Cotton Cloud";
 
         /// <summary>
+        /// Gets the public hosted service name for Cotton-managed bridge features.
+        /// </summary>
+        public const string CottonBridgeName = "Cotton Bridge";
+
+        /// <summary>
+        /// Gets the base URL for Cotton Bridge APIs.
+        /// </summary>
+        public const string CottonBridgeBaseUrl = "https://bridge.cottoncloud.dev/api/v1/";
+
+        /// <summary>
+        /// Gets the Cotton Bridge telemetry endpoint.
+        /// </summary>
+        public const string CottonBridgeTelemetryUrl = CottonBridgeBaseUrl + "telemetry";
+
+        /// <summary>
+        /// Gets the Cotton Bridge health endpoint.
+        /// </summary>
+        public const string CottonBridgeHealthUrl = CottonBridgeBaseUrl + "health";
+
+        /// <summary>
+        /// Gets the Cotton Bridge GeoIP lookup endpoint.
+        /// </summary>
+        public const string CottonBridgeGeoIpLookupUrl = CottonBridgeBaseUrl + "lookup";
+
+        /// <summary>
         /// Specifies the application-startup window, in minutes, during which the first administrator account may be created.
         /// </summary>
         /// <remarks>The window starts when the main ASP.NET application starts, after any master-key unlock step.

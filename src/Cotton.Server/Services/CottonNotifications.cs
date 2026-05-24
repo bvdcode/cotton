@@ -47,7 +47,7 @@ namespace Cotton.Server.Services
                     return false;
 
                 case EmailMode.Cloud:
-                    return await SendViaCloudAsync(userId, template, parameters, serverBaseUrl, settings);
+                    return await SendViaCottonBridgeAsync(userId, template, parameters, serverBaseUrl, settings);
 
                 case EmailMode.Custom:
                     return await SendViaSmtpAsync(userId, template, parameters, serverBaseUrl, settings);
@@ -110,7 +110,7 @@ namespace Cotton.Server.Services
             SendSmtpEmail(user.Email, recipientName, subject, body, smtpSettings);
         }
 
-        private async Task<bool> SendViaCloudAsync(
+        private async Task<bool> SendViaCottonBridgeAsync(
             Guid userId,
             EmailTemplate template,
             Dictionary<string, string> parameters,
@@ -141,7 +141,7 @@ namespace Cotton.Server.Services
             if (!sent)
             {
                 _logger.LogWarning(
-                    "Failed to send {Template} email via cloud provider for user {UserId}.",
+                    "Failed to send {Template} email via Cotton Bridge for user {UserId}.",
                     template,
                     userId);
             }

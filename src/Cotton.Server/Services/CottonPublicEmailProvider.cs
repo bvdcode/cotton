@@ -12,9 +12,9 @@ namespace Cotton.Server.Services
     public class CottonPublicEmailProvider : IDisposable
     {
         /// <summary>
-        /// Defines the gateway base URL.
+        /// Defines the Cotton Bridge base URL.
         /// </summary>
-        public const string GatewayBaseUrl = "https://bridge.cottoncloud.dev/api/v1/";
+        public const string CottonBridgeBaseUrl = global::Cotton.Constants.CottonBridgeBaseUrl;
         private readonly HttpClient _httpClient;
         private readonly Guid _instanceId;
         private readonly ILogger<CottonPublicEmailProvider> _logger;
@@ -33,7 +33,7 @@ namespace Cotton.Server.Services
             _instanceId = settings.InstanceId;
             _httpClient = new HttpClient
             {
-                BaseAddress = new Uri(GatewayBaseUrl),
+                BaseAddress = new Uri(CottonBridgeBaseUrl),
                 Timeout = TimeSpan.FromSeconds(15)
             };
         }
@@ -50,7 +50,7 @@ namespace Cotton.Server.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to check gateway health.");
+                _logger.LogError(ex, "Failed to check Cotton Bridge health.");
                 return false;
             }
         }
@@ -68,7 +68,7 @@ namespace Cotton.Server.Services
         {
             try
             {
-                var request = new GatewayEmailRequest
+                var request = new CottonBridgeEmailRequest
                 {
                     Template = template.ToString(),
                     InstanceId = _instanceId,
@@ -84,7 +84,7 @@ namespace Cotton.Server.Services
                 {
                     string body = await response.Content.ReadAsStringAsync();
                     _logger.LogWarning(
-                        "Gateway returned {StatusCode} for {Template}: {Body}",
+                        "Cotton Bridge returned {StatusCode} for {Template}: {Body}",
                         response.StatusCode,
                         template,
                         body);
@@ -94,7 +94,7 @@ namespace Cotton.Server.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send {Template} email via gateway.", template);
+                _logger.LogError(ex, "Failed to send {Template} email via Cotton Bridge.", template);
                 return false;
             }
         }
@@ -114,7 +114,7 @@ namespace Cotton.Server.Services
             _ => "English",
         };
 
-        private sealed class GatewayEmailRequest
+        private sealed class CottonBridgeEmailRequest
         {
             /// <summary>
             /// Gets or sets the template.

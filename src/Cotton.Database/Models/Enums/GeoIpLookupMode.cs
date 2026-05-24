@@ -8,7 +8,7 @@ namespace Cotton.Database.Models.Enums
     {
         /// <summary>Disable geolocation lookup.</summary>
         Disabled = 0,
-        /// <summary>Use Cotton cloud geolocation lookup.</summary>
+        /// <summary>Use Cotton Bridge geolocation lookup.</summary>
         CottonCloud = 1,
         /// <summary>Use a local MaxMind database.</summary>
         MaxMindLocal = 2,

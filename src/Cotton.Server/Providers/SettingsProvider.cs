@@ -226,17 +226,17 @@ namespace Cotton.Server.Providers
 
             if (settings.EmailMode == EmailMode.Cloud)
             {
-                return "Telemetry must be enabled to use cloud email service.";
+                return "Telemetry must be enabled to use Cotton Bridge Mail.";
             }
 
             if (settings.ComputionMode == ComputionMode.Cloud)
             {
-                return "Telemetry must be enabled to use cloud AI service.";
+                return "Telemetry must be enabled to use Cotton Bridge AI.";
             }
 
             if (settings.GeoIpLookupMode == GeoIpLookupMode.CottonCloud)
             {
-                return "Telemetry must be enabled to use Cotton Cloud IP lookup.";
+                return "Telemetry must be enabled to use Cotton Bridge IP lookup.";
             }
 
             return null;
@@ -253,13 +253,13 @@ namespace Cotton.Server.Providers
             {
                 if (!settings.TelemetryEnabled)
                 {
-                    return "Telemetry must be enabled to use cloud email service.";
+                    return "Telemetry must be enabled to use Cotton Bridge Mail.";
                 }
 
-                bool isHealthy = await CheckGatewayHealthAsync();
+                bool isHealthy = await CheckCottonBridgeHealthAsync();
                 if (!isHealthy)
                 {
-                    return "Cloud email service is currently unavailable. Please try again later or switch to Custom email service.";
+                    return "Cotton Bridge Mail is currently unavailable. Please try again later or switch to Custom email service.";
                 }
 
                 return null;
@@ -287,7 +287,7 @@ namespace Cotton.Server.Providers
         {
             if (mode == ComputionMode.Cloud && !GetServerSettings().TelemetryEnabled)
             {
-                return "Telemetry must be enabled to use cloud AI service.";
+                return "Telemetry must be enabled to use Cotton Bridge AI.";
             }
 
             return Enum.IsDefined(mode)
@@ -304,7 +304,7 @@ namespace Cotton.Server.Providers
 
             if (mode == GeoIpLookupMode.CottonCloud && !settings.TelemetryEnabled)
             {
-                return "Telemetry must be enabled to use Cotton Cloud IP lookup.";
+                return "Telemetry must be enabled to use Cotton Bridge IP lookup.";
             }
 
             if (mode == GeoIpLookupMode.CustomHttp && string.IsNullOrWhiteSpace(settings.CustomGeoIpLookupUrl))
@@ -322,12 +322,12 @@ namespace Cotton.Server.Providers
                 : "Invalid GeoIP lookup mode: " + mode;
         }
 
-        private static async Task<bool> CheckGatewayHealthAsync()
+        private static async Task<bool> CheckCottonBridgeHealthAsync()
         {
             try
             {
                 using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-                var response = await client.GetFromJsonAsync<HealthResponse>(CottonPublicEmailProvider.GatewayBaseUrl + "health");
+                var response = await client.GetFromJsonAsync<HealthResponse>(global::Cotton.Constants.CottonBridgeHealthUrl);
                 return response != null && response.Status == "Healthy";
             }
             catch

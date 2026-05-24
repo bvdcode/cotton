@@ -17,6 +17,7 @@ namespace Cotton.Server.Services
     public sealed class GeoLookupService(SettingsProvider _settings) : IGeoLookupService
     {
         private const string GoogleDnsIpAddress = "8.8.8.8";
+        private static readonly GeoIpClient CottonBridgeGeoIpClient = new(global::Cotton.Constants.CottonBridgeGeoIpLookupUrl);
 
         /// <summary>
         /// Attempts to lookup async.
@@ -43,7 +44,7 @@ namespace Cotton.Server.Services
                 return null;
             }
 
-            var geo = await GeoIpClient.TryLookupAsync(ipAddress.ToString(), cancellationToken);
+            var geo = await CottonBridgeGeoIpClient.TryLookupAsync(ipAddress.ToString(), cancellationToken);
             if (geo is null)
             {
                 return null;
