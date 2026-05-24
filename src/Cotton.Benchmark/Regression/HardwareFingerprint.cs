@@ -3,6 +3,7 @@
 
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Win32;
 
 namespace Cotton.Benchmark.Regression
 {
@@ -43,6 +44,12 @@ namespace Cotton.Benchmark.Regression
 
         private static string GetCpuModel()
         {
+            string? windowsCpu = TryReadWindowsCpuModel();
+            if (!string.IsNullOrWhiteSpace(windowsCpu))
+            {
+                return windowsCpu;
+            }
+
             string? linuxCpu = TryReadLinuxCpuModel();
             if (!string.IsNullOrWhiteSpace(linuxCpu))
             {
@@ -56,6 +63,17 @@ namespace Cotton.Benchmark.Regression
             }
 
             return "unknown-cpu";
+        }
+
+        private static string? TryReadWindowsCpuModel()
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                return null;
+            }
+
+            const string keyPath = @"HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System\CentralProcessor\0";
+            return NormalizeCpuModel(Registry.GetValue(keyPath, "ProcessorNameString", null) as string);
         }
 
         private static string? TryReadLinuxCpuModel()
@@ -85,6 +103,18 @@ namespace Cotton.Benchmark.Regression
             }
 
             return null;
+        }
+
+        private static string? NormalizeCpuModel(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            return string.Join(
+                ' ',
+                value.Split([' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
         }
 
         private static string GetOsFamily()
