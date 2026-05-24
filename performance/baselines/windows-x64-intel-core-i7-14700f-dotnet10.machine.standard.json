@@ -3,11 +3,11 @@
   "createdAtUtc": "2026-05-22T22:07:28.0947377+00:00",
   "mode": "machine",
   "profile": "standard",
-  "hardwareKey": "windows-x64-intel64-family-6-model-183-stepping-1-genuineintel-dotnet10",
+  "hardwareKey": "windows-x64-intel-core-i7-14700f-dotnet10",
   "gitCommit": "009d980a91db",
   "environment": {
     "architecture": "X64",
-    "cpu": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+    "cpu": "Intel Core i7-14700F",
     "dotnet": "10.0.7",
     "logicalProcessors": "28",
     "os": "Microsoft Windows 10.0.26200",
