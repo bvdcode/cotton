@@ -32,7 +32,7 @@ public sealed class FileManifestIntegrityDescriptor : DatabaseIntegrityDescripto
         writer.WriteBytesField(nameof(entity.SmallFilePreviewHashEncrypted), entity.SmallFilePreviewHashEncrypted);
         writer.WriteBytesField(nameof(entity.SmallFilePreviewHash), entity.SmallFilePreviewHash);
         writer.WriteBytesField(nameof(entity.LargeFilePreviewHash), entity.LargeFilePreviewHash);
-        writer.WriteStringField(nameof(entity.PreviewGenerationError), entity.PreviewGenerationError);
-        writer.WriteInt32Field(nameof(entity.PreviewGeneratorVersion), entity.PreviewGeneratorVersion);
+        // PreviewGenerationError and PreviewGeneratorVersion are retry/scheduling state, not file-content identity.
+        // Keep them outside the MAC so operators can safely clear preview failures and generator bumps can reschedule work.
     }
 }
