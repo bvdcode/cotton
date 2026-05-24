@@ -1,4 +1,7 @@
-﻿using Cotton.Database;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+using Cotton.Database;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Models.DatabaseBackup;
 using Cotton.Server.Providers;
@@ -15,6 +18,9 @@ using System.Text.Json;
 
 namespace Cotton.Server.Jobs
 {
+    /// <summary>
+    /// Runs the scheduled dump database maintenance task.
+    /// </summary>
     [JobTrigger(days: 7)]
     public class DumpDatabaseJob(
         IPostgresDumpService _dumper,
@@ -28,6 +34,9 @@ namespace Cotton.Server.Jobs
     {
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+        /// <summary>
+        /// Executes the scheduled Quartz job.
+        /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
             await Task.Delay(180_000); // Wait for 3 minutes for the server to start up and stabilize

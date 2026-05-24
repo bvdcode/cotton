@@ -1,4 +1,7 @@
-﻿namespace Cotton.Models.Enums
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+namespace Cotton.Models.Enums
 {
     /// <summary>
     /// Represents supported languages for the application. This enum can be used to specify the language for localization, user interface, or content.

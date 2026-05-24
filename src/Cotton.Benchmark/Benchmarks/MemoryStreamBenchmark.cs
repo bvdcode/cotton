@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Benchmark.Models;
 using System.Diagnostics;
@@ -17,7 +17,7 @@ namespace Cotton.Benchmark.Benchmarks
         public override string Name => "Memory Stream Operations";
 
         /// <inheritdoc/>
-        public override string Description => "Tests memory allocation and stream copy performance";
+        public override string Description => "Measures memory allocation and stream copy throughput";
 
         /// <inheritdoc/>
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)

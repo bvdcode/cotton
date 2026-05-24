@@ -1,18 +1,27 @@
 ﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Abstractions;
+using Cotton.Database.Integrity;
 using Cotton.Server.Auth;
 using Cotton.Server.Services;
+using Cotton.Server.Services.DatabaseIntegrity;
+using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 using Cotton.Server.Services.WebDav;
+using Cotton.Crypto;
 using EasyExtensions.Abstractions;
-using EasyExtensions.Crypto;
 using Microsoft.AspNetCore.Authentication;
 
 namespace Cotton.Server.Extensions
 {
+    /// <summary>
+    /// Contains extension methods for configuring service collection.
+    /// </summary>
     public static class ServiceCollectionExtensions
     {
+        /// <summary>
+        /// Registers stream cipher services.
+        /// </summary>
         public static IServiceCollection AddStreamCipher(this IServiceCollection services)
         {
             return services.AddScoped<IStreamCipher>(sp =>
@@ -30,12 +39,18 @@ namespace Cotton.Server.Extensions
             });
         }
 
+        /// <summary>
+        /// Registers web dav services services.
+        /// </summary>
         public static IServiceCollection AddWebDavServices(this IServiceCollection services)
         {
             services.AddScoped<IWebDavPathResolver, WebDavPathResolver>();
             return services;
         }
 
+        /// <summary>
+        /// Registers chunk services services.
+        /// </summary>
         public static IServiceCollection AddChunkServices(this IServiceCollection services)
         {
             services.AddScoped<IChunkIngestService, ChunkIngestService>();
@@ -47,12 +62,51 @@ namespace Cotton.Server.Extensions
             return services;
         }
 
+        /// <summary>
+        /// Registers database integrity services.
+        /// </summary>
+        public static IServiceCollection AddDatabaseIntegrity(this IServiceCollection services)
+        {
+            services.AddSingleton<IDatabaseIntegrityKeyProvider, DatabaseIntegrityKeyProvider>();
+            services.AddSingleton<IDatabaseIntegrityProtector, DatabaseIntegrityProtector>();
+            services.AddSingleton<IDatabaseIntegrityDescriptorRegistry, DatabaseIntegrityDescriptorRegistry>();
+            services.AddScoped<IDatabaseIntegrityChangeSigner, DatabaseIntegrityChangeSigner>();
+            services.AddScoped<IDatabaseIntegrityVerifier, DatabaseIntegrityVerifier>();
+            services.AddScoped<IDatabaseIntegrityBridgeBackfillService, DatabaseIntegrityBridgeBackfillService>();
+            services.AddScoped<DatabaseIntegrityDiagnosticsService>();
+            services.AddScoped<FileGraphIntegrityVerifier>();
+            services.AddSingleton<DatabaseIntegrityFailureReporter>();
+            services.AddSingleton<IDatabaseIntegrityFailureReporter>(sp =>
+                sp.GetRequiredService<DatabaseIntegrityFailureReporter>());
+            services.AddHostedService(sp => sp.GetRequiredService<DatabaseIntegrityFailureReporter>());
+
+            services.AddSingleton<IDatabaseIntegrityDescriptor, UserIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, UserPasskeyCredentialIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, ExtendedRefreshTokenIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, DownloadTokenIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, NodeShareTokenIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, CottonServerSettingsIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, NodeIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, NodeFileIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, FileManifestIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, FileManifestChunkIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, ChunkIntegrityDescriptor>();
+
+            return services;
+        }
+
+        /// <summary>
+        /// Registers layout path services services.
+        /// </summary>
         public static IServiceCollection AddLayoutPathServices(this IServiceCollection services)
         {
             services.AddScoped<ILayoutPathResolver, LayoutPathResolver>();
             return services;
         }
 
+        /// <summary>
+        /// Registers web dav auth services.
+        /// </summary>
         public static IServiceCollection AddWebDavAuth(this IServiceCollection services)
         {
             services.AddSingleton<Cotton.Server.Services.WebDav.WebDavAuthCache>();

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Auth;
 using Cotton.Server.Handlers.WebDav;
@@ -39,6 +39,9 @@ public class WebDavController(
     private static readonly long LocksCleanupIntervalTicks = TimeSpan.FromSeconds(30).Ticks;
     private static string GetLockKey(Guid userId, string path) => $"{userId:N}:{path}";
 
+    /// <summary>
+    /// Handles the options WebDAV request.
+    /// </summary>
     [HttpOptions]
     [AllowAnonymous]
     public IActionResult HandleOptions()
@@ -50,6 +53,9 @@ public class WebDavController(
         return Ok();
     }
 
+    /// <summary>
+    /// Handles the prop find WebDAV request.
+    /// </summary>
     [AcceptVerbs("PROPFIND")]
     [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
     public async Task<IActionResult> HandlePropFindAsync(string? path)
@@ -78,6 +84,9 @@ public class WebDavController(
         };
     }
 
+    /// <summary>
+    /// Handles the get WebDAV request.
+    /// </summary>
     [HttpGet]
     [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
     public async Task<IActionResult> HandleGetAsync(string? path)
@@ -118,6 +127,9 @@ public class WebDavController(
             enableRangeProcessing: true);
     }
 
+    /// <summary>
+    /// Handles the head WebDAV request.
+    /// </summary>
     [HttpHead]
     [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
     public async Task<IActionResult> HandleHeadAsync(string? path)
@@ -157,6 +169,9 @@ public class WebDavController(
         return Ok();
     }
 
+    /// <summary>
+    /// Handles the put WebDAV request.
+    /// </summary>
     [HttpPut]
     [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
     [DisableRequestSizeLimit]
@@ -205,6 +220,9 @@ public class WebDavController(
         return result.Created ? Created() : NoContent();
     }
 
+    /// <summary>
+    /// Handles the prop patch WebDAV request.
+    /// </summary>
     [AcceptVerbs("PROPPATCH")]
     [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
     public async Task<IActionResult> HandlePropPatchAsync(string? path)
@@ -235,6 +253,9 @@ public class WebDavController(
         };
     }
 
+    /// <summary>
+    /// Handles the lock WebDAV request.
+    /// </summary>
     [AcceptVerbs("LOCK")]
     [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
     public async Task<IActionResult> HandleLockAsync(string? path)
@@ -283,6 +304,9 @@ public class WebDavController(
         return Content(xml, "application/xml; charset=\"utf-8\"");
     }
 
+    /// <summary>
+    /// Handles the unlock WebDAV request.
+    /// </summary>
     [AcceptVerbs("UNLOCK")]
     [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
     public IActionResult HandleUnlockAsync(string? path)
@@ -308,6 +332,9 @@ public class WebDavController(
         return NoContent();
     }
 
+    /// <summary>
+    /// Handles the delete WebDAV request.
+    /// </summary>
     [HttpDelete]
     [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
     public async Task<IActionResult> HandleDeleteAsync(string? path)
@@ -337,6 +364,9 @@ public class WebDavController(
         return NoContent();
     }
 
+    /// <summary>
+    /// Handles the mk col WebDAV request.
+    /// </summary>
     [AcceptVerbs("MKCOL")]
     [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
     public async Task<IActionResult> HandleMkColAsync(string? path)
@@ -365,6 +395,9 @@ public class WebDavController(
         return Created();
     }
 
+    /// <summary>
+    /// Handles the move WebDAV request.
+    /// </summary>
     [AcceptVerbs("MOVE")]
     [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
     public async Task<IActionResult> HandleMoveAsync(string? path)
@@ -403,6 +436,9 @@ public class WebDavController(
         return result.Created ? Created() : NoContent();
     }
 
+    /// <summary>
+    /// Handles the copy WebDAV request.
+    /// </summary>
     [AcceptVerbs("COPY")]
     [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
     public async Task<IActionResult> HandleCopyAsync(string? path)

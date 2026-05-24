@@ -1,4 +1,7 @@
-﻿using System;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+using System;
 
 namespace Cotton
 {
@@ -26,6 +29,31 @@ namespace Cotton
         /// Gets the name of the product, which is "Cotton Cloud".
         /// </summary>
         public const string ProductName = "Cotton Cloud";
+
+        /// <summary>
+        /// Gets the public hosted service name for Cotton-managed bridge features.
+        /// </summary>
+        public const string CottonBridgeName = "Cotton Bridge";
+
+        /// <summary>
+        /// Gets the base URL for Cotton Bridge APIs.
+        /// </summary>
+        public const string CottonBridgeBaseUrl = "https://bridge.cottoncloud.dev/api/v1/";
+
+        /// <summary>
+        /// Gets the Cotton Bridge telemetry endpoint.
+        /// </summary>
+        public const string CottonBridgeTelemetryUrl = CottonBridgeBaseUrl + "telemetry";
+
+        /// <summary>
+        /// Gets the Cotton Bridge health endpoint.
+        /// </summary>
+        public const string CottonBridgeHealthUrl = CottonBridgeBaseUrl + "health";
+
+        /// <summary>
+        /// Gets the Cotton Bridge GeoIP lookup endpoint.
+        /// </summary>
+        public const string CottonBridgeGeoIpLookupUrl = CottonBridgeBaseUrl + "lookup";
 
         /// <summary>
         /// Specifies the application-startup window, in minutes, during which the first administrator account may be created.

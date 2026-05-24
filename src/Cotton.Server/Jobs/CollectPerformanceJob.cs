@@ -1,4 +1,7 @@
-﻿using Cotton.Database;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+using Cotton.Database;
 using Cotton.Models;
 using Cotton.Server.Helpers;
 using Cotton.Server.Providers;
@@ -9,15 +12,20 @@ using Quartz;
 
 namespace Cotton.Server.Jobs
 {
+    /// <summary>
+    /// Runs the scheduled collect performance maintenance task.
+    /// </summary>
     [JobTrigger(days: 1)]
     public class CollectPerformanceJob(
         PerfTracker _perf,
         CottonDbContext _dbContext,
         SettingsProvider _settingsProvider,
+        StoragePipelineProbeService _storagePipelineProbe,
         ILogger<CollectPerformanceJob> _logger) : IJob
     {
-        private const string CloudTelemetryUrl = "https://cotton-gateway.splidex.com/api/v1/telemetry";
-
+        /// <summary>
+        /// Executes the scheduled Quartz job.
+        /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
             await Task.Delay(360_000); // Wait for 6 minutes for the server to start up and stabilize
@@ -35,7 +43,8 @@ namespace Cotton.Server.Jobs
                 return;
             }
 
-            // TODO: Collect metrics and send to monitoring system, if user has opted in to telemetry.
+            StoragePipelineProbeResult? storagePipelineProbe = await TryRunStoragePipelineProbeAsync(settings.StorageType.ToString().ToLowerInvariant(), context.CancellationToken).ConfigureAwait(false);
+
             TelemetryRequest request = new()
             {
                 InstanceId = settings.InstanceId,
@@ -44,10 +53,24 @@ namespace Cotton.Server.Jobs
                 Users = await _dbContext.Users.CountAsync(),
                 Files = await _dbContext.FileManifests.CountAsync(),
                 Version = AppVersionHelpers.GetAppVersion() ?? "Unknown",
+                StoragePipelineProbe = storagePipelineProbe,
             };
             using var httpClient = new HttpClient();
-            await httpClient.PostAsJsonAsync(CloudTelemetryUrl, request);
-            _logger.LogInformation("CollectPerformanceJob completed - telemetry data was sent to Cotton Cloud");
+            await httpClient.PostAsJsonAsync(global::Cotton.Constants.CottonBridgeTelemetryUrl, request);
+            _logger.LogInformation("CollectPerformanceJob completed - telemetry data was sent to Cotton Bridge");
+        }
+
+        private async Task<StoragePipelineProbeResult?> TryRunStoragePipelineProbeAsync(string storageBackend, CancellationToken cancellationToken)
+        {
+            try
+            {
+                return await _storagePipelineProbe.RunAsync(storageBackend, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Storage pipeline telemetry probe failed; sending telemetry without storage speed metrics.");
+                return null;
+            }
         }
     }
 }

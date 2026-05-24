@@ -123,7 +123,7 @@
           "notifications",
           "email mode",
           "mail mode",
-          "cotton cloud mail",
+          "cotton bridge mail",
           "custom smtp",
           "meldingen",
           "e-mailmodus",
@@ -1142,12 +1142,12 @@
         "title": "E-mailconfiguratie",
         "subtitle": "Kies vanwaar e-mailmeldingen worden verzonden.",
         "options": {
-          "cloud": "Cloud Cotton Mail gebruiken",
+          "cloud": "Cotton Bridge Mail gebruiken",
           "custom": "Eigen SMTP-server gebruiken",
           "none": "Geen e-mailmeldingen"
         },
         "descriptions": {
-          "cloud": "De openbare SMTP-server van Cotton Cloud wordt gebruikt. Veilig en gratis. Kies deze optie als u twijfelt.",
+          "cloud": "Cotton Bridge verstuurt e-mailmeldingen voor deze instantie. Telemetrie moet ingeschakeld zijn.",
           "custom": "Configureer uw eigen SMTP-server voor het verzenden van e-mailmeldingen.",
           "none": "De eenvoudigste optie, maar u kunt dan zelfs uw wachtwoord niet herstellen."
         }
@@ -1190,13 +1190,13 @@
         "subtitle": "Cotton kan IP-adressen omzetten naar plaats- en landnamen. Dit kan bijvoorbeeld worden gebruikt in beveiligingsmeldingen om te tonen vanwaar een aanmelding plaatsvond en helpt ongebruikelijke toegang te detecteren.",
         "options": {
           "disabled": "Nee, uitgeschakeld laten",
-          "cottonCloud": "Clouddienst gebruiken",
+          "cottonCloud": "Cotton Bridge",
           "local": "GeoIP Light lokaal gebruiken",
           "custom": "Mijn eigen resolver gebruiken"
         },
         "descriptions": {
           "disabled": "Er wordt geen locatieopzoeking uitgevoerd. Functies die de aanmeldlocatie tonen, bewaren alleen de ruwe IP-adressen.",
-          "cottonCloud": "Zet IP-adressen om via de Cotton-provider. Vereist dat telemetrie is ingeschakeld.",
+          "cottonCloud": "IP-adressen omzetten via Cotton Bridge. Telemetrie moet ingeschakeld zijn.",
           "local": "Zet IP-adressen op uw server om met een lokale GeoIP Light-database/pakket.",
           "custom": "Plak een URL naar uw eigen service. Cotton probeert locatiegerelateerde velden automatisch uit JSON te extraheren."
         }
@@ -1217,12 +1217,12 @@
         "options": {
           "local": "Lokale berekeningen",
           "runner": "Eigen GPU-runner",
-          "cloud": "Cotton Cloud-berekeningen"
+          "cloud": "Cotton Bridge AI"
         },
         "descriptions": {
           "local": "Traag, de meeste zware functies zijn uitgeschakeld en de modelkwaliteit is vereenvoudigd. Maar de kwaliteit is nog steeds prima — meer dan voldoende voor alle taken.",
           "runner": "Sluit een aparte GPU-runner aan voor berekeningen. Snel, hoge kwaliteit — de beste modellen en ondersteuning voor alle functies.",
-          "cloud": "Optimale balans, maar kan beperkingen hebben. Ongelooflijk royaal en gratis. Vereist een internetverbinding."
+          "cloud": "Cotton Bridge kan AI-berekeningen uitvoeren voor deze instantie. Vereist internetverbinding en kan limieten hebben."
         }
       },
       "timezone": {
@@ -1818,7 +1818,7 @@
         "help": {
           "publicBaseUrl": "Ondanks deze instelling bepaalt Cotton de openbare URL bijna overal automatisch. Stel deze alleen in wanneer de automatische detectie onjuist is.",
           "timezone": "Dit helpt ons om geen achtergrondtaken uit te voeren terwijl u slaapt, zodat uw schijven 's nachts geen geluid maken.",
-          "telemetry": "Cotton verzamelt minimale technische diagnostische gegevens, zodat de ontwikkelaar fouten kan zien en oplossen, omdat niet iedereen problemen meldt. Het inschakelen van telemetrie ontgrendelt ook clouddiensten standaard.",
+          "telemetry": "Cotton verzamelt minimale technische diagnostische gegevens, zodat de ontwikkelaar fouten kan zien en oplossen, omdat niet iedereen problemen meldt. Het inschakelen van telemetrie ontgrendelt ook Cotton Bridge-diensten standaard.",
           "allowDeduplication": "Bepaalt of een gebruiker kan vernemen dat een andere gebruiker hetzelfde bestand al opslaat. Wanneer uitgeschakeld worden identieke gegevens nog steeds gededupliceerd op de server na de upload, maar worden ze onnodig eerst overgedragen. Wanneer ingeschakeld, kan een andere gebruiker vernemen dat iemand in deze cloud dat bestand eerder heeft geüpload. Dit is veilig voor familie en vertrouwde vrienden.",
           "allowGlobalIndexing": "Staat de server toe gebruikersbestanden te ontsleutelen en een diepgaande zoekindex op te bouwen. Zonder dit gebruikt het zoeken alleen bestands- en mapnamen.",
           "serverUsage": "Optimaliseert aanbevelingen voor functies en enkele instellingen. Het is geen kritieke parameter, dus kies wat goed voelt."
@@ -1842,18 +1842,18 @@
         "computionMode": {
           "Local": "Lokaal",
           "Remote": "Externe runner",
-          "Cloud": "Cotton Cloud",
+          "Cloud": "Cotton Bridge AI",
           "inDevelopment": "Deze functie is nog in ontwikkeling."
         },
         "geoIpLookupMode": {
           "Disabled": "Uitgeschakeld",
-          "CottonCloud": "Clouddienst",
+          "CottonCloud": "Cotton Bridge",
           "MaxMindLocal": "GeoIP Light",
           "CustomHttp": "Eigen HTTP"
         },
         "geoIpLookupModeDescription": {
           "Disabled": "IP-adressen niet omzetten.",
-          "CottonCloud": "IP-adressen omzetten via de Cotton-provider. Dit kan worden gebruikt door functies zoals beveiligingsmeldingen.",
+          "CottonCloud": "IP-adressen omzetten via Cotton Bridge. Dit kan worden gebruikt door functies zoals beveiligingsmeldingen.",
           "MaxMindLocal": "IP-adressen lokaal omzetten met een GeoIP Light-database/pakket.",
           "CustomHttp": "Plak een URL naar uw eigen service. Cotton probeert locatiegerelateerde velden automatisch uit JSON te extraheren."
         },
@@ -1935,7 +1935,7 @@
       },
       "emailMode": {
         "None": "Uitgeschakeld",
-        "Cloud": "Cotton Cloud Mail",
+        "Cloud": "Cotton Bridge Mail",
         "Custom": "Eigen SMTP"
       },
       "smtp": {

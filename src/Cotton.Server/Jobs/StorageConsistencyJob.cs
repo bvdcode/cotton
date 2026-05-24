@@ -1,4 +1,7 @@
-﻿using Cotton.Database;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
@@ -11,6 +14,9 @@ using Quartz;
 
 namespace Cotton.Server.Jobs
 {
+    /// <summary>
+    /// Runs the scheduled storage consistency maintenance task.
+    /// </summary>
     [JobTrigger(days: 30)]
     public class StorageConsistencyJob(
         IStoragePipeline _storage,
@@ -21,6 +27,9 @@ namespace Cotton.Server.Jobs
     {
         private const int BatchSize = 10000;
 
+        /// <summary>
+        /// Executes the scheduled Quartz job.
+        /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
             await Task.Delay(300_000, context.CancellationToken); // Wait for 5 minutes for the server to start up and stabilize
@@ -28,6 +37,9 @@ namespace Cotton.Server.Jobs
             await RunOnceAsync(context.CancellationToken);
         }
 
+        /// <summary>
+        /// Runs one maintenance pass immediately.
+        /// </summary>
         public async Task RunOnceAsync(CancellationToken ct = default)
         {
             _logger.LogInformation("Storage consistency check started.");
@@ -111,15 +123,25 @@ namespace Cotton.Server.Jobs
 
             if (referencedByPreview)
             {
-                await _dbContext.FileManifests
-                    .Where(fm => fm.SmallFilePreviewHash == chunkHash)
-                    .ExecuteUpdateAsync(fm => fm
-                        .SetProperty(x => x.SmallFilePreviewHash, (byte[]?)null)
-                        .SetProperty(x => x.SmallFilePreviewHashEncrypted, (byte[]?)null), ct);
+                List<FileManifest> previewManifests = await _dbContext.FileManifests
+                    .Where(fm => fm.SmallFilePreviewHash == chunkHash || fm.LargeFilePreviewHash == chunkHash)
+                    .ToListAsync(ct);
 
-                await _dbContext.FileManifests
-                    .Where(fm => fm.LargeFilePreviewHash == chunkHash)
-                    .ExecuteUpdateAsync(fm => fm.SetProperty(x => x.LargeFilePreviewHash, (byte[]?)null), ct);
+                foreach (FileManifest manifest in previewManifests)
+                {
+                    if (manifest.SmallFilePreviewHash is not null && manifest.SmallFilePreviewHash.SequenceEqual(chunkHash))
+                    {
+                        manifest.SmallFilePreviewHash = null;
+                        manifest.SmallFilePreviewHashEncrypted = null;
+                    }
+
+                    if (manifest.LargeFilePreviewHash is not null && manifest.LargeFilePreviewHash.SequenceEqual(chunkHash))
+                    {
+                        manifest.LargeFilePreviewHash = null;
+                    }
+                }
+
+                await _dbContext.SaveChangesAsync(ct);
             }
 
             bool referencedByAvatar = await _dbContext.Users

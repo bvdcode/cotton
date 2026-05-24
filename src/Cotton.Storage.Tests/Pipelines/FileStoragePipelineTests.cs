@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
@@ -97,6 +97,23 @@ namespace Cotton.Storage.Tests.Pipelines
                 ms.WriteByte(marker);
                 ms.Position = 0;
                 return ms;
+            }
+        }
+
+        private class CountingProcessor : IStorageProcessor
+        {
+            public int Priority => 100;
+            public int WriteCalls;
+
+            public Task<Stream> ReadAsync(string uid, Stream stream, PipelineContext? context = null)
+            {
+                return Task.FromResult(stream);
+            }
+
+            public Task<Stream> WriteAsync(string uid, Stream stream, PipelineContext? context = null)
+            {
+                System.Threading.Interlocked.Increment(ref WriteCalls);
+                return Task.FromResult(stream);
             }
         }
 
@@ -202,6 +219,34 @@ namespace Cotton.Storage.Tests.Pipelines
             await backendStream.CopyToAsync(result);
             // Processors add markers in reverse order: BB (200), AA (100), CC (50)
             Assert.That(result.ToArray(), Is.EqualTo(new byte[] { 0x01, 0xBB, 0xAA, 0xCC }));
+        }
+
+        [Test]
+        public async Task Pipeline_DuplicateWrite_SkipsProcessors()
+        {
+            // Arrange
+            var backend = new FakeStorageBackend();
+            var provider = new FakeBackendProvider(backend);
+            var logger = new Mock<ILogger<FileStoragePipeline>>();
+            var processor = new CountingProcessor();
+            var pipeline = new FileStoragePipeline(logger.Object, provider, [processor]);
+
+            byte[] originalData = Encoding.UTF8.GetBytes("already stored");
+            byte[] duplicateData = Encoding.UTF8.GetBytes("duplicate upload");
+            await backend.WriteAsync("test-uid", new MemoryStream(originalData));
+
+            // Act
+            await pipeline.WriteAsync("test-uid", new MemoryStream(duplicateData));
+
+            // Assert
+            var stream = await backend.ReadAsync("test-uid");
+            var result = new MemoryStream();
+            await stream.CopyToAsync(result);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(processor.WriteCalls, Is.Zero);
+                Assert.That(result.ToArray(), Is.EqualTo(originalData));
+            }
         }
 
         [Test]

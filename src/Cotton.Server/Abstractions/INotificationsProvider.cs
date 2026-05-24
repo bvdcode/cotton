@@ -1,8 +1,14 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
 using Cotton.Database.Models.Enums;
 using Cotton.Models.Enums;
 
 namespace Cotton.Server.Abstractions
 {
+    /// <summary>
+    /// Defines the notifications provider contract used by the server runtime.
+    /// </summary>
     public interface INotificationsProvider
     {
         /// <summary>
@@ -15,10 +21,16 @@ namespace Cotton.Server.Abstractions
             Dictionary<string, string> parameters,
             string serverBaseUrl);
 
+        /// <summary>
+        /// Sends smtp test email.
+        /// </summary>
         Task SendSmtpTestEmailAsync(
             Guid userId,
             string serverBaseUrl);
 
+        /// <summary>
+        /// Sends notification.
+        /// </summary>
         Task SendNotificationAsync(
             Guid userId,
             string title,

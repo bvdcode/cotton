@@ -19,7 +19,7 @@ namespace Cotton.Database.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.7")
+                .HasAnnotation("ProductVersion", "10.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "citext");
@@ -122,6 +122,14 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("gc_scheduled_after");
 
+                    b.Property<byte[]>("IntegrityMac")
+                        .HasColumnType("bytea")
+                        .HasColumnName("integrity_mac");
+
+                    b.Property<int?>("IntegrityVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("integrity_version");
+
                     b.Property<long>("PlainSizeBytes")
                         .HasColumnType("bigint")
                         .HasColumnName("plain_size_bytes");
@@ -206,6 +214,14 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("text")
                         .HasColumnName("custom_geo_ip_lookup_url");
 
+                    b.Property<long?>("DefaultUserStorageQuotaBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("default_user_storage_quota_bytes");
+
+                    b.Property<Guid?>("DefaultUserTemplateNodeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("default_user_template_node_id");
+
                     b.Property<int>("EmailMode")
                         .HasColumnType("integer")
                         .HasColumnName("email_mode");
@@ -221,6 +237,14 @@ namespace Cotton.Database.Migrations
                     b.Property<Guid>("InstanceId")
                         .HasColumnType("uuid")
                         .HasColumnName("instance_id");
+
+                    b.Property<byte[]>("IntegrityMac")
+                        .HasColumnType("bytea")
+                        .HasColumnName("integrity_mac");
+
+                    b.Property<int?>("IntegrityVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("integrity_version");
 
                     b.Property<int>("MaxChunkSizeBytes")
                         .HasColumnType("integer")
@@ -300,14 +324,6 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("storage_space_mode");
 
-                    b.Property<long?>("DefaultUserStorageQuotaBytes")
-                        .HasColumnType("bigint")
-                        .HasColumnName("default_user_storage_quota_bytes");
-
-                    b.Property<Guid?>("DefaultUserTemplateNodeId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("default_user_template_node_id");
-
                     b.Property<int>("StorageType")
                         .HasColumnType("integer")
                         .HasColumnName("storage_type");
@@ -362,6 +378,14 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("text")
                         .HasColumnName("file_name");
 
+                    b.Property<byte[]>("IntegrityMac")
+                        .HasColumnType("bytea")
+                        .HasColumnName("integrity_mac");
+
+                    b.Property<int?>("IntegrityVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("integrity_version");
+
                     b.Property<Guid>("NodeFileId")
                         .HasColumnType("uuid")
                         .HasColumnName("node_file_id");
@@ -406,6 +430,14 @@ namespace Cotton.Database.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<byte[]>("IntegrityMac")
+                        .HasColumnType("bytea")
+                        .HasColumnName("integrity_mac");
+
+                    b.Property<int?>("IntegrityVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("integrity_version");
 
                     b.Property<byte[]>("LargeFilePreviewHash")
                         .HasColumnType("bytea")
@@ -481,6 +513,14 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("file_manifest_id");
 
+                    b.Property<byte[]>("IntegrityMac")
+                        .HasColumnType("bytea")
+                        .HasColumnName("integrity_mac");
+
+                    b.Property<int?>("IntegrityVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("integrity_version");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -535,6 +575,14 @@ namespace Cotton.Database.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<byte[]>("IntegrityMac")
+                        .HasColumnType("bytea")
+                        .HasColumnName("integrity_mac");
+
+                    b.Property<int?>("IntegrityVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("integrity_version");
 
                     b.Property<Guid>("LayoutId")
                         .HasColumnType("uuid")
@@ -597,6 +645,14 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("file_manifest_id");
 
+                    b.Property<byte[]>("IntegrityMac")
+                        .HasColumnType("bytea")
+                        .HasColumnName("integrity_mac");
+
+                    b.Property<int?>("IntegrityVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("integrity_version");
+
                     b.Property<Dictionary<string, string>>("Metadata")
                         .HasColumnType("hstore")
                         .HasColumnName("metadata");
@@ -656,6 +712,14 @@ namespace Cotton.Database.Migrations
                     b.Property<DateTime?>("ExpiresAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expires_at");
+
+                    b.Property<byte[]>("IntegrityMac")
+                        .HasColumnType("bytea")
+                        .HasColumnName("integrity_mac");
+
+                    b.Property<int?>("IntegrityVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("integrity_version");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -773,6 +837,14 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("text")
                         .HasColumnName("first_name");
 
+                    b.Property<byte[]>("IntegrityMac")
+                        .HasColumnType("bytea")
+                        .HasColumnName("integrity_mac");
+
+                    b.Property<int?>("IntegrityVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("integrity_version");
+
                     b.Property<bool>("IsEmailVerified")
                         .HasColumnType("boolean")
                         .HasColumnName("is_email_verified");
@@ -849,10 +921,6 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
                     b.Property<Guid>("AaGuid")
                         .HasColumnType("uuid")
                         .HasColumnName("aaguid");
@@ -862,14 +930,22 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("character varying(64)")
                         .HasColumnName("attestation_format");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
                     b.Property<byte[]>("CredentialId")
                         .IsRequired()
                         .HasColumnType("bytea")
                         .HasColumnName("credential_id");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
+                    b.Property<byte[]>("IntegrityMac")
+                        .HasColumnType("bytea")
+                        .HasColumnName("integrity_mac");
+
+                    b.Property<int?>("IntegrityVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("integrity_version");
 
                     b.Property<bool>("IsBackedUp")
                         .HasColumnType("boolean")
@@ -898,7 +974,7 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("signature_counter");
 
-                    b.Property<string[]>("Transports")
+                    b.PrimitiveCollection<string[]>("Transports")
                         .IsRequired()
                         .HasColumnType("text[]")
                         .HasColumnName("transports");
@@ -911,6 +987,10 @@ namespace Cotton.Database.Migrations
                         .IsRequired()
                         .HasColumnType("bytea")
                         .HasColumnName("user_handle");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
 
                     b.HasKey("Id");
 
@@ -948,6 +1028,14 @@ namespace Cotton.Database.Migrations
                     b.Property<string>("Device")
                         .HasColumnType("text")
                         .HasColumnName("device");
+
+                    b.Property<byte[]>("IntegrityMac")
+                        .HasColumnType("bytea")
+                        .HasColumnName("integrity_mac");
+
+                    b.Property<int?>("IntegrityVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("integrity_version");
 
                     b.Property<IPAddress>("IpAddress")
                         .IsRequired()

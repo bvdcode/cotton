@@ -1,6 +1,7 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using System.Globalization;
 using System.Text;
 using System.Xml;
 
@@ -13,6 +14,9 @@ public static class WebDavXmlBuilder
 {
     private const string DavNamespace = "DAV:";
 
+    /// <summary>
+    /// Builds multi status response.
+    /// </summary>
     public static string BuildMultiStatusResponse(IEnumerable<WebDavResource> resources)
     {
         var sb = new StringBuilder();
@@ -39,6 +43,9 @@ public static class WebDavXmlBuilder
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Builds prop patch ok response.
+    /// </summary>
     public static string BuildPropPatchOkResponse(string href)
     {
         var sb = new StringBuilder();
@@ -70,6 +77,9 @@ public static class WebDavXmlBuilder
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Builds lock discovery response.
+    /// </summary>
     public static string BuildLockDiscoveryResponse(string token, TimeSpan timeout)
     {
         var sb = new StringBuilder();
@@ -128,9 +138,27 @@ public static class WebDavXmlBuilder
         }
         writer.WriteEndElement(); // resourcetype
 
-        writer.WriteElementString("d", "getcontentlength", DavNamespace, resource.ContentLength.ToString());
+        writer.WriteElementString("d", "getcontentlength", DavNamespace, resource.ContentLength.ToString(CultureInfo.InvariantCulture));
         writer.WriteElementString("d", "getlastmodified", DavNamespace, resource.LastModified.ToString("R"));
         writer.WriteElementString("d", "getetag", DavNamespace, resource.ETag);
+
+        if (resource.Quota is not null)
+        {
+            writer.WriteElementString(
+                "d",
+                "quota-used-bytes",
+                DavNamespace,
+                resource.Quota.UsedBytes.ToString(CultureInfo.InvariantCulture));
+
+            if (resource.Quota.AvailableBytes is long availableBytes)
+            {
+                writer.WriteElementString(
+                    "d",
+                    "quota-available-bytes",
+                    DavNamespace,
+                    availableBytes.ToString(CultureInfo.InvariantCulture));
+            }
+        }
 
         if (!resource.IsCollection && !string.IsNullOrEmpty(resource.ContentType))
         {
@@ -155,4 +183,16 @@ public record WebDavResource(
     long ContentLength,
     DateTimeOffset LastModified,
     string ETag,
-    string? ContentType = null);
+    string? ContentType = null,
+    WebDavQuota? Quota = null);
+
+/// <summary>
+/// Represents WebDAV quota properties exposed through PROPFIND.
+/// </summary>
+/// <remarks>
+/// quota-used-bytes is always known from Cotton's logical file references. quota-available-bytes is only emitted when
+/// the instance has a configured user quota; without a quota, Cotton does not pretend to know backend free space.
+/// </remarks>
+public record WebDavQuota(
+    long UsedBytes,
+    long? AvailableBytes);

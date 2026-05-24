@@ -4,8 +4,10 @@ import {
   NotAContainerError,
 } from "./errors";
 
-export const MAGIC = new Uint8Array([0x43, 0x54, 0x4e, 0x31]);
-export const CONTAINER_VERSION = 1;
+export const LEGACY_MAGIC = new Uint8Array([0x43, 0x54, 0x4e, 0x31]);
+export const MAGIC = new Uint8Array([0x43, 0x54, 0x4e, 0x32]);
+export const LEGACY_CONTAINER_VERSION = 1;
+export const CONTAINER_VERSION = 2;
 export const ALG_AES_256_GCM = 1;
 export const DEFAULT_KEY_ID = 1;
 export const GCM_TAG_BYTES = 16;
@@ -27,7 +29,12 @@ export const MIN_CHUNK_SIZE = 8 * 1024;
 export const MAX_CHUNK_SIZE = 64 * 1024 * 1024;
 export const MAX_CHUNK_COUNT = Number.MAX_SAFE_INTEGER;
 
+export type ContainerFormatVersion =
+  | typeof LEGACY_CONTAINER_VERSION
+  | typeof CONTAINER_VERSION;
+
 export interface ContainerHeader {
+  formatVersion: ContainerFormatVersion;
   keyId: number;
   noncePrefix: Uint8Array;
   fileKeyNonce: Uint8Array;
@@ -43,17 +50,13 @@ export interface ChunkHeader {
 }
 
 export function looksLikeContainer(bytes: Uint8Array): boolean {
-  if (bytes.length < MAGIC.length) {
-    return false;
-  }
+  return readFormatVersion(bytes) !== null;
+}
 
-  for (let i = 0; i < MAGIC.length; i += 1) {
-    if (bytes[i] !== MAGIC[i]) {
-      return false;
-    }
-  }
-
-  return true;
+export function requiresAuthenticatedTerminator(
+  formatVersion: ContainerFormatVersion,
+): boolean {
+  return formatVersion >= CONTAINER_VERSION;
 }
 
 export function buildHeader(header: ContainerHeader): Uint8Array {
@@ -63,7 +66,7 @@ export function buildHeader(header: ContainerHeader): Uint8Array {
   const view = new DataView(output.buffer);
   let offset = 0;
 
-  output.set(MAGIC, offset);
+  output.set(magicForVersion(header.formatVersion), offset);
   offset += MAGIC.length;
   view.setInt32(offset, FILE_HEADER_BYTES, true);
   offset += 4;
@@ -86,7 +89,8 @@ export function parseHeader(bytes: Uint8Array): {
   header: ContainerHeader;
   headerLength: number;
 } {
-  if (!looksLikeContainer(bytes)) {
+  const formatVersion = readFormatVersion(bytes);
+  if (formatVersion === null) {
     throw new NotAContainerError("Magic header mismatch.");
   }
 
@@ -115,6 +119,7 @@ export function parseHeader(bytes: Uint8Array): {
   const encryptedFileKey = bytes.slice(offset, offset + FILE_KEY_BYTES);
 
   const header: ContainerHeader = {
+    formatVersion,
     keyId,
     noncePrefix,
     fileKeyNonce,
@@ -132,8 +137,9 @@ export function parseHeader(bytes: Uint8Array): {
 
 export function buildKeyAad(header: Pick<
   ContainerHeader,
-  "keyId" | "noncePrefix" | "fileKeyNonce" | "plaintextSize"
+  "formatVersion" | "keyId" | "noncePrefix" | "fileKeyNonce" | "plaintextSize"
 >): Uint8Array {
+  assertFormatVersion(header.formatVersion);
   assertKeyId(header.keyId);
   assertByteLength(header.noncePrefix, GCM_NONCE_PREFIX_BYTES, "Nonce prefix");
   assertByteLength(header.fileKeyNonce, GCM_NONCE_BYTES, "File key nonce");
@@ -145,7 +151,7 @@ export function buildKeyAad(header: Pick<
   const view = new DataView(output.buffer);
   let offset = 0;
 
-  output.set(MAGIC, offset);
+  output.set(magicForVersion(header.formatVersion), offset);
   offset += MAGIC.length;
   view.setInt32(offset, FILE_HEADER_BYTES, true);
   offset += 4;
@@ -160,16 +166,20 @@ export function buildKeyAad(header: Pick<
   return output;
 }
 
-export function buildChunkHeader(header: ChunkHeader): Uint8Array {
+export function buildChunkHeader(
+  header: ChunkHeader,
+  formatVersion: ContainerFormatVersion = CONTAINER_VERSION,
+): Uint8Array {
+  assertFormatVersion(formatVersion);
   assertKeyId(header.keyId);
-  assertPlaintextLength(header.plaintextLength);
+  assertPlaintextLength(header.plaintextLength, true);
   assertByteLength(header.tag, GCM_TAG_BYTES, "Chunk tag");
 
   const output = new Uint8Array(CHUNK_HEADER_BYTES);
   const view = new DataView(output.buffer);
   let offset = 0;
 
-  output.set(MAGIC, offset);
+  output.set(magicForVersion(formatVersion), offset);
   offset += MAGIC.length;
   view.setInt32(offset, CHUNK_HEADER_BYTES, true);
   offset += 4;
@@ -182,9 +192,20 @@ export function buildChunkHeader(header: ChunkHeader): Uint8Array {
   return output;
 }
 
-export function parseChunkHeader(bytes: Uint8Array): ChunkHeader {
-  if (!looksLikeContainer(bytes)) {
+export function parseChunkHeader(
+  bytes: Uint8Array,
+  expectedFormatVersion?: ContainerFormatVersion,
+): ChunkHeader {
+  const actualFormatVersion = readFormatVersion(bytes);
+  if (actualFormatVersion === null) {
     throw new CorruptedContainerError("Chunk header magic mismatch.");
+  }
+
+  if (
+    expectedFormatVersion !== undefined &&
+    actualFormatVersion !== expectedFormatVersion
+  ) {
+    throw new CorruptedContainerError("Chunk header format version mismatch.");
   }
 
   if (bytes.length < CHUNK_HEADER_BYTES) {
@@ -219,16 +240,18 @@ export function buildChunkAad(
   keyId: number,
   chunkIndex: number,
   plaintextLength: number,
+  formatVersion: ContainerFormatVersion = CONTAINER_VERSION,
 ): Uint8Array {
+  assertFormatVersion(formatVersion);
   assertKeyId(keyId);
   assertChunkIndex(chunkIndex);
-  assertPlaintextLength(plaintextLength);
+  assertPlaintextLength(plaintextLength, true);
 
   const output = new Uint8Array(32);
   const view = new DataView(output.buffer);
 
-  output.set(MAGIC, 0);
-  view.setInt32(4, CONTAINER_VERSION, true);
+  output.set(magicForVersion(formatVersion), 0);
+  view.setInt32(4, formatVersion, true);
   view.setInt32(8, keyId, true);
   setInt64LittleEndian(view, 12, chunkIndex);
   setInt64LittleEndian(view, 20, plaintextLength);
@@ -284,7 +307,46 @@ export function assertCompatibleChunkSize(chunkSize: number): void {
   }
 }
 
+function magicForVersion(formatVersion: ContainerFormatVersion): Uint8Array {
+  if (formatVersion === CONTAINER_VERSION) {
+    return MAGIC;
+  }
+
+  if (formatVersion === LEGACY_CONTAINER_VERSION) {
+    return LEGACY_MAGIC;
+  }
+
+  throw new InvalidCryptoInputError("Unsupported container format version.");
+}
+
+function readFormatVersion(bytes: Uint8Array): ContainerFormatVersion | null {
+  if (bytes.length < MAGIC.length) {
+    return null;
+  }
+
+  if (startsWith(bytes, MAGIC)) {
+    return CONTAINER_VERSION;
+  }
+
+  if (startsWith(bytes, LEGACY_MAGIC)) {
+    return LEGACY_CONTAINER_VERSION;
+  }
+
+  return null;
+}
+
+function startsWith(bytes: Uint8Array, prefix: Uint8Array): boolean {
+  for (let index = 0; index < prefix.length; index += 1) {
+    if (bytes[index] !== prefix[index]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 function assertSupportedHeader(header: ContainerHeader): void {
+  assertFormatVersion(header.formatVersion);
   assertKeyId(header.keyId);
   assertByteLength(header.noncePrefix, GCM_NONCE_PREFIX_BYTES, "Nonce prefix");
   assertByteLength(header.fileKeyNonce, GCM_NONCE_BYTES, "File key nonce");
@@ -308,7 +370,7 @@ function assertParsedHeader(header: ContainerHeader): void {
 function assertParsedChunkHeader(header: ChunkHeader): void {
   try {
     assertKeyId(header.keyId);
-    assertPlaintextLength(header.plaintextLength);
+    assertPlaintextLength(header.plaintextLength, true);
   } catch (error) {
     if (error instanceof InvalidCryptoInputError) {
       throw new CorruptedContainerError("Invalid chunk header contents.");
@@ -329,10 +391,14 @@ function assertPlaintextSize(plaintextSize: number): void {
   }
 }
 
-function assertPlaintextLength(plaintextLength: number): void {
+function assertPlaintextLength(
+  plaintextLength: number,
+  allowZero: boolean = false,
+): void {
+  const minimum = allowZero ? 0 : 1;
   if (
     !Number.isSafeInteger(plaintextLength) ||
-    plaintextLength <= 0 ||
+    plaintextLength < minimum ||
     plaintextLength > MAX_CHUNK_SIZE
   ) {
     throw new InvalidCryptoInputError("Invalid chunk plaintext length.");
@@ -348,6 +414,17 @@ function assertChunkIndex(chunkIndex: number): void {
 function assertKeyId(keyId: number): void {
   if (!Number.isInteger(keyId) || keyId <= 0 || keyId > 0x7fffffff) {
     throw new InvalidCryptoInputError("Key id must be a positive 32-bit integer.");
+  }
+}
+
+function assertFormatVersion(
+  formatVersion: number,
+): asserts formatVersion is ContainerFormatVersion {
+  if (
+    formatVersion !== LEGACY_CONTAINER_VERSION &&
+    formatVersion !== CONTAINER_VERSION
+  ) {
+    throw new InvalidCryptoInputError("Unsupported container format version.");
   }
 }
 

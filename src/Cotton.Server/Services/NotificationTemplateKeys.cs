@@ -1,3 +1,6 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
 namespace Cotton.Server.Services
 {
     internal static class NotificationTemplateKeys
@@ -48,5 +51,8 @@ namespace Cotton.Server.Services
 
         public const string DatabaseRestoreCompletedTitle = "notifications:server.databaseRestoreCompleted.title";
         public const string DatabaseRestoreCompletedContent = "notifications:server.databaseRestoreCompleted.content";
+
+        public const string DatabaseIntegrityFailureTitle = "notifications:server.databaseIntegrityFailure.title";
+        public const string DatabaseIntegrityFailureContent = "notifications:server.databaseIntegrityFailure.content";
     }
 }

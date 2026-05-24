@@ -1,5 +1,5 @@
 ﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Database.Models;
@@ -20,6 +20,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Controllers
 {
+    /// <summary>
+    /// Exposes HTTP endpoints for user operations.
+    /// </summary>
     [ApiController]
     [Route(Routes.V1.Users)]
     public class UserController(
@@ -28,6 +31,9 @@ namespace Cotton.Server.Controllers
         IHubContext<EventHub> _hubContext,
         UserStorageQuotaService _quota) : ControllerBase
     {
+        /// <summary>
+        /// Confirms email verification.
+        /// </summary>
         [HttpPost("verify-email")]
         public async Task<IActionResult> ConfirmEmailVerification(
             [FromQuery] string token,
@@ -38,6 +44,9 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Sends email verification.
+        /// </summary>
         [Authorize]
         [HttpPost("me/send-email-verification")]
         public async Task<IActionResult> SendEmailVerification(CancellationToken cancellationToken)
@@ -48,6 +57,9 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Updates preferences.
+        /// </summary>
         [Authorize]
         [HttpPatch("me/preferences")]
         public async Task<IActionResult> UpdatePreferences(
@@ -71,6 +83,9 @@ namespace Cotton.Server.Controllers
             return Ok(foundUser.Preferences);
         }
 
+        /// <summary>
+        /// Gets current user.
+        /// </summary>
         [Authorize]
         [HttpGet("me")]
         public IActionResult GetCurrentUser()
@@ -85,6 +100,9 @@ namespace Cotton.Server.Controllers
             return Ok(userDto);
         }
 
+        /// <summary>
+        /// Gets current user storage quota.
+        /// </summary>
         [Authorize]
         [HttpGet("me/storage-quota")]
         public async Task<IActionResult> GetCurrentUserStorageQuota(CancellationToken cancellationToken)
@@ -94,6 +112,9 @@ namespace Cotton.Server.Controllers
             return Ok(quota);
         }
 
+        /// <summary>
+        /// Updates current user.
+        /// </summary>
         [Authorize]
         [HttpPut("me")]
         public async Task<IActionResult> UpdateCurrentUser(
@@ -121,6 +142,9 @@ namespace Cotton.Server.Controllers
             }
         }
 
+        /// <summary>
+        /// Gets users.
+        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet]
         public async Task<IActionResult> GetUsers([FromQuery] bool calculateStorageUsage, CancellationToken cancellationToken)
@@ -130,6 +154,9 @@ namespace Cotton.Server.Controllers
             return Ok(users);
         }
 
+        /// <summary>
+        /// Creates user.
+        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPost]
         public async Task<IActionResult> CreateUser([FromBody] AdminCreateUserRequest request, CancellationToken cancellationToken)
@@ -139,6 +166,9 @@ namespace Cotton.Server.Controllers
             return Ok(user);
         }
 
+        /// <summary>
+        /// Updates user.
+        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPut("{userId:guid}")]
         public async Task<IActionResult> UpdateUser(
@@ -160,6 +190,9 @@ namespace Cotton.Server.Controllers
             return Ok(updated);
         }
 
+        /// <summary>
+        /// Changes the current user password after verifying the old password.
+        /// </summary>
         [Authorize]
         [HttpPut("me/password")]
         public async Task<IActionResult> ChangePassword(

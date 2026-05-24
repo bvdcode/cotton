@@ -1,14 +1,23 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
 using Amazon.S3;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Helpers;
 
 namespace Cotton.Server.Providers
 {
+    /// <summary>
+    /// Provides s3 dependencies to server components.
+    /// </summary>
     public class S3Provider(SettingsProvider _settingsProvider) : IS3Provider
     {
         private IAmazonS3? _s3Client;
         private string? _bucketName;
 
+        /// <summary>
+        /// Gets bucket name.
+        /// </summary>
         public string GetBucketName()
         {
             if (!string.IsNullOrEmpty(_bucketName))
@@ -24,6 +33,9 @@ namespace Cotton.Server.Providers
             return result;
         }
 
+        /// <summary>
+        /// Gets s3 client.
+        /// </summary>
         public IAmazonS3 GetS3Client()
         {
             if (_s3Client != null)

@@ -1,14 +1,26 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
 using Cotton.Storage.Abstractions;
-using EasyExtensions.Crypto;
+using Cotton.Crypto;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
 namespace Cotton.Server.Services
 {
+    /// <summary>
+    /// Stores master key sentinel state.
+    /// </summary>
     public sealed class MasterKeySentinelStore
     {
+        /// <summary>
+        /// Defines the sentinel logical key.
+        /// </summary>
         public const string SentinelLogicalKey = "cotton.master-key.sentinel.v1";
+        /// <summary>
+        /// Executes sentinel storage key.
+        /// </summary>
         public static readonly string SentinelStorageKey = Hasher.ToHexStringHash(
             Hasher.HashData(Encoding.UTF8.GetBytes(SentinelLogicalKey)));
 
@@ -17,6 +29,9 @@ namespace Cotton.Server.Services
         private readonly IStorageBackend _backend;
         private readonly IMasterKeyCompatibilityProbe? _compatibilityProbe;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MasterKeySentinelStore"/> type.
+        /// </summary>
         public MasterKeySentinelStore(
             ILogger<MasterKeySentinelStore> logger,
             IStorageBackend backend,
@@ -27,8 +42,14 @@ namespace Cotton.Server.Services
             _compatibilityProbe = compatibilityProbe;
         }
 
+        /// <summary>
+        /// Checks whether the master-key sentinel exists in storage.
+        /// </summary>
         public Task<bool> ExistsAsync() => _backend.ExistsAsync(SentinelStorageKey);
 
+        /// <summary>
+        /// Validates or initialize async.
+        /// </summary>
         public Task<MasterKeySentinelResult> ValidateOrInitializeAsync(
             CottonEncryptionSettings encryptionSettings,
             CancellationToken cancellationToken = default) =>
@@ -37,6 +58,9 @@ namespace Cotton.Server.Services
                 MasterKeySentinelInitializationMode.TrustProvidedKeyWhenNoProbe,
                 cancellationToken);
 
+        /// <summary>
+        /// Validates or initialize async.
+        /// </summary>
         public async Task<MasterKeySentinelResult> ValidateOrInitializeAsync(
             CottonEncryptionSettings encryptionSettings,
             MasterKeySentinelInitializationMode initializationMode,
@@ -269,17 +293,35 @@ namespace Cotton.Server.Services
             string Nonce);
     }
 
+    /// <summary>
+    /// Lists the supported master key sentinel initialization mode values.
+    /// </summary>
     public enum MasterKeySentinelInitializationMode
     {
+        /// <summary>
+        /// Represents the trust provided key when no probe option.
+        /// </summary>
         TrustProvidedKeyWhenNoProbe,
+        /// <summary>
+        /// Represents the require compatibility evidence for existing data option.
+        /// </summary>
         RequireCompatibilityEvidenceForExistingData
     }
 
+    /// <summary>
+    /// Represents the result of master key sentinel.
+    /// </summary>
     public sealed record MasterKeySentinelResult(bool Success, bool Created, bool Repaired, string? Error)
     {
+        /// <summary>
+        /// Creates a successful compatibility probe result.
+        /// </summary>
         public static MasterKeySentinelResult Ok(bool created, bool repaired = false) =>
             new(true, created, repaired, null);
 
+        /// <summary>
+        /// Executes fail.
+        /// </summary>
         public static MasterKeySentinelResult Fail(string error) => new(false, false, false, error);
     }
 }

@@ -1,3 +1,6 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
 using Cotton.Server.Abstractions;
 using Cotton.Server.Models.DatabaseBackup;
 using Cotton.Storage.Abstractions;
@@ -5,6 +8,9 @@ using System.Text.Json;
 
 namespace Cotton.Server.Services
 {
+    /// <summary>
+    /// Coordinates database backup manifest.
+    /// </summary>
     public class DatabaseBackupManifestService(
         IStoragePipeline storage,
         DatabaseBackupKeyProvider keyProvider,
@@ -12,6 +18,9 @@ namespace Cotton.Server.Services
     {
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+        /// <summary>
+        /// Attempts to get latest manifest async.
+        /// </summary>
         public async Task<ResolvedBackupManifest?> TryGetLatestManifestAsync(CancellationToken cancellationToken = default)
         {
             string pointerStorageKey = keyProvider.GetScopedPointerStorageKey();

@@ -101,7 +101,7 @@
           "notifications",
           "email mode",
           "mail mode",
-          "cotton cloud mail",
+          "cotton bridge mail",
           "custom smtp"
         ],
         "adminOnly": true
@@ -1046,12 +1046,12 @@
         "title": "Email configuration",
         "subtitle": "Choose where email notifications will be sent from.",
         "options": {
-          "cloud": "Use cloud Cotton Mail",
+          "cloud": "Use Cotton Bridge Mail",
           "custom": "Use custom SMTP server",
           "none": "No Email notifications"
         },
         "descriptions": {
-          "cloud": "Public Cotton Cloud SMTP server will be used. It's secure and free. Choose this if you're not sure.",
+          "cloud": "Cotton Bridge will send notification emails for this instance. Requires telemetry to be enabled.",
           "custom": "Configure your own SMTP server for sending email notifications.",
           "none": "The simplest option, but you won't even be able to recover your password."
         }
@@ -1094,13 +1094,13 @@
         "subtitle": "Cotton can turn IP addresses into city and country names. This can be used, for example, in security notifications to show where a sign-in came from and help detect unusual access.",
         "options": {
           "disabled": "No, keep it off",
-          "cottonCloud": "Use cloud service",
+          "cottonCloud": "Cotton Bridge",
           "local": "Use GeoIP Light locally",
           "custom": "Use my own resolver"
         },
         "descriptions": {
           "disabled": "No location lookup will be made. Features that can show sign-in location will keep raw IP addresses only.",
-          "cottonCloud": "Resolve IP addresses through the Cotton provider. Requires telemetry to be enabled.",
+          "cottonCloud": "Resolve IP addresses through Cotton Bridge. Requires telemetry to be enabled.",
           "local": "Resolve IP addresses on your server with a local GeoIP Light database/package.",
           "custom": "Paste a URL to your own service. Cotton will try to extract location-related fields from JSON automatically."
         }
@@ -1121,12 +1121,12 @@
         "options": {
           "local": "Local computations",
           "runner": "Custom GPU runner",
-          "cloud": "Cotton Cloud computations"
+          "cloud": "Cotton Bridge AI"
         },
         "descriptions": {
           "local": "Slow, most heavy features disabled and model quality is simplified. But the quality is still great - more than enough for any tasks.",
           "runner": "Connect a separate GPU runner for computations. Fast, high quality - best models and support for all features.",
-          "cloud": "Optimal balance, but may have limitations. Incredible generosity for free. Requires internet connection."
+          "cloud": "Cotton Bridge can run AI computations for this instance. Requires internet connection and may have limits."
         }
       },
       "timezone": {
@@ -1743,7 +1743,7 @@
         "help": {
           "publicBaseUrl": "Despite this setting, Cotton determines the public URL automatically almost everywhere. Set it only when automatic detection is wrong.",
           "timezone": "This helps us avoid running background jobs while you sleep, so your disks do not grind at night.",
-          "telemetry": "Cotton collects minimal technical diagnostics so the developer can see errors and fix them, because not everyone reports issues. Enabling telemetry also unlocks cloud services out of the box.",
+          "telemetry": "Cotton collects minimal technical diagnostics so the developer can see errors and fix them, because not everyone reports issues. Enabling telemetry also unlocks Cotton Bridge services out of the box.",
           "allowDeduplication": "Controls whether one user can learn that another user already stores the same file. When disabled, identical data is still deduplicated on the server after upload, but it is needlessly transferred first. When enabled, another user may learn that someone in this cloud uploaded that file before. This is safe for family and trusted friends.",
           "allowGlobalIndexing": "Allows the server to decrypt user files and build a deep search index. Without it, search only uses file and folder names.",
           "serverUsage": "Optimizes feature recommendations and a few settings. It is not a critical parameter, so choose whatever feels right."
@@ -1767,18 +1767,18 @@
         "computionMode": {
           "Local": "Local",
           "Remote": "Remote runner",
-          "Cloud": "Cotton Cloud",
+          "Cloud": "Cotton Bridge AI",
           "inDevelopment": "This feature is still in development."
         },
         "geoIpLookupMode": {
           "Disabled": "Disabled",
-          "CottonCloud": "Cloud service",
+          "CottonCloud": "Cotton Bridge",
           "MaxMindLocal": "GeoIP Light",
           "CustomHttp": "Custom HTTP"
         },
         "geoIpLookupModeDescription": {
           "Disabled": "Do not resolve IP addresses.",
-          "CottonCloud": "Resolve IP addresses through the Cotton provider. This can be used by features such as security notifications.",
+          "CottonCloud": "Resolve IP addresses through Cotton Bridge. This can be used by features such as security notifications.",
           "MaxMindLocal": "Resolve IP addresses locally with a GeoIP Light database/package.",
           "CustomHttp": "Paste a URL to your own service. Cotton will try to extract location-related fields from JSON automatically."
         },
@@ -1860,7 +1860,7 @@
       },
       "emailMode": {
         "None": "Disabled",
-        "Cloud": "Cotton Cloud Mail",
+        "Cloud": "Cotton Bridge Mail",
         "Custom": "Custom SMTP"
       },
       "smtp": {
@@ -2023,7 +2023,8 @@
         "instance": "Instance and accounts",
         "masterKey": "Master key",
         "memory": "Process memory exposure",
-        "runtime": "Runtime facts"
+        "runtime": "Runtime facts",
+        "containerBoundary": "Container boundary"
       },
       "risks": {
         "empty": "No warnings were detected by the current server-side checks."
@@ -2044,7 +2045,16 @@
         "euid": "Effective UID",
         "noNewPrivileges": "No new privileges",
         "seccomp": "Seccomp mode",
-        "capabilities": "Effective capabilities"
+        "capabilities": "Effective capabilities",
+        "rootFilesystemReadOnly": "Read-only root filesystem",
+        "dockerSocketMounted": "Docker socket mounted",
+        "hostPidNamespace": "Host PID namespace",
+        "procOneCommandLine": "PID 1 command",
+        "coreDumpLimit": "Core dump limit",
+        "corePattern": "Core pattern",
+        "appArmorProfile": "AppArmor profile",
+        "selinuxContext": "SELinux context",
+        "selinuxEnforcing": "SELinux enforcing"
       },
       "values": {
         "unknown": "Unknown",
@@ -2063,7 +2073,14 @@
         "new-privileges-allowed": "If compromised code finds a setuid helper or capability-bearing binary, it has a wider path to gain privileges inside the container.",
         "seccomp-disabled": "The kernel syscall surface is wider than Docker's normal production baseline, so a container escape bug gets more room to breathe.",
         "running-as-root": "Remote code execution would run as root inside the container, which increases damage against mounted volumes and helper processes.",
-        "process-hardening-failed": "Cotton requested process hardening, but the process still started without the expected dump or ptrace protection."
+        "process-hardening-failed": "Cotton requested process hardening, but the process still started without the expected dump or ptrace protection.",
+        "db-integrity-unsigned-rows": "Unsigned protected rows can be modified directly in PostgreSQL without Cotton detecting the tampering at read boundaries.",
+        "db-integrity-bridge-mode": "During the bridge window, missing signatures are tolerated so existing installations can be signed. Leaving it on permanently weakens the database tamper boundary.",
+        "root-filesystem-writable": "A writable container root filesystem gives exploited code more places to drop tools, alter runtime files, or persist until the container is recreated.",
+        "docker-socket-mounted": "The Docker socket lets code inside the web container create privileged containers, mount host paths, and take over the host.",
+        "host-pid-namespace": "Sharing the host PID namespace exposes host processes through procfs and makes process-memory attacks easier to aim.",
+        "mandatory-access-control-unconfined": "Without an enforcing AppArmor or SELinux profile, a container escape or kernel-facing bug has fewer policy boundaries to cross.",
+        "core-dumps-enabled": "Core dumps are memory snapshots. If Cotton crashes while secrets are resident, a dump can preserve the master key or decrypted configuration."
       }
     },
     "groups": {

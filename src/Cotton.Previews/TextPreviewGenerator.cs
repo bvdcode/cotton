@@ -1,20 +1,28 @@
-﻿using EasyExtensions.Fonts.Resources;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+using EasyExtensions.Fonts.Resources;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Drawing;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
 namespace Cotton.Previews
 {
+    /// <summary>
+    /// Generates previews for text-like documents.
+    /// </summary>
     public class TextPreviewGenerator : IPreviewGenerator
     {
+        /// <inheritdoc />
         public int Version => 0;
+        /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes =>
         [
             "text/plain",
             "text/markdown",
+            "text/x-csharp",
             "application/xml",
             "application/json",
             "application/javascript",
@@ -28,6 +36,7 @@ namespace Cotton.Previews
 
         private static readonly FontFamily _fontFamily = LoadFontFamily();
 
+        /// <inheritdoc />
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
@@ -80,15 +89,15 @@ namespace Cotton.Previews
             float fontSize = Math.Max(10f, renderSize * FontSizeRatio);
             var font = _fontFamily.CreateFont(fontSize, FontStyle.Regular);
 
-            canvas.Mutate(ctx => ctx.BackgroundColor(Color.White));
-            using (var drawing = canvas.Frames.RootFrame.CreateCanvas(canvas.Configuration, new DrawingOptions(), Array.Empty<IPath>()))
+            canvas.Mutate(ctx =>
             {
-                drawing.DrawText(
+                ctx.BackgroundColor(Color.White);
+                ctx.Paint(canvas => canvas.DrawText(
                     new RichTextOptions(font) { Origin = new PointF(padding, paddingTop) },
                     text,
                     Brushes.Solid(Color.Black),
-                    null!);
-            }
+                    null));
+            });
 
             using var output = canvas.Clone(x => x.Resize(new ResizeOptions
             {

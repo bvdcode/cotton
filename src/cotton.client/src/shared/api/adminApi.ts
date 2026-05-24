@@ -112,10 +112,31 @@ export interface LinuxProcessSecurityDto {
   hasSysPtraceCapability: boolean | null;
 }
 
+export interface LinuxContainerSecurityDto {
+  rootFilesystemReadOnly: boolean | null;
+  dockerSocketMounted: boolean;
+  hostPidNamespaceLikely: boolean | null;
+  procOneCommandLine: string | null;
+  coreDumpSoftLimit: string | null;
+  coreDumpHardLimit: string | null;
+  coreDumpSoftLimitDisabled: boolean | null;
+  corePattern: string | null;
+  appArmorProfile: string | null;
+  selinuxContext: string | null;
+  selinuxEnforcing: boolean | null;
+}
+
 export interface AdminTotpDiagnosticsDto {
   adminCount: number;
   adminsWithTotp: number;
   adminsWithoutTotp: number;
+}
+
+export interface DatabaseIntegrityDiagnosticsDto {
+  enabled: boolean;
+  bridgeBackfillEnabled: boolean;
+  protectedEntityTypes: number;
+  unsignedProtectedRows: number;
 }
 
 export interface SecurityDiagnosticsDto {
@@ -130,7 +151,9 @@ export interface SecurityDiagnosticsDto {
   masterKeyEnvironmentVariablePresentInProcess: boolean;
   dotNetDiagnostics: DotNetDiagnosticsDto;
   linuxProcess: LinuxProcessSecurityDto;
+  linuxContainer: LinuxContainerSecurityDto;
   adminTotp: AdminTotpDiagnosticsDto;
+  databaseIntegrity: DatabaseIntegrityDiagnosticsDto;
   warnings: SecurityDiagnosticWarningDto[];
 }
 

@@ -1,5 +1,5 @@
 ﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Server.Abstractions;
@@ -7,14 +7,17 @@ using Cotton.Server.Models;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
+using Cotton.Crypto;
 using EasyExtensions;
-using EasyExtensions.Crypto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Controllers
 {
+    /// <summary>
+    /// Exposes HTTP endpoints for chunk operations.
+    /// </summary>
     public class ChunkController(
         PerfTracker _perf,
         CottonDbContext _dbContext,
@@ -23,6 +26,9 @@ namespace Cotton.Server.Controllers
         IChunkIngestService _chunkIngest,
         IStoragePipeline _storage) : ControllerBase
     {
+        /// <summary>
+        /// Checks whether a chunk hash is already stored.
+        /// </summary>
         [Authorize]
         [HttpGet(Routes.V1.Chunks + "/{hash}/exists")]
         public async Task<IActionResult> CheckChunkExists([FromRoute] string hash)
@@ -50,6 +56,9 @@ namespace Cotton.Server.Controllers
             return Ok(existsInStorage);
         }
 
+        /// <summary>
+        /// Uploads a raw content-addressed chunk.
+        /// </summary>
         [Authorize]
         [HttpPost(Routes.V1.Chunks)]
         [RequestSizeLimit(AesGcmStreamCipher.MaxChunkSize + ushort.MaxValue)]

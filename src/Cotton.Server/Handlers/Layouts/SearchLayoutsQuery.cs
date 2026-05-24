@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Database.Models.Enums;
@@ -14,6 +14,9 @@ using System.Text.RegularExpressions;
 
 namespace Cotton.Server.Handlers.Layouts;
 
+/// <summary>
+/// Represents a search layouts query sent through the mediator pipeline.
+/// </summary>
 public class SearchLayoutsQuery(
     Guid userId,
     Guid layoutId,
@@ -21,13 +24,31 @@ public class SearchLayoutsQuery(
     int page,
     int pageSize) : IRequest<SearchLayoutsResultDto>
 {
+    /// <summary>
+    /// Gets the owning user identifier.
+    /// </summary>
     public Guid UserId { get; } = userId;
+    /// <summary>
+    /// Gets the layout identifier.
+    /// </summary>
     public Guid LayoutId { get; } = layoutId;
+    /// <summary>
+    /// Gets the query.
+    /// </summary>
     public string Query { get; } = query;
+    /// <summary>
+    /// Gets the page.
+    /// </summary>
     public int Page { get; } = page;
+    /// <summary>
+    /// Gets the page size.
+    /// </summary>
     public int PageSize { get; } = pageSize;
 }
 
+/// <summary>
+/// Handles search layouts queries in the mediator pipeline.
+/// </summary>
 public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
     : IRequestHandler<SearchLayoutsQuery, SearchLayoutsResultDto>
 {
@@ -41,6 +62,9 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
         @"(?<![0-9a-fA-F])(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-fA-F]{32})(?![0-9a-fA-F])",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+    /// <summary>
+    /// Handles the request through the mediator pipeline.
+    /// </summary>
     public async Task<SearchLayoutsResultDto> Handle(SearchLayoutsQuery request, CancellationToken ct)
     {
         ValidatePaging(request.Page, request.PageSize);
@@ -495,17 +519,41 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
         string PrefixPattern,
         Guid[] IdQueries)
     {
+        /// <summary>
+        /// Indicates whether text.
+        /// </summary>
         public bool HasText => NameKey.Length > 0;
+        /// <summary>
+        /// Indicates whether ids.
+        /// </summary>
         public bool HasIds => IdQueries.Length > 0;
     }
 
     private sealed class SearchHitRow
     {
+        /// <summary>
+        /// Gets or sets the kind.
+        /// </summary>
         public int Kind { get; set; }
+        /// <summary>
+        /// Gets or sets the identifier.
+        /// </summary>
         public Guid Id { get; set; }
+        /// <summary>
+        /// Gets or sets the node id for path.
+        /// </summary>
         public Guid NodeIdForPath { get; set; }
+        /// <summary>
+        /// Gets or sets the name.
+        /// </summary>
         public string Name { get; set; } = string.Empty;
+        /// <summary>
+        /// Gets or sets the name key.
+        /// </summary>
         public string NameKey { get; set; } = string.Empty;
+        /// <summary>
+        /// Gets or sets the score.
+        /// </summary>
         public int Score { get; set; }
     }
 }

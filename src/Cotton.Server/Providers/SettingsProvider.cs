@@ -1,11 +1,12 @@
 ﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
+using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -14,9 +15,13 @@ using System.Net.Mail;
 
 namespace Cotton.Server.Providers
 {
+    /// <summary>
+    /// Provides settings dependencies to server components.
+    /// </summary>
     public class SettingsProvider(
         CottonDbContext _dbContext,
-        IStorageBackendTypeCache? _storageTypeCache = null)
+        IStorageBackendTypeCache? _storageTypeCache = null,
+        IDatabaseIntegrityVerifier? _integrity = null)
     {
         private static readonly Lock _cacheLock = new();
         private static readonly SemaphoreSlim _settingsCreationLock = new(1, 1);
@@ -32,6 +37,9 @@ namespace Cotton.Server.Providers
         private const int defaultMaxChunkSizeBytes = 4 * 1024 * 1024;
         private const int defaultCipherChunkSizeBytes = 1 * 1024 * 1024;
 
+        /// <summary>
+        /// Gets server settings.
+        /// </summary>
         public CottonServerSettings GetServerSettings()
         {
             if (_cache is not null)
@@ -50,7 +58,6 @@ namespace Cotton.Server.Providers
                 try
                 {
                     settings = _dbContext.ServerSettings
-                        .AsNoTracking()
                         .OrderByDescending(s => s.CreatedAt)
                         .FirstOrDefault();
                 }
@@ -60,6 +67,7 @@ namespace Cotton.Server.Providers
                 }
                 if (settings is not null)
                 {
+                    _integrity?.RequireValid(_dbContext, settings, "settings.cache-load");
                     _cache = settings;
                     return _cache;
                 }
@@ -90,6 +98,9 @@ namespace Cotton.Server.Providers
             }
         }
 
+        /// <summary>
+        /// Ensures server settings async.
+        /// </summary>
         public async Task<CottonServerSettings> EnsureServerSettingsAsync(
             string? fallbackPublicBaseUrl,
             CancellationToken cancellationToken = default)
@@ -121,6 +132,9 @@ namespace Cotton.Server.Providers
             }
         }
 
+        /// <summary>
+        /// Indicates whether server initialized async.
+        /// </summary>
         public async Task<bool> IsServerInitializedAsync()
         {
             var now = DateTimeOffset.UtcNow;
@@ -149,6 +163,9 @@ namespace Cotton.Server.Providers
             return value;
         }
 
+        /// <summary>
+        /// Checks whether any user account exists.
+        /// </summary>
         public async Task<bool> ServerHasUsersAsync()
         {
             var now = DateTimeOffset.UtcNow;
@@ -177,6 +194,9 @@ namespace Cotton.Server.Providers
             return value;
         }
 
+        /// <summary>
+        /// Validates timezone.
+        /// </summary>
         public string? ValidateTimezone(string? timezone)
         {
             if (string.IsNullOrWhiteSpace(timezone))
@@ -192,6 +212,9 @@ namespace Cotton.Server.Providers
             return null;
         }
 
+        /// <summary>
+        /// Validates telemetry change.
+        /// </summary>
         public string? ValidateTelemetryChange(bool enabled)
         {
             if (enabled)
@@ -203,22 +226,25 @@ namespace Cotton.Server.Providers
 
             if (settings.EmailMode == EmailMode.Cloud)
             {
-                return "Telemetry must be enabled to use cloud email service.";
+                return "Telemetry must be enabled to use Cotton Bridge Mail.";
             }
 
             if (settings.ComputionMode == ComputionMode.Cloud)
             {
-                return "Telemetry must be enabled to use cloud AI service.";
+                return "Telemetry must be enabled to use Cotton Bridge AI.";
             }
 
             if (settings.GeoIpLookupMode == GeoIpLookupMode.CottonCloud)
             {
-                return "Telemetry must be enabled to use Cotton Cloud IP lookup.";
+                return "Telemetry must be enabled to use Cotton Bridge IP lookup.";
             }
 
             return null;
         }
 
+        /// <summary>
+        /// Validates email mode async.
+        /// </summary>
         public async Task<string?> ValidateEmailModeAsync(EmailMode mode)
         {
             var settings = GetServerSettings();
@@ -227,13 +253,13 @@ namespace Cotton.Server.Providers
             {
                 if (!settings.TelemetryEnabled)
                 {
-                    return "Telemetry must be enabled to use cloud email service.";
+                    return "Telemetry must be enabled to use Cotton Bridge Mail.";
                 }
 
-                bool isHealthy = await CheckGatewayHealthAsync();
+                bool isHealthy = await CheckCottonBridgeHealthAsync();
                 if (!isHealthy)
                 {
-                    return "Cloud email service is currently unavailable. Please try again later or switch to Custom email service.";
+                    return "Cotton Bridge Mail is currently unavailable. Please try again later or switch to Custom email service.";
                 }
 
                 return null;
@@ -254,11 +280,14 @@ namespace Cotton.Server.Providers
             return "Invalid email mode: " + mode;
         }
 
+        /// <summary>
+        /// Validates compution mode.
+        /// </summary>
         public string? ValidateComputionMode(ComputionMode mode)
         {
             if (mode == ComputionMode.Cloud && !GetServerSettings().TelemetryEnabled)
             {
-                return "Telemetry must be enabled to use cloud AI service.";
+                return "Telemetry must be enabled to use Cotton Bridge AI.";
             }
 
             return Enum.IsDefined(mode)
@@ -266,13 +295,16 @@ namespace Cotton.Server.Providers
                 : "Invalid computation mode: " + mode;
         }
 
+        /// <summary>
+        /// Validates geo ip lookup mode.
+        /// </summary>
         public string? ValidateGeoIpLookupMode(GeoIpLookupMode mode)
         {
             var settings = GetServerSettings();
 
             if (mode == GeoIpLookupMode.CottonCloud && !settings.TelemetryEnabled)
             {
-                return "Telemetry must be enabled to use Cotton Cloud IP lookup.";
+                return "Telemetry must be enabled to use Cotton Bridge IP lookup.";
             }
 
             if (mode == GeoIpLookupMode.CustomHttp && string.IsNullOrWhiteSpace(settings.CustomGeoIpLookupUrl))
@@ -290,12 +322,12 @@ namespace Cotton.Server.Providers
                 : "Invalid GeoIP lookup mode: " + mode;
         }
 
-        private static async Task<bool> CheckGatewayHealthAsync()
+        private static async Task<bool> CheckCottonBridgeHealthAsync()
         {
             try
             {
                 using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-                var response = await client.GetFromJsonAsync<HealthResponse>(CottonPublicEmailProvider.GatewayBaseUrl + "health");
+                var response = await client.GetFromJsonAsync<HealthResponse>(global::Cotton.Constants.CottonBridgeHealthUrl);
                 return response != null && response.Status == "Healthy";
             }
             catch
@@ -304,6 +336,9 @@ namespace Cotton.Server.Providers
             }
         }
 
+        /// <summary>
+        /// Validates storage type async.
+        /// </summary>
         public async Task<string?> ValidateStorageTypeAsync(StorageType type)
         {
             if (type == StorageType.Local)
@@ -335,6 +370,9 @@ namespace Cotton.Server.Providers
             return await ValidateS3ConnectivityAsync(s3Config);
         }
 
+        /// <summary>
+        /// Validates s3 config async.
+        /// </summary>
         public async Task<string?> ValidateS3ConfigAsync(S3Config? s3Config)
         {
             var shapeError = ValidateS3ConfigShape(s3Config);
@@ -449,6 +487,9 @@ namespace Cotton.Server.Providers
             await s3.DeleteObjectAsync(s3Config.Bucket, testKey);
         }
 
+        /// <summary>
+        /// Validates email config.
+        /// </summary>
         public string? ValidateEmailConfig(EmailConfig? emailConfig)
         {
             if (emailConfig is null)
@@ -493,6 +534,9 @@ namespace Cotton.Server.Providers
             return null;
         }
 
+        /// <summary>
+        /// Validates default user storage quota bytes.
+        /// </summary>
         public string? ValidateDefaultUserStorageQuotaBytes(long? quotaBytes)
         {
             if (quotaBytes is null or 0)
@@ -505,6 +549,9 @@ namespace Cotton.Server.Providers
                 : "Default user storage quota must be zero, empty, or a positive byte value.";
         }
 
+        /// <summary>
+        /// Validates default user template node id async.
+        /// </summary>
         public async Task<string?> ValidateDefaultUserTemplateNodeIdAsync(
             Guid? nodeId,
             Guid ownerId,
@@ -528,6 +575,9 @@ namespace Cotton.Server.Providers
                 : "Default user template folder was not found.";
         }
 
+        /// <summary>
+        /// Validates public base url.
+        /// </summary>
         public string? ValidatePublicBaseUrl(string? url)
         {
             return TryNormalizePublicBaseUrl(url, out _)
@@ -535,6 +585,9 @@ namespace Cotton.Server.Providers
                 : "Public base URL must be an absolute HTTP or HTTPS URL.";
         }
 
+        /// <summary>
+        /// Validates custom geo ip lookup url.
+        /// </summary>
         public string? ValidateCustomGeoIpLookupUrl(string? url)
         {
             return TryNormalizePublicBaseUrl(url, out _)
@@ -542,6 +595,9 @@ namespace Cotton.Server.Providers
                 : "Custom GeoIP lookup URL must be an absolute HTTP or HTTPS URL.";
         }
 
+        /// <summary>
+        /// Updates settings async.
+        /// </summary>
         public async Task UpdateSettingsAsync(
             Action<CottonServerSettings> update,
             string? fallbackPublicBaseUrl,
@@ -553,11 +609,17 @@ namespace Cotton.Server.Providers
             InvalidateSettingsCache(serverIsInitialized: true);
         }
 
+        /// <summary>
+        /// Updates a single server setting property.
+        /// </summary>
         public async Task SetPropertyAsync<TProperty>(Expression<Func<CottonServerSettings, TProperty>> selector, TProperty value, CancellationToken cancellationToken = default)
         {
             await SetPropertyAsync(selector, value, fallbackPublicBaseUrl: null, cancellationToken);
         }
 
+        /// <summary>
+        /// Updates a single server setting property.
+        /// </summary>
         public async Task SetPropertyAsync<TProperty>(
             Expression<Func<CottonServerSettings, TProperty>> selector,
             TProperty value,
@@ -582,6 +644,9 @@ namespace Cotton.Server.Providers
             InvalidateSettingsCache(serverIsInitialized: true);
         }
 
+        /// <summary>
+        /// Normalizes the public base URL for storage and comparison.
+        /// </summary>
         public static string NormalizePublicBaseUrl(string? url)
         {
             return TryNormalizePublicBaseUrl(url, out string? normalized)
@@ -589,6 +654,9 @@ namespace Cotton.Server.Providers
                 : defaultPublicBaseUrl;
         }
 
+        /// <summary>
+        /// Attempts to parse port.
+        /// </summary>
         public static bool TryParsePort(string? value, out int port)
         {
             return int.TryParse(value, out port) && port is >= 1 and <= 65535;
@@ -635,7 +703,13 @@ namespace Cotton.Server.Providers
 
             try
             {
-                return await query.FirstOrDefaultAsync(cancellationToken);
+                CottonServerSettings? settings = await query.FirstOrDefaultAsync(cancellationToken);
+                if (settings is not null && !asNoTracking)
+                {
+                    _integrity?.RequireValid(_dbContext, settings, "settings.load");
+                }
+
+                return settings;
             }
             catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
             {

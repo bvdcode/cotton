@@ -1,11 +1,14 @@
 ﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Abstractions;
 using Microsoft.Extensions.Logging;
 
 namespace Cotton.Storage.Pipelines
 {
+    /// <summary>
+    /// Default storage pipeline implementation that applies processors around the configured backend.
+    /// </summary>
     public class FileStoragePipeline(
         ILogger<FileStoragePipeline> _logger,
         IStorageBackendProvider _backendProvider,
@@ -13,21 +16,25 @@ namespace Cotton.Storage.Pipelines
     {
         private static readonly SemaphoreSlim _maxParallel = new(initialCount: Environment.ProcessorCount);
 
+        /// <inheritdoc />
         public Task<bool> ExistsAsync(string uid)
         {
             return _backendProvider.GetBackend().ExistsAsync(uid);
         }
 
+        /// <inheritdoc />
         public Task<bool> DeleteAsync(string uid)
         {
             return _backendProvider.GetBackend().DeleteAsync(uid);
         }
 
+        /// <inheritdoc />
         public Task<long> GetSizeAsync(string uid)
         {
             return _backendProvider.GetBackend().GetSizeAsync(uid);
         }
 
+        /// <inheritdoc />
         public async Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
         {
             var backend = _backendProvider.GetBackend();
@@ -48,17 +55,23 @@ namespace Cotton.Storage.Pipelines
             return currentStream;
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(string uid, Stream stream, PipelineContext? context = null)
         {
             await _maxParallel.WaitAsync().ConfigureAwait(false);
             try
             {
                 var backend = _backendProvider.GetBackend();
-                if (!_processors.Any())
+                var orderedProcessors = _processors.OrderByDescending(p => p.Priority).ToArray();
+                if (orderedProcessors.Length == 0)
                 {
                     _logger.LogWarning("No storage processors are registered. Writing the stream directly to the backend.");
                 }
-                var orderedProcessors = _processors.OrderByDescending(p => p.Priority);
+                if (orderedProcessors.Length > 0 && await backend.ExistsAsync(uid).ConfigureAwait(false))
+                {
+                    _logger.LogDebug("File {Uid} deduplicated, skipping processor pipeline", uid);
+                    return;
+                }
                 Stream currentStream = stream;
                 foreach (var processor in orderedProcessors)
                 {
@@ -80,6 +93,7 @@ namespace Cotton.Storage.Pipelines
             }
         }
 
+        /// <inheritdoc />
         public IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default)
         {
             return _backendProvider.GetBackend().ListAllKeysAsync(ct);

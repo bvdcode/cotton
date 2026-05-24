@@ -1,4 +1,7 @@
-﻿using Cotton.Database;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Email;
@@ -17,6 +20,9 @@ using System.Text;
 
 namespace Cotton.Server.Services
 {
+    /// <summary>
+    /// Represents cotton notifications.
+    /// </summary>
     public class CottonNotifications(
         CottonDbContext _dbContext,
         SettingsProvider _settingsProvider,
@@ -24,6 +30,9 @@ namespace Cotton.Server.Services
         ILogger<CottonNotifications> _logger,
         IHubContext<EventHub> _hubContext) : INotificationsProvider
     {
+        /// <summary>
+        /// Sends email async.
+        /// </summary>
         public async Task<bool> SendEmailAsync(
             Guid userId,
             EmailTemplate template,
@@ -38,7 +47,7 @@ namespace Cotton.Server.Services
                     return false;
 
                 case EmailMode.Cloud:
-                    return await SendViaCloudAsync(userId, template, parameters, serverBaseUrl, settings);
+                    return await SendViaCottonBridgeAsync(userId, template, parameters, serverBaseUrl, settings);
 
                 case EmailMode.Custom:
                     return await SendViaSmtpAsync(userId, template, parameters, serverBaseUrl, settings);
@@ -49,6 +58,9 @@ namespace Cotton.Server.Services
             }
         }
 
+        /// <summary>
+        /// Sends smtp test email async.
+        /// </summary>
         public async Task SendSmtpTestEmailAsync(
             Guid userId,
             string serverBaseUrl)
@@ -98,7 +110,7 @@ namespace Cotton.Server.Services
             SendSmtpEmail(user.Email, recipientName, subject, body, smtpSettings);
         }
 
-        private async Task<bool> SendViaCloudAsync(
+        private async Task<bool> SendViaCottonBridgeAsync(
             Guid userId,
             EmailTemplate template,
             Dictionary<string, string> parameters,
@@ -129,7 +141,7 @@ namespace Cotton.Server.Services
             if (!sent)
             {
                 _logger.LogWarning(
-                    "Failed to send {Template} email via cloud provider for user {UserId}.",
+                    "Failed to send {Template} email via Cotton Bridge for user {UserId}.",
                     template,
                     userId);
             }
@@ -286,6 +298,9 @@ namespace Cotton.Server.Services
             client.Send(mailMessage);
         }
 
+        /// <summary>
+        /// Sends notification async.
+        /// </summary>
         public async Task SendNotificationAsync(
             Guid userId,
             string title,

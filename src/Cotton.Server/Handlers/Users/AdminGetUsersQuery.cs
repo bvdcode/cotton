@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Server.Models.Dto;
@@ -9,13 +9,25 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Users
 {
+    /// <summary>
+    /// Represents a admin get users query sent through the mediator pipeline.
+    /// </summary>
     public class AdminGetUsersQuery : IRequest<IEnumerable<AdminUserDto>>
     { 
+        /// <summary>
+        /// Gets or sets the calculate storage usage.
+        /// </summary>
         public bool CalculateStorageUsage { get; set; }
     }
 
+    /// <summary>
+    /// Handles admin get users queries in the mediator pipeline.
+    /// </summary>
     public class AdminGetUsersQueryHandler(CottonDbContext _dbContext) : IRequestHandler<AdminGetUsersQuery, IEnumerable<AdminUserDto>>
     {
+        /// <summary>
+        /// Handles the request through the mediator pipeline.
+        /// </summary>
         public async Task<IEnumerable<AdminUserDto>> Handle(AdminGetUsersQuery request, CancellationToken cancellationToken)
         {
             var users = await _dbContext.Users

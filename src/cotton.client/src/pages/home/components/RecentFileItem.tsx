@@ -20,6 +20,11 @@ export const RecentFileItem: React.FC<RecentFileItemProps> = ({ file, t }) => {
         file.previewHashEncryptedHex ?? null,
         file.name,
         file.contentType,
+        {
+          extensionLabelMaxLength: 3,
+          hideLongExtensionLabel: true,
+          hideInvalidExtensionLabel: true,
+        },
       ),
     [file.previewHashEncryptedHex, file.name, file.contentType],
   );

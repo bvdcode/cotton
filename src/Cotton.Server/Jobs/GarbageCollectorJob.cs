@@ -1,4 +1,7 @@
-﻿using Cotton.Database;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Providers;
@@ -11,6 +14,9 @@ using System.Collections.Concurrent;
 
 namespace Cotton.Server.Jobs
 {
+    /// <summary>
+    /// Runs the scheduled garbage collector maintenance task.
+    /// </summary>
     [JobTrigger(hours: 6)]
     [DisallowConcurrentExecution]
     public class GarbageCollectorJob(
@@ -31,10 +37,16 @@ namespace Cotton.Server.Jobs
         private static readonly TimeSpan ProgressLogInterval = TimeSpan.FromSeconds(15);
         private static readonly ConcurrentDictionary<string, byte> CurrentlyDeletingChunks = new(comparer: StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// Indicates whether chunk being deleted.
+        /// </summary>
         public static bool IsChunkBeingDeleted(string uid) => CurrentlyDeletingChunks.ContainsKey(uid);
 
         private static bool _isFirstRun = true;
 
+        /// <summary>
+        /// Executes the scheduled Quartz job.
+        /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
             bool isNightTime = _perf.IsNightTime();
@@ -64,6 +76,9 @@ namespace Cotton.Server.Jobs
             await RunOnceAsync(DateTime.UtcNow, batchSize, context.CancellationToken);
         }
 
+        /// <summary>
+        /// Runs one maintenance pass immediately.
+        /// </summary>
         public async Task RunOnceAsync(DateTime now, int batchSize, CancellationToken ct = default)
         {
             HashSet<string> protectedStorageKeys = await _chunkUsage.GetProtectedStorageKeysAsync(ct);

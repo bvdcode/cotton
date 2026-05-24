@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Database.Models;
@@ -15,6 +15,9 @@ using System.Security.Cryptography;
 
 namespace Cotton.Server.Services;
 
+/// <summary>
+/// Coordinates chunk ingest.
+/// </summary>
 public class ChunkIngestService(
     CottonDbContext _dbContext,
     ILayoutService _layouts,
@@ -27,6 +30,9 @@ public class ChunkIngestService(
     private const int GcWaitStepMs = 100;
     private const int GcWaitMaxMs = 30_000;
 
+    /// <summary>
+    /// Stores a chunk if it does not already exist and records ownership.
+    /// </summary>
     public async Task<Chunk> UpsertChunkAsync(Guid userId, byte[] buffer, int length, CancellationToken ct = default)
     {
         byte[] chunkHash = SHA256.HashData(buffer.AsSpan(0, length));
@@ -208,6 +214,9 @@ public class ChunkIngestService(
         return true;
     }
 
+    /// <summary>
+    /// Stores a chunk if it does not already exist and records ownership.
+    /// </summary>
     public async Task<Chunk> UpsertChunkAsync(Guid userId, Stream stream, long length, CancellationToken ct = default)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(length);

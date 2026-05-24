@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Server.Handlers.Files;
@@ -40,6 +40,9 @@ public class WebDavDeleteRequestHandler(
     ILogger<WebDavDeleteRequestHandler> _logger)
     : IRequestHandler<WebDavDeleteRequest, WebDavDeleteResult>
 {
+    /// <summary>
+    /// Handles the request through the mediator pipeline.
+    /// </summary>
     public async Task<WebDavDeleteResult> Handle(WebDavDeleteRequest request, CancellationToken ct)
     {
         var resolveResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);

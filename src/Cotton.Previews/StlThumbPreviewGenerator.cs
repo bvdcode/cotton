@@ -1,3 +1,6 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Xml;
@@ -5,15 +8,21 @@ using System.Xml.Linq;
 
 namespace Cotton.Previews
 {
+    /// <summary>
+    /// Generates previews for mesh and 3D model files through stl-thumb.
+    /// </summary>
     public class StlThumbPreviewGenerator : IPreviewGenerator
     {
-        public int Version => 6;
+        /// <inheritdoc />
+        public int Version => 8;
+        /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes => _supportedContentTypes;
 
         private readonly string _modelExtension;
         private readonly string[] _supportedContentTypes;
         private const string ThreeMfExtension = ".3mf";
 
+        /// <summary>Initializes the STL generator variant.</summary>
         public StlThumbPreviewGenerator()
             : this(".stl", ["model/stl", "application/sla", "application/vnd.ms-pki.stl"])
         {
@@ -28,11 +37,13 @@ namespace Cotton.Previews
             _supportedContentTypes = supportedContentTypes;
         }
 
+        /// <summary>Creates a generator variant for OBJ models.</summary>
         public static StlThumbPreviewGenerator CreateObjGenerator()
         {
             return new StlThumbPreviewGenerator(".obj", ["model/obj"]);
         }
 
+        /// <summary>Creates a generator variant for 3MF models.</summary>
         public static StlThumbPreviewGenerator CreateThreeMfGenerator()
         {
             return new StlThumbPreviewGenerator(
@@ -40,6 +51,7 @@ namespace Cotton.Previews
                 ["model/3mf", "application/vnd.ms-package.3dmanufacturing-3dmodel+xml"]);
         }
 
+        /// <inheritdoc />
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
         {
             ArgumentNullException.ThrowIfNull(stream);
@@ -456,6 +468,7 @@ namespace Cotton.Previews
                 process.StartInfo.ArgumentList.Add($"--input={modelFilePath}");
                 process.StartInfo.ArgumentList.Add($"--output={outputPngPath}");
                 process.StartInfo.ArgumentList.Add($"--resolution={size},{size}");
+                process.StartInfo.ArgumentList.Add($"--color={PreviewColorPalette.AccentGreenF3dRgb}");
                 if (includeMaxSizeArgument)
                 {
                     process.StartInfo.ArgumentList.Add($"--max-size={PreviewGeneratorProvider.DefaultSmallPreviewSize}");

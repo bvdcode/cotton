@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Benchmark.Infrastructure;
 using Cotton.Benchmark.Models;
@@ -9,7 +9,7 @@ using System.Diagnostics;
 namespace Cotton.Benchmark.Benchmarks
 {
     /// <summary>
-    /// Benchmark for decompression performance using REAL CompressionProcessor from Cotton.Storage.
+    /// Benchmark for Cotton.Storage decompression throughput.
     /// </summary>
     public sealed class DecompressionBenchmark : BenchmarkBase
     {
@@ -17,13 +17,14 @@ namespace Cotton.Benchmark.Benchmarks
         private readonly int _originalSize;
         private readonly CompressionProcessor _processor;
 
+        /// <summary>Initializes the benchmark with a fixed measurement configuration.</summary>
         public DecompressionBenchmark(BenchmarkConfiguration configuration)
             : base(configuration)
         {
-            // Use REAL CompressionProcessor
+            // Use CompressionProcessor
             _processor = new CompressionProcessor();
 
-            // Pre-compress REAL compressible data
+            // Pre-compress compressible data
             var testData = TestDataGenerator.GenerateCompressibleText(configuration.DataSizeBytes);
             _originalSize = testData.Length;
 
@@ -35,10 +36,10 @@ namespace Cotton.Benchmark.Benchmarks
         }
 
         /// <inheritdoc/>
-        public override string Name => "Decompression (Real Zstd Processor)";
+        public override string Name => "Cotton.Storage Zstd Decompression";
 
         /// <inheritdoc/>
-        public override string Description => "Tests REAL Cotton.Storage.Processors.CompressionProcessor decompression";
+        public override string Description => "Measures Cotton.Storage decompression throughput";
 
         /// <inheritdoc/>
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)
@@ -69,7 +70,7 @@ namespace Cotton.Benchmark.Benchmarks
         protected override Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
             var baseMetrics = base.AggregateMetrics(metrics);
-            baseMetrics["Processor"] = "Cotton.Storage.Processors.CompressionProcessor";
+            baseMetrics["Implementation"] = "Cotton.Storage.Processors.CompressionProcessor";
             baseMetrics["CompressedSize"] = FormatBytes(_compressedData.Length);
             baseMetrics["CompressionRatio"] = $"{(double)_originalSize / _compressedData.Length:F2}x";
             return baseMetrics;

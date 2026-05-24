@@ -1,10 +1,19 @@
-﻿using Cotton.Database.Models;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+using Cotton.Database.Models;
 using Cotton.Server.Services;
 
 namespace Cotton.Server.Extensions
 {
+    /// <summary>
+    /// Contains extension methods for configuring file manifest.
+    /// </summary>
     public static class FileManifestExtensions
     {
+        /// <summary>
+        /// Gets chunk lengths.
+        /// </summary>
         public static Dictionary<string, long> GetChunkLengths(this IEnumerable<FileManifestChunk> fileManifestChunks)
         {
             ArgumentNullException.ThrowIfNull(fileManifestChunks);
@@ -29,6 +38,9 @@ namespace Cotton.Server.Extensions
             return result;
         }
 
+        /// <summary>
+        /// Gets chunk hashes.
+        /// </summary>
         public static string[] GetChunkHashes(this IEnumerable<FileManifestChunk> chunks)
         {
             List<string> result = [];

@@ -1,4 +1,7 @@
-﻿using Docnet.Core;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+using Docnet.Core;
 using Docnet.Core.Models;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -6,12 +9,18 @@ using SixLabors.ImageSharp.Processing;
 
 namespace Cotton.Previews
 {
+    /// <summary>
+    /// Generates previews for PDF documents.
+    /// </summary>
     public sealed class PdfPreviewGenerator : IPreviewGenerator
     {
+        /// <inheritdoc />
         public int Version => 0;
+        /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes => ["application/pdf"];
         private static readonly DocLib _docLib = DocLib.Instance;
 
+        /// <inheritdoc />
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
         {
             ArgumentNullException.ThrowIfNull(stream);

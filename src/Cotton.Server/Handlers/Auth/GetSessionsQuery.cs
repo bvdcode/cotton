@@ -1,4 +1,7 @@
-﻿using Cotton.Database;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+using Cotton.Database;
 using Cotton.Server.Models.Dto;
 using EasyExtensions.AspNetCore.Authorization.Abstractions;
 using EasyExtensions.EntityFrameworkCore.Database;
@@ -8,12 +11,21 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Auth
 {
+    /// <summary>
+    /// Represents a get sessions query sent through the mediator pipeline.
+    /// </summary>
     public record GetSessionsQuery(Guid UserId, string SessionId) : IRequest<IEnumerable<SessionDto>> { }
 
+    /// <summary>
+    /// Handles get sessions queries in the mediator pipeline.
+    /// </summary>
     public class GetSessionsQueryHandler(
         CottonDbContext _dbContext,
         ITokenProvider _tokens) : IRequestHandler<GetSessionsQuery, IEnumerable<SessionDto>>
     {
+        /// <summary>
+        /// Handles the request through the mediator pipeline.
+        /// </summary>
         public async Task<IEnumerable<SessionDto>> Handle(GetSessionsQuery request, CancellationToken cancellationToken)
         {
             var tokens = await LoadTokensAsync(request.UserId, cancellationToken);

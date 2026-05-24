@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Database.Models;
@@ -14,6 +14,14 @@ namespace Cotton.Server.Services;
 // Logical quota is enforced when file references are created or changed.
 // Raw chunk uploads are intentionally handled by storage-pressure protection,
 // because chunking is an internal storage detail rather than user-owned data.
+/// <summary>
+/// Enforces logical per-user storage quotas for file references.
+/// </summary>
+/// <remarks>
+/// The hot upload path updates a small in-process cache instead of recomputing usage for every file.
+/// A cold cache still falls back to a single aggregate query, and chunk uploads are intentionally not
+/// billed as user data until they become reachable through a file reference.
+/// </remarks>
 public class UserStorageQuotaService(
     CottonDbContext _dbContext,
     SettingsProvider _settings,
@@ -22,6 +30,9 @@ public class UserStorageQuotaService(
     private static readonly TimeSpan UsedBytesCacheDuration = TimeSpan.FromMinutes(15);
     private readonly Dictionary<Guid, long> _usedBytesByUser = [];
 
+    /// <summary>
+    /// Gets the logical bytes currently referenced by the user's visible and retained file versions.
+    /// </summary>
     public async Task<long> GetUsedBytesAsync(Guid userId, CancellationToken ct = default)
     {
         if (_usedBytesByUser.TryGetValue(userId, out long cachedUsedBytes))
@@ -47,6 +58,9 @@ public class UserStorageQuotaService(
         return resolvedUsedBytes;
     }
 
+    /// <summary>
+    /// Gets the storage usage snapshot shown to the user interface.
+    /// </summary>
     public async Task<UserStorageQuotaDto> GetSnapshotAsync(Guid userId, CancellationToken ct = default)
     {
         long usedBytes = await GetUsedBytesAsync(userId, ct);
@@ -69,6 +83,9 @@ public class UserStorageQuotaService(
         };
     }
 
+    /// <summary>
+    /// Ensures adding a file reference will not exceed the user's logical quota.
+    /// </summary>
     public async Task<long> EnsureCanAddFileReferenceAsync(
         Guid userId,
         Guid fileManifestId,
@@ -84,6 +101,9 @@ public class UserStorageQuotaService(
         return Math.Max(0, additionalBytes);
     }
 
+    /// <summary>
+    /// Ensures adding a known logical file size will not exceed the user's quota.
+    /// </summary>
     public Task EnsureCanAddKnownFileSizeAsync(
         Guid userId,
         long sizeBytes,
@@ -92,6 +112,9 @@ public class UserStorageQuotaService(
         return EnsureCanAddLogicalBytesAsync(userId, sizeBytes, reserveInRequestCache: false, ct);
     }
 
+    /// <summary>
+    /// Ensures replacing a file manifest will not exceed quota after deduplication by content hash.
+    /// </summary>
     public async Task<long> EnsureCanChangeFileManifestAsync(
         Guid userId,
         Guid nodeFileId,
@@ -162,6 +185,9 @@ public class UserStorageQuotaService(
             _usedBytesByUser[userId] = usedBytes + safeAdditionalBytes;
         }
     }
+    /// <summary>
+    /// Records logical bytes added in the in-memory cache.
+    /// </summary>
     public void RecordLogicalBytesAdded(Guid userId, long bytes)
     {
         long safeBytes = Math.Max(0, bytes);
@@ -183,6 +209,9 @@ public class UserStorageQuotaService(
         }
     }
 
+    /// <summary>
+    /// Records logical bytes removed in the in-memory cache.
+    /// </summary>
     public void RecordLogicalBytesRemoved(Guid userId, long bytes)
     {
         long safeBytes = Math.Max(0, bytes);

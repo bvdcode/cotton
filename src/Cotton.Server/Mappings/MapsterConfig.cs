@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
@@ -7,10 +7,16 @@ using Mapster;
 
 namespace Cotton.Server.Mappings
 {
+    /// <summary>
+    /// Describes mapster configuration.
+    /// </summary>
     public static class MapsterConfig
     {
         private static bool _isConfigured;
 
+        /// <summary>
+        /// Registers Mapster mappings used by the API layer.
+        /// </summary>
         public static void Register()
         {
             if (_isConfigured)

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using System.Buffers;
 using System.Buffers.Binary;
@@ -7,19 +7,37 @@ using System.Text;
 
 namespace Cotton.Server.Services;
 
+/// <summary>
+/// Describes an archive entry whose final byte length is known before the response starts.
+/// </summary>
 public interface IStoredZipEntry
 {
+    /// <summary>
+    /// Gets the ZIP entry path using forward slashes.
+    /// </summary>
     string Path { get; }
+    /// <summary>
+    /// Gets the uncompressed entry size in bytes.
+    /// </summary>
     long SizeBytes { get; }
+    /// <summary>
+    /// Indicates whether the ZIP entry represents a directory marker.
+    /// </summary>
     bool IsDirectory { get; }
 }
 
+/// <summary>
+/// Provides a ZIP entry path, fixed uncompressed length, and deferred stream opener.
+/// </summary>
 public sealed record StoredZipSourceEntry(
     string Path,
     long SizeBytes,
     bool IsDirectory,
     Func<CancellationToken, ValueTask<Stream>> OpenReadAsync) : IStoredZipEntry;
 
+/// <summary>
+/// Writes uncompressed UTF-8 ZIP archives directly to a response stream with a deterministic Content-Length.
+/// </summary>
 public sealed class StoredZipArchiveWriter
 {
     private const ushort Utf8Flag = 1 << 11;
@@ -30,6 +48,9 @@ public sealed class StoredZipArchiveWriter
     private const uint UInt32Max = uint.MaxValue;
     private const ushort UInt16Max = ushort.MaxValue;
 
+    /// <summary>
+    /// Calculates the exact number of bytes that <see cref="WriteAsync"/> will emit for the entries.
+    /// </summary>
     public static long CalculateLength<TEntry>(IReadOnlyList<TEntry> entries)
         where TEntry : IStoredZipEntry
     {
@@ -38,9 +59,12 @@ public sealed class StoredZipArchiveWriter
 
     internal static bool RequiresZip64CentralDirectoryMetadata(long sizeBytes, long localHeaderOffset)
     {
-        return sizeBytes > UInt32Max || localHeaderOffset > UInt32Max;
+        return RequiresZip64UInt32(sizeBytes) || RequiresZip64UInt32(localHeaderOffset);
     }
 
+    /// <summary>
+    /// Streams the entries as a STORED ZIP archive without buffering file contents in memory.
+    /// </summary>
     public async Task WriteAsync(
         Stream destination,
         IReadOnlyList<StoredZipSourceEntry> entries,
@@ -63,6 +87,9 @@ public sealed class StoredZipArchiveWriter
         await WriteCentralDirectoryAsync(destination, writtenEntries, plan, cancellationToken);
     }
 
+    // Planning is separate from writing so the API can set Content-Length before sending bytes.
+    // We deliberately use the STORED method: no compression means predictable size, lower CPU,
+    // and UTF-8 filenames via the ZIP language-encoding flag instead of platform code pages.
     private static ZipPlan BuildPlan<TEntry>(IReadOnlyList<TEntry> entries)
         where TEntry : IStoredZipEntry
     {
@@ -83,7 +110,7 @@ public sealed class StoredZipArchiveWriter
                 throw new InvalidOperationException($"Archive entry path has invalid UTF-8 length: '{entry.Path}'.");
             }
 
-            bool zip64DataDescriptor = !entry.IsDirectory && entry.SizeBytes > UInt32Max;
+            bool zip64DataDescriptor = !entry.IsDirectory && RequiresZip64UInt32(entry.SizeBytes);
             long localHeaderLength = 30 + pathBytes.Length;
             long dataDescriptorLength = entry.IsDirectory ? 0 : zip64DataDescriptor ? 24 : 16;
 
@@ -108,9 +135,9 @@ public sealed class StoredZipArchiveWriter
             centralDirectoryLength += 46 + entry.PathBytes.Length + centralExtraLength;
         }
 
-        bool needsZip64End = entries.Count > UInt16Max ||
-            centralDirectoryOffset > UInt32Max ||
-            centralDirectoryLength > UInt32Max;
+        bool needsZip64End = RequiresZip64UInt16(entries.Count) ||
+            RequiresZip64UInt32(centralDirectoryOffset) ||
+            RequiresZip64UInt32(centralDirectoryLength);
         long endLength = (needsZip64End ? 56 + 20 : 0) + 22;
         return new ZipPlan(
             plans,
@@ -266,8 +293,10 @@ public sealed class StoredZipArchiveWriter
         CancellationToken cancellationToken)
     {
         ZipEntryPlan entry = written.Plan;
-        bool sizeNeedsZip64 = entry.SizeBytes > UInt32Max;
-        bool offsetNeedsZip64 = entry.LocalHeaderOffset > UInt32Max;
+        bool sizeNeedsZip64 = RequiresZip64UInt32(entry.SizeBytes);
+        bool offsetNeedsZip64 = RequiresZip64UInt32(entry.LocalHeaderOffset);
+        // ZIP64 central metadata is required even when each file is small if the local
+        // header offset crosses the 4 GiB boundary in a large folder archive.
         bool requiresZip64CentralMetadata = RequiresZip64CentralDirectoryMetadata(
             entry.SizeBytes,
             entry.LocalHeaderOffset);
@@ -279,12 +308,12 @@ public sealed class StoredZipArchiveWriter
             flags |= DataDescriptorFlag;
         }
 
-        int fixedLength = 46;
+        const int fixedLength = 46;
         int extraLength = checked((int)entry.CentralExtraLength);
-        byte[] buffer = ArrayPool<byte>.Shared.Rent(fixedLength + extraLength);
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(fixedLength);
         try
         {
-            Span<byte> header = buffer.AsSpan(0, fixedLength + extraLength);
+            Span<byte> header = buffer.AsSpan(0, fixedLength);
             BinaryPrimitives.WriteUInt32LittleEndian(header[0..4], 0x02014b50);
             BinaryPrimitives.WriteUInt16LittleEndian(header[4..6], versionMadeBy);
             BinaryPrimitives.WriteUInt16LittleEndian(header[6..8], versionNeeded);
@@ -303,11 +332,6 @@ public sealed class StoredZipArchiveWriter
             BinaryPrimitives.WriteUInt32LittleEndian(header[38..42], entry.IsDirectory ? 0x10u : 0u);
             BinaryPrimitives.WriteUInt32LittleEndian(header[42..46], offsetNeedsZip64 ? UInt32Max : checked((uint)entry.LocalHeaderOffset));
 
-            if (extraLength > 0)
-            {
-                WriteZip64CentralExtra(header[46..], entry, sizeNeedsZip64, offsetNeedsZip64);
-            }
-
             await destination.WriteAsync(header.ToArray(), cancellationToken).ConfigureAwait(false);
         }
         finally
@@ -316,6 +340,37 @@ public sealed class StoredZipArchiveWriter
         }
 
         await destination.WriteAsync(entry.PathBytes, cancellationToken).ConfigureAwait(false);
+        if (extraLength > 0)
+        {
+            await WriteZip64CentralExtraAsync(
+                destination,
+                entry,
+                sizeNeedsZip64,
+                offsetNeedsZip64,
+                extraLength,
+                cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task WriteZip64CentralExtraAsync(
+        Stream destination,
+        ZipEntryPlan entry,
+        bool sizeNeedsZip64,
+        bool offsetNeedsZip64,
+        int extraLength,
+        CancellationToken cancellationToken)
+    {
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(extraLength);
+        try
+        {
+            Span<byte> extra = buffer.AsSpan(0, extraLength);
+            WriteZip64CentralExtra(extra, entry, sizeNeedsZip64, offsetNeedsZip64);
+            await destination.WriteAsync(extra.ToArray(), cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
     }
 
     private static void WriteZip64CentralExtra(
@@ -391,10 +446,10 @@ public sealed class StoredZipArchiveWriter
             BinaryPrimitives.WriteUInt32LittleEndian(eocd[0..4], 0x06054b50);
             BinaryPrimitives.WriteUInt16LittleEndian(eocd[4..6], 0);
             BinaryPrimitives.WriteUInt16LittleEndian(eocd[6..8], 0);
-            BinaryPrimitives.WriteUInt16LittleEndian(eocd[8..10], entryCount > UInt16Max ? UInt16Max : (ushort)entryCount);
-            BinaryPrimitives.WriteUInt16LittleEndian(eocd[10..12], entryCount > UInt16Max ? UInt16Max : (ushort)entryCount);
-            BinaryPrimitives.WriteUInt32LittleEndian(eocd[12..16], plan.CentralDirectoryLength > UInt32Max ? UInt32Max : (uint)plan.CentralDirectoryLength);
-            BinaryPrimitives.WriteUInt32LittleEndian(eocd[16..20], plan.CentralDirectoryOffset > UInt32Max ? UInt32Max : (uint)plan.CentralDirectoryOffset);
+            BinaryPrimitives.WriteUInt16LittleEndian(eocd[8..10], RequiresZip64UInt16(entryCount) ? UInt16Max : (ushort)entryCount);
+            BinaryPrimitives.WriteUInt16LittleEndian(eocd[10..12], RequiresZip64UInt16(entryCount) ? UInt16Max : (ushort)entryCount);
+            BinaryPrimitives.WriteUInt32LittleEndian(eocd[12..16], RequiresZip64UInt32(plan.CentralDirectoryLength) ? UInt32Max : (uint)plan.CentralDirectoryLength);
+            BinaryPrimitives.WriteUInt32LittleEndian(eocd[16..20], RequiresZip64UInt32(plan.CentralDirectoryOffset) ? UInt32Max : (uint)plan.CentralDirectoryOffset);
             BinaryPrimitives.WriteUInt16LittleEndian(eocd[20..22], 0);
             await destination.WriteAsync(eocd.ToArray(), cancellationToken).ConfigureAwait(false);
         }
@@ -407,17 +462,27 @@ public sealed class StoredZipArchiveWriter
     private static long GetCentralZip64ExtraLength(long sizeBytes, long localHeaderOffset)
     {
         int payloadLength = 0;
-        if (sizeBytes > UInt32Max)
+        if (RequiresZip64UInt32(sizeBytes))
         {
             payloadLength += 16;
         }
 
-        if (localHeaderOffset > UInt32Max)
+        if (RequiresZip64UInt32(localHeaderOffset))
         {
             payloadLength += 8;
         }
 
         return payloadLength == 0 ? 0 : 4 + payloadLength;
+    }
+
+    private static bool RequiresZip64UInt16(int value)
+    {
+        return value >= UInt16Max;
+    }
+
+    private static bool RequiresZip64UInt32(long value)
+    {
+        return value >= UInt32Max;
     }
 
     private sealed record ZipPlan(
@@ -435,6 +500,9 @@ public sealed class StoredZipArchiveWriter
         bool UsesZip64DataDescriptor,
         long LocalHeaderOffset)
     {
+        /// <summary>
+        /// Gets or sets the central extra length.
+        /// </summary>
         public long CentralExtraLength { get; init; }
     }
 

@@ -1,17 +1,17 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Benchmark.Infrastructure;
 using Cotton.Benchmark.Models;
 using Cotton.Storage.Processors;
-using EasyExtensions.Crypto;
+using Cotton.Crypto;
 using System.Diagnostics;
 using System.Security.Cryptography;
 
 namespace Cotton.Benchmark.Benchmarks
 {
     /// <summary>
-    /// Benchmark for decryption performance using REAL CryptoProcessor from Cotton.Storage.
+    /// Benchmark for Cotton.Storage AES-GCM decryption throughput.
     /// </summary>
     public sealed class DecryptionBenchmark : BenchmarkBase, IDisposable
     {
@@ -20,6 +20,7 @@ namespace Cotton.Benchmark.Benchmarks
         private readonly CryptoProcessor _processor;
         private readonly AesGcmStreamCipher _cipher;
 
+        /// <summary>Initializes the benchmark with a fixed measurement configuration.</summary>
         public DecryptionBenchmark(BenchmarkConfiguration configuration)
             : base(configuration)
         {
@@ -27,7 +28,7 @@ namespace Cotton.Benchmark.Benchmarks
             var testData = TestDataGenerator.GenerateMixedData(configuration.DataSizeBytes);
             _originalSize = testData.Length;
 
-            // Create REAL AesGcmStreamCipher
+            // Create AesGcmStreamCipher
             var key = new byte[configuration.EncryptionKeySize];
             RandomNumberGenerator.Fill(key);
             _cipher = new AesGcmStreamCipher(
@@ -35,10 +36,10 @@ namespace Cotton.Benchmark.Benchmarks
                 keyId: 1,
                 threads: configuration.EncryptionThreads);
 
-            // Create REAL CryptoProcessor
+            // Create CryptoProcessor
             _processor = new CryptoProcessor(_cipher);
 
-            // Pre-encrypt data using REAL processor
+            // Pre-encrypt data using processor
             using var inputStream = new MemoryStream(testData);
             var encryptedStream = _processor.WriteAsync("test-uid", inputStream).Result;
             using var outputStream = new MemoryStream();
@@ -47,10 +48,10 @@ namespace Cotton.Benchmark.Benchmarks
         }
 
         /// <inheritdoc/>
-        public override string Name => "Decryption (Real AES-GCM Processor)";
+        public override string Name => "Cotton.Storage AES-GCM Decryption";
 
         /// <inheritdoc/>
-        public override string Description => $"Tests REAL Cotton.Storage.Processors.CryptoProcessor with {_configuration.EncryptionThreads} threads";
+        public override string Description => $"Measures Cotton.Storage AES-GCM throughput with {_configuration.EncryptionThreads} threads";
 
         /// <inheritdoc/>
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)
@@ -81,13 +82,14 @@ namespace Cotton.Benchmark.Benchmarks
         protected override Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
             var baseMetrics = base.AggregateMetrics(metrics);
-            baseMetrics["Processor"] = "Cotton.Storage.Processors.CryptoProcessor";
+            baseMetrics["Implementation"] = "Cotton.Storage.Processors.CryptoProcessor";
             baseMetrics["Cipher"] = "AesGcmStreamCipher";
             baseMetrics["EncryptionThreads"] = _configuration.EncryptionThreads ?? 0;
             baseMetrics["EncryptedSize"] = FormatBytes(_encryptedData.Length);
             return baseMetrics;
         }
 
+        /// <inheritdoc />
         public void Dispose()
         {
             _cipher?.Dispose();

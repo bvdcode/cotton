@@ -1,9 +1,17 @@
-﻿namespace Cotton.Localization
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+namespace Cotton.Localization
 {
+    /// <summary>
+    /// English server-side notification templates used when no client-side localization template is available.
+    /// </summary>
     public static class NotificationTemplates
     {
+        /// <summary>Title for a failed password login notification.</summary>
         public static string FailedLoginAttemptTitle => "Failed login attempt";
 
+        /// <summary>Builds failed login notification content when no device name is known.</summary>
         public static string FailedLoginAttemptContentNoDevice(
             string username,
             string ipAddress,
@@ -15,6 +23,7 @@
                    $"The attempt was made from {city}, {region}, {country} ({ipAddress}).";
         }
 
+        /// <summary>Builds failed login notification content with device details.</summary>
         public static string FailedLoginAttemptContent(
             string username,
             string ipAddress,
@@ -27,8 +36,10 @@
                    $"The attempt was made from {device} in {city}, {region}, {country} ({ipAddress}).";
         }
 
+        /// <summary>Title for a successful login notification.</summary>
         public static string SuccessfulLoginTitle => "New login to your account";
 
+        /// <summary>Builds successful login notification content when no device name is known.</summary>
         public static string SuccessfulLoginContentNoDevice(
             string ipAddress,
             string country,
@@ -39,6 +50,7 @@
                    $"If this wasn't you, please secure your account immediately.";
         }
 
+        /// <summary>Builds successful login notification content with device details.</summary>
         public static string SuccessfulLoginContent(
             string ipAddress,
             string device,
@@ -50,8 +62,10 @@
                    $"If this wasn't you, please secure your account immediately.";
         }
 
+        /// <summary>Title for a two-factor disabled notification.</summary>
         public static string OtpDisabledTitle => "Two-factor authentication disabled";
 
+        /// <summary>Builds two-factor disabled notification content when no device name is known.</summary>
         public static string OtpDisabledContentNoDevice(
             string ipAddress,
             string country,
@@ -63,6 +77,7 @@
                    $"Your account is less secure now. If this wasn't you, please secure your account immediately.";
         }
 
+        /// <summary>Builds two-factor disabled notification content with device details.</summary>
         public static string OtpDisabledContent(
             string ipAddress,
             string device,
@@ -75,8 +90,10 @@
                    $"Your account is less secure now. If this wasn't you, please secure your account immediately.";
         }
 
+        /// <summary>Title for a two-factor enabled notification.</summary>
         public static string OtpEnabledTitle => "Two-factor authentication activated";
 
+        /// <summary>Builds two-factor enabled notification content when no device name is known.</summary>
         public static string OtpEnabledContentNoDevice(
             string ipAddress,
             string country,
@@ -88,6 +105,7 @@
                    $"Your account is now more secure.";
         }
 
+        /// <summary>Builds two-factor enabled notification content with device details.</summary>
         public static string OtpEnabledContent(
             string ipAddress,
             string device,
@@ -100,8 +118,10 @@
                    $"Your account is now more secure.";
         }
 
+        /// <summary>Title for an invalid TOTP attempt notification.</summary>
         public static string TotpFailedAttemptTitle => "Invalid authentication code";
 
+        /// <summary>Builds invalid TOTP attempt content when no device name is known.</summary>
         public static string TotpFailedAttemptContentNoDevice(
             int failedAttempts,
             string ipAddress,
@@ -114,6 +134,7 @@
                    $"If this wasn't you, your account may be under attack.";
         }
 
+        /// <summary>Builds invalid TOTP attempt content with device details.</summary>
         public static string TotpFailedAttemptContent(
             int failedAttempts,
             string ipAddress,
@@ -127,8 +148,10 @@
                    $"If this wasn't you, your account may be under attack.";
         }
 
+        /// <summary>Title for a temporary TOTP lockout notification.</summary>
         public static string TotpLockoutTitle => "Account temporarily locked";
 
+        /// <summary>Builds TOTP lockout content when no device name is known.</summary>
         public static string TotpLockoutContentNoDevice(
             int maxFailedAttempts,
             string ipAddress,
@@ -141,6 +164,7 @@
                    $"Please wait before trying again.";
         }
 
+        /// <summary>Builds TOTP lockout content with device details.</summary>
         public static string TotpLockoutContent(
             int maxFailedAttempts,
             string ipAddress,
@@ -154,8 +178,10 @@
                    $"Please wait before trying again.";
         }
 
+        /// <summary>Title for a WebDAV token reset notification.</summary>
         public static string WebDavTokenResetTitle => "WebDAV access token changed";
 
+        /// <summary>Builds WebDAV token reset content when no device name is known.</summary>
         public static string WebDavTokenResetContentNoDevice(
             string ipAddress,
             string country,
@@ -167,6 +193,7 @@
                    $"You will need to update your WebDAV client with the new token.";
         }
 
+        /// <summary>Builds WebDAV token reset content with device details.</summary>
         public static string WebDavTokenResetContent(
             string ipAddress,
             string device,
@@ -179,8 +206,10 @@
                    $"You will need to update your WebDAV client with the new token.";
         }
 
+        /// <summary>Title for a shared file download notification.</summary>
         public static string SharedFileDownloadedTitle => "Shared file downloaded";
 
+        /// <summary>Builds shared file download content when no device name is known.</summary>
         public static string SharedFileDownloadedContentNoDevice(
             string fileName,
             string ipAddress,
@@ -192,6 +221,7 @@
                    $"from {city}, {region}, {country} ({ipAddress}).";
         }
 
+        /// <summary>Builds shared file download content with device details.</summary>
         public static string SharedFileDownloadedContent(
             string fileName,
             string ipAddress,
@@ -204,13 +234,16 @@
                    $"in {city}, {region}, {country} ({ipAddress}).";
         }
 
+        /// <summary>Title for an upload hash mismatch notification.</summary>
         public static string UploadHashMismatchTitle => "Upload verification failed";
 
+        /// <summary>Formats a hash for compact display in notifications.</summary>
         public static string FormatHashTail(string hash)
         {
             return "..." + hash[^4..];
         }
 
+        /// <summary>Builds upload hash mismatch notification content.</summary>
         public static string UploadHashMismatchContent(
             string fileName,
             string proposedHash,
@@ -224,8 +257,10 @@
                    $"Computed: {computedTail}";
         }
 
+        /// <summary>Title for missing storage chunk notifications.</summary>
         public static string StorageChunkMissingTitle => "File data missing from storage";
 
+        /// <summary>Builds missing storage chunk notification content.</summary>
         public static string StorageChunkMissingContent(string fileName)
         {
             return $"A storage consistency check detected that data for your file '{fileName}' " +
@@ -233,8 +268,10 @@
                    $"Please verify your storage integrity and re-upload this file.";
         }
 
+        /// <summary>Title for an available Cotton server update notification.</summary>
         public static string AppUpdateAvailableTitle => "Cotton server update available";
 
+        /// <summary>Builds available Cotton server update notification content.</summary>
         public static string AppUpdateAvailableContent(
             string currentVersion,
             string latestVersion,
@@ -249,6 +286,7 @@
                 $"\n\nFull release: {releaseUrl}";
         }
 
+        /// <summary>Normalizes and truncates release notes for notification display.</summary>
         public static string FormatReleaseNotes(string? releaseNotes)
         {
             const int maxLength = 3000;
@@ -263,8 +301,10 @@
                 : normalized[..maxLength].TrimEnd() + "...";
         }
 
+        /// <summary>Title for local storage pressure notifications.</summary>
         public static string StoragePressureTitle => "Storage is running out of free space";
 
+        /// <summary>Builds local storage pressure notification content.</summary>
         public static string StoragePressureContent(
             string availableSpace,
             double availablePercent,
@@ -277,8 +317,29 @@
                    $"Storage root: {rootPath}. Free disk space or expand the volume, then retry the upload.";
         }
 
+        /// <summary>Title for automatic database restore completion notifications.</summary>
         public static string DatabaseRestoreCompletedTitle => "Database restored automatically";
 
+        /// <summary>Title for database integrity failure notifications.</summary>
+        public static string DatabaseIntegrityFailureTitle => "Database integrity issue detected";
+
+        /// <summary>Builds database integrity failure notification content.</summary>
+        public static string DatabaseIntegrityFailureContent(
+            string entityName,
+            string entityKey,
+            string boundary,
+            DateTime detectedAtUtc)
+        {
+            return
+                $"Cotton rejected a protected database row because its integrity signature did not match.\n\n" +
+                $"Entity: {entityName}\n" +
+                $"Row: {entityKey}\n" +
+                $"Boundary: {boundary}\n" +
+                $"Detected (UTC): {detectedAtUtc:yyyy-MM-dd HH:mm:ss}\n\n" +
+                "If you edited PostgreSQL manually, restore the row from a trusted backup or re-apply the change through Cotton.";
+        }
+
+        /// <summary>Builds automatic database restore completion notification content.</summary>
         public static string DatabaseRestoreCompletedContent(
             string backupId,
             string sourceDatabase,

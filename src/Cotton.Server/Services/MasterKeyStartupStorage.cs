@@ -1,9 +1,12 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
 using Amazon.S3;
 using Cotton.Database.Models.Enums;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Backends;
 using Cotton.Storage.Helpers;
-using EasyExtensions.Crypto;
+using Cotton.Crypto;
 using EasyExtensions.Extensions;
 using Npgsql;
 using System.Security.Cryptography;

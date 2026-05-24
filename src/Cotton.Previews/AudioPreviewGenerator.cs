@@ -1,3 +1,6 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
 using Cotton.Previews.Http;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Drawing;
@@ -5,14 +8,18 @@ using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System.Diagnostics;
-using Xabe.FFmpeg.Downloader;
 
 namespace Cotton.Previews
 {
+    /// <summary>
+    /// Generates audio previews from embedded cover art or waveform data.
+    /// </summary>
     public class AudioPreviewGenerator : IPreviewGenerator
     {
+        /// <inheritdoc />
         public int Version => 1;
 
+        /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes =>
         [
             "audio/mpeg",
@@ -31,9 +38,10 @@ namespace Cotton.Previews
             "audio/aiff",
         ];
 
+        /// <inheritdoc />
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size = 150)
         {
-            await CheckFfmpegAsync();
+            await FfmpegBinary.EnsureAvailableAsync().ConfigureAwait(false);
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
 
@@ -85,7 +93,7 @@ namespace Cotton.Previews
             float[] amplitudes = BuildAmplitudes(samples, bars);
 
             using var image = new Image<Rgba32>(size, size, new Rgba32(0, 0, 0, 0));
-            using (var drawing = image.Frames.RootFrame.CreateCanvas(image.Configuration, new DrawingOptions(), Array.Empty<IPath>()))
+            image.Mutate(ctx =>
             {
                 float barGap = Math.Max(5f, size / 48f);
                 float sidePadding = Math.Max(10f, barGap * 1.5f);
@@ -96,32 +104,38 @@ namespace Cotton.Previews
                 float centerY = size / 2f;
                 float minBarHeight = Math.Max(4f, size * 0.06f);
                 float maxBarHeight = size * 0.82f;
-                var barBrush = Brushes.Solid(Color.FromPixel(new Rgba32(0x96, 0xBE, 0x02)));
+                var barBrush = Brushes.Solid(Color.FromPixel(new Rgba32(
+                    PreviewColorPalette.AccentGreenRed,
+                    PreviewColorPalette.AccentGreenGreen,
+                    PreviewColorPalette.AccentGreenBlue)));
 
-                for (int i = 0; i < bars; i++)
+                ctx.Paint(canvas =>
                 {
-                    float amplitude = amplitudes[i];
-                    float barHeight = Math.Max(minBarHeight, amplitude * maxBarHeight);
-                    float x = left + (i * (barWidth + barGap));
-                    float y = centerY - (barHeight / 2f);
-                    float radius = barWidth / 2f;
-
-                    if (barHeight <= barWidth)
+                    for (int i = 0; i < bars; i++)
                     {
-                        drawing.Fill(barBrush, new EllipsePolygon(x + radius, centerY, radius));
-                        continue;
-                    }
+                        float amplitude = amplitudes[i];
+                        float barHeight = Math.Max(minBarHeight, amplitude * maxBarHeight);
+                        float x = left + (i * (barWidth + barGap));
+                        float y = centerY - (barHeight / 2f);
+                        float radius = barWidth / 2f;
 
-                    float bodyHeight = Math.Max(0, barHeight - barWidth);
-                    if (bodyHeight > 0)
-                    {
-                        drawing.Fill(barBrush, new RectanglePolygon(x, y + radius, barWidth, bodyHeight));
-                    }
+                        if (barHeight <= barWidth)
+                        {
+                            canvas.Fill(barBrush, new EllipsePolygon(x + radius, centerY, radius));
+                            continue;
+                        }
 
-                    drawing.Fill(barBrush, new EllipsePolygon(x + radius, y + radius, radius));
-                    drawing.Fill(barBrush, new EllipsePolygon(x + radius, y + barHeight - radius, radius));
-                }
-            }
+                        float bodyHeight = Math.Max(0, barHeight - barWidth);
+                        if (bodyHeight > 0)
+                        {
+                            canvas.Fill(barBrush, new RectanglePolygon(x, y + radius, barWidth, bodyHeight));
+                        }
+
+                        canvas.Fill(barBrush, new EllipsePolygon(x + radius, y + radius, radius));
+                        canvas.Fill(barBrush, new EllipsePolygon(x + radius, y + barHeight - radius, radius));
+                    }
+                });
+            });
 
             await using var output = new MemoryStream();
             await image.SaveAsWebpAsync(output).ConfigureAwait(false);
@@ -138,7 +152,7 @@ namespace Cotton.Previews
 
             var startInfo = new ProcessStartInfo
             {
-                FileName = GetFfmpegPath(),
+                FileName = FfmpegBinary.GetFfmpegPath(),
                 Arguments = args,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -247,7 +261,7 @@ namespace Cotton.Previews
 
             var startInfo = new ProcessStartInfo
             {
-                FileName = GetFfmpegPath(),
+                FileName = FfmpegBinary.GetFfmpegPath(),
                 Arguments = args,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -291,22 +305,5 @@ namespace Cotton.Previews
             return outputMs.ToArray();
         }
 
-        private static async Task CheckFfmpegAsync()
-        {
-            if (!File.Exists(GetFfmpegPath()))
-            {
-                await FFmpegDownloader.GetLatestVersion(FFmpegVersion.Official);
-
-                if (Environment.OSVersion.Platform == PlatformID.Unix)
-                {
-                    Process.Start("chmod", "+x ffmpeg");
-                }
-            }
-        }
-
-        private static string GetFfmpegPath()
-        {
-            return Environment.OSVersion.Platform == PlatformID.Win32NT ? "ffmpeg.exe" : "./ffmpeg";
-        }
     }
 }

@@ -24,6 +24,7 @@ import type {
   TilesSize,
 } from "@shared/types/FileListViewTypes";
 import { BlurredPreviewImage } from "./BlurredPreviewImage";
+import { setClippedDragImage } from "./dragPreview";
 import {
   isFileEncrypted,
   isFolderEncryptionPolicyEnabled,
@@ -197,7 +198,12 @@ const TileFrame = ({
   <Box
     position="relative"
     draggable={draggable && !isRenaming}
-    onDragStart={onMoveDragStart}
+    onDragStart={(event) => {
+      onMoveDragStart?.(event);
+      if (!event.defaultPrevented) {
+        setClippedDragImage(event, event.currentTarget);
+      }
+    }}
     onDragOver={onMoveDragOver}
     onDragLeave={onMoveDragLeave}
     onDrop={onMoveDrop}
@@ -366,7 +372,7 @@ const FilePreviewIcon = ({
     file.name,
     file.contentType,
     {
-      extensionLabelMaxLength: 4,
+      extensionLabelMaxLength: 3,
       hideLongExtensionLabel: true,
       hideInvalidExtensionLabel: true,
       hideExtensionLabel: tileSize === "small",

@@ -1,5 +1,5 @@
 ﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
@@ -110,6 +110,7 @@ public class ServerEndpointsTests : IntegrationTestBase
         {
             Assert.That(payload.TryGetProperty("dotNetDiagnostics", out _), Is.True);
             Assert.That(payload.TryGetProperty("linuxProcess", out _), Is.True);
+            Assert.That(payload.TryGetProperty("linuxContainer", out JsonElement linuxContainer), Is.True);
             Assert.That(payload.TryGetProperty("warnings", out JsonElement warnings), Is.True);
             Assert.That(payload.TryGetProperty("securityScore", out JsonElement score), Is.True);
             Assert.That(payload.TryGetProperty("maxSecurityScore", out JsonElement maxScore), Is.True);
@@ -122,6 +123,13 @@ public class ServerEndpointsTests : IntegrationTestBase
             Assert.That(adminTotp.GetProperty("adminCount").GetInt32(), Is.EqualTo(1));
             Assert.That(adminTotp.GetProperty("adminsWithTotp").GetInt32(), Is.EqualTo(0));
             Assert.That(adminTotp.GetProperty("adminsWithoutTotp").GetInt32(), Is.EqualTo(1));
+            Assert.That(linuxContainer.TryGetProperty("rootFilesystemReadOnly", out _), Is.True);
+            Assert.That(linuxContainer.TryGetProperty("dockerSocketMounted", out _), Is.True);
+            Assert.That(linuxContainer.TryGetProperty("hostPidNamespaceLikely", out _), Is.True);
+            Assert.That(linuxContainer.TryGetProperty("coreDumpSoftLimit", out _), Is.True);
+            Assert.That(linuxContainer.TryGetProperty("corePattern", out _), Is.True);
+            Assert.That(linuxContainer.TryGetProperty("appArmorProfile", out _), Is.True);
+            Assert.That(linuxContainer.TryGetProperty("selinuxContext", out _), Is.True);
             Assert.That(
                 warnings.EnumerateArray().Any(warning =>
                     warning.GetProperty("code").GetString() == "admins-without-2fa"),

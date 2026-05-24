@@ -1,10 +1,11 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
+using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Extensions;
 using Microsoft.AspNetCore.Authentication;
@@ -19,6 +20,9 @@ using System.Text.Encodings.Web;
 
 namespace Cotton.Server.Auth;
 
+/// <summary>
+/// Represents web dav basic authentication handler.
+/// </summary>
 public sealed class WebDavBasicAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
     ILoggerFactory logger,
@@ -28,10 +32,17 @@ public sealed class WebDavBasicAuthenticationHandler(
     IMemoryCache cache,
     Cotton.Server.Services.WebDav.WebDavAuthCache authCache,
     INotificationsProvider notifications,
-    IGeoLookupService geoLookup)
+    IGeoLookupService geoLookup,
+    IDatabaseIntegrityVerifier integrity)
     : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
+    /// <summary>
+    /// Defines the policy name.
+    /// </summary>
     public const string PolicyName = "WebDav";
+    /// <summary>
+    /// Defines the scheme name.
+    /// </summary>
     public const string SchemeName = "WebDavBasic";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(1);
 
@@ -42,6 +53,7 @@ public sealed class WebDavBasicAuthenticationHandler(
             : Request.GetRemoteIPAddress();
     }
 
+    /// <inheritdoc />
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         var authHeader = Request.Headers.Authorization.ToString();
@@ -63,13 +75,15 @@ public sealed class WebDavBasicAuthenticationHandler(
 
         Logger.LogDebug("WebDAV auth: cache miss for username '{Username}'.", username);
 
-        var user = await dbContext.Users.AsNoTracking()
+        var user = await dbContext.Users
             .FirstOrDefaultAsync(x => x.Username == username || x.Email == username);
         if (user is null)
         {
             Logger.LogInformation("WebDAV auth: user '{Username}' not found.", username);
             return AuthenticateResult.Fail("Invalid username or token.");
         }
+
+        integrity.RequireValid(dbContext, user, "webdav.auth");
 
         var tokenResult = await VerifyTokenOrFailAsync(user, username, token);
         if (tokenResult is not null)
@@ -84,6 +98,7 @@ public sealed class WebDavBasicAuthenticationHandler(
         return AuthenticateSuccess(user.Id, user.Username);
     }
 
+    /// <inheritdoc />
     protected override Task HandleChallengeAsync(AuthenticationProperties properties)
     {
         Response.Headers.WWWAuthenticate = "Basic realm=\"Cotton WebDAV\", charset=\"UTF-8\"";

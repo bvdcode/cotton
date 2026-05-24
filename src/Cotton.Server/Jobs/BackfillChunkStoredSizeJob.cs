@@ -1,3 +1,6 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
 using Cotton.Database;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
@@ -7,6 +10,9 @@ using Quartz;
 
 namespace Cotton.Server.Jobs
 {
+    /// <summary>
+    /// Runs the scheduled backfill chunk stored size maintenance task.
+    /// </summary>
     [JobTrigger(days: 1)]
     public class BackfillChunkStoredSizeJob(
         CottonDbContext _dbContext,
@@ -15,6 +21,9 @@ namespace Cotton.Server.Jobs
     {
         private const int BatchSize = 1000;
 
+        /// <summary>
+        /// Executes the scheduled Quartz job.
+        /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
             CancellationToken ct = context.CancellationToken;

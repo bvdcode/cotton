@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Database.Models;
@@ -8,8 +8,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services;
 
+/// <summary>
+/// Coordinates file version storage.
+/// </summary>
 public sealed class FileVersionStorageService(CottonDbContext _dbContext)
 {
+    /// <summary>
+    /// Deletes historical versions async.
+    /// </summary>
     public async Task<long> DeleteHistoricalVersionsAsync(
         Guid userId,
         IReadOnlyCollection<NodeFile> versions,

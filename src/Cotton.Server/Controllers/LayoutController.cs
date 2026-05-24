@@ -1,5 +1,5 @@
 ﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Database.Models;
@@ -12,6 +12,7 @@ using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
+using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
@@ -31,6 +32,9 @@ using Microsoft.Net.Http.Headers;
 
 namespace Cotton.Server.Controllers
 {
+    /// <summary>
+    /// Exposes HTTP endpoints for layout operations.
+    /// </summary>
     [ApiController]
     [Route(Routes.V1.Layouts)]
     public class LayoutController(
@@ -40,10 +44,15 @@ namespace Cotton.Server.Controllers
         IHubContext<EventHub> _hubContext,
         ILogger<LayoutController> _logger,
         ILayoutNavigator _navigator,
-        IStoragePipeline _storage) : ControllerBase
+        IStoragePipeline _storage,
+        IDatabaseIntegrityVerifier _integrity,
+        FileGraphIntegrityVerifier _fileGraphIntegrity) : ControllerBase
     {
         private const int DefaultSharedFolderTokenLength = 16;
 
+        /// <summary>
+        /// Gets recent nodes.
+        /// </summary>
         [Authorize]
         [HttpGet("{layoutId:guid}/recent")]
         public async Task<IActionResult> GetRecentNodes([FromRoute] Guid layoutId,
@@ -55,6 +64,9 @@ namespace Cotton.Server.Controllers
             return Ok(result);
         }
 
+        /// <summary>
+        /// Searches files and folders across a layout.
+        /// </summary>
         [Authorize]
         [HttpGet("{layoutId:guid}/search")]
         public async Task<IActionResult> SearchLayouts(
@@ -70,6 +82,9 @@ namespace Cotton.Server.Controllers
             return Ok(result);
         }
 
+        /// <summary>
+        /// Gets layout stats.
+        /// </summary>
         [Authorize]
         [HttpGet("{layoutId:guid}/stats")]
         public async Task<IActionResult> GetLayoutStats([FromRoute] Guid layoutId)
@@ -106,6 +121,9 @@ namespace Cotton.Server.Controllers
             return Ok(stats);
         }
 
+        /// <summary>
+        /// Moves layout node.
+        /// </summary>
         [Authorize]
         [HttpPatch("nodes/{nodeId:guid}/move")]
         public async Task<IActionResult> MoveLayoutNode(
@@ -122,6 +140,9 @@ namespace Cotton.Server.Controllers
             return Ok(dto);
         }
 
+        /// <summary>
+        /// Renames layout node.
+        /// </summary>
         [Authorize]
         [HttpPatch("nodes/{nodeId:guid}/rename")]
         public async Task<IActionResult> RenameLayoutNode(
@@ -197,6 +218,9 @@ namespace Cotton.Server.Controllers
             return Ok(mapped);
         }
 
+        /// <summary>
+        /// Gets layout node.
+        /// </summary>
         [Authorize]
         [HttpGet("nodes/{nodeId:guid}")]
         public async Task<IActionResult> GetLayoutNode([FromRoute] Guid nodeId)
@@ -214,6 +238,9 @@ namespace Cotton.Server.Controllers
             return Ok(mapped);
         }
 
+        /// <summary>
+        /// Updates layout node metadata.
+        /// </summary>
         [Authorize]
         [HttpPatch("nodes/{nodeId:guid}/metadata")]
         [ProducesResponseType<NodeDto>(StatusCodes.Status200OK)]
@@ -274,6 +301,9 @@ namespace Cotton.Server.Controllers
             return Ok(mapped);
         }
 
+        /// <summary>
+        /// Deletes layout node.
+        /// </summary>
         [Authorize]
         [HttpDelete("nodes/{nodeId:guid}")]
         public async Task<IActionResult> DeleteLayoutNode(
@@ -294,6 +324,9 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Restores layout node.
+        /// </summary>
         [Authorize]
         [HttpPost("nodes/{nodeId:guid}/restore")]
         public async Task<IActionResult> RestoreLayoutNode(
@@ -322,6 +355,9 @@ namespace Cotton.Server.Controllers
             return Ok(outcome);
         }
 
+        /// <summary>
+        /// Creates layout node.
+        /// </summary>
         [Authorize]
         [HttpPut("nodes")]
         public async Task<IActionResult> CreateLayoutNode([FromBody] CreateNodeRequest request)
@@ -405,6 +441,9 @@ namespace Cotton.Server.Controllers
             return Ok(mapped);
         }
 
+        /// <summary>
+        /// Gets ancestor nodes.
+        /// </summary>
         [Authorize]
         [HttpGet("nodes/{nodeId:guid}/ancestors")]
         public async Task<IActionResult> GetAncestorNodes(
@@ -456,6 +495,9 @@ namespace Cotton.Server.Controllers
             return Ok(ancestors);
         }
 
+        /// <summary>
+        /// Gets child nodes.
+        /// </summary>
         [Authorize]
         [HttpGet("nodes/{nodeId:guid}/children")]
         public async Task<IActionResult> GetChildNodes(
@@ -472,6 +514,9 @@ namespace Cotton.Server.Controllers
             return Ok(result);
         }
 
+        /// <summary>
+        /// Gets node share link.
+        /// </summary>
         [Authorize]
         [HttpGet("nodes/{nodeId:guid}/share-link")]
         public async Task<IActionResult> GetNodeShareLink(
@@ -523,6 +568,9 @@ namespace Cotton.Server.Controllers
             return Ok($"/s/{newToken.Token}");
         }
 
+        /// <summary>
+        /// Gets shared node info.
+        /// </summary>
         [AllowAnonymous]
         [HttpGet("shared/{token}")]
         public async Task<IActionResult> GetSharedNodeInfo([FromRoute] string token)
@@ -542,6 +590,9 @@ namespace Cotton.Server.Controllers
             });
         }
 
+        /// <summary>
+        /// Gets shared node children.
+        /// </summary>
         [AllowAnonymous]
         [HttpGet("shared/{token}/children")]
         public async Task<IActionResult> GetSharedNodeChildren(
@@ -622,6 +673,9 @@ namespace Cotton.Server.Controllers
             return Ok(response);
         }
 
+        /// <summary>
+        /// Gets shared node ancestors.
+        /// </summary>
         [AllowAnonymous]
         [HttpGet("shared/{token}/ancestors/{nodeId:guid}")]
         public async Task<IActionResult> GetSharedNodeAncestors(
@@ -698,6 +752,9 @@ namespace Cotton.Server.Controllers
             return Ok(ancestors);
         }
 
+        /// <summary>
+        /// Downloads shared node file.
+        /// </summary>
         [AllowAnonymous]
         [HttpGet("shared/{token}/files/{nodeFileId:guid}/content")]
         public async Task<IActionResult> DownloadSharedNodeFile(
@@ -720,7 +777,22 @@ namespace Cotton.Server.Controllers
                 .SingleOrDefaultAsync(x => x.Id == nodeFileId
                     && x.OwnerId == nodeShareToken.CreatedByUserId);
 
-            if (nodeFile == null || nodeFile.Node.Type != NodeType.Default)
+            if (nodeFile == null)
+            {
+                return this.ApiNotFound("File not found.");
+            }
+
+            bool servesPreview = preview && nodeFile.FileManifest.LargeFilePreviewHash != null;
+            if (servesPreview)
+            {
+                _fileGraphIntegrity.RequireValidMetadata(_dbContext, nodeFile, "shared-folder.preview");
+            }
+            else
+            {
+                _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "shared-folder.download");
+            }
+
+            if (nodeFile.Node.Type != NodeType.Default)
             {
                 return this.ApiNotFound("File not found.");
             }
@@ -777,6 +849,9 @@ namespace Cotton.Server.Controllers
                 enableRangeProcessing: true);
         }
 
+        /// <summary>
+        /// Resolves layout.
+        /// </summary>
         [Authorize]
         [HttpGet("resolver")]
         [HttpGet("resolver/{*path}")]
@@ -797,13 +872,19 @@ namespace Cotton.Server.Controllers
         {
             DateTime now = DateTime.UtcNow;
             var nodeShareToken = await _dbContext.NodeShareTokens
-                .AsNoTracking()
                 .Include(x => x.Node)
                 .Where(x => x.Token == token
                     && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
                 .SingleOrDefaultAsync();
 
-            if (nodeShareToken == null || nodeShareToken.Node.Type != NodeType.Default)
+            if (nodeShareToken == null)
+            {
+                return null;
+            }
+
+            _integrity.RequireValid(_dbContext, nodeShareToken, "shared-folder.node-token");
+            _integrity.RequireValid(_dbContext, nodeShareToken.Node, "shared-folder.root-node");
+            if (nodeShareToken.Node.Type != NodeType.Default)
             {
                 return null;
             }
@@ -818,13 +899,10 @@ namespace Cotton.Server.Controllers
         {
             const int maxDepth = 512;
 
-            var currentNode = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.Id == nodeId
-                    && x.OwnerId == ownerId
-                    && x.Type == NodeType.Default)
-                .Select(x => new { x.Id, x.ParentId })
-                .SingleOrDefaultAsync();
+            Node? currentNode = await LoadVerifiedSharedDefaultNodeAsync(
+                nodeId,
+                ownerId,
+                "shared-folder.subtree.node");
 
             if (currentNode == null)
             {
@@ -852,26 +930,43 @@ namespace Cotton.Server.Controllers
                     return false;
                 }
 
-                if (parentId == sharedRootNodeId)
-                {
-                    return true;
-                }
-
-                currentNode = await _dbContext.Nodes
-                    .AsNoTracking()
-                    .Where(x => x.Id == parentId
-                        && x.OwnerId == ownerId
-                        && x.Type == NodeType.Default)
-                    .Select(x => new { x.Id, x.ParentId })
-                    .SingleOrDefaultAsync();
+                currentNode = await LoadVerifiedSharedDefaultNodeAsync(
+                    parentId,
+                    ownerId,
+                    "shared-folder.subtree.ancestor");
 
                 if (currentNode == null)
                 {
                     return false;
                 }
+
+                if (currentNode.Id == sharedRootNodeId)
+                {
+                    return true;
+                }
             }
 
             return false;
+        }
+
+        private async Task<Node?> LoadVerifiedSharedDefaultNodeAsync(
+            Guid nodeId,
+            Guid ownerId,
+            string boundary)
+        {
+            var node = await _dbContext.Nodes
+                .Where(x => x.Id == nodeId
+                    && x.OwnerId == ownerId
+                    && x.Type == NodeType.Default)
+                .SingleOrDefaultAsync();
+
+            if (node == null)
+            {
+                return null;
+            }
+
+            _integrity.RequireValid(_dbContext, node, boundary);
+            return node;
         }
 
         private async Task<string> CreateUniqueShareTokenAsync(int length)

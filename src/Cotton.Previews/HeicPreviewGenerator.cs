@@ -1,11 +1,19 @@
-﻿using PhotoSauce.MagicScaler;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+using PhotoSauce.MagicScaler;
 
 namespace Cotton.Previews
 {
+    /// <summary>
+    /// Generates previews for HEIC and HEIF image formats.
+    /// </summary>
     public class HeicPreviewGenerator : IPreviewGenerator
     {
+        /// <inheritdoc />
         public int Version => 1;
 
+        /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes =>
         [
             "image/heic",
@@ -14,6 +22,7 @@ namespace Cotton.Previews
             "image/heif-sequence"
         ];
 
+        /// <inheritdoc />
         public Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
         {
             ArgumentNullException.ThrowIfNull(stream);

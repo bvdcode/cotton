@@ -1,11 +1,20 @@
-﻿using Cotton.Server.Services;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+using Cotton.Server.Services;
 using EasyExtensions.Abstractions;
 using EasyExtensions.Extensions;
 
 namespace Cotton.Server.Extensions
 {
+    /// <summary>
+    /// Contains extension methods for configuring crypto.
+    /// </summary>
     public static class CryptoExtensions
     {
+        /// <summary>
+        /// Decrypts and validates an encrypted pre-signed token.
+        /// </summary>
         public static byte[] DecryptPresignedToken(this IStreamCipher crypto, string token)
         {
             byte[] encrypted = Hasher.FromHexStringHash(token);
@@ -25,6 +34,9 @@ namespace Cotton.Server.Extensions
             return Convert.FromHexString(hashStr);
         }
 
+        /// <summary>
+        /// Gets presigned token.
+        /// </summary>
         public static string GetPresignedToken(this IStreamCipher crypto, byte[] hash, TimeSpan? expiration = null)
         {
             expiration ??= TimeSpan.FromDays(1);

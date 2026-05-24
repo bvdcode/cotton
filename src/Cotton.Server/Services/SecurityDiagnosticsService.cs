@@ -1,18 +1,26 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services
 {
+    /// <summary>
+    /// Coordinates security diagnostics.
+    /// </summary>
     public sealed class SecurityDiagnosticsService(
         CottonDbContext dbContext,
         ProcessHardeningStatus hardeningStatus,
-        MasterKeyRuntimeState masterKeyRuntimeState)
+        MasterKeyRuntimeState masterKeyRuntimeState,
+        DatabaseIntegrityDiagnosticsService databaseIntegrityDiagnostics)
     {
+        /// <summary>
+        /// Gets snapshot async.
+        /// </summary>
         public async Task<SecurityDiagnosticsDto> GetSnapshotAsync(CancellationToken cancellationToken)
         {
             LinuxProcStatus procStatus = LinuxProcessHardening.SnapshotProcStatus();
@@ -23,7 +31,10 @@ namespace Cotton.Server.Services
             bool dotnetDiagnosticsDisabled = IsZero(dotnetEnableDiagnostics) || IsZero(comPlusEnableDiagnostics);
             bool isContainer = IsContainer();
             bool isPublicInstance = Constants.IsPublicInstance;
+            LinuxContainerSecuritySnapshot containerSecurity = LinuxContainerSecurity.Snapshot(isContainer);
             AdminTotpDiagnosticsDto adminTotp = await GetAdminTotpDiagnosticsAsync(cancellationToken);
+            DatabaseIntegrityDiagnosticsDto databaseIntegrity = await databaseIntegrityDiagnostics
+                .GetSnapshotAsync(cancellationToken);
 
             var linuxProcess = new LinuxProcessSecurityDto
             {
@@ -47,13 +58,30 @@ namespace Cotton.Server.Services
                 ComPlusEnableDiagnostics = comPlusEnableDiagnostics,
             };
 
+            var linuxContainer = new LinuxContainerSecurityDto
+            {
+                RootFilesystemReadOnly = containerSecurity.RootFilesystemReadOnly,
+                DockerSocketMounted = containerSecurity.DockerSocketMounted,
+                HostPidNamespaceLikely = containerSecurity.HostPidNamespaceLikely,
+                ProcOneCommandLine = containerSecurity.ProcOneCommandLine,
+                CoreDumpSoftLimit = containerSecurity.CoreDumpSoftLimit,
+                CoreDumpHardLimit = containerSecurity.CoreDumpHardLimit,
+                CoreDumpSoftLimitDisabled = containerSecurity.CoreDumpSoftLimitDisabled,
+                CorePattern = containerSecurity.CorePattern,
+                AppArmorProfile = containerSecurity.AppArmorProfile,
+                SelinuxContext = containerSecurity.SelinuxContext,
+                SelinuxEnforcing = containerSecurity.SelinuxEnforcing,
+            };
+
             IReadOnlyList<SecurityDiagnosticWarningDto> warnings = BuildWarnings(
                 isContainer,
                 isPublicInstance,
                 masterKeyRuntimeState,
                 dotnetDiagnostics,
                 linuxProcess,
-                adminTotp);
+                linuxContainer,
+                adminTotp,
+                databaseIntegrity);
 
             return new SecurityDiagnosticsDto
             {
@@ -66,7 +94,9 @@ namespace Cotton.Server.Services
                 MasterKeyEnvironmentVariablePresentInProcess = masterKeyRuntimeState.EnvironmentVariablePresentAfterResolution,
                 DotNetDiagnostics = dotnetDiagnostics,
                 LinuxProcess = linuxProcess,
+                LinuxContainer = linuxContainer,
                 AdminTotp = adminTotp,
+                DatabaseIntegrity = databaseIntegrity,
                 SecurityScore = CalculateSecurityScore(warnings),
                 Warnings = warnings,
             };
@@ -93,7 +123,9 @@ namespace Cotton.Server.Services
             MasterKeyRuntimeState masterKey,
             DotNetDiagnosticsDto dotnetDiagnostics,
             LinuxProcessSecurityDto linuxProcess,
-            AdminTotpDiagnosticsDto adminTotp)
+            LinuxContainerSecurityDto linuxContainer,
+            AdminTotpDiagnosticsDto adminTotp,
+            DatabaseIntegrityDiagnosticsDto databaseIntegrity)
         {
             var warnings = new List<SecurityDiagnosticWarningDto>();
             AddPublicInstanceWarning(warnings, isPublicInstance);
@@ -101,8 +133,37 @@ namespace Cotton.Server.Services
             AddAdminTotpWarning(warnings, adminTotp);
             AddDotNetDiagnosticsWarning(warnings, dotnetDiagnostics);
             AddLinuxProcessWarnings(warnings, isContainer, linuxProcess);
+            AddLinuxContainerWarnings(warnings, isContainer, linuxProcess, linuxContainer);
             AddHardeningWarning(warnings, linuxProcess);
+            AddDatabaseIntegrityWarnings(warnings, databaseIntegrity);
             return warnings;
+        }
+
+        private static void AddDatabaseIntegrityWarnings(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            DatabaseIntegrityDiagnosticsDto databaseIntegrity)
+        {
+            if (databaseIntegrity.UnsignedProtectedRows > 0)
+            {
+                warnings.Add(new SecurityDiagnosticWarningDto
+                {
+                    Code = "db-integrity-unsigned-rows",
+                    Severity = "critical",
+                    Message = $"{databaseIntegrity.UnsignedProtectedRows} protected database rows are missing valid integrity signatures. Run the bridge release backfill before trusting this instance.",
+                });
+            }
+
+            if (!databaseIntegrity.BridgeBackfillEnabled)
+            {
+                return;
+            }
+
+            warnings.Add(new SecurityDiagnosticWarningDto
+            {
+                Code = "db-integrity-bridge-mode",
+                Severity = "warning",
+                Message = "Database integrity bridge mode is enabled for this upgrade window. Existing rows are being signed automatically on startup. Disable bridge mode after the upgrade window so missing or invalid signatures become hard failures.",
+            });
         }
 
         private static void AddPublicInstanceWarning(
@@ -273,6 +334,119 @@ namespace Cotton.Server.Services
                 Code = "running-as-root",
                 Severity = "info",
                 Message = "The process is running as root. This may be acceptable for simple self-hosting, but a dedicated non-root UID is stronger when volume permissions are prepared for it.",
+            });
+        }
+
+        private static void AddLinuxContainerWarnings(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            bool isContainer,
+            LinuxProcessSecurityDto linuxProcess,
+            LinuxContainerSecurityDto linuxContainer)
+        {
+            if (!OperatingSystem.IsLinux())
+            {
+                return;
+            }
+
+            if (isContainer)
+            {
+                AddRootFilesystemWarning(warnings, linuxContainer);
+                AddDockerSocketWarning(warnings, linuxContainer);
+                AddHostPidNamespaceWarning(warnings, linuxContainer);
+                AddMandatoryAccessControlWarning(warnings, linuxContainer);
+            }
+
+            AddCoreDumpLimitWarning(warnings, linuxProcess, linuxContainer);
+        }
+
+        private static void AddRootFilesystemWarning(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            LinuxContainerSecurityDto linuxContainer)
+        {
+            if (linuxContainer.RootFilesystemReadOnly != false)
+            {
+                return;
+            }
+
+            warnings.Add(new SecurityDiagnosticWarningDto
+            {
+                Code = "root-filesystem-writable",
+                Severity = "info",
+                Message = "The container root filesystem is writable. Set read_only: true and mount only the required data directories as writable volumes.",
+            });
+        }
+
+        private static void AddDockerSocketWarning(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            LinuxContainerSecurityDto linuxContainer)
+        {
+            if (!linuxContainer.DockerSocketMounted)
+            {
+                return;
+            }
+
+            warnings.Add(new SecurityDiagnosticWarningDto
+            {
+                Code = "docker-socket-mounted",
+                Severity = "critical",
+                Message = "The Docker socket is visible inside the Cotton container. Remove the socket mount; it is effectively host-root access from the web process.",
+            });
+        }
+
+        private static void AddHostPidNamespaceWarning(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            LinuxContainerSecurityDto linuxContainer)
+        {
+            if (linuxContainer.HostPidNamespaceLikely != true)
+            {
+                return;
+            }
+
+            warnings.Add(new SecurityDiagnosticWarningDto
+            {
+                Code = "host-pid-namespace",
+                Severity = "critical",
+                Message = "Cotton appears to share the host PID namespace. Remove pid: host so process isolation and procfs visibility stay inside the container boundary.",
+            });
+        }
+
+        private static void AddMandatoryAccessControlWarning(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            LinuxContainerSecurityDto linuxContainer)
+        {
+            bool appArmorUnconfined = linuxContainer.AppArmorProfile?.StartsWith("unconfined", StringComparison.OrdinalIgnoreCase) == true;
+            bool hasMacProfile = !string.IsNullOrWhiteSpace(linuxContainer.AppArmorProfile)
+                || !string.IsNullOrWhiteSpace(linuxContainer.SelinuxContext);
+            bool selinuxPermissive = linuxContainer.SelinuxEnforcing == false;
+
+            if (hasMacProfile && !appArmorUnconfined && !selinuxPermissive)
+            {
+                return;
+            }
+
+            warnings.Add(new SecurityDiagnosticWarningDto
+            {
+                Code = "mandatory-access-control-unconfined",
+                Severity = "warning",
+                Message = "No enforcing AppArmor or SELinux confinement was detected for the container. Use Docker default AppArmor, a custom AppArmor profile, or an enforcing SELinux container context.",
+            });
+        }
+
+        private static void AddCoreDumpLimitWarning(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            LinuxProcessSecurityDto linuxProcess,
+            LinuxContainerSecurityDto linuxContainer)
+        {
+            if (linuxContainer.CoreDumpSoftLimitDisabled != false || linuxProcess.Dumpable == 0)
+            {
+                return;
+            }
+
+            warnings.Add(new SecurityDiagnosticWarningDto
+            {
+                Code = "core-dumps-enabled",
+                Severity = "warning",
+                Message = "Core dump limits allow dumps while the process may be dumpable. Set ulimit core=0 and keep COTTON_PROCESS_HARDENING=true so crashes cannot write memory snapshots containing secrets.",
             });
         }
 

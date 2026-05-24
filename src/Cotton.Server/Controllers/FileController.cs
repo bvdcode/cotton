@@ -1,5 +1,5 @@
 ﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Database.Models;
@@ -14,6 +14,7 @@ using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
+using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
@@ -34,6 +35,9 @@ using Quartz;
 
 namespace Cotton.Server.Controllers
 {
+    /// <summary>
+    /// Exposes HTTP endpoints for file operations.
+    /// </summary>
     [ApiController]
     public class FileController(
         IMediator _mediator,
@@ -47,10 +51,15 @@ namespace Cotton.Server.Controllers
         VideoTranscoder _videoTranscoder,
         HlsSegmentCache _segmentCache,
         IMemoryCache _cache,
+        IDatabaseIntegrityVerifier _integrity,
+        FileGraphIntegrityVerifier _fileGraphIntegrity,
         ILogger<FileController> _logger) : ControllerBase
     {
         private const int DefaultSharedFileTokenLength = 16;
 
+        /// <summary>
+        /// Creates or returns a public file share response.
+        /// </summary>
         [HttpGet("/s/{token}")]
         [HttpHead("/s/{token}")]
         public async Task<IActionResult> Share(
@@ -113,6 +122,9 @@ namespace Cotton.Server.Controllers
             }
         }
 
+        /// <summary>
+        /// Deletes file.
+        /// </summary>
         [Authorize]
         [HttpDelete(Routes.V1.Files + "/{nodeFileId:guid}")]
         public async Task<IActionResult> DeleteFile(
@@ -133,6 +145,9 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
+        /// <summary>
+        /// Restores file.
+        /// </summary>
         [Authorize]
         [HttpPost(Routes.V1.Files + "/{nodeFileId:guid}/restore")]
         public async Task<IActionResult> RestoreFile(
@@ -161,6 +176,9 @@ namespace Cotton.Server.Controllers
             return Ok(outcome);
         }
 
+        /// <summary>
+        /// Moves file.
+        /// </summary>
         [Authorize]
         [HttpPatch(Routes.V1.Files + "/{nodeFileId:guid}/move")]
         public async Task<IActionResult> MoveFile(
@@ -177,6 +195,9 @@ namespace Cotton.Server.Controllers
             return Ok(dto);
         }
 
+        /// <summary>
+        /// Renames file.
+        /// </summary>
         [Authorize]
         [HttpPatch(Routes.V1.Files + "/{nodeFileId:guid}/rename")]
         public async Task<IActionResult> RenameFile(
@@ -248,6 +269,9 @@ namespace Cotton.Server.Controllers
             return Ok(mapped);
         }
 
+        /// <summary>
+        /// Updates file metadata.
+        /// </summary>
         [Authorize]
         [HttpPatch(Routes.V1.Files + "/{nodeFileId:guid}/metadata")]
         [ProducesResponseType<NodeFileManifestDto>(StatusCodes.Status200OK)]
@@ -310,6 +334,9 @@ namespace Cotton.Server.Controllers
             return Ok(mapped);
         }
 
+        /// <summary>
+        /// Gets file versions.
+        /// </summary>
         [Authorize]
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/versions")]
         public async Task<IActionResult> GetFileVersions(
@@ -321,6 +348,9 @@ namespace Cotton.Server.Controllers
             return Ok(versions);
         }
 
+        /// <summary>
+        /// Restores file version.
+        /// </summary>
         [Authorize]
         [HttpPost(Routes.V1.Files + "/{nodeFileId:guid}/versions/{versionId:guid}/restore")]
         public async Task<IActionResult> RestoreFileVersion(
@@ -334,6 +364,9 @@ namespace Cotton.Server.Controllers
             return Ok(restored);
         }
 
+        /// <summary>
+        /// Deletes file version.
+        /// </summary>
         [Authorize]
         [HttpDelete(Routes.V1.Files + "/{nodeFileId:guid}/versions/{versionId:guid}")]
         public async Task<IActionResult> DeleteFileVersion(
@@ -346,6 +379,9 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
+        /// <summary>
+        /// Downloads file version.
+        /// </summary>
         [Authorize]
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/versions/{versionId:guid}/download-link")]
         public async Task<IActionResult> DownloadFileVersion(
@@ -364,6 +400,9 @@ namespace Cotton.Server.Controllers
             return Ok(link);
         }
 
+        /// <summary>
+        /// Downloads file.
+        /// </summary>
         [Authorize]
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/download-link")]
         public async Task<IActionResult> DownloadFile(
@@ -415,6 +454,9 @@ namespace Cotton.Server.Controllers
             return Ok(link);
         }
 
+        /// <summary>
+        /// Updates file content.
+        /// </summary>
         [Authorize]
         [HttpPatch(Routes.V1.Files + "/{nodeFileId:guid}/update-content")]
         public async Task<IActionResult> UpdateFileContent(
@@ -570,6 +612,9 @@ namespace Cotton.Server.Controllers
             return capture;
         }
 
+        /// <summary>
+        /// Downloads file by token.
+        /// </summary>
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/download")]
         public async Task<IActionResult> DownloadFileByToken(
             [FromRoute] Guid nodeFileId,
@@ -597,6 +642,17 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.NotFound("File not found");
             }
+            _integrity.RequireValid(_dbContext, downloadToken, "file.download-token");
+            bool servesPreview = preview && nodeFile.FileManifest.LargeFilePreviewHash != null;
+            if (servesPreview)
+            {
+                _fileGraphIntegrity.RequireValidMetadata(_dbContext, nodeFile, "file.preview");
+            }
+            else
+            {
+                _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "file.download");
+            }
+
             if (nodeFile.Node.Type != NodeType.Default && !FileVersionService.IsHistoricalVersion(nodeFile))
             {
                 return CottonResult.NotFound("File not found");
@@ -653,6 +709,9 @@ namespace Cotton.Server.Controllers
                 enableRangeProcessing: true);
         }
 
+        /// <summary>
+        /// Returns an HLS master playlist for a token-authorized file.
+        /// </summary>
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/hls/master.m3u8")]
         public async Task<IActionResult> HlsMasterPlaylistByToken(
             [FromRoute] Guid nodeFileId,
@@ -709,6 +768,9 @@ namespace Cotton.Server.Controllers
                 System.Text.Encoding.UTF8);
         }
 
+        /// <summary>
+        /// Returns an HLS media playlist for a token-authorized file.
+        /// </summary>
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/hls/playlist.m3u8")]
         public async Task<IActionResult> HlsVodPlaylistByToken(
             [FromRoute] Guid nodeFileId,
@@ -735,6 +797,9 @@ namespace Cotton.Server.Controllers
             return Content(manifest, HlsManifestBuilder.ContentType, System.Text.Encoding.UTF8);
         }
 
+        /// <summary>
+        /// Returns one HLS transport-stream segment for a token-authorized file.
+        /// </summary>
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/hls/seg-{segmentIndex:int}.ts")]
         public async Task<IActionResult> HlsSegmentByToken(
             [FromRoute] Guid nodeFileId,
@@ -850,7 +915,7 @@ namespace Cotton.Server.Controllers
                 .ThenInclude(x => x.FileManifestChunks)
                 .ThenInclude(x => x.Chunk)
                 .SingleOrDefaultAsync(x => x.Id == nodeFileId);
-            if (nodeFile == null || nodeFile.Node.Type != NodeType.Default)
+            if (nodeFile == null)
             {
                 return new TranscodableLookup(null, null, CottonResult.NotFound("File not found"));
             }
@@ -858,6 +923,12 @@ namespace Cotton.Server.Controllers
             var downloadToken = await _dbContext.DownloadTokens
                 .FirstOrDefaultAsync(x => x.Token == token && x.NodeFileId == nodeFile.Id);
             if (downloadToken == null || (downloadToken.ExpiresAt.HasValue && downloadToken.ExpiresAt.Value < DateTime.UtcNow))
+            {
+                return new TranscodableLookup(null, null, CottonResult.NotFound("File not found"));
+            }
+            _integrity.RequireValid(_dbContext, downloadToken, "file.hls-token");
+            _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "file.hls-source");
+            if (nodeFile.Node.Type != NodeType.Default)
             {
                 return new TranscodableLookup(null, null, CottonResult.NotFound("File not found"));
             }
@@ -927,6 +998,9 @@ namespace Cotton.Server.Controllers
             return probe;
         }
 
+        /// <summary>
+        /// Creates file from chunks.
+        /// </summary>
         [Authorize]
         [HttpPost(Routes.V1.Files + "/from-chunks")]
         public async Task<IActionResult> CreateFileFromChunks([FromBody] CreateFileRequest request)

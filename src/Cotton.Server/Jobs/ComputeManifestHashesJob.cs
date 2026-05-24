@@ -1,4 +1,7 @@
-﻿using Cotton.Database;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+using Cotton.Database;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Services;
@@ -11,6 +14,9 @@ using Quartz;
 
 namespace Cotton.Server.Jobs
 {
+    /// <summary>
+    /// Runs the scheduled compute manifest hashes maintenance task.
+    /// </summary>
     [JobTrigger(hours: 1)]
     public class ComputeManifestHashesJob(
         PerfTracker _perf,
@@ -21,6 +27,9 @@ namespace Cotton.Server.Jobs
     {
         private const int MaxItemsPerRun = 1000;
 
+        /// <summary>
+        /// Executes the scheduled Quartz job.
+        /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
             if (_perf.IsUploading())

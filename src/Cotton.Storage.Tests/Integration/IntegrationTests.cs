@@ -1,11 +1,11 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Backends;
 using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
-using EasyExtensions.Crypto;
+using Cotton.Crypto;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Security.Cryptography;

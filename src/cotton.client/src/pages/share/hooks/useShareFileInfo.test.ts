@@ -8,7 +8,7 @@ describe("useShareFileInfo", () => {
     vi.unstubAllGlobals();
   });
 
-  it("marks opaque octet-stream shares as encrypted when the stream starts with a CTN1 container", async () => {
+  it("marks opaque octet-stream shares as encrypted when the stream starts with a Cotton encrypted container", async () => {
     const fetchMock = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
       if (init?.method === "HEAD") {
         return new Response(null, {

@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using EasyExtensions.Crypto;
+using Cotton.Crypto;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -19,12 +19,13 @@ public class AesGcmStreamCipherInteropTests
         "43544e3124000000100000000000000001000000c5ef24a09009a9ed0ccc6edd0daa845f" +
         "92687f5a3ed888916cd851a46a61f41e";
 
-    private const string EasyExtensionsSingleChunkContainerHex =
-        "43544e315400000020000000000000000100000001020304101112131415161718191a1b" +
-        "105a66b023aeb952c3b16a92055c1160dd5f3ab5ed6c9c1462dca2b6a3d4c7fc" +
+    private const string CottonSingleChunkContainerHex =
+        "43544e325400000020000000000000000100000001020304101112131415161718191a1b" +
+        "4f84036fe0e090e1b0b1e8b167429b33dd5f3ab5ed6c9c1462dca2b6a3d4c7fc" +
         "67e1fcbdaf77e1065f4058dce2e9ea64" +
-        "43544e3124000000200000000000000001000000f7cae02a9b0ba5f0b205f417676e555a" +
-        "86d0074dab5ecff2aa2da23f6adee0ef2bf2fe613fd6de9c493e03d29e28cda1";
+        "43544e32240000002000000000000000010000003f3087cbd7d0fd43b6d653503c238d8e" +
+        "86d0074dab5ecff2aa2da23f6adee0ef2bf2fe613fd6de9c493e03d29e28cda1" +
+        "43544e32240000000000000000000000010000003f197f128dfdc96e06631fa0b8441187";
 
     private static readonly byte[] Plaintext = Encoding.UTF8.GetBytes(
         "0123456789abcdefABCDEFGHIJKLMNOP");
@@ -42,7 +43,7 @@ public class AesGcmStreamCipherInteropTests
     }
 
     [Test]
-    public async Task EncryptAsync_WritesEasyExtensionsSingleChunkGoldenVector()
+    public async Task EncryptAsync_WritesCottonSingleChunkGoldenVector()
     {
         using var rng = new ScriptedRandomNumberGenerator(
             FileKeyBytes(),
@@ -63,14 +64,14 @@ public class AesGcmStreamCipherInteropTests
 
         Assert.That(
             Convert.ToHexString(output.ToArray()).ToLowerInvariant(),
-            Is.EqualTo(EasyExtensionsSingleChunkContainerHex));
+            Is.EqualTo(CottonSingleChunkContainerHex));
     }
 
     [Test]
-    public async Task DecryptAsync_ReadsEasyExtensionsSingleChunkGoldenVector()
+    public async Task DecryptAsync_ReadsCottonSingleChunkGoldenVector()
     {
         using var cipher = new AesGcmStreamCipher(MasterKeyBytes(), keyId: 1, threads: 1);
-        await using var input = new MemoryStream(Convert.FromHexString(EasyExtensionsSingleChunkContainerHex));
+        await using var input = new MemoryStream(Convert.FromHexString(CottonSingleChunkContainerHex));
         await using var output = new MemoryStream();
 
         await cipher.DecryptAsync(input, output);

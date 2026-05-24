@@ -1,9 +1,10 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.AspNetCore.Exceptions;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
@@ -14,14 +15,21 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace Cotton.Server.Services
 {
+    /// <summary>
+    /// Coordinates passkey.
+    /// </summary>
     public class PasskeyService(
         CottonDbContext _dbContext,
         IHttpContextAccessor _httpContextAccessor,
-        IMemoryCache _cache)
+        IMemoryCache _cache,
+        IDatabaseIntegrityVerifier _integrity)
     {
         private static readonly TimeSpan OptionsLifetime = TimeSpan.FromMinutes(5);
         private const int MaxPasskeyNameLength = 120;
 
+        /// <summary>
+        /// Gets credentials async.
+        /// </summary>
         public async Task<IReadOnlyList<PasskeyCredentialDto>> GetCredentialsAsync(
             Guid userId,
             CancellationToken ct)
@@ -44,6 +52,9 @@ namespace Cotton.Server.Services
                 .ToListAsync(ct);
         }
 
+        /// <summary>
+        /// Begins registration async.
+        /// </summary>
         public async Task<PasskeyRegistrationOptionsResponseDto> BeginRegistrationAsync(
             Guid userId,
             string? requestedName,
@@ -51,6 +62,7 @@ namespace Cotton.Server.Services
         {
             User user = await _dbContext.Users.FindAsync([userId], ct)
                 ?? throw new EntityNotFoundException<User>();
+            _integrity.RequireValid(_dbContext, user, "passkey.registration-options");
 
             var existingCredentials = await _dbContext.UserPasskeyCredentials
                 .AsNoTracking()
@@ -96,6 +108,9 @@ namespace Cotton.Server.Services
             };
         }
 
+        /// <summary>
+        /// Finishes registration async.
+        /// </summary>
         public async Task<PasskeyCredentialDto> FinishRegistrationAsync(
             Guid userId,
             FinishPasskeyRegistrationRequestDto request,
@@ -153,6 +168,9 @@ namespace Cotton.Server.Services
             return ToDto(credential);
         }
 
+        /// <summary>
+        /// Begins assertion async.
+        /// </summary>
         public async Task<PasskeyAssertionOptionsResponseDto> BeginAssertionAsync(
             string? username,
             CancellationToken ct)
@@ -164,11 +182,11 @@ namespace Cotton.Server.Services
             if (!string.IsNullOrEmpty(normalizedUsername))
             {
                 User? user = await _dbContext.Users
-                    .AsNoTracking()
                     .FirstOrDefaultAsync(x => x.Username == normalizedUsername || x.Email == normalizedUsername, ct);
 
                 if (user != null)
                 {
+                    _integrity.RequireValid(_dbContext, user, "passkey.assertion-options");
                     scopedUserId = user.Id;
                     var userCredentials = await _dbContext.UserPasskeyCredentials
                         .AsNoTracking()
@@ -197,6 +215,9 @@ namespace Cotton.Server.Services
             };
         }
 
+        /// <summary>
+        /// Finishes assertion async.
+        /// </summary>
         public async Task<User> FinishAssertionAsync(
             FinishPasskeyAssertionRequestDto request,
             CancellationToken ct)
@@ -217,6 +238,8 @@ namespace Cotton.Server.Services
                 .Include(x => x.User)
                 .FirstOrDefaultAsync(x => x.CredentialId == credentialId, ct)
                 ?? throw new UnauthorizedAccessException("Passkey credential was not found");
+            _integrity.RequireValid(_dbContext, credential, "passkey.assertion-credential");
+            _integrity.RequireValid(_dbContext, credential.User, "passkey.assertion-user");
 
             if (state.ScopedUserId.HasValue && credential.UserId != state.ScopedUserId.Value)
             {
@@ -258,6 +281,9 @@ namespace Cotton.Server.Services
             return credential.User;
         }
 
+        /// <summary>
+        /// Renames credential async.
+        /// </summary>
         public async Task<PasskeyCredentialDto> RenameCredentialAsync(
             Guid userId,
             Guid credentialId,
@@ -267,22 +293,25 @@ namespace Cotton.Server.Services
             UserPasskeyCredential credential = await _dbContext.UserPasskeyCredentials
                 .FirstOrDefaultAsync(x => x.UserId == userId && x.Id == credentialId, ct)
                 ?? throw new EntityNotFoundException<UserPasskeyCredential>();
+            _integrity.RequireValid(_dbContext, credential, "passkey.rename");
 
             credential.Name = NormalizeName(name);
             await _dbContext.SaveChangesAsync(ct);
             return ToDto(credential);
         }
 
+        /// <summary>
+        /// Deletes credential async.
+        /// </summary>
         public async Task DeleteCredentialAsync(Guid userId, Guid credentialId, CancellationToken ct)
         {
-            int deleted = await _dbContext.UserPasskeyCredentials
-                .Where(x => x.UserId == userId && x.Id == credentialId)
-                .ExecuteDeleteAsync(ct);
+            UserPasskeyCredential credential = await _dbContext.UserPasskeyCredentials
+                .FirstOrDefaultAsync(x => x.UserId == userId && x.Id == credentialId, ct)
+                ?? throw new EntityNotFoundException<UserPasskeyCredential>();
+            _integrity.RequireValid(_dbContext, credential, "passkey.delete");
 
-            if (deleted == 0)
-            {
-                throw new EntityNotFoundException<UserPasskeyCredential>();
-            }
+            _dbContext.UserPasskeyCredentials.Remove(credential);
+            await _dbContext.SaveChangesAsync(ct);
         }
 
         private static PasskeyCredentialDto ToDto(UserPasskeyCredential credential)

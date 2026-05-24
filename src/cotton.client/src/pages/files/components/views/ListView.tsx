@@ -20,6 +20,7 @@ import {
   readMoveDragPayload,
   filterMoveItemsForTarget,
 } from "../../../../shared/hooks/useMoveOperations";
+import { setClippedDragImage } from "./dragPreview";
 import type { MoveClipboardItem } from "../../../../shared/store/moveClipboardStore";
 
 export const ListView: React.FC<IFileListView> = ({
@@ -243,6 +244,7 @@ export const ListView: React.FC<IFileListView> = ({
         return;
       }
       writeMoveDragPayload(event.dataTransfer, { items });
+      setClippedDragImage(event, rowEl);
     },
     [buildDragPayloadForRow, findRowElement, isRowRenaming, moveSupport, rowsById],
   );

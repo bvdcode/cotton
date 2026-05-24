@@ -60,7 +60,10 @@ import {
 } from "../../shared/store/userPreferencesStore";
 import { usePageTitle } from "../../shared/hooks/usePageTitle";
 import { useFileMoveController } from "./hooks/useFileMoveController";
-import { useFileListPageLogic } from "./hooks/useFileListPageLogic";
+import {
+  useFileListPageLogic,
+  type FileListPageLogic,
+} from "./hooks/useFileListPageLogic";
 import { useFolderClientEncryptionActions } from "./hooks/useFolderClientEncryptionActions";
 import { ClientEncryptionUnlockForm } from "../profile/components/ClientEncryptionUnlockForm";
 import { downloadArchive } from "@shared/utils/fileHandlers";
@@ -84,6 +87,51 @@ type ArchiveDownloadRequest = Parameters<typeof downloadArchive>[0];
 
 const tileId = (tile: FileSystemTile): string =>
   tile.kind === "folder" ? tile.node.id : tile.file.id;
+
+const resolveFilesNodeId = (
+  routeNodeId: string | undefined,
+  rootNodeId: string | null,
+): string | null => routeNodeId ?? rootNodeId ?? null;
+
+const getCurrentContent = <TContent,>(
+  nodeId: string | null,
+  isUserCacheValid: boolean,
+  contentByNodeId: Record<string, TContent>,
+): TContent | undefined =>
+  nodeId && isUserCacheValid ? contentByNodeId[nodeId] : undefined;
+
+const isHugeFolderCount = (childrenTotalCount: number | null): boolean =>
+  childrenTotalCount !== null && childrenTotalCount > HUGE_FOLDER_THRESHOLD;
+
+const getActiveCurrentNode = <TNode extends { id: string }>(
+  nodeId: string | null,
+  currentNode: TNode | null | undefined,
+): TNode | null => (nodeId && currentNode?.id === nodeId ? currentNode : null);
+
+const getGoUpParentId = (
+  ancestors: ReadonlyArray<{ id: string }>,
+): string | null =>
+  ancestors.length > 0 ? ancestors[ancestors.length - 1].id : null;
+
+const shouldPromptForCurrentFolderUnlock = (options: {
+  clientEncryptionEnabled: boolean;
+  currentNodeId?: string | null;
+  isVaultUnlocked: boolean;
+  nodeId: string | null;
+}): boolean =>
+  Boolean(options.nodeId && options.currentNodeId === options.nodeId) &&
+  !options.isVaultUnlocked &&
+  options.clientEncryptionEnabled;
+
+const isFilesUnlockDialogOpen = (
+  prompt: ClientEncryptionUnlockPrompt | null,
+  envelope: ReturnType<typeof readEnvelopeFromPreferences>,
+): boolean => prompt !== null && envelope !== null;
+
+const shouldRenderFilesList = (
+  error: string | null,
+  content: unknown,
+): boolean => !error || Boolean(content);
 
 const buildFolderEncryptionPrompt = (options: {
   decryptEncryptedFiles: () => Promise<void>;
@@ -214,6 +262,35 @@ const buildFilesCustomActionItems = (options: {
   return items.length > 0 ? items : undefined;
 };
 
+type FilesPageViewProps = {
+  activeUnlockPrompt: ClientEncryptionUnlockPrompt | null;
+  clientEncryptionEnvelope: ReturnType<typeof readEnvelopeFromPreferences>;
+  closePreview: FileListPageLogic["interaction"]["closePreview"];
+  error: string | null;
+  fileListViewProps: React.ComponentProps<typeof FileListViewFactory>;
+  fileUpload: ReturnType<typeof useFileUpload>;
+  folderEncryptionPrompt: FolderEncryptionPromptModel | null;
+  getDownloadUrl: FileListPageLogic["interaction"]["getDownloadUrl"];
+  getSignedMediaUrl: FileListPageLogic["interaction"]["getSignedMediaUrl"];
+  handleCloseVersions: () => void;
+  handleUnlockCancel: () => void;
+  handleUnlockSuccess: () => void;
+  handleVersionsChanged: () => void;
+  layoutType: InterfaceLayoutType;
+  lightboxIndex: number;
+  lightboxOpen: boolean;
+  mediaItems: FileListPageLogic["interaction"]["mediaItems"];
+  pageHeaderProps: React.ComponentProps<typeof PageHeader>;
+  previewState: FileListPageLogic["interaction"]["previewState"];
+  refreshCurrentNodeContent: () => void;
+  setLightboxOpen: FileListPageLogic["interaction"]["setLightboxOpen"];
+  shouldRenderFileList: boolean;
+  smoothGalleryTransitions: boolean;
+  t: ReturnType<typeof useTranslation>["t"];
+  unlockDialogOpen: boolean;
+  versionDialogFile: { id: string; name: string } | null;
+};
+
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
   const confirm = useConfirm();
@@ -255,9 +332,9 @@ export const FilesPage: React.FC = () => {
     });
   }, [routeNodeId, layoutType]);
 
-  const nodeId = routeNodeId ?? rootNodeId ?? null;
+  const nodeId = resolveFilesNodeId(routeNodeId, rootNodeId);
   const isUserCacheValid = cacheOwnerUserId === currentUserId;
-  const content = nodeId && isUserCacheValid ? contentByNodeId[nodeId] : undefined;
+  const content = getCurrentContent(nodeId, isUserCacheValid, contentByNodeId);
 
   const {
     childrenTotalCount,
@@ -276,8 +353,7 @@ export const FilesPage: React.FC = () => {
     onPreviewGenerated: optimisticUpdateCurrentNodeFilePreviewHash,
   });
 
-  const isHugeFolder =
-    childrenTotalCount !== null && childrenTotalCount > HUGE_FOLDER_THRESHOLD;
+  const isHugeFolder = isHugeFolderCount(childrenTotalCount);
 
   useEffect(() => {
     if (!isHugeFolder) return;
@@ -304,8 +380,7 @@ export const FilesPage: React.FC = () => {
   );
 
   const effectiveContent = content;
-  const activeCurrentNode =
-    nodeId && currentNode?.id === nodeId ? currentNode : null;
+  const activeCurrentNode = getActiveCurrentNode(nodeId, currentNode);
   const activeAncestors = useMemo(
     () => (activeCurrentNode ? ancestors : []),
     [activeCurrentNode, ancestors],
@@ -460,9 +535,7 @@ export const FilesPage: React.FC = () => {
     name: string;
   } | null>(null);
 
-  const goUpParentId = ancestors.length > 0
-    ? ancestors[ancestors.length - 1].id
-    : null;
+  const goUpParentId = getGoUpParentId(ancestors);
 
   const {
     moveSupport,
@@ -494,10 +567,12 @@ export const FilesPage: React.FC = () => {
   );
   const [unlockPrompt, setUnlockPrompt] =
     React.useState<ClientEncryptionUnlockPrompt | null>(null);
-  const currentFolderRequiresUnlock =
-    Boolean(nodeId && currentNode?.id === nodeId) &&
-    !isVaultUnlocked &&
-    currentFolderEncryptionPolicy.effectiveEnabled;
+  const currentFolderRequiresUnlock = shouldPromptForCurrentFolderUnlock({
+    clientEncryptionEnabled: currentFolderEncryptionPolicy.effectiveEnabled,
+    currentNodeId: currentNode?.id,
+    isVaultUnlocked,
+    nodeId,
+  });
   const activeUnlockPrompt = useMemo<ClientEncryptionUnlockPrompt | null>(() => {
     if (currentFolderRequiresUnlock && clientEncryptionEnvelope) {
       return { kind: "current" };
@@ -761,6 +836,7 @@ export const FilesPage: React.FC = () => {
       isCreatingFolder: folderOps.isCreatingFolder,
       selectionMode: fileSelection.selectionMode,
       selectedCount: fileSelection.selectedCount,
+      onToggleSelectionMode: fileSelection.toggleSelectionMode,
       onSelectAll: () => fileSelection.selectAll(tiles),
       onDeselectAll: fileSelection.deselectAll,
       customActionItems,
@@ -859,148 +935,333 @@ export const FilesPage: React.FC = () => {
     ],
   );
 
-  const unlockDialogOpen =
-    activeUnlockPrompt !== null && clientEncryptionEnvelope !== null;
-  const shouldRenderFileList = !error || Boolean(effectiveContent);
+  const unlockDialogOpen = isFilesUnlockDialogOpen(
+    activeUnlockPrompt,
+    clientEncryptionEnvelope,
+  );
+  const shouldRenderFileList = shouldRenderFilesList(error, effectiveContent);
+
+  const refreshCurrentNodeContent = React.useCallback(() => {
+    if (nodeId) {
+      void refreshNodeContent(nodeId);
+    }
+  }, [nodeId]);
 
   return (
-    <>
-      {fileUpload.dropPreparation.active && (
-        <Loader
-          overlay
-          title={getDropPreparationTitle(t, fileUpload.dropPreparation)}
-          caption={getDropPreparationCaption(t, fileUpload.dropPreparation)}
-        />
-      )}
-
-      <DraggingOverlay
-        open={fileUpload.isDragging}
-        onDragEnter={fileUpload.handleDragEnter}
-        onDragOver={fileUpload.handleDragOver}
-        onDragLeave={fileUpload.handleDragLeave}
-        onDrop={fileUpload.handleDrop}
-        label={t("actions.dropFiles")}
-      />
-      <Box
-        width="100%"
-        onDragEnter={fileUpload.handleDragEnter}
-        onDragOver={fileUpload.handleDragOver}
-        onDragLeave={fileUpload.handleDragLeave}
-        onDrop={fileUpload.handleDrop}
-        sx={{
-          position: "relative",
-          display: "flex",
-          flexDirection: "column",
-          flex: 1,
-          ...(layoutType === InterfaceLayoutType.List && {
-            minHeight: 0,
-            overflow: "hidden",
-          }),
-          ...(unlockDialogOpen && {
-            filter: "blur(4px)",
-            pointerEvents: "none",
-            transition: "filter 160ms ease",
-            userSelect: "none",
-          }),
-        }}
-      >
-        <PageHeader
-          {...pageHeaderProps}
-        />
-        {error && (
-          <Box mb={1} px={1}>
-            <Alert severity="error">{error}</Alert>
-          </Box>
-        )}
-        {shouldRenderFileList && (
-          <Box
-            sx={
-              layoutType === InterfaceLayoutType.List
-                ? { flex: 1, minHeight: 0, overflow: "hidden", pb: 1 }
-                : {}
-            }
-          >
-            <FileListViewFactory {...fileListViewProps} />
-          </Box>
-        )}
-
-      </Box>
-      <FilePreviewModal
-        isOpen={previewState.isOpen}
-        fileId={previewState.fileId}
-        fileName={previewState.fileName}
-        fileType={previewState.fileType}
-        fileSizeBytes={previewState.fileSizeBytes}
-        onClose={closePreview}
-        onSaved={() => {
-          if (nodeId) {
-            void refreshNodeContent(nodeId);
-          }
-        }}
-      />
-
-      {lightboxOpen && mediaItems.length > 0 && (
-        <MediaLightbox
-          items={mediaItems}
-          open={lightboxOpen}
-          initialIndex={lightboxIndex}
-          onClose={() => setLightboxOpen(false)}
-          getSignedMediaUrl={getSignedMediaUrl}
-          getDownloadUrl={getDownloadUrl}
-          smoothTransitions={smoothGalleryTransitions}
-        />
-      )}
-
-      <FileConflictDialog
-        open={fileUpload.conflictDialog.state.open}
-        newName={fileUpload.conflictDialog.state.newName}
-        onResolve={fileUpload.conflictDialog.onResolve}
-        onExited={fileUpload.conflictDialog.onExited}
-      />
-
-      <FileVersionsDialog
-        open={versionDialogFile !== null}
-        fileId={versionDialogFile?.id ?? null}
-        fileName={versionDialogFile?.name ?? ""}
-        onClose={handleCloseVersions}
-        onRestored={handleVersionsChanged}
-      />
-
-      {folderEncryptionPrompt && (
-        <FolderEncryptionActionPrompt
-          action={folderEncryptionPrompt.action}
-          disabled={folderEncryptionPrompt.disabled}
-          message={folderEncryptionPrompt.message}
-          onAction={folderEncryptionPrompt.onAction}
-          severity={folderEncryptionPrompt.severity}
-        />
-      )}
-
-      <Dialog
-        open={unlockDialogOpen}
-        onClose={handleUnlockCancel}
-        fullWidth
-        maxWidth="sm"
-        slotProps={blurredDialogBackdropSlotProps}
-      >
-        <DialogTitle>
-          {activeUnlockPrompt?.kind === "current"
-            ? t("clientEncryption.unlockDialog.currentTitle", { ns: "files" })
-            : t("clientEncryption.unlockDialog.title", { ns: "files" })}
-        </DialogTitle>
-        {clientEncryptionEnvelope && (
-          <ClientEncryptionUnlockForm
-            envelope={clientEncryptionEnvelope}
-            onCancel={handleUnlockCancel}
-            onSuccess={handleUnlockSuccess}
-            cancelLabel={
-              activeUnlockPrompt?.kind === "current"
-                ? t("clientEncryption.unlockDialog.goHome", { ns: "files" })
-                : undefined
-            }
-          />
-        )}
-      </Dialog>
-    </>
+    <FilesPageView
+      activeUnlockPrompt={activeUnlockPrompt}
+      clientEncryptionEnvelope={clientEncryptionEnvelope}
+      closePreview={closePreview}
+      error={error}
+      fileListViewProps={fileListViewProps}
+      fileUpload={fileUpload}
+      folderEncryptionPrompt={folderEncryptionPrompt}
+      getDownloadUrl={getDownloadUrl}
+      getSignedMediaUrl={getSignedMediaUrl}
+      handleCloseVersions={handleCloseVersions}
+      handleUnlockCancel={handleUnlockCancel}
+      handleUnlockSuccess={handleUnlockSuccess}
+      handleVersionsChanged={handleVersionsChanged}
+      layoutType={layoutType}
+      lightboxIndex={lightboxIndex}
+      lightboxOpen={lightboxOpen}
+      mediaItems={mediaItems}
+      pageHeaderProps={pageHeaderProps}
+      previewState={previewState}
+      refreshCurrentNodeContent={refreshCurrentNodeContent}
+      setLightboxOpen={setLightboxOpen}
+      shouldRenderFileList={shouldRenderFileList}
+      smoothGalleryTransitions={smoothGalleryTransitions}
+      t={t}
+      unlockDialogOpen={unlockDialogOpen}
+      versionDialogFile={versionDialogFile}
+    />
   );
 };
+
+const FilesPageView: React.FC<FilesPageViewProps> = ({
+  activeUnlockPrompt,
+  clientEncryptionEnvelope,
+  closePreview,
+  error,
+  fileListViewProps,
+  fileUpload,
+  folderEncryptionPrompt,
+  getDownloadUrl,
+  getSignedMediaUrl,
+  handleCloseVersions,
+  handleUnlockCancel,
+  handleUnlockSuccess,
+  handleVersionsChanged,
+  layoutType,
+  lightboxIndex,
+  lightboxOpen,
+  mediaItems,
+  pageHeaderProps,
+  previewState,
+  refreshCurrentNodeContent,
+  setLightboxOpen,
+  shouldRenderFileList,
+  smoothGalleryTransitions,
+  t,
+  unlockDialogOpen,
+  versionDialogFile,
+}) => (
+  <>
+    <FilesDropPreparationLoader fileUpload={fileUpload} t={t} />
+    <FilesPageContentPanel
+      error={error}
+      fileListViewProps={fileListViewProps}
+      fileUpload={fileUpload}
+      layoutType={layoutType}
+      pageHeaderProps={pageHeaderProps}
+      shouldRenderFileList={shouldRenderFileList}
+      t={t}
+      unlockDialogOpen={unlockDialogOpen}
+    />
+    <FilesPreviewLayers
+      closePreview={closePreview}
+      fileUpload={fileUpload}
+      getDownloadUrl={getDownloadUrl}
+      getSignedMediaUrl={getSignedMediaUrl}
+      handleCloseVersions={handleCloseVersions}
+      handleVersionsChanged={handleVersionsChanged}
+      lightboxIndex={lightboxIndex}
+      lightboxOpen={lightboxOpen}
+      mediaItems={mediaItems}
+      previewState={previewState}
+      refreshCurrentNodeContent={refreshCurrentNodeContent}
+      setLightboxOpen={setLightboxOpen}
+      smoothGalleryTransitions={smoothGalleryTransitions}
+      versionDialogFile={versionDialogFile}
+    />
+    <FilesEncryptionPrompts
+      activeUnlockPrompt={activeUnlockPrompt}
+      clientEncryptionEnvelope={clientEncryptionEnvelope}
+      folderEncryptionPrompt={folderEncryptionPrompt}
+      handleUnlockCancel={handleUnlockCancel}
+      handleUnlockSuccess={handleUnlockSuccess}
+      t={t}
+      unlockDialogOpen={unlockDialogOpen}
+    />
+  </>
+);
+
+type FilesPageContentPanelProps = Pick<
+  FilesPageViewProps,
+  | "error"
+  | "fileListViewProps"
+  | "fileUpload"
+  | "layoutType"
+  | "pageHeaderProps"
+  | "shouldRenderFileList"
+  | "t"
+  | "unlockDialogOpen"
+>;
+
+const FilesDropPreparationLoader: React.FC<
+  Pick<FilesPageViewProps, "fileUpload" | "t">
+> = ({ fileUpload, t }) =>
+  fileUpload.dropPreparation.active ? (
+    <Loader
+      overlay
+      title={getDropPreparationTitle(t, fileUpload.dropPreparation)}
+      caption={getDropPreparationCaption(t, fileUpload.dropPreparation)}
+    />
+  ) : null;
+
+const FilesPageContentPanel: React.FC<FilesPageContentPanelProps> = ({
+  error,
+  fileListViewProps,
+  fileUpload,
+  layoutType,
+  pageHeaderProps,
+  shouldRenderFileList,
+  t,
+  unlockDialogOpen,
+}) => (
+  <>
+    <DraggingOverlay
+      open={fileUpload.isDragging}
+      onDragEnter={fileUpload.handleDragEnter}
+      onDragOver={fileUpload.handleDragOver}
+      onDragLeave={fileUpload.handleDragLeave}
+      onDrop={fileUpload.handleDrop}
+      label={t("actions.dropFiles")}
+    />
+    <Box
+      width="100%"
+      onDragEnter={fileUpload.handleDragEnter}
+      onDragOver={fileUpload.handleDragOver}
+      onDragLeave={fileUpload.handleDragLeave}
+      onDrop={fileUpload.handleDrop}
+      sx={{
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        flex: 1,
+        ...(layoutType === InterfaceLayoutType.List && {
+          minHeight: 0,
+          overflow: "hidden",
+        }),
+        ...(unlockDialogOpen && {
+          filter: "blur(4px)",
+          pointerEvents: "none",
+          transition: "filter 160ms ease",
+          userSelect: "none",
+        }),
+      }}
+    >
+      <PageHeader {...pageHeaderProps} />
+      {error && (
+        <Box mb={1} px={1}>
+          <Alert severity="error">{error}</Alert>
+        </Box>
+      )}
+      {shouldRenderFileList && (
+        <Box
+          sx={
+            layoutType === InterfaceLayoutType.List
+              ? { flex: 1, minHeight: 0, overflow: "hidden", pb: 1 }
+              : {}
+          }
+        >
+          <FileListViewFactory {...fileListViewProps} />
+        </Box>
+      )}
+    </Box>
+  </>
+);
+
+type FilesPreviewLayersProps = Pick<
+  FilesPageViewProps,
+  | "closePreview"
+  | "fileUpload"
+  | "getDownloadUrl"
+  | "getSignedMediaUrl"
+  | "handleCloseVersions"
+  | "handleVersionsChanged"
+  | "lightboxIndex"
+  | "lightboxOpen"
+  | "mediaItems"
+  | "previewState"
+  | "refreshCurrentNodeContent"
+  | "setLightboxOpen"
+  | "smoothGalleryTransitions"
+  | "versionDialogFile"
+>;
+
+const FilesPreviewLayers: React.FC<FilesPreviewLayersProps> = ({
+  closePreview,
+  fileUpload,
+  getDownloadUrl,
+  getSignedMediaUrl,
+  handleCloseVersions,
+  handleVersionsChanged,
+  lightboxIndex,
+  lightboxOpen,
+  mediaItems,
+  previewState,
+  refreshCurrentNodeContent,
+  setLightboxOpen,
+  smoothGalleryTransitions,
+  versionDialogFile,
+}) => (
+  <>
+    <FilePreviewModal
+      isOpen={previewState.isOpen}
+      fileId={previewState.fileId}
+      fileName={previewState.fileName}
+      fileType={previewState.fileType}
+      fileSizeBytes={previewState.fileSizeBytes}
+      onClose={closePreview}
+      onSaved={refreshCurrentNodeContent}
+    />
+
+    {lightboxOpen && mediaItems.length > 0 && (
+      <MediaLightbox
+        items={mediaItems}
+        open={lightboxOpen}
+        initialIndex={lightboxIndex}
+        onClose={() => setLightboxOpen(false)}
+        getSignedMediaUrl={getSignedMediaUrl}
+        getDownloadUrl={getDownloadUrl}
+        smoothTransitions={smoothGalleryTransitions}
+      />
+    )}
+
+    <FileConflictDialog
+      open={fileUpload.conflictDialog.state.open}
+      newName={fileUpload.conflictDialog.state.newName}
+      onResolve={fileUpload.conflictDialog.onResolve}
+      onExited={fileUpload.conflictDialog.onExited}
+    />
+
+    <FileVersionsDialog
+      open={versionDialogFile !== null}
+      fileId={versionDialogFile?.id ?? null}
+      fileName={versionDialogFile?.name ?? ""}
+      onClose={handleCloseVersions}
+      onRestored={handleVersionsChanged}
+    />
+  </>
+);
+
+type FilesEncryptionPromptsProps = Pick<
+  FilesPageViewProps,
+  | "activeUnlockPrompt"
+  | "clientEncryptionEnvelope"
+  | "folderEncryptionPrompt"
+  | "handleUnlockCancel"
+  | "handleUnlockSuccess"
+  | "t"
+  | "unlockDialogOpen"
+>;
+
+const FilesEncryptionPrompts: React.FC<FilesEncryptionPromptsProps> = ({
+  activeUnlockPrompt,
+  clientEncryptionEnvelope,
+  folderEncryptionPrompt,
+  handleUnlockCancel,
+  handleUnlockSuccess,
+  t,
+  unlockDialogOpen,
+}) => (
+  <>
+    {folderEncryptionPrompt && (
+      <FolderEncryptionActionPrompt
+        action={folderEncryptionPrompt.action}
+        disabled={folderEncryptionPrompt.disabled}
+        message={folderEncryptionPrompt.message}
+        onAction={folderEncryptionPrompt.onAction}
+        severity={folderEncryptionPrompt.severity}
+      />
+    )}
+
+    <Dialog
+      open={unlockDialogOpen}
+      onClose={handleUnlockCancel}
+      fullWidth
+      maxWidth="sm"
+      slotProps={blurredDialogBackdropSlotProps}
+    >
+      <DialogTitle>
+        {activeUnlockPrompt?.kind === "current"
+          ? t("clientEncryption.unlockDialog.currentTitle", { ns: "files" })
+          : t("clientEncryption.unlockDialog.title", { ns: "files" })}
+      </DialogTitle>
+      {clientEncryptionEnvelope && (
+        <ClientEncryptionUnlockForm
+          envelope={clientEncryptionEnvelope}
+          onCancel={handleUnlockCancel}
+          onSuccess={handleUnlockSuccess}
+          cancelLabel={
+            activeUnlockPrompt?.kind === "current"
+              ? t("clientEncryption.unlockDialog.goHome", { ns: "files" })
+              : undefined
+          }
+        />
+      )}
+    </Dialog>
+  </>
+);

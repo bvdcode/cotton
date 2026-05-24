@@ -1,5 +1,5 @@
 ﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Localization;
@@ -15,6 +15,14 @@ using System.Globalization;
 
 namespace Cotton.Server.Services;
 
+/// <summary>
+/// Protects the backing storage from writes that would leave too little free space.
+/// </summary>
+/// <remarks>
+/// Capacity checks are cached briefly because they sit on the chunk upload path. Successful write
+/// reservations subtract from the cached available space immediately, so a burst of chunks cannot all
+/// pass against the same stale disk snapshot.
+/// </remarks>
 public sealed class StoragePressureGuard(
     IStorageBackendProvider _backendProvider,
     CottonDbContext _dbContext,
@@ -28,6 +36,9 @@ public sealed class StoragePressureGuard(
     private static readonly SemaphoreSlim CapacityReservationLock = new(initialCount: 1, maxCount: 1);
     private static readonly SemaphoreSlim NotificationLock = new(initialCount: 1, maxCount: 1);
 
+    /// <summary>
+    /// Ensures the backend can accept the incoming write and reserves that capacity for the request.
+    /// </summary>
     public async Task EnsureCanAcceptWriteAsync(long incomingBytes, CancellationToken ct = default)
     {
         using var reservation = await ReserveWriteAsync(incomingBytes, ct);
@@ -229,9 +240,18 @@ public sealed class StoragePressureGuard(
 
 internal sealed class CapacityCacheEntry(StorageCapacitySnapshot? snapshot)
 {
+    /// <summary>
+    /// Gets the snapshot.
+    /// </summary>
     public StorageCapacitySnapshot? Snapshot { get; } = snapshot;
+    /// <summary>
+    /// Gets or sets the reserved bytes.
+    /// </summary>
     public long ReservedBytes { get; private set; }
 
+    /// <summary>
+    /// Reserves bytes against the cached storage-capacity snapshot.
+    /// </summary>
     public void Reserve(long bytes)
     {
         long safeBytes = Math.Max(0, bytes);
@@ -240,6 +260,9 @@ internal sealed class CapacityCacheEntry(StorageCapacitySnapshot? snapshot)
             : ReservedBytes + safeBytes;
     }
 
+    /// <summary>
+    /// Releases previously reserved bytes after a failed or abandoned write.
+    /// </summary>
     public void Release(long bytes)
     {
         ReservedBytes = Math.Max(0, ReservedBytes - Math.Max(0, bytes));
@@ -248,6 +271,9 @@ internal sealed class CapacityCacheEntry(StorageCapacitySnapshot? snapshot)
 
 internal sealed class StoragePressureReservation : IDisposable
 {
+    /// <summary>
+    /// Creates an empty storage pressure reservation.
+    /// </summary>
     public static StoragePressureReservation None => new(null, 0);
 
     private readonly StoragePressureGuard? _owner;
@@ -261,11 +287,17 @@ internal sealed class StoragePressureReservation : IDisposable
         _bytes = Math.Max(0, bytes);
     }
 
+    /// <summary>
+    /// Marks a storage pressure reservation as consumed by a successful write.
+    /// </summary>
     public void Commit()
     {
         _committed = true;
     }
 
+    /// <summary>
+    /// Releases resources held by this instance.
+    /// </summary>
     public void Dispose()
     {
         if (_disposed)
@@ -281,15 +313,24 @@ internal sealed class StoragePressureReservation : IDisposable
     }
 }
 
+/// <summary>
+/// Represents storage pressure snapshot.
+/// </summary>
 public sealed record StoragePressureSnapshot(
     StorageCapacitySnapshot Capacity,
     long IncomingBytes,
     long RequiredFreeBytes,
     long ProjectedAvailableBytes);
 
+/// <summary>
+/// Represents storage pressure exception.
+/// </summary>
 public sealed class StoragePressureException(StoragePressureSnapshot pressure)
     : InvalidOperationException(BuildMessage(pressure))
 {
+    /// <summary>
+    /// Gets the pressure.
+    /// </summary>
     public StoragePressureSnapshot Pressure { get; } = pressure;
 
     private static string BuildMessage(StoragePressureSnapshot pressure)

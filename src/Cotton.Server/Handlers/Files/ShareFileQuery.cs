@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Database.Models;
@@ -7,6 +7,7 @@ using Cotton.Database.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Services;
+using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
@@ -19,19 +20,39 @@ using System.Text.Json;
 
 namespace Cotton.Server.Handlers.Files
 {
+    /// <summary>
+    /// Represents a share file query sent through the mediator pipeline.
+    /// </summary>
     public class ShareFileQuery(string token, string? view, HttpRequest httpRequest) : IRequest<ShareFileResult>
     {
+        /// <summary>
+        /// Gets the opaque token.
+        /// </summary>
         public string Token { get; } = token;
+        /// <summary>
+        /// Gets the view.
+        /// </summary>
         public string? View { get; } = view;
+        /// <summary>
+        /// Gets the http request.
+        /// </summary>
         public HttpRequest HttpRequest { get; } = httpRequest;
     }
 
+    /// <summary>
+    /// Handles share file queries in the mediator pipeline.
+    /// </summary>
     public class ShareFileQueryHandler(
         CottonDbContext _dbContext,
         ISharedFileDownloadNotifier _sharedFileDownloadNotifier,
         IHttpContextAccessor _httpContextAccessor,
-        IStoragePipeline _storage) : IRequestHandler<ShareFileQuery, ShareFileResult>
+        IStoragePipeline _storage,
+        IDatabaseIntegrityVerifier _integrity,
+        FileGraphIntegrityVerifier _fileGraphIntegrity) : IRequestHandler<ShareFileQuery, ShareFileResult>
     {
+        /// <summary>
+        /// Handles the request through the mediator pipeline.
+        /// </summary>
         public async Task<ShareFileResult> Handle(ShareFileQuery request, CancellationToken ct)
         {
             var viewMode = TryParseViewMode(request.View);
@@ -48,6 +69,16 @@ namespace Cotton.Server.Handlers.Files
             if (downloadToken is null)
             {
                 return await BuildMissingTokenResultAsync(request.Token, now, viewMode.Value.IsHtml, baseAppUrl, ct);
+            }
+
+            _integrity.RequireValid(_dbContext, downloadToken, "share.download-token");
+            if (viewMode.Value.IsHtml || isHead)
+            {
+                _fileGraphIntegrity.RequireValidMetadata(_dbContext, downloadToken.NodeFile, "share.file-metadata");
+            }
+            else
+            {
+                _fileGraphIntegrity.RequireValidContent(_dbContext, downloadToken.NodeFile, "share.file-download");
             }
 
             if (downloadToken.NodeFile.Node.Type != NodeType.Default)
@@ -88,15 +119,18 @@ namespace Cotton.Server.Handlers.Files
             }
 
             var nodeShareToken = await LoadNodeShareTokenAsync(token, now, ct);
-            return nodeShareToken is not null && nodeShareToken.Node.Type == NodeType.Default
-                ? BuildNodeShareRedirect(nodeShareToken, token, baseAppUrl)
-                : ShareFileResult.AsRedirect($"{baseAppUrl}/404");
+            if (nodeShareToken is null || nodeShareToken.Node.Type != NodeType.Default)
+            {
+                return ShareFileResult.AsRedirect($"{baseAppUrl}/404");
+            }
+
+            _integrity.RequireValid(_dbContext, nodeShareToken, "share.node-token");
+            return BuildNodeShareRedirect(nodeShareToken, token, baseAppUrl);
         }
 
         private async Task<NodeShareToken?> LoadNodeShareTokenAsync(string token, DateTime now, CancellationToken ct)
         {
             return await _dbContext.NodeShareTokens
-                .AsNoTracking()
                 .Include(x => x.Node)
                 .Where(x => x.Token == token && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
                 .SingleOrDefaultAsync(cancellationToken: ct);
@@ -312,31 +346,94 @@ namespace Cotton.Server.Handlers.Files
         }
     }
 
+    /// <summary>
+    /// Represents the result of share file.
+    /// </summary>
     public sealed record ShareFileResult
     {
+        /// <summary>
+        /// Gets or sets the kind.
+        /// </summary>
         public string Kind { get; init; } = "";
+        /// <summary>
+        /// Gets or sets the redirect url.
+        /// </summary>
         public string? RedirectUrl { get; init; }
+        /// <summary>
+        /// Gets or sets the html content.
+        /// </summary>
         public string? HtmlContent { get; init; }
 
+        /// <summary>
+        /// Gets or sets the response content type.
+        /// </summary>
         public string? ContentType { get; init; }
+        /// <summary>
+        /// Gets or sets the response content length in bytes.
+        /// </summary>
         public long? ContentLength { get; init; }
+        /// <summary>
+        /// Gets or sets the entity tag.
+        /// </summary>
         public string? EntityTag { get; init; }
+        /// <summary>
+        /// Gets or sets the file name shown to clients.
+        /// </summary>
         public string? FileName { get; init; }
+        /// <summary>
+        /// Gets or sets the inline.
+        /// </summary>
         public bool? Inline { get; init; }
 
+        /// <summary>
+        /// Gets or sets the file stream.
+        /// </summary>
         public Stream? FileStream { get; init; }
+        /// <summary>
+        /// Gets or sets the download name.
+        /// </summary>
         public string? DownloadName { get; init; }
+        /// <summary>
+        /// Gets or sets the last modified.
+        /// </summary>
         public DateTimeOffset? LastModified { get; init; }
+        /// <summary>
+        /// Gets or sets the entity tag value.
+        /// </summary>
         public EntityTagHeaderValue? EntityTagValue { get; init; }
+        /// <summary>
+        /// Deletes after use.
+        /// </summary>
         public bool DeleteAfterUse { get; init; }
+        /// <summary>
+        /// Deletes token id.
+        /// </summary>
         public Guid? DeleteTokenId { get; init; }
 
+        /// <summary>
+        /// Gets or sets the error message.
+        /// </summary>
         public string? ErrorMessage { get; init; }
 
+        /// <summary>
+        /// Converts the result to bad request.
+        /// </summary>
         public static ShareFileResult AsBadRequest(string message) => new() { Kind = "badRequest", ErrorMessage = message };
+        /// <summary>
+        /// Converts the result to not found.
+        /// </summary>
         public static ShareFileResult AsNotFound(string message) => new() { Kind = "notFound", ErrorMessage = message };
+        /// <summary>
+        /// Converts the result to redirect.
+        /// </summary>
         public static ShareFileResult AsRedirect(string url) => new() { Kind = "redirect", RedirectUrl = url };
+        /// <summary>
+        /// Converts the result to html.
+        /// </summary>
         public static ShareFileResult AsHtml(string html) => new() { Kind = "html", HtmlContent = html };
+        /// <summary>
+        /// Converts the result to head.
+        /// </summary>
         public static ShareFileResult AsHead(string contentType, long contentLength, string entityTag, string fileName, bool inline) =>
             new()
             {
@@ -348,6 +445,9 @@ namespace Cotton.Server.Handlers.Files
                 Inline = inline,
             };
 
+        /// <summary>
+        /// Converts the result to stream.
+        /// </summary>
         public static ShareFileResult AsStream(Stream stream, string contentType, string? downloadName, DateTimeOffset lastModified, EntityTagHeaderValue entityTag, bool deleteAfterUse, Guid deleteTokenId) =>
             new()
             {

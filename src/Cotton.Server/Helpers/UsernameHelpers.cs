@@ -1,11 +1,20 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
 using Cotton.Database;
 using Cotton.Validators;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Helpers
 {
+    /// <summary>
+    /// Contains helper methods for username.
+    /// </summary>
     public static class UsernameHelpers
     {
+        /// <summary>
+        /// Builds available username from email async.
+        /// </summary>
         public static async Task<string> BuildAvailableUsernameFromEmailAsync(
             CottonDbContext dbContext,
             string email,

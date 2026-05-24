@@ -1,5 +1,5 @@
 ﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Helpers;
@@ -7,6 +7,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Cotton.Storage.Backends
 {
+    /// <summary>
+    /// Filesystem backend that stores opaque Cotton chunks under a sharded directory layout.
+    /// </summary>
     public class FileSystemStorageBackend(ILogger<FileSystemStorageBackend> _logger, string? basePath = null) : IStorageBackend, IStorageCapacityReporter
     {
         private const string ChunkFileExtension = ".ctn";
@@ -14,6 +17,7 @@ namespace Cotton.Storage.Backends
         private const string TempDirectoryName = "tmp";
         private readonly string _basePath = basePath ?? Path.Combine(AppContext.BaseDirectory, BaseDirectoryName);
 
+        /// <inheritdoc />
         public StorageCapacitySnapshot GetCapacitySnapshot()
         {
             Directory.CreateDirectory(_basePath);
@@ -66,6 +70,7 @@ namespace Cotton.Storage.Backends
             return Path.Combine(tmpDir, $"{fileName}.{Guid.NewGuid():N}.tmp");
         }
 
+        /// <inheritdoc />
         public void CleanupTempFiles(TimeSpan ttl)
         {
             try
@@ -120,6 +125,7 @@ namespace Cotton.Storage.Backends
             }
         }
 
+        /// <inheritdoc />
         public Task<bool> DeleteAsync(string uid)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
@@ -146,6 +152,7 @@ namespace Cotton.Storage.Backends
             }
         }
 
+        /// <inheritdoc />
         public async Task<Stream> ReadAsync(string uid)
         {
             var (_, _, fileName) = StorageKeyHelper.GetSegments(uid);
@@ -165,6 +172,7 @@ namespace Cotton.Storage.Backends
             return new FileStream(filePath, fso);
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(string uid, Stream stream)
         {
             const int WriteBufferSize = 2 * 1024 * 1024;
@@ -219,6 +227,7 @@ namespace Cotton.Storage.Backends
             }
         }
 
+        /// <inheritdoc />
         public Task<bool> ExistsAsync(string uid)
         {
             var (_, _, fileName) = StorageKeyHelper.GetSegments(uid);
@@ -227,6 +236,7 @@ namespace Cotton.Storage.Backends
             return Task.FromResult(File.Exists(filePath));
         }
 
+        /// <inheritdoc />
         public Task<long> GetSizeAsync(string uid)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
@@ -244,6 +254,7 @@ namespace Cotton.Storage.Backends
             return Task.FromResult(info.Length);
         }
 
+        /// <inheritdoc />
         public async IAsyncEnumerable<string> ListAllKeysAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
             if (!Directory.Exists(_basePath))

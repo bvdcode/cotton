@@ -1,3 +1,6 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Models;
@@ -8,10 +11,17 @@ using System.Net;
 
 namespace Cotton.Server.Services
 {
+    /// <summary>
+    /// Coordinates geo lookup.
+    /// </summary>
     public sealed class GeoLookupService(SettingsProvider _settings) : IGeoLookupService
     {
         private const string GoogleDnsIpAddress = "8.8.8.8";
+        private static readonly GeoIpClient CottonBridgeGeoIpClient = new(global::Cotton.Constants.CottonBridgeGeoIpLookupUrl);
 
+        /// <summary>
+        /// Attempts to lookup async.
+        /// </summary>
         public async Task<GeoLookupResult?> TryLookupAsync(IPAddress ipAddress, CancellationToken cancellationToken = default)
         {
             var settings = _settings.GetServerSettings();
@@ -34,7 +44,7 @@ namespace Cotton.Server.Services
                 return null;
             }
 
-            var geo = await GeoIpClient.TryLookupAsync(ipAddress.ToString(), cancellationToken);
+            var geo = await CottonBridgeGeoIpClient.TryLookupAsync(ipAddress.ToString(), cancellationToken);
             if (geo is null)
             {
                 return null;
@@ -46,6 +56,9 @@ namespace Cotton.Server.Services
                 City: geo.City);
         }
 
+        /// <summary>
+        /// Executes test custom lookup.
+        /// </summary>
         public async Task<string?> TestCustomLookupAsync(string serverBaseUrl, CancellationToken cancellationToken = default)
         {
             var settings = _settings.GetServerSettings();
@@ -276,13 +289,25 @@ namespace Cotton.Server.Services
 
         private sealed class GeoFieldMatch
         {
+            /// <summary>
+            /// Gets or sets the country.
+            /// </summary>
             public string? Country { get; set; }
+            /// <summary>
+            /// Gets or sets the region.
+            /// </summary>
             public string? Region { get; set; }
+            /// <summary>
+            /// Gets or sets the city.
+            /// </summary>
             public string? City { get; set; }
             private int _countryPriority;
             private int _regionPriority;
             private int _cityPriority;
 
+            /// <summary>
+            /// Attempts to set country.
+            /// </summary>
             public bool TrySetCountry(string value, int priority)
             {
                 if (priority <= _countryPriority)
@@ -295,6 +320,9 @@ namespace Cotton.Server.Services
                 return true;
             }
 
+            /// <summary>
+            /// Attempts to set region.
+            /// </summary>
             public bool TrySetRegion(string value, int priority)
             {
                 if (priority <= _regionPriority)
@@ -307,6 +335,9 @@ namespace Cotton.Server.Services
                 return true;
             }
 
+            /// <summary>
+            /// Attempts to set city.
+            /// </summary>
             public bool TrySetCity(string value, int priority)
             {
                 if (priority <= _cityPriority)

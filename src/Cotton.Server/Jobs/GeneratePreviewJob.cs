@@ -1,4 +1,7 @@
-﻿using Cotton.Database;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Previews;
 using Cotton.Server.Extensions;
@@ -15,9 +18,13 @@ using EasyExtensions.Quartz.Attributes;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
+using System.Text.RegularExpressions;
 
 namespace Cotton.Server.Jobs
 {
+    /// <summary>
+    /// Runs the scheduled generate preview maintenance task.
+    /// </summary>
     [JobTrigger(minutes: 15)]
     public class GeneratePreviewJob(
         PerfTracker _perf,
@@ -31,10 +38,16 @@ namespace Cotton.Server.Jobs
         private const int UnthrottledItemsCount = 1000;
         private const int ThrottleDelayMs = 250;
 
+        /// <summary>
+        /// Executes the scheduled Quartz job.
+        /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
             var allSupportedMimeTypes = PreviewGeneratorProvider.GetAllSupportedMimeTypes();
             var generatorVersionsByContentType = PreviewGeneratorProvider.GetGeneratorVersionsByContentType();
+            CancellationToken cancellationToken = context?.CancellationToken ?? CancellationToken.None;
+
+            await NormalizeLegacySourceTextContentTypesAsync(allSupportedMimeTypes, cancellationToken);
 
             var processableItemsQuery = _dbContext.FileManifests
                 .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType));
@@ -170,6 +183,50 @@ namespace Cotton.Server.Jobs
                 _logger.LogInformation("Preview generation job completed successfully. Processed {Count} items", processed);
             }
         }
+
+        private async Task NormalizeLegacySourceTextContentTypesAsync(
+            IReadOnlyCollection<string> supportedContentTypes,
+            CancellationToken cancellationToken)
+        {
+            var manifests = await _dbContext.FileManifests
+                .Include(m => m.NodeFiles)
+                .Where(m =>
+                    (m.ContentType == FileManifestService.DefaultContentType
+                        || m.ContentType == string.Empty) &&
+                    m.NodeFiles.Any(nf => Regex.IsMatch(
+                        nf.Name,
+                        FileManifestService.SourceTextFileNameRegexPattern,
+                        RegexOptions.IgnoreCase)))
+                .OrderBy(m => m.CreatedAt)
+                .Take(MaxItemsPerRun)
+                .ToListAsync(cancellationToken);
+
+            int updated = 0;
+            foreach (var manifest in manifests)
+            {
+                string? fileName = manifest.NodeFiles.FirstOrDefault(nodeFile => FileManifestService.IsSourceTextFileName(nodeFile.Name))?.Name;
+                if (string.IsNullOrWhiteSpace(fileName))
+                {
+                    continue;
+                }
+
+                string contentType = FileManifestService.ResolveContentType(fileName, manifest.ContentType);
+                if (!supportedContentTypes.Contains(contentType))
+                {
+                    continue;
+                }
+
+                manifest.ContentType = contentType;
+                updated++;
+            }
+
+            if (updated > 0)
+            {
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Normalized {Count} legacy source-text file manifest content types before preview generation.", updated);
+            }
+        }
+
 
         private async Task EnsureChunkExistsAsync(byte[] hash, long sizeBytes)
         {

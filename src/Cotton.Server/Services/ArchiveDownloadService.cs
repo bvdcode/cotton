@@ -1,10 +1,11 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Extensions;
+using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Validators;
@@ -12,12 +13,19 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services;
 
+/// <summary>
+/// Coordinates archive download.
+/// </summary>
 public sealed class ArchiveDownloadService(
     CottonDbContext _dbContext,
-    ArchiveDownloadTicketStore _tickets)
+    ArchiveDownloadTicketStore _tickets,
+    FileGraphIntegrityVerifier _fileGraphIntegrity)
 {
     private const string DefaultArchiveName = "cotton-download.zip";
 
+    /// <summary>
+    /// Creates download link async.
+    /// </summary>
     public async Task<CreateArchiveDownloadLinkResult> CreateDownloadLinkAsync(
         Guid userId,
         CreateArchiveDownloadLinkRequest request,
@@ -44,6 +52,7 @@ public sealed class ArchiveDownloadService(
 
             foreach (NodeFile file in OrderByRequestedIds(files, fileIds, x => x.Id))
             {
+                _fileGraphIntegrity.RequireValidContent(_dbContext, file, "archive.selected-file");
                 AddFileEntry(entries, addedFileIds, uniquifier, file, file.Name);
             }
         }
@@ -113,8 +122,8 @@ public sealed class ArchiveDownloadService(
             Guid[] parentIds = [.. currentLevel.Keys];
 
             List<NodeFile> files = await _dbContext.NodeFiles
-                .AsNoTracking()
                 .Where(x => parentIds.Contains(x.NodeId) && x.OwnerId == userId && x.Node.Type == NodeType.Default)
+                .Include(x => x.Node)
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
                 .ThenInclude(x => x.Chunk)
@@ -124,6 +133,7 @@ public sealed class ArchiveDownloadService(
 
             foreach (NodeFile file in files)
             {
+                _fileGraphIntegrity.RequireValidContent(_dbContext, file, "archive.folder-file");
                 string parentPath = currentLevel[file.NodeId];
                 AddFileEntry(
                     entries,
@@ -178,8 +188,8 @@ public sealed class ArchiveDownloadService(
         CancellationToken cancellationToken)
     {
         return await _dbContext.NodeFiles
-            .AsNoTracking()
             .Where(x => fileIds.Contains(x.Id) && x.OwnerId == userId && x.Node.Type == NodeType.Default)
+            .Include(x => x.Node)
             .Include(x => x.FileManifest)
             .ThenInclude(x => x.FileManifestChunks)
             .ThenInclude(x => x.Chunk)
@@ -239,6 +249,9 @@ public sealed class ArchiveDownloadService(
     }
 }
 
+/// <summary>
+/// Represents the result of create archive download link.
+/// </summary>
 public sealed class CreateArchiveDownloadLinkResult
 {
     private CreateArchiveDownloadLinkResult(ArchiveDownloadLinkDto? link, string? error, int statusCode)
@@ -248,12 +261,30 @@ public sealed class CreateArchiveDownloadLinkResult
         StatusCode = statusCode;
     }
 
+    /// <summary>
+    /// Gets the link.
+    /// </summary>
     public ArchiveDownloadLinkDto? Link { get; }
+    /// <summary>
+    /// Gets the error.
+    /// </summary>
     public string? Error { get; }
+    /// <summary>
+    /// Gets the status code.
+    /// </summary>
     public int StatusCode { get; }
 
+    /// <summary>
+    /// Creates a successful operation result.
+    /// </summary>
     public static CreateArchiveDownloadLinkResult Success(ArchiveDownloadLinkDto link) => new(link, null, StatusCodes.Status200OK);
+    /// <summary>
+    /// Creates a bad request result.
+    /// </summary>
     public static CreateArchiveDownloadLinkResult BadRequest(string error) => new(null, error, StatusCodes.Status400BadRequest);
+    /// <summary>
+    /// Creates a not-found result.
+    /// </summary>
     public static CreateArchiveDownloadLinkResult NotFound(string error) => new(null, error, StatusCodes.Status404NotFound);
 }
 

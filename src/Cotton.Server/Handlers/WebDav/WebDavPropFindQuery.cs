@@ -1,7 +1,9 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Server.Models.Dto;
+using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -31,11 +33,15 @@ public record WebDavPropFindResult(
 public class WebDavPropFindQueryHandler(
     CottonDbContext _dbContext,
     IWebDavPathResolver _pathResolver,
+    UserStorageQuotaService _quota,
     ILogger<WebDavPropFindQueryHandler> _logger)
     : IRequestHandler<WebDavPropFindQuery, WebDavPropFindResult>
 {
     private const int MaxDepth = 32;
 
+    /// <summary>
+    /// Handles the request through the mediator pipeline.
+    /// </summary>
     public async Task<WebDavPropFindResult> Handle(WebDavPropFindQuery request, CancellationToken ct)
     {
         var resolveResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
@@ -50,6 +56,7 @@ public class WebDavPropFindQueryHandler(
         var hrefBase = EnsureTrailingSlash(request.HrefBase);
         var depth = Math.Clamp(request.Depth, 0, MaxDepth);
         var pathCache = new Dictionary<Guid, Database.Models.Node>();
+        WebDavQuota quota = await GetQuotaPropertiesAsync(request.UserId, ct);
 
         if (resolveResult.IsCollection && resolveResult.Node is not null)
         {
@@ -64,7 +71,8 @@ public class WebDavPropFindQueryHandler(
                 IsCollection: true,
                 ContentLength: 0,
                 LastModified: node.UpdatedAt,
-                ETag: $"\"{node.Id}\""));
+                ETag: $"\"{node.Id}\"",
+                Quota: quota));
 
             // If depth > 0, add children
             if (depth > 0)
@@ -92,11 +100,18 @@ public class WebDavPropFindQueryHandler(
                 ContentLength: nodeFile.FileManifest.SizeBytes,
                 LastModified: nodeFile.UpdatedAt,
                 ETag: $"\"{nodeFile.Id}:{nodeFile.FileManifestId}\"",
-                ContentType: nodeFile.FileManifest.ContentType));
+                ContentType: nodeFile.FileManifest.ContentType,
+                Quota: quota));
         }
 
         var xml = WebDavXmlBuilder.BuildMultiStatusResponse(resources);
         return new WebDavPropFindResult(true, xml);
+    }
+
+    private async Task<WebDavQuota> GetQuotaPropertiesAsync(Guid userId, CancellationToken ct)
+    {
+        UserStorageQuotaDto snapshot = await _quota.GetSnapshotAsync(userId, ct);
+        return new WebDavQuota(snapshot.UsedBytes, snapshot.AvailableBytes);
     }
 
     private async Task AddChildResourcesAsync(

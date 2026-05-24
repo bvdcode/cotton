@@ -1,11 +1,12 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 namespace Cotton.Previews.Tests;
 
 public class PreviewGeneratorProviderTests
 {
     [TestCase("text/plain", typeof(TextPreviewGenerator))]
+    [TestCase("text/x-csharp", typeof(TextPreviewGenerator))]
     [TestCase("application/pdf", typeof(PdfPreviewGenerator))]
     [TestCase("image/heic", typeof(HeicPreviewGenerator))]
     [TestCase("model/stl", typeof(StlThumbPreviewGenerator))]
@@ -57,6 +58,7 @@ public class PreviewGeneratorProviderTests
         using (Assert.EnterMultipleScope())
         {
             Assert.That(mimeTypes, Does.Contain("text/plain"));
+            Assert.That(mimeTypes, Does.Contain("text/x-csharp"));
             Assert.That(mimeTypes, Does.Contain("application/pdf"));
             Assert.That(mimeTypes, Does.Contain("image/heic"));
             Assert.That(mimeTypes, Does.Contain("image/svg+xml"));

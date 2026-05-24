@@ -118,12 +118,12 @@
           "notifications",
           "email mode",
           "mail mode",
-          "cotton cloud mail",
+          "cotton bridge mail",
           "custom smtp",
           "benachrichtigungen",
           "mail-modus",
           "mailmodus",
-          "cotton cloud mail",
+          "cotton bridge mail",
           "eigener smtp"
         ],
         "adminOnly": true
@@ -1146,12 +1146,12 @@
         "title": "E-Mail-Konfiguration",
         "subtitle": "Wähle, von wo E-Mail-Benachrichtigungen verschickt werden.",
         "options": {
-          "cloud": "Cotton Mail in der Cloud verwenden",
+          "cloud": "Cotton Bridge Mail verwenden",
           "custom": "Eigenen SMTP-Server verwenden",
           "none": "Keine E-Mail-Benachrichtigungen"
         },
         "descriptions": {
-          "cloud": "Es wird der öffentliche Cotton-Cloud-SMTP-Server verwendet. Sicher und kostenlos. Wähle dies, wenn du dir nicht sicher bist.",
+          "cloud": "Cotton Bridge sendet E-Mail-Benachrichtigungen für diese Instanz. Telemetrie muss aktiviert sein.",
           "custom": "Konfiguriere einen eigenen SMTP-Server für E-Mail-Benachrichtigungen.",
           "none": "Die einfachste Option, aber du kannst nicht einmal dein Passwort zurücksetzen."
         }
@@ -1194,13 +1194,13 @@
         "subtitle": "Cotton kann IP-Adressen in Städte- und Ländernamen umwandeln. Das kann z. B. in Sicherheitsbenachrichtigungen verwendet werden, um den Ort einer Anmeldung anzuzeigen und ungewöhnliche Zugriffe zu erkennen.",
         "options": {
           "disabled": "Nein, ausgeschaltet lassen",
-          "cottonCloud": "Cloud-Dienst verwenden",
+          "cottonCloud": "Cotton Bridge",
           "local": "GeoIP Light lokal verwenden",
           "custom": "Eigenen Resolver verwenden"
         },
         "descriptions": {
           "disabled": "Keine Ortsauflösung wird durchgeführt. Funktionen, die einen Anmeldeort anzeigen können, behalten nur die rohen IP-Adressen.",
-          "cottonCloud": "IP-Adressen über den Cotton-Anbieter auflösen. Erfordert aktivierte Telemetrie.",
+          "cottonCloud": "IP-Adressen über Cotton Bridge auflösen. Telemetrie muss aktiviert sein.",
           "local": "IP-Adressen auf deinem Server mit einer lokalen GeoIP-Light-Datenbank/Paket auflösen.",
           "custom": "Füge eine URL zu deinem eigenen Dienst ein. Cotton versucht, ortsbezogene Felder automatisch aus dem JSON zu extrahieren."
         }
@@ -1221,12 +1221,12 @@
         "options": {
           "local": "Lokale Berechnungen",
           "runner": "Eigener GPU-Runner",
-          "cloud": "Cotton-Cloud-Berechnungen"
+          "cloud": "Cotton Bridge AI"
         },
         "descriptions": {
           "local": "Langsam, die meisten anspruchsvollen Funktionen sind deaktiviert und die Modellqualität ist vereinfacht. Trotzdem ist die Qualität noch sehr gut – mehr als ausreichend für jede Aufgabe.",
           "runner": "Schließe einen separaten GPU-Runner für Berechnungen an. Schnell, hochwertig – beste Modelle und Unterstützung für alle Funktionen.",
-          "cloud": "Optimale Balance, kann aber Einschränkungen haben. Unglaubliche Großzügigkeit kostenlos. Erfordert eine Internetverbindung."
+          "cloud": "Cotton Bridge kann AI-Berechnungen für diese Instanz ausführen. Erfordert eine Internetverbindung und kann Limits haben."
         }
       },
       "timezone": {
@@ -1828,7 +1828,7 @@
         "help": {
           "publicBaseUrl": "Trotz dieser Einstellung ermittelt Cotton die öffentliche URL fast überall automatisch. Setze sie nur, wenn die automatische Erkennung falsch ist.",
           "timezone": "Das hilft uns, Hintergrundjobs nicht zu starten, während du schläfst, damit deine Festplatten nachts nicht arbeiten.",
-          "telemetry": "Cotton sammelt minimale technische Diagnose, damit der Entwickler Fehler sehen und beheben kann, weil nicht jeder Probleme meldet. Telemetrie freizuschalten aktiviert auch Cloud-Dienste ab Werk.",
+          "telemetry": "Cotton sammelt minimale technische Diagnose, damit der Entwickler Fehler sehen und beheben kann, weil nicht jeder Probleme meldet. Telemetrie freizuschalten aktiviert auch Cotton Bridge-Dienste ab Werk.",
           "allowDeduplication": "Steuert, ob ein Benutzer erfahren kann, dass ein anderer dieselbe Datei bereits speichert. Wenn deaktiviert, werden identische Daten nach dem Upload weiterhin auf dem Server dedupliziert, aber unnötig zuerst übertragen. Wenn aktiviert, kann ein anderer Benutzer erfahren, dass jemand in dieser Cloud diese Datei vorher hochgeladen hat. Das ist sicher für Familie und vertraute Freunde.",
           "allowGlobalIndexing": "Erlaubt dem Server, Benutzerdateien zu entschlüsseln und einen tiefen Suchindex aufzubauen. Ohne dies nutzt die Suche nur Datei- und Ordnernamen.",
           "serverUsage": "Optimiert Funktionsempfehlungen und einige Einstellungen. Das ist kein kritischer Parameter, wähle, was sich richtig anfühlt."
@@ -1852,18 +1852,18 @@
         "computionMode": {
           "Local": "Lokal",
           "Remote": "Entfernter Runner",
-          "Cloud": "Cotton Cloud",
+          "Cloud": "Cotton Bridge AI",
           "inDevelopment": "Diese Funktion ist noch in Entwicklung."
         },
         "geoIpLookupMode": {
           "Disabled": "Deaktiviert",
-          "CottonCloud": "Cloud-Dienst",
+          "CottonCloud": "Cotton Bridge",
           "MaxMindLocal": "GeoIP Light",
           "CustomHttp": "Eigenes HTTP"
         },
         "geoIpLookupModeDescription": {
           "Disabled": "IP-Adressen nicht auflösen.",
-          "CottonCloud": "IP-Adressen über den Cotton-Anbieter auflösen. Das kann z. B. für Sicherheitsbenachrichtigungen verwendet werden.",
+          "CottonCloud": "IP-Adressen über Cotton Bridge auflösen. Das kann z. B. für Sicherheitsbenachrichtigungen verwendet werden.",
           "MaxMindLocal": "IP-Adressen lokal mit einer GeoIP-Light-Datenbank/Paket auflösen.",
           "CustomHttp": "Füge eine URL zu deinem eigenen Dienst ein. Cotton versucht, ortsbezogene Felder automatisch aus dem JSON zu extrahieren."
         },
@@ -1945,7 +1945,7 @@
       },
       "emailMode": {
         "None": "Deaktiviert",
-        "Cloud": "Cotton Cloud Mail",
+        "Cloud": "Cotton Bridge Mail",
         "Custom": "Eigener SMTP"
       },
       "smtp": {

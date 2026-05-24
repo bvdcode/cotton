@@ -1,34 +1,61 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
 using Cotton.Storage.Abstractions;
-using EasyExtensions.Crypto;
+using Cotton.Crypto;
 using EasyExtensions.Extensions;
 using Npgsql;
 using System.Security.Cryptography;
 
 namespace Cotton.Server.Services
 {
+    /// <summary>
+    /// Defines the master key compatibility probe contract used by the server runtime.
+    /// </summary>
     public interface IMasterKeyCompatibilityProbe
     {
+        /// <summary>
+        /// Validates .
+        /// </summary>
         Task<MasterKeyCompatibilityResult> ValidateAsync(
             CottonEncryptionSettings encryptionSettings,
             MasterKeyCompatibilityMode mode,
             CancellationToken cancellationToken = default);
     }
 
+    /// <summary>
+    /// Lists the supported master key compatibility mode values.
+    /// </summary>
     public enum MasterKeyCompatibilityMode
     {
+        /// <summary>
+        /// Represents the allow missing evidence option.
+        /// </summary>
         AllowMissingEvidence,
+        /// <summary>
+        /// Represents the require evidence for existing data option.
+        /// </summary>
         RequireEvidenceForExistingData
     }
 
+    /// <summary>
+    /// Represents the result of master key compatibility.
+    /// </summary>
     public sealed record MasterKeyCompatibilityResult(
         bool Success,
         bool ExistingDataFound,
         bool EvidenceFound,
         string? Error)
     {
+        /// <summary>
+        /// Creates a successful master-key compatibility result.
+        /// </summary>
         public static MasterKeyCompatibilityResult Compatible(bool existingDataFound, bool evidenceFound) =>
             new(true, existingDataFound, evidenceFound, null);
 
+        /// <summary>
+        /// Creates a failed compatibility probe result.
+        /// </summary>
         public static MasterKeyCompatibilityResult Fail(
             string error,
             bool existingDataFound = true,
@@ -36,6 +63,9 @@ namespace Cotton.Server.Services
             new(false, existingDataFound, evidenceFound, error);
     }
 
+    /// <summary>
+    /// Represents master key compatibility probe.
+    /// </summary>
     public sealed class MasterKeyCompatibilityProbe : IMasterKeyCompatibilityProbe
     {
         private static readonly string[] CottonDataTables =
@@ -62,6 +92,9 @@ namespace Cotton.Server.Services
         private readonly string? _connectionString;
         private readonly IStorageBackend _storage;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MasterKeyCompatibilityProbe"/> type.
+        /// </summary>
         public MasterKeyCompatibilityProbe(
             ILogger<MasterKeyCompatibilityProbe> logger,
             IStorageBackend storage,
@@ -72,6 +105,9 @@ namespace Cotton.Server.Services
             _connectionString = connectionString;
         }
 
+        /// <summary>
+        /// Indicates whether existing cotton data async.
+        /// </summary>
         public static async Task<bool> HasExistingCottonDataAsync(
             string? connectionString = null,
             CancellationToken cancellationToken = default)
@@ -88,6 +124,9 @@ namespace Cotton.Server.Services
             }
         }
 
+        /// <summary>
+        /// Validates async.
+        /// </summary>
         public async Task<MasterKeyCompatibilityResult> ValidateAsync(
             CottonEncryptionSettings encryptionSettings,
             MasterKeyCompatibilityMode mode,
@@ -185,7 +224,6 @@ namespace Cotton.Server.Services
                     evidenceFound: false)
                 : CompatibleWithoutEvidence();
         }
-
 
         private MasterKeyCompatibilityResult EvaluateMissingEvidence(MasterKeyCompatibilityMode mode)
         {

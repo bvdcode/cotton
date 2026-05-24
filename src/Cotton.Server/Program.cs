@@ -1,5 +1,5 @@
 ﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Autoconfig.Extensions;
 using Cotton.Database;
@@ -25,8 +25,14 @@ using Microsoft.Extensions.Options;
 
 namespace Cotton.Server
 {
+    /// <summary>
+    /// Represents program.
+    /// </summary>
     public class Program
     {
+        /// <summary>
+        /// Starts the Cotton server process.
+        /// </summary>
         public static async Task Main(string[] args)
         {
             ConfigureProcessTimeZone();
@@ -139,7 +145,11 @@ namespace Cotton.Server
                 .AddSingleton<CottonPublicEmailProvider>()
                 .AddScoped<SettingsProvider>()
                 .AddScoped<SecurityDiagnosticsService>()
+                .AddScoped<StoragePipelineProbeService>()
                 .AddScoped<PasskeyService>()
+                .AddScoped<RefreshTokenRevocationService>()
+                .AddScoped<SessionRevocationNotifier>()
+                .AddScoped<DownloadTokenExpirationService>()
                 .AddScoped<IPostgresDumpService, PostgresDumpService>()
                 .AddScoped<IDatabaseBackupManifestService, DatabaseBackupManifestService>()
                 .AddScoped<IDatabaseAutoRestoreService, DatabaseAutoRestoreService>()
@@ -170,6 +180,7 @@ namespace Cotton.Server
                 .AddPbkdf2PasswordHashService()
                 .AddControllers().Services
                 .AddStreamCipher()
+                .AddDatabaseIntegrity()
                 .AddChunkServices()
                 .AddLayoutPathServices()
                 .AddWebDavServices()
@@ -189,6 +200,7 @@ namespace Cotton.Server
             app.MapControllers();
             app.MapFallbackToFile("/index.html");
             app.ApplyMigrations<CottonDbContext>();
+            await app.ApplyDatabaseIntegrityBridgeBackfillAsync();
             using (IServiceScope scope = app.Services.CreateScope())
             {
                 var autoRestore = scope.ServiceProvider.GetRequiredService<IDatabaseAutoRestoreService>();

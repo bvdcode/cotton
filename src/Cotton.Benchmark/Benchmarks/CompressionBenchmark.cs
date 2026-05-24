@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Benchmark.Infrastructure;
 using Cotton.Benchmark.Models;
@@ -9,7 +9,7 @@ using System.Diagnostics;
 namespace Cotton.Benchmark.Benchmarks
 {
     /// <summary>
-    /// Benchmark for compression performance using REAL CompressionProcessor from Cotton.Storage.
+    /// Benchmark for Cotton.Storage compression throughput.
     /// </summary>
     public sealed class CompressionBenchmark(BenchmarkConfiguration configuration) : BenchmarkBase(configuration)
     {
@@ -17,10 +17,10 @@ namespace Cotton.Benchmark.Benchmarks
         private readonly CompressionProcessor _processor = new();
 
         /// <inheritdoc/>
-        public override string Name => "Compression (Real Zstd Processor)";
+        public override string Name => "Cotton.Storage Zstd Compression";
 
         /// <inheritdoc/>
-        public override string Description => $"Tests REAL Cotton.Storage.Processors.CompressionProcessor with compressible text data";
+        public override string Description => $"Measures Cotton.Storage compression throughput on deterministic compressible text";
 
         /// <inheritdoc/>
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)
@@ -51,7 +51,7 @@ namespace Cotton.Benchmark.Benchmarks
         protected override Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
             var baseMetrics = base.AggregateMetrics(metrics);
-            baseMetrics["Processor"] = "Cotton.Storage.Processors.CompressionProcessor";
+            baseMetrics["Implementation"] = "Cotton.Storage.Processors.CompressionProcessor";
             baseMetrics["DataType"] = "Compressible Text (Logs)";
             return baseMetrics;
         }

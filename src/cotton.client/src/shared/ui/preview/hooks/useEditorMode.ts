@@ -11,87 +11,7 @@ import {
   useLocalPreferencesStore,
 } from "../../../store/localPreferencesStore";
 import { previewConfig } from "../../../config/previewConfig";
-
-/**
- * File extensions supported by Monaco Editor
- * Based on official Monaco documentation
- */
-const CODE_EXTENSIONS = {
-  // Rich IntelliSense languages
-  richIntelliSense: [
-    'ts', 'tsx',        // TypeScript (but exclude .ts video files by size check)
-    'js', 'jsx', 'mjs', 'cjs',  // JavaScript
-    'json', 'jsonc',    // JSON
-    'html', 'htm',      // HTML
-    'css',              // CSS
-    'less',             // LESS
-    'scss', 'sass',     // SCSS/SASS
-  ],
-  
-  // Basic syntax colorization languages
-  basicSyntax: [
-    'xml', 'svg',       // XML
-    'php', 'phtml',     // PHP
-    'cs', 'csx',        // C#
-    'cpp', 'cc', 'cxx', 'c', 'h', 'hpp', // C/C++
-    'razor', 'cshtml',  // Razor
-    'md', 'markdown',   // Markdown (can also use Markdown mode)
-    'diff', 'patch',    // Diff
-    'java',             // Java
-    'vb',               // VB
-    'coffee',           // CoffeeScript
-    'hbs', 'handlebars', // Handlebars
-    'bat', 'cmd',       // Batch
-    'pug', 'jade',      // Pug
-    'fs', 'fsi', 'fsx', 'fsscript', // F#
-    'lua',              // Lua
-    'ps1', 'psm1', 'psd1', // PowerShell
-    'py', 'pyw', 'pyi', // Python
-    'rb', 'rbw',        // Ruby
-    'r',                // R
-    'm', 'mm',          // Objective-C
-    
-    // Additional common languages
-    'go',               // Go
-    'rs',               // Rust
-    'swift',            // Swift
-    'kt', 'kts',        // Kotlin
-    'sh', 'bash', 'zsh', // Shell
-    'yaml', 'yml',      // YAML
-    'toml',             // TOML
-    'ini', 'conf', 'cfg', // Config files
-    'sql',              // SQL
-    'dockerfile',       // Dockerfile
-    'vue',              // Vue
-    'svelte',           // Svelte
-  ],
-} as const;
-
-/**
- * Get all supported code extensions as a flat array
- */
-const ALL_CODE_EXTENSIONS = [
-  ...CODE_EXTENSIONS.richIntelliSense,
-  ...CODE_EXTENSIONS.basicSyntax,
-] as readonly string[];
-
-/**
- * Check if file extension indicates a code file
- */
-function isCodeExtension(fileName: string): boolean {
-  const ext = fileName.toLowerCase().split('.').pop() || '';
-  return (ALL_CODE_EXTENSIONS as readonly string[]).includes(ext);
-}
-
-/**
- * Check if file is a Dockerfile (special case - no extension)
- */
-function isDockerfile(fileName: string): boolean {
-  const name = fileName.toLowerCase();
-  return name === 'dockerfile' || 
-         name.startsWith('dockerfile.') ||
-         name === '.dockerignore';
-}
+import { isCodePreviewFileName, isDockerfileName } from "../../../utils/codeFileTypes";
 
 /**
  * Detect initial editor mode based on content and filename
@@ -115,12 +35,12 @@ function detectInitialMode(content: string, fileName: string, fileSize?: number)
   }
   
   // Check for Dockerfile (special case)
-  if (isDockerfile(fileName)) {
+  if (isDockerfileName(fileName)) {
     return EditorMode.Code;
   }
   
   // Check file extension for code files
-  if (isCodeExtension(fileName)) {
+  if (isCodePreviewFileName(fileName)) {
     // Special case: .ts can be TypeScript or video transport stream
     // If file is small enough and has code-like content, treat as code
     const ext = fileName.toLowerCase().split('.').pop() || '';

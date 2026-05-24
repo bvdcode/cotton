@@ -1,19 +1,28 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using System.Globalization;
 using System.Runtime.InteropServices;
 
 namespace Cotton.Server.Services
 {
+    /// <summary>
+    /// Reports process hardening status.
+    /// </summary>
     public sealed record ProcessHardeningStatus(
         bool Requested,
         bool Applied,
         string? Error,
         int? DumpableAfter);
 
+    /// <summary>
+    /// Represents linux process hardening.
+    /// </summary>
     public static class LinuxProcessHardening
     {
+        /// <summary>
+        /// Defines the environment variable.
+        /// </summary>
         public const string EnvironmentVariable = "COTTON_PROCESS_HARDENING";
 
         private const int PR_GET_DUMPABLE = 3;
@@ -25,6 +34,9 @@ namespace Cotton.Server.Services
         [DllImport("libc")]
         private static extern uint geteuid();
 
+        /// <summary>
+        /// Applies from environment.
+        /// </summary>
         public static ProcessHardeningStatus ApplyFromEnvironment()
         {
             bool requested = IsEnabled(Environment.GetEnvironmentVariable(EnvironmentVariable));
@@ -52,6 +64,9 @@ namespace Cotton.Server.Services
             return new ProcessHardeningStatus(true, true, null, TryGetDumpable());
         }
 
+        /// <summary>
+        /// Attempts to get dumpable.
+        /// </summary>
         public static int? TryGetDumpable()
         {
             if (!OperatingSystem.IsLinux())
@@ -63,6 +78,9 @@ namespace Cotton.Server.Services
             return result >= 0 ? result : null;
         }
 
+        /// <summary>
+        /// Attempts to get effective user id.
+        /// </summary>
         public static uint? TryGetEffectiveUserId()
         {
             if (!OperatingSystem.IsLinux())
@@ -73,6 +91,9 @@ namespace Cotton.Server.Services
             return geteuid();
         }
 
+        /// <summary>
+        /// Reads Linux process status from /proc.
+        /// </summary>
         public static LinuxProcStatus SnapshotProcStatus()
         {
             if (!OperatingSystem.IsLinux())
@@ -134,6 +155,9 @@ namespace Cotton.Server.Services
         }
     }
 
+    /// <summary>
+    /// Reports linux proc status.
+    /// </summary>
     public sealed record LinuxProcStatus(
         int? NoNewPrivileges,
         int? SeccompMode,
@@ -141,6 +165,9 @@ namespace Cotton.Server.Services
         string? EffectiveCapabilitiesHex,
         bool? HasSysPtraceCapability)
     {
+        /// <summary>
+        /// Creates an empty value object.
+        /// </summary>
         public static LinuxProcStatus Empty { get; } = new(null, null, null, null, null);
     }
 }

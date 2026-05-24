@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Database.Models;
@@ -9,6 +9,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services;
 
+/// <summary>
+/// Coordinates file version retention.
+/// </summary>
 public sealed class FileVersionRetentionService(
     CottonDbContext _dbContext,
     SettingsProvider _settingsProvider,
@@ -17,6 +20,9 @@ public sealed class FileVersionRetentionService(
     private const int LimitedHistoricalVersionCount = 2;
     private const int OptimalHistoricalVersionCount = 10;
 
+    /// <summary>
+    /// Applies .
+    /// </summary>
     public async Task<long> ApplyAsync(
         Guid userId,
         Guid lineageId,

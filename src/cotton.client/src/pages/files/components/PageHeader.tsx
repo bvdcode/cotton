@@ -116,54 +116,49 @@ type PageHeaderActionFactoryOptions = Pick<
   viewIcon: ReactElement;
 };
 
-const buildPageHeaderActions = ({
-  canGoUp,
-  customActionItems,
-  goUpDropHandlers,
-  isCreatingFolder,
-  loading,
-  nextViewTitleKey,
-  onDeselectAll,
-  onGoUp,
-  onHomeClick,
-  onNewFolderClick,
-  onSelectAll,
-  onToggleSelectionMode,
-  onUploadClick,
-  onViewModeCycle,
-  selectedCount,
-  selectionMode,
-  showNewFolder,
-  showUpload,
-  showViewModeToggle,
-  t,
-  viewIcon,
-}: PageHeaderActionFactoryOptions): PageHeaderActionItem[] => {
+const buildPageHeaderActions = (
+  options: PageHeaderActionFactoryOptions,
+): PageHeaderActionItem[] => {
   const actions: PageHeaderActionItem[] = [
-    createGoUpAction(canGoUp, loading, onGoUp, t, goUpDropHandlers),
+    createGoUpAction(
+      options.canGoUp,
+      options.loading,
+      options.onGoUp,
+      options.t,
+      options.goUpDropHandlers,
+    ),
   ];
 
   appendCreationActions(actions, {
-    isCreatingFolder,
-    loading,
-    onNewFolderClick,
-    onUploadClick,
-    showNewFolder,
-    showUpload,
-    t,
+    isCreatingFolder: options.isCreatingFolder,
+    loading: options.loading,
+    onNewFolderClick: options.onNewFolderClick,
+    onUploadClick: options.onUploadClick,
+    showNewFolder: options.showNewFolder,
+    showUpload: options.showUpload,
+    t: options.t,
   });
-  actions.push(createHomeAction(onHomeClick, t));
-  appendViewModeAction(actions, showViewModeToggle ?? true, onViewModeCycle, nextViewTitleKey, viewIcon, t);
+  actions.push(createHomeAction(options.onHomeClick, options.t));
+  appendViewModeAction(
+    actions,
+    options.showViewModeToggle ?? true,
+    options.onViewModeCycle,
+    options.nextViewTitleKey,
+    options.viewIcon,
+    options.t,
+  );
   appendSelectionActions(actions, {
-    onDeselectAll,
-    onSelectAll,
-    onToggleSelectionMode,
-    selectedCount,
-    selectionMode,
-    t,
+    onDeselectAll: options.onDeselectAll,
+    onSelectAll: options.onSelectAll,
+    onToggleSelectionMode: options.onToggleSelectionMode,
+    selectedCount: options.selectedCount,
+    selectionMode: options.selectionMode,
+    t: options.t,
   });
 
-  return customActionItems?.length ? [...actions, ...customActionItems] : actions;
+  return options.customActionItems?.length
+    ? [...actions, ...options.customActionItems]
+    : actions;
 };
 
 const createGoUpAction = (
@@ -347,55 +342,29 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     [viewMode],
   );
 
-  const actionTabs = React.useMemo(
-    () =>
-      buildPageHeaderActions({
-        canGoUp,
-        customActionItems,
-        goUpDropHandlers,
-        isCreatingFolder,
-        loading,
-        nextViewTitleKey,
-        onDeselectAll,
-        onGoUp,
-        onHomeClick,
-        onNewFolderClick,
-        onSelectAll,
-        onToggleSelectionMode,
-        onUploadClick,
-        onViewModeCycle,
-        selectedCount,
-        selectionMode,
-        showNewFolder,
-        showUpload,
-        showViewModeToggle,
-        t,
-        viewIcon,
-      }),
-    [
-      canGoUp,
-      customActionItems,
-      goUpDropHandlers,
-      isCreatingFolder,
-      loading,
-      nextViewTitleKey,
-      onDeselectAll,
-      onGoUp,
-      onHomeClick,
-      onNewFolderClick,
-      onSelectAll,
-      onToggleSelectionMode,
-      onUploadClick,
-      onViewModeCycle,
-      selectedCount,
-      selectionMode,
-      showNewFolder,
-      showUpload,
-      showViewModeToggle,
-      t,
-      viewIcon,
-    ],
-  );
+  const actionTabs = buildPageHeaderActions({
+    canGoUp,
+    customActionItems,
+    goUpDropHandlers,
+    isCreatingFolder,
+    loading,
+    nextViewTitleKey,
+    onDeselectAll,
+    onGoUp,
+    onHomeClick,
+    onNewFolderClick,
+    onSelectAll,
+    onToggleSelectionMode,
+    onUploadClick,
+    onViewModeCycle,
+    selectedCount,
+    selectionMode,
+    showNewFolder,
+    showUpload,
+    showViewModeToggle,
+    t,
+    viewIcon,
+  });
 
   const visibleActionKeys = useOverflowActionKeys({
     actions: actionTabs,
@@ -410,7 +379,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
   const closeMenu = React.useCallback(() => {
     setMenuAnchorEl(null);
-  }, []);
+  }, [setMenuAnchorEl]);
 
   return (
     <Box

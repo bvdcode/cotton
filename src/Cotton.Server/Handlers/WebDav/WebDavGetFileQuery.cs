@@ -1,7 +1,9 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Database;
 using Cotton.Server.Extensions;
+using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Server.Services.WebDav;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
@@ -37,9 +39,14 @@ public record WebDavGetFileResult(
 public class WebDavGetFileQueryHandler(
     IWebDavPathResolver _pathResolver,
     IStoragePipeline _storage,
+    CottonDbContext _dbContext,
+    FileGraphIntegrityVerifier _fileGraphIntegrity,
     ILogger<WebDavGetFileQueryHandler> _logger)
     : IRequestHandler<WebDavGetFileQuery, WebDavGetFileResult>
 {
+    /// <summary>
+    /// Handles the request through the mediator pipeline.
+    /// </summary>
     public async Task<WebDavGetFileResult> Handle(WebDavGetFileQuery request, CancellationToken ct)
     {
         var resolveResult = await _pathResolver.ResolvePathAsync(request.UserId, request.Path, ct);
@@ -57,6 +64,8 @@ public class WebDavGetFileQueryHandler(
         }
 
         var nodeFile = resolveResult.NodeFile!;
+        _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "webdav.get");
+
         var manifest = nodeFile.FileManifest;
 
         var chunkHashes = manifest.FileManifestChunks

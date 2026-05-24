@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
@@ -253,7 +253,7 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         await AssertBadRequestProblemDetailsAsync(
             response,
             "/api/v1/server/settings/email-mode/Cloud",
-            "Telemetry must be enabled to use cloud email service.");
+            "Telemetry must be enabled to use Cotton Bridge Mail.");
     }
 
     [Test]
@@ -267,7 +267,7 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         await AssertBadRequestProblemDetailsAsync(
             response,
             "/api/v1/server/settings/compution-mode/Cloud",
-            "Telemetry must be enabled to use cloud AI service.");
+            "Telemetry must be enabled to use Cotton Bridge AI.");
     }
 
     [Test]

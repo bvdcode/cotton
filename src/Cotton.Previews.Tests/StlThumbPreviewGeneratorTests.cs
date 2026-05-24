@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -10,6 +10,17 @@ namespace Cotton.Previews.Tests;
 
 public class StlThumbPreviewGeneratorTests
 {
+    [Test]
+    public void MeshGenerators_ReportCurrentPreviewVersion()
+    {
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(new StlThumbPreviewGenerator().Version, Is.EqualTo(8));
+            Assert.That(StlThumbPreviewGenerator.CreateObjGenerator().Version, Is.EqualTo(8));
+            Assert.That(StlThumbPreviewGenerator.CreateThreeMfGenerator().Version, Is.EqualTo(8));
+        }
+    }
+
     [Test]
     public void GeneratePreviewWebPAsync_StlInvalidContent_Throws()
     {

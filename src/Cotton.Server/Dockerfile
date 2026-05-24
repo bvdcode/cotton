@@ -16,7 +16,7 @@ RUN set -eux \
     && echo "deb [signed-by=/etc/apt/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
         > /etc/apt/sources.list.d/pgdg.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends postgresql-client-18 f3d xvfb xauth gosu libosmesa6 libgl1 libgl1-mesa-dri libegl1 libglx-mesa0 \
+    && apt-get install -y --no-install-recommends postgresql-client-18 ffmpeg f3d xvfb xauth gosu libosmesa6 libgl1 libgl1-mesa-dri libegl1 libglx-mesa0 \
     && apt-get purge -y --auto-remove curl gnupg \
     && rm -rf /var/lib/apt/lists/*
 
@@ -42,6 +42,7 @@ COPY ["Directory.Build.props", "./"]
 COPY ["Cotton.Server/Cotton.Server.csproj", "Cotton.Server/"]
 COPY ["cotton.client/cotton.client.esproj", "cotton.client/"]
 COPY ["Cotton.Shared/Cotton.csproj", "Cotton.Shared/"]
+COPY ["Cotton.Crypto/Cotton.Crypto.csproj", "Cotton.Crypto/"]
 COPY ["Cotton.Storage/Cotton.Storage.csproj", "Cotton.Storage/"]
 COPY ["Cotton.Topology/Cotton.Topology.csproj", "Cotton.Topology/"]
 COPY ["Cotton.Previews/Cotton.Previews.csproj", "Cotton.Previews/"]
@@ -71,6 +72,8 @@ ARG BUILD_VERSION=dev
 ENV APP_VERSION=$BUILD_VERSION
 COPY --from=publish /app/publish .
 COPY --chmod=0755 ["Cotton.Server/docker-entrypoint.sh", "/usr/local/bin/cotton-entrypoint"]
+# Compatibility bridge for existing root-owned self-hosted volumes.
+# Remove the APP_UID fallback and require explicit non-root ownership after the migration window closes.
 RUN set -eux \
     && mkdir -p /app/files \
     && chown -R "${APP_UID:-1654}:${APP_UID:-1654}" /app/files

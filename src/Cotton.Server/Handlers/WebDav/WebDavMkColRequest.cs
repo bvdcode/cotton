@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Database.Models;
@@ -27,11 +27,26 @@ public record WebDavMkColResult(
     WebDavMkColError? Error = null,
     Guid? NodeId = null);
 
+/// <summary>
+/// Lists the supported web dav mk col error values.
+/// </summary>
 public enum WebDavMkColError
 {
+    /// <summary>
+    /// Represents the parent not found option.
+    /// </summary>
     ParentNotFound,
+    /// <summary>
+    /// Represents the already exists option.
+    /// </summary>
     AlreadyExists,
+    /// <summary>
+    /// Represents the invalid name option.
+    /// </summary>
     InvalidName,
+    /// <summary>
+    /// Represents the conflict option.
+    /// </summary>
     Conflict
 }
 
@@ -45,6 +60,9 @@ public class WebDavMkColRequestHandler(
     ILogger<WebDavMkColRequestHandler> _logger)
     : IRequestHandler<WebDavMkColRequest, WebDavMkColResult>
 {
+    /// <summary>
+    /// Handles the request through the mediator pipeline.
+    /// </summary>
     public async Task<WebDavMkColResult> Handle(WebDavMkColRequest request, CancellationToken ct)
     {
         var parent = await ResolveValidatedParentAsync(request, "path", ct);

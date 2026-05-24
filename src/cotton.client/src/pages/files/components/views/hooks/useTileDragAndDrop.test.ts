@@ -152,6 +152,51 @@ describe("useTileDragAndDrop drag start", () => {
     });
   });
 
+  it("drags all selected tiles when selection mode is active", () => {
+    const moveSupport = makeMoveSupport("current-parent");
+    const { result } = renderHook(() =>
+      useTileDragAndDrop({
+        tiles: [
+          makeFolderTile("folder-1", "current-parent"),
+          makeFileTile("file-1", "current-parent"),
+          makeFileTile("file-2", "current-parent"),
+        ],
+        moveSupport,
+        selectionMode: true,
+        selectedIds: new Set(["folder-1", "file-2"]),
+      }),
+    );
+    const dataTransfer = new FakeDataTransfer();
+
+    act(() =>
+      result.current.handleMoveDragStart(
+        "folder-1",
+        makeDragEvent(dataTransfer),
+      ),
+    );
+
+    expect(JSON.parse(dataTransfer.getData(MOVE_DRAG_DATA_MIME))).toEqual({
+      items: [
+        {
+          id: "folder-1",
+          kind: "folder",
+          sourceParentId: "current-parent",
+        },
+        {
+          id: "file-2",
+          kind: "file",
+          sourceParentId: "current-parent",
+          file: {
+            name: "file-2.txt",
+            contentType: "text/plain",
+            sizeBytes: 1,
+            metadata: {},
+          },
+        },
+      ],
+    });
+  });
+
   it("prevents dragging unknown tiles or tiles without parent context", () => {
     const { result } = renderHook(() =>
       useTileDragAndDrop({

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Benchmark.Abstractions;
 using Cotton.Benchmark.Models;
@@ -12,6 +12,7 @@ namespace Cotton.Benchmark.Benchmarks
     /// </summary>
     public abstract class BenchmarkBase(BenchmarkConfiguration configuration) : IBenchmark
     {
+        /// <summary>Benchmark configuration shared by warmup and measured iterations.</summary>
         protected readonly BenchmarkConfiguration _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
         /// <inheritdoc/>
@@ -38,8 +39,15 @@ namespace Cotton.Benchmark.Benchmarks
                 for (int i = 0; i < _configuration.MeasuredIterations; i++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+                    long allocatedBefore = GC.GetTotalAllocatedBytes(precise: false);
                     var iterationMetrics = await MeasureIterationAsync(cancellationToken);
-                    metrics.Add(iterationMetrics);
+                    long managedAllocatedBytes = Math.Max(0, GC.GetTotalAllocatedBytes(precise: false) - allocatedBefore);
+                    using var process = Process.GetCurrentProcess();
+                    process.Refresh();
+                    metrics.Add(iterationMetrics.WithMemory(
+                        managedAllocatedBytes,
+                        process.WorkingSet64,
+                        process.PeakWorkingSet64));
                 }
 
                 stopwatch.Stop();
@@ -73,16 +81,63 @@ namespace Cotton.Benchmark.Benchmarks
             var minThroughput = metrics.Min(m => m.MegabytesPerSecond);
             var maxThroughput = metrics.Max(m => m.MegabytesPerSecond);
             var avgDuration = TimeSpan.FromMilliseconds(metrics.Average(m => m.Duration.TotalMilliseconds));
+            var durationsMs = metrics
+                .Select(m => m.Duration.TotalMilliseconds)
+                .OrderBy(x => x)
+                .ToArray();
 
-            return new Dictionary<string, object>
+            var aggregated = new Dictionary<string, object>
             {
-                ["AvgThroughput"] = $"{avgThroughput:F2} MB/s",
-                ["MinThroughput"] = $"{minThroughput:F2} MB/s",
-                ["MaxThroughput"] = $"{maxThroughput:F2} MB/s",
-                ["AvgDuration"] = avgDuration,
+                ["AvgThroughputMBps"] = avgThroughput,
+                ["MinThroughputMBps"] = minThroughput,
+                ["MaxThroughputMBps"] = maxThroughput,
+                ["AvgDurationMs"] = avgDuration.TotalMilliseconds,
+                ["P50DurationMs"] = Percentile(durationsMs, 0.50),
+                ["P95DurationMs"] = Percentile(durationsMs, 0.95),
                 ["Iterations"] = metrics.Count,
+                ["DataSizeBytes"] = _configuration.DataSizeBytes,
                 ["DataSize"] = FormatBytes(_configuration.DataSizeBytes)
             };
+
+            AddMemoryMetrics(aggregated, metrics);
+            return aggregated;
+        }
+
+        /// <summary>
+        /// Adds shared managed allocation and process working-set metrics to an aggregate result.
+        /// </summary>
+        protected static void AddMemoryMetrics(
+            IDictionary<string, object> target,
+            IReadOnlyList<PerformanceMetrics> metrics)
+        {
+            target["AvgManagedAllocatedBytes"] = metrics.Average(m => m.ManagedAllocatedBytes);
+            target["MaxManagedAllocatedBytes"] = metrics.Max(m => m.ManagedAllocatedBytes);
+            target["MaxWorkingSetBytes"] = metrics.Max(m => m.WorkingSetBytes);
+            target["MaxPeakWorkingSetBytes"] = metrics.Max(m => m.PeakWorkingSetBytes);
+        }
+
+        private static double Percentile(IReadOnlyList<double> sortedValues, double percentile)
+        {
+            if (sortedValues.Count == 0)
+            {
+                return 0;
+            }
+
+            if (sortedValues.Count == 1)
+            {
+                return sortedValues[0];
+            }
+
+            double index = (sortedValues.Count - 1) * percentile;
+            int lowerIndex = (int)Math.Floor(index);
+            int upperIndex = (int)Math.Ceiling(index);
+            if (lowerIndex == upperIndex)
+            {
+                return sortedValues[lowerIndex];
+            }
+
+            double weight = index - lowerIndex;
+            return sortedValues[lowerIndex] * (1 - weight) + sortedValues[upperIndex] * weight;
         }
 
         /// <summary>

@@ -1,5 +1,5 @@
 ﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Handlers.Files;
@@ -161,6 +161,35 @@ public class LayoutAndFilesTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Shared_Children_Rejects_Tampered_Ancestor_Path()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var sharedRoot = await CreateNodeAsync(root!.Id, "shared-root");
+        var outsideParent = await CreateNodeAsync(root.Id, "outside-parent");
+        var outsideChild = await CreateNodeAsync(outsideParent.Id, "outside-child");
+
+        var shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{sharedRoot.Id}/share-link");
+        shareLinkRes.EnsureSuccessStatusCode();
+        string shareLink = (await shareLinkRes.Content.ReadAsStringAsync()).Trim('"');
+        string shareToken = shareLink.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
+
+        await DbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"UPDATE nodes SET parent_id = {sharedRoot.Id} WHERE id = {outsideParent.Id}");
+
+        _client.DefaultRequestHeaders.Authorization = null;
+
+        var response = await _client.GetAsync(
+            $"/api/v1/layouts/shared/{shareToken}/children?nodeId={outsideChild.Id}");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+    }
+
+    [Test]
     public async Task Shared_Folder_Page_Contains_Social_Preview_Meta_Tags()
     {
         var token = await LoginAsync();
@@ -192,6 +221,17 @@ public class LayoutAndFilesTests : IntegrationTestBase
         Assert.That(html, Does.Contain("<meta property=\"og:image\""));
         Assert.That(html, Does.Contain("<meta name=\"twitter:image\""));
         Assert.That(html, Does.Contain("/assets/images/social-preview.jpg"));
+    }
+
+    private async Task<NodeDto> CreateNodeAsync(Guid parentId, string name)
+    {
+        var response = await _client!.PutAsJsonAsync(
+            "/api/v1/layouts/nodes",
+            new CreateNodeRequest { ParentId = parentId, Name = name });
+        response.EnsureSuccessStatusCode();
+        var node = await response.Content.ReadFromJsonAsync<NodeDto>();
+        Assert.That(node, Is.Not.Null);
+        return node!;
     }
 
     private async Task<string> LoginAsync()

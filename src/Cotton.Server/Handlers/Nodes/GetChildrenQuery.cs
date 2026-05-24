@@ -1,3 +1,6 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
@@ -11,23 +14,50 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Nodes
 {
+    /// <summary>
+    /// Represents a get children query sent through the mediator pipeline.
+    /// </summary>
     public class GetChildrenQuery(
         Guid userId, Guid nodeId, NodeType nodeType,
         int page, int pageSize, int depth = 0) : IRequest<NodeContentDto>
     {
+        /// <summary>
+        /// Gets the owning user identifier.
+        /// </summary>
         public Guid UserId { get; } = userId;
+        /// <summary>
+        /// Gets the node identifier.
+        /// </summary>
         public Guid NodeId { get; } = nodeId;
+        /// <summary>
+        /// Gets the node type.
+        /// </summary>
         public NodeType NodeType { get; } = nodeType;
+        /// <summary>
+        /// Gets the page.
+        /// </summary>
         public int Page { get; } = page;
+        /// <summary>
+        /// Gets the page size.
+        /// </summary>
         public int PageSize { get; } = pageSize;
+        /// <summary>
+        /// Gets the depth.
+        /// </summary>
         public int Depth { get; } = depth;
     }
 
+    /// <summary>
+    /// Handles get children queries in the mediator pipeline.
+    /// </summary>
     public class GetChildrenQueryHandler(
         ILayoutService _layouts,
         CottonDbContext _dbContext)
             : IRequestHandler<GetChildrenQuery, NodeContentDto>
     {
+        /// <summary>
+        /// Handles the request through the mediator pipeline.
+        /// </summary>
         public async Task<NodeContentDto> Handle(GetChildrenQuery request, CancellationToken ct)
         {
             var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId);

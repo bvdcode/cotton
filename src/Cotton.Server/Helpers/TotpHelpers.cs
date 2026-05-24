@@ -1,10 +1,19 @@
-﻿using Cotton.Server.Models;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+using Cotton.Server.Models;
 using OtpNet;
 
 namespace Cotton.Server.Helpers
 {
+    /// <summary>
+    /// Contains helper methods for totp.
+    /// </summary>
     public class TotpHelpers
     {
+        /// <summary>
+        /// Creates setup.
+        /// </summary>
         public static TotpSetup CreateSetup(string issuer, string accountName)
         {
             var secretBytes = KeyGeneration.GenerateRandomKey(20); // 160-bit
@@ -19,6 +28,9 @@ namespace Cotton.Server.Helpers
             };
         }
 
+        /// <summary>
+        /// Verifies a TOTP code with the accepted clock window.
+        /// </summary>
         public static bool VerifyCode(string secretBase32, string code)
         {
             var secretBytes = Base32Encoding.ToBytes(secretBase32);

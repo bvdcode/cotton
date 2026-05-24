@@ -13,6 +13,7 @@ import {
   type ModelPreviewProps,
 } from "./modelPreviewTypes";
 import { resolveModelFormat } from "@shared/utils/modelFormats";
+import { resolveDefaultModelColor } from "./modelPalette";
 
 export const ModelPreview: React.FC<ModelPreviewProps> = ({
   source,
@@ -54,7 +55,7 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
     }
   }, [lightingPreset, theme]);
   const defaultPreviewColor = React.useMemo<string>(() => {
-    return theme.palette.error.main;
+    return resolveDefaultModelColor(theme);
   }, [theme]);
   const gridLineColor = React.useMemo(() => {
     return theme.palette.mode === "dark"

@@ -1,10 +1,13 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Microsoft.Extensions.Caching.Memory;
 
 namespace Cotton.Server.Services
 {
+    /// <summary>
+    /// Caches session access token revocation state.
+    /// </summary>
     public sealed class SessionAccessTokenRevocationCache : IDisposable
     {
         private const long EntrySize = 1;
@@ -14,16 +17,25 @@ namespace Cotton.Server.Services
             SizeLimit = MaxEntries,
         });
 
+        /// <summary>
+        /// Indicates whether revoked.
+        /// </summary>
         public bool IsRevoked(Guid userId, string sessionId)
         {
             return _cache.TryGetValue(RevokedKey(userId, sessionId), out bool revoked) && revoked;
         }
 
+        /// <summary>
+        /// Attempts to get active.
+        /// </summary>
         public bool TryGetActive(Guid userId, string sessionId, out bool active)
         {
             return _cache.TryGetValue(ActiveKey(userId, sessionId), out active);
         }
 
+        /// <summary>
+        /// Executes mark active.
+        /// </summary>
         public void MarkActive(Guid userId, string sessionId, TimeSpan duration)
         {
             _cache.Set(
@@ -36,6 +48,9 @@ namespace Cotton.Server.Services
                 });
         }
 
+        /// <summary>
+        /// Executes mark revoked.
+        /// </summary>
         public void MarkRevoked(Guid userId, string sessionId, TimeSpan duration)
         {
             _cache.Set(
@@ -49,6 +64,9 @@ namespace Cotton.Server.Services
             _cache.Remove(ActiveKey(userId, sessionId));
         }
 
+        /// <summary>
+        /// Releases resources held by this instance.
+        /// </summary>
         public void Dispose()
         {
             _cache.Dispose();

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Benchmark.Abstractions;
 using System.Text;
@@ -99,6 +99,9 @@ namespace Cotton.Benchmark.Reporting
             return value switch
             {
                 TimeSpan ts => FormatDuration(ts),
+                double number => number.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
+                float number => number.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
+                decimal number => number.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
                 _ => TruncateString(value.ToString() ?? "", ValueWidth)
             };
         }

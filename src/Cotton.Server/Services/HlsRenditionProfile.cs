@@ -1,28 +1,55 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using System.Globalization;
 
 namespace Cotton.Server.Services
 {
+    /// <summary>
+    /// Lists the supported hls rendition values.
+    /// </summary>
     public enum HlsRendition
     {
+        /// <summary>
+        /// Represents the source option.
+        /// </summary>
         Source,
+        /// <summary>
+        /// Represents the high option.
+        /// </summary>
         High,
+        /// <summary>
+        /// Represents the medium option.
+        /// </summary>
         Medium,
+        /// <summary>
+        /// Represents the low option.
+        /// </summary>
         Low,
     }
 
+    /// <summary>
+    /// Represents hls rendition profile.
+    /// </summary>
     public static class HlsRenditionProfile
     {
         private static readonly HashSet<string> StreamCopyableAudioCodecs =
             new(StringComparer.OrdinalIgnoreCase) { "aac", "mp3" };
 
+        /// <summary>
+        /// Represents encoder plan.
+        /// </summary>
         public sealed record EncoderPlan(string VideoCodecArgs, string AudioCodecArgs, bool IsStreamCopy)
         {
+            /// <summary>
+            /// Gets the combined args.
+            /// </summary>
             public string CombinedArgs => $"{VideoCodecArgs} {AudioCodecArgs}";
         }
 
+        /// <summary>
+        /// Parses value.
+        /// </summary>
         public static HlsRendition Parse(string? value)
         {
             if (string.IsNullOrWhiteSpace(value))
@@ -40,9 +67,15 @@ namespace Cotton.Server.Services
             };
         }
 
+        /// <summary>
+        /// Builds the plan decision for video playback.
+        /// </summary>
         public static EncoderPlan Plan(HlsRendition rendition) =>
             Plan(rendition, videoCodec: null, audioCodec: null);
 
+        /// <summary>
+        /// Builds the plan decision for video playback.
+        /// </summary>
         public static EncoderPlan Plan(HlsRendition rendition, string? videoCodec, string? audioCodec)
         {
             if (rendition == HlsRendition.Source && CanStreamCopy(videoCodec, audioCodec))
@@ -81,6 +114,9 @@ namespace Cotton.Server.Services
                 IsStreamCopy: false);
         }
 
+        /// <summary>
+        /// Indicates whether stream copy.
+        /// </summary>
         public static bool CanStreamCopy(string? videoCodec, string? audioCodec) =>
             string.Equals(videoCodec, "h264", StringComparison.OrdinalIgnoreCase)
             && !string.IsNullOrWhiteSpace(audioCodec)

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Database.Models;
@@ -34,13 +34,34 @@ public record WebDavCopyResult(
     Guid? CopiedNodeId = null,
     Guid? CopiedNodeFileId = null);
 
+/// <summary>
+/// Lists the supported web dav copy error values.
+/// </summary>
 public enum WebDavCopyError
 {
+    /// <summary>
+    /// Represents the source not found option.
+    /// </summary>
     SourceNotFound,
+    /// <summary>
+    /// Represents the destination parent not found option.
+    /// </summary>
     DestinationParentNotFound,
+    /// <summary>
+    /// Represents the destination exists option.
+    /// </summary>
     DestinationExists,
+    /// <summary>
+    /// Represents the invalid name option.
+    /// </summary>
     InvalidName,
+    /// <summary>
+    /// Represents the cannot copy root option.
+    /// </summary>
     CannotCopyRoot,
+    /// <summary>
+    /// Represents the quota exceeded option.
+    /// </summary>
     QuotaExceeded
 }
 
@@ -56,6 +77,9 @@ public class WebDavCopyRequestHandler(
     ILogger<WebDavCopyRequestHandler> _logger)
     : IRequestHandler<WebDavCopyRequest, WebDavCopyResult>
 {
+    /// <summary>
+    /// Handles the request through the mediator pipeline.
+    /// </summary>
     public async Task<WebDavCopyResult> Handle(WebDavCopyRequest request, CancellationToken ct)
     {
         var preconditions = await ResolvePreLockPreconditionsAsync(request, ct);
@@ -193,7 +217,13 @@ public class WebDavCopyRequestHandler(
 
     private sealed record PreLockCopyOutcome(Guid? LayoutId, WebDavCopyResult? Failure)
     {
+        /// <summary>
+        /// Creates a successful operation result.
+        /// </summary>
         public static PreLockCopyOutcome Success(Guid layoutId) => new(layoutId, null);
+        /// <summary>
+        /// Creates a failed operation result.
+        /// </summary>
         public static PreLockCopyOutcome Failed(WebDavCopyResult failure) => new(null, failure);
     }
 
@@ -203,11 +233,17 @@ public class WebDavCopyRequestHandler(
         bool Created,
         WebDavCopyResult? Failure)
     {
+        /// <summary>
+        /// Creates a successful operation result.
+        /// </summary>
         public static LockedCopyOutcome Success(
             WebDavResolveResult source,
             WebDavParentResult destinationParent,
             bool created) => new(source, destinationParent, created, null);
 
+        /// <summary>
+        /// Creates a failed operation result.
+        /// </summary>
         public static LockedCopyOutcome Failed(WebDavCopyResult failure) => new(null, null, false, failure);
     }
 
@@ -217,9 +253,15 @@ public class WebDavCopyRequestHandler(
         long AddedBytes,
         WebDavCopyResult? Failure)
     {
+        /// <summary>
+        /// Creates a successful operation result.
+        /// </summary>
         public static CopyOperationOutcome Success(Guid? nodeId, Guid? nodeFileId, long addedBytes) =>
             new(nodeId, nodeFileId, addedBytes, null);
 
+        /// <summary>
+        /// Creates a failed operation result.
+        /// </summary>
         public static CopyOperationOutcome Failed(WebDavCopyResult failure) => new(null, null, 0, failure);
     }
 

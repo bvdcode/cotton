@@ -1,4 +1,7 @@
-﻿using Cotton.Database;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Services;
@@ -11,13 +14,28 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Nodes
 {
+    /// <summary>
+    /// Represents a delete node query sent through the mediator pipeline.
+    /// </summary>
     public class DeleteNodeQuery(Guid userId, Guid nodeId, bool skipTrash) : IRequest
     {
+        /// <summary>
+        /// Gets the owning user identifier.
+        /// </summary>
         public Guid UserId { get; } = userId;
+        /// <summary>
+        /// Gets the node identifier.
+        /// </summary>
         public Guid NodeId { get; } = nodeId;
+        /// <summary>
+        /// Gets whether deletion bypasses trash and permanently removes the resource.
+        /// </summary>
         public bool SkipTrash { get; } = skipTrash;
     }
 
+    /// <summary>
+    /// Handles delete node queries in the mediator pipeline.
+    /// </summary>
     public class DeleteNodeQueryHandler(
         CottonDbContext _dbContext,
         ILayoutService _layouts,
@@ -28,6 +46,9 @@ namespace Cotton.Server.Handlers.Nodes
         FileVersionService _versions)
             : IRequestHandler<DeleteNodeQuery>
     {
+        /// <summary>
+        /// Handles the request through the mediator pipeline.
+        /// </summary>
         public async Task Handle(DeleteNodeQuery request, CancellationToken ct)
         {
             var node = await _dbContext.Nodes
@@ -98,16 +119,23 @@ namespace Cotton.Server.Handlers.Nodes
         {
             var ids = (await _subtree.CollectSubtreeIdsAsync(userId, rootId, ct)).ToArray();
 
-            await _dbContext.Nodes
+            List<Node> nodes = await _dbContext.Nodes
                 .Where(x => x.OwnerId == userId && ids.Contains(x.Id))
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(x => x.Type, NodeType.Trash), ct);
+                .ToListAsync(ct);
+            foreach (Node descendant in nodes)
+            {
+                descendant.Type = NodeType.Trash;
+            }
 
-            await _dbContext.DownloadTokens
+            DateTime now = DateTime.UtcNow;
+            List<DownloadToken> downloadTokens = await _dbContext.DownloadTokens
                 .Where(t => t.CreatedByUserId == userId && ids.Contains(t.NodeFile.NodeId)
-                    && (!t.ExpiresAt.HasValue || t.ExpiresAt.Value > DateTime.UtcNow))
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(t => t.ExpiresAt, DateTime.UtcNow), ct);
+                    && (!t.ExpiresAt.HasValue || t.ExpiresAt.Value > now))
+                .ToListAsync(ct);
+            foreach (DownloadToken token in downloadTokens)
+            {
+                token.ExpiresAt = now;
+            }
         }
 
         private async Task DeletePermanentlyAsync(DeleteNodeQuery command, Node node, CancellationToken ct)
@@ -125,13 +153,16 @@ namespace Cotton.Server.Handlers.Nodes
                 .Where(t => t.CreatedByUserId == command.UserId && nodeIds.Contains(t.NodeFile.NodeId))
                 .ExecuteDeleteAsync(ct);
 
-            long removedBytes = await _dbContext.NodeFiles
-                .Where(x => x.OwnerId == command.UserId && nodeIds.Contains(x.NodeId))
-                .SumAsync(x => (long?)x.FileManifest.SizeBytes, ct) ?? 0;
-
             var nodeFiles = await _dbContext.NodeFiles
+                .Include(x => x.FileManifest)
                 .Where(x => x.OwnerId == command.UserId && nodeIds.Contains(x.NodeId))
                 .ToListAsync(ct);
+            Guid[] nodeFileIds = [.. nodeFiles.Select(x => x.Id)];
+            long removedVersionBytes = await _versions.DeleteLineageVersionsForCurrentFilesAsync(
+                command.UserId,
+                nodeFileIds,
+                ct);
+            long removedBytes = nodeFiles.Sum(x => x.FileManifest.SizeBytes) + removedVersionBytes;
             _dbContext.NodeFiles.RemoveRange(nodeFiles);
 
             var nodesToDelete = await _dbContext.Nodes

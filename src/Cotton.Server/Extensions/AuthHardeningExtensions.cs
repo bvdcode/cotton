@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Auth;
 using Cotton.Server.Services;
@@ -11,8 +11,14 @@ using System.Threading.RateLimiting;
 
 namespace Cotton.Server.Extensions
 {
+    /// <summary>
+    /// Contains extension methods for configuring auth hardening.
+    /// </summary>
     public static class AuthHardeningExtensions
     {
+        /// <summary>
+        /// Registers auth hardening services.
+        /// </summary>
         public static IServiceCollection AddAuthHardening(this IServiceCollection services)
         {
             services.AddSingleton<SessionAccessTokenRevocationCache>();
@@ -22,6 +28,9 @@ namespace Cotton.Server.Extensions
             return services;
         }
 
+        /// <summary>
+        /// Adds auth hardening middleware to the application pipeline.
+        /// </summary>
         public static IApplicationBuilder UseAuthHardening(this IApplicationBuilder app)
         {
             return app.UseRateLimiter();

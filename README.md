@@ -113,18 +113,20 @@ In short: unlike systems that are mostly a filesystem wrapper, Cotton is designe
 - Upload multi-GB files and large folders from the browser while the UI stays responsive.
 - Re-send only missing chunks after interruptions instead of restarting an entire upload.
 - Inspect active sessions (device/IP/location metadata) and revoke individual sessions without terminating every login.
+- Register passkeys/security keys and sign in with WebAuthn in addition to password and TOTP flows.
 - Run public/demo instances with per-browser generated credentials, default onboarding files, and default user quotas instead of a shared demo account.
 - Stream, seek, and partially download large media without reassembling the whole file first.
+- Download selected files and whole folders as stored, uncompressed ZIP archives with UTF-8 filenames, ZIP64 metadata, and known content length when the archive ticket is prepared.
 - Extract previews and video frames from chunked encrypted storage without a full download, including when the backend is S3-backed.
-- Update file content while preserving previous content versions in a restore-friendly lineage.
+- Update file content while preserving version history; users can open the Versions dialog, download old versions, restore a previous version, and prune non-original history while the original version is retained.
 - Use built-in deduplication, inline compression, and streaming encryption in the main storage path.
 - Share files and folders with expiring links, share pages, previews, and native OS/browser share integration where available.
 - Generate previews for images, SVG, HEIC, PDF, text, audio, video, and 3D model content including STL, OBJ, and 3MF.
-- Use the existing **WebDAV v1** implementation today for standard sync clients, phone auto-sync, and other protocol-level workflows while native Cotton clients are still in development. In Cotton, WebDAV is an important compatibility path for the early stage, not the long-term center of gravity for the product.
+- Use the existing **WebDAV v1** implementation today for standard sync clients, phone auto-sync, and other protocol-level workflows while native Cotton clients are still in development. WebDAV PROPFIND exposes `quota-used-bytes` and `quota-available-bytes`, so clients such as rclone can read real quota information. In Cotton, WebDAV is an important compatibility path for the early stage, not the long-term center of gravity for the product.
 - Run background manifest verification and storage consistency checks that surface real integrity problems.
 - Receive useful notifications for failed logins, successful logins, TOTP events, WebDAV token resets, shared-file downloads, upload verification failures, and missing storage chunks.
 - Configure the instance through a setup wizard with safe defaults, cloud email or custom SMTP, storage choices, telemetry preferences, and timezone selection.
-- Review an admin security checkup score with concrete warnings for public mode, master-key source, admin 2FA coverage, .NET diagnostics, Linux dumpability, seccomp, ptrace capability, and related hardening signals.
+- Review an admin security checkup score with concrete warnings for public mode, master-key source, admin 2FA coverage, database-integrity rollout state, .NET diagnostics, Linux dumpability, seccomp, ptrace capability, writable rootfs, Docker socket exposure, likely host PID namespace, core dump settings, and AppArmor/SELinux confinement.
 - Offer email verification and a forgot-password flow as first-class product behavior.
 - Start with a simple Docker + Postgres deployment and grow into filesystem or S3-backed storage.
 - Use WebDAV in addition to the web UI when you need protocol-level access.
@@ -207,7 +209,11 @@ This is the core difference from the more common self-hosted experience: Cotton'
   The virtualized folder UI and structural metadata model are designed so listing and navigation remain responsive on ordinary hardware.
 
 - **Benchmarks use real production code**  
-  The dedicated benchmark suite exercises the real compression processor, crypto processor, filesystem backend, and full storage pipeline rather than mocks. See [src/Cotton.Benchmark/README.md](src/Cotton.Benchmark/README.md).
+  The dedicated benchmark suite exercises the real compression processor, crypto processor, filesystem backend, full storage pipeline, and image-preview memory paths rather than mocks. Reviewed local baselines live under [performance/baselines](performance/baselines), while raw runs stay ignored. See [src/Cotton.Benchmark/README.md](src/Cotton.Benchmark/README.md).
+
+- **Storage-pipeline telemetry measures real deployments**
+
+  When telemetry is enabled, Cotton can run a bounded warmup + measured storage probe through the configured storage pipeline, then report backend type and observed read/write throughput without committing synthetic giant files to user-visible storage.
 
 If you are comparing Cotton to the usual self-hosted stack, this matters: the engine is built with enough throughput headroom that storage and networking stay the dominant limits on normal hardware.
 
@@ -226,6 +232,10 @@ If you are comparing Cotton to the usual self-hosted stack, this matters: the en
 
 - **Storage consistency is checked against reality**  
   Cotton periodically re-checks stored data in the background (batch-by-batch) against the real storage backend. If a disk starts failing and real file chunks go missing or become unreadable, affected users get explicit notifications so operators can react immediately instead of discovering silent data loss later.
+
+- **Database integrity signatures protect high-value rows**
+
+  Cotton signs protected database rows with key material derived from the master key. Read-boundary verification detects tampering in users, passkey credentials, refresh/download/share tokens, server settings, nodes, node files, file manifests, manifest chunks, and chunks. During the current rollout window, bridge mode signs unsigned legacy rows at startup; invalid signatures are still treated as integrity failures, and the admin checkup warns while bridge mode remains enabled.
 
 - **Storage pressure is guarded on local disks**
   On filesystem-backed storage, Cotton checks the mounted volume free space through a short-lived cache before accepting new physical chunk writes. If the configured reserve would be crossed, uploads return HTTP 507 and admins get a throttled high-priority notification. S3-compatible backends are treated as unknown-capacity unless the provider exposes a hard limit, so Cotton does not invent an expensive bucket-size scan on the hot path.
@@ -348,7 +358,7 @@ Cotton also exposes an admin-only security diagnostics page in the web UI (`/adm
 GET /api/v1/server/security/status
 ```
 
-It reports process/container hardening signals such as .NET diagnostics state, Linux dumpability, effective UID, `no-new-privileges`, seccomp mode, `CAP_SYS_PTRACE`, whether the instance was unlocked from environment or browser unlock, whether public/demo mode is enabled, and how many admin accounts still lack 2FA. The UI turns those signals into a 0-10 security score plus human-readable threat vectors. It is intentionally **not** public: it is an operator check, not a healthcheck endpoint.
+It reports process/container hardening signals such as .NET diagnostics state, Linux dumpability, effective UID, `no-new-privileges`, seccomp mode, `CAP_SYS_PTRACE`, read-only root filesystem state, Docker socket exposure, likely host PID namespace use, core dump limits and `core_pattern`, AppArmor and SELinux confinement, whether the instance was unlocked from environment or browser unlock, whether public/demo mode is enabled, database-integrity bridge state, and how many admin accounts still lack 2FA. The UI turns those signals into a 0-10 security score plus human-readable threat vectors. It is intentionally **not** public: it is an operator check, not a healthcheck endpoint.
 
 ### Paranoia Mode
 
@@ -535,6 +545,16 @@ Downloads and previews properly support `ETag`, `If-None-Match` (304 responses),
 **Download tokens with auto-cleanup**  
 Share tokens can be single-use (`DeleteAfterUse`) and expire after configurable retention. Background job sweeps expired tokens — no manual "clean up shares" UI needed.
 
+**Stored ZIP archive downloads**
+
+Selected files and folders can be prepared as ticketed archive downloads. Cotton streams stored, uncompressed ZIP output with UTF-8 filenames, empty directory entries, ZIP64 central-directory metadata when needed, and a calculated content length so browsers can show a real download size.
+_See: `src/Cotton.Server/Controllers/ArchiveController.cs`, `src/Cotton.Server/Services/ArchiveDownloadService.cs`, `src/Cotton.Server/Services/StoredZipArchiveWriter.cs`_
+
+**File version workflow**
+
+File updates keep a version lineage that is visible in the web UI. Users can open the Versions dialog from a file action menu, inspect previous versions, download an old version, restore it as the active file content, or remove retained non-original versions according to retention policy.
+_See: `src/Cotton.Server/Services/FileVersionService.cs`, `src/Cotton.Server/Services/FileVersionRetentionService.cs`, `src/cotton.client/src/pages/files/components/FileVersionsDialog.tsx`_
+
 **GC-aware chunk ingest**  
 The garbage collector coordinates with ingestion: if a chunk is currently being deleted, the ingest path will refuse/hold concurrent uploads of that same chunk until the delete completes—this prevents rare races and windows where a delete and an upload could conflict. The behavior is deliberate: safety first, then fast reconciliation.  
 _See: `src/Cotton.Server/Jobs/GarbageCollectorJob.cs`, `src/Cotton.Server/Services/ChunkUsageService.cs`, `src/Cotton.Server/Services/ChunkIngestService.cs`_
@@ -548,8 +568,8 @@ _See: `src/Cotton.Storage/Abstractions/IStorageCapacityReporter.cs`, `src/Cotton
 _See: `src/cotton.client/src/pages/login/demoCredentials.ts`, `src/Cotton.Server/Services/DefaultUserContentSeeder.cs`, `src/Cotton.Server/Controllers/SettingsController.cs`_
 
 **Admin security checkup**
-The admin security page consumes server diagnostics, scores the instance, and explains concrete warning vectors such as public account creation, master key in environment metadata, admins without 2FA, enabled .NET diagnostics, dumpable Linux processes, seccomp off, and effective `CAP_SYS_PTRACE`.
-_See: `src/Cotton.Server/Services/SecurityDiagnosticsService.cs`, `src/cotton.client/src/pages/admin/security/AdminSecurityDiagnosticsPage.tsx`_
+The admin security page consumes server diagnostics, scores the instance, and explains concrete warning vectors such as public account creation, master key in environment metadata, admins without 2FA, enabled .NET diagnostics, dumpable Linux processes, writable root filesystems, Docker socket mounts, likely host PID namespace use, core dump configuration, missing AppArmor/SELinux confinement, seccomp off, effective `CAP_SYS_PTRACE`, and database integrity bridge mode.
+_See: `src/Cotton.Server/Services/SecurityDiagnosticsService.cs`, `src/Cotton.Server/Services/LinuxContainerSecurity.cs`, `src/cotton.client/src/pages/admin/security/AdminSecurityDiagnosticsPage.tsx`_
 
 **Industrial-strength NameValidator**  
 Enforces Unicode normalization (NFC), grapheme cluster limits, bans zero-width/control chars, forbids `.`/`..`, blocks Windows reserved names (`CON`, `PRN`, etc.), trims trailing dots/spaces. Generates case-insensitive, diacritic-stripped `NameKey` for collision detection.
@@ -563,8 +583,23 @@ Browser uploads hash chunks in a Web Worker (one pass for both chunk-hash and ro
 **Session management with actionable telemetry**  
 Session inspection groups refresh-token activity by session and surfaces practical metadata (device, IP, location, current-session flag, effective session duration), so users can revoke exactly the session they do not trust instead of forcing a global logout.
 
+**Passkeys and hardware security keys**
+
+Users can register WebAuthn credentials, rename/delete them from profile settings, and sign in with platform passkeys or external security keys. Credential metadata is stored as a normal account security surface and is covered by database integrity signatures.
+_See: `src/Cotton.Server/Services/PasskeyService.cs`, `src/cotton.client/src/pages/profile/components/PasskeysCard.tsx`, `src/cotton.client/src/shared/passkeys/webauthn.ts`_
+
 **SignalR hub with resilient client behavior**  
 Realtime updates are delivered through a dedicated event hub, with client reconnect strategy and transport fallback to keep file/tree/preview/notification flows in sync under imperfect network conditions.
+
+**Database integrity signatures**
+
+Protected EF entities carry integrity shadow columns written by descriptors instead of ad-hoc string serialization. The verifier checks signed rows at security-sensitive read boundaries, bridge backfill signs legacy rows during the rollout window, and failure reporting can notify administrators when a signed row no longer matches canonical data.
+_See: `src/Cotton.Server/Services/DatabaseIntegrity`, `src/Cotton.Database/CottonDbContext.cs`, `src/Cotton.Database/Integrity`_
+
+**WebDAV quota properties**
+
+WebDAV `PROPFIND` responses include `quota-used-bytes` and, when the user has a quota, `quota-available-bytes`. This keeps clients such as rclone aligned with Cotton's logical quota service instead of guessing from filesystem capacity.
+_See: `src/Cotton.Server/Services/WebDav/WebDavXmlBuilder.cs`, `src/Cotton.Server/Handlers/WebDav/WebDavPropFindQuery.cs`_
 
 ---
 
