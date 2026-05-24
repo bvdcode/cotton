@@ -16,19 +16,27 @@ type HashChunkMessage = {
   updateFileHash?: boolean;
 };
 
+type UpdateFileHashMessage = {
+  type: "updateFileHash";
+  requestId: string;
+  buffer: ArrayBuffer;
+};
+
 type DigestFileMessage = { type: "digestFile"; requestId: string };
 
-type InMessage = InitMessage | HashChunkMessage | DigestFileMessage;
+type InMessage = InitMessage | HashChunkMessage | UpdateFileHashMessage | DigestFileMessage;
 
 type InitResult = { type: "initResult"; requestId: string };
 
 type HashChunkResult = { type: "hashChunkResult"; requestId: string; chunkHash: string };
 
+type UpdateFileHashResult = { type: "updateFileHashResult"; requestId: string };
+
 type DigestFileResult = { type: "digestFileResult"; requestId: string; fileHash: string };
 
 type ErrorResult = { type: "error"; requestId?: string; message: string };
 
-type OutMessage = InitResult | HashChunkResult | DigestFileResult | ErrorResult;
+type OutMessage = InitResult | HashChunkResult | UpdateFileHashResult | DigestFileResult | ErrorResult;
 
 let initialized = false;
 let currentAlgorithm: SupportedHashAlgorithm | null = null;
@@ -79,6 +87,19 @@ self.onmessage = async (ev: MessageEvent<InMessage>) => {
     if (msg.type === "init") {
       await ensureInitialized(msg.algorithm);
       const out: OutMessage = { type: "initResult", requestId: msg.requestId };
+      self.postMessage(out);
+      return;
+    }
+
+    if (msg.type === "updateFileHash") {
+      if (!initialized || !fileHasher || !currentAlgorithm) {
+        const out: OutMessage = { type: "error", requestId: msg.requestId, message: "Hasher is not initialized" };
+        self.postMessage(out);
+        return;
+      }
+
+      fileHasher.update(new Uint8Array(msg.buffer));
+      const out: OutMessage = { type: "updateFileHashResult", requestId: msg.requestId };
       self.postMessage(out);
       return;
     }

@@ -2,10 +2,11 @@ import type { SupportedHashAlgorithm } from "./hashing";
 
 type InitResult = { type: "initResult"; requestId: string };
 type HashChunkResult = { type: "hashChunkResult"; requestId: string; chunkHash: string };
+type UpdateFileHashResult = { type: "updateFileHashResult"; requestId: string };
 type DigestFileResult = { type: "digestFileResult"; requestId: string; fileHash: string };
 type ErrorResult = { type: "error"; requestId?: string; message: string };
 
-type OutMessage = InitResult | HashChunkResult | DigestFileResult | ErrorResult;
+type OutMessage = InitResult | HashChunkResult | UpdateFileHashResult | DigestFileResult | ErrorResult;
 
 type PendingRequest<T> = {
   resolve: (value: T) => void;
@@ -40,7 +41,7 @@ export class HashWorkerClient {
         return;
       }
 
-      if (msg.type === "initResult") {
+      if (msg.type === "initResult" || msg.type === "updateFileHashResult") {
         const pVoid = this.pendingVoid.get(msg.requestId);
         if (pVoid) {
           this.pendingVoid.delete(msg.requestId);
@@ -91,16 +92,27 @@ export class HashWorkerClient {
       this.pending.set(requestId, { resolve, reject });
     });
 
-    // Transfer ownership of the buffer to avoid copying.
-    this.worker.postMessage(
-      {
-        type: "hashChunk",
-        requestId,
-        buffer,
-        updateFileHash: options?.updateFileHash,
-      },
-      [buffer],
-    );
+    this.worker.postMessage({
+      type: "hashChunk",
+      requestId,
+      buffer,
+      updateFileHash: options?.updateFileHash,
+    });
+    return promise;
+  }
+
+  async updateFileHash(buffer: ArrayBuffer): Promise<void> {
+    await this.ensureInitialized();
+    const requestId = makeRequestId();
+    const promise = new Promise<void>((resolve, reject) => {
+      this.pendingVoid.set(requestId, { resolve, reject });
+    });
+
+    this.worker.postMessage({
+      type: "updateFileHash",
+      requestId,
+      buffer,
+    });
     return promise;
   }
 
