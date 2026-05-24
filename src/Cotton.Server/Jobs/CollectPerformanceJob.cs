@@ -15,11 +15,7 @@ namespace Cotton.Server.Jobs
     /// <summary>
     /// Runs the scheduled collect performance maintenance task.
     /// </summary>
-    /// <remarks>
-    /// Scheduled for 03:37 UTC so the synthetic storage probe avoids the usual evening activity window
-    /// and never runs immediately after startup.
-    /// </remarks>
-    [JobTrigger(startNow: false, cronSchedule: "0 37 3 ? * * *")]
+    [JobTrigger(days: 1)]
     public class CollectPerformanceJob(
         PerfTracker _perf,
         CottonDbContext _dbContext,
@@ -32,7 +28,7 @@ namespace Cotton.Server.Jobs
         /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
-            await Task.Delay(360_000, context.CancellationToken);
+            await Task.Delay(360_000); // Wait for 6 minutes for the server to start up and stabilize
 
             var settings = _settingsProvider.GetServerSettings();
             if (!settings.TelemetryEnabled)
