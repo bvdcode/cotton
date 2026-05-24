@@ -280,5 +280,26 @@ namespace Cotton.Storage.Tests.Backends
                 Assert.DoesNotThrowAsync(async () => await _backend.ReadAsync(uid));
             }
         }
+
+        [Test]
+        public async Task FileSystemBackend_ParallelWrites_SameUid_DeduplicatesWithoutIOException()
+        {
+            // Arrange
+            string uid = NewUid();
+            var data = new byte[2 * 1024 * 1024];
+            RandomNumberGenerator.Fill(data);
+
+            var tasks = Enumerable.Range(0, 16)
+                .Select(_ => _backend.WriteAsync(uid, new MemoryStream(data)))
+                .ToArray();
+
+            // Act & Assert
+            Assert.DoesNotThrowAsync(() => Task.WhenAll(tasks));
+
+            await using var readStream = await _backend.ReadAsync(uid);
+            var result = new MemoryStream();
+            await readStream.CopyToAsync(result);
+            Assert.That(result.ToArray(), Is.EqualTo(data));
+        }
     }
 }

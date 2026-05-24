@@ -30,7 +30,7 @@ public sealed class StoragePipelineProbeServiceTests
         {
             Assert.That(result.PayloadSizeBytes, Is.EqualTo(StoragePipelineProbeService.PayloadSizeBytes));
             Assert.That(result.StorageBackend, Is.EqualTo("local"));
-            Assert.That(result.CompletedAtUtc, Is.Not.EqualTo(default(DateTimeOffset)));
+            Assert.That(result.CompletedAt, Is.Not.EqualTo(default(DateTimeOffset)));
             Assert.That(result.Warmup.IsWarmup, Is.True);
             Assert.That(result.Measured.IsWarmup, Is.False);
             Assert.That(result.Warmup.StoredSizeBytes, Is.EqualTo(StoragePipelineProbeService.PayloadSizeBytes));

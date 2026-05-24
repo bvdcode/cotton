@@ -220,6 +220,11 @@ namespace Cotton.Storage.Backends
                 File.Move(tmpFilePath, filePath, overwrite: false);
                 File.SetAttributes(filePath, FileAttributes.ReadOnly | FileAttributes.NotContentIndexed);
             }
+            catch (IOException ex) when (File.Exists(filePath))
+            {
+                _logger.LogDebug(ex, "File {Uid} was written concurrently, deduplicated temp write", uid);
+                TryDelete(tmpFilePath);
+            }
             catch (Exception)
             {
                 TryDelete(tmpFilePath);

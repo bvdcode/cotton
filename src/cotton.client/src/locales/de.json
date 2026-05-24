@@ -1395,18 +1395,16 @@
         "someItemsSkipped_few": "{{count}} Elemente übersprungen, die nicht gelesen werden konnten.",
         "someItemsSkipped_many": "{{count}} Elemente übersprungen, die nicht gelesen werden konnten.",
         "someItemsSkipped_other": "{{count}} Elemente übersprungen, die nicht gelesen werden konnten.",
-        "someItemsSkippedWithExamples_one": "{{count}} Element übersprungen (z. B. {{examples}}).",
-        "someItemsSkippedWithExamples_few": "{{count}} Elemente übersprungen (z. B. {{examples}}).",
-        "someItemsSkippedWithExamples_many": "{{count}} Elemente übersprungen (z. B. {{examples}}).",
-        "someItemsSkippedWithExamples_other": "{{count}} Elemente übersprungen (z. B. {{examples}}).",
-        "more_one": " +{{count}} mehr",
-        "more_few": " +{{count}} mehr",
-        "more_many": " +{{count}} mehr",
-        "more_other": " +{{count}} mehr",
-        "vaultLocked": "Verschlüsselte Uploads erfordern, dass dein Verschlüsselungs-Tresor zuerst entsperrt wird."
+        "vaultLocked": "Verschlüsselte Uploads erfordern, dass dein Verschlüsselungs-Tresor zuerst entsperrt wird.",
+        "details": "Details"
       },
       "errors": {
         "dropFailed": "Abgelegte Elemente konnten nicht verarbeitet werden. Bitte versuche es erneut."
+      },
+      "skippedDialog": {
+        "title": "Übersprungene Elemente",
+        "description": "Der Browser hat {{count}} Elemente gemeldet, konnte sie aber nicht vom Datenträger lesen.",
+        "truncated": "Die ersten {{count}} übersprungenen Elemente werden angezeigt."
       }
     },
     "refreshing": "Aktualisiere…",

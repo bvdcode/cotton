@@ -1,5 +1,17 @@
 import React, { useEffect, useMemo } from "react";
-import { Alert, Box, Dialog, DialogTitle } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  List,
+  ListItem,
+  ListItemText,
+  Typography,
+} from "@mui/material";
 import { ContentCut, ContentPaste, Delete, Download } from "@mui/icons-material";
 import { toast } from "@shared/ui/notifications";
 import {
@@ -1197,6 +1209,14 @@ const FilesPreviewLayers: React.FC<FilesPreviewLayersProps> = ({
       onExited={fileUpload.conflictDialog.onExited}
     />
 
+    <SkippedUploadItemsDialog
+      open={fileUpload.skippedItemsDialog.state.open}
+      total={fileUpload.skippedItemsDialog.state.total}
+      items={fileUpload.skippedItemsDialog.state.items}
+      truncated={fileUpload.skippedItemsDialog.state.truncated}
+      onClose={fileUpload.skippedItemsDialog.onClose}
+    />
+
     <FileVersionsDialog
       open={versionDialogFile !== null}
       fileId={versionDialogFile?.id ?? null}
@@ -1206,6 +1226,60 @@ const FilesPreviewLayers: React.FC<FilesPreviewLayersProps> = ({
     />
   </>
 );
+
+type SkippedUploadItemsDialogProps = {
+  open: boolean;
+  total: number;
+  items: string[];
+  truncated: boolean;
+  onClose: () => void;
+};
+
+const SkippedUploadItemsDialog: React.FC<SkippedUploadItemsDialogProps> = ({
+  open,
+  total,
+  items,
+  truncated,
+  onClose,
+}) => {
+  const { t } = useTranslation(["files", "common"]);
+
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+      <DialogTitle>{t("uploadDrop.skippedDialog.title", { ns: "files" })}</DialogTitle>
+      <DialogContent dividers>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          {t("uploadDrop.skippedDialog.description", { ns: "files", count: total })}
+        </Typography>
+
+        {items.length > 0 && (
+          <List dense disablePadding sx={{ maxHeight: 360, overflow: "auto" }}>
+            {items.map((item, index) => (
+              <ListItem key={`${item}-${index}`} disableGutters>
+                <ListItemText
+                  primary={item}
+                  primaryTypographyProps={{
+                    variant: "body2",
+                    sx: { overflowWrap: "anywhere", wordBreak: "break-word" },
+                  }}
+                />
+              </ListItem>
+            ))}
+          </List>
+        )}
+
+        {truncated && (
+          <Alert severity="info" sx={{ mt: 2 }}>
+            {t("uploadDrop.skippedDialog.truncated", { ns: "files", count: items.length })}
+          </Alert>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t("common:actions.close")}</Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
 
 type FilesEncryptionPromptsProps = Pick<
   FilesPageViewProps,

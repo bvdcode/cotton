@@ -1405,18 +1405,16 @@
         "someItemsSkipped_few": "{{count}} éléments ignorés car illisibles.",
         "someItemsSkipped_many": "{{count}} éléments ignorés car illisibles.",
         "someItemsSkipped_other": "{{count}} éléments ignorés car illisibles.",
-        "someItemsSkippedWithExamples_one": "{{count}} élément ignoré (ex. {{examples}}).",
-        "someItemsSkippedWithExamples_few": "{{count}} éléments ignorés (ex. {{examples}}).",
-        "someItemsSkippedWithExamples_many": "{{count}} éléments ignorés (ex. {{examples}}).",
-        "someItemsSkippedWithExamples_other": "{{count}} éléments ignorés (ex. {{examples}}).",
-        "more_one": " +{{count}} de plus",
-        "more_few": " +{{count}} de plus",
-        "more_many": " +{{count}} de plus",
-        "more_other": " +{{count}} de plus",
-        "vaultLocked": "Les téléversements chiffrés nécessitent d'abord de déverrouiller votre coffre-fort de chiffrement."
+        "vaultLocked": "Les téléversements chiffrés nécessitent d'abord de déverrouiller votre coffre-fort de chiffrement.",
+        "details": "Détails"
       },
       "errors": {
         "dropFailed": "Échec du traitement des éléments déposés. Veuillez réessayer."
+      },
+      "skippedDialog": {
+        "title": "Éléments ignorés",
+        "description": "Le navigateur a signalé {{count}} éléments, mais n’a pas pu les lire depuis le disque.",
+        "truncated": "Affichage des {{count}} premiers éléments ignorés."
       }
     },
     "refreshing": "Actualisation…",

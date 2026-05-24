@@ -120,6 +120,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const isActive = useActivityDetection(TOUCH_CONTROLS_AUTOHIDE_MS);
   const [touchControlsVisible, setTouchControlsVisible] =
     React.useState<boolean>(true);
+  const [isClosing, setIsClosing] = React.useState(false);
   const touchControlsTimerRef = React.useRef<number | null>(null);
 
   const clearTouchControlsTimer = React.useCallback(() => {
@@ -420,13 +421,15 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     [],
   );
 
+  const mediaPlaybackActive = open && !isClosing;
+
   const lightboxVideo = React.useMemo(
     () => ({
       controls: true,
       playsInline: true,
-      autoPlay: true,
+      autoPlay: mediaPlaybackActive,
     }),
-    [],
+    [mediaPlaybackActive],
   );
 
   const lightboxCarousel = React.useMemo(
@@ -441,6 +444,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   );
 
   const handleClose = React.useCallback(() => {
+    setIsClosing(true);
     stopLightboxMediaPlayback();
     setTouchControlsVisible(true);
     onClose();
@@ -448,6 +452,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 
   React.useEffect(() => {
     if (!open) {
+      setIsClosing(false);
       stopLightboxMediaPlayback();
     }
 
@@ -478,7 +483,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       close={handleClose}
       className={lightboxClassName}
       plugins={plugins}
-      slides={slides}
+      slides={mediaPlaybackActive ? slides : []}
       index={index}
       controller={lightboxController}
       animation={lightboxAnimation}

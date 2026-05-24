@@ -1409,18 +1409,16 @@
         "someItemsSkipped_few": "Pominięto {{count}} elementy, których nie udało się odczytać.",
         "someItemsSkipped_many": "Pominięto {{count}} elementów, których nie udało się odczytać.",
         "someItemsSkipped_other": "Pominięto {{count}} elementu, którego nie udało się odczytać.",
-        "someItemsSkippedWithExamples_one": "Pominięto {{count}} element (np. {{examples}}).",
-        "someItemsSkippedWithExamples_few": "Pominięto {{count}} elementy (np. {{examples}}).",
-        "someItemsSkippedWithExamples_many": "Pominięto {{count}} elementów (np. {{examples}}).",
-        "someItemsSkippedWithExamples_other": "Pominięto {{count}} elementu (np. {{examples}}).",
-        "more_one": " +{{count}} więcej",
-        "more_few": " +{{count}} więcej",
-        "more_many": " +{{count}} więcej",
-        "more_other": " +{{count}} więcej",
-        "vaultLocked": "Zaszyfrowane przesyłanie wymaga uprzedniego odblokowania sejfu szyfrowania."
+        "vaultLocked": "Zaszyfrowane przesyłanie wymaga uprzedniego odblokowania sejfu szyfrowania.",
+        "details": "Szczegóły"
       },
       "errors": {
         "dropFailed": "Nie udało się przetworzyć upuszczonych elementów. Spróbuj ponownie."
+      },
+      "skippedDialog": {
+        "title": "Pominięte elementy",
+        "description": "Przeglądarka zgłosiła {{count}} elementów, ale nie mogła ich odczytać z dysku.",
+        "truncated": "Pokazano pierwsze {{count}} pominiętych elementów."
       }
     },
     "refreshing": "Odświeżanie…",

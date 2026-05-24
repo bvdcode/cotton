@@ -1389,14 +1389,16 @@
         "noneCopied": "Er zijn geen bestanden geüpload (alles is overgeslagen).",
         "someItemsSkipped_one": "{{count}} item overgeslagen dat niet kon worden gelezen.",
         "someItemsSkipped_other": "{{count}} items overgeslagen die niet konden worden gelezen.",
-        "someItemsSkippedWithExamples_one": "{{count}} item overgeslagen (bijv. {{examples}}).",
-        "someItemsSkippedWithExamples_other": "{{count}} items overgeslagen (bijv. {{examples}}).",
-        "more_one": " +{{count}} meer",
-        "more_other": " +{{count}} meer",
-        "vaultLocked": "Voor versleutelde uploads moet u eerst uw versleutelingskluis ontgrendelen."
+        "vaultLocked": "Voor versleutelde uploads moet u eerst uw versleutelingskluis ontgrendelen.",
+        "details": "Details"
       },
       "errors": {
         "dropFailed": "Verwerken van de gesleepte items is mislukt. Probeer het opnieuw."
+      },
+      "skippedDialog": {
+        "title": "Overgeslagen items",
+        "description": "De browser meldde {{count}} items, maar kon ze niet van de schijf lezen.",
+        "truncated": "De eerste {{count}} overgeslagen items worden weergegeven."
       }
     },
     "refreshing": "Vernieuwen…",

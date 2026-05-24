@@ -58,8 +58,8 @@ dotnet run --project Cotton.Benchmark --configuration Release
 ### Command Line Options
 ```bash
 dotnet run --project Cotton.Benchmark -- --help
-dotnet run --project Cotton.Benchmark -- --mode machine --profile quick
-dotnet run --project Cotton.Benchmark -- --mode machine --profile standard --update-baseline
+dotnet run --project Cotton.Benchmark --configuration Release
+dotnet run --project Cotton.Benchmark -- --mode machine --profile quick --no-update-baseline
 dotnet run --project Cotton.Benchmark -- --mode machine --profile standard --compare
 ```
 
@@ -71,12 +71,18 @@ dotnet run --project Cotton.Benchmark -- --mode development --profile quick --sc
 
 ### Regression Baselines
 
-Reviewed baselines live under `performance/baselines`. Unreviewed run output is written to `performance/results` and ignored by git. Baselines are scoped by hardware key, benchmark mode, and profile so local machines can track their own history without pretending GitHub runner timings are stable.
+Reviewed baselines live under `performance/baselines`. A full non-compare run updates the reviewed baseline by default; use `--no-update-baseline` to save only an unreviewed result. Unreviewed run output is written to `performance/results` and ignored by git. Baselines are scoped by hardware key, benchmark mode, and profile so local machines can track their own history without pretending GitHub runner timings are stable.
 
 Modes:
 
-- `machine` runs portable benchmarks without PostgreSQL. The `quick` profile excludes the expensive Zstd -5..22 sweep and uses relaxed regression gates because it has few iterations; `standard` and `full` keep the sweep and stricter gates for reviewed regression checks.
+- `machine` runs portable benchmarks without PostgreSQL. The `quick` profile uses relaxed regression gates because it has few iterations; `standard` and `full` keep stricter gates for reviewed regression checks. The expensive Zstd -5..22 sweep is excluded from normal suites and should be run explicitly only when investigating compression-level tradeoffs.
 - `development` is the local Cotton regression suite. It includes filesystem, storage-pipeline, and image-preview memory capacity scenarios; PostgreSQL-backed flows belong there next.
+
+Run the expensive Zstd extreme-level sweep only on purpose:
+
+```bash
+dotnet run --project Cotton.Benchmark -- --mode machine --profile quick --scenario extreme
+```
 
 
 ## Default Configuration

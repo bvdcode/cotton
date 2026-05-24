@@ -38,7 +38,7 @@ namespace Cotton.Server.Services
 
                 return new StoragePipelineProbeResult
                 {
-                    CompletedAtUtc = DateTimeOffset.UtcNow,
+                    CompletedAt = DateTimeOffset.UtcNow,
                     PayloadSizeBytes = PayloadSizeBytes,
                     StorageBackend = storageBackend,
                     Warmup = warmup,

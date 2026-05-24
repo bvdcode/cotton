@@ -235,9 +235,10 @@ namespace Cotton.Benchmark
             Console.WriteLine("  --scenario <filter>     Run only matching benchmark names; can be comma-separated");
             Console.WriteLine("  --list                  List benchmarks for the selected mode");
             Console.WriteLine("  --compare               Compare with the committed baseline for this hardware key");
-            Console.WriteLine("  --update-baseline       Save this run as the reviewed baseline for this hardware key");
-            Console.WriteLine("  --baseline-dir <path>   Baseline directory; default performance/baselines");
-            Console.WriteLine("  --results-dir <path>    Unreviewed result directory; default performance/results");
+            Console.WriteLine("  --update-baseline       Save this run as the reviewed baseline; default for full non-compare runs");
+            Console.WriteLine("  --no-update-baseline    Save only an unreviewed result");
+            Console.WriteLine("  --baseline-dir <path>   Baseline directory; default <repo>/performance/baselines");
+            Console.WriteLine("  --results-dir <path>    Unreviewed result directory; default <repo>/performance/results");
             Console.WriteLine();
             Console.WriteLine("Modes:");
             Console.WriteLine("  machine      Portable benchmarks without PostgreSQL; useful for comparing hardware.");

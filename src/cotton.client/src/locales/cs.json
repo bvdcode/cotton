@@ -1410,18 +1410,16 @@
         "someItemsSkipped_few": "Přeskočeny {{count}} položky, které nebylo možné přečíst.",
         "someItemsSkipped_many": "Přeskočeno {{count}} položky, kterou nebylo možné přečíst.",
         "someItemsSkipped_other": "Přeskočeno {{count}} položek, které nebylo možné přečíst.",
-        "someItemsSkippedWithExamples_one": "Přeskočena {{count}} položka (např. {{examples}}).",
-        "someItemsSkippedWithExamples_few": "Přeskočeny {{count}} položky (např. {{examples}}).",
-        "someItemsSkippedWithExamples_many": "Přeskočeno {{count}} položky (např. {{examples}}).",
-        "someItemsSkippedWithExamples_other": "Přeskočeno {{count}} položek (např. {{examples}}).",
-        "more_one": " +{{count}} další",
-        "more_few": " +{{count}} další",
-        "more_many": " +{{count}} dalšího",
-        "more_other": " +{{count}} dalších",
-        "vaultLocked": "Šifrovaná nahrávání vyžadují nejprve odemčení šifrovacího trezoru."
+        "vaultLocked": "Šifrovaná nahrávání vyžadují nejprve odemčení šifrovacího trezoru.",
+        "details": "Podrobnosti"
       },
       "errors": {
         "dropFailed": "Zpracování přetažených položek se nezdařilo. Zkuste to prosím znovu."
+      },
+      "skippedDialog": {
+        "title": "Přeskočené položky",
+        "description": "Prohlížeč nahlásil {{count}} položek, ale nepodařilo se je přečíst z disku.",
+        "truncated": "Zobrazuje se prvních {{count}} přeskočených položek."
       }
     },
     "refreshing": "Obnovování…",

@@ -1367,18 +1367,16 @@
         "someItemsSkipped_few": "Se omitieron {{count}} elementos que no se pudieron leer.",
         "someItemsSkipped_many": "Se omitieron {{count}} elementos que no se pudieron leer.",
         "someItemsSkipped_other": "Se omitieron {{count}} elementos que no se pudieron leer.",
-        "someItemsSkippedWithExamples_one": "Se omitió {{count}} elemento (p. ej., {{examples}}).",
-        "someItemsSkippedWithExamples_few": "Se omitieron {{count}} elementos (p. ej., {{examples}}).",
-        "someItemsSkippedWithExamples_many": "Se omitieron {{count}} elementos (p. ej., {{examples}}).",
-        "someItemsSkippedWithExamples_other": "Se omitieron {{count}} elementos (p. ej., {{examples}}).",
-        "more_one": " +{{count}} más",
-        "more_few": " +{{count}} más",
-        "more_many": " +{{count}} más",
-        "more_other": " +{{count}} más",
-        "vaultLocked": "Las subidas cifradas requieren desbloquear primero la bóveda de cifrado."
+        "vaultLocked": "Las subidas cifradas requieren desbloquear primero la bóveda de cifrado.",
+        "details": "Detalles"
       },
       "errors": {
         "dropFailed": "No se pudieron procesar los elementos soltados. Inténtalo de nuevo."
+      },
+      "skippedDialog": {
+        "title": "Elementos omitidos",
+        "description": "El navegador informó de {{count}} elementos, pero no pudo leerlos desde el disco.",
+        "truncated": "Se muestran los primeros {{count}} elementos omitidos."
       }
     },
     "refreshing": "Actualizando…",

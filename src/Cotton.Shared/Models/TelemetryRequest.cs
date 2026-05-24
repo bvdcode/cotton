@@ -54,7 +54,7 @@ namespace Cotton.Models
         /// <summary>
         /// Gets or sets when the probe finished.
         /// </summary>
-        public DateTimeOffset CompletedAtUtc { get; set; }
+        public DateTimeOffset CompletedAt { get; set; }
 
         /// <summary>
         /// Gets or sets the plaintext payload size used by each iteration.

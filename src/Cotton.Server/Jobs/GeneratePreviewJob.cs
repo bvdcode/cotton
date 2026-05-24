@@ -68,7 +68,7 @@ namespace Cotton.Server.Jobs
             }
 
             var itemIds = await itemsToProcessQuery
-                .OrderBy(fm => fm.CreatedAt)
+                .OrderByDescending(fm => fm.CreatedAt)
                 .Select(fm => fm.Id)
                 .Take(MaxItemsPerRun)
                 .ToListAsync();

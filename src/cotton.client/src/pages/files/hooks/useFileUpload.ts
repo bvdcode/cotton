@@ -14,6 +14,8 @@ import {
   resolveUploadConflicts,
   ConflictAction,
 } from "../utils/uploadConflicts";
+import { showActionToast } from "../../../shared/ui/ActionToast";
+import { toast } from "../../../shared/ui/notifications";
 import { useFileConflictDialog } from "./useFileConflictDialog";
 
 interface UseBreadcrumb {
@@ -43,6 +45,22 @@ type DropPreparationState = {
   filesFound: number;
   processed: number;
 };
+
+type SkippedItemsDialogState = {
+  open: boolean;
+  total: number;
+  items: string[];
+  truncated: boolean;
+};
+
+const emptySkippedItemsDialog: SkippedItemsDialogState = {
+  open: false,
+  total: 0,
+  items: [],
+  truncated: false,
+};
+
+const maxSkippedItemsToKeep = 500;
 
 type UploadToastVariant = "info" | "error";
 
@@ -84,7 +102,12 @@ export const useFileUpload = (
   });
   const { dialogState, showConflictDialog, handleResolve, handleExited } =
     useFileConflictDialog();
+  const [skippedItemsDialog, setSkippedItemsDialog] = useState<SkippedItemsDialogState>(
+    emptySkippedItemsDialog,
+  );
   const skipAllConflictsRef = useRef<boolean>(false);
+  const skippedItemsToastIdRef = useRef<string | null>(null);
+  const skippedItemsToastSequenceRef = useRef(0);
   const onToast = options?.onToast;
 
   const baseLabel = useMemo(() => {
@@ -462,7 +485,7 @@ export const useFileUpload = (
   type DroppedScanResult = {
     files: DroppedFile[];
     skippedNotFound: number;
-    skippedExamples: string[];
+    skippedItems: string[];
   };
 
   type NamedErrorLike = { name?: string };
@@ -484,16 +507,15 @@ export const useFileUpload = (
     onFileFound: (filesFound: number) => void,
   ): Promise<DroppedScanResult> => {
     const files: DroppedFile[] = [];
+    const skippedItems: string[] = [];
     let skippedNotFound = 0;
-    const skippedExamples: string[] = [];
-    const MAX_SKIPPED_EXAMPLES = 3;
 
-    const rememberSkippedExample = (entry: FileSystemEntry) => {
-      if (skippedExamples.length >= MAX_SKIPPED_EXAMPLES) return;
+    const rememberSkippedItem = (entry: FileSystemEntry) => {
+      if (skippedItems.length >= maxSkippedItemsToKeep) return;
       const fullPath = (entry as { fullPath?: string }).fullPath;
       const display = (fullPath ?? entry.name).replace(/^\/+/, "").trim();
       if (display.length === 0) return;
-      skippedExamples.push(display);
+      skippedItems.push(display);
     };
 
     let lastNotifiedCount = 0;
@@ -519,7 +541,7 @@ export const useFileUpload = (
         } catch (e) {
           if (isNotFoundError(e as Error)) {
             skippedNotFound += 1;
-            rememberSkippedExample(entry);
+            rememberSkippedItem(entry);
             return;
           }
           throw e;
@@ -557,7 +579,7 @@ export const useFileUpload = (
         } catch (e) {
           if (isNotFoundError(e as Error)) {
             skippedNotFound += 1;
-            rememberSkippedExample(entry);
+            rememberSkippedItem(entry);
             return;
           }
           throw e;
@@ -580,7 +602,7 @@ export const useFileUpload = (
     }
     await Promise.all(promises);
 
-    return { files, skippedNotFound, skippedExamples };
+    return { files, skippedNotFound, skippedItems };
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -660,28 +682,29 @@ export const useFileUpload = (
         );
 
         if (scan.skippedNotFound > 0) {
-          const more = Math.max(0, scan.skippedNotFound - scan.skippedExamples.length);
-          const moreSuffix =
-            more > 0
-              ? t("uploadDrop.toasts.more", { ns: "files", count: more })
-              : "";
-          const examples =
-            scan.skippedExamples.length > 0
-              ? `${scan.skippedExamples.join(", ")}${moreSuffix}`
-              : "";
+          const details = {
+            open: false,
+            total: scan.skippedNotFound,
+            items: scan.skippedItems,
+            truncated: scan.skippedItems.length < scan.skippedNotFound,
+          };
+          setSkippedItemsDialog(details);
+          if (skippedItemsToastIdRef.current) {
+            toast.dismiss(skippedItemsToastIdRef.current);
+          }
+          skippedItemsToastSequenceRef.current += 1;
+          const toastId = `files-upload-skipped-${skippedItemsToastSequenceRef.current}`;
+          skippedItemsToastIdRef.current = toastId;
 
-          onToast?.(
-            examples.length > 0
-              ? t("uploadDrop.toasts.someItemsSkippedWithExamples", {
-                  ns: "files",
-                  count: scan.skippedNotFound,
-                  examples,
-                })
-              : t("uploadDrop.toasts.someItemsSkipped", {
-                  ns: "files",
-                  count: scan.skippedNotFound,
-                }),
-          );
+          showActionToast({
+            toastId,
+            message: t("uploadDrop.toasts.someItemsSkipped", {
+              ns: "files",
+              count: scan.skippedNotFound,
+            }),
+            action: t("uploadDrop.toasts.details", { ns: "files" }),
+            onAction: () => setSkippedItemsDialog({ ...details, open: true }),
+          });
         }
 
         if (scan.files.length > 0) {
@@ -735,9 +758,17 @@ export const useFileUpload = (
     }
   };
 
+  const closeSkippedItemsDialog = () => {
+    setSkippedItemsDialog((current) => ({ ...current, open: false }));
+  };
+
   return {
     isDragging,
     dropPreparation,
+    skippedItemsDialog: {
+      state: skippedItemsDialog,
+      onClose: closeSkippedItemsDialog,
+    },
     handleUploadClick,
     handleUploadFiles,
     handleDragEnter,
