@@ -1386,18 +1386,16 @@
         "someItemsSkipped_few": "Пропущено {{count}} елементи, які не вдалося прочитати.",
         "someItemsSkipped_many": "Пропущено {{count}} елементів, які не вдалося прочитати.",
         "someItemsSkipped_other": "Пропущено {{count}} елемента, які не вдалося прочитати.",
-        "someItemsSkippedWithExamples_one": "Пропущено {{count}} елемент (напр. {{examples}}).",
-        "someItemsSkippedWithExamples_few": "Пропущено {{count}} елементи (напр. {{examples}}).",
-        "someItemsSkippedWithExamples_many": "Пропущено {{count}} елементів (напр. {{examples}}).",
-        "someItemsSkippedWithExamples_other": "Пропущено {{count}} елемента (напр. {{examples}}).",
-        "more_one": " +ще {{count}}",
-        "more_few": " +ще {{count}}",
-        "more_many": " +ще {{count}}",
-        "more_other": " +ще {{count}}",
-        "vaultLocked": "Для зашифрованих вивантажень потрібно спершу розблокувати сховище шифрування."
+        "vaultLocked": "Для зашифрованих вивантажень потрібно спершу розблокувати сховище шифрування.",
+        "details": "Деталі"
       },
       "errors": {
         "dropFailed": "Не вдалося обробити перетягнуті елементи. Будь ласка, спробуйте ще раз."
+      },
+      "skippedDialog": {
+        "title": "Пропущені елементи",
+        "description": "Браузер показав {{count}} елементів, але не зміг прочитати їх із диска.",
+        "truncated": "Показано перші {{count}} пропущених елементів."
       }
     },
     "refreshing": "Оновлення…",

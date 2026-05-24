@@ -1376,14 +1376,16 @@
         "noneCopied": "未上传任何文件（全部已跳过）。",
         "someItemsSkipped_one": "已跳过 {{count}} 项无法读取的内容。",
         "someItemsSkipped_other": "已跳过 {{count}} 项无法读取的内容。",
-        "someItemsSkippedWithExamples_one": "已跳过 {{count}} 项（例如 {{examples}}）。",
-        "someItemsSkippedWithExamples_other": "已跳过 {{count}} 项（例如 {{examples}}）。",
-        "more_one": " 还有 +{{count}} 项",
-        "more_other": " 还有 +{{count}} 项",
-        "vaultLocked": "加密上传需要先解锁加密保险库。"
+        "vaultLocked": "加密上传需要先解锁加密保险库。",
+        "details": "详情"
       },
       "errors": {
         "dropFailed": "处理拖放项目失败，请重试。"
+      },
+      "skippedDialog": {
+        "title": "已跳过的项目",
+        "description": "浏览器报告了 {{count}} 个项目，但无法从磁盘读取。",
+        "truncated": "正在显示前 {{count}} 个已跳过项目。"
       }
     },
     "refreshing": "正在刷新……",

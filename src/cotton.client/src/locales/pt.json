@@ -1389,14 +1389,16 @@
         "noneCopied": "Nenhum arquivo foi enviado (todos foram ignorados).",
         "someItemsSkipped_one": "Ignorado {{count}} item que não pôde ser lido.",
         "someItemsSkipped_other": "Ignorados {{count}} itens que não puderam ser lidos.",
-        "someItemsSkippedWithExamples_one": "Ignorado {{count}} item (ex.: {{examples}}).",
-        "someItemsSkippedWithExamples_other": "Ignorados {{count}} itens (ex.: {{examples}}).",
-        "more_one": " +{{count}} mais",
-        "more_other": " +{{count}} mais",
-        "vaultLocked": "Envios criptografados exigem que você desbloqueie seu cofre de criptografia primeiro."
+        "vaultLocked": "Envios criptografados exigem que você desbloqueie seu cofre de criptografia primeiro.",
+        "details": "Detalhes"
       },
       "errors": {
         "dropFailed": "Falha ao processar os itens arrastados. Tente novamente."
+      },
+      "skippedDialog": {
+        "title": "Itens ignorados",
+        "description": "O navegador informou {{count}} itens, mas não conseguiu lê-los do disco.",
+        "truncated": "Mostrando os primeiros {{count}} itens ignorados."
       }
     },
     "refreshing": "Atualizando…",

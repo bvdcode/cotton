@@ -1295,18 +1295,16 @@
         "someItemsSkipped_few": "Skipped {{count}} items that could not be read.",
         "someItemsSkipped_many": "Skipped {{count}} items that could not be read.",
         "someItemsSkipped_other": "Skipped {{count}} items that could not be read.",
-        "someItemsSkippedWithExamples_one": "Skipped {{count}} item (e.g. {{examples}}).",
-        "someItemsSkippedWithExamples_few": "Skipped {{count}} items (e.g. {{examples}}).",
-        "someItemsSkippedWithExamples_many": "Skipped {{count}} items (e.g. {{examples}}).",
-        "someItemsSkippedWithExamples_other": "Skipped {{count}} items (e.g. {{examples}}).",
-        "more_one": " +{{count}} more",
-        "more_few": " +{{count}} more",
-        "more_many": " +{{count}} more",
-        "more_other": " +{{count}} more",
-        "vaultLocked": "Encrypted uploads require unlocking your encryption vault first."
+        "vaultLocked": "Encrypted uploads require unlocking your encryption vault first.",
+        "details": "Details"
       },
       "errors": {
         "dropFailed": "Failed to process dropped items. Please try again."
+      },
+      "skippedDialog": {
+        "title": "Skipped items",
+        "description": "{{count}} items were reported by the browser but could not be read from disk.",
+        "truncated": "Showing the first {{count}} skipped items."
       }
     },
     "refreshing": "Refreshing…",

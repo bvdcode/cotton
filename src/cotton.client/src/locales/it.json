@@ -1396,18 +1396,16 @@
         "someItemsSkipped_few": "Saltati {{count}} elementi che non è stato possibile leggere.",
         "someItemsSkipped_many": "Saltati {{count}} elementi che non è stato possibile leggere.",
         "someItemsSkipped_other": "Saltati {{count}} elementi che non è stato possibile leggere.",
-        "someItemsSkippedWithExamples_one": "Saltato {{count}} elemento (ad es. {{examples}}).",
-        "someItemsSkippedWithExamples_few": "Saltati {{count}} elementi (ad es. {{examples}}).",
-        "someItemsSkippedWithExamples_many": "Saltati {{count}} elementi (ad es. {{examples}}).",
-        "someItemsSkippedWithExamples_other": "Saltati {{count}} elementi (ad es. {{examples}}).",
-        "more_one": " +{{count}} altro",
-        "more_few": " +{{count}} altri",
-        "more_many": " +{{count}} altri",
-        "more_other": " +{{count}} altri",
-        "vaultLocked": "I caricamenti crittografati richiedono prima lo sblocco del Suo vault di crittografia."
+        "vaultLocked": "I caricamenti crittografati richiedono prima lo sblocco del Suo vault di crittografia.",
+        "details": "Dettagli"
       },
       "errors": {
         "dropFailed": "Impossibile elaborare gli elementi rilasciati. Riprovi."
+      },
+      "skippedDialog": {
+        "title": "Elementi saltati",
+        "description": "Il browser ha segnalato {{count}} elementi, ma non è riuscito a leggerli dal disco.",
+        "truncated": "Sono mostrati i primi {{count}} elementi saltati."
       }
     },
     "refreshing": "Aggiornamento…",
