@@ -16,16 +16,20 @@ namespace Cotton.Server.Services.DatabaseIntegrity;
 /// </remarks>
 public sealed class DatabaseIntegrityChangeSigner : IDatabaseIntegrityChangeSigner
 {
+    private const string SaveOriginalStateBoundary = "save.original-state";
     private readonly IDatabaseIntegrityProtector _protector;
     private readonly IDatabaseIntegrityDescriptorRegistry _descriptors;
+    private readonly IDatabaseIntegrityFailureReporter _failures;
 
     /// <summary>Initializes a new save-time integrity signer.</summary>
     public DatabaseIntegrityChangeSigner(
         IDatabaseIntegrityProtector protector,
-        IDatabaseIntegrityDescriptorRegistry descriptors)
+        IDatabaseIntegrityDescriptorRegistry descriptors,
+        IDatabaseIntegrityFailureReporter? failures = null)
     {
         _protector = protector;
         _descriptors = descriptors;
+        _failures = failures ?? NullDatabaseIntegrityFailureReporter.Instance;
     }
 
     /// <inheritdoc />
@@ -98,10 +102,24 @@ public sealed class DatabaseIntegrityChangeSigner : IDatabaseIntegrityChangeSign
 
         if (originalVersion != descriptor.SchemaVersion)
         {
-            throw new DatabaseIntegrityException(descriptor.EntityName, descriptor.GetEntityKey(entry.Entity));
+            FailOriginalState(entry, descriptor);
         }
 
         object originalEntity = entry.OriginalValues.ToObject();
-        _protector.RequireValid(originalEntity, descriptor, originalMac);
+        if (!_protector.Verify(originalEntity, descriptor, originalMac))
+        {
+            FailOriginalState(entry, descriptor);
+        }
+    }
+
+    private void FailOriginalState(EntityEntry entry, IDatabaseIntegrityDescriptor descriptor)
+    {
+        string entityKey = descriptor.GetEntityKey(entry.Entity);
+        _failures.Report(new DatabaseIntegrityFailure(
+            descriptor.EntityName,
+            entityKey,
+            SaveOriginalStateBoundary,
+            DateTime.UtcNow));
+        throw new DatabaseIntegrityException(descriptor.EntityName, entityKey);
     }
 }
