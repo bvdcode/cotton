@@ -318,6 +318,28 @@ public sealed class DatabaseIntegrityFoundationTests
     }
 
     [Test]
+    public void FileManifestDescriptor_IgnoresOperationalPreviewState()
+    {
+        var protector = CreateProtector();
+        var descriptor = new FileManifestIntegrityDescriptor();
+        var manifest = new FileManifest
+        {
+            ProposedContentHash = [1, 2, 3],
+            ComputedContentHash = [1, 2, 3],
+            ContentType = "text/plain",
+            SizeBytes = 3,
+            PreviewGenerationError = "ffmpeg failed before the runtime image was fixed",
+            PreviewGeneratorVersion = 1
+        };
+        byte[] mac = protector.Sign(manifest, descriptor);
+
+        manifest.PreviewGenerationError = null;
+        manifest.PreviewGeneratorVersion = 2;
+
+        Assert.That(protector.Verify(manifest, descriptor, mac), Is.True);
+    }
+
+    [Test]
     public void FileManifestChunkDescriptor_DetectsOrderTampering()
     {
         var protector = CreateProtector();
