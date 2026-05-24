@@ -12,7 +12,7 @@ namespace Cotton.Previews
     public class VideoPreviewGenerator : IPreviewGenerator
     {
         /// <inheritdoc />
-        public int Version => 0;
+        public int Version => 1;
         /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes =>
         [
