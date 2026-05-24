@@ -11,6 +11,7 @@ using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
 using Cotton.Topology.Abstractions;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using System.Security.Cryptography;
 
 namespace Cotton.Server.Services;
@@ -66,8 +67,80 @@ public class ChunkIngestService(
         chunk = await UpsertChunkMetadataAsync(chunk, chunkHash, length, storedSizeBytes, ct);
 
         await EnsureOwnershipAsync(chunkHash, userId, ct);
-        await _dbContext.SaveChangesAsync(ct);
-        return chunk;
+        return await SaveChunkUpsertAsync(chunk, chunkHash, storageKey, userId, ct);
+    }
+
+    private async Task<Chunk> SaveChunkUpsertAsync(
+        Chunk chunk,
+        byte[] chunkHash,
+        string storageKey,
+        Guid userId,
+        CancellationToken ct)
+    {
+        try
+        {
+            await _dbContext.SaveChangesAsync(ct);
+            return chunk;
+        }
+        catch (DbUpdateException ex) when (IsConcurrentChunkUpsertConflict(ex))
+        {
+            _logger.LogDebug(ex, "Chunk {Hash} metadata was upserted concurrently, reloading", storageKey);
+            DetachPendingChunkUpsert(chunkHash, userId);
+        }
+
+        Chunk existing = await LoadExistingChunkAsync(chunkHash, storageKey, ct);
+        await EnsureOwnershipAsync(chunkHash, userId, ct);
+
+        try
+        {
+            await _dbContext.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (IsConcurrentChunkUpsertConflict(ex))
+        {
+            _logger.LogDebug(ex, "Chunk {Hash} ownership was upserted concurrently, reusing existing metadata", storageKey);
+            DetachPendingChunkUpsert(chunkHash, userId);
+        }
+
+        return existing;
+    }
+
+    private async Task<Chunk> LoadExistingChunkAsync(byte[] chunkHash, string storageKey, CancellationToken ct)
+    {
+        return await _dbContext.Chunks.FirstOrDefaultAsync(c => c.Hash == chunkHash, ct)
+            ?? throw new InvalidOperationException($"Chunk {storageKey} was inserted concurrently but could not be reloaded.");
+    }
+
+    private void DetachPendingChunkUpsert(byte[] chunkHash, Guid userId)
+    {
+        foreach (var entry in _dbContext.ChangeTracker.Entries().ToArray())
+        {
+            if (entry.State != EntityState.Added)
+            {
+                continue;
+            }
+
+            if (entry.Entity is Chunk chunk && chunk.Hash.SequenceEqual(chunkHash))
+            {
+                entry.State = EntityState.Detached;
+                continue;
+            }
+
+            if (entry.Entity is ChunkOwnership ownership
+                && ownership.OwnerId == userId
+                && ownership.ChunkHash.SequenceEqual(chunkHash))
+            {
+                entry.State = EntityState.Detached;
+            }
+        }
+    }
+
+    private static bool IsConcurrentChunkUpsertConflict(DbUpdateException ex)
+    {
+        return ex.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            TableName: "chunks" or "chunk_ownerships"
+        };
     }
 
     private async Task WaitForGarbageCollectionAsync(string storageKey, CancellationToken ct)

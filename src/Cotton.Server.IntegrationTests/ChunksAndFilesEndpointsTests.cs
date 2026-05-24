@@ -20,6 +20,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace Cotton.Server.IntegrationTests;
@@ -138,6 +139,36 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         Assert.That(file!.Metadata, Does.ContainKey("isClientEncrypted"));
         Assert.That(file.Metadata["isClientEncrypted"], Is.EqualTo("true"));
         Assert.That(file.Metadata["originalContentType"], Is.EqualTo("text/plain"));
+    }
+
+    [Test]
+    public async Task Upload_Same_Chunk_In_Parallel_Deduplicates_Metadata()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        byte[] content = new byte[2 * 1024 * 1024];
+        RandomNumberGenerator.Fill(content);
+        string chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 16).Select(_ => UploadRawChunkAsync(content, chunkHashLower)));
+
+        foreach (var response in responses)
+        {
+            response.EnsureSuccessStatusCode();
+            response.Dispose();
+        }
+
+        byte[] chunkHash = Hasher.FromHexStringHash(chunkHashLower);
+        DbContext.ChangeTracker.Clear();
+        int chunkCount = await DbContext.Chunks.CountAsync(x => x.Hash == chunkHash);
+        int ownershipCount = await DbContext.ChunkOwnerships.CountAsync(x => x.ChunkHash == chunkHash);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(chunkCount, Is.EqualTo(1));
+            Assert.That(ownershipCount, Is.EqualTo(1));
+        });
     }
 
     [Test]
@@ -776,8 +807,13 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
 
     private async Task<HttpResponseMessage> UploadRawChunkAsync(string text)
     {
-        var content = Encoding.UTF8.GetBytes(text);
-        var chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
+        byte[] content = Encoding.UTF8.GetBytes(text);
+        string chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
+        return await UploadRawChunkAsync(content, chunkHashLower);
+    }
+
+    private async Task<HttpResponseMessage> UploadRawChunkAsync(byte[] content, string chunkHashLower)
+    {
         using var form = new MultipartFormDataContent
         {
             {
