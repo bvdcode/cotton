@@ -4,7 +4,7 @@ Cotton keeps reviewed performance baselines in git, but raw benchmark runs stay 
 
 ## Modes
 
-- `machine` runs portable benchmarks without PostgreSQL. The `quick` profile excludes the expensive Zstd -5..22 sweep and uses relaxed regression gates because it has few iterations; `standard` and `full` keep the sweep and stricter gates for reviewed regression checks. Use it to compare raw machine capability across CPUs, runtimes, and disks.
+- `machine` runs portable benchmarks without PostgreSQL. The `quick` profile uses relaxed regression gates because it has few iterations; `standard` and `full` keep stricter gates for reviewed regression checks. The expensive Zstd -5..22 sweep is excluded from normal suites and should be run explicitly only when investigating compression-level tradeoffs. Use it to compare raw machine capability across CPUs, runtimes, and disks.
 - `development` is the local Cotton regression suite. It includes filesystem, storage-pipeline, and image-preview memory capacity scenarios; PostgreSQL-backed listing, upload, download, WebDAV, archive, and integrity scenarios should be added next.
 
 ## Common Commands
@@ -19,6 +19,12 @@ Run a quick local check:
 
 ```bash
 dotnet run --project src/Cotton.Benchmark -c Release -- --mode machine --profile quick
+```
+
+Run the expensive Zstd extreme-level sweep only on purpose:
+
+```bash
+dotnet run --project src/Cotton.Benchmark -c Release -- --mode machine --profile quick --scenario extreme
 ```
 
 Create or refresh a reviewed baseline for the current hardware key:

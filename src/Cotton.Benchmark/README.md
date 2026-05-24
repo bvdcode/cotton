@@ -75,8 +75,14 @@ Reviewed baselines live under `performance/baselines`. Unreviewed run output is 
 
 Modes:
 
-- `machine` runs portable benchmarks without PostgreSQL. The `quick` profile excludes the expensive Zstd -5..22 sweep and uses relaxed regression gates because it has few iterations; `standard` and `full` keep the sweep and stricter gates for reviewed regression checks.
+- `machine` runs portable benchmarks without PostgreSQL. The `quick` profile uses relaxed regression gates because it has few iterations; `standard` and `full` keep stricter gates for reviewed regression checks. The expensive Zstd -5..22 sweep is excluded from normal suites and should be run explicitly only when investigating compression-level tradeoffs.
 - `development` is the local Cotton regression suite. It includes filesystem, storage-pipeline, and image-preview memory capacity scenarios; PostgreSQL-backed flows belong there next.
+
+Run the expensive Zstd extreme-level sweep only on purpose:
+
+```bash
+dotnet run --project Cotton.Benchmark -- --mode machine --profile quick --scenario extreme
+```
 
 
 ## Default Configuration

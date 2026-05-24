@@ -13,7 +13,7 @@ namespace Cotton.Benchmark.Infrastructure
         {
             var benchmarks = options.Mode switch
             {
-                BenchmarkMode.Machine => CreateMachineBenchmarks(configuration, options.Profile),
+                BenchmarkMode.Machine => CreateMachineBenchmarks(configuration, options),
                 BenchmarkMode.Development => CreateDevelopmentBenchmarks(configuration, options.Profile),
                 _ => throw new ArgumentOutOfRangeException(nameof(options), options.Mode, "Unsupported benchmark mode.")
             };
@@ -21,7 +21,7 @@ namespace Cotton.Benchmark.Infrastructure
             return ApplyScenarioFilters(benchmarks, options.ScenarioFilters);
         }
 
-        private static List<IBenchmark> CreateMachineBenchmarks(BenchmarkConfiguration configuration, BenchmarkProfile profile)
+        private static List<IBenchmark> CreateMachineBenchmarks(BenchmarkConfiguration configuration, BenchmarkOptions options)
         {
             List<IBenchmark> benchmarks =
             [
@@ -36,7 +36,7 @@ namespace Cotton.Benchmark.Infrastructure
                 new PipelineBenchmark(configuration)
             ];
 
-            if (profile != BenchmarkProfile.Quick)
+            if (ShouldIncludeExtremeLevelSweep(options.ScenarioFilters))
             {
                 benchmarks.Add(new CompressionLevelsBenchmark(configuration));
             }
@@ -69,8 +69,31 @@ namespace Cotton.Benchmark.Infrastructure
 
         private static bool MatchesFilter(IBenchmark benchmark, string filter)
         {
-            return benchmark.Name.Contains(filter, StringComparison.OrdinalIgnoreCase)
-                || Slugify(benchmark.Name).Contains(Slugify(filter), StringComparison.OrdinalIgnoreCase);
+            return TextMatchesFilter(benchmark.Name, filter);
+        }
+
+        private static bool ShouldIncludeExtremeLevelSweep(IReadOnlyList<string> filters)
+        {
+            if (filters.Count == 0)
+            {
+                return false;
+            }
+
+            string[] aliases =
+            [
+                "ZstdSharp Extreme Level Sweep (-5..22)",
+                "compression-levels",
+                "extreme-level-sweep",
+                "zstd-extreme"
+            ];
+
+            return filters.Any(filter => aliases.Any(alias => TextMatchesFilter(alias, filter)));
+        }
+
+        private static bool TextMatchesFilter(string value, string filter)
+        {
+            return value.Contains(filter, StringComparison.OrdinalIgnoreCase)
+                || Slugify(value).Contains(Slugify(filter), StringComparison.OrdinalIgnoreCase);
         }
 
         private static string Slugify(string value)
