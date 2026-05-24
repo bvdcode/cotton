@@ -6,5 +6,6 @@
     <WarningsAsErrors Condition="'$(IsCottonTestProject)' != 'true'">$(WarningsAsErrors);CS1591</WarningsAsErrors>
     <SixLaborsLicenseKey Condition="'$(SixLaborsLicenseKey)' == '' and '$(SIXLABORS_LICENSE)' != ''">$(SIXLABORS_LICENSE)</SixLaborsLicenseKey>
     <SixLaborsLicenseFile Condition="'$(SixLaborsLicenseKey)' == '' and '$(SixLaborsLicenseFile)' == '' and Exists('$(MSBuildThisFileDirectory)sixlabors.lic')">$(MSBuildThisFileDirectory)sixlabors.lic</SixLaborsLicenseFile>
+    <SixLaborsLicenseFile Condition="'$(SixLaborsLicenseKey)' == '' and '$(SixLaborsLicenseFile)' == '' and Exists('$(MSBuildThisFileDirectory)Cotton.Benchmark\sixlabors-community.lic')">$(MSBuildThisFileDirectory)Cotton.Benchmark\sixlabors-community.lic</SixLaborsLicenseFile>
   </PropertyGroup>
 </Project>
