@@ -21,7 +21,7 @@
 
 </div>
 
-![Cotton Cloud](src/cotton.client/public/assets/images/social-preview.jpg)
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/0df8aa1c-ee7c-4a33-b88c-da8f1da926ac" />
 
 ---
 
