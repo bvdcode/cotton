@@ -72,15 +72,60 @@ export const setupStatusSchema = z.object({
   isServerInitialized: z.boolean(),
 });
 
+const defaultSupportedMaxChunkSizeBytes = [
+  4 * 1024 * 1024,
+  8 * 1024 * 1024,
+  16 * 1024 * 1024,
+];
+
 const chunkSizeObjectSchema = z.object({
   maxChunkSizeBytes: z.number().finite(),
+  supportedMaxChunkSizeBytes: z.array(z.number().finite()).optional(),
 });
 
-export const chunkSizeResponseSchema = z
+export const chunkSizeSettingsResponseSchema = z
   .union([z.number().finite(), chunkSizeObjectSchema])
-  .transform((value): number =>
-    typeof value === "number" ? value : value.maxChunkSizeBytes,
-  );
+  .transform((value) => {
+    const maxChunkSizeBytes =
+      typeof value === "number" ? value : value.maxChunkSizeBytes;
+    const supportedMaxChunkSizeBytes =
+      typeof value === "number"
+        ? defaultSupportedMaxChunkSizeBytes
+        : value.supportedMaxChunkSizeBytes;
+    const normalizedSupportedMaxChunkSizeBytes = Array.from(
+      new Set(
+        (supportedMaxChunkSizeBytes ?? defaultSupportedMaxChunkSizeBytes)
+          .filter((entry) => Number.isFinite(entry) && entry > 0),
+      ),
+    ).sort((left, right) => left - right);
+
+    return {
+      maxChunkSizeBytes,
+      supportedMaxChunkSizeBytes:
+        normalizedSupportedMaxChunkSizeBytes.length > 0
+          ? normalizedSupportedMaxChunkSizeBytes
+          : defaultSupportedMaxChunkSizeBytes,
+    };
+  });
+export type ChunkSizeSettings = z.infer<typeof chunkSizeSettingsResponseSchema>;
+
+export const storagePipelineSettingsResponseSchema = z.object({
+  compressionLevel: z.number().finite(),
+  minCompressionLevel: z.number().finite(),
+  maxCompressionLevel: z.number().finite(),
+  cipherChunkSizeBytes: z.number().finite().positive(),
+  minCipherChunkSizeBytes: z.number().finite().positive(),
+  maxCipherChunkSizeBytes: z.number().finite().positive(),
+  supportedCipherChunkSizeBytes: z.array(z.number().finite().positive()),
+  encryptionThreads: z.number().finite().positive(),
+  minEncryptionThreads: z.number().finite().positive(),
+  maxEncryptionThreads: z.number().finite().positive(),
+  supportedEncryptionThreads: z.array(z.number().finite().positive()),
+});
+export type StoragePipelineSettings = z.infer<typeof storagePipelineSettingsResponseSchema>;
+
+export const chunkSizeResponseSchema = chunkSizeSettingsResponseSchema
+  .transform((value): number => value.maxChunkSizeBytes);
 
 const selectSupportedHashAlgorithm = (value: {
   supportedHashAlgorithms?: string[];

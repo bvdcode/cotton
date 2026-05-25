@@ -5,10 +5,12 @@ using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using NUnit.Framework;
 using System.Net;
@@ -56,7 +58,7 @@ public class ServerEndpointsTests : IntegrationTestBase
             ["DatabaseSettings:Password"] = csb.Password,
             ["MasterEncryptionKey"] = Convert.ToBase64String(Hasher.HashData(Encoding.UTF8.GetBytes("super"))),
             ["MasterEncryptionKeyId"] = "1",
-            ["EncryptionThreads"] = "1",
+            ["EncryptionThreads"] = "2",
             ["MaxChunkSizeBytes"] = "16777216",
             ["CipherChunkSizeBytes"] = "20971520",
             ["JwtSettings:Key"] = "T3wNTuKqmTXKjJKXHJRGUpG9sdrmpSX4"
@@ -113,6 +115,48 @@ public class ServerEndpointsTests : IntegrationTestBase
             "/api/v1/server/settings/chunk-size/33554432",
             null);
         Assert.That(invalidResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+    }
+
+    [Test]
+    public async Task Set_Storage_Pipeline_Settings_AreAdminOnly_AndPersist()
+    {
+        using HttpResponseMessage unauthenticatedResponse = await _client!.PatchAsync(
+            "/api/v1/server/settings/compression-level/1",
+            null);
+        Assert.That(unauthenticatedResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+
+        var token = await LoginAsync();
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        using HttpResponseMessage compressionResponse = await _client.PatchAsync(
+            "/api/v1/server/settings/compression-level/1",
+            null);
+        compressionResponse.EnsureSuccessStatusCode();
+        JsonElement compressionPayload = await compressionResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.That(compressionPayload.GetProperty("compressionLevel").GetInt32(), Is.EqualTo(1));
+        Assert.That(compressionPayload.GetProperty("minCompressionLevel").GetInt32(), Is.LessThanOrEqualTo(1));
+        Assert.That(compressionPayload.GetProperty("maxCompressionLevel").GetInt32(), Is.GreaterThanOrEqualTo(1));
+
+        using HttpResponseMessage cipherResponse = await _client.PatchAsync(
+            "/api/v1/server/settings/cipher-chunk-size/4194304",
+            null);
+        cipherResponse.EnsureSuccessStatusCode();
+        JsonElement cipherPayload = await cipherResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.That(cipherPayload.GetProperty("cipherChunkSizeBytes").GetInt32(), Is.EqualTo(4 * 1024 * 1024));
+
+        using HttpResponseMessage threadsResponse = await _client.PatchAsync(
+            "/api/v1/server/settings/encryption-threads/1",
+            null);
+        threadsResponse.EnsureSuccessStatusCode();
+        JsonElement threadsPayload = await threadsResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.That(threadsPayload.GetProperty("encryptionThreads").GetInt32(), Is.EqualTo(1));
+        Assert.That(threadsPayload.GetProperty("supportedEncryptionThreads").GetArrayLength(), Is.GreaterThanOrEqualTo(1));
+
+        JsonElement getPayload = await _client.GetFromJsonAsync<JsonElement>("/api/v1/server/settings/storage-pipeline");
+        Assert.That(getPayload.GetProperty("compressionLevel").GetInt32(), Is.EqualTo(1));
+        Assert.That(getPayload.GetProperty("cipherChunkSizeBytes").GetInt32(), Is.EqualTo(4 * 1024 * 1024));
+        Assert.That(getPayload.GetProperty("encryptionThreads").GetInt32(), Is.EqualTo(1));
+        Assert.That(GetResolvedEncryptionThreads(), Is.EqualTo(1));
     }
 
     [Test]
@@ -187,8 +231,18 @@ public class ServerEndpointsTests : IntegrationTestBase
         Type settingsProviderType = typeof(SettingsProvider);
 
         settingsProviderType.GetField("_cache", flags)?.SetValue(null, null);
+        settingsProviderType.GetField("_cachedEncryptionThreads", flags)?.SetValue(null, 0);
         settingsProviderType.GetField("_isServerInitializedCache", flags)?.SetValue(null, null);
         settingsProviderType.GetField("_serverHasUsersCache", flags)?.SetValue(null, null);
+    }
+
+    private int GetResolvedEncryptionThreads()
+    {
+        using var scope = _factory!.Services.CreateScope();
+        var cipher = scope.ServiceProvider.GetRequiredService<IStreamCipher>();
+        FieldInfo? field = cipher.GetType().GetField("ConcurrencyLevel", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.That(field, Is.Not.Null);
+        return (int)field!.GetValue(cipher)!;
     }
 
     private async Task<string> LoginAsync()

@@ -6,12 +6,17 @@ import { STORAGE_KEY_PREFIX } from "../config/storageKeys";
 type TilesSize = "small" | "medium" | "large";
 
 const DEFAULT_TILES_SIZE: TilesSize = "medium";
+const DEVELOPER_SETTINGS_UNLOCK_CLICK_TARGET = 3;
+const DEVELOPER_SETTINGS_UNLOCK_CLICK_WINDOW_MS = 10 * 60 * 1000;
 
 interface LocalPreferencesState {
   filesLayoutType: InterfaceLayoutType | null;
   trashLayoutType: InterfaceLayoutType | null;
   filesTilesSize: TilesSize;
   trashTilesSize: TilesSize;
+  developerSettingsUnlocked: boolean;
+  developerSettingsUnlockClickCount: number;
+  developerSettingsUnlockClickExpiresAt: number | null;
 
   editorModes: Record<string, string>;
   languageOverrides: Record<string, string>;
@@ -20,6 +25,8 @@ interface LocalPreferencesState {
   setTrashLayoutType: (layoutType: InterfaceLayoutType) => void;
   setFilesTilesSize: (size: TilesSize) => void;
   setTrashTilesSize: (size: TilesSize) => void;
+  setDeveloperSettingsUnlocked: (unlocked: boolean) => void;
+  recordDeveloperSettingsUnlockClick: (now?: number) => boolean;
 
   setEditorMode: (fileId: string, mode: string) => void;
   setLanguageOverride: (fileId: string, language: string) => void;
@@ -33,6 +40,9 @@ const INITIAL_STATE = {
   trashLayoutType: null as InterfaceLayoutType | null,
   filesTilesSize: DEFAULT_TILES_SIZE as TilesSize,
   trashTilesSize: DEFAULT_TILES_SIZE as TilesSize,
+  developerSettingsUnlocked: false,
+  developerSettingsUnlockClickCount: 0,
+  developerSettingsUnlockClickExpiresAt: null as number | null,
   editorModes: {} as Record<string, string>,
   languageOverrides: {} as Record<string, string>,
 };
@@ -46,6 +56,39 @@ export const useLocalPreferencesStore = create<LocalPreferencesState>()(
       setTrashLayoutType: (layoutType) => set({ trashLayoutType: layoutType }),
       setFilesTilesSize: (size) => set({ filesTilesSize: size }),
       setTrashTilesSize: (size) => set({ trashTilesSize: size }),
+      setDeveloperSettingsUnlocked: (unlocked) =>
+        set({
+          developerSettingsUnlocked: unlocked,
+          developerSettingsUnlockClickCount: 0,
+          developerSettingsUnlockClickExpiresAt: null,
+        }),
+      recordDeveloperSettingsUnlockClick: (now = Date.now()) => {
+        let unlocked = false;
+        set((state) => {
+          const withinWindow =
+            state.developerSettingsUnlockClickExpiresAt !== null
+            && now <= state.developerSettingsUnlockClickExpiresAt;
+          const clickCount = withinWindow
+            ? state.developerSettingsUnlockClickCount + 1
+            : 1;
+
+          if (clickCount >= DEVELOPER_SETTINGS_UNLOCK_CLICK_TARGET) {
+            unlocked = true;
+            return {
+              developerSettingsUnlocked: true,
+              developerSettingsUnlockClickCount: 0,
+              developerSettingsUnlockClickExpiresAt: null,
+            };
+          }
+
+          return {
+            developerSettingsUnlockClickCount: clickCount,
+            developerSettingsUnlockClickExpiresAt:
+              now + DEVELOPER_SETTINGS_UNLOCK_CLICK_WINDOW_MS,
+          };
+        });
+        return unlocked;
+      },
 
       setEditorMode: (fileId, mode) =>
         set((s) => ({
@@ -86,3 +129,6 @@ export const selectFilesTilesSize = (s: LocalPreferencesState): TilesSize =>
 
 export const selectTrashTilesSize = (s: LocalPreferencesState): TilesSize =>
   s.trashTilesSize;
+export const selectDeveloperSettingsUnlocked = (
+  s: LocalPreferencesState,
+): boolean => s.developerSettingsUnlocked;

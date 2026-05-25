@@ -26,6 +26,7 @@ namespace Cotton.Server.Jobs
     /// Runs the scheduled generate preview maintenance task.
     /// </summary>
     [JobTrigger(minutes: 15)]
+    [DisallowConcurrentExecution]
     public class GeneratePreviewJob(
         PerfTracker _perf,
         IStreamCipher _crypto,
@@ -35,6 +36,7 @@ namespace Cotton.Server.Jobs
         ILogger<GeneratePreviewJob> _logger) : IJob
     {
         private const int MaxItemsPerRun = 10000;
+        private const int RefreshItemsPerUploadPause = 250;
         private const int UnthrottledItemsCount = 1000;
         private const int ThrottleDelayMs = 250;
 
@@ -49,40 +51,13 @@ namespace Cotton.Server.Jobs
 
             await NormalizeLegacySourceTextContentTypesAsync(allSupportedMimeTypes, cancellationToken);
 
-            var processableItemsQuery = _dbContext.FileManifests
-                .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType));
-
-            var itemsToProcessQuery = processableItemsQuery
-                .Where(fm => fm.SmallFilePreviewHash == null)
-                .Where(fm => fm.PreviewGenerationError == null);
-
-            foreach (var versionGroup in generatorVersionsByContentType.GroupBy(x => x.Value))
-            {
-                int generatorVersion = versionGroup.Key;
-                string[] contentTypes = [.. versionGroup.Select(x => x.Key)];
-
-                itemsToProcessQuery = itemsToProcessQuery
-                    .Union(processableItemsQuery
-                        .Where(fm => contentTypes.Contains(fm.ContentType))
-                        .Where(fm => fm.PreviewGeneratorVersion != generatorVersion));
-            }
-
-            var itemIds = await itemsToProcessQuery
-                .OrderByDescending(fm => fm.CreatedAt)
-                .Select(fm => fm.Id)
-                .Take(MaxItemsPerRun)
-                .ToListAsync();
-
-            var itemsToProcess = await _dbContext.FileManifests
-                .Where(fm => itemIds.Contains(fm.Id))
-                .Include(fm => fm.NodeFiles)
-                .Include(fm => fm.FileManifestChunks)
-                .ThenInclude(fmc => fmc.Chunk)
-                .AsSplitQuery()
-                .ToListAsync();
-
-            var itemsToProcessById = itemsToProcess.ToDictionary(x => x.Id);
-            itemsToProcess = [.. itemIds.Where(itemsToProcessById.ContainsKey).Select(id => itemsToProcessById[id])];
+            HashSet<Guid> queuedOrProcessedItemIds = [];
+            List<FileManifest> itemsToProcess = await LoadNextPreviewItemsAsync(
+                allSupportedMimeTypes,
+                generatorVersionsByContentType,
+                MaxItemsPerRun,
+                queuedOrProcessedItemIds,
+                cancellationToken);
 
             if (itemsToProcess.Count > 0)
             {
@@ -90,8 +65,10 @@ namespace Cotton.Server.Jobs
             }
 
             int processed = 0;
-            foreach (var item in itemsToProcess)
+            int nextIndex = 0;
+            while (nextIndex < itemsToProcess.Count && processed < MaxItemsPerRun)
             {
+                var item = itemsToProcess[nextIndex++];
                 _perf.OnPreviewGenerating();
                 processed++;
                 _logger.LogInformation("Processing {Current}/{Total}: FileManifest {FileManifestId}, ContentType={ContentType}, Size={Size}",
@@ -101,6 +78,7 @@ namespace Cotton.Server.Jobs
                 if (generator == null)
                 {
                     _logger.LogWarning("No preview generator found for content type {ContentType}", item.ContentType);
+                    DetachPreviewItem(item);
                     continue;
                 }
 
@@ -121,7 +99,7 @@ namespace Cotton.Server.Jobs
                     _logger.LogDebug("Storing preview (hash={Hash}) for FileManifest {FileManifestId}...", hashStr, item.Id);
                     using var resultStream = new MemoryStream(previewImage);
                     await _storage.WriteAsync(hashStr, resultStream);
-                    await EnsureChunkExistsAsync(hash, previewImage.Length);
+                    await EnsureChunkExistsAsync(hash, previewImage.Length, cancellationToken);
                     item.SmallFilePreviewHash = hash;
                     item.SmallFilePreviewHashEncrypted = _crypto.Encrypt(hash);
                     item.PreviewGenerationError = null;
@@ -136,11 +114,11 @@ namespace Cotton.Server.Jobs
                         _logger.LogDebug("Storing large preview (hash={Hash}) for FileManifest {FileManifestId}...", hashLargeStr, item.Id);
                         using var resultStreamLarge = new MemoryStream(previewImageLarge);
                         await _storage.WriteAsync(hashLargeStr, resultStreamLarge);
-                        await EnsureChunkExistsAsync(hashLarge, previewImageLarge.Length);
+                        await EnsureChunkExistsAsync(hashLarge, previewImageLarge.Length, cancellationToken);
                         item.LargeFilePreviewHash = hashLarge;
                     }
 
-                    await _dbContext.SaveChangesAsync();
+                    await _dbContext.SaveChangesAsync(cancellationToken);
                     _logger.LogDebug("Generated preview for file manifest {FileManifestId}", item.Id);
                     foreach (var nodeFile in item.NodeFiles)
                     {
@@ -149,7 +127,7 @@ namespace Cotton.Server.Jobs
                         // because the preview hash will be reset and regenerated, preventing the second user from discovering that the first user had the file.
                         await _hubContext.Clients
                             .User(nodeFile.OwnerId.ToString())
-                            .SendAsync("PreviewGenerated", nodeFile.NodeId, nodeFile.Id, item.GetPreviewHashEncryptedHex());
+                            .SendAsync("PreviewGenerated", nodeFile.NodeId, nodeFile.Id, item.GetPreviewHashEncryptedHex(), cancellationToken);
                     }
                     if (processed == UnthrottledItemsCount)
                     {
@@ -158,30 +136,191 @@ namespace Cotton.Server.Jobs
                     if (processed > UnthrottledItemsCount)
                     {
                         // TODO: Move to settings or autoconfig
-                        await Task.Delay(ThrottleDelayMs);
+                        await Task.Delay(ThrottleDelayMs, cancellationToken);
                     }
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
                 }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Failed to generate preview for file manifest {FileManifestId}", item.Id);
                     item.PreviewGenerationError = ex.Message;
                     item.PreviewGeneratorVersion = generator.Version;
-                    await _dbContext.SaveChangesAsync();
+                    await _dbContext.SaveChangesAsync(cancellationToken);
                 }
 
                 if (_perf.IsUploading())
                 {
-                    const int waitTimeSeconds = 5;
-                    _logger.LogInformation("Upload in progress, waiting {seconds}s before processing next item...", waitTimeSeconds);
-                    await Task.Delay(waitTimeSeconds * 1000);
+                    await WaitForUploadPauseAsync(cancellationToken);
+                    int refreshed = await RefreshPreviewQueueAsync(
+                        itemsToProcess,
+                        nextIndex,
+                        queuedOrProcessedItemIds,
+                        allSupportedMimeTypes,
+                        generatorVersionsByContentType,
+                        cancellationToken);
+                    if (refreshed > 0)
+                    {
+                        _logger.LogInformation(
+                            "Upload pause refreshed preview queue with {Count} newer file manifests. Queue now has {Total} items.",
+                            refreshed,
+                            itemsToProcess.Count);
+                    }
                 }
+
+                DetachPreviewItem(item);
             }
 
-            await _dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync(cancellationToken);
             if (processed > 0)
             {
                 _logger.LogInformation("Preview generation job completed successfully. Processed {Count} items", processed);
             }
+        }
+
+        private IQueryable<FileManifest> CreateItemsToProcessQuery(
+            IReadOnlyCollection<string> allSupportedMimeTypes,
+            IReadOnlyDictionary<string, int> generatorVersionsByContentType)
+        {
+            var processableItemsQuery = _dbContext.FileManifests
+                .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType));
+
+            var itemsToProcessQuery = processableItemsQuery
+                .Where(fm => fm.SmallFilePreviewHash == null)
+                .Where(fm => fm.PreviewGenerationError == null);
+
+            foreach (var versionGroup in generatorVersionsByContentType.GroupBy(x => x.Value))
+            {
+                int generatorVersion = versionGroup.Key;
+                string[] contentTypes = [.. versionGroup.Select(x => x.Key)];
+
+                itemsToProcessQuery = itemsToProcessQuery
+                    .Union(processableItemsQuery
+                        .Where(fm => contentTypes.Contains(fm.ContentType))
+                        .Where(fm => fm.PreviewGeneratorVersion != generatorVersion));
+            }
+
+            return itemsToProcessQuery;
+        }
+
+        private async Task<List<FileManifest>> LoadNextPreviewItemsAsync(
+            IReadOnlyCollection<string> allSupportedMimeTypes,
+            IReadOnlyDictionary<string, int> generatorVersionsByContentType,
+            int limit,
+            HashSet<Guid> knownItemIds,
+            CancellationToken cancellationToken)
+        {
+            if (limit <= 0)
+            {
+                return [];
+            }
+
+            var itemIds = await CreateItemsToProcessQuery(allSupportedMimeTypes, generatorVersionsByContentType)
+                .OrderByDescending(fm => fm.CreatedAt)
+                .Select(fm => fm.Id)
+                .Take(limit)
+                .ToListAsync(cancellationToken);
+
+            List<Guid> newItemIds = [.. itemIds.Where(id => knownItemIds.Add(id))];
+            return await LoadPreviewItemsByIdsAsync(newItemIds, cancellationToken);
+        }
+
+        private async Task<List<FileManifest>> LoadPreviewItemsByIdsAsync(
+            IReadOnlyCollection<Guid> itemIds,
+            CancellationToken cancellationToken)
+        {
+            if (itemIds.Count == 0)
+            {
+                return [];
+            }
+
+            var itemsToProcess = await _dbContext.FileManifests
+                .Where(fm => itemIds.Contains(fm.Id))
+                .Include(fm => fm.NodeFiles)
+                .Include(fm => fm.FileManifestChunks)
+                .ThenInclude(fmc => fmc.Chunk)
+                .AsSplitQuery()
+                .ToListAsync(cancellationToken);
+
+            var itemsToProcessById = itemsToProcess.ToDictionary(x => x.Id);
+            return [.. itemIds.Where(itemsToProcessById.ContainsKey).Select(id => itemsToProcessById[id])];
+        }
+
+        private async Task<int> RefreshPreviewQueueAsync(
+            List<FileManifest> itemsToProcess,
+            int insertIndex,
+            HashSet<Guid> queuedOrProcessedItemIds,
+            IReadOnlyCollection<string> allSupportedMimeTypes,
+            IReadOnlyDictionary<string, int> generatorVersionsByContentType,
+            CancellationToken cancellationToken)
+        {
+            int remainingSlots = Math.Max(0, MaxItemsPerRun - insertIndex);
+            if (remainingSlots == 0)
+            {
+                return 0;
+            }
+
+            List<FileManifest> refreshedItems = await LoadNextPreviewItemsAsync(
+                allSupportedMimeTypes,
+                generatorVersionsByContentType,
+                Math.Min(RefreshItemsPerUploadPause, remainingSlots),
+                queuedOrProcessedItemIds,
+                cancellationToken);
+
+            if (refreshedItems.Count == 0)
+            {
+                return 0;
+            }
+
+            itemsToProcess.InsertRange(insertIndex, refreshedItems);
+            TrimPreviewQueueToRunLimit(itemsToProcess);
+            return refreshedItems.Count;
+        }
+
+        private void TrimPreviewQueueToRunLimit(List<FileManifest> itemsToProcess)
+        {
+            if (itemsToProcess.Count <= MaxItemsPerRun)
+            {
+                return;
+            }
+
+            int removeStart = MaxItemsPerRun;
+            int removeCount = itemsToProcess.Count - MaxItemsPerRun;
+            for (int i = removeStart; i < itemsToProcess.Count; i++)
+            {
+                DetachPreviewItem(itemsToProcess[i]);
+            }
+
+            itemsToProcess.RemoveRange(removeStart, removeCount);
+        }
+
+        private void DetachPreviewItem(FileManifest item)
+        {
+            foreach (var manifestChunk in item.FileManifestChunks)
+            {
+                if (manifestChunk.Chunk is not null)
+                {
+                    _dbContext.Entry(manifestChunk.Chunk).State = EntityState.Detached;
+                }
+
+                _dbContext.Entry(manifestChunk).State = EntityState.Detached;
+            }
+
+            foreach (var nodeFile in item.NodeFiles)
+            {
+                _dbContext.Entry(nodeFile).State = EntityState.Detached;
+            }
+
+            _dbContext.Entry(item).State = EntityState.Detached;
+        }
+
+        private async Task WaitForUploadPauseAsync(CancellationToken cancellationToken)
+        {
+            const int waitTimeSeconds = 5;
+            _logger.LogInformation("Upload in progress, waiting {seconds}s before processing next item...", waitTimeSeconds);
+            await Task.Delay(waitTimeSeconds * 1000, cancellationToken);
         }
 
         private async Task NormalizeLegacySourceTextContentTypesAsync(
@@ -227,10 +366,9 @@ namespace Cotton.Server.Jobs
             }
         }
 
-
-        private async Task EnsureChunkExistsAsync(byte[] hash, long sizeBytes)
+        private async Task EnsureChunkExistsAsync(byte[] hash, long sizeBytes, CancellationToken cancellationToken)
         {
-            var existing = await _dbContext.Chunks.FindAsync([(object?)hash]);
+            var existing = await _dbContext.Chunks.FindAsync(new object?[] { hash }, cancellationToken);
             string storageKey = Hasher.ToHexStringHash(hash);
             long storedSizeBytes = await _storage.GetSizeAsync(storageKey);
             if (existing == null)

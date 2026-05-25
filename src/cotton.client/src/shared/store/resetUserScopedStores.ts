@@ -1,3 +1,4 @@
+import { useLocalPreferencesStore } from "./localPreferencesStore";
 import { useMoveClipboardStore } from "./moveClipboardStore";
 import { useNodesStore } from "./nodesStore";
 import { useAudioPlayerStore } from "./audioPlayerStore";
@@ -49,6 +50,7 @@ export const resetUserScopedStores = (nextUserId: string | null): void => {
   if (nodesOwner !== nextUserId) {
     safeClearPersisted(useNodesStore.persist.clearStorage);
     useNodesStore.getState().reset(nextUserId);
+    useLocalPreferencesStore.getState().setDeveloperSettingsUnlocked(false);
   }
 
   // Non-persisted but user-scoped state

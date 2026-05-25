@@ -1,10 +1,10 @@
 import {
   Avatar,
   Box,
-  ButtonBase,
   Divider,
   IconButton,
   LinearProgress,
+  Link,
   ListItemIcon,
   ListItemText,
   Menu,
@@ -24,6 +24,9 @@ import { useNavigate } from "react-router-dom";
 import { UserRole, useAuth } from "../../../features/auth";
 import { queryKeys } from "../../../shared/api/queries/queryKeys";
 import { storageQuotaApi } from "../../../shared/api/storageQuotaApi";
+import {
+  useLocalPreferencesStore,
+} from "../../../shared/store/localPreferencesStore";
 import { useServerSettings } from "../../../shared/store/useServerSettings";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import {
@@ -32,7 +35,6 @@ import {
 } from "./bugReportPrefill";
 
 const STORAGE_QUOTA_STALE_TIME_MS = 60_000;
-
 const getStorageQuotaPercent = (
   usedBytes: number,
   quotaBytes: number | null,
@@ -63,6 +65,9 @@ export const UserMenu = () => {
   const navigate = useNavigate();
   const { t } = useTranslation("common");
   const { data: serverSettings } = useServerSettings();
+  const recordDeveloperSettingsUnlockClick = useLocalPreferencesStore(
+    (state) => state.recordDeveloperSettingsUnlockClick,
+  );
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const isOpen = Boolean(anchorEl);
   const storageQuotaQuery = useQuery({
@@ -130,9 +135,8 @@ export const UserMenu = () => {
     window.open(reportUrl, "_blank", "noopener,noreferrer");
   };
 
-  const openProductSite = () => {
-    handleClose();
-    window.open("https://cottoncloud.dev", "_blank", "noopener,noreferrer");
+  const handleVersionClick = () => {
+    recordDeveloperSettingsUnlockClick();
   };
 
   const fullName = [user?.firstName, user?.lastName]
@@ -293,24 +297,23 @@ export const UserMenu = () => {
         {serverSettings?.version && <Divider />}
         {serverSettings?.version && (
           <Box px={2} py={0.5}>
-            <ButtonBase
-              onClick={openProductSite}
+            <Link
+              href="https://cottoncloud.dev"
+              underline="none"
+              onClick={handleVersionClick}
               sx={{
-                width: "100%",
-                borderRadius: 1,
+                display: "block",
                 py: 0.5,
-                px: 1,
                 color: "text.secondary",
                 "&:hover": {
                   color: "primary.main",
-                  bgcolor: "action.hover",
                 },
               }}
             >
               <Typography variant="caption">
                 {serverSettings.version}
               </Typography>
-            </ButtonBase>
+            </Link>
           </Box>
         )}
       </Menu>

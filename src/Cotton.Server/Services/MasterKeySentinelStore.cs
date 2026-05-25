@@ -271,14 +271,7 @@ namespace Cotton.Server.Services
 
         internal static AesGcmStreamCipher CreateCipher(CottonEncryptionSettings encryptionSettings)
         {
-            if (string.IsNullOrWhiteSpace(encryptionSettings.MasterEncryptionKey))
-            {
-                throw new InvalidOperationException("MasterEncryptionKey is not configured.");
-            }
-
-            byte[] keyMaterial = Convert.FromBase64String(encryptionSettings.MasterEncryptionKey);
-            int? threads = encryptionSettings.EncryptionThreads > 0 ? encryptionSettings.EncryptionThreads : null;
-            return new AesGcmStreamCipher(keyMaterial, encryptionSettings.MasterEncryptionKeyId, threads);
+            return StreamCipherFactory.Create(encryptionSettings);
         }
 
         private static bool IsSentinelReadFailure(Exception ex) =>

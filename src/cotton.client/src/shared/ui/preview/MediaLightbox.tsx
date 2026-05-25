@@ -47,6 +47,11 @@ type LightboxIndexState = {
   index: number;
 };
 
+type ClosingState = {
+  open: boolean;
+  closing: boolean;
+};
+
 type IndexOrUpdater = number | ((current: number) => number);
 
 const buildLightboxIndexKey = (
@@ -120,7 +125,14 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const isActive = useActivityDetection(TOUCH_CONTROLS_AUTOHIDE_MS);
   const [touchControlsVisible, setTouchControlsVisible] =
     React.useState<boolean>(true);
-  const [isClosing, setIsClosing] = React.useState(false);
+  const [closingState, setClosingState] = React.useState<ClosingState>(
+    () => ({ open, closing: false }),
+  );
+  let isClosing = closingState.open === open ? closingState.closing : false;
+  if (closingState.open !== open) {
+    isClosing = false;
+    setClosingState({ open, closing: false });
+  }
   const touchControlsTimerRef = React.useRef<number | null>(null);
 
   const clearTouchControlsTimer = React.useCallback(() => {
@@ -444,15 +456,14 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   );
 
   const handleClose = React.useCallback(() => {
-    setIsClosing(true);
+    setClosingState({ open, closing: true });
     stopLightboxMediaPlayback();
     setTouchControlsVisible(true);
     onClose();
-  }, [onClose]);
+  }, [onClose, open]);
 
   React.useEffect(() => {
     if (!open) {
-      setIsClosing(false);
       stopLightboxMediaPlayback();
     }
 

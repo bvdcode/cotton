@@ -1,9 +1,10 @@
-import { getValidated, httpClient } from "./httpClient";
+import { getValidated, httpClient, parseValidated } from "./httpClient";
 import { isJsonObject, type JsonValue } from "../types/json";
 import {
   allowCrossUserDeduplicationSchema,
   allowGlobalIndexingSchema,
   chunkSizeResponseSchema,
+  chunkSizeSettingsResponseSchema,
   computionModeResponseSchema,
   customGeoIpLookupUrlSchema,
   defaultUserStorageQuotaBytesSchema,
@@ -17,10 +18,12 @@ import {
   serverUsageListSchema,
   setupStatusSchema,
   s3ConfigSchema,
+  storagePipelineSettingsResponseSchema,
   storageSpaceModeResponseSchema,
   storageTypeResponseSchema,
   telemetrySettingSchema,
   timezoneSchema,
+  type ChunkSizeSettings,
   type ComputionMode,
   type EmailConfig,
   type EmailMode,
@@ -29,11 +32,13 @@ import {
   type S3Config,
   type ServerSettings,
   type ServerUsage,
+  type StoragePipelineSettings,
   type StorageSpaceMode,
   type StorageType,
 } from "./schemas/serverSettings";
 
 export type {
+  ChunkSizeSettings,
   ComputionMode,
   EmailConfig,
   EmailMode,
@@ -42,6 +47,7 @@ export type {
   S3Config,
   ServerSettings,
   ServerUsage,
+  StoragePipelineSettings,
   StorageSpaceMode,
   StorageType,
 } from "./schemas/serverSettings";
@@ -182,11 +188,67 @@ export const settingsApi = {
   get: (): Promise<ServerSettings> =>
     getValidated("server/settings", serverSettingsResponseSchema),
 
+  getChunkSizeSettings: (): Promise<ChunkSizeSettings> =>
+    getValidated(
+      "server/settings/chunk-size",
+      chunkSizeSettingsResponseSchema,
+    ),
+
   getChunkSize: (): Promise<number> =>
     getValidated(
       "server/settings/chunk-size",
       chunkSizeResponseSchema,
     ),
+
+  setChunkSize: async (maxChunkSizeBytes: number): Promise<ChunkSizeSettings> => {
+    const response = await httpClient.patch<unknown>(
+      `server/settings/chunk-size/${maxChunkSizeBytes}`,
+    );
+    return parseValidated(
+      "server/settings/chunk-size",
+      response.data,
+      chunkSizeSettingsResponseSchema,
+    );
+  },
+
+  getStoragePipelineSettings: (): Promise<StoragePipelineSettings> =>
+    getValidated(
+      "server/settings/storage-pipeline",
+      storagePipelineSettingsResponseSchema,
+    ),
+
+  setCompressionLevel: async (compressionLevel: number): Promise<StoragePipelineSettings> => {
+    const response = await httpClient.patch<unknown>(
+      `server/settings/compression-level/${compressionLevel}`,
+    );
+    return parseValidated(
+      "server/settings/compression-level",
+      response.data,
+      storagePipelineSettingsResponseSchema,
+    );
+  },
+
+  setCipherChunkSize: async (cipherChunkSizeBytes: number): Promise<StoragePipelineSettings> => {
+    const response = await httpClient.patch<unknown>(
+      `server/settings/cipher-chunk-size/${cipherChunkSizeBytes}`,
+    );
+    return parseValidated(
+      "server/settings/cipher-chunk-size",
+      response.data,
+      storagePipelineSettingsResponseSchema,
+    );
+  },
+
+  setEncryptionThreads: async (encryptionThreads: number): Promise<StoragePipelineSettings> => {
+    const response = await httpClient.patch<unknown>(
+      `server/settings/encryption-threads/${encryptionThreads}`,
+    );
+    return parseValidated(
+      "server/settings/encryption-threads",
+      response.data,
+      storagePipelineSettingsResponseSchema,
+    );
+  },
 
   getTelemetry: (): Promise<boolean> =>
     getValidated("server/settings/telemetry", telemetrySettingSchema),

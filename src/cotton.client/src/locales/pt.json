@@ -1882,6 +1882,21 @@
       "fields": {
         "storageType": "Backend de armazenamento"
       },
+      "chunkSize": {
+        "title": "Upload chunk size",
+        "description": "Controls how much data the browser sends per upload request. Larger chunks reduce request overhead on fast local networks.",
+        "ariaLabel": "Upload chunk size"
+      },
+      "pipeline": {
+        "title": "Storage pipeline",
+        "description": "Tunes how new chunks are compressed and encrypted before they are written to storage.",
+        "fields": {
+          "compressionLevel": "Compression level",
+          "cipherChunkSize": "Encryption block size",
+          "encryptionThreads": "Encryption threads"
+        },
+        "compressionHelp": "Allowed range: {{min}} to {{max}}. Default is 1."
+      },
       "quota": {
         "title": "Cota padrão por usuário",
         "description": "Limita quanto conteúdo único enviado cada usuário pode possuir. Deixe em branco para contas ilimitadas.",
@@ -1926,7 +1941,9 @@
         "s3SaveFailed": "Falha ao salvar a configuração S3.",
         "storageSaveFailed": "Falha ao alternar o modo de armazenamento.",
         "quotaSaveFailed": "Falha ao salvar a cota padrão por usuário.",
-        "templateSaveFailed": "Falha ao salvar o modelo de arquivos padrão."
+        "templateSaveFailed": "Falha ao salvar o modelo de arquivos padrão.",
+        "chunkSizeSaveFailed": "Failed to save upload chunk size.",
+        "storagePipelineSaveFailed": "Failed to save storage pipeline settings."
       }
     },
     "notificationsSettings": {
