@@ -109,6 +109,7 @@ export async function uploadBlobToChunks(options: {
   const pendingSegments: ChunkSegment[] = [];
   const uploadedSegments: UploadedChunkSegment[] = [];
   const inFlightBytesById = new Map<number, number>();
+  const fileHashUpdates = new Set<Promise<void>>();
   let fileHashWaiters: Array<() => void> = [];
 
   const report = () => {
@@ -278,6 +279,16 @@ export async function uploadBlobToChunks(options: {
     wakeFileHashWaiters();
   };
 
+  const trackFileHashUpdate = (update: Promise<void>) => {
+    const tracked = update.catch((error) => {
+      failUpload(error);
+    });
+    fileHashUpdates.add(tracked);
+    tracked.finally(() => {
+      fileHashUpdates.delete(tracked);
+    });
+  };
+
   if (canUseHashWorker()) {
     worker = await globalHashWorkerPool.acquire(algorithm);
   } else {
@@ -333,6 +344,18 @@ export async function uploadBlobToChunks(options: {
       }
 
       blobHasher!.update(new Uint8Array(buffer));
+    };
+
+    const queueFileHashUpdate = (segment: ChunkSegment, buffer: ArrayBuffer) => {
+      if (!segment.updateFileHash) {
+        return;
+      }
+
+      trackFileHashUpdate((async () => {
+        await waitForFileHashTurn(segment);
+        await updateFileHashFromBuffer(buffer);
+        advanceFileHashOffset(segment);
+      })());
     };
 
     const uploadHashedChunk = async (
@@ -400,11 +423,7 @@ export async function uploadBlobToChunks(options: {
 
         const buffer = await chunk.arrayBuffer();
         const chunkHashPromise = hashBuffer(buffer, algorithm);
-        if (segment.updateFileHash) {
-          await waitForFileHashTurn(segment);
-          await updateFileHashFromBuffer(buffer);
-          advanceFileHashOffset(segment);
-        }
+        queueFileHashUpdate(segment, buffer);
 
         chunkHash = await chunkHashPromise;
         const uploadChunk = new Blob([buffer], { type: chunk.type });
@@ -470,6 +489,10 @@ export async function uploadBlobToChunks(options: {
 
     while (inFlight.size > 0) {
       await Promise.race(inFlight);
+    }
+
+    while (fileHashUpdates.size > 0 && !fatalError) {
+      await Promise.race(fileHashUpdates);
     }
 
     if (fatalError) {
