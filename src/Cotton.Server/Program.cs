@@ -207,6 +207,7 @@ namespace Cotton.Server
             {
                 var autoRestore = scope.ServiceProvider.GetRequiredService<IDatabaseAutoRestoreService>();
                 autoRestore.TryRestoreIfEmptyAsync().GetAwaiter().GetResult();
+                scope.ServiceProvider.GetRequiredService<SettingsProvider>().GetServerSettings();
             }
             app.MapHub<EventHub>(Routes.V1.EventHub);
             await app.RunAsync();

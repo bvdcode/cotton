@@ -5,10 +5,12 @@ using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using NUnit.Framework;
 using System.Net;
@@ -56,7 +58,7 @@ public class ServerEndpointsTests : IntegrationTestBase
             ["DatabaseSettings:Password"] = csb.Password,
             ["MasterEncryptionKey"] = Convert.ToBase64String(Hasher.HashData(Encoding.UTF8.GetBytes("super"))),
             ["MasterEncryptionKeyId"] = "1",
-            ["EncryptionThreads"] = "1",
+            ["EncryptionThreads"] = "2",
             ["MaxChunkSizeBytes"] = "16777216",
             ["CipherChunkSizeBytes"] = "20971520",
             ["JwtSettings:Key"] = "T3wNTuKqmTXKjJKXHJRGUpG9sdrmpSX4"
@@ -154,6 +156,7 @@ public class ServerEndpointsTests : IntegrationTestBase
         Assert.That(getPayload.GetProperty("compressionLevel").GetInt32(), Is.EqualTo(1));
         Assert.That(getPayload.GetProperty("cipherChunkSizeBytes").GetInt32(), Is.EqualTo(4 * 1024 * 1024));
         Assert.That(getPayload.GetProperty("encryptionThreads").GetInt32(), Is.EqualTo(1));
+        Assert.That(GetResolvedEncryptionThreads(), Is.EqualTo(1));
     }
 
     [Test]
@@ -228,8 +231,18 @@ public class ServerEndpointsTests : IntegrationTestBase
         Type settingsProviderType = typeof(SettingsProvider);
 
         settingsProviderType.GetField("_cache", flags)?.SetValue(null, null);
+        settingsProviderType.GetField("_cachedEncryptionThreads", flags)?.SetValue(null, 0);
         settingsProviderType.GetField("_isServerInitializedCache", flags)?.SetValue(null, null);
         settingsProviderType.GetField("_serverHasUsersCache", flags)?.SetValue(null, null);
+    }
+
+    private int GetResolvedEncryptionThreads()
+    {
+        using var scope = _factory!.Services.CreateScope();
+        var cipher = scope.ServiceProvider.GetRequiredService<IStreamCipher>();
+        FieldInfo? field = cipher.GetType().GetField("ConcurrencyLevel", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.That(field, Is.Not.Null);
+        return (int)field!.GetValue(cipher)!;
     }
 
     private async Task<string> LoginAsync()
