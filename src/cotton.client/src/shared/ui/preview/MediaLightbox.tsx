@@ -121,12 +121,20 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const [touchControlsVisible, setTouchControlsVisible] =
     React.useState<boolean>(true);
   const [isClosing, setIsClosing] = React.useState(false);
+  const closingResetTimerRef = React.useRef<number | null>(null);
   const touchControlsTimerRef = React.useRef<number | null>(null);
 
   const clearTouchControlsTimer = React.useCallback(() => {
     if (touchControlsTimerRef.current !== null) {
       window.clearTimeout(touchControlsTimerRef.current);
       touchControlsTimerRef.current = null;
+    }
+  }, []);
+
+  const clearClosingResetTimer = React.useCallback(() => {
+    if (closingResetTimerRef.current !== null) {
+      window.clearTimeout(closingResetTimerRef.current);
+      closingResetTimerRef.current = null;
     }
   }, []);
 
@@ -444,20 +452,26 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   );
 
   const handleClose = React.useCallback(() => {
+    clearClosingResetTimer();
     setIsClosing(true);
     stopLightboxMediaPlayback();
     setTouchControlsVisible(true);
     onClose();
-  }, [onClose]);
+    closingResetTimerRef.current = window.setTimeout(() => {
+      setIsClosing(false);
+      closingResetTimerRef.current = null;
+    }, LIGHTBOX_ANIMATION_MS + 50);
+  }, [clearClosingResetTimer, onClose]);
 
   React.useEffect(() => {
     if (!open) {
-      setIsClosing(false);
       stopLightboxMediaPlayback();
     }
 
     return stopLightboxMediaPlayback;
   }, [open]);
+
+  React.useEffect(() => clearClosingResetTimer, [clearClosingResetTimer]);
 
   const lightboxThumbnails = React.useMemo(() => {
     if (isTouchDevice) {
