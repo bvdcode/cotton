@@ -1927,6 +1927,11 @@
       "fields": {
         "storageType": "Backend úložiště"
       },
+      "chunkSize": {
+        "title": "Upload chunk size",
+        "description": "Controls how much data the browser sends per upload request. Larger chunks reduce request overhead on fast local networks.",
+        "ariaLabel": "Upload chunk size"
+      },
       "quota": {
         "title": "Výchozí kvóta uživatele",
         "description": "Omezuje, kolik unikátně nahraného obsahu může každý uživatel vlastnit. Pro neomezené účty ponechte prázdné.",
@@ -1971,7 +1976,8 @@
         "s3SaveFailed": "Uložení konfigurace S3 se nezdařilo.",
         "storageSaveFailed": "Přepnutí režimu úložiště se nezdařilo.",
         "quotaSaveFailed": "Uložení výchozí kvóty uživatele se nezdařilo.",
-        "templateSaveFailed": "Uložení šablony výchozích souborů se nezdařilo."
+        "templateSaveFailed": "Uložení šablony výchozích souborů se nezdařilo.",
+        "chunkSizeSaveFailed": "Failed to save upload chunk size."
       }
     },
     "notificationsSettings": {

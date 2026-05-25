@@ -1882,6 +1882,11 @@
       "fields": {
         "storageType": "Opslagback-end"
       },
+      "chunkSize": {
+        "title": "Upload chunk size",
+        "description": "Controls how much data the browser sends per upload request. Larger chunks reduce request overhead on fast local networks.",
+        "ariaLabel": "Upload chunk size"
+      },
       "quota": {
         "title": "Standaardquota per gebruiker",
         "description": "Beperkt hoeveel unieke geüploade inhoud elke gebruiker mag bezitten. Laat leeg voor onbeperkte accounts.",
@@ -1926,7 +1931,8 @@
         "s3SaveFailed": "Opslaan van S3-configuratie mislukt.",
         "storageSaveFailed": "Wisselen van opslagmodus mislukt.",
         "quotaSaveFailed": "Opslaan van het standaardquotum per gebruiker mislukt.",
-        "templateSaveFailed": "Opslaan van het standaardbestandensjabloon mislukt."
+        "templateSaveFailed": "Opslaan van het standaardbestandensjabloon mislukt.",
+        "chunkSizeSaveFailed": "Failed to save upload chunk size."
       }
     },
     "notificationsSettings": {

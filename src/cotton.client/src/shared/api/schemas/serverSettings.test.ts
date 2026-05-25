@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   chunkSizeResponseSchema,
+  chunkSizeSettingsResponseSchema,
   emailConfigSchema,
   emailModeResponseSchema,
   publicBaseUrlSchema,
@@ -52,9 +53,13 @@ describe("server settings schemas", () => {
 
   it("accepts chunk size response variants", () => {
     expect(chunkSizeResponseSchema.parse(512)).toBe(512);
-    expect(chunkSizeResponseSchema.parse({ maxChunkSizeBytes: 1024 })).toBe(
-      1024,
-    );
+    expect(chunkSizeSettingsResponseSchema.parse({
+      maxChunkSizeBytes: 1024,
+      supportedMaxChunkSizeBytes: [512, 1024],
+    })).toEqual({
+      maxChunkSizeBytes: 1024,
+      supportedMaxChunkSizeBytes: [512, 1024],
+    });
   });
 
   it("normalizes enum responses from strings and numeric indexes", () => {

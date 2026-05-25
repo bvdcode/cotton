@@ -22,6 +22,7 @@ import {
 import { useTranslation } from "react-i18next";
 import {
   settingsApi,
+  type ChunkSizeSettings,
   type S3Config,
   type StorageSpaceMode,
   type StorageType,
@@ -40,9 +41,14 @@ type FlashTimers = {
   storageSpace: number | null;
   quota: number | null;
   template: number | null;
+  chunkSize: number | null;
 };
 
 const bytesPerGiB = 1024 ** 3;
+const bytesPerMiB = 1024 ** 2;
+const defaultChunkSizeOptionsBytes = [4, 8, 16].map(
+  (value) => value * bytesPerMiB,
+);
 
 const formatQuotaInput = (quotaBytes: number | null): string => {
   if (!quotaBytes || quotaBytes <= 0) {
@@ -82,6 +88,18 @@ const parseTemplateNodeIdInput = (input: string): string | null => {
 
   return trimmed.toLowerCase();
 };
+
+const formatChunkSize = (bytes: number): string => {
+  const mib = bytes / bytesPerMiB;
+  return `${Number(mib.toFixed(2)).toString()} MiB`;
+};
+
+const getSupportedChunkSizeOptions = (
+  settings: ChunkSizeSettings,
+): number[] =>
+  settings.supportedMaxChunkSizeBytes.length > 0
+    ? settings.supportedMaxChunkSizeBytes
+    : defaultChunkSizeOptionsBytes;
 
 const emptyS3Config: S3Config = {
   endpoint: "",
@@ -137,6 +155,18 @@ export const AdminStorageSettingsPage = () => {
   const [defaultTemplateStatus, setDefaultTemplateStatus] =
     useState<SaveStatus>("loading");
 
+  const [chunkSizeBytes, setChunkSizeBytes] = useState(
+    defaultChunkSizeOptionsBytes[0],
+  );
+  const [savedChunkSizeBytes, setSavedChunkSizeBytes] = useState(
+    defaultChunkSizeOptionsBytes[0],
+  );
+  const [supportedChunkSizeBytes, setSupportedChunkSizeBytes] = useState(
+    defaultChunkSizeOptionsBytes,
+  );
+  const [chunkSizeStatus, setChunkSizeStatus] =
+    useState<SaveStatus>("loading");
+
   const flashTimers = useMemo<FlashTimers>(
     () => ({
       storageType: null,
@@ -144,6 +174,7 @@ export const AdminStorageSettingsPage = () => {
       storageSpace: null,
       quota: null,
       template: null,
+      chunkSize: null,
     }),
     [],
   );
@@ -158,6 +189,7 @@ export const AdminStorageSettingsPage = () => {
       setStorageSpaceModeStatus("loading");
       setDefaultUserQuotaStatus("loading");
       setDefaultTemplateStatus("loading");
+      setChunkSizeStatus("loading");
 
       try {
         const [
@@ -166,12 +198,14 @@ export const AdminStorageSettingsPage = () => {
           nextStorageSpaceMode,
           nextDefaultUserQuotaBytes,
           nextDefaultTemplateNodeId,
+          nextChunkSizeSettings,
         ] = await Promise.all([
           settingsApi.getStorageType(),
           settingsApi.getS3Config(),
           settingsApi.getStorageSpaceMode(),
           settingsApi.getDefaultUserStorageQuotaBytes(),
           settingsApi.getDefaultUserTemplateNodeId(),
+          settingsApi.getChunkSizeSettings(),
         ]);
 
         if (!active) return;
@@ -186,11 +220,17 @@ export const AdminStorageSettingsPage = () => {
         setSavedDefaultUserQuotaGiB(quotaInput);
         setDefaultTemplateNodeId(nextDefaultTemplateNodeId ?? "");
         setSavedDefaultTemplateNodeId(nextDefaultTemplateNodeId ?? "");
+        setChunkSizeBytes(nextChunkSizeSettings.maxChunkSizeBytes);
+        setSavedChunkSizeBytes(nextChunkSizeSettings.maxChunkSizeBytes);
+        setSupportedChunkSizeBytes(
+          getSupportedChunkSizeOptions(nextChunkSizeSettings),
+        );
         setStorageTypeStatus("idle");
         setS3Status("idle");
         setStorageSpaceModeStatus("idle");
         setDefaultUserQuotaStatus("idle");
         setDefaultTemplateStatus("idle");
+        setChunkSizeStatus("idle");
       } catch {
         if (!active) return;
         setLoadError(t("storageSettings.errors.loadFailed"));
@@ -199,6 +239,7 @@ export const AdminStorageSettingsPage = () => {
         setStorageSpaceModeStatus("idle");
         setDefaultUserQuotaStatus("idle");
         setDefaultTemplateStatus("idle");
+        setChunkSizeStatus("idle");
       }
     };
 
@@ -225,6 +266,10 @@ export const AdminStorageSettingsPage = () => {
       if (flashTimers.template !== null) {
         window.clearTimeout(flashTimers.template);
         flashTimers.template = null;
+      }
+      if (flashTimers.chunkSize !== null) {
+        window.clearTimeout(flashTimers.chunkSize);
+        flashTimers.chunkSize = null;
       }
     };
   }, [flashTimers, t]);
@@ -374,6 +419,37 @@ export const AdminStorageSettingsPage = () => {
     }
   };
 
+  const handleChunkSizeChange = async (next: number | null) => {
+    if (
+      next === null
+      || next === chunkSizeBytes
+      || chunkSizeStatus === "loading"
+      || chunkSizeStatus === "saving"
+    ) {
+      return;
+    }
+
+    const previous = savedChunkSizeBytes;
+    setChunkSizeBytes(next);
+    setChunkSizeStatus("saving");
+
+    try {
+      const settings = await settingsApi.setChunkSize(next);
+      setChunkSizeBytes(settings.maxChunkSizeBytes);
+      setSavedChunkSizeBytes(settings.maxChunkSizeBytes);
+      setSupportedChunkSizeBytes(getSupportedChunkSizeOptions(settings));
+      flashStatus(setChunkSizeStatus, flashTimers, "chunkSize");
+    } catch (error) {
+      setChunkSizeBytes(previous);
+      setChunkSizeStatus("error");
+      showApiErrorToast(
+        error,
+        t("storageSettings.errors.chunkSizeSaveFailed"),
+        "admin-storage-settings:chunk-size:save-failed",
+      );
+    }
+  };
+
   const handleStorageSpaceModeChange = async (
     next: StorageSpaceMode | null,
   ) => {
@@ -413,6 +489,8 @@ export const AdminStorageSettingsPage = () => {
   const s3Saving = s3Status === "saving" || storageTypeStatus === "saving";
   const storageSpaceDisabled =
     storageSpaceModeStatus === "loading" || storageSpaceModeStatus === "saving";
+  const chunkSizeDisabled =
+    chunkSizeStatus === "loading" || chunkSizeStatus === "saving";
   const quotaSaving = defaultUserQuotaStatus === "saving";
   const quotaDisabled =
     defaultUserQuotaStatus === "loading" || defaultUserQuotaStatus === "saving";
@@ -566,6 +644,38 @@ export const AdminStorageSettingsPage = () => {
               {storageSpaceOptions.map((option) => (
                 <ToggleButton key={option} value={option}>
                   {t(`settings.general.storageSpaceMode.${option}`)}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </SettingsSection>
+
+          <SettingsSection
+            title={t("storageSettings.chunkSize.title")}
+            description={t("storageSettings.chunkSize.description")}
+            status={chunkSizeStatus}
+          >
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={chunkSizeBytes}
+              onChange={(_, next: number | null) =>
+                void handleChunkSizeChange(next)
+              }
+              disabled={chunkSizeDisabled}
+              aria-label={t("storageSettings.chunkSize.ariaLabel")}
+              fullWidth
+              sx={{
+                "& .MuiToggleButton-root": {
+                  flex: 1,
+                  minWidth: 0,
+                  whiteSpace: "normal",
+                  lineHeight: 1.2,
+                },
+              }}
+            >
+              {supportedChunkSizeBytes.map((option) => (
+                <ToggleButton key={option} value={option}>
+                  {formatChunkSize(option)}
                 </ToggleButton>
               ))}
             </ToggleButtonGroup>

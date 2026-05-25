@@ -78,10 +78,18 @@ describe("settingsApi getters", () => {
     const get = vi
       .spyOn(httpClient, "get")
       .mockResolvedValueOnce({ data: 4096 })
-      .mockResolvedValueOnce({ data: { maxChunkSizeBytes: 8192 } });
+      .mockResolvedValueOnce({
+        data: {
+          maxChunkSizeBytes: 8192,
+          supportedMaxChunkSizeBytes: [4096, 8192, 16384],
+        },
+      });
 
     await expect(settingsApi.getChunkSize()).resolves.toBe(4096);
-    await expect(settingsApi.getChunkSize()).resolves.toBe(8192);
+    await expect(settingsApi.getChunkSizeSettings()).resolves.toEqual({
+      maxChunkSizeBytes: 8192,
+      supportedMaxChunkSizeBytes: [4096, 8192, 16384],
+    });
     expect(get).toHaveBeenCalledWith(
       "server/settings/chunk-size",
       undefined,
@@ -275,11 +283,19 @@ describe("settingsApi setters", () => {
   });
 
   it("encodes mode setters in the URL path", async () => {
-    const patch = vi.spyOn(httpClient, "patch").mockResolvedValue({
-      data: undefined,
-    });
+    const patch = vi
+      .spyOn(httpClient, "patch")
+      .mockResolvedValue({ data: undefined })
+      .mockResolvedValueOnce({ data: undefined })
+      .mockResolvedValueOnce({
+        data: {
+          maxChunkSizeBytes: 16777216,
+          supportedMaxChunkSizeBytes: [4194304, 8388608, 16777216],
+        },
+      });
 
     await settingsApi.setStorageSpaceMode("Limited");
+    await settingsApi.setChunkSize(16777216);
     await settingsApi.setComputionMode("Remote");
     await settingsApi.setStorageType("S3");
     await settingsApi.setEmailMode("Custom");
@@ -291,18 +307,22 @@ describe("settingsApi setters", () => {
     );
     expect(patch).toHaveBeenNthCalledWith(
       2,
-      "server/settings/compution-mode/Remote",
+      "server/settings/chunk-size/16777216",
     );
     expect(patch).toHaveBeenNthCalledWith(
       3,
-      "server/settings/storage-type/S3",
+      "server/settings/compution-mode/Remote",
     );
     expect(patch).toHaveBeenNthCalledWith(
       4,
-      "server/settings/email-mode/Custom",
+      "server/settings/storage-type/S3",
     );
     expect(patch).toHaveBeenNthCalledWith(
       5,
+      "server/settings/email-mode/Custom",
+    );
+    expect(patch).toHaveBeenNthCalledWith(
+      6,
       "server/settings/geoip-lookup-mode/CottonCloud",
     );
   });

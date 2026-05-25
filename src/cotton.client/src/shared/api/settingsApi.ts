@@ -1,9 +1,10 @@
-import { getValidated, httpClient } from "./httpClient";
+import { getValidated, httpClient, parseValidated } from "./httpClient";
 import { isJsonObject, type JsonValue } from "../types/json";
 import {
   allowCrossUserDeduplicationSchema,
   allowGlobalIndexingSchema,
   chunkSizeResponseSchema,
+  chunkSizeSettingsResponseSchema,
   computionModeResponseSchema,
   customGeoIpLookupUrlSchema,
   defaultUserStorageQuotaBytesSchema,
@@ -21,6 +22,7 @@ import {
   storageTypeResponseSchema,
   telemetrySettingSchema,
   timezoneSchema,
+  type ChunkSizeSettings,
   type ComputionMode,
   type EmailConfig,
   type EmailMode,
@@ -34,6 +36,7 @@ import {
 } from "./schemas/serverSettings";
 
 export type {
+  ChunkSizeSettings,
   ComputionMode,
   EmailConfig,
   EmailMode,
@@ -182,11 +185,28 @@ export const settingsApi = {
   get: (): Promise<ServerSettings> =>
     getValidated("server/settings", serverSettingsResponseSchema),
 
+  getChunkSizeSettings: (): Promise<ChunkSizeSettings> =>
+    getValidated(
+      "server/settings/chunk-size",
+      chunkSizeSettingsResponseSchema,
+    ),
+
   getChunkSize: (): Promise<number> =>
     getValidated(
       "server/settings/chunk-size",
       chunkSizeResponseSchema,
     ),
+
+  setChunkSize: async (maxChunkSizeBytes: number): Promise<ChunkSizeSettings> => {
+    const response = await httpClient.patch<unknown>(
+      `server/settings/chunk-size/${maxChunkSizeBytes}`,
+    );
+    return parseValidated(
+      "server/settings/chunk-size",
+      response.data,
+      chunkSizeSettingsResponseSchema,
+    );
+  },
 
   getTelemetry: (): Promise<boolean> =>
     getValidated("server/settings/telemetry", telemetrySettingSchema),

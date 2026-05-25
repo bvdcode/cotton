@@ -1869,6 +1869,11 @@
       "fields": {
         "storageType": "存储后端"
       },
+      "chunkSize": {
+        "title": "Upload chunk size",
+        "description": "Controls how much data the browser sends per upload request. Larger chunks reduce request overhead on fast local networks.",
+        "ariaLabel": "Upload chunk size"
+      },
       "quota": {
         "title": "默认用户配额",
         "description": "限制每位用户可拥有的去重后上传内容总量。留空表示账户无上限。",
@@ -1913,7 +1918,8 @@
         "s3SaveFailed": "保存 S3 配置失败。",
         "storageSaveFailed": "切换存储模式失败。",
         "quotaSaveFailed": "保存默认用户配额失败。",
-        "templateSaveFailed": "保存默认文件模板失败。"
+        "templateSaveFailed": "保存默认文件模板失败。",
+        "chunkSizeSaveFailed": "Failed to save upload chunk size."
       }
     },
     "notificationsSettings": {

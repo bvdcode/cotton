@@ -1803,6 +1803,11 @@
       "fields": {
         "storageType": "Storage backend"
       },
+      "chunkSize": {
+        "title": "Upload chunk size",
+        "description": "Controls how much data the browser sends per upload request. Larger chunks reduce request overhead on fast local networks.",
+        "ariaLabel": "Upload chunk size"
+      },
       "quota": {
         "title": "Default user quota",
         "description": "Limits how much unique uploaded content each user can own. Leave it empty for unlimited accounts.",
@@ -1847,7 +1852,8 @@
         "s3SaveFailed": "Failed to save S3 configuration.",
         "storageSaveFailed": "Failed to switch storage mode.",
         "quotaSaveFailed": "Failed to save default user quota.",
-        "templateSaveFailed": "Failed to save default files template."
+        "templateSaveFailed": "Failed to save default files template.",
+        "chunkSizeSaveFailed": "Failed to save upload chunk size."
       }
     },
     "notificationsSettings": {

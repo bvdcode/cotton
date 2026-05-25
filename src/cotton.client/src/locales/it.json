@@ -1889,6 +1889,11 @@
       "fields": {
         "storageType": "Backend di archiviazione"
       },
+      "chunkSize": {
+        "title": "Upload chunk size",
+        "description": "Controls how much data the browser sends per upload request. Larger chunks reduce request overhead on fast local networks.",
+        "ariaLabel": "Upload chunk size"
+      },
       "quota": {
         "title": "Quota utente predefinita",
         "description": "Limita la quantità di contenuti unici caricati che ogni utente può possedere. Lasci vuoto per account illimitati.",
@@ -1933,7 +1938,8 @@
         "s3SaveFailed": "Impossibile salvare la configurazione S3.",
         "storageSaveFailed": "Impossibile cambiare la modalità di archiviazione.",
         "quotaSaveFailed": "Impossibile salvare la quota utente predefinita.",
-        "templateSaveFailed": "Impossibile salvare il modello di file predefiniti."
+        "templateSaveFailed": "Impossibile salvare il modello di file predefiniti.",
+        "chunkSizeSaveFailed": "Failed to save upload chunk size."
       }
     },
     "notificationsSettings": {

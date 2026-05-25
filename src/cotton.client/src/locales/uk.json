@@ -1879,6 +1879,11 @@
       "fields": {
         "storageType": "Бекенд сховища"
       },
+      "chunkSize": {
+        "title": "Upload chunk size",
+        "description": "Controls how much data the browser sends per upload request. Larger chunks reduce request overhead on fast local networks.",
+        "ariaLabel": "Upload chunk size"
+      },
       "quota": {
         "title": "Квота користувача за замовчуванням",
         "description": "Обмежує, скільки унікального вивантаженого вмісту може мати кожен користувач. Залиште порожнім для облікових записів без обмежень.",
@@ -1923,7 +1928,8 @@
         "s3SaveFailed": "Не вдалося зберегти конфігурацію S3.",
         "storageSaveFailed": "Не вдалося перемкнути режим сховища.",
         "quotaSaveFailed": "Не вдалося зберегти квоту користувача за замовчуванням.",
-        "templateSaveFailed": "Не вдалося зберегти шаблон файлів за замовчуванням."
+        "templateSaveFailed": "Не вдалося зберегти шаблон файлів за замовчуванням.",
+        "chunkSizeSaveFailed": "Failed to save upload chunk size."
       }
     },
     "notificationsSettings": {
