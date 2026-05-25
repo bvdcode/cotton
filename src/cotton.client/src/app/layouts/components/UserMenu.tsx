@@ -36,7 +36,7 @@ import {
 
 const STORAGE_QUOTA_STALE_TIME_MS = 60_000;
 const VERSION_DEVELOPER_CLICK_TARGET = 3;
-const VERSION_DEVELOPER_CLICK_WINDOW_MS = 1_500;
+const VERSION_DEVELOPER_CLICK_WINDOW_MS = 3_000;
 
 const getStorageQuotaPercent = (
   usedBytes: number,
