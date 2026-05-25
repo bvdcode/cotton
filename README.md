@@ -152,18 +152,6 @@ In short: unlike systems that are mostly a filesystem wrapper, Cotton is designe
 
 ---
 
-## Product Snapshots
-
-Current screenshots from the shipped web client:
-
-| Large-folder navigation                                                      | Gallery browsing                                                            | Search in the same workflow                                                |
-| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| ![Folder navigation](src/cotton.client/public/assets/images/screenshot1.jpg) | ![Gallery browsing](src/cotton.client/public/assets/images/screenshot2.jpg) | ![Search workflow](src/cotton.client/public/assets/images/screenshot5.jpg) |
-
-The UI matters here because Cotton is not trying to prove a storage thesis in isolation. The engine is built so the product can stay responsive, preview-rich, and straightforward to operate.
-
----
-
 ## What This Enables In Practice
 
 | Design choice                                                  | Practical outcome                                                                                               |
