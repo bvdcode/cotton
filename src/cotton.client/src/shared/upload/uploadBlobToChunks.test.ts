@@ -82,4 +82,52 @@ describe("uploadBlobToChunks", () => {
     expect(worker.digestFile).toHaveBeenCalledOnce();
     expect(mocks.release).toHaveBeenCalledWith(worker);
   });
+
+  it("bounds cache-hit probes while file hash updates are backlogged", async () => {
+    let releaseFirstFileHashUpdate: () => void = () => {
+      throw new Error("file hash update was not queued");
+    };
+    let updateCalls = 0;
+    const worker = {
+      updateFileHash: vi.fn(() => {
+        updateCalls += 1;
+        if (updateCalls === 1) {
+          return new Promise<void>((resolve) => {
+            releaseFirstFileHashUpdate = resolve;
+          });
+        }
+
+        return Promise.resolve();
+      }),
+      digestFile: vi.fn(async () => "file-hash"),
+    };
+    mocks.acquire.mockResolvedValue(worker);
+
+    const upload = uploadBlobToChunks({
+      blob: new Blob(["abcdef"]),
+      fileName: "bytes.bin",
+      server: {
+        maxChunkSizeBytes: 1,
+        supportedHashAlgorithm: "sha256",
+      },
+    });
+
+    await vi.waitFor(() => {
+      expect(mocks.chunkExists).toHaveBeenCalledTimes(4);
+    });
+    await new Promise((resolve) => {
+      globalThis.setTimeout(resolve, 0);
+    });
+    expect(mocks.chunkExists).toHaveBeenCalledTimes(4);
+
+    releaseFirstFileHashUpdate();
+
+    await expect(upload).resolves.toEqual({
+      chunkHashes: Array(6).fill("chunk-hash"),
+      fileHash: "file-hash",
+    });
+    expect(mocks.chunkExists).toHaveBeenCalledTimes(6);
+    expect(worker.digestFile).toHaveBeenCalledOnce();
+    expect(mocks.release).toHaveBeenCalledWith(worker);
+  });
 });

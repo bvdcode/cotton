@@ -96,6 +96,13 @@ export async function uploadBlobToChunks(options: {
     Math.min(uploadConfig.minAdaptiveChunkSizeBytes, initialChunkSize),
   );
   const algorithm = toWebCryptoAlgorithm(server.supportedHashAlgorithm);
+  const maxQueuedFileHashBytes = Math.max(
+    initialChunkSize,
+    Math.min(
+      initialChunkSize * chunkUploadConcurrency.max,
+      64 * 1024 * 1024,
+    ),
+  );
 
   let activeChunkSize = initialChunkSize;
   let nextSegmentId = 0;
@@ -110,7 +117,9 @@ export async function uploadBlobToChunks(options: {
   const uploadedSegments: UploadedChunkSegment[] = [];
   const inFlightBytesById = new Map<number, number>();
   const fileHashUpdates = new Set<Promise<void>>();
+  let queuedFileHashBytes = 0;
   let fileHashWaiters: Array<() => void> = [];
+  let fileHashQueueWaiters: Array<() => void> = [];
 
   const report = () => {
     if (!options.onProgress) {
@@ -252,6 +261,46 @@ export async function uploadBlobToChunks(options: {
     }
   };
 
+  const wakeFileHashQueueWaiters = () => {
+    const waiters = fileHashQueueWaiters;
+    fileHashQueueWaiters = [];
+    for (const resolve of waiters) {
+      resolve();
+    }
+  };
+
+  const reserveFileHashQueueBytes = async (bytes: number): Promise<number> => {
+    if (bytes <= 0) {
+      return 0;
+    }
+
+    while (
+      !fatalError
+      && queuedFileHashBytes > 0
+      && queuedFileHashBytes + bytes > maxQueuedFileHashBytes
+    ) {
+      await new Promise<void>((resolve) => {
+        fileHashQueueWaiters.push(resolve);
+      });
+    }
+
+    if (fatalError) {
+      throw fatalError;
+    }
+
+    queuedFileHashBytes += bytes;
+    return bytes;
+  };
+
+  const releaseFileHashQueueBytes = (bytes: number) => {
+    if (bytes <= 0) {
+      return;
+    }
+
+    queuedFileHashBytes = Math.max(0, queuedFileHashBytes - bytes);
+    wakeFileHashQueueWaiters();
+  };
+
   const waitForFileHashTurn = async (segment: ChunkSegment) => {
     while (!fatalError && segment.start !== nextFileHashOffset) {
       await new Promise<void>((resolve) => {
@@ -277,16 +326,20 @@ export async function uploadBlobToChunks(options: {
     fatalError ??= error;
     abortController.abort();
     wakeFileHashWaiters();
+    wakeFileHashQueueWaiters();
   };
 
-  const trackFileHashUpdate = (update: Promise<void>) => {
-    const tracked = update.catch((error) => {
-      failUpload(error);
-    });
+  const trackFileHashUpdate = (update: Promise<void>, queuedBytes: number) => {
+    let tracked: Promise<void>;
+    tracked = update
+      .catch((error) => {
+        failUpload(error);
+      })
+      .finally(() => {
+        releaseFileHashQueueBytes(queuedBytes);
+        fileHashUpdates.delete(tracked);
+      });
     fileHashUpdates.add(tracked);
-    tracked.finally(() => {
-      fileHashUpdates.delete(tracked);
-    });
   };
 
   if (canUseHashWorker()) {
@@ -346,8 +399,13 @@ export async function uploadBlobToChunks(options: {
       blobHasher!.update(new Uint8Array(buffer));
     };
 
-    const queueFileHashUpdate = (segment: ChunkSegment, buffer: ArrayBuffer) => {
+    const queueFileHashUpdate = (
+      segment: ChunkSegment,
+      buffer: ArrayBuffer,
+      queuedBytes: number,
+    ) => {
       if (!segment.updateFileHash) {
+        releaseFileHashQueueBytes(queuedBytes);
         return;
       }
 
@@ -355,7 +413,7 @@ export async function uploadBlobToChunks(options: {
         await waitForFileHashTurn(segment);
         await updateFileHashFromBuffer(buffer);
         advanceFileHashOffset(segment);
-      })());
+      })(), queuedBytes);
     };
 
     const uploadHashedChunk = async (
@@ -414,6 +472,7 @@ export async function uploadBlobToChunks(options: {
       const chunkBytes = getSegmentLength(segment);
       const startedAt = performance.now();
       let chunkHash: string | null = segment.knownHash ?? null;
+      let reservedFileHashBytes = 0;
 
       try {
         if (segment.knownHash) {
@@ -421,15 +480,21 @@ export async function uploadBlobToChunks(options: {
           return;
         }
 
+        if (segment.updateFileHash) {
+          reservedFileHashBytes = await reserveFileHashQueueBytes(chunkBytes);
+        }
+
         const buffer = await chunk.arrayBuffer();
         const chunkHashPromise = hashBuffer(buffer, algorithm);
-        queueFileHashUpdate(segment, buffer);
+        queueFileHashUpdate(segment, buffer, reservedFileHashBytes);
+        reservedFileHashBytes = 0;
 
         chunkHash = await chunkHashPromise;
         const uploadChunk = new Blob([buffer], { type: chunk.type });
         await uploadHashedChunk(segment, uploadChunk, chunkHash);
         completeSegment(segment, chunkHash, startedAt);
       } catch (error) {
+        releaseFileHashQueueBytes(reservedFileHashBytes);
         handleSegmentUploadFailure(segment, chunkBytes, startedAt, chunkHash, error);
       }
     };
@@ -491,7 +556,7 @@ export async function uploadBlobToChunks(options: {
       await Promise.race(inFlight);
     }
 
-    while (fileHashUpdates.size > 0 && !fatalError) {
+    while (fileHashUpdates.size > 0) {
       await Promise.race(fileHashUpdates);
     }
 

@@ -66,7 +66,7 @@ namespace Cotton.Server.Jobs
 
             int processed = 0;
             int nextIndex = 0;
-            while (nextIndex < itemsToProcess.Count)
+            while (nextIndex < itemsToProcess.Count && processed < MaxItemsPerRun)
             {
                 var item = itemsToProcess[nextIndex++];
                 _perf.OnPreviewGenerating();
@@ -78,6 +78,7 @@ namespace Cotton.Server.Jobs
                 if (generator == null)
                 {
                     _logger.LogWarning("No preview generator found for content type {ContentType}", item.ContentType);
+                    DetachPreviewItem(item);
                     continue;
                 }
 
@@ -168,6 +169,8 @@ namespace Cotton.Server.Jobs
                             itemsToProcess.Count);
                     }
                 }
+
+                DetachPreviewItem(item);
             }
 
             await _dbContext.SaveChangesAsync(cancellationToken);
@@ -253,10 +256,16 @@ namespace Cotton.Server.Jobs
             IReadOnlyDictionary<string, int> generatorVersionsByContentType,
             CancellationToken cancellationToken)
         {
+            int remainingSlots = Math.Max(0, MaxItemsPerRun - insertIndex);
+            if (remainingSlots == 0)
+            {
+                return 0;
+            }
+
             List<FileManifest> refreshedItems = await LoadNextPreviewItemsAsync(
                 allSupportedMimeTypes,
                 generatorVersionsByContentType,
-                RefreshItemsPerUploadPause,
+                Math.Min(RefreshItemsPerUploadPause, remainingSlots),
                 queuedOrProcessedItemIds,
                 cancellationToken);
 
@@ -266,7 +275,45 @@ namespace Cotton.Server.Jobs
             }
 
             itemsToProcess.InsertRange(insertIndex, refreshedItems);
+            TrimPreviewQueueToRunLimit(itemsToProcess);
             return refreshedItems.Count;
+        }
+
+        private void TrimPreviewQueueToRunLimit(List<FileManifest> itemsToProcess)
+        {
+            if (itemsToProcess.Count <= MaxItemsPerRun)
+            {
+                return;
+            }
+
+            int removeStart = MaxItemsPerRun;
+            int removeCount = itemsToProcess.Count - MaxItemsPerRun;
+            for (int i = removeStart; i < itemsToProcess.Count; i++)
+            {
+                DetachPreviewItem(itemsToProcess[i]);
+            }
+
+            itemsToProcess.RemoveRange(removeStart, removeCount);
+        }
+
+        private void DetachPreviewItem(FileManifest item)
+        {
+            foreach (var manifestChunk in item.FileManifestChunks)
+            {
+                if (manifestChunk.Chunk is not null)
+                {
+                    _dbContext.Entry(manifestChunk.Chunk).State = EntityState.Detached;
+                }
+
+                _dbContext.Entry(manifestChunk).State = EntityState.Detached;
+            }
+
+            foreach (var nodeFile in item.NodeFiles)
+            {
+                _dbContext.Entry(nodeFile).State = EntityState.Detached;
+            }
+
+            _dbContext.Entry(item).State = EntityState.Detached;
         }
 
         private async Task WaitForUploadPauseAsync(CancellationToken cancellationToken)
