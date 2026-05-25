@@ -29,6 +29,10 @@ import {
   type StorageType,
 } from "../../../shared/api/settingsApi";
 import { showApiErrorToast } from "../../../shared/api/httpClient";
+import {
+  selectDeveloperSettingsUnlocked,
+  useLocalPreferencesStore,
+} from "../../../shared/store/localPreferencesStore";
 import { SettingsSection } from "./SettingsSection";
 import { isGuidString } from "../../../shared/utils/guid";
 import { storageSpaceOptions } from "./adminGeneralSettingsModel";
@@ -141,8 +145,19 @@ const flashStatus = (
   }, SAVED_STATUS_VISIBLE_MS);
 };
 
+const combineStatuses = (...statuses: SaveStatus[]): SaveStatus => {
+  if (statuses.includes("saving")) return "saving";
+  if (statuses.includes("error")) return "error";
+  if (statuses.includes("loading")) return "loading";
+  if (statuses.includes("saved")) return "saved";
+  return "idle";
+};
+
 export const AdminStorageSettingsPage = () => {
   const { t } = useTranslation("admin");
+  const developerSettingsUnlocked = useLocalPreferencesStore(
+    selectDeveloperSettingsUnlocked,
+  );
 
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -464,6 +479,8 @@ export const AdminStorageSettingsPage = () => {
       || next === chunkSizeBytes
       || chunkSizeStatus === "loading"
       || chunkSizeStatus === "saving"
+      || storagePipelineStatus === "loading"
+      || storagePipelineStatus === "saving"
     ) {
       return;
     }
@@ -496,7 +513,12 @@ export const AdminStorageSettingsPage = () => {
   };
 
   const handleCompressionLevelSave = async () => {
-    if (storagePipelineStatus === "loading" || storagePipelineStatus === "saving") {
+    if (
+      storagePipelineStatus === "loading"
+      || storagePipelineStatus === "saving"
+      || chunkSizeStatus === "loading"
+      || chunkSizeStatus === "saving"
+    ) {
       return;
     }
 
@@ -531,6 +553,8 @@ export const AdminStorageSettingsPage = () => {
       || next === storagePipelineSettings.cipherChunkSizeBytes
       || storagePipelineStatus === "loading"
       || storagePipelineStatus === "saving"
+      || chunkSizeStatus === "loading"
+      || chunkSizeStatus === "saving"
     ) {
       return;
     }
@@ -562,6 +586,8 @@ export const AdminStorageSettingsPage = () => {
       || next === storagePipelineSettings.encryptionThreads
       || storagePipelineStatus === "loading"
       || storagePipelineStatus === "saving"
+      || chunkSizeStatus === "loading"
+      || chunkSizeStatus === "saving"
     ) {
       return;
     }
@@ -626,10 +652,15 @@ export const AdminStorageSettingsPage = () => {
   const s3Saving = s3Status === "saving" || storageTypeStatus === "saving";
   const storageSpaceDisabled =
     storageSpaceModeStatus === "loading" || storageSpaceModeStatus === "saving";
-  const chunkSizeDisabled =
-    chunkSizeStatus === "loading" || chunkSizeStatus === "saving";
-  const storagePipelineDisabled =
-    storagePipelineStatus === "loading" || storagePipelineStatus === "saving";
+  const storagePipelineGroupStatus = combineStatuses(
+    chunkSizeStatus,
+    storagePipelineStatus,
+  );
+  const storagePipelineGroupDisabled =
+    storagePipelineGroupStatus === "loading"
+    || storagePipelineGroupStatus === "saving";
+  const chunkSizeDisabled = storagePipelineGroupDisabled;
+  const storagePipelineDisabled = storagePipelineGroupDisabled;
   const compressionLevelChanged =
     compressionLevelInput.trim() !== savedStoragePipelineSettings.compressionLevel.toString();
   const quotaSaving = defaultUserQuotaStatus === "saving";
@@ -790,44 +821,44 @@ export const AdminStorageSettingsPage = () => {
             </ToggleButtonGroup>
           </SettingsSection>
 
-          <SettingsSection
-            title={t("storageSettings.chunkSize.title")}
-            description={t("storageSettings.chunkSize.description")}
-            status={chunkSizeStatus}
-          >
-            <ToggleButtonGroup
-              size="small"
-              exclusive
-              value={chunkSizeBytes}
-              onChange={(_, next: number | null) =>
-                void handleChunkSizeChange(next)
-              }
-              disabled={chunkSizeDisabled}
-              aria-label={t("storageSettings.chunkSize.ariaLabel")}
-              fullWidth
-              sx={{
-                "& .MuiToggleButton-root": {
-                  flex: 1,
-                  minWidth: 0,
-                  whiteSpace: "normal",
-                  lineHeight: 1.2,
-                },
-              }}
+          {developerSettingsUnlocked && (
+            <SettingsSection
+              title={t("storageSettings.pipeline.title")}
+              description={t("storageSettings.pipeline.description")}
+              status={storagePipelineGroupStatus}
             >
-              {supportedChunkSizeBytes.map((option) => (
-                <ToggleButton key={option} value={option}>
-                  {formatChunkSize(option)}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
-          </SettingsSection>
+              <Stack spacing={2}>
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    {t("storageSettings.chunkSize.title")}
+                  </Typography>
+                  <ToggleButtonGroup
+                    size="small"
+                    exclusive
+                    value={chunkSizeBytes}
+                    onChange={(_, next: number | null) =>
+                      void handleChunkSizeChange(next)
+                    }
+                    disabled={chunkSizeDisabled}
+                    aria-label={t("storageSettings.chunkSize.ariaLabel")}
+                    fullWidth
+                    sx={{
+                      "& .MuiToggleButton-root": {
+                        flex: 1,
+                        minWidth: 0,
+                        whiteSpace: "normal",
+                        lineHeight: 1.2,
+                      },
+                    }}
+                  >
+                    {supportedChunkSizeBytes.map((option) => (
+                      <ToggleButton key={option} value={option}>
+                        {formatChunkSize(option)}
+                      </ToggleButton>
+                    ))}
+                  </ToggleButtonGroup>
+                </Box>
 
-          <SettingsSection
-            title={t("storageSettings.pipeline.title")}
-            description={t("storageSettings.pipeline.description")}
-            status={storagePipelineStatus}
-          >
-            <Stack spacing={2}>
               <Stack
                 direction={{ xs: "column", sm: "row" }}
                 spacing={2}
@@ -934,8 +965,9 @@ export const AdminStorageSettingsPage = () => {
                   ))}
                 </ToggleButtonGroup>
               </Box>
-            </Stack>
-          </SettingsSection>
+              </Stack>
+            </SettingsSection>
+          )}
 
           <SettingsSection
             title={t("storageSettings.quota.title")}

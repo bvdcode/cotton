@@ -1,10 +1,10 @@
 import {
   Avatar,
   Box,
-  ButtonBase,
   Divider,
   IconButton,
   LinearProgress,
+  Link,
   ListItemIcon,
   ListItemText,
   Menu,
@@ -18,12 +18,15 @@ import {
   Person,
 } from "@mui/icons-material";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { UserRole, useAuth } from "../../../features/auth";
 import { queryKeys } from "../../../shared/api/queries/queryKeys";
 import { storageQuotaApi } from "../../../shared/api/storageQuotaApi";
+import {
+  useLocalPreferencesStore,
+} from "../../../shared/store/localPreferencesStore";
 import { useServerSettings } from "../../../shared/store/useServerSettings";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import {
@@ -32,6 +35,8 @@ import {
 } from "./bugReportPrefill";
 
 const STORAGE_QUOTA_STALE_TIME_MS = 60_000;
+const VERSION_DEVELOPER_CLICK_TARGET = 3;
+const VERSION_DEVELOPER_CLICK_WINDOW_MS = 1_500;
 
 const getStorageQuotaPercent = (
   usedBytes: number,
@@ -63,7 +68,12 @@ export const UserMenu = () => {
   const navigate = useNavigate();
   const { t } = useTranslation("common");
   const { data: serverSettings } = useServerSettings();
+  const setDeveloperSettingsUnlocked = useLocalPreferencesStore(
+    (state) => state.setDeveloperSettingsUnlocked,
+  );
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const versionClickCountRef = useRef(0);
+  const versionClickResetTimerRef = useRef<number | null>(null);
   const isOpen = Boolean(anchorEl);
   const storageQuotaQuery = useQuery({
     queryKey: queryKeys.storageQuota.current(),
@@ -74,6 +84,12 @@ export const UserMenu = () => {
 
   useEffect(() => {
     initializeBugReportConsoleCapture();
+
+    return () => {
+      if (versionClickResetTimerRef.current !== null) {
+        window.clearTimeout(versionClickResetTimerRef.current);
+      }
+    };
   }, []);
 
   const getAvatarInitials = (args: {
@@ -130,9 +146,32 @@ export const UserMenu = () => {
     window.open(reportUrl, "_blank", "noopener,noreferrer");
   };
 
-  const openProductSite = () => {
-    handleClose();
-    window.open("https://cottoncloud.dev", "_blank", "noopener,noreferrer");
+  const handleVersionLinkClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+      return;
+    }
+
+    event.preventDefault();
+    versionClickCountRef.current += 1;
+
+    if (versionClickResetTimerRef.current !== null) {
+      window.clearTimeout(versionClickResetTimerRef.current);
+    }
+
+    versionClickResetTimerRef.current = window.setTimeout(() => {
+      versionClickCountRef.current = 0;
+      versionClickResetTimerRef.current = null;
+    }, VERSION_DEVELOPER_CLICK_WINDOW_MS);
+
+    if (versionClickCountRef.current >= VERSION_DEVELOPER_CLICK_TARGET) {
+      versionClickCountRef.current = 0;
+      if (versionClickResetTimerRef.current !== null) {
+        window.clearTimeout(versionClickResetTimerRef.current);
+        versionClickResetTimerRef.current = null;
+      }
+
+      setDeveloperSettingsUnlocked(true);
+    }
   };
 
   const fullName = [user?.firstName, user?.lastName]
@@ -293,24 +332,25 @@ export const UserMenu = () => {
         {serverSettings?.version && <Divider />}
         {serverSettings?.version && (
           <Box px={2} py={0.5}>
-            <ButtonBase
-              onClick={openProductSite}
+            <Link
+              href="https://cottoncloud.dev"
+              target="_blank"
+              rel="noopener noreferrer"
+              underline="none"
+              onClick={handleVersionLinkClick}
               sx={{
-                width: "100%",
-                borderRadius: 1,
+                display: "block",
                 py: 0.5,
-                px: 1,
                 color: "text.secondary",
                 "&:hover": {
                   color: "primary.main",
-                  bgcolor: "action.hover",
                 },
               }}
             >
               <Typography variant="caption">
                 {serverSettings.version}
               </Typography>
-            </ButtonBase>
+            </Link>
           </Box>
         )}
       </Menu>
