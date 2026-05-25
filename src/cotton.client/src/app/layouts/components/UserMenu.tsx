@@ -18,7 +18,7 @@ import {
   Person,
 } from "@mui/icons-material";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { UserRole, useAuth } from "../../../features/auth";
@@ -35,9 +35,6 @@ import {
 } from "./bugReportPrefill";
 
 const STORAGE_QUOTA_STALE_TIME_MS = 60_000;
-const VERSION_DEVELOPER_CLICK_TARGET = 3;
-const VERSION_DEVELOPER_CLICK_WINDOW_MS = 3_000;
-
 const getStorageQuotaPercent = (
   usedBytes: number,
   quotaBytes: number | null,
@@ -68,12 +65,10 @@ export const UserMenu = () => {
   const navigate = useNavigate();
   const { t } = useTranslation("common");
   const { data: serverSettings } = useServerSettings();
-  const setDeveloperSettingsUnlocked = useLocalPreferencesStore(
-    (state) => state.setDeveloperSettingsUnlocked,
+  const recordDeveloperSettingsUnlockClick = useLocalPreferencesStore(
+    (state) => state.recordDeveloperSettingsUnlockClick,
   );
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const versionClickCountRef = useRef(0);
-  const versionClickResetTimerRef = useRef<number | null>(null);
   const isOpen = Boolean(anchorEl);
   const storageQuotaQuery = useQuery({
     queryKey: queryKeys.storageQuota.current(),
@@ -84,12 +79,6 @@ export const UserMenu = () => {
 
   useEffect(() => {
     initializeBugReportConsoleCapture();
-
-    return () => {
-      if (versionClickResetTimerRef.current !== null) {
-        window.clearTimeout(versionClickResetTimerRef.current);
-      }
-    };
   }, []);
 
   const getAvatarInitials = (args: {
@@ -146,32 +135,8 @@ export const UserMenu = () => {
     window.open(reportUrl, "_blank", "noopener,noreferrer");
   };
 
-  const handleVersionLinkClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
-      return;
-    }
-
-    event.preventDefault();
-    versionClickCountRef.current += 1;
-
-    if (versionClickResetTimerRef.current !== null) {
-      window.clearTimeout(versionClickResetTimerRef.current);
-    }
-
-    versionClickResetTimerRef.current = window.setTimeout(() => {
-      versionClickCountRef.current = 0;
-      versionClickResetTimerRef.current = null;
-    }, VERSION_DEVELOPER_CLICK_WINDOW_MS);
-
-    if (versionClickCountRef.current >= VERSION_DEVELOPER_CLICK_TARGET) {
-      versionClickCountRef.current = 0;
-      if (versionClickResetTimerRef.current !== null) {
-        window.clearTimeout(versionClickResetTimerRef.current);
-        versionClickResetTimerRef.current = null;
-      }
-
-      setDeveloperSettingsUnlocked(true);
-    }
+  const handleVersionClick = () => {
+    recordDeveloperSettingsUnlockClick();
   };
 
   const fullName = [user?.firstName, user?.lastName]
@@ -334,10 +299,8 @@ export const UserMenu = () => {
           <Box px={2} py={0.5}>
             <Link
               href="https://cottoncloud.dev"
-              target="_blank"
-              rel="noopener noreferrer"
               underline="none"
-              onClick={handleVersionLinkClick}
+              onClick={handleVersionClick}
               sx={{
                 display: "block",
                 py: 0.5,
