@@ -8,6 +8,7 @@ using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Helpers;
+using Cotton.Storage.Processors;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using System.Linq.Expressions;
@@ -36,6 +37,7 @@ namespace Cotton.Server.Providers
         private const int defaultEncryptionThreads = 2;
         private const int defaultMaxChunkSizeBytes = 4 * 1024 * 1024;
         private const int defaultCipherChunkSizeBytes = 1 * 1024 * 1024;
+        private const int defaultCompressionLevel = CompressionProcessor.DefaultCompressionLevel;
 
         /// <summary>
         /// Gets server settings.
@@ -77,6 +79,7 @@ namespace Cotton.Server.Providers
                     AllowCrossUserDeduplication = false,
                     AllowGlobalIndexing = false,
                     CipherChunkSizeBytes = defaultCipherChunkSizeBytes,
+                    CompressionLevel = defaultCompressionLevel,
                     EncryptionThreads = defaultEncryptionThreads,
                     MaxChunkSizeBytes = defaultMaxChunkSizeBytes,
                     SessionTimeoutHours = defaultSessionTimeoutHours,
@@ -724,6 +727,7 @@ namespace Cotton.Server.Providers
                 AllowCrossUserDeduplication = false,
                 AllowGlobalIndexing = false,
                 CipherChunkSizeBytes = defaultCipherChunkSizeBytes,
+                CompressionLevel = defaultCompressionLevel,
                 EncryptionThreads = defaultEncryptionThreads,
                 MaxChunkSizeBytes = defaultMaxChunkSizeBytes,
                 SessionTimeoutHours = defaultSessionTimeoutHours,

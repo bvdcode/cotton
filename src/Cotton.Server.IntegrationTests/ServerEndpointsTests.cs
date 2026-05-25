@@ -116,6 +116,47 @@ public class ServerEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Set_Storage_Pipeline_Settings_AreAdminOnly_AndPersist()
+    {
+        using HttpResponseMessage unauthenticatedResponse = await _client!.PatchAsync(
+            "/api/v1/server/settings/compression-level/1",
+            null);
+        Assert.That(unauthenticatedResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+
+        var token = await LoginAsync();
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        using HttpResponseMessage compressionResponse = await _client.PatchAsync(
+            "/api/v1/server/settings/compression-level/1",
+            null);
+        compressionResponse.EnsureSuccessStatusCode();
+        JsonElement compressionPayload = await compressionResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.That(compressionPayload.GetProperty("compressionLevel").GetInt32(), Is.EqualTo(1));
+        Assert.That(compressionPayload.GetProperty("minCompressionLevel").GetInt32(), Is.LessThanOrEqualTo(1));
+        Assert.That(compressionPayload.GetProperty("maxCompressionLevel").GetInt32(), Is.GreaterThanOrEqualTo(1));
+
+        using HttpResponseMessage cipherResponse = await _client.PatchAsync(
+            "/api/v1/server/settings/cipher-chunk-size/4194304",
+            null);
+        cipherResponse.EnsureSuccessStatusCode();
+        JsonElement cipherPayload = await cipherResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.That(cipherPayload.GetProperty("cipherChunkSizeBytes").GetInt32(), Is.EqualTo(4 * 1024 * 1024));
+
+        using HttpResponseMessage threadsResponse = await _client.PatchAsync(
+            "/api/v1/server/settings/encryption-threads/1",
+            null);
+        threadsResponse.EnsureSuccessStatusCode();
+        JsonElement threadsPayload = await threadsResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.That(threadsPayload.GetProperty("encryptionThreads").GetInt32(), Is.EqualTo(1));
+        Assert.That(threadsPayload.GetProperty("supportedEncryptionThreads").GetArrayLength(), Is.GreaterThanOrEqualTo(1));
+
+        JsonElement getPayload = await _client.GetFromJsonAsync<JsonElement>("/api/v1/server/settings/storage-pipeline");
+        Assert.That(getPayload.GetProperty("compressionLevel").GetInt32(), Is.EqualTo(1));
+        Assert.That(getPayload.GetProperty("cipherChunkSizeBytes").GetInt32(), Is.EqualTo(4 * 1024 * 1024));
+        Assert.That(getPayload.GetProperty("encryptionThreads").GetInt32(), Is.EqualTo(1));
+    }
+
+    [Test]
     public async Task Get_CurrentUser_Works()
     {
         var token = await LoginAsync();

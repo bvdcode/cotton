@@ -1884,6 +1884,16 @@
         "description": "Controls how much data the browser sends per upload request. Larger chunks reduce request overhead on fast local networks.",
         "ariaLabel": "Upload chunk size"
       },
+      "pipeline": {
+        "title": "Storage pipeline",
+        "description": "Tunes how new chunks are compressed and encrypted before they are written to storage.",
+        "fields": {
+          "compressionLevel": "Compression level",
+          "cipherChunkSize": "Encryption block size",
+          "encryptionThreads": "Encryption threads"
+        },
+        "compressionHelp": "Allowed range: {{min}} to {{max}}. Default is 1."
+      },
       "quota": {
         "title": "Квота користувача за замовчуванням",
         "description": "Обмежує, скільки унікального вивантаженого вмісту може мати кожен користувач. Залиште порожнім для облікових записів без обмежень.",
@@ -1929,7 +1939,8 @@
         "storageSaveFailed": "Не вдалося перемкнути режим сховища.",
         "quotaSaveFailed": "Не вдалося зберегти квоту користувача за замовчуванням.",
         "templateSaveFailed": "Не вдалося зберегти шаблон файлів за замовчуванням.",
-        "chunkSizeSaveFailed": "Failed to save upload chunk size."
+        "chunkSizeSaveFailed": "Failed to save upload chunk size.",
+        "storagePipelineSaveFailed": "Failed to save storage pipeline settings."
       }
     },
     "notificationsSettings": {

@@ -1874,6 +1874,16 @@
         "description": "Controls how much data the browser sends per upload request. Larger chunks reduce request overhead on fast local networks.",
         "ariaLabel": "Upload chunk size"
       },
+      "pipeline": {
+        "title": "Storage pipeline",
+        "description": "Tunes how new chunks are compressed and encrypted before they are written to storage.",
+        "fields": {
+          "compressionLevel": "Compression level",
+          "cipherChunkSize": "Encryption block size",
+          "encryptionThreads": "Encryption threads"
+        },
+        "compressionHelp": "Allowed range: {{min}} to {{max}}. Default is 1."
+      },
       "quota": {
         "title": "默认用户配额",
         "description": "限制每位用户可拥有的去重后上传内容总量。留空表示账户无上限。",
@@ -1919,7 +1929,8 @@
         "storageSaveFailed": "切换存储模式失败。",
         "quotaSaveFailed": "保存默认用户配额失败。",
         "templateSaveFailed": "保存默认文件模板失败。",
-        "chunkSizeSaveFailed": "Failed to save upload chunk size."
+        "chunkSizeSaveFailed": "Failed to save upload chunk size.",
+        "storagePipelineSaveFailed": "Failed to save storage pipeline settings."
       }
     },
     "notificationsSettings": {

@@ -170,6 +170,8 @@ namespace Cotton.Server
                 .AddScoped<ISharedFileDownloadNotifier, SharedFileDownloadNotifier>()
                 .AddScoped<NodeSubtreeService>()
                 .AddScoped<TrashRestoreCoordinator>()
+                .AddScoped<IEncryptionChunkSizeProvider, SettingsEncryptionChunkSizeProvider>()
+                .AddScoped<ICompressionLevelProvider, SettingsCompressionLevelProvider>()
                 .AddScoped<IStorageProcessor, CryptoProcessor>()
                 .AddScoped<IStorageProcessor, CompressionProcessor>()
                 .AddScoped<IStoragePipeline, FileStoragePipeline>()

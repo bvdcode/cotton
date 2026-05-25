@@ -109,6 +109,21 @@ export const chunkSizeSettingsResponseSchema = z
   });
 export type ChunkSizeSettings = z.infer<typeof chunkSizeSettingsResponseSchema>;
 
+export const storagePipelineSettingsResponseSchema = z.object({
+  compressionLevel: z.number().finite(),
+  minCompressionLevel: z.number().finite(),
+  maxCompressionLevel: z.number().finite(),
+  cipherChunkSizeBytes: z.number().finite().positive(),
+  minCipherChunkSizeBytes: z.number().finite().positive(),
+  maxCipherChunkSizeBytes: z.number().finite().positive(),
+  supportedCipherChunkSizeBytes: z.array(z.number().finite().positive()),
+  encryptionThreads: z.number().finite().positive(),
+  minEncryptionThreads: z.number().finite().positive(),
+  maxEncryptionThreads: z.number().finite().positive(),
+  supportedEncryptionThreads: z.array(z.number().finite().positive()),
+});
+export type StoragePipelineSettings = z.infer<typeof storagePipelineSettingsResponseSchema>;
+
 export const chunkSizeResponseSchema = chunkSizeSettingsResponseSchema
   .transform((value): number => value.maxChunkSizeBytes);
 

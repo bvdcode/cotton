@@ -18,6 +18,7 @@ import {
   serverUsageListSchema,
   setupStatusSchema,
   s3ConfigSchema,
+  storagePipelineSettingsResponseSchema,
   storageSpaceModeResponseSchema,
   storageTypeResponseSchema,
   telemetrySettingSchema,
@@ -31,6 +32,7 @@ import {
   type S3Config,
   type ServerSettings,
   type ServerUsage,
+  type StoragePipelineSettings,
   type StorageSpaceMode,
   type StorageType,
 } from "./schemas/serverSettings";
@@ -45,6 +47,7 @@ export type {
   S3Config,
   ServerSettings,
   ServerUsage,
+  StoragePipelineSettings,
   StorageSpaceMode,
   StorageType,
 } from "./schemas/serverSettings";
@@ -205,6 +208,45 @@ export const settingsApi = {
       "server/settings/chunk-size",
       response.data,
       chunkSizeSettingsResponseSchema,
+    );
+  },
+
+  getStoragePipelineSettings: (): Promise<StoragePipelineSettings> =>
+    getValidated(
+      "server/settings/storage-pipeline",
+      storagePipelineSettingsResponseSchema,
+    ),
+
+  setCompressionLevel: async (compressionLevel: number): Promise<StoragePipelineSettings> => {
+    const response = await httpClient.patch<unknown>(
+      `server/settings/compression-level/${compressionLevel}`,
+    );
+    return parseValidated(
+      "server/settings/compression-level",
+      response.data,
+      storagePipelineSettingsResponseSchema,
+    );
+  },
+
+  setCipherChunkSize: async (cipherChunkSizeBytes: number): Promise<StoragePipelineSettings> => {
+    const response = await httpClient.patch<unknown>(
+      `server/settings/cipher-chunk-size/${cipherChunkSizeBytes}`,
+    );
+    return parseValidated(
+      "server/settings/cipher-chunk-size",
+      response.data,
+      storagePipelineSettingsResponseSchema,
+    );
+  },
+
+  setEncryptionThreads: async (encryptionThreads: number): Promise<StoragePipelineSettings> => {
+    const response = await httpClient.patch<unknown>(
+      `server/settings/encryption-threads/${encryptionThreads}`,
+    );
+    return parseValidated(
+      "server/settings/encryption-threads",
+      response.data,
+      storagePipelineSettingsResponseSchema,
     );
   },
 

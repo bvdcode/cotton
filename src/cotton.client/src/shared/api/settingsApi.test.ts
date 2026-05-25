@@ -96,6 +96,41 @@ describe("settingsApi getters", () => {
     );
   });
 
+
+  it("reads and updates storage pipeline settings", async () => {
+    const payload = {
+      compressionLevel: 1,
+      minCompressionLevel: -10,
+      maxCompressionLevel: 22,
+      cipherChunkSizeBytes: 1048576,
+      minCipherChunkSizeBytes: 8192,
+      maxCipherChunkSizeBytes: 67108864,
+      supportedCipherChunkSizeBytes: [131072, 1048576],
+      encryptionThreads: 2,
+      minEncryptionThreads: 1,
+      maxEncryptionThreads: 4,
+      supportedEncryptionThreads: [1, 2, 3, 4],
+    };
+    const get = vi.spyOn(httpClient, "get").mockResolvedValue({ data: payload });
+    const patch = vi.spyOn(httpClient, "patch").mockResolvedValue({
+      data: { ...payload, compressionLevel: -5 },
+    });
+
+    await expect(settingsApi.getStoragePipelineSettings()).resolves.toEqual(payload);
+    await expect(settingsApi.setCompressionLevel(-5)).resolves.toEqual({
+      ...payload,
+      compressionLevel: -5,
+    });
+
+    expect(get).toHaveBeenCalledWith(
+      "server/settings/storage-pipeline",
+      undefined,
+    );
+    expect(patch).toHaveBeenCalledWith(
+      "server/settings/compression-level/-5",
+    );
+  });
+
   it("unwraps booleans and simple string settings", async () => {
     const get = vi
       .spyOn(httpClient, "get")

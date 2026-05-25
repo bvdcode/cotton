@@ -7,6 +7,7 @@ import {
   publicBaseUrlSchema,
   serverSettingsResponseSchema,
   serverUsageListSchema,
+  storagePipelineSettingsResponseSchema,
   s3ConfigSchema,
   storageTypeResponseSchema,
   telemetrySettingSchema,
@@ -59,6 +60,34 @@ describe("server settings schemas", () => {
     })).toEqual({
       maxChunkSizeBytes: 1024,
       supportedMaxChunkSizeBytes: [512, 1024],
+    });
+  });
+
+  it("parses storage pipeline tuning settings", () => {
+    expect(storagePipelineSettingsResponseSchema.parse({
+      compressionLevel: -5,
+      minCompressionLevel: -10,
+      maxCompressionLevel: 22,
+      cipherChunkSizeBytes: 1048576,
+      minCipherChunkSizeBytes: 8192,
+      maxCipherChunkSizeBytes: 67108864,
+      supportedCipherChunkSizeBytes: [131072, 1048576],
+      encryptionThreads: 2,
+      minEncryptionThreads: 1,
+      maxEncryptionThreads: 4,
+      supportedEncryptionThreads: [1, 2, 3, 4],
+    })).toEqual({
+      compressionLevel: -5,
+      minCompressionLevel: -10,
+      maxCompressionLevel: 22,
+      cipherChunkSizeBytes: 1048576,
+      minCipherChunkSizeBytes: 8192,
+      maxCipherChunkSizeBytes: 67108864,
+      supportedCipherChunkSizeBytes: [131072, 1048576],
+      encryptionThreads: 2,
+      minEncryptionThreads: 1,
+      maxEncryptionThreads: 4,
+      supportedEncryptionThreads: [1, 2, 3, 4],
     });
   });
 

@@ -18,7 +18,7 @@ public sealed class CottonServerSettingsIntegrityDescriptor : DatabaseIntegrityD
     /// <inheritdoc />
     public override string EntityName => "server_settings";
     /// <inheritdoc />
-    public override int SchemaVersion => 1;
+    public override int SchemaVersion => 2;
 
     /// <inheritdoc />
     public override string GetEntityKey(CottonServerSettings entity)
@@ -34,6 +34,7 @@ public sealed class CottonServerSettingsIntegrityDescriptor : DatabaseIntegrityD
         writer.WriteStringField(nameof(entity.PublicBaseUrl), entity.PublicBaseUrl);
         writer.WriteInt32Field(nameof(entity.EncryptionThreads), entity.EncryptionThreads);
         writer.WriteInt32Field(nameof(entity.CipherChunkSizeBytes), entity.CipherChunkSizeBytes);
+        writer.WriteInt32Field(nameof(entity.CompressionLevel), entity.CompressionLevel);
         writer.WriteInt32Field(nameof(entity.MaxChunkSizeBytes), entity.MaxChunkSizeBytes);
         writer.WriteInt32Field(nameof(entity.SessionTimeoutHours), entity.SessionTimeoutHours);
         writer.WriteBooleanField(nameof(entity.TelemetryEnabled), entity.TelemetryEnabled);
