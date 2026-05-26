@@ -106,6 +106,13 @@ const AdminSecurityDiagnosticsPage = lazy(() =>
     }),
   ),
 );
+const AdminIdentityProvidersPage = lazy(() =>
+  import("../pages/admin/identity-providers/AdminIdentityProvidersPage").then(
+    (module) => ({
+      default: module.AdminIdentityProvidersPage,
+    }),
+  ),
+);
 const AdminNotificationsSettingsPage = lazy(() =>
   import("../pages/admin/settings/AdminNotificationsSettingsPage").then(
     (module) => ({
@@ -360,6 +367,10 @@ export function AppRoutes() {
           <Route
             path="security"
             element={withRouteSuspense(<AdminSecurityDiagnosticsPage />)}
+          />
+          <Route
+            path="identity-providers"
+            element={withRouteSuspense(<AdminIdentityProvidersPage />)}
           />
           <Route
             path="notifications-settings"

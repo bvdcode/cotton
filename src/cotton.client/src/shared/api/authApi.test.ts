@@ -78,7 +78,6 @@ describe("authApi.me", () => {
         email: "alice@example.com",
         isEmailVerified: true,
         displayName: "Alice",
-        pictureUrl: "https://cdn.example/avatar.png",
         avatarHashEncryptedHex: "hash value",
         preferences: { theme: "dark" },
         firstName: "Alice",
@@ -135,7 +134,7 @@ describe("authApi.me", () => {
     expect(user.pictureUrl).toBeUndefined();
   });
 
-  it("uses pictureUrl when no encrypted avatar hash is present", async () => {
+  it("does not use external picture URLs as user avatars", async () => {
     vi.spyOn(httpClient, "get").mockResolvedValue({
       data: {
         ...baseUserResponse,
@@ -144,10 +143,10 @@ describe("authApi.me", () => {
       },
     });
 
-    await expect(authApi.me()).resolves.toMatchObject({
-      pictureUrl: "https://cdn.example/avatar.png",
-      avatarHashEncryptedHex: "   ",
-    });
+    const user = await authApi.me();
+
+    expect(user.pictureUrl).toBeUndefined();
+    expect(user.avatarHashEncryptedHex).toBe("   ");
   });
 });
 

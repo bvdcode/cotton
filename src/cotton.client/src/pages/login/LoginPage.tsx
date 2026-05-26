@@ -22,6 +22,7 @@ import { FirstRunAlert } from "./components/FirstRunAlert";
 import { ForgotPasswordLink } from "./components/ForgotPasswordLink";
 import { TrustDeviceToggle } from "./components/TrustDeviceToggle";
 import { TwoFactorFields } from "./components/TwoFactorFields";
+import { OidcProviderButtons } from "./components/OidcProviderButtons";
 import { useLoginForm } from "./useLoginForm";
 
 type LoginFormState = ReturnType<typeof useLoginForm>;
@@ -53,6 +54,7 @@ export const LoginPage = () => {
   const showFirstRunAlert =
     serverInfo !== null && serverInfo.canCreateInitialAdmin;
   const isFirstRunMode = showFirstRunAlert && !form.requiresTwoFactor;
+  const returnUrl = (location.state as { from?: string })?.from || "/";
 
   return (
     <>
@@ -64,6 +66,12 @@ export const LoginPage = () => {
             <LoginFormFields form={form} />
             {showFirstRunAlert && <FirstRunNotice />}
             <LoginActions form={form} isFirstRunMode={isFirstRunMode} />
+            <OidcProviderButtons
+              disabled={form.loading}
+              returnUrl={returnUrl}
+              trustDevice={form.trustDevice}
+              visible={!form.requiresTwoFactor && !showFirstRunAlert}
+            />
           </Stack>
         </Box>
       </LoginShell>
@@ -105,7 +113,7 @@ type LoginShellProps = {
 const LoginShell = ({ children, footer }: LoginShellProps) => (
   <Box
     sx={{
-      minHeight: "100dvh",
+      minHeight: "100%",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",

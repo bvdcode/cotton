@@ -16,6 +16,7 @@ import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import PersonIcon from "@mui/icons-material/Person";
 import QueryStatsIcon from "@mui/icons-material/QueryStats";
 import SecurityIcon from "@mui/icons-material/Security";
+import LoginIcon from "@mui/icons-material/Login";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ShieldIcon from "@mui/icons-material/Shield";
 import StorageIcon from "@mui/icons-material/Storage";
@@ -33,6 +34,7 @@ type AdminMenuItem = {
     | "groups"
     | "privacySettings"
     | "securityDiagnostics"
+    | "identityProviders"
     | "storageSettings"
     | "storageStatistics"
     | "notificationsSettings"
@@ -84,6 +86,12 @@ export const AdminLayoutPage = () => {
       to: "/admin/notifications-settings",
       title: t("menu.notificationsSettings"),
       icon: <NotificationsActiveIcon />,
+    },
+    {
+      id: "identityProviders",
+      to: "/admin/identity-providers",
+      title: t("menu.identityProviders"),
+      icon: <LoginIcon />,
     },
     {
       id: "storageSettings",

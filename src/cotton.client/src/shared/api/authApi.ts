@@ -43,7 +43,6 @@ interface UserInfoResponse extends BaseDto<string> {
   isEmailVerified?: boolean;
   role: UserRole;
   displayName?: string;
-  pictureUrl?: string;
   avatarHashEncryptedHex?: string | null;
 
   preferences?: Record<string, string>;
@@ -60,11 +59,9 @@ interface UserInfoResponse extends BaseDto<string> {
 
 const buildAvatarUrl = (response: UserInfoResponse): string | undefined => {
   const avatarHashEncryptedHex = response.avatarHashEncryptedHex?.trim();
-  if (avatarHashEncryptedHex) {
-    return `/api/v1/preview/${encodeURIComponent(avatarHashEncryptedHex)}.webp`;
-  }
-
-  return response.pictureUrl;
+  return avatarHashEncryptedHex
+    ? `/api/v1/preview/${encodeURIComponent(avatarHashEncryptedHex)}.webp`
+    : undefined;
 };
 
 const mapUserResponse = (response: UserInfoResponse): User => {

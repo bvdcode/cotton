@@ -6,6 +6,7 @@ const trashRoot = ["trash"] as const;
 const serverSettingsRoot = ["serverSettings"] as const;
 const storageQuotaRoot = ["storageQuota"] as const;
 const fileVersionsRoot = ["fileVersions"] as const;
+const oidcRoot = ["oidc"] as const;
 
 export const queryKeys = {
   notifications: {
@@ -66,5 +67,11 @@ export const queryKeys = {
   fileVersions: {
     all: () => fileVersionsRoot,
     list: (fileId: string) => [...fileVersionsRoot, "list", fileId] as const,
+  },
+  oidc: {
+    all: () => oidcRoot,
+    publicProviders: () => [...oidcRoot, "providers", "public"] as const,
+    adminProviders: () => [...oidcRoot, "providers", "admin"] as const,
+    links: () => [...oidcRoot, "links"] as const,
   },
 } as const;
