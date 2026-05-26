@@ -13,7 +13,10 @@ import {
   useVault,
 } from "../../../shared/crypto";
 import { refreshNodeContent } from "../../../shared/store/nodesActions";
-import { collectPlainFilesInFoldersForClientEncryption } from "../../../shared/utils/clientEncryptionFolderScan";
+import {
+  collectEncryptedFilesInFoldersForClientEncryption,
+  collectPlainFilesInFoldersForClientEncryption,
+} from "../../../shared/utils/clientEncryptionFolderScan";
 import {
   decryptExistingFileWithTask,
   encryptExistingFileWithTask,
@@ -93,7 +96,9 @@ export const useFolderClientEncryptionActions = ({
       let filesToEncrypt = plainFiles;
       try {
         const scan = await collectPlainFilesInFoldersForClientEncryption([nodeId]);
-        scanIncomplete = scan.truncated;
+        if (scan.truncated) {
+          scanIncomplete = true;
+        }
         if (scan.files.length > 0) {
           filesToEncrypt = scan.files;
         }
@@ -174,6 +179,7 @@ export const useFolderClientEncryptionActions = ({
 
     let decryptedCount = 0;
     let failedCount = 0;
+    let scanIncomplete = false;
 
     try {
       const settings = await fetchServerSettings(queryClient);
@@ -182,25 +188,46 @@ export const useFolderClientEncryptionActions = ({
         supportedHashAlgorithm: settings.supportedHashAlgorithm,
       };
 
-      for (const file of encryptedFiles) {
+      let filesToDecrypt = encryptedFiles;
+      try {
+        const scan = await collectEncryptedFilesInFoldersForClientEncryption([
+          nodeId,
+        ]);
+        if (scan.truncated) {
+          scanIncomplete = true;
+        }
+        if (scan.files.length > 0) {
+          filesToDecrypt = scan.files;
+        }
+      } catch (error) {
+        console.error("Failed to scan folder for encrypted files", error);
+        scanIncomplete = true;
+      }
+      const refreshedParents = new Set<string>([nodeId]);
+
+      for (const file of filesToDecrypt) {
         try {
           await decryptExistingFileWithTask({
             file: toDecryptionTaskFile(file),
-            targetNodeId: nodeId,
+            targetNodeId: file.nodeId,
             scopeLabel: activeNode.name,
             server,
           });
+          refreshedParents.add(file.nodeId);
           decryptedCount += 1;
         } catch {
           failedCount += 1;
         }
+      }
+
+      for (const parentId of refreshedParents) {
+        void refreshNodeContent(parentId);
       }
     } catch {
       onToast(t("errors.serverSettingsNotLoaded", { ns: "tasks" }), "error");
       return;
     } finally {
       setIsDecryptingEncryptedFiles(false);
-      void refreshNodeContent(nodeId);
     }
 
     if (decryptedCount > 0) {
@@ -217,6 +244,15 @@ export const useFolderClientEncryptionActions = ({
         t("clientEncryption.toasts.decryptExistingFailed", {
           ns: "files",
           count: failedCount,
+        }),
+        "error",
+      );
+    }
+
+    if (scanIncomplete) {
+      onToast(
+        t("clientEncryption.toasts.decryptExistingScanIncomplete", {
+          ns: "files",
         }),
         "error",
       );

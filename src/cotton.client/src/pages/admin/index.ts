@@ -7,3 +7,4 @@ export { AdminGeneralSettingsPage } from "./settings/AdminGeneralSettingsPage";
 export { AdminPrivacySettingsPage } from "./settings/AdminPrivacySettingsPage";
 export { AdminStorageSettingsPage } from "./settings/AdminStorageSettingsPage";
 export { AdminNotificationsSettingsPage } from "./settings/AdminNotificationsSettingsPage";
+export { AdminIdentityProvidersPage } from "./identity-providers/AdminIdentityProvidersPage";

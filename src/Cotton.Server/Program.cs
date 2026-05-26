@@ -114,6 +114,16 @@ namespace Cotton.Server
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("Cotton/1.0");
                 client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
             });
+            builder.Services.AddHttpClient(OidcDiscoveryService.HttpClientName, client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(15);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("Cotton/1.0");
+            });
+            builder.Services.AddHttpClient<OidcAvatarImportService>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(10);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("Cotton/1.0");
+            });
             builder.Services
                 .AddExceptionHandler()
                 .AddOptions<CottonEncryptionSettings>()
@@ -147,6 +157,10 @@ namespace Cotton.Server
                 .AddScoped<SecurityDiagnosticsService>()
                 .AddScoped<StoragePipelineProbeService>()
                 .AddScoped<PasskeyService>()
+                .AddScoped<AuthSessionIssuer>()
+                .AddScoped<OidcProviderService>()
+                .AddScoped<OidcAuthenticationService>()
+                .AddScoped(sp => new OidcDiscoveryService(sp.GetRequiredService<IHttpClientFactory>().CreateClient(OidcDiscoveryService.HttpClientName)))
                 .AddScoped<RefreshTokenRevocationService>()
                 .AddScoped<SessionRevocationNotifier>()
                 .AddScoped<DownloadTokenExpirationService>()

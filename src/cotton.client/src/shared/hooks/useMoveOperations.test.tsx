@@ -77,6 +77,28 @@ const plainFileItem: MoveClipboardItem = {
   },
 };
 
+const makeMovedFolderDto = (id: string) => ({
+  id,
+  createdAt: "2026-05-17T00:00:00Z",
+  updatedAt: "2026-05-17T00:00:00Z",
+  layoutId: "layout-1",
+  parentId: targetParentId,
+  name: "Moved folder",
+  metadata: {},
+});
+
+const makeMovedFileDto = (item: MoveClipboardItem) => ({
+  id: item.id,
+  createdAt: "2026-05-17T00:00:00Z",
+  updatedAt: "2026-05-17T00:00:00Z",
+  nodeId: targetParentId,
+  ownerId: "user-1",
+  name: item.file?.name ?? "moved.txt",
+  contentType: item.file?.contentType ?? "application/octet-stream",
+  sizeBytes: item.file?.sizeBytes ?? 0,
+  metadata: item.file?.metadata ?? {},
+});
+
 const makeEmptyChildrenResponse = (id = "empty") => ({
   content: {
     id,
@@ -129,8 +151,12 @@ describe("useMoveOperations", () => {
       lastUpdatedByNodeId: {},
     });
     useVault.setState({ isUnlocked: true, masterKey: {} as CryptoKey });
-    mocks.moveFile.mockResolvedValue(undefined);
-    mocks.moveNode.mockResolvedValue(undefined);
+    mocks.moveFile.mockImplementation((id: string) =>
+      Promise.resolve(makeMovedFileDto({ ...plainFileItem, id })),
+    );
+    mocks.moveNode.mockImplementation((id: string) =>
+      Promise.resolve(makeMovedFolderDto(id)),
+    );
     mocks.getChildren.mockResolvedValue(makeEmptyChildrenResponse());
     mocks.fetchServerSettings.mockResolvedValue({
       maxChunkSizeBytes: 1024,

@@ -55,6 +55,11 @@ type ClosingState = {
 
 type IndexOrUpdater = number | ((current: number) => number);
 
+type DeleteProgressState = {
+  itemId: string | null;
+  inProgress: boolean;
+};
+
 const buildLightboxIndexKey = (
   open: boolean,
   initialIndex: number,
@@ -64,7 +69,7 @@ const buildLightboxIndexKey = (
     return "closed";
   }
 
-  return [initialIndex, items.length, items[initialIndex]?.id ?? ""].join("\u0000");
+  return [initialIndex, items[initialIndex]?.id ?? ""].join("\u0000");
 };
 
 const resolveIndex = (current: number, next: IndexOrUpdater): number => {
@@ -86,7 +91,8 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const [indexState, setIndexState] = React.useState<LightboxIndexState>(
     () => ({ key: indexKey, index: initialIndex }),
   );
-  const index = indexState.key === indexKey ? indexState.index : initialIndex;
+  const rawIndex = indexState.key === indexKey ? indexState.index : initialIndex;
+  const index = items.length === 0 ? 0 : Math.min(rawIndex, items.length - 1);
   const setLightboxIndex = React.useCallback(
     (next: IndexOrUpdater) => {
       setIndexState((currentState) => {
@@ -157,6 +163,13 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     }, TOUCH_CONTROLS_AUTOHIDE_MS);
   }, [clearTouchControlsTimer, isTouchDevice]);
 
+  const handleClose = React.useCallback(() => {
+    setClosingState({ open, closing: true });
+    stopLightboxMediaPlayback();
+    setTouchControlsVisible(true);
+    onClose();
+  }, [onClose, open]);
+
   const toggleTouchControls = React.useCallback(() => {
     if (!isTouchDevice) return;
 
@@ -191,30 +204,42 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     };
   }, [open, isTouchDevice, clearTouchControlsTimer]);
 
-  const [deleteInProgress, setDeleteInProgress] = React.useState(false);
-  const deleteInProgressRef = React.useRef(false);
-
-  React.useEffect(() => {
-    deleteInProgressRef.current = false;
-    setDeleteInProgress(false);
-  }, [currentItemId, open]);
+  const [deleteProgress, setDeleteProgress] =
+    React.useState<DeleteProgressState>(() => ({
+      itemId: currentItemId,
+      inProgress: false,
+    }));
+  const deleteInProgressRef = React.useRef<DeleteProgressState>({
+    itemId: null,
+    inProgress: false,
+  });
+  const deleteInProgress =
+    deleteProgress.itemId === currentItemId && deleteProgress.inProgress;
 
   const handleDeleteCurrent = React.useCallback(async () => {
-    if (!onDelete || !currentItem || deleteInProgressRef.current) {
+    if (
+      !onDelete ||
+      !currentItem ||
+      (deleteInProgressRef.current.itemId === currentItemId &&
+        deleteInProgressRef.current.inProgress)
+    ) {
       return;
     }
 
-    deleteInProgressRef.current = true;
-    setDeleteInProgress(true);
+    deleteInProgressRef.current = { itemId: currentItemId, inProgress: true };
+    setDeleteProgress({ itemId: currentItemId, inProgress: true });
     try {
       await onDelete(currentItem);
+      if (items.length <= 1) {
+        handleClose();
+      }
     } catch (error) {
       console.error("Failed to delete media item:", error);
     } finally {
-      deleteInProgressRef.current = false;
-      setDeleteInProgress(false);
+      deleteInProgressRef.current = { itemId: currentItemId, inProgress: false };
+      setDeleteProgress({ itemId: currentItemId, inProgress: false });
     }
-  }, [currentItem, onDelete]);
+  }, [currentItem, currentItemId, handleClose, items.length, onDelete]);
 
   React.useEffect(() => {
     if (!open || !onDelete) {
@@ -543,13 +568,6 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     }),
     [],
   );
-
-  const handleClose = React.useCallback(() => {
-    setClosingState({ open, closing: true });
-    stopLightboxMediaPlayback();
-    setTouchControlsVisible(true);
-    onClose();
-  }, [onClose, open]);
 
   React.useEffect(() => {
     if (!open) {

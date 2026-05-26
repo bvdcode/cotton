@@ -63,7 +63,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("app_versions");
+                    b.ToTable("app_versions", (string)null);
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.Benchmark", b =>
@@ -105,7 +105,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("benchmarks");
+                    b.ToTable("benchmarks", (string)null);
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.Chunk", b =>
@@ -142,7 +142,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasIndex("GCScheduledAfter");
 
-                    b.ToTable("chunks");
+                    b.ToTable("chunks", (string)null);
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.ChunkOwnership", b =>
@@ -176,7 +176,7 @@ namespace Cotton.Database.Migrations
                     b.HasIndex("OwnerId", "ChunkHash")
                         .IsUnique();
 
-                    b.ToTable("chunk_ownerships");
+                    b.ToTable("chunk_ownerships", (string)null);
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.CottonServerSettings", b =>
@@ -351,7 +351,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("server_settings");
+                    b.ToTable("server_settings", (string)null);
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.DownloadToken", b =>
@@ -412,7 +412,7 @@ namespace Cotton.Database.Migrations
                     b.HasIndex("Token")
                         .IsUnique();
 
-                    b.ToTable("download_tokens");
+                    b.ToTable("download_tokens", (string)null);
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.FileManifest", b =>
@@ -490,7 +490,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasIndex("SmallFilePreviewHash");
 
-                    b.ToTable("file_manifests");
+                    b.ToTable("file_manifests", (string)null);
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.FileManifestChunk", b =>
@@ -536,7 +536,7 @@ namespace Cotton.Database.Migrations
                     b.HasIndex("FileManifestId", "ChunkOrder")
                         .IsUnique();
 
-                    b.ToTable("file_manifest_chunks");
+                    b.ToTable("file_manifest_chunks", (string)null);
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.Layout", b =>
@@ -566,7 +566,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasIndex("OwnerId");
 
-                    b.ToTable("layouts");
+                    b.ToTable("layouts", (string)null);
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.Node", b =>
@@ -631,7 +631,7 @@ namespace Cotton.Database.Migrations
                     b.HasIndex("LayoutId", "ParentId", "Type", "NameKey")
                         .IsUnique();
 
-                    b.ToTable("nodes");
+                    b.ToTable("nodes", (string)null);
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.NodeFile", b =>
@@ -695,7 +695,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasIndex("NodeId", "NameKey");
 
-                    b.ToTable("node_files");
+                    b.ToTable("node_files", (string)null);
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.NodeShareToken", b =>
@@ -752,7 +752,7 @@ namespace Cotton.Database.Migrations
                     b.HasIndex("Token")
                         .IsUnique();
 
-                    b.ToTable("node_share_tokens");
+                    b.ToTable("node_share_tokens", (string)null);
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.Notification", b =>
@@ -799,7 +799,173 @@ namespace Cotton.Database.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("notifications");
+                    b.ToTable("notifications", (string)null);
+                });
+
+            modelBuilder.Entity("Cotton.Database.Models.OidcLoginState", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CodeVerifierEncrypted")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("code_verifier_encrypted");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<byte[]>("IntegrityMac")
+                        .HasColumnType("bytea")
+                        .HasColumnName("integrity_mac");
+
+                    b.Property<int?>("IntegrityVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("integrity_version");
+
+                    b.Property<Guid?>("LinkUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("link_user_id");
+
+                    b.Property<string>("NonceEncrypted")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("nonce_encrypted");
+
+                    b.Property<Guid>("ProviderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("provider_id");
+
+                    b.Property<string>("ReturnUrl")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("return_url");
+
+                    b.Property<string>("StateHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("state_hash");
+
+                    b.Property<bool>("TrustDevice")
+                        .HasColumnType("boolean")
+                        .HasColumnName("trust_device");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("ProviderId");
+
+                    b.HasIndex("StateHash")
+                        .IsUnique();
+
+                    b.ToTable("oidc_login_states", (string)null);
+                });
+
+            modelBuilder.Entity("Cotton.Database.Models.OidcProvider", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AllowAccountCreation")
+                        .HasColumnType("boolean")
+                        .HasColumnName("allow_account_creation");
+
+                    b.PrimitiveCollection<string[]>("AllowedEmailDomains")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("allowed_email_domains");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("client_id");
+
+                    b.Property<string>("ClientSecretEncrypted")
+                        .HasColumnType("text")
+                        .HasColumnName("client_secret_encrypted");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("DefaultRole")
+                        .HasColumnType("integer")
+                        .HasColumnName("default_role");
+
+                    b.Property<byte[]>("IntegrityMac")
+                        .HasColumnType("bytea")
+                        .HasColumnName("integrity_mac");
+
+                    b.Property<int?>("IntegrityVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("integrity_version");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_enabled");
+
+                    b.Property<string>("Issuer")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("issuer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("name");
+
+                    b.Property<bool>("RequireVerifiedEmail")
+                        .HasColumnType("boolean")
+                        .HasColumnName("require_verified_email");
+
+                    b.PrimitiveCollection<string[]>("Scopes")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("scopes");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("slug");
+
+                    b.Property<bool>("SyncAvatar")
+                        .HasColumnType("boolean")
+                        .HasColumnName("sync_avatar");
+
+                    b.Property<bool>("SyncProfile")
+                        .HasColumnType("boolean")
+                        .HasColumnName("sync_profile");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("oidc_providers", (string)null);
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.User", b =>
@@ -915,7 +1081,84 @@ namespace Cotton.Database.Migrations
                     b.HasIndex("Username")
                         .IsUnique();
 
-                    b.ToTable("users");
+                    b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("Cotton.Database.Models.UserExternalIdentity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("display_name");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("email");
+
+                    b.Property<bool>("EmailVerified")
+                        .HasColumnType("boolean")
+                        .HasColumnName("email_verified");
+
+                    b.Property<byte[]>("IntegrityMac")
+                        .HasColumnType("bytea")
+                        .HasColumnName("integrity_mac");
+
+                    b.Property<int?>("IntegrityVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("integrity_version");
+
+                    b.Property<string>("Issuer")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("issuer");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_used_at");
+
+                    b.Property<string>("PictureUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("picture_url");
+
+                    b.Property<Guid>("ProviderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("provider_id");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("subject");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderId", "Subject")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "ProviderId")
+                        .IsUnique();
+
+                    b.ToTable("user_external_identities", (string)null);
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.UserPasskeyCredential", b =>
@@ -1003,7 +1246,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("user_passkey_credentials");
+                    b.ToTable("user_passkey_credentials", (string)null);
                 });
 
             modelBuilder.Entity("EasyExtensions.EntityFrameworkCore.Database.ExtendedRefreshToken", b =>
@@ -1085,7 +1328,7 @@ namespace Cotton.Database.Migrations
                     b.HasIndex("Token")
                         .IsUnique();
 
-                    b.ToTable("refresh_tokens");
+                    b.ToTable("refresh_tokens", (string)null);
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.ChunkOwnership", b =>
@@ -1239,6 +1482,36 @@ namespace Cotton.Database.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Cotton.Database.Models.OidcLoginState", b =>
+                {
+                    b.HasOne("Cotton.Database.Models.OidcProvider", "Provider")
+                        .WithMany()
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Provider");
+                });
+
+            modelBuilder.Entity("Cotton.Database.Models.UserExternalIdentity", b =>
+                {
+                    b.HasOne("Cotton.Database.Models.OidcProvider", "Provider")
+                        .WithMany("UserIdentities")
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Cotton.Database.Models.User", "User")
+                        .WithMany("ExternalIdentities")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Provider");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Cotton.Database.Models.UserPasskeyCredential", b =>
                 {
                     b.HasOne("Cotton.Database.Models.User", "User")
@@ -1281,11 +1554,18 @@ namespace Cotton.Database.Migrations
                     b.Navigation("DownloadTokens");
                 });
 
+            modelBuilder.Entity("Cotton.Database.Models.OidcProvider", b =>
+                {
+                    b.Navigation("UserIdentities");
+                });
+
             modelBuilder.Entity("Cotton.Database.Models.User", b =>
                 {
                     b.Navigation("ChunkOwnerships");
 
                     b.Navigation("DownloadTokens");
+
+                    b.Navigation("ExternalIdentities");
 
                     b.Navigation("NodeFiles");
 

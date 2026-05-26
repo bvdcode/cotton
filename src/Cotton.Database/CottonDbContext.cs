@@ -46,6 +46,12 @@ namespace Cotton.Database
         public DbSet<ChunkOwnership> ChunkOwnerships => Set<ChunkOwnership>();
         /// <summary>Registered user passkey credentials.</summary>
         public DbSet<UserPasskeyCredential> UserPasskeyCredentials => Set<UserPasskeyCredential>();
+        /// <summary>Configured OpenID Connect identity providers.</summary>
+        public DbSet<OidcProvider> OidcProviders => Set<OidcProvider>();
+        /// <summary>External identities linked to Cotton users.</summary>
+        public DbSet<UserExternalIdentity> UserExternalIdentities => Set<UserExternalIdentity>();
+        /// <summary>Short-lived OpenID Connect login states.</summary>
+        public DbSet<OidcLoginState> OidcLoginStates => Set<OidcLoginState>();
         /// <summary>Ordered manifest-to-chunk mapping rows.</summary>
         public DbSet<FileManifestChunk> FileManifestChunks => Set<FileManifestChunk>();
         /// <summary>Refresh-token session rows.</summary>
@@ -90,6 +96,9 @@ namespace Cotton.Database
 
             ConfigureIntegrityShadowProperties<User>(modelBuilder);
             ConfigureIntegrityShadowProperties<UserPasskeyCredential>(modelBuilder);
+            ConfigureIntegrityShadowProperties<OidcProvider>(modelBuilder);
+            ConfigureIntegrityShadowProperties<UserExternalIdentity>(modelBuilder);
+            ConfigureIntegrityShadowProperties<OidcLoginState>(modelBuilder);
             ConfigureIntegrityShadowProperties<ExtendedRefreshToken>(modelBuilder);
             ConfigureIntegrityShadowProperties<DownloadToken>(modelBuilder);
             ConfigureIntegrityShadowProperties<NodeShareToken>(modelBuilder);

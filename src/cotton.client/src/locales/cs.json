@@ -565,13 +565,15 @@
       "delete": "Smazat",
       "rename": "Přejmenovat",
       "restore": "Obnovit",
+      "undo": "Vrátit zpět",
       "download": "Stáhnout",
       "share": "Sdílet",
       "more": "Další akce",
       "play": "Přehrát",
       "pause": "Pozastavit",
       "copied": "Zkopírováno!",
-      "reload": "Obnovit"
+      "reload": "Obnovit",
+      "versions": "Versions"
     },
     "errors": {
       "unexpectedTitle": "Něco se pokazilo",
@@ -714,6 +716,11 @@
         "cancelled": "Přihlášení přístupovým klíčem bylo zrušeno.",
         "failed": "Přihlášení přístupovým klíčem selhalo."
       }
+    },
+    "oidc": {
+      "loading": "Loading sign-in providers...",
+      "divider": "or",
+      "signInWith": "Continue with {{provider}}"
     }
   },
   "notFound": {
@@ -1055,6 +1062,24 @@
         "save": "Uložit",
         "saving": "Ukládání...",
         "cancel": "Teď ne"
+      }
+    },
+    "connectedAccounts": {
+      "title": "Connected accounts",
+      "description": "Link external identity providers to this account.",
+      "loading": "Loading connected accounts...",
+      "empty": "No external accounts are linked yet.",
+      "link": "Link {{provider}}",
+      "unlink": {
+        "button": "Unlink",
+        "title": "Unlink {{provider}}?",
+        "description": "You will no longer be able to sign in with this provider until you link it again.",
+        "confirm": "Unlink",
+        "cancel": "Cancel"
+      },
+      "errors": {
+        "loadFailed": "Failed to load connected accounts.",
+        "unlinkFailed": "Failed to unlink this account."
       }
     }
   },
@@ -1503,6 +1528,8 @@
         "save": "Uložit",
         "saving": "Ukládání..."
       },
+      "deleteToast": "Soubor byl smazán",
+      "deleteUndoFailed": "Nepodařilo se obnovit smazaný soubor.",
       "editorModes": {
         "text": {
           "label": "Text",
@@ -1645,8 +1672,25 @@
         "decryptExistingFailed_one": "Nepodařilo se dešifrovat {{count}} soubor. Zkontrolujte panel úloh.",
         "decryptExistingFailed_few": "Nepodařilo se dešifrovat {{count}} soubory. Zkontrolujte panel úloh.",
         "decryptExistingFailed_many": "Nepodařilo se dešifrovat {{count}} souboru. Zkontrolujte panel úloh.",
-        "decryptExistingFailed_other": "Nepodařilo se dešifrovat {{count}} souborů. Zkontrolujte panel úloh."
+        "decryptExistingFailed_other": "Nepodařilo se dešifrovat {{count}} souborů. Zkontrolujte panel úloh.",
+        "encryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some files may still be unencrypted; run encryption again from the folder after this batch finishes.",
+        "decryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some encrypted files may remain; run decryption again from the folder after this batch finishes."
       }
+    },
+    "fileVersions": {
+      "title": "Versions of {{name}}",
+      "empty": "No previous versions yet.",
+      "loadFailed": "Failed to load versions.",
+      "restoreFailed": "Failed to restore version.",
+      "deleteFailed": "Failed to delete version.",
+      "downloadFailed": "Failed to prepare version download.",
+      "versionLabel": "Version {{version}}",
+      "current": "Current",
+      "original": "Original",
+      "restoreConfirmTitle": "Restore this version?",
+      "restoreConfirmDescription": "Current file content will be saved as a new version, then version {{version}} will become current.",
+      "deleteConfirmTitle": "Delete this version?",
+      "deleteConfirmDescription": "Version {{version}} will be deleted. The current file will not be changed."
     }
   },
   "tasks": {
@@ -1771,7 +1815,8 @@
       "databaseBackup": "Záloha databáze",
       "storageStatistics": "Statistiky úložiště",
       "securityDiagnostics": "Kontrola zabezpečení",
-      "groups": "Skupiny"
+      "groups": "Skupiny",
+      "identityProviders": "Identity providers"
     },
     "roles": {
       "user": "Uživatel",
@@ -2162,7 +2207,8 @@
         "instance": "Instance a účty",
         "masterKey": "Hlavní klíč",
         "memory": "Expozice paměti procesu",
-        "runtime": "Fakta o běhovém prostředí"
+        "runtime": "Fakta o běhovém prostředí",
+        "containerBoundary": "Container boundary"
       },
       "risks": {
         "empty": "Aktuální serverové kontroly neodhalily žádná varování."
@@ -2183,7 +2229,16 @@
         "euid": "Efektivní UID",
         "noNewPrivileges": "Žádná nová oprávnění",
         "seccomp": "Režim Seccomp",
-        "capabilities": "Efektivní schopnosti"
+        "capabilities": "Efektivní schopnosti",
+        "rootFilesystemReadOnly": "Read-only root filesystem",
+        "dockerSocketMounted": "Docker socket mounted",
+        "hostPidNamespace": "Host PID namespace",
+        "procOneCommandLine": "PID 1 command",
+        "coreDumpLimit": "Core dump limit",
+        "corePattern": "Core pattern",
+        "appArmorProfile": "AppArmor profile",
+        "selinuxContext": "SELinux context",
+        "selinuxEnforcing": "SELinux enforcing"
       },
       "values": {
         "unknown": "Neznámé",
@@ -2202,13 +2257,88 @@
         "new-privileges-allowed": "Pokud kompromitovaný kód najde setuid pomocníka nebo binární soubor s capabilities, má širší cestu k získání oprávnění uvnitř kontejneru.",
         "seccomp-disabled": "Plocha jaderných systémových volání je širší než běžná produkční úroveň Dockeru, takže chyba úniku z kontejneru má více prostoru k dýchání.",
         "running-as-root": "Vzdálené spuštění kódu by uvnitř kontejneru běželo jako root, což zvyšuje škody na připojených svazcích a pomocných procesech.",
-        "process-hardening-failed": "Cotton si vyžádal zpevnění procesu, ale proces se přesto spustil bez očekávané ochrany proti dumpu nebo ptrace."
+        "process-hardening-failed": "Cotton si vyžádal zpevnění procesu, ale proces se přesto spustil bez očekávané ochrany proti dumpu nebo ptrace.",
+        "db-integrity-unsigned-rows": "Unsigned protected rows can be modified directly in PostgreSQL without Cotton detecting the tampering at read boundaries.",
+        "db-integrity-bridge-mode": "During the bridge window, missing signatures are tolerated so existing installations can be signed. Leaving it on permanently weakens the database tamper boundary.",
+        "root-filesystem-writable": "A writable container root filesystem gives exploited code more places to drop tools, alter runtime files, or persist until the container is recreated.",
+        "docker-socket-mounted": "The Docker socket lets code inside the web container create privileged containers, mount host paths, and take over the host.",
+        "host-pid-namespace": "Sharing the host PID namespace exposes host processes through procfs and makes process-memory attacks easier to aim.",
+        "mandatory-access-control-unconfined": "Without an enforcing AppArmor or SELinux profile, a container escape or kernel-facing bug has fewer policy boundaries to cross.",
+        "core-dumps-enabled": "Core dumps are memory snapshots. If Cotton crashes while secrets are resident, a dump can preserve the master key or decrypted configuration."
       }
     },
     "groups": {
       "title": "Skupiny",
       "description": "Spravujte přístupové skupiny odděleně od jednotlivých uživatelů.",
       "inDevelopment": "Správa skupin je ve vývoji."
+    },
+    "identityProviders": {
+      "title": "Identity providers",
+      "description": "Configure OpenID Connect providers for sign-in and account linking.",
+      "actions": {
+        "create": "Add provider",
+        "edit": "Edit provider",
+        "delete": "Delete provider",
+        "refresh": "Refresh",
+        "save": "Save provider",
+        "saving": "Saving..."
+      },
+      "columns": {
+        "name": "Provider",
+        "issuer": "Issuer",
+        "status": "Status",
+        "accountCreation": "Account creation",
+        "scopes": "Scopes",
+        "domains": "Domains",
+        "actions": "Actions"
+      },
+      "status": {
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "allowed": "Allowed",
+        "blocked": "Blocked"
+      },
+      "fields": {
+        "name": "Name",
+        "slug": "Slug",
+        "redirectUrl": "Redirect URL",
+        "issuer": "Issuer URL",
+        "clientId": "Client ID",
+        "clientSecret": "Client secret",
+        "scopes": "Scopes",
+        "allowedEmailDomains": "Allowed email domains",
+        "defaultRole": "Default role",
+        "isEnabled": "Enable sign-in with this provider",
+        "allowAccountCreation": "Allow this provider to create new accounts",
+        "requireVerifiedEmail": "Require verified email for account creation",
+        "syncProfile": "Sync profile names on sign-in",
+        "syncAvatar": "Import provider avatar when the user has no avatar",
+        "clearClientSecret": "Clear saved client secret"
+      },
+      "help": {
+        "slug": "Leave empty to generate it from the provider name. Existing slugs stay stable.",
+        "redirectUrl": "Register this exact callback URL in the provider application.",
+        "clientSecret": "Leave empty if this provider uses a public client.",
+        "clientSecretConfigured": "A secret is already saved. Enter a new one to replace it.",
+        "scopes": "Separate scopes with spaces or commas. openid is always required.",
+        "allowedEmailDomains": "Optional comma-separated domains for automatic account creation."
+      },
+      "create": {
+        "title": "Add identity provider"
+      },
+      "edit": {
+        "title": "Edit identity provider"
+      },
+      "delete": {
+        "title": "Delete {{name}}?",
+        "description": "Existing links for this provider will stop working. Users can keep signing in with other methods.",
+        "confirm": "Delete provider"
+      },
+      "errors": {
+        "loadFailed": "Failed to load identity providers.",
+        "saveFailed": "Failed to save identity provider.",
+        "deleteFailed": "Failed to delete identity provider."
+      }
     }
   },
   "routes": {

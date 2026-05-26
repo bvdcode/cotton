@@ -137,7 +137,7 @@ namespace Cotton.Benchmark.Benchmarks
             }
 
             double weight = index - lowerIndex;
-            return sortedValues[lowerIndex] * (1 - weight) + sortedValues[upperIndex] * weight;
+            return (sortedValues[lowerIndex] * (1 - weight)) + (sortedValues[upperIndex] * weight);
         }
 
         /// <summary>

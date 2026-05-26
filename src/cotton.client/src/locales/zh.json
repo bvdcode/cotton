@@ -534,7 +534,25 @@
       "durationHours_other": "{{count}} 小时",
       "durationDays_one": "{{count}} 天",
       "durationDays_other": "{{count}} 天",
-      "lessThanMinute": "不到一分钟"
+      "lessThanMinute": "不到一分钟",
+      "secondsAgo_few": "{{count}} seconds ago",
+      "secondsAgo_many": "{{count}} seconds ago",
+      "minutesAgo_few": "{{count}} minutes ago",
+      "minutesAgo_many": "{{count}} minutes ago",
+      "hoursAgo_few": "{{count}} hours ago",
+      "hoursAgo_many": "{{count}} hours ago",
+      "daysAgo_few": "{{count}} days ago",
+      "daysAgo_many": "{{count}} days ago",
+      "monthsAgo_few": "{{count}} months ago",
+      "monthsAgo_many": "{{count}} months ago",
+      "yearsAgo_few": "{{count}} years ago",
+      "yearsAgo_many": "{{count}} years ago",
+      "durationMinutes_few": "{{count}} min",
+      "durationMinutes_many": "{{count}} min",
+      "durationHours_few": "{{count}} hours",
+      "durationHours_many": "{{count}} hours",
+      "durationDays_few": "{{count}} days",
+      "durationDays_many": "{{count}} days"
     },
     "actions": {
       "confirm": "确认",
@@ -543,13 +561,15 @@
       "delete": "删除",
       "rename": "重命名",
       "restore": "还原",
+      "undo": "撤销",
       "download": "下载",
       "share": "分享",
       "more": "更多操作",
       "play": "播放",
       "pause": "暂停",
       "copied": "已复制！",
-      "reload": "刷新"
+      "reload": "刷新",
+      "versions": "Versions"
     },
     "errors": {
       "unexpectedTitle": "出错了",
@@ -692,6 +712,11 @@
         "cancelled": "已取消通行密钥登录。",
         "failed": "通行密钥登录失败。"
       }
+    },
+    "oidc": {
+      "loading": "Loading sign-in providers...",
+      "divider": "or",
+      "signInWith": "Continue with {{provider}}"
     }
   },
   "notFound": {
@@ -1031,6 +1056,26 @@
         "save": "保存",
         "saving": "正在保存...",
         "cancel": "暂不"
+      }
+    },
+    "ageYears_few": "{{count}} years",
+    "ageYears_many": "{{count}} years",
+    "connectedAccounts": {
+      "title": "Connected accounts",
+      "description": "Link external identity providers to this account.",
+      "loading": "Loading connected accounts...",
+      "empty": "No external accounts are linked yet.",
+      "link": "Link {{provider}}",
+      "unlink": {
+        "button": "Unlink",
+        "title": "Unlink {{provider}}?",
+        "description": "You will no longer be able to sign in with this provider until you link it again.",
+        "confirm": "Unlink",
+        "cancel": "Cancel"
+      },
+      "errors": {
+        "loadFailed": "Failed to load connected accounts.",
+        "unlinkFailed": "Failed to unlink this account."
       }
     }
   },
@@ -1377,7 +1422,9 @@
         "someItemsSkipped_one": "已跳过 {{count}} 项无法读取的内容。",
         "someItemsSkipped_other": "已跳过 {{count}} 项无法读取的内容。",
         "vaultLocked": "加密上传需要先解锁加密保险库。",
-        "details": "详情"
+        "details": "详情",
+        "someItemsSkipped_few": "Skipped {{count}} items that could not be read.",
+        "someItemsSkipped_many": "Skipped {{count}} items that could not be read."
       },
       "errors": {
         "dropFailed": "处理拖放项目失败，请重试。"
@@ -1465,6 +1512,8 @@
         "save": "保存",
         "saving": "正在保存……"
       },
+      "deleteToast": "文件已删除",
+      "deleteUndoFailed": "无法恢复已删除的文件。",
       "editorModes": {
         "text": {
           "label": "文本",
@@ -1589,8 +1638,25 @@
         "decryptExistingComplete_one": "已解密 {{count}} 个文件。",
         "decryptExistingComplete_other": "已解密 {{count}} 个文件。",
         "decryptExistingFailed_one": "无法解密 {{count}} 个文件。请查看任务面板。",
-        "decryptExistingFailed_other": "无法解密 {{count}} 个文件。请查看任务面板。"
+        "decryptExistingFailed_other": "无法解密 {{count}} 个文件。请查看任务面板。",
+        "encryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some files may still be unencrypted; run encryption again from the folder after this batch finishes.",
+        "decryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some encrypted files may remain; run decryption again from the folder after this batch finishes."
       }
+    },
+    "fileVersions": {
+      "title": "Versions of {{name}}",
+      "empty": "No previous versions yet.",
+      "loadFailed": "Failed to load versions.",
+      "restoreFailed": "Failed to restore version.",
+      "deleteFailed": "Failed to delete version.",
+      "downloadFailed": "Failed to prepare version download.",
+      "versionLabel": "Version {{version}}",
+      "current": "Current",
+      "original": "Original",
+      "restoreConfirmTitle": "Restore this version?",
+      "restoreConfirmDescription": "Current file content will be saved as a new version, then version {{version}} will become current.",
+      "deleteConfirmTitle": "Delete this version?",
+      "deleteConfirmDescription": "Version {{version}} will be deleted. The current file will not be changed."
     }
   },
   "tasks": {
@@ -1713,7 +1779,8 @@
       "databaseBackup": "数据库备份",
       "storageStatistics": "存储统计",
       "securityDiagnostics": "安全检查",
-      "groups": "用户组"
+      "groups": "用户组",
+      "identityProviders": "Identity providers"
     },
     "roles": {
       "user": "用户",
@@ -2104,7 +2171,8 @@
         "instance": "实例与账户",
         "masterKey": "主密钥",
         "memory": "进程内存暴露",
-        "runtime": "运行时信息"
+        "runtime": "运行时信息",
+        "containerBoundary": "Container boundary"
       },
       "risks": {
         "empty": "当前服务端检查未发现任何警告。"
@@ -2125,7 +2193,16 @@
         "euid": "有效 UID",
         "noNewPrivileges": "禁止获取新特权",
         "seccomp": "Seccomp 模式",
-        "capabilities": "有效能力"
+        "capabilities": "有效能力",
+        "rootFilesystemReadOnly": "Read-only root filesystem",
+        "dockerSocketMounted": "Docker socket mounted",
+        "hostPidNamespace": "Host PID namespace",
+        "procOneCommandLine": "PID 1 command",
+        "coreDumpLimit": "Core dump limit",
+        "corePattern": "Core pattern",
+        "appArmorProfile": "AppArmor profile",
+        "selinuxContext": "SELinux context",
+        "selinuxEnforcing": "SELinux enforcing"
       },
       "values": {
         "unknown": "未知",
@@ -2144,13 +2221,88 @@
         "new-privileges-allowed": "如果被攻陷的代码找到 setuid 辅助程序或携带能力的二进制文件，它在容器内获取特权的途径会更多。",
         "seccomp-disabled": "内核系统调用面比 Docker 常规生产基线更宽，容器逃逸漏洞将拥有更大的活动空间。",
         "running-as-root": "远程代码执行将在容器内以 root 身份运行，从而对挂载卷和辅助进程造成更大破坏。",
-        "process-hardening-failed": "Cotton 已请求进程加固，但进程仍未启用预期的转储或 ptrace 防护。"
+        "process-hardening-failed": "Cotton 已请求进程加固，但进程仍未启用预期的转储或 ptrace 防护。",
+        "db-integrity-unsigned-rows": "Unsigned protected rows can be modified directly in PostgreSQL without Cotton detecting the tampering at read boundaries.",
+        "db-integrity-bridge-mode": "During the bridge window, missing signatures are tolerated so existing installations can be signed. Leaving it on permanently weakens the database tamper boundary.",
+        "root-filesystem-writable": "A writable container root filesystem gives exploited code more places to drop tools, alter runtime files, or persist until the container is recreated.",
+        "docker-socket-mounted": "The Docker socket lets code inside the web container create privileged containers, mount host paths, and take over the host.",
+        "host-pid-namespace": "Sharing the host PID namespace exposes host processes through procfs and makes process-memory attacks easier to aim.",
+        "mandatory-access-control-unconfined": "Without an enforcing AppArmor or SELinux profile, a container escape or kernel-facing bug has fewer policy boundaries to cross.",
+        "core-dumps-enabled": "Core dumps are memory snapshots. If Cotton crashes while secrets are resident, a dump can preserve the master key or decrypted configuration."
       }
     },
     "groups": {
       "title": "用户组",
       "description": "独立于单个用户管理访问组。",
       "inDevelopment": "用户组管理功能正在开发中。"
+    },
+    "identityProviders": {
+      "title": "Identity providers",
+      "description": "Configure OpenID Connect providers for sign-in and account linking.",
+      "actions": {
+        "create": "Add provider",
+        "edit": "Edit provider",
+        "delete": "Delete provider",
+        "refresh": "Refresh",
+        "save": "Save provider",
+        "saving": "Saving..."
+      },
+      "columns": {
+        "name": "Provider",
+        "issuer": "Issuer",
+        "status": "Status",
+        "accountCreation": "Account creation",
+        "scopes": "Scopes",
+        "domains": "Domains",
+        "actions": "Actions"
+      },
+      "status": {
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "allowed": "Allowed",
+        "blocked": "Blocked"
+      },
+      "fields": {
+        "name": "Name",
+        "slug": "Slug",
+        "redirectUrl": "Redirect URL",
+        "issuer": "Issuer URL",
+        "clientId": "Client ID",
+        "clientSecret": "Client secret",
+        "scopes": "Scopes",
+        "allowedEmailDomains": "Allowed email domains",
+        "defaultRole": "Default role",
+        "isEnabled": "Enable sign-in with this provider",
+        "allowAccountCreation": "Allow this provider to create new accounts",
+        "requireVerifiedEmail": "Require verified email for account creation",
+        "syncProfile": "Sync profile names on sign-in",
+        "syncAvatar": "Import provider avatar when the user has no avatar",
+        "clearClientSecret": "Clear saved client secret"
+      },
+      "help": {
+        "slug": "Leave empty to generate it from the provider name. Existing slugs stay stable.",
+        "redirectUrl": "Register this exact callback URL in the provider application.",
+        "clientSecret": "Leave empty if this provider uses a public client.",
+        "clientSecretConfigured": "A secret is already saved. Enter a new one to replace it.",
+        "scopes": "Separate scopes with spaces or commas. openid is always required.",
+        "allowedEmailDomains": "Optional comma-separated domains for automatic account creation."
+      },
+      "create": {
+        "title": "Add identity provider"
+      },
+      "edit": {
+        "title": "Edit identity provider"
+      },
+      "delete": {
+        "title": "Delete {{name}}?",
+        "description": "Existing links for this provider will stop working. Users can keep signing in with other methods.",
+        "confirm": "Delete provider"
+      },
+      "errors": {
+        "loadFailed": "Failed to load identity providers.",
+        "saveFailed": "Failed to save identity provider.",
+        "deleteFailed": "Failed to delete identity provider."
+      }
     }
   },
   "routes": {

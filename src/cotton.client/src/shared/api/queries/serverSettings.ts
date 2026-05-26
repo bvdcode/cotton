@@ -11,11 +11,25 @@ const serverSettingsQueryOptions = () => ({
   staleTime: SERVER_SETTINGS_STALE_TIME_MS,
 });
 
+const publicBaseUrlQueryOptions = () => ({
+  queryKey: queryKeys.serverSettings.publicBaseUrl(),
+  queryFn: () => settingsApi.getPublicBaseUrl(),
+  staleTime: SERVER_SETTINGS_STALE_TIME_MS,
+});
+
 export const useServerSettingsQuery = (
   options: { enabled?: boolean } = {},
 ) =>
   useQuery<ServerSettings>({
     ...serverSettingsQueryOptions(),
+    enabled: options.enabled ?? true,
+  });
+
+export const usePublicBaseUrlQuery = (
+  options: { enabled?: boolean } = {},
+) =>
+  useQuery<string>({
+    ...publicBaseUrlQueryOptions(),
     enabled: options.enabled ?? true,
   });
 

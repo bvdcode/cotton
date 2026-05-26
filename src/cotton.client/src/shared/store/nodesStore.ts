@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import type { NodeContentDto } from "../api/nodesApi";
+import type { NodeContentDto, NodeFileManifestDto } from "../api/nodesApi";
 import type { NodeDto } from "../api/layoutsApi";
 import { NODES_STORAGE_KEY } from "../config/storageKeys";
 import {
@@ -20,6 +20,16 @@ type NodesState = {
   error: string | null;
   lastUpdatedByNodeId: Record<string, number | undefined>;
   updateNode: (updated: NodeDto) => void;
+  moveFolderInCache: (
+    updated: NodeDto,
+    sourceParentId: string,
+    targetParentId: string,
+  ) => void;
+  moveFileInCache: (
+    updated: NodeFileManifestDto,
+    sourceParentId: string,
+    targetParentId: string,
+  ) => void;
   addFolderToCache: (parentNodeId: string, folder: NodeDto) => void;
   updateFileInCache: (
     parentNodeId: string,
@@ -89,6 +99,26 @@ function buildPersistedContentSnapshot(state: {
     ancestorsByNodeId,
     lastUpdatedByNodeId,
   };
+}
+
+function dropAncestorCachesAffectedByMove(
+  ancestorsByNodeId: Record<string, NodeDto[] | undefined>,
+  movedNodeId: string,
+): Record<string, NodeDto[] | undefined> {
+  let changed = false;
+  const next = { ...ancestorsByNodeId };
+
+  for (const [nodeId, ancestors] of Object.entries(ancestorsByNodeId)) {
+    if (
+      nodeId === movedNodeId ||
+      ancestors?.some((node) => node.id === movedNodeId)
+    ) {
+      delete next[nodeId];
+      changed = true;
+    }
+  }
+
+  return changed ? next : ancestorsByNodeId;
 }
 
 const safeSessionStorage = {
@@ -171,6 +201,123 @@ export const useNodesStore = create<NodesState>()(
             contentByNodeId: contentChanged
               ? contentByNodeId
               : prev.contentByNodeId,
+          };
+        });
+      },
+
+      moveFolderInCache: (updated, sourceParentId, targetParentId) => {
+        set((prev) => {
+          let contentChanged = false;
+          const contentByNodeId = { ...prev.contentByNodeId };
+
+          for (const [nodeId, content] of Object.entries(prev.contentByNodeId)) {
+            if (!content) continue;
+
+            if (nodeId === targetParentId) {
+              const nodes = [
+                ...content.nodes.filter((node) => node.id !== updated.id),
+                updated,
+              ];
+              contentByNodeId[nodeId] = { ...content, nodes };
+              contentChanged = true;
+              continue;
+            }
+
+            if (nodeId === sourceParentId) {
+              const nodes = content.nodes.filter(
+                (node) => node.id !== updated.id,
+              );
+              if (nodes.length !== content.nodes.length) {
+                contentByNodeId[nodeId] = { ...content, nodes };
+                contentChanged = true;
+              }
+              continue;
+            }
+
+            if (content.nodes.some((node) => node.id === updated.id)) {
+              contentByNodeId[nodeId] = {
+                ...content,
+                nodes: content.nodes.map((node) =>
+                  node.id === updated.id ? updated : node,
+                ),
+              };
+              contentChanged = true;
+            }
+          }
+
+          const now = Date.now();
+          return {
+            currentNode:
+              prev.currentNode?.id === updated.id ? updated : prev.currentNode,
+            ancestors: prev.ancestors.map((node) =>
+              node.id === updated.id ? updated : node,
+            ),
+            ancestorsByNodeId: dropAncestorCachesAffectedByMove(
+              prev.ancestorsByNodeId,
+              updated.id,
+            ),
+            contentByNodeId: contentChanged
+              ? contentByNodeId
+              : prev.contentByNodeId,
+            lastUpdatedByNodeId: {
+              ...prev.lastUpdatedByNodeId,
+              [sourceParentId]: now,
+              [targetParentId]: now,
+            },
+          };
+        });
+      },
+
+      moveFileInCache: (updated, sourceParentId, targetParentId) => {
+        set((prev) => {
+          let contentChanged = false;
+          const contentByNodeId = { ...prev.contentByNodeId };
+
+          for (const [nodeId, content] of Object.entries(prev.contentByNodeId)) {
+            if (!content) continue;
+
+            if (nodeId === targetParentId) {
+              const files = [
+                ...content.files.filter((file) => file.id !== updated.id),
+                updated,
+              ];
+              contentByNodeId[nodeId] = { ...content, files };
+              contentChanged = true;
+              continue;
+            }
+
+            if (nodeId === sourceParentId) {
+              const files = content.files.filter(
+                (file) => file.id !== updated.id,
+              );
+              if (files.length !== content.files.length) {
+                contentByNodeId[nodeId] = { ...content, files };
+                contentChanged = true;
+              }
+              continue;
+            }
+
+            if (content.files.some((file) => file.id === updated.id)) {
+              contentByNodeId[nodeId] = {
+                ...content,
+                files: content.files.map((file) =>
+                  file.id === updated.id ? updated : file,
+                ),
+              };
+              contentChanged = true;
+            }
+          }
+
+          const now = Date.now();
+          return {
+            contentByNodeId: contentChanged
+              ? contentByNodeId
+              : prev.contentByNodeId,
+            lastUpdatedByNodeId: {
+              ...prev.lastUpdatedByNodeId,
+              [sourceParentId]: now,
+              [targetParentId]: now,
+            },
           };
         });
       },

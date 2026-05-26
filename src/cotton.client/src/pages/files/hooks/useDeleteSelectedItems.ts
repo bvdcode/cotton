@@ -2,6 +2,7 @@ import * as React from "react";
 import { filesApi } from "../../../shared/api/filesApi";
 import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 import type { FileSelectionState } from "@shared/hooks/useFileSelection";
+import { destructiveConfirmOptions } from "@shared/ui/confirmOptions";
 
 type TranslationFn = (
   key: string,
@@ -16,8 +17,7 @@ type ConfirmFn = (args: {
   description: string;
   confirmationText: string;
   cancellationText: string;
-  confirmationButtonProps: { color: "error" };
-}) => Promise<{ confirmed: boolean }>;
+} & typeof destructiveConfirmOptions) => Promise<{ confirmed: boolean }>;
 
 interface UseDeleteSelectedItemsArgs {
   nodeId: string | null;
@@ -61,7 +61,7 @@ export const useDeleteSelectedItems = ({
       description: t("deleteSelected.confirmDescription", { ns: "files" }),
       confirmationText: t("common:actions.delete"),
       cancellationText: t("common:actions.cancel"),
-      confirmationButtonProps: { color: "error" },
+      ...destructiveConfirmOptions,
     });
 
     if (!result.confirmed) return;

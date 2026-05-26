@@ -457,6 +457,7 @@
       "delete": "Delete",
       "rename": "Rename",
       "restore": "Restore",
+      "undo": "Undo",
       "versions": "Versions",
       "download": "Download",
       "share": "Share",
@@ -607,6 +608,11 @@
         "cancelled": "Passkey sign-in was cancelled.",
         "failed": "Passkey sign-in failed."
       }
+    },
+    "oidc": {
+      "loading": "Loading sign-in providers...",
+      "divider": "or",
+      "signInWith": "Continue with {{provider}}"
     }
   },
   "notFound": {
@@ -948,6 +954,24 @@
         "save": "Save",
         "saving": "Saving...",
         "cancel": "Not now"
+      }
+    },
+    "connectedAccounts": {
+      "title": "Connected accounts",
+      "description": "Link external identity providers to this account.",
+      "loading": "Loading connected accounts...",
+      "empty": "No external accounts are linked yet.",
+      "link": "Link {{provider}}",
+      "unlink": {
+        "button": "Unlink",
+        "title": "Unlink {{provider}}?",
+        "description": "You will no longer be able to sign in with this provider until you link it again.",
+        "confirm": "Unlink",
+        "cancel": "Cancel"
+      },
+      "errors": {
+        "loadFailed": "Failed to load connected accounts.",
+        "unlinkFailed": "Failed to unlink this account."
       }
     }
   },
@@ -1399,6 +1423,8 @@
         "save": "Save",
         "saving": "Saving..."
       },
+      "deleteToast": "File was deleted",
+      "deleteUndoFailed": "Failed to restore the deleted file.",
       "editorModes": {
         "text": {
           "label": "Text",
@@ -1524,7 +1550,8 @@
         "decryptExistingComplete_one": "Decrypted {{count}} file.",
         "decryptExistingComplete_other": "Decrypted {{count}} files.",
         "decryptExistingFailed_one": "Could not decrypt {{count}} file. Check the task panel.",
-        "decryptExistingFailed_other": "Could not decrypt {{count}} files. Check the task panel."
+        "decryptExistingFailed_other": "Could not decrypt {{count}} files. Check the task panel.",
+        "decryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some encrypted files may remain; run decryption again from the folder after this batch finishes."
       }
     }
   },
@@ -1648,7 +1675,8 @@
       "databaseBackup": "Database backup",
       "storageStatistics": "Storage statistics",
       "securityDiagnostics": "Security checkup",
-      "groups": "Groups"
+      "groups": "Groups",
+      "identityProviders": "Identity providers"
     },
     "roles": {
       "user": "User",
@@ -2103,6 +2131,74 @@
       "title": "Groups",
       "description": "Manage access groups separately from individual users.",
       "inDevelopment": "Group management is in development."
+    },
+    "identityProviders": {
+      "title": "Identity providers",
+      "description": "Configure OpenID Connect providers for sign-in and account linking.",
+      "actions": {
+        "create": "Add provider",
+        "edit": "Edit provider",
+        "delete": "Delete provider",
+        "refresh": "Refresh",
+        "save": "Save provider",
+        "saving": "Saving..."
+      },
+      "columns": {
+        "name": "Provider",
+        "issuer": "Issuer",
+        "status": "Status",
+        "accountCreation": "Account creation",
+        "scopes": "Scopes",
+        "domains": "Domains",
+        "actions": "Actions"
+      },
+      "status": {
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "allowed": "Allowed",
+        "blocked": "Blocked"
+      },
+      "fields": {
+        "name": "Name",
+        "slug": "Slug",
+        "redirectUrl": "Redirect URL",
+        "issuer": "Issuer URL",
+        "clientId": "Client ID",
+        "clientSecret": "Client secret",
+        "scopes": "Scopes",
+        "allowedEmailDomains": "Allowed email domains",
+        "defaultRole": "Default role",
+        "isEnabled": "Enable sign-in with this provider",
+        "allowAccountCreation": "Allow this provider to create new accounts",
+        "requireVerifiedEmail": "Require verified email for account creation",
+        "syncProfile": "Sync profile names on sign-in",
+        "syncAvatar": "Import provider avatar when the user has no avatar",
+        "clearClientSecret": "Clear saved client secret"
+      },
+      "help": {
+        "slug": "Leave empty to generate it from the provider name. Existing slugs stay stable.",
+        "redirectUrl": "Register this exact callback URL in the provider application.",
+        "clientSecret": "Leave empty if this provider uses a public client.",
+        "clientSecretConfigured": "A secret is already saved. Enter a new one to replace it.",
+        "scopes": "Separate scopes with spaces or commas. openid is always required.",
+        "allowedEmailDomains": "Optional comma-separated domains for automatic account creation."
+      },
+      "create": {
+        "title": "Add identity provider"
+      },
+      "edit": {
+        "title": "Edit identity provider"
+      },
+      "delete": {
+        "title": "Delete {{name}}?",
+        "description": "Existing links for this provider will stop working. Users can keep signing in with other methods.",
+        "confirm": "Delete provider"
+      },
+      "errors": {
+        "loadFailed": "Failed to load identity providers.",
+        "saveFailed": "Failed to save identity provider.",
+        "deleteFailed": "Failed to delete identity provider."
+      }
     }
   },
   "routes": {

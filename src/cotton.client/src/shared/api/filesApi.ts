@@ -138,8 +138,10 @@ export const filesApi = {
   moveFile: async (
     nodeFileId: Guid,
     request: MoveFileRequest,
-  ): Promise<void> => {
-    await httpClient.patch(`/files/${nodeFileId}/move`, request);
+  ): Promise<NodeFileManifestDto> => {
+    const url = `/files/${nodeFileId}/move`;
+    const response = await httpClient.patch<unknown>(url, request);
+    return parseValidated(url, response.data, nodeFileManifestSchema);
   },
 
   restoreFile: async (

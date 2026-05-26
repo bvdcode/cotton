@@ -7,8 +7,10 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./shared/api/queries/queryClient";
 import { AppBootstrap } from "./app/AppBootstrap";
 import { NotificationProvider } from "@shared/ui/notifications";
+import { safeConfirmFocusOptions } from "@shared/ui/confirmOptions";
 
 const confirmProviderOptions: ConfirmOptions = {
+  ...safeConfirmFocusOptions,
   dialogProps: {
     sx: { zIndex: 10000 },
   },

@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { filesApi } from "../../../shared/api/filesApi";
 import {
@@ -22,7 +23,34 @@ export const useFileOperations = (onFilesChanged?: () => void) => {
     optimisticDeleteFile,
   } = useNodesStore();
 
-  return useFileRenameDeleteOperations({
+  const deleteFile = useCallback(
+    async (fileId: string) => {
+      const parentId = currentNode?.id;
+
+      if (parentId) {
+        optimisticDeleteFile(parentId, fileId);
+      }
+
+      try {
+        await filesApi.deleteFile(fileId);
+
+        if (parentId) {
+          void refreshNodeContent(parentId);
+        } else if (onFilesChanged) {
+          onFilesChanged();
+        }
+      } catch (error) {
+        // Rollback: reload from server on failure
+        if (parentId) {
+          void refreshNodeContent(parentId);
+        }
+        throw error;
+      }
+    },
+    [currentNode?.id, onFilesChanged, optimisticDeleteFile],
+  );
+
+  const operations = useFileRenameDeleteOperations({
     getDeleteDialogContent: (fileName) => ({
       title: t("deleteFile.confirmTitle", { ns: "files", name: fileName }),
       description: t("deleteFile.confirmDescription", { ns: "files" }),
@@ -75,30 +103,13 @@ export const useFileOperations = (onFilesChanged?: () => void) => {
         return false;
       }
     },
-    deleteFile: async (fileId) => {
-      const parentId = currentNode?.id;
-
-      if (parentId) {
-        optimisticDeleteFile(parentId, fileId);
-      }
-
-      try {
-        await filesApi.deleteFile(fileId);
-
-        if (parentId) {
-          void refreshNodeContent(parentId);
-        } else if (onFilesChanged) {
-          onFilesChanged();
-        }
-      } catch (error) {
-        // Rollback: reload from server on failure
-        if (parentId) {
-          void refreshNodeContent(parentId);
-        }
-        throw error;
-      }
-    },
+    deleteFile,
     renameErrorMessage: "Failed to rename file:",
     deleteErrorMessage: "Failed to delete file:",
   });
+
+  return {
+    ...operations,
+    deleteFile,
+  };
 };

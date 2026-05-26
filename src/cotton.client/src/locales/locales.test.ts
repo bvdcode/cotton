@@ -53,6 +53,29 @@ const findOrphans = (locale: Record<string, unknown>): string[] =>
     (key) => !enKeys.has(key) && !enBaseKeys.has(baseKey(key)),
   );
 
+const findMissing = (locale: Record<string, unknown>): string[] =>
+  [...enKeys].filter((key) => !(key in locale));
+
+const requiredGalleryUndoKeys = [
+  "common.actions.undo",
+  "files.preview.deleteToast",
+  "files.preview.deleteUndoFailed",
+] as const;
+
+const getLocaleValue = (locale: LocaleObject, path: string): unknown =>
+  path.split(".").reduce<unknown>((current, segment) => {
+    if (
+      current !== null &&
+      typeof current === "object" &&
+      !Array.isArray(current) &&
+      segment in current
+    ) {
+      return (current as LocaleObject)[segment];
+    }
+
+    return undefined;
+  }, locale);
+
 const nonEnLocales: ReadonlyArray<readonly [string, LocaleObject]> = [
   ["Czech", cs as LocaleObject],
   ["German", de as LocaleObject],
@@ -93,6 +116,26 @@ describe("locale parity", () => {
         orphan,
         `${language} locale contains keys without an EN counterpart: ${orphan.join(", ")}`,
       ).toEqual([]);
+    });
+
+    it(`keeps ${language} complete with the EN namespace`, () => {
+      const missing = findMissing(flatten(locale));
+
+      expect(
+        missing,
+        `${language} locale is missing EN keys: ${missing.join(", ")}`,
+      ).toEqual([]);
+    });
+
+    it(`keeps ${language} gallery undo strings translated`, () => {
+      for (const key of requiredGalleryUndoKeys) {
+        const value = getLocaleValue(locale, key);
+
+        expect(
+          typeof value === "string" && value.length > 0,
+          `${language} locale is missing ${key}`,
+        ).toBe(true);
+      }
     });
   }
 });

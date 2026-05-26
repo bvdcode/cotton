@@ -35,6 +35,14 @@ import {
 } from "./bugReportPrefill";
 
 const STORAGE_QUOTA_STALE_TIME_MS = 60_000;
+const storageQuotaProgressSx = {
+  mt: 0.75,
+  height: 4,
+  borderRadius: 999,
+  "& .MuiLinearProgress-bar": {
+    transition: "none",
+  },
+};
 const getStorageQuotaPercent = (
   usedBytes: number,
   quotaBytes: number | null,
@@ -69,11 +77,12 @@ export const UserMenu = () => {
     (state) => state.recordDeveloperSettingsUnlockClick,
   );
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [menuContentVisible, setMenuContentVisible] = useState(false);
   const isOpen = Boolean(anchorEl);
   const storageQuotaQuery = useQuery({
     queryKey: queryKeys.storageQuota.current(),
     queryFn: storageQuotaApi.getCurrent,
-    enabled: isOpen && Boolean(user),
+    enabled: Boolean(user),
     staleTime: STORAGE_QUOTA_STALE_TIME_MS,
   });
 
@@ -111,11 +120,16 @@ export const UserMenu = () => {
   };
 
   const handleOpen = (event: MouseEvent<HTMLElement>) => {
+    setMenuContentVisible(true);
     setAnchorEl(event.currentTarget);
   };
 
   const handleClose = () => {
     setAnchorEl(null);
+  };
+
+  const handleMenuExited = () => {
+    setMenuContentVisible(false);
   };
 
   const handleLogout = async () => {
@@ -174,7 +188,7 @@ export const UserMenu = () => {
         })
     : t("userMenu.storageQuota.loading");
   const showStorageQuota =
-    isOpen && (storageQuotaQuery.isPending || Boolean(quota));
+    menuContentVisible && (storageQuotaQuery.isPending || Boolean(quota));
 
   return (
     <>
@@ -215,6 +229,9 @@ export const UserMenu = () => {
               mt: 1.5,
               minWidth: 240,
             },
+          },
+          transition: {
+            onExited: handleMenuExited,
           },
         }}
       >
@@ -283,12 +300,12 @@ export const UserMenu = () => {
                 value={storageQuotaPercent}
                 color={storageQuotaColor}
                 aria-label={t("userMenu.storageQuota.label")}
-                sx={{ mt: 0.75, height: 4, borderRadius: 999 }}
+                sx={storageQuotaProgressSx}
               />
             ) : storageQuotaQuery.isPending ? (
               <LinearProgress
                 aria-label={t("userMenu.storageQuota.loading")}
-                sx={{ mt: 0.75, height: 4, borderRadius: 999 }}
+                sx={storageQuotaProgressSx}
               />
             ) : null}
           </Box>
@@ -296,21 +313,26 @@ export const UserMenu = () => {
 
         {serverSettings?.version && <Divider />}
         {serverSettings?.version && (
-          <Box px={2} py={0.5}>
+          <Box px={2} py={0.25}>
             <Link
               href="https://cottoncloud.dev"
               underline="none"
               onClick={handleVersionClick}
               sx={{
                 display: "block",
-                py: 0.5,
+                py: 0.25,
                 color: "text.secondary",
+                textAlign: "center",
                 "&:hover": {
                   color: "primary.main",
                 },
               }}
             >
-              <Typography variant="caption">
+              <Typography
+                component="span"
+                variant="caption"
+                sx={{ fontSize: "0.6875rem", lineHeight: 1.2 }}
+              >
                 {serverSettings.version}
               </Typography>
             </Link>
