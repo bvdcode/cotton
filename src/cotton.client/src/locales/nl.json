@@ -556,6 +556,7 @@
       "delete": "Verwijderen",
       "rename": "Hernoemen",
       "restore": "Herstellen",
+      "undo": "Ongedaan maken",
       "download": "Downloaden",
       "share": "Delen",
       "more": "Meer acties",
@@ -1478,6 +1479,8 @@
         "save": "Opslaan",
         "saving": "Bezig met opslaan..."
       },
+      "deleteToast": "Bestand is verwijderd",
+      "deleteUndoFailed": "Kan het verwijderde bestand niet herstellen.",
       "editorModes": {
         "text": {
           "label": "Tekst",

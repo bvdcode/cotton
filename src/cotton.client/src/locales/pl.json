@@ -564,6 +564,7 @@
       "delete": "Usuń",
       "rename": "Zmień nazwę",
       "restore": "Przywróć",
+      "undo": "Cofnij",
       "download": "Pobierz",
       "share": "Udostępnij",
       "more": "Więcej akcji",
@@ -1502,6 +1503,8 @@
         "save": "Zapisz",
         "saving": "Zapisywanie..."
       },
+      "deleteToast": "Plik został usunięty",
+      "deleteUndoFailed": "Nie udało się przywrócić usuniętego pliku.",
       "editorModes": {
         "text": {
           "label": "Tekst",

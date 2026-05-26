@@ -543,6 +543,7 @@
       "delete": "删除",
       "rename": "重命名",
       "restore": "还原",
+      "undo": "撤销",
       "download": "下载",
       "share": "分享",
       "more": "更多操作",
@@ -1465,6 +1466,8 @@
         "save": "保存",
         "saving": "正在保存……"
       },
+      "deleteToast": "文件已删除",
+      "deleteUndoFailed": "无法恢复已删除的文件。",
       "editorModes": {
         "text": {
           "label": "文本",

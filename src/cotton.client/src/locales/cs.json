@@ -565,6 +565,7 @@
       "delete": "Smazat",
       "rename": "Přejmenovat",
       "restore": "Obnovit",
+      "undo": "Vrátit zpět",
       "download": "Stáhnout",
       "share": "Sdílet",
       "more": "Další akce",
@@ -1503,6 +1504,8 @@
         "save": "Uložit",
         "saving": "Ukládání..."
       },
+      "deleteToast": "Soubor byl smazán",
+      "deleteUndoFailed": "Nepodařilo se obnovit smazaný soubor.",
       "editorModes": {
         "text": {
           "label": "Text",

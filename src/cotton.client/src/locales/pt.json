@@ -556,6 +556,7 @@
       "delete": "Excluir",
       "rename": "Renomear",
       "restore": "Restaurar",
+      "undo": "Desfazer",
       "download": "Baixar",
       "share": "Compartilhar",
       "more": "Mais ações",
@@ -1478,6 +1479,8 @@
         "save": "Salvar",
         "saving": "Salvando..."
       },
+      "deleteToast": "O arquivo foi excluído",
+      "deleteUndoFailed": "Não foi possível restaurar o arquivo excluído.",
       "editorModes": {
         "text": {
           "label": "Texto",

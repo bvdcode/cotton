@@ -530,6 +530,7 @@
       "delete": "Eliminar",
       "rename": "Renombrar",
       "restore": "Restaurar",
+      "undo": "Deshacer",
       "download": "Descargar",
       "share": "Compartir",
       "more": "Más acciones",
@@ -1456,6 +1457,8 @@
         "save": "Guardar",
         "saving": "Guardando..."
       },
+      "deleteToast": "Se eliminó el archivo",
+      "deleteUndoFailed": "No se pudo restaurar el archivo eliminado.",
       "editorModes": {
         "text": {
           "label": "Texto",

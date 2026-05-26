@@ -568,6 +568,7 @@
       "delete": "Supprimer",
       "rename": "Renommer",
       "restore": "Restaurer",
+      "undo": "Annuler",
       "download": "Télécharger",
       "share": "Partager",
       "more": "Plus d'actions",
@@ -1494,6 +1495,8 @@
         "save": "Enregistrer",
         "saving": "Enregistrement..."
       },
+      "deleteToast": "Le fichier a été supprimé",
+      "deleteUndoFailed": "Impossible de restaurer le fichier supprimé.",
       "editorModes": {
         "text": {
           "label": "Texte",

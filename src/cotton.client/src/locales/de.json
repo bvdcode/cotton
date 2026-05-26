@@ -558,6 +558,7 @@
       "delete": "Löschen",
       "rename": "Umbenennen",
       "restore": "Wiederherstellen",
+      "undo": "Rückgängig",
       "download": "Herunterladen",
       "share": "Teilen",
       "more": "Weitere Aktionen",
@@ -1484,6 +1485,8 @@
         "save": "Speichern",
         "saving": "Wird gespeichert..."
       },
+      "deleteToast": "Datei wurde gelöscht",
+      "deleteUndoFailed": "Die gelöschte Datei konnte nicht wiederhergestellt werden.",
       "editorModes": {
         "text": {
           "label": "Text",
