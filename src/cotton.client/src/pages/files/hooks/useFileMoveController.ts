@@ -40,6 +40,7 @@ export interface UseFileMoveControllerArgs {
   selectedIds: ReadonlySet<string>;
   selectedCount: number;
   goUpParentId: string | null;
+  onItemsCut?: () => void;
   showToast: (message: string) => void;
   t: TFunction;
 }
@@ -67,6 +68,7 @@ export const useFileMoveController = ({
   selectedIds,
   selectedCount,
   goUpParentId,
+  onItemsCut,
   showToast,
   t,
 }: UseFileMoveControllerArgs): UseFileMoveControllerResult => {
@@ -115,8 +117,9 @@ export const useFileMoveController = ({
     const items = buildClipboardItemsFromIds(selectedIds);
     if (items.length === 0) return;
     moveOps.cutItems(items);
+    onItemsCut?.();
     showToast(t("move.toasts.cut", { ns: "files", count: items.length }));
-  }, [buildClipboardItemsFromIds, moveOps, selectedCount, selectedIds, showToast, t]);
+  }, [buildClipboardItemsFromIds, moveOps, onItemsCut, selectedCount, selectedIds, showToast, t]);
 
   const handlePasteHere = useCallback(() => {
     if (!nodeId) return;
@@ -230,9 +233,10 @@ export const useFileMoveController = ({
     (folderId: string) => {
       if (!nodeId) return;
       moveOps.cutItems([{ id: folderId, kind: "folder", sourceParentId: nodeId }]);
+      onItemsCut?.();
       showToast(t("move.toasts.cut", { ns: "files", count: 1 }));
     },
-    [moveOps, nodeId, showToast, t],
+    [moveOps, nodeId, onItemsCut, showToast, t],
   );
 
   const handleCutFile = useCallback(
@@ -255,9 +259,10 @@ export const useFileMoveController = ({
           },
         },
       ]);
+      onItemsCut?.();
       showToast(t("move.toasts.cut", { ns: "files", count: 1 }));
     },
-    [moveOps, nodeId, showToast, t, tiles],
+    [moveOps, nodeId, onItemsCut, showToast, t, tiles],
   );
 
   return {

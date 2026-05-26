@@ -8,6 +8,7 @@ using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Helpers;
+using Cotton.Storage.Processors;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using System.Linq.Expressions;
@@ -26,6 +27,7 @@ namespace Cotton.Server.Providers
         private static readonly Lock _cacheLock = new();
         private static readonly SemaphoreSlim _settingsCreationLock = new(1, 1);
         private static CottonServerSettings? _cache;
+        private static int _cachedEncryptionThreads;
         private static readonly TimeSpan _boolCacheTtl = TimeSpan.FromMinutes(1);
         private static (bool Value, DateTimeOffset CachedAt)? _isServerInitializedCache;
         private static (bool Value, DateTimeOffset CachedAt)? _serverHasUsersCache;
@@ -36,6 +38,7 @@ namespace Cotton.Server.Providers
         private const int defaultEncryptionThreads = 2;
         private const int defaultMaxChunkSizeBytes = 4 * 1024 * 1024;
         private const int defaultCipherChunkSizeBytes = 1 * 1024 * 1024;
+        private const int defaultCompressionLevel = CompressionProcessor.DefaultCompressionLevel;
 
         /// <summary>
         /// Gets server settings.
@@ -68,6 +71,7 @@ namespace Cotton.Server.Providers
                 if (settings is not null)
                 {
                     _integrity?.RequireValid(_dbContext, settings, "settings.cache-load");
+                    CacheRuntimePipelineSettings(settings);
                     _cache = settings;
                     return _cache;
                 }
@@ -77,6 +81,7 @@ namespace Cotton.Server.Providers
                     AllowCrossUserDeduplication = false,
                     AllowGlobalIndexing = false,
                     CipherChunkSizeBytes = defaultCipherChunkSizeBytes,
+                    CompressionLevel = defaultCompressionLevel,
                     EncryptionThreads = defaultEncryptionThreads,
                     MaxChunkSizeBytes = defaultMaxChunkSizeBytes,
                     SessionTimeoutHours = defaultSessionTimeoutHours,
@@ -94,8 +99,15 @@ namespace Cotton.Server.Providers
                     DefaultUserTemplateNodeId = null,
                     GeoIpLookupMode = GeoIpLookupMode.Disabled,
                 };
+                CacheRuntimePipelineSettings(_cache);
                 return _cache;
             }
+        }
+
+        internal static int? GetCachedEncryptionThreads()
+        {
+            int value = Volatile.Read(ref _cachedEncryptionThreads);
+            return value > 0 ? value : null;
         }
 
         /// <summary>
@@ -117,12 +129,14 @@ namespace Cotton.Server.Providers
                 settings = await LoadLatestSettingsAsync(asNoTracking: false, cancellationToken);
                 if (settings is not null)
                 {
+                    CacheRuntimePipelineSettings(settings);
                     return settings;
                 }
 
                 settings = CreateDefaultSettings(fallbackPublicBaseUrl);
                 await _dbContext.ServerSettings.AddAsync(settings, cancellationToken);
                 await _dbContext.SaveChangesAsync(cancellationToken);
+                CacheRuntimePipelineSettings(settings);
                 InvalidateSettingsCache(serverIsInitialized: true);
                 return settings;
             }
@@ -606,6 +620,7 @@ namespace Cotton.Server.Providers
             CottonServerSettings settings = await EnsureServerSettingsAsync(fallbackPublicBaseUrl, cancellationToken);
             update(settings);
             await _dbContext.SaveChangesAsync(cancellationToken);
+            CacheRuntimePipelineSettings(settings);
             InvalidateSettingsCache(serverIsInitialized: true);
         }
 
@@ -641,6 +656,7 @@ namespace Cotton.Server.Providers
 
             _dbContext.Entry(settings).Property(propertyName).CurrentValue = value;
             await _dbContext.SaveChangesAsync(cancellationToken);
+            CacheRuntimePipelineSettings(settings);
             InvalidateSettingsCache(serverIsInitialized: true);
         }
 
@@ -724,6 +740,7 @@ namespace Cotton.Server.Providers
                 AllowCrossUserDeduplication = false,
                 AllowGlobalIndexing = false,
                 CipherChunkSizeBytes = defaultCipherChunkSizeBytes,
+                CompressionLevel = defaultCompressionLevel,
                 EncryptionThreads = defaultEncryptionThreads,
                 MaxChunkSizeBytes = defaultMaxChunkSizeBytes,
                 SessionTimeoutHours = defaultSessionTimeoutHours,
@@ -764,6 +781,12 @@ namespace Cotton.Server.Providers
                     _isServerInitializedCache = (true, DateTimeOffset.UtcNow);
                 }
             }
+        }
+
+        private static void CacheRuntimePipelineSettings(CottonServerSettings settings)
+        {
+            int encryptionThreads = settings.EncryptionThreads > 0 ? settings.EncryptionThreads : 0;
+            Volatile.Write(ref _cachedEncryptionThreads, encryptionThreads);
         }
     }
 }

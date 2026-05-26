@@ -1,5 +1,5 @@
-import { act, render, screen } from "@testing-library/react";
-import type { ReactElement } from "react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { MediaLightbox } from "./MediaLightbox";
 import type { MediaItem } from "@shared/types/mediaLightbox";
@@ -8,9 +8,19 @@ type CapturedLightboxProps = {
   close: () => void;
   open: boolean;
   slides: ReadonlyArray<object>;
+  toolbar?: {
+    buttons?: ReadonlyArray<ReactNode>;
+  };
   video?: {
     autoPlay?: boolean;
   };
+};
+
+type MockIconButtonProps = {
+  disabled?: boolean;
+  label: string;
+  onClick?: () => void;
+  renderIcon?: () => ReactNode;
 };
 
 const capturedLightboxProps: CapturedLightboxProps[] = [];
@@ -24,8 +34,22 @@ vi.mock("react-i18next", () => ({
 vi.mock("yet-another-react-lightbox", () => ({
   default: (props: CapturedLightboxProps): ReactElement => {
     capturedLightboxProps.push(props);
-    return <button onClick={props.close}>close</button>;
+    return (
+      <div>
+        <button onClick={props.close}>close</button>
+        {props.toolbar?.buttons?.map((button, index) =>
+          typeof button === "string" ? null : (
+            <span key={index}>{button}</span>
+          ),
+        )}
+      </div>
+    );
   },
+  IconButton: ({ disabled, label, onClick, renderIcon }: MockIconButtonProps) => (
+    <button aria-label={label} disabled={disabled} onClick={onClick}>
+      {renderIcon?.()}
+    </button>
+  ),
 }));
 
 vi.mock("yet-another-react-lightbox/plugins/video", () => ({ default: {} }));
@@ -118,5 +142,51 @@ describe("MediaLightbox", () => {
 
     expect(capturedLightboxProps.at(-1)?.slides).toHaveLength(1);
     expect(capturedLightboxProps.at(-1)?.video?.autoPlay).toBe(true);
+  });
+
+  it("requests deleting the current item from the toolbar", () => {
+    capturedLightboxProps.length = 0;
+    const onDelete = vi.fn();
+
+    render(
+      <MediaLightbox
+        items={mediaItems}
+        open
+        initialIndex={0}
+        onClose={vi.fn()}
+        getSignedMediaUrl={vi.fn()}
+        onDelete={onDelete}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(onDelete).toHaveBeenCalledTimes(1);
+    expect(onDelete).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "video-id", name: "video.mp4" }),
+    );
+  });
+
+  it("requests deleting the current item with the Delete key", () => {
+    capturedLightboxProps.length = 0;
+    const onDelete = vi.fn();
+
+    render(
+      <MediaLightbox
+        items={mediaItems}
+        open
+        initialIndex={0}
+        onClose={vi.fn()}
+        getSignedMediaUrl={vi.fn()}
+        onDelete={onDelete}
+      />,
+    );
+
+    fireEvent.keyDown(document, { key: "Delete" });
+
+    expect(onDelete).toHaveBeenCalledTimes(1);
+    expect(onDelete).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "video-id", name: "video.mp4" }),
+    );
   });
 });

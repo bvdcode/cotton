@@ -1926,6 +1926,21 @@
       "fields": {
         "storageType": "Backend magazynu"
       },
+      "chunkSize": {
+        "title": "Upload chunk size",
+        "description": "Controls how much data the browser sends per upload request. Larger chunks reduce request overhead on fast local networks.",
+        "ariaLabel": "Upload chunk size"
+      },
+      "pipeline": {
+        "title": "Storage pipeline",
+        "description": "Tunes how new chunks are compressed and encrypted before they are written to storage.",
+        "fields": {
+          "compressionLevel": "Compression level",
+          "cipherChunkSize": "Encryption block size",
+          "encryptionThreads": "Encryption threads"
+        },
+        "compressionHelp": "Allowed range: {{min}} to {{max}}. Default is 1."
+      },
       "quota": {
         "title": "Domyślny limit użytkownika",
         "description": "Ogranicza ilość unikalnych przesłanych treści, które może posiadać każdy użytkownik. Pozostaw puste, aby konta były bez ograniczeń.",
@@ -1970,7 +1985,9 @@
         "s3SaveFailed": "Nie udało się zapisać konfiguracji S3.",
         "storageSaveFailed": "Nie udało się przełączyć trybu magazynu.",
         "quotaSaveFailed": "Nie udało się zapisać domyślnego limitu użytkownika.",
-        "templateSaveFailed": "Nie udało się zapisać szablonu plików domyślnych."
+        "templateSaveFailed": "Nie udało się zapisać szablonu plików domyślnych.",
+        "chunkSizeSaveFailed": "Failed to save upload chunk size.",
+        "storagePipelineSaveFailed": "Failed to save storage pipeline settings."
       }
     },
     "notificationsSettings": {

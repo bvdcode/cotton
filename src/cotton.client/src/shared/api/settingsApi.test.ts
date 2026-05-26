@@ -78,13 +78,56 @@ describe("settingsApi getters", () => {
     const get = vi
       .spyOn(httpClient, "get")
       .mockResolvedValueOnce({ data: 4096 })
-      .mockResolvedValueOnce({ data: { maxChunkSizeBytes: 8192 } });
+      .mockResolvedValueOnce({
+        data: {
+          maxChunkSizeBytes: 8192,
+          supportedMaxChunkSizeBytes: [4096, 8192, 16384],
+        },
+      });
 
     await expect(settingsApi.getChunkSize()).resolves.toBe(4096);
-    await expect(settingsApi.getChunkSize()).resolves.toBe(8192);
+    await expect(settingsApi.getChunkSizeSettings()).resolves.toEqual({
+      maxChunkSizeBytes: 8192,
+      supportedMaxChunkSizeBytes: [4096, 8192, 16384],
+    });
     expect(get).toHaveBeenCalledWith(
       "server/settings/chunk-size",
       undefined,
+    );
+  });
+
+
+  it("reads and updates storage pipeline settings", async () => {
+    const payload = {
+      compressionLevel: 1,
+      minCompressionLevel: -10,
+      maxCompressionLevel: 22,
+      cipherChunkSizeBytes: 1048576,
+      minCipherChunkSizeBytes: 8192,
+      maxCipherChunkSizeBytes: 67108864,
+      supportedCipherChunkSizeBytes: [131072, 1048576],
+      encryptionThreads: 2,
+      minEncryptionThreads: 1,
+      maxEncryptionThreads: 4,
+      supportedEncryptionThreads: [1, 2, 3, 4],
+    };
+    const get = vi.spyOn(httpClient, "get").mockResolvedValue({ data: payload });
+    const patch = vi.spyOn(httpClient, "patch").mockResolvedValue({
+      data: { ...payload, compressionLevel: -5 },
+    });
+
+    await expect(settingsApi.getStoragePipelineSettings()).resolves.toEqual(payload);
+    await expect(settingsApi.setCompressionLevel(-5)).resolves.toEqual({
+      ...payload,
+      compressionLevel: -5,
+    });
+
+    expect(get).toHaveBeenCalledWith(
+      "server/settings/storage-pipeline",
+      undefined,
+    );
+    expect(patch).toHaveBeenCalledWith(
+      "server/settings/compression-level/-5",
     );
   });
 
@@ -275,11 +318,19 @@ describe("settingsApi setters", () => {
   });
 
   it("encodes mode setters in the URL path", async () => {
-    const patch = vi.spyOn(httpClient, "patch").mockResolvedValue({
-      data: undefined,
-    });
+    const patch = vi
+      .spyOn(httpClient, "patch")
+      .mockResolvedValue({ data: undefined })
+      .mockResolvedValueOnce({ data: undefined })
+      .mockResolvedValueOnce({
+        data: {
+          maxChunkSizeBytes: 16777216,
+          supportedMaxChunkSizeBytes: [4194304, 8388608, 16777216],
+        },
+      });
 
     await settingsApi.setStorageSpaceMode("Limited");
+    await settingsApi.setChunkSize(16777216);
     await settingsApi.setComputionMode("Remote");
     await settingsApi.setStorageType("S3");
     await settingsApi.setEmailMode("Custom");
@@ -291,18 +342,22 @@ describe("settingsApi setters", () => {
     );
     expect(patch).toHaveBeenNthCalledWith(
       2,
-      "server/settings/compution-mode/Remote",
+      "server/settings/chunk-size/16777216",
     );
     expect(patch).toHaveBeenNthCalledWith(
       3,
-      "server/settings/storage-type/S3",
+      "server/settings/compution-mode/Remote",
     );
     expect(patch).toHaveBeenNthCalledWith(
       4,
-      "server/settings/email-mode/Custom",
+      "server/settings/storage-type/S3",
     );
     expect(patch).toHaveBeenNthCalledWith(
       5,
+      "server/settings/email-mode/Custom",
+    );
+    expect(patch).toHaveBeenNthCalledWith(
+      6,
       "server/settings/geoip-lookup-mode/CottonCloud",
     );
   });

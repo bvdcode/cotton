@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   chunkSizeResponseSchema,
+  chunkSizeSettingsResponseSchema,
   emailConfigSchema,
   emailModeResponseSchema,
   publicBaseUrlSchema,
   serverSettingsResponseSchema,
   serverUsageListSchema,
+  storagePipelineSettingsResponseSchema,
   s3ConfigSchema,
   storageTypeResponseSchema,
   telemetrySettingSchema,
@@ -52,9 +54,41 @@ describe("server settings schemas", () => {
 
   it("accepts chunk size response variants", () => {
     expect(chunkSizeResponseSchema.parse(512)).toBe(512);
-    expect(chunkSizeResponseSchema.parse({ maxChunkSizeBytes: 1024 })).toBe(
-      1024,
-    );
+    expect(chunkSizeSettingsResponseSchema.parse({
+      maxChunkSizeBytes: 1024,
+      supportedMaxChunkSizeBytes: [512, 1024],
+    })).toEqual({
+      maxChunkSizeBytes: 1024,
+      supportedMaxChunkSizeBytes: [512, 1024],
+    });
+  });
+
+  it("parses storage pipeline tuning settings", () => {
+    expect(storagePipelineSettingsResponseSchema.parse({
+      compressionLevel: -5,
+      minCompressionLevel: -10,
+      maxCompressionLevel: 22,
+      cipherChunkSizeBytes: 1048576,
+      minCipherChunkSizeBytes: 8192,
+      maxCipherChunkSizeBytes: 67108864,
+      supportedCipherChunkSizeBytes: [131072, 1048576],
+      encryptionThreads: 2,
+      minEncryptionThreads: 1,
+      maxEncryptionThreads: 4,
+      supportedEncryptionThreads: [1, 2, 3, 4],
+    })).toEqual({
+      compressionLevel: -5,
+      minCompressionLevel: -10,
+      maxCompressionLevel: 22,
+      cipherChunkSizeBytes: 1048576,
+      minCipherChunkSizeBytes: 8192,
+      maxCipherChunkSizeBytes: 67108864,
+      supportedCipherChunkSizeBytes: [131072, 1048576],
+      encryptionThreads: 2,
+      minEncryptionThreads: 1,
+      maxEncryptionThreads: 4,
+      supportedEncryptionThreads: [1, 2, 3, 4],
+    });
   });
 
   it("normalizes enum responses from strings and numeric indexes", () => {

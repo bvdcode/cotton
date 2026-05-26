@@ -150,7 +150,7 @@
   box-sizing: border-box;
 
   /* Leave space for the toolbar buttons on the right */
-  padding-right: calc(var(--yarl__toolbar_padding, 8px) + 111);
+  padding-right: calc(var(--yarl__toolbar_padding, 8px) + 232px);
   pointer-events: none;
   z-index: 1;
   text-align: left;
@@ -201,7 +201,7 @@
 
 @media (max-width: 900px) {
   .lightbox-autohide .media-lightbox__header {
-    padding-right: calc(var(--yarl__toolbar_padding, 8px) + 180px);
+    padding-right: calc(var(--yarl__toolbar_padding, 8px) + 232px);
   }
 }
 

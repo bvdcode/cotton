@@ -4,11 +4,11 @@
 using Cotton.Server.Abstractions;
 using Cotton.Database.Integrity;
 using Cotton.Server.Auth;
+using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 using Cotton.Server.Services.WebDav;
-using Cotton.Crypto;
 using EasyExtensions.Abstractions;
 using Microsoft.AspNetCore.Authentication;
 
@@ -27,15 +27,7 @@ namespace Cotton.Server.Extensions
             return services.AddScoped<IStreamCipher>(sp =>
             {
                 var settings = sp.GetRequiredService<CottonEncryptionSettings>();
-                if (string.IsNullOrWhiteSpace(settings.MasterEncryptionKey))
-                {
-                    throw new InvalidOperationException("MasterEncryptionKey is not configured.");
-                }
-                // Derive 32-byte key (SHA-256 of provided string)
-                byte[] keyMaterial = Convert.FromBase64String(settings.MasterEncryptionKey);
-                int keyId = settings.MasterEncryptionKeyId;
-                int? threads = settings.EncryptionThreads > 0 ? settings.EncryptionThreads : null;
-                return new AesGcmStreamCipher(keyMaterial, keyId, threads);
+                return StreamCipherFactory.Create(settings, SettingsProvider.GetCachedEncryptionThreads());
             });
         }
 

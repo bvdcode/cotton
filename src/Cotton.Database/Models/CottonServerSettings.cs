@@ -21,6 +21,10 @@ namespace Cotton.Database.Models
         [Column("cipher_chunk_size_bytes")]
         public int CipherChunkSizeBytes { get; set; }
 
+        /// <summary>Zstandard compression level used by the storage pipeline.</summary>
+        [Column("compression_level")]
+        public int CompressionLevel { get; set; }
+
         /// <summary>Maximum accepted upload chunk size.</summary>
         [Column("max_chunk_size_bytes")]
         public int MaxChunkSizeBytes { get; set; }

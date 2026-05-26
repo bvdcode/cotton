@@ -2,6 +2,11 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import type { FileType } from "@shared/utils/fileTypes";
 import { previewConfig } from "../config/previewConfig";
+import type { NodeFileManifestDto } from "../api/nodesApi";
+import {
+  CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES,
+  isFileEncrypted,
+} from "../crypto";
 
 interface PreviewState {
   isOpen: boolean;
@@ -9,6 +14,7 @@ interface PreviewState {
   fileName: string | null;
   fileType: FileType | null;
   fileSizeBytes: number | null;
+  file: NodeFileManifestDto | null;
 }
 
 const PREVIEW_HISTORY_STATE = "preview";
@@ -20,6 +26,7 @@ export const useFilePreview = () => {
     fileName: null,
     fileType: null,
     fileSizeBytes: null,
+    file: null,
   });
 
   const historyPushedRef = useRef(false);
@@ -31,6 +38,7 @@ export const useFilePreview = () => {
       fileName: null,
       fileType: null,
       fileSizeBytes: null,
+      file: null,
     });
   }, []);
 
@@ -39,19 +47,29 @@ export const useFilePreview = () => {
     fileName: string,
     fileSizeBytes?: number,
     contentType?: string | null,
+    file?: NodeFileManifestDto | null,
   ) => {
     const typeInfo = getFileTypeInfo(fileName, contentType);
     if (typeInfo.supportsInlineView) {
-      if (typeInfo.type === 'text' && fileSizeBytes && fileSizeBytes > previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES) {
+      const textPreviewLimit =
+        file && isFileEncrypted(file.metadata)
+          ? CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES
+          : previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES;
+      if (
+        typeInfo.type === "text" &&
+        fileSizeBytes &&
+        fileSizeBytes > textPreviewLimit
+      ) {
         return false;
       }
-      
+
       setPreviewState({
         isOpen: true,
         fileId,
         fileName,
         fileType: typeInfo.type,
         fileSizeBytes: fileSizeBytes ?? null,
+        file: file ?? null,
       });
       window.history.pushState({ overlay: PREVIEW_HISTORY_STATE }, "");
       historyPushedRef.current = true;

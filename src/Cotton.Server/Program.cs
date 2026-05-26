@@ -170,6 +170,8 @@ namespace Cotton.Server
                 .AddScoped<ISharedFileDownloadNotifier, SharedFileDownloadNotifier>()
                 .AddScoped<NodeSubtreeService>()
                 .AddScoped<TrashRestoreCoordinator>()
+                .AddScoped<IEncryptionChunkSizeProvider, SettingsEncryptionChunkSizeProvider>()
+                .AddScoped<ICompressionLevelProvider, SettingsCompressionLevelProvider>()
                 .AddScoped<IStorageProcessor, CryptoProcessor>()
                 .AddScoped<IStorageProcessor, CompressionProcessor>()
                 .AddScoped<IStoragePipeline, FileStoragePipeline>()
@@ -205,6 +207,7 @@ namespace Cotton.Server
             {
                 var autoRestore = scope.ServiceProvider.GetRequiredService<IDatabaseAutoRestoreService>();
                 autoRestore.TryRestoreIfEmptyAsync().GetAwaiter().GetResult();
+                scope.ServiceProvider.GetRequiredService<SettingsProvider>().GetServerSettings();
             }
             app.MapHub<EventHub>(Routes.V1.EventHub);
             await app.RunAsync();

@@ -22,6 +22,7 @@ export interface MediaLightboxProps {
   getSignedMediaUrl: (id: string) => Promise<string>;
   smoothTransitions?: boolean;
   getDownloadUrl?: (id: string) => Promise<string>;
+  onDelete?: (item: MediaItem) => void | Promise<void>;
 }
 
 export const HLS_VIDEO_SLIDE_TYPE = "video-hls" as const;
@@ -37,6 +38,10 @@ export interface SlideHlsVideo extends GenericSlide {
 declare module "yet-another-react-lightbox" {
   interface SlideTypes {
     "video-hls": SlideHlsVideo;
+  }
+
+  interface Labels {
+    Delete?: string;
   }
 }
 

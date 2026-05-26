@@ -285,6 +285,9 @@ type FilesPageViewProps = {
   getDownloadUrl: FileListPageLogic["interaction"]["getDownloadUrl"];
   getSignedMediaUrl: FileListPageLogic["interaction"]["getSignedMediaUrl"];
   handleCloseVersions: () => void;
+  handleLightboxDelete: (
+    item: FileListPageLogic["interaction"]["mediaItems"][number],
+  ) => Promise<void>;
   handleUnlockCancel: () => void;
   handleUnlockSuccess: () => void;
   handleVersionsChanged: () => void;
@@ -541,6 +544,12 @@ export const FilesPage: React.FC = () => {
     onToast: showToast,
   });
   const fileOps = useFileOperations(reloadCurrentNode);
+  const handleLightboxDelete = React.useCallback(
+    async (item: FileListPageLogic["interaction"]["mediaItems"][number]) => {
+      await fileOps.handleDeleteFile(item.id, item.name);
+    },
+    [fileOps],
+  );
   const fileSelection = useFileSelection();
   const [versionDialogFile, setVersionDialogFile] = React.useState<{
     id: string;
@@ -564,6 +573,7 @@ export const FilesPage: React.FC = () => {
     selectedIds: fileSelection.selectedIds,
     selectedCount: fileSelection.selectedCount,
     goUpParentId,
+    onItemsCut: fileSelection.deselectAll,
     showToast,
     t,
   });
@@ -971,6 +981,7 @@ export const FilesPage: React.FC = () => {
       getDownloadUrl={getDownloadUrl}
       getSignedMediaUrl={getSignedMediaUrl}
       handleCloseVersions={handleCloseVersions}
+      handleLightboxDelete={handleLightboxDelete}
       handleUnlockCancel={handleUnlockCancel}
       handleUnlockSuccess={handleUnlockSuccess}
       handleVersionsChanged={handleVersionsChanged}
@@ -1002,6 +1013,7 @@ const FilesPageView: React.FC<FilesPageViewProps> = ({
   getDownloadUrl,
   getSignedMediaUrl,
   handleCloseVersions,
+  handleLightboxDelete,
   handleUnlockCancel,
   handleUnlockSuccess,
   handleVersionsChanged,
@@ -1037,6 +1049,7 @@ const FilesPageView: React.FC<FilesPageViewProps> = ({
       getDownloadUrl={getDownloadUrl}
       getSignedMediaUrl={getSignedMediaUrl}
       handleCloseVersions={handleCloseVersions}
+      handleLightboxDelete={handleLightboxDelete}
       handleVersionsChanged={handleVersionsChanged}
       lightboxIndex={lightboxIndex}
       lightboxOpen={lightboxOpen}
@@ -1152,6 +1165,7 @@ type FilesPreviewLayersProps = Pick<
   | "getDownloadUrl"
   | "getSignedMediaUrl"
   | "handleCloseVersions"
+  | "handleLightboxDelete"
   | "handleVersionsChanged"
   | "lightboxIndex"
   | "lightboxOpen"
@@ -1169,6 +1183,7 @@ const FilesPreviewLayers: React.FC<FilesPreviewLayersProps> = ({
   getDownloadUrl,
   getSignedMediaUrl,
   handleCloseVersions,
+  handleLightboxDelete,
   handleVersionsChanged,
   lightboxIndex,
   lightboxOpen,
@@ -1186,6 +1201,7 @@ const FilesPreviewLayers: React.FC<FilesPreviewLayersProps> = ({
       fileName={previewState.fileName}
       fileType={previewState.fileType}
       fileSizeBytes={previewState.fileSizeBytes}
+      file={previewState.file}
       onClose={closePreview}
       onSaved={refreshCurrentNodeContent}
     />
@@ -1198,6 +1214,7 @@ const FilesPreviewLayers: React.FC<FilesPreviewLayersProps> = ({
         onClose={() => setLightboxOpen(false)}
         getSignedMediaUrl={getSignedMediaUrl}
         getDownloadUrl={getDownloadUrl}
+        onDelete={handleLightboxDelete}
         smoothTransitions={smoothGalleryTransitions}
       />
     )}
