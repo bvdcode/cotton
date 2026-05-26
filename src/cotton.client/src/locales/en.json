@@ -457,6 +457,7 @@
       "delete": "Delete",
       "rename": "Rename",
       "restore": "Restore",
+      "undo": "Undo",
       "versions": "Versions",
       "download": "Download",
       "share": "Share",
@@ -1422,6 +1423,8 @@
         "save": "Save",
         "saving": "Saving..."
       },
+      "deleteToast": "File was deleted",
+      "deleteUndoFailed": "Failed to restore the deleted file.",
       "editorModes": {
         "text": {
           "label": "Text",

@@ -6,8 +6,12 @@ import type { MediaItem } from "@shared/types/mediaLightbox";
 
 type CapturedLightboxProps = {
   close: () => void;
+  index?: number;
   open: boolean;
   slides: ReadonlyArray<object>;
+  on?: {
+    view?: (event: { index: number }) => void;
+  };
   toolbar?: {
     buttons?: ReadonlyArray<ReactNode>;
   };
@@ -66,13 +70,15 @@ vi.mock("../../store/userPreferencesStore", () => ({
   useUserPreferencesStore: () => false,
 }));
 vi.mock("./useMediaLightboxUrls", () => ({
-  useMediaLightboxUrls: () => ({
-    slides: [
-      {
-        type: "video",
-        sources: [{ src: "/video.mp4", type: "video/mp4" }],
-      },
-    ],
+  useMediaLightboxUrls: ({ items }: { items: MediaItem[] }) => ({
+    slides: items.map((item) =>
+      item.kind === "video"
+        ? {
+            type: "video",
+            sources: [{ src: `/${item.name}`, type: item.mimeType }],
+          }
+        : { type: "image", src: `/${item.name}` },
+    ),
     ensureSlideHasOriginal: vi.fn(),
     handleSlideImageError: vi.fn(),
     resolveSlideDownloadUrl: vi.fn(),
@@ -87,6 +93,20 @@ const mediaItems: MediaItem[] = [
     previewUrl: "",
     mimeType: "video/mp4",
   },
+];
+
+const makeImageItem = (id: string, name: string): MediaItem => ({
+  id,
+  kind: "image",
+  name,
+  previewUrl: "",
+  mimeType: "image/jpeg",
+});
+
+const galleryItems: MediaItem[] = [
+  makeImageItem("image-1", "first.jpg"),
+  makeImageItem("image-2", "second.jpg"),
+  makeImageItem("image-3", "third.jpg"),
 ];
 
 describe("MediaLightbox", () => {
@@ -165,6 +185,64 @@ describe("MediaLightbox", () => {
     expect(onDelete).toHaveBeenCalledWith(
       expect.objectContaining({ id: "video-id", name: "video.mp4" }),
     );
+  });
+
+  it("keeps the next media item selected after the current item is removed", () => {
+    capturedLightboxProps.length = 0;
+    const { rerender } = render(
+      <MediaLightbox
+        items={galleryItems}
+        open
+        initialIndex={0}
+        onClose={vi.fn()}
+        getSignedMediaUrl={vi.fn()}
+      />,
+    );
+
+    act(() => {
+      capturedLightboxProps.at(-1)?.on?.view?.({ index: 1 });
+    });
+
+    rerender(
+      <MediaLightbox
+        items={[galleryItems[0], galleryItems[2]]}
+        open
+        initialIndex={0}
+        onClose={vi.fn()}
+        getSignedMediaUrl={vi.fn()}
+      />,
+    );
+
+    expect(capturedLightboxProps.at(-1)?.index).toBe(1);
+  });
+
+  it("keeps the previous media item selected after the last item is removed", () => {
+    capturedLightboxProps.length = 0;
+    const { rerender } = render(
+      <MediaLightbox
+        items={galleryItems}
+        open
+        initialIndex={0}
+        onClose={vi.fn()}
+        getSignedMediaUrl={vi.fn()}
+      />,
+    );
+
+    act(() => {
+      capturedLightboxProps.at(-1)?.on?.view?.({ index: 2 });
+    });
+
+    rerender(
+      <MediaLightbox
+        items={[galleryItems[0], galleryItems[1]]}
+        open
+        initialIndex={0}
+        onClose={vi.fn()}
+        getSignedMediaUrl={vi.fn()}
+      />,
+    );
+
+    expect(capturedLightboxProps.at(-1)?.index).toBe(1);
   });
 
   it("requests deleting the current item with the Delete key", () => {

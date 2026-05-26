@@ -69,7 +69,7 @@ const buildLightboxIndexKey = (
     return "closed";
   }
 
-  return [initialIndex, items.length, items[initialIndex]?.id ?? ""].join("\u0000");
+  return [initialIndex, items[initialIndex]?.id ?? ""].join("\u0000");
 };
 
 const resolveIndex = (current: number, next: IndexOrUpdater): number => {
@@ -91,7 +91,8 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const [indexState, setIndexState] = React.useState<LightboxIndexState>(
     () => ({ key: indexKey, index: initialIndex }),
   );
-  const index = indexState.key === indexKey ? indexState.index : initialIndex;
+  const rawIndex = indexState.key === indexKey ? indexState.index : initialIndex;
+  const index = items.length === 0 ? 0 : Math.min(rawIndex, items.length - 1);
   const setLightboxIndex = React.useCallback(
     (next: IndexOrUpdater) => {
       setIndexState((currentState) => {
@@ -162,6 +163,13 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     }, TOUCH_CONTROLS_AUTOHIDE_MS);
   }, [clearTouchControlsTimer, isTouchDevice]);
 
+  const handleClose = React.useCallback(() => {
+    setClosingState({ open, closing: true });
+    stopLightboxMediaPlayback();
+    setTouchControlsVisible(true);
+    onClose();
+  }, [onClose, open]);
+
   const toggleTouchControls = React.useCallback(() => {
     if (!isTouchDevice) return;
 
@@ -222,13 +230,16 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     setDeleteProgress({ itemId: currentItemId, inProgress: true });
     try {
       await onDelete(currentItem);
+      if (items.length <= 1) {
+        handleClose();
+      }
     } catch (error) {
       console.error("Failed to delete media item:", error);
     } finally {
       deleteInProgressRef.current = { itemId: currentItemId, inProgress: false };
       setDeleteProgress({ itemId: currentItemId, inProgress: false });
     }
-  }, [currentItem, currentItemId, onDelete]);
+  }, [currentItem, currentItemId, handleClose, items.length, onDelete]);
 
   React.useEffect(() => {
     if (!open || !onDelete) {
@@ -557,13 +568,6 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     }),
     [],
   );
-
-  const handleClose = React.useCallback(() => {
-    setClosingState({ open, closing: true });
-    stopLightboxMediaPlayback();
-    setTouchControlsVisible(true);
-    onClose();
-  }, [onClose, open]);
 
   React.useEffect(() => {
     if (!open) {

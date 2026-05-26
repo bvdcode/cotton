@@ -52,6 +52,7 @@ import {
   buildFolderOperations,
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
+import { filesApi } from "../../shared/api/filesApi";
 import { nodesApi } from "../../shared/api/nodesApi";
 import {
   FOLDER_ENCRYPTION_POLICY_KEY,
@@ -512,11 +513,47 @@ export const FilesPage: React.FC = () => {
     onToast: showToast,
   });
   const fileOps = useFileOperations(reloadCurrentNode);
+  const handleRestoreLightboxFile = React.useCallback(
+    async (fileId: string) => {
+      try {
+        const outcome = await filesApi.restoreFile(fileId);
+        if (outcome.status !== "Restored") {
+          toast.error(t("preview.deleteUndoFailed", { ns: "files" }));
+          return;
+        }
+
+        if (nodeId) {
+          await refreshNodeContent(nodeId);
+        } else {
+          reloadCurrentNode();
+        }
+      } catch (error) {
+        console.error("Failed to undo media delete:", error);
+        toast.error(t("preview.deleteUndoFailed", { ns: "files" }));
+      }
+    },
+    [nodeId, reloadCurrentNode, t],
+  );
   const handleLightboxDelete = React.useCallback(
     async (item: FileListPageLogic["interaction"]["mediaItems"][number]) => {
-      await fileOps.handleDeleteFile(item.id, item.name);
+      await fileOps.deleteFile(item.id);
+      toast.info(t("preview.deleteToast", { ns: "files" }), {
+        action: (key) => (
+          <Button
+            color="inherit"
+            size="small"
+            onClick={() => {
+              toast.dismiss(key);
+              void handleRestoreLightboxFile(item.id);
+            }}
+          >
+            {t("common:actions.undo")}
+          </Button>
+        ),
+        position: "bottom-center",
+      });
     },
-    [fileOps],
+    [fileOps, handleRestoreLightboxFile, t],
   );
   const fileSelection = useFileSelection();
   const [versionDialogFile, setVersionDialogFile] = React.useState<{
