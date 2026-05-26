@@ -268,4 +268,47 @@ describe("useMoveOperations", () => {
     );
     expect(useMoveClipboardStore.getState().items).toEqual([]);
   });
+  it("warns when moved folder encryption scan is truncated", async () => {
+    const folderItem: MoveClipboardItem = {
+      id: "44444444-4444-4444-8444-444444444444",
+      kind: "folder",
+      sourceParentId,
+    };
+    const files = Array.from({ length: 501 }, (_, index) => ({
+      id: `plain-${index}`,
+      createdAt: "2026-05-17T00:00:00Z",
+      updatedAt: "2026-05-17T00:00:00Z",
+      nodeId: folderItem.id,
+      ownerId: "user-1",
+      name: `plain-${index}.txt`,
+      contentType: "text/plain",
+      sizeBytes: 12,
+      metadata: {},
+    }));
+    mocks.getChildren.mockResolvedValueOnce({
+      content: {
+        id: folderItem.id,
+        createdAt: "2026-05-17T00:00:00Z",
+        updatedAt: "2026-05-17T00:00:00Z",
+        nodes: [],
+        files,
+      },
+      totalCount: files.length,
+    });
+    useMoveClipboardStore.getState().setItems([folderItem]);
+
+    const { result } = renderHook(() => useMoveOperations());
+
+    await act(async () => {
+      await result.current.pasteInto(targetParentId);
+    });
+
+    expect(mocks.encryptExistingFileWithTask).toHaveBeenCalledTimes(500);
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      "clientEncryption.toasts.encryptExistingScanIncomplete",
+      expect.any(Object),
+    );
+    expect(useMoveClipboardStore.getState().items).toEqual([]);
+  });
+
 });

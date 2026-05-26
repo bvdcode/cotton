@@ -81,6 +81,7 @@ export const useFolderClientEncryptionActions = ({
 
     let encryptedCount = 0;
     let failedCount = 0;
+    let scanIncomplete = false;
 
     try {
       const settings = await fetchServerSettings(queryClient);
@@ -92,11 +93,13 @@ export const useFolderClientEncryptionActions = ({
       let filesToEncrypt = plainFiles;
       try {
         const scan = await collectPlainFilesInFoldersForClientEncryption([nodeId]);
+        scanIncomplete = scan.truncated;
         if (scan.files.length > 0) {
           filesToEncrypt = scan.files;
         }
       } catch (error) {
         console.error("Failed to scan folder for plain files", error);
+        scanIncomplete = true;
       }
       const refreshedParents = new Set<string>([nodeId]);
 
@@ -139,6 +142,15 @@ export const useFolderClientEncryptionActions = ({
         t("clientEncryption.toasts.encryptExistingFailed", {
           ns: "files",
           count: failedCount,
+        }),
+        "error",
+      );
+    }
+
+    if (scanIncomplete) {
+      onToast(
+        t("clientEncryption.toasts.encryptExistingScanIncomplete", {
+          ns: "files",
         }),
         "error",
       );

@@ -1520,6 +1520,7 @@
         "encryptExistingComplete_other": "Encrypted {{count}} existing files.",
         "encryptExistingFailed_one": "Could not encrypt {{count}} file. Check the task panel.",
         "encryptExistingFailed_other": "Could not encrypt {{count}} files. Check the task panel.",
+        "encryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some files may still be unencrypted; run encryption again from the folder after this batch finishes.",
         "decryptExistingComplete_one": "Decrypted {{count}} file.",
         "decryptExistingComplete_other": "Decrypted {{count}} files.",
         "decryptExistingFailed_one": "Could not decrypt {{count}} file. Check the task panel.",

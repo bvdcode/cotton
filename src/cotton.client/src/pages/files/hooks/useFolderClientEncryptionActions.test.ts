@@ -311,6 +311,35 @@ describe("useFolderClientEncryptionActions", () => {
     );
   });
 
+  it("warns when recursive plain file encryption scan is incomplete", async () => {
+    useVault.setState({ isUnlocked: true, masterKey: {} as CryptoKey });
+    const onToast = vi.fn();
+    vi.mocked(collectPlainFilesInFoldersForClientEncryption).mockResolvedValue({
+      files: [makeFile("scanned")],
+      scannedFolders: 250,
+      truncated: true,
+    });
+
+    const { result } = renderHook(() =>
+      useFolderClientEncryptionActions({
+        nodeId: "node-1",
+        currentNode: makeNode({ isClientEncryptionEnabled: "true" }),
+        content: makeContent([makeFile("direct")]),
+        onToast,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.encryptPlainFiles();
+    });
+
+    expect(encryptExistingFileWithTask).toHaveBeenCalledOnce();
+    expect(onToast).toHaveBeenCalledWith(
+      "clientEncryption.toasts.encryptExistingScanIncomplete",
+      "error",
+    );
+  });
+
   it("requires the vault to be unlocked before decrypting existing files", async () => {
     const onToast = vi.fn();
     const { result } = renderHook(() =>
