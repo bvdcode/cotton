@@ -565,7 +565,8 @@
       "play": "Abspielen",
       "pause": "Pause",
       "copied": "Kopiert!",
-      "reload": "Aktualisieren"
+      "reload": "Aktualisieren",
+      "versions": "Versions"
     },
     "errors": {
       "unexpectedTitle": "Etwas ist schiefgelaufen",
@@ -708,6 +709,11 @@
         "cancelled": "Passkey-Anmeldung wurde abgebrochen.",
         "failed": "Passkey-Anmeldung fehlgeschlagen."
       }
+    },
+    "oidc": {
+      "loading": "Loading sign-in providers...",
+      "divider": "or",
+      "signInWith": "Continue with {{provider}}"
     }
   },
   "notFound": {
@@ -1049,6 +1055,24 @@
         "save": "Speichern",
         "saving": "Speichern...",
         "cancel": "Nicht jetzt"
+      }
+    },
+    "connectedAccounts": {
+      "title": "Connected accounts",
+      "description": "Link external identity providers to this account.",
+      "loading": "Loading connected accounts...",
+      "empty": "No external accounts are linked yet.",
+      "link": "Link {{provider}}",
+      "unlink": {
+        "button": "Unlink",
+        "title": "Unlink {{provider}}?",
+        "description": "You will no longer be able to sign in with this provider until you link it again.",
+        "confirm": "Unlink",
+        "cancel": "Cancel"
+      },
+      "errors": {
+        "loadFailed": "Failed to load connected accounts.",
+        "unlinkFailed": "Failed to unlink this account."
       }
     }
   },
@@ -1611,8 +1635,25 @@
         "decryptExistingComplete_one": "{{count}} Datei entschlüsselt.",
         "decryptExistingComplete_other": "{{count}} Dateien entschlüsselt.",
         "decryptExistingFailed_one": "{{count}} Datei konnte nicht entschlüsselt werden. Prüfe das Aufgaben-Panel.",
-        "decryptExistingFailed_other": "{{count}} Dateien konnten nicht entschlüsselt werden. Prüfe das Aufgaben-Panel."
+        "decryptExistingFailed_other": "{{count}} Dateien konnten nicht entschlüsselt werden. Prüfe das Aufgaben-Panel.",
+        "encryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some files may still be unencrypted; run encryption again from the folder after this batch finishes.",
+        "decryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some encrypted files may remain; run decryption again from the folder after this batch finishes."
       }
+    },
+    "fileVersions": {
+      "title": "Versions of {{name}}",
+      "empty": "No previous versions yet.",
+      "loadFailed": "Failed to load versions.",
+      "restoreFailed": "Failed to restore version.",
+      "deleteFailed": "Failed to delete version.",
+      "downloadFailed": "Failed to prepare version download.",
+      "versionLabel": "Version {{version}}",
+      "current": "Current",
+      "original": "Original",
+      "restoreConfirmTitle": "Restore this version?",
+      "restoreConfirmDescription": "Current file content will be saved as a new version, then version {{version}} will become current.",
+      "deleteConfirmTitle": "Delete this version?",
+      "deleteConfirmDescription": "Version {{version}} will be deleted. The current file will not be changed."
     }
   },
   "tasks": {
@@ -1735,7 +1776,8 @@
       "databaseBackup": "Datenbanksicherung",
       "storageStatistics": "Speicherstatistiken",
       "securityDiagnostics": "Sicherheitsprüfung",
-      "groups": "Gruppen"
+      "groups": "Gruppen",
+      "identityProviders": "Identity providers"
     },
     "roles": {
       "user": "Benutzer",
@@ -2126,7 +2168,8 @@
         "instance": "Instanz und Konten",
         "masterKey": "Master-Key",
         "memory": "Prozess-Speicher-Exposition",
-        "runtime": "Laufzeit-Fakten"
+        "runtime": "Laufzeit-Fakten",
+        "containerBoundary": "Container boundary"
       },
       "risks": {
         "empty": "Die aktuellen serverseitigen Prüfungen haben keine Warnungen erkannt."
@@ -2147,7 +2190,16 @@
         "euid": "Effective UID",
         "noNewPrivileges": "No new privileges",
         "seccomp": "Seccomp-Modus",
-        "capabilities": "Effective Capabilities"
+        "capabilities": "Effective Capabilities",
+        "rootFilesystemReadOnly": "Read-only root filesystem",
+        "dockerSocketMounted": "Docker socket mounted",
+        "hostPidNamespace": "Host PID namespace",
+        "procOneCommandLine": "PID 1 command",
+        "coreDumpLimit": "Core dump limit",
+        "corePattern": "Core pattern",
+        "appArmorProfile": "AppArmor profile",
+        "selinuxContext": "SELinux context",
+        "selinuxEnforcing": "SELinux enforcing"
       },
       "values": {
         "unknown": "Unbekannt",
@@ -2166,13 +2218,88 @@
         "new-privileges-allowed": "Wenn kompromittierter Code einen setuid-Helper oder eine capability-tragende Binärdatei findet, hat er einen breiteren Weg, Privilegien im Container zu erhöhen.",
         "seccomp-disabled": "Die Kernel-Syscall-Oberfläche ist breiter als die normale Produktions-Baseline von Docker, daher hat ein Container-Escape-Bug mehr Spielraum.",
         "running-as-root": "Remote-Code-Ausführung würde im Container als root laufen, was den Schaden gegenüber gemounteten Volumes und Hilfsprozessen vergrößert.",
-        "process-hardening-failed": "Cotton hat Prozess-Härtung angefordert, aber der Prozess startete dennoch ohne erwarteten Schutz vor Dump oder ptrace."
+        "process-hardening-failed": "Cotton hat Prozess-Härtung angefordert, aber der Prozess startete dennoch ohne erwarteten Schutz vor Dump oder ptrace.",
+        "db-integrity-unsigned-rows": "Unsigned protected rows can be modified directly in PostgreSQL without Cotton detecting the tampering at read boundaries.",
+        "db-integrity-bridge-mode": "During the bridge window, missing signatures are tolerated so existing installations can be signed. Leaving it on permanently weakens the database tamper boundary.",
+        "root-filesystem-writable": "A writable container root filesystem gives exploited code more places to drop tools, alter runtime files, or persist until the container is recreated.",
+        "docker-socket-mounted": "The Docker socket lets code inside the web container create privileged containers, mount host paths, and take over the host.",
+        "host-pid-namespace": "Sharing the host PID namespace exposes host processes through procfs and makes process-memory attacks easier to aim.",
+        "mandatory-access-control-unconfined": "Without an enforcing AppArmor or SELinux profile, a container escape or kernel-facing bug has fewer policy boundaries to cross.",
+        "core-dumps-enabled": "Core dumps are memory snapshots. If Cotton crashes while secrets are resident, a dump can preserve the master key or decrypted configuration."
       }
     },
     "groups": {
       "title": "Gruppen",
       "description": "Verwalte Zugriffsgruppen getrennt von einzelnen Benutzern.",
       "inDevelopment": "Die Gruppenverwaltung befindet sich in Entwicklung."
+    },
+    "identityProviders": {
+      "title": "Identity providers",
+      "description": "Configure OpenID Connect providers for sign-in and account linking.",
+      "actions": {
+        "create": "Add provider",
+        "edit": "Edit provider",
+        "delete": "Delete provider",
+        "refresh": "Refresh",
+        "save": "Save provider",
+        "saving": "Saving..."
+      },
+      "columns": {
+        "name": "Provider",
+        "issuer": "Issuer",
+        "status": "Status",
+        "accountCreation": "Account creation",
+        "scopes": "Scopes",
+        "domains": "Domains",
+        "actions": "Actions"
+      },
+      "status": {
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "allowed": "Allowed",
+        "blocked": "Blocked"
+      },
+      "fields": {
+        "name": "Name",
+        "slug": "Slug",
+        "redirectUrl": "Redirect URL",
+        "issuer": "Issuer URL",
+        "clientId": "Client ID",
+        "clientSecret": "Client secret",
+        "scopes": "Scopes",
+        "allowedEmailDomains": "Allowed email domains",
+        "defaultRole": "Default role",
+        "isEnabled": "Enable sign-in with this provider",
+        "allowAccountCreation": "Allow this provider to create new accounts",
+        "requireVerifiedEmail": "Require verified email for account creation",
+        "syncProfile": "Sync profile names on sign-in",
+        "syncAvatar": "Import provider avatar when the user has no avatar",
+        "clearClientSecret": "Clear saved client secret"
+      },
+      "help": {
+        "slug": "Leave empty to generate it from the provider name. Existing slugs stay stable.",
+        "redirectUrl": "Register this exact callback URL in the provider application.",
+        "clientSecret": "Leave empty if this provider uses a public client.",
+        "clientSecretConfigured": "A secret is already saved. Enter a new one to replace it.",
+        "scopes": "Separate scopes with spaces or commas. openid is always required.",
+        "allowedEmailDomains": "Optional comma-separated domains for automatic account creation."
+      },
+      "create": {
+        "title": "Add identity provider"
+      },
+      "edit": {
+        "title": "Edit identity provider"
+      },
+      "delete": {
+        "title": "Delete {{name}}?",
+        "description": "Existing links for this provider will stop working. Users can keep signing in with other methods.",
+        "confirm": "Delete provider"
+      },
+      "errors": {
+        "loadFailed": "Failed to load identity providers.",
+        "saveFailed": "Failed to save identity provider.",
+        "deleteFailed": "Failed to delete identity provider."
+      }
     }
   },
   "routes": {

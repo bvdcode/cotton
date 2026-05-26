@@ -547,7 +547,25 @@
       "durationHours_other": "{{count}} uur",
       "durationDays_one": "{{count}} dag",
       "durationDays_other": "{{count}} dagen",
-      "lessThanMinute": "minder dan een minuut"
+      "lessThanMinute": "minder dan een minuut",
+      "secondsAgo_few": "{{count}} seconds ago",
+      "secondsAgo_many": "{{count}} seconds ago",
+      "minutesAgo_few": "{{count}} minutes ago",
+      "minutesAgo_many": "{{count}} minutes ago",
+      "hoursAgo_few": "{{count}} hours ago",
+      "hoursAgo_many": "{{count}} hours ago",
+      "daysAgo_few": "{{count}} days ago",
+      "daysAgo_many": "{{count}} days ago",
+      "monthsAgo_few": "{{count}} months ago",
+      "monthsAgo_many": "{{count}} months ago",
+      "yearsAgo_few": "{{count}} years ago",
+      "yearsAgo_many": "{{count}} years ago",
+      "durationMinutes_few": "{{count}} min",
+      "durationMinutes_many": "{{count}} min",
+      "durationHours_few": "{{count}} hours",
+      "durationHours_many": "{{count}} hours",
+      "durationDays_few": "{{count}} days",
+      "durationDays_many": "{{count}} days"
     },
     "actions": {
       "confirm": "Bevestigen",
@@ -563,7 +581,8 @@
       "play": "Afspelen",
       "pause": "Pauzeren",
       "copied": "Gekopieerd!",
-      "reload": "Vernieuwen"
+      "reload": "Vernieuwen",
+      "versions": "Versions"
     },
     "errors": {
       "unexpectedTitle": "Er is iets misgegaan",
@@ -706,6 +725,11 @@
         "cancelled": "Inloggen met passkey is geannuleerd.",
         "failed": "Inloggen met passkey is mislukt."
       }
+    },
+    "oidc": {
+      "loading": "Loading sign-in providers...",
+      "divider": "or",
+      "signInWith": "Continue with {{provider}}"
     }
   },
   "notFound": {
@@ -1045,6 +1069,26 @@
         "save": "Opslaan",
         "saving": "Opslaan...",
         "cancel": "Niet nu"
+      }
+    },
+    "ageYears_few": "{{count}} years",
+    "ageYears_many": "{{count}} years",
+    "connectedAccounts": {
+      "title": "Connected accounts",
+      "description": "Link external identity providers to this account.",
+      "loading": "Loading connected accounts...",
+      "empty": "No external accounts are linked yet.",
+      "link": "Link {{provider}}",
+      "unlink": {
+        "button": "Unlink",
+        "title": "Unlink {{provider}}?",
+        "description": "You will no longer be able to sign in with this provider until you link it again.",
+        "confirm": "Unlink",
+        "cancel": "Cancel"
+      },
+      "errors": {
+        "loadFailed": "Failed to load connected accounts.",
+        "unlinkFailed": "Failed to unlink this account."
       }
     }
   },
@@ -1391,7 +1435,9 @@
         "someItemsSkipped_one": "{{count}} item overgeslagen dat niet kon worden gelezen.",
         "someItemsSkipped_other": "{{count}} items overgeslagen die niet konden worden gelezen.",
         "vaultLocked": "Voor versleutelde uploads moet u eerst uw versleutelingskluis ontgrendelen.",
-        "details": "Details"
+        "details": "Details",
+        "someItemsSkipped_few": "Skipped {{count}} items that could not be read.",
+        "someItemsSkipped_many": "Skipped {{count}} items that could not be read."
       },
       "errors": {
         "dropFailed": "Verwerken van de gesleepte items is mislukt. Probeer het opnieuw."
@@ -1605,8 +1651,25 @@
         "decryptExistingComplete_one": "{{count}} bestand ontsleuteld.",
         "decryptExistingComplete_other": "{{count}} bestanden ontsleuteld.",
         "decryptExistingFailed_one": "Kon {{count}} bestand niet ontsleutelen. Controleer het taakpaneel.",
-        "decryptExistingFailed_other": "Kon {{count}} bestanden niet ontsleutelen. Controleer het taakpaneel."
+        "decryptExistingFailed_other": "Kon {{count}} bestanden niet ontsleutelen. Controleer het taakpaneel.",
+        "encryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some files may still be unencrypted; run encryption again from the folder after this batch finishes.",
+        "decryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some encrypted files may remain; run decryption again from the folder after this batch finishes."
       }
+    },
+    "fileVersions": {
+      "title": "Versions of {{name}}",
+      "empty": "No previous versions yet.",
+      "loadFailed": "Failed to load versions.",
+      "restoreFailed": "Failed to restore version.",
+      "deleteFailed": "Failed to delete version.",
+      "downloadFailed": "Failed to prepare version download.",
+      "versionLabel": "Version {{version}}",
+      "current": "Current",
+      "original": "Original",
+      "restoreConfirmTitle": "Restore this version?",
+      "restoreConfirmDescription": "Current file content will be saved as a new version, then version {{version}} will become current.",
+      "deleteConfirmTitle": "Delete this version?",
+      "deleteConfirmDescription": "Version {{version}} will be deleted. The current file will not be changed."
     }
   },
   "tasks": {
@@ -1729,7 +1792,8 @@
       "databaseBackup": "Databaseback-up",
       "storageStatistics": "Opslagstatistieken",
       "securityDiagnostics": "Beveiligingscontrole",
-      "groups": "Groepen"
+      "groups": "Groepen",
+      "identityProviders": "Identity providers"
     },
     "roles": {
       "user": "Gebruiker",
@@ -2120,7 +2184,8 @@
         "instance": "Instantie en accounts",
         "masterKey": "Hoofdsleutel",
         "memory": "Blootstelling van procesgeheugen",
-        "runtime": "Runtime-feiten"
+        "runtime": "Runtime-feiten",
+        "containerBoundary": "Container boundary"
       },
       "risks": {
         "empty": "Er zijn door de huidige controles aan de serverzijde geen waarschuwingen gedetecteerd."
@@ -2141,7 +2206,16 @@
         "euid": "Effectieve UID",
         "noNewPrivileges": "Geen nieuwe privileges",
         "seccomp": "Seccomp-modus",
-        "capabilities": "Effectieve capabilities"
+        "capabilities": "Effectieve capabilities",
+        "rootFilesystemReadOnly": "Read-only root filesystem",
+        "dockerSocketMounted": "Docker socket mounted",
+        "hostPidNamespace": "Host PID namespace",
+        "procOneCommandLine": "PID 1 command",
+        "coreDumpLimit": "Core dump limit",
+        "corePattern": "Core pattern",
+        "appArmorProfile": "AppArmor profile",
+        "selinuxContext": "SELinux context",
+        "selinuxEnforcing": "SELinux enforcing"
       },
       "values": {
         "unknown": "Onbekend",
@@ -2160,13 +2234,88 @@
         "new-privileges-allowed": "Als gecompromitteerde code een setuid-helper of een binaire bestand met capabilities vindt, heeft het een bredere weg om privileges binnen de container te verkrijgen.",
         "seccomp-disabled": "Het kerneloppervlak voor systeemaanroepen is groter dan Docker's normale productiebasis, dus een containerontsnappingsbug krijgt meer ruimte.",
         "running-as-root": "Externe code-uitvoering zou als root binnen de container worden uitgevoerd, wat de schade aan aangekoppelde volumes en helperprocessen vergroot.",
-        "process-hardening-failed": "Cotton heeft procesharding aangevraagd, maar het proces is toch gestart zonder de verwachte dump- of ptrace-bescherming."
+        "process-hardening-failed": "Cotton heeft procesharding aangevraagd, maar het proces is toch gestart zonder de verwachte dump- of ptrace-bescherming.",
+        "db-integrity-unsigned-rows": "Unsigned protected rows can be modified directly in PostgreSQL without Cotton detecting the tampering at read boundaries.",
+        "db-integrity-bridge-mode": "During the bridge window, missing signatures are tolerated so existing installations can be signed. Leaving it on permanently weakens the database tamper boundary.",
+        "root-filesystem-writable": "A writable container root filesystem gives exploited code more places to drop tools, alter runtime files, or persist until the container is recreated.",
+        "docker-socket-mounted": "The Docker socket lets code inside the web container create privileged containers, mount host paths, and take over the host.",
+        "host-pid-namespace": "Sharing the host PID namespace exposes host processes through procfs and makes process-memory attacks easier to aim.",
+        "mandatory-access-control-unconfined": "Without an enforcing AppArmor or SELinux profile, a container escape or kernel-facing bug has fewer policy boundaries to cross.",
+        "core-dumps-enabled": "Core dumps are memory snapshots. If Cotton crashes while secrets are resident, a dump can preserve the master key or decrypted configuration."
       }
     },
     "groups": {
       "title": "Groepen",
       "description": "Beheer toegangsgroepen los van individuele gebruikers.",
       "inDevelopment": "Groepsbeheer is in ontwikkeling."
+    },
+    "identityProviders": {
+      "title": "Identity providers",
+      "description": "Configure OpenID Connect providers for sign-in and account linking.",
+      "actions": {
+        "create": "Add provider",
+        "edit": "Edit provider",
+        "delete": "Delete provider",
+        "refresh": "Refresh",
+        "save": "Save provider",
+        "saving": "Saving..."
+      },
+      "columns": {
+        "name": "Provider",
+        "issuer": "Issuer",
+        "status": "Status",
+        "accountCreation": "Account creation",
+        "scopes": "Scopes",
+        "domains": "Domains",
+        "actions": "Actions"
+      },
+      "status": {
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "allowed": "Allowed",
+        "blocked": "Blocked"
+      },
+      "fields": {
+        "name": "Name",
+        "slug": "Slug",
+        "redirectUrl": "Redirect URL",
+        "issuer": "Issuer URL",
+        "clientId": "Client ID",
+        "clientSecret": "Client secret",
+        "scopes": "Scopes",
+        "allowedEmailDomains": "Allowed email domains",
+        "defaultRole": "Default role",
+        "isEnabled": "Enable sign-in with this provider",
+        "allowAccountCreation": "Allow this provider to create new accounts",
+        "requireVerifiedEmail": "Require verified email for account creation",
+        "syncProfile": "Sync profile names on sign-in",
+        "syncAvatar": "Import provider avatar when the user has no avatar",
+        "clearClientSecret": "Clear saved client secret"
+      },
+      "help": {
+        "slug": "Leave empty to generate it from the provider name. Existing slugs stay stable.",
+        "redirectUrl": "Register this exact callback URL in the provider application.",
+        "clientSecret": "Leave empty if this provider uses a public client.",
+        "clientSecretConfigured": "A secret is already saved. Enter a new one to replace it.",
+        "scopes": "Separate scopes with spaces or commas. openid is always required.",
+        "allowedEmailDomains": "Optional comma-separated domains for automatic account creation."
+      },
+      "create": {
+        "title": "Add identity provider"
+      },
+      "edit": {
+        "title": "Edit identity provider"
+      },
+      "delete": {
+        "title": "Delete {{name}}?",
+        "description": "Existing links for this provider will stop working. Users can keep signing in with other methods.",
+        "confirm": "Delete provider"
+      },
+      "errors": {
+        "loadFailed": "Failed to load identity providers.",
+        "saveFailed": "Failed to save identity provider.",
+        "deleteFailed": "Failed to delete identity provider."
+      }
     }
   },
   "routes": {

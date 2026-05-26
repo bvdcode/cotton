@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Database.Models.Enums;
 using Cotton.Server.Helpers;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
@@ -148,6 +149,7 @@ public sealed class OidcAuthenticationService(
             .FirstOrDefaultAsync(x => x.Id == identityId && x.UserId == userId, ct)
             ?? throw new EntityNotFoundException<UserExternalIdentity>();
         _integrity.RequireValid(_dbContext, identity, "oidc.unlink");
+        await EnsureCanUnlinkAsync(userId, identityId, ct);
         _dbContext.UserExternalIdentities.Remove(identity);
         await _dbContext.SaveChangesAsync(ct);
     }
@@ -264,8 +266,9 @@ public sealed class OidcAuthenticationService(
             PasswordPhc = _hasher.Hash(randomSecret),
             WebDavTokenPhc = _hasher.Hash(randomSecret),
         };
-        var newIdentity = CreateIdentity(user.Id, provider.Id, provider.Issuer, claims);
         await _dbContext.Users.AddAsync(user, ct);
+        var newIdentity = CreateIdentity(user.Id, provider.Id, provider.Issuer, claims);
+        newIdentity.User = user;
         await _dbContext.UserExternalIdentities.AddAsync(newIdentity, ct);
         await TryImportUserAvatarAsync(user, provider, claims, ct);
         await _dbContext.SaveChangesAsync(ct);
@@ -558,6 +561,38 @@ public sealed class OidcAuthenticationService(
             PictureUrl = identity.PictureUrl,
             LastUsedAt = identity.LastUsedAt
         };
+    }
+
+    private async Task EnsureCanUnlinkAsync(Guid userId, Guid identityId, CancellationToken ct)
+    {
+        bool hasAnotherExternalIdentity = await _dbContext.UserExternalIdentities
+            .AnyAsync(x => x.UserId == userId && x.Id != identityId, ct);
+        if (hasAnotherExternalIdentity)
+        {
+            return;
+        }
+
+        bool hasPasskey = await _dbContext.UserPasskeyCredentials
+            .AnyAsync(x => x.UserId == userId, ct);
+        if (hasPasskey)
+        {
+            return;
+        }
+
+        User user = await _dbContext.Users.FindAsync([userId], ct)
+            ?? throw new EntityNotFoundException<User>();
+        _integrity.RequireValid(_dbContext, user, "oidc.unlink-user");
+
+        bool canResetPassword = user.IsEmailVerified
+            && !string.IsNullOrWhiteSpace(user.Email)
+            && _settings.GetServerSettings().EmailMode != EmailMode.None;
+        if (canResetPassword)
+        {
+            return;
+        }
+
+        throw new BadRequestException<UserExternalIdentity>(
+            "Add another sign-in method before unlinking the last external account.");
     }
 
     private Task CleanupExpiredStatesAsync(CancellationToken ct)

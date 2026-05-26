@@ -53,6 +53,9 @@ const findOrphans = (locale: Record<string, unknown>): string[] =>
     (key) => !enKeys.has(key) && !enBaseKeys.has(baseKey(key)),
   );
 
+const findMissing = (locale: Record<string, unknown>): string[] =>
+  [...enKeys].filter((key) => !(key in locale));
+
 const requiredGalleryUndoKeys = [
   "common.actions.undo",
   "files.preview.deleteToast",
@@ -112,6 +115,15 @@ describe("locale parity", () => {
       expect(
         orphan,
         `${language} locale contains keys without an EN counterpart: ${orphan.join(", ")}`,
+      ).toEqual([]);
+    });
+
+    it(`keeps ${language} complete with the EN namespace`, () => {
+      const missing = findMissing(flatten(locale));
+
+      expect(
+        missing,
+        `${language} locale is missing EN keys: ${missing.join(", ")}`,
       ).toEqual([]);
     });
 
