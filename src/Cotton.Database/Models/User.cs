@@ -123,5 +123,7 @@ namespace Cotton.Database.Models
         public virtual ICollection<NodeFile> NodeFiles { get; set; } = [];
         /// <summary>Passkey credentials registered by the user.</summary>
         public virtual ICollection<UserPasskeyCredential> PasskeyCredentials { get; set; } = [];
+        /// <summary>External OpenID Connect identities linked to this user.</summary>
+        public virtual ICollection<UserExternalIdentity> ExternalIdentities { get; set; } = [];
     }
 }
