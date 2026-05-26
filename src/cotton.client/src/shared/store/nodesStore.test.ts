@@ -155,6 +155,66 @@ describe("updateNode", () => {
   });
 });
 
+describe("moveFolderInCache", () => {
+  it("moves the fresh folder snapshot between cached parents", () => {
+    const folder = makeNode("folder-1", "Docs");
+    const updated = { ...folder, parentId: "target" };
+    seedParent("source", [folder], []);
+    seedParent("target", [], []);
+    useNodesStore.setState({
+      ancestorsByNodeId: {
+        "folder-1": [makeNode("source", "Source")],
+      },
+    });
+
+    useNodesStore.getState().moveFolderInCache(updated, "source", "target");
+
+    const state = useNodesStore.getState();
+    expect(state.contentByNodeId.source?.nodes).toEqual([]);
+    expect(state.contentByNodeId.target?.nodes).toEqual([updated]);
+    expect(state.ancestorsByNodeId["folder-1"]).toBeUndefined();
+  });
+
+  it("replaces the folder without removing it when the move is a no-op", () => {
+    const folder = makeNode("folder-1", "Docs");
+    const updated = { ...folder, name: "Docs fresh" };
+    seedParent("parent-1", [folder], []);
+
+    useNodesStore.getState().moveFolderInCache(updated, "parent-1", "parent-1");
+
+    expect(useNodesStore.getState().contentByNodeId["parent-1"]?.nodes).toEqual([
+      updated,
+    ]);
+  });
+});
+
+describe("moveFileInCache", () => {
+  it("moves the fresh file snapshot between cached parents", () => {
+    const file = makeFile("file-1", "paper.txt", { nodeId: "source" });
+    const updated = { ...file, nodeId: "target" };
+    seedParent("source", [], [file]);
+    seedParent("target", [], []);
+
+    useNodesStore.getState().moveFileInCache(updated, "source", "target");
+
+    const state = useNodesStore.getState();
+    expect(state.contentByNodeId.source?.files).toEqual([]);
+    expect(state.contentByNodeId.target?.files).toEqual([updated]);
+  });
+
+  it("replaces the file without removing it when the move is a no-op", () => {
+    const file = makeFile("file-1", "paper.txt");
+    const updated = { ...file, name: "paper fresh.txt" };
+    seedParent("parent-1", [], [file]);
+
+    useNodesStore.getState().moveFileInCache(updated, "parent-1", "parent-1");
+
+    expect(useNodesStore.getState().contentByNodeId["parent-1"]?.files).toEqual([
+      updated,
+    ]);
+  });
+});
+
 describe("optimisticRenameFile", () => {
   it("renames the matching file", () => {
     seedParent("parent-1", [], [makeFile("f1", "old.txt")]);

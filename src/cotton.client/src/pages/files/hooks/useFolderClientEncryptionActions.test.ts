@@ -16,6 +16,11 @@ vi.mock("../../../shared/store/nodesActions", () => ({
 }));
 
 vi.mock("../../../shared/utils/clientEncryptionFolderScan", () => ({
+  collectEncryptedFilesInFoldersForClientEncryption: vi.fn(async () => ({
+    files: [],
+    scannedFolders: 0,
+    truncated: false,
+  })),
   collectPlainFilesInFoldersForClientEncryption: vi.fn(async () => ({
     files: [],
     scannedFolders: 0,
@@ -30,7 +35,10 @@ vi.mock("../../../shared/tasks", () => ({
 
 import { fetchServerSettings } from "../../../shared/api/queries/serverSettings";
 import { refreshNodeContent } from "../../../shared/store/nodesActions";
-import { collectPlainFilesInFoldersForClientEncryption } from "../../../shared/utils/clientEncryptionFolderScan";
+import {
+  collectEncryptedFilesInFoldersForClientEncryption,
+  collectPlainFilesInFoldersForClientEncryption,
+} from "../../../shared/utils/clientEncryptionFolderScan";
 import {
   decryptExistingFileWithTask,
   encryptExistingFileWithTask,
@@ -74,6 +82,11 @@ describe("useFolderClientEncryptionActions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useVault.getState().lock();
+    vi.mocked(collectEncryptedFilesInFoldersForClientEncryption).mockResolvedValue({
+      files: [],
+      scannedFolders: 0,
+      truncated: false,
+    });
     vi.mocked(collectPlainFilesInFoldersForClientEncryption).mockResolvedValue({
       files: [],
       scannedFolders: 0,
@@ -270,6 +283,51 @@ describe("useFolderClientEncryptionActions", () => {
     );
   });
 
+
+  it("decrypts recursive encrypted files when the current folder action runs", async () => {
+    useVault.setState({ isUnlocked: true, masterKey: {} as CryptoKey });
+    const onToast = vi.fn();
+    const nestedFile = {
+      ...makeFile("nested-encrypted", { isClientEncrypted: "true" }),
+      nodeId: "nested-node",
+    };
+    vi.mocked(collectEncryptedFilesInFoldersForClientEncryption).mockResolvedValue({
+      files: [nestedFile],
+      scannedFolders: 2,
+      truncated: false,
+    });
+
+    const { result } = renderHook(() =>
+      useFolderClientEncryptionActions({
+        nodeId: "node-1",
+        currentNode: makeNode({}),
+        content: makeContent([
+          makeFile("direct-encrypted", { isClientEncrypted: "true" }),
+        ]),
+        onToast,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.decryptEncryptedFiles();
+    });
+
+    expect(collectEncryptedFilesInFoldersForClientEncryption).toHaveBeenCalledWith([
+      "node-1",
+    ]);
+    expect(decryptExistingFileWithTask).toHaveBeenCalledTimes(1);
+    expect(decryptExistingFileWithTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        file: expect.objectContaining({ id: "nested-encrypted" }),
+        targetNodeId: "nested-node",
+      }),
+    );
+    expect(refreshNodeContent).toHaveBeenCalledWith("node-1");
+    expect(refreshNodeContent).toHaveBeenCalledWith("nested-node");
+    expect(onToast).toHaveBeenCalledWith(
+      "clientEncryption.toasts.decryptExistingComplete",
+    );
+  });
 
   it("encrypts recursive plain files when the current encrypted folder action runs", async () => {
     useVault.setState({ isUnlocked: true, masterKey: {} as CryptoKey });

@@ -235,12 +235,27 @@ describe("filesApi file mutations", () => {
   });
 
   it("renames and moves files through the scoped mutation endpoints", async () => {
-    const patch = vi.spyOn(httpClient, "patch").mockResolvedValue({
-      data: undefined,
-    });
+    const movedFile = {
+      id: fileId,
+      createdAt: "2026-05-17T00:00:00Z",
+      updatedAt: "2026-05-17T00:00:01Z",
+      nodeId,
+      ownerId: "owner-1",
+      name: "renamed.txt",
+      contentType: "text/plain",
+      sizeBytes: 10,
+      metadata: {},
+      requiresVideoTranscoding: false,
+    };
+    const patch = vi
+      .spyOn(httpClient, "patch")
+      .mockResolvedValueOnce({ data: undefined })
+      .mockResolvedValueOnce({ data: movedFile });
 
     await filesApi.renameFile(fileId, { name: "renamed.txt" });
-    await filesApi.moveFile(fileId, { parentId: nodeId });
+    await expect(filesApi.moveFile(fileId, { parentId: nodeId })).resolves.toEqual(
+      movedFile,
+    );
 
     expect(patch).toHaveBeenNthCalledWith(1, `/files/${fileId}/rename`, {
       name: "renamed.txt",

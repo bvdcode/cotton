@@ -245,6 +245,10 @@ interface MoveExecutionResult extends MoveOutcome {
   sourceParents: ReadonlySet<string>;
 }
 
+type MoveSingleItemResult =
+  | { kind: "folder"; folder: NodeDto }
+  | { kind: "file"; file: NodeFileManifestDto };
+
 interface EncryptionCandidate {
   file: ExistingFileEncryptionTaskFile;
   targetNodeId: string;
@@ -312,7 +316,8 @@ const moveCandidatesToTarget = async (options: {
   // index throws. Serial keeps the multi-item UX deterministic.
   for (const item of options.candidates) {
     try {
-      await moveSingleItem(item, options.targetParentId);
+      const moved = await moveSingleItem(item, options.targetParentId);
+      applyMovedItemToCache(item, moved, options.targetParentId);
       sourceParents.add(item.sourceParentId);
       succeeded.push(item);
       collectMovedEncryptionFollowups({
@@ -344,13 +349,28 @@ const moveCandidatesToTarget = async (options: {
 const moveSingleItem = async (
   item: MoveClipboardItem,
   targetParentId: string,
-): Promise<void> => {
+): Promise<MoveSingleItemResult> => {
   if (item.kind === "folder") {
-    await nodesApi.moveNode(item.id, { parentId: targetParentId });
+    const folder = await nodesApi.moveNode(item.id, { parentId: targetParentId });
+    return { kind: "folder", folder };
+  }
+
+  const file = await filesApi.moveFile(item.id, { parentId: targetParentId });
+  return { kind: "file", file };
+};
+
+const applyMovedItemToCache = (
+  item: MoveClipboardItem,
+  moved: MoveSingleItemResult,
+  targetParentId: string,
+): void => {
+  const store = useNodesStore.getState();
+  if (moved.kind === "folder") {
+    store.moveFolderInCache(moved.folder, item.sourceParentId, targetParentId);
     return;
   }
 
-  await filesApi.moveFile(item.id, { parentId: targetParentId });
+  store.moveFileInCache(moved.file, item.sourceParentId, targetParentId);
 };
 
 const collectMovedEncryptionFollowups = (options: {

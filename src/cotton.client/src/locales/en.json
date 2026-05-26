@@ -1547,7 +1547,8 @@
         "decryptExistingComplete_one": "Decrypted {{count}} file.",
         "decryptExistingComplete_other": "Decrypted {{count}} files.",
         "decryptExistingFailed_one": "Could not decrypt {{count}} file. Check the task panel.",
-        "decryptExistingFailed_other": "Could not decrypt {{count}} files. Check the task panel."
+        "decryptExistingFailed_other": "Could not decrypt {{count}} files. Check the task panel.",
+        "decryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some encrypted files may remain; run decryption again from the folder after this batch finishes."
       }
     }
   },

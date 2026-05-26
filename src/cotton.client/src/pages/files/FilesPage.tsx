@@ -83,9 +83,12 @@ import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 
 const HUGE_FOLDER_THRESHOLD = 100_000;
 
+type ClientEncryptionFolderAction = "encrypt-existing" | "decrypt-existing";
+
 type ClientEncryptionUnlockPrompt =
   | { kind: "current" }
-  | { kind: "open"; folderId: string };
+  | { kind: "open"; folderId: string }
+  | { kind: "action"; action: ClientEncryptionFolderAction };
 
 type FolderEncryptionPromptModel = {
   severity: "info" | "warning";
@@ -146,11 +149,11 @@ const shouldRenderFilesList = (
 ): boolean => !error || Boolean(content);
 
 const buildFolderEncryptionPrompt = (options: {
-  decryptEncryptedFiles: () => Promise<void>;
+  decryptEncryptedFiles: () => void;
   encryptedFilesCount: number;
   encryptedFilesMessage: string;
   encryptedFilesAction: string;
-  encryptPlainFiles: () => Promise<void>;
+  encryptPlainFiles: () => void;
   folderPolicyEnabled: boolean;
   isDecryptingEncryptedFiles: boolean;
   isEncryptingPlainFiles: boolean;
@@ -504,41 +507,6 @@ export const FilesPage: React.FC = () => {
     plainFiles,
   } = folderEncryptionActions;
 
-  const folderEncryptionPrompt = useMemo(
-    () =>
-      buildFolderEncryptionPrompt({
-        decryptEncryptedFiles,
-        encryptedFilesCount: encryptedFiles.length,
-        encryptedFilesMessage: t("clientEncryption.encryptedFilesRemain.toast", {
-          ns: "files",
-          count: encryptedFiles.length,
-        }),
-        encryptedFilesAction: t("clientEncryption.encryptedFilesRemain.action", {
-          ns: "files",
-        }),
-        encryptPlainFiles,
-        folderPolicyEnabled,
-        isDecryptingEncryptedFiles,
-        isEncryptingPlainFiles,
-        plainFilesCount: plainFiles.length,
-        plainFilesMessage: t("clientEncryption.mixedPlain.toast", {
-          ns: "files",
-          count: plainFiles.length,
-        }),
-        plainFilesAction: t("clientEncryption.mixedPlain.action", { ns: "files" }),
-      }),
-    [
-      decryptEncryptedFiles,
-      encryptedFiles.length,
-      encryptPlainFiles,
-      folderPolicyEnabled,
-      isDecryptingEncryptedFiles,
-      isEncryptingPlainFiles,
-      plainFiles.length,
-      t,
-    ],
-  );
-
   const folderOps = useFolderOperations(nodeId, handleFolderChanged);
   const fileUpload = useFileUpload(nodeId, breadcrumbs, content, {
     onToast: showToast,
@@ -602,6 +570,72 @@ export const FilesPage: React.FC = () => {
 
     return unlockPrompt;
   }, [clientEncryptionEnvelope, currentFolderRequiresUnlock, unlockPrompt]);
+
+  const runFolderClientEncryptionAction = React.useCallback(
+    (action: ClientEncryptionFolderAction) => {
+      const runAction =
+        action === "encrypt-existing" ? encryptPlainFiles : decryptEncryptedFiles;
+
+      if (isVaultUnlocked) {
+        void runAction();
+        return;
+      }
+
+      if (!clientEncryptionEnvelope) {
+        showToast(
+          t("clientEncryption.toasts.setupRequired", { ns: "files" }),
+          "error",
+        );
+        return;
+      }
+
+      setUnlockPrompt({ kind: "action", action });
+    },
+    [
+      clientEncryptionEnvelope,
+      decryptEncryptedFiles,
+      encryptPlainFiles,
+      isVaultUnlocked,
+      showToast,
+      t,
+    ],
+  );
+
+  const folderEncryptionPrompt = useMemo(
+    () =>
+      buildFolderEncryptionPrompt({
+        decryptEncryptedFiles: () =>
+          runFolderClientEncryptionAction("decrypt-existing"),
+        encryptedFilesCount: encryptedFiles.length,
+        encryptedFilesMessage: t("clientEncryption.encryptedFilesRemain.toast", {
+          ns: "files",
+          count: encryptedFiles.length,
+        }),
+        encryptedFilesAction: t("clientEncryption.encryptedFilesRemain.action", {
+          ns: "files",
+        }),
+        encryptPlainFiles: () =>
+          runFolderClientEncryptionAction("encrypt-existing"),
+        folderPolicyEnabled,
+        isDecryptingEncryptedFiles,
+        isEncryptingPlainFiles,
+        plainFilesCount: plainFiles.length,
+        plainFilesMessage: t("clientEncryption.mixedPlain.toast", {
+          ns: "files",
+          count: plainFiles.length,
+        }),
+        plainFilesAction: t("clientEncryption.mixedPlain.action", { ns: "files" }),
+      }),
+    [
+      encryptedFiles.length,
+      runFolderClientEncryptionAction,
+      folderPolicyEnabled,
+      isDecryptingEncryptedFiles,
+      isEncryptingPlainFiles,
+      plainFiles.length,
+      t,
+    ],
+  );
 
   const stats = useMemo(
     () => calculateFolderStats(effectiveContent?.nodes, effectiveContent?.files),
@@ -679,8 +713,17 @@ export const FilesPage: React.FC = () => {
 
     if (prompt?.kind === "open") {
       navigate(`/files/${prompt.folderId}`);
+      return;
     }
-  }, [activeUnlockPrompt, navigate]);
+
+    if (prompt?.kind === "action") {
+      const runAction =
+        prompt.action === "encrypt-existing"
+          ? encryptPlainFiles
+          : decryptEncryptedFiles;
+      void runAction();
+    }
+  }, [activeUnlockPrompt, decryptEncryptedFiles, encryptPlainFiles, navigate]);
 
   const handleGoUp = React.useCallback(() => {
     if (ancestors.length > 0) {
