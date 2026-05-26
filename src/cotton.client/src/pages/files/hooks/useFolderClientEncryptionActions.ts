@@ -13,6 +13,7 @@ import {
   useVault,
 } from "../../../shared/crypto";
 import { refreshNodeContent } from "../../../shared/store/nodesActions";
+import { collectPlainFilesInFoldersForClientEncryption } from "../../../shared/utils/clientEncryptionFolderScan";
 import {
   decryptExistingFileWithTask,
   encryptExistingFileWithTask,
@@ -88,25 +89,40 @@ export const useFolderClientEncryptionActions = ({
         supportedHashAlgorithm: settings.supportedHashAlgorithm,
       };
 
-      for (const file of plainFiles) {
+      let filesToEncrypt = plainFiles;
+      try {
+        const scan = await collectPlainFilesInFoldersForClientEncryption([nodeId]);
+        if (scan.files.length > 0) {
+          filesToEncrypt = scan.files;
+        }
+      } catch (error) {
+        console.error("Failed to scan folder for plain files", error);
+      }
+      const refreshedParents = new Set<string>([nodeId]);
+
+      for (const file of filesToEncrypt) {
         try {
           await encryptExistingFileWithTask({
             file: toEncryptionTaskFile(file),
-            targetNodeId: nodeId,
+            targetNodeId: file.nodeId,
             scopeLabel: activeNode.name,
             server,
           });
+          refreshedParents.add(file.nodeId);
           encryptedCount += 1;
         } catch {
           failedCount += 1;
         }
+      }
+
+      for (const parentId of refreshedParents) {
+        void refreshNodeContent(parentId);
       }
     } catch {
       onToast(t("errors.serverSettingsNotLoaded", { ns: "tasks" }), "error");
       return;
     } finally {
       setIsEncryptingPlainFiles(false);
-      void refreshNodeContent(nodeId);
     }
 
     if (encryptedCount > 0) {

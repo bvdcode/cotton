@@ -9,6 +9,7 @@ import { useMoveOperations } from "./useMoveOperations";
 const mocks = vi.hoisted(() => ({
   moveFile: vi.fn(),
   moveNode: vi.fn(),
+  getChildren: vi.fn(),
   fetchServerSettings: vi.fn(),
   encryptExistingFileWithTask: vi.fn(),
   decryptExistingFileWithTask: vi.fn(),
@@ -40,6 +41,7 @@ vi.mock("../api/filesApi", () => ({
 vi.mock("../api/nodesApi", () => ({
   nodesApi: {
     moveNode: mocks.moveNode,
+    getChildren: mocks.getChildren,
   },
 }));
 
@@ -74,6 +76,17 @@ const plainFileItem: MoveClipboardItem = {
     metadata: {},
   },
 };
+
+const makeEmptyChildrenResponse = (id = "empty") => ({
+  content: {
+    id,
+    createdAt: "2026-05-17T00:00:00Z",
+    updatedAt: "2026-05-17T00:00:00Z",
+    nodes: [],
+    files: [],
+  },
+  totalCount: 0,
+});
 
 describe("useMoveOperations", () => {
   beforeEach(() => {
@@ -118,6 +131,7 @@ describe("useMoveOperations", () => {
     useVault.setState({ isUnlocked: true, masterKey: {} as CryptoKey });
     mocks.moveFile.mockResolvedValue(undefined);
     mocks.moveNode.mockResolvedValue(undefined);
+    mocks.getChildren.mockResolvedValue(makeEmptyChildrenResponse());
     mocks.fetchServerSettings.mockResolvedValue({
       maxChunkSizeBytes: 1024,
       supportedHashAlgorithm: "SHA-256",
@@ -150,5 +164,108 @@ describe("useMoveOperations", () => {
       "clientEncryption.toasts.encryptExistingFailed",
       expect.any(Object),
     );
+  });
+
+  it("encrypts plain files nested inside a moved folder when the target encrypts new files", async () => {
+    const folderItem: MoveClipboardItem = {
+      id: "44444444-4444-4444-8444-444444444444",
+      kind: "folder",
+      sourceParentId,
+    };
+    const nestedNodeId = "55555555-5555-4555-8555-555555555555";
+    mocks.getChildren
+      .mockResolvedValueOnce({
+        content: {
+          id: folderItem.id,
+          createdAt: "2026-05-17T00:00:00Z",
+          updatedAt: "2026-05-17T00:00:00Z",
+          nodes: [
+            {
+              id: nestedNodeId,
+              createdAt: "2026-05-17T00:00:00Z",
+              updatedAt: "2026-05-17T00:00:00Z",
+              layoutId: "layout-1",
+              parentId: folderItem.id,
+              name: "Nested",
+              metadata: {},
+            },
+          ],
+          files: [
+            {
+              id: "66666666-6666-4666-8666-666666666666",
+              createdAt: "2026-05-17T00:00:00Z",
+              updatedAt: "2026-05-17T00:00:00Z",
+              nodeId: folderItem.id,
+              ownerId: "user-1",
+              name: "root-plain.txt",
+              contentType: "text/plain",
+              sizeBytes: 12,
+              metadata: {},
+            },
+          ],
+        },
+        totalCount: 2,
+      })
+      .mockResolvedValueOnce({
+        content: {
+          id: nestedNodeId,
+          createdAt: "2026-05-17T00:00:00Z",
+          updatedAt: "2026-05-17T00:00:00Z",
+          nodes: [],
+          files: [
+            {
+              id: "77777777-7777-4777-8777-777777777777",
+              createdAt: "2026-05-17T00:00:00Z",
+              updatedAt: "2026-05-17T00:00:00Z",
+              nodeId: nestedNodeId,
+              ownerId: "user-1",
+              name: "nested-plain.txt",
+              contentType: "text/plain",
+              sizeBytes: 34,
+              metadata: {},
+            },
+          ],
+        },
+        totalCount: 1,
+      });
+    useMoveClipboardStore.getState().setItems([folderItem]);
+
+    const { result } = renderHook(() => useMoveOperations());
+
+    await act(async () => {
+      await result.current.pasteInto(targetParentId);
+    });
+
+    expect(mocks.moveNode).toHaveBeenCalledWith(folderItem.id, {
+      parentId: targetParentId,
+    });
+    expect(mocks.getChildren).toHaveBeenCalledWith(folderItem.id, {
+      page: 1,
+      pageSize: 250,
+    });
+    expect(mocks.getChildren).toHaveBeenCalledWith(nestedNodeId, {
+      page: 1,
+      pageSize: 250,
+    });
+    expect(mocks.encryptExistingFileWithTask).toHaveBeenCalledTimes(2);
+    expect(mocks.encryptExistingFileWithTask).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        file: expect.objectContaining({
+          id: "66666666-6666-4666-8666-666666666666",
+        }),
+        targetNodeId: folderItem.id,
+      }),
+    );
+    expect(mocks.encryptExistingFileWithTask).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        file: expect.objectContaining({
+          id: "77777777-7777-4777-8777-777777777777",
+        }),
+        targetNodeId: nestedNodeId,
+      }),
+    );
+    expect(useMoveClipboardStore.getState().items).toEqual([]);
   });
 });

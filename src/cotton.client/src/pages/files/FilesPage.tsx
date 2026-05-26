@@ -564,6 +564,7 @@ export const FilesPage: React.FC = () => {
     selectedIds: fileSelection.selectedIds,
     selectedCount: fileSelection.selectedCount,
     goUpParentId,
+    onItemsCut: fileSelection.deselectAll,
     showToast,
     t,
   });
