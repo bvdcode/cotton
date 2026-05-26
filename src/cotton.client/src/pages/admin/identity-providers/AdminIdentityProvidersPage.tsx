@@ -1,4 +1,4 @@
-import { Alert, Box, Stack, Typography } from "@mui/material";
+import { Alert, Box } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import { useConfirm } from "material-ui-confirm";
 import { useMemo, useState } from "react";
@@ -62,34 +62,24 @@ export const AdminIdentityProvidersPage = () => {
   }, [providersQuery, t]);
 
   return (
-    <Stack spacing={2}>
-      <AdminPageSurface>
-        <Stack p={3} pb={2} spacing={0.5}>
-          <Typography variant="h5" fontWeight={700}>
-            {t("identityProviders.title")}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t("identityProviders.description")}
-          </Typography>
-        </Stack>
-
+    <Box
+      sx={{
+        height: "100%",
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <AdminPageSurface fullHeight>
         {(providersQuery.isError || pageError) && (
-          <Box px={3} pb={2}>
+          <Box p={2} pb={0}>
             <Alert severity="error">
               {pageError ?? t("identityProviders.errors.loadFailed")}
             </Alert>
           </Box>
         )}
 
-        <Box
-          sx={{
-            height: { xs: 520, md: 640 },
-            minHeight: 420,
-            maxHeight: "calc(100% - 220px)",
-            borderTop: "1px solid",
-            borderColor: "divider",
-          }}
-        >
+        <Box sx={{ flex: 1, minHeight: 0 }}>
           <DataGrid
             rows={providers}
             columns={columns}
@@ -130,6 +120,6 @@ export const AdminIdentityProvidersPage = () => {
         provider={editingProvider}
         onClose={() => setEditingProvider(null)}
       />
-    </Stack>
+    </Box>
   );
 };

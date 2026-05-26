@@ -2158,6 +2158,7 @@
       "fields": {
         "name": "Name",
         "slug": "Slug",
+        "redirectUrl": "Redirect URL",
         "issuer": "Issuer URL",
         "clientId": "Client ID",
         "clientSecret": "Client secret",
@@ -2173,6 +2174,7 @@
       },
       "help": {
         "slug": "Leave empty to generate it from the provider name. Existing slugs stay stable.",
+        "redirectUrl": "Register this exact callback URL in the provider application. The last path segment is generated from the provider name and stays stable after saving.",
         "clientSecret": "Leave empty if this provider uses a public client.",
         "clientSecretConfigured": "A secret is already saved. Enter a new one to replace it.",
         "scopes": "Separate scopes with spaces or commas. openid is always required.",

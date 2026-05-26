@@ -1,4 +1,4 @@
-import { Checkbox, FormControlLabel, FormGroup } from "@mui/material";
+import { Box, Checkbox, FormControlLabel } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { UserRole } from "@features/auth/types";
 import type { OidcProviderDto } from "@shared/api/oidcApi";
@@ -30,7 +30,16 @@ export const OidcProviderOptions = ({
   };
 
   return (
-    <FormGroup>
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: {
+          xs: "minmax(0, 1fr)",
+          sm: "repeat(2, minmax(0, 1fr))",
+        },
+        columnGap: 2,
+      }}
+    >
       <FormControlLabel
         control={
           <Checkbox
@@ -53,18 +62,20 @@ export const OidcProviderOptions = ({
         }
         label={t("identityProviders.fields.allowAccountCreation")}
       />
-      <FormControlLabel
-        control={
-          <Checkbox
-            checked={form.requireVerifiedEmail}
-            onChange={(event) =>
-              onUpdate("requireVerifiedEmail", event.target.checked)
-            }
-            disabled={saving || !form.allowAccountCreation}
-          />
-        }
-        label={t("identityProviders.fields.requireVerifiedEmail")}
-      />
+      {form.allowAccountCreation && (
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={form.requireVerifiedEmail}
+              onChange={(event) =>
+                onUpdate("requireVerifiedEmail", event.target.checked)
+              }
+              disabled={saving}
+            />
+          }
+          label={t("identityProviders.fields.requireVerifiedEmail")}
+        />
+      )}
       <FormControlLabel
         control={
           <Checkbox
@@ -99,6 +110,6 @@ export const OidcProviderOptions = ({
           label={t("identityProviders.fields.clearClientSecret")}
         />
       )}
-    </FormGroup>
+    </Box>
   );
 };

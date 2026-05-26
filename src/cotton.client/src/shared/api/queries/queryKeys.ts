@@ -59,6 +59,7 @@ export const queryKeys = {
   },
   serverSettings: {
     all: () => serverSettingsRoot,
+    publicBaseUrl: () => [...serverSettingsRoot, "publicBaseUrl"] as const,
   },
   storageQuota: {
     all: () => storageQuotaRoot,

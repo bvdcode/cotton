@@ -228,6 +228,7 @@ export const AdminLayoutPage = () => {
           minWidth={0}
           display="flex"
           flexDirection="column"
+          alignSelf="stretch"
         >
           <Outlet />
         </Box>

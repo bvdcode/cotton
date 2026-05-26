@@ -7,12 +7,17 @@ import {
   TextField,
   type SelectChangeEvent,
 } from "@mui/material";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { UserRole } from "@features/auth/types";
 import type { OidcProviderDto } from "@shared/api/oidcApi";
-import type {
-  OidcProviderFormState,
-  OidcProviderFormUpdater,
+import { usePublicBaseUrlQuery } from "@shared/api/queries/serverSettings";
+import {
+  buildOidcProviderCallbackUrl,
+  resolveOidcCallbackBaseUrl,
+  resolveOidcProviderCallbackSlug,
+  type OidcProviderFormState,
+  type OidcProviderFormUpdater,
 } from "./oidcProviderForm";
 
 interface OidcProviderTextFieldsProps {
@@ -22,6 +27,9 @@ interface OidcProviderTextFieldsProps {
   onUpdate: OidcProviderFormUpdater;
 }
 
+const getBrowserOrigin = (): string =>
+  typeof window === "undefined" ? "" : window.location.origin;
+
 export const OidcProviderTextFields = ({
   form,
   provider,
@@ -29,6 +37,20 @@ export const OidcProviderTextFields = ({
   onUpdate,
 }: OidcProviderTextFieldsProps) => {
   const { t } = useTranslation(["admin", "common"]);
+  const publicBaseUrlQuery = usePublicBaseUrlQuery();
+  const callbackSlug = useMemo(
+    () =>
+      resolveOidcProviderCallbackSlug({ name: form.name, slug: form.slug }),
+    [form.name, form.slug],
+  );
+
+  const callbackUrl = useMemo(() => {
+    const baseUrl = resolveOidcCallbackBaseUrl(
+      publicBaseUrlQuery.data,
+      getBrowserOrigin(),
+    );
+    return buildOidcProviderCallbackUrl(callbackSlug, baseUrl);
+  }, [callbackSlug, publicBaseUrlQuery.data]);
 
   const handleRoleChange = (event: SelectChangeEvent<UserRole>) => {
     const numericRole = Number(event.target.value);
@@ -58,12 +80,12 @@ export const OidcProviderTextFields = ({
         required
       />
       <TextField
-        label={t("identityProviders.fields.slug")}
-        value={form.slug}
-        onChange={(event) => onUpdate("slug", event.target.value)}
+        label={t("identityProviders.fields.redirectUrl")}
+        value={callbackUrl}
         fullWidth
-        disabled={saving || Boolean(provider)}
-        helperText={t("identityProviders.help.slug")}
+        helperText={t("identityProviders.help.redirectUrl")}
+        slotProps={{ input: { readOnly: true } }}
+        sx={{ gridColumn: { xs: "auto", sm: "1 / -1" } }}
       />
       <TextField
         label={t("identityProviders.fields.issuer")}
