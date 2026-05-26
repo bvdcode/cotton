@@ -1,12 +1,21 @@
 import { useState, useEffect } from "react";
 import type { Guid } from "../../../api/layoutsApi";
+import type { NodeFileManifestDto } from "../../../api/nodesApi";
 import { filesApi } from "../../../api/filesApi";
 import { useTranslation } from "react-i18next";
 import { previewConfig } from "../../../config/previewConfig";
+import {
+  CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES,
+  getReadableFileUrl,
+  isFileEncrypted,
+  type ReadableFileHandle,
+} from "../../../crypto";
+import { formatBytes } from "../../../utils/formatBytes";
 
 export const useTextFileContent = (
   nodeFileId: Guid,
   fileSizeBytes: number | null,
+  sourceFile?: NodeFileManifestDto | null,
 ) => {
   const { t } = useTranslation(["files"]);
   const [content, setContent] = useState<string | undefined>(undefined);
@@ -18,22 +27,24 @@ export const useTextFileContent = (
     let cancelled = false;
 
     const loadContent = async () => {
+      let readableFile: ReadableFileHandle | null = null;
+
       try {
         setLoading(true);
         setError(null);
 
-        if (fileSizeBytes && fileSizeBytes > previewConfig.MAX_PREVIEW_SIZE_BYTES) {
+        const encrypted = sourceFile ? isFileEncrypted(sourceFile.metadata) : false;
+        const maxPreviewSizeBytes = encrypted
+          ? CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES
+          : previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES;
+
+        if (fileSizeBytes && fileSizeBytes > maxPreviewSizeBytes) {
           if (!cancelled) {
-            const sizeMB = fileSizeBytes / 1024 / 1024;
-            const maxMB = previewConfig.MAX_PREVIEW_SIZE_BYTES / 1024;
             setError(
               t("preview.errors.fileTooLarge", {
                 ns: "files",
-                size:
-                  sizeMB >= 1
-                    ? `${Math.round(sizeMB)} MB`
-                    : `${Math.round(fileSizeBytes / 1024)} KB`,
-                maxSize: `${maxMB} KB`,
+                size: formatBytes(fileSizeBytes),
+                maxSize: formatBytes(maxPreviewSizeBytes),
               }),
             );
             setLoading(false);
@@ -41,7 +52,9 @@ export const useTextFileContent = (
           return;
         }
 
-        const downloadUrl = await filesApi.getDownloadLink(nodeFileId);
+        const downloadUrl = encrypted && sourceFile
+          ? (readableFile = await getReadableFileUrl(sourceFile)).url
+          : await filesApi.getDownloadLink(nodeFileId);
         const response = await fetch(downloadUrl);
 
         if (!response.ok) {
@@ -68,6 +81,8 @@ export const useTextFileContent = (
           );
           setLoading(false);
         }
+      } finally {
+        readableFile?.revoke();
       }
     };
 
@@ -76,7 +91,7 @@ export const useTextFileContent = (
     return () => {
       cancelled = true;
     };
-  }, [nodeFileId, fileSizeBytes, t]);
+  }, [nodeFileId, fileSizeBytes, sourceFile, t]);
 
   return {
     content,

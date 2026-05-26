@@ -192,6 +192,7 @@ export const SearchPage: React.FC = () => {
         fileName={previewState.fileName}
         fileType={previewState.fileType}
         fileSizeBytes={previewState.fileSizeBytes}
+        file={previewState.file}
         onClose={closePreview}
       />
 

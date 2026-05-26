@@ -1187,6 +1187,7 @@ const FilesPreviewLayers: React.FC<FilesPreviewLayersProps> = ({
       fileName={previewState.fileName}
       fileType={previewState.fileType}
       fileSizeBytes={previewState.fileSizeBytes}
+      file={previewState.file}
       onClose={closePreview}
       onSaved={refreshCurrentNodeContent}
     />

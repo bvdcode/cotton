@@ -26,6 +26,7 @@ import {
   type PaletteColor,
 } from "./modelPalette";
 import type { FileType } from "@shared/utils/fileTypes";
+import type { NodeFileManifestDto } from "../../api/nodesApi";
 
 const PdfPreview = lazy(() =>
   import("./PdfPreview").then((module) => ({
@@ -64,6 +65,7 @@ interface FilePreviewModalProps {
   fileName: string | null;
   fileType: FileType | null;
   fileSizeBytes: number | null;
+  file?: NodeFileManifestDto | null;
   onClose: () => void;
   onSaved?: () => void;
 }
@@ -85,6 +87,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   fileName,
   fileType,
   fileSizeBytes,
+  file,
   onClose,
   onSaved,
 }) => {
@@ -120,6 +123,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
         fileName={fileName}
         fileType={fileType}
         fileSizeBytes={fileSizeBytes}
+        sourceFile={file}
         fileSource={fileSource}
         modelControls={modelControls}
         onSaved={onSaved}
@@ -226,6 +230,7 @@ type FilePreviewBodyProps = {
   fileName: string;
   fileType: FileType | null;
   fileSizeBytes: number | null;
+  sourceFile?: NodeFileManifestDto | null;
   fileSource: FilePreviewSource | null;
   modelControls: ModelPreviewControls;
   onSaved?: () => void;
@@ -236,6 +241,7 @@ const FilePreviewBody = ({
   fileName,
   fileType,
   fileSizeBytes,
+  sourceFile,
   fileSource,
   modelControls,
   onSaved,
@@ -256,6 +262,7 @@ const FilePreviewBody = ({
           nodeFileId={fileId}
           fileName={fileName}
           fileSizeBytes={fileSizeBytes}
+          sourceFile={sourceFile}
           onSaved={onSaved}
         />
       </Suspense>
