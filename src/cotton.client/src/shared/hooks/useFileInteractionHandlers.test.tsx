@@ -58,6 +58,7 @@ vi.mock("./useFilePreview", () => ({
       fileName: null,
       fileType: null,
       fileSizeBytes: undefined,
+      file: null,
     },
     openPreview: mocks.openPreview,
     closePreview: mocks.closePreview,
@@ -251,6 +252,33 @@ describe("useFileInteractionHandlers", () => {
     await result.current.handleDownloadFile("encrypted-file", "secret.txt");
 
     expect(mocks.createTask).not.toHaveBeenCalled();
+  });
+
+  it("opens encrypted text files in the preview instead of downloading immediately", () => {
+    const encryptedText = createFile({
+      id: "encrypted-text",
+      name: "secret.txt",
+      contentType: "text/plain",
+      metadata: { [ENCRYPTED_FLAG_KEY]: "true" },
+    });
+    const { result } = renderHook(() =>
+      useFileInteractionHandlers({
+        sortedFiles: [encryptedText],
+      }),
+    );
+
+    act(() => {
+      result.current.handleFileClick("encrypted-text", "secret.txt", 4);
+    });
+
+    expect(mocks.openPreview).toHaveBeenCalledWith(
+      "encrypted-text",
+      "secret.txt",
+      4,
+      "text/plain",
+      encryptedText,
+    );
+    expect(mocks.downloadReadableFile).not.toHaveBeenCalled();
   });
 
   it("downloads encrypted audio clicks instead of adding ciphertext to the player", () => {

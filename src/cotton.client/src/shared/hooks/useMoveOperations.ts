@@ -4,6 +4,7 @@ import { toast } from "@shared/ui/notifications";
 import { filesApi } from "../api/filesApi";
 import { nodesApi } from "../api/nodesApi";
 import type { NodeDto } from "../api/layoutsApi";
+import type { NodeFileManifestDto } from "../api/nodesApi";
 import { isAxiosError } from "../api/httpClient";
 import { fetchServerSettings } from "../api/queries/serverSettings";
 import { queryClient } from "../api/queries/queryClient";
@@ -23,6 +24,8 @@ import {
   encryptExistingFileWithTask,
 } from "../tasks";
 import { showActionToast } from "../ui/ActionToast";
+import { collectPlainFilesInFoldersForClientEncryption } from "../utils/clientEncryptionFolderScan";
+import type { ExistingFileEncryptionTaskFile } from "../tasks";
 
 /**
  * Non-authoritative drag hint type. Used so synchronous drag-over handlers can
@@ -242,6 +245,16 @@ interface MoveExecutionResult extends MoveOutcome {
   sourceParents: ReadonlySet<string>;
 }
 
+interface EncryptionCandidate {
+  file: ExistingFileEncryptionTaskFile;
+  targetNodeId: string;
+}
+
+interface EncryptionCandidateScanResult {
+  candidates: EncryptionCandidate[];
+  incomplete: boolean;
+}
+
 type MoveTranslation = ReturnType<
   typeof useTranslation<["files", "common", "tasks"]>
 >["t"];
@@ -270,9 +283,9 @@ const getMoveCandidates = (
 };
 
 const loadEncryptionServerSettings = async (
-  filesToEncrypt: ReadonlyArray<MoveClipboardItem>,
+  shouldLoad: boolean,
 ): Promise<Awaited<ReturnType<typeof fetchServerSettings>> | null> => {
-  if (filesToEncrypt.length === 0) return null;
+  if (!shouldLoad) return null;
   if (!useVault.getState().isUnlocked) return null;
 
   try {
@@ -369,7 +382,7 @@ const refreshMovedParents = (
 };
 
 const encryptMovedFiles = async (options: {
-  files: ReadonlyArray<MoveClipboardItem>;
+  files: ReadonlyArray<EncryptionCandidate>;
   settings: Awaited<ReturnType<typeof fetchServerSettings>> | null;
   targetNodeName: string;
   targetParentId: string;
@@ -386,31 +399,80 @@ const encryptMovedFiles = async (options: {
   }
 
   let failedCount = 0;
-  for (const item of options.files) {
-    if (!item.file) continue;
+  const refreshedParents = new Set<string>([options.targetParentId]);
 
+  for (const item of options.files) {
     try {
       await encryptExistingFileWithTask({
-        file: {
-          id: item.id,
-          name: item.file.name,
-          contentType: item.file.contentType,
-          sizeBytes: item.file.sizeBytes,
-        },
-        targetNodeId: options.targetParentId,
+        file: item.file,
+        targetNodeId: item.targetNodeId,
         scopeLabel: options.targetNodeName,
         server: {
           maxChunkSizeBytes: options.settings.maxChunkSizeBytes,
           supportedHashAlgorithm: options.settings.supportedHashAlgorithm,
         },
       });
+      refreshedParents.add(item.targetNodeId);
     } catch {
       failedCount += 1;
     }
   }
 
-  void refreshNodeContent(options.targetParentId);
+  for (const parentId of refreshedParents) {
+    void refreshNodeContent(parentId);
+  }
   return failedCount;
+};
+
+const toDirectEncryptionCandidate = (
+  item: MoveClipboardItem,
+  targetParentId: string,
+): EncryptionCandidate | null => {
+  if (!item.file) return null;
+
+  return {
+    file: {
+      id: item.id,
+      name: item.file.name,
+      contentType: item.file.contentType,
+      sizeBytes: item.file.sizeBytes,
+    },
+    targetNodeId: targetParentId,
+  };
+};
+
+const toNestedEncryptionCandidate = (
+  file: NodeFileManifestDto,
+): EncryptionCandidate => ({
+  file: {
+    id: file.id,
+    name: file.name,
+    contentType: file.contentType,
+    sizeBytes: file.sizeBytes,
+  },
+  targetNodeId: file.nodeId,
+});
+
+const collectMovedFolderEncryptionCandidates = async (
+  folders: ReadonlyArray<MoveClipboardItem>,
+): Promise<EncryptionCandidateScanResult> => {
+  if (folders.length === 0) {
+    return { candidates: [], incomplete: false };
+  }
+
+  try {
+    const scan = await collectPlainFilesInFoldersForClientEncryption(
+      folders.map((folder) => folder.id),
+    );
+
+    return {
+      candidates: scan.files.map(toNestedEncryptionCandidate),
+      incomplete: scan.truncated,
+    };
+  } catch (error) {
+    console.error("Failed to scan moved folders for plain files", error);
+    return { candidates: [], incomplete: true };
+  }
 };
 
 const offerDecryptForMovedFiles = (options: {
@@ -442,6 +504,7 @@ const offerDecryptForMovedFiles = (options: {
 
 const showMoveOutcomeToasts = (options: {
   encryptionFailedCount: number;
+  encryptionScanIncomplete: boolean;
   failed: ReadonlyArray<MoveClipboardItem>;
   lastErrorMessage: string | null;
   succeeded: ReadonlyArray<MoveClipboardItem>;
@@ -485,6 +548,21 @@ const showMoveOutcomeToasts = (options: {
       },
     );
   }
+
+  if (options.encryptionScanIncomplete) {
+    toast.error(
+      options.t("clientEncryption.toasts.encryptExistingScanIncomplete", {
+        ns: "files",
+      }),
+      {
+        toastId:
+          "move-encrypt-scan-incomplete-" +
+          options.targetParentId +
+          "-" +
+          Date.now(),
+      },
+    );
+  }
 };
 
 export const useMoveOperations = (): UseMoveOperationsResult => {
@@ -516,11 +594,11 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
       const targetNode = findCachedNode(targetParentId);
       const targetEncryptsNewFiles =
         getCachedFolderEncryptionPolicyEnabled(targetParentId);
-      const filesToEncrypt = targetEncryptsNewFiles
-        ? candidates.filter(needsEncryptionAfterMove)
-        : [];
+      const hasMoveEncryptionFollowups =
+        targetEncryptsNewFiles &&
+        candidates.some((item) => item.kind === "folder" || needsEncryptionAfterMove(item));
       const encryptionServerSettings = await loadEncryptionServerSettings(
-        filesToEncrypt,
+        hasMoveEncryptionFollowups,
       );
       const result = await moveCandidatesToTarget({
         candidates,
@@ -530,8 +608,19 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
 
       refreshMovedParents(result.sourceParents, targetParentId);
 
+      const directEncryptionCandidates = result.movedFilesToEncrypt
+        .map((item) => toDirectEncryptionCandidate(item, targetParentId))
+        .filter((item): item is EncryptionCandidate => item !== null);
+      const nestedEncryptionCandidateScan = encryptionServerSettings
+        ? await collectMovedFolderEncryptionCandidates(
+            result.succeeded.filter((item) => item.kind === "folder"),
+          )
+        : { candidates: [], incomplete: false };
       const encryptionFailedCount = await encryptMovedFiles({
-        files: result.movedFilesToEncrypt,
+        files: [
+          ...directEncryptionCandidates,
+          ...nestedEncryptionCandidateScan.candidates,
+        ],
         settings: encryptionServerSettings,
         targetNodeName: targetNode?.name ?? "",
         targetParentId,
@@ -545,6 +634,7 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
       });
       showMoveOutcomeToasts({
         encryptionFailedCount,
+        encryptionScanIncomplete: nestedEncryptionCandidateScan.incomplete,
         failed: result.failed,
         lastErrorMessage: result.lastErrorMessage,
         succeeded: result.succeeded,

@@ -47,7 +47,7 @@ export const useFileRenameDeleteOperations = (
     try {
       const result = await confirm({
         ...dialogContent,
-        confirmationButtonProps: { color: "error" },
+        confirmationButtonProps: { color: "error", autoFocus: true },
       });
 
       if (!result.confirmed) {

@@ -140,21 +140,27 @@ export const useFileInteractionHandlers = ({
     (fileId: string, fileName: string, fileSizeBytes?: number) => {
       const file = filesById.get(fileId);
 
-      if (file && isFileEncrypted(file.metadata)) {
-        void handleDownloadFile(fileId, fileName);
-        return;
-      }
-
       const typeInfo = getFileTypeInfo(fileName, file?.contentType ?? null, {
         requiresVideoTranscoding: file?.requiresVideoTranscoding ?? false,
       });
+
+      if (file && isFileEncrypted(file.metadata) && typeInfo.type !== "text") {
+        void handleDownloadFile(fileId, fileName);
+        return;
+      }
 
       if (typeInfo.type === "audio") {
         openAudio({ fileId, fileName, playlist: audioPlaylist });
         return;
       }
 
-      const opened = openPreview(fileId, fileName, fileSizeBytes);
+      const opened = openPreview(
+        fileId,
+        fileName,
+        fileSizeBytes,
+        file?.contentType ?? null,
+        file ?? null,
+      );
       if (!opened) {
         void handleDownloadFile(fileId, fileName);
       }

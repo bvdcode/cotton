@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import Lightbox from "yet-another-react-lightbox";
+import Lightbox, { IconButton } from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
 import "./MediaLightbox.css";
 import Video from "yet-another-react-lightbox/plugins/video";
@@ -17,6 +17,7 @@ import {
   Pause as PauseIcon,
   Download as DownloadIcon,
   Slideshow as SlideshowIcon,
+  DeleteOutline as DeleteIcon,
 } from "@mui/icons-material";
 import { CircularProgress } from "@mui/material";
 import { useActivityDetection } from "../../hooks/useActivityDetection";
@@ -78,8 +79,9 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   getSignedMediaUrl,
   smoothTransitions = true,
   getDownloadUrl,
+  onDelete,
 }) => {
-  const { t } = useTranslation("files");
+  const { t } = useTranslation(["files", "common"]);
   const indexKey = buildLightboxIndexKey(open, initialIndex, items);
   const [indexState, setIndexState] = React.useState<LightboxIndexState>(
     () => ({ key: indexKey, index: initialIndex }),
@@ -109,6 +111,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     () => (open ? items[index]?.id ?? null : null),
     [index, items, open],
   );
+  const currentItem = open ? items[index] : undefined;
   const isTouchDevice = React.useMemo(() => {
     if (typeof window === "undefined") return false;
     return window.matchMedia?.("(hover: none)")?.matches ?? false;
@@ -187,6 +190,57 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       clearTouchControlsTimer();
     };
   }, [open, isTouchDevice, clearTouchControlsTimer]);
+
+  const [deleteInProgress, setDeleteInProgress] = React.useState(false);
+  const deleteInProgressRef = React.useRef(false);
+
+  React.useEffect(() => {
+    deleteInProgressRef.current = false;
+    setDeleteInProgress(false);
+  }, [currentItemId, open]);
+
+  const handleDeleteCurrent = React.useCallback(async () => {
+    if (!onDelete || !currentItem || deleteInProgressRef.current) {
+      return;
+    }
+
+    deleteInProgressRef.current = true;
+    setDeleteInProgress(true);
+    try {
+      await onDelete(currentItem);
+    } catch (error) {
+      console.error("Failed to delete media item:", error);
+    } finally {
+      deleteInProgressRef.current = false;
+      setDeleteInProgress(false);
+    }
+  }, [currentItem, onDelete]);
+
+  React.useEffect(() => {
+    if (!open || !onDelete) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.key !== "Delete") {
+        return;
+      }
+
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        target.closest('input, textarea, [contenteditable="true"]')
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      void handleDeleteCurrent();
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleDeleteCurrent, onDelete, open]);
 
   const {
     slides,
@@ -410,6 +464,41 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     [handleCustomShare],
   );
 
+  const deleteButton = React.useMemo(() => {
+    if (!onDelete || !currentItem) {
+      return null;
+    }
+
+    return (
+      <IconButton
+        key="delete"
+        label="Delete"
+        icon={DeleteIcon}
+        renderIcon={() => <DeleteIcon />}
+        disabled={deleteInProgress}
+        onClick={() => {
+          void handleDeleteCurrent();
+        }}
+      />
+    );
+  }, [currentItem, deleteInProgress, handleDeleteCurrent, onDelete]);
+
+  const lightboxLabels = React.useMemo(
+    () => ({
+      Delete: t("actions.delete", { ns: "common" }),
+    }),
+    [t],
+  );
+
+  const lightboxToolbar = React.useMemo(
+    () => ({
+      buttons: deleteButton
+        ? ["slideshow", "download", deleteButton, "share", "close"]
+        : ["slideshow", "download", "share", "close"],
+    }),
+    [deleteButton],
+  );
+
   const lightboxZoom = React.useMemo(
     () => ({
       maxZoomPixelRatio: 3,
@@ -505,6 +594,8 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       zoom={lightboxZoom}
       slideshow={lightboxSlideshow}
       thumbnails={lightboxThumbnails}
+      toolbar={lightboxToolbar}
+      labels={lightboxLabels}
       video={lightboxVideo}
       carousel={lightboxCarousel}
     />

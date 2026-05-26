@@ -1530,6 +1530,7 @@
         "encryptExistingFailed_few": "Не удалось зашифровать {{count}} файла. Проверьте панель задач.",
         "encryptExistingFailed_many": "Не удалось зашифровать {{count}} файлов. Проверьте панель задач.",
         "encryptExistingFailed_other": "Не удалось зашифровать {{count}} файлов. Проверьте панель задач.",
+        "encryptExistingScanIncomplete": "Просканирована только часть дерева папок. Некоторые файлы могут оставаться незашифрованными; запустите шифрование из папки ещё раз после завершения этой пачки.",
         "decryptExistingComplete_one": "Расшифрован {{count}} файл.",
         "decryptExistingComplete_few": "Расшифровано {{count}} файла.",
         "decryptExistingComplete_many": "Расшифровано {{count}} файлов.",

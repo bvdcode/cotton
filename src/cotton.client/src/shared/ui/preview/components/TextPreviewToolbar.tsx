@@ -24,6 +24,7 @@ interface TextPreviewToolbarProps {
   setLanguage: (language: string) => void;
   isEditing: boolean;
   setIsEditing: (editing: boolean) => void;
+  editable?: boolean;
   hasChanges: boolean;
   saving: boolean;
   onSave: () => void;
@@ -38,6 +39,7 @@ export const TextPreviewToolbar: React.FC<TextPreviewToolbarProps> = ({
   setLanguage,
   isEditing,
   setIsEditing,
+  editable = true,
   hasChanges,
   saving,
   onSave,
@@ -102,7 +104,8 @@ export const TextPreviewToolbar: React.FC<TextPreviewToolbarProps> = ({
               />
             )}
 
-            {!isEditing &&
+            {editable &&
+              !isEditing &&
               (isMobile ? (
                 <Tooltip title={t("preview.actions.edit", { ns: "files" })}>
                   <span>

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Box } from "@mui/material";
 import type { Guid } from "../../api/layoutsApi";
+import type { NodeFileManifestDto } from "../../api/nodesApi";
+import { isFileEncrypted } from "../../crypto";
 import { EditorFactory } from "./factories/EditorFactory";
 import { useEditorMode } from "./hooks/useEditorMode";
 import { useLanguageSelection } from "./hooks/useLanguageSelection";
@@ -17,6 +19,7 @@ interface TextPreviewProps {
   nodeFileId: Guid;
   fileName: string;
   fileSizeBytes: number | null;
+  sourceFile?: NodeFileManifestDto | null;
   onSaved?: () => void;
 }
 
@@ -24,9 +27,11 @@ export function TextPreview({
   nodeFileId,
   fileName,
   fileSizeBytes,
+  sourceFile,
   onSaved,
 }: TextPreviewProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const editable = !sourceFile || !isFileEncrypted(sourceFile.metadata);
 
   const {
     content,
@@ -36,7 +41,7 @@ export function TextPreview({
     loading,
     error: loadError,
     isFileTooLarge,
-  } = useTextFileContent(nodeFileId, fileSizeBytes);
+  } = useTextFileContent(nodeFileId, fileSizeBytes, sourceFile);
 
   const { saving, error: saveError, handleSave } = useTextFileSave(
     nodeFileId,
@@ -62,7 +67,7 @@ export function TextPreview({
   });
 
   const handleSaveClick = () => {
-    if (content) {
+    if (editable && content) {
       void handleSave(content);
     }
   };
@@ -100,6 +105,7 @@ export function TextPreview({
         setLanguage={setLanguage}
         isEditing={isEditing}
         setIsEditing={setIsEditing}
+        editable={editable}
         hasChanges={hasChanges}
         saving={saving}
         onSave={handleSaveClick}
