@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Auth;
+using Cotton.Server.Controllers;
 using Cotton.Server.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
@@ -24,6 +25,7 @@ namespace Cotton.Server.Extensions
             services.AddSingleton<SessionAccessTokenRevocationCache>();
             services.AddScoped<SessionAccessTokenRevocationStore>();
             services.AddAuthRateLimiting();
+            services.AddAccessTokenCookieFallback();
             services.AddSessionRevocationValidation();
             return services;
         }
@@ -67,6 +69,32 @@ namespace Cotton.Server.Extensions
                             Window = TimeSpan.FromMinutes(1),
                         });
                 });
+            });
+            return services;
+        }
+
+        private static IServiceCollection AddAccessTokenCookieFallback(this IServiceCollection services)
+        {
+            services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
+            {
+                JwtBearerEvents events = options.Events ?? new JwtBearerEvents();
+                Func<MessageReceivedContext, Task> existingHandler = events.OnMessageReceived;
+                events.OnMessageReceived = async context =>
+                {
+                    await existingHandler(context);
+                    if (!string.IsNullOrWhiteSpace(context.Token)
+                        || context.Request.Headers.ContainsKey("Authorization"))
+                    {
+                        return;
+                    }
+
+                    if (context.Request.Cookies.TryGetValue(AuthController.CookieAccessTokenKey, out string? token)
+                        && !string.IsNullOrWhiteSpace(token))
+                    {
+                        context.Token = token;
+                    }
+                };
+                options.Events = events;
             });
             return services;
         }
