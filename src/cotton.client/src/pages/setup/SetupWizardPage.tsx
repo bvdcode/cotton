@@ -168,6 +168,7 @@ export function SetupWizardPage() {
   const { t } = useTranslation("setup");
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isSetupInitialized = useSetupStatusStore((s) => s.isInitialized);
   const [started, setStarted] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -204,7 +205,7 @@ export function SetupWizardPage() {
   const canProceed = currentStep?.isValid?.() ?? false;
 
   useEffect(() => {
-    if (!started || !currentStepKey) {
+    if (!started || !currentStepKey || isSetupInitialized !== true) {
       return;
     }
 
@@ -237,7 +238,7 @@ export function SetupWizardPage() {
     return () => {
       active = false;
     };
-  }, [currentStepKey, started]);
+  }, [currentStepKey, isSetupInitialized, started]);
 
   const handleStart = () => {
     setStarted(true);
