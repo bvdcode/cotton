@@ -88,13 +88,6 @@ namespace Cotton.Server.Services
                 },
                 AttestationPreference = AttestationConveyancePreference.None
             });
-            options.Hints =
-            [
-                PublicKeyCredentialHint.SecurityKey,
-                PublicKeyCredentialHint.ClientDevice,
-                PublicKeyCredentialHint.Hybrid
-            ];
-
             string requestId = CreateRequestId();
             _cache.Set(
                 RegistrationCacheKey(requestId),
