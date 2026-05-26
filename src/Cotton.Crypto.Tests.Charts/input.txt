@@ -1,4 +1,4 @@
- Encrypt_ThreadSweep_ChunkSweep
+﻿ Encrypt_ThreadSweep_ChunkSweep
    Source: PerformanceTests.cs line 55
    Duration: 6.2 sec
 
@@ -91,4 +91,3 @@ Threads | ChunkMB | Avg MB/s
      16 |   4.000 |   14402.7
      16 |   8.000 |   14745.1
      16 |  16.000 |   14301.3
-

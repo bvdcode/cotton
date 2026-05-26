@@ -228,7 +228,7 @@ namespace Cotton.Storage.Tests.Processors
         public async Task CompressionProcessor_UsesRuntimeCompressionLevelProvider_ForFutureWrites()
         {
             // Arrange
-            var provider = new MutableCompressionLevelProvider();
+            var provider = new TestCompressionLevelProvider();
             var processor = new CompressionProcessor(provider);
             byte[] originalData = CreateCompressionLevelSensitiveData();
 
@@ -280,6 +280,16 @@ namespace Cotton.Storage.Tests.Processors
             }
 
             return Encoding.UTF8.GetBytes(builder.ToString());
+        }
+
+        private sealed class TestCompressionLevelProvider : ICompressionLevelProvider
+        {
+            public int Level { get; private set; } = CompressionProcessor.DefaultCompressionLevel;
+
+            public void SetLevel(int compressionLevel)
+            {
+                Level = compressionLevel;
+            }
         }
     }
 }

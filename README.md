@@ -21,7 +21,7 @@
 
 </div>
 
-![Cotton Cloud](src/cotton.client/public/assets/images/social-preview.jpg)
+<img width="1692" height="929" alt="image" src="https://github.com/user-attachments/assets/5b19843d-1e8f-4a67-ac36-60c6053bf367" />
 
 ---
 
@@ -149,18 +149,6 @@ In short: unlike systems that are mostly a filesystem wrapper, Cotton is designe
 | Compression and encryption | Inline in the main storage pipeline | More often absent, optional, or handled outside the main ingest path |
 | Restore and cleanup | Snapshot-first model with reclaim checks designed to coexist with rollback | Cleanup and restore are more likely to be separate concerns that need careful operator coordination |
 | Product surface | Focused core with WebDAV, sharing, previews, notifications, and setup built in | Feature breadth is often higher, but the operational surface is also broader and less uniform |
-
----
-
-## Product Snapshots
-
-Current screenshots from the shipped web client:
-
-| Large-folder navigation                                                      | Gallery browsing                                                            | Search in the same workflow                                                |
-| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| ![Folder navigation](src/cotton.client/public/assets/images/screenshot1.jpg) | ![Gallery browsing](src/cotton.client/public/assets/images/screenshot2.jpg) | ![Search workflow](src/cotton.client/public/assets/images/screenshot5.jpg) |
-
-The UI matters here because Cotton is not trying to prove a storage thesis in isolation. The engine is built so the product can stay responsive, preview-rich, and straightforward to operate.
 
 ---
 
