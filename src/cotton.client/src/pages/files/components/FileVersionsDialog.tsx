@@ -18,6 +18,7 @@ import {
 } from "@mui/material";
 import { Delete, Download, Restore } from "@mui/icons-material";
 import { useConfirm } from "material-ui-confirm";
+import { destructiveConfirmOptions } from "@shared/ui/confirmOptions";
 import { useTranslation } from "react-i18next";
 import { filesApi, type FileVersionDto } from "../../../shared/api/filesApi";
 import {
@@ -125,7 +126,7 @@ export const FileVersionsDialog: React.FC<FileVersionsDialogProps> = ({
         }),
         confirmationText: t("common:actions.delete"),
         cancellationText: t("common:actions.cancel"),
-        confirmationButtonProps: { color: "error" },
+        ...destructiveConfirmOptions,
       });
       if (!result.confirmed) return;
 

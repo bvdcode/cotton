@@ -1,4 +1,5 @@
 import { useConfirm } from "material-ui-confirm";
+import { destructiveConfirmOptions } from "@shared/ui/confirmOptions";
 import { useRenameState } from "./useRenameState";
 
 interface ConfirmDialogContent {
@@ -47,7 +48,7 @@ export const useFolderRenameDeleteOperations = (
     try {
       const result = await confirm({
         ...dialogContent,
-        confirmationButtonProps: { color: "error" },
+        ...destructiveConfirmOptions,
       });
 
       if (!result.confirmed) {

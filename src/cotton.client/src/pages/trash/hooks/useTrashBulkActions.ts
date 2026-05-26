@@ -5,6 +5,7 @@ import type { ConfirmResult, ConfirmOptions } from "material-ui-confirm";
 import type { TFunction } from "i18next";
 import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 import type { FileSelectionState } from "@shared/hooks/useFileSelection";
+import { destructiveConfirmOptions } from "@shared/ui/confirmOptions";
 
 type ConfirmFn = (options?: ConfirmOptions) => Promise<ConfirmResult>;
 
@@ -157,7 +158,7 @@ export const useTrashBulkActions = ({
         description: t("emptyTrash.confirmDescription"),
         confirmationText: t("common:actions.delete"),
         cancellationText: t("common:actions.cancel"),
-        confirmationButtonProps: { color: "error" },
+        ...destructiveConfirmOptions,
       });
 
       if (!isConfirmed(result)) return;
@@ -201,7 +202,7 @@ export const useTrashBulkActions = ({
       }),
       confirmationText: t("common:actions.delete"),
       cancellationText: t("common:actions.cancel"),
-      confirmationButtonProps: { color: "error" },
+      ...destructiveConfirmOptions,
     });
 
     if (!isConfirmed(result)) return;
