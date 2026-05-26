@@ -61,7 +61,6 @@ public sealed class OidcAuthenticationService(
 
     /// <summary>Completes an authorization callback and returns an application return URL.</summary>
     public async Task<string> CompleteCallbackAsync(
-        string providerSlug,
         string state,
         string code,
         CancellationToken ct)
@@ -81,18 +80,13 @@ public sealed class OidcAuthenticationService(
             throw new BadRequestException<OidcLoginState>("OIDC sign-in state has expired.");
         }
 
-        if (!string.Equals(loginState.Provider.Slug, providerSlug, StringComparison.Ordinal))
-        {
-            throw new BadRequestException<OidcLoginState>("OIDC provider does not match the sign-in state.");
-        }
-
         if (!loginState.Provider.IsEnabled)
         {
             throw new BadRequestException<OidcProvider>("OIDC provider is disabled.");
         }
 
         OpenIdConnectConfiguration configuration = await _discovery.GetConfigurationAsync(loginState.Provider, ct);
-        string redirectUri = BuildRedirectUri(loginState.Provider);
+        string redirectUri = BuildRedirectUri();
         OidcTokenResponse tokenResponse = await _discovery.ExchangeCodeAsync(
             configuration,
             loginState.Provider,
@@ -176,7 +170,7 @@ public sealed class OidcAuthenticationService(
         string state = CreateOpaqueValue();
         string codeVerifier = CreateOpaqueValue();
         string nonce = CreateOpaqueValue();
-        string redirectUri = BuildRedirectUri(provider);
+        string redirectUri = BuildRedirectUri();
         var loginState = new OidcLoginState
         {
             ProviderId = provider.Id,
@@ -506,10 +500,10 @@ public sealed class OidcAuthenticationService(
         return values.Select(x => x?.Trim()).FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
     }
 
-    private string BuildRedirectUri(OidcProvider provider)
+    private string BuildRedirectUri()
     {
         string baseUrl = ResolvePublicBaseUrl();
-        return $"{baseUrl}{Routes.V1.Auth}/oidc/callback/{Uri.EscapeDataString(provider.Slug)}";
+        return $"{baseUrl}{Routes.V1.Auth}/oidc/callback";
     }
 
     private string ResolvePublicBaseUrl()

@@ -105,9 +105,8 @@ public sealed class OidcController(
 
     /// <summary>Completes an OIDC authorization-code callback.</summary>
     [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
-    [HttpGet("callback/{providerSlug}")]
+    [HttpGet("callback")]
     public async Task<IActionResult> Callback(
-        [FromRoute] string providerSlug,
         [FromQuery] string? state,
         [FromQuery] string? code,
         [FromQuery] string? error,
@@ -124,7 +123,6 @@ public sealed class OidcController(
         }
 
         string returnUrl = await _auth.CompleteCallbackAsync(
-            providerSlug,
             state.Trim(),
             code.Trim(),
             cancellationToken);

@@ -18,31 +18,7 @@ export interface OidcProviderFormState {
   syncAvatar: boolean;
 }
 
-const OIDC_PROVIDER_SLUG_MAX_LENGTH = 64;
 const DEFAULT_PUBLIC_BASE_URL = "http://localhost";
-
-export const slugifyOidcProviderName = (value: string): string => {
-  const normalized = value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/gu, "-")
-    .replace(/^-+|-+$/gu, "");
-  const slug =
-    normalized.length === 0 || !/^[a-z]/u.test(normalized)
-      ? `oidc-${normalized}`
-      : normalized;
-
-  return slug.slice(0, OIDC_PROVIDER_SLUG_MAX_LENGTH);
-};
-
-export const resolveOidcProviderCallbackSlug = (
-  state: Pick<OidcProviderFormState, "name" | "slug">,
-): string => {
-  const existingSlug = state.slug.trim();
-  return existingSlug.length > 0
-    ? existingSlug.toLowerCase()
-    : slugifyOidcProviderName(state.name);
-};
 
 const trimTrailingSlash = (value: string): string => value.replace(/\/+$/u, "");
 
@@ -62,11 +38,8 @@ export const resolveOidcCallbackBaseUrl = (
   return trimTrailingSlash(browserOrigin.trim());
 };
 
-export const buildOidcProviderCallbackUrl = (
-  providerSlug: string,
-  baseUrl: string,
-): string =>
-  `${trimTrailingSlash(baseUrl)}/api/v1/auth/oidc/callback/${encodeURIComponent(providerSlug)}`;
+export const buildOidcCallbackUrl = (baseUrl: string): string =>
+  `${trimTrailingSlash(baseUrl)}/api/v1/auth/oidc/callback`;
 
 export const createEmptyOidcProviderForm = (): OidcProviderFormState => ({
   name: "",

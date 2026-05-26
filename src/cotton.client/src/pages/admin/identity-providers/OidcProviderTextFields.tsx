@@ -13,9 +13,8 @@ import { UserRole } from "@features/auth/types";
 import type { OidcProviderDto } from "@shared/api/oidcApi";
 import { usePublicBaseUrlQuery } from "@shared/api/queries/serverSettings";
 import {
-  buildOidcProviderCallbackUrl,
+  buildOidcCallbackUrl,
   resolveOidcCallbackBaseUrl,
-  resolveOidcProviderCallbackSlug,
   type OidcProviderFormState,
   type OidcProviderFormUpdater,
 } from "./oidcProviderForm";
@@ -38,19 +37,14 @@ export const OidcProviderTextFields = ({
 }: OidcProviderTextFieldsProps) => {
   const { t } = useTranslation(["admin", "common"]);
   const publicBaseUrlQuery = usePublicBaseUrlQuery();
-  const callbackSlug = useMemo(
-    () =>
-      resolveOidcProviderCallbackSlug({ name: form.name, slug: form.slug }),
-    [form.name, form.slug],
-  );
 
   const callbackUrl = useMemo(() => {
     const baseUrl = resolveOidcCallbackBaseUrl(
       publicBaseUrlQuery.data,
       getBrowserOrigin(),
     );
-    return buildOidcProviderCallbackUrl(callbackSlug, baseUrl);
-  }, [callbackSlug, publicBaseUrlQuery.data]);
+    return buildOidcCallbackUrl(baseUrl);
+  }, [publicBaseUrlQuery.data]);
 
   const handleRoleChange = (event: SelectChangeEvent<UserRole>) => {
     const numericRole = Number(event.target.value);
