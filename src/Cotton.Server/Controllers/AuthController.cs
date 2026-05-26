@@ -36,8 +36,6 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
-using System.Security.Claims;
-using System.Text;
 
 namespace Cotton.Server.Controllers
 {
@@ -49,10 +47,10 @@ namespace Cotton.Server.Controllers
     public class AuthController(
         IMediator _mediator,
         IStreamCipher _crypto,
-        ITokenProvider _tokens,
         SettingsProvider _settings,
         CottonDbContext _dbContext,
         IPasswordHashService _hasher,
+        AuthSessionIssuer _sessionIssuer,
         ILogger<AuthController> _logger,
         WebDavAuthCache _webDavAuthCache,
         INotificationsProvider _notifications,
@@ -81,8 +79,6 @@ namespace Cotton.Server.Controllers
         /// Defines the cookie refresh token key.
         /// </summary>
         public const string CookieRefreshTokenKey = "refresh_token";
-        private const string UnknownGeoLabel = "Unknown";
-        private const string DemoGeoLabel = "Demo";
         private static readonly EmailAddressAttribute EmailValidator = new();
 
         /// <summary>
@@ -513,7 +509,7 @@ namespace Cotton.Server.Controllers
                 return NotFound();
             }
 
-            string refreshTokenHash = HashRefreshToken(refreshToken);
+            string refreshTokenHash = AuthSessionIssuer.HashRefreshToken(refreshToken);
             var dbToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x => x.Token == refreshTokenHash);
             if (dbToken == null || dbToken.RevokedAt != null)
             {
@@ -526,17 +522,17 @@ namespace Cotton.Server.Controllers
                 return NotFound();
             }
             _integrity.RequireValid(_dbContext, user, "auth.refresh-user");
-            var accessToken = CreateAccessToken(user, dbToken.SessionId!);
+            var accessToken = _sessionIssuer.CreateAccessToken(user, dbToken.SessionId!);
             dbToken.RevokedAt = DateTime.UtcNow;
-            var (newDbToken, newRefreshToken) = await CreateRefreshTokenAsync(
+            var (newDbToken, newRefreshToken) = await _sessionIssuer.CreateRefreshTokenAsync(
                 user,
                 dbToken.IsTrusted,
                 dbToken.AuthType,
                 dbToken.SessionId);
             await _dbContext.RefreshTokens.AddAsync(newDbToken);
             await _dbContext.SaveChangesAsync();
-            AddRefreshTokenToCookies(newRefreshToken, dbToken.IsTrusted);
-            AddAccessTokenToCookies(accessToken);
+            _sessionIssuer.AddRefreshTokenToCookies(newRefreshToken, dbToken.IsTrusted);
+            _sessionIssuer.AddAccessTokenToCookies(accessToken);
             return Ok(new TokenPairResponseDto()
             {
                 AccessToken = accessToken,
@@ -559,7 +555,7 @@ namespace Cotton.Server.Controllers
             }
             if (!string.IsNullOrEmpty(refreshToken))
             {
-                string refreshTokenHash = HashRefreshToken(refreshToken);
+                string refreshTokenHash = AuthSessionIssuer.HashRefreshToken(refreshToken);
                 var dbToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x => x.Token == refreshTokenHash);
                 if (dbToken != null && dbToken.RevokedAt == null)
                 {
@@ -621,35 +617,7 @@ namespace Cotton.Server.Controllers
 
         private async Task<TokenPairResponseDto> CreateSignedInResponseAsync(User user, bool trustDevice, AuthType authType)
         {
-            var (dbToken, refreshToken) = await CreateRefreshTokenAsync(user, trustDevice, authType);
-            string accessToken = CreateAccessToken(user, dbToken.SessionId!);
-            await _dbContext.RefreshTokens.AddAsync(dbToken);
-            await _dbContext.SaveChangesAsync();
-            AddRefreshTokenToCookies(refreshToken, trustDevice);
-            AddAccessTokenToCookies(accessToken);
-            await _notifications.SendSuccessfulLoginAsync(
-                _geoLookup,
-                user.Id,
-                GetRequestIpAddress(),
-                Request.Headers.UserAgent);
-
-            return new TokenPairResponseDto()
-            {
-                AccessToken = accessToken,
-                RefreshToken = refreshToken
-            };
-        }
-
-        private string CreateAccessToken(User user, string sessionId)
-        {
-            return _tokens.CreateToken(x =>
-            {
-                return x.Add(JwtRegisteredClaimNames.Sub, user.Id.ToString())
-                    .Add(JwtRegisteredClaimNames.Name, user.Username)
-                    .Add(JwtRegisteredClaimNames.Sid, sessionId)
-                    .Add(ClaimTypes.Name, user.Username)
-                    .Add(ClaimTypes.Role, user.Role.ToString());
-            });
+            return await _sessionIssuer.SignInAsync(user, trustDevice, authType, HttpContext.RequestAborted);
         }
 
         private IPAddress GetRequestIpAddress()
@@ -657,30 +625,6 @@ namespace Cotton.Server.Controllers
             return Constants.IsPublicInstance
                 ? IPAddress.Loopback
                 : Request.GetRemoteIPAddress();
-        }
-
-        private void AddRefreshTokenToCookies(string refreshToken, bool trustDevice)
-        {
-            const int yearHours = 24 * 365;
-            int sessionTimeoutHours = _settings.GetServerSettings().SessionTimeoutHours;
-            Response.Cookies.Append(CookieRefreshTokenKey, refreshToken, new CookieOptions
-            {
-                Secure = true,
-                HttpOnly = true,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.UtcNow.AddHours(trustDevice ? yearHours : sessionTimeoutHours)
-            });
-        }
-
-        private void AddAccessTokenToCookies(string accessToken)
-        {
-            Response.Cookies.Append(CookieAccessTokenKey, accessToken, new CookieOptions
-            {
-                Secure = true,
-                HttpOnly = true,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.UtcNow.Add(_tokens.TokenLifetime)
-            });
         }
 
         private async Task<User?> TryGetNewUserAsync(LoginRequest request)
@@ -752,57 +696,6 @@ namespace Cotton.Server.Controllers
             return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         }
 
-        private async Task<(ExtendedRefreshToken DbToken, string RefreshToken)> CreateRefreshTokenAsync(
-            User user,
-            bool trustDevice,
-            AuthType authType,
-            string? sessionId = null)
-        {
-            IPAddress ipAddress = GetRequestIpAddress();
-            var lookup = await _geoLookup.TryLookupAsync(ipAddress);
-            var geo = ResolveRefreshTokenGeoFields(lookup);
-            sessionId ??= StringHelpers.CreateRandomString(RefreshTokenLength);
-            string refreshToken = StringHelpers.CreateRandomString(RefreshTokenLength);
-            ExtendedRefreshToken dbToken = new()
-            {
-                RevokedAt = null,
-                UserId = user.Id,
-                City = geo.City,
-                SessionId = sessionId,
-                Region = geo.Region,
-                IsTrusted = trustDevice,
-                Country = geo.Country,
-                AuthType = authType,
-                IpAddress = ipAddress,
-                UserAgent = Request.Headers.UserAgent.ToString(),
-                Token = HashRefreshToken(refreshToken),
-                Device = UserAgentHelpers.GetDevice(Request.Headers.UserAgent.ToString()),
-            };
-            return (dbToken, refreshToken);
-        }
 
-        private static (string City, string Region, string Country) ResolveRefreshTokenGeoFields(
-            GeoLookupResult? lookup)
-        {
-            if (lookup is null && Constants.IsPublicInstance)
-            {
-                return (DemoGeoLabel, string.Empty, string.Empty);
-            }
-
-            return (
-                NormalizeGeoField(lookup?.City),
-                NormalizeGeoField(lookup?.Region),
-                NormalizeGeoField(lookup?.Country));
-        }
-
-        private static string NormalizeGeoField(string? value)
-        {
-            return string.IsNullOrWhiteSpace(value) ? UnknownGeoLabel : value;
-        }
-
-        private static string HashRefreshToken(string refreshToken)
-        {
-            return Hasher.ToHexStringHash(Hasher.HashData(Encoding.UTF8.GetBytes(refreshToken)));
-        }
     }
 }
