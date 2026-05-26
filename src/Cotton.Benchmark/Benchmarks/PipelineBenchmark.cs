@@ -101,6 +101,5 @@ namespace Cotton.Benchmark.Benchmarks
         {
             _cipher?.Dispose();
         }
-
     }
 }

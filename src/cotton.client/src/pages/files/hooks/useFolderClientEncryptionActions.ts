@@ -93,7 +93,9 @@ export const useFolderClientEncryptionActions = ({
       let filesToEncrypt = plainFiles;
       try {
         const scan = await collectPlainFilesInFoldersForClientEncryption([nodeId]);
-        scanIncomplete = scan.truncated;
+        if (scan.truncated) {
+          scanIncomplete = true;
+        }
         if (scan.files.length > 0) {
           filesToEncrypt = scan.files;
         }

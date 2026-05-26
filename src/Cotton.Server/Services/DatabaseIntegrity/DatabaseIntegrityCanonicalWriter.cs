@@ -104,7 +104,7 @@ public sealed class DatabaseIntegrityCanonicalWriter
 
     private static DateTime NormalizeToDatabasePrecision(DateTime utc)
     {
-        long ticks = utc.Ticks - utc.Ticks % TimeSpan.TicksPerMicrosecond;
+        long ticks = utc.Ticks - (utc.Ticks % TimeSpan.TicksPerMicrosecond);
         return new DateTime(ticks, DateTimeKind.Utc);
     }
 

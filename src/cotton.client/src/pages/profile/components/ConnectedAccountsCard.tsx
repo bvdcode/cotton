@@ -45,12 +45,16 @@ export const ConnectedAccountsCard = () => {
   const unlinkMutation = useUnlinkOidcIdentityMutation();
   const [error, setError] = useState<string | null>(null);
 
-  const links = linksQuery.data ?? [];
+  const links = useMemo(() => linksQuery.data ?? [], [linksQuery.data]);
+  const providers = useMemo(
+    () => providersQuery.data ?? [],
+    [providersQuery.data],
+  );
   const linkedSlugs = useMemo(
     () => new Set(links.map((identity) => identity.providerSlug)),
     [links],
   );
-  const linkableProviders = (providersQuery.data ?? []).filter(
+  const linkableProviders = providers.filter(
     (provider) => !linkedSlugs.has(provider.slug),
   );
 

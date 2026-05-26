@@ -55,6 +55,11 @@ type ClosingState = {
 
 type IndexOrUpdater = number | ((current: number) => number);
 
+type DeleteProgressState = {
+  itemId: string | null;
+  inProgress: boolean;
+};
+
 const buildLightboxIndexKey = (
   open: boolean,
   initialIndex: number,
@@ -191,30 +196,39 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     };
   }, [open, isTouchDevice, clearTouchControlsTimer]);
 
-  const [deleteInProgress, setDeleteInProgress] = React.useState(false);
-  const deleteInProgressRef = React.useRef(false);
-
-  React.useEffect(() => {
-    deleteInProgressRef.current = false;
-    setDeleteInProgress(false);
-  }, [currentItemId, open]);
+  const [deleteProgress, setDeleteProgress] =
+    React.useState<DeleteProgressState>(() => ({
+      itemId: currentItemId,
+      inProgress: false,
+    }));
+  const deleteInProgressRef = React.useRef<DeleteProgressState>({
+    itemId: null,
+    inProgress: false,
+  });
+  const deleteInProgress =
+    deleteProgress.itemId === currentItemId && deleteProgress.inProgress;
 
   const handleDeleteCurrent = React.useCallback(async () => {
-    if (!onDelete || !currentItem || deleteInProgressRef.current) {
+    if (
+      !onDelete ||
+      !currentItem ||
+      (deleteInProgressRef.current.itemId === currentItemId &&
+        deleteInProgressRef.current.inProgress)
+    ) {
       return;
     }
 
-    deleteInProgressRef.current = true;
-    setDeleteInProgress(true);
+    deleteInProgressRef.current = { itemId: currentItemId, inProgress: true };
+    setDeleteProgress({ itemId: currentItemId, inProgress: true });
     try {
       await onDelete(currentItem);
     } catch (error) {
       console.error("Failed to delete media item:", error);
     } finally {
-      deleteInProgressRef.current = false;
-      setDeleteInProgress(false);
+      deleteInProgressRef.current = { itemId: currentItemId, inProgress: false };
+      setDeleteProgress({ itemId: currentItemId, inProgress: false });
     }
-  }, [currentItem, onDelete]);
+  }, [currentItem, currentItemId, onDelete]);
 
   React.useEffect(() => {
     if (!open || !onDelete) {

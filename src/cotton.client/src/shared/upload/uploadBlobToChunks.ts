@@ -330,8 +330,7 @@ export async function uploadBlobToChunks(options: {
   };
 
   const trackFileHashUpdate = (update: Promise<void>, queuedBytes: number) => {
-    let tracked: Promise<void>;
-    tracked = update
+    const tracked = update
       .catch((error) => {
         failUpload(error);
       })

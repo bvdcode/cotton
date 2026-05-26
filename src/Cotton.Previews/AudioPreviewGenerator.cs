@@ -304,6 +304,5 @@ namespace Cotton.Previews
 
             return outputMs.ToArray();
         }
-
     }
 }

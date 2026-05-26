@@ -8,7 +8,7 @@ import {
   DialogTitle,
   Stack,
 } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { OidcProviderDto } from "@shared/api/oidcApi";
 import {
@@ -40,7 +40,13 @@ export const OidcProviderFormDialog = ({
     return null;
   }
 
-  return <OidcProviderFormDialogContent provider={provider} onClose={onClose} />;
+  return (
+    <OidcProviderFormDialogContent
+      key={provider?.id ?? "new"}
+      provider={provider}
+      onClose={onClose}
+    />
+  );
 };
 
 interface OidcProviderFormDialogContentProps {
@@ -59,13 +65,6 @@ const OidcProviderFormDialogContent = ({
     provider ? createOidcProviderFormFromDto(provider) : createEmptyOidcProviderForm(),
   );
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setForm(
-      provider ? createOidcProviderFormFromDto(provider) : createEmptyOidcProviderForm(),
-    );
-    setError(null);
-  }, [provider]);
 
   const saving = createMutation.isPending || updateMutation.isPending;
   const title = provider
