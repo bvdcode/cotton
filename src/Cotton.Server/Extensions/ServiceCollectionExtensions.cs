@@ -8,6 +8,7 @@ using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
+using Cotton.Server.Services.KeyManagement;
 using Cotton.Server.Services.WebDav;
 using EasyExtensions.Abstractions;
 using Microsoft.AspNetCore.Authentication;
@@ -27,6 +28,15 @@ namespace Cotton.Server.Extensions
             return services.AddScoped<IStreamCipher>(sp =>
             {
                 var settings = sp.GetRequiredService<CottonEncryptionSettings>();
+                KeyringBootstrapResult? keyring = sp.GetService<KeyringBootstrapResult>();
+                if (keyring is not null)
+                {
+                    return StreamCipherFactory.Create(
+                        keyring.State,
+                        settings,
+                        SettingsProvider.GetCachedEncryptionThreads());
+                }
+
                 return StreamCipherFactory.Create(settings, SettingsProvider.GetCachedEncryptionThreads());
             });
         }
