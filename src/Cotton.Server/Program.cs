@@ -183,6 +183,9 @@ namespace Cotton.Server
             builder.Services.AddScoped(sp => new KeyringJournaledObjectStore(KeyringStartup.CreateReplicas(sp)));
             builder.Services.AddScoped(sp => new KeyringDiagnosticsService(
                 sp.GetRequiredService<KeyringJournaledObjectStore>()));
+            builder.Services.AddScoped(sp => new KeyringAdminService(
+                sp.GetRequiredService<KeyringJournaledObjectStore>(),
+                sp.GetRequiredService<KeyringRuntimeState>()));
             builder.Services.AddSingleton(masterKeyRuntimeState);
             builder.Services.AddSingleton(processHardeningStatus);
             builder.Services.AddSingleton(new ApplicationStartupClock(DateTimeOffset.UtcNow));

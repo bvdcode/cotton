@@ -69,6 +69,48 @@ public class KeyringRotationServiceTests
             Throws.InstanceOf<UnauthorizedAccessException>());
     }
 
+
+    [Test]
+    [NonParallelizable]
+    public async Task AdminService_RotatesUnlock_AndUpdatesRuntimeState()
+    {
+        string root = CreateTempDirectory();
+        string? originalEnabled = Environment.GetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable);
+        string? originalPath = Environment.GetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable);
+        string oldUnlock = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        string newUnlock = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(oldUnlock);
+
+        try
+        {
+            Environment.SetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable, "1");
+            Environment.SetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable, root);
+            var store = new KeyringJournaledObjectStore([new KeyringLocalFileReplica(root)]);
+            var bootstrap = new KeyringBootstrapService(store);
+            KeyringBootstrapResult initial = await bootstrap.OpenOrCreateFromV1Async(settings, oldUnlock);
+            var runtimeState = new KeyringRuntimeState();
+            runtimeState.Set(initial);
+            var admin = new KeyringAdminService(store, runtimeState);
+
+            KeyringAdminRotationResult result = await admin.RotateUnlockAsync(oldUnlock, newUnlock);
+            KeyringBootstrapResult? current = runtimeState.Current;
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result.RootEpoch, Is.EqualTo(initial.State.RootEpoch + 1));
+                Assert.That(result.AccessGeneration, Is.EqualTo(initial.AccessEnvelope.Generation + 1));
+                Assert.That(result.StateGeneration, Is.EqualTo(initial.State.StateGeneration + 1));
+                Assert.That(current, Is.Not.Null);
+                Assert.That(current!.State.RootEpoch, Is.EqualTo(result.RootEpoch));
+            }
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable, originalEnabled);
+            Environment.SetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable, originalPath);
+        }
+    }
+
     private static string CreateTempDirectory()
     {
         string path = Path.Combine(TestContext.CurrentContext.WorkDirectory, "keyring-rotation", Guid.NewGuid().ToString("N"));

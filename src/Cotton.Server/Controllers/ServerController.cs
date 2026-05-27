@@ -5,8 +5,10 @@ using Cotton.Models;
 using Cotton.Server.Handlers.Server;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Models.Requests;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using Cotton.Server.Services.KeyManagement;
 using EasyExtensions.Mediator;
 using EasyExtensions.Models.Enums;
 using EasyExtensions.Quartz.Extensions;
@@ -25,7 +27,8 @@ namespace Cotton.Server.Controllers
         IMediator _mediator,
         SettingsProvider _settings,
         ISchedulerFactory _scheduler,
-        SecurityDiagnosticsService _securityDiagnostics) : ControllerBase
+        SecurityDiagnosticsService _securityDiagnostics,
+        KeyringAdminService _keyringAdmin) : ControllerBase
     {
         /// <summary>
         /// Stops the server after an authenticated emergency shutdown request.
@@ -63,6 +66,36 @@ namespace Cotton.Server.Controllers
         {
             SecurityDiagnosticsDto snapshot = await _securityDiagnostics.GetSnapshotAsync(cancellationToken);
             return Ok(snapshot);
+        }
+
+        /// <summary>
+        /// Rotates the keyring unlock secret without rewriting user chunks.
+        /// </summary>
+        [HttpPost("keyring/rotate-unlock")]
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        public async Task<IActionResult> RotateKeyringUnlock(
+            [FromBody] KeyringRotateUnlockRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                KeyringAdminRotationResult result = await _keyringAdmin.RotateUnlockAsync(
+                    request.CurrentUnlockSecret,
+                    request.NewUnlockSecret,
+                    cancellationToken);
+                return Ok(new KeyringRotateUnlockResponseDto
+                {
+                    RootEpoch = result.RootEpoch,
+                    AccessGeneration = result.AccessGeneration,
+                    StateGeneration = result.StateGeneration,
+                });
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException
+                or InvalidOperationException
+                or ArgumentException)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         /// <summary>
