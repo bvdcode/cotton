@@ -59,12 +59,17 @@ internal static class KeyringStartup
         string unlockSecret,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(services);
         if (!IsEnabled())
         {
             return null;
         }
 
+        return await BootstrapAsync(CreateReplicas(services), legacySettings, unlockSecret, cancellationToken);
+    }
+
+    public static IReadOnlyList<IKeyringObjectReplica> CreateReplicas(IServiceProvider services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
         List<IKeyringObjectReplica> replicas = [new KeyringLocalFileReplica(ResolveLocalReplicaRootPath())];
 
         CottonDbContext? dbContext = services.GetService<CottonDbContext>();
@@ -80,7 +85,7 @@ internal static class KeyringStartup
             replicas.Add(new KeyringStorageBackendReplica(backend, listByScanning: false));
         }
 
-        return await BootstrapAsync(replicas, legacySettings, unlockSecret, cancellationToken);
+        return replicas;
     }
 
     private static async Task<KeyringBootstrapResult> BootstrapAsync(

@@ -139,6 +139,19 @@ export interface DatabaseIntegrityDiagnosticsDto {
   unsignedProtectedRows: number;
 }
 
+export interface KeyringDiagnosticsDto {
+  enabled: boolean;
+  loaded: boolean;
+  accessEnvelopePresent: boolean;
+  stateSnapshotPresent: boolean;
+  accessGeneration: number | null;
+  stateGeneration: number | null;
+  rootEpoch: number | null;
+  keyCount: number | null;
+  legacyDecryptOnlyKeyCount: number | null;
+  warnings: string[];
+}
+
 export interface SecurityDiagnosticsDto {
   operatingSystem: string;
   isLinux: boolean;
@@ -154,6 +167,7 @@ export interface SecurityDiagnosticsDto {
   linuxContainer: LinuxContainerSecurityDto;
   adminTotp: AdminTotpDiagnosticsDto;
   databaseIntegrity: DatabaseIntegrityDiagnosticsDto;
+  keyring: KeyringDiagnosticsDto;
   warnings: SecurityDiagnosticWarningDto[];
 }
 

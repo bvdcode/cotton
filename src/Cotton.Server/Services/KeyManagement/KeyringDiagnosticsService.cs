@@ -8,9 +8,16 @@ namespace Cotton.Server.Services.KeyManagement;
 /// <summary>
 /// Verifies keyring v2 objects and summarizes their migration/security state.
 /// </summary>
-internal sealed class KeyringDiagnosticsService(KeyringJournaledObjectStore _store)
+public sealed class KeyringDiagnosticsService
 {
-    public async Task<KeyringDiagnosticsSnapshot> GetSnapshotAsync(
+    private readonly KeyringJournaledObjectStore _store;
+
+    internal KeyringDiagnosticsService(KeyringJournaledObjectStore store)
+    {
+        _store = store;
+    }
+
+    internal async Task<KeyringDiagnosticsSnapshot> GetSnapshotAsync(
         string? unlockSecret = null,
         CancellationToken cancellationToken = default)
     {

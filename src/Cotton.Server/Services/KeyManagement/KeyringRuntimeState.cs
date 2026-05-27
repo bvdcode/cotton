@@ -6,12 +6,12 @@ namespace Cotton.Server.Services.KeyManagement;
 /// <summary>
 /// Holds the keyring loaded after database migrations and before normal request handling starts.
 /// </summary>
-internal sealed class KeyringRuntimeState
+public sealed class KeyringRuntimeState
 {
     private readonly object _gate = new();
     private KeyringBootstrapResult? _current;
 
-    public KeyringBootstrapResult? Current
+    internal KeyringBootstrapResult? Current
     {
         get
         {
@@ -22,7 +22,7 @@ internal sealed class KeyringRuntimeState
         }
     }
 
-    public void Set(KeyringBootstrapResult result)
+    internal void Set(KeyringBootstrapResult result)
     {
         ArgumentNullException.ThrowIfNull(result);
         lock (_gate)

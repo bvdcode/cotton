@@ -164,6 +164,8 @@ namespace Cotton.Server
             });
             builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CottonEncryptionSettings>>().Value);
             builder.Services.AddSingleton<KeyringRuntimeState>();
+            builder.Services.AddScoped(sp => new KeyringJournaledObjectStore(KeyringStartup.CreateReplicas(sp)));
+            builder.Services.AddScoped<KeyringDiagnosticsService>();
             builder.Services.AddSingleton(masterKeyRuntimeState);
             builder.Services.AddSingleton(processHardeningStatus);
             builder.Services.AddSingleton(new ApplicationStartupClock(DateTimeOffset.UtcNow));

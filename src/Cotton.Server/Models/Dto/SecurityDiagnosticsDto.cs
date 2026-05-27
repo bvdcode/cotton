@@ -65,6 +65,10 @@ namespace Cotton.Server.Models.Dto
         /// </summary>
         public DatabaseIntegrityDiagnosticsDto DatabaseIntegrity { get; init; } = new();
         /// <summary>
+        /// Gets or sets keyring diagnostics.
+        /// </summary>
+        public KeyringDiagnosticsDto Keyring { get; init; } = new();
+        /// <summary>
         /// Gets or sets warnings.
         /// </summary>
         public IReadOnlyList<SecurityDiagnosticWarningDto> Warnings { get; init; } = [];
@@ -231,6 +235,53 @@ namespace Cotton.Server.Models.Dto
         /// Gets or sets unsigned protected rows.
         /// </summary>
         public int UnsignedProtectedRows { get; init; }
+    }
+
+    /// <summary>
+    /// Represents keyring diagnostics in the security checkup payload.
+    /// </summary>
+    public sealed class KeyringDiagnosticsDto
+    {
+        /// <summary>
+        /// Indicates whether keyring v2 startup is enabled.
+        /// </summary>
+        public bool Enabled { get; init; }
+        /// <summary>
+        /// Indicates whether a keyring is loaded in the current process.
+        /// </summary>
+        public bool Loaded { get; init; }
+        /// <summary>
+        /// Indicates whether an access envelope is present in the replicated store.
+        /// </summary>
+        public bool AccessEnvelopePresent { get; init; }
+        /// <summary>
+        /// Indicates whether a state snapshot is present in the replicated store.
+        /// </summary>
+        public bool StateSnapshotPresent { get; init; }
+        /// <summary>
+        /// Gets the latest access envelope generation.
+        /// </summary>
+        public int? AccessGeneration { get; init; }
+        /// <summary>
+        /// Gets the latest state snapshot generation.
+        /// </summary>
+        public int? StateGeneration { get; init; }
+        /// <summary>
+        /// Gets the current keyring root epoch.
+        /// </summary>
+        public int? RootEpoch { get; init; }
+        /// <summary>
+        /// Gets the number of data keys in the loaded keyring state.
+        /// </summary>
+        public int? KeyCount { get; init; }
+        /// <summary>
+        /// Gets the number of legacy decrypt-only keys in the loaded keyring state.
+        /// </summary>
+        public int? LegacyDecryptOnlyKeyCount { get; init; }
+        /// <summary>
+        /// Gets low-level keyring diagnostic warning codes.
+        /// </summary>
+        public IReadOnlyList<string> Warnings { get; init; } = [];
     }
 
     /// <summary>

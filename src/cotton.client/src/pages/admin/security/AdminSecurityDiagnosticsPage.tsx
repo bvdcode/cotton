@@ -39,6 +39,11 @@ const knownThreatVectorCodes = new Set([
   "process-hardening-failed",
   "db-integrity-unsigned-rows",
   "db-integrity-bridge-mode",
+  "keyring-v2-disabled",
+  "keyring-diagnostics-failed",
+  "keyring-not-loaded",
+  "keyring-replicas-incomplete",
+  "keyring-legacy-debt",
   "root-filesystem-writable",
   "docker-socket-mounted",
   "host-pid-namespace",
@@ -230,6 +235,7 @@ const SecurityDiagnosticsContent = ({
     <SecurityRiskSection warnings={diagnostics.warnings} t={t} />
     <InstanceDiagnosticsSection diagnostics={diagnostics} t={t} />
     <MasterKeyDiagnosticsSection diagnostics={diagnostics} t={t} />
+    <KeyringDiagnosticsSection diagnostics={diagnostics} t={t} />
     <MemoryDiagnosticsSection diagnostics={diagnostics} t={t} />
     <ContainerDiagnosticsSection diagnostics={diagnostics} t={t} />
     <RuntimeDiagnosticsSection diagnostics={diagnostics} t={t} />
@@ -317,6 +323,23 @@ const SecuritySummaryChips = ({
         withTotp: diagnostics.adminTotp.adminsWithTotp,
         total: diagnostics.adminTotp.adminCount,
       })}
+    />
+    <Chip
+      size="small"
+      color={
+        diagnostics.keyring.loaded
+          ? "success"
+          : diagnostics.keyring.enabled
+            ? "warning"
+            : "default"
+      }
+      label={
+        diagnostics.keyring.loaded
+          ? t("securityDiagnostics.chips.keyringLoaded")
+          : diagnostics.keyring.enabled
+            ? t("securityDiagnostics.chips.keyringEnabled")
+            : t("securityDiagnostics.chips.keyringDisabled")
+      }
     />
   </Stack>
 );
@@ -421,6 +444,78 @@ const MasterKeyDiagnosticsSection = ({
       value={yesNo(diagnostics.masterKeyEnvironmentVariablePresentInProcess, t)}
       color={
         diagnostics.masterKeyEnvironmentVariablePresentInProcess
+          ? "warning"
+          : "success"
+      }
+    />
+  </DiagnosticsSection>
+);
+
+const KeyringDiagnosticsSection = ({
+  diagnostics,
+  t,
+}: DiagnosticsContentSectionProps) => (
+  <DiagnosticsSection title={t("securityDiagnostics.sections.keyring")}>
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.keyringEnabled")}
+      value={yesNo(diagnostics.keyring.enabled, t)}
+      color={diagnostics.keyring.enabled ? "success" : "default"}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.keyringLoaded")}
+      value={yesNo(diagnostics.keyring.loaded, t)}
+      color={
+        diagnostics.keyring.loaded
+          ? "success"
+          : diagnostics.keyring.enabled
+            ? "error"
+            : "default"
+      }
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.keyringAccessEnvelope")}
+      value={yesNo(diagnostics.keyring.accessEnvelopePresent, t)}
+      color={
+        diagnostics.keyring.accessEnvelopePresent
+          ? "success"
+          : diagnostics.keyring.enabled
+            ? "error"
+            : "default"
+      }
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.keyringStateSnapshot")}
+      value={yesNo(diagnostics.keyring.stateSnapshotPresent, t)}
+      color={
+        diagnostics.keyring.stateSnapshotPresent
+          ? "success"
+          : diagnostics.keyring.enabled
+            ? "error"
+            : "default"
+      }
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.keyringRootEpoch")}
+      value={formatNullable(diagnostics.keyring.rootEpoch, t)}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.keyringAccessGeneration")}
+      value={formatNullable(diagnostics.keyring.accessGeneration, t)}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.keyringStateGeneration")}
+      value={formatNullable(diagnostics.keyring.stateGeneration, t)}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.keyringKeys")}
+      value={formatNullable(diagnostics.keyring.keyCount, t)}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.keyringLegacyKeys")}
+      value={formatNullable(diagnostics.keyring.legacyDecryptOnlyKeyCount, t)}
+      color={
+        diagnostics.keyring.legacyDecryptOnlyKeyCount &&
+        diagnostics.keyring.legacyDecryptOnlyKeyCount > 0
           ? "warning"
           : "success"
       }

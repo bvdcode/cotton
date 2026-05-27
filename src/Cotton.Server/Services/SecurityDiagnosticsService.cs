@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services.DatabaseIntegrity;
+using Cotton.Server.Services.KeyManagement;
 using EasyExtensions.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,7 +17,9 @@ namespace Cotton.Server.Services
         CottonDbContext dbContext,
         ProcessHardeningStatus hardeningStatus,
         MasterKeyRuntimeState masterKeyRuntimeState,
-        DatabaseIntegrityDiagnosticsService databaseIntegrityDiagnostics)
+        DatabaseIntegrityDiagnosticsService databaseIntegrityDiagnostics,
+        KeyringRuntimeState keyringRuntimeState,
+        KeyringDiagnosticsService keyringDiagnostics)
     {
         /// <summary>
         /// Gets snapshot async.
@@ -35,6 +38,7 @@ namespace Cotton.Server.Services
             AdminTotpDiagnosticsDto adminTotp = await GetAdminTotpDiagnosticsAsync(cancellationToken);
             DatabaseIntegrityDiagnosticsDto databaseIntegrity = await databaseIntegrityDiagnostics
                 .GetSnapshotAsync(cancellationToken);
+            KeyringDiagnosticsDto keyring = await GetKeyringDiagnosticsAsync(cancellationToken);
 
             var linuxProcess = new LinuxProcessSecurityDto
             {
@@ -81,7 +85,8 @@ namespace Cotton.Server.Services
                 linuxProcess,
                 linuxContainer,
                 adminTotp,
-                databaseIntegrity);
+                databaseIntegrity,
+                keyring);
 
             return new SecurityDiagnosticsDto
             {
@@ -97,6 +102,7 @@ namespace Cotton.Server.Services
                 LinuxContainer = linuxContainer,
                 AdminTotp = adminTotp,
                 DatabaseIntegrity = databaseIntegrity,
+                Keyring = keyring,
                 SecurityScore = CalculateSecurityScore(warnings),
                 Warnings = warnings,
             };
@@ -117,6 +123,44 @@ namespace Cotton.Server.Services
             };
         }
 
+        private async Task<KeyringDiagnosticsDto> GetKeyringDiagnosticsAsync(CancellationToken cancellationToken)
+        {
+            bool enabled = KeyringStartup.IsEnabled();
+            KeyringBootstrapResult? runtime = keyringRuntimeState.Current;
+            KeyringDiagnosticsSnapshot? snapshot = null;
+            var warnings = new List<string>();
+
+            try
+            {
+                snapshot = await keyringDiagnostics.GetSnapshotAsync(cancellationToken: cancellationToken);
+                warnings.AddRange(snapshot.Warnings);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                warnings.Add("keyring-diagnostics-failed");
+            }
+
+            int? legacyDecryptOnlyKeyCount = runtime is null
+                ? snapshot?.LegacyDecryptOnlyKeyCount
+                : runtime.State.Keys.Count(x =>
+                    x.Origin == KeyringKeyOrigin.LegacyV1MasterDerived
+                    && x.Status is KeyringKeyStatus.DecryptOnly or KeyringKeyStatus.VerifyOnly);
+
+            return new KeyringDiagnosticsDto
+            {
+                Enabled = enabled,
+                Loaded = runtime is not null,
+                AccessEnvelopePresent = snapshot?.AccessEnvelopePresent ?? false,
+                StateSnapshotPresent = snapshot?.StateSnapshotPresent ?? false,
+                AccessGeneration = snapshot?.AccessGeneration ?? runtime?.AccessEnvelope.Generation,
+                StateGeneration = snapshot?.StateGeneration ?? runtime?.State.StateGeneration,
+                RootEpoch = snapshot?.RootEpoch ?? runtime?.State.RootEpoch,
+                KeyCount = runtime?.State.Keys.Count ?? snapshot?.KeyCount,
+                LegacyDecryptOnlyKeyCount = legacyDecryptOnlyKeyCount,
+                Warnings = warnings,
+            };
+        }
+
         private static IReadOnlyList<SecurityDiagnosticWarningDto> BuildWarnings(
             bool isContainer,
             bool isPublicInstance,
@@ -125,7 +169,8 @@ namespace Cotton.Server.Services
             LinuxProcessSecurityDto linuxProcess,
             LinuxContainerSecurityDto linuxContainer,
             AdminTotpDiagnosticsDto adminTotp,
-            DatabaseIntegrityDiagnosticsDto databaseIntegrity)
+            DatabaseIntegrityDiagnosticsDto databaseIntegrity,
+            KeyringDiagnosticsDto keyring)
         {
             var warnings = new List<SecurityDiagnosticWarningDto>();
             AddPublicInstanceWarning(warnings, isPublicInstance);
@@ -136,7 +181,65 @@ namespace Cotton.Server.Services
             AddLinuxContainerWarnings(warnings, isContainer, linuxProcess, linuxContainer);
             AddHardeningWarning(warnings, linuxProcess);
             AddDatabaseIntegrityWarnings(warnings, databaseIntegrity);
+            AddKeyringWarnings(warnings, keyring);
             return warnings;
+        }
+
+        private static void AddKeyringWarnings(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            KeyringDiagnosticsDto keyring)
+        {
+            if (!keyring.Enabled)
+            {
+                warnings.Add(new SecurityDiagnosticWarningDto
+                {
+                    Code = "keyring-v2-disabled",
+                    Severity = "info",
+                    Message = "Keyring v2 is not enabled for this process. New random data keys, replicated keyring state, and unlock-key rotation are not active.",
+                });
+                return;
+            }
+
+            bool diagnosticsFailed = keyring.Warnings.Contains("keyring-diagnostics-failed", StringComparer.Ordinal);
+            if (diagnosticsFailed)
+            {
+                warnings.Add(new SecurityDiagnosticWarningDto
+                {
+                    Code = "keyring-diagnostics-failed",
+                    Severity = "warning",
+                    Message = "Keyring v2 is enabled, but Cotton could not scan the replicated keyring objects for this checkup.",
+                });
+            }
+
+            if (!keyring.Loaded)
+            {
+                warnings.Add(new SecurityDiagnosticWarningDto
+                {
+                    Code = "keyring-not-loaded",
+                    Severity = "critical",
+                    Message = "Keyring v2 is enabled, but no keyring is loaded in the current process. New encryption should not proceed until startup bootstrap succeeds.",
+                });
+            }
+
+            if (!diagnosticsFailed && (!keyring.AccessEnvelopePresent || !keyring.StateSnapshotPresent))
+            {
+                warnings.Add(new SecurityDiagnosticWarningDto
+                {
+                    Code = "keyring-replicas-incomplete",
+                    Severity = "critical",
+                    Message = "Keyring v2 is enabled, but the replicated access envelope or state snapshot is missing from the scanned replicas.",
+                });
+            }
+
+            if (keyring.LegacyDecryptOnlyKeyCount.GetValueOrDefault() > 0)
+            {
+                warnings.Add(new SecurityDiagnosticWarningDto
+                {
+                    Code = "keyring-legacy-debt",
+                    Severity = "warning",
+                    Message = "This keyring still contains legacy decrypt-only keys. Existing legacy chunks remain compatible, but they need re-encryption before the old master key stops being useful for those chunks.",
+                });
+            }
         }
 
         private static void AddDatabaseIntegrityWarnings(
