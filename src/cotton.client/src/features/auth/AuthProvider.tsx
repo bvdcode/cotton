@@ -10,6 +10,7 @@ import { useAuthStore } from "../../shared/store";
 import { useUserPreferencesStore } from "../../shared/store/userPreferencesStore";
 import { resetUserScopedStores } from "../../shared/store/resetUserScopedStores";
 import { JUST_UNLOCKED_STORAGE_KEY } from "./authStorageKeys";
+import { consumeOidcSignInPending } from "./oidcSignInSession";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 const AUTH_RETRY_AFTER_UNLOCK_TIMEOUT_MS = 10000;
@@ -118,7 +119,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const ensureAuth = useCallback(async () => {
     if (isAuthenticated || isInitializing) return;
     if (!hydrated) return;
-    if (!refreshEnabled) {
+    const canRefreshAfterOidcRedirect =
+      !refreshEnabled && consumeOidcSignInPending();
+    if (!refreshEnabled && !canRefreshAfterOidcRedirect) {
       setHasChecked(true);
       return;
     }

@@ -424,7 +424,10 @@ public sealed class OidcAuthenticationService(
         string idToken,
         string nonce)
     {
-        var handler = new JwtSecurityTokenHandler();
+        var handler = new JwtSecurityTokenHandler
+        {
+            MapInboundClaims = false
+        };
         var validationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -461,7 +464,11 @@ public sealed class OidcAuthenticationService(
         ClaimsPrincipal principal,
         OidcUserInfoClaims? userInfo)
     {
-        string subject = ReadRequiredClaim(principal, JwtRegisteredClaimNames.Sub, "OIDC subject is missing.");
+        string subject = ReadRequiredClaim(
+            principal,
+            "OIDC subject is missing.",
+            JwtRegisteredClaimNames.Sub,
+            ClaimTypes.NameIdentifier);
         if (!string.IsNullOrWhiteSpace(userInfo?.Subject)
             && !string.Equals(userInfo.Subject, subject, StringComparison.Ordinal))
         {
@@ -472,18 +479,33 @@ public sealed class OidcAuthenticationService(
         return new(
             issuer,
             subject,
-            FirstNonEmpty(userInfo?.Email, principal.FindFirstValue(JwtRegisteredClaimNames.Email), principal.FindFirstValue("email")),
+            FirstNonEmpty(
+                userInfo?.Email,
+                principal.FindFirstValue(JwtRegisteredClaimNames.Email),
+                principal.FindFirstValue("email"),
+                principal.FindFirstValue(ClaimTypes.Email)),
             userInfo?.EmailVerified ?? ReadBooleanClaim(principal, "email_verified"),
-            FirstNonEmpty(userInfo?.Name, principal.FindFirstValue("name")),
-            FirstNonEmpty(userInfo?.GivenName, principal.FindFirstValue("given_name")),
-            FirstNonEmpty(userInfo?.FamilyName, principal.FindFirstValue("family_name")),
+            FirstNonEmpty(
+                userInfo?.Name,
+                principal.FindFirstValue("name"),
+                principal.FindFirstValue(ClaimTypes.Name)),
+            FirstNonEmpty(
+                userInfo?.GivenName,
+                principal.FindFirstValue("given_name"),
+                principal.FindFirstValue(ClaimTypes.GivenName)),
+            FirstNonEmpty(
+                userInfo?.FamilyName,
+                principal.FindFirstValue("family_name"),
+                principal.FindFirstValue(ClaimTypes.Surname)),
             FirstNonEmpty(userInfo?.Picture, principal.FindFirstValue("picture")),
             FirstNonEmpty(userInfo?.PreferredUsername, principal.FindFirstValue("preferred_username")));
     }
 
-    private static string ReadRequiredClaim(ClaimsPrincipal principal, string type, string error)
+    private static string ReadRequiredClaim(ClaimsPrincipal principal, string error, params string[] types)
     {
-        string? value = principal.FindFirstValue(type);
+        string? value = types
+            .Select(principal.FindFirstValue)
+            .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
         if (string.IsNullOrWhiteSpace(value))
         {
             throw new BadRequestException<OidcProvider>(error);

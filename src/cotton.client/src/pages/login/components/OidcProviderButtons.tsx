@@ -8,6 +8,7 @@ import {
 import LoginIcon from "@mui/icons-material/Login";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { markOidcSignInPending } from "../../../features/auth/oidcSignInSession";
 import { oidcApi, type PublicOidcProviderDto } from "@shared/api/oidcApi";
 import { usePublicOidcProvidersQuery } from "@shared/api/queries/oidc";
 import { toast } from "@shared/ui/notifications";
@@ -89,6 +90,7 @@ const OidcProviderButton = ({
         provider.slug,
         { returnUrl, trustDevice },
       );
+      markOidcSignInPending();
       window.location.assign(authorizationUrl);
     } catch {
       toast.error(t("oidc.errors.startFailed"));

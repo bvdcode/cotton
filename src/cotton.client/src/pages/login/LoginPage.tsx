@@ -15,6 +15,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../features/auth";
+import { clearOidcSignInPending } from "../../features/auth/oidcSignInSession";
 import Loader from "../../shared/ui/Loader";
 import { useServerInfoStore } from "../../shared/store/serverInfoStore";
 import { CredentialsFields } from "./components/CredentialsFields";
@@ -37,6 +38,10 @@ export const LoginPage = () => {
   useEffect(() => {
     fetchServerInfo();
   }, [fetchServerInfo]);
+
+  useEffect(() => {
+    clearOidcSignInPending();
+  }, []);
 
   useEffect(() => {
     if (shouldRestoreSession(auth)) {
