@@ -10,6 +10,7 @@ using Cotton.Server.Mappings;
 using Cotton.Server.Models.Configuration;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using Cotton.Server.Services.KeyManagement;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
@@ -40,16 +41,17 @@ namespace Cotton.Server
 
             CottonEncryptionSettings encryptionSettings;
             MasterKeyRuntimeState masterKeyRuntimeState;
+            string unlockSecret;
             try
             {
-                (encryptionSettings, masterKeyRuntimeState) = await ResolveEncryptionSettingsAsync(args);
+                (encryptionSettings, masterKeyRuntimeState, unlockSecret) = await ResolveEncryptionSettingsAsync(args);
             }
             catch (OperationCanceledException)
             {
                 return;
             }
 
-            await RunApplicationAsync(args, encryptionSettings, masterKeyRuntimeState, processHardeningStatus);
+            await RunApplicationAsync(args, encryptionSettings, masterKeyRuntimeState, unlockSecret, processHardeningStatus);
         }
 
         private static void ConfigureProcessTimeZone()
@@ -60,22 +62,26 @@ namespace Cotton.Server
             TimeZoneInfo.ClearCachedData();
         }
 
-        private static async Task<(CottonEncryptionSettings Settings, MasterKeyRuntimeState RuntimeState)> ResolveEncryptionSettingsAsync(string[] args)
+        private static async Task<(CottonEncryptionSettings Settings, MasterKeyRuntimeState RuntimeState, string UnlockSecret)> ResolveEncryptionSettingsAsync(string[] args)
         {
             string? rootMasterKey = Environment.GetEnvironmentVariable(
                 ConfigurationBuilderExtensions.MasterKeyEnvironmentVariable);
             if (string.IsNullOrEmpty(rootMasterKey))
             {
                 ConfigurationBuilderExtensions.ClearMasterKeyEnvironmentVariable();
-                CottonEncryptionSettings settings = await MasterKeyUnlockServer.WaitForUnlockAsync(args);
-                return (settings, MasterKeyRuntimeState.FromUnlock(IsMasterKeyEnvironmentVariablePresent()));
+                MasterKeyUnlockResult unlock = await MasterKeyUnlockServer.WaitForUnlockAsync(args);
+                return (
+                    unlock.Settings,
+                    MasterKeyRuntimeState.FromUnlock(IsMasterKeyEnvironmentVariablePresent()),
+                    unlock.UnlockSecret);
             }
 
             try
             {
                 return (
                     ConfigurationBuilderExtensions.DeriveEncryptionSettings(rootMasterKey),
-                    MasterKeyRuntimeState.FromEnvironment(environmentVariablePresentAfterResolution: false));
+                    MasterKeyRuntimeState.FromEnvironment(environmentVariablePresentAfterResolution: false),
+                    rootMasterKey);
             }
             finally
             {
@@ -93,10 +99,14 @@ namespace Cotton.Server
             string[] args,
             CottonEncryptionSettings encryptionSettings,
             MasterKeyRuntimeState masterKeyRuntimeState,
+            string unlockSecret,
             ProcessHardeningStatus processHardeningStatus)
         {
             var builder = WebApplication.CreateBuilder(args);
             builder.Configuration.AddCottonOptions(encryptionSettings);
+            KeyringBootstrapResult? keyring = await KeyringStartup.BootstrapIfEnabledAsync(
+                encryptionSettings,
+                unlockSecret);
             if (OperatingSystem.IsWindows() && !builder.Environment.IsProduction())
             {
                 builder.Logging.ClearProviders();
@@ -135,6 +145,11 @@ namespace Cotton.Server
                 options.KnownProxies.Clear();
             });
             builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CottonEncryptionSettings>>().Value);
+            if (keyring is not null)
+            {
+                builder.Services.AddSingleton(keyring);
+            }
+
             builder.Services.AddSingleton(masterKeyRuntimeState);
             builder.Services.AddSingleton(processHardeningStatus);
             builder.Services.AddSingleton(new ApplicationStartupClock(DateTimeOffset.UtcNow));

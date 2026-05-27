@@ -19,9 +19,9 @@ namespace Cotton.Server.Services
         /// <summary>
         /// Waits for for unlock.
         /// </summary>
-        public static async Task<CottonEncryptionSettings> WaitForUnlockAsync(string[] args)
+        public static async Task<MasterKeyUnlockResult> WaitForUnlockAsync(string[] args)
         {
-            var completion = new TaskCompletionSource<CottonEncryptionSettings>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var completion = new TaskCompletionSource<MasterKeyUnlockResult>(TaskCreationOptions.RunContinuationsAsynchronously);
             DateTimeOffset startedAtUtc = DateTimeOffset.UtcNow;
             DateTimeOffset firstUnlockExpiresAtUtc = startedAtUtc.Add(FirstUnlockWindow);
             string bootstrapToken = GenerateBootstrapToken();
@@ -101,7 +101,10 @@ namespace Cotton.Server.Services
                     return Results.BadRequest(new UnlockResponse(false, validation.Error ?? "Unlock failed."));
                 }
 
-                _ = CompleteUnlockAsync(completion, app, encryptionSettings);
+                _ = CompleteUnlockAsync(
+                    completion,
+                    app,
+                    new MasterKeyUnlockResult(encryptionSettings, submitted.MasterKey!));
                 string message = validation.Repaired
                     ? "Master key sentinel repaired. Cotton is starting."
                     : validation.Created
@@ -160,12 +163,12 @@ namespace Cotton.Server.Services
         }
 
         private static async Task CompleteUnlockAsync(
-            TaskCompletionSource<CottonEncryptionSettings> completion,
+            TaskCompletionSource<MasterKeyUnlockResult> completion,
             IHost host,
-            CottonEncryptionSettings encryptionSettings)
+            MasterKeyUnlockResult result)
         {
             await Task.Delay(750);
-            completion.TrySetResult(encryptionSettings);
+            completion.TrySetResult(result);
             await host.StopAsync();
         }
 
@@ -294,4 +297,10 @@ namespace Cotton.Server.Services
         private sealed record UnlockResponse(bool Ok, string Message);
         private sealed record LockedApiResponse(bool Locked, string Message);
     }
+
+    /// <summary>
+    /// Master-key unlock result containing the derived legacy settings and the unlock secret used for keyring slots.
+    /// </summary>
+    public sealed record MasterKeyUnlockResult(CottonEncryptionSettings Settings, string UnlockSecret);
+
 }

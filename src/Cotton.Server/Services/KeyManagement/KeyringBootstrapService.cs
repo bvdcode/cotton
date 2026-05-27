@@ -15,7 +15,7 @@ internal sealed class KeyringBootstrapService(KeyringJournaledObjectStore _store
     public async Task<KeyringBootstrapResult> OpenOrCreateFromV1Async(
         CottonEncryptionSettings legacySettings,
         string unlockSecret,
-        Guid instanceId,
+        Guid? instanceId = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(legacySettings);
@@ -39,7 +39,7 @@ internal sealed class KeyringBootstrapService(KeyringJournaledObjectStore _store
 
     public async Task<KeyringBootstrapResult?> TryOpenLatestAsync(
         string unlockSecret,
-        Guid instanceId,
+        Guid? instanceId = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(unlockSecret);
@@ -89,15 +89,16 @@ internal sealed class KeyringBootstrapService(KeyringJournaledObjectStore _store
     private async Task<KeyringBootstrapResult> CreateInitialFromV1Async(
         CottonEncryptionSettings legacySettings,
         string unlockSecret,
-        Guid instanceId,
+        Guid? instanceId,
         CancellationToken cancellationToken)
     {
+        Guid resolvedInstanceId = instanceId ?? Guid.NewGuid();
         byte[] rootKey = KeyringCryptography.GenerateKeyMaterial();
         try
         {
             KeyringPlainState state = KeyringV1UpgradeBuilder.CreateInitialState(
                 legacySettings,
-                instanceId);
+                resolvedInstanceId);
             KeyringStateSnapshot snapshot = KeyringCryptography.ProtectState(state, rootKey);
             byte[] snapshotBytes = KeyringJson.SerializeToUtf8Bytes(snapshot);
             KeyringObjectPointer statePointer = await _store.CommitAsync(
@@ -107,7 +108,7 @@ internal sealed class KeyringBootstrapService(KeyringJournaledObjectStore _store
                 cancellationToken);
 
             KeyringAccessEnvelope access = KeyringCryptography.CreateLegacyMasterAccessEnvelope(
-                instanceId,
+                resolvedInstanceId,
                 state.KeyringId,
                 state.RootEpoch,
                 generation: 1,
@@ -138,12 +139,12 @@ internal sealed class KeyringBootstrapService(KeyringJournaledObjectStore _store
     }
 
     private static void ValidateOpenedKeyring(
-        Guid expectedInstanceId,
+        Guid? expectedInstanceId,
         KeyringAccessEnvelope access,
         KeyringPlainState state)
     {
-        if (access.InstanceId != expectedInstanceId
-            || state.InstanceId != expectedInstanceId
+        if ((expectedInstanceId.HasValue
+                && (access.InstanceId != expectedInstanceId.Value || state.InstanceId != expectedInstanceId.Value))
             || access.KeyringId != state.KeyringId
             || access.RootEpoch != state.RootEpoch)
         {

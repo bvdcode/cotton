@@ -95,6 +95,76 @@ public class KeyringBootstrapStorageTests
         }
     }
 
+    [Test]
+    public async Task Bootstrap_ReopensExistingKeyring_WithoutExpectedInstanceId()
+    {
+        string root = CreateTempDirectory();
+        var store = new KeyringJournaledObjectStore([new KeyringLocalFileReplica(root)]);
+        var bootstrap = new KeyringBootstrapService(store);
+        CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+
+        KeyringBootstrapResult created = await bootstrap.OpenOrCreateFromV1Async(
+            settings,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        KeyringBootstrapResult reopened = await bootstrap.OpenOrCreateFromV1Async(
+            settings,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(created.Created, Is.True);
+            Assert.That(reopened.Created, Is.False);
+            Assert.That(reopened.State.InstanceId, Is.EqualTo(created.State.InstanceId));
+            Assert.That(reopened.State.KeyringId, Is.EqualTo(created.State.KeyringId));
+        }
+    }
+
+    [Test]
+    [NonParallelizable]
+    public async Task KeyringStartup_BootstrapsOnlyWhenEnabled_AndUsesConfiguredPath()
+    {
+        string root = CreateTempDirectory();
+        string? originalEnabled = Environment.GetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable);
+        string? originalPath = Environment.GetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable);
+        CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+
+        try
+        {
+            Environment.SetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable, null);
+            Environment.SetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable, root);
+            Assert.That(
+                await KeyringStartup.BootstrapIfEnabledAsync(settings, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+                Is.Null);
+
+            Environment.SetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable, "1");
+            KeyringBootstrapResult? created = await KeyringStartup.BootstrapIfEnabledAsync(
+                settings,
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+            KeyringBootstrapResult? reopened = await KeyringStartup.BootstrapIfEnabledAsync(
+                settings,
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(created, Is.Not.Null);
+                Assert.That(created!.Created, Is.True);
+                Assert.That(reopened, Is.Not.Null);
+                Assert.That(reopened!.Created, Is.False);
+                Assert.That(reopened.State.KeyringId, Is.EqualTo(created.State.KeyringId));
+                Assert.That(
+                    Directory.EnumerateFiles(root, "*.head", SearchOption.AllDirectories),
+                    Is.Not.Empty);
+            }
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable, originalEnabled);
+            Environment.SetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable, originalPath);
+        }
+    }
+
     private static string CreateTempDirectory()
     {
         string path = Path.Combine(TestContext.CurrentContext.WorkDirectory, "keyring", Guid.NewGuid().ToString("N"));
