@@ -165,6 +165,53 @@ public class KeyringBootstrapStorageTests
         }
     }
 
+
+    [Test]
+    [NonParallelizable]
+    public async Task KeyringStartup_OpensRotatedLocalKeyring_AndRestoresLegacySettings()
+    {
+        string root = CreateTempDirectory();
+        string? originalEnabled = Environment.GetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable);
+        string? originalPath = Environment.GetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable);
+        string oldUnlock = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        string newUnlock = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(oldUnlock);
+
+        try
+        {
+            Environment.SetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable, "1");
+            Environment.SetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable, root);
+
+            KeyringBootstrapResult? created = await KeyringStartup.BootstrapIfEnabledAsync(
+                settings,
+                oldUnlock);
+            Assert.That(created, Is.Not.Null);
+
+            var store = new KeyringJournaledObjectStore([new KeyringLocalFileReplica(root)]);
+            var rotation = new KeyringRotationService(store);
+            await rotation.RotateLegacyMasterUnlockAsync(oldUnlock, newUnlock);
+
+            KeyringStartupOpenResult openedWithNew = await KeyringStartup.TryOpenLocalIfEnabledAsync(newUnlock);
+            KeyringStartupOpenResult openedWithOld = await KeyringStartup.TryOpenLocalIfEnabledAsync(oldUnlock);
+            CottonEncryptionSettings restored = KeyringV1UpgradeBuilder.CreateLegacySettingsFromState(
+                openedWithNew.Keyring!.State);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(openedWithNew.Status, Is.EqualTo(KeyringStartupOpenStatus.Opened));
+                Assert.That(openedWithOld.Status, Is.EqualTo(KeyringStartupOpenStatus.Failed));
+                Assert.That(restored.MasterEncryptionKey, Is.EqualTo(settings.MasterEncryptionKey));
+                Assert.That(restored.MasterEncryptionKeyId, Is.EqualTo(settings.MasterEncryptionKeyId));
+                Assert.That(restored.Pepper, Is.EqualTo(settings.Pepper));
+            }
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable, originalEnabled);
+            Environment.SetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable, originalPath);
+        }
+    }
+
     private static string CreateTempDirectory()
     {
         string path = Path.Combine(TestContext.CurrentContext.WorkDirectory, "keyring", Guid.NewGuid().ToString("N"));

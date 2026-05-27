@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Storage.Abstractions;
+using System.Security.Cryptography;
 
 namespace Cotton.Server.Services.KeyManagement;
 
@@ -53,6 +54,48 @@ internal static class KeyringStartup
         return await BootstrapAsync([replica], legacySettings, unlockSecret, cancellationToken);
     }
 
+    public static async Task<KeyringStartupOpenResult> TryOpenLocalIfEnabledAsync(
+        string unlockSecret,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsEnabled())
+        {
+            return KeyringStartupOpenResult.Disabled();
+        }
+
+        var replica = new KeyringLocalFileReplica(ResolveLocalReplicaRootPath());
+        if (!await HasAnyKeyringObjectAsync(replica, cancellationToken))
+        {
+            return KeyringStartupOpenResult.NotFound();
+        }
+
+        if (string.IsNullOrWhiteSpace(unlockSecret))
+        {
+            return KeyringStartupOpenResult.Failed("Keyring unlock secret is required.");
+        }
+
+        try
+        {
+            var store = new KeyringJournaledObjectStore([replica]);
+            var bootstrap = new KeyringBootstrapService(store);
+            KeyringBootstrapResult? keyring = await bootstrap.TryOpenLatestAsync(
+                unlockSecret,
+                instanceId: null,
+                cancellationToken);
+            return keyring is null
+                ? KeyringStartupOpenResult.Failed("Keyring objects exist, but no valid keyring head could be opened.")
+                : KeyringStartupOpenResult.Opened(keyring);
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException
+            or CryptographicException
+            or InvalidDataException
+            or FormatException
+            or IOException)
+        {
+            return KeyringStartupOpenResult.Failed(ex.Message);
+        }
+    }
+
     public static async Task<KeyringBootstrapResult?> BootstrapIfEnabledAsync(
         IServiceProvider services,
         CottonEncryptionSettings legacySettings,
@@ -88,6 +131,21 @@ internal static class KeyringStartup
         return replicas;
     }
 
+    private static async Task<bool> HasAnyKeyringObjectAsync(
+        IKeyringObjectReplica replica,
+        CancellationToken cancellationToken)
+    {
+        await foreach (string name in replica.ListNamesAsync(cancellationToken))
+        {
+            if (KeyringObjectNames.IsKeyringObjectName(name))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static async Task<KeyringBootstrapResult> BootstrapAsync(
         IEnumerable<IKeyringObjectReplica> replicas,
         CottonEncryptionSettings legacySettings,
@@ -102,4 +160,38 @@ internal static class KeyringStartup
             instanceId: null,
             cancellationToken);
     }
+}
+
+internal enum KeyringStartupOpenStatus
+{
+    Disabled,
+    NotFound,
+    Opened,
+    Failed
+}
+
+internal sealed record KeyringStartupOpenResult(
+    KeyringStartupOpenStatus Status,
+    KeyringBootstrapResult? Keyring,
+    string? Error)
+{
+    public static KeyringStartupOpenResult Disabled() => new(
+        KeyringStartupOpenStatus.Disabled,
+        Keyring: null,
+        Error: null);
+
+    public static KeyringStartupOpenResult NotFound() => new(
+        KeyringStartupOpenStatus.NotFound,
+        Keyring: null,
+        Error: null);
+
+    public static KeyringStartupOpenResult Opened(KeyringBootstrapResult keyring) => new(
+        KeyringStartupOpenStatus.Opened,
+        keyring,
+        Error: null);
+
+    public static KeyringStartupOpenResult Failed(string error) => new(
+        KeyringStartupOpenStatus.Failed,
+        Keyring: null,
+        Error: error);
 }

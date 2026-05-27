@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Autoconfig.Extensions;
+using Cotton.Server.Services.KeyManagement;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -77,6 +78,25 @@ namespace Cotton.Server.Services
                 if (bootstrapError is not null)
                 {
                     return bootstrapError;
+                }
+
+                KeyringStartupOpenResult keyringOpen = await KeyringStartup.TryOpenLocalIfEnabledAsync(
+                    submitted.MasterKey ?? string.Empty,
+                    context.RequestAborted);
+                if (keyringOpen.Status == KeyringStartupOpenStatus.Opened && keyringOpen.Keyring is not null)
+                {
+                    CottonEncryptionSettings keyringSettings = KeyringV1UpgradeBuilder.CreateLegacySettingsFromState(
+                        keyringOpen.Keyring.State);
+                    _ = CompleteUnlockAsync(
+                        completion,
+                        app,
+                        new MasterKeyUnlockResult(keyringSettings, submitted.MasterKey!, KeyringBacked: true));
+                    return Results.Ok(new UnlockResponse(true, "Keyring unlocked. Cotton is starting."));
+                }
+
+                if (keyringOpen.Status == KeyringStartupOpenStatus.Failed)
+                {
+                    return Results.BadRequest(new UnlockResponse(false, keyringOpen.Error ?? "Keyring unlock failed."));
                 }
 
                 CottonEncryptionSettings encryptionSettings;
@@ -301,6 +321,6 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Master-key unlock result containing the derived legacy settings and the unlock secret used for keyring slots.
     /// </summary>
-    public sealed record MasterKeyUnlockResult(CottonEncryptionSettings Settings, string UnlockSecret);
+    public sealed record MasterKeyUnlockResult(CottonEncryptionSettings Settings, string UnlockSecret, bool KeyringBacked = false);
 
 }

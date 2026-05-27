@@ -229,6 +229,12 @@ internal static partial class KeyringObjectNames
         return $"{Prefix}/latest/{segment}.json";
     }
 
+    public static bool IsKeyringObjectName(string name)
+    {
+        return !string.IsNullOrWhiteSpace(name)
+            && name.Replace('\\', '/').TrimStart('/').StartsWith(Prefix + "/", StringComparison.Ordinal);
+    }
+
     public static bool TryParseHeadName(
         string name,
         KeyringObjectKind expectedKind,

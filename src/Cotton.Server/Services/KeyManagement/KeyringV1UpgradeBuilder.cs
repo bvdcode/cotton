@@ -96,6 +96,47 @@ internal static class KeyringV1UpgradeBuilder
             Keys: keys);
     }
 
+    public static CottonEncryptionSettings CreateLegacySettingsFromState(
+        KeyringPlainState state,
+        int encryptionThreads = 0)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        string masterEncryptionKey = GetLegacyMaterial(
+            state,
+            KeyringKeyPurpose.ChunkAead,
+            LegacyKeyId);
+        string pepper = GetLegacyMaterial(
+            state,
+            KeyringKeyPurpose.PasswordPepper,
+            LegacyPasswordPepperKeyId);
+
+        return new CottonEncryptionSettings
+        {
+            MasterEncryptionKey = masterEncryptionKey,
+            MasterEncryptionKeyId = LegacyKeyId,
+            Pepper = pepper,
+            EncryptionThreads = encryptionThreads,
+        };
+    }
+
+    private static string GetLegacyMaterial(
+        KeyringPlainState state,
+        KeyringKeyPurpose purpose,
+        int keyId)
+    {
+        KeyringKeyRecord? key = state.Keys.FirstOrDefault(x =>
+            x.Id == keyId
+            && x.Purpose == purpose
+            && x.Origin == KeyringKeyOrigin.LegacyV1MasterDerived);
+        if (key is null || string.IsNullOrWhiteSpace(key.MaterialBase64))
+        {
+            throw new InvalidDataException($"Keyring state does not contain legacy {purpose} key material.");
+        }
+
+        _ = Convert.FromBase64String(key.MaterialBase64);
+        return key.MaterialBase64;
+    }
+
     private static KeyringKeyRecord CreateLegacyKey(
         int id,
         KeyringKeyPurpose purpose,

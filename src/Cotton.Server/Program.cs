@@ -72,12 +72,28 @@ namespace Cotton.Server
                 MasterKeyUnlockResult unlock = await MasterKeyUnlockServer.WaitForUnlockAsync(args);
                 return (
                     unlock.Settings,
-                    MasterKeyRuntimeState.FromUnlock(IsMasterKeyEnvironmentVariablePresent()),
+                    unlock.KeyringBacked
+                        ? MasterKeyRuntimeState.FromKeyringUnlock(IsMasterKeyEnvironmentVariablePresent())
+                        : MasterKeyRuntimeState.FromUnlock(IsMasterKeyEnvironmentVariablePresent()),
                     unlock.UnlockSecret);
             }
 
             try
             {
+                KeyringStartupOpenResult keyringOpen = await KeyringStartup.TryOpenLocalIfEnabledAsync(rootMasterKey);
+                if (keyringOpen.Status == KeyringStartupOpenStatus.Opened && keyringOpen.Keyring is not null)
+                {
+                    return (
+                        KeyringV1UpgradeBuilder.CreateLegacySettingsFromState(keyringOpen.Keyring.State),
+                        MasterKeyRuntimeState.FromKeyringEnvironment(environmentVariablePresentAfterResolution: false),
+                        rootMasterKey);
+                }
+
+                if (keyringOpen.Status == KeyringStartupOpenStatus.Failed)
+                {
+                    throw new InvalidOperationException(keyringOpen.Error ?? "Keyring unlock failed.");
+                }
+
                 return (
                     ConfigurationBuilderExtensions.DeriveEncryptionSettings(rootMasterKey),
                     MasterKeyRuntimeState.FromEnvironment(environmentVariablePresentAfterResolution: false),

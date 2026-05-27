@@ -26,5 +26,21 @@ namespace Cotton.Server.Services
             "Environment",
             true,
             environmentVariablePresentAfterResolution);
+
+        /// <summary>
+        /// Creates runtime state for a keyring-backed interactive unlock.
+        /// </summary>
+        public static MasterKeyRuntimeState FromKeyringUnlock(bool environmentVariablePresentAfterResolution) => new(
+            "KeyringUnlock",
+            false,
+            environmentVariablePresentAfterResolution);
+
+        /// <summary>
+        /// Creates runtime state for a keyring-backed environment unlock.
+        /// </summary>
+        public static MasterKeyRuntimeState FromKeyringEnvironment(bool environmentVariablePresentAfterResolution) => new(
+            "KeyringEnvironment",
+            true,
+            environmentVariablePresentAfterResolution);
     }
 }
