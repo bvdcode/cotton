@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton.Database;
+using Cotton.Storage.Abstractions;
+
 namespace Cotton.Server.Services.KeyManagement;
 
 /// <summary>
-/// Startup helpers for opt-in keyring v2 runtime wiring.
+/// Startup helpers for keyring v2 runtime wiring.
 /// </summary>
 internal static class KeyringStartup
 {
@@ -47,7 +50,46 @@ internal static class KeyringStartup
         }
 
         var replica = new KeyringLocalFileReplica(ResolveLocalReplicaRootPath());
-        var store = new KeyringJournaledObjectStore([replica]);
+        return await BootstrapAsync([replica], legacySettings, unlockSecret, cancellationToken);
+    }
+
+    public static async Task<KeyringBootstrapResult?> BootstrapIfEnabledAsync(
+        IServiceProvider services,
+        CottonEncryptionSettings legacySettings,
+        string unlockSecret,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        if (!IsEnabled())
+        {
+            return null;
+        }
+
+        List<IKeyringObjectReplica> replicas = [new KeyringLocalFileReplica(ResolveLocalReplicaRootPath())];
+
+        CottonDbContext? dbContext = services.GetService<CottonDbContext>();
+        if (dbContext is not null)
+        {
+            replicas.Add(new KeyringDatabaseReplica(dbContext));
+        }
+
+        IStorageBackendProvider? backendProvider = services.GetService<IStorageBackendProvider>();
+        if (backendProvider is not null)
+        {
+            IStorageBackend backend = backendProvider.GetBackend();
+            replicas.Add(new KeyringStorageBackendReplica(backend, listByScanning: false));
+        }
+
+        return await BootstrapAsync(replicas, legacySettings, unlockSecret, cancellationToken);
+    }
+
+    private static async Task<KeyringBootstrapResult> BootstrapAsync(
+        IEnumerable<IKeyringObjectReplica> replicas,
+        CottonEncryptionSettings legacySettings,
+        string unlockSecret,
+        CancellationToken cancellationToken)
+    {
+        var store = new KeyringJournaledObjectStore(replicas);
         var bootstrap = new KeyringBootstrapService(store);
         return await bootstrap.OpenOrCreateFromV1Async(
             legacySettings,

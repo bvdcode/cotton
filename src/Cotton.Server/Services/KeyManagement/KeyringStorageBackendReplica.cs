@@ -10,12 +10,21 @@ namespace Cotton.Server.Services.KeyManagement;
 /// <summary>
 /// Object-storage replica for small encrypted keyring system objects.
 /// </summary>
-internal sealed class KeyringStorageBackendReplica(IStorageBackend _backend, string? _name = null) : IKeyringObjectReplica
+internal sealed class KeyringStorageBackendReplica : IKeyringObjectReplica
 {
     private const string PayloadMagic = "cotton.keyring-storage-replica.v2";
     private const string UidPurpose = "cotton/keyring-storage-replica/v2|";
+    private readonly IStorageBackend _backend;
+    private readonly bool _listByScanning;
 
-    public string Name { get; } = string.IsNullOrWhiteSpace(_name) ? "object-storage" : _name;
+    public KeyringStorageBackendReplica(IStorageBackend backend, string? name = null, bool listByScanning = true)
+    {
+        _backend = backend;
+        _listByScanning = listByScanning;
+        Name = string.IsNullOrWhiteSpace(name) ? "object-storage" : name;
+    }
+
+    public string Name { get; }
 
     public async Task WriteAsync(string name, byte[] bytes, CancellationToken cancellationToken = default)
     {
@@ -59,6 +68,11 @@ internal sealed class KeyringStorageBackendReplica(IStorageBackend _backend, str
     public async IAsyncEnumerable<string> ListNamesAsync(
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        if (!_listByScanning)
+        {
+            yield break;
+        }
+
         await foreach (string uid in _backend.ListAllKeysAsync(cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();

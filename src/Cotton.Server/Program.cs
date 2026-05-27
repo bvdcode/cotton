@@ -95,6 +95,27 @@ namespace Cotton.Server
                 ConfigurationBuilderExtensions.MasterKeyEnvironmentVariable));
         }
 
+        private static async Task BootstrapKeyringAsync(
+            WebApplication app,
+            CottonEncryptionSettings encryptionSettings,
+            string unlockSecret)
+        {
+            if (!KeyringStartup.IsEnabled())
+            {
+                return;
+            }
+
+            using IServiceScope scope = app.Services.CreateScope();
+            KeyringBootstrapResult? keyring = await KeyringStartup.BootstrapIfEnabledAsync(
+                scope.ServiceProvider,
+                encryptionSettings,
+                unlockSecret);
+            if (keyring is not null)
+            {
+                scope.ServiceProvider.GetRequiredService<KeyringRuntimeState>().Set(keyring);
+            }
+        }
+
         private static async Task RunApplicationAsync(
             string[] args,
             CottonEncryptionSettings encryptionSettings,
@@ -104,9 +125,6 @@ namespace Cotton.Server
         {
             var builder = WebApplication.CreateBuilder(args);
             builder.Configuration.AddCottonOptions(encryptionSettings);
-            KeyringBootstrapResult? keyring = await KeyringStartup.BootstrapIfEnabledAsync(
-                encryptionSettings,
-                unlockSecret);
             if (OperatingSystem.IsWindows() && !builder.Environment.IsProduction())
             {
                 builder.Logging.ClearProviders();
@@ -145,11 +163,7 @@ namespace Cotton.Server
                 options.KnownProxies.Clear();
             });
             builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CottonEncryptionSettings>>().Value);
-            if (keyring is not null)
-            {
-                builder.Services.AddSingleton(keyring);
-            }
-
+            builder.Services.AddSingleton<KeyringRuntimeState>();
             builder.Services.AddSingleton(masterKeyRuntimeState);
             builder.Services.AddSingleton(processHardeningStatus);
             builder.Services.AddSingleton(new ApplicationStartupClock(DateTimeOffset.UtcNow));
@@ -231,6 +245,7 @@ namespace Cotton.Server
             app.MapControllers();
             app.MapFallbackToFile("/index.html");
             app.ApplyMigrations<CottonDbContext>();
+            await BootstrapKeyringAsync(app, encryptionSettings, unlockSecret);
             await app.ApplyDatabaseIntegrityBridgeBackfillAsync();
             using (IServiceScope scope = app.Services.CreateScope())
             {

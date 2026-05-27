@@ -28,13 +28,14 @@ namespace Cotton.Server.Extensions
             services.AddScoped<IKeyringPurposeCipherFactory>(sp =>
             {
                 var settings = sp.GetRequiredService<CottonEncryptionSettings>();
-                return new KeyringPurposeCipherFactory(settings, sp.GetService<KeyringBootstrapResult>());
+                KeyringBootstrapResult? keyring = ResolveKeyring(sp);
+                return new KeyringPurposeCipherFactory(settings, keyring);
             });
 
             return services.AddScoped<IStreamCipher>(sp =>
             {
                 var settings = sp.GetRequiredService<CottonEncryptionSettings>();
-                KeyringBootstrapResult? keyring = sp.GetService<KeyringBootstrapResult>();
+                KeyringBootstrapResult? keyring = ResolveKeyring(sp);
                 if (keyring is not null)
                 {
                     return StreamCipherFactory.Create(
@@ -45,6 +46,12 @@ namespace Cotton.Server.Extensions
 
                 return StreamCipherFactory.Create(settings, SettingsProvider.GetCachedEncryptionThreads());
             });
+        }
+
+        private static KeyringBootstrapResult? ResolveKeyring(IServiceProvider services)
+        {
+            return services.GetService<KeyringRuntimeState>()?.Current
+                ?? services.GetService<KeyringBootstrapResult>();
         }
 
         /// <summary>
@@ -76,15 +83,10 @@ namespace Cotton.Server.Extensions
         public static IServiceCollection AddDatabaseIntegrity(this IServiceCollection services)
         {
             services.AddSingleton<IDatabaseIntegrityKeyProvider>(sp =>
-            {
-                KeyringBootstrapResult? keyring = sp.GetService<KeyringBootstrapResult>();
-                if (keyring is not null)
-                {
-                    return new KeyringDatabaseIntegrityKeyProvider(keyring.State);
-                }
-
-                return new DatabaseIntegrityKeyProvider(sp.GetRequiredService<CottonEncryptionSettings>());
-            });
+                new KeyringAwareDatabaseIntegrityKeyProvider(
+                    sp.GetRequiredService<CottonEncryptionSettings>(),
+                    sp.GetService<KeyringRuntimeState>(),
+                    sp.GetService<KeyringBootstrapResult>()));
             services.AddSingleton<IDatabaseIntegrityProtector, DatabaseIntegrityProtector>();
             services.AddSingleton<IDatabaseIntegrityDescriptorRegistry, DatabaseIntegrityDescriptorRegistry>();
             services.AddScoped<IDatabaseIntegrityChangeSigner, DatabaseIntegrityChangeSigner>();
