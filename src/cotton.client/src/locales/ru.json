@@ -1843,6 +1843,26 @@
       "errors": {
         "loadFailed": "Не удалось загрузить диагностику безопасности."
       },
+      "actions": {
+        "rotateUnlock": "Сменить unlock secret"
+      },
+      "rotateUnlock": {
+        "title": "Смена unlock secret",
+        "current": "Текущий unlock secret",
+        "next": "Новый unlock secret",
+        "confirm": "Повторите новый secret",
+        "generate": "Сгенерировать",
+        "cancel": "Отмена",
+        "submit": "Сменить",
+        "saving": "Смена...",
+        "success": "Keyring переведён на root epoch {{rootEpoch}}.",
+        "errors": {
+          "required": "Введите текущий и новый unlock secret.",
+          "mismatch": "Новый unlock secret и подтверждение не совпадают.",
+          "same": "Новый unlock secret должен отличаться от текущего.",
+          "failed": "Не удалось сменить unlock secret keyring."
+        }
+      },
       "severity": {
         "critical": "Критично",
         "warning": "Внимание",

@@ -1,22 +1,30 @@
 import {
   Alert,
   Box,
+  Button,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
   LinearProgress,
   Skeleton,
   Stack,
+  TextField,
   Typography,
   type AlertColor,
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import KeyIcon from "@mui/icons-material/VpnKey";
 import SecurityIcon from "@mui/icons-material/Security";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import type { ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { getApiErrorMessage } from "../../../shared/api/httpClient";
 import {
+  useRotateKeyringUnlockMutation,
   useSecurityDiagnosticsQuery,
 } from "../../../shared/api/queries/admin";
 import type {
@@ -25,6 +33,7 @@ import type {
   SecurityDiagnosticsDto,
 } from "../../../shared/api/adminApi";
 import { AdminPageSurface } from "../components/AdminPageSurface";
+import { toast } from "../../../shared/ui/notifications";
 
 const knownThreatVectorCodes = new Set([
   "public-instance",
@@ -224,18 +233,24 @@ const DiagnosticsSection = ({
 interface SecurityDiagnosticsContentProps {
   diagnostics: SecurityDiagnosticsDto;
   t: TFunction<"admin">;
+  onRotateUnlock: () => void;
 }
 
 const SecurityDiagnosticsContent = ({
   diagnostics,
   t,
+  onRotateUnlock,
 }: SecurityDiagnosticsContentProps) => (
   <Stack spacing={3} divider={<Divider flexItem />}>
     <SecurityScoreSummary diagnostics={diagnostics} t={t} />
     <SecurityRiskSection warnings={diagnostics.warnings} t={t} />
     <InstanceDiagnosticsSection diagnostics={diagnostics} t={t} />
     <MasterKeyDiagnosticsSection diagnostics={diagnostics} t={t} />
-    <KeyringDiagnosticsSection diagnostics={diagnostics} t={t} />
+    <KeyringDiagnosticsSection
+      diagnostics={diagnostics}
+      t={t}
+      onRotateUnlock={onRotateUnlock}
+    />
     <MemoryDiagnosticsSection diagnostics={diagnostics} t={t} />
     <ContainerDiagnosticsSection diagnostics={diagnostics} t={t} />
     <RuntimeDiagnosticsSection diagnostics={diagnostics} t={t} />
@@ -451,10 +466,15 @@ const MasterKeyDiagnosticsSection = ({
   </DiagnosticsSection>
 );
 
+type KeyringDiagnosticsSectionProps = DiagnosticsContentSectionProps & {
+  onRotateUnlock: () => void;
+};
+
 const KeyringDiagnosticsSection = ({
   diagnostics,
   t,
-}: DiagnosticsContentSectionProps) => (
+  onRotateUnlock,
+}: KeyringDiagnosticsSectionProps) => (
   <DiagnosticsSection title={t("securityDiagnostics.sections.keyring")}>
     <DiagnosticsRow
       label={t("securityDiagnostics.fields.keyringEnabled")}
@@ -520,6 +540,18 @@ const KeyringDiagnosticsSection = ({
           : "success"
       }
     />
+    {diagnostics.keyring.enabled && diagnostics.keyring.loaded && (
+      <Box>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<KeyIcon fontSize="small" />}
+          onClick={onRotateUnlock}
+        >
+          {t("securityDiagnostics.actions.rotateUnlock")}
+        </Button>
+      </Box>
+    )}
   </DiagnosticsSection>
 );
 
@@ -696,9 +728,167 @@ const RuntimeDiagnosticsSection = ({
   </DiagnosticsSection>
 );
 
+const generateUnlockSecret = () => {
+  const bytes = new Uint8Array(24);
+  globalThis.crypto.getRandomValues(bytes);
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+};
+
+type KeyringRotateUnlockDialogProps = {
+  open: boolean;
+  onClose: () => void;
+};
+
+const KeyringRotateUnlockDialog = ({
+  open,
+  onClose,
+}: KeyringRotateUnlockDialogProps) => {
+  const { t } = useTranslation("admin");
+  const rotateMutation = useRotateKeyringUnlockMutation();
+  const [currentUnlockSecret, setCurrentUnlockSecret] = useState("");
+  const [newUnlockSecret, setNewUnlockSecret] = useState("");
+  const [confirmUnlockSecret, setConfirmUnlockSecret] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const rotating = rotateMutation.isPending;
+  const canSubmit =
+    currentUnlockSecret.trim().length > 0 &&
+    newUnlockSecret.trim().length > 0 &&
+    confirmUnlockSecret.trim().length > 0 &&
+    !rotating;
+
+  const resetAndClose = () => {
+    if (rotating) {
+      return;
+    }
+
+    setCurrentUnlockSecret("");
+    setNewUnlockSecret("");
+    setConfirmUnlockSecret("");
+    setError(null);
+    onClose();
+  };
+
+  const handleGenerate = () => {
+    const generated = generateUnlockSecret();
+    setNewUnlockSecret(generated);
+    setConfirmUnlockSecret(generated);
+    setError(null);
+  };
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    const current = currentUnlockSecret.trim();
+    const next = newUnlockSecret.trim();
+    const confirmation = confirmUnlockSecret.trim();
+    if (!current || !next || !confirmation) {
+      setError(t("securityDiagnostics.rotateUnlock.errors.required"));
+      return;
+    }
+
+    if (next !== confirmation) {
+      setError(t("securityDiagnostics.rotateUnlock.errors.mismatch"));
+      return;
+    }
+
+    if (current === next) {
+      setError(t("securityDiagnostics.rotateUnlock.errors.same"));
+      return;
+    }
+
+    try {
+      const result = await rotateMutation.mutateAsync({
+        currentUnlockSecret: current,
+        newUnlockSecret: next,
+      });
+      toast.success(
+        t("securityDiagnostics.rotateUnlock.success", {
+          rootEpoch: result.rootEpoch,
+        }),
+        { toastId: "admin:keyring:rotate-unlock:success" },
+      );
+      resetAndClose();
+    } catch (apiError) {
+      setError(
+        getApiErrorMessage(apiError) ??
+          t("securityDiagnostics.rotateUnlock.errors.failed"),
+      );
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={resetAndClose} maxWidth="xs" fullWidth>
+      <DialogTitle>{t("securityDiagnostics.rotateUnlock.title")}</DialogTitle>
+      <DialogContent dividers>
+        <Box component="form" id="keyring-rotate-unlock-form" onSubmit={handleSubmit}>
+          <Stack spacing={2} pt={0.5}>
+            {error && <Alert severity="error">{error}</Alert>}
+            <TextField
+              label={t("securityDiagnostics.rotateUnlock.current")}
+              type="password"
+              value={currentUnlockSecret}
+              onChange={(event) => setCurrentUnlockSecret(event.target.value)}
+              autoComplete="current-password"
+              disabled={rotating}
+              fullWidth
+            />
+            <TextField
+              label={t("securityDiagnostics.rotateUnlock.next")}
+              type="password"
+              value={newUnlockSecret}
+              onChange={(event) => setNewUnlockSecret(event.target.value)}
+              autoComplete="new-password"
+              disabled={rotating}
+              fullWidth
+            />
+            <TextField
+              label={t("securityDiagnostics.rotateUnlock.confirm")}
+              type="password"
+              value={confirmUnlockSecret}
+              onChange={(event) => setConfirmUnlockSecret(event.target.value)}
+              autoComplete="new-password"
+              disabled={rotating}
+              fullWidth
+            />
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<KeyIcon fontSize="small" />}
+              onClick={handleGenerate}
+              disabled={rotating}
+              sx={{ alignSelf: "flex-start" }}
+            >
+              {t("securityDiagnostics.rotateUnlock.generate")}
+            </Button>
+          </Stack>
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={resetAndClose} disabled={rotating}>
+          {t("securityDiagnostics.rotateUnlock.cancel")}
+        </Button>
+        <Button
+          type="submit"
+          form="keyring-rotate-unlock-form"
+          variant="contained"
+          disabled={!canSubmit}
+        >
+          {rotating
+            ? t("securityDiagnostics.rotateUnlock.saving")
+            : t("securityDiagnostics.rotateUnlock.submit")}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 export const AdminSecurityDiagnosticsPage = () => {
   const { t } = useTranslation("admin");
   const diagnosticsQuery = useSecurityDiagnosticsQuery();
+  const [rotationOpen, setRotationOpen] = useState(false);
   const loadError = diagnosticsQuery.isError
     ? getApiErrorMessage(diagnosticsQuery.error) ??
       t("securityDiagnostics.errors.loadFailed")
@@ -734,10 +924,15 @@ export const AdminSecurityDiagnosticsPage = () => {
             <SecurityDiagnosticsContent
               diagnostics={diagnosticsQuery.data}
               t={t}
+              onRotateUnlock={() => setRotationOpen(true)}
             />
           )}
         </Stack>
       </AdminPageSurface>
+      <KeyringRotateUnlockDialog
+        open={rotationOpen}
+        onClose={() => setRotationOpen(false)}
+      />
     </Stack>
   );
 };

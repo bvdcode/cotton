@@ -2032,6 +2032,26 @@
       "errors": {
         "loadFailed": "Failed to load security diagnostics."
       },
+      "actions": {
+        "rotateUnlock": "Rotate unlock secret"
+      },
+      "rotateUnlock": {
+        "title": "Rotate unlock secret",
+        "current": "Current unlock secret",
+        "next": "New unlock secret",
+        "confirm": "Confirm new secret",
+        "generate": "Generate",
+        "cancel": "Cancel",
+        "submit": "Rotate",
+        "saving": "Rotating...",
+        "success": "Keyring rotated to root epoch {{rootEpoch}}.",
+        "errors": {
+          "required": "Enter the current and new unlock secrets.",
+          "mismatch": "The new unlock secret does not match its confirmation.",
+          "same": "The new unlock secret must be different.",
+          "failed": "Failed to rotate the keyring unlock secret."
+        }
+      },
       "severity": {
         "critical": "Critical",
         "warning": "Warning",

@@ -152,6 +152,17 @@ export interface KeyringDiagnosticsDto {
   warnings: string[];
 }
 
+export interface KeyringRotateUnlockRequestDto {
+  currentUnlockSecret: string;
+  newUnlockSecret: string;
+}
+
+export interface KeyringRotateUnlockResponseDto {
+  rootEpoch: number;
+  accessGeneration: number;
+  stateGeneration: number;
+}
+
 export interface SecurityDiagnosticsDto {
   operatingSystem: string;
   isLinux: boolean;
@@ -242,6 +253,16 @@ export const adminApi = {
     const response = await httpClient.get<SecurityDiagnosticsDto>(
       "server/security/status",
       { signal },
+    );
+    return response.data;
+  },
+
+  rotateKeyringUnlock: async (
+    request: KeyringRotateUnlockRequestDto,
+  ): Promise<KeyringRotateUnlockResponseDto> => {
+    const response = await httpClient.post<KeyringRotateUnlockResponseDto>(
+      "server/keyring/rotate-unlock",
+      request,
     );
     return response.data;
   },
