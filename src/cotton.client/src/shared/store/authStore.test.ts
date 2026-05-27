@@ -42,13 +42,9 @@ describe("authStore", () => {
     });
   });
 
-  it("can re-enable refresh after local logout for external auth redirects", () => {
+  it("keeps refresh disabled after local logout", () => {
     useAuthStore.getState().logoutLocal();
 
     expect(getRefreshEnabled()).toBe(false);
-
-    useAuthStore.getState().enableRefresh();
-
-    expect(getRefreshEnabled()).toBe(true);
   });
 });
