@@ -37,7 +37,7 @@ public sealed class AuthSessionIssuer(
     private const string UnknownGeoLabel = "Unknown";
     private const string DemoGeoLabel = "Demo";
 
-    /// <summary>Creates auth cookies and returns the API token response.</summary>
+    /// <summary>Creates a refresh cookie and returns the API token response.</summary>
     public async Task<TokenPairResponseDto> SignInAsync(
         User user,
         bool trustDevice,
@@ -49,7 +49,6 @@ public sealed class AuthSessionIssuer(
         await _dbContext.RefreshTokens.AddAsync(dbToken, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
         AddRefreshTokenToCookies(refreshToken, trustDevice);
-        AddAccessTokenToCookies(accessToken);
 
         HttpRequest request = GetRequest();
         await _notifications.SendSuccessfulLoginAsync(
@@ -120,18 +119,6 @@ public sealed class AuthSessionIssuer(
             HttpOnly = true,
             SameSite = SameSiteMode.Strict,
             Expires = DateTimeOffset.UtcNow.AddHours(trustDevice ? yearHours : sessionTimeoutHours)
-        });
-    }
-
-    /// <summary>Adds the access token to the current response cookies.</summary>
-    public void AddAccessTokenToCookies(string accessToken)
-    {
-        GetResponse().Cookies.Append(AuthController.CookieAccessTokenKey, accessToken, new CookieOptions
-        {
-            Secure = true,
-            HttpOnly = true,
-            SameSite = SameSiteMode.Strict,
-            Expires = DateTimeOffset.UtcNow.Add(_tokens.TokenLifetime)
         });
     }
 

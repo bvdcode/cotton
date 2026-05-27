@@ -23,6 +23,15 @@ export interface OidcProviderDto extends BaseDto<string> {
   syncAvatar: boolean;
 }
 
+export interface OidcAuthorizationUrlDto {
+  authorizationUrl: string;
+}
+
+export interface OidcAuthorizationRequestDto {
+  returnUrl: string | null;
+  trustDevice: boolean;
+}
+
 export interface UserExternalIdentityDto extends BaseDto<string> {
   providerId: string;
   providerName: string;
@@ -71,20 +80,7 @@ const normalizeProviderRequest = (
   ),
 });
 
-const buildOidcRedirectUrl = (
-  path: string,
-  params: Record<string, string | boolean | null | undefined>,
-): string => {
-  const query = new URLSearchParams();
-
-  Object.entries(params).forEach(([key, value]) => {
-    if (value === null || value === undefined || value === "") return;
-    query.set(key, String(value));
-  });
-
-  const suffix = query.toString();
-  return suffix.length > 0 ? `${path}?${suffix}` : path;
-};
+const normalizeReturnUrl = (returnUrl: string): string => returnUrl.trim();
 
 export const oidcApi = {
   listPublicProviders: async (): Promise<PublicOidcProviderDto[]> => {
@@ -137,19 +133,31 @@ export const oidcApi = {
     await httpClient.delete(`auth/oidc/links/${encodeURIComponent(identityId)}`);
   },
 
-  buildSignInUrl: (
+  createSignInAuthorizationUrl: async (
+    providerSlug: string,
+    request: OidcAuthorizationRequestDto,
+  ): Promise<string> => {
+    const response = await httpClient.post<OidcAuthorizationUrlDto>(
+      `auth/oidc/start/${encodeURIComponent(providerSlug)}/authorization-url`,
+      {
+        returnUrl: request.returnUrl ? normalizeReturnUrl(request.returnUrl) : null,
+        trustDevice: request.trustDevice,
+      },
+    );
+    return response.data.authorizationUrl;
+  },
+
+  createLinkAuthorizationUrl: async (
     providerSlug: string,
     returnUrl: string,
-    trustDevice: boolean,
-  ): string =>
-    buildOidcRedirectUrl(
-      `/api/v1/auth/oidc/start/${encodeURIComponent(providerSlug)}`,
-      { returnUrl, trustDevice },
-    ),
-
-  buildLinkUrl: (providerSlug: string, returnUrl: string): string =>
-    buildOidcRedirectUrl(
-      `/api/v1/auth/oidc/link/${encodeURIComponent(providerSlug)}`,
-      { returnUrl },
-    ),
+  ): Promise<string> => {
+    const response = await httpClient.post<OidcAuthorizationUrlDto>(
+      `auth/oidc/link/${encodeURIComponent(providerSlug)}/authorization-url`,
+      {
+        returnUrl: normalizeReturnUrl(returnUrl),
+        trustDevice: false,
+      },
+    );
+    return response.data.authorizationUrl;
+  },
 };

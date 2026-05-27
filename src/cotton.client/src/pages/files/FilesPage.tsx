@@ -550,7 +550,6 @@ export const FilesPage: React.FC = () => {
             {t("common:actions.undo")}
           </Button>
         ),
-        position: "bottom-center",
       });
     },
     [fileOps, handleRestoreLightboxFile, t],

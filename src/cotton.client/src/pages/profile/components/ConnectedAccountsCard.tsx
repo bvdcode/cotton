@@ -44,6 +44,7 @@ export const ConnectedAccountsCard = () => {
   const providersQuery = usePublicOidcProvidersQuery();
   const unlinkMutation = useUnlinkOidcIdentityMutation();
   const [error, setError] = useState<string | null>(null);
+  const [linkingSlug, setLinkingSlug] = useState<string | null>(null);
 
   const links = useMemo(() => linksQuery.data ?? [], [linksQuery.data]);
   const providers = useMemo(
@@ -61,8 +62,19 @@ export const ConnectedAccountsCard = () => {
   const loading = linksQuery.isLoading || providersQuery.isLoading;
   const loadFailed = linksQuery.isError || providersQuery.isError;
 
-  const handleLink = (providerSlug: string) => {
-    window.location.assign(oidcApi.buildLinkUrl(providerSlug, "/settings"));
+  const handleLink = async (providerSlug: string) => {
+    setError(null);
+    setLinkingSlug(providerSlug);
+    try {
+      const authorizationUrl = await oidcApi.createLinkAuthorizationUrl(
+        providerSlug,
+        "/settings",
+      );
+      window.location.assign(authorizationUrl);
+    } catch {
+      setError(t("connectedAccounts.errors.linkFailed"));
+      setLinkingSlug(null);
+    }
   };
 
   const handleUnlink = async (identity: UserExternalIdentityDto) => {
@@ -128,17 +140,27 @@ export const ConnectedAccountsCard = () => {
 
             {linkableProviders.length > 0 && (
               <Stack direction="row" flexWrap="wrap" gap={1}>
-                {linkableProviders.map((provider) => (
-                  <Button
-                    key={provider.slug}
-                    type="button"
-                    variant="outlined"
-                    startIcon={<LoginIcon />}
-                    onClick={() => handleLink(provider.slug)}
-                  >
-                    {t("connectedAccounts.link", { provider: provider.name })}
-                  </Button>
-                ))}
+                {linkableProviders.map((provider) => {
+                  const linking = linkingSlug === provider.slug;
+                  return (
+                    <Button
+                      key={provider.slug}
+                      type="button"
+                      variant="outlined"
+                      startIcon={
+                        linking ? (
+                          <CircularProgress color="inherit" size={16} />
+                        ) : (
+                          <LoginIcon />
+                        )
+                      }
+                      onClick={() => void handleLink(provider.slug)}
+                      disabled={linkingSlug !== null}
+                    >
+                      {t("connectedAccounts.link", { provider: provider.name })}
+                    </Button>
+                  );
+                })}
               </Stack>
             )}
           </>

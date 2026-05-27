@@ -532,7 +532,6 @@ namespace Cotton.Server.Controllers
             await _dbContext.RefreshTokens.AddAsync(newDbToken);
             await _dbContext.SaveChangesAsync();
             _sessionIssuer.AddRefreshTokenToCookies(newRefreshToken, dbToken.IsTrusted);
-            _sessionIssuer.AddAccessTokenToCookies(accessToken);
             return Ok(new TokenPairResponseDto()
             {
                 AccessToken = accessToken,
@@ -569,6 +568,7 @@ namespace Cotton.Server.Controllers
                 }
             }
             Response.Cookies.Delete(CookieRefreshTokenKey);
+            Response.Cookies.Delete(CookieAccessTokenKey);
             return Ok();
         }
 

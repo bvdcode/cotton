@@ -719,7 +719,10 @@
     "oidc": {
       "loading": "Loading sign-in providers...",
       "divider": "or",
-      "signInWith": "Continue with {{provider}}"
+      "signInWith": "Continue with {{provider}}",
+      "errors": {
+        "startFailed": "Nie udało się rozpocząć logowania."
+      }
     }
   },
   "notFound": {
@@ -1078,7 +1081,8 @@
       },
       "errors": {
         "loadFailed": "Failed to load connected accounts.",
-        "unlinkFailed": "Failed to unlink this account."
+        "unlinkFailed": "Failed to unlink this account.",
+        "linkFailed": "Nie udało się rozpocząć łączenia konta."
       }
     }
   },

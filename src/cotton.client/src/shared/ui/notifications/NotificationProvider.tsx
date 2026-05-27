@@ -5,6 +5,7 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import {
   Box,
+  GlobalStyles,
   IconButton,
   Paper,
   Stack,
@@ -29,18 +30,31 @@ interface NotificationProviderProps {
   children: ReactNode;
 }
 
+const NOTIFICATION_CONTAINER_CLASS = "cotton-notification-container";
+const FOREGROUND_OVERLAY_Z_INDEX = 10000;
+
 export function NotificationProvider({ children }: NotificationProviderProps) {
   return (
-    <SnackbarProvider
-      maxSnack={4}
-      autoHideDuration={4500}
-      anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-      preventDuplicate
-      hideIconVariant
-      Components={notificationComponents}
-    >
-      {children}
-    </SnackbarProvider>
+    <>
+      <GlobalStyles
+        styles={{
+          [`.${NOTIFICATION_CONTAINER_CLASS}.${NOTIFICATION_CONTAINER_CLASS}`]: {
+            zIndex: FOREGROUND_OVERLAY_Z_INDEX,
+          },
+        }}
+      />
+      <SnackbarProvider
+        maxSnack={4}
+        autoHideDuration={4500}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        preventDuplicate
+        hideIconVariant
+        classes={{ containerRoot: NOTIFICATION_CONTAINER_CLASS }}
+        Components={notificationComponents}
+      >
+        {children}
+      </SnackbarProvider>
+    </>
   );
 }
 

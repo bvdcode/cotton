@@ -4,6 +4,7 @@
 using Cotton.Database.Models;
 using Cotton.Server.Auth;
 using Cotton.Server.Extensions;
+using Cotton.Server.Models.Dto;
 using EasyExtensions.AspNetCore.Extensions;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
@@ -69,38 +70,37 @@ public sealed class OidcController(
         return NoContent();
     }
 
-    /// <summary>Starts sign-in with a provider.</summary>
+    /// <summary>Creates a sign-in authorization URL for a provider.</summary>
     [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
-    [HttpGet("start/{providerSlug}")]
-    public async Task<IActionResult> StartSignIn(
+    [HttpPost("start/{providerSlug}/authorization-url")]
+    public async Task<ActionResult<OidcAuthorizationUrlDto>> CreateSignInAuthorizationUrl(
         [FromRoute] string providerSlug,
-        [FromQuery] string? returnUrl,
-        [FromQuery] bool trustDevice,
+        [FromBody] OidcAuthorizationRequestDto? request,
         CancellationToken cancellationToken)
     {
         string authorizationUrl = await _auth.BeginSignInAsync(
             providerSlug,
-            returnUrl,
-            trustDevice,
+            request?.ReturnUrl,
+            request?.TrustDevice ?? false,
             cancellationToken);
-        return Redirect(authorizationUrl);
+        return Ok(new OidcAuthorizationUrlDto { AuthorizationUrl = authorizationUrl });
     }
 
-    /// <summary>Starts linking the current account with a provider.</summary>
+    /// <summary>Creates an account-linking authorization URL for a provider.</summary>
     [Authorize]
     [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
-    [HttpGet("link/{providerSlug}")]
-    public async Task<IActionResult> StartLink(
+    [HttpPost("link/{providerSlug}/authorization-url")]
+    public async Task<ActionResult<OidcAuthorizationUrlDto>> CreateLinkAuthorizationUrl(
         [FromRoute] string providerSlug,
-        [FromQuery] string? returnUrl,
+        [FromBody] OidcAuthorizationRequestDto? request,
         CancellationToken cancellationToken)
     {
         string authorizationUrl = await _auth.BeginLinkAsync(
             User.GetUserId(),
             providerSlug,
-            returnUrl,
+            request?.ReturnUrl,
             cancellationToken);
-        return Redirect(authorizationUrl);
+        return Ok(new OidcAuthorizationUrlDto { AuthorizationUrl = authorizationUrl });
     }
 
     /// <summary>Completes an OIDC authorization-code callback.</summary>

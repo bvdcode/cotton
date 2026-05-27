@@ -1,8 +1,16 @@
-import { Button, CircularProgress, Divider, Stack, Typography } from "@mui/material";
+import {
+  Button,
+  CircularProgress,
+  Divider,
+  Stack,
+  Typography,
+} from "@mui/material";
 import LoginIcon from "@mui/icons-material/Login";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { oidcApi, type PublicOidcProviderDto } from "@shared/api/oidcApi";
 import { usePublicOidcProvidersQuery } from "@shared/api/queries/oidc";
+import { toast } from "@shared/ui/notifications";
 
 interface OidcProviderButtonsProps {
   disabled: boolean;
@@ -72,20 +80,31 @@ const OidcProviderButton = ({
   trustDevice,
 }: OidcProviderButtonProps) => {
   const { t } = useTranslation("login");
+  const [pending, setPending] = useState(false);
 
-  const handleClick = () => {
-    window.location.assign(
-      oidcApi.buildSignInUrl(provider.slug, returnUrl, trustDevice),
-    );
+  const handleClick = async () => {
+    setPending(true);
+    try {
+      const authorizationUrl = await oidcApi.createSignInAuthorizationUrl(
+        provider.slug,
+        { returnUrl, trustDevice },
+      );
+      window.location.assign(authorizationUrl);
+    } catch {
+      toast.error(t("oidc.errors.startFailed"));
+      setPending(false);
+    }
   };
 
   return (
     <Button
       type="button"
       variant="outlined"
-      startIcon={<LoginIcon />}
-      onClick={handleClick}
-      disabled={disabled}
+      startIcon={
+        pending ? <CircularProgress color="inherit" size={16} /> : <LoginIcon />
+      }
+      onClick={() => void handleClick()}
+      disabled={disabled || pending}
       fullWidth
     >
       {t("oidc.signInWith", { provider: provider.name })}
