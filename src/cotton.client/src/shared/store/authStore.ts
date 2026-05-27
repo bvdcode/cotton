@@ -15,6 +15,7 @@ type AuthStoreState = {
   setHasChecked: (value: boolean) => void;
   setAuthenticated: (user: User) => void;
   setUnauthenticated: () => void;
+  enableRefresh: () => void;
   logoutLocal: () => void;
 };
 
@@ -45,6 +46,11 @@ export const useAuthStore = create<AuthStoreState>()(
           user: null,
           isAuthenticated: false,
           hasChecked: true,
+        }),
+
+      enableRefresh: () =>
+        set({
+          refreshEnabled: true,
         }),
 
       logoutLocal: () =>

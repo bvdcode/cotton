@@ -10,6 +10,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { oidcApi, type PublicOidcProviderDto } from "@shared/api/oidcApi";
 import { usePublicOidcProvidersQuery } from "@shared/api/queries/oidc";
+import { useAuthStore } from "@shared/store/authStore";
 import { toast } from "@shared/ui/notifications";
 
 interface OidcProviderButtonsProps {
@@ -89,6 +90,7 @@ const OidcProviderButton = ({
         provider.slug,
         { returnUrl, trustDevice },
       );
+      useAuthStore.getState().enableRefresh();
       window.location.assign(authorizationUrl);
     } catch {
       toast.error(t("oidc.errors.startFailed"));
