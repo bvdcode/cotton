@@ -11,6 +11,9 @@ namespace Cotton.Server.Services.KeyManagement;
 /// </summary>
 public interface IKeyringPurposeCipherFactory
 {
+    /// <summary>Creates a cipher for general encrypted database fields.</summary>
+    IStreamCipher CreateDbFieldCipher();
+
     /// <summary>Creates a cipher for TOTP shared secrets.</summary>
     IStreamCipher CreateTotpSecretCipher();
 }
@@ -34,6 +37,11 @@ internal sealed class KeyringPurposeCipherFactory : IKeyringPurposeCipherFactory
     {
         _settings = settings;
         _keyringState = keyringState;
+    }
+
+    public IStreamCipher CreateDbFieldCipher()
+    {
+        return Create(KeyringKeyPurpose.DbFieldAead);
     }
 
     public IStreamCipher CreateTotpSecretCipher()

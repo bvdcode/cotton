@@ -4,6 +4,7 @@
 using Cotton.Database.Models;
 using Cotton.Previews;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Services.KeyManagement;
 using Cotton.Storage.Abstractions;
 using EasyExtensions.Abstractions;
 using EasyExtensions.Extensions;
@@ -15,13 +16,14 @@ namespace Cotton.Server.Services;
 public sealed class OidcAvatarImportService(
     HttpClient _httpClient,
     IChunkIngestService _chunkIngest,
-    IStreamCipher _crypto,
+    IKeyringPurposeCipherFactory cryptoFactory,
     ILogger<OidcAvatarImportService> _logger)
 {
     /// <summary>Maximum external avatar response size accepted for import.</summary>
     public const int MaxAvatarBytes = 5 * 1024 * 1024;
 
     private static readonly ImagePreviewGenerator _avatarGenerator = new();
+    private readonly IStreamCipher _dbFieldCrypto = cryptoFactory.CreateDbFieldCipher();
 
     /// <summary>Imports the provider avatar when the user does not already have one.</summary>
     public async Task TryImportMissingAvatarAsync(
@@ -51,7 +53,7 @@ public sealed class OidcAvatarImportService(
                 ct);
 
             user.AvatarHash = avatarChunk.Hash;
-            user.AvatarHashEncrypted = _crypto.Encrypt(avatarChunk.Hash);
+            user.AvatarHashEncrypted = _dbFieldCrypto.Encrypt(avatarChunk.Hash);
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {

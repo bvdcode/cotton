@@ -7,6 +7,7 @@ using Cotton.Previews;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
+using Cotton.Server.Services.KeyManagement;
 using Cotton.Storage.Abstractions;
 using Cotton.Validators;
 using EasyExtensions.Abstractions;
@@ -66,11 +67,12 @@ namespace Cotton.Server.Handlers.Users
     /// </summary>
     public class UpdateCurrentUserRequestHandler(
         CottonDbContext _dbContext,
-        IStreamCipher _crypto,
+        IKeyringPurposeCipherFactory cryptoFactory,
         IStoragePipeline _storage,
         IChunkIngestService _chunkIngest) : IRequestHandler<UpdateCurrentUserRequest, UserDto>
     {
         private static readonly ImagePreviewGenerator _avatarGenerator = new();
+        private readonly IStreamCipher _dbFieldCrypto = cryptoFactory.CreateDbFieldCipher();
 
         /// <summary>
         /// Handles the request through the mediator pipeline.
@@ -295,7 +297,7 @@ namespace Cotton.Server.Handlers.Users
             user.AvatarHash = update.Hash;
             user.AvatarHashEncrypted = update.Hash is null
                 ? null
-                : _crypto.Encrypt(update.Hash);
+                : _dbFieldCrypto.Encrypt(update.Hash);
         }
 
         private sealed record UsernameUpdate(string? NormalizedUsername, bool Changed);

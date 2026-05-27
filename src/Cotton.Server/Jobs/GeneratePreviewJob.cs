@@ -8,6 +8,7 @@ using Cotton.Server.Extensions;
 using Cotton.Server.Hubs;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using Cotton.Server.Services.KeyManagement;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
@@ -29,7 +30,7 @@ namespace Cotton.Server.Jobs
     [DisallowConcurrentExecution]
     public class GeneratePreviewJob(
         PerfTracker _perf,
-        IStreamCipher _crypto,
+        IKeyringPurposeCipherFactory cryptoFactory,
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
         IHubContext<EventHub> _hubContext,
@@ -39,6 +40,7 @@ namespace Cotton.Server.Jobs
         private const int RefreshItemsPerUploadPause = 250;
         private const int UnthrottledItemsCount = 1000;
         private const int ThrottleDelayMs = 250;
+        private readonly IStreamCipher _dbFieldCrypto = cryptoFactory.CreateDbFieldCipher();
 
         /// <summary>
         /// Executes the scheduled Quartz job.
@@ -101,7 +103,7 @@ namespace Cotton.Server.Jobs
                     await _storage.WriteAsync(hashStr, resultStream);
                     await EnsureChunkExistsAsync(hash, previewImage.Length, cancellationToken);
                     item.SmallFilePreviewHash = hash;
-                    item.SmallFilePreviewHashEncrypted = _crypto.Encrypt(hash);
+                    item.SmallFilePreviewHashEncrypted = _dbFieldCrypto.Encrypt(hash);
                     item.PreviewGenerationError = null;
                     item.PreviewGeneratorVersion = generator.Version;
 

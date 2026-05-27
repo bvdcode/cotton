@@ -6,6 +6,7 @@ using Cotton.Database.Models;
 using DbUser = Cotton.Database.Models.User;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
+using Cotton.Server.Services.KeyManagement;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
 using EasyExtensions.Abstractions;
@@ -25,12 +26,13 @@ namespace Cotton.Server.Controllers
     public class PreviewController(
         CottonDbContext _dbContext,
         IDatabaseIntegrityVerifier _integrity,
-        IStreamCipher _crypto,
+        IKeyringPurposeCipherFactory cryptoFactory,
         ILogger<PreviewController> _logger,
         IStoragePipeline _storage) : ControllerBase
     {
         private const int TokenOwnerIdLength = 32;
         private static readonly SemaphoreSlim _previewGate = new(8);
+        private readonly IStreamCipher _dbFieldCrypto = cryptoFactory.CreateDbFieldCipher();
 
         /// <summary>
         /// Gets file preview.
@@ -147,7 +149,7 @@ namespace Cotton.Server.Controllers
             byte[] decryptedHashBytes;
             try
             {
-                decryptedHashBytes = _crypto.Decrypt(token.EncryptedHash);
+                decryptedHashBytes = _dbFieldCrypto.Decrypt(token.EncryptedHash);
             }
             catch (Exception ex)
             {
