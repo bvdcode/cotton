@@ -29,12 +29,25 @@ namespace Cotton.Server.Services
             CottonEncryptionSettings settings,
             int? encryptionThreadsOverride = null)
         {
+            return Create(
+                keyringState,
+                settings,
+                KeyringKeyPurpose.ChunkAead,
+                encryptionThreadsOverride);
+        }
+
+        public static IStreamCipher Create(
+            KeyringPlainState keyringState,
+            CottonEncryptionSettings settings,
+            KeyringKeyPurpose purpose,
+            int? encryptionThreadsOverride = null)
+        {
             ArgumentNullException.ThrowIfNull(keyringState);
             ArgumentNullException.ThrowIfNull(settings);
 
             int? threads = ResolveThreads(encryptionThreadsOverride, settings.EncryptionThreads);
             var resolver = new KeyringPlainStateKeyResolver(keyringState);
-            return new KeyringStreamCipher(resolver, KeyringKeyPurpose.ChunkAead, threads);
+            return new KeyringStreamCipher(resolver, purpose, threads);
         }
 
         private static int? ResolveThreads(int? encryptionThreadsOverride, int configuredThreads)

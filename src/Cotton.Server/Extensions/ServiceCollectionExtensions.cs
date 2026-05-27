@@ -25,6 +25,12 @@ namespace Cotton.Server.Extensions
         /// </summary>
         public static IServiceCollection AddStreamCipher(this IServiceCollection services)
         {
+            services.AddScoped<IKeyringPurposeCipherFactory>(sp =>
+            {
+                var settings = sp.GetRequiredService<CottonEncryptionSettings>();
+                return new KeyringPurposeCipherFactory(settings, sp.GetService<KeyringBootstrapResult>());
+            });
+
             return services.AddScoped<IStreamCipher>(sp =>
             {
                 var settings = sp.GetRequiredService<CottonEncryptionSettings>();
