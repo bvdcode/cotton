@@ -129,6 +129,8 @@ namespace Cotton.Server
             if (keyring is not null)
             {
                 scope.ServiceProvider.GetRequiredService<KeyringRuntimeState>().Set(keyring);
+                await scope.ServiceProvider.GetRequiredService<KeyringJournaledObjectStore>()
+                    .RepairLatestAsync();
             }
         }
 

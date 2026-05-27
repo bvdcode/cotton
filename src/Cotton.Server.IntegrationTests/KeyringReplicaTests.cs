@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton.Autoconfig.Extensions;
 using Cotton.Server.Services.KeyManagement;
 using Cotton.Storage.Abstractions;
 using NUnit.Framework;
@@ -44,6 +45,47 @@ public class KeyringReplicaTests
         List<string> names = await replica.ListNamesAsync().ToListAsync();
 
         Assert.That(names, Is.EqualTo(new[] { objectName }));
+    }
+
+
+    [Test]
+    public async Task JournaledStore_RepairsLatestObjectsIntoMissingReplica()
+    {
+        string primaryRoot = CreateTempDirectory();
+        string secondaryRoot = CreateTempDirectory();
+        var primaryReplica = new KeyringLocalFileReplica(primaryRoot, "primary");
+        var secondaryReplica = new KeyringLocalFileReplica(secondaryRoot, "secondary");
+        var primaryStore = new KeyringJournaledObjectStore([primaryReplica]);
+        var bootstrap = new KeyringBootstrapService(primaryStore);
+        CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        KeyringBootstrapResult created = await bootstrap.OpenOrCreateFromV1Async(
+            settings,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        var repairStore = new KeyringJournaledObjectStore([primaryReplica, secondaryReplica]);
+
+        IReadOnlyList<KeyringObjectPointer> repaired = await repairStore.RepairLatestAsync();
+        KeyringLoadedObject? reopened = await repairStore.FindLatestValidAsync(KeyringObjectKind.StateSnapshot);
+        List<string> secondaryNames = await secondaryReplica.ListNamesAsync().ToListAsync();
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(repaired, Has.Count.EqualTo(2));
+            Assert.That(reopened, Is.Not.Null);
+            Assert.That(reopened!.Pointer.Hash, Is.EqualTo(created.StatePointer.Hash));
+            Assert.That(secondaryNames, Does.Contain(created.StatePointer.ObjectName));
+            Assert.That(secondaryNames, Does.Contain(created.AccessPointer.ObjectName));
+            Assert.That(secondaryNames, Does.Contain(KeyringObjectNames.GetLatestName(KeyringObjectKind.StateSnapshot)));
+            Assert.That(secondaryNames, Does.Contain(KeyringObjectNames.GetLatestName(KeyringObjectKind.AccessEnvelope)));
+        }
+    }
+
+
+    private static string CreateTempDirectory()
+    {
+        string path = Path.Combine(TestContext.CurrentContext.WorkDirectory, "keyring-replicas", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        return path;
     }
 
     private sealed class MemoryStorageBackend : IStorageBackend

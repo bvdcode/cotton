@@ -117,6 +117,49 @@ internal sealed class KeyringJournaledObjectStore
         return null;
     }
 
+    public async Task<IReadOnlyList<KeyringObjectPointer>> RepairLatestAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var repaired = new List<KeyringObjectPointer>();
+        foreach (KeyringObjectKind kind in Enum.GetValues<KeyringObjectKind>())
+        {
+            KeyringLoadedObject? loaded = await FindLatestValidAsync(kind, cancellationToken);
+            if (loaded is null)
+            {
+                continue;
+            }
+
+            await WritePointerToAllReplicasAsync(loaded.Pointer, loaded.Bytes, cancellationToken);
+            repaired.Add(loaded.Pointer);
+        }
+
+        return repaired;
+    }
+
+    private async Task WritePointerToAllReplicasAsync(
+        KeyringObjectPointer pointer,
+        byte[] objectBytes,
+        CancellationToken cancellationToken)
+    {
+        byte[] pointerBytes = KeyringJson.SerializeToUtf8Bytes(pointer);
+        foreach (IKeyringObjectReplica replica in _replicas)
+        {
+            await replica.WriteAsync(pointer.ObjectName, objectBytes, cancellationToken);
+        }
+
+        string headName = KeyringObjectNames.GetHeadName(pointer.Kind, pointer.Generation, pointer.Hash);
+        foreach (IKeyringObjectReplica replica in _replicas)
+        {
+            await replica.WriteAsync(headName, pointerBytes, cancellationToken);
+        }
+
+        string latestName = KeyringObjectNames.GetLatestName(pointer.Kind);
+        foreach (IKeyringObjectReplica replica in _replicas)
+        {
+            await replica.WriteAsync(latestName, pointerBytes, cancellationToken);
+        }
+    }
+
     private async Task<List<KeyringObjectPointer>> ListHeadPointersAsync(
         KeyringObjectKind kind,
         CancellationToken cancellationToken)
