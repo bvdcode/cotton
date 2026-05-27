@@ -31,16 +31,35 @@ public sealed class DatabaseIntegrityProtector(IDatabaseIntegrityKeyProvider key
     /// <inheritdoc />
     public bool Verify(object entity, IDatabaseIntegrityDescriptor descriptor, byte[] expectedMac)
     {
+        ArgumentNullException.ThrowIfNull(entity);
+        ArgumentNullException.ThrowIfNull(descriptor);
         ArgumentNullException.ThrowIfNull(expectedMac);
 
-        byte[] actualMac = Sign(entity, descriptor);
+        byte[] payload = descriptor.BuildCanonicalPayload(entity);
         try
         {
-            return CryptographicOperations.FixedTimeEquals(actualMac, expectedMac);
+            if (keyProvider is IDatabaseIntegrityVerificationKeyProvider verificationKeyProvider)
+            {
+                foreach (HMACSHA256 hmac in verificationKeyProvider.CreateVerificationHmacs())
+                {
+                    using (hmac)
+                    {
+                        if (VerifyWithHmac(hmac, payload, expectedMac))
+                        {
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
+            }
+
+            using HMACSHA256 signingHmac = keyProvider.CreateHmac();
+            return VerifyWithHmac(signingHmac, payload, expectedMac);
         }
         finally
         {
-            CryptographicOperations.ZeroMemory(actualMac);
+            CryptographicOperations.ZeroMemory(payload);
         }
     }
 
@@ -53,5 +72,18 @@ public sealed class DatabaseIntegrityProtector(IDatabaseIntegrityKeyProvider key
         }
 
         throw new DatabaseIntegrityException(descriptor.EntityName, descriptor.GetEntityKey(entity));
+    }
+
+    private static bool VerifyWithHmac(HMACSHA256 hmac, byte[] payload, byte[] expectedMac)
+    {
+        byte[] actualMac = hmac.ComputeHash(payload);
+        try
+        {
+            return CryptographicOperations.FixedTimeEquals(actualMac, expectedMac);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(actualMac);
+        }
     }
 }

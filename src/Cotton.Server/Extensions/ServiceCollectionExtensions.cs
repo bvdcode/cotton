@@ -69,7 +69,16 @@ namespace Cotton.Server.Extensions
         /// </summary>
         public static IServiceCollection AddDatabaseIntegrity(this IServiceCollection services)
         {
-            services.AddSingleton<IDatabaseIntegrityKeyProvider, DatabaseIntegrityKeyProvider>();
+            services.AddSingleton<IDatabaseIntegrityKeyProvider>(sp =>
+            {
+                KeyringBootstrapResult? keyring = sp.GetService<KeyringBootstrapResult>();
+                if (keyring is not null)
+                {
+                    return new KeyringDatabaseIntegrityKeyProvider(keyring.State);
+                }
+
+                return new DatabaseIntegrityKeyProvider(sp.GetRequiredService<CottonEncryptionSettings>());
+            });
             services.AddSingleton<IDatabaseIntegrityProtector, DatabaseIntegrityProtector>();
             services.AddSingleton<IDatabaseIntegrityDescriptorRegistry, DatabaseIntegrityDescriptorRegistry>();
             services.AddScoped<IDatabaseIntegrityChangeSigner, DatabaseIntegrityChangeSigner>();

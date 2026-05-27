@@ -14,7 +14,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity;
 /// The derived key is process-local and never persisted. A database-only attacker therefore cannot forge row MACs
 /// unless they also obtain the master key or compromise the running process.
 /// </remarks>
-public sealed class DatabaseIntegrityKeyProvider : IDatabaseIntegrityKeyProvider, IDisposable
+public sealed class DatabaseIntegrityKeyProvider : IDatabaseIntegrityKeyProvider, IDatabaseIntegrityVerificationKeyProvider, IDisposable
 {
     /// <summary>Purpose string used to domain-separate the integrity subkey from other master-key derivations.</summary>
     public const string Purpose = "CottonDbIntegrityKey:v1";
@@ -51,6 +51,12 @@ public sealed class DatabaseIntegrityKeyProvider : IDatabaseIntegrityKeyProvider
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         return new HMACSHA256(_key);
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyList<HMACSHA256> CreateVerificationHmacs()
+    {
+        return [CreateHmac()];
     }
 
     /// <inheritdoc />
