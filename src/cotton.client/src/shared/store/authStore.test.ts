@@ -3,7 +3,6 @@ import { getRefreshEnabled, useAuthStore } from "./authStore";
 
 describe("authStore", () => {
   beforeEach(() => {
-    window.localStorage.clear();
     useAuthStore.setState({
       user: null,
       isAuthenticated: false,
