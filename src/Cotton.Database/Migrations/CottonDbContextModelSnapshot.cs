@@ -145,6 +145,31 @@ namespace Cotton.Database.Migrations
                     b.ToTable("chunks", (string)null);
                 });
 
+            modelBuilder.Entity("Cotton.Database.Models.KeyringObject", b =>
+                {
+                    b.Property<string>("Name")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("name");
+
+                    b.Property<byte[]>("Bytes")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("bytes");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Name");
+
+                    b.ToTable("cotton_keyring_objects", (string)null);
+                });
+
             modelBuilder.Entity("Cotton.Database.Models.ChunkOwnership", b =>
                 {
                     b.Property<Guid>("Id")
