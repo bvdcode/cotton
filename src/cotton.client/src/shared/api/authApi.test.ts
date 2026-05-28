@@ -150,6 +150,26 @@ describe("authApi.me", () => {
   });
 });
 
+describe("authApi.refresh", () => {
+  it("can explicitly refresh after an interactive redirect when local refresh is disabled", async () => {
+    refreshEnabledMock.mockReturnValue(false);
+    const post = vi.spyOn(httpClient, "post").mockResolvedValue({
+      data: { accessToken: "oidc-token" },
+    });
+
+    await expect(
+      authApi.refresh({ allowWhenRefreshDisabled: true }),
+    ).resolves.toBe("oidc-token");
+
+    expect(post).toHaveBeenCalledWith(
+      "auth/refresh",
+      {},
+      { withCredentials: true },
+    );
+    expect(getAccessToken()).toBe("oidc-token");
+  });
+});
+
 describe("authApi profile mutations", () => {
   it("clears the access token before posting logout", async () => {
     setAccessToken("stale-token");

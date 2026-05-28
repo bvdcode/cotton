@@ -270,6 +270,18 @@ describe("refreshAccessToken", () => {
     expect(getAccessToken()).toBeNull();
   });
 
+  it("allows one explicit refresh when local refresh is disabled", async () => {
+    refreshEnabledMock.mockReturnValue(false);
+    vi.spyOn(httpClient, "post").mockResolvedValue({
+      data: { accessToken: "fresh" },
+    });
+
+    await expect(
+      refreshAccessToken({ allowWhenRefreshDisabled: true }),
+    ).resolves.toBe("fresh");
+    expect(getAccessToken()).toBe("fresh");
+  });
+
   it("returns and stores the new token on success", async () => {
     vi.spyOn(httpClient, "post").mockResolvedValue({
       data: { accessToken: "fresh" },

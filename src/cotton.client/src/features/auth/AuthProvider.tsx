@@ -33,8 +33,16 @@ const consumeJustUnlockedMarker = (): boolean => {
   }
 };
 
-const restoreAuthSession = async (): Promise<User | null> => {
-  const token = await authApi.refresh();
+interface RestoreAuthSessionOptions {
+  allowWhenRefreshDisabled?: boolean;
+}
+
+const restoreAuthSession = async (
+  options: RestoreAuthSessionOptions = {},
+): Promise<User | null> => {
+  const token = await authApi.refresh({
+    allowWhenRefreshDisabled: options.allowWhenRefreshDisabled,
+  });
   if (!token) {
     return null;
   }
@@ -42,12 +50,14 @@ const restoreAuthSession = async (): Promise<User | null> => {
   return await authApi.me();
 };
 
-const waitForAuthSessionAfterUnlock = async (): Promise<User | null> => {
+const waitForAuthSessionAfterUnlock = async (
+  options: RestoreAuthSessionOptions = {},
+): Promise<User | null> => {
   const deadline = Date.now() + AUTH_RETRY_AFTER_UNLOCK_TIMEOUT_MS;
 
   do {
     try {
-      const userData = await restoreAuthSession();
+      const userData = await restoreAuthSession(options);
       if (userData) {
         return userData;
       }
@@ -55,7 +65,10 @@ const waitForAuthSessionAfterUnlock = async (): Promise<User | null> => {
       // The backend can finish unlocking before auth endpoints are fully ready.
     }
 
-    if (!useAuthStore.getState().refreshEnabled) {
+    if (
+      !options.allowWhenRefreshDisabled &&
+      !useAuthStore.getState().refreshEnabled
+    ) {
       return null;
     }
 
@@ -119,19 +132,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const ensureAuth = useCallback(async () => {
     if (isAuthenticated || isInitializing) return;
     if (!hydrated) return;
-    const canRefreshAfterOidcRedirect =
-      !refreshEnabled && consumeOidcSignInPending();
-    if (!refreshEnabled && !canRefreshAfterOidcRedirect) {
+    const hasPendingOidcSignIn = consumeOidcSignInPending();
+    if (!refreshEnabled && !hasPendingOidcSignIn) {
       setHasChecked(true);
       return;
     }
 
     setInitializing(true);
     try {
+      const restoreOptions: RestoreAuthSessionOptions = {
+        allowWhenRefreshDisabled: hasPendingOidcSignIn,
+      };
       const shouldRetryAfterUnlock = consumeJustUnlockedMarker();
       const userData = shouldRetryAfterUnlock
-        ? await waitForAuthSessionAfterUnlock()
-        : await restoreAuthSession();
+        ? await waitForAuthSessionAfterUnlock(restoreOptions)
+        : await restoreAuthSession(restoreOptions);
 
       if (userData) {
         // Ensure stale persisted data from another identity is cleared
