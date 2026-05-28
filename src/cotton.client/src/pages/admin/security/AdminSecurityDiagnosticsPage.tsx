@@ -16,6 +16,7 @@ import {
   type AlertColor,
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import KeyIcon from "@mui/icons-material/VpnKey";
 import SecurityIcon from "@mui/icons-material/Security";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
@@ -24,10 +25,12 @@ import type { TFunction } from "i18next";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { getApiErrorMessage } from "../../../shared/api/httpClient";
 import {
+  useExportKeyringRecoveryKitMutation,
   useRotateKeyringUnlockMutation,
   useSecurityDiagnosticsQuery,
 } from "../../../shared/api/queries/admin";
 import type {
+  KeyringRecoveryKitDto,
   LinuxProcessSecurityDto,
   SecurityDiagnosticWarningDto,
   SecurityDiagnosticsDto,
@@ -234,12 +237,16 @@ interface SecurityDiagnosticsContentProps {
   diagnostics: SecurityDiagnosticsDto;
   t: TFunction<"admin">;
   onRotateUnlock: () => void;
+  onExportRecoveryKit: () => void;
+  exportingRecoveryKit: boolean;
 }
 
 const SecurityDiagnosticsContent = ({
   diagnostics,
   t,
   onRotateUnlock,
+  onExportRecoveryKit,
+  exportingRecoveryKit,
 }: SecurityDiagnosticsContentProps) => (
   <Stack spacing={3} divider={<Divider flexItem />}>
     <SecurityScoreSummary diagnostics={diagnostics} t={t} />
@@ -250,6 +257,8 @@ const SecurityDiagnosticsContent = ({
       diagnostics={diagnostics}
       t={t}
       onRotateUnlock={onRotateUnlock}
+      onExportRecoveryKit={onExportRecoveryKit}
+      exportingRecoveryKit={exportingRecoveryKit}
     />
     <MemoryDiagnosticsSection diagnostics={diagnostics} t={t} />
     <ContainerDiagnosticsSection diagnostics={diagnostics} t={t} />
@@ -468,12 +477,16 @@ const MasterKeyDiagnosticsSection = ({
 
 type KeyringDiagnosticsSectionProps = DiagnosticsContentSectionProps & {
   onRotateUnlock: () => void;
+  onExportRecoveryKit: () => void;
+  exportingRecoveryKit: boolean;
 };
 
 const KeyringDiagnosticsSection = ({
   diagnostics,
   t,
   onRotateUnlock,
+  onExportRecoveryKit,
+  exportingRecoveryKit,
 }: KeyringDiagnosticsSectionProps) => (
   <DiagnosticsSection title={t("securityDiagnostics.sections.keyring")}>
     <DiagnosticsRow
@@ -541,7 +554,7 @@ const KeyringDiagnosticsSection = ({
       }
     />
     {diagnostics.keyring.enabled && diagnostics.keyring.loaded && (
-      <Box>
+      <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
         <Button
           variant="outlined"
           size="small"
@@ -550,7 +563,18 @@ const KeyringDiagnosticsSection = ({
         >
           {t("securityDiagnostics.actions.rotateUnlock")}
         </Button>
-      </Box>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<FileDownloadIcon fontSize="small" />}
+          onClick={onExportRecoveryKit}
+          disabled={exportingRecoveryKit}
+        >
+          {exportingRecoveryKit
+            ? t("securityDiagnostics.actions.exportingRecoveryKit")
+            : t("securityDiagnostics.actions.exportRecoveryKit")}
+        </Button>
+      </Stack>
     )}
   </DiagnosticsSection>
 );
@@ -728,6 +752,26 @@ const RuntimeDiagnosticsSection = ({
   </DiagnosticsSection>
 );
 
+const createRecoveryKitFilename = (kit: KeyringRecoveryKitDto) => {
+  const instanceId = kit.instanceId.replace(/[^a-zA-Z0-9-]/g, "");
+  const exportedAt = kit.exportedAtUtc.replace(/[^0-9T]/g, "").slice(0, 15);
+  return `cotton-keyring-kit-${instanceId || "instance"}-g${kit.stateGeneration}-${exportedAt || "export"}.json`;
+};
+
+const downloadRecoveryKit = (kit: KeyringRecoveryKitDto) => {
+  const blob = new Blob([JSON.stringify(kit, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = createRecoveryKitFilename(kit);
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+};
+
 const generateUnlockSecret = () => {
   const bytes = new Uint8Array(24);
   globalThis.crypto.getRandomValues(bytes);
@@ -888,11 +932,28 @@ const KeyringRotateUnlockDialog = ({
 export const AdminSecurityDiagnosticsPage = () => {
   const { t } = useTranslation("admin");
   const diagnosticsQuery = useSecurityDiagnosticsQuery();
+  const exportRecoveryKitMutation = useExportKeyringRecoveryKitMutation();
   const [rotationOpen, setRotationOpen] = useState(false);
   const loadError = diagnosticsQuery.isError
     ? getApiErrorMessage(diagnosticsQuery.error) ??
       t("securityDiagnostics.errors.loadFailed")
     : null;
+
+  const handleExportRecoveryKit = async () => {
+    try {
+      const kit = await exportRecoveryKitMutation.mutateAsync();
+      downloadRecoveryKit(kit);
+      toast.success(t("securityDiagnostics.recoveryKit.success"), {
+        toastId: "admin:keyring:recovery-kit:success",
+      });
+    } catch (apiError) {
+      toast.error(
+        getApiErrorMessage(apiError) ??
+          t("securityDiagnostics.recoveryKit.errors.failed"),
+        { toastId: "admin:keyring:recovery-kit:failed" },
+      );
+    }
+  };
 
   return (
     <Stack>
@@ -925,6 +986,8 @@ export const AdminSecurityDiagnosticsPage = () => {
               diagnostics={diagnosticsQuery.data}
               t={t}
               onRotateUnlock={() => setRotationOpen(true)}
+              onExportRecoveryKit={handleExportRecoveryKit}
+              exportingRecoveryKit={exportRecoveryKitMutation.isPending}
             />
           )}
         </Stack>

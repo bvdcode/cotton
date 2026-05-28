@@ -99,6 +99,23 @@ namespace Cotton.Server.Controllers
         }
 
         /// <summary>
+        /// Exports the encrypted keyring recovery kit.
+        /// </summary>
+        [HttpGet("keyring/recovery-kit")]
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        public async Task<IActionResult> ExportKeyringRecoveryKit(CancellationToken cancellationToken)
+        {
+            try
+            {
+                return Ok(await _keyringAdmin.ExportRecoveryKitAsync(cancellationToken));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Schedules an immediate database backup.
         /// </summary>
         [HttpPatch("database-backup/trigger")]

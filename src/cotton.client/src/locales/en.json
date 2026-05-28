@@ -2033,7 +2033,15 @@
         "loadFailed": "Failed to load security diagnostics."
       },
       "actions": {
+        "exportRecoveryKit": "Export recovery kit",
+        "exportingRecoveryKit": "Exporting...",
         "rotateUnlock": "Rotate unlock secret"
+      },
+      "recoveryKit": {
+        "success": "Recovery kit downloaded.",
+        "errors": {
+          "failed": "Failed to export the keyring recovery kit."
+        }
       },
       "rotateUnlock": {
         "title": "Rotate unlock secret",

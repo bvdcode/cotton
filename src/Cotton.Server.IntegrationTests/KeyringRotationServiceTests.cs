@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Autoconfig.Extensions;
+using Cotton.Server.Models.Dto;
 using Cotton.Server.Services.KeyManagement;
 using NUnit.Framework;
 
@@ -69,6 +70,55 @@ public class KeyringRotationServiceTests
             Throws.InstanceOf<UnauthorizedAccessException>());
     }
 
+
+    [Test]
+    [NonParallelizable]
+    public async Task AdminService_ExportsRecoveryKit_WithLatestEncryptedObjects()
+    {
+        string root = CreateTempDirectory();
+        string? originalEnabled = Environment.GetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable);
+        string? originalPath = Environment.GetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable);
+        string unlock = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(unlock);
+
+        try
+        {
+            Environment.SetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable, "1");
+            Environment.SetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable, root);
+            var store = new KeyringJournaledObjectStore([new KeyringLocalFileReplica(root)]);
+            var bootstrap = new KeyringBootstrapService(store);
+            KeyringBootstrapResult initial = await bootstrap.OpenOrCreateFromV1Async(settings, unlock);
+            var runtimeState = new KeyringRuntimeState();
+            runtimeState.Set(initial);
+            var admin = new KeyringAdminService(store, runtimeState);
+
+            KeyringRecoveryKitDto kit = await admin.ExportRecoveryKitAsync();
+            KeyringLoadedObject? accessObject = await store.FindLatestValidAsync(KeyringObjectKind.AccessEnvelope);
+            KeyringLoadedObject? stateObject = await store.FindLatestValidAsync(KeyringObjectKind.StateSnapshot);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(kit.Magic, Is.EqualTo("cotton.recovery-kit.v2"));
+                Assert.That(kit.Schema, Is.EqualTo(KeyringFormat.SchemaVersion));
+                Assert.That(kit.InstanceId, Is.EqualTo(initial.State.InstanceId));
+                Assert.That(kit.KeyringId, Is.EqualTo(initial.State.KeyringId));
+                Assert.That(kit.RootEpoch, Is.EqualTo(initial.State.RootEpoch));
+                Assert.That(kit.AccessGeneration, Is.EqualTo(initial.AccessEnvelope.Generation));
+                Assert.That(kit.StateGeneration, Is.EqualTo(initial.State.StateGeneration));
+                Assert.That(kit.AccessEnvelopeObjectName, Is.EqualTo(initial.AccessPointer.ObjectName));
+                Assert.That(kit.AccessEnvelopeHash, Is.EqualTo(initial.AccessPointer.Hash));
+                Assert.That(kit.StateSnapshotObjectName, Is.EqualTo(initial.StatePointer.ObjectName));
+                Assert.That(kit.StateSnapshotHash, Is.EqualTo(initial.StatePointer.Hash));
+                Assert.That(Convert.FromBase64String(kit.AccessEnvelopeBase64), Is.EqualTo(accessObject!.Bytes));
+                Assert.That(Convert.FromBase64String(kit.StateSnapshotBase64), Is.EqualTo(stateObject!.Bytes));
+            }
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable, originalEnabled);
+            Environment.SetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable, originalPath);
+        }
+    }
 
     [Test]
     [NonParallelizable]

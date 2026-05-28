@@ -116,6 +116,11 @@ export const useRotateKeyringUnlockMutation = () => {
   });
 };
 
+export const useExportKeyringRecoveryKitMutation = () =>
+  useMutation({
+    mutationFn: () => adminApi.exportKeyringRecoveryKit(),
+  });
+
 export const useCreateAdminUserMutation = () => {
   const queryClient = useQueryClient();
 

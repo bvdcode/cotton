@@ -1844,7 +1844,15 @@
         "loadFailed": "Не удалось загрузить диагностику безопасности."
       },
       "actions": {
+        "exportRecoveryKit": "Скачать recovery kit",
+        "exportingRecoveryKit": "Экспорт...",
         "rotateUnlock": "Сменить unlock secret"
+      },
+      "recoveryKit": {
+        "success": "Recovery kit скачан.",
+        "errors": {
+          "failed": "Не удалось экспортировать recovery kit keyring."
+        }
       },
       "rotateUnlock": {
         "title": "Смена unlock secret",
