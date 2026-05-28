@@ -43,6 +43,24 @@ const resetAuthStore = () => {
   });
 };
 
+const getWindowStorage = (
+  key: "localStorage" | "sessionStorage",
+): Storage | undefined => {
+  try {
+    return window[key];
+  } catch {
+    return undefined;
+  }
+};
+
+const clearStorage = (key: "localStorage" | "sessionStorage"): void => {
+  try {
+    getWindowStorage(key)?.clear();
+  } catch {
+    // jsdom can expose storage as unavailable when the test origin is opaque.
+  }
+};
+
 const AuthProbe = () => {
   const { ensureAuth, isAuthenticated, user: currentUser } = useAuth();
 
@@ -59,8 +77,8 @@ const AuthProbe = () => {
 
 describe("AuthProvider OIDC restore", () => {
   beforeEach(() => {
-    window.localStorage.clear();
-    window.sessionStorage.clear();
+    clearStorage("localStorage");
+    clearStorage("sessionStorage");
     resetAuthStore();
     authApiMocks.refresh.mockReset();
     authApiMocks.me.mockReset();
@@ -68,8 +86,8 @@ describe("AuthProvider OIDC restore", () => {
   });
 
   afterEach(() => {
-    window.localStorage.clear();
-    window.sessionStorage.clear();
+    clearStorage("localStorage");
+    clearStorage("sessionStorage");
     resetAuthStore();
   });
 
