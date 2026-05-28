@@ -45,8 +45,13 @@ namespace Cotton.Storage.Tests.Pipelines
                 return Task.FromResult<Stream>(new MemoryStream(data));
             }
 
-            public Task WriteAsync(string uid, Stream stream)
+            public Task WriteAsync(string uid, Stream stream, bool overwrite = false)
             {
+                if (!overwrite && _storage.ContainsKey(uid))
+                {
+                    return Task.CompletedTask;
+                }
+
                 var ms = new MemoryStream();
                 stream.CopyTo(ms);
                 _storage[uid] = ms.ToArray();
@@ -246,6 +251,37 @@ namespace Cotton.Storage.Tests.Pipelines
             {
                 Assert.That(processor.WriteCalls, Is.Zero);
                 Assert.That(result.ToArray(), Is.EqualTo(originalData));
+            }
+        }
+
+        [Test]
+        public async Task Pipeline_OverwriteExisting_ReprocessesAndReplacesBackendData()
+        {
+            // Arrange
+            var backend = new FakeStorageBackend();
+            var provider = new FakeBackendProvider(backend);
+            var logger = new Mock<ILogger<FileStoragePipeline>>();
+            var processor = new CountingProcessor();
+            var pipeline = new FileStoragePipeline(logger.Object, provider, [processor]);
+
+            byte[] originalData = Encoding.UTF8.GetBytes("already stored");
+            byte[] replacementData = Encoding.UTF8.GetBytes("replacement upload");
+            await backend.WriteAsync("test-uid", new MemoryStream(originalData));
+
+            // Act
+            await pipeline.WriteAsync(
+                "test-uid",
+                new MemoryStream(replacementData),
+                new PipelineContext { OverwriteExisting = true });
+
+            // Assert
+            var stream = await backend.ReadAsync("test-uid");
+            var result = new MemoryStream();
+            await stream.CopyToAsync(result);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(processor.WriteCalls, Is.EqualTo(1));
+                Assert.That(result.ToArray(), Is.EqualTo(replacementData));
             }
         }
 

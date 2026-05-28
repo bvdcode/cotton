@@ -121,8 +121,13 @@ public class KeyringReplicaTests
             return Task.FromResult<Stream>(new MemoryStream(bytes.ToArray(), writable: false));
         }
 
-        public async Task WriteAsync(string uid, Stream stream)
+        public async Task WriteAsync(string uid, Stream stream, bool overwrite = false)
         {
+            if (!overwrite && _objects.ContainsKey(uid))
+            {
+                return;
+            }
+
             using var memory = new MemoryStream();
             if (stream.CanSeek)
             {

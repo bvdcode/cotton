@@ -109,7 +109,7 @@ namespace Cotton.Storage.Backends
         }
 
         /// <inheritdoc />
-        public async Task WriteAsync(string uid, Stream source)
+        public async Task WriteAsync(string uid, Stream source, bool overwrite = false)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
             ArgumentNullException.ThrowIfNull(source);
@@ -117,7 +117,7 @@ namespace Cotton.Storage.Backends
             var s3 = _s3Provider.GetS3Client();
             string bucket = _s3Provider.GetBucketName();
             string key = GetS3Key(uid);
-            if (await ExistsAsync(uid).ConfigureAwait(false))
+            if (!overwrite && await ExistsAsync(uid).ConfigureAwait(false))
             {
                 return;
             }

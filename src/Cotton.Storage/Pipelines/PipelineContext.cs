@@ -14,5 +14,7 @@ namespace Cotton.Storage.Pipelines
         public bool StoreInMemoryCache { get; set; }
         /// <summary>Gets or sets known chunk lengths keyed by storage UID.</summary>
         public Dictionary<string, long>? ChunkLengths { get; set; }
+        /// <summary>Gets or sets whether an existing storage UID should be replaced.</summary>
+        public bool OverwriteExisting { get; set; }
     }
 }

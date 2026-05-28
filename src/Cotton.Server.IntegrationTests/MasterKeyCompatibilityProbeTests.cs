@@ -207,7 +207,7 @@ namespace Cotton.Server.IntegrationTests
             public Task<bool> ExistsAsync(string uid) => throw StorageTouched();
             public Task<long> GetSizeAsync(string uid) => throw StorageTouched();
             public Task<Stream> ReadAsync(string uid) => throw StorageTouched();
-            public Task WriteAsync(string uid, Stream stream) => throw StorageTouched();
+            public Task WriteAsync(string uid, Stream stream, bool overwrite = false) => throw StorageTouched();
             public IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default) => throw StorageTouched();
 
             private static InvalidOperationException StorageTouched() =>

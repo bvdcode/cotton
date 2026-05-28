@@ -21,8 +21,8 @@ namespace Cotton.Storage.Abstractions
         Task<long> GetSizeAsync(string uid);
         /// <summary>Opens a readable stream for a stored blob.</summary>
         Task<Stream> ReadAsync(string uid);
-        /// <summary>Writes the supplied blob stream if the UID is not already present.</summary>
-        Task WriteAsync(string uid, Stream stream);
+        /// <summary>Writes the supplied blob stream, optionally replacing an existing UID.</summary>
+        Task WriteAsync(string uid, Stream stream, bool overwrite = false);
         /// <summary>Lists every storage UID known to the backend for consistency checks.</summary>
         IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default);
     }

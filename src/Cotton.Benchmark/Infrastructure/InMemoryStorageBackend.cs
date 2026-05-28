@@ -43,8 +43,13 @@ namespace Cotton.Benchmark.Infrastructure
             return Task.FromResult<Stream>(new MemoryStream(data, writable: false));
         }
 
-        public Task WriteAsync(string uid, Stream stream)
+        public Task WriteAsync(string uid, Stream stream, bool overwrite = false)
         {
+            if (!overwrite && _storage.ContainsKey(uid))
+            {
+                return Task.CompletedTask;
+            }
+
             using var ms = new MemoryStream();
             stream.CopyTo(ms);
             _storage[uid] = ms.ToArray();

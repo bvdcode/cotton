@@ -178,6 +178,25 @@ namespace Cotton.Storage.Tests.Backends
         }
 
         [Test]
+        public async Task FileSystemBackend_Write_OverwriteExisting_ReplacesData()
+        {
+            // Arrange
+            string uid = NewUid();
+            var originalData = Encoding.UTF8.GetBytes("First");
+            var replacementData = Encoding.UTF8.GetBytes("Second");
+            await _backend.WriteAsync(uid, new MemoryStream(originalData));
+
+            // Act
+            await _backend.WriteAsync(uid, new MemoryStream(replacementData), overwrite: true);
+            await using var readStream = await _backend.ReadAsync(uid);
+
+            // Assert
+            using var result = new MemoryStream();
+            await readStream.CopyToAsync(result);
+            Assert.That(result.ToArray(), Is.EqualTo(replacementData));
+        }
+
+        [Test]
         public async Task FileSystemBackend_Write_LargeFile_Success()
         {
             // Arrange

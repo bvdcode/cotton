@@ -192,7 +192,7 @@ public class StoragePressureGuardTests : IntegrationTestBase
         public Task<bool> ExistsAsync(string uid) => throw new NotImplementedException();
         public Task<long> GetSizeAsync(string uid) => throw new NotImplementedException();
         public Task<Stream> ReadAsync(string uid) => throw new NotImplementedException();
-        public Task WriteAsync(string uid, Stream stream) => throw new NotImplementedException();
+        public Task WriteAsync(string uid, Stream stream, bool overwrite = false) => throw new NotImplementedException();
         public IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default) => throw new NotImplementedException();
     }
 
