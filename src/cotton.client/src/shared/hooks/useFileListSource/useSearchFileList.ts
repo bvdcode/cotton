@@ -58,14 +58,6 @@ export const useSearchFileList = ({
       return `${normalized.slice(0, slashIndex + 1)}${fileName}`;
     };
 
-    const sortByName = <T extends { name: string }>(items: T[]): T[] => {
-      const sorted = items.slice();
-      sorted.sort((a, b) =>
-        a.name.localeCompare(b.name, undefined, { numeric: true }),
-      );
-      return sorted;
-    };
-
     // Some backend versions return filePaths keyed by file manifest IDs.
     // Others may return node-file association IDs. Prefer direct lookup by file.id,
     // but keep a best-effort fallback to match by file name.
@@ -94,11 +86,11 @@ export const useSearchFileList = ({
       return consumeNextPath(file.name);
     };
 
-    const sortedFolders = sortByName(results.nodes ?? []);
-    const sortedFiles = sortByName(results.files ?? []);
+    const folders = results.nodes ?? [];
+    const files = results.files ?? [];
 
     return [
-      ...sortedFolders.map(
+      ...folders.map(
         (node) =>
           ({
             kind: "folder",
@@ -108,7 +100,7 @@ export const useSearchFileList = ({
               : undefined,
           }) as const,
       ),
-      ...sortedFiles.map((file) => {
+      ...files.map((file) => {
         const fullPath = getFullPathForFile(file);
 
         // containerPath stays as the full original path for backend resolution
