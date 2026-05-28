@@ -1845,12 +1845,16 @@
       },
       "actions": {
         "exportRecoveryKit": "Скачать recovery kit",
+        "importRecoveryKit": "Импортировать recovery kit",
+        "importingRecoveryKit": "Импорт...",
         "exportingRecoveryKit": "Экспорт...",
         "rotateUnlock": "Сменить unlock secret"
       },
       "recoveryKit": {
+        "importSuccess": "Recovery kit восстановил state generation {{stateGeneration}}.",
         "success": "Recovery kit скачан.",
         "errors": {
+          "importFailed": "Не удалось импортировать recovery kit keyring.",
           "failed": "Не удалось экспортировать recovery kit keyring."
         }
       },

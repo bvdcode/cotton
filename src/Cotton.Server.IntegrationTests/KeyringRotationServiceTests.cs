@@ -70,7 +70,6 @@ public class KeyringRotationServiceTests
             Throws.InstanceOf<UnauthorizedAccessException>());
     }
 
-
     [Test]
     [NonParallelizable]
     public async Task AdminService_ExportsRecoveryKit_WithLatestEncryptedObjects()
@@ -122,6 +121,93 @@ public class KeyringRotationServiceTests
 
     [Test]
     [NonParallelizable]
+    public async Task AdminService_ImportsRecoveryKit_AndRestoresMissingReplicaObjects()
+    {
+        string primaryRoot = CreateTempDirectory();
+        string secondaryRoot = CreateTempDirectory();
+        string? originalEnabled = Environment.GetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable);
+        string? originalPath = Environment.GetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable);
+        string unlock = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(unlock);
+
+        try
+        {
+            Environment.SetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable, "1");
+            Environment.SetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable, primaryRoot);
+            var primaryReplica = new KeyringLocalFileReplica(primaryRoot, "primary");
+            var secondaryReplica = new KeyringLocalFileReplica(secondaryRoot, "secondary");
+            var primaryStore = new KeyringJournaledObjectStore([primaryReplica]);
+            var bootstrap = new KeyringBootstrapService(primaryStore);
+            KeyringBootstrapResult initial = await bootstrap.OpenOrCreateFromV1Async(settings, unlock);
+            var runtimeState = new KeyringRuntimeState();
+            runtimeState.Set(initial);
+            var repairStore = new KeyringJournaledObjectStore([primaryReplica, secondaryReplica]);
+            var admin = new KeyringAdminService(repairStore, runtimeState);
+            KeyringRecoveryKitDto kit = await admin.ExportRecoveryKitAsync();
+
+            KeyringRecoveryKitImportResponseDto result = await admin.ImportRecoveryKitAsync(kit);
+            List<string> secondaryNames = await secondaryReplica.ListNamesAsync().ToListAsync();
+            KeyringLoadedObject? secondaryState = await new KeyringJournaledObjectStore([secondaryReplica])
+                .FindLatestValidAsync(KeyringObjectKind.StateSnapshot);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result.RootEpoch, Is.EqualTo(initial.State.RootEpoch));
+                Assert.That(result.AccessGeneration, Is.EqualTo(initial.AccessEnvelope.Generation));
+                Assert.That(result.StateGeneration, Is.EqualTo(initial.State.StateGeneration));
+                Assert.That(result.AccessEnvelopeHash, Is.EqualTo(initial.AccessPointer.Hash));
+                Assert.That(result.StateSnapshotHash, Is.EqualTo(initial.StatePointer.Hash));
+                Assert.That(secondaryNames, Does.Contain(initial.AccessPointer.ObjectName));
+                Assert.That(secondaryNames, Does.Contain(initial.StatePointer.ObjectName));
+                Assert.That(secondaryNames, Does.Contain(KeyringObjectNames.GetLatestName(KeyringObjectKind.AccessEnvelope)));
+                Assert.That(secondaryNames, Does.Contain(KeyringObjectNames.GetLatestName(KeyringObjectKind.StateSnapshot)));
+                Assert.That(secondaryState, Is.Not.Null);
+                Assert.That(secondaryState!.Pointer.Hash, Is.EqualTo(initial.StatePointer.Hash));
+            }
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable, originalEnabled);
+            Environment.SetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable, originalPath);
+        }
+    }
+
+    [Test]
+    [NonParallelizable]
+    public async Task AdminService_RejectsRecoveryKit_WhenPayloadHashIsTampered()
+    {
+        string root = CreateTempDirectory();
+        string? originalEnabled = Environment.GetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable);
+        string? originalPath = Environment.GetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable);
+        string unlock = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(unlock);
+
+        try
+        {
+            Environment.SetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable, "1");
+            Environment.SetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable, root);
+            var store = new KeyringJournaledObjectStore([new KeyringLocalFileReplica(root)]);
+            var bootstrap = new KeyringBootstrapService(store);
+            KeyringBootstrapResult initial = await bootstrap.OpenOrCreateFromV1Async(settings, unlock);
+            var runtimeState = new KeyringRuntimeState();
+            runtimeState.Set(initial);
+            var admin = new KeyringAdminService(store, runtimeState);
+            KeyringRecoveryKitDto kit = await admin.ExportRecoveryKitAsync();
+            KeyringRecoveryKitDto tampered = CopyKit(kit, stateSnapshotHash: new string('0', 64));
+
+            Assert.That(
+                async () => await admin.ImportRecoveryKitAsync(tampered),
+                Throws.InstanceOf<InvalidOperationException>());
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable, originalEnabled);
+            Environment.SetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable, originalPath);
+        }
+    }
+
+    [Test]
+    [NonParallelizable]
     public async Task AdminService_RotatesUnlock_AndUpdatesRuntimeState()
     {
         string root = CreateTempDirectory();
@@ -159,6 +245,30 @@ public class KeyringRotationServiceTests
             Environment.SetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable, originalEnabled);
             Environment.SetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable, originalPath);
         }
+    }
+
+    private static KeyringRecoveryKitDto CopyKit(
+        KeyringRecoveryKitDto kit,
+        string? accessEnvelopeHash = null,
+        string? stateSnapshotHash = null)
+    {
+        return new KeyringRecoveryKitDto
+        {
+            Magic = kit.Magic,
+            Schema = kit.Schema,
+            ExportedAtUtc = kit.ExportedAtUtc,
+            InstanceId = kit.InstanceId,
+            KeyringId = kit.KeyringId,
+            RootEpoch = kit.RootEpoch,
+            AccessGeneration = kit.AccessGeneration,
+            StateGeneration = kit.StateGeneration,
+            AccessEnvelopeObjectName = kit.AccessEnvelopeObjectName,
+            AccessEnvelopeHash = accessEnvelopeHash ?? kit.AccessEnvelopeHash,
+            AccessEnvelopeBase64 = kit.AccessEnvelopeBase64,
+            StateSnapshotObjectName = kit.StateSnapshotObjectName,
+            StateSnapshotHash = stateSnapshotHash ?? kit.StateSnapshotHash,
+            StateSnapshotBase64 = kit.StateSnapshotBase64,
+        };
     }
 
     private static string CreateTempDirectory()

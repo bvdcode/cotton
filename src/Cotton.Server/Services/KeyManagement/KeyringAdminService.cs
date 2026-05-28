@@ -3,6 +3,7 @@
 
 using Cotton.Autoconfig.Extensions;
 using Cotton.Server.Models.Dto;
+using System.Security.Cryptography;
 using System.Text.Json;
 
 namespace Cotton.Server.Services.KeyManagement;
@@ -12,6 +13,8 @@ namespace Cotton.Server.Services.KeyManagement;
 /// </summary>
 public sealed class KeyringAdminService
 {
+    private const string RecoveryKitMagic = "cotton.recovery-kit.v2";
+
     private readonly KeyringJournaledObjectStore _store;
     private readonly KeyringRuntimeState _runtimeState;
 
@@ -114,6 +117,159 @@ public sealed class KeyringAdminService
             StateSnapshotHash = stateObject.Pointer.Hash,
             StateSnapshotBase64 = Convert.ToBase64String(stateObject.Bytes),
         };
+    }
+
+    internal async Task<KeyringRecoveryKitImportResponseDto> ImportRecoveryKitAsync(
+        KeyringRecoveryKitDto kit,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(kit);
+        if (!KeyringStartup.IsEnabled())
+        {
+            throw new InvalidOperationException("Keyring v2 is not enabled for this process.");
+        }
+
+        KeyringBootstrapResult runtime = _runtimeState.Current
+            ?? throw new InvalidOperationException("Keyring recovery kit cannot be imported before runtime keyring is loaded.");
+        ValidateRecoveryKitHeader(kit);
+        byte[] accessBytes = DecodeKitObject(kit.AccessEnvelopeBase64, "access envelope");
+        byte[] stateBytes = DecodeKitObject(kit.StateSnapshotBase64, "state snapshot");
+        ValidateKitHash(kit.AccessEnvelopeHash, accessBytes, "access envelope");
+        ValidateKitHash(kit.StateSnapshotHash, stateBytes, "state snapshot");
+        ValidateObjectName(
+            KeyringObjectKind.AccessEnvelope,
+            kit.AccessGeneration,
+            kit.AccessEnvelopeHash,
+            kit.AccessEnvelopeObjectName,
+            "access envelope");
+        ValidateObjectName(
+            KeyringObjectKind.StateSnapshot,
+            kit.StateGeneration,
+            kit.StateSnapshotHash,
+            kit.StateSnapshotObjectName,
+            "state snapshot");
+
+        KeyringAccessEnvelope access = DeserializeAccessEnvelope(accessBytes);
+        KeyringStateSnapshot snapshot = DeserializeStateSnapshot(stateBytes);
+        ValidateRecoveryKitMetadata(kit, access, snapshot);
+        ValidateRecoveryKitMatchesRuntime(kit, runtime);
+
+        KeyringObjectPointer accessPointer = await _store.CommitAsync(
+            KeyringObjectKind.AccessEnvelope,
+            access.Generation,
+            accessBytes,
+            cancellationToken);
+        KeyringObjectPointer statePointer = await _store.CommitAsync(
+            KeyringObjectKind.StateSnapshot,
+            snapshot.StateGeneration,
+            stateBytes,
+            cancellationToken);
+
+        return new KeyringRecoveryKitImportResponseDto
+        {
+            ImportedAtUtc = DateTimeOffset.UtcNow,
+            RootEpoch = access.RootEpoch,
+            AccessGeneration = access.Generation,
+            StateGeneration = snapshot.StateGeneration,
+            AccessEnvelopeHash = accessPointer.Hash,
+            StateSnapshotHash = statePointer.Hash,
+        };
+    }
+
+    private static void ValidateRecoveryKitHeader(KeyringRecoveryKitDto kit)
+    {
+        if (kit.Magic != RecoveryKitMagic)
+        {
+            throw new InvalidOperationException("Keyring recovery kit has an invalid format marker.");
+        }
+
+        if (kit.Schema != KeyringFormat.SchemaVersion)
+        {
+            throw new InvalidOperationException("Keyring recovery kit uses an unsupported schema version.");
+        }
+    }
+
+    private static byte[] DecodeKitObject(string base64, string objectLabel)
+    {
+        if (string.IsNullOrWhiteSpace(base64))
+        {
+            throw new InvalidOperationException($"Keyring recovery kit {objectLabel} payload is missing.");
+        }
+
+        try
+        {
+            return Convert.FromBase64String(base64);
+        }
+        catch (FormatException ex)
+        {
+            throw new InvalidOperationException($"Keyring recovery kit {objectLabel} payload is not valid base64.", ex);
+        }
+    }
+
+    private static void ValidateKitHash(string expectedHash, byte[] bytes, string objectLabel)
+    {
+        if (string.IsNullOrWhiteSpace(expectedHash))
+        {
+            throw new InvalidOperationException($"Keyring recovery kit {objectLabel} hash is missing.");
+        }
+
+        string actualHash = Convert.ToHexStringLower(SHA256.HashData(bytes));
+        if (!string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"Keyring recovery kit {objectLabel} hash does not match its payload.");
+        }
+    }
+
+    private static void ValidateObjectName(
+        KeyringObjectKind kind,
+        int generation,
+        string hash,
+        string objectName,
+        string objectLabel)
+    {
+        string expectedName = KeyringObjectNames.GetObjectName(kind, generation, hash.ToLowerInvariant());
+        if (!string.Equals(objectName, expectedName, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException($"Keyring recovery kit {objectLabel} object name does not match its generation and hash.");
+        }
+    }
+
+    private static void ValidateRecoveryKitMetadata(
+        KeyringRecoveryKitDto kit,
+        KeyringAccessEnvelope access,
+        KeyringStateSnapshot snapshot)
+    {
+        if (access.InstanceId != snapshot.InstanceId
+            || access.KeyringId != snapshot.KeyringId
+            || access.RootEpoch != snapshot.RootEpoch)
+        {
+            throw new InvalidOperationException("Keyring recovery kit access and state metadata do not match.");
+        }
+
+        if (kit.InstanceId != access.InstanceId
+            || kit.KeyringId != access.KeyringId
+            || kit.RootEpoch != access.RootEpoch
+            || kit.AccessGeneration != access.Generation
+            || kit.StateGeneration != snapshot.StateGeneration)
+        {
+            throw new InvalidOperationException("Keyring recovery kit metadata does not match the embedded keyring objects.");
+        }
+    }
+
+    private static void ValidateRecoveryKitMatchesRuntime(
+        KeyringRecoveryKitDto kit,
+        KeyringBootstrapResult runtime)
+    {
+        if (runtime.State.InstanceId != kit.InstanceId
+            || runtime.State.KeyringId != kit.KeyringId
+            || runtime.State.RootEpoch != kit.RootEpoch
+            || runtime.State.StateGeneration != kit.StateGeneration
+            || runtime.AccessEnvelope.Generation != kit.AccessGeneration
+            || !string.Equals(runtime.AccessPointer.Hash, kit.AccessEnvelopeHash, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(runtime.StatePointer.Hash, kit.StateSnapshotHash, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Keyring recovery kit does not match the loaded runtime keyring.");
+        }
     }
 
     private static KeyringAccessEnvelope DeserializeAccessEnvelope(byte[] bytes)

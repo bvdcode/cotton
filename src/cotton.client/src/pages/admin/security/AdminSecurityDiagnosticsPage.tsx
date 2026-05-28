@@ -17,15 +17,23 @@ import {
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
 import KeyIcon from "@mui/icons-material/VpnKey";
 import SecurityIcon from "@mui/icons-material/Security";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { useState, type FormEvent, type ReactNode } from "react";
+import {
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { getApiErrorMessage } from "../../../shared/api/httpClient";
 import {
   useExportKeyringRecoveryKitMutation,
+  useImportKeyringRecoveryKitMutation,
   useRotateKeyringUnlockMutation,
   useSecurityDiagnosticsQuery,
 } from "../../../shared/api/queries/admin";
@@ -238,7 +246,9 @@ interface SecurityDiagnosticsContentProps {
   t: TFunction<"admin">;
   onRotateUnlock: () => void;
   onExportRecoveryKit: () => void;
+  onImportRecoveryKit: () => void;
   exportingRecoveryKit: boolean;
+  importingRecoveryKit: boolean;
 }
 
 const SecurityDiagnosticsContent = ({
@@ -246,7 +256,9 @@ const SecurityDiagnosticsContent = ({
   t,
   onRotateUnlock,
   onExportRecoveryKit,
+  onImportRecoveryKit,
   exportingRecoveryKit,
+  importingRecoveryKit,
 }: SecurityDiagnosticsContentProps) => (
   <Stack spacing={3} divider={<Divider flexItem />}>
     <SecurityScoreSummary diagnostics={diagnostics} t={t} />
@@ -258,7 +270,9 @@ const SecurityDiagnosticsContent = ({
       t={t}
       onRotateUnlock={onRotateUnlock}
       onExportRecoveryKit={onExportRecoveryKit}
+      onImportRecoveryKit={onImportRecoveryKit}
       exportingRecoveryKit={exportingRecoveryKit}
+      importingRecoveryKit={importingRecoveryKit}
     />
     <MemoryDiagnosticsSection diagnostics={diagnostics} t={t} />
     <ContainerDiagnosticsSection diagnostics={diagnostics} t={t} />
@@ -478,7 +492,9 @@ const MasterKeyDiagnosticsSection = ({
 type KeyringDiagnosticsSectionProps = DiagnosticsContentSectionProps & {
   onRotateUnlock: () => void;
   onExportRecoveryKit: () => void;
+  onImportRecoveryKit: () => void;
   exportingRecoveryKit: boolean;
+  importingRecoveryKit: boolean;
 };
 
 const KeyringDiagnosticsSection = ({
@@ -486,7 +502,9 @@ const KeyringDiagnosticsSection = ({
   t,
   onRotateUnlock,
   onExportRecoveryKit,
+  onImportRecoveryKit,
   exportingRecoveryKit,
+  importingRecoveryKit,
 }: KeyringDiagnosticsSectionProps) => (
   <DiagnosticsSection title={t("securityDiagnostics.sections.keyring")}>
     <DiagnosticsRow
@@ -574,6 +592,17 @@ const KeyringDiagnosticsSection = ({
             ? t("securityDiagnostics.actions.exportingRecoveryKit")
             : t("securityDiagnostics.actions.exportRecoveryKit")}
         </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<UploadFileIcon fontSize="small" />}
+          onClick={onImportRecoveryKit}
+          disabled={importingRecoveryKit}
+        >
+          {importingRecoveryKit
+            ? t("securityDiagnostics.actions.importingRecoveryKit")
+            : t("securityDiagnostics.actions.importRecoveryKit")}
+        </Button>
       </Stack>
     )}
   </DiagnosticsSection>
@@ -608,7 +637,6 @@ const MemoryDiagnosticsSection = ({
     />
   </DiagnosticsSection>
 );
-
 
 const getLimitSummary = (
   softLimit: string | null | undefined,
@@ -933,6 +961,8 @@ export const AdminSecurityDiagnosticsPage = () => {
   const { t } = useTranslation("admin");
   const diagnosticsQuery = useSecurityDiagnosticsQuery();
   const exportRecoveryKitMutation = useExportKeyringRecoveryKitMutation();
+  const importRecoveryKitMutation = useImportKeyringRecoveryKitMutation();
+  const recoveryKitInputRef = useRef<HTMLInputElement | null>(null);
   const [rotationOpen, setRotationOpen] = useState(false);
   const loadError = diagnosticsQuery.isError
     ? getApiErrorMessage(diagnosticsQuery.error) ??
@@ -951,6 +981,37 @@ export const AdminSecurityDiagnosticsPage = () => {
         getApiErrorMessage(apiError) ??
           t("securityDiagnostics.recoveryKit.errors.failed"),
         { toastId: "admin:keyring:recovery-kit:failed" },
+      );
+    }
+  };
+
+  const handleImportRecoveryKit = () => {
+    recoveryKitInputRef.current?.click();
+  };
+
+  const handleRecoveryKitFileSelected = async (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) {
+      return;
+    }
+
+    try {
+      const kit = JSON.parse(await file.text()) as KeyringRecoveryKitDto;
+      const result = await importRecoveryKitMutation.mutateAsync(kit);
+      toast.success(
+        t("securityDiagnostics.recoveryKit.importSuccess", {
+          stateGeneration: result.stateGeneration,
+        }),
+        { toastId: "admin:keyring:recovery-kit:import-success" },
+      );
+    } catch (apiError) {
+      toast.error(
+        getApiErrorMessage(apiError) ??
+          t("securityDiagnostics.recoveryKit.errors.importFailed"),
+        { toastId: "admin:keyring:recovery-kit:import-failed" },
       );
     }
   };
@@ -987,11 +1048,20 @@ export const AdminSecurityDiagnosticsPage = () => {
               t={t}
               onRotateUnlock={() => setRotationOpen(true)}
               onExportRecoveryKit={handleExportRecoveryKit}
+              onImportRecoveryKit={handleImportRecoveryKit}
               exportingRecoveryKit={exportRecoveryKitMutation.isPending}
+              importingRecoveryKit={importRecoveryKitMutation.isPending}
             />
           )}
         </Stack>
       </AdminPageSurface>
+      <input
+        ref={recoveryKitInputRef}
+        type="file"
+        accept="application/json,.json"
+        hidden
+        onChange={handleRecoveryKitFileSelected}
+      />
       <KeyringRotateUnlockDialog
         open={rotationOpen}
         onClose={() => setRotationOpen(false)}

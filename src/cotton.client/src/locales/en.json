@@ -2034,12 +2034,16 @@
       },
       "actions": {
         "exportRecoveryKit": "Export recovery kit",
+        "importRecoveryKit": "Import recovery kit",
+        "importingRecoveryKit": "Importing...",
         "exportingRecoveryKit": "Exporting...",
         "rotateUnlock": "Rotate unlock secret"
       },
       "recoveryKit": {
+        "importSuccess": "Recovery kit restored state generation {{stateGeneration}}.",
         "success": "Recovery kit downloaded.",
         "errors": {
+          "importFailed": "Failed to import the keyring recovery kit.",
           "failed": "Failed to export the keyring recovery kit."
         }
       },

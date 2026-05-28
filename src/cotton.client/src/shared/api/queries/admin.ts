@@ -11,6 +11,7 @@ import {
   type AdminUserDto,
   type GcChunkTimelineDto,
   type GcTimelineBucketKind,
+  type KeyringRecoveryKitDto,
   type KeyringRotateUnlockRequestDto,
   type LatestDatabaseBackupDto,
   type SecurityDiagnosticsDto,
@@ -120,6 +121,19 @@ export const useExportKeyringRecoveryKitMutation = () =>
   useMutation({
     mutationFn: () => adminApi.exportKeyringRecoveryKit(),
   });
+
+export const useImportKeyringRecoveryKitMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (kit: KeyringRecoveryKitDto) =>
+      adminApi.importKeyringRecoveryKit(kit),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.securityDiagnostics(),
+      }),
+  });
+};
 
 export const useCreateAdminUserMutation = () => {
   const queryClient = useQueryClient();

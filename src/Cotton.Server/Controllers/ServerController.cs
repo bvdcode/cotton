@@ -116,6 +116,25 @@ namespace Cotton.Server.Controllers
         }
 
         /// <summary>
+        /// Restores replicated encrypted keyring objects from a recovery kit.
+        /// </summary>
+        [HttpPost("keyring/recovery-kit/import")]
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        public async Task<IActionResult> ImportKeyringRecoveryKit(
+            [FromBody] KeyringRecoveryKitDto request,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                return Ok(await _keyringAdmin.ImportRecoveryKitAsync(request, cancellationToken));
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Schedules an immediate database backup.
         /// </summary>
         [HttpPatch("database-backup/trigger")]

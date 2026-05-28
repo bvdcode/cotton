@@ -169,6 +169,15 @@ export interface KeyringRecoveryKitDto {
   stateSnapshotBase64: string;
 }
 
+export interface KeyringRecoveryKitImportResponseDto {
+  importedAtUtc: string;
+  rootEpoch: number;
+  accessGeneration: number;
+  stateGeneration: number;
+  accessEnvelopeHash: string;
+  stateSnapshotHash: string;
+}
+
 export interface KeyringRotateUnlockRequestDto {
   currentUnlockSecret: string;
   newUnlockSecret: string;
@@ -287,6 +296,16 @@ export const adminApi = {
   exportKeyringRecoveryKit: async (): Promise<KeyringRecoveryKitDto> => {
     const response = await httpClient.get<KeyringRecoveryKitDto>(
       "server/keyring/recovery-kit",
+    );
+    return response.data;
+  },
+
+  importKeyringRecoveryKit: async (
+    kit: KeyringRecoveryKitDto,
+  ): Promise<KeyringRecoveryKitImportResponseDto> => {
+    const response = await httpClient.post<KeyringRecoveryKitImportResponseDto>(
+      "server/keyring/recovery-kit/import",
+      kit,
     );
     return response.data;
   },
