@@ -1877,7 +1877,26 @@
         }
       },
       "reencryptChunks": {
+        "title": "Перешифровать chunks",
+        "running": "Перешифровка идёт небольшими возобновляемыми batches.",
+        "finished": "Перешифровка chunks завершена.",
+        "finishedWithWarnings": "Перешифровка chunks завершена с предупреждениями.",
+        "canceled": "Перешифровка остановлена после текущего batch.",
+        "cancel": "Остановить после batch",
+        "close": "Закрыть",
+        "canceledToast": "Перешифровка chunks остановлена после текущего batch.",
         "success": "Перешифровка chunks завершена. Перезаписано: {{reencrypted}}, проверено: {{scanned}}, отсутствует: {{missing}}, ошибок: {{failed}}.",
+        "fields": {
+          "targetKeyId": "Целевой key id",
+          "scanned": "Проверено",
+          "reencrypted": "Перезаписано",
+          "alreadyCurrent": "Уже актуальные",
+          "missing": "Отсутствует",
+          "failed": "Ошибки"
+        },
+        "values": {
+          "scanned": "{{scanned}} / {{total}}"
+        },
         "errors": {
           "failed": "Не удалось перешифровать chunks."
         }

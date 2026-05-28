@@ -863,6 +863,125 @@ const generateUnlockSecret = () => {
   return btoa(binary);
 };
 
+type KeyringReencryptionProgress = {
+  running: boolean;
+  targetKeyId: number | null;
+  totalChunks: number;
+  scanned: number;
+  reencrypted: number;
+  alreadyCurrent: number;
+  missing: number;
+  failed: number;
+  completed: boolean;
+  canceled: boolean;
+};
+
+type KeyringReencryptChunksDialogProps = {
+  progress: KeyringReencryptionProgress | null;
+  onCancel: () => void;
+  onClose: () => void;
+};
+
+const KeyringReencryptChunksDialog = ({
+  progress,
+  onCancel,
+  onClose,
+}: KeyringReencryptChunksDialogProps) => {
+  const { t } = useTranslation("admin");
+  const totalChunks = progress?.totalChunks ?? 0;
+  const scanned = progress?.scanned ?? 0;
+  const progressValue =
+    totalChunks > 0 ? Math.min(100, (scanned / totalChunks) * 100) : 0;
+  const finished = progress !== null && !progress.running;
+  const hasProblems =
+    (progress?.missing ?? 0) > 0 || (progress?.failed ?? 0) > 0;
+
+  const handleDismiss = () => {
+    if (progress?.running) {
+      onCancel();
+      return;
+    }
+
+    onClose();
+  };
+
+  return (
+    <Dialog
+      open={progress !== null}
+      onClose={handleDismiss}
+      maxWidth="sm"
+      fullWidth
+    >
+      <DialogTitle>{t("securityDiagnostics.reencryptChunks.title")}</DialogTitle>
+      <DialogContent dividers>
+        <Stack spacing={2} pt={0.5}>
+          {progress?.running && (
+            <Alert severity="info">
+              {t("securityDiagnostics.reencryptChunks.running")}
+            </Alert>
+          )}
+          {finished && progress?.canceled && (
+            <Alert severity="warning">
+              {t("securityDiagnostics.reencryptChunks.canceled")}
+            </Alert>
+          )}
+          {finished && !progress?.canceled && (
+            <Alert severity={hasProblems ? "warning" : "success"}>
+              {hasProblems
+                ? t("securityDiagnostics.reencryptChunks.finishedWithWarnings")
+                : t("securityDiagnostics.reencryptChunks.finished")}
+            </Alert>
+          )}
+          <LinearProgress
+            variant={totalChunks > 0 ? "determinate" : "indeterminate"}
+            value={progressValue}
+            sx={{ height: 8, borderRadius: 1 }}
+          />
+          <Stack spacing={1}>
+            <DiagnosticsRow
+              label={t("securityDiagnostics.reencryptChunks.fields.targetKeyId")}
+              value={formatNullable(progress?.targetKeyId, t)}
+            />
+            <DiagnosticsRow
+              label={t("securityDiagnostics.reencryptChunks.fields.scanned")}
+              value={t("securityDiagnostics.reencryptChunks.values.scanned", {
+                scanned,
+                total: totalChunks,
+              })}
+            />
+            <DiagnosticsRow
+              label={t("securityDiagnostics.reencryptChunks.fields.reencrypted")}
+              value={formatNullable(progress?.reencrypted ?? 0, t)}
+              color={(progress?.reencrypted ?? 0) > 0 ? "success" : "default"}
+            />
+            <DiagnosticsRow
+              label={t("securityDiagnostics.reencryptChunks.fields.alreadyCurrent")}
+              value={formatNullable(progress?.alreadyCurrent ?? 0, t)}
+            />
+            <DiagnosticsRow
+              label={t("securityDiagnostics.reencryptChunks.fields.missing")}
+              value={formatNullable(progress?.missing ?? 0, t)}
+              color={(progress?.missing ?? 0) > 0 ? "warning" : "default"}
+            />
+            <DiagnosticsRow
+              label={t("securityDiagnostics.reencryptChunks.fields.failed")}
+              value={formatNullable(progress?.failed ?? 0, t)}
+              color={(progress?.failed ?? 0) > 0 ? "error" : "default"}
+            />
+          </Stack>
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleDismiss}>
+          {progress?.running
+            ? t("securityDiagnostics.reencryptChunks.cancel")
+            : t("securityDiagnostics.reencryptChunks.close")}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 type KeyringRotateUnlockDialogProps = {
   open: boolean;
   onClose: () => void;
@@ -1135,8 +1254,12 @@ export const AdminSecurityDiagnosticsPage = () => {
   const importRecoveryKitMutation = useImportKeyringRecoveryKitMutation();
   const reencryptChunksMutation = useReencryptKeyringChunksMutation();
   const recoveryKitInputRef = useRef<HTMLInputElement | null>(null);
+  const reencryptionCancelRef = useRef(false);
   const [rotationOpen, setRotationOpen] = useState(false);
   const [recoveryPhraseOpen, setRecoveryPhraseOpen] = useState(false);
+  const [reencryptionProgress, setReencryptionProgress] =
+    useState<KeyringReencryptionProgress | null>(null);
+  const reencryptingChunks = reencryptionProgress?.running === true;
   const loadError = diagnosticsQuery.isError
     ? getApiErrorMessage(diagnosticsQuery.error) ??
       t("securityDiagnostics.errors.loadFailed")
@@ -1182,28 +1305,86 @@ export const AdminSecurityDiagnosticsPage = () => {
   };
 
   const handleReencryptChunks = async () => {
+    if (reencryptionProgress?.running) {
+      return;
+    }
+
     const limit = 100;
     let offset = 0;
     let reencrypted = 0;
+    let alreadyCurrent = 0;
     let scanned = 0;
     let failed = 0;
     let missing = 0;
+    let completed = false;
+
+    reencryptionCancelRef.current = false;
+    setReencryptionProgress({
+      running: true,
+      targetKeyId: null,
+      totalChunks: 0,
+      scanned: 0,
+      reencrypted: 0,
+      alreadyCurrent: 0,
+      missing: 0,
+      failed: 0,
+      completed: false,
+      canceled: false,
+    });
 
     try {
-      while (true) {
-        const result = await reencryptChunksMutation.mutateAsync({ offset, limit });
+      while (!reencryptionCancelRef.current) {
+        const result = await reencryptChunksMutation.mutateAsync({
+          offset,
+          limit,
+        });
         reencrypted += result.reencrypted;
+        alreadyCurrent += result.alreadyCurrent;
         scanned += result.scanned;
         failed += result.failed;
         missing += result.missing;
         offset = result.nextOffset;
+        completed = result.completed;
 
-        if (result.completed) {
+        setReencryptionProgress({
+          running: true,
+          targetKeyId: result.targetKeyId,
+          totalChunks: result.totalChunks,
+          scanned,
+          reencrypted,
+          alreadyCurrent,
+          missing,
+          failed,
+          completed,
+          canceled: false,
+        });
+
+        if (completed) {
           break;
         }
       }
 
-      const toastType = failed > 0 || missing > 0 ? toast.warning : toast.success;
+      const canceled = reencryptionCancelRef.current && !completed;
+      setReencryptionProgress((current) =>
+        current
+          ? {
+              ...current,
+              running: false,
+              completed,
+              canceled,
+            }
+          : current,
+      );
+
+      if (canceled) {
+        toast.info(t("securityDiagnostics.reencryptChunks.canceledToast"), {
+          toastId: "admin:keyring:reencrypt-chunks:canceled",
+        });
+        return;
+      }
+
+      const toastType =
+        failed > 0 || missing > 0 ? toast.warning : toast.success;
       toastType(
         t("securityDiagnostics.reencryptChunks.success", {
           reencrypted,
@@ -1214,11 +1395,28 @@ export const AdminSecurityDiagnosticsPage = () => {
         { toastId: "admin:keyring:reencrypt-chunks:success" },
       );
     } catch (apiError) {
+      setReencryptionProgress((current) =>
+        current
+          ? { ...current, running: false, failed: current.failed + 1 }
+          : current,
+      );
       toast.error(
         getApiErrorMessage(apiError) ??
           t("securityDiagnostics.reencryptChunks.errors.failed"),
         { toastId: "admin:keyring:reencrypt-chunks:failed" },
       );
+    } finally {
+      reencryptionCancelRef.current = false;
+    }
+  };
+
+  const handleCancelReencryption = () => {
+    reencryptionCancelRef.current = true;
+  };
+
+  const handleCloseReencryptionProgress = () => {
+    if (!reencryptionProgress?.running) {
+      setReencryptionProgress(null);
     }
   };
 
@@ -1286,7 +1484,7 @@ export const AdminSecurityDiagnosticsPage = () => {
               onReencryptChunks={handleReencryptChunks}
               exportingRecoveryKit={exportRecoveryKitMutation.isPending}
               importingRecoveryKit={importRecoveryKitMutation.isPending}
-              reencryptingChunks={reencryptChunksMutation.isPending}
+              reencryptingChunks={reencryptingChunks}
             />
           )}
         </Stack>
@@ -1301,6 +1499,11 @@ export const AdminSecurityDiagnosticsPage = () => {
       <KeyringRecoveryPhraseDialog
         open={recoveryPhraseOpen}
         onClose={() => setRecoveryPhraseOpen(false)}
+      />
+      <KeyringReencryptChunksDialog
+        progress={reencryptionProgress}
+        onCancel={handleCancelReencryption}
+        onClose={handleCloseReencryptionProgress}
       />
       <KeyringRotateUnlockDialog
         open={rotationOpen}

@@ -56,6 +56,46 @@ public class KeyringStreamCipherTests
     }
 
     [Test]
+    public async Task ReencryptLegacyStream_WritesPrimaryV2Key_AndPreservesPlaintext()
+    {
+        KeyringPlainState state = CreateState(out CottonEncryptionSettings settings);
+        var resolver = new KeyringPlainStateKeyResolver(state);
+        var keyringCipher = new KeyringStreamCipher(resolver);
+        byte[] plaintext = Encoding.UTF8.GetBytes("legacy chunk to rewrite");
+        byte[] legacyMaterial = Convert.FromBase64String(settings.MasterEncryptionKey);
+
+        await using var input = new MemoryStream(plaintext, writable: false);
+        await using var legacyEncrypted = new MemoryStream();
+        using (var legacyCipher = new AesGcmStreamCipher(legacyMaterial, KeyringV1UpgradeBuilder.LegacyKeyId))
+        {
+            await legacyCipher.EncryptAsync(input, legacyEncrypted, leaveInputOpen: true, leaveOutputOpen: true);
+        }
+
+        await using Stream decrypted = await keyringCipher.DecryptAsync(
+            new MemoryStream(legacyEncrypted.ToArray()),
+            leaveOpen: false);
+        await using var rewritten = new MemoryStream();
+        await keyringCipher.EncryptAsync(
+            decrypted,
+            rewritten,
+            leaveInputOpen: true,
+            leaveOutputOpen: true);
+        byte[] rewrittenBytes = rewritten.ToArray();
+        await using Stream restored = await keyringCipher.DecryptAsync(
+            new MemoryStream(rewrittenBytes),
+            leaveOpen: false);
+        using var output = new MemoryStream();
+        await restored.CopyToAsync(output);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(ReadKeyId(legacyEncrypted.ToArray()), Is.EqualTo(KeyringV1UpgradeBuilder.LegacyKeyId));
+            Assert.That(ReadKeyId(rewrittenBytes), Is.EqualTo(KeyringV1UpgradeBuilder.FirstV2ChunkKeyId));
+            Assert.That(output.ToArray(), Is.EqualTo(plaintext));
+        }
+    }
+
+    [Test]
     public async Task DecryptAsync_FailsClosed_ForUnknownKeyId()
     {
         KeyringPlainState state = CreateState(out _);

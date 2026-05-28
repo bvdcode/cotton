@@ -2066,7 +2066,26 @@
         }
       },
       "reencryptChunks": {
+        "title": "Re-encrypt chunks",
+        "running": "Re-encryption is running in resumable batches.",
+        "finished": "Chunk re-encryption completed.",
+        "finishedWithWarnings": "Chunk re-encryption completed with warnings.",
+        "canceled": "Chunk re-encryption was stopped after the current batch.",
+        "cancel": "Stop after batch",
+        "close": "Close",
+        "canceledToast": "Chunk re-encryption stopped after the current batch.",
         "success": "Chunk re-encryption finished. Rewritten: {{reencrypted}}, scanned: {{scanned}}, missing: {{missing}}, failed: {{failed}}.",
+        "fields": {
+          "targetKeyId": "Target key id",
+          "scanned": "Scanned",
+          "reencrypted": "Rewritten",
+          "alreadyCurrent": "Already current",
+          "missing": "Missing",
+          "failed": "Failed"
+        },
+        "values": {
+          "scanned": "{{scanned}} / {{total}}"
+        },
         "errors": {
           "failed": "Failed to re-encrypt chunks."
         }
