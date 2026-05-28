@@ -1,6 +1,44 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const storageMocks = vi.hoisted(() => {
+  const createMemoryStorage = (): Storage => {
+    const values = new Map<string, string>();
+
+    return {
+      get length() {
+        return values.size;
+      },
+      clear: () => {
+        values.clear();
+      },
+      getItem: (key) => values.get(key) ?? null,
+      key: (index) => Array.from(values.keys())[index] ?? null,
+      removeItem: (key) => {
+        values.delete(key);
+      },
+      setItem: (key, value) => {
+        values.set(key, value);
+      },
+    };
+  };
+
+  const localStorage = createMemoryStorage();
+  const sessionStorage = createMemoryStorage();
+
+  Object.defineProperty(globalThis, "localStorage", {
+    value: localStorage,
+    configurable: true,
+  });
+  Object.defineProperty(globalThis, "sessionStorage", {
+    value: sessionStorage,
+    configurable: true,
+  });
+
+  return { localStorage, sessionStorage };
+});
+
 import { useAuthStore } from "../../shared/store";
 import { AuthProvider } from "./AuthProvider";
 import { markOidcSignInPending } from "./oidcSignInSession";
@@ -59,8 +97,8 @@ const AuthProbe = () => {
 
 describe("AuthProvider OIDC restore", () => {
   beforeEach(() => {
-    window.localStorage.clear();
-    window.sessionStorage.clear();
+    storageMocks.localStorage.clear();
+    storageMocks.sessionStorage.clear();
     resetAuthStore();
     authApiMocks.refresh.mockReset();
     authApiMocks.me.mockReset();
@@ -68,8 +106,8 @@ describe("AuthProvider OIDC restore", () => {
   });
 
   afterEach(() => {
-    window.localStorage.clear();
-    window.sessionStorage.clear();
+    storageMocks.localStorage.clear();
+    storageMocks.sessionStorage.clear();
     resetAuthStore();
   });
 

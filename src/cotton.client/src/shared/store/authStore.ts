@@ -1,5 +1,9 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import {
+  createJSONStorage,
+  persist,
+  type StateStorage,
+} from "zustand/middleware";
 import { AUTH_STORAGE_KEY } from "../config/storageKeys";
 import type { User } from "../../features/auth/types";
 
@@ -16,6 +20,42 @@ type AuthStoreState = {
   setAuthenticated: (user: User) => void;
   setUnauthenticated: () => void;
   logoutLocal: () => void;
+};
+
+const getLocalStorage = (): Storage | undefined => {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  try {
+    return window.localStorage ?? undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const safeLocalStorage: StateStorage = {
+  getItem: (key) => {
+    try {
+      return getLocalStorage()?.getItem(key) ?? null;
+    } catch {
+      return null;
+    }
+  },
+  removeItem: (key) => {
+    try {
+      getLocalStorage()?.removeItem(key);
+    } catch {
+      // best-effort: auth state should still update when storage is blocked
+    }
+  },
+  setItem: (key, value) => {
+    try {
+      getLocalStorage()?.setItem(key, value);
+    } catch {
+      // best-effort: auth state should still update when storage is blocked
+    }
+  },
 };
 
 export const useAuthStore = create<AuthStoreState>()(
@@ -57,6 +97,7 @@ export const useAuthStore = create<AuthStoreState>()(
     }),
     {
       name: AUTH_STORAGE_KEY,
+      storage: createJSONStorage(() => safeLocalStorage),
       partialize: (state) => ({ refreshEnabled: state.refreshEnabled }),
       onRehydrateStorage: () => (state) => {
         state?.setHydrated(true);
