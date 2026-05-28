@@ -19,6 +19,8 @@ import type { SharedNodeContentDto } from "../../../shared/api/sharedFoldersApi"
 import type { MediaItem } from "@shared/types/mediaLightbox";
 import type { FileBrowserViewMode } from "@shared/utils/viewMode";
 import { useFilePreview } from "@shared/hooks/useFilePreview";
+import { openDownloadLink } from "@shared/utils/fileHandlers";
+import { toast } from "@shared/ui/notifications";
 import { SharedFilePreviewModal } from "./SharedFilePreviewModal";
 import {
   cycleFileBrowserViewMode,
@@ -65,12 +67,16 @@ interface SharedFolderViewerProps {
   token: string;
   rootNodeId: Guid;
   rootName: string;
+  onDownloadActionChange?: (
+    action: { disabled: boolean; onDownload: () => void } | null,
+  ) => void;
 }
 
 export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
   token,
   rootNodeId,
   rootName,
+  onDownloadActionChange,
 }) => {
   const { t } = useTranslation(["share", "common"]);
   const rootBreadcrumbs = React.useMemo<BreadcrumbNode[]>(
@@ -94,6 +100,7 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
   const [tilesSize, setTilesSize] = React.useState<TilesSize>("medium");
   const [lightboxOpen, setLightboxOpen] = React.useState<boolean>(false);
   const [lightboxIndex, setLightboxIndex] = React.useState<number>(0);
+  const [isDownloadingAll, setIsDownloadingAll] = React.useState(false);
   const { previewState, openPreview, closePreview } = useFilePreview();
 
   const currentNode = React.useMemo(
@@ -228,6 +235,51 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
     },
     [token],
   );
+
+  const handleDownloadCurrentFolder = React.useCallback(async () => {
+    if (!currentNode || isDownloadingAll) return;
+
+    setIsDownloadingAll(true);
+    try {
+      const archive = await sharedFoldersApi.createArchiveDownloadLink(
+        token,
+        currentNode.id,
+      );
+      openDownloadLink(archive.url, archive.fileName);
+    } catch {
+      toast.error(t("folder.downloadFailed", { ns: "share" }), {
+        toastId: "shared-folder-download-failed",
+      });
+    } finally {
+      setIsDownloadingAll(false);
+    }
+  }, [currentNode, isDownloadingAll, t, token]);
+
+  React.useEffect(() => {
+    if (!onDownloadActionChange) return;
+
+    if (!currentNode) {
+      onDownloadActionChange(null);
+      return;
+    }
+
+    onDownloadActionChange({
+      disabled: loading || isDownloadingAll,
+      onDownload: handleDownloadCurrentFolder,
+    });
+  }, [
+    currentNode,
+    handleDownloadCurrentFolder,
+    isDownloadingAll,
+    loading,
+    onDownloadActionChange,
+  ]);
+
+  React.useEffect(() => {
+    return () => {
+      onDownloadActionChange?.(null);
+    };
+  }, [onDownloadActionChange]);
 
   const handleFileClick = React.useCallback(
     (fileId: string, fileName: string, fileSizeBytes?: number) => {

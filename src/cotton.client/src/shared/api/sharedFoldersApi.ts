@@ -1,4 +1,5 @@
 import { httpClient } from "./httpClient";
+import type { ArchiveDownloadLinkDto } from "./archiveApi";
 import type { Guid, NodeDto } from "./layoutsApi";
 import { readRequiredIntHeader, type HeaderMap } from "./utils/headerUtils";
 
@@ -70,6 +71,20 @@ export const sharedFoldersApi = {
   getAncestors: async (token: string, nodeId: Guid): Promise<NodeDto[]> => {
     const response = await httpClient.get<NodeDto[]>(
       `/layouts/shared/${encodeToken(token)}/ancestors/${nodeId}`,
+    );
+    return response.data;
+  },
+
+  createArchiveDownloadLink: async (
+    token: string,
+    nodeId: Guid,
+  ): Promise<ArchiveDownloadLinkDto> => {
+    const response = await httpClient.post<ArchiveDownloadLinkDto>(
+      `/layouts/shared/${encodeToken(token)}/archives/download-link`,
+      null,
+      {
+        params: { nodeId },
+      },
     );
     return response.data;
   },

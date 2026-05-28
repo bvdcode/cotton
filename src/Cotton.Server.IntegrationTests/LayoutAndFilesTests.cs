@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
 using NUnit.Framework;
+using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -190,6 +191,49 @@ public class LayoutAndFilesTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Shared_Archive_Download_Link_Allows_Current_Shared_Folder_Only()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var sharedRoot = await CreateNodeAsync(root!.Id, "shared-root");
+        var nested = await CreateNodeAsync(sharedRoot.Id, "nested");
+        var outside = await CreateNodeAsync(root.Id, "outside");
+        await UploadTextFileAsync(sharedRoot.Id, "root.txt", "root body");
+        await UploadTextFileAsync(nested.Id, "deep.txt", "deep body");
+
+        var shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{sharedRoot.Id}/share-link");
+        shareLinkRes.EnsureSuccessStatusCode();
+        string shareLink = (await shareLinkRes.Content.ReadAsStringAsync()).Trim('"');
+        string shareToken = shareLink.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
+
+        _client.DefaultRequestHeaders.Authorization = null;
+
+        var linkResponse = await _client.PostAsync(
+            $"/api/v1/layouts/shared/{shareToken}/archives/download-link?nodeId={sharedRoot.Id}",
+            null);
+        linkResponse.EnsureSuccessStatusCode();
+        var archive = await linkResponse.Content.ReadFromJsonAsync<ArchiveDownloadLinkDto>();
+        Assert.That(archive, Is.Not.Null);
+
+        var download = await _client.GetAsync(archive!.Url);
+        download.EnsureSuccessStatusCode();
+        byte[] bytes = await download.Content.ReadAsByteArrayAsync();
+
+        using var zip = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+        AssertZipEntry(zip, "shared-root/root.txt", "root body");
+        AssertZipEntry(zip, "shared-root/nested/deep.txt", "deep body");
+
+        var outsideResponse = await _client.PostAsync(
+            $"/api/v1/layouts/shared/{shareToken}/archives/download-link?nodeId={outside.Id}",
+            null);
+        Assert.That(outsideResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+    }
+
+    [Test]
     public async Task Shared_Folder_Page_Contains_Social_Preview_Meta_Tags()
     {
         var token = await LoginAsync();
@@ -232,6 +276,49 @@ public class LayoutAndFilesTests : IntegrationTestBase
         var node = await response.Content.ReadFromJsonAsync<NodeDto>();
         Assert.That(node, Is.Not.Null);
         return node!;
+    }
+
+    private async Task<NodeFileManifestDto> UploadTextFileAsync(Guid nodeId, string name, string body)
+    {
+        byte[] content = Encoding.UTF8.GetBytes(body);
+        string hash = Hasher.ToHexStringHash(Hasher.HashData(content));
+        using var form = new MultipartFormDataContent
+        {
+            {
+                new ByteArrayContent(content)
+                {
+                    Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
+                },
+                "file",
+                $"{name}.chunk"
+            },
+            { new StringContent(hash), "hash" }
+        };
+
+        var uploadResponse = await _client!.PostAsync("/api/v1/chunks", form);
+        uploadResponse.EnsureSuccessStatusCode();
+
+        var fileReq = new CreateFileRequest
+        {
+            ChunkHashes = [hash],
+            Name = name,
+            ContentType = "text/plain",
+            Hash = hash,
+            NodeId = nodeId
+        };
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
+        createResponse.EnsureSuccessStatusCode();
+        var file = await createResponse.Content.ReadFromJsonAsync<NodeFileManifestDto>();
+        Assert.That(file, Is.Not.Null);
+        return file!;
+    }
+
+    private static void AssertZipEntry(ZipArchive zip, string path, string expectedText)
+    {
+        ZipArchiveEntry? entry = zip.GetEntry(path);
+        Assert.That(entry, Is.Not.Null, $"Archive entry '{path}' was not found.");
+        using var reader = new StreamReader(entry!.Open(), Encoding.UTF8);
+        Assert.That(reader.ReadToEnd(), Is.EqualTo(expectedText));
     }
 
     private async Task<string> LoginAsync()

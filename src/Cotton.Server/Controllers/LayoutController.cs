@@ -46,7 +46,8 @@ namespace Cotton.Server.Controllers
         ILayoutNavigator _navigator,
         IStoragePipeline _storage,
         IDatabaseIntegrityVerifier _integrity,
-        FileGraphIntegrityVerifier _fileGraphIntegrity) : ControllerBase
+        FileGraphIntegrityVerifier _fileGraphIntegrity,
+        ArchiveDownloadService _archives) : ControllerBase
     {
         private const int DefaultSharedFolderTokenLength = 16;
 
@@ -750,6 +751,49 @@ namespace Cotton.Server.Controllers
 
             ancestors.Reverse();
             return Ok(ancestors);
+        }
+
+        /// <summary>
+        /// Creates shared folder archive download link.
+        /// </summary>
+        [AllowAnonymous]
+        [HttpPost("shared/{token}/archives/download-link")]
+        public async Task<IActionResult> CreateSharedArchiveDownloadLink(
+            [FromRoute] string token,
+            [FromQuery] Guid? nodeId,
+            CancellationToken cancellationToken)
+        {
+            var nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
+            if (nodeShareToken == null)
+            {
+                return this.ApiNotFound("Shared folder not found.");
+            }
+
+            Guid targetNodeId = nodeId ?? nodeShareToken.NodeId;
+            bool canAccessNode = await IsNodeInSharedSubtreeAsync(
+                targetNodeId,
+                nodeShareToken.NodeId,
+                nodeShareToken.CreatedByUserId);
+            if (!canAccessNode)
+            {
+                return this.ApiNotFound("Folder not found.");
+            }
+
+            CreateArchiveDownloadLinkResult result = await _archives.CreateDownloadLinkAsync(
+                nodeShareToken.CreatedByUserId,
+                new CreateArchiveDownloadLinkRequest
+                {
+                    NodeIds = [targetNodeId],
+                },
+                cancellationToken);
+
+            return result.StatusCode switch
+            {
+                StatusCodes.Status200OK => Ok(result.Link),
+                StatusCodes.Status400BadRequest => BadRequest(result.Error),
+                StatusCodes.Status404NotFound => NotFound(result.Error),
+                _ => StatusCode(result.StatusCode, result.Error),
+            };
         }
 
         /// <summary>

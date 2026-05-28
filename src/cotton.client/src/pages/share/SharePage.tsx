@@ -31,6 +31,11 @@ type ShareResolutionState = {
   } | null;
 };
 
+type FolderDownloadAction = {
+  disabled: boolean;
+  onDownload: () => void;
+};
+
 const createInitialShareResolution = (
   token: string | null,
 ): ShareResolutionState => ({
@@ -123,6 +128,8 @@ export const SharePage: React.FC = () => {
   });
 
   const [isCopied, markCopied] = useCopyFeedback();
+  const [folderDownloadAction, setFolderDownloadAction] =
+    React.useState<FolderDownloadAction | null>(null);
 
   const resolvedError = React.useMemo((): string | null => {
     if (!error) return null;
@@ -196,6 +203,17 @@ export const SharePage: React.FC = () => {
     title,
   ]);
 
+  const handleFolderDownload = React.useCallback(() => {
+    folderDownloadAction?.onDownload();
+  }, [folderDownloadAction]);
+
+  const handleFolderDownloadActionChange = React.useCallback(
+    (action: FolderDownloadAction | null) => {
+      setFolderDownloadAction(action);
+    },
+    [],
+  );
+
   const viewState = React.useMemo(
     () =>
       resolveSharePageViewState({
@@ -264,14 +282,18 @@ export const SharePage: React.FC = () => {
             contentLength={null}
             isCopied={isCopied}
             onShareLink={handleShareLink}
-            onDownload={() => {}}
-            canDownload={false}
+            onDownload={handleFolderDownload}
+            canDownload={Boolean(folderDownloadAction)}
+            downloadDisabled={folderDownloadAction?.disabled ?? false}
+            downloadVariant="outlined"
+            shareIconOnly
           />
 
           <SharedFolderViewer
             token={viewState.token}
             rootNodeId={viewState.folder.nodeId}
             rootName={viewState.folder.name}
+            onDownloadActionChange={handleFolderDownloadActionChange}
           />
         </>
       )}
