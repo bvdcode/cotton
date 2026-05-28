@@ -1884,6 +1884,8 @@
         "submit": "Сменить",
         "saving": "Смена...",
         "success": "Keyring переведён на root epoch {{rootEpoch}}.",
+        "recoveryReminder": "Recovery slots сброшены для нового root epoch. Создайте новую recovery phrase и скачайте свежий recovery kit.",
+        "createRecoveryAction": "Создать phrase",
         "errors": {
           "required": "Введите текущий и новый unlock secret.",
           "mismatch": "Новый unlock secret и подтверждение не совпадают.",

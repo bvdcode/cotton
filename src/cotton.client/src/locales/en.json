@@ -2073,6 +2073,8 @@
         "submit": "Rotate",
         "saving": "Rotating...",
         "success": "Keyring rotated to root epoch {{rootEpoch}}.",
+        "recoveryReminder": "Recovery slots were reset for the new root epoch. Create a new recovery phrase and export the fresh recovery kit.",
+        "createRecoveryAction": "Create phrase",
         "errors": {
           "required": "Enter the current and new unlock secrets.",
           "mismatch": "The new unlock secret does not match its confirmation.",

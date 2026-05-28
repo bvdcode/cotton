@@ -843,11 +843,13 @@ const generateUnlockSecret = () => {
 type KeyringRotateUnlockDialogProps = {
   open: boolean;
   onClose: () => void;
+  onRotated: () => void;
 };
 
 const KeyringRotateUnlockDialog = ({
   open,
   onClose,
+  onRotated,
 }: KeyringRotateUnlockDialogProps) => {
   const { t } = useTranslation("admin");
   const rotateMutation = useRotateKeyringUnlockMutation();
@@ -913,6 +915,7 @@ const KeyringRotateUnlockDialog = ({
         { toastId: "admin:keyring:rotate-unlock:success" },
       );
       resetAndClose();
+      onRotated();
     } catch (apiError) {
       setError(
         getApiErrorMessage(apiError) ??
@@ -1115,6 +1118,25 @@ export const AdminSecurityDiagnosticsPage = () => {
       t("securityDiagnostics.errors.loadFailed")
     : null;
 
+  const handleRotationCompleted = () => {
+    toast.warning(t("securityDiagnostics.rotateUnlock.recoveryReminder"), {
+      toastId: "admin:keyring:rotate-unlock:recovery-reminder",
+      autoClose: false,
+      action: (snackbarId) => (
+        <Button
+          color="inherit"
+          size="small"
+          onClick={() => {
+            toast.dismiss(snackbarId);
+            setRecoveryPhraseOpen(true);
+          }}
+        >
+          {t("securityDiagnostics.rotateUnlock.createRecoveryAction")}
+        </Button>
+      ),
+    });
+  };
+
   const handleExportRecoveryKit = async () => {
     try {
       const kit = await exportRecoveryKitMutation.mutateAsync();
@@ -1216,6 +1238,7 @@ export const AdminSecurityDiagnosticsPage = () => {
       <KeyringRotateUnlockDialog
         open={rotationOpen}
         onClose={() => setRotationOpen(false)}
+        onRotated={handleRotationCompleted}
       />
     </Stack>
   );
