@@ -45,6 +45,12 @@ public sealed class KeyringDiagnosticsService
         KeyringStateSnapshot? snapshot = stateObject is null
             ? null
             : KeyringJson.Deserialize<KeyringStateSnapshot>(stateObject.Bytes);
+        int? recipientCount = access?.Recipients.Count;
+        int? recoverySlotCount = access?.Recipients.Count(x => x.Type == KeyringCryptography.RecoverySlotType);
+        if (access is not null && recoverySlotCount == 0)
+        {
+            warnings.Add("keyring-recovery-missing");
+        }
 
         KeyringPlainState? state = null;
         bool? unlockSucceeded = null;
@@ -82,6 +88,8 @@ public sealed class KeyringDiagnosticsService
             RootEpoch: snapshot?.RootEpoch ?? access?.RootEpoch,
             UnlockSucceeded: unlockSucceeded,
             UnlockedSlotId: unlockedSlotId,
+            RecipientCount: recipientCount,
+            RecoverySlotCount: recoverySlotCount,
             KeyCount: state?.Keys.Count,
             LegacyDecryptOnlyKeyCount: state is null ? null : legacyDecryptOnlyKeys,
             Warnings: warnings);
@@ -122,6 +130,8 @@ internal sealed record KeyringDiagnosticsSnapshot(
     int? RootEpoch,
     bool? UnlockSucceeded,
     string? UnlockedSlotId,
+    int? RecipientCount,
+    int? RecoverySlotCount,
     int? KeyCount,
     int? LegacyDecryptOnlyKeyCount,
     IReadOnlyList<string> Warnings);

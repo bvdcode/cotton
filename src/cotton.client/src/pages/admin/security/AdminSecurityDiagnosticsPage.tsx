@@ -69,6 +69,7 @@ const knownThreatVectorCodes = new Set([
   "keyring-not-loaded",
   "keyring-replicas-incomplete",
   "keyring-legacy-debt",
+  "keyring-recovery-missing",
   "root-filesystem-writable",
   "docker-socket-mounted",
   "host-pid-namespace",
@@ -570,6 +571,17 @@ const KeyringDiagnosticsSection = ({
     <DiagnosticsRow
       label={t("securityDiagnostics.fields.keyringKeys")}
       value={formatNullable(diagnostics.keyring.keyCount, t)}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.keyringRecoverySlots")}
+      value={formatNullable(diagnostics.keyring.recoverySlotCount, t)}
+      color={
+        diagnostics.keyring.recoverySlotCount === null
+          ? "default"
+          : diagnostics.keyring.recoverySlotCount > 0
+            ? "success"
+            : "warning"
+      }
     />
     <DiagnosticsRow
       label={t("securityDiagnostics.fields.keyringLegacyKeys")}

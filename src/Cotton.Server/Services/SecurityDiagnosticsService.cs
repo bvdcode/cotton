@@ -145,6 +145,9 @@ namespace Cotton.Server.Services
                 : runtime.State.Keys.Count(x =>
                     x.Origin == KeyringKeyOrigin.LegacyV1MasterDerived
                     && x.Status is KeyringKeyStatus.DecryptOnly or KeyringKeyStatus.VerifyOnly);
+            int? recoverySlotCount = runtime is null
+                ? snapshot?.RecoverySlotCount
+                : runtime.AccessEnvelope.Recipients.Count(x => x.Type == KeyringCryptography.RecoverySlotType);
 
             return new KeyringDiagnosticsDto
             {
@@ -156,6 +159,7 @@ namespace Cotton.Server.Services
                 StateGeneration = snapshot?.StateGeneration ?? runtime?.State.StateGeneration,
                 RootEpoch = snapshot?.RootEpoch ?? runtime?.State.RootEpoch,
                 KeyCount = runtime?.State.Keys.Count ?? snapshot?.KeyCount,
+                RecoverySlotCount = recoverySlotCount,
                 LegacyDecryptOnlyKeyCount = legacyDecryptOnlyKeyCount,
                 Warnings = warnings,
             };
@@ -238,6 +242,16 @@ namespace Cotton.Server.Services
                     Code = "keyring-legacy-debt",
                     Severity = "warning",
                     Message = "This keyring still contains legacy decrypt-only keys. Existing legacy chunks remain compatible, but they need re-encryption before the old master key stops being useful for those chunks.",
+                });
+            }
+
+            if (keyring.Loaded && keyring.RecoverySlotCount.GetValueOrDefault() == 0)
+            {
+                warnings.Add(new SecurityDiagnosticWarningDto
+                {
+                    Code = "keyring-recovery-missing",
+                    Severity = "warning",
+                    Message = "This keyring has no recovery phrase recipient slot. Create a recovery phrase and export a fresh recovery kit before relying on keyring recovery.",
                 });
             }
         }

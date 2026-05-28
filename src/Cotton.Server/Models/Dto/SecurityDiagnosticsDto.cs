@@ -275,6 +275,10 @@ namespace Cotton.Server.Models.Dto
         /// </summary>
         public int? KeyCount { get; init; }
         /// <summary>
+        /// Gets the number of recovery recipient slots in the latest access envelope.
+        /// </summary>
+        public int? RecoverySlotCount { get; init; }
+        /// <summary>
         /// Gets the number of legacy decrypt-only keys in the loaded keyring state.
         /// </summary>
         public int? LegacyDecryptOnlyKeyCount { get; init; }

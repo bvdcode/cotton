@@ -52,8 +52,33 @@ public class KeyringDiagnosticsServiceTests
             Assert.That(snapshot.StateGeneration, Is.EqualTo(1));
             Assert.That(snapshot.RootEpoch, Is.EqualTo(1));
             Assert.That(snapshot.KeyCount, Is.GreaterThan(0));
+            Assert.That(snapshot.RecoverySlotCount, Is.EqualTo(0));
             Assert.That(snapshot.LegacyDecryptOnlyKeyCount, Is.GreaterThan(0));
             Assert.That(snapshot.Warnings, Does.Contain("keyring-legacy-debt"));
+            Assert.That(snapshot.Warnings, Does.Contain("keyring-recovery-missing"));
+        }
+    }
+
+    [Test]
+    public async Task GetSnapshotAsync_CountsRecoverySlots()
+    {
+        string root = CreateTempDirectory();
+        var store = new KeyringJournaledObjectStore([new KeyringLocalFileReplica(root)]);
+        var bootstrap = new KeyringBootstrapService(store);
+        var rotation = new KeyringRotationService(store);
+        var diagnostics = new KeyringDiagnosticsService(store);
+        string unlock = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        string recoverySecret = new string('b', 64);
+        CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(unlock);
+
+        await bootstrap.OpenOrCreateFromV1Async(settings, unlock);
+        await rotation.AddRecoverySlotAsync(unlock, recoverySecret);
+        KeyringDiagnosticsSnapshot snapshot = await diagnostics.GetSnapshotAsync(unlock);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(snapshot.RecoverySlotCount, Is.EqualTo(1));
+            Assert.That(snapshot.Warnings, Does.Not.Contain("keyring-recovery-missing"));
         }
     }
 

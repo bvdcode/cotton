@@ -148,6 +148,7 @@ export interface KeyringDiagnosticsDto {
   stateGeneration: number | null;
   rootEpoch: number | null;
   keyCount: number | null;
+  recoverySlotCount: number | null;
   legacyDecryptOnlyKeyCount: number | null;
   warnings: string[];
 }
