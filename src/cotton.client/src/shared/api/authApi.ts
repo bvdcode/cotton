@@ -20,6 +20,10 @@ interface LoginResponse {
   accessToken: string;
 }
 
+interface RefreshOptions {
+  allowWhenRefreshDisabled?: boolean;
+}
+
 interface ChangePasswordRequest {
   oldPassword: string;
   newPassword: string;
@@ -130,8 +134,10 @@ export const authApi = {
    * Safe to call on app startup; errors are swallowed.
    * Returns token if successful, null otherwise.
    */
-  refresh: async (): Promise<string | null> => {
-    return await refreshAccessToken();
+  refresh: async (options: RefreshOptions = {}): Promise<string | null> => {
+    return await refreshAccessToken({
+      allowWhenRefreshDisabled: options.allowWhenRefreshDisabled,
+    });
   },
 
   getWebDavToken: async (): Promise<string> => {

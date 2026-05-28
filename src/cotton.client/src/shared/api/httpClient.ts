@@ -226,13 +226,23 @@ export const clearAccessToken = () => {
   accessToken = null;
 };
 
+export interface RefreshAccessTokenOptions {
+  allowWhenRefreshDisabled?: boolean;
+}
+
 /**
  * Refreshes access token using refresh cookie.
  * Returns new token or null if refresh failed.
  */
-export const refreshAccessToken = async (): Promise<string | null> => {
+export const refreshAccessToken = async (
+  options: RefreshAccessTokenOptions = {},
+): Promise<string | null> => {
   try {
-    if (!getRefreshEnabled() || refreshBlocked) {
+    const refreshAllowed =
+      options.allowWhenRefreshDisabled || getRefreshEnabled();
+    const blockedByTerminalFailure =
+      refreshBlocked && !options.allowWhenRefreshDisabled;
+    if (!refreshAllowed || blockedByTerminalFailure) {
       clearAccessToken();
       return null;
     }
