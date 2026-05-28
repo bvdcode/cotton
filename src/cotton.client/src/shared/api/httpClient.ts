@@ -240,7 +240,9 @@ export const refreshAccessToken = async (
   try {
     const refreshAllowed =
       options.allowWhenRefreshDisabled || getRefreshEnabled();
-    if (!refreshAllowed || refreshBlocked) {
+    const blockedByTerminalFailure =
+      refreshBlocked && !options.allowWhenRefreshDisabled;
+    if (!refreshAllowed || blockedByTerminalFailure) {
       clearAccessToken();
       return null;
     }

@@ -74,6 +74,7 @@ beforeEach(() => {
   toastErrorMock.mockClear();
   logoutLocalMock.mockClear();
   vi.spyOn(console, "error").mockImplementation(() => undefined);
+  setAccessToken("reset");
   clearAccessToken();
 });
 
@@ -280,6 +281,25 @@ describe("refreshAccessToken", () => {
       refreshAccessToken({ allowWhenRefreshDisabled: true }),
     ).resolves.toBe("fresh");
     expect(getAccessToken()).toBe("fresh");
+  });
+
+  it("allows explicit refresh after a terminal failure blocks silent refresh", async () => {
+    const post = vi
+      .spyOn(httpClient, "post")
+      .mockRejectedValueOnce(buildAxiosError(401, {}))
+      .mockResolvedValueOnce({ data: { accessToken: "oidc-fresh" } });
+    setAccessToken("stale");
+
+    await expect(refreshAccessToken()).resolves.toBeNull();
+
+    refreshEnabledMock.mockReturnValue(false);
+    await expect(
+      refreshAccessToken({ allowWhenRefreshDisabled: true }),
+    ).resolves.toBe("oidc-fresh");
+
+    expect(post).toHaveBeenCalledTimes(2);
+    expect(getAccessToken()).toBe("oidc-fresh");
+    expect(logoutLocalMock).toHaveBeenCalledTimes(1);
   });
 
   it("returns and stores the new token on success", async () => {
