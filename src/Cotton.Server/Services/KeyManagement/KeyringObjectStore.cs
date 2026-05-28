@@ -102,7 +102,16 @@ internal sealed class KeyringJournaledObjectStore
         KeyringObjectKind kind,
         CancellationToken cancellationToken = default)
     {
+        IReadOnlyList<KeyringLoadedObject> objects = await FindValidObjectsAsync(kind, cancellationToken);
+        return objects.FirstOrDefault();
+    }
+
+    public async Task<IReadOnlyList<KeyringLoadedObject>> FindValidObjectsAsync(
+        KeyringObjectKind kind,
+        CancellationToken cancellationToken = default)
+    {
         List<KeyringObjectPointer> candidates = await ListHeadPointersAsync(kind, cancellationToken);
+        var objects = new List<KeyringLoadedObject>();
         foreach (KeyringObjectPointer pointer in candidates
             .OrderByDescending(x => x.Generation)
             .ThenByDescending(x => x.CommittedAtUtc))
@@ -110,11 +119,27 @@ internal sealed class KeyringJournaledObjectStore
             KeyringLoadedObject? loaded = await TryReadValidObjectAsync(pointer, cancellationToken);
             if (loaded is not null)
             {
-                return loaded;
+                objects.Add(loaded);
             }
         }
 
-        return null;
+        return objects;
+    }
+
+    public async Task<bool> HasAnyKeyringEvidenceAsync(CancellationToken cancellationToken = default)
+    {
+        foreach (IKeyringObjectReplica replica in _replicas)
+        {
+            await foreach (string name in replica.ListNamesAsync(cancellationToken))
+            {
+                if (KeyringObjectNames.IsKeyringObjectName(name))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     public async Task<IReadOnlyList<KeyringObjectPointer>> RepairLatestAsync(

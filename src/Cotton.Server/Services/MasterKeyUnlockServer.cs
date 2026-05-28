@@ -83,6 +83,7 @@ namespace Cotton.Server.Services
                 KeyringStartupOpenResult keyringOpen = await KeyringStartup.TryOpenLocalIfEnabledAsync(
                     submitted.MasterKey ?? string.Empty,
                     context.RequestAborted);
+                bool localKeyringOpenFailed = keyringOpen.Status == KeyringStartupOpenStatus.Failed;
                 if (keyringOpen.Status == KeyringStartupOpenStatus.Opened && keyringOpen.Keyring is not null)
                 {
                     CottonEncryptionSettings keyringSettings = KeyringV1UpgradeBuilder.CreateLegacySettingsFromState(
@@ -92,11 +93,6 @@ namespace Cotton.Server.Services
                         app,
                         new MasterKeyUnlockResult(keyringSettings, submitted.MasterKey!, KeyringBacked: true));
                     return Results.Ok(new UnlockResponse(true, "Keyring unlocked. Cotton is starting."));
-                }
-
-                if (keyringOpen.Status == KeyringStartupOpenStatus.Failed)
-                {
-                    return Results.BadRequest(new UnlockResponse(false, keyringOpen.Error ?? "Keyring unlock failed."));
                 }
 
                 CottonEncryptionSettings encryptionSettings;
@@ -118,6 +114,15 @@ namespace Cotton.Server.Services
                     context.RequestAborted);
                 if (!validation.Success)
                 {
+                    if (localKeyringOpenFailed && KeyringStartup.IsEnabled())
+                    {
+                        _ = CompleteUnlockAsync(
+                            completion,
+                            app,
+                            new MasterKeyUnlockResult(encryptionSettings, submitted.MasterKey!, KeyringBacked: true));
+                        return Results.Ok(new UnlockResponse(true, "Keyring unlock deferred to full replica bootstrap. Cotton is starting."));
+                    }
+
                     return Results.BadRequest(new UnlockResponse(false, validation.Error ?? "Unlock failed."));
                 }
 

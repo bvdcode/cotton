@@ -121,6 +121,56 @@ public class KeyringBootstrapStorageTests
     }
 
     [Test]
+    public async Task Bootstrap_RejectsPartialKeyringInsteadOfCreatingNewState()
+    {
+        string root = CreateTempDirectory();
+        var store = new KeyringJournaledObjectStore([new KeyringLocalFileReplica(root)]);
+        var bootstrap = new KeyringBootstrapService(store);
+        string unlock = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(unlock);
+        await bootstrap.OpenOrCreateFromV1Async(settings, unlock);
+
+        DeleteKeyringSegment(root, "state");
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(
+                async () => await bootstrap.OpenOrCreateFromV1Async(settings, unlock),
+                Throws.InstanceOf<InvalidDataException>());
+            Assert.That(await store.FindValidObjectsAsync(KeyringObjectKind.AccessEnvelope), Is.Not.Empty);
+            Assert.That(await store.FindValidObjectsAsync(KeyringObjectKind.StateSnapshot), Is.Empty);
+        }
+    }
+
+    [Test]
+    [NonParallelizable]
+    public async Task Bootstrap_OpensFromHealthyReplica_WhenLocalReplicaIsPartial()
+    {
+        string localRoot = CreateTempDirectory();
+        string healthyRoot = CreateTempDirectory();
+        var localReplica = new KeyringLocalFileReplica(localRoot, "local");
+        var healthyReplica = new KeyringLocalFileReplica(healthyRoot, "healthy");
+        var store = new KeyringJournaledObjectStore([localReplica, healthyReplica]);
+        var bootstrap = new KeyringBootstrapService(store);
+        string unlock = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(unlock);
+        KeyringBootstrapResult created = await bootstrap.OpenOrCreateFromV1Async(settings, unlock);
+
+        DeleteKeyringSegment(localRoot, "state");
+
+        KeyringStartupOpenResult localOnly = await OpenLocalReplicaAsync(localRoot, unlock);
+        KeyringBootstrapResult reopened = await bootstrap.OpenOrCreateFromV1Async(settings, unlock);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(localOnly.Status, Is.EqualTo(KeyringStartupOpenStatus.Failed));
+            Assert.That(reopened.Created, Is.False);
+            Assert.That(reopened.State.KeyringId, Is.EqualTo(created.State.KeyringId));
+            Assert.That(reopened.StatePointer.Hash, Is.EqualTo(created.StatePointer.Hash));
+        }
+    }
+
+    [Test]
     [NonParallelizable]
     public async Task KeyringStartup_BootstrapsOnlyWhenEnabled_AndUsesConfiguredPath()
     {
@@ -209,6 +259,45 @@ public class KeyringBootstrapStorageTests
         {
             Environment.SetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable, originalEnabled);
             Environment.SetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable, originalPath);
+        }
+    }
+
+    private static async Task<KeyringStartupOpenResult> OpenLocalReplicaAsync(
+        string root,
+        string unlockSecret)
+    {
+        string? originalEnabled = Environment.GetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable);
+        string? originalPath = Environment.GetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable);
+        try
+        {
+            Environment.SetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable, "1");
+            Environment.SetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable, root);
+            return await KeyringStartup.TryOpenLocalIfEnabledAsync(unlockSecret);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable, originalEnabled);
+            Environment.SetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable, originalPath);
+        }
+    }
+
+    private static void DeleteKeyringSegment(string root, string segment)
+    {
+        string keyringRoot = Path.Combine(root, ".cotton", "system", "keyring", "v2");
+        DeleteDirectoryIfExists(Path.Combine(keyringRoot, segment));
+        DeleteDirectoryIfExists(Path.Combine(keyringRoot, "heads", segment));
+        string latestPath = Path.Combine(keyringRoot, "latest", segment + ".json");
+        if (File.Exists(latestPath))
+        {
+            File.Delete(latestPath);
+        }
+    }
+
+    private static void DeleteDirectoryIfExists(string path)
+    {
+        if (Directory.Exists(path))
+        {
+            Directory.Delete(path, recursive: true);
         }
     }
 

@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Security.Cryptography;
+using System.Text.Json;
 
 namespace Cotton.Server.Services.KeyManagement;
 
@@ -44,46 +45,99 @@ internal sealed class KeyringBootstrapService(KeyringJournaledObjectStore _store
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(unlockSecret);
 
-        KeyringLoadedObject? accessObject = await _store.FindLatestValidAsync(
+        IReadOnlyList<KeyringLoadedObject> accessObjects = await _store.FindValidObjectsAsync(
             KeyringObjectKind.AccessEnvelope,
             cancellationToken);
-        KeyringLoadedObject? stateObject = await _store.FindLatestValidAsync(
+        IReadOnlyList<KeyringLoadedObject> stateObjects = await _store.FindValidObjectsAsync(
             KeyringObjectKind.StateSnapshot,
             cancellationToken);
-        if (accessObject is null && stateObject is null)
+
+        if (accessObjects.Count == 0 && stateObjects.Count == 0)
         {
-            return null;
+            return await _store.HasAnyKeyringEvidenceAsync(cancellationToken)
+                ? throw new InvalidDataException("Keyring objects exist, but no valid keyring heads could be opened.")
+                : null;
         }
 
-        if (accessObject is null || stateObject is null)
+        if (accessObjects.Count == 0 || stateObjects.Count == 0)
         {
-            return null;
+            throw new InvalidDataException("Incomplete keyring replicas: both access envelope and state snapshot are required.");
         }
 
-        KeyringAccessEnvelope access = KeyringJson.Deserialize<KeyringAccessEnvelope>(accessObject.Bytes);
-        KeyringUnwrapResult unwrap = KeyringCryptography.TryUnwrapRootKey(access, unlockSecret);
-        if (!unwrap.Success || unwrap.KeyringRootKey is null)
+        int latestAccessGeneration = accessObjects.Max(x => x.Pointer.Generation);
+        bool unlockedAnyAccessEnvelope = false;
+        Exception? lastStateFailure = null;
+        foreach (KeyringLoadedObject accessObject in accessObjects
+            .Where(x => x.Pointer.Generation == latestAccessGeneration))
+        {
+            KeyringAccessEnvelope access;
+            try
+            {
+                access = KeyringJson.Deserialize<KeyringAccessEnvelope>(accessObject.Bytes);
+            }
+            catch (Exception ex) when (ex is JsonException or InvalidDataException)
+            {
+                continue;
+            }
+
+            KeyringUnwrapResult unwrap;
+            try
+            {
+                unwrap = KeyringCryptography.TryUnwrapRootKey(access, unlockSecret);
+            }
+            catch (Exception ex) when (ex is InvalidDataException or FormatException)
+            {
+                continue;
+            }
+
+            if (!unwrap.Success || unwrap.KeyringRootKey is null)
+            {
+                continue;
+            }
+
+            unlockedAnyAccessEnvelope = true;
+            try
+            {
+                foreach (KeyringLoadedObject stateObject in stateObjects)
+                {
+                    try
+                    {
+                        KeyringStateSnapshot snapshot = KeyringJson.Deserialize<KeyringStateSnapshot>(stateObject.Bytes);
+                        KeyringPlainState state = KeyringCryptography.UnprotectState(
+                            snapshot,
+                            unwrap.KeyringRootKey);
+                        ValidateOpenedKeyring(instanceId, access, state);
+                        return new KeyringBootstrapResult(
+                            Created: false,
+                            State: state,
+                            AccessEnvelope: access,
+                            StatePointer: stateObject.Pointer,
+                            AccessPointer: accessObject.Pointer,
+                            UnlockedSlotId: unwrap.SlotId);
+                    }
+                    catch (Exception ex) when (ex is CryptographicException
+                        or FormatException
+                        or InvalidDataException
+                        or JsonException)
+                    {
+                        lastStateFailure = ex;
+                    }
+                }
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(unwrap.KeyringRootKey);
+            }
+        }
+
+        if (!unlockedAnyAccessEnvelope)
         {
             throw new UnauthorizedAccessException("Keyring could not be unlocked with the supplied master key.");
         }
 
-        try
-        {
-            KeyringStateSnapshot snapshot = KeyringJson.Deserialize<KeyringStateSnapshot>(stateObject.Bytes);
-            KeyringPlainState state = KeyringCryptography.UnprotectState(snapshot, unwrap.KeyringRootKey);
-            ValidateOpenedKeyring(instanceId, access, state);
-            return new KeyringBootstrapResult(
-                Created: false,
-                State: state,
-                AccessEnvelope: access,
-                StatePointer: stateObject.Pointer,
-                AccessPointer: accessObject.Pointer,
-                UnlockedSlotId: unwrap.SlotId);
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(unwrap.KeyringRootKey);
-        }
+        throw new InvalidDataException(
+            "No decryptable keyring state snapshot matched an unlocked access envelope.",
+            lastStateFailure);
     }
 
     private async Task<KeyringBootstrapResult> CreateInitialFromV1Async(

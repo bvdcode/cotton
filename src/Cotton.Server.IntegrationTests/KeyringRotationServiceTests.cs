@@ -5,6 +5,7 @@ using Cotton.Autoconfig.Extensions;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services.KeyManagement;
 using NUnit.Framework;
+using System.Security.Cryptography;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -46,6 +47,57 @@ public class KeyringRotationServiceTests
                     settings,
                     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
                 Throws.InstanceOf<UnauthorizedAccessException>());
+        }
+    }
+
+    [Test]
+    public async Task Bootstrap_FallsBackToPreviousState_WhenRotationStateCommitIsIncomplete()
+    {
+        string root = CreateTempDirectory();
+        var store = new KeyringJournaledObjectStore([new KeyringLocalFileReplica(root)]);
+        var bootstrap = new KeyringBootstrapService(store);
+        string oldUnlock = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(oldUnlock);
+        KeyringBootstrapResult initial = await bootstrap.OpenOrCreateFromV1Async(settings, oldUnlock);
+        KeyringUnwrapResult unwrap = KeyringCryptography.TryUnwrapRootKey(
+            initial.AccessEnvelope,
+            oldUnlock);
+        Assert.That(unwrap.KeyringRootKey, Is.Not.Null);
+        byte[] newRootKey = KeyringCryptography.GenerateKeyMaterial();
+
+        try
+        {
+            KeyringPlainState nextState = initial.State with
+            {
+                RootEpoch = initial.State.RootEpoch + 1,
+                StateGeneration = initial.State.StateGeneration + 1,
+                ParentStateHash = initial.StatePointer.Hash
+            };
+            KeyringStateSnapshot nextSnapshot = KeyringCryptography.ProtectState(nextState, newRootKey);
+            await store.CommitAsync(
+                KeyringObjectKind.StateSnapshot,
+                nextState.StateGeneration,
+                KeyringJson.SerializeToUtf8Bytes(nextSnapshot));
+
+            KeyringBootstrapResult reopened = await bootstrap.OpenOrCreateFromV1Async(settings, oldUnlock);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(reopened.Created, Is.False);
+                Assert.That(reopened.State.StateGeneration, Is.EqualTo(initial.State.StateGeneration));
+                Assert.That(reopened.State.RootEpoch, Is.EqualTo(initial.State.RootEpoch));
+                Assert.That(reopened.StatePointer.Hash, Is.EqualTo(initial.StatePointer.Hash));
+                Assert.That(reopened.AccessPointer.Hash, Is.EqualTo(initial.AccessPointer.Hash));
+            }
+        }
+        finally
+        {
+            if (unwrap.KeyringRootKey is not null)
+            {
+                CryptographicOperations.ZeroMemory(unwrap.KeyringRootKey);
+            }
+
+            CryptographicOperations.ZeroMemory(newRootKey);
         }
     }
 

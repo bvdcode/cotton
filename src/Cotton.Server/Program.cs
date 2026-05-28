@@ -89,11 +89,6 @@ namespace Cotton.Server
                         rootMasterKey);
                 }
 
-                if (keyringOpen.Status == KeyringStartupOpenStatus.Failed)
-                {
-                    throw new InvalidOperationException(keyringOpen.Error ?? "Keyring unlock failed.");
-                }
-
                 return (
                     ConfigurationBuilderExtensions.DeriveEncryptionSettings(rootMasterKey),
                     MasterKeyRuntimeState.FromEnvironment(environmentVariablePresentAfterResolution: false),
