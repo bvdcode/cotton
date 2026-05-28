@@ -1,5 +1,12 @@
 import * as React from "react";
-import { Avatar, Box, Button, Typography } from "@mui/material";
+import {
+  Avatar,
+  Box,
+  Button,
+  IconButton,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 import { Check, Download, Share as ShareIcon } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "../../../shared/utils/formatBytes";
@@ -12,6 +19,9 @@ interface ShareHeaderBarProps {
   onShareLink: () => void;
   onDownload: () => void;
   canDownload: boolean;
+  downloadDisabled?: boolean;
+  downloadVariant?: "contained" | "outlined" | "text";
+  shareIconOnly?: boolean;
 }
 
 export const ShareHeaderBar: React.FC<ShareHeaderBarProps> = ({
@@ -22,8 +32,14 @@ export const ShareHeaderBar: React.FC<ShareHeaderBarProps> = ({
   onShareLink,
   onDownload,
   canDownload,
+  downloadDisabled = false,
+  downloadVariant = "contained",
+  shareIconOnly = false,
 }) => {
   const { t } = useTranslation(["share", "common"]);
+  const shareTitle = isCopied
+    ? t("actions.copied", { ns: "common" })
+    : t("actions.share", { ns: "common" });
 
   return (
     <Box
@@ -66,24 +82,36 @@ export const ShareHeaderBar: React.FC<ShareHeaderBarProps> = ({
       </Box>
 
       <Box display="flex" alignItems="center" gap={1} flexShrink={0}>
-        <Button
-          onClick={onShareLink}
-          variant="outlined"
-          startIcon={isCopied ? <Check /> : <ShareIcon />}
-          size="small"
-          color={isCopied ? "success" : "primary"}
-        >
-          {isCopied
-            ? t("actions.copied", { ns: "common" })
-            : t("actions.share", { ns: "common" })}
-        </Button>
+        {shareIconOnly ? (
+          <Tooltip title={shareTitle} disableInteractive>
+            <IconButton
+              aria-label={shareTitle}
+              onClick={onShareLink}
+              size="small"
+              color={isCopied ? "success" : "primary"}
+            >
+              {isCopied ? <Check /> : <ShareIcon />}
+            </IconButton>
+          </Tooltip>
+        ) : (
+          <Button
+            onClick={onShareLink}
+            variant="outlined"
+            startIcon={isCopied ? <Check /> : <ShareIcon />}
+            size="small"
+            color={isCopied ? "success" : "primary"}
+          >
+            {shareTitle}
+          </Button>
+        )}
 
         {canDownload && (
           <Button
             onClick={onDownload}
-            variant="contained"
+            variant={downloadVariant}
             startIcon={<Download />}
             size="small"
+            disabled={downloadDisabled}
           >
             {t("actions.download", { ns: "common" })}
           </Button>

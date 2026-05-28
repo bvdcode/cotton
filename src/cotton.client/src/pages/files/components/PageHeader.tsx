@@ -293,6 +293,32 @@ const appendSelectionActions = (
   }
 };
 
+const buildStatsSummary = (
+  stats: PageHeaderProps["stats"],
+  statsNamespace: string,
+  t: ReturnType<typeof useTranslation>["t"],
+): string | null => {
+  const parts: string[] = [];
+
+  if (stats.folders > 0) {
+    parts.push(t("stats.folders", { ns: statsNamespace, count: stats.folders }));
+  }
+
+  if (stats.files > 0) {
+    parts.push(t("stats.files", { ns: statsNamespace, count: stats.files }));
+  }
+
+  if (stats.sizeBytes > 0) {
+    parts.push(formatBytes(stats.sizeBytes));
+  }
+
+  if (parts.length === 0) {
+    return null;
+  }
+
+  return parts.join(t("stats.separator", { ns: statsNamespace }));
+};
+
 /**
  * Shared sticky header for file/folder pages
  */
@@ -327,6 +353,12 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   const actionsContainerRef = React.useRef<HTMLDivElement | null>(null);
   const actionButtonRefs = React.useRef<Record<string, HTMLButtonElement | null>>({});
   const [menuAnchorEl, setMenuAnchorEl] = React.useState<HTMLElement | null>(null);
+  const statsSummary = React.useMemo(
+    () => buildStatsSummary(stats, statsNamespace, t),
+    [stats, statsNamespace, t],
+  );
+  const showHeaderMeta =
+    Boolean(statsSummary) || (selectionMode && selectedCount > 0);
 
   const viewIcon = React.useMemo(
     () =>
@@ -525,53 +557,54 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             dropHandlers={breadcrumbsDropHandlers}
           />
 
-          <Divider
-            orientation="vertical"
-            flexItem
-            sx={{ display: { xs: "none", sm: "block" } }}
-          />
+          {showHeaderMeta && (
+            <Divider
+              orientation="vertical"
+              flexItem
+              sx={{ display: { xs: "none", md: "block" } }}
+            />
+          )}
 
-          <Box
-            sx={{
-              display: { xs: "none", md: "flex" },
-              alignItems: "center",
-              gap: 1,
-              flexShrink: 0,
-              minWidth: 0,
-            }}
-          >
-            <Typography
-              color="text.secondary"
-              noWrap
+          {showHeaderMeta && (
+            <Box
               sx={{
-                fontSize: "0.875rem",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
+                display: { xs: "none", md: "flex" },
+                alignItems: "center",
+                gap: 1,
+                flexShrink: 0,
+                minWidth: 0,
               }}
             >
-              {t("stats.summary", {
-                ns: statsNamespace,
-                folders: stats.folders,
-                files: stats.files,
-                size: formatBytes(stats.sizeBytes),
-              })}
-            </Typography>
+              {statsSummary && (
+                <Typography
+                  color="text.secondary"
+                  noWrap
+                  sx={{
+                    fontSize: "0.875rem",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {statsSummary}
+                </Typography>
+              )}
 
-            {selectionMode && selectedCount > 0 && (
-              <Typography
-                color="text.secondary"
-                noWrap
-                sx={{
-                  fontSize: "0.875rem",
-                  whiteSpace: "nowrap",
-                  flexShrink: 0,
-                }}
-              >
-                {t("selection.count", { count: selectedCount })}
-              </Typography>
-            )}
-          </Box>
+              {selectionMode && selectedCount > 0 && (
+                <Typography
+                  color="text.secondary"
+                  noWrap
+                  sx={{
+                    fontSize: "0.875rem",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                  }}
+                >
+                  {t("selection.count", { count: selectedCount })}
+                </Typography>
+              )}
+            </Box>
+          )}
         </Box>
       </Box>
     </Box>

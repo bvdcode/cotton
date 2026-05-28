@@ -12,7 +12,13 @@ import {
   ListItemText,
   Typography,
 } from "@mui/material";
-import { ContentCut, ContentPaste, Delete, Download } from "@mui/icons-material";
+import {
+  ContentCut,
+  ContentPaste,
+  Delete,
+  Download,
+  Share as ShareIcon,
+} from "@mui/icons-material";
 import { toast } from "@shared/ui/notifications";
 import {
   FileListViewFactory,
@@ -224,21 +230,34 @@ const buildSelectionArchiveRequest = (
 const buildFilesCustomActionItems = (options: {
   clipboardCount: number;
   cutTitle: string;
+  currentFolderId: string | null;
   deleteSelectedTitle: string;
   downloadSelectedTitle: string;
   handleCutSelection: () => void;
   handleDeleteSelected: () => void;
   handleDownloadSelection: () => void;
   handlePasteHere: () => void;
+  handleShareCurrentFolder: () => void;
   loading: boolean;
   nodeId: string | null;
   pasteHereTitle: string;
   selectedCount: number;
   selectionMode: boolean;
+  shareCurrentFolderTitle: string;
 }): React.ComponentProps<typeof PageHeader>["customActionItems"] => {
   const items: NonNullable<
     React.ComponentProps<typeof PageHeader>["customActionItems"]
   > = [];
+
+  if (!options.selectionMode && options.currentFolderId) {
+    items.push({
+      key: "share-current-folder",
+      icon: <ShareIcon />,
+      title: options.shareCurrentFolderTitle,
+      onClick: options.handleShareCurrentFolder,
+      disabled: options.loading,
+    });
+  }
 
   if (options.selectionMode && options.selectedCount > 0) {
     items.push({
@@ -777,6 +796,11 @@ export const FilesPage: React.FC = () => {
     [t],
   );
 
+  const handleShareCurrentFolder = React.useCallback(() => {
+    if (!activeCurrentNode) return;
+    void handleShareFolder(activeCurrentNode.id, activeCurrentNode.name);
+  }, [activeCurrentNode, handleShareFolder]);
+
   const handleToggleFolderEncryption = React.useCallback(
     async (folderId: string, currentlyEnabled: boolean) => {
       const nextEnabled = !currentlyEnabled;
@@ -886,6 +910,7 @@ export const FilesPage: React.FC = () => {
       buildFilesCustomActionItems({
         clipboardCount,
         cutTitle: t("move.cut", { ns: "files" }),
+        currentFolderId: activeCurrentNode?.id ?? null,
         deleteSelectedTitle: t("selection.deleteSelected", { ns: "files" }),
         downloadSelectedTitle: t("selection.downloadSelected", { ns: "files" }),
         handleCutSelection,
@@ -896,6 +921,7 @@ export const FilesPage: React.FC = () => {
           void handleDownloadSelection();
         },
         handlePasteHere,
+        handleShareCurrentFolder,
         loading,
         nodeId,
         pasteHereTitle: t("move.pasteHere", {
@@ -904,8 +930,10 @@ export const FilesPage: React.FC = () => {
         }),
         selectedCount: fileSelection.selectedCount,
         selectionMode: fileSelection.selectionMode,
+        shareCurrentFolderTitle: t("actions.share", { ns: "common" }),
       }),
     [
+      activeCurrentNode?.id,
       clipboardCount,
       fileSelection.selectedCount,
       fileSelection.selectionMode,
@@ -913,6 +941,7 @@ export const FilesPage: React.FC = () => {
       handleDeleteSelected,
       handleDownloadSelection,
       handlePasteHere,
+      handleShareCurrentFolder,
       loading,
       nodeId,
       t,
