@@ -13,6 +13,7 @@ import {
   type GcTimelineBucketKind,
   type KeyringCreateRecoverySlotRequestDto,
   type KeyringRecoveryKitDto,
+  type KeyringReencryptChunksRequestDto,
   type KeyringRotateUnlockRequestDto,
   type LatestDatabaseBackupDto,
   type SecurityDiagnosticsDto,
@@ -134,6 +135,12 @@ export const useCreateKeyringRecoverySlotMutation = () => {
 export const useExportKeyringRecoveryKitMutation = () =>
   useMutation({
     mutationFn: () => adminApi.exportKeyringRecoveryKit(),
+  });
+
+export const useReencryptKeyringChunksMutation = () =>
+  useMutation({
+    mutationFn: (request: KeyringReencryptChunksRequestDto) =>
+      adminApi.reencryptKeyringChunks(request),
   });
 
 export const useImportKeyringRecoveryKitMutation = () => {

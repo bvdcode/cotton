@@ -15,6 +15,7 @@ import {
   Typography,
   type AlertColor,
 } from "@mui/material";
+import AutorenewIcon from "@mui/icons-material/Autorenew";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
@@ -35,6 +36,7 @@ import {
   useCreateKeyringRecoverySlotMutation,
   useExportKeyringRecoveryKitMutation,
   useImportKeyringRecoveryKitMutation,
+  useReencryptKeyringChunksMutation,
   useRotateKeyringUnlockMutation,
   useSecurityDiagnosticsQuery,
 } from "../../../shared/api/queries/admin";
@@ -254,8 +256,10 @@ interface SecurityDiagnosticsContentProps {
   onCreateRecoveryPhrase: () => void;
   onExportRecoveryKit: () => void;
   onImportRecoveryKit: () => void;
+  onReencryptChunks: () => void;
   exportingRecoveryKit: boolean;
   importingRecoveryKit: boolean;
+  reencryptingChunks: boolean;
 }
 
 const SecurityDiagnosticsContent = ({
@@ -265,8 +269,10 @@ const SecurityDiagnosticsContent = ({
   onCreateRecoveryPhrase,
   onExportRecoveryKit,
   onImportRecoveryKit,
+  onReencryptChunks,
   exportingRecoveryKit,
   importingRecoveryKit,
+  reencryptingChunks,
 }: SecurityDiagnosticsContentProps) => (
   <Stack spacing={3} divider={<Divider flexItem />}>
     <SecurityScoreSummary diagnostics={diagnostics} t={t} />
@@ -280,8 +286,10 @@ const SecurityDiagnosticsContent = ({
       onCreateRecoveryPhrase={onCreateRecoveryPhrase}
       onExportRecoveryKit={onExportRecoveryKit}
       onImportRecoveryKit={onImportRecoveryKit}
+      onReencryptChunks={onReencryptChunks}
       exportingRecoveryKit={exportingRecoveryKit}
       importingRecoveryKit={importingRecoveryKit}
+      reencryptingChunks={reencryptingChunks}
     />
     <MemoryDiagnosticsSection diagnostics={diagnostics} t={t} />
     <ContainerDiagnosticsSection diagnostics={diagnostics} t={t} />
@@ -503,8 +511,10 @@ type KeyringDiagnosticsSectionProps = DiagnosticsContentSectionProps & {
   onCreateRecoveryPhrase: () => void;
   onExportRecoveryKit: () => void;
   onImportRecoveryKit: () => void;
+  onReencryptChunks: () => void;
   exportingRecoveryKit: boolean;
   importingRecoveryKit: boolean;
+  reencryptingChunks: boolean;
 };
 
 const KeyringDiagnosticsSection = ({
@@ -514,8 +524,10 @@ const KeyringDiagnosticsSection = ({
   onCreateRecoveryPhrase,
   onExportRecoveryKit,
   onImportRecoveryKit,
+  onReencryptChunks,
   exportingRecoveryKit,
   importingRecoveryKit,
+  reencryptingChunks,
 }: KeyringDiagnosticsSectionProps) => (
   <DiagnosticsSection title={t("securityDiagnostics.sections.keyring")}>
     <DiagnosticsRow
@@ -602,6 +614,17 @@ const KeyringDiagnosticsSection = ({
           onClick={onRotateUnlock}
         >
           {t("securityDiagnostics.actions.rotateUnlock")}
+        </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<AutorenewIcon fontSize="small" />}
+          onClick={onReencryptChunks}
+          disabled={reencryptingChunks}
+        >
+          {reencryptingChunks
+            ? t("securityDiagnostics.actions.reencryptingChunks")
+            : t("securityDiagnostics.actions.reencryptChunks")}
         </Button>
         <Button
           variant="outlined"
@@ -1110,6 +1133,7 @@ export const AdminSecurityDiagnosticsPage = () => {
   const diagnosticsQuery = useSecurityDiagnosticsQuery();
   const exportRecoveryKitMutation = useExportKeyringRecoveryKitMutation();
   const importRecoveryKitMutation = useImportKeyringRecoveryKitMutation();
+  const reencryptChunksMutation = useReencryptKeyringChunksMutation();
   const recoveryKitInputRef = useRef<HTMLInputElement | null>(null);
   const [rotationOpen, setRotationOpen] = useState(false);
   const [recoveryPhraseOpen, setRecoveryPhraseOpen] = useState(false);
@@ -1155,6 +1179,47 @@ export const AdminSecurityDiagnosticsPage = () => {
 
   const handleImportRecoveryKit = () => {
     recoveryKitInputRef.current?.click();
+  };
+
+  const handleReencryptChunks = async () => {
+    const limit = 100;
+    let offset = 0;
+    let reencrypted = 0;
+    let scanned = 0;
+    let failed = 0;
+    let missing = 0;
+
+    try {
+      while (true) {
+        const result = await reencryptChunksMutation.mutateAsync({ offset, limit });
+        reencrypted += result.reencrypted;
+        scanned += result.scanned;
+        failed += result.failed;
+        missing += result.missing;
+        offset = result.nextOffset;
+
+        if (result.completed) {
+          break;
+        }
+      }
+
+      const toastType = failed > 0 || missing > 0 ? toast.warning : toast.success;
+      toastType(
+        t("securityDiagnostics.reencryptChunks.success", {
+          reencrypted,
+          scanned,
+          failed,
+          missing,
+        }),
+        { toastId: "admin:keyring:reencrypt-chunks:success" },
+      );
+    } catch (apiError) {
+      toast.error(
+        getApiErrorMessage(apiError) ??
+          t("securityDiagnostics.reencryptChunks.errors.failed"),
+        { toastId: "admin:keyring:reencrypt-chunks:failed" },
+      );
+    }
   };
 
   const handleRecoveryKitFileSelected = async (
@@ -1218,8 +1283,10 @@ export const AdminSecurityDiagnosticsPage = () => {
               onCreateRecoveryPhrase={() => setRecoveryPhraseOpen(true)}
               onExportRecoveryKit={handleExportRecoveryKit}
               onImportRecoveryKit={handleImportRecoveryKit}
+              onReencryptChunks={handleReencryptChunks}
               exportingRecoveryKit={exportRecoveryKitMutation.isPending}
               importingRecoveryKit={importRecoveryKitMutation.isPending}
+              reencryptingChunks={reencryptChunksMutation.isPending}
             />
           )}
         </Stack>

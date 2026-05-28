@@ -1849,6 +1849,8 @@
         "importRecoveryKit": "Импортировать recovery kit",
         "importingRecoveryKit": "Импорт...",
         "exportingRecoveryKit": "Экспорт...",
+        "reencryptChunks": "Перешифровать chunks",
+        "reencryptingChunks": "Перешифровка...",
         "rotateUnlock": "Сменить unlock secret"
       },
       "recoveryPhrase": {
@@ -1872,6 +1874,12 @@
         "errors": {
           "importFailed": "Не удалось импортировать recovery kit keyring.",
           "failed": "Не удалось экспортировать recovery kit keyring."
+        }
+      },
+      "reencryptChunks": {
+        "success": "Перешифровка chunks завершена. Перезаписано: {{reencrypted}}, проверено: {{scanned}}, отсутствует: {{missing}}, ошибок: {{failed}}.",
+        "errors": {
+          "failed": "Не удалось перешифровать chunks."
         }
       },
       "rotateUnlock": {

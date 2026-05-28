@@ -183,6 +183,7 @@ namespace Cotton.Server
             builder.Services.AddScoped(sp => new KeyringAdminService(
                 sp.GetRequiredService<KeyringJournaledObjectStore>(),
                 sp.GetRequiredService<KeyringRuntimeState>()));
+            builder.Services.AddScoped<KeyringChunkReencryptionService>();
             builder.Services.AddSingleton(masterKeyRuntimeState);
             builder.Services.AddSingleton(processHardeningStatus);
             builder.Services.AddSingleton(new ApplicationStartupClock(DateTimeOffset.UtcNow));

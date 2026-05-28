@@ -2038,6 +2038,8 @@
         "importRecoveryKit": "Import recovery kit",
         "importingRecoveryKit": "Importing...",
         "exportingRecoveryKit": "Exporting...",
+        "reencryptChunks": "Re-encrypt chunks",
+        "reencryptingChunks": "Re-encrypting...",
         "rotateUnlock": "Rotate unlock secret"
       },
       "recoveryPhrase": {
@@ -2061,6 +2063,12 @@
         "errors": {
           "importFailed": "Failed to import the keyring recovery kit.",
           "failed": "Failed to export the keyring recovery kit."
+        }
+      },
+      "reencryptChunks": {
+        "success": "Chunk re-encryption finished. Rewritten: {{reencrypted}}, scanned: {{scanned}}, missing: {{missing}}, failed: {{failed}}.",
+        "errors": {
+          "failed": "Failed to re-encrypt chunks."
         }
       },
       "rotateUnlock": {

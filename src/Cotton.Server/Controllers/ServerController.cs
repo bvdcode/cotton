@@ -28,7 +28,8 @@ namespace Cotton.Server.Controllers
         SettingsProvider _settings,
         ISchedulerFactory _scheduler,
         SecurityDiagnosticsService _securityDiagnostics,
-        KeyringAdminService _keyringAdmin) : ControllerBase
+        KeyringAdminService _keyringAdmin,
+        KeyringChunkReencryptionService _keyringChunkReencryption) : ControllerBase
     {
         /// <summary>
         /// Stops the server after an authenticated emergency shutdown request.
@@ -153,6 +154,28 @@ namespace Cotton.Server.Controllers
                 return Ok(await _keyringAdmin.ImportRecoveryKitAsync(request, cancellationToken));
             }
             catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Re-encrypts one resumable batch of stored chunks with the current keyring primary key.
+        /// </summary>
+        [HttpPost("keyring/chunks/reencrypt")]
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        public async Task<IActionResult> ReencryptKeyringChunks(
+            [FromBody] KeyringReencryptChunksRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                return Ok(await _keyringChunkReencryption.ReencryptBatchAsync(
+                    request.Offset,
+                    request.Limit,
+                    cancellationToken));
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or ArgumentOutOfRangeException)
             {
                 return BadRequest(new { message = ex.Message });
             }

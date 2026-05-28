@@ -203,6 +203,24 @@ export interface KeyringRotateUnlockResponseDto {
   stateGeneration: number;
 }
 
+export interface KeyringReencryptChunksRequestDto {
+  offset?: number;
+  limit?: number;
+}
+
+export interface KeyringReencryptChunksResponseDto {
+  targetKeyId: number;
+  offset: number;
+  nextOffset: number;
+  totalChunks: number;
+  scanned: number;
+  reencrypted: number;
+  alreadyCurrent: number;
+  missing: number;
+  failed: number;
+  completed: boolean;
+}
+
 export interface SecurityDiagnosticsDto {
   operatingSystem: string;
   isLinux: boolean;
@@ -330,6 +348,16 @@ export const adminApi = {
     const response = await httpClient.post<KeyringRecoveryKitImportResponseDto>(
       "server/keyring/recovery-kit/import",
       kit,
+    );
+    return response.data;
+  },
+
+  reencryptKeyringChunks: async (
+    request: KeyringReencryptChunksRequestDto,
+  ): Promise<KeyringReencryptChunksResponseDto> => {
+    const response = await httpClient.post<KeyringReencryptChunksResponseDto>(
+      "server/keyring/chunks/reencrypt",
+      request,
     );
     return response.data;
   },
