@@ -32,6 +32,7 @@ import {
 } from "react";
 import { getApiErrorMessage } from "../../../shared/api/httpClient";
 import {
+  useCreateKeyringRecoverySlotMutation,
   useExportKeyringRecoveryKitMutation,
   useImportKeyringRecoveryKitMutation,
   useRotateKeyringUnlockMutation,
@@ -45,6 +46,10 @@ import type {
 } from "../../../shared/api/adminApi";
 import { AdminPageSurface } from "../components/AdminPageSurface";
 import { toast } from "../../../shared/ui/notifications";
+import {
+  generateRecoveryPhrase,
+  recoveryPhraseToKdfSecret,
+} from "../../../shared/crypto/recoveryKey";
 
 const knownThreatVectorCodes = new Set([
   "public-instance",
@@ -245,6 +250,7 @@ interface SecurityDiagnosticsContentProps {
   diagnostics: SecurityDiagnosticsDto;
   t: TFunction<"admin">;
   onRotateUnlock: () => void;
+  onCreateRecoveryPhrase: () => void;
   onExportRecoveryKit: () => void;
   onImportRecoveryKit: () => void;
   exportingRecoveryKit: boolean;
@@ -255,6 +261,7 @@ const SecurityDiagnosticsContent = ({
   diagnostics,
   t,
   onRotateUnlock,
+  onCreateRecoveryPhrase,
   onExportRecoveryKit,
   onImportRecoveryKit,
   exportingRecoveryKit,
@@ -269,6 +276,7 @@ const SecurityDiagnosticsContent = ({
       diagnostics={diagnostics}
       t={t}
       onRotateUnlock={onRotateUnlock}
+      onCreateRecoveryPhrase={onCreateRecoveryPhrase}
       onExportRecoveryKit={onExportRecoveryKit}
       onImportRecoveryKit={onImportRecoveryKit}
       exportingRecoveryKit={exportingRecoveryKit}
@@ -491,6 +499,7 @@ const MasterKeyDiagnosticsSection = ({
 
 type KeyringDiagnosticsSectionProps = DiagnosticsContentSectionProps & {
   onRotateUnlock: () => void;
+  onCreateRecoveryPhrase: () => void;
   onExportRecoveryKit: () => void;
   onImportRecoveryKit: () => void;
   exportingRecoveryKit: boolean;
@@ -501,6 +510,7 @@ const KeyringDiagnosticsSection = ({
   diagnostics,
   t,
   onRotateUnlock,
+  onCreateRecoveryPhrase,
   onExportRecoveryKit,
   onImportRecoveryKit,
   exportingRecoveryKit,
@@ -580,6 +590,14 @@ const KeyringDiagnosticsSection = ({
           onClick={onRotateUnlock}
         >
           {t("securityDiagnostics.actions.rotateUnlock")}
+        </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<KeyIcon fontSize="small" />}
+          onClick={onCreateRecoveryPhrase}
+        >
+          {t("securityDiagnostics.actions.createRecoveryPhrase")}
         </Button>
         <Button
           variant="outlined"
@@ -957,6 +975,121 @@ const KeyringRotateUnlockDialog = ({
   );
 };
 
+type KeyringRecoveryPhraseDialogProps = {
+  open: boolean;
+  onClose: () => void;
+};
+
+const KeyringRecoveryPhraseDialog = ({
+  open,
+  onClose,
+}: KeyringRecoveryPhraseDialogProps) => {
+  const { t } = useTranslation("admin");
+  const createMutation = useCreateKeyringRecoverySlotMutation();
+  const [currentUnlockSecret, setCurrentUnlockSecret] = useState("");
+  const [recoveryPhrase, setRecoveryPhrase] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const creating = createMutation.isPending;
+
+  const resetAndClose = () => {
+    if (creating) {
+      return;
+    }
+
+    setCurrentUnlockSecret("");
+    setRecoveryPhrase(null);
+    setError(null);
+    onClose();
+  };
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    const current = currentUnlockSecret.trim();
+    if (!current) {
+      setError(t("securityDiagnostics.recoveryPhrase.errors.required"));
+      return;
+    }
+
+    try {
+      const phrase = generateRecoveryPhrase();
+      const result = await createMutation.mutateAsync({
+        currentUnlockSecret: current,
+        recoverySecret: recoveryPhraseToKdfSecret(phrase),
+      });
+      setRecoveryPhrase(phrase);
+      setError(null);
+      downloadRecoveryKit(result.recoveryKit);
+      toast.success(
+        t("securityDiagnostics.recoveryPhrase.success", {
+          accessGeneration: result.accessGeneration,
+        }),
+        { toastId: "admin:keyring:recovery-phrase:success" },
+      );
+    } catch (apiError) {
+      setError(
+        getApiErrorMessage(apiError) ??
+          t("securityDiagnostics.recoveryPhrase.errors.failed"),
+      );
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={resetAndClose} maxWidth="sm" fullWidth>
+      <DialogTitle>{t("securityDiagnostics.recoveryPhrase.title")}</DialogTitle>
+      <DialogContent dividers>
+        <Box component="form" id="keyring-recovery-phrase-form" onSubmit={handleSubmit}>
+          <Stack spacing={2} pt={0.5}>
+            {error && <Alert severity="error">{error}</Alert>}
+            {recoveryPhrase && (
+              <Alert severity="success">
+                {t("securityDiagnostics.recoveryPhrase.created")}
+              </Alert>
+            )}
+            <TextField
+              label={t("securityDiagnostics.recoveryPhrase.current")}
+              type="password"
+              value={currentUnlockSecret}
+              onChange={(event) => setCurrentUnlockSecret(event.target.value)}
+              autoComplete="current-password"
+              disabled={creating || recoveryPhrase !== null}
+              fullWidth
+            />
+            {recoveryPhrase && (
+              <TextField
+                label={t("securityDiagnostics.recoveryPhrase.phrase")}
+                value={recoveryPhrase}
+                multiline
+                minRows={4}
+                slotProps={{ input: { readOnly: true } }}
+                fullWidth
+              />
+            )}
+          </Stack>
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={resetAndClose} disabled={creating}>
+          {recoveryPhrase
+            ? t("securityDiagnostics.recoveryPhrase.close")
+            : t("securityDiagnostics.recoveryPhrase.cancel")}
+        </Button>
+        {!recoveryPhrase && (
+          <Button
+            type="submit"
+            form="keyring-recovery-phrase-form"
+            variant="contained"
+            disabled={creating || currentUnlockSecret.trim().length === 0}
+          >
+            {creating
+              ? t("securityDiagnostics.recoveryPhrase.creating")
+              : t("securityDiagnostics.recoveryPhrase.create")}
+          </Button>
+        )}
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 export const AdminSecurityDiagnosticsPage = () => {
   const { t } = useTranslation("admin");
   const diagnosticsQuery = useSecurityDiagnosticsQuery();
@@ -964,6 +1097,7 @@ export const AdminSecurityDiagnosticsPage = () => {
   const importRecoveryKitMutation = useImportKeyringRecoveryKitMutation();
   const recoveryKitInputRef = useRef<HTMLInputElement | null>(null);
   const [rotationOpen, setRotationOpen] = useState(false);
+  const [recoveryPhraseOpen, setRecoveryPhraseOpen] = useState(false);
   const loadError = diagnosticsQuery.isError
     ? getApiErrorMessage(diagnosticsQuery.error) ??
       t("securityDiagnostics.errors.loadFailed")
@@ -1047,6 +1181,7 @@ export const AdminSecurityDiagnosticsPage = () => {
               diagnostics={diagnosticsQuery.data}
               t={t}
               onRotateUnlock={() => setRotationOpen(true)}
+              onCreateRecoveryPhrase={() => setRecoveryPhraseOpen(true)}
               onExportRecoveryKit={handleExportRecoveryKit}
               onImportRecoveryKit={handleImportRecoveryKit}
               exportingRecoveryKit={exportRecoveryKitMutation.isPending}
@@ -1061,6 +1196,10 @@ export const AdminSecurityDiagnosticsPage = () => {
         accept="application/json,.json"
         hidden
         onChange={handleRecoveryKitFileSelected}
+      />
+      <KeyringRecoveryPhraseDialog
+        open={recoveryPhraseOpen}
+        onClose={() => setRecoveryPhraseOpen(false)}
       />
       <KeyringRotateUnlockDialog
         open={rotationOpen}

@@ -72,6 +72,54 @@ public class KeyringRotationServiceTests
 
     [Test]
     [NonParallelizable]
+    public async Task AdminService_CreatesRecoverySlot_AndKeepsMasterUnlockWorking()
+    {
+        string root = CreateTempDirectory();
+        string? originalEnabled = Environment.GetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable);
+        string? originalPath = Environment.GetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable);
+        string unlock = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        string recoverySecret = new string('b', 64);
+        CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(unlock);
+
+        try
+        {
+            Environment.SetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable, "1");
+            Environment.SetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable, root);
+            var store = new KeyringJournaledObjectStore([new KeyringLocalFileReplica(root)]);
+            var bootstrap = new KeyringBootstrapService(store);
+            KeyringBootstrapResult initial = await bootstrap.OpenOrCreateFromV1Async(settings, unlock);
+            var runtimeState = new KeyringRuntimeState();
+            runtimeState.Set(initial);
+            var admin = new KeyringAdminService(store, runtimeState);
+
+            KeyringCreateRecoverySlotResponseDto result = await admin.CreateRecoverySlotAsync(
+                unlock,
+                recoverySecret);
+            KeyringBootstrapResult openedWithMaster = await bootstrap.OpenOrCreateFromV1Async(settings, unlock);
+            KeyringBootstrapResult openedWithRecovery = await bootstrap.OpenOrCreateFromV1Async(settings, recoverySecret);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result.SlotId, Does.StartWith("recovery:"));
+                Assert.That(result.RootEpoch, Is.EqualTo(initial.State.RootEpoch));
+                Assert.That(result.AccessGeneration, Is.EqualTo(initial.AccessEnvelope.Generation));
+                Assert.That(result.StateGeneration, Is.EqualTo(initial.State.StateGeneration));
+                Assert.That(result.RecoveryKit.AccessGeneration, Is.EqualTo(result.AccessGeneration));
+                Assert.That(openedWithMaster.State.KeyringId, Is.EqualTo(initial.State.KeyringId));
+                Assert.That(openedWithRecovery.State.KeyringId, Is.EqualTo(initial.State.KeyringId));
+                Assert.That(openedWithRecovery.UnlockedSlotId, Is.EqualTo(result.SlotId));
+                Assert.That(openedWithRecovery.AccessEnvelope.Recipients, Has.Count.EqualTo(2));
+            }
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(KeyringStartup.EnabledEnvironmentVariable, originalEnabled);
+            Environment.SetEnvironmentVariable(KeyringStartup.KeyringPathEnvironmentVariable, originalPath);
+        }
+    }
+
+    [Test]
+    [NonParallelizable]
     public async Task AdminService_ExportsRecoveryKit_WithLatestEncryptedObjects()
     {
         string root = CreateTempDirectory();

@@ -99,6 +99,30 @@ namespace Cotton.Server.Controllers
         }
 
         /// <summary>
+        /// Adds a recovery recipient slot to the keyring.
+        /// </summary>
+        [HttpPost("keyring/recovery-slot")]
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        public async Task<IActionResult> CreateKeyringRecoverySlot(
+            [FromBody] KeyringCreateRecoverySlotRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                return Ok(await _keyringAdmin.CreateRecoverySlotAsync(
+                    request.CurrentUnlockSecret,
+                    request.RecoverySecret,
+                    cancellationToken));
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException
+                or InvalidOperationException
+                or ArgumentException)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Exports the encrypted keyring recovery kit.
         /// </summary>
         [HttpGet("keyring/recovery-kit")]

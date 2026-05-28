@@ -88,6 +88,75 @@ internal sealed class KeyringRotationService(KeyringJournaledObjectStore _store)
         }
     }
 
+    public async Task<KeyringRecoverySlotResult> AddRecoverySlotAsync(
+        string currentUnlockSecret,
+        string recoverySecret,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(currentUnlockSecret);
+        ArgumentException.ThrowIfNullOrWhiteSpace(recoverySecret);
+
+        KeyringLoadedObject accessObject = await LoadRequiredLatestAsync(
+            KeyringObjectKind.AccessEnvelope,
+            cancellationToken);
+        KeyringLoadedObject stateObject = await LoadRequiredLatestAsync(
+            KeyringObjectKind.StateSnapshot,
+            cancellationToken);
+        KeyringAccessEnvelope currentAccess = KeyringJson.Deserialize<KeyringAccessEnvelope>(accessObject.Bytes);
+        KeyringUnwrapResult unwrap = KeyringCryptography.TryUnwrapRootKey(
+            currentAccess,
+            currentUnlockSecret);
+        if (!unwrap.Success || unwrap.KeyringRootKey is null)
+        {
+            throw new UnauthorizedAccessException("Keyring could not be unlocked with the supplied current unlock secret.");
+        }
+
+        try
+        {
+            KeyringStateSnapshot currentSnapshot = KeyringJson.Deserialize<KeyringStateSnapshot>(stateObject.Bytes);
+            KeyringPlainState currentState = KeyringCryptography.UnprotectState(
+                currentSnapshot,
+                unwrap.KeyringRootKey);
+            ValidateCurrentState(currentAccess, currentState);
+
+            int nextAccessGeneration = currentAccess.Generation;
+            string slotId = $"recovery:{DateTimeOffset.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}";
+            KeyringRecipientSlot recoverySlot = KeyringCryptography.CreateRecoveryRecipientSlot(
+                currentAccess.InstanceId,
+                currentAccess.KeyringId,
+                currentAccess.RootEpoch,
+                nextAccessGeneration,
+                unwrap.KeyringRootKey,
+                recoverySecret,
+                slotId);
+            KeyringAccessEnvelope nextAccess = currentAccess with
+            {
+                Generation = nextAccessGeneration,
+                ParentHash = accessObject.Pointer.Hash,
+                CreatedAtUtc = DateTimeOffset.UtcNow,
+                Recipients = currentAccess.Recipients.Concat([recoverySlot]).ToArray()
+            };
+            byte[] nextAccessBytes = KeyringJson.SerializeToUtf8Bytes(nextAccess);
+            KeyringObjectPointer nextAccessPointer = await _store.CommitAsync(
+                KeyringObjectKind.AccessEnvelope,
+                nextAccess.Generation,
+                nextAccessBytes,
+                cancellationToken);
+
+            return new KeyringRecoverySlotResult(
+                currentState,
+                nextAccess,
+                stateObject.Pointer,
+                nextAccessPointer,
+                slotId,
+                unwrap.SlotId);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(unwrap.KeyringRootKey);
+        }
+    }
+
     private async Task<KeyringLoadedObject> LoadRequiredLatestAsync(
         KeyringObjectKind kind,
         CancellationToken cancellationToken)
@@ -112,3 +181,11 @@ internal sealed record KeyringRotationResult(
     KeyringAccessEnvelope AccessEnvelope,
     KeyringObjectPointer StatePointer,
     KeyringObjectPointer AccessPointer);
+
+internal sealed record KeyringRecoverySlotResult(
+    KeyringPlainState State,
+    KeyringAccessEnvelope AccessEnvelope,
+    KeyringObjectPointer StatePointer,
+    KeyringObjectPointer AccessPointer,
+    string SlotId,
+    string? UnlockedSlotId);

@@ -1844,11 +1844,27 @@
         "loadFailed": "Не удалось загрузить диагностику безопасности."
       },
       "actions": {
+        "createRecoveryPhrase": "Создать recovery phrase",
         "exportRecoveryKit": "Скачать recovery kit",
         "importRecoveryKit": "Импортировать recovery kit",
         "importingRecoveryKit": "Импорт...",
         "exportingRecoveryKit": "Экспорт...",
         "rotateUnlock": "Сменить unlock secret"
+      },
+      "recoveryPhrase": {
+        "title": "Создать recovery phrase",
+        "current": "Текущий unlock secret",
+        "phrase": "Recovery phrase",
+        "created": "Recovery phrase создана. Обновлённый recovery kit скачан.",
+        "create": "Создать",
+        "creating": "Создание...",
+        "cancel": "Отмена",
+        "close": "Закрыть",
+        "success": "Recovery slot добавлен в access generation {{accessGeneration}}.",
+        "errors": {
+          "required": "Введите текущий unlock secret.",
+          "failed": "Не удалось создать recovery phrase."
+        }
       },
       "recoveryKit": {
         "importSuccess": "Recovery kit восстановил state generation {{stateGeneration}}.",

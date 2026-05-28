@@ -11,6 +11,7 @@ import {
   type AdminUserDto,
   type GcChunkTimelineDto,
   type GcTimelineBucketKind,
+  type KeyringCreateRecoverySlotRequestDto,
   type KeyringRecoveryKitDto,
   type KeyringRotateUnlockRequestDto,
   type LatestDatabaseBackupDto,
@@ -110,6 +111,19 @@ export const useRotateKeyringUnlockMutation = () => {
   return useMutation({
     mutationFn: (request: KeyringRotateUnlockRequestDto) =>
       adminApi.rotateKeyringUnlock(request),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.securityDiagnostics(),
+      }),
+  });
+};
+
+export const useCreateKeyringRecoverySlotMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: KeyringCreateRecoverySlotRequestDto) =>
+      adminApi.createKeyringRecoverySlot(request),
     onSuccess: () =>
       queryClient.invalidateQueries({
         queryKey: queryKeys.admin.securityDiagnostics(),

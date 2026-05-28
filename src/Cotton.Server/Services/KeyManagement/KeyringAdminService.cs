@@ -63,6 +63,48 @@ public sealed class KeyringAdminService
             rotated.State.StateGeneration);
     }
 
+    internal async Task<KeyringCreateRecoverySlotResponseDto> CreateRecoverySlotAsync(
+        string currentUnlockSecret,
+        string recoverySecret,
+        CancellationToken cancellationToken = default)
+    {
+        if (!KeyringStartup.IsEnabled())
+        {
+            throw new InvalidOperationException("Keyring v2 is not enabled for this process.");
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(currentUnlockSecret);
+        ValidateRecoverySecret(recoverySecret);
+        if (string.Equals(currentUnlockSecret, recoverySecret, StringComparison.Ordinal))
+        {
+            throw new ArgumentException("Recovery secret must be different from the current unlock secret.");
+        }
+
+        var rotation = new KeyringRotationService(_store);
+        KeyringRecoverySlotResult added = await rotation.AddRecoverySlotAsync(
+            currentUnlockSecret,
+            recoverySecret,
+            cancellationToken);
+        var bootstrapResult = new KeyringBootstrapResult(
+            Created: false,
+            State: added.State,
+            AccessEnvelope: added.AccessEnvelope,
+            StatePointer: added.StatePointer,
+            AccessPointer: added.AccessPointer,
+            UnlockedSlotId: added.UnlockedSlotId);
+        _runtimeState.Set(bootstrapResult);
+        KeyringRecoveryKitDto recoveryKit = await ExportRecoveryKitAsync(cancellationToken);
+
+        return new KeyringCreateRecoverySlotResponseDto
+        {
+            SlotId = added.SlotId,
+            RootEpoch = added.State.RootEpoch,
+            AccessGeneration = added.AccessEnvelope.Generation,
+            StateGeneration = added.State.StateGeneration,
+            RecoveryKit = recoveryKit,
+        };
+    }
+
     internal async Task<KeyringRecoveryKitDto> ExportRecoveryKitAsync(
         CancellationToken cancellationToken = default)
     {
@@ -174,6 +216,15 @@ public sealed class KeyringAdminService
             AccessEnvelopeHash = accessPointer.Hash,
             StateSnapshotHash = statePointer.Hash,
         };
+    }
+
+    private static void ValidateRecoverySecret(string recoverySecret)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(recoverySecret);
+        if (recoverySecret.Length != 64 || recoverySecret.Any(x => !Uri.IsHexDigit(x)))
+        {
+            throw new ArgumentException("Recovery secret must be a 64-character hexadecimal string.", nameof(recoverySecret));
+        }
     }
 
     private static void ValidateRecoveryKitHeader(KeyringRecoveryKitDto kit)

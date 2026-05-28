@@ -2033,11 +2033,27 @@
         "loadFailed": "Failed to load security diagnostics."
       },
       "actions": {
+        "createRecoveryPhrase": "Create recovery phrase",
         "exportRecoveryKit": "Export recovery kit",
         "importRecoveryKit": "Import recovery kit",
         "importingRecoveryKit": "Importing...",
         "exportingRecoveryKit": "Exporting...",
         "rotateUnlock": "Rotate unlock secret"
+      },
+      "recoveryPhrase": {
+        "title": "Create recovery phrase",
+        "current": "Current unlock secret",
+        "phrase": "Recovery phrase",
+        "created": "Recovery phrase created. The updated recovery kit was downloaded.",
+        "create": "Create",
+        "creating": "Creating...",
+        "cancel": "Cancel",
+        "close": "Close",
+        "success": "Recovery slot added at access generation {{accessGeneration}}.",
+        "errors": {
+          "required": "Enter the current unlock secret.",
+          "failed": "Failed to create the recovery phrase."
+        }
       },
       "recoveryKit": {
         "importSuccess": "Recovery kit restored state generation {{stateGeneration}}.",

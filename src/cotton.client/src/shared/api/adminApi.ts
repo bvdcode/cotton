@@ -178,6 +178,19 @@ export interface KeyringRecoveryKitImportResponseDto {
   stateSnapshotHash: string;
 }
 
+export interface KeyringCreateRecoverySlotRequestDto {
+  currentUnlockSecret: string;
+  recoverySecret: string;
+}
+
+export interface KeyringCreateRecoverySlotResponseDto {
+  slotId: string;
+  rootEpoch: number;
+  accessGeneration: number;
+  stateGeneration: number;
+  recoveryKit: KeyringRecoveryKitDto;
+}
+
 export interface KeyringRotateUnlockRequestDto {
   currentUnlockSecret: string;
   newUnlockSecret: string;
@@ -288,6 +301,16 @@ export const adminApi = {
   ): Promise<KeyringRotateUnlockResponseDto> => {
     const response = await httpClient.post<KeyringRotateUnlockResponseDto>(
       "server/keyring/rotate-unlock",
+      request,
+    );
+    return response.data;
+  },
+
+  createKeyringRecoverySlot: async (
+    request: KeyringCreateRecoverySlotRequestDto,
+  ): Promise<KeyringCreateRecoverySlotResponseDto> => {
+    const response = await httpClient.post<KeyringCreateRecoverySlotResponseDto>(
+      "server/keyring/recovery-slot",
       request,
     );
     return response.data;

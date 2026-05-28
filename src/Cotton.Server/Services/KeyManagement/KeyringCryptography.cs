@@ -13,6 +13,7 @@ namespace Cotton.Server.Services.KeyManagement;
 internal static class KeyringCryptography
 {
     public const string LegacyMasterSlotType = "legacy-master-hkdf";
+    public const string RecoverySlotType = "recovery-hkdf";
 
     public static byte[] GenerateKeyMaterial()
     {
@@ -40,8 +41,70 @@ internal static class KeyringCryptography
                 nameof(keyringRootKey));
         }
 
+        KeyringRecipientSlot slot = CreateRecipientSlot(
+            instanceId,
+            keyringId,
+            rootEpoch,
+            generation,
+            keyringRootKey,
+            unlockSecret,
+            slotId,
+            LegacyMasterSlotType);
+
+        return new KeyringAccessEnvelope(
+            KeyringFormat.AccessEnvelopeMagic,
+            instanceId,
+            keyringId,
+            rootEpoch,
+            generation,
+            parentHash,
+            createdAtUtc,
+            [slot]);
+    }
+
+    public static KeyringRecipientSlot CreateRecoveryRecipientSlot(
+        Guid instanceId,
+        string keyringId,
+        int rootEpoch,
+        int generation,
+        ReadOnlySpan<byte> keyringRootKey,
+        string recoverySecret,
+        string slotId)
+    {
+        return CreateRecipientSlot(
+            instanceId,
+            keyringId,
+            rootEpoch,
+            generation,
+            keyringRootKey,
+            recoverySecret,
+            slotId,
+            RecoverySlotType);
+    }
+
+    private static KeyringRecipientSlot CreateRecipientSlot(
+        Guid instanceId,
+        string keyringId,
+        int rootEpoch,
+        int generation,
+        ReadOnlySpan<byte> keyringRootKey,
+        string unlockSecret,
+        string slotId,
+        string slotType)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(keyringId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(unlockSecret);
+        ArgumentException.ThrowIfNullOrWhiteSpace(slotId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(slotType);
+        if (keyringRootKey.Length != KeyringFormat.KeySizeBytes)
+        {
+            throw new ArgumentException(
+                $"Keyring root key must be {KeyringFormat.KeySizeBytes} bytes.",
+                nameof(keyringRootKey));
+        }
+
         byte[] salt = RandomNumberGenerator.GetBytes(KeyringFormat.KeySizeBytes);
-        string info = BuildSlotInfo(instanceId, keyringId, rootEpoch, generation, slotId, LegacyMasterSlotType);
+        string info = BuildSlotInfo(instanceId, keyringId, rootEpoch, generation, slotId, slotType);
         var kdf = new KeyringKdfDescriptor(
             KeyringFormat.HkdfSha256,
             Convert.ToBase64String(salt),
@@ -59,7 +122,7 @@ internal static class KeyringCryptography
                 rootEpoch,
                 generation,
                 slotId,
-                LegacyMasterSlotType,
+                slotType,
                 kdf);
             try
             {
@@ -71,23 +134,13 @@ internal static class KeyringCryptography
                 CryptographicOperations.ZeroMemory(aad);
             }
 
-            KeyringRecipientSlot slot = new(
+            return new KeyringRecipientSlot(
                 slotId,
-                LegacyMasterSlotType,
+                slotType,
                 kdf,
                 KeyringFormat.Aes256Gcm,
                 Convert.ToBase64String(nonce),
                 Convert.ToBase64String(Concat(ciphertext, tag)));
-
-            return new KeyringAccessEnvelope(
-                KeyringFormat.AccessEnvelopeMagic,
-                instanceId,
-                keyringId,
-                rootEpoch,
-                generation,
-                parentHash,
-                createdAtUtc,
-                [slot]);
         }
         finally
         {
@@ -112,7 +165,7 @@ internal static class KeyringCryptography
 
         foreach (KeyringRecipientSlot slot in envelope.Recipients)
         {
-            if (slot.Type != LegacyMasterSlotType
+            if (!IsSupportedSlotType(slot.Type)
                 || slot.WrapAlgorithm != KeyringFormat.Aes256Gcm
                 || slot.Kdf.Algorithm != KeyringFormat.HkdfSha256)
             {
@@ -234,6 +287,11 @@ internal static class KeyringCryptography
             CryptographicOperations.ZeroMemory(protectedBytes);
             CryptographicOperations.ZeroMemory(plaintext);
         }
+    }
+
+    private static bool IsSupportedSlotType(string slotType)
+    {
+        return slotType is LegacyMasterSlotType or RecoverySlotType;
     }
 
     private static byte[]? TryUnwrapSlot(
