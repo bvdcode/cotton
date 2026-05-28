@@ -1,6 +1,44 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const storageMocks = vi.hoisted(() => {
+  const createMemoryStorage = (): Storage => {
+    const values = new Map<string, string>();
+
+    return {
+      get length() {
+        return values.size;
+      },
+      clear: () => {
+        values.clear();
+      },
+      getItem: (key) => values.get(key) ?? null,
+      key: (index) => Array.from(values.keys())[index] ?? null,
+      removeItem: (key) => {
+        values.delete(key);
+      },
+      setItem: (key, value) => {
+        values.set(key, value);
+      },
+    };
+  };
+
+  const localStorage = createMemoryStorage();
+  const sessionStorage = createMemoryStorage();
+
+  Object.defineProperty(globalThis, "localStorage", {
+    value: localStorage,
+    configurable: true,
+  });
+  Object.defineProperty(globalThis, "sessionStorage", {
+    value: sessionStorage,
+    configurable: true,
+  });
+
+  return { localStorage, sessionStorage };
+});
+
 import { useAuthStore } from "../../shared/store";
 import { AuthProvider } from "./AuthProvider";
 import { markOidcSignInPending } from "./oidcSignInSession";
@@ -43,24 +81,6 @@ const resetAuthStore = () => {
   });
 };
 
-const getWindowStorage = (
-  key: "localStorage" | "sessionStorage",
-): Storage | undefined => {
-  try {
-    return window[key];
-  } catch {
-    return undefined;
-  }
-};
-
-const clearStorage = (key: "localStorage" | "sessionStorage"): void => {
-  try {
-    getWindowStorage(key)?.clear();
-  } catch {
-    // jsdom can expose storage as unavailable when the test origin is opaque.
-  }
-};
-
 const AuthProbe = () => {
   const { ensureAuth, isAuthenticated, user: currentUser } = useAuth();
 
@@ -77,8 +97,8 @@ const AuthProbe = () => {
 
 describe("AuthProvider OIDC restore", () => {
   beforeEach(() => {
-    clearStorage("localStorage");
-    clearStorage("sessionStorage");
+    storageMocks.localStorage.clear();
+    storageMocks.sessionStorage.clear();
     resetAuthStore();
     authApiMocks.refresh.mockReset();
     authApiMocks.me.mockReset();
@@ -86,8 +106,8 @@ describe("AuthProvider OIDC restore", () => {
   });
 
   afterEach(() => {
-    clearStorage("localStorage");
-    clearStorage("sessionStorage");
+    storageMocks.localStorage.clear();
+    storageMocks.sessionStorage.clear();
     resetAuthStore();
   });
 

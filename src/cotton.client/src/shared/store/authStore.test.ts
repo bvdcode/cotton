@@ -47,4 +47,22 @@ describe("authStore", () => {
 
     expect(getRefreshEnabled()).toBe(false);
   });
+
+  it("updates auth state when localStorage is unavailable", () => {
+    const availableStorage = globalThis.localStorage;
+    Object.defineProperty(globalThis, "localStorage", {
+      value: undefined,
+      configurable: true,
+    });
+
+    try {
+      expect(() => useAuthStore.getState().logoutLocal()).not.toThrow();
+      expect(getRefreshEnabled()).toBe(false);
+    } finally {
+      Object.defineProperty(globalThis, "localStorage", {
+        value: availableStorage,
+        configurable: true,
+      });
+    }
+  });
 });
