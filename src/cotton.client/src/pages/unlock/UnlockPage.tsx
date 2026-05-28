@@ -10,6 +10,8 @@ import {
   Paper,
   Stack,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -26,8 +28,13 @@ import { useTranslation } from "react-i18next";
 import { unlockApi, type UnlockStatusResponse } from "../../shared/api/unlockApi";
 import { toast } from "@shared/ui/notifications";
 import { JUST_UNLOCKED_STORAGE_KEY } from "../../features/auth/authStorageKeys";
+import {
+  recoveryPhraseToKdfSecret,
+  validateRecoveryPhrase,
+} from "../../shared/crypto/recoveryKey";
 
 const masterKeyLength = 32;
+type UnlockMode = "master-key" | "recovery-phrase";
 
 type UnlockPageProps = {
   initialStatus?: UnlockStatusResponse;
@@ -97,6 +104,7 @@ const useFormattedExpiry = (status: UnlockStatusResponse | null): string | null 
 
 const useUnlockFormState = (status: UnlockStatusResponse | null) => {
   const { t } = useTranslation("unlock");
+  const [mode, setMode] = useState<UnlockMode>("master-key");
   const [masterKey, setMasterKey] = useState("");
   const [bootstrapToken, setBootstrapToken] = useState("");
   const [showMasterKey, setShowMasterKey] = useState(false);
@@ -105,8 +113,12 @@ const useUnlockFormState = (status: UnlockStatusResponse | null) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const requiresBootstrapToken = status?.requiresBootstrapToken === true;
+  const trimmedUnlockInput = masterKey.trim();
+  const unlockInputLooksValid = mode === "recovery-phrase"
+    ? validateRecoveryPhrase(trimmedUnlockInput)
+    : trimmedUnlockInput.length === masterKeyLength;
   const canSubmit =
-    masterKey.trim().length === masterKeyLength &&
+    unlockInputLooksValid &&
     (!requiresBootstrapToken || bootstrapToken.trim().length > 0) &&
     !submitting;
 
@@ -115,11 +127,23 @@ const useUnlockFormState = (status: UnlockStatusResponse | null) => {
     setSuccess(null);
   };
 
+  const handleModeChange = (_: unknown, nextMode: UnlockMode | null) => {
+    if (!nextMode || nextMode === mode || submitting) {
+      return;
+    }
+
+    setMode(nextMode);
+    setMasterKey("");
+    setShowMasterKey(false);
+    resetMessages();
+  };
+
   const handleGenerate = async () => {
     setGenerating(true);
     resetMessages();
     try {
       const key = await unlockApi.generateKey();
+      setMode("master-key");
       setMasterKey(key);
       setShowMasterKey(true);
       setSuccess(t("generated"));
@@ -151,8 +175,19 @@ const useUnlockFormState = (status: UnlockStatusResponse | null) => {
     setSubmitting(true);
     resetMessages();
     try {
+      let unlockSecret = masterKey.trim();
+      if (mode === "recovery-phrase") {
+        try {
+          unlockSecret = recoveryPhraseToKdfSecret(unlockSecret);
+        } catch {
+          setError(t("invalidRecoveryPhrase"));
+          setSubmitting(false);
+          return;
+        }
+      }
+
       const response = await unlockApi.unlock({
-        masterKey: masterKey.trim(),
+        masterKey: unlockSecret,
         bootstrapToken: bootstrapToken.trim(),
       });
       setMasterKey("");
@@ -179,8 +214,10 @@ const useUnlockFormState = (status: UnlockStatusResponse | null) => {
     generating,
     handleCopy,
     handleGenerate,
+    handleModeChange,
     handleSubmit,
     masterKey,
+    mode,
     requiresBootstrapToken,
     setBootstrapToken,
     setMasterKey,
@@ -225,12 +262,56 @@ const UnlockHeader = (): React.ReactElement => {
   );
 };
 
+const UnlockModeSelector = ({
+  form,
+}: {
+  form: UnlockFormState;
+}): React.ReactElement => {
+  const { t } = useTranslation("unlock");
+
+  return (
+    <ToggleButtonGroup
+      value={form.mode}
+      exclusive
+      fullWidth
+      size="small"
+      onChange={form.handleModeChange}
+      aria-label={t("mode.label")}
+      disabled={form.submitting}
+    >
+      <ToggleButton value="master-key">{t("mode.masterKey")}</ToggleButton>
+      <ToggleButton value="recovery-phrase">{t("mode.recoveryPhrase")}</ToggleButton>
+    </ToggleButtonGroup>
+  );
+};
+
 const MasterKeyField = ({
   form,
 }: {
   form: UnlockFormState;
 }): React.ReactElement => {
   const { t } = useTranslation("unlock");
+
+  if (form.mode === "recovery-phrase") {
+    return (
+      <TextField
+        label={t("recoveryPhrase")}
+        value={form.masterKey}
+        onChange={(event) => form.setMasterKey(event.target.value)}
+        disabled={form.submitting}
+        required
+        autoComplete="off"
+        multiline
+        minRows={3}
+        placeholder={t("recoveryPhrasePlaceholder")}
+        slotProps={{
+          htmlInput: {
+            spellCheck: false,
+          },
+        }}
+      />
+    );
+  }
 
   return (
     <TextField
@@ -367,6 +448,7 @@ const UnlockForm = ({
         )}
         {form.error && <Alert severity="error">{form.error}</Alert>}
         {form.success && <Alert severity="success">{form.success}</Alert>}
+        <UnlockModeSelector form={form} />
         <MasterKeyField form={form} />
         {form.requiresBootstrapToken && <BootstrapTokenField form={form} />}
         <Box

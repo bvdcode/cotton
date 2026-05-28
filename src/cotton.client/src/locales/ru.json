@@ -2421,6 +2421,13 @@
       "caption": "Cotton готовит безопасный запуск."
     },
     "masterKey": "Мастер-ключ",
+    "mode": {
+      "label": "Способ разблокировки",
+      "masterKey": "Мастер-ключ",
+      "recoveryPhrase": "Фраза восстановления"
+    },
+    "recoveryPhrase": "Фраза восстановления",
+    "recoveryPhrasePlaceholder": "Введите 24 слова через пробел",
     "bootstrapToken": "Bootstrap-токен",
     "bootstrapRequired": "Для первой разблокировки нужен bootstrap-токен из логов сервера.",
     "bootstrapRequiredWithExpiry": "Для первой разблокировки нужен bootstrap-токен из логов сервера. Он истекает {{expiresAt}}.",
@@ -2433,6 +2440,7 @@
     "generateFailed": "Не удалось сгенерировать ключ.",
     "unlocked": "Мастер-ключ принят. Cotton запускается.",
     "unlockFailed": "Не удалось разблокировать.",
+    "invalidRecoveryPhrase": "Фраза восстановления должна быть валидной 24-словной фразой Cotton.",
     "showKey": "Показать ключ",
     "hideKey": "Скрыть ключ",
     "copyKey": "Скопировать ключ",
