@@ -22,6 +22,7 @@ import { OPEN_SEARCH_EVENT, SearchModal } from "../../features/search";
 import { useServerSettingsQuery } from "../../shared/api/queries/serverSettings";
 import { AudioPlayerBar } from "../components/AudioPlayerBar";
 import { ErrorBoundary } from "../../shared/ui/ErrorBoundary";
+import { isSystemKeyboardShortcut } from "../../shared/utils/keyboardShortcuts";
 
 interface AppLayoutProps {
   routes: RouteConfig[];
@@ -48,8 +49,7 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
     const handleOpenSearch = () => openSearch();
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (!(event.ctrlKey || event.metaKey)) return;
-      if (event.key.toLocaleLowerCase() !== "f") return;
+      if (!isSystemKeyboardShortcut(event, "search")) return;
 
       event.preventDefault();
       openSearch();

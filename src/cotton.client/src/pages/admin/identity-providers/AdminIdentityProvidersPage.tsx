@@ -51,6 +51,7 @@ export const AdminIdentityProvidersPage = () => {
     const ProviderToolbar = () => (
       <OidcProvidersGridToolbar
         createLabel={t("identityProviders.actions.create")}
+        docsLabel={t("identityProviders.actions.openDocs")}
         loading={providersQuery.isLoading}
         refreshLabel={t("identityProviders.actions.refresh")}
         onCreate={() => setCreateOpen(true)}

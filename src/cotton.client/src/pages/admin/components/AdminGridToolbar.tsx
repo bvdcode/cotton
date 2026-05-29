@@ -7,7 +7,7 @@ import {
 } from "@mui/x-data-grid";
 import { GridToolbar } from "@mui/x-data-grid/internals";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 
 export interface AdminGridToolbarProps {
   createIcon: ReactElement;
@@ -16,6 +16,7 @@ export interface AdminGridToolbarProps {
   refreshLabel: string;
   onCreate: () => void;
   onRefresh: () => void;
+  extraControls?: ReactNode;
 }
 
 export const AdminGridToolbar = ({
@@ -25,6 +26,7 @@ export const AdminGridToolbar = ({
   refreshLabel,
   onCreate,
   onRefresh,
+  extraControls,
 }: AdminGridToolbarProps) => {
   const rootProps = useGridRootProps();
   const ColumnSelectorIcon = rootProps.slots.columnSelectorIcon;
@@ -51,6 +53,8 @@ export const AdminGridToolbar = ({
               {createIcon}
             </ToolbarButton>
           </Tooltip>
+
+          {extraControls}
 
           {!rootProps.disableColumnSelector && (
             <Tooltip title={rootProps.localeText.toolbarColumns}>

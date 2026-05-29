@@ -11,6 +11,7 @@ import {
   type MoveClipboardItem,
 } from "../../../shared/store/moveClipboardStore";
 import type { FileSystemTile } from "@shared/types/FileListViewTypes";
+import { getSystemKeyboardShortcut } from "@shared/utils/keyboardShortcuts";
 
 interface DropHandlersForGoUp {
   onDragOver: (event: React.DragEvent<HTMLElement>) => void;
@@ -145,16 +146,15 @@ export const useFileMoveController = ({
     };
 
     const handler = (event: KeyboardEvent) => {
-      if (!(event.ctrlKey || event.metaKey)) return;
-      const key = event.key.toLowerCase();
-      if (key !== "x" && key !== "v") return;
+      const shortcut = getSystemKeyboardShortcut(event, ["cut", "paste"]);
+      if (!shortcut) return;
       if (isEditableTarget(event.target)) return;
 
-      if (key === "x") {
+      if (shortcut === "cut") {
         if (selectedCount === 0) return;
         event.preventDefault();
         handleCutSelection();
-      } else if (key === "v") {
+      } else {
         if (clipboardItems.length === 0) return;
         if (!nodeId) return;
         event.preventDefault();
