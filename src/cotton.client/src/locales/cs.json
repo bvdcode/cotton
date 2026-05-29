@@ -3250,6 +3250,7 @@
         "edit": "Edit provider",
         "delete": "Delete provider",
         "refresh": "Refresh",
+        "openDocs": "Open OIDC setup guide",
         "save": "Save provider",
         "saving": "Saving..."
       },
