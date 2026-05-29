@@ -34,6 +34,19 @@ interface MoveSupport {
   ) => void;
 }
 
+type MoveKeyboardShortcut = "cut" | "paste";
+
+const resolveMoveKeyboardShortcut = (
+  event: KeyboardEvent,
+): MoveKeyboardShortcut | null => {
+  const key = event.key.toLowerCase();
+
+  if (key === "x" || event.code === "KeyX") return "cut";
+  if (key === "v" || event.code === "KeyV") return "paste";
+
+  return null;
+};
+
 export interface UseFileMoveControllerArgs {
   nodeId: string | null;
   tiles: ReadonlyArray<FileSystemTile>;
@@ -146,15 +159,16 @@ export const useFileMoveController = ({
 
     const handler = (event: KeyboardEvent) => {
       if (!(event.ctrlKey || event.metaKey)) return;
-      const key = event.key.toLowerCase();
-      if (key !== "x" && key !== "v") return;
+      if (event.repeat) return;
+      const shortcut = resolveMoveKeyboardShortcut(event);
+      if (!shortcut) return;
       if (isEditableTarget(event.target)) return;
 
-      if (key === "x") {
+      if (shortcut === "cut") {
         if (selectedCount === 0) return;
         event.preventDefault();
         handleCutSelection();
-      } else if (key === "v") {
+      } else {
         if (clipboardItems.length === 0) return;
         if (!nodeId) return;
         event.preventDefault();
