@@ -74,7 +74,6 @@ After saving the Authentik provider, copy the client ID and client secret into C
 
 If the provider accepts the login but Cotton returns to the login page:
 
-- Use Cotton `0.4.19` or newer. Earlier builds had weaker OIDC session recovery after redirects.
 - Check that the browser receives a `refresh_token` cookie from Cotton after returning from the provider.
 - Check that `POST /api/v1/auth/refresh` succeeds after the callback.
 - Confirm that Cotton public base URL exactly matches the external HTTPS URL users open in the browser.
