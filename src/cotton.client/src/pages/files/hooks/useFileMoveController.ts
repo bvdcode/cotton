@@ -113,14 +113,71 @@ export const useFileMoveController = ({
     [nodeId, tiles],
   );
 
+  const resolveFocusedItemId = useCallback(
+    (target: EventTarget | null): string | null => {
+      const elements: Element[] = [];
+
+      if (target instanceof Element) {
+        elements.push(target);
+      }
+
+      if (document.activeElement instanceof Element) {
+        elements.push(document.activeElement);
+      }
+
+      for (const element of elements) {
+        const itemElement = element.closest<HTMLElement>(
+          "[data-tile-id], [data-id]",
+        );
+        const itemId = itemElement?.dataset.tileId ?? itemElement?.dataset.id;
+        if (!itemId) continue;
+
+        const items = buildClipboardItemsFromIds([itemId]);
+        if (items.length > 0) return itemId;
+      }
+
+      return null;
+    },
+    [buildClipboardItemsFromIds],
+  );
+
+  const cutItems = useCallback(
+    (items: ReadonlyArray<MoveClipboardItem>): boolean => {
+      if (items.length === 0) return false;
+
+      moveOps.cutItems(items);
+      onItemsCut?.();
+      showToast(t("move.toasts.cut", { ns: "files", count: items.length }));
+      return true;
+    },
+    [moveOps, onItemsCut, showToast, t],
+  );
+
   const handleCutSelection = useCallback(() => {
     if (selectedCount === 0) return;
     const items = buildClipboardItemsFromIds(selectedIds);
-    if (items.length === 0) return;
-    moveOps.cutItems(items);
-    onItemsCut?.();
-    showToast(t("move.toasts.cut", { ns: "files", count: items.length }));
-  }, [buildClipboardItemsFromIds, moveOps, onItemsCut, selectedCount, selectedIds, showToast, t]);
+    cutItems(items);
+  }, [buildClipboardItemsFromIds, cutItems, selectedCount, selectedIds]);
+
+  const handleCutKeyboardTarget = useCallback(
+    (target: EventTarget | null): boolean => {
+      if (selectedCount > 0) {
+        return cutItems(buildClipboardItemsFromIds(selectedIds));
+      }
+
+      const focusedItemId = resolveFocusedItemId(target);
+      if (!focusedItemId) return false;
+
+      return cutItems(buildClipboardItemsFromIds([focusedItemId]));
+    },
+    [
+      buildClipboardItemsFromIds,
+      cutItems,
+      resolveFocusedItemId,
+      selectedCount,
+      selectedIds,
+    ],
+  );
 
   const handlePasteHere = useCallback(() => {
     if (!nodeId) return;
@@ -151,9 +208,8 @@ export const useFileMoveController = ({
       if (isEditableTarget(event.target)) return;
 
       if (shortcut === "cut") {
-        if (selectedCount === 0) return;
+        if (!handleCutKeyboardTarget(event.target)) return;
         event.preventDefault();
-        handleCutSelection();
       } else {
         if (clipboardItems.length === 0) return;
         if (!nodeId) return;
@@ -164,7 +220,7 @@ export const useFileMoveController = ({
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [clipboardItems.length, handleCutSelection, handlePasteHere, nodeId, selectedCount]);
+  }, [clipboardItems.length, handleCutKeyboardTarget, handlePasteHere, nodeId]);
 
   const [goUpDropActive, setGoUpDropActive] = useState(false);
 

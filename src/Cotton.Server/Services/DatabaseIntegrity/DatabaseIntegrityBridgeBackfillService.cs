@@ -13,8 +13,8 @@ namespace Cotton.Server.Services.DatabaseIntegrity;
 /// Rollout bridge that signs protected rows created before integrity metadata existed.
 /// </summary>
 /// <remarks>
-/// This bridge signs rows that predate integrity metadata and any later legacy row that is still unsigned during the
-/// current rollout window. Existing metadata is never ignored: unsupported schema versions still stop startup rather than
+/// This bridge signs rows that predate integrity metadata and any later legacy row that is still unsigned while
+/// bridge mode is enabled. Existing metadata is never ignored: unsupported schema versions still stop startup rather than
 /// being re-signed blindly.
 /// </remarks>
 public sealed class DatabaseIntegrityBridgeBackfillService(
@@ -77,7 +77,7 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
             total += count;
             _logger.LogWarning(
                 "Database integrity bridge signed {Count} existing {EntityName} rows. " +
-                "This migration bridge is temporary and must be removed after the required upgrade window.",
+                "This migration bridge is enabled; remove it after all supported upgrades have crossed the integrity migration.",
                 count,
                 descriptor.EntityName);
         }

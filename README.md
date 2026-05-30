@@ -45,7 +45,7 @@ This is not just a storage engine with a web skin. Cotton is meant to feel good 
 - uploads stream cleanly in the browser without freezing the UI;
 - large files stay seekable, previewable, and streamable without full re-download or reassembly;
 - integrity checks and storage consistency work happen in the background and surface real warnings;
-- sharing, previews, password reset, notifications, and setup behave like product features, not TODO items.
+- sharing, previews, password reset, notifications, and setup behave like product features, not placeholders.
 
 If you want the architecture details, keep reading below. If you want the 30-second version, start with the next three sections.
 
@@ -222,7 +222,7 @@ If you are comparing Cotton to the usual self-hosted stack, this matters: the en
 
 - **Database integrity signatures protect high-value rows**
 
-  Cotton signs protected database rows with key material derived from the master key. Read-boundary verification detects tampering in users, passkey credentials, refresh/download/share tokens, server settings, nodes, node files, file manifests, manifest chunks, and chunks. During the current rollout window, bridge mode signs unsigned legacy rows at startup; invalid signatures are still treated as integrity failures, and the admin checkup warns while bridge mode remains enabled.
+  Cotton signs protected database rows with key material derived from the master key. Read-boundary verification detects tampering in users, passkey credentials, refresh/download/share tokens, server settings, nodes, node files, file manifests, manifest chunks, and chunks. When bridge mode is enabled, it signs unsigned legacy rows at startup; invalid signatures are still treated as integrity failures, and the admin checkup warns while bridge mode remains enabled.
 
 - **Storage pressure is guarded on local disks**
   On filesystem-backed storage, Cotton checks the mounted volume free space through a short-lived cache before accepting new physical chunk writes. If the configured reserve would be crossed, uploads return HTTP 507 and admins get a throttled high-priority notification. S3-compatible backends are treated as unknown-capacity unless the provider exposes a hard limit, so Cotton does not invent an expensive bucket-size scan on the hot path.
@@ -580,7 +580,7 @@ Realtime updates are delivered through a dedicated event hub, with client reconn
 
 **Database integrity signatures**
 
-Protected EF entities carry integrity shadow columns written by descriptors instead of ad-hoc string serialization. The verifier checks signed rows at security-sensitive read boundaries, bridge backfill signs legacy rows during the rollout window, and failure reporting can notify administrators when a signed row no longer matches canonical data.
+Protected EF entities carry integrity shadow columns written by descriptors instead of ad-hoc string serialization. The verifier checks signed rows at security-sensitive read boundaries, bridge backfill signs legacy rows while bridge mode is enabled, and failure reporting can notify administrators when a signed row no longer matches canonical data.
 _See: `src/Cotton.Server/Services/DatabaseIntegrity`, `src/Cotton.Database/CottonDbContext.cs`, `src/Cotton.Database/Integrity`_
 
 **WebDAV quota properties**
