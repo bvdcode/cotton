@@ -137,11 +137,6 @@ export const AdminDatabaseBackupPage = () => {
         label: t("databaseBackup.fields.sourceHost"),
         value: backup.sourceHost || placeholder,
       },
-      {
-        id: "sourcePort",
-        label: t("databaseBackup.fields.sourcePort"),
-        value: String(backup.sourcePort),
-      },
     ];
   }, [backup, placeholder, t]);
 
