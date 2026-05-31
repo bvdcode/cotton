@@ -2385,7 +2385,8 @@
         "someItemsSkipped_many": "Skipped {{count}} items that could not be read."
       },
       "errors": {
-        "dropFailed": "Falha ao processar os itens arrastados. Tente novamente."
+        "dropFailed": "Falha ao processar os itens arrastados. Tente novamente.",
+        "createMarkdownFileFailed": "Não foi possível criar o arquivo Markdown. Tente novamente."
       },
       "skippedDialog": {
         "title": "Itens ignorados",
@@ -2397,6 +2398,9 @@
     "actions": {
       "upload": "Enviar",
       "newFolder": "Nova pasta",
+      "newMarkdownFile": "Novo arquivo Markdown",
+      "defaultMarkdownFileName": "Novo arquivo.md",
+      "defaultNewFolderName": "Nova pasta",
       "folderNamePlaceholder": "Nome da pasta",
       "goToFolder": "Ir para a pasta",
       "goUp": "Subir um nível",

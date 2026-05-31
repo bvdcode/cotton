@@ -46,8 +46,10 @@ export interface FileVersionDto {
 export const filesApi = {
   createFromChunks: async (
     request: CreateFileFromChunksRequest,
-  ): Promise<void> => {
-    await httpClient.post("files/from-chunks", request);
+  ): Promise<NodeFileManifestDto> => {
+    const url = "files/from-chunks";
+    const response = await httpClient.post<unknown>(url, request);
+    return parseValidated(url, response.data, nodeFileManifestSchema);
   },
 
   updateFileContent: async (

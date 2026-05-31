@@ -33,6 +33,20 @@ const chunkRequest = {
   originalNodeFileId: null,
 };
 
+const chunkResponse = {
+  id: fileId,
+  nodeId,
+  ownerId: "user-1",
+  name: "document.pdf",
+  contentType: "application/pdf",
+  sizeBytes: 12,
+  metadata: {},
+  requiresVideoTranscoding: false,
+  previewHashEncryptedHex: null,
+  createdAt: "2026-05-30T00:00:00Z",
+  updatedAt: "2026-05-30T00:00:00Z",
+};
+
 beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
@@ -44,10 +58,12 @@ afterEach(() => {
 describe("filesApi chunk manifests", () => {
   it("creates a file from an ordered chunk manifest", async () => {
     const post = vi.spyOn(httpClient, "post").mockResolvedValue({
-      data: undefined,
+      data: chunkResponse,
     });
 
-    await filesApi.createFromChunks(chunkRequest);
+    await expect(filesApi.createFromChunks(chunkRequest)).resolves.toEqual(
+      chunkResponse,
+    );
 
     expect(post).toHaveBeenCalledWith("files/from-chunks", chunkRequest);
   });

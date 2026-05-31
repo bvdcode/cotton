@@ -2491,7 +2491,8 @@
         "details": "Детали"
       },
       "errors": {
-        "dropFailed": "Не удалось обработать перетаскивание. Попробуйте ещё раз."
+        "dropFailed": "Не удалось обработать перетаскивание. Попробуйте ещё раз.",
+        "createMarkdownFileFailed": "Не удалось создать Markdown-файл. Попробуйте ещё раз."
       },
       "skippedDialog": {
         "title": "Пропущенные элементы",
@@ -2503,6 +2504,9 @@
     "actions": {
       "upload": "Загрузить",
       "newFolder": "Новая папка",
+      "newMarkdownFile": "Новый Markdown-файл",
+      "defaultMarkdownFileName": "Новый файл.md",
+      "defaultNewFolderName": "Новая папка",
       "folderNamePlaceholder": "Название папки",
       "goToFolder": "Перейти в папку",
       "goUp": "Вверх",

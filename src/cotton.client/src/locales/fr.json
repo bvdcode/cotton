@@ -2382,7 +2382,8 @@
         "details": "Détails"
       },
       "errors": {
-        "dropFailed": "Échec du traitement des éléments déposés. Veuillez réessayer."
+        "dropFailed": "Échec du traitement des éléments déposés. Veuillez réessayer.",
+        "createMarkdownFileFailed": "Impossible de créer le fichier Markdown. Réessayez."
       },
       "skippedDialog": {
         "title": "Éléments ignorés",
@@ -2394,6 +2395,9 @@
     "actions": {
       "upload": "Téléverser",
       "newFolder": "Nouveau dossier",
+      "newMarkdownFile": "Nouveau fichier Markdown",
+      "defaultMarkdownFileName": "Nouveau fichier.md",
+      "defaultNewFolderName": "Nouveau dossier",
       "folderNamePlaceholder": "Nom du dossier",
       "goToFolder": "Aller au dossier",
       "goUp": "Remonter",

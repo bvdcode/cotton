@@ -2389,7 +2389,8 @@
         "details": "Деталі"
       },
       "errors": {
-        "dropFailed": "Не вдалося обробити перетягнуті елементи. Будь ласка, спробуйте ще раз."
+        "dropFailed": "Не вдалося обробити перетягнуті елементи. Будь ласка, спробуйте ще раз.",
+        "createMarkdownFileFailed": "Не вдалося створити Markdown-файл. Спробуйте ще раз."
       },
       "skippedDialog": {
         "title": "Пропущені елементи",
@@ -2401,6 +2402,9 @@
     "actions": {
       "upload": "Вивантажити",
       "newFolder": "Нова тека",
+      "newMarkdownFile": "Новий Markdown-файл",
+      "defaultMarkdownFileName": "Новий файл.md",
+      "defaultNewFolderName": "Нова тека",
       "folderNamePlaceholder": "Назва теки",
       "goToFolder": "Перейти до теки",
       "goUp": "Вгору",

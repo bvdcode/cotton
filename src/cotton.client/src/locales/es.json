@@ -2381,7 +2381,8 @@
         "details": "Detalles"
       },
       "errors": {
-        "dropFailed": "No se pudieron procesar los elementos soltados. Inténtalo de nuevo."
+        "dropFailed": "No se pudieron procesar los elementos soltados. Inténtalo de nuevo.",
+        "createMarkdownFileFailed": "No se pudo crear el archivo Markdown. Inténtalo de nuevo."
       },
       "skippedDialog": {
         "title": "Elementos omitidos",
@@ -2393,6 +2394,9 @@
     "actions": {
       "upload": "Subir",
       "newFolder": "Nueva carpeta",
+      "newMarkdownFile": "Nuevo archivo Markdown",
+      "defaultMarkdownFileName": "Nuevo archivo.md",
+      "defaultNewFolderName": "Nueva carpeta",
       "folderNamePlaceholder": "Nombre de la carpeta",
       "goToFolder": "Ir a la carpeta",
       "goUp": "Subir",

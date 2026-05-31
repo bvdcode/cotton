@@ -2177,7 +2177,8 @@
         "details": "Details"
       },
       "errors": {
-        "dropFailed": "Failed to process dropped items. Please try again."
+        "dropFailed": "Failed to process dropped items. Please try again.",
+        "createMarkdownFileFailed": "Failed to create Markdown file. Please try again."
       },
       "skippedDialog": {
         "title": "Skipped items",
@@ -2189,6 +2190,9 @@
     "actions": {
       "upload": "Upload",
       "newFolder": "New folder",
+      "newMarkdownFile": "New Markdown file",
+      "defaultMarkdownFileName": "New File.md",
+      "defaultNewFolderName": "New Folder",
       "folderNamePlaceholder": "Folder name",
       "goToFolder": "Go to folder",
       "goUp": "Go up",

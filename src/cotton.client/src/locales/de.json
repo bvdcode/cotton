@@ -2378,7 +2378,8 @@
         "details": "Details"
       },
       "errors": {
-        "dropFailed": "Abgelegte Elemente konnten nicht verarbeitet werden. Bitte versuche es erneut."
+        "dropFailed": "Abgelegte Elemente konnten nicht verarbeitet werden. Bitte versuche es erneut.",
+        "createMarkdownFileFailed": "Markdown-Datei konnte nicht erstellt werden. Bitte versuche es erneut."
       },
       "skippedDialog": {
         "title": "Übersprungene Elemente",
@@ -2390,6 +2391,9 @@
     "actions": {
       "upload": "Hochladen",
       "newFolder": "Neuer Ordner",
+      "newMarkdownFile": "Neue Markdown-Datei",
+      "defaultMarkdownFileName": "Neue Datei.md",
+      "defaultNewFolderName": "Neuer Ordner",
       "folderNamePlaceholder": "Ordnername",
       "goToFolder": "Zum Ordner gehen",
       "goUp": "Nach oben",

@@ -1,4 +1,5 @@
 import type { Guid } from "../api/layoutsApi";
+import type { NodeFileManifestDto } from "../api/nodesApi";
 import { filesApi } from "../api/filesApi";
 import {
   DISPLAY_META_KEY,
@@ -26,7 +27,7 @@ export async function uploadFileToNode(options: {
   onFinalizing?: UploadFileToNodeCallbacks["onFinalizing"];
   onEncryptProgress?: UploadFileToNodeCallbacks["onEncryptProgress"];
   onEncryptComplete?: UploadFileToNodeCallbacks["onEncryptComplete"];
-}): Promise<void> {
+}): Promise<NodeFileManifestDto> {
   const { file, nodeId, server } = options;
   const originalContentType =
     file.type && file.type.length > 0 ? file.type : ENCRYPTED_CONTENT_TYPE;
@@ -73,7 +74,7 @@ export async function uploadFileToNode(options: {
 
   options.onFinalizing?.();
 
-  await filesApi.createFromChunks({
+  return filesApi.createFromChunks({
     nodeId,
     chunkHashes,
     name,

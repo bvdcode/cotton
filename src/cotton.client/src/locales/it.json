@@ -2384,7 +2384,8 @@
         "details": "Dettagli"
       },
       "errors": {
-        "dropFailed": "Impossibile elaborare gli elementi rilasciati. Riprovi."
+        "dropFailed": "Impossibile elaborare gli elementi rilasciati. Riprovi.",
+        "createMarkdownFileFailed": "Impossibile creare il file Markdown. Riprova."
       },
       "skippedDialog": {
         "title": "Elementi saltati",
@@ -2396,6 +2397,9 @@
     "actions": {
       "upload": "Carica",
       "newFolder": "Nuova cartella",
+      "newMarkdownFile": "Nuovo file Markdown",
+      "defaultMarkdownFileName": "Nuovo file.md",
+      "defaultNewFolderName": "Nuova cartella",
       "folderNamePlaceholder": "Nome cartella",
       "goToFolder": "Vai alla cartella",
       "goUp": "Vai su",

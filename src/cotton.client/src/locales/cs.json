@@ -2391,7 +2391,8 @@
         "details": "Podrobnosti"
       },
       "errors": {
-        "dropFailed": "Zpracování přetažených položek se nezdařilo. Zkuste to prosím znovu."
+        "dropFailed": "Zpracování přetažených položek se nezdařilo. Zkuste to prosím znovu.",
+        "createMarkdownFileFailed": "Nepodařilo se vytvořit soubor Markdown. Zkuste to znovu."
       },
       "skippedDialog": {
         "title": "Přeskočené položky",
@@ -2403,6 +2404,9 @@
     "actions": {
       "upload": "Nahrát",
       "newFolder": "Nová složka",
+      "newMarkdownFile": "Nový soubor Markdown",
+      "defaultMarkdownFileName": "Nový soubor.md",
+      "defaultNewFolderName": "Nová složka",
       "folderNamePlaceholder": "Název složky",
       "goToFolder": "Přejít do složky",
       "goUp": "O úroveň výš",

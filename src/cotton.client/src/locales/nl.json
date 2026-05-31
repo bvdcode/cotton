@@ -2383,7 +2383,8 @@
         "someItemsSkipped_many": "Skipped {{count}} items that could not be read."
       },
       "errors": {
-        "dropFailed": "Verwerken van de gesleepte items is mislukt. Probeer het opnieuw."
+        "dropFailed": "Verwerken van de gesleepte items is mislukt. Probeer het opnieuw.",
+        "createMarkdownFileFailed": "Kan Markdown-bestand niet maken. Probeer het opnieuw."
       },
       "skippedDialog": {
         "title": "Overgeslagen items",
@@ -2395,6 +2396,9 @@
     "actions": {
       "upload": "Uploaden",
       "newFolder": "Nieuwe map",
+      "newMarkdownFile": "Nieuw Markdown-bestand",
+      "defaultMarkdownFileName": "Nieuw bestand.md",
+      "defaultNewFolderName": "Nieuwe map",
       "folderNamePlaceholder": "Mapnaam",
       "goToFolder": "Naar map gaan",
       "goUp": "Omhoog",
