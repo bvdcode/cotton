@@ -89,13 +89,6 @@ public sealed class NameLayoutSearchProvider(CottonDbContext _dbContext) : ILayo
 
     private static IQueryable<Node> ApplyCriteria(IQueryable<Node> query, LayoutSearchCriteria criteria)
     {
-        if (criteria.HasIds && criteria.HasText)
-        {
-            return query
-                .Where(x => criteria.IdQueries.Contains(x.Id))
-                .Union(ApplyTextCriteria(query, criteria));
-        }
-
         if (criteria.HasIds)
         {
             return query.Where(x => criteria.IdQueries.Contains(x.Id));
@@ -106,13 +99,6 @@ public sealed class NameLayoutSearchProvider(CottonDbContext _dbContext) : ILayo
 
     private static IQueryable<NodeFile> ApplyCriteria(IQueryable<NodeFile> query, LayoutSearchCriteria criteria)
     {
-        if (criteria.HasIds && criteria.HasText)
-        {
-            return query
-                .Where(x => criteria.IdQueries.Contains(x.Id) || criteria.IdQueries.Contains(x.FileManifestId))
-                .Union(ApplyTextCriteria(query, criteria));
-        }
-
         if (criteria.HasIds)
         {
             return query.Where(x => criteria.IdQueries.Contains(x.Id) || criteria.IdQueries.Contains(x.FileManifestId));

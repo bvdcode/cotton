@@ -89,6 +89,38 @@ public sealed class LayoutSearchServiceTests
     }
 
     [Test]
+    public void NameProvider_QueryWithIdsAndText_UsesIdentifierPredicateOnly()
+    {
+        const string connectionString = "Host=localhost;Database=cotton_translation_test;Username=postgres;Password=postgres";
+
+        DbContextOptions<CottonDbContext> options = new DbContextOptionsBuilder<CottonDbContext>()
+            .UseNpgsql(connectionString)
+            .Options;
+        using CottonDbContext dbContext = new(options);
+
+        Guid nodeId = Guid.Parse("11111111-2222-3333-4444-555555555555");
+        LayoutSearchRequest request = new(
+            UserId: Guid.Parse("22222222-3333-4444-5555-666666666666"),
+            LayoutId: Guid.Parse("33333333-4444-5555-6666-777777777777"),
+            Query: $"{nodeId} why",
+            Page: 1,
+            PageSize: 20);
+        LayoutSearchCriteria criteria = LayoutSearchCriteriaBuilder.Build(request.Query);
+        NameLayoutSearchProvider provider = new(dbContext);
+
+        string sql = provider
+            .BuildHitsQuery(new LayoutSearchProviderContext(request, criteria))
+            .ToQueryString();
+        string[] whereClauses = sql
+            .Split('\n')
+            .Select(x => x.Trim())
+            .Where(x => x.StartsWith("WHERE ", StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.That(whereClauses, Has.All.Not.Contains("name_key"));
+    }
+
+    [Test]
     public void VectorProvider_CanSearchOnlyNaturalLanguageText()
     {
         NoOpVectorLayoutSearchProvider provider = new(null!);
