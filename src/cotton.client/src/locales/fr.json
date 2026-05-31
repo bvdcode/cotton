@@ -2328,6 +2328,7 @@
     "errors": {
       "resolveRootFailed": "Échec de la résolution du dossier racine",
       "loadContentsFailed": "Échec du chargement du contenu du dossier",
+      "folderNotFound": "Dossier introuvable",
       "createFolderFailed": "Échec de la création du dossier",
       "deleteFolderFailed": "Échec de la suppression du dossier",
       "renameFolderFailed": "Échec du renommage du dossier",

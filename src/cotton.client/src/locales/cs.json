@@ -2329,6 +2329,7 @@
     "errors": {
       "resolveRootFailed": "Nepodařilo se určit kořenovou složku",
       "loadContentsFailed": "Načtení obsahu složky se nezdařilo",
+      "folderNotFound": "Složka nebyla nalezena",
       "createFolderFailed": "Vytvoření složky se nezdařilo",
       "deleteFolderFailed": "Smazání složky se nezdařilo",
       "renameFolderFailed": "Přejmenování složky se nezdařilo",

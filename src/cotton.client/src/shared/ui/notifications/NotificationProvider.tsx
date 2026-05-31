@@ -31,7 +31,7 @@ interface NotificationProviderProps {
 }
 
 const NOTIFICATION_CONTAINER_CLASS = "cotton-notification-container";
-const FOREGROUND_OVERLAY_Z_INDEX = 10000;
+const FOREGROUND_OVERLAY_Z_INDEX = 11000;
 
 export function NotificationProvider({ children }: NotificationProviderProps) {
   return (
@@ -39,7 +39,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
       <GlobalStyles
         styles={{
           [`.${NOTIFICATION_CONTAINER_CLASS}.${NOTIFICATION_CONTAINER_CLASS}`]: {
-            zIndex: FOREGROUND_OVERLAY_Z_INDEX,
+            zIndex: `${FOREGROUND_OVERLAY_Z_INDEX} !important`,
           },
         }}
       />

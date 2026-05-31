@@ -2332,6 +2332,7 @@
     "errors": {
       "resolveRootFailed": "Nie udało się ustalić folderu głównego",
       "loadContentsFailed": "Nie udało się załadować zawartości folderu",
+      "folderNotFound": "Nie znaleziono folderu",
       "createFolderFailed": "Nie udało się utworzyć folderu",
       "deleteFolderFailed": "Nie udało się usunąć folderu",
       "renameFolderFailed": "Nie udało się zmienić nazwy folderu",

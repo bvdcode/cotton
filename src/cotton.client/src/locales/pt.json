@@ -2331,6 +2331,7 @@
     "errors": {
       "resolveRootFailed": "Falha ao resolver a pasta raiz",
       "loadContentsFailed": "Falha ao carregar o conteúdo da pasta",
+      "folderNotFound": "Pasta não encontrada",
       "createFolderFailed": "Falha ao criar a pasta",
       "deleteFolderFailed": "Falha ao excluir a pasta",
       "renameFolderFailed": "Falha ao renomear a pasta",

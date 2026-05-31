@@ -2429,6 +2429,7 @@
     "errors": {
       "resolveRootFailed": "Не удалось определить корневую папку",
       "loadContentsFailed": "Не удалось загрузить содержимое папки",
+      "folderNotFound": "Папка не найдена",
       "createFolderFailed": "Не удалось создать папку",
       "deleteFolderFailed": "Не удалось удалить папку",
       "renameFolderFailed": "Не удалось переименовать папку",

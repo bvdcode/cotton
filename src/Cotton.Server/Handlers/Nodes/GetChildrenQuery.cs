@@ -109,7 +109,6 @@ namespace Cotton.Server.Handlers.Nodes
             int skip = (request.Page - 1) * request.PageSize;
             IQueryable<Node> nodesBaseQuery = _dbContext.Nodes
                 .AsNoTracking()
-                .OrderBy(x => x.NameKey)
                 .Where(x => x.ParentId != null
                     && currentParentIds.Contains(x.ParentId.Value)
                     && x.OwnerId == request.UserId
@@ -126,9 +125,18 @@ namespace Cotton.Server.Handlers.Nodes
                 nodesBaseQuery = HideVersionOnlyTrashWrappers(nodesBaseQuery, request.UserId);
                 filesBaseQuery = filesBaseQuery
                     .Where(x => x.OriginalNodeFileId == Guid.Empty || x.Id == x.OriginalNodeFileId);
+
+                return await LoadTrashChildrenAsync(
+                    request,
+                    parentNode,
+                    nodesBaseQuery,
+                    filesBaseQuery,
+                    skip,
+                    ct);
             }
 
             IQueryable<NodeDto> nodesQuery = nodesBaseQuery
+                .OrderBy(x => x.NameKey)
                 .ProjectToType<NodeDto>();
 
             int nodesCount = await nodesQuery.CountAsync(cancellationToken: ct);
@@ -159,6 +167,87 @@ namespace Cotton.Server.Handlers.Nodes
                 UpdatedAt = parentNode.UpdatedAt,
                 TotalCount = nodesCount + filesCount,
             };
+        }
+
+        private async Task<NodeContentDto> LoadTrashChildrenAsync(
+            GetChildrenQuery request,
+            Node parentNode,
+            IQueryable<Node> nodesBaseQuery,
+            IQueryable<NodeFile> filesBaseQuery,
+            int skip,
+            CancellationToken ct)
+        {
+            int nodesCount = await nodesBaseQuery.CountAsync(cancellationToken: ct);
+            int filesCount = await filesBaseQuery.CountAsync(cancellationToken: ct);
+
+            IQueryable<TrashChildPageEntry> nodeEntriesQuery = nodesBaseQuery
+                .Select(x => new TrashChildPageEntry
+                {
+                    Id = x.Id,
+                    IsNode = true,
+                    UpdatedAt = x.UpdatedAt,
+                    NameKey = x.NameKey,
+                });
+            IQueryable<TrashChildPageEntry> fileEntriesQuery = filesBaseQuery
+                .Select(x => new TrashChildPageEntry
+                {
+                    Id = x.Id,
+                    IsNode = false,
+                    UpdatedAt = x.UpdatedAt,
+                    NameKey = x.NameKey,
+                });
+
+            List<TrashChildPageEntry> pageEntries = await nodeEntriesQuery
+                .Concat(fileEntriesQuery)
+                .OrderByDescending(x => x.UpdatedAt)
+                .ThenBy(x => x.NameKey)
+                .ThenBy(x => x.Id)
+                .Skip(skip)
+                .Take(request.PageSize)
+                .ToListAsync(cancellationToken: ct);
+
+            Guid[] nodeIds = [.. pageEntries.Where(x => x.IsNode).Select(x => x.Id)];
+            Guid[] fileIds = [.. pageEntries.Where(x => !x.IsNode).Select(x => x.Id)];
+
+            List<NodeDto> nodes = nodeIds.Length == 0 ? []
+                : await nodesBaseQuery
+                    .Where(x => nodeIds.Contains(x.Id))
+                    .ProjectToType<NodeDto>()
+                    .ToListAsync(cancellationToken: ct);
+
+            List<NodeFileManifestDto> files = fileIds.Length == 0 ? []
+                : await filesBaseQuery
+                    .Where(x => fileIds.Contains(x.Id))
+                    .Include(x => x.FileManifest)
+                    .ProjectToType<NodeFileManifestDto>()
+                    .ToListAsync(cancellationToken: ct);
+
+            Dictionary<Guid, int> entryOrder = pageEntries
+                .Select((entry, index) => new { entry.Id, Index = index })
+                .ToDictionary(x => x.Id, x => x.Index);
+            nodes.Sort((a, b) => entryOrder[a.Id].CompareTo(entryOrder[b.Id]));
+            files.Sort((a, b) => entryOrder[a.Id].CompareTo(entryOrder[b.Id]));
+
+            return new()
+            {
+                Nodes = nodes,
+                Files = files,
+                Id = request.NodeId,
+                CreatedAt = parentNode.CreatedAt,
+                UpdatedAt = parentNode.UpdatedAt,
+                TotalCount = nodesCount + filesCount,
+            };
+        }
+
+        private sealed class TrashChildPageEntry
+        {
+            public Guid Id { get; init; }
+
+            public bool IsNode { get; init; }
+
+            public DateTime UpdatedAt { get; init; }
+
+            public string NameKey { get; init; } = string.Empty;
         }
 
         private IQueryable<Node> HideVersionOnlyTrashWrappers(IQueryable<Node> nodesQuery, Guid userId)

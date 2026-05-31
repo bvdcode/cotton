@@ -2329,6 +2329,7 @@
     "errors": {
       "resolveRootFailed": "Het oplossen van de hoofdmap is mislukt",
       "loadContentsFailed": "Inhoud van de map kon niet worden geladen",
+      "folderNotFound": "Map niet gevonden",
       "createFolderFailed": "Map aanmaken mislukt",
       "deleteFolderFailed": "Map verwijderen mislukt",
       "renameFolderFailed": "Map hernoemen mislukt",

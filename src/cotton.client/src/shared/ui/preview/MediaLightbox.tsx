@@ -586,10 +586,10 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       position: "bottom" as const,
       width: 120,
       height: 80,
-      border: 0,
+      border: 1,
       borderRadius: 4,
-      padding: 2,
-      gap: 4,
+      padding: 0,
+      gap: 6,
       showToggle: false,
       hidden: items[index]?.kind === "video",
     };

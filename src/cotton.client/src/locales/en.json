@@ -2123,6 +2123,7 @@
     "errors": {
       "resolveRootFailed": "Failed to resolve root folder",
       "loadContentsFailed": "Failed to load folder contents",
+      "folderNotFound": "Folder not found",
       "createFolderFailed": "Failed to create folder",
       "deleteFolderFailed": "Failed to delete folder",
       "renameFolderFailed": "Failed to rename folder",

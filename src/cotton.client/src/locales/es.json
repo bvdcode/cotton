@@ -2327,6 +2327,7 @@
     "errors": {
       "resolveRootFailed": "No se pudo resolver la carpeta raíz",
       "loadContentsFailed": "No se pudo cargar el contenido de la carpeta",
+      "folderNotFound": "Carpeta no encontrada",
       "createFolderFailed": "No se pudo crear la carpeta",
       "deleteFolderFailed": "No se pudo eliminar la carpeta",
       "renameFolderFailed": "No se pudo renombrar la carpeta",

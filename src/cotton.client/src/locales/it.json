@@ -2330,6 +2330,7 @@
     "errors": {
       "resolveRootFailed": "Impossibile risolvere la cartella radice",
       "loadContentsFailed": "Impossibile caricare il contenuto della cartella",
+      "folderNotFound": "Cartella non trovata",
       "createFolderFailed": "Impossibile creare la cartella",
       "deleteFolderFailed": "Impossibile eliminare la cartella",
       "renameFolderFailed": "Impossibile rinominare la cartella",

@@ -33,7 +33,9 @@ export const useTrashFileList = ({
       ? (listContent ?? childrenQuery.data?.content)
       : childrenQuery.data?.content;
 
-  const { tiles } = useContentTiles(effectiveContent ?? undefined);
+  const { tiles } = useContentTiles(effectiveContent ?? undefined, {
+    sortMode: "updatedAtDesc",
+  });
 
   const refresh = useCallback(() => {
     if (!nodeId) return;

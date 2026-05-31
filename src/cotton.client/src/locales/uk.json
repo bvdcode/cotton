@@ -2335,6 +2335,7 @@
     "errors": {
       "resolveRootFailed": "Не вдалося визначити кореневу теку",
       "loadContentsFailed": "Не вдалося завантажити вміст теки",
+      "folderNotFound": "Папку не знайдено",
       "createFolderFailed": "Не вдалося створити теку",
       "deleteFolderFailed": "Не вдалося видалити теку",
       "renameFolderFailed": "Не вдалося перейменувати теку",

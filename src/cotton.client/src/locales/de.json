@@ -2324,6 +2324,7 @@
     "errors": {
       "resolveRootFailed": "Stammordner konnte nicht aufgelöst werden",
       "loadContentsFailed": "Ordnerinhalt konnte nicht geladen werden",
+      "folderNotFound": "Ordner nicht gefunden",
       "createFolderFailed": "Ordner konnte nicht erstellt werden",
       "deleteFolderFailed": "Ordner konnte nicht gelöscht werden",
       "renameFolderFailed": "Ordner konnte nicht umbenannt werden",

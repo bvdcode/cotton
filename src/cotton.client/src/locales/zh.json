@@ -2337,6 +2337,7 @@
     "errors": {
       "resolveRootFailed": "无法解析根文件夹",
       "loadContentsFailed": "加载文件夹内容失败",
+      "folderNotFound": "文件夹未找到",
       "createFolderFailed": "创建文件夹失败",
       "deleteFolderFailed": "删除文件夹失败",
       "renameFolderFailed": "重命名文件夹失败",
