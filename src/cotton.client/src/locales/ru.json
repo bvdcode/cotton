@@ -2765,6 +2765,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Настройки сервера не загружены",
       "uploadFailed": "Загрузка не удалась",
+      "deleteFailed": "Удаление не удалось",
       "storageQuotaExceeded": "Недостаточно места. Доступно: {{available}}.",
       "encryptionVaultLocked": "Крипто-хранилище заблокировано",
       "encryptionFailed": "Шифрование не удалось",
@@ -2773,6 +2774,7 @@
     },
     "titleWithTotal": "Задачи ({{total}})",
     "titleWithProgress": "Задачи ({{completed}} / {{total}} - {{speed}}/с)",
+    "titleWithProgressNoSpeed": "Задачи ({{completed}} / {{total}})",
     "titleWithErrors": "Задачи ({{total}} • с ошибкой: {{failed}})",
     "actions": {
       "expand": "Развернуть",

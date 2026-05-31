@@ -2626,6 +2626,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Servereinstellungen sind nicht geladen",
       "uploadFailed": "Upload fehlgeschlagen",
+      "deleteFailed": "Löschen fehlgeschlagen",
       "storageQuotaExceeded": "Nicht genügend Speicherplatz. Verfügbar: {{available}}.",
       "encryptionVaultLocked": "Verschlüsselungs-Tresor ist gesperrt",
       "encryptionFailed": "Verschlüsselung fehlgeschlagen",
@@ -2634,6 +2635,7 @@
     },
     "titleWithTotal": "Aufgaben ({{total}})",
     "titleWithProgress": "Aufgaben ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithProgressNoSpeed": "Aufgaben ({{completed}} / {{total}})",
     "titleWithErrors": "Aufgaben ({{total}} • {{failed}} fehlgeschlagen)",
     "actions": {
       "expand": "Aufklappen",

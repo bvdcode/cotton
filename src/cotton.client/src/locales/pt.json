@@ -2633,6 +2633,7 @@
     "errors": {
       "serverSettingsNotLoaded": "As configurações do servidor não foram carregadas",
       "uploadFailed": "Falha no envio",
+      "deleteFailed": "Falha ao excluir",
       "storageQuotaExceeded": "Espaço de armazenamento insuficiente. Disponível: {{available}}.",
       "encryptionVaultLocked": "O cofre de criptografia está bloqueado",
       "encryptionFailed": "Falha na criptografia",
@@ -2641,6 +2642,7 @@
     },
     "titleWithTotal": "Tarefas ({{total}})",
     "titleWithProgress": "Tarefas ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithProgressNoSpeed": "Tarefas ({{completed}} / {{total}})",
     "titleWithErrors": "Tarefas ({{total}} • {{failed}} com falha)",
     "actions": {
       "expand": "Expandir",

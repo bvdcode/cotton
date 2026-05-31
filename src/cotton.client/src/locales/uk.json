@@ -2641,6 +2641,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Налаштування сервера не завантажено",
       "uploadFailed": "Вивантаження не вдалося",
+      "deleteFailed": "Не вдалося видалити",
       "storageQuotaExceeded": "Недостатньо місця у сховищі. Доступно: {{available}}.",
       "encryptionVaultLocked": "Сховище шифрування заблоковано",
       "encryptionFailed": "Помилка шифрування",
@@ -2649,6 +2650,7 @@
     },
     "titleWithTotal": "Завдання ({{total}})",
     "titleWithProgress": "Завдання ({{completed}} / {{total}} - {{speed}}/с)",
+    "titleWithProgressNoSpeed": "Завдання ({{completed}} / {{total}})",
     "titleWithErrors": "Завдання ({{total}} • {{failed}} з помилками)",
     "actions": {
       "expand": "Розгорнути",

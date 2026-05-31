@@ -2668,6 +2668,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Ustawienia serwera nie są załadowane",
       "uploadFailed": "Przesyłanie nie powiodło się",
+      "deleteFailed": "Usuwanie nie powiodło się",
       "storageQuotaExceeded": "Brak wystarczającego miejsca. Dostępne: {{available}}.",
       "encryptionVaultLocked": "Sejf szyfrowania jest zablokowany",
       "encryptionFailed": "Szyfrowanie nie powiodło się",
@@ -2676,6 +2677,7 @@
     },
     "titleWithTotal": "Zadania ({{total}})",
     "titleWithProgress": "Zadania ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithProgressNoSpeed": "Zadania ({{completed}} / {{total}})",
     "titleWithErrors": "Zadania ({{total}} • {{failed}} nieudanych)",
     "actions": {
       "expand": "Rozwiń",

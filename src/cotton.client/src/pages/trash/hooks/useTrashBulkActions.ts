@@ -6,10 +6,37 @@ import type { TFunction } from "i18next";
 import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 import type { FileSelectionState } from "@shared/hooks/useFileSelection";
 import { destructiveConfirmOptions } from "@shared/ui/confirmOptions";
+import { taskManager } from "@shared/tasks";
 
 type ConfirmFn = (options?: ConfirmOptions) => Promise<ConfirmResult>;
 
+type TrashDeleteTarget = {
+  kind: "node" | "file";
+  id: string;
+  diagnosticsLabel: string;
+};
+
 const isConfirmed = (result: ConfirmResult): boolean => result.confirmed;
+
+const toTargetKey = (target: TrashDeleteTarget): string =>
+  target.kind + ":" + target.id;
+
+const dedupeTargets = (targets: TrashDeleteTarget[]): TrashDeleteTarget[] => {
+  const seen = new Set<string>();
+  const deduped: TrashDeleteTarget[] = [];
+
+  for (const target of targets) {
+    const key = toTargetKey(target);
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    deduped.push(target);
+  }
+
+  return deduped;
+};
 
 const collectTrashWrapperIds = (content: NodeContentDto): string[] => {
   const wrapperIds = new Set<string>();
@@ -22,103 +49,112 @@ const collectTrashWrapperIds = (content: NodeContentDto): string[] => {
   return [...wrapperIds];
 };
 
-async function deleteNodeWithProgress(args: {
-  nodeId: string;
-  label: string;
-  deleted: number;
-  total: number;
-  onProgress: (current: number, total: number) => void;
-}): Promise<number> {
-  const { nodeId, label, deleted, total, onProgress } = args;
-  try {
-    await nodesApi.deleteNode(nodeId, true);
-    const nextDeleted = deleted + 1;
-    onProgress(nextDeleted, total);
-    return nextDeleted;
-  } catch (error) {
-    console.error("Failed to delete " + label + " " + nodeId + ":", error);
-    return deleted;
-  }
-}
-
-async function deleteFileWithProgress(args: {
-  fileId: string;
-  deleted: number;
-  total: number;
-  onProgress: (current: number, total: number) => void;
-}): Promise<number> {
-  const { fileId, deleted, total, onProgress } = args;
-  try {
-    await filesApi.deleteFile(fileId, true);
-    const nextDeleted = deleted + 1;
-    onProgress(nextDeleted, total);
-    return nextDeleted;
-  } catch (error) {
-    console.error("Failed to delete file " + fileId + ":", error);
-    return deleted;
-  }
-}
-
-async function deleteTrashRootWrappers(
+const buildEmptyTrashTargets = (
   content: NodeContentDto,
-  onProgress: (current: number, total: number) => void,
-): Promise<void> {
-  const wrappers = collectTrashWrapperIds(content);
-  let deleted = 0;
-  for (const wrapperId of wrappers) {
-    deleted = await deleteNodeWithProgress({
-      nodeId: wrapperId,
-      label: "trash wrapper",
-      deleted,
-      total: wrappers.length,
-      onProgress,
-    });
-  }
-}
-
-async function deleteTrashFolderContents(
-  content: NodeContentDto,
-  onProgress: (current: number, total: number) => void,
-): Promise<void> {
-  const total = (content.nodes?.length ?? 0) + (content.files?.length ?? 0);
-  let deleted = 0;
-
-  for (const folder of content.nodes ?? []) {
-    deleted = await deleteNodeWithProgress({
-      nodeId: folder.id,
-      label: "folder",
-      deleted,
-      total,
-      onProgress,
-    });
-  }
-
-  for (const file of content.files ?? []) {
-    deleted = await deleteFileWithProgress({
-      fileId: file.id,
-      deleted,
-      total,
-      onProgress,
-    });
-  }
-}
-
-async function deleteAllTrashItems(args: {
-  content: NodeContentDto;
-  isTrashRoot: boolean;
-  onProgress: (current: number, total: number) => void;
-}): Promise<void> {
-  const { content, isTrashRoot, onProgress } = args;
+  isTrashRoot: boolean,
+): TrashDeleteTarget[] => {
   if (isTrashRoot) {
-    await deleteTrashRootWrappers(content, onProgress);
+    return collectTrashWrapperIds(content).map((id) => ({
+      kind: "node",
+      id,
+      diagnosticsLabel: "trash wrapper",
+    }));
+  }
+
+  return [
+    ...(content.nodes ?? []).map((node) => ({
+      kind: "node" as const,
+      id: node.id,
+      diagnosticsLabel: "folder",
+    })),
+    ...(content.files ?? []).map((file) => ({
+      kind: "file" as const,
+      id: file.id,
+      diagnosticsLabel: "file",
+    })),
+  ];
+};
+
+const buildSelectedTrashTargets = (
+  selectedTiles: FileSystemTile[],
+  resolveWrapperNodeId: (itemId: string) => string | null,
+): TrashDeleteTarget[] => {
+  const targets = selectedTiles.map((tile): TrashDeleteTarget => {
+    const itemId = tile.kind === "folder" ? tile.node.id : tile.file.id;
+    const wrapperId = resolveWrapperNodeId(itemId);
+
+    if (wrapperId) {
+      return {
+        kind: "node",
+        id: wrapperId,
+        diagnosticsLabel: "trash wrapper",
+      };
+    }
+
+    return tile.kind === "folder"
+      ? { kind: "node", id: tile.node.id, diagnosticsLabel: "folder" }
+      : { kind: "file", id: tile.file.id, diagnosticsLabel: "file" };
+  });
+
+  return dedupeTargets(targets);
+};
+
+const deleteTrashTarget = async (target: TrashDeleteTarget): Promise<void> => {
+  if (target.kind === "node") {
+    await nodesApi.deleteNode(target.id, true);
     return;
   }
 
-  await deleteTrashFolderContents(content, onProgress);
-}
+  await filesApi.deleteFile(target.id, true);
+};
+
+const runTrashDeleteTask = async (args: {
+  targets: TrashDeleteTarget[];
+  label: string;
+  scopeLabel: string;
+  failureMessage: string;
+}): Promise<void> => {
+  const { targets, label, scopeLabel, failureMessage } = args;
+  const task = taskManager.createTask({
+    kind: "delete",
+    label,
+    scopeLabel,
+    bytesTotal: targets.length,
+  });
+
+  let processed = 0;
+  let failed = 0;
+  task.update({ status: "running" });
+
+  for (const target of targets) {
+    try {
+      await deleteTrashTarget(target);
+    } catch (error) {
+      failed += 1;
+      console.error(
+        "Failed to delete " + target.diagnosticsLabel + " " + target.id + ":",
+        error,
+      );
+    } finally {
+      processed += 1;
+      task.update({
+        status: "running",
+        bytesCompleted: processed,
+      });
+    }
+  }
+
+  if (failed > 0) {
+    task.update({ bytesCompleted: targets.length, progress01: 1 });
+    task.fail({ message: failureMessage });
+    return;
+  }
+
+  task.complete();
+};
 
 type UseTrashBulkActionsParams = {
-  t: TFunction<["trash", "common", "files"], undefined>;
+  t: TFunction<["trash", "common", "files", "tasks"], undefined>;
   confirm: ConfirmFn;
   content: NodeContentDto | undefined;
   tiles: FileSystemTile[];
@@ -140,17 +176,39 @@ export const useTrashBulkActions = ({
   resolveWrapperNodeId,
   refreshContent,
 }: UseTrashBulkActionsParams) => {
-  const [emptyingTrash, setEmptyingTrash] = useState(false);
-  const [emptyTrashProgress, setEmptyTrashProgress] = useState({
-    current: 0,
-    total: 0,
-  });
+  const [deletingTrash, setDeletingTrash] = useState(false);
+
+  const startDeleteTask = useCallback(
+    (args: {
+      targets: TrashDeleteTarget[];
+      label: string;
+      onStarted?: () => void;
+    }) => {
+      setDeletingTrash(true);
+      args.onStarted?.();
+
+      void (async () => {
+        try {
+          await runTrashDeleteTask({
+            targets: args.targets,
+            label: args.label,
+            scopeLabel: t("breadcrumbs.root"),
+            failureMessage: t("errors.deleteFailed", { ns: "tasks" }),
+          });
+          await refreshContent();
+        } finally {
+          setDeletingTrash(false);
+        }
+      })();
+    },
+    [refreshContent, t],
+  );
 
   const handleEmptyTrash = useCallback(async () => {
-    if (!content) return;
+    if (!content || deletingTrash) return;
 
-    const totalItems = (content.nodes?.length ?? 0) + (content.files?.length ?? 0);
-    if (totalItems === 0) return;
+    const targets = buildEmptyTrashTargets(content, isTrashRoot);
+    if (targets.length === 0) return;
 
     try {
       const result = await confirm({
@@ -163,24 +221,17 @@ export const useTrashBulkActions = ({
 
       if (!isConfirmed(result)) return;
 
-      setEmptyingTrash(true);
-      setEmptyTrashProgress({ current: 0, total: totalItems });
-
-      await deleteAllTrashItems({
-        content,
-        isTrashRoot,
-        onProgress: (current, total) => setEmptyTrashProgress({ current, total }),
+      startDeleteTask({
+        targets,
+        label: t("actions.emptyTrash"),
       });
-
-      setEmptyingTrash(false);
-      await refreshContent();
     } catch {
-      setEmptyingTrash(false);
+      // Confirmation dialogs reject when dismissed. No deletion was started.
     }
-  }, [confirm, content, isTrashRoot, refreshContent, t]);
+  }, [confirm, content, deletingTrash, isTrashRoot, startDeleteTask, t]);
 
   const handleDeleteSelected = useCallback(async () => {
-    if (!nodeId) return;
+    if (!nodeId || deletingTrash) return;
     if (!fileSelection.selectionMode) return;
     if (fileSelection.selectedCount <= 0) return;
 
@@ -191,6 +242,9 @@ export const useTrashBulkActions = ({
     });
 
     if (selectedTiles.length === 0) return;
+
+    const targets = buildSelectedTrashTargets(selectedTiles, resolveWrapperNodeId);
+    if (targets.length === 0) return;
 
     const result = await confirm({
       title: t("deleteSelectedForever.confirmTitle", {
@@ -207,40 +261,24 @@ export const useTrashBulkActions = ({
 
     if (!isConfirmed(result)) return;
 
-    let hadError = false;
-
-    for (const tile of selectedTiles) {
-      try {
-        const id = tile.kind === "folder" ? tile.node.id : tile.file.id;
-        const wrapperId = resolveWrapperNodeId(id);
-
-        if (wrapperId) {
-          await nodesApi.deleteNode(wrapperId, true);
-          continue;
-        }
-
-        if (tile.kind === "folder") {
-          await nodesApi.deleteNode(tile.node.id, true);
-        } else {
-          await filesApi.deleteFile(tile.file.id, true);
-        }
-      } catch (error) {
-        hadError = true;
-        console.error("Failed to delete selected trash item", error);
-      }
-    }
-
-    fileSelection.deselectAll();
-    await refreshContent();
-
-    if (hadError) {
-      // Keep console diagnostics; UI refresh already triggered.
-    }
-  }, [confirm, fileSelection, nodeId, refreshContent, resolveWrapperNodeId, t, tiles]);
+    startDeleteTask({
+      targets,
+      label: t("selection.deleteSelected", { ns: "files" }),
+      onStarted: fileSelection.deselectAll,
+    });
+  }, [
+    confirm,
+    deletingTrash,
+    fileSelection,
+    nodeId,
+    resolveWrapperNodeId,
+    startDeleteTask,
+    t,
+    tiles,
+  ]);
 
   return {
-    emptyingTrash,
-    emptyTrashProgress,
+    deletingTrash,
     handleEmptyTrash,
     handleDeleteSelected,
   };

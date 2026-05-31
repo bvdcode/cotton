@@ -2425,6 +2425,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Server settings are not loaded",
       "uploadFailed": "Upload failed",
+      "deleteFailed": "Deletion failed",
       "storageQuotaExceeded": "Not enough storage space. Available: {{available}}.",
       "encryptionVaultLocked": "Encryption vault is locked",
       "encryptionFailed": "Encryption failed",
@@ -2433,6 +2434,7 @@
     },
     "titleWithTotal": "Tasks ({{total}})",
     "titleWithProgress": "Tasks ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithProgressNoSpeed": "Tasks ({{completed}} / {{total}})",
     "titleWithErrors": "Tasks ({{total}} • {{failed}} failed)",
     "actions": {
       "expand": "Expand",

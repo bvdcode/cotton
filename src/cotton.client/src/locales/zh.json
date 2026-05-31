@@ -2639,6 +2639,7 @@
     "errors": {
       "serverSettingsNotLoaded": "服务器设置尚未加载",
       "uploadFailed": "上传失败",
+      "deleteFailed": "删除失败",
       "storageQuotaExceeded": "存储空间不足。可用：{{available}}。",
       "encryptionVaultLocked": "加密保险库已锁定",
       "encryptionFailed": "加密失败",
@@ -2647,6 +2648,7 @@
     },
     "titleWithTotal": "任务 ({{total}})",
     "titleWithProgress": "任务 ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithProgressNoSpeed": "任务（{{completed}} / {{total}}）",
     "titleWithErrors": "任务 ({{total}} · 失败 {{failed}})",
     "actions": {
       "expand": "展开",

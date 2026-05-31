@@ -2629,6 +2629,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Los ajustes del servidor no se han cargado",
       "uploadFailed": "La subida falló",
+      "deleteFailed": "No se pudo eliminar",
       "storageQuotaExceeded": "No hay suficiente espacio. Disponible: {{available}}.",
       "encryptionVaultLocked": "La bóveda de cifrado está bloqueada",
       "encryptionFailed": "El cifrado falló",
@@ -2637,6 +2638,7 @@
     },
     "titleWithTotal": "Tareas ({{total}})",
     "titleWithProgress": "Tareas ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithProgressNoSpeed": "Tareas ({{completed}} / {{total}})",
     "titleWithErrors": "Tareas ({{total}} • {{failed}} fallidas)",
     "actions": {
       "expand": "Expandir",

@@ -60,8 +60,6 @@ type EmptyTrashProgressDialogProps = {
 
 type TrashPageViewProps = {
   clearRestoreErrors: () => void;
-  emptyingTrash: boolean;
-  emptyTrashProgress: ReturnType<typeof useTrashBulkActions>["emptyTrashProgress"];
   fileListViewProps: React.ComponentProps<typeof FileListViewFactory>;
   handlePromptAnswer: ReturnType<typeof useTrashRestoreActions>["handlePromptAnswer"];
   hasContent: boolean;
@@ -86,7 +84,7 @@ const TrashProgressDialog: React.FC<EmptyTrashProgressDialogProps> = ({
 
   return (
     <Dialog open={open} disableEscapeKeyDown>
-      <DialogTitle sx={{ fontFamily: "monospace" }}>{title}</DialogTitle>
+      <DialogTitle>{title}</DialogTitle>
       <DialogContent>
         <LinearProgress variant="determinate" value={progressPercent} />
       </DialogContent>
@@ -255,7 +253,7 @@ const resolveTrashPageTitle = (options: {
 const buildTrashCustomActionItems = (options: {
   deleteSelectedTitle: string;
   emptyTrashTitle: string;
-  emptyingTrash: boolean;
+  deletingTrash: boolean;
   handleDeleteSelected: () => void;
   handleEmptyTrash: () => void;
   loading: boolean;
@@ -274,7 +272,7 @@ const buildTrashCustomActionItems = (options: {
         icon: <Restore />,
         title: options.restoreSelectedTitle,
         onClick: options.restoreSelected,
-        disabled: options.loading || options.restoring,
+        disabled: options.loading || options.restoring || options.deletingTrash,
         color: "primary" as const,
       },
       {
@@ -282,7 +280,7 @@ const buildTrashCustomActionItems = (options: {
         icon: <Delete />,
         title: options.deleteSelectedTitle,
         onClick: options.handleDeleteSelected,
-        disabled: options.loading || options.restoring,
+        disabled: options.loading || options.restoring || options.deletingTrash,
         color: "error" as const,
       },
     ];
@@ -299,14 +297,14 @@ const buildTrashCustomActionItems = (options: {
       title: options.emptyTrashTitle,
       onClick: options.handleEmptyTrash,
       disabled:
-        options.loading || options.emptyingTrash || options.totalItems === 0,
+        options.loading || options.deletingTrash || options.totalItems === 0,
       color: "error" as const,
     },
   ];
 };
 
 export const TrashPage: React.FC = () => {
-  const { t } = useTranslation(["trash", "common", "files"]);
+  const { t } = useTranslation(["trash", "common", "files", "tasks"]);
   const navigate = useNavigate();
   const params = useParams<{ nodeId?: string }>();
   const confirm = useConfirm();
@@ -536,8 +534,7 @@ export const TrashPage: React.FC = () => {
   }, [breadcrumbs.length, navigate, navigateToBreadcrumb]);
 
   const {
-    emptyingTrash,
-    emptyTrashProgress,
+    deletingTrash,
     handleEmptyTrash,
     handleDeleteSelected,
   } = useTrashBulkActions({
@@ -552,13 +549,12 @@ export const TrashPage: React.FC = () => {
     refreshContent,
   });
 
-
   const customActionItems = useMemo(
     () =>
       buildTrashCustomActionItems({
         deleteSelectedTitle: t("selection.deleteSelected", { ns: "files" }),
         emptyTrashTitle: t("actions.emptyTrash"),
-        emptyingTrash,
+        deletingTrash,
         handleDeleteSelected: () => {
           void handleDeleteSelected();
         },
@@ -576,7 +572,7 @@ export const TrashPage: React.FC = () => {
       }),
     [
       breadcrumbs.length,
-      emptyingTrash,
+      deletingTrash,
       fileSelection.selectedCount,
       fileSelection.selectionMode,
       handleDeleteSelected,
@@ -721,8 +717,6 @@ export const TrashPage: React.FC = () => {
   return (
     <TrashPageView
       clearRestoreErrors={clearRestoreErrors}
-      emptyingTrash={emptyingTrash}
-      emptyTrashProgress={emptyTrashProgress}
       fileListViewProps={fileListViewProps}
       handlePromptAnswer={handlePromptAnswer}
       hasContent={hasContent}
@@ -742,8 +736,6 @@ export const TrashPage: React.FC = () => {
 
 const TrashPageView: React.FC<TrashPageViewProps> = ({
   clearRestoreErrors,
-  emptyingTrash,
-  emptyTrashProgress,
   fileListViewProps,
   handlePromptAnswer,
   hasContent,
@@ -810,17 +802,6 @@ const TrashPageView: React.FC<TrashPageViewProps> = ({
           </Box>
         )}
       </Box>
-      <TrashProgressDialog
-        open={emptyingTrash}
-        title={t("emptyTrash.inProgress", {
-          current: emptyTrashProgress.current,
-          total: emptyTrashProgress.total,
-        })}
-        progressPercent={calculateProgressPercent(
-          emptyTrashProgress.current,
-          emptyTrashProgress.total,
-        )}
-      />
       <TrashProgressDialog
         open={restoring}
         title={t("restore.inProgress", {

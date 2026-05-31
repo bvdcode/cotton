@@ -2632,6 +2632,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Le impostazioni del server non sono state caricate",
       "uploadFailed": "Caricamento non riuscito",
+      "deleteFailed": "Eliminazione non riuscita",
       "storageQuotaExceeded": "Spazio di archiviazione insufficiente. Disponibile: {{available}}.",
       "encryptionVaultLocked": "Il vault di crittografia è bloccato",
       "encryptionFailed": "Crittografia non riuscita",
@@ -2640,6 +2641,7 @@
     },
     "titleWithTotal": "Attività ({{total}})",
     "titleWithProgress": "Attività ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithProgressNoSpeed": "Attività ({{completed}} / {{total}})",
     "titleWithErrors": "Attività ({{total}} • {{failed}} fallite)",
     "actions": {
       "expand": "Espandi",

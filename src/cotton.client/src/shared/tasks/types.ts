@@ -3,6 +3,7 @@ export type AppTaskKind =
   | "encrypt"
   | "decrypt"
   | "convert"
+  | "delete"
   | "system";
 
 export type AppTaskStatus =

@@ -2631,6 +2631,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Serverinstellingen zijn niet geladen",
       "uploadFailed": "Upload mislukt",
+      "deleteFailed": "Verwijderen mislukt",
       "storageQuotaExceeded": "Onvoldoende opslagruimte. Beschikbaar: {{available}}.",
       "encryptionVaultLocked": "Versleutelingskluis is vergrendeld",
       "encryptionFailed": "Versleutelen mislukt",
@@ -2639,6 +2640,7 @@
     },
     "titleWithTotal": "Taken ({{total}})",
     "titleWithProgress": "Taken ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithProgressNoSpeed": "Taken ({{completed}} / {{total}})",
     "titleWithErrors": "Taken ({{total}} • {{failed}} mislukt)",
     "actions": {
       "expand": "Uitvouwen",

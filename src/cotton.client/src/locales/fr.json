@@ -2630,6 +2630,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Les paramètres du serveur ne sont pas chargés",
       "uploadFailed": "Échec du téléversement",
+      "deleteFailed": "Échec de la suppression",
       "storageQuotaExceeded": "Espace de stockage insuffisant. Disponible : {{available}}.",
       "encryptionVaultLocked": "Le coffre-fort de chiffrement est verrouillé",
       "encryptionFailed": "Échec du chiffrement",
@@ -2638,6 +2639,7 @@
     },
     "titleWithTotal": "Tâches ({{total}})",
     "titleWithProgress": "Tâches ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithProgressNoSpeed": "Tâches ({{completed}} / {{total}})",
     "titleWithErrors": "Tâches ({{total}} • {{failed}} en échec)",
     "actions": {
       "expand": "Développer",

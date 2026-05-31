@@ -2665,6 +2665,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Nastavení serveru není načteno",
       "uploadFailed": "Nahrávání selhalo",
+      "deleteFailed": "Odstranění se nezdařilo",
       "storageQuotaExceeded": "Nedostatek místa v úložišti. K dispozici: {{available}}.",
       "encryptionVaultLocked": "Šifrovací trezor je uzamčen",
       "encryptionFailed": "Šifrování selhalo",
@@ -2673,6 +2674,7 @@
     },
     "titleWithTotal": "Úlohy ({{total}})",
     "titleWithProgress": "Úlohy ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithProgressNoSpeed": "Úlohy ({{completed}} / {{total}})",
     "titleWithErrors": "Úlohy ({{total}} • {{failed}} selhalo)",
     "actions": {
       "expand": "Rozbalit",
