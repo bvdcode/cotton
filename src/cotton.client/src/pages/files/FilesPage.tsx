@@ -406,8 +406,6 @@ export const FilesPage: React.FC = () => {
   const currentUserId = useAuthStore((s) => s.user?.id ?? null);
 
   const routeNodeId = params.nodeId;
-  const folderNotFoundErrorText = t("errors.folderNotFound", { ns: "files" });
-
   const { layoutType, setLayoutType, tilesSize, viewMode, cycleViewMode } =
     useFilesLayout();
 
@@ -428,14 +426,6 @@ export const FilesPage: React.FC = () => {
   const nodeId = resolveFilesNodeId(routeNodeId, rootNodeId);
   const isUserCacheValid = cacheOwnerUserId === currentUserId;
   const content = getCurrentContent(nodeId, isUserCacheValid, contentByNodeId);
-
-  useEffect(() => {
-    if (!routeNodeId || error !== folderNotFoundErrorText) {
-      return;
-    }
-
-    navigate("/files", { replace: true });
-  }, [error, folderNotFoundErrorText, navigate, routeNodeId]);
 
   const {
     childrenTotalCount,

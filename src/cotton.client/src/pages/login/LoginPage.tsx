@@ -18,6 +18,7 @@ import { useAuth } from "../../features/auth";
 import { clearOidcSignInPending } from "../../features/auth/oidcSignInSession";
 import Loader from "../../shared/ui/Loader";
 import { useServerInfoStore } from "../../shared/store/serverInfoStore";
+import { getSafeAuthReturnPath } from "../../shared/utils/authReturnPath";
 import { CredentialsFields } from "./components/CredentialsFields";
 import { FirstRunAlert } from "./components/FirstRunAlert";
 import { ForgotPasswordLink } from "./components/ForgotPasswordLink";
@@ -30,6 +31,9 @@ type LoginFormState = ReturnType<typeof useLoginForm>;
 
 export const LoginPage = () => {
   const location = useLocation();
+  const returnUrl = getSafeAuthReturnPath(
+    (location.state as { from?: string })?.from || "/",
+  );
   const auth = useAuth();
   const form = useLoginForm();
   const serverInfo = useServerInfoStore((s) => s.data);
@@ -50,8 +54,7 @@ export const LoginPage = () => {
   }, [auth]);
 
   if (!auth.isInitializing && auth.isAuthenticated) {
-    const from = (location.state as { from?: string })?.from || "/";
-    return <Navigate to={from} replace />;
+    return <Navigate to={returnUrl} replace />;
   }
 
   const showRestoreOverlay =
@@ -59,7 +62,6 @@ export const LoginPage = () => {
   const showFirstRunAlert =
     serverInfo !== null && serverInfo.canCreateInitialAdmin;
   const isFirstRunMode = showFirstRunAlert && !form.requiresTwoFactor;
-  const returnUrl = (location.state as { from?: string })?.from || "/";
 
   return (
     <>

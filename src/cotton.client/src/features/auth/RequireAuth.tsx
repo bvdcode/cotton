@@ -2,6 +2,7 @@ import { useAuth } from "./useAuth";
 import { useEffect, type ReactNode } from "react";
 import Loader from "../../shared/ui/Loader";
 import { Navigate, useLocation } from "react-router-dom";
+import { getSafeAuthReturnPath } from "../../shared/utils/authReturnPath";
 
 type Props = {
   children: ReactNode;
@@ -54,7 +55,13 @@ export function RequireAuth({ children }: Props) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: getSafeAuthReturnPath(location.pathname) }}
+        replace
+      />
+    );
   }
 
   return <>{children}</>;
