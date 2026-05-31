@@ -31,18 +31,16 @@ public sealed class NameLayoutSearchProvider(CottonDbContext _dbContext) : ILayo
 
     private IQueryable<LayoutSearchHit> BuildNodeHitsQuery(LayoutSearchProviderContext context)
     {
-        var request = context.Request;
-        var criteria = context.Criteria;
+        LayoutSearchRequest request = context.Request;
+        LayoutSearchCriteria criteria = context.Criteria;
 
-        var query = _dbContext.Nodes
+        IQueryable<Node> baseQuery = _dbContext.Nodes
             .AsNoTracking()
             .Where(x => x.OwnerId == request.UserId
                 && x.LayoutId == request.LayoutId
                 && x.Type == NodeType.Default);
 
-        query = criteria.HasIds
-            ? query.Where(x => criteria.IdQueries.Contains(x.Id))
-            : ApplyTextCriteria(query, criteria);
+        IQueryable<Node> query = ApplyCriteria(baseQuery, criteria);
 
         return query.Select(x => new LayoutSearchHit
         {
@@ -52,28 +50,26 @@ public sealed class NameLayoutSearchProvider(CottonDbContext _dbContext) : ILayo
             Name = x.Name,
             NameKey = x.NameKey,
             Score =
-                criteria.HasIds && criteria.IdQueries.Contains(x.Id) ? 100 :
-                criteria.HasText && x.NameKey == criteria.NameKey ? 80 :
-                criteria.HasText && EF.Functions.Like(x.NameKey, criteria.PrefixPattern, criteria.LikeEscape) ? 60 :
-                criteria.HasMultipleTextTokens ? 40 :
-                20,
+                criteria.HasIds && criteria.IdQueries.Contains(x.Id) ? LayoutSearchScores.ExactIdentifier :
+                criteria.HasText && x.NameKey == criteria.NameKey ? LayoutSearchScores.ExactName :
+                criteria.HasText && EF.Functions.Like(x.NameKey, criteria.PrefixPattern, criteria.LikeEscape) ? LayoutSearchScores.PrefixName :
+                criteria.HasMultipleTextTokens ? LayoutSearchScores.TokenName :
+                LayoutSearchScores.SubstringName,
         });
     }
 
     private IQueryable<LayoutSearchHit> BuildFileHitsQuery(LayoutSearchProviderContext context)
     {
-        var request = context.Request;
-        var criteria = context.Criteria;
+        LayoutSearchRequest request = context.Request;
+        LayoutSearchCriteria criteria = context.Criteria;
 
-        var query = _dbContext.NodeFiles
+        IQueryable<NodeFile> baseQuery = _dbContext.NodeFiles
             .AsNoTracking()
             .Where(x => x.OwnerId == request.UserId
                 && x.Node.LayoutId == request.LayoutId
                 && x.Node.Type == NodeType.Default);
 
-        query = criteria.HasIds
-            ? query.Where(x => criteria.IdQueries.Contains(x.Id) || criteria.IdQueries.Contains(x.FileManifestId))
-            : ApplyTextCriteria(query, criteria);
+        IQueryable<NodeFile> query = ApplyCriteria(baseQuery, criteria);
 
         return query.Select(x => new LayoutSearchHit
         {
@@ -83,13 +79,46 @@ public sealed class NameLayoutSearchProvider(CottonDbContext _dbContext) : ILayo
             Name = x.Name,
             NameKey = x.NameKey,
             Score =
-                criteria.HasIds && criteria.IdQueries.Contains(x.Id) ? 100 :
-                criteria.HasIds && criteria.IdQueries.Contains(x.FileManifestId) ? 95 :
-                criteria.HasText && x.NameKey == criteria.NameKey ? 80 :
-                criteria.HasText && EF.Functions.Like(x.NameKey, criteria.PrefixPattern, criteria.LikeEscape) ? 60 :
-                criteria.HasMultipleTextTokens ? 40 :
-                20,
+                criteria.HasIds && (criteria.IdQueries.Contains(x.Id) || criteria.IdQueries.Contains(x.FileManifestId)) ? LayoutSearchScores.ExactIdentifier :
+                criteria.HasText && x.NameKey == criteria.NameKey ? LayoutSearchScores.ExactName :
+                criteria.HasText && EF.Functions.Like(x.NameKey, criteria.PrefixPattern, criteria.LikeEscape) ? LayoutSearchScores.PrefixName :
+                criteria.HasMultipleTextTokens ? LayoutSearchScores.TokenName :
+                LayoutSearchScores.SubstringName,
         });
+    }
+
+    private static IQueryable<Node> ApplyCriteria(IQueryable<Node> query, LayoutSearchCriteria criteria)
+    {
+        if (criteria.HasIds && criteria.HasText)
+        {
+            return query
+                .Where(x => criteria.IdQueries.Contains(x.Id))
+                .Union(ApplyTextCriteria(query, criteria));
+        }
+
+        if (criteria.HasIds)
+        {
+            return query.Where(x => criteria.IdQueries.Contains(x.Id));
+        }
+
+        return ApplyTextCriteria(query, criteria);
+    }
+
+    private static IQueryable<NodeFile> ApplyCriteria(IQueryable<NodeFile> query, LayoutSearchCriteria criteria)
+    {
+        if (criteria.HasIds && criteria.HasText)
+        {
+            return query
+                .Where(x => criteria.IdQueries.Contains(x.Id) || criteria.IdQueries.Contains(x.FileManifestId))
+                .Union(ApplyTextCriteria(query, criteria));
+        }
+
+        if (criteria.HasIds)
+        {
+            return query.Where(x => criteria.IdQueries.Contains(x.Id) || criteria.IdQueries.Contains(x.FileManifestId));
+        }
+
+        return ApplyTextCriteria(query, criteria);
     }
 
     private static IQueryable<Node> ApplyTextCriteria(

@@ -24,5 +24,5 @@ public sealed class LayoutSearchHit
     public string NameKey { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the provider score.</summary>
-    public int Score { get; set; }
+    public double Score { get; set; }
 }

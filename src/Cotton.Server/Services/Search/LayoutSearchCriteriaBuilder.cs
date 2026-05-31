@@ -38,7 +38,7 @@ public static class LayoutSearchCriteriaBuilder
             .Distinct()
             .ToArray();
 
-        string textWithoutGuids = GuidRegex.Replace(rawQuery, " ");
+        string textWithoutGuids = GuidRegex.Replace(rawQuery, " ").Trim();
         string nameKey = NameValidator.GetNameKey(textWithoutGuids);
         string escapedNameKey = EscapeLike(nameKey);
 
@@ -69,7 +69,8 @@ public static class LayoutSearchCriteriaBuilder
                 return new LayoutSearchToken(
                     NameKey: x,
                     ContainsPattern: $"%{escapedToken}%",
-                    PrefixPattern: $"{escapedToken}%");
+                    PrefixPattern: $"{escapedToken}%",
+                    HasLetters: x.Any(char.IsLetter));
             })
             .ToArray();
     }

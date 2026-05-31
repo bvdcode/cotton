@@ -107,6 +107,7 @@ namespace Cotton.Server.Extensions
         {
             services.AddScoped<ILayoutSearchService, LayoutSearchService>();
             services.AddScoped<ILayoutSearchProvider, NameLayoutSearchProvider>();
+            services.AddScoped<ILayoutSearchProvider, NoOpVectorLayoutSearchProvider>();
             return services;
         }
 

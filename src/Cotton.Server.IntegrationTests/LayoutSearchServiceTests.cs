@@ -19,6 +19,7 @@ public sealed class LayoutSearchServiceTests
         {
             Assert.That(criteria.HasText, Is.True);
             Assert.That(criteria.HasIds, Is.False);
+            Assert.That(criteria.HasVectorSearchText, Is.True);
             Assert.That(criteria.HasMultipleTextTokens, Is.True);
             Assert.That(criteria.TextTokens.Select(x => x.NameKey), Is.EqualTo(new[] { "пупкин", "вася" }));
             Assert.That(criteria.TextTokens.Select(x => x.ContainsPattern), Is.EqualTo(new[] { "%пупкин%", "%вася%" }));
@@ -35,7 +36,25 @@ public sealed class LayoutSearchServiceTests
         Assert.Multiple(() =>
         {
             Assert.That(criteria.IdQueries, Is.EqualTo(new[] { id }));
+            Assert.That(criteria.HasOnlyIds, Is.False);
+            Assert.That(criteria.HasVectorSearchText, Is.True);
             Assert.That(criteria.TextTokens.Select(x => x.NameKey), Is.EqualTo(new[] { "report", "final" }));
+        });
+    }
+
+    [Test]
+    public void BuildCriteria_RecognizesGuidOnlyQueries()
+    {
+        Guid id = Guid.Parse("11111111-2222-3333-4444-555555555555");
+
+        LayoutSearchCriteria criteria = LayoutSearchCriteriaBuilder.Build(id.ToString());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(criteria.IdQueries, Is.EqualTo(new[] { id }));
+            Assert.That(criteria.HasText, Is.False);
+            Assert.That(criteria.HasOnlyIds, Is.True);
+            Assert.That(criteria.HasVectorSearchText, Is.False);
         });
     }
 
@@ -68,7 +87,28 @@ public sealed class LayoutSearchServiceTests
     }
 
     [Test]
-    public void AddLayoutSearchServices_RegistersServiceAndNameProvider()
+    public void VectorProvider_CanSearchOnlyNaturalLanguageText()
+    {
+        NoOpVectorLayoutSearchProvider provider = new(null!);
+        Guid id = Guid.Parse("11111111-2222-3333-4444-555555555555");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(provider.CanSearch(LayoutSearchCriteriaBuilder.Build(id.ToString())), Is.False);
+            Assert.That(provider.CanSearch(LayoutSearchCriteriaBuilder.Build("123456")), Is.False);
+            Assert.That(provider.CanSearch(LayoutSearchCriteriaBuilder.Build("report 123456")), Is.True);
+            Assert.That(provider.CanSearch(LayoutSearchCriteriaBuilder.Build("quarterly report")), Is.True);
+        });
+    }
+
+    [Test]
+    public void ExactIdentifierScore_IsCertainMatch()
+    {
+        Assert.That(LayoutSearchScores.ExactIdentifier, Is.EqualTo(1.0));
+    }
+
+    [Test]
+    public void AddLayoutSearchServices_RegistersServiceAndProviders()
     {
         ServiceCollection services = new();
 
@@ -82,6 +122,9 @@ public sealed class LayoutSearchServiceTests
             Assert.That(services.Any(x =>
                 x.ServiceType == typeof(ILayoutSearchProvider)
                 && x.ImplementationType == typeof(NameLayoutSearchProvider)), Is.True);
+            Assert.That(services.Any(x =>
+                x.ServiceType == typeof(ILayoutSearchProvider)
+                && x.ImplementationType == typeof(NoOpVectorLayoutSearchProvider)), Is.True);
         });
     }
 }
