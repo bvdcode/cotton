@@ -7,6 +7,7 @@ using Cotton.Server.Auth;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
+using Cotton.Server.Services.Search;
 using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 using Cotton.Server.Services.WebDav;
 using EasyExtensions.Abstractions;
@@ -96,6 +97,16 @@ namespace Cotton.Server.Extensions
         public static IServiceCollection AddLayoutPathServices(this IServiceCollection services)
         {
             services.AddScoped<ILayoutPathResolver, LayoutPathResolver>();
+            return services;
+        }
+
+        /// <summary>
+        /// Registers layout search services.
+        /// </summary>
+        public static IServiceCollection AddLayoutSearchServices(this IServiceCollection services)
+        {
+            services.AddScoped<ILayoutSearchService, LayoutSearchService>();
+            services.AddScoped<ILayoutSearchProvider, NameLayoutSearchProvider>();
             return services;
         }
 
