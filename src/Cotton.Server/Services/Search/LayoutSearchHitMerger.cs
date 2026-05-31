@@ -14,12 +14,23 @@ public static class LayoutSearchHitMerger
     public static IQueryable<LayoutSearchHit> MergeDuplicateHits(IQueryable<LayoutSearchHit> hits)
     {
         return hits
-            .GroupBy(x => new { x.Kind, x.Id })
-            .Select(x => x
-                .OrderByDescending(hit => hit.Score)
-                .ThenBy(hit => hit.NameKey)
-                .ThenBy(hit => hit.NodeIdForPath)
-                .First());
+            .GroupBy(x => new
+            {
+                x.Kind,
+                x.Id,
+                x.NodeIdForPath,
+                x.Name,
+                x.NameKey,
+            })
+            .Select(x => new LayoutSearchHit
+            {
+                Kind = x.Key.Kind,
+                Id = x.Key.Id,
+                NodeIdForPath = x.Key.NodeIdForPath,
+                Name = x.Key.Name,
+                NameKey = x.Key.NameKey,
+                Score = x.Max(hit => hit.Score),
+            });
     }
 
     /// <summary>

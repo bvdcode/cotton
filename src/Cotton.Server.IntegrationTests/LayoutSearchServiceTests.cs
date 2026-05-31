@@ -1,8 +1,10 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Database;
 using Cotton.Server.Extensions;
 using Cotton.Server.Services.Search;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
@@ -155,6 +157,37 @@ public sealed class LayoutSearchServiceTests
             Assert.That(fileHit.Score, Is.EqualTo(0.9));
             Assert.That(fileHit.Name, Is.EqualTo("report-high.md"));
         });
+    }
+
+    [Test]
+    public void MergeDuplicateHits_QueryableTranslatesForNameProvider()
+    {
+        const string connectionString = "Host=localhost;Database=cotton_translation_test;Username=postgres;Password=postgres";
+
+        DbContextOptions<CottonDbContext> options = new DbContextOptionsBuilder<CottonDbContext>()
+            .UseNpgsql(connectionString)
+            .Options;
+        using CottonDbContext dbContext = new(options);
+
+        LayoutSearchRequest request = new(
+            UserId: Guid.Parse("11111111-2222-3333-4444-555555555555"),
+            LayoutId: Guid.Parse("22222222-3333-4444-5555-666666666666"),
+            Query: "demo",
+            Page: 1,
+            PageSize: 20);
+        LayoutSearchCriteria criteria = LayoutSearchCriteriaBuilder.Build(request.Query);
+        NameLayoutSearchProvider provider = new(dbContext);
+
+        IQueryable<LayoutSearchHit> query = LayoutSearchHitMerger
+            .MergeDuplicateHits(provider.BuildHitsQuery(new LayoutSearchProviderContext(request, criteria)))
+            .OrderByDescending(x => x.Score)
+            .ThenBy(x => x.Kind)
+            .ThenBy(x => x.NameKey)
+            .ThenBy(x => x.Id)
+            .Skip(0)
+            .Take(request.PageSize);
+
+        Assert.That(query.ToQueryString(), Does.Contain("GROUP BY"));
     }
 
     [Test]
