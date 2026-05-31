@@ -108,6 +108,56 @@ public sealed class LayoutSearchServiceTests
     }
 
     [Test]
+    public void MergeDuplicateHits_KeepsBestScorePerEntity()
+    {
+        Guid fileId = Guid.Parse("11111111-2222-3333-4444-555555555555");
+        Guid nodeId = Guid.Parse("22222222-3333-4444-5555-666666666666");
+        Guid parentNodeId = Guid.Parse("33333333-4444-5555-6666-777777777777");
+
+        LayoutSearchHit[] hits =
+        [
+            new()
+            {
+                Kind = LayoutSearchHitKind.File,
+                Id = fileId,
+                NodeIdForPath = parentNodeId,
+                Name = "report-low.md",
+                NameKey = "report-low.md",
+                Score = 0.4,
+            },
+            new()
+            {
+                Kind = LayoutSearchHitKind.File,
+                Id = fileId,
+                NodeIdForPath = parentNodeId,
+                Name = "report-high.md",
+                NameKey = "report-high.md",
+                Score = 0.9,
+            },
+            new()
+            {
+                Kind = LayoutSearchHitKind.Node,
+                Id = nodeId,
+                NodeIdForPath = nodeId,
+                Name = "Reports",
+                NameKey = "reports",
+                Score = 0.5,
+            },
+        ];
+
+        IReadOnlyList<LayoutSearchHit> merged = LayoutSearchHitMerger.MergeDuplicateHits(hits);
+        LayoutSearchHit fileHit = merged.Single(x => x.Kind == LayoutSearchHitKind.File);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(merged, Has.Count.EqualTo(2));
+            Assert.That(fileHit.Id, Is.EqualTo(fileId));
+            Assert.That(fileHit.Score, Is.EqualTo(0.9));
+            Assert.That(fileHit.Name, Is.EqualTo("report-high.md"));
+        });
+    }
+
+    [Test]
     public void AddLayoutSearchServices_RegistersServiceAndProviders()
     {
         ServiceCollection services = new();

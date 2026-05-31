@@ -35,6 +35,8 @@ public sealed class LayoutSearchService(
             return new SearchLayoutsResultDto();
         }
 
+        hitsQuery = LayoutSearchHitMerger.MergeDuplicateHits(hitsQuery);
+
         int totalCount = await hitsQuery.CountAsync(cancellationToken);
         if (totalCount == 0)
         {
@@ -130,11 +132,13 @@ public sealed class LayoutSearchService(
         var nodeIds = hits
             .Where(x => x.Kind == LayoutSearchHitKind.Node)
             .Select(x => x.Id)
+            .Distinct()
             .ToArray();
 
         var fileIds = hits
             .Where(x => x.Kind == LayoutSearchHitKind.File)
             .Select(x => x.Id)
+            .Distinct()
             .ToArray();
 
         var nodes = await LoadNodesAsync(nodeIds, cancellationToken);
