@@ -139,6 +139,29 @@ export interface DatabaseIntegrityDiagnosticsDto {
   unsignedProtectedRows: number;
 }
 
+export interface CpuFeatureAvailabilityDto {
+  runtimeSupported: boolean | null;
+  linuxFlagPresent: boolean | null;
+}
+
+export interface CpuFeatureDiagnosticsDto {
+  architecture: string;
+  osArchitecture: string;
+  logicalProcessorCount: number;
+  vendorId: string | null;
+  modelName: string | null;
+  aesGcmHardwareAccelerationLikely: boolean;
+  aesNi: CpuFeatureAvailabilityDto;
+  pclmulqdq: CpuFeatureAvailabilityDto;
+  vaes: CpuFeatureAvailabilityDto;
+  vpclmulqdq: CpuFeatureAvailabilityDto;
+  avx2: CpuFeatureAvailabilityDto;
+  tme: CpuFeatureAvailabilityDto;
+  tmeMk: CpuFeatureAvailabilityDto;
+  pconfig: CpuFeatureAvailabilityDto;
+  linuxCpuFlags: string[];
+}
+
 export interface SecurityDiagnosticsDto {
   operatingSystem: string;
   isLinux: boolean;
@@ -154,6 +177,7 @@ export interface SecurityDiagnosticsDto {
   linuxContainer: LinuxContainerSecurityDto;
   adminTotp: AdminTotpDiagnosticsDto;
   databaseIntegrity: DatabaseIntegrityDiagnosticsDto;
+  cpuFeatures: CpuFeatureDiagnosticsDto;
   warnings: SecurityDiagnosticWarningDto[];
 }
 
