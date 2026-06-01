@@ -208,7 +208,9 @@ export const UserMenu = () => {
           sx={{
             width: 40,
             height: 40,
-            bgcolor: "primary.main",
+            bgcolor: "background.paper",
+            color: "primary.main",
+            fontWeight: 600,
           }}
         >
           {!user?.pictureUrl && avatarInitials}

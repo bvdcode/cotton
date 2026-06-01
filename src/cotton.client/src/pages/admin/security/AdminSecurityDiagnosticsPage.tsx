@@ -4,12 +4,17 @@ import {
   Chip,
   Divider,
   LinearProgress,
+  Paper,
   Skeleton,
   Stack,
   Typography,
   type AlertColor,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
+import BuildOutlinedIcon from "@mui/icons-material/BuildOutlined";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import SecurityIcon from "@mui/icons-material/Security";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import { useTranslation } from "react-i18next";
@@ -98,19 +103,19 @@ const getSecurityLevel = (
   };
 };
 
-const getSeverityColor = (
-  warning: SecurityDiagnosticWarningDto,
-): AlertColor => {
-  if (warning.severity === "critical") {
-    return "error";
-  }
+const paletteKeyFor = (
+  severity: SecurityDiagnosticWarningDto["severity"],
+): "error" | "warning" | "info" =>
+  severity === "critical"
+    ? "error"
+    : severity === "warning"
+      ? "warning"
+      : "info";
 
-  if (warning.severity === "warning") {
-    return "warning";
-  }
-
-  return "info";
-};
+const severityRank = (
+  severity: SecurityDiagnosticWarningDto["severity"],
+): number =>
+  severity === "critical" ? 0 : severity === "warning" ? 1 : 2;
 
 const getSeverityLabel = (
   severity: SecurityDiagnosticWarningDto["severity"],
@@ -133,6 +138,14 @@ const getThreatVector = (
 ): string | null =>
   knownThreatVectorCodes.has(warning.code)
     ? t(`securityDiagnostics.threatVectors.${warning.code}`)
+    : null;
+
+const getFixText = (
+  warning: SecurityDiagnosticWarningDto,
+  t: TFunction<"admin">,
+): string | null =>
+  knownThreatVectorCodes.has(warning.code)
+    ? t(`securityDiagnostics.fixes.${warning.code}`)
     : null;
 
 const formatNullable = (
@@ -263,13 +276,20 @@ const SecurityScoreSummary = ({
         </Typography>
         <Typography variant="body2">{level.summary}</Typography>
       </Alert>
-      <Box>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
         <LinearProgress
           variant="determinate"
           value={Math.max(0, Math.min(100, scorePercent))}
           color={level.color}
-          sx={{ height: 8, borderRadius: 1 }}
+          sx={{ flex: 1, height: 8, borderRadius: 1, bgcolor: "action.hover" }}
         />
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}
+        >
+          {diagnostics.securityScore} / {diagnostics.maxSecurityScore}
+        </Typography>
       </Box>
       <SecuritySummaryChips diagnostics={diagnostics} t={t} />
     </Stack>
@@ -326,43 +346,140 @@ type SecurityRiskSectionProps = {
   t: TFunction<"admin">;
 };
 
-const SecurityRiskSection = ({ warnings, t }: SecurityRiskSectionProps) => (
-  <DiagnosticsSection title={t("securityDiagnostics.sections.risks")}>
-    {warnings.length > 0 ? (
-      warnings.map((warning) => (
-        <SecurityRiskAlert key={warning.code} warning={warning} t={t} />
-      ))
-    ) : (
-      <Alert severity="success">{t("securityDiagnostics.risks.empty")}</Alert>
-    )}
-  </DiagnosticsSection>
-);
+const SecurityRiskSection = ({ warnings, t }: SecurityRiskSectionProps) => {
+  const sorted = [...warnings].sort(
+    (a, b) => severityRank(a.severity) - severityRank(b.severity),
+  );
 
-type SecurityRiskAlertProps = {
+  return (
+    <DiagnosticsSection title={t("securityDiagnostics.sections.risks")}>
+      {sorted.length > 0 ? (
+        <Box
+          sx={{
+            display: "grid",
+            gap: 1.5,
+            gridTemplateColumns: {
+              xs: "1fr",
+              lg: "repeat(2, minmax(0, 1fr))",
+            },
+          }}
+        >
+          {sorted.map((warning) => (
+            <SecurityRiskCard key={warning.code} warning={warning} t={t} />
+          ))}
+        </Box>
+      ) : (
+        <Alert severity="success">{t("securityDiagnostics.risks.empty")}</Alert>
+      )}
+    </DiagnosticsSection>
+  );
+};
+
+type SecurityRiskCardProps = {
   warning: SecurityDiagnosticWarningDto;
   t: TFunction<"admin">;
 };
 
-const SecurityRiskAlert = ({ warning, t }: SecurityRiskAlertProps) => {
+const SeverityIcon = ({
+  severity,
+}: {
+  severity: SecurityDiagnosticWarningDto["severity"];
+}) => {
+  if (severity === "critical") {
+    return <ErrorOutlineIcon fontSize="small" />;
+  }
+
+  if (severity === "warning") {
+    return <WarningAmberIcon fontSize="small" />;
+  }
+
+  return <InfoOutlinedIcon fontSize="small" />;
+};
+
+const RiskLabeledBlock = ({ label, text }: { label: string; text: string }) => (
+  <Box>
+    <Typography
+      variant="caption"
+      color="text.secondary"
+      fontWeight={700}
+      sx={{ display: "block", textTransform: "uppercase", letterSpacing: 0.4 }}
+    >
+      {label}
+    </Typography>
+    <Typography variant="body2">{text}</Typography>
+  </Box>
+);
+
+const SecurityRiskCard = ({ warning, t }: SecurityRiskCardProps) => {
+  const paletteKey = paletteKeyFor(warning.severity);
   const threatVector = getThreatVector(warning, t);
+  const fix = getFixText(warning, t);
 
   return (
-    <Alert severity={getSeverityColor(warning)} icon={<WarningAmberIcon />}>
-      <Stack spacing={0.5}>
-        <Stack direction="row" spacing={1} alignItems="center" useFlexGap sx={{ flexWrap: "wrap" }}>
-          <Typography variant="subtitle2" fontWeight={700}>
-            {getSeverityLabel(warning.severity, t)}
-          </Typography>
-          <Chip size="small" variant="outlined" label={warning.code} />
-        </Stack>
-        <Typography variant="body2">{warning.message}</Typography>
+    <Paper
+      variant="outlined"
+      sx={(theme) => ({
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        borderLeft: `4px solid ${theme.palette[paletteKey].main}`,
+      })}
+    >
+      <Box
+        sx={(theme) => ({
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          px: 2,
+          py: 1,
+          color: theme.palette[paletteKey].main,
+          bgcolor: alpha(theme.palette[paletteKey].main, 0.1),
+        })}
+      >
+        <SeverityIcon severity={warning.severity} />
+        <Typography variant="subtitle2" fontWeight={700} color="inherit">
+          {getSeverityLabel(warning.severity, t)}
+        </Typography>
+        <Chip
+          size="small"
+          variant="outlined"
+          label={warning.code}
+          sx={{ ml: "auto" }}
+        />
+      </Box>
+      <Stack spacing={1.25} sx={{ px: 2, py: 1.5 }}>
+        <RiskLabeledBlock
+          label={t("securityDiagnostics.labels.whatItMeans")}
+          text={warning.message}
+        />
         {threatVector && (
-          <Typography variant="body2" color="text.secondary">
-            {threatVector}
-          </Typography>
+          <RiskLabeledBlock
+            label={t("securityDiagnostics.labels.impact")}
+            text={threatVector}
+          />
+        )}
+        {fix && (
+          <Box
+            sx={{
+              display: "flex",
+              gap: 1,
+              p: 1.25,
+              borderRadius: 1,
+              bgcolor: "action.hover",
+            }}
+          >
+            <BuildOutlinedIcon
+              fontSize="small"
+              sx={{ color: "text.secondary", mt: 0.25, flexShrink: 0 }}
+            />
+            <RiskLabeledBlock
+              label={t("securityDiagnostics.labels.howToFix")}
+              text={fix}
+            />
+          </Box>
         )}
       </Stack>
-    </Alert>
+    </Paper>
   );
 };
 

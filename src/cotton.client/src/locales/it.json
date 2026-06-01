@@ -3203,6 +3203,30 @@
         "host-pid-namespace": "Sharing the host PID namespace exposes host processes through procfs and makes process-memory attacks easier to aim.",
         "mandatory-access-control-unconfined": "Without an enforcing AppArmor or SELinux profile, a container escape or kernel-facing bug has fewer policy boundaries to cross.",
         "core-dumps-enabled": "Core dumps are memory snapshots. If Cotton crashes while secrets are resident, a dump can preserve the master key or decrypted configuration."
+      },
+      "labels": {
+        "whatItMeans": "What it means",
+        "impact": "Impact",
+        "howToFix": "How to fix"
+      },
+      "fixes": {
+        "public-instance": "If this instance is not meant to be public, disable public/demo mode (unset COTTON_PUBLIC_INSTANCE) and restart.",
+        "master-key-from-environment": "Prefer unlocking via the /unlock page instead of COTTON_MASTER_KEY, or make sure the variable is not retained in deployment metadata or exposed to exec sessions.",
+        "admins-without-2fa": "Enable two-factor authentication (TOTP) for every admin account from Profile → Security.",
+        "dotnet-diagnostics-enabled": "Set DOTNET_EnableDiagnostics=0 (and COMPlus_EnableDiagnostics=0) in the container environment and restart.",
+        "process-dumpable": "Set COTTON_PROCESS_HARDENING=true (or use the official image defaults) so the process requests PR_SET_DUMPABLE=0 at startup.",
+        "sys-ptrace-capability": "Drop the CAP_SYS_PTRACE capability from the container (for example cap_drop: [ALL]).",
+        "new-privileges-allowed": "Run the container with no-new-privileges:true so the process cannot gain privileges through setuid binaries.",
+        "seccomp-disabled": "Run with a seccomp profile enabled (avoid seccomp=unconfined) to restrict the syscalls available to the process.",
+        "running-as-root": "Run the container as a non-root user; the official image runs as the unprivileged app user by default.",
+        "process-hardening-failed": "Process hardening was requested but could not be applied — check the container capabilities/permissions and the startup logs.",
+        "db-integrity-unsigned-rows": "Let the database-integrity bridge backfill finish signing legacy rows (keep the instance running), then disable bridge mode.",
+        "db-integrity-bridge-mode": "Bridge mode still accepts unsigned legacy rows. Once backfill is complete, disable bridge mode so every protected row must be signed.",
+        "root-filesystem-writable": "Run the container with a read-only root filesystem (read_only: true) and mount only the storage volume as writable.",
+        "docker-socket-mounted": "Do not mount the Docker socket (/var/run/docker.sock) into the container.",
+        "host-pid-namespace": "Do not share the host PID namespace (avoid pid: host) so the process cannot observe other host processes.",
+        "mandatory-access-control-unconfined": "Apply an AppArmor or SELinux profile to confine the process instead of running unconfined.",
+        "core-dumps-enabled": "Disable core dumps for the container (ulimits: core: 0) so secrets cannot leak into dump files."
       }
     },
     "groups": {

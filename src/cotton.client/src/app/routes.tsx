@@ -338,43 +338,43 @@ export function AppRoutes() {
           <Route index element={<Navigate to="general-settings" replace />} />
           <Route
             path="users"
-            element={withRouteSuspense(<AdminUsersPage />)}
+            element={<AdminUsersPage />}
           />
           <Route
             path="groups"
-            element={withRouteSuspense(<AdminGroupsPage />)}
+            element={<AdminGroupsPage />}
           />
           <Route
             path="database-backup"
-            element={withRouteSuspense(<AdminDatabaseBackupPage />)}
+            element={<AdminDatabaseBackupPage />}
           />
           <Route
             path="storage-statistics"
-            element={withRouteSuspense(<AdminStorageStatisticsPage />)}
+            element={<AdminStorageStatisticsPage />}
           />
           <Route
             path="storage-settings"
-            element={withRouteSuspense(<AdminStorageSettingsPage />)}
+            element={<AdminStorageSettingsPage />}
           />
           <Route
             path="general-settings"
-            element={withRouteSuspense(<AdminGeneralSettingsPage />)}
+            element={<AdminGeneralSettingsPage />}
           />
           <Route
             path="privacy-settings"
-            element={withRouteSuspense(<AdminPrivacySettingsPage />)}
+            element={<AdminPrivacySettingsPage />}
           />
           <Route
             path="security"
-            element={withRouteSuspense(<AdminSecurityDiagnosticsPage />)}
+            element={<AdminSecurityDiagnosticsPage />}
           />
           <Route
             path="identity-providers"
-            element={withRouteSuspense(<AdminIdentityProvidersPage />)}
+            element={<AdminIdentityProvidersPage />}
           />
           <Route
             path="notifications-settings"
-            element={withRouteSuspense(<AdminNotificationsSettingsPage />)}
+            element={<AdminNotificationsSettingsPage />}
           />
           <Route
             path="email-settings"

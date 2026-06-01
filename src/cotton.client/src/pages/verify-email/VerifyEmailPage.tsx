@@ -92,7 +92,7 @@ export const VerifyEmailPage = () => {
 
         {success && (
           <Box>
-            <Alert color="success" sx={{ mt: 2 }}>
+            <Alert severity="success" sx={{ mt: 2 }}>
               {t("success")}
             </Alert>
             <Button
@@ -109,7 +109,7 @@ export const VerifyEmailPage = () => {
 
         {error && !loading && (
           <Box>
-            <Alert color="error" sx={{ mt: 2 }}>
+            <Alert severity="error" sx={{ mt: 2 }}>
               {error}
             </Alert>
             <Button

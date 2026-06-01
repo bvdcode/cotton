@@ -7,6 +7,8 @@ import {
   MenuItem,
   Paper,
   Select,
+  Skeleton,
+  Stack,
   Tooltip,
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material/Select";
@@ -20,7 +22,7 @@ import LoginIcon from "@mui/icons-material/Login";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ShieldIcon from "@mui/icons-material/Shield";
 import StorageIcon from "@mui/icons-material/Storage";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ADMIN_PAGE_SURFACE_WIDTH } from "./components/AdminPageSurface";
@@ -44,6 +46,25 @@ type AdminMenuItem = {
   icon: ReactNode;
   activePaths?: string[];
 };
+
+/**
+ * Layout-matching fallback shown in the admin content column while a lazy admin
+ * page chunk loads, so the nav rail never appears in front of a blank content area.
+ */
+const AdminContentSkeleton = () => (
+  <Box width="100%">
+    <Skeleton variant="text" width={240} height={40} sx={{ mb: 3 }} />
+    <Stack spacing={3}>
+      {[0, 1, 2].map((i) => (
+        <Box key={i}>
+          <Skeleton variant="text" width={180} height={24} />
+          <Skeleton variant="text" width={320} height={18} sx={{ mb: 1 }} />
+          <Skeleton variant="rounded" height={48} />
+        </Box>
+      ))}
+    </Stack>
+  </Box>
+);
 
 export const AdminLayoutPage = () => {
   const { t } = useTranslation("admin");
@@ -230,7 +251,9 @@ export const AdminLayoutPage = () => {
           flexDirection="column"
           alignSelf="stretch"
         >
-          <Outlet />
+          <Suspense fallback={<AdminContentSkeleton />}>
+            <Outlet />
+          </Suspense>
         </Box>
       </Box>
     </Box>

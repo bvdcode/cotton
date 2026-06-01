@@ -135,10 +135,8 @@ export const ClientEncryptionCard = ({
                 justifyContent="space-between"
                 sx={{
                   p: 2,
-                  border: "1px solid",
-                  borderColor: "divider",
                   borderRadius: 1,
-                  bgcolor: "background.default",
+                  bgcolor: "action.hover",
                 }}
               >
                 <Stack spacing={1} minWidth={0}>
