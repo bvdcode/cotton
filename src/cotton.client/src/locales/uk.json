@@ -2335,6 +2335,7 @@
     "errors": {
       "resolveRootFailed": "Не вдалося визначити кореневу теку",
       "loadContentsFailed": "Не вдалося завантажити вміст теки",
+      "folderNotFound": "Папку не знайдено",
       "createFolderFailed": "Не вдалося створити теку",
       "deleteFolderFailed": "Не вдалося видалити теку",
       "renameFolderFailed": "Не вдалося перейменувати теку",
@@ -2389,7 +2390,8 @@
         "details": "Деталі"
       },
       "errors": {
-        "dropFailed": "Не вдалося обробити перетягнуті елементи. Будь ласка, спробуйте ще раз."
+        "dropFailed": "Не вдалося обробити перетягнуті елементи. Будь ласка, спробуйте ще раз.",
+        "createMarkdownFileFailed": "Не вдалося створити Markdown-файл. Спробуйте ще раз."
       },
       "skippedDialog": {
         "title": "Пропущені елементи",
@@ -2401,6 +2403,9 @@
     "actions": {
       "upload": "Вивантажити",
       "newFolder": "Нова тека",
+      "newMarkdownFile": "Новий Markdown-файл",
+      "defaultMarkdownFileName": "Новий файл.md",
+      "defaultNewFolderName": "Нова тека",
       "folderNamePlaceholder": "Назва теки",
       "goToFolder": "Перейти до теки",
       "goUp": "Вгору",
@@ -2636,6 +2641,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Налаштування сервера не завантажено",
       "uploadFailed": "Вивантаження не вдалося",
+      "deleteFailed": "Не вдалося видалити",
       "storageQuotaExceeded": "Недостатньо місця у сховищі. Доступно: {{available}}.",
       "encryptionVaultLocked": "Сховище шифрування заблоковано",
       "encryptionFailed": "Помилка шифрування",
@@ -2644,6 +2650,7 @@
     },
     "titleWithTotal": "Завдання ({{total}})",
     "titleWithProgress": "Завдання ({{completed}} / {{total}} - {{speed}}/с)",
+    "titleWithProgressNoSpeed": "Завдання ({{completed}} / {{total}})",
     "titleWithErrors": "Завдання ({{total}} • {{failed}} з помилками)",
     "actions": {
       "expand": "Розгорнути",

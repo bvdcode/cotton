@@ -46,7 +46,8 @@ namespace Cotton.Server.Handlers.Server
     public class GetGcChunksTimelineQueryHandler(
         CottonDbContext _dbContext,
         SettingsProvider _settings,
-        ChunkUsageService _chunkUsage) : IRequestHandler<GetGcChunksTimelineQuery, GcChunkTimelineDto>
+        ChunkUsageService _chunkUsage,
+        StorageUsageStatsService _storageUsageStats) : IRequestHandler<GetGcChunksTimelineQuery, GcChunkTimelineDto>
     {
         private const int DefaultGcTimelineHorizonDays = 30;
         private const int MaxGcTimelineHorizonDays = 365;
@@ -65,7 +66,7 @@ namespace Cotton.Server.Handlers.Server
             var gcBaseQuery = BuildGcBaseQuery(protectedStorageKeys, range.EndUtc);
             var aggregates = await LoadHourlyAggregatesAsync(gcBaseQuery, range.StartUtc, cancellationToken);
             List<GcChunkTimelineBucketDto> buckets = BuildTimelineBuckets(aggregates, normalizedBucket, effectiveTimeZone);
-            var storageStats = await GetStorageUsageStatsAsync(now, protectedStorageKeys, cancellationToken);
+            var storageStats = await _storageUsageStats.GetAsync(now, protectedStorageKeys, cancellationToken);
 
             return BuildTimelineDto(normalizedBucket, range, now, buckets, storageStats);
         }
@@ -234,88 +235,6 @@ namespace Cotton.Server.Handlers.Server
                     SizeBytes = g.Sum(x => x.StoredSizeBytes),
                 })
                 .ToListAsync(cancellationToken);
-        }
-
-        private async Task<StorageUsageStatsDto> GetStorageUsageStatsAsync(
-            DateTime nowUtc,
-            IReadOnlyCollection<string> protectedStorageKeys,
-            CancellationToken cancellationToken)
-        {
-            var chunks = _dbContext.Chunks.AsNoTracking();
-
-            long totalUniqueChunkCount = await chunks.LongCountAsync(cancellationToken);
-            long totalUniqueChunkPlainSizeBytes = await chunks.SumAsync(x => (long?)x.PlainSizeBytes, cancellationToken) ?? 0L;
-            long totalUniqueChunkStoredSizeBytes = await chunks.SumAsync(x => (long?)x.StoredSizeBytes, cancellationToken) ?? 0L;
-
-            var referenced = _dbContext.FileManifestChunks
-                .AsNoTracking()
-                .GroupBy(x => x.ChunkHash)
-                .Select(g => new
-                {
-                    ChunkHash = g.Key,
-                    RefCount = g.LongCount(),
-                });
-
-            long referencedUniqueChunkCount = await referenced.LongCountAsync(cancellationToken);
-            long referencedLogicalChunkCount = await referenced.SumAsync(x => (long?)x.RefCount, cancellationToken) ?? 0L;
-            long deduplicatedUniqueChunkCount = await referenced.Where(x => x.RefCount > 1).LongCountAsync(cancellationToken);
-
-            long referencedUniqueChunkPlainSizeBytes = await (
-                from c in chunks
-                join r in referenced on c.Hash equals r.ChunkHash
-                select (long?)c.PlainSizeBytes)
-                .SumAsync(cancellationToken) ?? 0L;
-
-            long referencedUniqueChunkStoredSizeBytes = await (
-                from c in chunks
-                join r in referenced on c.Hash equals r.ChunkHash
-                select (long?)c.StoredSizeBytes)
-                .SumAsync(cancellationToken) ?? 0L;
-
-            long referencedLogicalPlainSizeBytes = await (
-                from c in chunks
-                join r in referenced on c.Hash equals r.ChunkHash
-                select (long?)(c.PlainSizeBytes * r.RefCount))
-                .SumAsync(cancellationToken) ?? 0L;
-
-            var pendingGc = _chunkUsage
-                .WhereNotProtectedByStorageKeys(
-                    _chunkUsage.WhereUnreferencedByDatabase(chunks),
-                    protectedStorageKeys)
-                .Where(c => c.GCScheduledAfter != null);
-
-            long pendingGcChunkCount = await pendingGc.LongCountAsync(cancellationToken);
-            long pendingGcStoredSizeBytes = await pendingGc.SumAsync(x => (long?)x.StoredSizeBytes, cancellationToken) ?? 0L;
-
-            long overdueGcChunkCount = await pendingGc
-                .Where(c => c.GCScheduledAfter <= nowUtc)
-                .LongCountAsync(cancellationToken);
-            long overdueGcStoredSizeBytes = await pendingGc
-                .Where(c => c.GCScheduledAfter <= nowUtc)
-                .SumAsync(x => (long?)x.StoredSizeBytes, cancellationToken) ?? 0L;
-
-            long dedupSavedBytes = Math.Max(0, referencedLogicalPlainSizeBytes - referencedUniqueChunkPlainSizeBytes);
-            long compressionSavedBytes = Math.Max(0, totalUniqueChunkPlainSizeBytes - totalUniqueChunkStoredSizeBytes);
-
-            return new StorageUsageStatsDto
-            {
-                StorageType = _settings.GetServerSettings().StorageType.ToString(),
-                TotalUniqueChunkCount = totalUniqueChunkCount,
-                TotalUniqueChunkPlainSizeBytes = totalUniqueChunkPlainSizeBytes,
-                TotalUniqueChunkStoredSizeBytes = totalUniqueChunkStoredSizeBytes,
-                ReferencedUniqueChunkCount = referencedUniqueChunkCount,
-                ReferencedUniqueChunkPlainSizeBytes = referencedUniqueChunkPlainSizeBytes,
-                ReferencedUniqueChunkStoredSizeBytes = referencedUniqueChunkStoredSizeBytes,
-                ReferencedLogicalChunkCount = referencedLogicalChunkCount,
-                ReferencedLogicalPlainSizeBytes = referencedLogicalPlainSizeBytes,
-                DeduplicatedUniqueChunkCount = deduplicatedUniqueChunkCount,
-                DedupSavedBytes = dedupSavedBytes,
-                CompressionSavedBytes = compressionSavedBytes,
-                PendingGcChunkCount = pendingGcChunkCount,
-                PendingGcStoredSizeBytes = pendingGcStoredSizeBytes,
-                OverdueGcChunkCount = overdueGcChunkCount,
-                OverdueGcStoredSizeBytes = overdueGcStoredSizeBytes,
-            };
         }
 
         private sealed record TimelineRange(DateTime StartUtc, DateTime EndUtc);

@@ -44,10 +44,10 @@ export const useFolderOperations = (
     deleteErrorMessage: "Failed to delete folder:",
   });
 
-  const handleNewFolder = () => {
+  const handleNewFolder = (initialName = "") => {
     setNewFolderParentId(currentNodeId);
     setIsCreatingFolder(true);
-    setNewFolderName("");
+    setNewFolderName(initialName);
   };
 
   const handleConfirmNewFolder = async () => {

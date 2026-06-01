@@ -35,6 +35,7 @@ namespace Cotton.Server.Services
             AdminTotpDiagnosticsDto adminTotp = await GetAdminTotpDiagnosticsAsync(cancellationToken);
             DatabaseIntegrityDiagnosticsDto databaseIntegrity = await databaseIntegrityDiagnostics
                 .GetSnapshotAsync(cancellationToken);
+            CpuFeatureDiagnosticsDto cpuFeatures = CpuFeatureDiagnostics.Snapshot();
 
             var linuxProcess = new LinuxProcessSecurityDto
             {
@@ -97,6 +98,7 @@ namespace Cotton.Server.Services
                 LinuxContainer = linuxContainer,
                 AdminTotp = adminTotp,
                 DatabaseIntegrity = databaseIntegrity,
+                CpuFeatures = cpuFeatures,
                 SecurityScore = CalculateSecurityScore(warnings),
                 Warnings = warnings,
             };

@@ -175,6 +175,7 @@ namespace Cotton.Server
                 .AddScoped<StoragePressureGuard>()
                 .AddScoped<DefaultUserContentSeeder>()
                 .AddScoped<ChunkUsageService>()
+                .AddScoped<StorageUsageStatsService>()
                 .AddScoped<VideoTranscoder>()
                 .AddSingleton<HlsSegmentCache>()
                 .AddSingleton<DatabaseBackupKeyProvider>()
@@ -199,6 +200,7 @@ namespace Cotton.Server
                 .AddDatabaseIntegrity()
                 .AddChunkServices()
                 .AddLayoutPathServices()
+                .AddLayoutSearchServices()
                 .AddWebDavServices()
                 .AddWebDavAuth()
                 .AddJwt();

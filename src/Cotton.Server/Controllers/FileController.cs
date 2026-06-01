@@ -626,59 +626,109 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.NotFound("File not found");
             }
-            var nodeFile = await _dbContext.NodeFiles
+
+            NodeFile? nodeFile = await LoadDownloadNodeFileAsync(nodeFileId);
+            if (nodeFile is null)
+            {
+                return CottonResult.NotFound("File not found");
+            }
+
+            DownloadToken? downloadToken = await LoadValidDownloadTokenAsync(token, nodeFile.Id);
+            if (downloadToken is null || !CanServeTokenDownload(nodeFile))
+            {
+                return CottonResult.NotFound("File not found");
+            }
+
+            bool servesPreview = CanServeLargePreview(nodeFile, preview);
+            RequireDownloadIntegrity(nodeFile, downloadToken, servesPreview);
+
+            return servesPreview
+                ? ServeLargePreview(nodeFile)
+                : ServeTokenFileDownload(nodeFile, downloadToken, download);
+        }
+
+        private Task<NodeFile?> LoadDownloadNodeFileAsync(Guid nodeFileId)
+        {
+            return _dbContext.NodeFiles
                 .Include(x => x.Node)
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
                 .ThenInclude(x => x.Chunk)
                 .SingleOrDefaultAsync(x => x.Id == nodeFileId);
-            if (nodeFile == null)
-            {
-                return CottonResult.NotFound("File not found");
-            }
-            var downloadToken = await _dbContext.DownloadTokens
-                .FirstOrDefaultAsync(x => x.Token == token && x.NodeFileId == nodeFile.Id);
-            if (downloadToken == null || (downloadToken.ExpiresAt.HasValue && downloadToken.ExpiresAt.Value < DateTime.UtcNow))
-            {
-                return CottonResult.NotFound("File not found");
-            }
+        }
+
+        private async Task<DownloadToken?> LoadValidDownloadTokenAsync(string token, Guid nodeFileId)
+        {
+            DownloadToken? downloadToken = await _dbContext.DownloadTokens
+                .FirstOrDefaultAsync(x => x.Token == token && x.NodeFileId == nodeFileId);
+
+            return downloadToken is null || IsExpired(downloadToken)
+                ? null
+                : downloadToken;
+        }
+
+        private static bool IsExpired(DownloadToken downloadToken) =>
+            downloadToken.ExpiresAt.HasValue && downloadToken.ExpiresAt.Value < DateTime.UtcNow;
+
+        private static bool CanServeTokenDownload(NodeFile nodeFile) =>
+            nodeFile.Node.Type == NodeType.Default || FileVersionService.IsHistoricalVersion(nodeFile);
+
+        private static bool CanServeLargePreview(NodeFile nodeFile, bool preview) =>
+            preview && nodeFile.FileManifest.LargeFilePreviewHash is not null;
+
+        private void RequireDownloadIntegrity(
+            NodeFile nodeFile,
+            DownloadToken downloadToken,
+            bool servesPreview)
+        {
             _integrity.RequireValid(_dbContext, downloadToken, "file.download-token");
-            bool servesPreview = preview && nodeFile.FileManifest.LargeFilePreviewHash != null;
+
             if (servesPreview)
             {
                 _fileGraphIntegrity.RequireValidMetadata(_dbContext, nodeFile, "file.preview");
-            }
-            else
-            {
-                _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "file.download");
+                return;
             }
 
-            if (nodeFile.Node.Type != NodeType.Default && !FileVersionService.IsHistoricalVersion(nodeFile))
+            _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "file.download");
+        }
+
+        private IActionResult ServeLargePreview(NodeFile nodeFile)
+        {
+            string previewHashHex = Hasher.ToHexStringHash(nodeFile.FileManifest.LargeFilePreviewHash!);
+            var etagHeader = new EntityTagHeaderValue($"\"sha256-{previewHashHex}\"");
+            SetLargePreviewCacheHeaders(etagHeader);
+
+            if (ClientHasCurrentPreview(etagHeader))
             {
-                return CottonResult.NotFound("File not found");
+                return StatusCode(StatusCodes.Status304NotModified);
             }
 
-            if (preview && nodeFile.FileManifest.LargeFilePreviewHash != null)
+            Stream previewStream = _storage.GetBlobStream([previewHashHex]);
+            return File(previewStream, "image/webp");
+        }
+
+        private void SetLargePreviewCacheHeaders(EntityTagHeaderValue etagHeader)
+        {
+            Response.Headers.ETag = etagHeader.ToString();
+            Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+        }
+
+        private bool ClientHasCurrentPreview(EntityTagHeaderValue etagHeader)
+        {
+            if (!Request.Headers.TryGetValue(HeaderNames.IfNoneMatch, out var inmValues))
             {
-                string previewHashHex = Hasher.ToHexStringHash(nodeFile.FileManifest.LargeFilePreviewHash);
-                var previewStream = _storage.GetBlobStream([previewHashHex]);
-                string etag = $"\"sha256-{previewHashHex}\"";
-                var etagHeader = new EntityTagHeaderValue(etag);
-                if (Request.Headers.TryGetValue(HeaderNames.IfNoneMatch, out var inmValues))
-                {
-                    var clientEtags = EntityTagHeaderValue.ParseList([.. inmValues!]);
-                    if (clientEtags.Any(x => x.Compare(etagHeader, useStrongComparison: true)))
-                    {
-                        Response.Headers.ETag = etagHeader.ToString();
-                        Response.Headers.CacheControl = "public, max-age=31536000, immutable";
-                        return StatusCode(StatusCodes.Status304NotModified);
-                    }
-                }
-                Response.Headers.ETag = etag;
-                Response.Headers.CacheControl = "public, max-age=31536000, immutable";
-                return File(previewStream, "image/webp");
+                return false;
             }
 
+            var clientEtags = EntityTagHeaderValue.ParseList([.. inmValues!]);
+            return clientEtags.Any(x => x.Compare(etagHeader, useStrongComparison: true));
+        }
+
+        private IActionResult ServeTokenFileDownload(
+            NodeFile nodeFile,
+            DownloadToken downloadToken,
+            bool download)
+        {
             string[] uids = nodeFile.FileManifest.FileManifestChunks.GetChunkHashes();
             PipelineContext context = new()
             {
@@ -688,25 +738,32 @@ namespace Cotton.Server.Controllers
             Stream stream = _storage.GetBlobStream(uids, context);
             Response.Headers.ContentEncoding = "identity";
             Response.Headers.CacheControl = "private, no-store, no-transform";
-            var entityTag = EntityTagHeaderValue.Parse($"\"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}\"");
+            EntityTagHeaderValue entityTag = EntityTagHeaderValue.Parse(
+                $"\"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}\"");
 
-            if (downloadToken.DeleteAfterUse)
-            {
-                Response.OnCompleted(async () =>
-                {
-                    _dbContext.DownloadTokens.Remove(downloadToken);
-                    await _dbContext.SaveChangesAsync();
-                });
-            }
+            RegisterDeleteAfterUse(downloadToken);
 
-            var lastModified = new DateTimeOffset(nodeFile.CreatedAt);
             return File(
                 stream,
                 nodeFile.FileManifest.ContentType,
                 fileDownloadName: download ? nodeFile.Name : null,
-                lastModified: lastModified,
+                lastModified: new DateTimeOffset(nodeFile.CreatedAt),
                 entityTag: entityTag,
                 enableRangeProcessing: true);
+        }
+
+        private void RegisterDeleteAfterUse(DownloadToken downloadToken)
+        {
+            if (!downloadToken.DeleteAfterUse)
+            {
+                return;
+            }
+
+            Response.OnCompleted(async () =>
+            {
+                _dbContext.DownloadTokens.Remove(downloadToken);
+                await _dbContext.SaveChangesAsync();
+            });
         }
 
         /// <summary>

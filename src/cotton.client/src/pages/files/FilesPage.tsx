@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
   Box,
@@ -59,15 +60,17 @@ import {
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
 import { filesApi } from "../../shared/api/filesApi";
+import { fetchServerSettings } from "../../shared/api/queries/serverSettings";
 import { nodesApi } from "../../shared/api/nodesApi";
 import {
+  applyDisplayMetaToFile,
   FOLDER_ENCRYPTION_POLICY_KEY,
   getFolderEncryptionPolicyState,
   readEnvelopeFromPreferences,
   useVault,
 } from "../../shared/crypto";
 import { useFolderFileList } from "../../shared/hooks/useFileListSource";
-import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
+import { InterfaceLayoutType, type NodeDto } from "../../shared/api/layoutsApi";
 import { shareFolder } from "../../shared/utils/shareFolder";
 import Loader from "../../shared/ui/Loader";
 import { blurredDialogBackdropSlotProps } from "../../shared/ui/dialogBackdrop";
@@ -86,9 +89,60 @@ import {
 import { useFolderClientEncryptionActions } from "./hooks/useFolderClientEncryptionActions";
 import { ClientEncryptionUnlockForm } from "../profile/components/ClientEncryptionUnlockForm";
 import { downloadArchive } from "@shared/utils/fileHandlers";
+import { uploadFileToNode } from "@shared/upload";
+import { collectFoldersInFoldersForClientEncryption } from "@shared/utils/clientEncryptionFolderScan";
 import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 
 const HUGE_FOLDER_THRESHOLD = 100_000;
+const MARKDOWN_FILE_CONTENT_TYPE = "text/markdown";
+
+const normalizeSiblingName = (name: string): string =>
+  name.trim().toLocaleLowerCase();
+
+const buildUniqueSiblingName = (
+  baseName: string,
+  siblingNames: ReadonlyArray<string>,
+): string => {
+  const normalizedNames = new Set(siblingNames.map(normalizeSiblingName));
+  if (!normalizedNames.has(normalizeSiblingName(baseName))) {
+    return baseName;
+  }
+
+  const extensionIndex = baseName.lastIndexOf(".");
+  const hasExtension = extensionIndex > 0;
+  const nameWithoutExtension = hasExtension
+    ? baseName.slice(0, extensionIndex)
+    : baseName;
+  const extension = hasExtension ? baseName.slice(extensionIndex) : "";
+
+  for (let index = 1; index < 1000; index += 1) {
+    const candidate = `${nameWithoutExtension} ${index}${extension}`;
+    if (!normalizedNames.has(normalizeSiblingName(candidate))) {
+      return candidate;
+    }
+  }
+
+  return `${nameWithoutExtension} ${Date.now()}${extension}`;
+};
+
+const isEditableKeyboardTarget = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  const tagName = target.tagName.toLocaleLowerCase();
+  return (
+    target.isContentEditable ||
+    tagName === "input" ||
+    tagName === "textarea" ||
+    tagName === "select"
+  );
+};
+
+const isCreateFolderShortcut = (event: KeyboardEvent): boolean =>
+  (event.ctrlKey || event.metaKey) &&
+  event.shiftKey &&
+  (event.code === "KeyN" || event.key.toLocaleLowerCase() === "n");
 
 type ClientEncryptionFolderAction = "encrypt-existing" | "decrypt-existing";
 
@@ -227,6 +281,30 @@ const buildSelectionArchiveRequest = (
   return { fileIds, nodeIds, archiveName: archiveName ?? undefined };
 };
 
+const updateFolderEncryptionPolicyTree = async (
+  folderId: string,
+  nextEnabled: boolean,
+): Promise<NodeDto[]> => {
+  const value = String(nextEnabled);
+  const scan = await collectFoldersInFoldersForClientEncryption([folderId]);
+  const foldersToUpdate = [
+    folderId,
+    ...scan.folders
+      .filter((folder) => folder.metadata?.[FOLDER_ENCRYPTION_POLICY_KEY] !== value)
+      .map((folder) => folder.id),
+  ];
+  const updatedNodes: NodeDto[] = [];
+
+  for (const nodeId of foldersToUpdate) {
+    const updated = await nodesApi.updateNodeMetadata(nodeId, {
+      [FOLDER_ENCRYPTION_POLICY_KEY]: value,
+    });
+    updatedNodes.push(updated);
+  }
+
+  return updatedNodes;
+};
+
 const buildFilesCustomActionItems = (options: {
   clipboardCount: number;
   cutTitle: string;
@@ -332,6 +410,7 @@ type FilesPageViewProps = {
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
   const confirm = useConfirm();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams<{ nodeId?: string }>();
@@ -352,7 +431,6 @@ export const FilesPage: React.FC = () => {
   const currentUserId = useAuthStore((s) => s.user?.id ?? null);
 
   const routeNodeId = params.nodeId;
-
   const { layoutType, setLayoutType, tilesSize, viewMode, cycleViewMode } =
     useFilesLayout();
 
@@ -532,6 +610,49 @@ export const FilesPage: React.FC = () => {
     onToast: showToast,
   });
   const fileOps = useFileOperations(reloadCurrentNode);
+  const [isCreatingMarkdownFile, setIsCreatingMarkdownFile] =
+    React.useState(false);
+
+  const getCurrentSiblingNames = React.useCallback(
+    () =>
+      tiles.map((tile) =>
+        tile.kind === "folder" ? tile.node.name : tile.file.name,
+      ),
+    [tiles],
+  );
+
+  const handleNewFolderClick = React.useCallback(() => {
+    const folderName = buildUniqueSiblingName(
+      t("actions.defaultNewFolderName", { ns: "files" }),
+      getCurrentSiblingNames(),
+    );
+    folderOps.handleNewFolder(folderName);
+  }, [folderOps, getCurrentSiblingNames, t]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        !nodeId ||
+        loading ||
+        folderOps.isCreatingFolder ||
+        !isCreateFolderShortcut(event) ||
+        isEditableKeyboardTarget(event.target)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      handleNewFolderClick();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    folderOps.isCreatingFolder,
+    handleNewFolderClick,
+    loading,
+    nodeId,
+  ]);
   const handleRestoreLightboxFile = React.useCallback(
     async (fileId: string) => {
       try {
@@ -625,6 +746,69 @@ export const FilesPage: React.FC = () => {
 
     return unlockPrompt;
   }, [clientEncryptionEnvelope, currentFolderRequiresUnlock, unlockPrompt]);
+
+  const handleCreateMarkdownFile = React.useCallback(async () => {
+    if (!nodeId || isCreatingMarkdownFile) {
+      return;
+    }
+
+    if (currentFolderEncryptionPolicy.effectiveEnabled && !isVaultUnlocked) {
+      if (!clientEncryptionEnvelope) {
+        showToast(
+          t("clientEncryption.toasts.setupRequired", { ns: "files" }),
+          "error",
+        );
+        return;
+      }
+
+      setUnlockPrompt({ kind: "current" });
+      return;
+    }
+
+    const fileName = buildUniqueSiblingName(
+      t("actions.defaultMarkdownFileName", { ns: "files" }),
+      getCurrentSiblingNames(),
+    );
+
+    setIsCreatingMarkdownFile(true);
+
+    try {
+      const settings = await fetchServerSettings(queryClient);
+      const createdFile = await uploadFileToNode({
+        file: new File([""], fileName, { type: MARKDOWN_FILE_CONTENT_TYPE }),
+        nodeId,
+        server: {
+          maxChunkSizeBytes: settings.maxChunkSizeBytes,
+          supportedHashAlgorithm: settings.supportedHashAlgorithm,
+        },
+        encrypt: currentFolderEncryptionPolicy.effectiveEnabled,
+      });
+      const displayFile = await applyDisplayMetaToFile(createdFile);
+
+      useNodesStore.getState().moveFileInCache(displayFile, nodeId, nodeId);
+      fileOps.handleRenameFile(displayFile.id, displayFile.name);
+      void refreshNodeContent(nodeId);
+    } catch (error) {
+      console.error("Failed to create markdown file:", error);
+      showToast(
+        t("uploadDrop.errors.createMarkdownFileFailed", { ns: "files" }),
+        "error",
+      );
+    } finally {
+      setIsCreatingMarkdownFile(false);
+    }
+  }, [
+    clientEncryptionEnvelope,
+    currentFolderEncryptionPolicy.effectiveEnabled,
+    fileOps,
+    getCurrentSiblingNames,
+    isCreatingMarkdownFile,
+    isVaultUnlocked,
+    nodeId,
+    queryClient,
+    showToast,
+    t,
+  ]);
 
   const runFolderClientEncryptionAction = React.useCallback(
     (action: ClientEncryptionFolderAction) => {
@@ -806,10 +990,14 @@ export const FilesPage: React.FC = () => {
       const nextEnabled = !currentlyEnabled;
 
       try {
-        const updated = await nodesApi.updateNodeMetadata(folderId, {
-          [FOLDER_ENCRYPTION_POLICY_KEY]: String(nextEnabled),
-        });
-        useNodesStore.getState().updateNode(updated);
+        const updatedNodes = await updateFolderEncryptionPolicyTree(
+          folderId,
+          nextEnabled,
+        );
+        const store = useNodesStore.getState();
+        for (const updated of updatedNodes) {
+          store.updateNode(updated);
+        }
         showToast(
           nextEnabled
             ? t("clientEncryption.toasts.policyEnabled", { ns: "files" })
@@ -960,9 +1148,12 @@ export const FilesPage: React.FC = () => {
       onViewModeCycle: cycleViewMode,
       showViewModeToggle: !isHugeFolder,
       showUpload: !!nodeId,
+      showNewFile: !!nodeId,
       showNewFolder: !!nodeId,
       onUploadClick: fileUpload.handleUploadClick,
-      onNewFolderClick: folderOps.handleNewFolder,
+      onNewFileClick: handleCreateMarkdownFile,
+      onNewFolderClick: handleNewFolderClick,
+      isCreatingFile: isCreatingMarkdownFile,
       isCreatingFolder: folderOps.isCreatingFolder,
       selectionMode: fileSelection.selectionMode,
       selectedCount: fileSelection.selectedCount,
@@ -982,7 +1173,9 @@ export const FilesPage: React.FC = () => {
       goUpDropHandlers,
       fileSelection,
       fileUpload.handleUploadClick,
-      folderOps.handleNewFolder,
+      handleCreateMarkdownFile,
+      handleNewFolderClick,
+      isCreatingMarkdownFile,
       folderOps.isCreatingFolder,
       goHome,
       handleGoUp,

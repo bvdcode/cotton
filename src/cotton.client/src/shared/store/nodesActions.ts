@@ -412,6 +412,11 @@ const scheduleRootResolveIfNeeded = (nodeId: string, options: LoadNodeOptions) =
   }
 };
 
+const getLoadNodeErrorMessage = (statusCode: number | undefined): string =>
+  statusCode === 404
+    ? tFileError("errors.folderNotFound")
+    : tFileError("errors.loadContentsFailed");
+
 const handleLoadNodeFailureAsync = async (
   nodeId: string,
   error: unknown,
@@ -424,7 +429,7 @@ const handleLoadNodeFailureAsync = async (
   console.error("Failed to load node view", error);
   useNodesStore.setState({
     loading: false,
-    error: tFileError("errors.loadContentsFailed"),
+    error: getLoadNodeErrorMessage(statusCode),
   });
 };
 

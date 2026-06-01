@@ -312,51 +312,61 @@ namespace Cotton.Previews
                 using JsonDocument document = JsonDocument.Parse(raw);
                 JsonElement root = document.RootElement;
 
-                double? duration = null;
-                if (root.TryGetProperty("format", out JsonElement format)
-                    && format.TryGetProperty("duration", out JsonElement durationElement)
-                    && double.TryParse(durationElement.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out double durationValue)
-                    && durationValue > 0)
-                {
-                    duration = durationValue;
-                }
-
-                string? videoCodec = null;
-                string? audioCodec = null;
-                if (root.TryGetProperty("streams", out JsonElement streams))
-                {
-                    foreach (JsonElement stream in streams.EnumerateArray())
-                    {
-                        if (!stream.TryGetProperty("codec_type", out JsonElement typeElement)
-                            || !stream.TryGetProperty("codec_name", out JsonElement codecElement))
-                        {
-                            continue;
-                        }
-
-                        string? codecType = typeElement.GetString();
-                        string? codecName = codecElement.GetString();
-                        if (codecName is null)
-                        {
-                            continue;
-                        }
-
-                        if (codecType == "video" && videoCodec is null)
-                        {
-                            videoCodec = codecName;
-                        }
-                        else if (codecType == "audio" && audioCodec is null)
-                        {
-                            audioCodec = codecName;
-                        }
-                    }
-                }
-
-                return new MediaProbeInfo(duration, videoCodec, audioCodec);
+                return new MediaProbeInfo(
+                    ParseProbeDuration(root),
+                    ParseFirstStreamCodec(root, "video"),
+                    ParseFirstStreamCodec(root, "audio"));
             }
             catch (JsonException)
             {
                 return null;
             }
+        }
+
+        private static double? ParseProbeDuration(JsonElement root)
+        {
+            return root.TryGetProperty("format", out JsonElement format)
+                && format.TryGetProperty("duration", out JsonElement durationElement)
+                    ? ParsePositiveDuration(durationElement.GetString() ?? string.Empty)
+                    : null;
+        }
+
+        private static string? ParseFirstStreamCodec(JsonElement root, string targetCodecType)
+        {
+            if (!root.TryGetProperty("streams", out JsonElement streams))
+            {
+                return null;
+            }
+
+            foreach (JsonElement stream in streams.EnumerateArray())
+            {
+                if (TryReadStreamCodec(stream, out string? codecType, out string? codecName)
+                    && codecType == targetCodecType)
+                {
+                    return codecName;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool TryReadStreamCodec(
+            JsonElement stream,
+            out string? codecType,
+            out string? codecName)
+        {
+            codecType = null;
+            codecName = null;
+
+            if (!stream.TryGetProperty("codec_type", out JsonElement typeElement)
+                || !stream.TryGetProperty("codec_name", out JsonElement codecElement))
+            {
+                return false;
+            }
+
+            codecType = typeElement.GetString();
+            codecName = codecElement.GetString();
+            return codecName is not null;
         }
     }
 }

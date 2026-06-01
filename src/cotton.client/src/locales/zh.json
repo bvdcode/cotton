@@ -2337,6 +2337,7 @@
     "errors": {
       "resolveRootFailed": "无法解析根文件夹",
       "loadContentsFailed": "加载文件夹内容失败",
+      "folderNotFound": "文件夹未找到",
       "createFolderFailed": "创建文件夹失败",
       "deleteFolderFailed": "删除文件夹失败",
       "renameFolderFailed": "重命名文件夹失败",
@@ -2391,7 +2392,8 @@
         "someItemsSkipped_many": "Skipped {{count}} items that could not be read."
       },
       "errors": {
-        "dropFailed": "处理拖放项目失败，请重试。"
+        "dropFailed": "处理拖放项目失败，请重试。",
+        "createMarkdownFileFailed": "无法创建 Markdown 文件。请重试。"
       },
       "skippedDialog": {
         "title": "已跳过的项目",
@@ -2403,6 +2405,9 @@
     "actions": {
       "upload": "上传",
       "newFolder": "新建文件夹",
+      "newMarkdownFile": "新建 Markdown 文件",
+      "defaultMarkdownFileName": "新文件.md",
+      "defaultNewFolderName": "新建文件夹",
       "folderNamePlaceholder": "文件夹名称",
       "goToFolder": "前往文件夹",
       "goUp": "上一级",
@@ -2634,6 +2639,7 @@
     "errors": {
       "serverSettingsNotLoaded": "服务器设置尚未加载",
       "uploadFailed": "上传失败",
+      "deleteFailed": "删除失败",
       "storageQuotaExceeded": "存储空间不足。可用：{{available}}。",
       "encryptionVaultLocked": "加密保险库已锁定",
       "encryptionFailed": "加密失败",
@@ -2642,6 +2648,7 @@
     },
     "titleWithTotal": "任务 ({{total}})",
     "titleWithProgress": "任务 ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithProgressNoSpeed": "任务（{{completed}} / {{total}}）",
     "titleWithErrors": "任务 ({{total}} · 失败 {{failed}})",
     "actions": {
       "expand": "展开",

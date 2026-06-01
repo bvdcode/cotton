@@ -2429,6 +2429,7 @@
     "errors": {
       "resolveRootFailed": "Не удалось определить корневую папку",
       "loadContentsFailed": "Не удалось загрузить содержимое папки",
+      "folderNotFound": "Папка не найдена",
       "createFolderFailed": "Не удалось создать папку",
       "deleteFolderFailed": "Не удалось удалить папку",
       "renameFolderFailed": "Не удалось переименовать папку",
@@ -2491,7 +2492,8 @@
         "details": "Детали"
       },
       "errors": {
-        "dropFailed": "Не удалось обработать перетаскивание. Попробуйте ещё раз."
+        "dropFailed": "Не удалось обработать перетаскивание. Попробуйте ещё раз.",
+        "createMarkdownFileFailed": "Не удалось создать Markdown-файл. Попробуйте ещё раз."
       },
       "skippedDialog": {
         "title": "Пропущенные элементы",
@@ -2503,6 +2505,9 @@
     "actions": {
       "upload": "Загрузить",
       "newFolder": "Новая папка",
+      "newMarkdownFile": "Новый Markdown-файл",
+      "defaultMarkdownFileName": "Новый файл.md",
+      "defaultNewFolderName": "Новая папка",
       "folderNamePlaceholder": "Название папки",
       "goToFolder": "Перейти в папку",
       "goUp": "Вверх",
@@ -2760,6 +2765,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Настройки сервера не загружены",
       "uploadFailed": "Загрузка не удалась",
+      "deleteFailed": "Удаление не удалось",
       "storageQuotaExceeded": "Недостаточно места. Доступно: {{available}}.",
       "encryptionVaultLocked": "Крипто-хранилище заблокировано",
       "encryptionFailed": "Шифрование не удалось",
@@ -2768,6 +2774,7 @@
     },
     "titleWithTotal": "Задачи ({{total}})",
     "titleWithProgress": "Задачи ({{completed}} / {{total}} - {{speed}}/с)",
+    "titleWithProgressNoSpeed": "Задачи ({{completed}} / {{total}})",
     "titleWithErrors": "Задачи ({{total}} • с ошибкой: {{failed}})",
     "actions": {
       "expand": "Развернуть",

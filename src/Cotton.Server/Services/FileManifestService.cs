@@ -150,6 +150,15 @@ namespace Cotton.Server.Services
         public static string ResolveContentType(string? fileName, string? contentType)
         {
             string normalizedContentType = NormalizeContentType(contentType);
+            return ResolveOverriddenContentType(fileName, normalizedContentType)
+                ?? ResolveProvidedContentType(fileName, normalizedContentType)
+                ?? ResolveDetectedContentType(fileName)
+                ?? ResolveSourceTextFallback(fileName)
+                ?? ResolveDefaultContentType(normalizedContentType);
+        }
+
+        private static string? ResolveOverriddenContentType(string? fileName, string normalizedContentType)
+        {
             string extension = Path.GetExtension(fileName ?? string.Empty);
             if (!string.IsNullOrWhiteSpace(extension)
                 && extensionContentTypeOverrides.TryGetValue(extension, out string? overriddenContentType)
@@ -160,6 +169,11 @@ namespace Cotton.Server.Services
                 return overriddenContentType;
             }
 
+            return null;
+        }
+
+        private static string? ResolveProvidedContentType(string? fileName, string normalizedContentType)
+        {
             if (!string.IsNullOrWhiteSpace(normalizedContentType)
                 && !string.Equals(normalizedContentType, DefaultContentType, StringComparison.OrdinalIgnoreCase))
             {
@@ -168,6 +182,11 @@ namespace Cotton.Server.Services
                     : normalizedContentType;
             }
 
+            return null;
+        }
+
+        private static string? ResolveDetectedContentType(string? fileName)
+        {
             if (!string.IsNullOrWhiteSpace(fileName)
                 && fileExtensionContentTypeProvider.TryGetContentType(fileName, out string? detectedContentType)
                 && !string.IsNullOrWhiteSpace(detectedContentType))
@@ -178,15 +197,16 @@ namespace Cotton.Server.Services
                     : normalizedDetectedContentType;
             }
 
-            if (IsSourceTextFileName(fileName))
-            {
-                return "text/plain";
-            }
+            return null;
+        }
 
-            return string.IsNullOrWhiteSpace(normalizedContentType)
+        private static string? ResolveSourceTextFallback(string? fileName) =>
+            IsSourceTextFileName(fileName) ? "text/plain" : null;
+
+        private static string ResolveDefaultContentType(string normalizedContentType) =>
+            string.IsNullOrWhiteSpace(normalizedContentType)
                 ? DefaultContentType
                 : normalizedContentType;
-        }
 
         /// <summary>Returns true when the filename should be treated as source-code text for preview generation.</summary>
         public static bool IsSourceTextFileName(string? fileName)

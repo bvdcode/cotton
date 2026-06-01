@@ -82,6 +82,10 @@ export const calculateTaskStats = (tasks: AppTask[]) => {
   };
 };
 
+const shouldShowTaskSpeed = (task: AppTask): boolean =>
+  task.kind === "upload" &&
+  (task.status === "running" || task.status === "finalizing");
+
 export const getWidgetTitle = (
   stats: ReturnType<typeof calculateTaskStats>,
   isCollapsed: boolean,
@@ -89,20 +93,29 @@ export const getWidgetTitle = (
   totalSpeed: number,
 ):
   | { key: "titleWithProgress"; options: { completed: number; total: number; speed: string } }
+  | { key: "titleWithProgressNoSpeed"; options: { completed: number; total: number } }
   | { key: "titleWithErrors"; options: { total: number; failed: number } }
   | { key: "title" }
   | { key: "titleWithTotal"; options: { total: number } } => {
   const { hasActive, allCompleted, hasErrors, completed, failed, inProgress, total } = stats;
 
   if (hasActive) {
-    return {
-      key: "titleWithProgress",
-      options: {
-        completed: Math.min(completed + failed + inProgress, total),
-        total,
-        speed: formatBytes(totalSpeed),
-      },
-    };
+    const completedCount = Math.min(completed + failed + inProgress, total);
+    const hasSpeedTask = stats.activeTasks.some(shouldShowTaskSpeed);
+
+    return hasSpeedTask
+      ? {
+          key: "titleWithProgress",
+          options: {
+            completed: completedCount,
+            total,
+            speed: formatBytes(totalSpeed),
+          },
+        }
+      : {
+          key: "titleWithProgressNoSpeed",
+          options: { completed: completedCount, total },
+        };
   }
 
   if (allCompleted && hasErrors) {

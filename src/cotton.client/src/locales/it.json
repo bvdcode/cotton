@@ -2330,6 +2330,7 @@
     "errors": {
       "resolveRootFailed": "Impossibile risolvere la cartella radice",
       "loadContentsFailed": "Impossibile caricare il contenuto della cartella",
+      "folderNotFound": "Cartella non trovata",
       "createFolderFailed": "Impossibile creare la cartella",
       "deleteFolderFailed": "Impossibile eliminare la cartella",
       "renameFolderFailed": "Impossibile rinominare la cartella",
@@ -2384,7 +2385,8 @@
         "details": "Dettagli"
       },
       "errors": {
-        "dropFailed": "Impossibile elaborare gli elementi rilasciati. Riprovi."
+        "dropFailed": "Impossibile elaborare gli elementi rilasciati. Riprovi.",
+        "createMarkdownFileFailed": "Impossibile creare il file Markdown. Riprova."
       },
       "skippedDialog": {
         "title": "Elementi saltati",
@@ -2396,6 +2398,9 @@
     "actions": {
       "upload": "Carica",
       "newFolder": "Nuova cartella",
+      "newMarkdownFile": "Nuovo file Markdown",
+      "defaultMarkdownFileName": "Nuovo file.md",
+      "defaultNewFolderName": "Nuova cartella",
       "folderNamePlaceholder": "Nome cartella",
       "goToFolder": "Vai alla cartella",
       "goUp": "Vai su",
@@ -2627,6 +2632,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Le impostazioni del server non sono state caricate",
       "uploadFailed": "Caricamento non riuscito",
+      "deleteFailed": "Eliminazione non riuscita",
       "storageQuotaExceeded": "Spazio di archiviazione insufficiente. Disponibile: {{available}}.",
       "encryptionVaultLocked": "Il vault di crittografia è bloccato",
       "encryptionFailed": "Crittografia non riuscita",
@@ -2635,6 +2641,7 @@
     },
     "titleWithTotal": "Attività ({{total}})",
     "titleWithProgress": "Attività ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithProgressNoSpeed": "Attività ({{completed}} / {{total}})",
     "titleWithErrors": "Attività ({{total}} • {{failed}} fallite)",
     "actions": {
       "expand": "Espandi",

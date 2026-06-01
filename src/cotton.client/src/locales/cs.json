@@ -2329,6 +2329,7 @@
     "errors": {
       "resolveRootFailed": "Nepodařilo se určit kořenovou složku",
       "loadContentsFailed": "Načtení obsahu složky se nezdařilo",
+      "folderNotFound": "Složka nebyla nalezena",
       "createFolderFailed": "Vytvoření složky se nezdařilo",
       "deleteFolderFailed": "Smazání složky se nezdařilo",
       "renameFolderFailed": "Přejmenování složky se nezdařilo",
@@ -2391,7 +2392,8 @@
         "details": "Podrobnosti"
       },
       "errors": {
-        "dropFailed": "Zpracování přetažených položek se nezdařilo. Zkuste to prosím znovu."
+        "dropFailed": "Zpracování přetažených položek se nezdařilo. Zkuste to prosím znovu.",
+        "createMarkdownFileFailed": "Nepodařilo se vytvořit soubor Markdown. Zkuste to znovu."
       },
       "skippedDialog": {
         "title": "Přeskočené položky",
@@ -2403,6 +2405,9 @@
     "actions": {
       "upload": "Nahrát",
       "newFolder": "Nová složka",
+      "newMarkdownFile": "Nový soubor Markdown",
+      "defaultMarkdownFileName": "Nový soubor.md",
+      "defaultNewFolderName": "Nová složka",
       "folderNamePlaceholder": "Název složky",
       "goToFolder": "Přejít do složky",
       "goUp": "O úroveň výš",
@@ -2660,6 +2665,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Nastavení serveru není načteno",
       "uploadFailed": "Nahrávání selhalo",
+      "deleteFailed": "Odstranění se nezdařilo",
       "storageQuotaExceeded": "Nedostatek místa v úložišti. K dispozici: {{available}}.",
       "encryptionVaultLocked": "Šifrovací trezor je uzamčen",
       "encryptionFailed": "Šifrování selhalo",
@@ -2668,6 +2674,7 @@
     },
     "titleWithTotal": "Úlohy ({{total}})",
     "titleWithProgress": "Úlohy ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithProgressNoSpeed": "Úlohy ({{completed}} / {{total}})",
     "titleWithErrors": "Úlohy ({{total}} • {{failed}} selhalo)",
     "actions": {
       "expand": "Rozbalit",

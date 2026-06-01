@@ -3,19 +3,11 @@
   "createdAtUtc": "2026-05-22T22:07:28.0947377+00:00",
   "mode": "machine",
   "profile": "standard",
-<<<<<<<< HEAD:performance/baselines/windows-x64-14th-gen-intel-r-core-tm-i7-14700f-dotnet10.machine.standard.json
   "hardwareKey": "windows-x64-14th-gen-intel-r-core-tm-i7-14700f-dotnet10",
   "gitCommit": "009d980a91db",
   "environment": {
     "architecture": "X64",
     "cpu": "14th Gen Intel(R) Core(TM) i7-14700F",
-========
-  "hardwareKey": "windows-x64-intel-core-i7-14700f-dotnet10",
-  "gitCommit": "009d980a91db",
-  "environment": {
-    "architecture": "X64",
-    "cpu": "Intel Core i7-14700F",
->>>>>>>> develop:performance/baselines/windows-x64-intel-core-i7-14700f-dotnet10.machine.standard.json
     "dotnet": "10.0.7",
     "logicalProcessors": "28",
     "os": "Microsoft Windows 10.0.26200",

@@ -2123,6 +2123,7 @@
     "errors": {
       "resolveRootFailed": "Failed to resolve root folder",
       "loadContentsFailed": "Failed to load folder contents",
+      "folderNotFound": "Folder not found",
       "createFolderFailed": "Failed to create folder",
       "deleteFolderFailed": "Failed to delete folder",
       "renameFolderFailed": "Failed to rename folder",
@@ -2177,7 +2178,8 @@
         "details": "Details"
       },
       "errors": {
-        "dropFailed": "Failed to process dropped items. Please try again."
+        "dropFailed": "Failed to process dropped items. Please try again.",
+        "createMarkdownFileFailed": "Failed to create Markdown file. Please try again."
       },
       "skippedDialog": {
         "title": "Skipped items",
@@ -2189,6 +2191,9 @@
     "actions": {
       "upload": "Upload",
       "newFolder": "New folder",
+      "newMarkdownFile": "New Markdown file",
+      "defaultMarkdownFileName": "New File.md",
+      "defaultNewFolderName": "New Folder",
       "folderNamePlaceholder": "Folder name",
       "goToFolder": "Go to folder",
       "goUp": "Go up",
@@ -2420,6 +2425,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Server settings are not loaded",
       "uploadFailed": "Upload failed",
+      "deleteFailed": "Deletion failed",
       "storageQuotaExceeded": "Not enough storage space. Available: {{available}}.",
       "encryptionVaultLocked": "Encryption vault is locked",
       "encryptionFailed": "Encryption failed",
@@ -2428,6 +2434,7 @@
     },
     "titleWithTotal": "Tasks ({{total}})",
     "titleWithProgress": "Tasks ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithProgressNoSpeed": "Tasks ({{completed}} / {{total}})",
     "titleWithErrors": "Tasks ({{total}} • {{failed}} failed)",
     "actions": {
       "expand": "Expand",

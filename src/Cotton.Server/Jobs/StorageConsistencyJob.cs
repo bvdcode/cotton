@@ -114,54 +114,71 @@ namespace Cotton.Server.Jobs
 
         private async Task HandleMissingChunkAsync(byte[] chunkHash, CancellationToken ct)
         {
-            // 1) If the missing chunk is used by previews only, silently clear preview references.
             bool referencedByFileData = await _dbContext.FileManifestChunks
                 .AnyAsync(fmc => fmc.ChunkHash == chunkHash, ct);
 
+            await ClearMissingPreviewReferencesAsync(chunkHash, ct);
+            await ClearMissingAvatarReferencesAsync(chunkHash, ct);
+
+            if (referencedByFileData)
+            {
+                await NotifyMissingFileDataOwnersAsync(chunkHash, ct);
+            }
+        }
+
+        private async Task ClearMissingPreviewReferencesAsync(byte[] chunkHash, CancellationToken ct)
+        {
             bool referencedByPreview = await _dbContext.FileManifests
                 .AnyAsync(fm => fm.SmallFilePreviewHash == chunkHash || fm.LargeFilePreviewHash == chunkHash, ct);
-
-            if (referencedByPreview)
-            {
-                List<FileManifest> previewManifests = await _dbContext.FileManifests
-                    .Where(fm => fm.SmallFilePreviewHash == chunkHash || fm.LargeFilePreviewHash == chunkHash)
-                    .ToListAsync(ct);
-
-                foreach (FileManifest manifest in previewManifests)
-                {
-                    if (manifest.SmallFilePreviewHash is not null && manifest.SmallFilePreviewHash.SequenceEqual(chunkHash))
-                    {
-                        manifest.SmallFilePreviewHash = null;
-                        manifest.SmallFilePreviewHashEncrypted = null;
-                    }
-
-                    if (manifest.LargeFilePreviewHash is not null && manifest.LargeFilePreviewHash.SequenceEqual(chunkHash))
-                    {
-                        manifest.LargeFilePreviewHash = null;
-                    }
-                }
-
-                await _dbContext.SaveChangesAsync(ct);
-            }
-
-            bool referencedByAvatar = await _dbContext.Users
-                .AnyAsync(u => u.AvatarHash == chunkHash, ct);
-
-            if (referencedByAvatar)
-            {
-                await _dbContext.Users
-                    .Where(u => u.AvatarHash == chunkHash)
-                    .ExecuteUpdateAsync(u => u
-                        .SetProperty(x => x.AvatarHash, (byte[]?)null)
-                        .SetProperty(x => x.AvatarHashEncrypted, (byte[]?)null), ct);
-            }
-
-            if (!referencedByFileData)
+            if (!referencedByPreview)
             {
                 return;
             }
 
-            // 2) For actual file data chunks: notify affected users, but do not delete anything.
+            List<FileManifest> previewManifests = await _dbContext.FileManifests
+                .Where(fm => fm.SmallFilePreviewHash == chunkHash || fm.LargeFilePreviewHash == chunkHash)
+                .ToListAsync(ct);
+
+            foreach (FileManifest manifest in previewManifests)
+            {
+                ClearMissingPreviewHashes(manifest, chunkHash);
+            }
+
+            await _dbContext.SaveChangesAsync(ct);
+        }
+
+        private static void ClearMissingPreviewHashes(FileManifest manifest, byte[] chunkHash)
+        {
+            if (manifest.SmallFilePreviewHash is not null && manifest.SmallFilePreviewHash.SequenceEqual(chunkHash))
+            {
+                manifest.SmallFilePreviewHash = null;
+                manifest.SmallFilePreviewHashEncrypted = null;
+            }
+
+            if (manifest.LargeFilePreviewHash is not null && manifest.LargeFilePreviewHash.SequenceEqual(chunkHash))
+            {
+                manifest.LargeFilePreviewHash = null;
+            }
+        }
+
+        private async Task ClearMissingAvatarReferencesAsync(byte[] chunkHash, CancellationToken ct)
+        {
+            bool referencedByAvatar = await _dbContext.Users
+                .AnyAsync(u => u.AvatarHash == chunkHash, ct);
+            if (!referencedByAvatar)
+            {
+                return;
+            }
+
+            await _dbContext.Users
+                .Where(u => u.AvatarHash == chunkHash)
+                .ExecuteUpdateAsync(u => u
+                    .SetProperty(x => x.AvatarHash, (byte[]?)null)
+                    .SetProperty(x => x.AvatarHashEncrypted, (byte[]?)null), ct);
+        }
+
+        private async Task NotifyMissingFileDataOwnersAsync(byte[] chunkHash, CancellationToken ct)
+        {
             var affectedManifestIds = await _dbContext.FileManifestChunks
                 .Where(fmc => fmc.ChunkHash == chunkHash)
                 .Select(fmc => fmc.FileManifestId)
@@ -175,20 +192,29 @@ namespace Cotton.Server.Jobs
             HashSet<(Guid OwnerId, string FileName)> notified = [];
             foreach (var nodeFile in affectedNodeFiles)
             {
-                if (notified.Add((nodeFile.OwnerId, nodeFile.Name)))
-                {
-                    try
-                    {
-                        await _notifications.SendStorageChunkMissingNotificationAsync(
-                            nodeFile.OwnerId,
-                            nodeFile.Name);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to send missing chunk notification to user {UserId} for file {FileName}.",
-                            nodeFile.OwnerId, nodeFile.Name);
-                    }
-                }
+                await NotifyMissingFileDataOwnerOnceAsync(nodeFile, notified);
+            }
+        }
+
+        private async Task NotifyMissingFileDataOwnerOnceAsync(
+            NodeFile nodeFile,
+            ISet<(Guid OwnerId, string FileName)> notified)
+        {
+            if (!notified.Add((nodeFile.OwnerId, nodeFile.Name)))
+            {
+                return;
+            }
+
+            try
+            {
+                await _notifications.SendStorageChunkMissingNotificationAsync(
+                    nodeFile.OwnerId,
+                    nodeFile.Name);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send missing chunk notification to user {UserId} for file {FileName}.",
+                    nodeFile.OwnerId, nodeFile.Name);
             }
         }
 

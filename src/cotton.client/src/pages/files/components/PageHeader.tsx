@@ -17,6 +17,7 @@ import {
   Deselect,
   Home,
   MoreVert,
+  NoteAdd,
   SelectAll,
   UploadFile,
   ViewModule,
@@ -62,9 +63,12 @@ export interface PageHeaderProps {
 
   // Optional actions
   showUpload?: boolean;
+  showNewFile?: boolean;
   showNewFolder?: boolean;
   onUploadClick?: () => void;
+  onNewFileClick?: () => void;
   onNewFolderClick?: () => void;
+  isCreatingFile?: boolean;
   isCreatingFolder?: boolean;
 
   // Selection mode
@@ -95,11 +99,13 @@ type PageHeaderActionFactoryOptions = Pick<
   | "canGoUp"
   | "customActionItems"
   | "goUpDropHandlers"
+  | "isCreatingFile"
   | "isCreatingFolder"
   | "loading"
   | "onDeselectAll"
   | "onGoUp"
   | "onHomeClick"
+  | "onNewFileClick"
   | "onNewFolderClick"
   | "onSelectAll"
   | "onToggleSelectionMode"
@@ -107,6 +113,7 @@ type PageHeaderActionFactoryOptions = Pick<
   | "onViewModeCycle"
   | "selectedCount"
   | "selectionMode"
+  | "showNewFile"
   | "showNewFolder"
   | "showUpload"
   | "showViewModeToggle"
@@ -130,10 +137,13 @@ const buildPageHeaderActions = (
   ];
 
   appendCreationActions(actions, {
+    isCreatingFile: options.isCreatingFile,
     isCreatingFolder: options.isCreatingFolder,
     loading: options.loading,
+    onNewFileClick: options.onNewFileClick,
     onNewFolderClick: options.onNewFolderClick,
     onUploadClick: options.onUploadClick,
+    showNewFile: options.showNewFile,
     showNewFolder: options.showNewFolder,
     showUpload: options.showUpload,
     t: options.t,
@@ -181,10 +191,13 @@ const createGoUpAction = (
 
 type CreationActionOptions = Pick<
   PageHeaderActionFactoryOptions,
+  | "isCreatingFile"
   | "isCreatingFolder"
   | "loading"
+  | "onNewFileClick"
   | "onNewFolderClick"
   | "onUploadClick"
+  | "showNewFile"
   | "showNewFolder"
   | "showUpload"
   | "t"
@@ -201,6 +214,16 @@ const appendCreationActions = (
       title: options.t("actions.upload"),
       onClick: options.onUploadClick,
       disabled: options.loading,
+    });
+  }
+
+  if (options.showNewFile && options.onNewFileClick) {
+    actions.push({
+      key: "new-markdown-file",
+      icon: <NoteAdd />,
+      title: options.t("actions.newMarkdownFile"),
+      onClick: options.onNewFileClick,
+      disabled: options.loading || options.isCreatingFile,
     });
   }
 
@@ -335,9 +358,12 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   showViewModeToggle = true,
   statsNamespace = "files",
   showUpload = false,
+  showNewFile = false,
   showNewFolder = false,
   onUploadClick,
+  onNewFileClick,
   onNewFolderClick,
+  isCreatingFile = false,
   isCreatingFolder = false,
   selectionMode = false,
   selectedCount = 0,
@@ -378,12 +404,14 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     canGoUp,
     customActionItems,
     goUpDropHandlers,
+    isCreatingFile,
     isCreatingFolder,
     loading,
     nextViewTitleKey,
     onDeselectAll,
     onGoUp,
     onHomeClick,
+    onNewFileClick,
     onNewFolderClick,
     onSelectAll,
     onToggleSelectionMode,
@@ -391,6 +419,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     onViewModeCycle,
     selectedCount,
     selectionMode,
+    showNewFile,
     showNewFolder,
     showUpload,
     showViewModeToggle,

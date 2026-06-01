@@ -50,6 +50,16 @@ type FlashTimers = {
   pipeline: number | null;
 };
 
+const flashTimerKeys: Array<keyof FlashTimers> = [
+  "storageType",
+  "s3",
+  "storageSpace",
+  "quota",
+  "template",
+  "chunkSize",
+  "pipeline",
+];
+
 const bytesPerGiB = 1024 ** 3;
 const bytesPerMiB = 1024 ** 2;
 const defaultChunkSizeOptionsBytes = [4, 8, 16].map(
@@ -129,6 +139,16 @@ const emptyS3Config: S3Config = {
   secretKey: "",
 };
 
+const clearFlashTimers = (flashTimers: FlashTimers): void => {
+  for (const key of flashTimerKeys) {
+    const pendingTimer = flashTimers[key];
+    if (pendingTimer !== null) {
+      window.clearTimeout(pendingTimer);
+      flashTimers[key] = null;
+    }
+  }
+};
+
 const flashStatus = (
   setStatus: Dispatch<SetStateAction<SaveStatus>>,
   flashTimers: FlashTimers,
@@ -152,6 +172,17 @@ const combineStatuses = (...statuses: SaveStatus[]): SaveStatus => {
   if (statuses.includes("saved")) return "saved";
   return "idle";
 };
+
+const isStatusBusy = (status: SaveStatus): boolean =>
+  status === "loading" || status === "saving";
+
+const isAnyStatusSaving = (...statuses: SaveStatus[]): boolean =>
+  statuses.includes("saving");
+
+const isStorageTypeDisabled = (
+  storageTypeStatus: SaveStatus,
+  s3Status: SaveStatus,
+): boolean => isStatusBusy(storageTypeStatus) || s3Status === "saving";
 
 export const AdminStorageSettingsPage = () => {
   const { t } = useTranslation("admin");
@@ -297,34 +328,7 @@ export const AdminStorageSettingsPage = () => {
 
     return () => {
       active = false;
-      if (flashTimers.storageType !== null) {
-        window.clearTimeout(flashTimers.storageType);
-        flashTimers.storageType = null;
-      }
-      if (flashTimers.s3 !== null) {
-        window.clearTimeout(flashTimers.s3);
-        flashTimers.s3 = null;
-      }
-      if (flashTimers.storageSpace !== null) {
-        window.clearTimeout(flashTimers.storageSpace);
-        flashTimers.storageSpace = null;
-      }
-      if (flashTimers.quota !== null) {
-        window.clearTimeout(flashTimers.quota);
-        flashTimers.quota = null;
-      }
-      if (flashTimers.template !== null) {
-        window.clearTimeout(flashTimers.template);
-        flashTimers.template = null;
-      }
-      if (flashTimers.chunkSize !== null) {
-        window.clearTimeout(flashTimers.chunkSize);
-        flashTimers.chunkSize = null;
-      }
-      if (flashTimers.pipeline !== null) {
-        window.clearTimeout(flashTimers.pipeline);
-        flashTimers.pipeline = null;
-      }
+      clearFlashTimers(flashTimers);
     };
   }, [flashTimers, t]);
 
@@ -644,32 +648,27 @@ export const AdminStorageSettingsPage = () => {
     }
   };
 
-  const storageTypeDisabled =
-    storageTypeStatus === "loading"
-    || storageTypeStatus === "saving"
-    || s3Status === "saving";
-  const s3Disabled = s3Status === "loading" || s3Status === "saving";
-  const s3Saving = s3Status === "saving" || storageTypeStatus === "saving";
-  const storageSpaceDisabled =
-    storageSpaceModeStatus === "loading" || storageSpaceModeStatus === "saving";
+  const storageTypeDisabled = isStorageTypeDisabled(
+    storageTypeStatus,
+    s3Status,
+  );
+  const s3Disabled = isStatusBusy(s3Status);
+  const s3Saving = isAnyStatusSaving(s3Status, storageTypeStatus);
+  const storageSpaceDisabled = isStatusBusy(storageSpaceModeStatus);
   const storagePipelineGroupStatus = combineStatuses(
     chunkSizeStatus,
     storagePipelineStatus,
   );
-  const storagePipelineGroupDisabled =
-    storagePipelineGroupStatus === "loading"
-    || storagePipelineGroupStatus === "saving";
+  const storagePipelineGroupDisabled = isStatusBusy(storagePipelineGroupStatus);
   const chunkSizeDisabled = storagePipelineGroupDisabled;
   const storagePipelineDisabled = storagePipelineGroupDisabled;
   const compressionLevelChanged =
     compressionLevelInput.trim() !== savedStoragePipelineSettings.compressionLevel.toString();
   const quotaSaving = defaultUserQuotaStatus === "saving";
-  const quotaDisabled =
-    defaultUserQuotaStatus === "loading" || defaultUserQuotaStatus === "saving";
+  const quotaDisabled = isStatusBusy(defaultUserQuotaStatus);
   const quotaChanged = defaultUserQuotaGiB !== savedDefaultUserQuotaGiB;
   const templateSaving = defaultTemplateStatus === "saving";
-  const templateDisabled =
-    defaultTemplateStatus === "loading" || defaultTemplateStatus === "saving";
+  const templateDisabled = isStatusBusy(defaultTemplateStatus);
   const templateChanged = defaultTemplateNodeId !== savedDefaultTemplateNodeId;
 
   return (
@@ -859,112 +858,112 @@ export const AdminStorageSettingsPage = () => {
                   </ToggleButtonGroup>
                 </Box>
 
-              <Stack
-                direction={{ xs: "column", sm: "row" }}
-                spacing={2}
-                alignItems={{ xs: "stretch", sm: "flex-start" }}
-              >
-                <TextField
-                  label={t("storageSettings.pipeline.fields.compressionLevel")}
-                  value={compressionLevelInput}
-                  onChange={(event) => {
-                    setCompressionLevelInput(event.target.value);
-                    if (storagePipelineStatus === "error") {
-                      setStoragePipelineStatus("idle");
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={2}
+                  alignItems={{ xs: "stretch", sm: "flex-start" }}
+                >
+                  <TextField
+                    label={t("storageSettings.pipeline.fields.compressionLevel")}
+                    value={compressionLevelInput}
+                    onChange={(event) => {
+                      setCompressionLevelInput(event.target.value);
+                      if (storagePipelineStatus === "error") {
+                        setStoragePipelineStatus("idle");
+                      }
+                    }}
+                    disabled={storagePipelineDisabled}
+                    error={storagePipelineStatus === "error"}
+                    helperText={t("storageSettings.pipeline.compressionHelp", {
+                      min: storagePipelineSettings.minCompressionLevel,
+                      max: storagePipelineSettings.maxCompressionLevel,
+                    })}
+                    type="number"
+                    inputProps={{
+                      min: storagePipelineSettings.minCompressionLevel,
+                      max: storagePipelineSettings.maxCompressionLevel,
+                      step: 1,
+                    }}
+                    fullWidth
+                  />
+                  <Button
+                    variant="contained"
+                    onClick={() => void handleCompressionLevelSave()}
+                    disabled={storagePipelineDisabled || !compressionLevelChanged}
+                    startIcon={
+                      storagePipelineStatus === "saving" ? (
+                        <CircularProgress size={16} color="inherit" />
+                      ) : (
+                        <SaveIcon />
+                      )
                     }
-                  }}
-                  disabled={storagePipelineDisabled}
-                  error={storagePipelineStatus === "error"}
-                  helperText={t("storageSettings.pipeline.compressionHelp", {
-                    min: storagePipelineSettings.minCompressionLevel,
-                    max: storagePipelineSettings.maxCompressionLevel,
-                  })}
-                  type="number"
-                  inputProps={{
-                    min: storagePipelineSettings.minCompressionLevel,
-                    max: storagePipelineSettings.maxCompressionLevel,
-                    step: 1,
-                  }}
-                  fullWidth
-                />
-                <Button
-                  variant="contained"
-                  onClick={() => void handleCompressionLevelSave()}
-                  disabled={storagePipelineDisabled || !compressionLevelChanged}
-                  startIcon={
-                    storagePipelineStatus === "saving" ? (
-                      <CircularProgress size={16} color="inherit" />
-                    ) : (
-                      <SaveIcon />
-                    )
-                  }
-                  sx={{ minWidth: { xs: "100%", sm: 120 } }}
-                >
-                  {t("settings.actions.save")}
-                </Button>
-              </Stack>
+                    sx={{ minWidth: { xs: "100%", sm: 120 } }}
+                  >
+                    {t("settings.actions.save")}
+                  </Button>
+                </Stack>
 
-              <Box>
-                <Typography variant="subtitle2" gutterBottom>
-                  {t("storageSettings.pipeline.fields.cipherChunkSize")}
-                </Typography>
-                <ToggleButtonGroup
-                  size="small"
-                  exclusive
-                  value={storagePipelineSettings.cipherChunkSizeBytes}
-                  onChange={(_, next: number | null) =>
-                    void handleCipherChunkSizeChange(next)
-                  }
-                  disabled={storagePipelineDisabled}
-                  aria-label={t("storageSettings.pipeline.fields.cipherChunkSize")}
-                  fullWidth
-                  sx={{
-                    "& .MuiToggleButton-root": {
-                      flex: 1,
-                      minWidth: 0,
-                      whiteSpace: "normal",
-                      lineHeight: 1.2,
-                    },
-                  }}
-                >
-                  {storagePipelineSettings.supportedCipherChunkSizeBytes.map((option) => (
-                    <ToggleButton key={option} value={option}>
-                      {formatChunkSize(option)}
-                    </ToggleButton>
-                  ))}
-                </ToggleButtonGroup>
-              </Box>
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    {t("storageSettings.pipeline.fields.cipherChunkSize")}
+                  </Typography>
+                  <ToggleButtonGroup
+                    size="small"
+                    exclusive
+                    value={storagePipelineSettings.cipherChunkSizeBytes}
+                    onChange={(_, next: number | null) =>
+                      void handleCipherChunkSizeChange(next)
+                    }
+                    disabled={storagePipelineDisabled}
+                    aria-label={t("storageSettings.pipeline.fields.cipherChunkSize")}
+                    fullWidth
+                    sx={{
+                      "& .MuiToggleButton-root": {
+                        flex: 1,
+                        minWidth: 0,
+                        whiteSpace: "normal",
+                        lineHeight: 1.2,
+                      },
+                    }}
+                  >
+                    {storagePipelineSettings.supportedCipherChunkSizeBytes.map((option) => (
+                      <ToggleButton key={option} value={option}>
+                        {formatChunkSize(option)}
+                      </ToggleButton>
+                    ))}
+                  </ToggleButtonGroup>
+                </Box>
 
-              <Box>
-                <Typography variant="subtitle2" gutterBottom>
-                  {t("storageSettings.pipeline.fields.encryptionThreads")}
-                </Typography>
-                <ToggleButtonGroup
-                  size="small"
-                  exclusive
-                  value={storagePipelineSettings.encryptionThreads}
-                  onChange={(_, next: number | null) =>
-                    void handleEncryptionThreadsChange(next)
-                  }
-                  disabled={storagePipelineDisabled}
-                  aria-label={t("storageSettings.pipeline.fields.encryptionThreads")}
-                  fullWidth
-                  sx={{
-                    "& .MuiToggleButton-root": {
-                      flex: 1,
-                      minWidth: 0,
-                      whiteSpace: "normal",
-                      lineHeight: 1.2,
-                    },
-                  }}
-                >
-                  {storagePipelineSettings.supportedEncryptionThreads.map((option) => (
-                    <ToggleButton key={option} value={option}>
-                      {option.toString()}
-                    </ToggleButton>
-                  ))}
-                </ToggleButtonGroup>
-              </Box>
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    {t("storageSettings.pipeline.fields.encryptionThreads")}
+                  </Typography>
+                  <ToggleButtonGroup
+                    size="small"
+                    exclusive
+                    value={storagePipelineSettings.encryptionThreads}
+                    onChange={(_, next: number | null) =>
+                      void handleEncryptionThreadsChange(next)
+                    }
+                    disabled={storagePipelineDisabled}
+                    aria-label={t("storageSettings.pipeline.fields.encryptionThreads")}
+                    fullWidth
+                    sx={{
+                      "& .MuiToggleButton-root": {
+                        flex: 1,
+                        minWidth: 0,
+                        whiteSpace: "normal",
+                        lineHeight: 1.2,
+                      },
+                    }}
+                  >
+                    {storagePipelineSettings.supportedEncryptionThreads.map((option) => (
+                      <ToggleButton key={option} value={option}>
+                        {option.toString()}
+                      </ToggleButton>
+                    ))}
+                  </ToggleButtonGroup>
+                </Box>
               </Stack>
             </SettingsSection>
           )}

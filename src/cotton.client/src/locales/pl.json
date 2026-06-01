@@ -2332,6 +2332,7 @@
     "errors": {
       "resolveRootFailed": "Nie udało się ustalić folderu głównego",
       "loadContentsFailed": "Nie udało się załadować zawartości folderu",
+      "folderNotFound": "Nie znaleziono folderu",
       "createFolderFailed": "Nie udało się utworzyć folderu",
       "deleteFolderFailed": "Nie udało się usunąć folderu",
       "renameFolderFailed": "Nie udało się zmienić nazwy folderu",
@@ -2394,7 +2395,8 @@
         "details": "Szczegóły"
       },
       "errors": {
-        "dropFailed": "Nie udało się przetworzyć upuszczonych elementów. Spróbuj ponownie."
+        "dropFailed": "Nie udało się przetworzyć upuszczonych elementów. Spróbuj ponownie.",
+        "createMarkdownFileFailed": "Nie udało się utworzyć pliku Markdown. Spróbuj ponownie."
       },
       "skippedDialog": {
         "title": "Pominięte elementy",
@@ -2406,6 +2408,9 @@
     "actions": {
       "upload": "Wgraj",
       "newFolder": "Nowy folder",
+      "newMarkdownFile": "Nowy plik Markdown",
+      "defaultMarkdownFileName": "Nowy plik.md",
+      "defaultNewFolderName": "Nowy folder",
       "folderNamePlaceholder": "Nazwa folderu",
       "goToFolder": "Przejdź do folderu",
       "goUp": "Wyżej",
@@ -2663,6 +2668,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Ustawienia serwera nie są załadowane",
       "uploadFailed": "Przesyłanie nie powiodło się",
+      "deleteFailed": "Usuwanie nie powiodło się",
       "storageQuotaExceeded": "Brak wystarczającego miejsca. Dostępne: {{available}}.",
       "encryptionVaultLocked": "Sejf szyfrowania jest zablokowany",
       "encryptionFailed": "Szyfrowanie nie powiodło się",
@@ -2671,6 +2677,7 @@
     },
     "titleWithTotal": "Zadania ({{total}})",
     "titleWithProgress": "Zadania ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithProgressNoSpeed": "Zadania ({{completed}} / {{total}})",
     "titleWithErrors": "Zadania ({{total}} • {{failed}} nieudanych)",
     "actions": {
       "expand": "Rozwiń",

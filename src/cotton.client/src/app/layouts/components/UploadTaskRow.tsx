@@ -21,6 +21,10 @@ export const UploadTaskRow: React.FC<UploadTaskRowProps> = ({
       ? 100
       : Math.min(99, Math.floor(task.progress01 * 100));
   const progressColor = getTaskProgressColor(task);
+  const shouldShowSpeed =
+    task.kind === "upload" &&
+    task.status === "running" &&
+    task.speedBytesPerSec != null;
 
   return (
     <Box sx={{ pr: 0.5, pb: 1 }}>
@@ -59,8 +63,8 @@ export const UploadTaskRow: React.FC<UploadTaskRowProps> = ({
 
       <Box display="flex" justifyContent="space-between" mt={0.5}>
         <Typography variant="caption" color="text.secondary">
-          {task.status === "running" && task.speedBytesPerSec != null
-            ? `${formatBytes(task.speedBytesPerSec)}/s`
+          {shouldShowSpeed
+            ? `${formatBytes(task.speedBytesPerSec ?? 0)}/s`
             : t(`status.${task.status}`)}
         </Typography>
         <Typography
@@ -89,6 +93,8 @@ const getTaskProgressColor = (
       return "info";
     case "system":
       return "warning";
+    case "delete":
+      return "error";
     case "upload":
     default:
       return "primary";

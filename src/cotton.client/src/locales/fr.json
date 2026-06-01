@@ -2328,6 +2328,7 @@
     "errors": {
       "resolveRootFailed": "Échec de la résolution du dossier racine",
       "loadContentsFailed": "Échec du chargement du contenu du dossier",
+      "folderNotFound": "Dossier introuvable",
       "createFolderFailed": "Échec de la création du dossier",
       "deleteFolderFailed": "Échec de la suppression du dossier",
       "renameFolderFailed": "Échec du renommage du dossier",
@@ -2382,7 +2383,8 @@
         "details": "Détails"
       },
       "errors": {
-        "dropFailed": "Échec du traitement des éléments déposés. Veuillez réessayer."
+        "dropFailed": "Échec du traitement des éléments déposés. Veuillez réessayer.",
+        "createMarkdownFileFailed": "Impossible de créer le fichier Markdown. Réessayez."
       },
       "skippedDialog": {
         "title": "Éléments ignorés",
@@ -2394,6 +2396,9 @@
     "actions": {
       "upload": "Téléverser",
       "newFolder": "Nouveau dossier",
+      "newMarkdownFile": "Nouveau fichier Markdown",
+      "defaultMarkdownFileName": "Nouveau fichier.md",
+      "defaultNewFolderName": "Nouveau dossier",
       "folderNamePlaceholder": "Nom du dossier",
       "goToFolder": "Aller au dossier",
       "goUp": "Remonter",
@@ -2625,6 +2630,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Les paramètres du serveur ne sont pas chargés",
       "uploadFailed": "Échec du téléversement",
+      "deleteFailed": "Échec de la suppression",
       "storageQuotaExceeded": "Espace de stockage insuffisant. Disponible : {{available}}.",
       "encryptionVaultLocked": "Le coffre-fort de chiffrement est verrouillé",
       "encryptionFailed": "Échec du chiffrement",
@@ -2633,6 +2639,7 @@
     },
     "titleWithTotal": "Tâches ({{total}})",
     "titleWithProgress": "Tâches ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithProgressNoSpeed": "Tâches ({{completed}} / {{total}})",
     "titleWithErrors": "Tâches ({{total}} • {{failed}} en échec)",
     "actions": {
       "expand": "Développer",
