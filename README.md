@@ -91,6 +91,17 @@ A file should not become an opaque blob you are afraid to touch once it enters t
 
 ---
 
+## Small Details That Matter
+
+- Audio playback supports time-synced lyrics (karaoke-style) from a sidecar `.lrc` file, and preview extraction pulls embedded cover art from audio tracks (including MP3) and attached cover art from containers like MKV.
+- Share links can be bulk-invalidated, expire automatically, and are cleaned up in the background; sharing uses the Web Share API where available with a clipboard fallback.
+- Admins can configure a default template folder whose contents are copied into each new account — handy for demos, onboarding files, or starter media.
+- WebDAV token reset takes effect immediately (auth-cache versioning), and failed WebDAV token attempts notify the account.
+- Preferences changed in one active client propagate to others in near real time over SignalR.
+- UI localization ships 12 frontend locales (cs, de, en, es, fr, it, nl, pl, pt, ru, uk, zh) with CI parity checks; backend notifications cover English and Russian.
+
+---
+
 ## Performance
 
 - **High, memory-bound crypto headroom.** Measurements in this repo (on typical dev hardware — Intel 13th Gen, DDR5 4200) put decrypt around **9–10 GB/s** and encrypt around **14–16+ GB/s**, scaling into memory-bandwidth limits rather than becoming the first bottleneck. That headroom is why encryption stays a default, not something to disable for speed.
