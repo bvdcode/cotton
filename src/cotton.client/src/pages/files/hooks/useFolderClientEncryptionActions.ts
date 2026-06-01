@@ -20,6 +20,8 @@ import {
 import {
   decryptExistingFileWithTask,
   encryptExistingFileWithTask,
+  taskManager,
+  type AppTaskHandle,
 } from "../../../shared/tasks";
 
 type ToastVariant = "info" | "error";
@@ -107,14 +109,20 @@ export const useFolderClientEncryptionActions = ({
         scanIncomplete = true;
       }
       const refreshedParents = new Set<string>([nodeId]);
+      const taskHandles = createExistingFileTaskHandles(
+        filesToEncrypt,
+        "encrypt",
+        activeNode.name,
+      );
 
-      for (const file of filesToEncrypt) {
+      for (const [index, file] of filesToEncrypt.entries()) {
         try {
           await encryptExistingFileWithTask({
             file: toEncryptionTaskFile(file),
             targetNodeId: file.nodeId,
             scopeLabel: activeNode.name,
             server,
+            task: taskHandles[index],
           });
           refreshedParents.add(file.nodeId);
           encryptedCount += 1;
@@ -204,14 +212,20 @@ export const useFolderClientEncryptionActions = ({
         scanIncomplete = true;
       }
       const refreshedParents = new Set<string>([nodeId]);
+      const taskHandles = createExistingFileTaskHandles(
+        filesToDecrypt,
+        "decrypt",
+        activeNode.name,
+      );
 
-      for (const file of filesToDecrypt) {
+      for (const [index, file] of filesToDecrypt.entries()) {
         try {
           await decryptExistingFileWithTask({
             file: toDecryptionTaskFile(file),
             targetNodeId: file.nodeId,
             scopeLabel: activeNode.name,
             server,
+            task: taskHandles[index],
           });
           refreshedParents.add(file.nodeId);
           decryptedCount += 1;
@@ -284,3 +298,17 @@ const toDecryptionTaskFile = (file: NodeFileManifestDto) => ({
   sizeBytes: file.sizeBytes,
   metadata: file.metadata,
 });
+
+const createExistingFileTaskHandles = (
+  files: ReadonlyArray<NodeFileManifestDto>,
+  kind: "encrypt" | "decrypt",
+  scopeLabel: string,
+): AppTaskHandle[] =>
+  files.map((file) =>
+    taskManager.createTask({
+      kind,
+      label: file.name,
+      scopeLabel,
+      bytesTotal: file.sizeBytes,
+    }),
+  );

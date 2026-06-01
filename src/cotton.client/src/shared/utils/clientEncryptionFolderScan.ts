@@ -7,6 +7,7 @@ export const CLIENT_ENCRYPTION_FOLDER_SCAN_MAX_FOLDERS = 250;
 const CLIENT_ENCRYPTION_FOLDER_SCAN_PAGE_SIZE = 250;
 
 export interface ClientEncryptionFolderScanResult {
+  folders: NodeDto[];
   files: NodeFileManifestDto[];
   scannedFolders: number;
   truncated: boolean;
@@ -25,6 +26,7 @@ interface ScanLimits {
 }
 
 interface ScanState {
+  folders: NodeDto[];
   files: NodeFileManifestDto[];
   scannedFolders: number;
   truncated: boolean;
@@ -44,6 +46,12 @@ export const collectEncryptedFilesInFoldersForClientEncryption = (
 ): Promise<ClientEncryptionFolderScanResult> =>
   collectFilesInFolders(rootNodeIds, (file) => isFileEncrypted(file.metadata), options);
 
+export const collectFoldersInFoldersForClientEncryption = (
+  rootNodeIds: ReadonlyArray<string>,
+  options: ScanOptions = {},
+): Promise<ClientEncryptionFolderScanResult> =>
+  collectFilesInFolders(rootNodeIds, () => false, options);
+
 async function collectFilesInFolders(
   rootNodeIds: ReadonlyArray<string>,
   predicate: FilePredicate,
@@ -61,6 +69,7 @@ async function collectFilesInFolders(
   }
 
   return {
+    folders: state.folders,
     files: state.files,
     scannedFolders: state.scannedFolders,
     truncated: state.truncated,
@@ -74,6 +83,7 @@ const resolveScanLimits = (options: ScanOptions): ScanLimits => ({
 
 const createScanState = (rootNodeIds: ReadonlyArray<string>): ScanState => {
   const state: ScanState = {
+    folders: [],
     files: [],
     scannedFolders: 0,
     truncated: false,
@@ -88,13 +98,14 @@ const createScanState = (rootNodeIds: ReadonlyArray<string>): ScanState => {
   return state;
 };
 
-const enqueueFolderIfNew = (state: ScanState, nodeId: string): void => {
+const enqueueFolderIfNew = (state: ScanState, nodeId: string): boolean => {
   if (state.visited.has(nodeId)) {
-    return;
+    return false;
   }
 
   state.visited.add(nodeId);
   state.queue.push(nodeId);
+  return true;
 };
 
 const isScanLimitReached = (state: ScanState, limits: ScanLimits): boolean =>
@@ -144,7 +155,9 @@ const enqueueChildFolders = (
       continue;
     }
 
-    enqueueFolderIfNew(state, childNode.id);
+    if (enqueueFolderIfNew(state, childNode.id)) {
+      state.folders.push(childNode);
+    }
   }
 };
 

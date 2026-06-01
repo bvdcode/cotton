@@ -70,7 +70,7 @@ import {
   useVault,
 } from "../../shared/crypto";
 import { useFolderFileList } from "../../shared/hooks/useFileListSource";
-import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
+import { InterfaceLayoutType, type NodeDto } from "../../shared/api/layoutsApi";
 import { shareFolder } from "../../shared/utils/shareFolder";
 import Loader from "../../shared/ui/Loader";
 import { blurredDialogBackdropSlotProps } from "../../shared/ui/dialogBackdrop";
@@ -90,6 +90,7 @@ import { useFolderClientEncryptionActions } from "./hooks/useFolderClientEncrypt
 import { ClientEncryptionUnlockForm } from "../profile/components/ClientEncryptionUnlockForm";
 import { downloadArchive } from "@shared/utils/fileHandlers";
 import { uploadFileToNode } from "@shared/upload";
+import { collectFoldersInFoldersForClientEncryption } from "@shared/utils/clientEncryptionFolderScan";
 import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 
 const HUGE_FOLDER_THRESHOLD = 100_000;
@@ -278,6 +279,30 @@ const buildSelectionArchiveRequest = (
       : currentFolderName;
 
   return { fileIds, nodeIds, archiveName: archiveName ?? undefined };
+};
+
+const updateFolderEncryptionPolicyTree = async (
+  folderId: string,
+  nextEnabled: boolean,
+): Promise<NodeDto[]> => {
+  const value = String(nextEnabled);
+  const scan = await collectFoldersInFoldersForClientEncryption([folderId]);
+  const foldersToUpdate = [
+    folderId,
+    ...scan.folders
+      .filter((folder) => folder.metadata?.[FOLDER_ENCRYPTION_POLICY_KEY] !== value)
+      .map((folder) => folder.id),
+  ];
+  const updatedNodes: NodeDto[] = [];
+
+  for (const nodeId of foldersToUpdate) {
+    const updated = await nodesApi.updateNodeMetadata(nodeId, {
+      [FOLDER_ENCRYPTION_POLICY_KEY]: value,
+    });
+    updatedNodes.push(updated);
+  }
+
+  return updatedNodes;
 };
 
 const buildFilesCustomActionItems = (options: {
@@ -965,10 +990,14 @@ export const FilesPage: React.FC = () => {
       const nextEnabled = !currentlyEnabled;
 
       try {
-        const updated = await nodesApi.updateNodeMetadata(folderId, {
-          [FOLDER_ENCRYPTION_POLICY_KEY]: String(nextEnabled),
-        });
-        useNodesStore.getState().updateNode(updated);
+        const updatedNodes = await updateFolderEncryptionPolicyTree(
+          folderId,
+          nextEnabled,
+        );
+        const store = useNodesStore.getState();
+        for (const updated of updatedNodes) {
+          store.updateNode(updated);
+        }
         showToast(
           nextEnabled
             ? t("clientEncryption.toasts.policyEnabled", { ns: "files" })

@@ -8,6 +8,7 @@ import { decryptExistingFileInPlace } from "../upload/decryptExistingFileInPlace
 import type { UploadServerParams } from "../upload/types";
 import { formatBytes } from "../utils/formatBytes";
 import { taskManager } from "./taskManager";
+import type { AppTaskHandle } from "./types";
 
 export type ExistingFileEncryptionTaskFile = Pick<
   NodeFileManifestDto,
@@ -24,9 +25,10 @@ export async function encryptExistingFileWithTask(options: {
   targetNodeId: string;
   scopeLabel?: string;
   server: UploadServerParams;
+  task?: AppTaskHandle;
 }): Promise<void> {
   const { file, targetNodeId, scopeLabel, server } = options;
-  const task = taskManager.createTask({
+  const task = options.task ?? taskManager.createTask({
     kind: "encrypt",
     label: file.name,
     scopeLabel,
@@ -82,9 +84,10 @@ export async function decryptExistingFileWithTask(options: {
   targetNodeId: string;
   scopeLabel?: string;
   server: UploadServerParams;
+  task?: AppTaskHandle;
 }): Promise<void> {
   const { file, targetNodeId, scopeLabel, server } = options;
-  const task = taskManager.createTask({
+  const task = options.task ?? taskManager.createTask({
     kind: "decrypt",
     label: file.name,
     scopeLabel,

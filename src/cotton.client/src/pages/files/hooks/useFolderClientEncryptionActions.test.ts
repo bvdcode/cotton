@@ -17,11 +17,13 @@ vi.mock("../../../shared/store/nodesActions", () => ({
 
 vi.mock("../../../shared/utils/clientEncryptionFolderScan", () => ({
   collectEncryptedFilesInFoldersForClientEncryption: vi.fn(async () => ({
+    folders: [],
     files: [],
     scannedFolders: 0,
     truncated: false,
   })),
   collectPlainFilesInFoldersForClientEncryption: vi.fn(async () => ({
+    folders: [],
     files: [],
     scannedFolders: 0,
     truncated: false,
@@ -31,6 +33,14 @@ vi.mock("../../../shared/utils/clientEncryptionFolderScan", () => ({
 vi.mock("../../../shared/tasks", () => ({
   decryptExistingFileWithTask: vi.fn(),
   encryptExistingFileWithTask: vi.fn(),
+  taskManager: {
+    createTask: vi.fn(() => ({
+      id: "task-id",
+      update: vi.fn(),
+      complete: vi.fn(),
+      fail: vi.fn(),
+    })),
+  },
 }));
 
 import { fetchServerSettings } from "../../../shared/api/queries/serverSettings";
@@ -83,11 +93,13 @@ describe("useFolderClientEncryptionActions", () => {
     vi.clearAllMocks();
     useVault.getState().lock();
     vi.mocked(collectEncryptedFilesInFoldersForClientEncryption).mockResolvedValue({
+      folders: [],
       files: [],
       scannedFolders: 0,
       truncated: false,
     });
     vi.mocked(collectPlainFilesInFoldersForClientEncryption).mockResolvedValue({
+      folders: [],
       files: [],
       scannedFolders: 0,
       truncated: false,
@@ -292,6 +304,7 @@ describe("useFolderClientEncryptionActions", () => {
       nodeId: "nested-node",
     };
     vi.mocked(collectEncryptedFilesInFoldersForClientEncryption).mockResolvedValue({
+      folders: [],
       files: [nestedFile],
       scannedFolders: 2,
       truncated: false,
@@ -334,6 +347,7 @@ describe("useFolderClientEncryptionActions", () => {
     const onToast = vi.fn();
     const nestedFile = { ...makeFile("nested"), nodeId: "nested-node" };
     vi.mocked(collectPlainFilesInFoldersForClientEncryption).mockResolvedValue({
+      folders: [],
       files: [nestedFile],
       scannedFolders: 2,
       truncated: false,
@@ -373,6 +387,7 @@ describe("useFolderClientEncryptionActions", () => {
     useVault.setState({ isUnlocked: true, masterKey: {} as CryptoKey });
     const onToast = vi.fn();
     vi.mocked(collectPlainFilesInFoldersForClientEncryption).mockResolvedValue({
+      folders: [],
       files: [makeFile("scanned")],
       scannedFolders: 250,
       truncated: true,
