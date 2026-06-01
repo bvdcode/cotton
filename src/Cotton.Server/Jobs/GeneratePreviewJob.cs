@@ -59,124 +59,246 @@ namespace Cotton.Server.Jobs
                 queuedOrProcessedItemIds,
                 cancellationToken);
 
-            if (itemsToProcess.Count > 0)
-            {
-                _logger.LogInformation("Generating previews for {Count} file manifests", itemsToProcess.Count);
-            }
+            LogPreviewQueueLoaded(itemsToProcess.Count);
+            int processed = await ProcessPreviewQueueAsync(
+                itemsToProcess,
+                queuedOrProcessedItemIds,
+                allSupportedMimeTypes,
+                generatorVersionsByContentType,
+                cancellationToken);
 
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            LogPreviewJobCompleted(processed);
+        }
+
+        private void LogPreviewQueueLoaded(int itemCount)
+        {
+            if (itemCount > 0)
+            {
+                _logger.LogInformation("Generating previews for {Count} file manifests", itemCount);
+            }
+        }
+
+        private void LogPreviewJobCompleted(int processed)
+        {
+            if (processed > 0)
+            {
+                _logger.LogInformation("Preview generation job completed successfully. Processed {Count} items", processed);
+            }
+        }
+
+        private async Task<int> ProcessPreviewQueueAsync(
+            List<FileManifest> itemsToProcess,
+            HashSet<Guid> queuedOrProcessedItemIds,
+            IReadOnlyCollection<string> allSupportedMimeTypes,
+            IReadOnlyDictionary<string, int> generatorVersionsByContentType,
+            CancellationToken cancellationToken)
+        {
             int processed = 0;
             int nextIndex = 0;
             while (nextIndex < itemsToProcess.Count && processed < MaxItemsPerRun)
             {
-                var item = itemsToProcess[nextIndex++];
-                _perf.OnPreviewGenerating();
+                FileManifest item = itemsToProcess[nextIndex++];
                 processed++;
-                _logger.LogInformation("Processing {Current}/{Total}: FileManifest {FileManifestId}, ContentType={ContentType}, Size={Size}",
-                    processed, itemsToProcess.Count, item.Id, item.ContentType, item.SizeBytes);
-
-                var generator = PreviewGeneratorProvider.GetGeneratorByContentType(item.ContentType);
-                if (generator == null)
-                {
-                    _logger.LogWarning("No preview generator found for content type {ContentType}", item.ContentType);
-                    DetachPreviewItem(item);
-                    continue;
-                }
-
-                PipelineContext pipelineContext = new()
-                {
-                    FileSizeBytes = item.SizeBytes,
-                    ChunkLengths = item.FileManifestChunks.GetChunkLengths()
-                };
-                var uids = item.FileManifestChunks.GetChunkHashes();
 
                 try
                 {
-                    _logger.LogDebug("Getting blob stream for FileManifest {FileManifestId}...", item.Id);
-                    await using var fsSmall = _storage.GetBlobStream(uids, pipelineContext);
-                    byte[] previewImage = await generator.GeneratePreviewWebPAsync(fsSmall, PreviewGeneratorProvider.DefaultSmallPreviewSize);
-                    byte[] hash = Hasher.HashData(previewImage);
-                    string hashStr = Hasher.ToHexStringHash(hash);
-                    _logger.LogDebug("Storing preview (hash={Hash}) for FileManifest {FileManifestId}...", hashStr, item.Id);
-                    using var resultStream = new MemoryStream(previewImage);
-                    await _storage.WriteAsync(hashStr, resultStream);
-                    await EnsureChunkExistsAsync(hash, previewImage.Length, cancellationToken);
-                    item.SmallFilePreviewHash = hash;
-                    item.SmallFilePreviewHashEncrypted = _crypto.Encrypt(hash);
-                    item.PreviewGenerationError = null;
-                    item.PreviewGeneratorVersion = generator.Version;
-
-                    if (generator is ImagePreviewGenerator or HeicPreviewGenerator or SvgPreviewGenerator)
-                    {
-                        await using var fsLarge = _storage.GetBlobStream(uids, pipelineContext);
-                        byte[] previewImageLarge = await generator.GeneratePreviewWebPAsync(fsLarge, PreviewGeneratorProvider.DefaultLargePreviewSize);
-                        byte[] hashLarge = Hasher.HashData(previewImageLarge);
-                        string hashLargeStr = Hasher.ToHexStringHash(hashLarge);
-                        _logger.LogDebug("Storing large preview (hash={Hash}) for FileManifest {FileManifestId}...", hashLargeStr, item.Id);
-                        using var resultStreamLarge = new MemoryStream(previewImageLarge);
-                        await _storage.WriteAsync(hashLargeStr, resultStreamLarge);
-                        await EnsureChunkExistsAsync(hashLarge, previewImageLarge.Length, cancellationToken);
-                        item.LargeFilePreviewHash = hashLarge;
-                    }
-
-                    await _dbContext.SaveChangesAsync(cancellationToken);
-                    _logger.LogDebug("Generated preview for file manifest {FileManifestId}", item.Id);
-                    foreach (var nodeFile in item.NodeFiles)
-                    {
-                        // Minor vulnerability:
-                        // Even if cross-user deduplication is disabled, this event could reveal to a user who already had the file that someone else had the file,
-                        // because the preview hash will be reset and regenerated, preventing the second user from discovering that the first user had the file.
-                        await _hubContext.Clients
-                            .User(nodeFile.OwnerId.ToString())
-                            .SendAsync("PreviewGenerated", nodeFile.NodeId, nodeFile.Id, item.GetPreviewHashEncryptedHex(), cancellationToken);
-                    }
-                    if (processed == UnthrottledItemsCount)
-                    {
-                        _logger.LogInformation("Processed {Count} items, throttling further processing to avoid overloading the system...", UnthrottledItemsCount);
-                    }
-                    if (processed > UnthrottledItemsCount)
-                    {
-                        // TODO: Move to settings or autoconfig
-                        await Task.Delay(ThrottleDelayMs, cancellationToken);
-                    }
-                }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to generate preview for file manifest {FileManifestId}", item.Id);
-                    item.PreviewGenerationError = ex.Message;
-                    item.PreviewGeneratorVersion = generator.Version;
-                    await _dbContext.SaveChangesAsync(cancellationToken);
-                }
-
-                if (_perf.IsUploading())
-                {
-                    await WaitForUploadPauseAsync(cancellationToken);
-                    int refreshed = await RefreshPreviewQueueAsync(
+                    await ProcessPreviewItemAsync(item, processed, itemsToProcess.Count, cancellationToken);
+                    await RefreshQueueAfterUploadPauseAsync(
                         itemsToProcess,
                         nextIndex,
                         queuedOrProcessedItemIds,
                         allSupportedMimeTypes,
                         generatorVersionsByContentType,
                         cancellationToken);
-                    if (refreshed > 0)
-                    {
-                        _logger.LogInformation(
-                            "Upload pause refreshed preview queue with {Count} newer file manifests. Queue now has {Total} items.",
-                            refreshed,
-                            itemsToProcess.Count);
-                    }
                 }
-
-                DetachPreviewItem(item);
+                finally
+                {
+                    DetachPreviewItem(item);
+                }
             }
 
-            await _dbContext.SaveChangesAsync(cancellationToken);
-            if (processed > 0)
+            return processed;
+        }
+
+        private async Task ProcessPreviewItemAsync(
+            FileManifest item,
+            int processed,
+            int total,
+            CancellationToken cancellationToken)
+        {
+            _perf.OnPreviewGenerating();
+            _logger.LogInformation("Processing {Current}/{Total}: FileManifest {FileManifestId}, ContentType={ContentType}, Size={Size}",
+                processed, total, item.Id, item.ContentType, item.SizeBytes);
+
+            IPreviewGenerator? generator = PreviewGeneratorProvider.GetGeneratorByContentType(item.ContentType);
+            if (generator is null)
             {
-                _logger.LogInformation("Preview generation job completed successfully. Processed {Count} items", processed);
+                _logger.LogWarning("No preview generator found for content type {ContentType}", item.ContentType);
+                return;
+            }
+
+            try
+            {
+                await GeneratePreviewAsync(item, generator, cancellationToken);
+                await NotifyPreviewGeneratedAsync(item, cancellationToken);
+                await ThrottlePreviewProcessingAsync(processed, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                await RecordPreviewGenerationFailureAsync(item, generator, ex, cancellationToken);
+            }
+        }
+
+        private async Task GeneratePreviewAsync(
+            FileManifest item,
+            IPreviewGenerator generator,
+            CancellationToken cancellationToken)
+        {
+            PipelineContext pipelineContext = CreatePreviewPipelineContext(item);
+            string[] uids = item.FileManifestChunks.GetChunkHashes();
+
+            await StoreSmallPreviewAsync(item, generator, uids, pipelineContext, cancellationToken);
+            await StoreLargePreviewIfSupportedAsync(item, generator, uids, pipelineContext, cancellationToken);
+
+            item.PreviewGenerationError = null;
+            item.PreviewGeneratorVersion = generator.Version;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            _logger.LogDebug("Generated preview for file manifest {FileManifestId}", item.Id);
+        }
+
+        private static PipelineContext CreatePreviewPipelineContext(FileManifest item)
+        {
+            return new PipelineContext
+            {
+                FileSizeBytes = item.SizeBytes,
+                ChunkLengths = item.FileManifestChunks.GetChunkLengths()
+            };
+        }
+
+        private async Task StoreSmallPreviewAsync(
+            FileManifest item,
+            IPreviewGenerator generator,
+            string[] uids,
+            PipelineContext pipelineContext,
+            CancellationToken cancellationToken)
+        {
+            _logger.LogDebug("Getting blob stream for FileManifest {FileManifestId}...", item.Id);
+            await using Stream source = _storage.GetBlobStream(uids, pipelineContext);
+            byte[] previewImage = await generator.GeneratePreviewWebPAsync(source, PreviewGeneratorProvider.DefaultSmallPreviewSize);
+            byte[] hash = await WritePreviewImageAsync(item.Id, "preview", previewImage, cancellationToken);
+            item.SmallFilePreviewHash = hash;
+            item.SmallFilePreviewHashEncrypted = _crypto.Encrypt(hash);
+        }
+
+        private async Task StoreLargePreviewIfSupportedAsync(
+            FileManifest item,
+            IPreviewGenerator generator,
+            string[] uids,
+            PipelineContext pipelineContext,
+            CancellationToken cancellationToken)
+        {
+            if (!ShouldGenerateLargePreview(generator))
+            {
+                return;
+            }
+
+            await using Stream source = _storage.GetBlobStream(uids, pipelineContext);
+            byte[] previewImage = await generator.GeneratePreviewWebPAsync(source, PreviewGeneratorProvider.DefaultLargePreviewSize);
+            item.LargeFilePreviewHash = await WritePreviewImageAsync(item.Id, "large preview", previewImage, cancellationToken);
+        }
+
+        private static bool ShouldGenerateLargePreview(IPreviewGenerator generator) =>
+            generator is ImagePreviewGenerator or HeicPreviewGenerator or SvgPreviewGenerator;
+
+        private async Task<byte[]> WritePreviewImageAsync(
+            Guid fileManifestId,
+            string previewKind,
+            byte[] previewImage,
+            CancellationToken cancellationToken)
+        {
+            byte[] hash = Hasher.HashData(previewImage);
+            string hashStr = Hasher.ToHexStringHash(hash);
+            _logger.LogDebug("Storing {PreviewKind} (hash={Hash}) for FileManifest {FileManifestId}...",
+                previewKind, hashStr, fileManifestId);
+
+            using var resultStream = new MemoryStream(previewImage);
+            await _storage.WriteAsync(hashStr, resultStream);
+            await EnsureChunkExistsAsync(hash, previewImage.Length, cancellationToken);
+            return hash;
+        }
+
+        private async Task NotifyPreviewGeneratedAsync(FileManifest item, CancellationToken cancellationToken)
+        {
+            foreach (var nodeFile in item.NodeFiles)
+            {
+                // Minor vulnerability:
+                // Even if cross-user deduplication is disabled, this event could reveal to a user who already had the file that someone else had the file,
+                // because the preview hash will be reset and regenerated, preventing the second user from discovering that the first user had the file.
+                await _hubContext.Clients
+                    .User(nodeFile.OwnerId.ToString())
+                    .SendAsync("PreviewGenerated", nodeFile.NodeId, nodeFile.Id, item.GetPreviewHashEncryptedHex(), cancellationToken);
+            }
+        }
+
+        private async Task ThrottlePreviewProcessingAsync(int processed, CancellationToken cancellationToken)
+        {
+            if (processed == UnthrottledItemsCount)
+            {
+                _logger.LogInformation("Processed {Count} items, throttling further processing to avoid overloading the system...", UnthrottledItemsCount);
+            }
+
+            if (processed > UnthrottledItemsCount)
+            {
+                // TODO: Move to settings or autoconfig
+                await Task.Delay(ThrottleDelayMs, cancellationToken);
+            }
+        }
+
+        private async Task RecordPreviewGenerationFailureAsync(
+            FileManifest item,
+            IPreviewGenerator generator,
+            Exception ex,
+            CancellationToken cancellationToken)
+        {
+            _logger.LogWarning(ex, "Failed to generate preview for file manifest {FileManifestId}", item.Id);
+            item.PreviewGenerationError = ex.Message;
+            item.PreviewGeneratorVersion = generator.Version;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        private async Task RefreshQueueAfterUploadPauseAsync(
+            List<FileManifest> itemsToProcess,
+            int nextIndex,
+            HashSet<Guid> queuedOrProcessedItemIds,
+            IReadOnlyCollection<string> allSupportedMimeTypes,
+            IReadOnlyDictionary<string, int> generatorVersionsByContentType,
+            CancellationToken cancellationToken)
+        {
+            if (!_perf.IsUploading())
+            {
+                return;
+            }
+
+            await WaitForUploadPauseAsync(cancellationToken);
+            int refreshed = await RefreshPreviewQueueAsync(
+                itemsToProcess,
+                nextIndex,
+                queuedOrProcessedItemIds,
+                allSupportedMimeTypes,
+                generatorVersionsByContentType,
+                cancellationToken);
+
+            if (refreshed > 0)
+            {
+                _logger.LogInformation(
+                    "Upload pause refreshed preview queue with {Count} newer file manifests. Queue now has {Total} items.",
+                    refreshed,
+                    itemsToProcess.Count);
             }
         }
 

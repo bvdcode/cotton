@@ -695,6 +695,5 @@ namespace Cotton.Server.Controllers
         {
             return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         }
-
     }
 }
