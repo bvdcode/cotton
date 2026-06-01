@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { Button, Typography, Container, Box } from "@mui/material";
+import { Avatar, Box, Button, Container, Typography } from "@mui/material";
 
 export const NotFoundPage = () => {
   const navigate = useNavigate();
@@ -23,6 +23,11 @@ export const NotFoundPage = () => {
           px: 4,
         }}
       >
+        <Avatar
+          src="/assets/icons/icon.svg"
+          alt=""
+          sx={{ width: 56, height: 56, mx: "auto", mb: 3 }}
+        />
         <Typography
           variant="h1"
           component="h1"
@@ -62,13 +67,6 @@ export const NotFoundPage = () => {
           color="primary"
           size="large"
           onClick={() => navigate("/")}
-          sx={{
-            px: 4,
-            py: 1.5,
-            borderRadius: 2,
-            textTransform: "none",
-            fontSize: "1rem",
-          }}
         >
           {t("backButton")}
         </Button>

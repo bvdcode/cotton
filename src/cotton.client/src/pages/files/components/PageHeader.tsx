@@ -517,9 +517,15 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                             ? theme.palette.error.main
                             : action.active || action.color === "secondary"
                               ? theme.palette.secondary.main
-                              : theme.palette.primary.main,
+                              : theme.palette.text.secondary,
                         transition:
-                          "box-shadow 120ms ease-out, background-color 120ms ease-out",
+                          "box-shadow 120ms ease-out, background-color 120ms ease-out, color 120ms ease-out",
+                        "&:hover": {
+                          color:
+                            action.color === "error"
+                              ? theme.palette.error.main
+                              : theme.palette.primary.main,
+                        },
                         ...(action.dropActive && {
                           boxShadow: `inset 0 0 0 2px ${theme.palette.primary.main}`,
                           backgroundColor: theme.palette.action.selected,
@@ -540,7 +546,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                 <IconButton
                   aria-label={t("common:actions.more")}
                   onClick={(e) => setMenuAnchorEl(e.currentTarget)}
-                  sx={{ color: "primary.main" }}
+                  sx={{ color: "text.secondary" }}
                 >
                   <MoreVert />
                 </IconButton>

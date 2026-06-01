@@ -143,15 +143,13 @@ export const NotificationsMenu = () => {
     () => ({
       width: isMobile ? "100dvw" : 340,
       maxWidth: isMobile ? "100dvw" : 340,
-      borderRadius: isMobile ? 0 : 2,
+      borderRadius: isMobile ? 0 : undefined,
       left: isMobile ? "0 !important" : undefined,
       right: isMobile ? "0 !important" : undefined,
       mt: isMobile ? 0.5 : 0,
     }),
     [isMobile],
   );
-
-  const maxTextLength = 128;
 
   return (
     <>
@@ -177,7 +175,7 @@ export const NotificationsMenu = () => {
             ? { vertical: "top", horizontal: "left" }
             : { vertical: "top", horizontal: "right" }
         }
-        slotProps={{ paper: { sx: menuPaperSx } }}
+        slotProps={{ paper: { elevation: 3, sx: menuPaperSx } }}
       >
         <Box
           display="flex"
@@ -230,10 +228,6 @@ export const NotificationsMenu = () => {
           {notifications.length > 0 ? (
             notifications.map((n) => {
               const rendered = renderNotificationText(n, t);
-              const contentText =
-                rendered.content && rendered.content.length > maxTextLength
-                  ? rendered.content.slice(0, maxTextLength) + "..."
-                  : rendered.content;
 
               return (
                 <ListItem
@@ -267,6 +261,9 @@ export const NotificationsMenu = () => {
                     px: 2,
                     py: 1,
                     cursor: "pointer",
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
+                    "&:last-of-type": { borderBottom: 0 },
                     bgcolor: n.readAt ? "transparent" : "action.selected",
                     "&:hover": {
                       bgcolor: "action.hover",
@@ -299,9 +296,18 @@ export const NotificationsMenu = () => {
                       </Box>
                     }
                     secondary={
-                      contentText ? (
-                        <Typography variant="caption" color="text.secondary">
-                          {contentText}
+                      rendered.content ? (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {rendered.content}
                         </Typography>
                       ) : null
                     }

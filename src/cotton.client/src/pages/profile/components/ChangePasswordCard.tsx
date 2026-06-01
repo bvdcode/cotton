@@ -67,7 +67,7 @@ const PasswordInputField: React.FC<PasswordInputFieldProps> = ({
                   aria-label={tooltipTitle}
                   disabled={disabled}
                 >
-                  {visible ? <VisibilityIcon /> : <VisibilityOffIcon />}
+                  {visible ? <VisibilityOffIcon /> : <VisibilityIcon />}
                 </IconButton>
               </Tooltip>
             </InputAdornment>
