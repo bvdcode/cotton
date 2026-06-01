@@ -175,6 +175,7 @@ namespace Cotton.Server
                 .AddScoped<StoragePressureGuard>()
                 .AddScoped<DefaultUserContentSeeder>()
                 .AddScoped<ChunkUsageService>()
+                .AddScoped<StorageUsageStatsService>()
                 .AddScoped<VideoTranscoder>()
                 .AddSingleton<HlsSegmentCache>()
                 .AddSingleton<DatabaseBackupKeyProvider>()
