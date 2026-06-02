@@ -3160,7 +3160,8 @@
         "memory": "Доступ до пам'яті процесу",
         "runtime": "Факти середовища виконання",
         "containerBoundary": "Container boundary",
-        "passed": "Protections in place"
+        "passed": "Protections in place",
+        "capabilities": "Hardware"
       },
       "risks": {
         "empty": "Поточні серверні перевірки не виявили попереджень."
@@ -3260,6 +3261,12 @@
         "host-pid-namespace": "Isolated PID namespace",
         "core-dumps-enabled": "Core dumps disabled",
         "mandatory-access-control-unconfined": "AppArmor/SELinux confinement active"
+      },
+      "capabilities": {
+        "aesAcceleration": {
+          "title": "Hardware-accelerated encryption",
+          "body": "This processor ({{cpu}}) exposes AES-NI / PCLMULQDQ instructions, so AES-GCM runs on dedicated hardware paths — encryption stays fast and adds little CPU overhead."
+        }
       }
     },
     "groups": {

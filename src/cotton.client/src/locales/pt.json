@@ -3148,7 +3148,8 @@
         "memory": "Exposição da memória do processo",
         "runtime": "Fatos de tempo de execução",
         "containerBoundary": "Container boundary",
-        "passed": "Protections in place"
+        "passed": "Protections in place",
+        "capabilities": "Hardware"
       },
       "risks": {
         "empty": "Nenhum aviso foi detectado pelas verificações atuais do servidor."
@@ -3248,6 +3249,12 @@
         "host-pid-namespace": "Isolated PID namespace",
         "core-dumps-enabled": "Core dumps disabled",
         "mandatory-access-control-unconfined": "AppArmor/SELinux confinement active"
+      },
+      "capabilities": {
+        "aesAcceleration": {
+          "title": "Hardware-accelerated encryption",
+          "body": "This processor ({{cpu}}) exposes AES-NI / PCLMULQDQ instructions, so AES-GCM runs on dedicated hardware paths — encryption stays fast and adds little CPU overhead."
+        }
       }
     },
     "groups": {
