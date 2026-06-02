@@ -173,6 +173,7 @@ public sealed class SqliteSyncStateStore : ISyncStateStore
         var connectionString = new DbConnectionStringBuilder
         {
             ["Data Source"] = _databasePath,
+            ["Pooling"] = false,
         }.ToString();
         DbContextOptions<SyncStateDbContext> options = new DbContextOptionsBuilder<SyncStateDbContext>()
             .UseSqlite(connectionString)

@@ -138,6 +138,7 @@ public sealed class SqliteClientStateStore : ICottonClientStateStore
         var connectionString = new DbConnectionStringBuilder
         {
             ["Data Source"] = _databasePath,
+            ["Pooling"] = false,
         }.ToString();
         DbContextOptions<ClientStateDbContext> options = new DbContextOptionsBuilder<ClientStateDbContext>()
             .UseSqlite(connectionString)
