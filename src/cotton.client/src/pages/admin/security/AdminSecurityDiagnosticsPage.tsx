@@ -51,6 +51,9 @@ const knownThreatVectorCodes = new Set([
   "core-dumps-enabled",
 ]);
 
+// Warnings whose remediation is not an operator action (managed by Cotton itself).
+const noUserFixCodes = new Set(["db-integrity-bridge-mode"]);
+
 interface SecurityLevel {
   title: string;
   summary: string;
@@ -241,6 +244,7 @@ const SecurityDiagnosticsContent = ({
   <Stack spacing={3} divider={<Divider flexItem />}>
     <SecurityScoreSummary diagnostics={diagnostics} t={t} />
     <SecurityRiskSection warnings={diagnostics.warnings} t={t} />
+    <SecurityPassedSection diagnostics={diagnostics} t={t} />
     <InstanceDiagnosticsSection diagnostics={diagnostics} t={t} />
     <MasterKeyDiagnosticsSection diagnostics={diagnostics} t={t} />
     <MemoryDiagnosticsSection diagnostics={diagnostics} t={t} />
@@ -468,18 +472,146 @@ const SecurityRiskCard = ({ warning, t }: SecurityRiskCardProps) => {
               bgcolor: "action.hover",
             }}
           >
-            <BuildOutlinedIcon
-              fontSize="small"
-              sx={{ color: "text.secondary", mt: 0.25, flexShrink: 0 }}
-            />
+            {noUserFixCodes.has(warning.code) ? (
+              <InfoOutlinedIcon
+                fontSize="small"
+                sx={{ color: "text.secondary", mt: 0.25, flexShrink: 0 }}
+              />
+            ) : (
+              <BuildOutlinedIcon
+                fontSize="small"
+                sx={{ color: "text.secondary", mt: 0.25, flexShrink: 0 }}
+              />
+            )}
             <RiskLabeledBlock
-              label={t("securityDiagnostics.labels.howToFix")}
+              label={t(
+                noUserFixCodes.has(warning.code)
+                  ? "securityDiagnostics.labels.note"
+                  : "securityDiagnostics.labels.howToFix",
+              )}
               text={fix}
             />
           </Box>
         )}
       </Stack>
     </Paper>
+  );
+};
+
+const getPassedCheckCodes = (d: SecurityDiagnosticsDto): string[] => {
+  const lp = d.linuxProcess;
+  const lc = d.linuxContainer;
+  const checks: ReadonlyArray<readonly [string, boolean]> = [
+    ["public-instance", d.isPublicInstance === false],
+    [
+      "master-key-from-environment",
+      d.masterKeyEnvironmentVariableWasConfigured === false,
+    ],
+    [
+      "admins-without-2fa",
+      d.adminTotp.adminCount > 0 && d.adminTotp.adminsWithoutTotp === 0,
+    ],
+    ["dotnet-diagnostics-enabled", d.dotNetDiagnostics.disabled === true],
+    ["process-hardening-failed", lp.hardeningApplied === true],
+    ["process-dumpable", lp.dumpable === 0],
+    ["sys-ptrace-capability", lp.hasSysPtraceCapability === false],
+    ["new-privileges-allowed", lp.noNewPrivileges === 1],
+    ["seccomp-disabled", lp.seccompMode != null && lp.seccompMode !== 0],
+    ["running-as-root", lp.runningAsRoot === false],
+    ["root-filesystem-writable", lc.rootFilesystemReadOnly === true],
+    ["docker-socket-mounted", lc.dockerSocketMounted === false],
+    ["host-pid-namespace", lc.hostPidNamespaceLikely === false],
+    ["core-dumps-enabled", lc.coreDumpSoftLimitDisabled === true],
+    [
+      "mandatory-access-control-unconfined",
+      (lc.appArmorProfile != null &&
+        !isUnconfinedAppArmorProfile(lc.appArmorProfile)) ||
+        lc.selinuxEnforcing === true,
+    ],
+  ];
+
+  return checks.filter(([, ok]) => ok).map(([code]) => code);
+};
+
+type SecurityPassedCardProps = {
+  code: string;
+  t: TFunction<"admin">;
+};
+
+const SecurityPassedCard = ({ code, t }: SecurityPassedCardProps) => {
+  const guardsAgainst = knownThreatVectorCodes.has(code)
+    ? t(`securityDiagnostics.threatVectors.${code}`)
+    : null;
+
+  return (
+    <Paper
+      variant="outlined"
+      sx={(theme) => ({
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        borderLeft: `4px solid ${theme.palette.success.main}`,
+      })}
+    >
+      <Box
+        sx={(theme) => ({
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          px: 2,
+          py: 1,
+          color: theme.palette.success.main,
+          bgcolor: alpha(theme.palette.success.main, 0.1),
+        })}
+      >
+        <CheckCircleIcon fontSize="small" />
+        <Typography variant="subtitle2" fontWeight={700} color="inherit">
+          {t(`securityDiagnostics.passed.${code}`)}
+        </Typography>
+        <Chip size="small" variant="outlined" label={code} sx={{ ml: "auto" }} />
+      </Box>
+      {guardsAgainst && (
+        <Stack spacing={1.25} sx={{ px: 2, py: 1.5 }}>
+          <RiskLabeledBlock
+            label={t("securityDiagnostics.labels.guardsAgainst")}
+            text={guardsAgainst}
+          />
+        </Stack>
+      )}
+    </Paper>
+  );
+};
+
+const SecurityPassedSection = ({
+  diagnostics,
+  t,
+}: DiagnosticsContentSectionProps) => {
+  const warningCodes = new Set(diagnostics.warnings.map((w) => w.code));
+  const codes = getPassedCheckCodes(diagnostics).filter(
+    (code) => !warningCodes.has(code),
+  );
+
+  if (codes.length === 0) {
+    return null;
+  }
+
+  return (
+    <DiagnosticsSection title={t("securityDiagnostics.sections.passed")}>
+      <Box
+        sx={{
+          display: "grid",
+          gap: 1.5,
+          gridTemplateColumns: {
+            xs: "1fr",
+            lg: "repeat(2, minmax(0, 1fr))",
+          },
+        }}
+      >
+        {codes.map((code) => (
+          <SecurityPassedCard key={code} code={code} t={t} />
+        ))}
+      </Box>
+    </DiagnosticsSection>
   );
 };
 

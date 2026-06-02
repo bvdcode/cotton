@@ -3146,7 +3146,8 @@
         "masterKey": "Chiave master",
         "memory": "Esposizione della memoria del processo",
         "runtime": "Informazioni di runtime",
-        "containerBoundary": "Container boundary"
+        "containerBoundary": "Container boundary",
+        "passed": "Protections in place"
       },
       "risks": {
         "empty": "Nessun avviso rilevato dagli attuali controlli lato server."
@@ -3207,7 +3208,9 @@
       "labels": {
         "whatItMeans": "What it means",
         "impact": "Impact",
-        "howToFix": "How to fix"
+        "howToFix": "How to fix",
+        "guardsAgainst": "What this guards against",
+        "note": "Note"
       },
       "fixes": {
         "public-instance": "If this instance is not meant to be public, disable public/demo mode (unset COTTON_PUBLIC_INSTANCE) and restart.",
@@ -3221,12 +3224,29 @@
         "running-as-root": "Run the container as a non-root user; the official image runs as the unprivileged app user by default.",
         "process-hardening-failed": "Process hardening was requested but could not be applied — check the container capabilities/permissions and the startup logs.",
         "db-integrity-unsigned-rows": "Let the database-integrity bridge backfill finish signing legacy rows (keep the instance running), then disable bridge mode.",
-        "db-integrity-bridge-mode": "Bridge mode still accepts unsigned legacy rows. Once backfill is complete, disable bridge mode so every protected row must be signed.",
+        "db-integrity-bridge-mode": "Bridge mode is a transitional database-integrity migration state managed by Cotton itself. It is finalized by upgrading to the Cotton release that completes the integrity migration — there is no operator action to take.",
         "root-filesystem-writable": "Run the container with a read-only root filesystem (read_only: true) and mount only the storage volume as writable.",
         "docker-socket-mounted": "Do not mount the Docker socket (/var/run/docker.sock) into the container.",
         "host-pid-namespace": "Do not share the host PID namespace (avoid pid: host) so the process cannot observe other host processes.",
         "mandatory-access-control-unconfined": "Apply an AppArmor or SELinux profile to confine the process instead of running unconfined.",
         "core-dumps-enabled": "Disable core dumps for the container (ulimits: core: 0) so secrets cannot leak into dump files."
+      },
+      "passed": {
+        "public-instance": "Public account creation disabled",
+        "master-key-from-environment": "Master key not exposed via the environment",
+        "admins-without-2fa": "All admins have two-factor enabled",
+        "dotnet-diagnostics-enabled": ".NET diagnostics disabled",
+        "process-hardening-failed": "Process hardening applied",
+        "process-dumpable": "Process is not dumpable",
+        "sys-ptrace-capability": "CAP_SYS_PTRACE not held",
+        "new-privileges-allowed": "no-new-privileges enforced",
+        "seccomp-disabled": "seccomp filtering enabled",
+        "running-as-root": "Running as a non-root user",
+        "root-filesystem-writable": "Read-only root filesystem",
+        "docker-socket-mounted": "Docker socket not mounted",
+        "host-pid-namespace": "Isolated PID namespace",
+        "core-dumps-enabled": "Core dumps disabled",
+        "mandatory-access-control-unconfined": "AppArmor/SELinux confinement active"
       }
     },
     "groups": {
