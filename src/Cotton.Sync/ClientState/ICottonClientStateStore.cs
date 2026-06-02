@@ -19,4 +19,14 @@ public interface ICottonClientStateStore : ICottonTokenStore
     /// Loads the Cotton server base address associated with the current profile.
     /// </summary>
     Task<Uri?> GetServerBaseAddressAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Saves a client profile value.
+    /// </summary>
+    Task SaveProfileValueAsync(string key, string value, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Loads a client profile value.
+    /// </summary>
+    Task<string?> GetProfileValueAsync(string key, CancellationToken cancellationToken = default);
 }

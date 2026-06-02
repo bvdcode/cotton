@@ -26,6 +26,11 @@ namespace Cotton.Sync.Desktop;
 public sealed partial class MainWindow : Window
 {
     private const int DefaultIntervalSeconds = 30;
+    private const string LocalPathProfileKey = "desktop.local_path";
+    private const string RemotePathProfileKey = "desktop.remote_path";
+    private const string IntervalProfileKey = "desktop.interval_seconds";
+    private const string UsernameProfileKey = "desktop.username";
+    private const string TrustDeviceProfileKey = "desktop.trust_device";
     private CancellationTokenSource? _actionCancellation;
     private CancellationTokenSource? _loopCancellation;
     private Task? _loopTask;
@@ -38,6 +43,7 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         DataContext = this;
         LoadDefaults();
+        _ = LoadSavedProfileAsync();
     }
 
     /// <summary>
@@ -134,7 +140,10 @@ public sealed partial class MainWindow : Window
             TrustDevice = TrustDeviceBox.IsChecked == true,
         }, cancellationToken).ConfigureAwait(true);
         await store.SaveServerBaseAddressAsync(server, cancellationToken).ConfigureAwait(true);
+        await store.SaveProfileValueAsync(UsernameProfileKey, username, cancellationToken).ConfigureAwait(true);
+        await store.SaveProfileValueAsync(TrustDeviceProfileKey, (TrustDeviceBox.IsChecked == true).ToString(CultureInfo.InvariantCulture), cancellationToken).ConfigureAwait(true);
         UserDto user = await client.Auth.MeAsync(cancellationToken).ConfigureAwait(true);
+        PasswordInput.Text = string.Empty;
         AddActivity("Login", user.Username, "Authenticated on " + server.ToString().TrimEnd('/'));
         SetStatus("Logged in as " + user.Username);
     }
@@ -205,6 +214,7 @@ public sealed partial class MainWindow : Window
         }
 
         SqliteClientStateStore clientStore = CreateClientStateStore();
+        await SaveSyncProfileAsync(clientStore, server, localRoot, remotePath, cancellationToken).ConfigureAwait(true);
         using HttpClient httpClient = CreateHttpClient(server);
         var client = new CottonCloudClient(httpClient, clientStore, new CottonSdkOptions { BaseAddress = server });
         IProgress<SyncProgress> progress = new Progress<SyncProgress>(UpdateProgress);
@@ -356,6 +366,66 @@ public sealed partial class MainWindow : Window
         LocalPathBox.Text = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Cotton");
         RemotePathBox.Text = "DesktopSync";
         IntervalBox.Text = DefaultIntervalSeconds.ToString(CultureInfo.InvariantCulture);
+    }
+
+    private async Task LoadSavedProfileAsync()
+    {
+        try
+        {
+            SqliteClientStateStore store = CreateClientStateStore();
+            Uri? server = await store.GetServerBaseAddressAsync().ConfigureAwait(true);
+            if (server is not null)
+            {
+                ServerBox.Text = server.ToString().TrimEnd('/');
+            }
+
+            string? username = await store.GetProfileValueAsync(UsernameProfileKey).ConfigureAwait(true);
+            if (!string.IsNullOrWhiteSpace(username))
+            {
+                UsernameBox.Text = username;
+            }
+
+            string? trustDevice = await store.GetProfileValueAsync(TrustDeviceProfileKey).ConfigureAwait(true);
+            if (bool.TryParse(trustDevice, out bool trust))
+            {
+                TrustDeviceBox.IsChecked = trust;
+            }
+
+            string? localPath = await store.GetProfileValueAsync(LocalPathProfileKey).ConfigureAwait(true);
+            if (!string.IsNullOrWhiteSpace(localPath))
+            {
+                LocalPathBox.Text = localPath;
+            }
+
+            string? remotePath = await store.GetProfileValueAsync(RemotePathProfileKey).ConfigureAwait(true);
+            if (!string.IsNullOrWhiteSpace(remotePath))
+            {
+                RemotePathBox.Text = remotePath;
+            }
+
+            string? interval = await store.GetProfileValueAsync(IntervalProfileKey).ConfigureAwait(true);
+            if (!string.IsNullOrWhiteSpace(interval))
+            {
+                IntervalBox.Text = interval;
+            }
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or IOException or UnauthorizedAccessException or DbException)
+        {
+            AddActivity("Error", string.Empty, "Could not load saved settings: " + exception.Message);
+        }
+    }
+
+    private async Task SaveSyncProfileAsync(
+        SqliteClientStateStore store,
+        Uri server,
+        string localRoot,
+        string? remotePath,
+        CancellationToken cancellationToken)
+    {
+        await store.SaveServerBaseAddressAsync(server, cancellationToken).ConfigureAwait(true);
+        await store.SaveProfileValueAsync(LocalPathProfileKey, localRoot, cancellationToken).ConfigureAwait(true);
+        await store.SaveProfileValueAsync(RemotePathProfileKey, remotePath ?? string.Empty, cancellationToken).ConfigureAwait(true);
+        await store.SaveProfileValueAsync(IntervalProfileKey, ReadIntervalSeconds().ToString(CultureInfo.InvariantCulture), cancellationToken).ConfigureAwait(true);
     }
 
     private Uri ReadServer()

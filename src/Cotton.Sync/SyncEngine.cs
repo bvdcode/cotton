@@ -52,12 +52,12 @@ public sealed class SyncEngine : ISyncEngine
         ValidateOptions(options);
         ReportProgress(options, "Preparing sync state...");
         await _stateStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        ReportProgress(options, "Loading sync baseline...");
+        IReadOnlyList<SyncStateEntry> stateEntries = await _stateStore.LoadPairAsync(syncPair.SyncPairId, cancellationToken).ConfigureAwait(false);
         ReportProgress(options, "Scanning local files...");
-        IReadOnlyList<LocalFileSnapshot> localFiles = await _localScanner.ScanAsync(syncPair.LocalRootPath, cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<LocalFileSnapshot> localFiles = await _localScanner.ScanAsync(syncPair.LocalRootPath, BuildLocalHashHints(stateEntries), cancellationToken).ConfigureAwait(false);
         ReportProgress(options, "Reading remote tree after " + localFiles.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + " local file(s)...");
         RemoteTreeSnapshot remoteTree = await _remoteCrawler.CrawlAsync(syncPair.RemoteRootNodeId, cancellationToken).ConfigureAwait(false);
-        ReportProgress(options, "Loading sync baseline after " + remoteTree.Files.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + " remote file(s)...");
-        IReadOnlyList<SyncStateEntry> stateEntries = await _stateStore.LoadPairAsync(syncPair.SyncPairId, cancellationToken).ConfigureAwait(false);
 
         Dictionary<string, LocalFileSnapshot> localByPath = ToDictionary(localFiles, file => file.RelativePath);
         Dictionary<string, RemoteFileSnapshot> remoteByPath = ToDictionary(remoteTree.Files, file => file.RelativePath);
@@ -126,7 +126,7 @@ public sealed class SyncEngine : ISyncEngine
             {
                 if (!options.DryRun)
                 {
-                    await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, remote.File), cancellationToken)
+                    await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, local.SizeBytes, remote.File), cancellationToken)
                         .ConfigureAwait(false);
                 }
 
@@ -167,7 +167,7 @@ public sealed class SyncEngine : ISyncEngine
         {
             if (!options.DryRun)
             {
-                await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, remote.File), cancellationToken)
+                await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, local.SizeBytes, remote.File), cancellationToken)
                     .ConfigureAwait(false);
             }
 
@@ -245,7 +245,7 @@ public sealed class SyncEngine : ISyncEngine
             local,
             existingRemoteFile,
             cancellationToken).ConfigureAwait(false);
-        await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, uploaded), cancellationToken)
+        await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, local.SizeBytes, uploaded), cancellationToken)
             .ConfigureAwait(false);
         Report(result, options, SyncActivityKind.Uploaded, relativePath, null);
     }
@@ -271,7 +271,7 @@ public sealed class SyncEngine : ISyncEngine
             (stream, token) => _remoteFiles.DownloadFileAsync(remoteFile.Id, stream, token),
             remoteFile.UpdatedAt == default ? null : remoteFile.UpdatedAt,
             cancellationToken).ConfigureAwait(false);
-        await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, remoteFile.ContentHash, remoteFile.UpdatedAt, remoteFile), cancellationToken)
+        await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, remoteFile.ContentHash, remoteFile.UpdatedAt, remoteFile.SizeBytes, remoteFile), cancellationToken)
             .ConfigureAwait(false);
         Report(result, options, SyncActivityKind.Downloaded, relativePath, null);
     }
@@ -342,7 +342,7 @@ public sealed class SyncEngine : ISyncEngine
                 remoteFile.UpdatedAt == default ? null : remoteFile.UpdatedAt,
                 cancellationToken).ConfigureAwait(false);
             details = "Remote version saved as " + conflictPath;
-            await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, remoteFile), cancellationToken)
+            await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, local.SizeBytes, remoteFile), cancellationToken)
                 .ConfigureAwait(false);
         }
         else if (local is not null)
@@ -355,7 +355,7 @@ public sealed class SyncEngine : ISyncEngine
                 null,
                 cancellationToken).ConfigureAwait(false);
             details = "Remote deletion conflicted with local change; local version was uploaded again.";
-            await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, uploaded), cancellationToken)
+            await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, local.SizeBytes, uploaded), cancellationToken)
                 .ConfigureAwait(false);
         }
         else if (remoteFile is not null)
@@ -368,7 +368,7 @@ public sealed class SyncEngine : ISyncEngine
                 remoteFile.UpdatedAt == default ? null : remoteFile.UpdatedAt,
                 cancellationToken).ConfigureAwait(false);
             details = "Local deletion conflicted with remote change; remote version was restored locally.";
-            await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, remoteFile.ContentHash, remoteFile.UpdatedAt, remoteFile), cancellationToken)
+            await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, remoteFile.ContentHash, remoteFile.UpdatedAt, remoteFile.SizeBytes, remoteFile), cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -380,6 +380,7 @@ public sealed class SyncEngine : ISyncEngine
         string relativePath,
         string? localContentHash,
         DateTime? localLastWriteUtc,
+        long? localSizeBytes,
         NodeFileManifestDto? remoteFile)
     {
         return new SyncStateEntry
@@ -389,12 +390,37 @@ public sealed class SyncEngine : ISyncEngine
             Kind = SyncEntryKind.File,
             LocalContentHash = localContentHash,
             LocalLastWriteUtc = localLastWriteUtc?.ToUniversalTime(),
+            LocalSizeBytes = localSizeBytes,
             RemoteFileId = remoteFile?.Id,
             RemoteNodeId = remoteFile?.NodeId,
             RemoteContentHash = remoteFile?.ContentHash,
             RemoteETag = remoteFile?.ETag,
             SyncedAtUtc = DateTime.UtcNow,
         };
+    }
+
+    private static IReadOnlyDictionary<string, LocalFileScanHint> BuildLocalHashHints(IEnumerable<SyncStateEntry> stateEntries)
+    {
+        var hints = new Dictionary<string, LocalFileScanHint>(PathComparer);
+        foreach (SyncStateEntry entry in stateEntries)
+        {
+            if (entry.Kind != SyncEntryKind.File
+                || string.IsNullOrWhiteSpace(entry.LocalContentHash)
+                || !entry.LocalLastWriteUtc.HasValue
+                || !entry.LocalSizeBytes.HasValue)
+            {
+                continue;
+            }
+
+            hints[SyncPath.ToKey(entry.RelativePath)] = new LocalFileScanHint
+            {
+                ContentHash = entry.LocalContentHash,
+                LastWriteUtc = entry.LocalLastWriteUtc.Value.ToUniversalTime(),
+                SizeBytes = entry.LocalSizeBytes.Value,
+            };
+        }
+
+        return hints;
     }
 
     private static bool RemoteMatchesBaseline(NodeFileManifestDto remoteFile, SyncStateEntry state)

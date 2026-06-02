@@ -12,4 +12,15 @@ public interface ILocalFileScanner
     /// Scans a local root folder and returns stable file snapshots.
     /// </summary>
     Task<IReadOnlyList<LocalFileSnapshot>> ScanAsync(string rootPath, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Scans a local root folder, reusing known hashes for unchanged files when possible.
+    /// </summary>
+    Task<IReadOnlyList<LocalFileSnapshot>> ScanAsync(
+        string rootPath,
+        IReadOnlyDictionary<string, LocalFileScanHint> hashHints,
+        CancellationToken cancellationToken = default)
+    {
+        return ScanAsync(rootPath, cancellationToken);
+    }
 }

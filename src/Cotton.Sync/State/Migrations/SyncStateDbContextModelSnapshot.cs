@@ -37,6 +37,10 @@ namespace Cotton.Sync.State.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("local_last_write_utc");
 
+                    b.Property<long?>("LocalSizeBytes")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("local_size_bytes");
+
                     b.Property<string>("RelativePath")
                         .IsRequired()
                         .HasMaxLength(1024)

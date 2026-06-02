@@ -33,7 +33,18 @@ public sealed class LocalFileScanner : ILocalFileScanner
         string rootPath,
         CancellationToken cancellationToken = default)
     {
+        return await ScanAsync(rootPath, new Dictionary<string, LocalFileScanHint>(StringComparer.OrdinalIgnoreCase), cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<LocalFileSnapshot>> ScanAsync(
+        string rootPath,
+        IReadOnlyDictionary<string, LocalFileScanHint> hashHints,
+        CancellationToken cancellationToken = default)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
+        ArgumentNullException.ThrowIfNull(hashHints);
         string fullRoot = Path.GetFullPath(rootPath);
         if (!Directory.Exists(fullRoot))
         {
@@ -41,6 +52,7 @@ public sealed class LocalFileScanner : ILocalFileScanner
         }
 
         var snapshots = new List<LocalFileSnapshot>();
+        int reusedHashes = 0;
         _progress?.Report(new SyncProgress { Message = "Scanning local files..." });
         foreach (string filePath in Directory.EnumerateFiles(fullRoot, "*", FileEnumerationOptions))
         {
@@ -57,13 +69,23 @@ public sealed class LocalFileScanner : ILocalFileScanner
                 continue;
             }
 
-            string contentHash = await ComputeHashAsync(file.FullName, cancellationToken).ConfigureAwait(false);
+            string contentHash;
+            if (TryReuseHash(hashHints, relativePath, file, out string? reusedHash))
+            {
+                contentHash = reusedHash;
+                reusedHashes++;
+            }
+            else
+            {
+                contentHash = await ComputeHashAsync(file.FullName, cancellationToken).ConfigureAwait(false);
+            }
+
             int scannedCount = snapshots.Count + 1;
             if (ShouldReportProgress(scannedCount))
             {
                 _progress?.Report(new SyncProgress
                 {
-                    Message = "Scanning local files... " + scannedCount.ToString(System.Globalization.CultureInfo.InvariantCulture) + " file(s) hashed",
+                    Message = "Scanning local files... " + scannedCount.ToString(System.Globalization.CultureInfo.InvariantCulture) + " file(s), " + reusedHashes.ToString(System.Globalization.CultureInfo.InvariantCulture) + " hash(es) reused",
                     Current = scannedCount,
                 });
             }
@@ -81,11 +103,34 @@ public sealed class LocalFileScanner : ILocalFileScanner
         snapshots.Sort((left, right) => PathComparer.Compare(left.RelativePath, right.RelativePath));
         _progress?.Report(new SyncProgress
         {
-            Message = "Scanned " + snapshots.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + " local file(s).",
+            Message = "Scanned " + snapshots.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + " local file(s), reused " + reusedHashes.ToString(System.Globalization.CultureInfo.InvariantCulture) + " hash(es).",
             Current = snapshots.Count,
             Total = snapshots.Count,
         });
         return snapshots;
+    }
+
+    private static bool TryReuseHash(
+        IReadOnlyDictionary<string, LocalFileScanHint> hashHints,
+        string relativePath,
+        FileInfo file,
+        out string? contentHash)
+    {
+        contentHash = null;
+        if (!hashHints.TryGetValue(SyncPath.ToKey(relativePath), out LocalFileScanHint? hint)
+            || string.IsNullOrWhiteSpace(hint.ContentHash))
+        {
+            return false;
+        }
+
+        DateTime fileLastWriteUtc = file.LastWriteTimeUtc.ToUniversalTime();
+        if (file.Length != hint.SizeBytes || fileLastWriteUtc != hint.LastWriteUtc.ToUniversalTime())
+        {
+            return false;
+        }
+
+        contentHash = hint.ContentHash;
+        return true;
     }
 
     private static bool ShouldReportProgress(int scannedCount)

@@ -121,6 +121,30 @@ public sealed class SqliteClientStateStore : ICottonClientStateStore
         return string.IsNullOrWhiteSpace(value) ? null : new Uri(value, UriKind.Absolute);
     }
 
+    /// <inheritdoc />
+    public async Task SaveProfileValueAsync(string key, string value, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+        await using ClientStateDbContext context = CreateContext();
+        await UpsertAsync(context, "profile:" + key.Trim(), value, cancellationToken).ConfigureAwait(false);
+        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<string?> GetProfileValueAsync(string key, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+        await using ClientStateDbContext context = CreateContext();
+        return await context.StateItems
+            .AsNoTracking()
+            .Where(item => item.Key == "profile:" + key.Trim())
+            .Select(item => item.Value)
+            .SingleOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     private static async Task UpsertAsync(ClientStateDbContext context, string key, string value, CancellationToken cancellationToken)
     {
         ClientStateItem? item = await context.StateItems.FindAsync([key], cancellationToken).ConfigureAwait(false);
