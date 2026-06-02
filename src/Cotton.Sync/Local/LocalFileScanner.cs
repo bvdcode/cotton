@@ -70,7 +70,7 @@ public sealed class LocalFileScanner : ILocalFileScanner
             }
 
             string contentHash;
-            if (TryReuseHash(hashHints, relativePath, file, out string? reusedHash))
+            if (TryReuseHash(hashHints, relativePath, file, out string reusedHash))
             {
                 contentHash = reusedHash;
                 reusedHashes++;
@@ -114,9 +114,9 @@ public sealed class LocalFileScanner : ILocalFileScanner
         IReadOnlyDictionary<string, LocalFileScanHint> hashHints,
         string relativePath,
         FileInfo file,
-        out string? contentHash)
+        out string contentHash)
     {
-        contentHash = null;
+        contentHash = string.Empty;
         if (!hashHints.TryGetValue(SyncPath.ToKey(relativePath), out LocalFileScanHint? hint)
             || string.IsNullOrWhiteSpace(hint.ContentHash))
         {

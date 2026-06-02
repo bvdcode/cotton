@@ -3,6 +3,7 @@
 
 using Cotton.Contracts.Auth;
 using Cotton.Sync.ClientState;
+using Microsoft.Data.Sqlite;
 
 namespace Cotton.Sync.Tests.ClientState;
 
@@ -60,8 +61,35 @@ public sealed class SqliteClientStateStoreTests
         Assert.That(results, Is.All.Null);
     }
 
+    [Test]
+    public async Task InitializeAsync_RecreatesDatabaseWhenSchemaDoesNotMatch()
+    {
+        string databasePath = DatabasePath();
+        await CreateSqliteDatabaseAsync(databasePath, "CREATE TABLE state_items (key TEXT NOT NULL);");
+        var store = new SqliteClientStateStore(databasePath);
+
+        await store.SaveProfileValueAsync("probe", "value");
+
+        string? value = await store.GetProfileValueAsync("probe");
+        Assert.That(value, Is.EqualTo("value"));
+    }
+
     private SqliteClientStateStore CreateStore()
     {
-        return new SqliteClientStateStore(Path.Combine(_tempDirectory, "client-state.sqlite"));
+        return new SqliteClientStateStore(DatabasePath());
+    }
+
+    private string DatabasePath()
+    {
+        return Path.Combine(_tempDirectory, "client-state.sqlite");
+    }
+
+    private static async Task CreateSqliteDatabaseAsync(string databasePath, string commandText)
+    {
+        await using var connection = new SqliteConnection("Data Source=" + databasePath);
+        await connection.OpenAsync();
+        await using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = commandText;
+        await command.ExecuteNonQueryAsync();
     }
 }

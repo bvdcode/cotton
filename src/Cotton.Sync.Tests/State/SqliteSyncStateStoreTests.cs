@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Sync.State;
+using Microsoft.Data.Sqlite;
 
 namespace Cotton.Sync.Tests.State;
 
@@ -34,6 +35,27 @@ public sealed class SqliteSyncStateStoreTests
         IReadOnlyList<SyncStateEntry> entries = await store.LoadPairAsync("pair-a");
 
         Assert.That(entries, Is.Empty);
+    }
+
+    [Test]
+    public async Task InitializeAsync_RecreatesDatabaseWhenSchemaDoesNotMatch()
+    {
+        string databasePath = DatabasePath();
+        await CreateSqliteDatabaseAsync(databasePath, "CREATE TABLE sync_entries (sync_pair_id TEXT NOT NULL);");
+        var store = new SqliteSyncStateStore(databasePath);
+
+        await store.InitializeAsync();
+        await store.UpsertAsync(new SyncStateEntry
+        {
+            SyncPairId = "pair-a",
+            RelativePath = "cached.txt",
+            Kind = SyncEntryKind.File,
+            LocalContentHash = "hash",
+            LocalSizeBytes = 42,
+        });
+        SyncStateEntry? entry = await store.GetAsync("pair-a", "cached.txt");
+
+        Assert.That(entry?.LocalSizeBytes, Is.EqualTo(42));
     }
 
     [Test]
@@ -177,5 +199,14 @@ public sealed class SqliteSyncStateStoreTests
     private string DatabasePath()
     {
         return Path.Combine(_tempDirectory, "sync-state.sqlite");
+    }
+
+    private static async Task CreateSqliteDatabaseAsync(string databasePath, string commandText)
+    {
+        await using var connection = new SqliteConnection("Data Source=" + databasePath);
+        await connection.OpenAsync();
+        await using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = commandText;
+        await command.ExecuteNonQueryAsync();
     }
 }

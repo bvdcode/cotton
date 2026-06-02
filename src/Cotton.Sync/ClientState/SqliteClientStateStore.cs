@@ -47,13 +47,54 @@ public sealed class SqliteClientStateStore : ICottonClientStateStore
             }
 
             EnsureDirectoryExists();
-            await using ClientStateDbContext context = CreateContext();
-            await context.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
+            await InitializeDatabaseAsync(cancellationToken).ConfigureAwait(false);
             _initialized = true;
         }
         finally
         {
             _initializeGate.Release();
+        }
+    }
+
+    private async Task InitializeDatabaseAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using ClientStateDbContext context = CreateContext();
+            await context.Database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
+            await ValidateSchemaAsync(context, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // удаляем бд при ошибках т.к. идёт разработка
+            DeleteDatabaseFiles();
+            await using ClientStateDbContext context = CreateContext();
+            await context.Database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
+            await ValidateSchemaAsync(context, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task ValidateSchemaAsync(ClientStateDbContext context, CancellationToken cancellationToken)
+    {
+        await context.StateItems
+            .AsNoTracking()
+            .Take(1)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private void DeleteDatabaseFiles()
+    {
+        DeleteIfExists(_databasePath);
+        DeleteIfExists(_databasePath + "-wal");
+        DeleteIfExists(_databasePath + "-shm");
+    }
+
+    private static void DeleteIfExists(string path)
+    {
+        if (File.Exists(path))
+        {
+            File.Delete(path);
         }
     }
 
