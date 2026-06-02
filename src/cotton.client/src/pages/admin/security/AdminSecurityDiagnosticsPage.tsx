@@ -608,7 +608,17 @@ const SecurityPassedSection = ({
   );
   const cpu = diagnostics.cpuFeatures;
   const showAesAcceleration = cpu?.aesGcmHardwareAccelerationLikely === true;
-  const cpuLabel = cpu?.modelName?.trim() || cpu?.architecture || "";
+  const cpuDescriptor = cpu
+    ? [
+        cpu.vendorId?.trim(),
+        cpu.architecture?.trim(),
+        cpu.logicalProcessorCount
+          ? `${cpu.logicalProcessorCount}×`
+          : undefined,
+      ]
+        .filter((part): part is string => Boolean(part))
+        .join(" · ")
+    : "";
 
   if (codes.length === 0 && !showAesAcceleration) {
     return null;
@@ -634,10 +644,17 @@ const SecurityPassedSection = ({
             title={t("securityDiagnostics.capabilities.aesAcceleration.title")}
           >
             <Typography variant="body2">
-              {t("securityDiagnostics.capabilities.aesAcceleration.body", {
-                cpu: cpuLabel,
-              })}
+              {t("securityDiagnostics.capabilities.aesAcceleration.body")}
             </Typography>
+            {cpuDescriptor && (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ fontVariantNumeric: "tabular-nums" }}
+              >
+                {cpuDescriptor}
+              </Typography>
+            )}
           </PositiveCard>
         )}
       </Box>

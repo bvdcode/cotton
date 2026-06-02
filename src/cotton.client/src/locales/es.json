@@ -3044,7 +3044,7 @@
       "capabilities": {
         "aesAcceleration": {
           "title": "Hardware-accelerated encryption",
-          "body": "This processor ({{cpu}}) exposes AES-NI / PCLMULQDQ instructions, so AES-GCM runs on dedicated hardware paths — encryption stays fast and adds little CPU overhead."
+          "body": "This processor exposes AES-NI / PCLMULQDQ instructions, so AES-GCM runs on dedicated hardware paths — encryption stays fast and adds little CPU overhead."
         }
       }
     },
