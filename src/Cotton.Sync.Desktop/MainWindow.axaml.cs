@@ -26,6 +26,7 @@ namespace Cotton.Sync.Desktop;
 public sealed partial class MainWindow : Window
 {
     private const int DefaultIntervalSeconds = 30;
+    private CancellationTokenSource? _actionCancellation;
     private CancellationTokenSource? _loopCancellation;
     private Task? _loopTask;
 
@@ -74,15 +75,18 @@ public sealed partial class MainWindow : Window
 
     private async void StopLoopButton_Click(object? sender, RoutedEventArgs args)
     {
+        CancellationTokenSource? actionCancellation = _actionCancellation;
         CancellationTokenSource? cancellation = _loopCancellation;
         Task? loopTask = _loopTask;
-        if (cancellation is null)
+        if (actionCancellation is null && cancellation is null)
         {
             return;
         }
 
-        cancellation.Cancel();
+        actionCancellation?.Cancel();
+        cancellation?.Cancel();
         StopLoopButton.IsEnabled = false;
+        SetStatus("Canceling...");
         if (loopTask is not null)
         {
             await loopTask.ConfigureAwait(true);
@@ -172,6 +176,7 @@ public sealed partial class MainWindow : Window
         {
             try
             {
+                SetStatus("Starting sync pass...");
                 SyncRunResult result = await RunSyncPassAsync(cancellationToken).ConfigureAwait(true);
                 AddResultActivities(result);
             }
@@ -179,10 +184,10 @@ public sealed partial class MainWindow : Window
             {
                 throw;
             }
-        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or Cotton.Sdk.CottonApiException or HttpRequestException or IOException or UnauthorizedAccessException or DbException)
-        {
-            AddActivity("Error", string.Empty, exception.Message);
-            SetStatus("Sync error");
+            catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or Cotton.Sdk.CottonApiException or HttpRequestException or IOException or UnauthorizedAccessException or DbException)
+            {
+                AddActivity("Error", string.Empty, exception.Message);
+                SetStatus("Sync error");
             }
 
             await Task.Delay(TimeSpan.FromSeconds(intervalSeconds), cancellationToken).ConfigureAwait(true);
@@ -202,6 +207,7 @@ public sealed partial class MainWindow : Window
         SqliteClientStateStore clientStore = CreateClientStateStore();
         using HttpClient httpClient = CreateHttpClient(server);
         var client = new CottonCloudClient(httpClient, clientStore, new CottonSdkOptions { BaseAddress = server });
+        SetStatus("Resolving remote folder...");
         NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync(remotePath, cancellationToken).ConfigureAwait(true);
         string syncPairId = BuildSyncPairId(server, localRoot, remoteRoot.Id);
         var engine = new SyncEngine(
@@ -209,7 +215,7 @@ public sealed partial class MainWindow : Window
             new RemoteTreeCrawler(client.Nodes),
             new SdkRemoteFileSynchronizer(client),
             new SqliteSyncStateStore(GetSyncStateDatabasePath()));
-        SetStatus("Syncing " + localRoot);
+        SetStatus("Scanning and syncing " + localRoot);
         return await engine.RunOnceAsync(new SyncPair
         {
             SyncPairId = syncPairId,
@@ -223,9 +229,15 @@ public sealed partial class MainWindow : Window
 
     private async Task RunUiActionAsync(string status, Func<CancellationToken, Task> action)
     {
+        if (_actionCancellation is not null || _loopCancellation is not null)
+        {
+            return;
+        }
+
+        using var cancellation = new CancellationTokenSource();
+        _actionCancellation = cancellation;
         SetBusy(true);
         SetStatus(status);
-        using var cancellation = new CancellationTokenSource();
         try
         {
             await action(cancellation.Token).ConfigureAwait(true);
@@ -234,6 +246,16 @@ public sealed partial class MainWindow : Window
                 SetStatus("Ready");
             }
         }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            AddActivity("Info", string.Empty, "Operation canceled.");
+            SetStatus("Canceled");
+        }
+        catch (OperationCanceledException exception)
+        {
+            AddActivity("Error", string.Empty, exception.Message);
+            SetStatus("Error");
+        }
         catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or Cotton.Sdk.CottonApiException or HttpRequestException or IOException or UnauthorizedAccessException or DbException)
         {
             AddActivity("Error", string.Empty, exception.Message);
@@ -241,6 +263,11 @@ public sealed partial class MainWindow : Window
         }
         finally
         {
+            if (ReferenceEquals(_actionCancellation, cancellation))
+            {
+                _actionCancellation = null;
+            }
+
             SetBusy(false);
         }
     }
@@ -284,7 +311,15 @@ public sealed partial class MainWindow : Window
         SyncOnceButton.IsEnabled = !isBusy;
         BrowseButton.IsEnabled = !isBusy;
         StartLoopButton.IsEnabled = !isBusy && _loopCancellation is null;
-        StopLoopButton.IsEnabled = _loopCancellation is not null;
+        StopLoopButton.IsEnabled = _actionCancellation is not null || _loopCancellation is not null;
+        ServerBox.IsEnabled = !isBusy;
+        UsernameBox.IsEnabled = !isBusy;
+        PasswordInput.IsEnabled = !isBusy;
+        TwoFactorBox.IsEnabled = !isBusy;
+        TrustDeviceBox.IsEnabled = !isBusy;
+        LocalPathBox.IsEnabled = !isBusy;
+        RemotePathBox.IsEnabled = !isBusy;
+        IntervalBox.IsEnabled = !isBusy;
     }
 
     private void SetStatus(string status)
