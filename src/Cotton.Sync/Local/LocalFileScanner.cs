@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Security.Cryptography;
+using Cotton.Sync;
 using Cotton.Sync.State;
 
 namespace Cotton.Sync.Local;
@@ -17,6 +18,15 @@ public sealed class LocalFileScanner : ILocalFileScanner
         RecurseSubdirectories = true,
         AttributesToSkip = FileAttributes.ReparsePoint,
     };
+    private readonly IProgress<SyncProgress>? _progress;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LocalFileScanner" /> class.
+    /// </summary>
+    public LocalFileScanner(IProgress<SyncProgress>? progress = null)
+    {
+        _progress = progress;
+    }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<LocalFileSnapshot>> ScanAsync(
@@ -31,6 +41,7 @@ public sealed class LocalFileScanner : ILocalFileScanner
         }
 
         var snapshots = new List<LocalFileSnapshot>();
+        _progress?.Report(new SyncProgress { Message = "Scanning local files..." });
         foreach (string filePath in Directory.EnumerateFiles(fullRoot, "*", FileEnumerationOptions))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -47,6 +58,16 @@ public sealed class LocalFileScanner : ILocalFileScanner
             }
 
             string contentHash = await ComputeHashAsync(file.FullName, cancellationToken).ConfigureAwait(false);
+            int scannedCount = snapshots.Count + 1;
+            if (ShouldReportProgress(scannedCount))
+            {
+                _progress?.Report(new SyncProgress
+                {
+                    Message = "Scanning local files... " + scannedCount.ToString(System.Globalization.CultureInfo.InvariantCulture) + " file(s) hashed",
+                    Current = scannedCount,
+                });
+            }
+
             snapshots.Add(new LocalFileSnapshot
             {
                 RelativePath = relativePath,
@@ -58,7 +79,19 @@ public sealed class LocalFileScanner : ILocalFileScanner
         }
 
         snapshots.Sort((left, right) => PathComparer.Compare(left.RelativePath, right.RelativePath));
+        _progress?.Report(new SyncProgress
+        {
+            Message = "Scanned " + snapshots.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + " local file(s).",
+            Current = snapshots.Count,
+            Total = snapshots.Count,
+        });
         return snapshots;
+    }
+
+    private static bool ShouldReportProgress(int scannedCount)
+    {
+        return scannedCount == 1
+            || scannedCount % 10 == 0;
     }
 
     private static bool ShouldIgnore(string relativePath)

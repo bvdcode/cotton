@@ -207,13 +207,14 @@ public sealed partial class MainWindow : Window
         SqliteClientStateStore clientStore = CreateClientStateStore();
         using HttpClient httpClient = CreateHttpClient(server);
         var client = new CottonCloudClient(httpClient, clientStore, new CottonSdkOptions { BaseAddress = server });
+        IProgress<SyncProgress> progress = new Progress<SyncProgress>(UpdateProgress);
         SetStatus("Resolving remote folder...");
         NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync(remotePath, cancellationToken).ConfigureAwait(true);
         string syncPairId = BuildSyncPairId(server, localRoot, remoteRoot.Id);
         var engine = new SyncEngine(
-            new LocalFileScanner(),
-            new RemoteTreeCrawler(client.Nodes),
-            new SdkRemoteFileSynchronizer(client),
+            new LocalFileScanner(progress),
+            new RemoteTreeCrawler(client.Nodes, progress: progress),
+            new SdkRemoteFileSynchronizer(client, progress: progress),
             new SqliteSyncStateStore(GetSyncStateDatabasePath()));
         SetStatus("Scanning and syncing " + localRoot);
         return await engine.RunOnceAsync(new SyncPair
@@ -224,6 +225,7 @@ public sealed partial class MainWindow : Window
         }, new SyncRunOptions
         {
             ActivityProgress = new Progress<SyncActivity>(activity => AddActivity(activity)),
+            Progress = progress,
         }, cancellationToken).ConfigureAwait(true);
     }
 
@@ -320,11 +322,32 @@ public sealed partial class MainWindow : Window
         LocalPathBox.IsEnabled = !isBusy;
         RemotePathBox.IsEnabled = !isBusy;
         IntervalBox.IsEnabled = !isBusy;
+        BusyProgress.IsVisible = isBusy;
+        BusyProgress.IsIndeterminate = isBusy;
+        BusyProgress.Value = 0;
     }
 
     private void SetStatus(string status)
     {
         StatusText.Text = status;
+    }
+
+    private void UpdateProgress(SyncProgress progress)
+    {
+        if (!string.IsNullOrWhiteSpace(progress.Message))
+        {
+            SetStatus(progress.Message);
+        }
+
+        if (progress.Current.HasValue && progress.Total.HasValue && progress.Total.Value > 0)
+        {
+            BusyProgress.IsIndeterminate = false;
+            BusyProgress.Maximum = progress.Total.Value;
+            BusyProgress.Value = Math.Min(progress.Current.Value, progress.Total.Value);
+            return;
+        }
+
+        BusyProgress.IsIndeterminate = BusyProgress.IsVisible;
     }
 
     private void LoadDefaults()

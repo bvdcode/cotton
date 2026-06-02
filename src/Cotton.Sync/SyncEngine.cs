@@ -50,9 +50,13 @@ public sealed class SyncEngine : ISyncEngine
 
         options ??= new SyncRunOptions();
         ValidateOptions(options);
+        ReportProgress(options, "Preparing sync state...");
         await _stateStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        ReportProgress(options, "Scanning local files...");
         IReadOnlyList<LocalFileSnapshot> localFiles = await _localScanner.ScanAsync(syncPair.LocalRootPath, cancellationToken).ConfigureAwait(false);
+        ReportProgress(options, "Reading remote tree after " + localFiles.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + " local file(s)...");
         RemoteTreeSnapshot remoteTree = await _remoteCrawler.CrawlAsync(syncPair.RemoteRootNodeId, cancellationToken).ConfigureAwait(false);
+        ReportProgress(options, "Loading sync baseline after " + remoteTree.Files.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + " remote file(s)...");
         IReadOnlyList<SyncStateEntry> stateEntries = await _stateStore.LoadPairAsync(syncPair.SyncPairId, cancellationToken).ConfigureAwait(false);
 
         Dictionary<string, LocalFileSnapshot> localByPath = ToDictionary(localFiles, file => file.RelativePath);
@@ -62,11 +66,13 @@ public sealed class SyncEngine : ISyncEngine
             entry => entry.RelativePath);
         List<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys);
         var result = new SyncRunResult();
+        ReportProgress(options, "Checking delete safety for " + pathKeys.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + " path(s)...");
         if (!options.DryRun)
         {
             ValidateDeleteSafety(options, pathKeys, localByPath, remoteByPath, stateByPath);
         }
 
+        int processed = 0;
         foreach (string key in pathKeys)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -74,6 +80,11 @@ public sealed class SyncEngine : ISyncEngine
             remoteByPath.TryGetValue(key, out RemoteFileSnapshot? remote);
             stateByPath.TryGetValue(key, out SyncStateEntry? state);
             string relativePath = local?.RelativePath ?? remote?.RelativePath ?? state?.RelativePath ?? key;
+            processed++;
+            if (ShouldReportProgress(processed, pathKeys.Count))
+            {
+                ReportProgress(options, "Comparing " + processed.ToString(System.Globalization.CultureInfo.InvariantCulture) + "/" + pathKeys.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + ": " + relativePath, processed, pathKeys.Count);
+            }
 
             if (state is null)
             {
@@ -227,6 +238,7 @@ public sealed class SyncEngine : ISyncEngine
             return;
         }
 
+        ReportProgress(options, "Uploading " + relativePath + "...");
         NodeFileManifestDto uploaded = await _remoteFiles.UploadFileAsync(
             syncPair.RemoteRootNodeId,
             relativePath,
@@ -252,6 +264,7 @@ public sealed class SyncEngine : ISyncEngine
             return;
         }
 
+        ReportProgress(options, "Downloading " + relativePath + "...");
         await _localWriter.WriteFileAsync(
             syncPair.LocalRootPath,
             relativePath,
@@ -277,6 +290,7 @@ public sealed class SyncEngine : ISyncEngine
             return;
         }
 
+        ReportProgress(options, "Deleting remote " + relativePath + "...");
         await _remoteFiles.DeleteFileAsync(remoteFile.Id, options.DeleteRemotePermanently, cancellationToken).ConfigureAwait(false);
         await _stateStore.DeleteAsync(syncPair.SyncPairId, relativePath, cancellationToken).ConfigureAwait(false);
         Report(result, options, SyncActivityKind.DeletedRemote, relativePath, null);
@@ -295,6 +309,7 @@ public sealed class SyncEngine : ISyncEngine
             return;
         }
 
+        ReportProgress(options, "Deleting local " + relativePath + "...");
         await _localWriter.DeleteFileAsync(syncPair.LocalRootPath, relativePath, cancellationToken).ConfigureAwait(false);
         await _stateStore.DeleteAsync(syncPair.SyncPairId, relativePath, cancellationToken).ConfigureAwait(false);
         Report(result, options, SyncActivityKind.DeletedLocal, relativePath, null);
@@ -319,6 +334,7 @@ public sealed class SyncEngine : ISyncEngine
         if (local is not null && remoteFile is not null)
         {
             string conflictPath = _localWriter.CreateConflictRelativePath(syncPair.LocalRootPath, relativePath, DateTime.UtcNow);
+            ReportProgress(options, "Saving conflict copy " + conflictPath + "...");
             await _localWriter.WriteFileAsync(
                 syncPair.LocalRootPath,
                 conflictPath,
@@ -331,6 +347,7 @@ public sealed class SyncEngine : ISyncEngine
         }
         else if (local is not null)
         {
+            ReportProgress(options, "Uploading local conflict winner " + relativePath + "...");
             NodeFileManifestDto uploaded = await _remoteFiles.UploadFileAsync(
                 syncPair.RemoteRootNodeId,
                 relativePath,
@@ -343,6 +360,7 @@ public sealed class SyncEngine : ISyncEngine
         }
         else if (remoteFile is not null)
         {
+            ReportProgress(options, "Restoring remote conflict winner " + relativePath + "...");
             await _localWriter.WriteFileAsync(
                 syncPair.LocalRootPath,
                 relativePath,
@@ -453,6 +471,23 @@ public sealed class SyncEngine : ISyncEngine
         };
         result.Activities.Add(activity);
         options.ActivityProgress?.Report(activity);
+    }
+
+    private static void ReportProgress(SyncRunOptions options, string message, int? current = null, int? total = null)
+    {
+        options.Progress?.Report(new SyncProgress
+        {
+            Message = message,
+            Current = current,
+            Total = total,
+        });
+    }
+
+    private static bool ShouldReportProgress(int current, int total)
+    {
+        return current == 1
+            || current == total
+            || current % 25 == 0;
     }
 
     private static void ValidateOptions(SyncRunOptions options)

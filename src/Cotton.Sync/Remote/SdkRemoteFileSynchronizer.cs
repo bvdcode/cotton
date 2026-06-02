@@ -7,6 +7,7 @@ using Cotton.Contracts.Files;
 using Cotton.Contracts.Nodes;
 using Cotton.Contracts.Settings;
 using Cotton.Sdk;
+using Cotton.Sync;
 using Cotton.Sync.Local;
 using Cotton.Sync.State;
 
@@ -20,16 +21,18 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileSynchronizer
     private const string DefaultContentType = "application/octet-stream";
     private readonly ICottonCloudClient _client;
     private readonly SdkRemoteFileSynchronizerOptions _options;
+    private readonly IProgress<SyncProgress>? _progress;
     private readonly Dictionary<string, Guid> _directoryCache = new(StringComparer.OrdinalIgnoreCase);
     private int? _resolvedChunkSizeBytes;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SdkRemoteFileSynchronizer" /> class.
     /// </summary>
-    public SdkRemoteFileSynchronizer(ICottonCloudClient client, SdkRemoteFileSynchronizerOptions? options = null)
+    public SdkRemoteFileSynchronizer(ICottonCloudClient client, SdkRemoteFileSynchronizerOptions? options = null, IProgress<SyncProgress>? progress = null)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
         _options = options ?? new SdkRemoteFileSynchronizerOptions();
+        _progress = progress;
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(_options.DirectoryPageSize);
         if (_options.ChunkSizeBytes.HasValue)
         {
@@ -47,6 +50,7 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileSynchronizer
     {
         ArgumentNullException.ThrowIfNull(localFile);
         string normalizedPath = SyncPath.Normalize(relativePath);
+        _progress?.Report(new SyncProgress { Message = "Preparing upload " + normalizedPath + "..." });
         Guid parentNodeId = await EnsureParentNodeAsync(rootNodeId, normalizedPath, cancellationToken).ConfigureAwait(false);
         IReadOnlyList<string> chunkHashes = await UploadChunksAsync(localFile.FullPath, cancellationToken).ConfigureAwait(false);
         var request = new CreateFileFromChunksRequestDto
@@ -60,6 +64,7 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileSynchronizer
             Validate = true,
         };
 
+        _progress?.Report(new SyncProgress { Message = "Committing upload " + normalizedPath + "..." });
         return existingRemoteFile is null
             ? await _client.Files.CreateFromChunksAsync(request, cancellationToken).ConfigureAwait(false)
             : await _client.Files.UpdateContentAsync(existingRemoteFile.Id, request, cancellationToken).ConfigureAwait(false);
@@ -69,6 +74,7 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileSynchronizer
     public Task DownloadFileAsync(Guid nodeFileId, Stream destination, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(destination);
+        _progress?.Report(new SyncProgress { Message = "Downloading remote content..." });
         return _client.Files.DownloadContentAsync(nodeFileId, destination, cancellationToken: cancellationToken);
     }
 
@@ -93,6 +99,7 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileSynchronizer
                 FileShare.Read,
                 bufferSize: Math.Min(chunkSize, 1024 * 128),
                 FileOptions.Asynchronous | FileOptions.SequentialScan);
+            int totalChunks = Math.Max(1, (int)((stream.Length + chunkSize - 1) / chunkSize));
             while (true)
             {
                 int read = await ReadChunkAsync(stream, buffer, chunkSize, cancellationToken).ConfigureAwait(false);
@@ -101,6 +108,13 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileSynchronizer
                     break;
                 }
 
+                int chunkNumber = chunkHashes.Count + 1;
+                _progress?.Report(new SyncProgress
+                {
+                    Message = "Uploading chunks " + chunkNumber.ToString(System.Globalization.CultureInfo.InvariantCulture) + "/" + totalChunks.ToString(System.Globalization.CultureInfo.InvariantCulture) + ": " + Path.GetFileName(filePath),
+                    Current = chunkNumber,
+                    Total = totalChunks,
+                });
                 string hash = Convert.ToHexStringLower(SHA256.HashData(buffer.AsSpan(0, read)));
                 await UploadChunkIfMissingAsync(hash, buffer, read, cancellationToken).ConfigureAwait(false);
                 chunkHashes.Add(hash);
@@ -113,6 +127,12 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileSynchronizer
 
         if (chunkHashes.Count == 0)
         {
+            _progress?.Report(new SyncProgress
+            {
+                Message = "Uploading empty file chunk: " + Path.GetFileName(filePath),
+                Current = 1,
+                Total = 1,
+            });
             string emptyHash = Convert.ToHexStringLower(SHA256.HashData(ReadOnlySpan<byte>.Empty));
             await UploadChunkIfMissingAsync(emptyHash, ReadOnlyMemory<byte>.Empty, cancellationToken).ConfigureAwait(false);
             chunkHashes.Add(emptyHash);

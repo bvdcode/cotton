@@ -52,4 +52,9 @@ public sealed class SyncRunOptions
     /// Gets or sets the optional live activity reporter used by UI and CLI clients.
     /// </summary>
     public IProgress<SyncActivity>? ActivityProgress { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional live progress reporter used by UI and CLI clients.
+    /// </summary>
+    public IProgress<SyncProgress>? Progress { get; set; }
 }
