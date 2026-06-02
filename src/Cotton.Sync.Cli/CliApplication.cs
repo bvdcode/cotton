@@ -16,8 +16,6 @@ namespace Cotton.Sync.Cli;
 internal static class CliApplication
 {
     private const int DefaultLoopIntervalSeconds = 30;
-    private const int RemoteDirectoryPageSize = 100;
-
     public static async Task<int> RunAsync(
         string[] args,
         TextWriter stdout,
@@ -140,7 +138,7 @@ internal static class CliApplication
         using HttpClient httpClient = CreateHttpClient(server);
         var client = new CottonCloudClient(httpClient, cliStore, new CottonSdkOptions { BaseAddress = server });
         string? remotePath = options.GetOptional("remote")?.Trim();
-        NodeDto remoteRoot = await EnsureRemoteRootAsync(client.Nodes, remotePath, cancellationToken).ConfigureAwait(false);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync(remotePath, cancellationToken).ConfigureAwait(false);
         string syncPairId = options.GetOptional("pair")?.Trim() ?? BuildSyncPairId(server, localRoot, remoteRoot.Id);
         string statePath = options.GetOptional("state") ?? Path.Combine(GetConfigDirectory(options), "sync-state.sqlite");
         var engine = new SyncEngine(
@@ -155,60 +153,6 @@ internal static class CliApplication
             LocalRootPath = localRoot,
             RemoteRootNodeId = remoteRoot.Id,
         }, cancellationToken: cancellationToken).ConfigureAwait(false);
-    }
-
-    private static async Task<NodeDto> EnsureRemoteRootAsync(
-        Cotton.Sdk.Nodes.ICottonNodeClient nodes,
-        string? remotePath,
-        CancellationToken cancellationToken)
-    {
-        NodeDto current = await nodes.ResolveAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
-        if (string.IsNullOrWhiteSpace(remotePath))
-        {
-            return current;
-        }
-
-        string[] segments = remotePath.Replace('\\', '/').Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
-        foreach (string segment in segments)
-        {
-            NodeDto? existing = await FindChildDirectoryAsync(nodes, current.Id, segment, cancellationToken).ConfigureAwait(false);
-            current = existing ?? await nodes.CreateAsync(current.Id, segment, cancellationToken).ConfigureAwait(false);
-        }
-
-        return current;
-    }
-
-    private static async Task<NodeDto?> FindChildDirectoryAsync(
-        Cotton.Sdk.Nodes.ICottonNodeClient nodes,
-        Guid parentNodeId,
-        string name,
-        CancellationToken cancellationToken)
-    {
-        int page = 1;
-        int loaded = 0;
-        while (true)
-        {
-            Cotton.Contracts.Nodes.NodeContentDto content = await nodes.GetChildrenAsync(
-                parentNodeId,
-                page,
-                RemoteDirectoryPageSize,
-                depth: 0,
-                cancellationToken).ConfigureAwait(false);
-            NodeDto? match = content.Nodes.FirstOrDefault(node => string.Equals(node.Name, name, StringComparison.OrdinalIgnoreCase));
-            if (match is not null)
-            {
-                return match;
-            }
-
-            int count = content.Nodes.Count + content.Files.Count;
-            loaded += count;
-            if (count == 0 || loaded >= content.TotalCount)
-            {
-                return null;
-            }
-
-            page++;
-        }
     }
 
     private static async Task<Uri> ResolveServerAsync(
