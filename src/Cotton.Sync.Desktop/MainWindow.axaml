@@ -61,11 +61,11 @@
           <ListBox Grid.Row="1" x:Name="ActivityList" ItemsSource="{Binding Activities}">
             <ListBox.ItemTemplate>
               <DataTemplate>
-                <Grid ColumnDefinitions="82,120,*,220" ColumnSpacing="10" Margin="0,4">
+                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="82,120,*" ColumnSpacing="10" Margin="0,4">
                   <TextBlock Text="{Binding Time}" Opacity="0.72" />
                   <TextBlock Grid.Column="1" Text="{Binding Kind}" FontWeight="SemiBold" />
-                  <TextBlock Grid.Column="2" Text="{Binding Path}" TextTrimming="CharacterEllipsis" />
-                  <TextBlock Grid.Column="3" Text="{Binding Details}" Opacity="0.72" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="2" Text="{Binding Path}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}" />
+                  <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding Details}" Opacity="0.72" TextWrapping="Wrap" ToolTip.Tip="{Binding Details}" />
                 </Grid>
               </DataTemplate>
             </ListBox.ItemTemplate>

@@ -13,6 +13,7 @@ public static class Program
     /// <summary>
     /// Runs the desktop synchronization client.
     /// </summary>
+    [STAThread]
     public static void Main(string[] args)
     {
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
