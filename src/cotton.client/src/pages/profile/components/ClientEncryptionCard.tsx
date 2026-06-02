@@ -131,44 +131,35 @@ export const ClientEncryptionCard = ({
               <Stack
                 direction={{ xs: "column", sm: "row" }}
                 spacing={2}
-                alignItems={{ xs: "stretch", sm: "center" }}
+                alignItems={{ xs: "flex-start", sm: "center" }}
                 justifyContent="space-between"
-                sx={{
-                  p: 2,
-                  borderRadius: 1,
-                  bgcolor: "action.hover",
-                }}
               >
-                <Stack spacing={1} minWidth={0}>
-                  {statusChip}
+                <Stack spacing={0.5} minWidth={0}>
+                  <Box>{statusChip}</Box>
                   {statusHint && (
                     <Typography variant="body2" color="text.secondary">
                       {statusHint}
                     </Typography>
                   )}
                 </Stack>
-                <Box sx={{ flexShrink: 0 }}>
-                  {status === "locked" && envelope && (
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      onClick={() => setUnlockOpen(true)}
-                      sx={{ minWidth: 128 }}
-                    >
-                      {t("clientEncryption.actions.unlock")}
-                    </Button>
-                  )}
-                  {status === "unlocked" && (
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      onClick={lockVault}
-                      sx={{ minWidth: 128 }}
-                    >
-                      {t("clientEncryption.actions.lock")}
-                    </Button>
-                  )}
-                </Box>
+                {status === "locked" && envelope && (
+                  <Button
+                    variant="contained"
+                    onClick={() => setUnlockOpen(true)}
+                    sx={{ flexShrink: 0, minWidth: 128 }}
+                  >
+                    {t("clientEncryption.actions.unlock")}
+                  </Button>
+                )}
+                {status === "unlocked" && (
+                  <Button
+                    variant="outlined"
+                    onClick={lockVault}
+                    sx={{ flexShrink: 0, minWidth: 128 }}
+                  >
+                    {t("clientEncryption.actions.lock")}
+                  </Button>
+                )}
               </Stack>
               <FormControlLabel
                 control={
