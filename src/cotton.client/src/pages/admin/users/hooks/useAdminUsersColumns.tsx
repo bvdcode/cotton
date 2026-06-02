@@ -14,12 +14,12 @@ import { formatDateOnly } from "../../../../shared/utils/dateOnly";
 import { formatTimeAgo } from "../../../../shared/utils/formatTimeAgo";
 import { formatStorageBytes } from "../utils/formatStorageBytes";
 
-const renderOptionalText = (value: string) =>
+const renderOptionalText = (value: string, placeholder: string) =>
   value ? (
     value
   ) : (
     <Box component="span" sx={{ color: "text.disabled" }}>
-      —
+      {placeholder}
     </Box>
   );
 
@@ -43,6 +43,7 @@ export const useAdminUsersColumns = ({
   }, [t]);
 
   const storageUsageCalculatingLabel = t("users.storageUsage.calculating");
+  const placeholder = t("common:placeholder");
 
   return useMemo(
     () => [
@@ -58,7 +59,8 @@ export const useAdminUsersColumns = ({
         flex: 1,
         minWidth: 120,
         valueGetter: (_, row) => row.email ?? "",
-        renderCell: (params) => renderOptionalText(String(params.value ?? "")),
+        renderCell: (params) =>
+          renderOptionalText(String(params.value ?? ""), placeholder),
         sortable: false,
       },
       {
@@ -85,7 +87,8 @@ export const useAdminUsersColumns = ({
         flex: 1,
         minWidth: 100,
         valueGetter: (_, row) => row.firstName ?? "",
-        renderCell: (params) => renderOptionalText(String(params.value ?? "")),
+        renderCell: (params) =>
+          renderOptionalText(String(params.value ?? ""), placeholder),
         sortable: false,
       },
       {
@@ -94,7 +97,8 @@ export const useAdminUsersColumns = ({
         flex: 1,
         minWidth: 100,
         valueGetter: (_, row) => row.lastName ?? "",
-        renderCell: (params) => renderOptionalText(String(params.value ?? "")),
+        renderCell: (params) =>
+          renderOptionalText(String(params.value ?? ""), placeholder),
         sortable: false,
       },
       {
@@ -104,7 +108,8 @@ export const useAdminUsersColumns = ({
         minWidth: 130,
         valueGetter: (_, row) =>
           row.birthDate ? formatDateOnly(row.birthDate) : "",
-        renderCell: (params) => renderOptionalText(String(params.value ?? "")),
+        renderCell: (params) =>
+          renderOptionalText(String(params.value ?? ""), placeholder),
         sortable: false,
       },
       {
@@ -207,6 +212,6 @@ export const useAdminUsersColumns = ({
         ],
       },
     ],
-    [onEdit, roleLabel, storageUsageCalculatingLabel, storageUsageLoading, t],
+    [onEdit, placeholder, roleLabel, storageUsageCalculatingLabel, storageUsageLoading, t],
   );
 };
