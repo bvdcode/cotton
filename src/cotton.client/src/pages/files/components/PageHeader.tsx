@@ -461,8 +461,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       <Box
         sx={{
           display: "flex",
-          flexDirection: "row",
-          alignItems: "center",
+          flexDirection: { xs: "column", md: "row" },
+          alignItems: { xs: "stretch", md: "center" },
           gap: 1,
           minWidth: 0,
         }}
@@ -474,6 +474,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             flexShrink: 0,
             minWidth: 0,
             gap: 0.5,
+            order: { xs: 2, md: 1 },
+            width: { xs: "100%", md: "auto" },
           }}
         >
           <Box
@@ -517,15 +519,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                             ? theme.palette.error.main
                             : action.active || action.color === "secondary"
                               ? theme.palette.secondary.main
-                              : theme.palette.text.secondary,
-                        transition:
-                          "box-shadow 120ms ease-out, background-color 120ms ease-out, color 120ms ease-out",
-                        "&:hover": {
-                          color:
-                            action.color === "error"
-                              ? theme.palette.error.main
                               : theme.palette.primary.main,
-                        },
+                        transition:
+                          "box-shadow 120ms ease-out, background-color 120ms ease-out",
                         ...(action.dropActive && {
                           boxShadow: `inset 0 0 0 2px ${theme.palette.primary.main}`,
                           backgroundColor: theme.palette.action.selected,
@@ -546,7 +542,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                 <IconButton
                   aria-label={t("common:actions.more")}
                   onClick={(e) => setMenuAnchorEl(e.currentTarget)}
-                  sx={{ color: "text.secondary" }}
+                  sx={{ color: "primary.main" }}
                 >
                   <MoreVert />
                 </IconButton>

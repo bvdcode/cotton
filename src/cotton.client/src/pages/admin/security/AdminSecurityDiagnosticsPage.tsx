@@ -533,6 +533,49 @@ const getPassedCheckCodes = (d: SecurityDiagnosticsDto): string[] => {
   return checks.filter(([, ok]) => ok).map(([code]) => code);
 };
 
+type PositiveCardProps = {
+  title: string;
+  code?: string;
+  children?: ReactNode;
+};
+
+const PositiveCard = ({ title, code, children }: PositiveCardProps) => (
+  <Paper
+    variant="outlined"
+    sx={(theme) => ({
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column",
+      borderLeft: `4px solid ${theme.palette.success.main}`,
+    })}
+  >
+    <Box
+      sx={(theme) => ({
+        display: "flex",
+        alignItems: "center",
+        gap: 1,
+        px: 2,
+        py: 1,
+        color: theme.palette.success.main,
+        bgcolor: alpha(theme.palette.success.main, 0.1),
+      })}
+    >
+      <CheckCircleIcon fontSize="small" />
+      <Typography variant="subtitle2" fontWeight={700} color="inherit">
+        {title}
+      </Typography>
+      {code && (
+        <Chip size="small" variant="outlined" label={code} sx={{ ml: "auto" }} />
+      )}
+    </Box>
+    {children && (
+      <Stack spacing={1.25} sx={{ px: 2, py: 1.5 }}>
+        {children}
+      </Stack>
+    )}
+  </Paper>
+);
+
 type SecurityPassedCardProps = {
   code: string;
   t: TFunction<"admin">;
@@ -544,41 +587,14 @@ const SecurityPassedCard = ({ code, t }: SecurityPassedCardProps) => {
     : null;
 
   return (
-    <Paper
-      variant="outlined"
-      sx={(theme) => ({
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-        borderLeft: `4px solid ${theme.palette.success.main}`,
-      })}
-    >
-      <Box
-        sx={(theme) => ({
-          display: "flex",
-          alignItems: "center",
-          gap: 1,
-          px: 2,
-          py: 1,
-          color: theme.palette.success.main,
-          bgcolor: alpha(theme.palette.success.main, 0.1),
-        })}
-      >
-        <CheckCircleIcon fontSize="small" />
-        <Typography variant="subtitle2" fontWeight={700} color="inherit">
-          {t(`securityDiagnostics.passed.${code}`)}
-        </Typography>
-        <Chip size="small" variant="outlined" label={code} sx={{ ml: "auto" }} />
-      </Box>
+    <PositiveCard title={t(`securityDiagnostics.passed.${code}`)} code={code}>
       {guardsAgainst && (
-        <Stack spacing={1.25} sx={{ px: 2, py: 1.5 }}>
-          <RiskLabeledBlock
-            label={t("securityDiagnostics.labels.guardsAgainst")}
-            text={guardsAgainst}
-          />
-        </Stack>
+        <RiskLabeledBlock
+          label={t("securityDiagnostics.labels.guardsAgainst")}
+          text={guardsAgainst}
+        />
       )}
-    </Paper>
+    </PositiveCard>
   );
 };
 
@@ -590,8 +606,11 @@ const SecurityPassedSection = ({
   const codes = getPassedCheckCodes(diagnostics).filter(
     (code) => !warningCodes.has(code),
   );
+  const cpu = diagnostics.cpuFeatures;
+  const showAesAcceleration = cpu?.aesGcmHardwareAccelerationLikely === true;
+  const cpuLabel = cpu?.modelName?.trim() || cpu?.architecture || "";
 
-  if (codes.length === 0) {
+  if (codes.length === 0 && !showAesAcceleration) {
     return null;
   }
 
@@ -610,6 +629,17 @@ const SecurityPassedSection = ({
         {codes.map((code) => (
           <SecurityPassedCard key={code} code={code} t={t} />
         ))}
+        {showAesAcceleration && (
+          <PositiveCard
+            title={t("securityDiagnostics.capabilities.aesAcceleration.title")}
+          >
+            <Typography variant="body2">
+              {t("securityDiagnostics.capabilities.aesAcceleration.body", {
+                cpu: cpuLabel,
+              })}
+            </Typography>
+          </PositiveCard>
+        )}
       </Box>
     </DiagnosticsSection>
   );
