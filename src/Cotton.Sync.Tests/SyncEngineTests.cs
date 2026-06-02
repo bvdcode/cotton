@@ -45,7 +45,7 @@ public sealed class SyncEngineTests
 
         SyncRunResult result = await engine.RunOnceAsync(
             Pair(),
-            new SyncRunOptions { ActivityProgress = new Progress<SyncActivity>(progress.Add) });
+            new SyncRunOptions { ActivityProgress = new InlineProgress<SyncActivity>(progress.Add) });
 
         SyncStateEntry? entry = await stateStore.GetAsync("pair-a", "docs/LOCAL.txt");
         Assert.Multiple(() =>
@@ -478,6 +478,21 @@ public sealed class SyncEngineTests
         {
             ScanCalls++;
             return Task.FromResult<IReadOnlyList<LocalFileSnapshot>>(Files);
+        }
+    }
+
+    private sealed class InlineProgress<T> : IProgress<T>
+    {
+        private readonly Action<T> _handler;
+
+        public InlineProgress(Action<T> handler)
+        {
+            _handler = handler;
+        }
+
+        public void Report(T value)
+        {
+            _handler(value);
         }
     }
 

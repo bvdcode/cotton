@@ -1,0 +1,109 @@
+name: Sync Clients
+
+on:
+  push:
+    paths:
+      - "src/Cotton.Contracts/**"
+      - "src/Cotton.Sdk/**"
+      - "src/Cotton.Sync/**"
+      - "src/Cotton.Sync.Cli/**"
+      - "src/Cotton.Sync.Desktop/**"
+      - "src/Cotton.Validators/**"
+      - "GitVersion.yml"
+      - ".github/workflows/sync-clients.yml"
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+jobs:
+  build_sync_clients:
+    name: Build Sync Clients
+    runs-on: ubuntu-latest
+    outputs:
+      Version: ${{ steps.gitversion.outputs.SemVer }}
+      CommitsSinceVersionSource: ${{ steps.gitversion.outputs.CommitsSinceVersionSource }}
+    permissions:
+      contents: read
+    steps:
+      - name: check repository
+        uses: actions/checkout@v5
+        with:
+          lfs: "true"
+          fetch-depth: 0
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v3.1.11
+        with:
+          versionSpec: 5.x
+
+      - name: Determine Version
+        uses: gittools/actions/gitversion/execute@v3.1.11
+        id: gitversion
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore sync client projects
+        run: |
+          dotnet restore src/Cotton.Sync.Cli/Cotton.Sync.Cli.csproj
+          dotnet restore src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj
+
+      - name: Publish sync client archives
+        run: |
+          set -euo pipefail
+          rm -rf publish release-artifacts
+          mkdir -p publish release-artifacts
+
+          for runtime in linux-x64 win-x64; do
+            dotnet publish src/Cotton.Sync.Cli/Cotton.Sync.Cli.csproj --configuration Release --runtime "$runtime" --self-contained true --output "publish/cotton-sync-cli-$runtime"
+            dotnet publish src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj --configuration Release --runtime "$runtime" --self-contained true --output "publish/cotton-sync-desktop-$runtime"
+          done
+
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZIP_DEFLATED, ZipFile
+
+          publish_root = Path('publish')
+          output_root = Path('release-artifacts')
+          for directory in sorted(publish_root.iterdir()):
+              archive_path = output_root / f'{directory.name}.zip'
+              with ZipFile(archive_path, 'w', ZIP_DEFLATED) as archive:
+                  for file_path in sorted(path for path in directory.rglob('*') if path.is_file()):
+                      archive.write(file_path, file_path.relative_to(directory))
+          PY
+
+          sha256sum release-artifacts/* > release-artifacts/cotton-sync-checksums.sha256
+
+      - name: Upload sync client artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: sync-clients
+          path: release-artifacts
+
+  release_sync_clients:
+    name: Attach Sync Clients To Release
+    runs-on: ubuntu-latest
+    needs: build_sync_clients
+    if: github.ref == 'refs/heads/main' && needs.build_sync_clients.outputs.CommitsSinceVersionSource > 0
+    permissions:
+      contents: write
+    steps:
+      - name: Download sync client artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sync-clients
+          path: sync-clients
+
+      - name: Attach sync clients to release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ needs.build_sync_clients.outputs.Version }}
+          name: Release ${{ needs.build_sync_clients.outputs.Version }}
+          artifacts: "sync-clients/*"
+          allowUpdates: true
+          omitBodyDuringUpdate: true
+          artifactErrorsFailBuild: true
+          token: ${{ secrets.GITHUB_TOKEN }}
