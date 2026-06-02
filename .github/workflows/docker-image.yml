@@ -158,37 +158,6 @@ jobs:
           name: nupkg
           path: nupkg
 
-      - name: Publish sync client archives
-        run: |
-          set -euo pipefail
-          rm -rf publish release-artifacts
-          mkdir -p publish release-artifacts
-
-          for runtime in linux-x64 win-x64; do
-            dotnet publish src/Cotton.Sync.Cli/Cotton.Sync.Cli.csproj --configuration Release --runtime "$runtime" --self-contained true --output "publish/cotton-sync-cli-$runtime"
-            dotnet publish src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj --configuration Release --runtime "$runtime" --self-contained true --output "publish/cotton-sync-desktop-$runtime"
-          done
-
-          python3 - <<'PY'
-          from pathlib import Path
-          from zipfile import ZIP_DEFLATED, ZipFile
-
-          publish_root = Path('publish')
-          output_root = Path('release-artifacts')
-          for directory in sorted(publish_root.iterdir()):
-              archive_path = output_root / f'{directory.name}.zip'
-              with ZipFile(archive_path, 'w', ZIP_DEFLATED) as archive:
-                  for file_path in sorted(path for path in directory.rglob('*') if path.is_file()):
-                      archive.write(file_path, file_path.relative_to(directory))
-          PY
-
-          sha256sum release-artifacts/* > release-artifacts/cotton-sync-checksums.sha256
-
-      - name: Upload sync client artifact
-        uses: actions/upload-artifact@v5
-        with:
-          name: sync-clients
-          path: release-artifacts
 
       - name: Write SixLabors license secret for Docker build
         env:
@@ -299,12 +268,6 @@ jobs:
           name: nupkg
           path: nupkg
 
-      - name: Download sync client artifact
-        if: needs.build.outputs.CommitsSinceVersionSource > 0
-        uses: actions/download-artifact@v4
-        with:
-          name: sync-clients
-          path: sync-clients
 
       - name: Create Release
         if: needs.build.outputs.CommitsSinceVersionSource > 0
@@ -313,5 +276,6 @@ jobs:
           tag: ${{ needs.build.outputs.Version }}
           name: Release ${{ needs.build.outputs.Version }}
           body: ${{ github.event.head_commit.message }}
-          artifacts: "nupkg/*,sync-clients/*"
+          artifacts: "nupkg/*"
+          allowUpdates: true
           token: ${{ secrets.GITHUB_TOKEN }}
