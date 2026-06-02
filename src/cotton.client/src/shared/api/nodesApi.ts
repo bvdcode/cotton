@@ -14,10 +14,14 @@ export interface NodeFileManifestDto extends BaseDto {
    * Container node id (folder) where this file is located.
    */
   nodeId: Guid;
+  fileManifestId?: Guid;
+  originalNodeFileId?: Guid;
   ownerId: Guid;
   name: string;
   contentType: string;
   sizeBytes: number;
+  contentHash?: string;
+  eTag?: string;
   metadata: Record<string, string>;
   requiresVideoTranscoding?: boolean;
   previewHashEncryptedHex?: string | null;

@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Models;
@@ -74,6 +74,7 @@ public class VideoPlaybackResolverTests
             FileManifest = new FileManifest
             {
                 ContentType = contentType,
+                ProposedContentHash = [4, 5, 6],
                 SmallFilePreviewHash = hasPreview ? [1, 2, 3] : null,
             },
         };
