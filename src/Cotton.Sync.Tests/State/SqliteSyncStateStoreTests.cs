@@ -203,7 +203,7 @@ public sealed class SqliteSyncStateStoreTests
 
     private static async Task CreateSqliteDatabaseAsync(string databasePath, string commandText)
     {
-        await using var connection = new SqliteConnection("Data Source=" + databasePath);
+        await using var connection = new SqliteConnection("Data Source=" + databasePath + ";Pooling=False");
         await connection.OpenAsync();
         await using SqliteCommand command = connection.CreateCommand();
         command.CommandText = commandText;
