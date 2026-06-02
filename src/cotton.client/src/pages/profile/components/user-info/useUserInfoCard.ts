@@ -84,11 +84,11 @@ export const useUserInfoCard = ({
   );
 
   const birthDateValues = useMemo(() => {
-    const placeholder = t("common:placeholder");
     if (!user.birthDate || user.birthDate.trim().length === 0) {
+      // No birth date set: return empty so the row is hidden entirely.
       return {
-        compact: placeholder,
-        full: placeholder,
+        compact: "",
+        full: "",
       };
     }
 

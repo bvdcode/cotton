@@ -3113,7 +3113,7 @@
     "submit": "Reset password",
     "submitting": "Resetting...",
     "success": "Password has been reset successfully. You can now sign in with your new password.",
-    "goToLogin": "Go to application",
+    "goToLogin": "Go to sign in",
     "errors": {
       "mismatch": "Passwords do not match.",
       "invalidToken": "The reset link is invalid or has expired.",
@@ -3124,7 +3124,7 @@
     "title": "Email verification",
     "verifying": "Verifying your email...",
     "success": "Your email has been verified successfully!",
-    "goToLogin": "Go to application",
+    "goToLogin": "Go to sign in",
     "goToSettings": "Go to settings",
     "errors": {
       "invalidToken": "The verification link is invalid or has expired.",

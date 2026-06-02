@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { Box, Alert, Typography } from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useRootNodeQuery } from "../../shared/api/queries/layouts";
@@ -139,9 +140,22 @@ export const SearchPage: React.FC = () => {
       )}
 
       {!loading && layoutId && !query.trim() && !results && (
-        <Typography color="text.secondary">
-          {t("enterQueryHint", { ns: "search" })}
-        </Typography>
+        <Box
+          flex={1}
+          minHeight={0}
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+          textAlign="center"
+          gap={1.5}
+          sx={{ color: "text.secondary" }}
+        >
+          <SearchIcon sx={{ fontSize: 48, opacity: 0.5 }} />
+          <Typography color="text.secondary">
+            {t("enterQueryHint", { ns: "search" })}
+          </Typography>
+        </Box>
       )}
 
       {(loading || results) && (

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Box, Typography } from "@mui/material";
+import FolderOpenOutlinedIcon from "@mui/icons-material/FolderOpenOutlined";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import type { IFileListView, FileSystemTile } from "@shared/types/FileListViewTypes";
 import Loader from "../../../../shared/ui/Loader";
@@ -550,12 +551,20 @@ export const TilesView: React.FC<IFileListView> = ({
   if (!loading && !isCreatingFolder && tiles.length === 0 && emptyStateText) {
     return (
       <Box
+        flex={1}
+        minHeight={240}
         display="flex"
+        flexDirection="column"
         alignItems="center"
         justifyContent="center"
-        minHeight={160}
+        textAlign="center"
+        gap={1.5}
+        sx={{ color: "text.secondary" }}
       >
-        <Typography color="text.secondary">{emptyStateText}</Typography>
+        <FolderOpenOutlinedIcon sx={{ fontSize: 56, opacity: 0.4 }} />
+        <Typography variant="h6" color="text.secondary" fontWeight={500}>
+          {emptyStateText}
+        </Typography>
       </Box>
     );
   }

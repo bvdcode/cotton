@@ -14,6 +14,15 @@ import { formatDateOnly } from "../../../../shared/utils/dateOnly";
 import { formatTimeAgo } from "../../../../shared/utils/formatTimeAgo";
 import { formatStorageBytes } from "../utils/formatStorageBytes";
 
+const renderOptionalText = (value: string) =>
+  value ? (
+    value
+  ) : (
+    <Box component="span" sx={{ color: "text.disabled" }}>
+      —
+    </Box>
+  );
+
 interface UseAdminUsersColumnsOptions {
   storageUsageLoading: boolean;
   onEdit: (user: AdminUserDto) => void;
@@ -49,6 +58,7 @@ export const useAdminUsersColumns = ({
         flex: 1,
         minWidth: 120,
         valueGetter: (_, row) => row.email ?? "",
+        renderCell: (params) => renderOptionalText(String(params.value ?? "")),
         sortable: false,
       },
       {
@@ -75,6 +85,7 @@ export const useAdminUsersColumns = ({
         flex: 1,
         minWidth: 100,
         valueGetter: (_, row) => row.firstName ?? "",
+        renderCell: (params) => renderOptionalText(String(params.value ?? "")),
         sortable: false,
       },
       {
@@ -83,6 +94,7 @@ export const useAdminUsersColumns = ({
         flex: 1,
         minWidth: 100,
         valueGetter: (_, row) => row.lastName ?? "",
+        renderCell: (params) => renderOptionalText(String(params.value ?? "")),
         sortable: false,
       },
       {
@@ -92,6 +104,7 @@ export const useAdminUsersColumns = ({
         minWidth: 130,
         valueGetter: (_, row) =>
           row.birthDate ? formatDateOnly(row.birthDate) : "",
+        renderCell: (params) => renderOptionalText(String(params.value ?? "")),
         sortable: false,
       },
       {

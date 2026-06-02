@@ -194,6 +194,7 @@ export const NotificationsMenu = () => {
               <IconButton
                 size="small"
                 onClick={() => setShowOnlyUnread(!showOnlyUnread)}
+                sx={{ color: "text.secondary" }}
               >
                 {showOnlyUnread ? (
                   <FilterListOff fontSize="small" />
@@ -206,6 +207,7 @@ export const NotificationsMenu = () => {
               <IconButton
                 size="small"
                 onClick={() => setSoundEnabled(!soundEnabled)}
+                sx={{ color: "text.secondary" }}
               >
                 {soundEnabled ? (
                   <VolumeUp fontSize="small" />
@@ -215,7 +217,11 @@ export const NotificationsMenu = () => {
               </IconButton>
             </Tooltip>
             <Tooltip title={t("markAllAsRead")}>
-              <IconButton size="small" onClick={handleMarkAllAsRead}>
+              <IconButton
+                size="small"
+                onClick={handleMarkAllAsRead}
+                sx={{ color: "text.secondary" }}
+              >
                 <MarkChatRead fontSize="small" />
               </IconButton>
             </Tooltip>

@@ -1,5 +1,6 @@
-import { Alert, Box } from "@mui/material";
-import { DataGrid } from "@mui/x-data-grid";
+import { Alert, Box, useMediaQuery } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import { DataGrid, type GridColumnVisibilityModel } from "@mui/x-data-grid";
 import { useConfirm } from "material-ui-confirm";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -47,6 +48,17 @@ export const AdminIdentityProvidersPage = () => {
     onDelete: (provider) => void handleDelete(provider),
   });
 
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const columnVisibilityModel: GridColumnVisibilityModel = isMobile
+    ? {
+        issuer: false,
+        allowAccountCreation: false,
+        scopes: false,
+        allowedEmailDomains: false,
+      }
+    : {};
+
   const ToolbarSlot = useMemo(() => {
     const ProviderToolbar = () => (
       <OidcProvidersGridToolbar
@@ -84,6 +96,7 @@ export const AdminIdentityProvidersPage = () => {
           <DataGrid
             rows={providers}
             columns={columns}
+            columnVisibilityModel={columnVisibilityModel}
             getRowId={(row) => row.id}
             loading={providersQuery.isLoading}
             disableRowSelectionOnClick

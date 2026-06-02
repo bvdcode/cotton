@@ -70,22 +70,35 @@ export const ResetPasswordPage = () => {
   }, [navigate]);
 
   return (
-    <Container maxWidth="sm">
-      <Paper
-        sx={{
-          mt: 8,
-          p: 4,
-        }}
-      >
+    <Container
+      maxWidth="sm"
+      sx={{
+        minHeight: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        py: 4,
+      }}
+    >
+      <Paper sx={{ p: 4, width: "100%" }}>
         <Box
           display="flex"
           justifyContent="space-between"
           alignItems="center"
+          gap={1.5}
         >
-          <Typography variant="h4" component="h1" gutterBottom>
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{ flex: 1, minWidth: 0 }}
+          >
             {t("title")}
           </Typography>
-          <Avatar src="/assets/icons/icon.svg" alt="App Logo" />
+          <Avatar
+            src="/assets/icons/icon.svg"
+            alt="App Logo"
+            sx={{ flexShrink: 0 }}
+          />
         </Box>
 
         {success ? (

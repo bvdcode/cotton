@@ -151,7 +151,7 @@ export const AdminStorageBackendSettings = ({
     <Stack spacing={2} sx={sx}>
       {showHeader && (
         <Stack spacing={0.5}>
-          <Typography variant="h6" fontWeight={700}>
+          <Typography variant="h5" fontWeight={700}>
             {t("storageSettings.title")}
           </Typography>
           <Typography variant="body2" color="text.secondary">

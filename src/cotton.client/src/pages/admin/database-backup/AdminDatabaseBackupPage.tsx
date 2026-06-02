@@ -150,7 +150,7 @@ export const AdminDatabaseBackupPage = () => {
             justifyContent="space-between"
             alignItems={{ xs: "stretch", md: "center" }}
           >
-            <Typography variant="h6" fontWeight={700}>
+            <Typography variant="h5" fontWeight={700}>
               {t("databaseBackup.title")}
             </Typography>
 
@@ -269,7 +269,11 @@ export const AdminDatabaseBackupPage = () => {
             </Box>
           )}
 
-          <Alert severity="info">
+          <Alert
+            severity="info"
+            variant="outlined"
+            sx={{ "& .MuiAlert-message": { overflowWrap: "anywhere" } }}
+          >
             {t("databaseBackup.state.restoreIfEmptyHint")}
           </Alert>
         </Stack>
