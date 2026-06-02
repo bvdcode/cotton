@@ -580,6 +580,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             flex: 1,
             gap: 1,
             minWidth: 0,
+            order: { xs: 1, md: 2 },
           }}
         >
           <FileBreadcrumbs
