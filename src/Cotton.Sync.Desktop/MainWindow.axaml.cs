@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Collections.ObjectModel;
+using System.Data.Common;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -66,8 +67,7 @@ public sealed partial class MainWindow : Window
 
         var cancellation = new CancellationTokenSource();
         _loopCancellation = cancellation;
-        StartLoopButton.IsEnabled = false;
-        StopLoopButton.IsEnabled = true;
+        SetBusy(true);
         SetStatus("Sync loop running");
         _loopTask = RunLoopSupervisedAsync(cancellation);
     }
@@ -82,6 +82,7 @@ public sealed partial class MainWindow : Window
         }
 
         cancellation.Cancel();
+        StopLoopButton.IsEnabled = false;
         if (loopTask is not null)
         {
             await loopTask.ConfigureAwait(true);
@@ -156,8 +157,7 @@ public sealed partial class MainWindow : Window
             {
                 _loopCancellation = null;
                 _loopTask = null;
-                StartLoopButton.IsEnabled = true;
-                StopLoopButton.IsEnabled = false;
+                SetBusy(false);
                 SetStatus(finalStatus);
             }
 
@@ -179,10 +179,10 @@ public sealed partial class MainWindow : Window
             {
                 throw;
             }
-            catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or Cotton.Sdk.CottonApiException or HttpRequestException or IOException)
-            {
-                AddActivity("Error", string.Empty, exception.Message);
-                SetStatus("Sync error");
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or Cotton.Sdk.CottonApiException or HttpRequestException or IOException or UnauthorizedAccessException or DbException)
+        {
+            AddActivity("Error", string.Empty, exception.Message);
+            SetStatus("Sync error");
             }
 
             await Task.Delay(TimeSpan.FromSeconds(intervalSeconds), cancellationToken).ConfigureAwait(true);
@@ -194,7 +194,11 @@ public sealed partial class MainWindow : Window
         Uri server = ReadServer();
         string localRoot = Path.GetFullPath(ReadRequired(LocalPathBox.Text, "Local folder"));
         string? remotePath = NormalizeOptional(RemotePathBox.Text);
-        Directory.CreateDirectory(localRoot);
+        if (!Directory.Exists(localRoot))
+        {
+            throw new InvalidOperationException("Local sync folder does not exist: " + localRoot + ". Create it explicitly before syncing.");
+        }
+
         SqliteClientStateStore clientStore = CreateClientStateStore();
         using HttpClient httpClient = CreateHttpClient(server);
         var client = new CottonCloudClient(httpClient, clientStore, new CottonSdkOptions { BaseAddress = server });
@@ -230,7 +234,7 @@ public sealed partial class MainWindow : Window
                 SetStatus("Ready");
             }
         }
-        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or Cotton.Sdk.CottonApiException or HttpRequestException or IOException)
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or Cotton.Sdk.CottonApiException or HttpRequestException or IOException or UnauthorizedAccessException or DbException)
         {
             AddActivity("Error", string.Empty, exception.Message);
             SetStatus("Error");

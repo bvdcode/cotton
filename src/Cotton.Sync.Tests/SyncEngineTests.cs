@@ -153,6 +153,46 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_BlocksExcessiveRemoteDeletes()
+    {
+        NodeFileManifestDto first = RemoteFile("delete-a.txt", HashText("a"));
+        NodeFileManifestDto second = RemoteFile("delete-b.txt", HashText("b"));
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        SyncEngine engine = CreateEngine(new FakeLocalFileScanner(), RemoteTree(first, second), remoteFiles, out SqliteSyncStateStore stateStore);
+        await InsertBaselineAsync(stateStore, "delete-a.txt", first.ContentHash, first);
+        await InsertBaselineAsync(stateStore, "delete-b.txt", second.ContentHash, second);
+
+        InvalidOperationException exception = Assert.ThrowsAsync<InvalidOperationException>(() =>
+            engine.RunOnceAsync(Pair(), new SyncRunOptions { MaxDeletesPerRun = 1 }))!;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception.Message, Does.Contain("exceeding the configured safety limits"));
+            Assert.That(remoteFiles.Deletes, Is.Empty);
+        });
+    }
+
+    [Test]
+    public async Task RunOnceAsync_DryRunReportsRemoteDeleteWithoutMutating()
+    {
+        NodeFileManifestDto remote = RemoteFile("dry-delete.txt", HashText("old"));
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        SyncEngine engine = CreateEngine(new FakeLocalFileScanner(), RemoteTree(remote), remoteFiles, out SqliteSyncStateStore stateStore);
+        await InsertBaselineAsync(stateStore, "dry-delete.txt", remote.ContentHash, remote);
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair(), new SyncRunOptions { DryRun = true });
+
+        SyncStateEntry? entry = await stateStore.GetAsync("pair-a", "dry-delete.txt");
+        Assert.Multiple(() =>
+        {
+            Assert.That(remoteFiles.Deletes, Is.Empty);
+            Assert.That(result.Activities.Select(x => x.Kind), Is.EqualTo(new[] { SyncActivityKind.DeletedRemote }));
+            Assert.That(result.Activities[0].Details, Does.Contain("Dry run"));
+            Assert.That(entry, Is.Not.Null);
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_DownloadsRemoteFileInsteadOfDeletingWhenBaselineIsMissing()
     {
         byte[] content = Encoding.UTF8.GetBytes("no-baseline-remote");
@@ -289,6 +329,19 @@ public sealed class SyncEngineTests
 
         Assert.ThrowsAsync<OperationCanceledException>(() => engine.RunOnceAsync(Pair(), cancellationToken: cancellation.Token));
         Assert.That(scanner.ScanCalls, Is.Zero);
+    }
+
+    [Test]
+    public void RunOnceAsync_RejectsCollidingLocalPaths()
+    {
+        var scanner = new FakeLocalFileScanner(
+            LocalFile("Foo.txt", "upper"),
+            LocalFile("foo.txt", "lower"));
+        SyncEngine engine = CreateEngine(scanner, EmptyRemoteTree(), new FakeRemoteFileSynchronizer(), out _);
+
+        InvalidOperationException exception = Assert.ThrowsAsync<InvalidOperationException>(() => engine.RunOnceAsync(Pair()))!;
+
+        Assert.That(exception.Message, Does.Contain("collide after normalization"));
     }
 
     private SyncEngine CreateEngine(

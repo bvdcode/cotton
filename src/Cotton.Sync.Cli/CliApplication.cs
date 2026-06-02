@@ -3,6 +3,7 @@
 
 using System.Security.Cryptography;
 using System.Text;
+using System.Data.Common;
 using Cotton.Contracts.Auth;
 using Cotton.Contracts.Nodes;
 using Cotton.Sdk;
@@ -44,7 +45,7 @@ internal static class CliApplication
             stderr.WriteLine("Canceled.");
             return 130;
         }
-        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or Cotton.Sdk.CottonApiException or HttpRequestException)
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or Cotton.Sdk.CottonApiException or HttpRequestException or IOException or UnauthorizedAccessException or DbException)
         {
             stderr.WriteLine("Error: " + exception.Message);
             return 1;
@@ -132,7 +133,11 @@ internal static class CliApplication
         CancellationToken cancellationToken)
     {
         string localRoot = Path.GetFullPath(options.GetRequired("local"));
-        Directory.CreateDirectory(localRoot);
+        if (!Directory.Exists(localRoot))
+        {
+            throw new InvalidOperationException("Local sync folder does not exist: " + localRoot + ". Create it explicitly before syncing.");
+        }
+
         SqliteClientStateStore cliStore = CreateCliStore(options);
         Uri server = await ResolveServerAsync(options, cliStore, cancellationToken).ConfigureAwait(false);
         using HttpClient httpClient = CreateHttpClient(server);
@@ -146,13 +151,24 @@ internal static class CliApplication
             new RemoteTreeCrawler(client.Nodes),
             new SdkRemoteFileSynchronizer(client),
             new SqliteSyncStateStore(statePath));
-        stdout.WriteLine("Syncing " + localRoot + " <-> " + (string.IsNullOrWhiteSpace(remotePath) ? "/" : remotePath) + ".");
+        SyncRunOptions syncOptions = BuildSyncRunOptions(options);
+        stdout.WriteLine((syncOptions.DryRun ? "Dry-run syncing " : "Syncing ") + localRoot + " <-> " + (string.IsNullOrWhiteSpace(remotePath) ? "/" : remotePath) + ".");
         return await engine.RunOnceAsync(new SyncPair
         {
             SyncPairId = syncPairId,
             LocalRootPath = localRoot,
             RemoteRootNodeId = remoteRoot.Id,
-        }, cancellationToken: cancellationToken).ConfigureAwait(false);
+        }, syncOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static SyncRunOptions BuildSyncRunOptions(OptionReader options)
+    {
+        return new SyncRunOptions
+        {
+            DryRun = options.HasFlag("dry-run"),
+            MaxDeletesPerRun = options.GetInt32("max-deletes", SyncRunOptions.DefaultMaxDeletesPerRun),
+            MaxDeleteRatio = options.GetDouble("max-delete-ratio", SyncRunOptions.DefaultMaxDeleteRatio),
+        };
     }
 
     private static async Task<Uri> ResolveServerAsync(
@@ -250,8 +266,8 @@ internal static class CliApplication
         output.WriteLine("Commands:");
         output.WriteLine("  login --server URL --username USER --password PASS [--two-factor CODE] [--trust-device]");
         output.WriteLine("  logout [--server URL]");
-        output.WriteLine("  sync once --local PATH [--remote PATH] [--server URL] [--pair ID] [--state PATH]");
-        output.WriteLine("  sync loop --local PATH [--remote PATH] [--interval SECONDS]");
+        output.WriteLine("  sync once --local PATH [--remote PATH] [--server URL] [--pair ID] [--state PATH] [--dry-run]");
+        output.WriteLine("  sync loop --local PATH [--remote PATH] [--interval SECONDS] [--dry-run]");
         output.WriteLine();
         output.WriteLine("Global options:");
         output.WriteLine("  --config PATH    Directory for CLI token/profile SQLite and default sync state SQLite.");
@@ -260,7 +276,8 @@ internal static class CliApplication
     private static void WriteSyncHelp(TextWriter output)
     {
         output.WriteLine("Cotton Sync CLI sync commands");
-        output.WriteLine("  sync once --local PATH [--remote PATH]");
-        output.WriteLine("  sync loop --local PATH [--remote PATH] [--interval SECONDS]");
+        output.WriteLine("  sync once --local PATH [--remote PATH] [--dry-run]");
+        output.WriteLine("  sync loop --local PATH [--remote PATH] [--interval SECONDS] [--dry-run]");
+        output.WriteLine("  Safety options: [--max-deletes N] [--max-delete-ratio 0.5]");
     }
 }

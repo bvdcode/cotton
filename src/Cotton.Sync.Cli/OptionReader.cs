@@ -92,4 +92,22 @@ internal sealed class OptionReader
 
         return parsed;
     }
+
+    public double GetDouble(string name, double defaultValue)
+    {
+        string? value = GetOptional(name);
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return defaultValue;
+        }
+
+        if (!double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double parsed)
+            || double.IsNaN(parsed)
+            || double.IsInfinity(parsed))
+        {
+            throw new InvalidOperationException("Option --" + name + " must be a finite number.");
+        }
+
+        return parsed;
+    }
 }

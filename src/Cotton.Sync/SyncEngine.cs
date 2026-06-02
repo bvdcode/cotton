@@ -49,6 +49,7 @@ public sealed class SyncEngine : ISyncEngine
         cancellationToken.ThrowIfCancellationRequested();
 
         options ??= new SyncRunOptions();
+        ValidateOptions(options);
         await _stateStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
         IReadOnlyList<LocalFileSnapshot> localFiles = await _localScanner.ScanAsync(syncPair.LocalRootPath, cancellationToken).ConfigureAwait(false);
         RemoteTreeSnapshot remoteTree = await _remoteCrawler.CrawlAsync(syncPair.RemoteRootNodeId, cancellationToken).ConfigureAwait(false);
@@ -61,6 +62,10 @@ public sealed class SyncEngine : ISyncEngine
             entry => entry.RelativePath);
         List<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys);
         var result = new SyncRunResult();
+        if (!options.DryRun)
+        {
+            ValidateDeleteSafety(options, pathKeys, localByPath, remoteByPath, stateByPath);
+        }
 
         foreach (string key in pathKeys)
         {
@@ -108,8 +113,12 @@ public sealed class SyncEngine : ISyncEngine
         {
             if (ContentMatches(local.ContentHash, remote.File.ContentHash))
             {
-                await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, remote.File), cancellationToken)
-                    .ConfigureAwait(false);
+                if (!options.DryRun)
+                {
+                    await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, remote.File), cancellationToken)
+                        .ConfigureAwait(false);
+                }
+
                 return;
             }
 
@@ -135,14 +144,22 @@ public sealed class SyncEngine : ISyncEngine
 
         if (local is null && remote is null)
         {
-            await _stateStore.DeleteAsync(syncPair.SyncPairId, relativePath, cancellationToken).ConfigureAwait(false);
+            if (!options.DryRun)
+            {
+                await _stateStore.DeleteAsync(syncPair.SyncPairId, relativePath, cancellationToken).ConfigureAwait(false);
+            }
+
             return;
         }
 
         if (local is not null && remote is not null && ContentMatches(local.ContentHash, remote.File.ContentHash))
         {
-            await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, remote.File), cancellationToken)
-                .ConfigureAwait(false);
+            if (!options.DryRun)
+            {
+                await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, remote.File), cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
             return;
         }
 
@@ -204,6 +221,12 @@ public sealed class SyncEngine : ISyncEngine
         NodeFileManifestDto? existingRemoteFile,
         CancellationToken cancellationToken)
     {
+        if (options.DryRun)
+        {
+            Report(result, options, SyncActivityKind.Uploaded, relativePath, "Dry run: would upload.");
+            return;
+        }
+
         NodeFileManifestDto uploaded = await _remoteFiles.UploadFileAsync(
             syncPair.RemoteRootNodeId,
             relativePath,
@@ -223,6 +246,12 @@ public sealed class SyncEngine : ISyncEngine
         NodeFileManifestDto remoteFile,
         CancellationToken cancellationToken)
     {
+        if (options.DryRun)
+        {
+            Report(result, options, SyncActivityKind.Downloaded, relativePath, "Dry run: would download.");
+            return;
+        }
+
         await _localWriter.WriteFileAsync(
             syncPair.LocalRootPath,
             relativePath,
@@ -242,6 +271,12 @@ public sealed class SyncEngine : ISyncEngine
         NodeFileManifestDto remoteFile,
         CancellationToken cancellationToken)
     {
+        if (options.DryRun)
+        {
+            Report(result, options, SyncActivityKind.DeletedRemote, relativePath, "Dry run: would delete remote.");
+            return;
+        }
+
         await _remoteFiles.DeleteFileAsync(remoteFile.Id, options.DeleteRemotePermanently, cancellationToken).ConfigureAwait(false);
         await _stateStore.DeleteAsync(syncPair.SyncPairId, relativePath, cancellationToken).ConfigureAwait(false);
         Report(result, options, SyncActivityKind.DeletedRemote, relativePath, null);
@@ -254,6 +289,12 @@ public sealed class SyncEngine : ISyncEngine
         string relativePath,
         CancellationToken cancellationToken)
     {
+        if (options.DryRun)
+        {
+            Report(result, options, SyncActivityKind.DeletedLocal, relativePath, "Dry run: would delete local.");
+            return;
+        }
+
         await _localWriter.DeleteFileAsync(syncPair.LocalRootPath, relativePath, cancellationToken).ConfigureAwait(false);
         await _stateStore.DeleteAsync(syncPair.SyncPairId, relativePath, cancellationToken).ConfigureAwait(false);
         Report(result, options, SyncActivityKind.DeletedLocal, relativePath, null);
@@ -268,6 +309,12 @@ public sealed class SyncEngine : ISyncEngine
         NodeFileManifestDto? remoteFile,
         CancellationToken cancellationToken)
     {
+        if (options.DryRun)
+        {
+            Report(result, options, SyncActivityKind.Conflict, relativePath, "Dry run: would preserve both versions.");
+            return;
+        }
+
         string? details = null;
         if (local is not null && remoteFile is not null)
         {
@@ -359,7 +406,19 @@ public sealed class SyncEngine : ISyncEngine
         var result = new Dictionary<string, T>(PathComparer);
         foreach (T entry in entries)
         {
-            result[SyncPath.ToKey(pathSelector(entry))] = entry;
+            string path = pathSelector(entry);
+            string key = SyncPath.ToKey(path);
+            if (result.TryGetValue(key, out T? existing))
+            {
+                throw new InvalidOperationException(
+                    "Sync contains paths that collide after normalization: '"
+                    + pathSelector(existing)
+                    + "' and '"
+                    + path
+                    + "'. Rename one of them before syncing.");
+            }
+
+            result[key] = entry;
         }
 
         return result;
@@ -394,5 +453,96 @@ public sealed class SyncEngine : ISyncEngine
         };
         result.Activities.Add(activity);
         options.ActivityProgress?.Report(activity);
+    }
+
+    private static void ValidateOptions(SyncRunOptions options)
+    {
+        if (options.MaxDeletesPerRun < 0)
+        {
+            throw new InvalidOperationException("MaxDeletesPerRun cannot be negative.");
+        }
+
+        if (options.MaxDeleteRatio is < 0 or > 1)
+        {
+            throw new InvalidOperationException("MaxDeleteRatio must be between 0 and 1.");
+        }
+
+        if (options.DeleteRatioBaselineThreshold < 0)
+        {
+            throw new InvalidOperationException("DeleteRatioBaselineThreshold cannot be negative.");
+        }
+    }
+
+    private static void ValidateDeleteSafety(
+        SyncRunOptions options,
+        IReadOnlyCollection<string> pathKeys,
+        Dictionary<string, LocalFileSnapshot> localByPath,
+        Dictionary<string, RemoteFileSnapshot> remoteByPath,
+        Dictionary<string, SyncStateEntry> stateByPath)
+    {
+        int plannedDeletes = CountPlannedDataDeletes(pathKeys, localByPath, remoteByPath, stateByPath);
+        if (plannedDeletes == 0)
+        {
+            return;
+        }
+
+        int baselineCount = stateByPath.Count;
+        bool countExceeded = plannedDeletes > options.MaxDeletesPerRun;
+        bool ratioExceeded = baselineCount >= options.DeleteRatioBaselineThreshold
+            && baselineCount > 0
+            && plannedDeletes > baselineCount * options.MaxDeleteRatio;
+        if (!countExceeded && !ratioExceeded)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            "Sync planned "
+            + plannedDeletes.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            + " data delete(s) out of "
+            + baselineCount.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            + " baseline file(s), exceeding the configured safety limits. Verify local and remote paths before retrying.");
+    }
+
+    private static int CountPlannedDataDeletes(
+        IEnumerable<string> pathKeys,
+        Dictionary<string, LocalFileSnapshot> localByPath,
+        Dictionary<string, RemoteFileSnapshot> remoteByPath,
+        Dictionary<string, SyncStateEntry> stateByPath)
+    {
+        int count = 0;
+        foreach (string key in pathKeys)
+        {
+            localByPath.TryGetValue(key, out LocalFileSnapshot? local);
+            remoteByPath.TryGetValue(key, out RemoteFileSnapshot? remote);
+            stateByPath.TryGetValue(key, out SyncStateEntry? state);
+            if (state is null)
+            {
+                continue;
+            }
+
+            bool localDeleted = local is null && !string.IsNullOrWhiteSpace(state.LocalContentHash);
+            bool remoteDeleted = remote is null && state.RemoteFileId.HasValue;
+            bool localChanged = local is not null && !ContentMatches(local.ContentHash, state.LocalContentHash);
+            bool remoteChanged = remote is not null && !RemoteMatchesBaseline(remote.File, state);
+            bool baselineDiverged = !ContentMatches(state.LocalContentHash, state.RemoteContentHash);
+            if (baselineDiverged)
+            {
+                continue;
+            }
+
+            if (localDeleted && !remoteChanged && remote is not null)
+            {
+                count++;
+                continue;
+            }
+
+            if (remoteDeleted && !localChanged && local is not null)
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 }

@@ -8,6 +8,7 @@ project.lock.json
 nupkg/
 artifacts/
 .dotnet-home/
+.dotnet_home/
 
 # Visual Studio Code
 .vscode

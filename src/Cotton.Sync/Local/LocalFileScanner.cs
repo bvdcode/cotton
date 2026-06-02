@@ -12,6 +12,11 @@ namespace Cotton.Sync.Local;
 public sealed class LocalFileScanner : ILocalFileScanner
 {
     private static readonly StringComparer PathComparer = StringComparer.OrdinalIgnoreCase;
+    private static readonly EnumerationOptions FileEnumerationOptions = new()
+    {
+        RecurseSubdirectories = true,
+        AttributesToSkip = FileAttributes.ReparsePoint,
+    };
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<LocalFileSnapshot>> ScanAsync(
@@ -26,7 +31,7 @@ public sealed class LocalFileScanner : ILocalFileScanner
         }
 
         var snapshots = new List<LocalFileSnapshot>();
-        foreach (string filePath in Directory.EnumerateFiles(fullRoot, "*", SearchOption.AllDirectories))
+        foreach (string filePath in Directory.EnumerateFiles(fullRoot, "*", FileEnumerationOptions))
         {
             cancellationToken.ThrowIfCancellationRequested();
             string relativePath = ToRelativePath(fullRoot, filePath);
@@ -36,6 +41,11 @@ public sealed class LocalFileScanner : ILocalFileScanner
             }
 
             FileInfo file = new(filePath);
+            if ((file.Attributes & FileAttributes.ReparsePoint) != 0)
+            {
+                continue;
+            }
+
             string contentHash = await ComputeHashAsync(file.FullName, cancellationToken).ConfigureAwait(false);
             snapshots.Add(new LocalFileSnapshot
             {
