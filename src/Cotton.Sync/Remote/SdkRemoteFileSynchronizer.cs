@@ -1,0 +1,277 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
+
+using System.Buffers;
+using System.Security.Cryptography;
+using Cotton.Contracts.Files;
+using Cotton.Contracts.Nodes;
+using Cotton.Contracts.Settings;
+using Cotton.Sdk;
+using Cotton.Sync.Local;
+using Cotton.Sync.State;
+
+namespace Cotton.Sync.Remote;
+
+/// <summary>
+/// Synchronizes remote files through Cotton SDK clients.
+/// </summary>
+public sealed class SdkRemoteFileSynchronizer : IRemoteFileSynchronizer
+{
+    private const string DefaultContentType = "application/octet-stream";
+    private readonly ICottonCloudClient _client;
+    private readonly SdkRemoteFileSynchronizerOptions _options;
+    private readonly Dictionary<string, Guid> _directoryCache = new(StringComparer.OrdinalIgnoreCase);
+    private int? _resolvedChunkSizeBytes;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SdkRemoteFileSynchronizer" /> class.
+    /// </summary>
+    public SdkRemoteFileSynchronizer(ICottonCloudClient client, SdkRemoteFileSynchronizerOptions? options = null)
+    {
+        _client = client ?? throw new ArgumentNullException(nameof(client));
+        _options = options ?? new SdkRemoteFileSynchronizerOptions();
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(_options.DirectoryPageSize);
+        if (_options.ChunkSizeBytes.HasValue)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(_options.ChunkSizeBytes.Value);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<NodeFileManifestDto> UploadFileAsync(
+        Guid rootNodeId,
+        string relativePath,
+        LocalFileSnapshot localFile,
+        NodeFileManifestDto? existingRemoteFile = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(localFile);
+        string normalizedPath = SyncPath.Normalize(relativePath);
+        Guid parentNodeId = await EnsureParentNodeAsync(rootNodeId, normalizedPath, cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<string> chunkHashes = await UploadChunksAsync(localFile.FullPath, cancellationToken).ConfigureAwait(false);
+        var request = new CreateFileFromChunksRequestDto
+        {
+            NodeId = parentNodeId,
+            ChunkHashes = chunkHashes.ToList(),
+            Name = Path.GetFileName(normalizedPath),
+            ContentType = ResolveContentType(normalizedPath),
+            Hash = localFile.ContentHash,
+            OriginalNodeFileId = existingRemoteFile?.OriginalNodeFileId == Guid.Empty ? existingRemoteFile.Id : existingRemoteFile?.OriginalNodeFileId,
+            Validate = true,
+        };
+
+        return existingRemoteFile is null
+            ? await _client.Files.CreateFromChunksAsync(request, cancellationToken).ConfigureAwait(false)
+            : await _client.Files.UpdateContentAsync(existingRemoteFile.Id, request, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public Task DownloadFileAsync(Guid nodeFileId, Stream destination, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
+        return _client.Files.DownloadContentAsync(nodeFileId, destination, cancellationToken: cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task DeleteFileAsync(Guid nodeFileId, bool skipTrash = false, CancellationToken cancellationToken = default)
+    {
+        return _client.Files.DeleteAsync(nodeFileId, skipTrash, cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<string>> UploadChunksAsync(string filePath, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+        int chunkSize = await GetChunkSizeAsync(cancellationToken).ConfigureAwait(false);
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(chunkSize);
+        var chunkHashes = new List<string>();
+        try
+        {
+            await using FileStream stream = new(
+                filePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                bufferSize: Math.Min(chunkSize, 1024 * 128),
+                FileOptions.Asynchronous | FileOptions.SequentialScan);
+            while (true)
+            {
+                int read = await ReadChunkAsync(stream, buffer, chunkSize, cancellationToken).ConfigureAwait(false);
+                if (read == 0)
+                {
+                    break;
+                }
+
+                string hash = Convert.ToHexStringLower(SHA256.HashData(buffer.AsSpan(0, read)));
+                await UploadChunkIfMissingAsync(hash, buffer, read, cancellationToken).ConfigureAwait(false);
+                chunkHashes.Add(hash);
+            }
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+
+        if (chunkHashes.Count == 0)
+        {
+            string emptyHash = Convert.ToHexStringLower(SHA256.HashData(ReadOnlySpan<byte>.Empty));
+            await UploadChunkIfMissingAsync(emptyHash, ReadOnlyMemory<byte>.Empty, cancellationToken).ConfigureAwait(false);
+            chunkHashes.Add(emptyHash);
+        }
+
+        return chunkHashes;
+    }
+
+    private async Task UploadChunkIfMissingAsync(
+        string hash,
+        byte[] buffer,
+        int count,
+        CancellationToken cancellationToken)
+    {
+        if (await _client.Chunks.ExistsAsync(hash, cancellationToken).ConfigureAwait(false))
+        {
+            return;
+        }
+
+        await using var chunkStream = new MemoryStream(buffer, 0, count, writable: false);
+        await _client.Chunks.UploadRawAsync(hash, chunkStream, DefaultContentType, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task UploadChunkIfMissingAsync(
+        string hash,
+        ReadOnlyMemory<byte> content,
+        CancellationToken cancellationToken)
+    {
+        if (await _client.Chunks.ExistsAsync(hash, cancellationToken).ConfigureAwait(false))
+        {
+            return;
+        }
+
+        await using var chunkStream = new MemoryStream(content.ToArray(), writable: false);
+        await _client.Chunks.UploadRawAsync(hash, chunkStream, DefaultContentType, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<int> GetChunkSizeAsync(CancellationToken cancellationToken)
+    {
+        if (_resolvedChunkSizeBytes.HasValue)
+        {
+            return _resolvedChunkSizeBytes.Value;
+        }
+
+        if (_options.ChunkSizeBytes.HasValue)
+        {
+            _resolvedChunkSizeBytes = _options.ChunkSizeBytes.Value;
+            return _resolvedChunkSizeBytes.Value;
+        }
+
+        ClientSettingsDto settings = await _client.Settings.GetAsync(cancellationToken).ConfigureAwait(false);
+        if (settings.MaxChunkSizeBytes <= 0)
+        {
+            throw new InvalidOperationException("Server returned an invalid maximum chunk size.");
+        }
+
+        _resolvedChunkSizeBytes = settings.MaxChunkSizeBytes;
+        return _resolvedChunkSizeBytes.Value;
+    }
+
+    private async Task<Guid> EnsureParentNodeAsync(Guid rootNodeId, string relativePath, CancellationToken cancellationToken)
+    {
+        string[] segments = relativePath.Split('/');
+        if (segments.Length == 1)
+        {
+            return rootNodeId;
+        }
+
+        Guid currentNodeId = rootNodeId;
+        string currentPath = string.Empty;
+        for (int index = 0; index < segments.Length - 1; index++)
+        {
+            string segment = segments[index];
+            currentPath = string.IsNullOrEmpty(currentPath) ? segment : currentPath + "/" + segment;
+            string cacheKey = rootNodeId.ToString("D") + ":" + SyncPath.ToKey(currentPath);
+            if (_directoryCache.TryGetValue(cacheKey, out Guid cachedNodeId))
+            {
+                currentNodeId = cachedNodeId;
+                continue;
+            }
+
+            NodeDto? existing = await FindChildDirectoryAsync(currentNodeId, segment, cancellationToken).ConfigureAwait(false);
+            NodeDto node = existing ?? await _client.Nodes.CreateAsync(currentNodeId, segment, cancellationToken).ConfigureAwait(false);
+            currentNodeId = node.Id;
+            _directoryCache[cacheKey] = currentNodeId;
+        }
+
+        return currentNodeId;
+    }
+
+    private async Task<NodeDto?> FindChildDirectoryAsync(Guid parentNodeId, string name, CancellationToken cancellationToken)
+    {
+        int page = 1;
+        int loaded = 0;
+        while (true)
+        {
+            NodeContentDto content = await _client.Nodes.GetChildrenAsync(
+                parentNodeId,
+                page,
+                _options.DirectoryPageSize,
+                depth: 0,
+                cancellationToken).ConfigureAwait(false);
+            NodeDto? match = content.Nodes.FirstOrDefault(node => string.Equals(node.Name, name, StringComparison.OrdinalIgnoreCase));
+            if (match is not null)
+            {
+                return match;
+            }
+
+            int count = content.Nodes.Count + content.Files.Count;
+            loaded += count;
+            if (count == 0 || loaded >= content.TotalCount)
+            {
+                return null;
+            }
+
+            page++;
+        }
+    }
+
+    private string ResolveContentType(string relativePath)
+    {
+        if (_options.ContentTypeResolver is not null)
+        {
+            return _options.ContentTypeResolver(relativePath);
+        }
+
+        string extension = Path.GetExtension(relativePath).ToLowerInvariant();
+        return extension switch
+        {
+            ".css" => "text/css",
+            ".csv" => "text/csv",
+            ".htm" or ".html" => "text/html",
+            ".json" => "application/json",
+            ".md" => "text/markdown",
+            ".pdf" => "application/pdf",
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".svg" => "image/svg+xml",
+            ".txt" => "text/plain",
+            ".webp" => "image/webp",
+            ".xml" => "application/xml",
+            _ => DefaultContentType,
+        };
+    }
+
+    private static async Task<int> ReadChunkAsync(FileStream stream, byte[] buffer, int chunkSize, CancellationToken cancellationToken)
+    {
+        int total = 0;
+        while (total < chunkSize)
+        {
+            int read = await stream.ReadAsync(buffer.AsMemory(total, chunkSize - total), cancellationToken).ConfigureAwait(false);
+            if (read == 0)
+            {
+                break;
+            }
+
+            total += read;
+        }
+
+        return total;
+    }
+}
