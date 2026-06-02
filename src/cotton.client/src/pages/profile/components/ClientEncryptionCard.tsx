@@ -127,20 +127,32 @@ export const ClientEncryptionCard = ({
               </Button>
             </Box>
           ) : status !== "invalid" ? (
-            <Stack spacing={2}>
+            <Stack spacing={1.5}>
               <Stack
                 direction={{ xs: "column", sm: "row" }}
                 spacing={2}
                 alignItems={{ xs: "flex-start", sm: "center" }}
                 justifyContent="space-between"
               >
-                <Stack spacing={0.5} minWidth={0}>
-                  <Box>{statusChip}</Box>
-                  {statusHint && (
-                    <Typography variant="body2" color="text.secondary">
-                      {statusHint}
-                    </Typography>
-                  )}
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  alignItems="center"
+                  flexWrap="wrap"
+                  useFlexGap
+                  minWidth={0}
+                >
+                  {statusChip}
+                  <FormControlLabel
+                    sx={{ m: 0 }}
+                    control={
+                      <Switch
+                        checked={lockOnRefresh}
+                        onChange={handleLockOnRefreshChange}
+                      />
+                    }
+                    label={t("clientEncryption.actions.lockOnRefresh")}
+                  />
                 </Stack>
                 {status === "locked" && envelope && (
                   <Button
@@ -161,15 +173,11 @@ export const ClientEncryptionCard = ({
                   </Button>
                 )}
               </Stack>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={lockOnRefresh}
-                    onChange={handleLockOnRefreshChange}
-                  />
-                }
-                label={t("clientEncryption.actions.lockOnRefresh")}
-              />
+              {statusHint && (
+                <Typography variant="body2" color="text.secondary">
+                  {statusHint}
+                </Typography>
+              )}
             </Stack>
           ) : null}
         </Stack>
