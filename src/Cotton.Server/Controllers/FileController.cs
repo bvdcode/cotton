@@ -455,6 +455,34 @@ namespace Cotton.Server.Controllers
         }
 
         /// <summary>
+        /// Downloads an owned file through normal bearer-token authentication.
+        /// </summary>
+        [Authorize]
+        [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/content")]
+        public async Task<IActionResult> DownloadOwnedFileContent(
+            [FromRoute] Guid nodeFileId,
+            [FromQuery] bool download = false)
+        {
+            Guid userId = User.GetUserId();
+            NodeFile? nodeFile = await _dbContext.NodeFiles
+                .Include(x => x.Node)
+                .Include(x => x.FileManifest)
+                .ThenInclude(x => x.FileManifestChunks)
+                .ThenInclude(x => x.Chunk)
+                .SingleOrDefaultAsync(x =>
+                    x.Id == nodeFileId &&
+                    x.OwnerId == userId &&
+                    x.Node.Type == NodeType.Default);
+            if (nodeFile is null)
+            {
+                return CottonResult.NotFound("Node file not found");
+            }
+
+            _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "file.content");
+            return ServeFileDownload(nodeFile, download);
+        }
+
+        /// <summary>
         /// Updates file content.
         /// </summary>
         [Authorize]
@@ -729,6 +757,12 @@ namespace Cotton.Server.Controllers
             DownloadToken downloadToken,
             bool download)
         {
+            RegisterDeleteAfterUse(downloadToken);
+            return ServeFileDownload(nodeFile, download);
+        }
+
+        private IActionResult ServeFileDownload(NodeFile nodeFile, bool download)
+        {
             string[] uids = nodeFile.FileManifest.FileManifestChunks.GetChunkHashes();
             PipelineContext context = new()
             {
@@ -740,8 +774,6 @@ namespace Cotton.Server.Controllers
             Response.Headers.CacheControl = "private, no-store, no-transform";
             EntityTagHeaderValue entityTag = EntityTagHeaderValue.Parse(
                 $"\"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}\"");
-
-            RegisterDeleteAfterUse(downloadToken);
 
             return File(
                 stream,

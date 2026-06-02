@@ -15,6 +15,14 @@ namespace Cotton.Server.Models.Dto
         /// </summary>
         public Guid NodeId { get; set; }
         /// <summary>
+        /// Gets or sets file manifest id.
+        /// </summary>
+        public Guid FileManifestId { get; set; }
+        /// <summary>
+        /// Gets or sets original node file id.
+        /// </summary>
+        public Guid OriginalNodeFileId { get; set; }
+        /// <summary>
         /// Gets or sets owner id.
         /// </summary>
         public Guid OwnerId { get; set; }
@@ -30,6 +38,14 @@ namespace Cotton.Server.Models.Dto
         /// Gets or sets size bytes.
         /// </summary>
         public long SizeBytes { get; set; }
+        /// <summary>
+        /// Gets or sets full content hash hex.
+        /// </summary>
+        public string ContentHash { get; set; } = null!;
+        /// <summary>
+        /// Gets or sets strong content ETag without quotes.
+        /// </summary>
+        public string ETag { get; set; } = null!;
 
         private Dictionary<string, string> _metadata = [];
         /// <summary>
