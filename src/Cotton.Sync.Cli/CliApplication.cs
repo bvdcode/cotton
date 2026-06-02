@@ -6,7 +6,7 @@ using System.Text;
 using Cotton.Contracts.Auth;
 using Cotton.Contracts.Nodes;
 using Cotton.Sdk;
-using Cotton.Sync.Cli.Storage;
+using Cotton.Sync.ClientState;
 using Cotton.Sync.Local;
 using Cotton.Sync.Remote;
 using Cotton.Sync.State;
@@ -63,7 +63,7 @@ internal static class CliApplication
             throw new InvalidOperationException("Missing required option --password or COTTON_PASSWORD environment variable.");
         }
 
-        SqliteCliStateStore store = CreateCliStore(options);
+        SqliteClientStateStore store = CreateCliStore(options);
         using HttpClient httpClient = CreateHttpClient(server);
         var client = new CottonCloudClient(httpClient, store, new CottonSdkOptions { BaseAddress = server });
         await client.Auth.LoginAsync(new LoginRequestDto
@@ -81,7 +81,7 @@ internal static class CliApplication
 
     private static async Task<int> LogoutAsync(OptionReader options, TextWriter stdout, CancellationToken cancellationToken)
     {
-        SqliteCliStateStore store = CreateCliStore(options);
+        SqliteClientStateStore store = CreateCliStore(options);
         Uri server = await ResolveServerAsync(options, store, cancellationToken).ConfigureAwait(false);
         using HttpClient httpClient = CreateHttpClient(server);
         var client = new CottonCloudClient(httpClient, store, new CottonSdkOptions { BaseAddress = server });
@@ -135,7 +135,7 @@ internal static class CliApplication
     {
         string localRoot = Path.GetFullPath(options.GetRequired("local"));
         Directory.CreateDirectory(localRoot);
-        SqliteCliStateStore cliStore = CreateCliStore(options);
+        SqliteClientStateStore cliStore = CreateCliStore(options);
         Uri server = await ResolveServerAsync(options, cliStore, cancellationToken).ConfigureAwait(false);
         using HttpClient httpClient = CreateHttpClient(server);
         var client = new CottonCloudClient(httpClient, cliStore, new CottonSdkOptions { BaseAddress = server });
@@ -213,7 +213,7 @@ internal static class CliApplication
 
     private static async Task<Uri> ResolveServerAsync(
         OptionReader options,
-        SqliteCliStateStore store,
+        SqliteClientStateStore store,
         CancellationToken cancellationToken)
     {
         Uri? server = ResolveServerOption(options) ?? await store.GetServerBaseAddressAsync(cancellationToken).ConfigureAwait(false);
@@ -226,9 +226,9 @@ internal static class CliApplication
         return string.IsNullOrWhiteSpace(value) ? null : new Uri(value, UriKind.Absolute);
     }
 
-    private static SqliteCliStateStore CreateCliStore(OptionReader options)
+    private static SqliteClientStateStore CreateCliStore(OptionReader options)
     {
-        return new SqliteCliStateStore(Path.Combine(GetConfigDirectory(options), "client-state.sqlite"));
+        return new SqliteClientStateStore(Path.Combine(GetConfigDirectory(options), "client-state.sqlite"));
     }
 
     private static string GetConfigDirectory(OptionReader options)

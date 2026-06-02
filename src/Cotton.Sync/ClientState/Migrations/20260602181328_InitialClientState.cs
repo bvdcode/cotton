@@ -2,16 +2,16 @@
 
 #nullable disable
 
-namespace Cotton.Sync.Cli.Storage.Migrations
+namespace Cotton.Sync.ClientState.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCliState : Migration
+    public partial class InitialClientState : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "cli_state",
+                name: "client_state",
                 columns: table => new
                 {
                     key = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
@@ -19,7 +19,7 @@ namespace Cotton.Sync.Cli.Storage.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_cli_state", x => x.key);
+                    table.PrimaryKey("PK_client_state", x => x.key);
                 });
         }
 
@@ -27,7 +27,7 @@ namespace Cotton.Sync.Cli.Storage.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "cli_state");
+                name: "client_state");
         }
     }
 }

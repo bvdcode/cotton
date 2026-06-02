@@ -4,13 +4,13 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Cotton.Sync.Cli.Storage;
+namespace Cotton.Sync.ClientState;
 
 /// <summary>
-/// Represents one persisted CLI state value.
+/// Represents one persisted client profile value.
 /// </summary>
-[Table("cli_state")]
-public sealed class CliStateItem
+[Table("client_state")]
+public sealed class ClientStateItem
 {
     /// <summary>
     /// Gets or sets the state key.
