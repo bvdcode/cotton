@@ -21,10 +21,14 @@ export const nodeDtoSchema = baseDtoSchema.extend({
 
 export const nodeFileManifestSchema = baseDtoSchema.extend({
   nodeId: z.string(),
+  fileManifestId: z.string().optional(),
+  originalNodeFileId: z.string().optional(),
   ownerId: z.string(),
   name: z.string(),
   contentType: z.string(),
   sizeBytes: z.number(),
+  contentHash: z.string().optional(),
+  eTag: z.string().optional(),
   metadata: metadataSchema,
   requiresVideoTranscoding: z.boolean().optional().default(false),
   previewHashEncryptedHex: z.string().nullable().optional(),

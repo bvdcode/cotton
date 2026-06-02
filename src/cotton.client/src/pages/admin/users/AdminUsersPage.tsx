@@ -1,6 +1,6 @@
 import { Alert, Box, Stack, Typography, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DataGrid, type GridColumnVisibilityModel } from "@mui/x-data-grid";
 import type { AdminUserDto } from "../../../shared/api/adminApi";
@@ -29,18 +29,31 @@ export const AdminUsersPage = () => {
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const columnVisibilityModel: GridColumnVisibilityModel = isMobile
-    ? {
-        email: false,
-        firstName: false,
-        lastName: false,
-        birthDate: false,
-        isTotpEnabled: false,
-        activeSessionCount: false,
-        storageUsedBytes: false,
-        lastActivityAt: false,
-      }
-    : {};
+  const defaultColumnVisibilityModel = useMemo<GridColumnVisibilityModel>(() => {
+    if (!isMobile) {
+      const visibleColumns: GridColumnVisibilityModel = {};
+      return visibleColumns;
+    }
+
+    const mobileColumns: GridColumnVisibilityModel = {
+      email: false,
+      firstName: false,
+      lastName: false,
+      birthDate: false,
+      isTotpEnabled: false,
+      activeSessionCount: false,
+      storageUsedBytes: false,
+      lastActivityAt: false,
+    };
+    return mobileColumns;
+  }, [isMobile]);
+  const [columnVisibilityModel, setColumnVisibilityModel] = useState<GridColumnVisibilityModel>(
+    defaultColumnVisibilityModel,
+  );
+
+  useEffect(() => {
+    setColumnVisibilityModel(defaultColumnVisibilityModel);
+  }, [defaultColumnVisibilityModel]);
 
   const GridToolbarSlot = useMemo(() => {
     const ToolbarSlot = () => (
@@ -84,6 +97,7 @@ export const AdminUsersPage = () => {
             rows={users}
             columns={columns}
             columnVisibilityModel={columnVisibilityModel}
+            onColumnVisibilityModelChange={setColumnVisibilityModel}
             getRowId={(row) => row.id}
             loading={isLoading}
             disableRowSelectionOnClick

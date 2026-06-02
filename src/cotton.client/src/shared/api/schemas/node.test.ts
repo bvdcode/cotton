@@ -38,6 +38,26 @@ describe("node api schemas", () => {
     expect(parsed.metadata).toEqual({});
   });
 
+  it("preserves sync metadata fields from file manifests", () => {
+    const parsed = nodeFileManifestSchema.parse({
+      ...baseDto,
+      nodeId: "node-id",
+      fileManifestId: "manifest-id",
+      originalNodeFileId: "original-file-id",
+      ownerId: "owner-id",
+      name: "track.mp3",
+      contentType: "audio/mpeg",
+      sizeBytes: 42,
+      contentHash: "abc123",
+      eTag: "sha256-abc123",
+    });
+
+    expect(parsed.fileManifestId).toBe("manifest-id");
+    expect(parsed.originalNodeFileId).toBe("original-file-id");
+    expect(parsed.contentHash).toBe("abc123");
+    expect(parsed.eTag).toBe("sha256-abc123");
+  });
+
   it("validates node content envelopes", () => {
     const parsed = nodeContentSchema.parse({
       ...baseDto,
