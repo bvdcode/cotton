@@ -259,9 +259,13 @@ namespace Cotton.Server.Handlers.Files
                 CreatedAt = nodeFile.CreatedAt,
                 Id = nodeFile.Id,
                 NodeId = nodeFile.NodeId,
+                FileManifestId = fileManifest.Id,
+                OriginalNodeFileId = nodeFile.OriginalNodeFileId,
                 Name = nodeFile.Name,
                 OwnerId = nodeFile.OwnerId,
                 PreviewHashEncryptedHex = fileManifest.GetPreviewHashEncryptedHex(),
+                ContentHash = Hasher.ToHexStringHash(fileManifest.ProposedContentHash),
+                ETag = "sha256-" + Hasher.ToHexStringHash(fileManifest.ProposedContentHash),
                 RequiresVideoTranscoding = fileManifest.SmallFilePreviewHash != null
                     && fileManifest.ContentType.StartsWith("video/")
                     && fileManifest.ContentType != "video/mp4"
