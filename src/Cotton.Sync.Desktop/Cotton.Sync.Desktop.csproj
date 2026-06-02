@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>Cotton.Sync.Desktop</AssemblyName>
+    <Authors>Vadim Belov</Authors>
+    <Company>bvdcode</Company>
+    <Product>Cotton</Product>
+    <Description>Cross-platform desktop synchronization client for Cotton Cloud.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.7" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.7" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.7" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.7" />
+    <PackageReference Include="Tmds.DBus.Protocol" Version="0.21.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Cotton.Contracts/Cotton.Contracts.csproj" />
+    <ProjectReference Include="../Cotton.Sdk/Cotton.Sdk.csproj" />
+    <ProjectReference Include="../Cotton.Sync/Cotton.Sync.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets/**" />
+  </ItemGroup>
+
+</Project>
