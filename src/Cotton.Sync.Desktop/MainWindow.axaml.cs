@@ -64,41 +64,27 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        _loopCancellation = new CancellationTokenSource();
+        var cancellation = new CancellationTokenSource();
+        _loopCancellation = cancellation;
         StartLoopButton.IsEnabled = false;
         StopLoopButton.IsEnabled = true;
         SetStatus("Sync loop running");
-        _loopTask = RunLoopAsync(_loopCancellation.Token);
+        _loopTask = RunLoopSupervisedAsync(cancellation);
     }
 
     private async void StopLoopButton_Click(object? sender, RoutedEventArgs args)
     {
         CancellationTokenSource? cancellation = _loopCancellation;
+        Task? loopTask = _loopTask;
         if (cancellation is null)
         {
             return;
         }
 
         cancellation.Cancel();
-        try
+        if (loopTask is not null)
         {
-            if (_loopTask is not null)
-            {
-                await _loopTask.ConfigureAwait(true);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            AddActivity("Info", string.Empty, "Sync loop stopped.");
-        }
-        finally
-        {
-            cancellation.Dispose();
-            _loopCancellation = null;
-            _loopTask = null;
-            StartLoopButton.IsEnabled = true;
-            StopLoopButton.IsEnabled = false;
-            SetStatus("Ready");
+            await loopTask.ConfigureAwait(true);
         }
     }
 
@@ -146,6 +132,37 @@ public sealed partial class MainWindow : Window
         UserDto user = await client.Auth.MeAsync(cancellationToken).ConfigureAwait(true);
         AddActivity("Login", user.Username, "Authenticated on " + server.ToString().TrimEnd('/'));
         SetStatus("Logged in as " + user.Username);
+    }
+
+    private async Task RunLoopSupervisedAsync(CancellationTokenSource cancellation)
+    {
+        string finalStatus = "Ready";
+        try
+        {
+            await RunLoopAsync(cancellation.Token).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            AddActivity("Info", string.Empty, "Sync loop stopped.");
+        }
+        catch (Exception exception)
+        {
+            AddActivity("Error", string.Empty, exception.Message);
+            finalStatus = "Error";
+        }
+        finally
+        {
+            if (ReferenceEquals(_loopCancellation, cancellation))
+            {
+                _loopCancellation = null;
+                _loopTask = null;
+                StartLoopButton.IsEnabled = true;
+                StopLoopButton.IsEnabled = false;
+                SetStatus(finalStatus);
+            }
+
+            cancellation.Dispose();
+        }
     }
 
     private async Task RunLoopAsync(CancellationToken cancellationToken)

@@ -16,6 +16,8 @@ public sealed class SqliteClientStateStore : ICottonClientStateStore
     private const string RefreshTokenKey = "refresh_token";
     private const string ServerBaseAddressKey = "server_base_address";
     private readonly string _databasePath;
+    private readonly SemaphoreSlim _initializeGate = new(1, 1);
+    private bool _initialized;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SqliteClientStateStore" /> class.
@@ -31,9 +33,28 @@ public sealed class SqliteClientStateStore : ICottonClientStateStore
     /// </summary>
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        EnsureDirectoryExists();
-        await using ClientStateDbContext context = CreateContext();
-        await context.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
+        if (_initialized)
+        {
+            return;
+        }
+
+        await _initializeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (_initialized)
+            {
+                return;
+            }
+
+            EnsureDirectoryExists();
+            await using ClientStateDbContext context = CreateContext();
+            await context.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
+            _initialized = true;
+        }
+        finally
+        {
+            _initializeGate.Release();
+        }
     }
 
     /// <inheritdoc />

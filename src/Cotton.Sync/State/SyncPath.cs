@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton.Validators;
+
 namespace Cotton.Sync.State;
 
 /// <summary>
@@ -13,14 +15,7 @@ public static class SyncPath
     /// </summary>
     public static string Normalize(string relativePath)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
-        string normalized = relativePath.Replace('\\', '/').Trim('/');
-        if (string.IsNullOrWhiteSpace(normalized) || normalized.Split('/').Any(string.IsNullOrWhiteSpace))
-        {
-            throw new ArgumentException("Relative path must contain non-empty segments.", nameof(relativePath));
-        }
-
-        return normalized;
+        return RelativePathValidator.NormalizeOrThrow(relativePath);
     }
 
     /// <summary>

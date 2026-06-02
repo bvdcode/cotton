@@ -27,7 +27,7 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
         string fullRoot = Path.GetFullPath(rootPath);
         Directory.CreateDirectory(fullRoot);
 
-        string targetPath = Path.Combine(fullRoot, normalizedPath.Replace('/', Path.DirectorySeparatorChar));
+        string targetPath = BuildSafeTargetPath(fullRoot, normalizedPath);
         string? targetDirectory = Path.GetDirectoryName(targetPath);
         if (!string.IsNullOrEmpty(targetDirectory))
         {
@@ -76,7 +76,7 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
         cancellationToken.ThrowIfCancellationRequested();
         string normalizedPath = SyncPath.Normalize(relativePath);
         string fullRoot = Path.GetFullPath(rootPath);
-        string targetPath = Path.Combine(fullRoot, normalizedPath.Replace('/', Path.DirectorySeparatorChar));
+        string targetPath = BuildSafeTargetPath(fullRoot, normalizedPath);
         if (File.Exists(targetPath))
         {
             File.Delete(targetPath);
@@ -102,9 +102,7 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
             string candidateRelativePath = string.IsNullOrEmpty(directory)
                 ? candidateName
                 : directory.Replace(Path.DirectorySeparatorChar, '/') + "/" + candidateName;
-            string candidateFullPath = Path.Combine(
-                Path.GetFullPath(rootPath),
-                candidateRelativePath.Replace('/', Path.DirectorySeparatorChar));
+            string candidateFullPath = BuildSafeTargetPath(Path.GetFullPath(rootPath), candidateRelativePath);
             if (!File.Exists(candidateFullPath))
             {
                 return SyncPath.Normalize(candidateRelativePath);
@@ -112,6 +110,36 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
         }
 
         throw new InvalidOperationException("Unable to allocate a unique conflict file path.");
+    }
+
+    private static string BuildSafeTargetPath(string fullRoot, string normalizedRelativePath)
+    {
+        string root = Path.GetFullPath(fullRoot);
+        string rootPrefix = EndsWithDirectorySeparator(root)
+            ? root
+            : root + Path.DirectorySeparatorChar;
+        string targetPath = Path.GetFullPath(Path.Combine(
+            root,
+            normalizedRelativePath.Replace('/', Path.DirectorySeparatorChar)));
+        if (!targetPath.StartsWith(rootPrefix, GetPathComparison()))
+        {
+            throw new ArgumentException("Relative path must stay inside the sync root.", nameof(normalizedRelativePath));
+        }
+
+        return targetPath;
+    }
+
+    private static bool EndsWithDirectorySeparator(string path)
+    {
+        return path.EndsWith(Path.DirectorySeparatorChar)
+            || path.EndsWith(Path.AltDirectorySeparatorChar);
+    }
+
+    private static StringComparison GetPathComparison()
+    {
+        return OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
     }
 
     private static void DeleteEmptyParents(string fullRoot, string? currentDirectory)

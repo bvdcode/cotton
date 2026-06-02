@@ -26,6 +26,7 @@
     </PackageReference>
     <ProjectReference Include="../Cotton.Contracts/Cotton.Contracts.csproj" />
     <ProjectReference Include="../Cotton.Sdk/Cotton.Sdk.csproj" />
+    <ProjectReference Include="../Cotton.Validators/Cotton.Validators.csproj" />
   </ItemGroup>
 
 </Project>
