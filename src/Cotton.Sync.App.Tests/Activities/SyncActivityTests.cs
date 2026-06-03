@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-using Cotton.Sync.App.Activities;
+using AppSyncActivity = Cotton.Sync.App.Activities.SyncActivity;
+using AppSyncActivityType = Cotton.Sync.App.Activities.SyncActivityType;
 
 namespace Cotton.Sync.App.Tests.Activities;
 
@@ -12,10 +13,10 @@ public sealed class SyncActivityTests
     {
         DateTime unspecifiedTime = new DateTime(2026, 6, 3, 10, 0, 0, DateTimeKind.Unspecified);
 
-        var activity = new SyncActivity(
+        var activity = new AppSyncActivity(
             Guid.NewGuid(),
             Guid.NewGuid(),
-            SyncActivityType.Uploaded,
+            AppSyncActivityType.Uploaded,
             "/Documents/report.txt",
             "Uploaded report.txt",
             unspecifiedTime);

@@ -24,6 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../Cotton.Sync/Cotton.Sync.csproj" />
     <ProjectReference Include="../Cotton.Sdk/Cotton.Sdk.csproj" />
   </ItemGroup>
 
