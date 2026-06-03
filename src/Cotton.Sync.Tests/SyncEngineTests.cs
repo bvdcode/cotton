@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using Cotton.Contracts.Files;
@@ -294,6 +295,79 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_PreservesBothVersionsWhenStaleUploadLosesRemoteRace()
+    {
+        string relativePath = "stale-upload.txt";
+        WriteFile(relativePath, "local-new");
+        LocalFileSnapshot local = LocalFile(relativePath, "local-new");
+        Guid remoteId = Guid.NewGuid();
+        NodeFileManifestDto baselineRemote = RemoteFile(relativePath, HashText("old"), remoteId);
+        NodeFileManifestDto initialRemote = RemoteFile(relativePath, HashText("old"), remoteId);
+        byte[] latestRemoteContent = Encoding.UTF8.GetBytes("remote-new");
+        NodeFileManifestDto latestRemote = RemoteFile(relativePath, Hash(latestRemoteContent), remoteId);
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        remoteFiles.PreconditionFailedUploadIds.Add(remoteId);
+        remoteFiles.Downloads[remoteId] = latestRemoteContent;
+        SyncEngine engine = CreateEngine(
+            new FakeLocalFileScanner(local),
+            remoteFiles,
+            out SqliteSyncStateStore stateStore,
+            RemoteTree(initialRemote),
+            RemoteTree(latestRemote));
+        await InsertBaselineAsync(stateStore, relativePath, baselineRemote.ContentHash, baselineRemote);
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+        string[] conflictFiles = Directory.GetFiles(_root, "*Cotton conflict*", SearchOption.AllDirectories);
+        SyncStateEntry? entry = await stateStore.GetAsync("pair-a", relativePath);
+        Assert.Multiple(() =>
+        {
+            Assert.That(File.ReadAllText(Path.Combine(_root, relativePath)), Is.EqualTo("local-new"));
+            Assert.That(conflictFiles, Has.Length.EqualTo(1));
+            Assert.That(File.ReadAllText(conflictFiles[0]), Is.EqualTo("remote-new"));
+            Assert.That(remoteFiles.Uploads, Is.Empty);
+            Assert.That(result.Activities.Select(x => x.Kind), Is.EqualTo(new[] { SyncActivityKind.Conflict }));
+            Assert.That(entry, Is.Not.Null);
+            Assert.That(entry!.LocalContentHash, Is.EqualTo(local.ContentHash));
+            Assert.That(entry.RemoteContentHash, Is.EqualTo(latestRemote.ContentHash));
+        });
+    }
+
+    [Test]
+    public async Task RunOnceAsync_RestoresRemoteVersionWhenStaleDeleteLosesRemoteRace()
+    {
+        string relativePath = "stale-delete.txt";
+        Guid remoteId = Guid.NewGuid();
+        NodeFileManifestDto baselineRemote = RemoteFile(relativePath, HashText("old"), remoteId);
+        NodeFileManifestDto initialRemote = RemoteFile(relativePath, HashText("old"), remoteId);
+        byte[] latestRemoteContent = Encoding.UTF8.GetBytes("remote-new");
+        NodeFileManifestDto latestRemote = RemoteFile(relativePath, Hash(latestRemoteContent), remoteId);
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        remoteFiles.PreconditionFailedDeleteIds.Add(remoteId);
+        remoteFiles.Downloads[remoteId] = latestRemoteContent;
+        SyncEngine engine = CreateEngine(
+            new FakeLocalFileScanner(),
+            remoteFiles,
+            out SqliteSyncStateStore stateStore,
+            RemoteTree(initialRemote),
+            RemoteTree(latestRemote));
+        await InsertBaselineAsync(stateStore, relativePath, baselineRemote.ContentHash, baselineRemote);
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+        SyncStateEntry? entry = await stateStore.GetAsync("pair-a", relativePath);
+        Assert.Multiple(() =>
+        {
+            Assert.That(File.ReadAllText(Path.Combine(_root, relativePath)), Is.EqualTo("remote-new"));
+            Assert.That(remoteFiles.Deletes, Is.EqualTo(new[] { (remoteId, false, initialRemote.ETag) }));
+            Assert.That(result.Activities.Select(x => x.Kind), Is.EqualTo(new[] { SyncActivityKind.Conflict }));
+            Assert.That(entry, Is.Not.Null);
+            Assert.That(entry!.LocalContentHash, Is.EqualTo(latestRemote.ContentHash));
+            Assert.That(entry.RemoteContentHash, Is.EqualTo(latestRemote.ContentHash));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_DoesNotDuplicateConflictCopiesWhenUnresolvedConflictIsUnchanged()
     {
         string relativePath = "conflict-stable.txt";
@@ -365,8 +439,17 @@ public sealed class SyncEngineTests
         FakeRemoteFileSynchronizer remoteFiles,
         out SqliteSyncStateStore stateStore)
     {
+        return CreateEngine(scanner, remoteFiles, out stateStore, remoteTree);
+    }
+
+    private SyncEngine CreateEngine(
+        FakeLocalFileScanner scanner,
+        FakeRemoteFileSynchronizer remoteFiles,
+        out SqliteSyncStateStore stateStore,
+        params RemoteTreeSnapshot[] remoteTrees)
+    {
         stateStore = new SqliteSyncStateStore(_databasePath);
-        return new SyncEngine(scanner, new FakeRemoteTreeCrawler(remoteTree), remoteFiles, stateStore);
+        return new SyncEngine(scanner, new FakeRemoteTreeCrawler(remoteTrees), remoteFiles, stateStore);
     }
 
     private SyncPair Pair()
@@ -498,16 +581,28 @@ public sealed class SyncEngineTests
 
     private sealed class FakeRemoteTreeCrawler : IRemoteTreeCrawler
     {
-        private readonly RemoteTreeSnapshot _snapshot;
+        private readonly Queue<RemoteTreeSnapshot> _snapshots;
+        private RemoteTreeSnapshot _lastSnapshot;
 
-        public FakeRemoteTreeCrawler(RemoteTreeSnapshot snapshot)
+        public FakeRemoteTreeCrawler(params RemoteTreeSnapshot[] snapshots)
         {
-            _snapshot = snapshot;
+            if (snapshots.Length == 0)
+            {
+                throw new ArgumentException("At least one remote snapshot is required.", nameof(snapshots));
+            }
+
+            _snapshots = new Queue<RemoteTreeSnapshot>(snapshots);
+            _lastSnapshot = snapshots[0];
         }
 
         public Task<RemoteTreeSnapshot> CrawlAsync(Guid rootNodeId, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(_snapshot);
+            if (_snapshots.Count > 0)
+            {
+                _lastSnapshot = _snapshots.Dequeue();
+            }
+
+            return Task.FromResult(_lastSnapshot);
         }
     }
 
@@ -519,6 +614,10 @@ public sealed class SyncEngineTests
 
         public Dictionary<Guid, byte[]> Downloads { get; } = [];
 
+        public HashSet<Guid> PreconditionFailedUploadIds { get; } = [];
+
+        public HashSet<Guid> PreconditionFailedDeleteIds { get; } = [];
+
         public Task<NodeFileManifestDto> UploadFileAsync(
             Guid rootNodeId,
             string relativePath,
@@ -526,6 +625,14 @@ public sealed class SyncEngineTests
             NodeFileManifestDto? existingRemoteFile = null,
             CancellationToken cancellationToken = default)
         {
+            if (existingRemoteFile is not null && PreconditionFailedUploadIds.Contains(existingRemoteFile.Id))
+            {
+                throw new HttpRequestException(
+                    "Remote file changed before upload.",
+                    inner: null,
+                    HttpStatusCode.PreconditionFailed);
+            }
+
             var returned = new NodeFileManifestDto
             {
                 Id = existingRemoteFile?.Id ?? Guid.NewGuid(),
@@ -560,6 +667,14 @@ public sealed class SyncEngineTests
             CancellationToken cancellationToken = default)
         {
             Deletes.Add((nodeFileId, skipTrash, expectedETag));
+            if (PreconditionFailedDeleteIds.Contains(nodeFileId))
+            {
+                throw new HttpRequestException(
+                    "Remote file changed before delete.",
+                    inner: null,
+                    HttpStatusCode.PreconditionFailed);
+            }
+
             return Task.CompletedTask;
         }
     }

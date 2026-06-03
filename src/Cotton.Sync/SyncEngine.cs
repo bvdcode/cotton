@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Net;
 using Cotton.Contracts.Files;
 using Cotton.Sync.Local;
 using Cotton.Sync.Remote;
@@ -207,12 +208,30 @@ public sealed class SyncEngine : ISyncEngine
         NodeFileManifestDto? existingRemoteFile,
         CancellationToken cancellationToken)
     {
-        NodeFileManifestDto uploaded = await _remoteFiles.UploadFileAsync(
-            syncPair.RemoteRootNodeId,
-            relativePath,
-            local,
-            existingRemoteFile,
-            cancellationToken).ConfigureAwait(false);
+        NodeFileManifestDto uploaded;
+        try
+        {
+            uploaded = await _remoteFiles.UploadFileAsync(
+                syncPair.RemoteRootNodeId,
+                relativePath,
+                local,
+                existingRemoteFile,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (HttpRequestException exception) when (existingRemoteFile is not null && IsRemotePreconditionFailed(exception))
+        {
+            NodeFileManifestDto? latestRemoteFile = await FindLatestRemoteFileAsync(syncPair, relativePath, cancellationToken).ConfigureAwait(false);
+            await PreserveConflictAsync(
+                syncPair,
+                options,
+                result,
+                relativePath,
+                local,
+                latestRemoteFile ?? existingRemoteFile,
+                cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
         await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, uploaded), cancellationToken)
             .ConfigureAwait(false);
         Report(result, options, SyncActivityKind.Uploaded, relativePath, null);
@@ -252,11 +271,28 @@ public sealed class SyncEngine : ISyncEngine
             return;
         }
 
-        await _remoteFiles.DeleteFileAsync(
-            remoteFile.Id,
-            options.DeleteRemotePermanently,
-            remoteFile.ETag,
-            cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _remoteFiles.DeleteFileAsync(
+                remoteFile.Id,
+                options.DeleteRemotePermanently,
+                remoteFile.ETag,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (HttpRequestException exception) when (IsRemotePreconditionFailed(exception))
+        {
+            NodeFileManifestDto? latestRemoteFile = await FindLatestRemoteFileAsync(syncPair, relativePath, cancellationToken).ConfigureAwait(false);
+            await PreserveConflictAsync(
+                syncPair,
+                options,
+                result,
+                relativePath,
+                local: null,
+                remoteFile: latestRemoteFile ?? remoteFile,
+                cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
         await _stateStore.DeleteAsync(syncPair.SyncPairId, relativePath, cancellationToken).ConfigureAwait(false);
         Report(result, options, SyncActivityKind.DeletedRemote, relativePath, null);
     }
@@ -331,6 +367,16 @@ public sealed class SyncEngine : ISyncEngine
         Report(result, options, SyncActivityKind.Conflict, relativePath, details);
     }
 
+    private async Task<NodeFileManifestDto?> FindLatestRemoteFileAsync(
+        SyncPair syncPair,
+        string relativePath,
+        CancellationToken cancellationToken)
+    {
+        RemoteTreeSnapshot latestTree = await _remoteCrawler.CrawlAsync(syncPair.RemoteRootNodeId, cancellationToken).ConfigureAwait(false);
+        string key = SyncPath.ToKey(relativePath);
+        return latestTree.Files.FirstOrDefault(file => PathComparer.Equals(SyncPath.ToKey(file.RelativePath), key))?.File;
+    }
+
     private static SyncStateEntry BuildBaseline(
         SyncPair syncPair,
         string relativePath,
@@ -390,6 +436,11 @@ public sealed class SyncEngine : ISyncEngine
         return !string.IsNullOrWhiteSpace(left)
             && !string.IsNullOrWhiteSpace(right)
             && string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsRemotePreconditionFailed(HttpRequestException exception)
+    {
+        return exception.StatusCode == HttpStatusCode.PreconditionFailed;
     }
 
     private static Dictionary<string, T> ToDictionary<T>(IEnumerable<T> entries, Func<T, string> pathSelector)
