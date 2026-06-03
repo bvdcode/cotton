@@ -420,6 +420,57 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task RunOnceAsync_UploadsManySmallFilesThroughSdkAndServer()
+    {
+        CottonCloudClient client = CreateClient();
+        await LoginAsync(client);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-many-small-files");
+        string localRoot = Path.Combine(_tempDirectory, "client-many-small-files");
+        List<string> expectedPaths = [];
+        for (int index = 0; index < 32; index++)
+        {
+            string relativePath = $"Batch/{index / 8:00}/file-{index:00}.txt";
+            expectedPaths.Add(relativePath);
+            WriteLocalFile(localRoot, relativePath, $"small file {index:00}");
+        }
+
+        SqliteSyncStateStore stateStore = CreateStateStore("client-many-small-files-state.sqlite");
+        SyncEngine engine = CreateEngine(client, stateStore);
+
+        SyncRunResult result = await engine.RunOnceAsync(new SyncPair
+        {
+            SyncPairId = "client-many-small-files",
+            LocalRootPath = localRoot,
+            RemoteRootNodeId = remoteRoot.Id,
+        });
+
+        NodeContentDto rootContent = await client.Nodes.GetChildrenAsync(remoteRoot.Id);
+        NodeDto batchDirectory = rootContent.Nodes.Single(node => string.Equals(node.Name, "Batch", StringComparison.Ordinal));
+        NodeContentDto batchContent = await client.Nodes.GetChildrenAsync(batchDirectory.Id);
+        var remoteContents = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (NodeDto groupDirectory in batchContent.Nodes.OrderBy(node => node.Name, StringComparer.Ordinal))
+        {
+            NodeContentDto groupContent = await client.Nodes.GetChildrenAsync(groupDirectory.Id);
+            foreach (NodeFileManifestDto file in groupContent.Files.OrderBy(file => file.Name, StringComparer.Ordinal))
+            {
+                string relativePath = $"Batch/{groupDirectory.Name}/{file.Name}";
+                remoteContents[relativePath] = await DownloadTextAsync(client, file.Id);
+            }
+        }
+
+        IReadOnlyList<SyncStateEntry> baselines = await stateStore.LoadPairAsync("client-many-small-files");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Activities, Has.Count.EqualTo(expectedPaths.Count));
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.All.EqualTo(SyncActivityKind.Uploaded));
+            Assert.That(remoteContents.Keys, Is.EquivalentTo(expectedPaths));
+            Assert.That(remoteContents.Values, Is.EquivalentTo(Enumerable.Range(0, 32).Select(index => $"small file {index:00}")));
+            Assert.That(baselines.Select(entry => entry.RelativePath), Is.EquivalentTo(expectedPaths));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_MovesLocalFileToQuarantineWhenRemoteFileIsDeleted()
     {
         CottonCloudClient client = CreateClient();

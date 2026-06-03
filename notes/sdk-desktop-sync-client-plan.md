@@ -449,7 +449,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Partial 2026-06-03: `SyncPairRunner` now converts remote HTTP 507 / Cotton API quota failures into the user-facing action-required message `Remote storage quota exceeded. Free space in Cotton Cloud or choose a smaller sync folder.`, which flows through existing desktop status/action-required handling. Focused runner tests passed 13/13, full `Cotton.Sync.App.Tests` passed 89/89, and full solution Release build passed with the known NU1903 warning. Keep unchecked until a server-backed quota scenario is run end to end.
 - [x] Large file upload and download complete.
   Verification 2026-06-03: `SyncClientEndToEndTests.RunOnceAsync_UploadsAndDownloadsLargeFilesThroughSdkAndServer` verifies a binary local file larger than the sync test chunk size uploads through `SyncEngine`/SDK/server, round-trips from the server byte-for-byte, records SQLite baseline hashes, and creates a multi-chunk server manifest. The same test creates a separate multi-chunk remote binary file, syncs it down locally, and verifies byte-for-byte local content plus baseline hashes. Focused server-backed sync E2E tests passed 11/11, and full solution Release build passed with the known NU1903 warning.
-- [ ] Many small files complete.
+- [x] Many small files complete.
+  Verification 2026-06-03: `SyncClientEndToEndTests.RunOnceAsync_UploadsManySmallFilesThroughSdkAndServer` verifies 32 small local files across multiple nested folders upload through `SyncEngine`/SDK/server, produce one upload activity per file, preserve remote file contents, and create one SQLite baseline entry per relative path. Focused server-backed sync E2E tests passed 12/12, and full solution Release build passed with the known NU1903 warning.
 - [ ] Deep nested paths complete or fail with clear path error.
 - [ ] Windows reserved names are blocked or mapped with clear UX.
 - [ ] Case conflict is detected and explained.
