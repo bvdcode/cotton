@@ -471,6 +471,63 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task RunOnceAsync_SyncsDeepNestedPathsThroughSdkAndServer()
+    {
+        CottonCloudClient client = CreateClient();
+        await LoginAsync(client);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-deep-nested");
+        string localRoot = Path.Combine(_tempDirectory, "client-deep-nested");
+        string localDirectory = string.Join('/', Enumerable.Range(1, 10).Select(index => $"local-{index:00}"));
+        string remoteDirectory = string.Join('/', Enumerable.Range(1, 10).Select(index => $"remote-{index:00}"));
+        string uploadPath = $"{localDirectory}/upload-deep.txt";
+        string downloadPath = $"{remoteDirectory}/download-deep.txt";
+        WriteLocalFile(localRoot, uploadPath, "deep local content");
+        SqliteSyncStateStore stateStore = CreateStateStore("client-deep-nested-state.sqlite");
+        SyncEngine engine = CreateEngine(client, stateStore);
+        var syncPair = new SyncPair
+        {
+            SyncPairId = "client-deep-nested",
+            LocalRootPath = localRoot,
+            RemoteRootNodeId = remoteRoot.Id,
+        };
+
+        SyncRunResult uploadRun = await engine.RunOnceAsync(syncPair);
+        NodeFileManifestDto uploaded = await FindRemoteFileAsync(client, remoteRoot.Id, uploadPath);
+        string uploadedContent = await DownloadTextAsync(client, uploaded.Id);
+        Guid currentNodeId = remoteRoot.Id;
+        foreach (string segment in remoteDirectory.Split('/'))
+        {
+            currentNodeId = (await client.Nodes.CreateAsync(currentNodeId, segment)).Id;
+        }
+
+        NodeFileManifestDto remoteFile = await CreateRemoteTextFileAsync(
+            client,
+            currentNodeId,
+            "download-deep.txt",
+            "deep remote content");
+
+        SyncRunResult downloadRun = await engine.RunOnceAsync(syncPair);
+
+        string downloadedContent = await File.ReadAllTextAsync(
+            Path.Combine(localRoot, downloadPath.Replace('/', Path.DirectorySeparatorChar)),
+            Encoding.UTF8);
+        SyncStateEntry? uploadedBaseline = await stateStore.GetAsync("client-deep-nested", uploadPath);
+        SyncStateEntry? downloadedBaseline = await stateStore.GetAsync("client-deep-nested", downloadPath);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(uploadRun.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
+            Assert.That(downloadRun.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Downloaded }));
+            Assert.That(uploadedContent, Is.EqualTo("deep local content"));
+            Assert.That(downloadedContent, Is.EqualTo("deep remote content"));
+            Assert.That(uploadedBaseline?.RelativePath, Is.EqualTo(uploadPath));
+            Assert.That(uploadedBaseline?.RemoteFileId, Is.EqualTo(uploaded.Id));
+            Assert.That(downloadedBaseline?.RelativePath, Is.EqualTo(downloadPath));
+            Assert.That(downloadedBaseline?.RemoteFileId, Is.EqualTo(remoteFile.Id));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_MovesLocalFileToQuarantineWhenRemoteFileIsDeleted()
     {
         CottonCloudClient client = CreateClient();
@@ -692,10 +749,25 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         string directoryName,
         string fileName)
     {
-        NodeContentDto rootContent = await client.Nodes.GetChildrenAsync(rootNodeId);
-        NodeDto directory = rootContent.Nodes.Single(node => string.Equals(node.Name, directoryName, StringComparison.Ordinal));
-        NodeContentDto directoryContent = await client.Nodes.GetChildrenAsync(directory.Id);
-        return directoryContent.Files.Single(file => string.Equals(file.Name, fileName, StringComparison.Ordinal));
+        return await FindRemoteFileAsync(client, rootNodeId, $"{directoryName}/{fileName}");
+    }
+
+    private static async Task<NodeFileManifestDto> FindRemoteFileAsync(
+        CottonCloudClient client,
+        Guid rootNodeId,
+        string relativePath)
+    {
+        string normalized = SyncPath.Normalize(relativePath);
+        string[] segments = normalized.Split('/');
+        Guid nodeId = rootNodeId;
+        for (int index = 0; index < segments.Length - 1; index++)
+        {
+            NodeContentDto content = await client.Nodes.GetChildrenAsync(nodeId);
+            nodeId = content.Nodes.Single(node => string.Equals(node.Name, segments[index], StringComparison.Ordinal)).Id;
+        }
+
+        NodeContentDto directoryContent = await client.Nodes.GetChildrenAsync(nodeId);
+        return directoryContent.Files.Single(file => string.Equals(file.Name, segments[^1], StringComparison.Ordinal));
     }
 
     private static async Task<NodeFileManifestDto> CreateRemoteTextFileAsync(
