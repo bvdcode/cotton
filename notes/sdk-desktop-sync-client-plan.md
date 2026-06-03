@@ -89,20 +89,31 @@ Target layers:
 
 - [x] Create `Cotton.Sync.App` or an equivalent application-layer project.
   Verification 2026-06-03: `src/Cotton.Sync.App/Cotton.Sync.App.csproj` and `src/Cotton.Sync.App.Tests/Cotton.Sync.App.Tests.csproj` are in the solution; Release build passes.
-- [ ] Move desktop orchestration out of `MainWindow`.
-- [ ] Add `SyncApplicationService` for high-level commands.
+- [x] Move desktop orchestration out of `MainWindow`.
+  Verification 2026-06-03: `MainWindow` only owns Avalonia window lifecycle, sizing, folder picker binding, and view-model creation; auth, sync-pair persistence, supervisor control, status subscription, diagnostics, and server probing live behind `DesktopShellController`, `DesktopSyncApplicationFactory`, and `Cotton.Sync.App`. Full `Cotton.Sync.Desktop.Tests` passed 62/62 and full solution Release build passed with the known NU1903 warning.
+- [x] Add `SyncApplicationService` for high-level commands.
   Commands: sign in, sign out, add sync pair, update sync pair, remove sync pair, sync now, pause, resume, open folder, open web.
-- [ ] Add `SyncSupervisor` for continuous background operation.
-- [ ] Add `SyncPairRunner` for per-pair state.
+  Verification 2026-06-03: `SyncApplicationService` exposes sign in/out, preferences, sync-pair save/delete/list, start/stop/sync-now, pause/resume, and platform open commands. `SyncApplicationServiceTests` cover sign-out shutdown, start/stop sync, platform command delegation, valid sync-pair save, overlap/prerequisite rejection, and deletion; full `Cotton.Sync.App.Tests` passed 83/83.
+- [x] Add `SyncSupervisor` for continuous background operation.
+  Verification 2026-06-03: `SyncSupervisor` creates one runner per saved sync pair, starts/stops runners, fans out sync/pause/resume commands, and publishes aggregate status. `SyncSupervisorTests` cover start status publishing, selected-runner pause/resume, sync-all fanout, and stop publishing; full `Cotton.Sync.App.Tests` passed 83/83.
+- [x] Add `SyncPairRunner` for per-pair state.
   States: disabled, idle, scanning, syncing, paused, offline, conflict, error.
-- [ ] Add `IAppStatusPublisher` or equivalent observable status stream.
-- [ ] Add activity history model.
+  Verification 2026-06-03: `SyncPairRunState` defines disabled, idle, scanning, syncing, paused, offline, conflict, and error; `SyncPairRunner` manages disabled/idle/paused/syncing/offline/error transitions and queue-collapsed sync requests. `SyncPairRunnerTests` cover disabled start, pause/resume, paused no-op sync, successful sync, queued requests, retry, offline transient failures, and error state; full `Cotton.Sync.App.Tests` passed 83/83.
+- [x] Add `IAppStatusPublisher` or equivalent observable status stream.
+  Verification 2026-06-03: `IAppStatusPublisher` and `InMemoryAppStatusPublisher` expose current app status and observable updates; tests cover current snapshot, immediate subscriber replay, publish delivery, and unsubscribe behavior.
+- [x] Add activity history model.
   Required activity types: uploaded, downloaded, deleted local, deleted remote, conflict, skipped, error, warning.
-- [ ] Add cancellation and shutdown flow.
-- [ ] Add tests for supervisor state transitions.
-- [ ] Add tests for pause/resume and app shutdown.
+  Verification 2026-06-03: `SyncActivity` and `SyncActivityType` include uploaded, downloaded, deleted local, deleted remote, conflict, skipped, error, and warning; `SyncActivityTests` cover UTC normalization and activity fields.
+- [x] Add cancellation and shutdown flow.
+  Verification 2026-06-03: app commands accept cancellation tokens, `SyncApplicationService.SignOutAsync` and `StopSyncAsync` stop remote, periodic, local, and supervisor components in order, and `DesktopShellController.Dispose` disposes the host/status subscription. App-layer tests cover start/stop and sign-out shutdown; full `Cotton.Sync.App.Tests` passed 83/83.
+- [x] Add tests for supervisor state transitions.
+  Verification 2026-06-03: `SyncSupervisorTests` cover start, pause/resume, sync-all, and stop transitions/status publishing.
+- [x] Add tests for pause/resume and app shutdown.
+  Verification 2026-06-03: `SyncPairRunnerTests` and `SyncSupervisorTests` cover pause/resume states, while `SyncApplicationServiceTests` cover sign-out and stop-sync shutdown flow.
 - [ ] Add tests proving UI can use the app layer without directly constructing `SyncEngine`.
-- [ ] Build the solution.
+  Partial 2026-06-03: `MainWindow` and `ShellViewModel` use `IDesktopShellController`; `DesktopSyncApplicationFactory` is the desktop composition root that creates the headless engine and `SyncApplicationService`. Keep unchecked until a focused test enforces that UI shell classes depend only on the controller/app abstractions.
+- [x] Build the solution.
+  Verification 2026-06-03: `dotnet test src/Cotton.Sync.App.Tests/Cotton.Sync.App.Tests.csproj --configuration Release --no-restore` passed 83/83 and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with the known NU1903 Avalonia/Tmds.DBus.Protocol warning.
 
 ## Phase 3 - Backend Sync Change Feed
 
