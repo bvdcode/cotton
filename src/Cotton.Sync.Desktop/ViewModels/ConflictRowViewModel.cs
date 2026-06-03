@@ -5,6 +5,8 @@ namespace Cotton.Sync.Desktop.ViewModels;
 
 internal sealed class ConflictRowViewModel
 {
+    public Guid? SyncPairId { get; init; }
+
     public string Time { get; init; } = string.Empty;
 
     public string Path { get; init; } = string.Empty;

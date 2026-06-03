@@ -862,7 +862,8 @@ internal sealed class DesktopShellController : IDesktopShellController
             activity.Type.ToString(),
             activity.ItemPath ?? string.Empty,
             activity.Message,
-            activity.OccurredAtUtc);
+            activity.OccurredAtUtc,
+            activity.SyncPairId);
     }
 
     private async Task<AuthSession?> TryRestoreSessionAsync(

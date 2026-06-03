@@ -7,4 +7,5 @@ internal sealed record DesktopActivitySnapshot(
     string Kind,
     string Path,
     string Details,
-    DateTime OccurredAtUtc);
+    DateTime OccurredAtUtc,
+    Guid? SyncPairId = null);

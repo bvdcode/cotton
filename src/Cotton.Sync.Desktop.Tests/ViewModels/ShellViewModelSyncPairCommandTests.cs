@@ -161,7 +161,8 @@ public sealed class ShellViewModelSyncPairCommandTests
     [Test]
     public async Task ConflictActivity_AddsConflictRow()
     {
-        var controller = new FakeDesktopShellController(CreateSignedInSnapshot());
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Idle")));
         using ShellViewModel viewModel = CreateViewModel(controller);
         await viewModel.InitializeAsync();
 
@@ -169,17 +170,58 @@ public sealed class ShellViewModelSyncPairCommandTests
             "Conflict",
             "Documents/report.txt",
             "Created conflict copy Documents/report.txt",
-            new DateTime(2026, 6, 3, 10, 15, 0, DateTimeKind.Utc)));
+            new DateTime(2026, 6, 3, 10, 15, 0, DateTimeKind.Utc),
+            syncPairId));
 
         ConflictRowViewModel conflict = viewModel.Conflicts.Single();
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.HasConflicts, Is.True);
             Assert.That(viewModel.ConflictCountLabel, Is.EqualTo("1 conflict"));
+            Assert.That(viewModel.SelectedConflict, Is.SameAs(conflict));
+            Assert.That(conflict.SyncPairId, Is.EqualTo(syncPairId));
             Assert.That(conflict.Path, Is.EqualTo("Documents/report.txt"));
             Assert.That(conflict.Details, Is.EqualTo("Created conflict copy Documents/report.txt"));
             Assert.That(viewModel.Activities.First().Kind, Is.EqualTo("Conflict"));
         });
+    }
+
+    [Test]
+    public async Task OpenSelectedConflictCommand_OpensConflictParentFolder()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Idle")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        controller.ReportActivity(new DesktopActivitySnapshot(
+            "Conflict",
+            "Reports/q1.txt",
+            "Created conflict copy Reports/q1.txt",
+            new DateTime(2026, 6, 3, 10, 15, 0, DateTimeKind.Utc),
+            syncPairId));
+
+        await ExecuteAsync(viewModel.OpenSelectedConflictCommand);
+
+        Assert.That(controller.OpenedFolderPath, Is.EqualTo("/home/vadim/Documents/Reports"));
+    }
+
+    [Test]
+    public async Task OpenSelectedConflictCommand_RejectsConflictPathOutsideSyncRoot()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Idle")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        controller.ReportActivity(new DesktopActivitySnapshot(
+            "Conflict",
+            "../outside.txt",
+            "Created conflict copy ../outside.txt",
+            new DateTime(2026, 6, 3, 10, 15, 0, DateTimeKind.Utc),
+            syncPairId));
+
+        await ExecuteAsync(viewModel.OpenSelectedConflictCommand);
+
+        Assert.That(controller.OpenedFolderPath, Is.EqualTo("/home/vadim/Documents"));
     }
 
     [Test]
@@ -357,6 +399,8 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public int SyncAllCalls { get; private set; }
 
+        public string? OpenedFolderPath { get; private set; }
+
         public void ReportActivity(DesktopActivitySnapshot activity)
         {
             ActivityReported?.Invoke(this, activity);
@@ -452,7 +496,9 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public Task OpenFolderAsync(string localPath, CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException();
+            cancellationToken.ThrowIfCancellationRequested();
+            OpenedFolderPath = localPath;
+            return Task.CompletedTask;
         }
 
         public Task OpenWebAsync(CancellationToken cancellationToken = default)

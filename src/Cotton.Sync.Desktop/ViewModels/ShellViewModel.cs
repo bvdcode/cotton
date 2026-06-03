@@ -55,6 +55,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     private bool _startWithOperatingSystem;
     private AppThemeMode _themeMode = AppThemeMode.System;
     private CancellationTokenSource? _serverProbeCancellation;
+    private ConflictRowViewModel? _selectedConflict;
     private RemoteFolderRowViewModel? _selectedRemoteFolder;
     private SyncPairRowViewModel? _selectedSyncPair;
     private string _totpCode = string.Empty;
@@ -96,6 +97,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         ResumeCommand = new AsyncRelayCommand(ResumeAsync, () => IsSignedIn, HandleCommandError);
         SignOutCommand = new AsyncRelayCommand(SignOutAsync, () => IsSignedIn, HandleCommandError);
         OpenFolderCommand = new AsyncRelayCommand(OpenFolderAsync, () => SelectedSyncPair is not null, HandleCommandError);
+        OpenSelectedConflictCommand = new AsyncRelayCommand(
+            OpenSelectedConflictAsync,
+            () => SelectedConflict is not null && !IsBusy,
+            HandleCommandError);
         ToggleSelectedSyncPairEnabledCommand = new AsyncRelayCommand(
             ToggleSelectedSyncPairEnabledAsync,
             () => IsSignedIn && SelectedSyncPair is not null && !IsBusy,
@@ -136,6 +141,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public AsyncRelayCommand CloseSettingsCommand { get; }
 
     public AsyncRelayCommand OpenFolderCommand { get; }
+
+    public AsyncRelayCommand OpenSelectedConflictCommand { get; }
 
     public AsyncRelayCommand OpenWebCommand { get; }
 
@@ -522,6 +529,18 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         }
     }
 
+    public ConflictRowViewModel? SelectedConflict
+    {
+        get => _selectedConflict;
+        set
+        {
+            if (SetProperty(ref _selectedConflict, value))
+            {
+                OpenSelectedConflictCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
     public SyncPairRowViewModel? SelectedSyncPair
     {
         get => _selectedSyncPair;
@@ -761,6 +780,29 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
 
         await _controller.OpenFolderAsync(selected.LocalPath).ConfigureAwait(true);
         AddActivity("Open", selected.LocalPath, "Folder opened");
+    }
+
+    private async Task OpenSelectedConflictAsync()
+    {
+        ConflictRowViewModel? conflict = SelectedConflict;
+        if (conflict is null)
+        {
+            return;
+        }
+
+        SyncPairRowViewModel? syncPair = ResolveConflictSyncPair(conflict);
+        if (syncPair is null)
+        {
+            GlobalStatus = "Action required";
+            ActionRequiredMessage = "Sync folder for conflict was not found.";
+            AddActivity("Warning", conflict.Path, "Sync folder for conflict was not found");
+            return;
+        }
+
+        string openPath = ResolveConflictOpenPath(syncPair.LocalPath, conflict.Path);
+        await _controller.OpenFolderAsync(openPath).ConfigureAwait(true);
+        ActionRequiredMessage = string.Empty;
+        AddActivity("Open", openPath, "Conflict location opened");
     }
 
     private async Task OpenWebAsync()
@@ -1147,6 +1189,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     {
         OnPropertyChanged(nameof(HasConflicts));
         OnPropertyChanged(nameof(ConflictCountLabel));
+        OpenSelectedConflictCommand.RaiseCanExecuteChanged();
     }
 
     private void OnRemoteFoldersChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -1223,7 +1266,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             occurredAt);
         if (string.Equals(activity.Kind, "Conflict", StringComparison.Ordinal))
         {
-            AddConflict(activity.Path, activity.Details, occurredAt);
+            AddConflict(activity.SyncPairId, activity.Path, activity.Details, occurredAt);
         }
     }
 
@@ -1321,14 +1364,17 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private void AddConflict(string path, string details, DateTimeOffset occurredAt)
+    private void AddConflict(Guid? syncPairId, string path, string details, DateTimeOffset occurredAt)
     {
-        Conflicts.Insert(0, new ConflictRowViewModel
+        var conflict = new ConflictRowViewModel
         {
+            SyncPairId = syncPairId,
             Time = occurredAt.ToString("HH:mm", CultureInfo.CurrentCulture),
             Path = path,
             Details = details,
-        });
+        };
+        Conflicts.Insert(0, conflict);
+        SelectedConflict ??= conflict;
         while (Conflicts.Count > MaxConflictRows)
         {
             Conflicts.RemoveAt(Conflicts.Count - 1);
@@ -1348,6 +1394,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         PauseCommand.RaiseCanExecuteChanged();
         ResumeCommand.RaiseCanExecuteChanged();
         OpenFolderCommand.RaiseCanExecuteChanged();
+        OpenSelectedConflictCommand.RaiseCanExecuteChanged();
         ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
         SaveSelectedSyncPairNameCommand.RaiseCanExecuteChanged();
         RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
@@ -1374,6 +1421,59 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         {
             syncPair.Status = status;
         }
+    }
+
+    private SyncPairRowViewModel? ResolveConflictSyncPair(ConflictRowViewModel conflict)
+    {
+        return conflict.SyncPairId is { } syncPairId
+            ? SyncPairs.FirstOrDefault(syncPair => syncPair.Id == syncPairId)
+            : SelectedSyncPair;
+    }
+
+    private static string ResolveConflictOpenPath(string localRootPath, string relativePath)
+    {
+        string localRoot = Path.GetFullPath(localRootPath.Trim());
+        if (string.IsNullOrWhiteSpace(relativePath))
+        {
+            return localRoot;
+        }
+
+        string normalizedRelativePath = relativePath
+            .Replace('/', Path.DirectorySeparatorChar)
+            .Replace('\\', Path.DirectorySeparatorChar);
+        string combinedPath = Path.GetFullPath(Path.Combine(localRoot, normalizedRelativePath));
+        if (!IsPathInsideRoot(localRoot, combinedPath))
+        {
+            return localRoot;
+        }
+
+        if (Directory.Exists(combinedPath))
+        {
+            return combinedPath;
+        }
+
+        string? parentPath = Path.GetDirectoryName(combinedPath);
+        return string.IsNullOrWhiteSpace(parentPath) || !IsPathInsideRoot(localRoot, parentPath)
+            ? localRoot
+            : parentPath;
+    }
+
+    private static bool IsPathInsideRoot(string localRootPath, string path)
+    {
+        string root = Path.GetFullPath(localRootPath);
+        string candidate = Path.GetFullPath(path);
+        StringComparison comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        return string.Equals(root, candidate, comparison)
+            || candidate.StartsWith(EnsureTrailingSeparator(root), comparison);
+    }
+
+    private static string EnsureTrailingSeparator(string path)
+    {
+        return path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar)
+            ? path
+            : path + Path.DirectorySeparatorChar;
     }
 
     private static SyncPairRowViewModel ToRow(SyncPairSettings syncPair)
