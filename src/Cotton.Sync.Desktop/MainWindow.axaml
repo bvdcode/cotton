@@ -127,10 +127,17 @@
                  Text="{Binding Password}" />
         <TextBox Watermark="TOTP code"
                  Text="{Binding TotpCode}" />
-        <Button Content="Sign in"
-                Classes="primary"
-                HorizontalAlignment="Stretch"
-                Command="{Binding SignInCommand}" />
+        <Grid ColumnDefinitions="*,Auto"
+              ColumnSpacing="8">
+          <Button Content="Sign in"
+                  Classes="primary"
+                  HorizontalAlignment="Stretch"
+                  Command="{Binding SignInCommand}" />
+          <Button Grid.Column="1"
+                  Content="Test"
+                  Classes="compact"
+                  Command="{Binding SelfTestCommand}" />
+        </Grid>
         <CheckBox Content="Start with computer"
                   IsChecked="{Binding StartWithOperatingSystem}" />
       </StackPanel>
@@ -310,16 +317,20 @@
         </Grid>
 
         <Grid Grid.Row="2"
-              ColumnDefinitions="*,Auto,Auto"
+              ColumnDefinitions="*,Auto,Auto,Auto"
               ColumnSpacing="6">
           <CheckBox Content="Start with computer"
                     IsChecked="{Binding StartWithOperatingSystem}"
                     VerticalAlignment="Center" />
           <Button Grid.Column="1"
+                  Content="Test"
+                  Classes="compact"
+                  Command="{Binding SelfTestCommand}" />
+          <Button Grid.Column="2"
                   Content="Resume"
                   Classes="compact"
                   Command="{Binding ResumeCommand}" />
-          <Button Grid.Column="2"
+          <Button Grid.Column="3"
                   Content="Sign out"
                   Classes="compact"
                   Command="{Binding SignOutCommand}" />

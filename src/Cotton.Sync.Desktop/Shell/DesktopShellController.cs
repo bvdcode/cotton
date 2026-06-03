@@ -238,6 +238,76 @@ internal sealed class DesktopShellController : IDesktopShellController
         await _preferencesStore.SaveAsync(preferences, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<DesktopSelfTestSnapshot> RunSelfTestAsync(CancellationToken cancellationToken = default)
+    {
+        var items = new List<DesktopSelfTestItemSnapshot>();
+        AppPreferences? preferences = null;
+        IReadOnlyList<SyncPairSettings> syncPairs = [];
+
+        await AddSelfTestCheckAsync(
+            items,
+            "Preferences database",
+            async () =>
+            {
+                await _preferencesStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+                preferences = await _preferencesStore.GetAsync(cancellationToken).ConfigureAwait(false);
+                return "Ready";
+            }).ConfigureAwait(false);
+
+        await AddSelfTestCheckAsync(
+            items,
+            "Sync pair database",
+            async () =>
+            {
+                await _syncPairStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+                syncPairs = await _syncPairStore.ListAsync(cancellationToken).ConfigureAwait(false);
+                return syncPairs.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + " sync pair(s)";
+            }).ConfigureAwait(false);
+
+        await AddSelfTestCheckAsync(
+            items,
+            "Autostart adapter",
+            async () =>
+            {
+                bool isEnabled = await _autostartService.IsEnabledAsync(cancellationToken).ConfigureAwait(false);
+                return isEnabled ? "Enabled" : "Disabled";
+            }).ConfigureAwait(false);
+
+        Uri? serverUrl = _startupOptions.ServerUrl ?? preferences?.RememberedServerUrl;
+        if (serverUrl is null)
+        {
+            items.Add(new DesktopSelfTestItemSnapshot("Server identity", true, "Not configured"));
+        }
+        else
+        {
+            await AddSelfTestCheckAsync(
+                items,
+                "Server identity",
+                async () =>
+                {
+                    DesktopServerProbeResult result = await ProbeServerAsync(
+                        serverUrl.AbsoluteUri,
+                        cancellationToken).ConfigureAwait(false);
+                    if (!result.IsCottonServer)
+                    {
+                        throw new InvalidOperationException("Cotton server not found.");
+                    }
+
+                    return result.Product ?? "Cotton Cloud";
+                }).ConfigureAwait(false);
+        }
+
+        foreach (SyncPairSettings syncPair in syncPairs)
+        {
+            await AddSelfTestCheckAsync(
+                items,
+                "Local root: " + syncPair.DisplayName,
+                () => CheckLocalRootAsync(syncPair, cancellationToken)).ConfigureAwait(false);
+        }
+
+        return new DesktopSelfTestSnapshot(items);
+    }
+
     public void Dispose()
     {
         DesktopSyncApplicationHost? host = _host;
@@ -257,6 +327,37 @@ internal sealed class DesktopShellController : IDesktopShellController
             new ProcessPlatformCommandService(),
             DesktopAutostartServiceFactory.CreateDefault(),
             startupOptions);
+    }
+
+    private static Task<string> CheckLocalRootAsync(
+        SyncPairSettings syncPair,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!Directory.Exists(syncPair.LocalRootPath))
+        {
+            throw new DirectoryNotFoundException("Local root does not exist: " + syncPair.LocalRootPath);
+        }
+
+        _ = Directory.EnumerateFileSystemEntries(syncPair.LocalRootPath).Take(1).ToList();
+        return Task.FromResult(syncPair.LocalRootPath);
+    }
+
+    private static async Task AddSelfTestCheckAsync(
+        List<DesktopSelfTestItemSnapshot> items,
+        string name,
+        Func<Task<string>> checkAsync)
+    {
+        try
+        {
+            string details = await checkAsync().ConfigureAwait(false);
+            items.Add(new DesktopSelfTestItemSnapshot(name, true, details));
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            Trace.TraceWarning("Desktop self-test check failed for {0}: {1}", name, exception);
+            items.Add(new DesktopSelfTestItemSnapshot(name, false, exception.Message));
+        }
     }
 
     private static DesktopSyncPairSnapshot ToSnapshot(SyncPairSettings settings)

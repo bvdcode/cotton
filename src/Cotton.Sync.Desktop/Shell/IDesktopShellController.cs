@@ -31,4 +31,6 @@ internal interface IDesktopShellController : IDisposable
     Task OpenFolderAsync(string localPath, CancellationToken cancellationToken = default);
 
     Task SetStartWithOperatingSystemAsync(bool enabled, CancellationToken cancellationToken = default);
+
+    Task<DesktopSelfTestSnapshot> RunSelfTestAsync(CancellationToken cancellationToken = default);
 }

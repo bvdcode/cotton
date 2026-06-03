@@ -62,6 +62,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         ResumeCommand = new AsyncRelayCommand(ResumeAsync, () => IsSignedIn, HandleCommandError);
         SignOutCommand = new AsyncRelayCommand(SignOutAsync, () => IsSignedIn, HandleCommandError);
         OpenFolderCommand = new AsyncRelayCommand(OpenFolderAsync, () => SelectedSyncPair is not null, HandleCommandError);
+        SelfTestCommand = new AsyncRelayCommand(SelfTestAsync, () => !IsBusy, HandleCommandError);
     }
 
     public ObservableCollection<SyncPairRowViewModel> SyncPairs { get; } = [];
@@ -93,6 +94,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public AsyncRelayCommand ShowAddSyncPairCommand { get; }
 
     public AsyncRelayCommand SyncNowCommand { get; }
+
+    public AsyncRelayCommand SelfTestCommand { get; }
 
     public string AccountName
     {
@@ -556,6 +559,24 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         }
     }
 
+    private async Task SelfTestAsync()
+    {
+        IsBusy = true;
+        try
+        {
+            DesktopSelfTestSnapshot result = await _controller.RunSelfTestAsync().ConfigureAwait(true);
+            GlobalStatus = result.Passed ? "Self-test passed" : "Action required";
+            foreach (DesktopSelfTestItemSnapshot item in result.Items)
+            {
+                AddActivity(item.Passed ? "Check" : "Warning", item.Name, item.Passed ? item.Details : "Failed: " + item.Details);
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     private async Task OpenRemoteFolderAsync()
     {
         RemoteFolderRowViewModel? selected = SelectedRemoteFolder;
@@ -793,6 +814,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         ResumeCommand.RaiseCanExecuteChanged();
         OpenFolderCommand.RaiseCanExecuteChanged();
         ShowAddSyncPairCommand.RaiseCanExecuteChanged();
+        SelfTestCommand.RaiseCanExecuteChanged();
     }
 
     private void RaiseWizardStateProperties()
