@@ -454,7 +454,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [x] Deep nested paths complete or fail with clear path error.
   Verification 2026-06-03: `SyncClientEndToEndTests.RunOnceAsync_SyncsDeepNestedPathsThroughSdkAndServer` verifies 10-level nested local paths upload through `SyncEngine`/SDK/server and 10-level nested remote paths download locally, preserving content and SQLite baselines in both directions. Focused server-backed sync E2E tests passed 13/13, and full solution Release build passed with the known NU1903 warning.
 - [ ] Windows reserved names are blocked or mapped with clear UX.
-- [ ] Case conflict is detected and explained.
+- [x] Case conflict is detected and explained.
+  Verification 2026-06-03: `SyncClientEndToEndTests.RunOnceAsync_RejectsLocalCaseInsensitivePathCollisionThroughSdkAndServer` verifies a case-sensitive local filesystem conflict between `Case/File.txt` and `case/file.txt` throws `SyncPathCollisionException`, includes the colliding paths in the message/properties, uploads nothing to the server, and records no SQLite baseline. Focused server-backed sync E2E tests passed 14/14, and full solution Release build passed with the known NU1903 warning.
 - [x] Unicode names sync consistently.
   Verification 2026-06-03: `SyncEngine` has focused Unicode path coverage and `SyncClientEndToEndTests.RunOnceAsync_SyncsUnicodePathsThroughSdkAndServer` verifies Unicode paths through the SDK and integration-test server in both directions: local upload of `Документы/設計-notes.txt` and remote download of `共有/設計-remote.txt`, preserving relative paths and SQLite baselines. Focused server-backed sync E2E tests passed 9/9, and full solution Release build passed with the known NU1903 warning.
 - [x] Temporary files are ignored.

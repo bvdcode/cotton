@@ -528,6 +528,44 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task RunOnceAsync_RejectsLocalCaseInsensitivePathCollisionThroughSdkAndServer()
+    {
+        if (!IsCaseSensitiveFileSystem(_tempDirectory))
+        {
+            Assert.Ignore("This case-conflict smoke requires a case-sensitive local filesystem.");
+        }
+
+        CottonCloudClient client = CreateClient();
+        await LoginAsync(client);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-case-conflict");
+        string localRoot = Path.Combine(_tempDirectory, "client-case-conflict");
+        WriteLocalFile(localRoot, "Case/File.txt", "first");
+        WriteLocalFile(localRoot, "case/file.txt", "second");
+        SqliteSyncStateStore stateStore = CreateStateStore("client-case-conflict-state.sqlite");
+        SyncEngine engine = CreateEngine(client, stateStore);
+
+        SyncPathCollisionException? exception = Assert.ThrowsAsync<SyncPathCollisionException>(() => engine.RunOnceAsync(new SyncPair
+        {
+            SyncPairId = "client-case-conflict",
+            LocalRootPath = localRoot,
+            RemoteRootNodeId = remoteRoot.Id,
+        }));
+
+        NodeContentDto rootContent = await client.Nodes.GetChildrenAsync(remoteRoot.Id);
+        IReadOnlyList<SyncStateEntry> baselines = await stateStore.LoadPairAsync("client-case-conflict");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(new[] { exception!.FirstPath, exception.SecondPath }, Is.EquivalentTo(new[] { "Case/File.txt", "case/file.txt" }));
+            Assert.That(exception.Message, Does.Contain("Case-insensitive path collision"));
+            Assert.That(rootContent.Nodes, Is.Empty);
+            Assert.That(rootContent.Files, Is.Empty);
+            Assert.That(baselines, Is.Empty);
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_MovesLocalFileToQuarantineWhenRemoteFileIsDeleted()
     {
         CottonCloudClient client = CreateClient();
@@ -852,6 +890,21 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         }
 
         return bytes;
+    }
+
+    private static bool IsCaseSensitiveFileSystem(string directory)
+    {
+        string probeName = "case-probe-" + Guid.NewGuid().ToString("N");
+        string probePath = Path.Combine(directory, probeName);
+        File.WriteAllText(probePath, string.Empty);
+        try
+        {
+            return !File.Exists(Path.Combine(directory, probeName.ToUpperInvariant()));
+        }
+        finally
+        {
+            File.Delete(probePath);
+        }
     }
 
     private Dictionary<string, string?> CreateServerOverrides()
