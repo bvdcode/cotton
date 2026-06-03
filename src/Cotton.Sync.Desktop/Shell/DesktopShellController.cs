@@ -338,6 +338,14 @@ internal sealed class DesktopShellController : IDesktopShellController
             "Authentication state",
             () => CheckAuthenticationStateAsync(cancellationToken)).ConfigureAwait(false);
 
+        DesktopTokenStorageCapabilitySnapshot tokenStorage = DesktopTokenStorageCapabilities.CreateSnapshot();
+        items.Add(new DesktopSelfTestItemSnapshot(
+            "Token storage",
+            true,
+            tokenStorage.IsReleaseSecure
+                ? tokenStorage.Details
+                : tokenStorage.Details + " (not release secure)"));
+
         await AddSelfTestCheckAsync(
             items,
             "Autostart adapter",

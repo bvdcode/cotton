@@ -277,6 +277,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [x] Add explicit fallback policy for Linux environments without a secret service.
   Release decision must be explicit: block login, prompt user, or encrypted local store.
   Verification: commit `Add token payload protection boundary`; current non-Windows fallback is explicitly `RestrictedFileTokenPayloadProtector` with a protected-envelope scheme and chmod-restricted token file. This remains a deliberate development fallback for environments without Secret Service; final release policy and Linux manual verification remain open.
+  Verification 2026-06-03: self-test now includes `Token storage` and reports restricted-file storage as a development fallback that is not release-secure. `DesktopTokenStorageCapabilitiesTests` cover restricted-file, Linux Secret Service, and Windows DPAPI capability classification.
 - [x] Ensure logout clears tokens and stops all sync runners.
   Verification: `SyncApplicationService.SignOutAsync` stops remote changes, periodic sync, local changes, and supervisor before delegating to `IAuthFlow.SignOutAsync`; SDK `CottonAuthClient.LogoutAsync` clears `ICottonTokenStore`, including failed server logout responses. `SyncApplicationServiceTests` plus `PasswordAuthFlowTests` passed in focused auth/service tests 21/21, and `CottonAuthClientTests` passed 3/3.
 - [x] Handle refresh-token revocation and session-revoked SignalR event.
@@ -368,6 +369,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [x] Add self-test command.
   Required checks: server reachability, auth state, local folder access, remote folder access, SQLite state access, watcher availability.
   Verification 2026-06-03: self-test now checks preferences DB, sync-pair DB, sync-state DB, authentication state, autostart adapter, tray lifecycle, file watcher availability, server identity, local roots, and remote roots when signed in; unsigned remote roots are explicitly reported as requiring sign-in to verify. Focused `DesktopShellControllerSelfTestTests` passed 2/2. Full desktop tests and solution build are recorded in the commit verification.
+  Verification 2026-06-03: self-test also reports token-storage capability so diagnostics distinguish Windows DPAPI, Linux Secret Service, and the development-only restricted-file fallback. Focused token-storage/self-test tests passed 10/10, full `Cotton.Sync.Desktop.Tests` passed 88/88, and full solution Release build passed with the known NU1903 warning.
 - [x] Add tests for redaction.
   Verification 2026-06-03: `DesktopSecretRedactorTests` cover bearer, JSON, and query-string secret patterns; `DesktopDiagnosticsExporterTests` cover archive exclusion of token/database files and redaction of secrets in exported logs.
 - [ ] Add manual diagnostics export verification.
