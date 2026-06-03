@@ -26,6 +26,7 @@ public sealed partial class MainWindow : Window
     private const double SetupWidth = 420;
 
     private bool? _isDashboardWindowMode;
+    private bool _isQuitRequested;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MainWindow" /> class.
@@ -44,11 +45,40 @@ public sealed partial class MainWindow : Window
         ApplyWindowMode(viewModel.IsDashboardVisible);
         viewModel.PropertyChanged += OnViewModelPropertyChanged;
         Opened += async (_, _) => await viewModel.InitializeAsync().ConfigureAwait(true);
+        Closing += OnClosing;
         Closed += (_, _) =>
         {
+            Closing -= OnClosing;
             viewModel.PropertyChanged -= OnViewModelPropertyChanged;
             viewModel.Dispose();
         };
+    }
+
+    internal void RequestQuit()
+    {
+        _isQuitRequested = true;
+    }
+
+    internal void ShowShell()
+    {
+        Show();
+        if (WindowState == WindowState.Minimized)
+        {
+            WindowState = WindowState.Normal;
+        }
+
+        Activate();
+    }
+
+    private void OnClosing(object? sender, WindowClosingEventArgs e)
+    {
+        if (_isQuitRequested)
+        {
+            return;
+        }
+
+        e.Cancel = true;
+        Hide();
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)

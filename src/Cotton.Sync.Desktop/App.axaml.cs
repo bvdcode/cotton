@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Cotton.Sync.Desktop.Shell;
@@ -14,6 +15,8 @@ namespace Cotton.Sync.Desktop;
 /// </summary>
 public sealed partial class App : Application
 {
+    private DesktopTrayController? _trayController;
+
     internal static DesktopStartupOptions StartupOptions { get; set; } = DesktopStartupOptions.Empty;
 
     /// <inheritdoc />
@@ -27,7 +30,11 @@ public sealed partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow(DesktopShellController.CreateDefault(StartupOptions));
+            desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            var window = new MainWindow(DesktopShellController.CreateDefault(StartupOptions));
+            desktop.MainWindow = window;
+            _trayController = new DesktopTrayController(window, desktop);
+            desktop.Exit += (_, _) => _trayController?.Dispose();
         }
 
         base.OnFrameworkInitializationCompleted();
