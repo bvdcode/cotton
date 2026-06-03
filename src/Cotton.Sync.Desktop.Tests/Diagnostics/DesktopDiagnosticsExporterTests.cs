@@ -66,6 +66,30 @@ public sealed class DesktopDiagnosticsExporterTests
         });
     }
 
+    [Test]
+    public async Task ExportAsync_RedactsSecretsFromLogs()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        File.WriteAllText(
+            paths.LogFilePath,
+            """Authorization: Bearer access-token {"password":"secret","refreshToken":"refresh-token"}""");
+        var exporter = new DesktopDiagnosticsExporter();
+
+        string archivePath = await exporter.ExportAsync(paths, CreateBundle());
+
+        using ZipArchive archive = ZipFile.OpenRead(archivePath);
+        string logContent = ReadEntry(archive, "logs/cotton-sync.log");
+        Assert.Multiple(() =>
+        {
+            Assert.That(logContent, Does.Contain("Bearer [redacted]"));
+            Assert.That(logContent, Does.Contain("""password":"[redacted]"""));
+            Assert.That(logContent, Does.Contain("""refreshToken":"[redacted]"""));
+            Assert.That(logContent, Does.Not.Contain("access-token"));
+            Assert.That(logContent, Does.Not.Contain("refresh-token"));
+            Assert.That(logContent, Does.Not.Contain("secret"));
+        });
+    }
+
     private static DesktopDiagnosticsBundle CreateBundle()
     {
         return new DesktopDiagnosticsBundle(
@@ -84,5 +108,14 @@ public sealed class DesktopDiagnosticsExporterTests
             [
                 new DesktopSelfTestItemSnapshot("Server identity", true, "Cotton Cloud"),
             ]);
+    }
+
+    private static string ReadEntry(ZipArchive archive, string entryName)
+    {
+        ZipArchiveEntry entry = archive.GetEntry(entryName) ?? throw new InvalidOperationException(
+            "Diagnostics archive entry is missing: " + entryName);
+        using Stream stream = entry.Open();
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
     }
 }

@@ -341,11 +341,12 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Required fields: app version, server URL, account, sync pair ids, local paths, remote ids, last sync time, current cursor, last error.
 - [x] Add export diagnostics bundle command.
   Verification 2026-06-03: settings now exposes an Export diagnostics command; `DesktopDiagnosticsExporter` writes a zip bundle under app-data `diagnostics/` containing `diagnostics.json` and rotated trace logs, while excluding token and SQLite files. Focused `DesktopDiagnosticsExporterTests` passed 2/2. Full desktop tests and solution build are recorded in the commit verification.
-- [ ] Redact tokens and secrets from logs and diagnostics.
-  Partial 2026-06-03: diagnostics bundle tests verify `tokens.json`, `sync-app.db`, and `sync-state.db` are not included in exported archives. Keep unchecked until log-content redaction is implemented and covered.
+- [x] Redact tokens and secrets from logs and diagnostics.
+  Verification 2026-06-03: diagnostics export excludes `tokens.json`, `sync-app.db`, and `sync-state.db`, and `DesktopSecretRedactor` redacts bearer tokens plus JSON/query secrets before writing diagnostics JSON or log entries into the bundle. Focused redaction/exporter tests passed 6/6. Full desktop tests and solution build are recorded in the commit verification.
 - [ ] Add self-test command.
   Required checks: server reachability, auth state, local folder access, remote folder access, SQLite state access, watcher availability.
-- [ ] Add tests for redaction.
+- [x] Add tests for redaction.
+  Verification 2026-06-03: `DesktopSecretRedactorTests` cover bearer, JSON, and query-string secret patterns; `DesktopDiagnosticsExporterTests` cover archive exclusion of token/database files and redaction of secrets in exported logs.
 - [ ] Add manual diagnostics export verification.
 
 ## Phase 11 - Packaging And Installers

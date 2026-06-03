@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using System.IO.Compression;
+using System.Text;
 using System.Text.Json;
 using Cotton.Sync.Desktop.Composition;
 
@@ -43,7 +44,9 @@ internal sealed class DesktopDiagnosticsExporter
     {
         ZipArchiveEntry entry = archive.CreateEntry(DiagnosticsJsonEntryName);
         await using Stream entryStream = entry.Open();
-        await JsonSerializer.SerializeAsync(entryStream, bundle, JsonOptions, cancellationToken).ConfigureAwait(false);
+        string json = JsonSerializer.Serialize(bundle, JsonOptions);
+        string redactedJson = DesktopSecretRedactor.Redact(json);
+        await entryStream.WriteAsync(Encoding.UTF8.GetBytes(redactedJson), cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task AddLogEntriesAsync(
@@ -75,8 +78,9 @@ internal sealed class DesktopDiagnosticsExporter
 
         ZipArchiveEntry entry = archive.CreateEntry(LogEntryPrefix + entryName);
         await using Stream entryStream = entry.Open();
-        await using FileStream sourceStream = File.OpenRead(sourcePath);
-        await sourceStream.CopyToAsync(entryStream, cancellationToken).ConfigureAwait(false);
+        string logContent = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+        string redactedLog = DesktopSecretRedactor.Redact(logContent);
+        await entryStream.WriteAsync(Encoding.UTF8.GetBytes(redactedLog), cancellationToken).ConfigureAwait(false);
     }
 
     private static string CreateArchiveFileName(DateTimeOffset createdAtUtc)
