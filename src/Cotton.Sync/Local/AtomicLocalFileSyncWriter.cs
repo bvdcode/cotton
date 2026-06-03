@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Globalization;
 using Cotton.Sync.State;
 
 namespace Cotton.Sync.Local;
@@ -11,6 +12,7 @@ namespace Cotton.Sync.Local;
 public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
 {
     private const string MetadataDirectoryName = ".cotton-sync";
+    private const string DeletedDirectoryName = "deleted";
     private const string TemporaryDirectoryName = "tmp";
 
     /// <inheritdoc />
@@ -79,7 +81,14 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
         string targetPath = Path.Combine(fullRoot, normalizedPath.Replace('/', Path.DirectorySeparatorChar));
         if (File.Exists(targetPath))
         {
-            File.Delete(targetPath);
+            string preservedPath = CreateDeletedFilePath(fullRoot, normalizedPath);
+            string? preservedDirectory = Path.GetDirectoryName(preservedPath);
+            if (!string.IsNullOrWhiteSpace(preservedDirectory))
+            {
+                Directory.CreateDirectory(preservedDirectory);
+            }
+
+            File.Move(targetPath, preservedPath, overwrite: false);
             DeleteEmptyParents(fullRoot, Path.GetDirectoryName(targetPath));
         }
 
@@ -97,7 +106,7 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
         string suffix = timestampUtc.ToUniversalTime().ToString("yyyyMMddTHHmmssZ");
         for (int index = 1; index < int.MaxValue; index++)
         {
-            string indexedSuffix = index == 1 ? suffix : suffix + "-" + index.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            string indexedSuffix = index == 1 ? suffix : suffix + "-" + index.ToString(CultureInfo.InvariantCulture);
             string candidateName = fileName + " (Cotton conflict " + indexedSuffix + ")" + extension;
             string candidateRelativePath = string.IsNullOrEmpty(directory)
                 ? candidateName
@@ -112,6 +121,19 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
         }
 
         throw new InvalidOperationException("Unable to allocate a unique conflict file path.");
+    }
+
+    private static string CreateDeletedFilePath(string fullRoot, string normalizedPath)
+    {
+        string quarantineName = DateTime.UtcNow.ToString("yyyyMMddTHHmmssfffZ", CultureInfo.InvariantCulture)
+            + "-"
+            + Guid.NewGuid().ToString("N");
+        return Path.Combine(
+            fullRoot,
+            MetadataDirectoryName,
+            DeletedDirectoryName,
+            quarantineName,
+            normalizedPath.Replace('/', Path.DirectorySeparatorChar));
     }
 
     private static void DeleteEmptyParents(string fullRoot, string? currentDirectory)

@@ -19,7 +19,7 @@ public interface ILocalFileSyncWriter
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Deletes a local file if it exists.
+    /// Removes a local file if it exists.
     /// </summary>
     Task DeleteFileAsync(string rootPath, string relativePath, CancellationToken cancellationToken = default);
 
