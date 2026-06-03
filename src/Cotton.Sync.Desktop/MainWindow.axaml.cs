@@ -25,10 +25,8 @@ public sealed partial class MainWindow : Window
     private const double SetupMinWidth = 324;
     private const double SetupWidth = 344;
 
-    private readonly bool _canHideToTray;
-    private readonly bool _hideAfterSessionRestore;
+    private readonly DesktopWindowLifecyclePolicy _lifecyclePolicy;
     private bool? _isDashboardWindowMode;
-    private bool _isQuitRequested;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MainWindow" /> class.
@@ -44,8 +42,7 @@ public sealed partial class MainWindow : Window
         bool canHideToTray = false)
     {
         ArgumentNullException.ThrowIfNull(controller);
-        _canHideToTray = canHideToTray;
-        _hideAfterSessionRestore = hideAfterSessionRestore && canHideToTray;
+        _lifecyclePolicy = new DesktopWindowLifecyclePolicy(hideAfterSessionRestore, canHideToTray);
         InitializeComponent();
         var viewModel = new ShellViewModel(controller, new WindowLocalFolderPicker(this));
         DataContext = viewModel;
@@ -54,7 +51,7 @@ public sealed partial class MainWindow : Window
         Opened += async (_, _) =>
         {
             await viewModel.InitializeAsync().ConfigureAwait(true);
-            if (_hideAfterSessionRestore && viewModel.IsDashboardVisible)
+            if (_lifecyclePolicy.ShouldHideAfterSessionRestore(viewModel.IsDashboardVisible))
             {
                 Hide();
             }
@@ -70,7 +67,7 @@ public sealed partial class MainWindow : Window
 
     internal void RequestQuit()
     {
-        _isQuitRequested = true;
+        _lifecyclePolicy.RequestQuit();
     }
 
     internal void ShowShell()
@@ -86,7 +83,7 @@ public sealed partial class MainWindow : Window
 
     private void OnClosing(object? sender, WindowClosingEventArgs e)
     {
-        if (_isQuitRequested || !_canHideToTray)
+        if (_lifecyclePolicy.ResolveCloseAction() == DesktopWindowCloseAction.Close)
         {
             return;
         }

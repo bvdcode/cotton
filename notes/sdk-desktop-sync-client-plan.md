@@ -306,8 +306,10 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 
 - [x] Add single-instance enforcement.
   Verification 2026-06-03: commit `Add desktop single-instance guard`; desktop startup acquires a per-user app-data lock file before starting Avalonia, and a second process exits when the lock is already held. Focused `DesktopSingleInstanceGuardTests` passed 3/3, full `Cotton.Sync.Desktop.Tests` passed 18/18, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
-- [ ] Add close-to-tray behavior.
-- [ ] Add explicit quit behavior.
+- [x] Add close-to-tray behavior.
+  Verification 2026-06-03: Windows-only tray lifecycle uses `ShutdownMode.OnExplicitShutdown`; `MainWindow` cancels close and hides to tray when tray lifecycle is available, while Linux keeps normal close semantics because tray lifecycle is unsupported. `DesktopWindowLifecyclePolicyTests` passed 4/4, full `Cotton.Sync.Desktop.Tests` passed 22/22, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings. Manual Windows tray verification remains open below.
+- [x] Add explicit quit behavior.
+  Verification 2026-06-03: tray Quit calls `MainWindow.RequestQuit()` before application shutdown, and the window lifecycle policy then resolves close as a real close instead of hide-to-tray. `DesktopWindowLifecyclePolicyTests` passed 4/4, full `Cotton.Sync.Desktop.Tests` passed 22/22, and solution Release build passed with known NU1903 warnings.
 - [ ] Add tray icon states.
   Required states: idle, syncing, paused, offline, error.
 - [ ] Add tray menu.
