@@ -27,10 +27,15 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     private string _localFolderPath = string.Empty;
     private string _password = string.Empty;
     private string _remoteFolderPath = string.Empty;
+    private bool _isServerProbeChecking;
+    private bool _isServerProbeFailed;
+    private bool _isServerVerified;
+    private bool _isAddSyncPairWizardVisible;
     private string _serverUrl = string.Empty;
+    private string _serverProbeStatus = string.Empty;
+    private CancellationTokenSource? _serverProbeCancellation;
     private SyncPairRowViewModel? _selectedSyncPair;
     private string _totpCode = string.Empty;
-    private bool _trustDevice = true;
     private string _username = string.Empty;
 
     internal ShellViewModel(IDesktopShellController controller, ILocalFolderPicker folderPicker)
@@ -42,6 +47,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         SignInCommand = new AsyncRelayCommand(SignInAsync, CanSignIn, HandleCommandError);
         AddSyncPairCommand = new AsyncRelayCommand(AddSyncPairAsync, CanAddSyncPair, HandleCommandError);
         BrowseLocalFolderCommand = new AsyncRelayCommand(BrowseLocalFolderAsync, () => !IsBusy, HandleCommandError);
+        CancelAddSyncPairCommand = new AsyncRelayCommand(CancelAddSyncPairAsync, () => !IsBusy, HandleCommandError);
+        ShowAddSyncPairCommand = new AsyncRelayCommand(ShowAddSyncPairAsync, () => IsSignedIn && !IsBusy, HandleCommandError);
         SyncNowCommand = new AsyncRelayCommand(SyncNowAsync, () => IsSignedIn, HandleCommandError);
         PauseCommand = new AsyncRelayCommand(PauseAsync, () => IsSignedIn, HandleCommandError);
         ResumeCommand = new AsyncRelayCommand(ResumeAsync, () => IsSignedIn, HandleCommandError);
@@ -57,6 +64,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
 
     public AsyncRelayCommand BrowseLocalFolderCommand { get; }
 
+    public AsyncRelayCommand CancelAddSyncPairCommand { get; }
+
     public AsyncRelayCommand OpenFolderCommand { get; }
 
     public AsyncRelayCommand PauseCommand { get; }
@@ -66,6 +75,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public AsyncRelayCommand SignInCommand { get; }
 
     public AsyncRelayCommand SignOutCommand { get; }
+
+    public AsyncRelayCommand ShowAddSyncPairCommand { get; }
 
     public AsyncRelayCommand SyncNowCommand { get; }
 
@@ -115,6 +126,36 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
 
     public bool IsSetupVisible => !IsSignedIn;
 
+    public bool IsAddSyncPairWizardVisible
+    {
+        get => _isAddSyncPairWizardVisible;
+        private set => SetProperty(ref _isAddSyncPairWizardVisible, value);
+    }
+
+    public bool IsServerProbeChecking
+    {
+        get => _isServerProbeChecking;
+        private set => SetProperty(ref _isServerProbeChecking, value);
+    }
+
+    public bool IsServerProbeFailed
+    {
+        get => _isServerProbeFailed;
+        private set => SetProperty(ref _isServerProbeFailed, value);
+    }
+
+    public bool IsServerVerified
+    {
+        get => _isServerVerified;
+        private set
+        {
+            if (SetProperty(ref _isServerVerified, value))
+            {
+                SignInCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
     public string LocalFolderPath
     {
         get => _localFolderPath;
@@ -158,10 +199,25 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         {
             if (SetProperty(ref _serverUrl, value))
             {
+                ScheduleServerProbe(value);
                 SignInCommand.RaiseCanExecuteChanged();
             }
         }
     }
+
+    public string ServerProbeStatus
+    {
+        get => _serverProbeStatus;
+        private set
+        {
+            if (SetProperty(ref _serverProbeStatus, value))
+            {
+                OnPropertyChanged(nameof(HasServerProbeStatus));
+            }
+        }
+    }
+
+    public bool HasServerProbeStatus => !string.IsNullOrWhiteSpace(ServerProbeStatus);
 
     public SyncPairRowViewModel? SelectedSyncPair
     {
@@ -181,12 +237,6 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         set => SetProperty(ref _totpCode, value);
     }
 
-    public bool TrustDevice
-    {
-        get => _trustDevice;
-        set => SetProperty(ref _trustDevice, value);
-    }
-
     public string Username
     {
         get => _username;
@@ -203,6 +253,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     {
         _controller.StatusChanged -= OnStatusChanged;
         SyncPairs.CollectionChanged -= OnSyncPairsChanged;
+        _serverProbeCancellation?.Cancel();
+        _serverProbeCancellation?.Dispose();
         _controller.Dispose();
     }
 
@@ -212,7 +264,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         try
         {
             DesktopShellSnapshot snapshot = await _controller.LoadAsync().ConfigureAwait(true);
-            ServerUrl = snapshot.ServerUrl.AbsoluteUri;
+            ServerUrl = snapshot.ServerUrl?.AbsoluteUri ?? string.Empty;
+            Username = snapshot.RememberedUsername ?? string.Empty;
             SyncPairs.Clear();
             foreach (DesktopSyncPairSnapshot syncPair in snapshot.SyncPairs)
             {
@@ -255,6 +308,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             SelectedSyncPair = row;
             LocalFolderPath = string.Empty;
             RemoteFolderPath = string.Empty;
+            IsAddSyncPairWizardVisible = false;
             GlobalStatus = "Sync requested";
             AddActivity("Pair", syncPair.LocalRootPath, "Folder added and initial sync requested");
             RaiseCommandStates();
@@ -275,6 +329,14 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
 
         LocalFolderPath = selectedPath;
         AddActivity("Folder", selectedPath, "Local folder selected");
+    }
+
+    private Task CancelAddSyncPairAsync()
+    {
+        LocalFolderPath = string.Empty;
+        RemoteFolderPath = string.Empty;
+        IsAddSyncPairWizardVisible = false;
+        return Task.CompletedTask;
     }
 
     private async Task OpenFolderAsync()
@@ -327,7 +389,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         try
         {
             AuthSession session = await _controller.SignInAsync(
-                new DesktopSignInRequest(ServerUrl, Username, Password, TotpCode, TrustDevice)).ConfigureAwait(true);
+                new DesktopSignInRequest(ServerUrl, Username, Password, TotpCode)).ConfigureAwait(true);
             IsSignedIn = true;
             AccountName = session.Email ?? session.Username;
             Password = string.Empty;
@@ -350,6 +412,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             AccountName = "Signed out";
             GlobalStatus = "Signed out";
             Password = string.Empty;
+            IsAddSyncPairWizardVisible = false;
             SetAllPairStatuses("Idle");
             AddActivity("Account", string.Empty, "Signed out");
         }
@@ -375,6 +438,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         }
     }
 
+    private Task ShowAddSyncPairAsync()
+    {
+        IsAddSyncPairWizardVisible = true;
+        return Task.CompletedTask;
+    }
+
     private bool CanAddSyncPair()
     {
         return !IsBusy
@@ -388,7 +457,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         return !IsBusy
             && !string.IsNullOrWhiteSpace(ServerUrl)
             && !string.IsNullOrWhiteSpace(Username)
-            && !string.IsNullOrEmpty(Password);
+            && !string.IsNullOrEmpty(Password)
+            && IsServerVerified;
     }
 
     private void HandleCommandError(Exception exception)
@@ -397,6 +467,76 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         GlobalStatus = "Action failed";
         AddActivity("Error", string.Empty, exception.Message);
         IsBusy = false;
+    }
+
+    private async Task ProbeServerAfterDelayAsync(string serverUrl, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(450), cancellationToken).ConfigureAwait(false);
+            DesktopServerProbeResult result = await _controller.ProbeServerAsync(serverUrl, cancellationToken)
+                .ConfigureAwait(false);
+            await Dispatcher.UIThread.InvokeAsync(
+                () => ApplyServerProbeResult(result),
+                DispatcherPriority.Normal,
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            Trace.TraceWarning("Failed to probe Cotton server {0}: {1}", serverUrl, exception);
+            await Dispatcher.UIThread.InvokeAsync(
+                () => ApplyServerProbeFailure(),
+                DispatcherPriority.Normal);
+        }
+    }
+
+    private void ApplyServerProbeFailure()
+    {
+        IsServerProbeChecking = false;
+        IsServerVerified = false;
+        IsServerProbeFailed = true;
+        ServerProbeStatus = "Cotton server not found";
+    }
+
+    private void ApplyServerProbeResult(DesktopServerProbeResult result)
+    {
+        IsServerProbeChecking = false;
+        IsServerVerified = result.IsCottonServer;
+        IsServerProbeFailed = !result.IsCottonServer;
+        ServerProbeStatus = result.IsCottonServer
+            ? "Cotton Cloud"
+            : "Cotton server not found";
+    }
+
+    private void ResetServerProbe()
+    {
+        IsServerProbeChecking = false;
+        IsServerVerified = false;
+        IsServerProbeFailed = false;
+        ServerProbeStatus = string.Empty;
+    }
+
+    private void ScheduleServerProbe(string serverUrl)
+    {
+        _serverProbeCancellation?.Cancel();
+        _serverProbeCancellation?.Dispose();
+        string normalized = serverUrl.Trim();
+        if (normalized.Length == 0)
+        {
+            _serverProbeCancellation = null;
+            ResetServerProbe();
+            return;
+        }
+
+        _serverProbeCancellation = new CancellationTokenSource();
+        IsServerProbeChecking = true;
+        IsServerVerified = false;
+        IsServerProbeFailed = false;
+        ServerProbeStatus = "Checking server";
+        _ = ProbeServerAfterDelayAsync(normalized, _serverProbeCancellation.Token);
     }
 
     private void OnSyncPairsChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -475,10 +615,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         SignOutCommand.RaiseCanExecuteChanged();
         AddSyncPairCommand.RaiseCanExecuteChanged();
         BrowseLocalFolderCommand.RaiseCanExecuteChanged();
+        CancelAddSyncPairCommand.RaiseCanExecuteChanged();
         SyncNowCommand.RaiseCanExecuteChanged();
         PauseCommand.RaiseCanExecuteChanged();
         ResumeCommand.RaiseCanExecuteChanged();
         OpenFolderCommand.RaiseCanExecuteChanged();
+        ShowAddSyncPairCommand.RaiseCanExecuteChanged();
     }
 
     private void SetAllPairStatuses(string status)

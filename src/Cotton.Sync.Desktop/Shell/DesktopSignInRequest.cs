@@ -7,5 +7,4 @@ internal sealed record DesktopSignInRequest(
     string ServerUrl,
     string Username,
     string Password,
-    string? TotpCode,
-    bool TrustDevice);
+    string? TotpCode);

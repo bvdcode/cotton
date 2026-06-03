@@ -69,6 +69,7 @@ public sealed class SqliteAppPreferencesStore : IAppPreferencesStore
             : preferences.CreatedAtUtc;
         DateTime updatedAt = preferences.UpdatedAtUtc == default ? now : preferences.UpdatedAtUtc;
         entity.RememberedServerUrl = preferences.RememberedServerUrl?.AbsoluteUri;
+        entity.RememberedUsername = NormalizeOptional(preferences.RememberedUsername);
         entity.StartWithOperatingSystem = preferences.StartWithOperatingSystem;
         entity.StartMinimizedToTray = preferences.StartMinimizedToTray;
         entity.EnableNotifications = preferences.EnableNotifications;
@@ -83,6 +84,7 @@ public sealed class SqliteAppPreferencesStore : IAppPreferencesStore
             RememberedServerUrl = string.IsNullOrWhiteSpace(entity.RememberedServerUrl)
                 ? null
                 : new Uri(entity.RememberedServerUrl, UriKind.Absolute),
+            RememberedUsername = entity.RememberedUsername,
             StartWithOperatingSystem = entity.StartWithOperatingSystem,
             StartMinimizedToTray = entity.StartMinimizedToTray,
             EnableNotifications = entity.EnableNotifications,
@@ -110,5 +112,11 @@ public sealed class SqliteAppPreferencesStore : IAppPreferencesStore
     {
         return string.Equals(serverUrl.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
             || string.Equals(serverUrl.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? NormalizeOptional(string? value)
+    {
+        string? normalized = value?.Trim();
+        return string.IsNullOrEmpty(normalized) ? null : normalized;
     }
 }

@@ -2,7 +2,60 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Cotton.Sync.Desktop.App"
              RequestedThemeVariant="Default">
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="CottonAppBackgroundBrush" Color="#F7F7F9" />
+          <SolidColorBrush x:Key="CottonSurfaceBrush" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="CottonSurfaceMutedBrush" Color="#EEF2F3" />
+          <SolidColorBrush x:Key="CottonBorderBrush" Color="#14000000" />
+          <SolidColorBrush x:Key="CottonTextPrimaryBrush" Color="#323232" />
+          <SolidColorBrush x:Key="CottonTextSecondaryBrush" Color="#646464" />
+          <SolidColorBrush x:Key="CottonPrimaryBrush" Color="#96BE02" />
+          <SolidColorBrush x:Key="CottonSecondaryBrush" Color="#1BCEA7" />
+          <SolidColorBrush x:Key="CottonSuccessBrush" Color="#1BCEA7" />
+          <SolidColorBrush x:Key="CottonErrorBrush" Color="#D32F2F" />
+          <SolidColorBrush x:Key="CottonOverlayBrush" Color="#66000000" />
+          <SolidColorBrush x:Key="CottonPrimaryTextBrush" Color="#202300" />
+          <SolidColorBrush x:Key="CottonPrimaryHoverBrush" Color="#A5CF08" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="CottonAppBackgroundBrush" Color="#1F2022" />
+          <SolidColorBrush x:Key="CottonSurfaceBrush" Color="#151A21" />
+          <SolidColorBrush x:Key="CottonSurfaceMutedBrush" Color="#242B32" />
+          <SolidColorBrush x:Key="CottonBorderBrush" Color="#10FFFFFF" />
+          <SolidColorBrush x:Key="CottonTextPrimaryBrush" Color="#EEEEEE" />
+          <SolidColorBrush x:Key="CottonTextSecondaryBrush" Color="#A3A3A3" />
+          <SolidColorBrush x:Key="CottonPrimaryBrush" Color="#96BE02" />
+          <SolidColorBrush x:Key="CottonSecondaryBrush" Color="#1BCEA7" />
+          <SolidColorBrush x:Key="CottonSuccessBrush" Color="#1BCEA7" />
+          <SolidColorBrush x:Key="CottonErrorBrush" Color="#EF5350" />
+          <SolidColorBrush x:Key="CottonOverlayBrush" Color="#99000000" />
+          <SolidColorBrush x:Key="CottonPrimaryTextBrush" Color="#202300" />
+          <SolidColorBrush x:Key="CottonPrimaryHoverBrush" Color="#A5CF08" />
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+
   <Application.Styles>
     <FluentTheme />
+    <Style Selector="TextBlock.secondary">
+      <Setter Property="Foreground" Value="{DynamicResource CottonTextSecondaryBrush}" />
+    </Style>
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="{DynamicResource CottonPrimaryBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource CottonPrimaryBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource CottonPrimaryTextBrush}" />
+    </Style>
+    <Style Selector="Button.primary:pointerover">
+      <Setter Property="Background" Value="{DynamicResource CottonPrimaryHoverBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource CottonPrimaryHoverBrush}" />
+    </Style>
+    <Style Selector="TextBox">
+      <Setter Property="Background" Value="{DynamicResource CottonSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource CottonBorderBrush}" />
+    </Style>
   </Application.Styles>
 </Application>

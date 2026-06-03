@@ -14,6 +14,11 @@ public sealed class AppPreferences
     public Uri? RememberedServerUrl { get; set; }
 
     /// <summary>
+    /// Gets or sets the last username selected by the user.
+    /// </summary>
+    public string? RememberedUsername { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the app should start with the operating system.
     /// </summary>
     public bool StartWithOperatingSystem { get; set; }

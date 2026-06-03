@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Cotton.Sync.Desktop.Shell;
+using Cotton.Sync.Desktop.Startup;
 
 namespace Cotton.Sync.Desktop;
 
@@ -13,6 +14,8 @@ namespace Cotton.Sync.Desktop;
 /// </summary>
 public sealed partial class App : Application
 {
+    internal static DesktopStartupOptions StartupOptions { get; set; } = DesktopStartupOptions.Empty;
+
     /// <inheritdoc />
     public override void Initialize()
     {
@@ -24,7 +27,7 @@ public sealed partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow(DesktopShellController.CreateDefault());
+            desktop.MainWindow = new MainWindow(DesktopShellController.CreateDefault(StartupOptions));
         }
 
         base.OnFrameworkInitializationCompleted();

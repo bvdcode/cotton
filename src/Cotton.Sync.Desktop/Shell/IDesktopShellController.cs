@@ -12,6 +12,8 @@ internal interface IDesktopShellController : IDisposable
 
     Task<DesktopShellSnapshot> LoadAsync(CancellationToken cancellationToken = default);
 
+    Task<DesktopServerProbeResult> ProbeServerAsync(string serverUrl, CancellationToken cancellationToken = default);
+
     Task<AuthSession> SignInAsync(DesktopSignInRequest request, CancellationToken cancellationToken = default);
 
     Task SignOutAsync(CancellationToken cancellationToken = default);

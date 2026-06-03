@@ -2,7 +2,10 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Diagnostics;
+using System.Net.Http.Json;
+using Cotton;
 using Cotton.Contracts.Nodes;
+using Cotton.Models;
 using Cotton.Sync.App.Auth;
 using Cotton.Sync.App.Platform;
 using Cotton.Sync.App.Preferences;
@@ -10,16 +13,18 @@ using Cotton.Sync.App.Status;
 using Cotton.Sync.App.SyncApplication;
 using Cotton.Sync.App.SyncPairs;
 using Cotton.Sync.Desktop.Composition;
+using Cotton.Sync.Desktop.Startup;
 
 namespace Cotton.Sync.Desktop.Shell;
 
 internal sealed class DesktopShellController : IDesktopShellController
 {
-    private static readonly Uri DefaultServerUrl = new("http://localhost:5182");
+    private static readonly TimeSpan ServerProbeTimeout = TimeSpan.FromSeconds(5);
 
     private readonly DesktopSyncApplicationFactory _factory;
     private readonly IPlatformCommandService _platformCommands;
     private readonly SqliteAppPreferencesStore _preferencesStore;
+    private readonly DesktopStartupOptions _startupOptions;
     private readonly SqliteSyncPairSettingsStore _syncPairStore;
     private DesktopSyncApplicationHost? _host;
     private IDisposable? _statusSubscription;
@@ -28,12 +33,14 @@ internal sealed class DesktopShellController : IDesktopShellController
         DesktopSyncApplicationFactory factory,
         SqliteAppPreferencesStore preferencesStore,
         SqliteSyncPairSettingsStore syncPairStore,
-        IPlatformCommandService platformCommands)
+        IPlatformCommandService platformCommands,
+        DesktopStartupOptions? startupOptions = null)
     {
         _factory = factory ?? throw new ArgumentNullException(nameof(factory));
         _preferencesStore = preferencesStore ?? throw new ArgumentNullException(nameof(preferencesStore));
         _syncPairStore = syncPairStore ?? throw new ArgumentNullException(nameof(syncPairStore));
         _platformCommands = platformCommands ?? throw new ArgumentNullException(nameof(platformCommands));
+        _startupOptions = startupOptions ?? DesktopStartupOptions.Empty;
     }
 
     public event EventHandler<DesktopSyncStatusSnapshot>? StatusChanged;
@@ -44,13 +51,37 @@ internal sealed class DesktopShellController : IDesktopShellController
         await _syncPairStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
         AppPreferences preferences = await _preferencesStore.GetAsync(cancellationToken).ConfigureAwait(false);
         IReadOnlyList<SyncPairSettings> syncPairs = await _syncPairStore.ListAsync(cancellationToken).ConfigureAwait(false);
-        Uri serverUrl = preferences.RememberedServerUrl ?? DefaultServerUrl;
-        AuthSession? session = await TryRestoreSessionAsync(serverUrl, cancellationToken).ConfigureAwait(false);
+        Uri? serverUrl = _startupOptions.ServerUrl ?? preferences.RememberedServerUrl;
+        AuthSession? session = serverUrl is null
+            ? null
+            : await TryRestoreSessionAsync(serverUrl, cancellationToken).ConfigureAwait(false);
         return new DesktopShellSnapshot(
             serverUrl,
             session?.Email ?? session?.Username,
+            _startupOptions.Username ?? preferences.RememberedUsername,
             session is not null,
             syncPairs.Select(ToSnapshot).ToList());
+    }
+
+    public async Task<DesktopServerProbeResult> ProbeServerAsync(
+        string serverUrl,
+        CancellationToken cancellationToken = default)
+    {
+        Uri parsedServerUrl = ParseServerUrl(serverUrl);
+        using var httpClient = new HttpClient
+        {
+            BaseAddress = parsedServerUrl,
+            Timeout = ServerProbeTimeout,
+        };
+        PublicServerInfo? info = await httpClient
+            .GetFromJsonAsync<PublicServerInfo>("/api/v1/server/info", cancellationToken)
+            .ConfigureAwait(false);
+        bool isCottonServer = string.Equals(info?.Product, Constants.ProductName, StringComparison.Ordinal);
+        return new DesktopServerProbeResult(
+            parsedServerUrl,
+            isCottonServer,
+            info?.Product,
+            info?.InstanceIdHash);
     }
 
     public async Task<AuthSession> SignInAsync(
@@ -68,12 +99,13 @@ internal sealed class DesktopShellController : IDesktopShellController
                     Username = request.Username.Trim(),
                     Password = request.Password,
                     TwoFactorCode = NormalizeOptional(request.TotpCode),
-                    TrustDevice = request.TrustDevice,
+                    TrustDevice = true,
                 },
                 cancellationToken).ConfigureAwait(false);
             var preferences = new AppPreferences
             {
                 RememberedServerUrl = serverUrl,
+                RememberedUsername = request.Username.Trim(),
             };
             await host.App.SavePreferencesAsync(preferences, cancellationToken).ConfigureAwait(false);
             await host.App.StartSyncAsync(cancellationToken).ConfigureAwait(false);
@@ -174,14 +206,15 @@ internal sealed class DesktopShellController : IDesktopShellController
         host?.Dispose();
     }
 
-    public static DesktopShellController CreateDefault()
+    public static DesktopShellController CreateDefault(DesktopStartupOptions? startupOptions = null)
     {
         DesktopAppPaths paths = DesktopAppPaths.CreateDefault();
         return new DesktopShellController(
             new DesktopSyncApplicationFactory(paths),
             new SqliteAppPreferencesStore(paths.AppDatabasePath),
             new SqliteSyncPairSettingsStore(paths.AppDatabasePath),
-            new ProcessPlatformCommandService());
+            new ProcessPlatformCommandService(),
+            startupOptions);
     }
 
     private static DesktopSyncPairSnapshot ToSnapshot(SyncPairSettings settings)

@@ -17,6 +17,10 @@ internal sealed class AppPreferencesEntity
     [Column("remembered_server_url")]
     public string? RememberedServerUrl { get; set; }
 
+    [MaxLength(320)]
+    [Column("remembered_username")]
+    public string? RememberedUsername { get; set; }
+
     [Column("start_with_operating_system")]
     public bool StartWithOperatingSystem { get; set; }
 

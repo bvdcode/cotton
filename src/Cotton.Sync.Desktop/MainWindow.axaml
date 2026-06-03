@@ -2,27 +2,44 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="Cotton.Sync.Desktop.MainWindow"
         Title="Cotton Sync"
-        Width="980"
-        Height="680"
-        MinWidth="760"
-        MinHeight="560">
+        Width="420"
+        Height="430"
+        MinWidth="400"
+        MinHeight="410"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource CottonAppBackgroundBrush}">
   <Grid RowDefinitions="Auto,*"
-        Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
+        Background="{DynamicResource CottonAppBackgroundBrush}">
     <Border Grid.Row="0"
-            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+            Background="{DynamicResource CottonSurfaceBrush}"
+            BorderBrush="{DynamicResource CottonBorderBrush}"
             BorderThickness="0,0,0,1"
-            Padding="22,14">
-      <Grid ColumnDefinitions="*,Auto"
-            ColumnSpacing="16">
-        <StackPanel Spacing="2">
+            Padding="18,12">
+      <Grid ColumnDefinitions="Auto,*,Auto"
+            ColumnSpacing="12">
+        <Border Width="34"
+                Height="34"
+                CornerRadius="8"
+                Background="{DynamicResource CottonSurfaceMutedBrush}"
+                VerticalAlignment="Center">
+          <Image Source="avares://Cotton.Sync.Desktop/Assets/icon-192.png"
+                 Width="24"
+                 Height="24"
+                 HorizontalAlignment="Center"
+                 VerticalAlignment="Center" />
+        </Border>
+        <StackPanel Grid.Column="1"
+                    Spacing="2"
+                    VerticalAlignment="Center">
           <TextBlock Text="Cotton Sync"
-                     FontSize="21"
+                     Foreground="{DynamicResource CottonTextPrimaryBrush}"
+                     FontSize="18"
                      FontWeight="SemiBold" />
           <TextBlock Text="{Binding GlobalStatus}"
-                     Opacity="0.68" />
+                     Classes="secondary"
+                     FontSize="12" />
         </StackPanel>
-        <StackPanel Grid.Column="1"
+        <StackPanel Grid.Column="2"
                     Orientation="Horizontal"
                     Spacing="8"
                     VerticalAlignment="Center"
@@ -42,108 +59,139 @@
     </Border>
 
     <Grid Grid.Row="1"
+          Background="{DynamicResource CottonSurfaceBrush}"
           IsVisible="{Binding IsSetupVisible}">
-      <Border Width="430"
-              Padding="24"
-              CornerRadius="6"
-              Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-              HorizontalAlignment="Center"
-              VerticalAlignment="Center">
-        <StackPanel Spacing="14">
-          <StackPanel Spacing="3">
-            <TextBlock Text="Set up Cotton Sync"
-                       FontSize="22"
-                       FontWeight="SemiBold" />
-            <TextBlock Text="Sign in to connect this computer."
-                       Opacity="0.68" />
-          </StackPanel>
+      <StackPanel Width="340"
+                  Spacing="10"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center">
+        <StackPanel Spacing="2">
+          <TextBlock Text="Set up Cotton Sync"
+                     FontSize="21"
+                     FontWeight="SemiBold" />
+          <TextBlock Text="Sign in to connect this computer."
+                     Classes="secondary" />
+        </StackPanel>
 
+        <Grid ColumnDefinitions="*,Auto"
+              ColumnSpacing="8">
           <TextBox Watermark="Server URL"
                    Text="{Binding ServerUrl}" />
-          <TextBox Watermark="Username"
-                   Text="{Binding Username}" />
-          <TextBox Watermark="Password"
-                   PasswordChar="*"
-                   Text="{Binding Password}" />
-          <TextBox Watermark="TOTP code"
-                   Text="{Binding TotpCode}" />
-          <CheckBox Content="Trust this device"
-                    IsChecked="{Binding TrustDevice}" />
-          <Button Content="Sign in"
-                  HorizontalAlignment="Stretch"
-                  Command="{Binding SignInCommand}" />
-        </StackPanel>
-      </Border>
+          <Grid Grid.Column="1"
+                Width="22"
+                Height="22"
+                VerticalAlignment="Center">
+            <Border Width="18"
+                    Height="18"
+                    CornerRadius="9"
+                    Background="{DynamicResource CottonSurfaceMutedBrush}"
+                    IsVisible="{Binding IsServerProbeChecking}">
+              <TextBlock Text="..."
+                         FontSize="10"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+            </Border>
+            <Border Width="18"
+                    Height="18"
+                    CornerRadius="9"
+                    Background="{DynamicResource CottonSuccessBrush}"
+                    IsVisible="{Binding IsServerVerified}">
+              <TextBlock Text="✓"
+                         FontSize="12"
+                         FontWeight="Bold"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+            </Border>
+            <Border Width="18"
+                    Height="18"
+                    CornerRadius="9"
+                    Background="{DynamicResource CottonErrorBrush}"
+                    IsVisible="{Binding IsServerProbeFailed}">
+              <TextBlock Text="!"
+                         Foreground="White"
+                         FontSize="12"
+                         FontWeight="Bold"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+            </Border>
+          </Grid>
+        </Grid>
+        <TextBlock Text="{Binding ServerProbeStatus}"
+                   Classes="secondary"
+                   FontSize="12"
+                   IsVisible="{Binding HasServerProbeStatus}" />
+        <TextBox Watermark="Username"
+                 Text="{Binding Username}" />
+        <TextBox Watermark="Password"
+                 PasswordChar="*"
+                 Text="{Binding Password}" />
+        <TextBox Watermark="TOTP code"
+                 Text="{Binding TotpCode}" />
+        <Button Content="Sign in"
+                Classes="primary"
+                HorizontalAlignment="Stretch"
+                Command="{Binding SignInCommand}" />
+      </StackPanel>
     </Grid>
 
     <Grid Grid.Row="1"
-          RowDefinitions="Auto,*"
-          Margin="22"
-          RowSpacing="18"
           IsVisible="{Binding IsDashboardVisible}">
-      <Border Padding="16"
-              CornerRadius="6"
-              Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
-        <Grid ColumnDefinitions="*,Auto"
-              ColumnSpacing="16">
-          <StackPanel Spacing="3">
-            <TextBlock Text="{Binding AccountName}"
-                       FontSize="16"
-                       FontWeight="SemiBold" />
-            <TextBlock Text="This computer is connected to Cotton Sync."
-                       Opacity="0.68" />
-          </StackPanel>
-          <Button Grid.Column="1"
-                  Content="Sign out"
-                  VerticalAlignment="Center"
-                  Command="{Binding SignOutCommand}" />
-        </Grid>
-      </Border>
-
-      <Grid Grid.Row="1"
-            ColumnDefinitions="*,310"
+      <Grid ColumnDefinitions="*,300"
+            Margin="22"
             ColumnSpacing="18">
         <Border Padding="16"
-                CornerRadius="6"
-                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
-          <Grid RowDefinitions="Auto,Auto,*"
+              CornerRadius="6"
+              Background="{DynamicResource CottonSurfaceBrush}"
+              BorderBrush="{DynamicResource CottonBorderBrush}"
+              BorderThickness="1">
+          <Grid RowDefinitions="Auto,*"
                 RowSpacing="14">
-            <Grid ColumnDefinitions="*,Auto"
-                  ColumnSpacing="12">
-              <TextBlock Text="Sync folders"
-                         FontSize="17"
-                         FontWeight="SemiBold" />
+            <Grid ColumnDefinitions="*,Auto,Auto"
+                  ColumnSpacing="8">
+              <StackPanel Spacing="2">
+                <TextBlock Text="Sync folders"
+                           FontSize="18"
+                           FontWeight="SemiBold" />
+                <TextBlock Text="Folders connected on this computer."
+                           Classes="secondary" />
+              </StackPanel>
               <Button Grid.Column="1"
-                      Content="Open selected"
+                      Content="+"
+                      Width="34"
+                      Height="34"
+                      FontSize="18"
+                      FontWeight="SemiBold"
+                      VerticalAlignment="Center"
+                      Command="{Binding ShowAddSyncPairCommand}" />
+              <Button Grid.Column="2"
+                      Content="Open"
+                      VerticalAlignment="Center"
                       Command="{Binding OpenFolderCommand}" />
             </Grid>
 
-            <Grid Grid.Row="1"
-                  ColumnDefinitions="*,Auto,*"
-                  RowDefinitions="Auto,Auto"
-                  ColumnSpacing="8"
-                  RowSpacing="8">
-              <TextBox Watermark="Local folder"
-                       Text="{Binding LocalFolderPath}" />
-              <Button Grid.Column="1"
-                      Content="Browse"
-                      Command="{Binding BrowseLocalFolderCommand}" />
-              <TextBox Grid.Column="2"
-                       Watermark="Remote folder"
-                       Text="{Binding RemoteFolderPath}" />
-              <Button Grid.Row="1"
-                      Grid.ColumnSpan="3"
-                      Content="Add sync folder"
-                      HorizontalAlignment="Stretch"
-                      Command="{Binding AddSyncPairCommand}" />
-            </Grid>
+            <Grid Grid.Row="1">
+              <StackPanel HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          Spacing="12"
+                          Width="320"
+                          IsVisible="{Binding HasNoSyncPairs}">
+                <Button Content="+"
+                        Width="46"
+                        Height="46"
+                        FontSize="24"
+                        FontWeight="SemiBold"
+                        HorizontalAlignment="Center"
+                        Command="{Binding ShowAddSyncPairCommand}" />
+                <TextBlock Text="No sync folders"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center" />
+                <TextBlock Text="Add a folder to start syncing this computer with Cotton Cloud."
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           Classes="secondary" />
+              </StackPanel>
 
-            <Grid Grid.Row="2">
-              <TextBlock Text="No folders are syncing yet."
-                         HorizontalAlignment="Center"
-                         VerticalAlignment="Center"
-                         Opacity="0.62"
-                         IsVisible="{Binding HasNoSyncPairs}" />
               <ListBox ItemsSource="{Binding SyncPairs}"
                        SelectedItem="{Binding SelectedSyncPair}"
                        IsVisible="{Binding HasSyncPairs}">
@@ -176,14 +224,39 @@
           </Grid>
         </Border>
 
-        <Border Grid.Column="1"
+        <Grid Grid.Column="1"
+              RowDefinitions="Auto,*"
+              RowSpacing="14">
+          <Border Padding="16"
+                CornerRadius="6"
+                Background="{DynamicResource CottonSurfaceBrush}"
+                BorderBrush="{DynamicResource CottonBorderBrush}"
+                BorderThickness="1">
+          <StackPanel Spacing="10">
+            <StackPanel Spacing="2">
+              <TextBlock Text="{Binding AccountName}"
+                         FontSize="16"
+                         FontWeight="SemiBold"
+                         TextTrimming="CharacterEllipsis" />
+              <TextBlock Text="Connected account"
+                         Classes="secondary" />
+            </StackPanel>
+            <Button Content="Sign out"
+                    HorizontalAlignment="Stretch"
+                    Command="{Binding SignOutCommand}" />
+          </StackPanel>
+          </Border>
+
+          <Border Grid.Row="1"
                 Padding="16"
                 CornerRadius="6"
-                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+                Background="{DynamicResource CottonSurfaceBrush}"
+                BorderBrush="{DynamicResource CottonBorderBrush}"
+                BorderThickness="1">
           <Grid RowDefinitions="Auto,*"
                 RowSpacing="12">
             <TextBlock Text="Recent activity"
-                       FontSize="17"
+                       FontSize="16"
                        FontWeight="SemiBold" />
             <ListBox Grid.Row="1"
                      ItemsSource="{Binding Activities}">
@@ -213,8 +286,53 @@
               </ListBox.ItemTemplate>
             </ListBox>
           </Grid>
-        </Border>
+          </Border>
+        </Grid>
       </Grid>
+
+      <Border Background="{DynamicResource CottonOverlayBrush}"
+              IsVisible="{Binding IsAddSyncPairWizardVisible}">
+        <Border Width="430"
+                Padding="18"
+                CornerRadius="6"
+                Background="{DynamicResource CottonSurfaceBrush}"
+                BorderBrush="{DynamicResource CottonBorderBrush}"
+                BorderThickness="1"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+          <StackPanel Spacing="12">
+            <StackPanel Spacing="2">
+              <TextBlock Text="Add sync folder"
+                         FontSize="19"
+                         FontWeight="SemiBold" />
+              <TextBlock Text="Choose a local folder, then choose the Cotton Cloud folder."
+                         TextWrapping="Wrap"
+                         Classes="secondary" />
+            </StackPanel>
+
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="8">
+              <TextBox Watermark="Local folder"
+                       Text="{Binding LocalFolderPath}" />
+              <Button Grid.Column="1"
+                      Content="Browse"
+                      Command="{Binding BrowseLocalFolderCommand}" />
+            </Grid>
+            <TextBox Watermark="Remote folder"
+                     Text="{Binding RemoteFolderPath}" />
+            <Grid ColumnDefinitions="*,Auto,Auto"
+                  ColumnSpacing="8">
+              <Button Grid.Column="1"
+                      Content="Cancel"
+                      Command="{Binding CancelAddSyncPairCommand}" />
+              <Button Grid.Column="2"
+                      Content="Add"
+                      Classes="primary"
+                      Command="{Binding AddSyncPairCommand}" />
+            </Grid>
+          </StackPanel>
+        </Border>
+      </Border>
     </Grid>
   </Grid>
 </Window>

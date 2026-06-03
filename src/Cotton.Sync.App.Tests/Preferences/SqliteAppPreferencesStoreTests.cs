@@ -37,6 +37,7 @@ public sealed class SqliteAppPreferencesStoreTests
         Assert.Multiple(() =>
         {
             Assert.That(preferences.RememberedServerUrl, Is.Null);
+            Assert.That(preferences.RememberedUsername, Is.Null);
             Assert.That(preferences.StartWithOperatingSystem, Is.False);
             Assert.That(preferences.StartMinimizedToTray, Is.False);
             Assert.That(preferences.EnableNotifications, Is.True);
@@ -52,6 +53,7 @@ public sealed class SqliteAppPreferencesStoreTests
         var expected = new AppPreferences
         {
             RememberedServerUrl = new Uri("https://cotton.example.test/"),
+            RememberedUsername = "desktop@example.test",
             StartWithOperatingSystem = true,
             StartMinimizedToTray = true,
             EnableNotifications = false,
@@ -68,6 +70,7 @@ public sealed class SqliteAppPreferencesStoreTests
         Assert.Multiple(() =>
         {
             Assert.That(actual.RememberedServerUrl, Is.EqualTo(expected.RememberedServerUrl));
+            Assert.That(actual.RememberedUsername, Is.EqualTo(expected.RememberedUsername));
             Assert.That(actual.StartWithOperatingSystem, Is.True);
             Assert.That(actual.StartMinimizedToTray, Is.True);
             Assert.That(actual.EnableNotifications, Is.False);
@@ -119,6 +122,22 @@ public sealed class SqliteAppPreferencesStoreTests
             Assert.That(persistedSyncPair, Is.Not.Null);
             Assert.That(persistedPreferences.RememberedServerUrl, Is.EqualTo(new Uri("https://cotton.example.test/")));
         });
+    }
+
+    [Test]
+    public async Task SaveAsync_TrimsRememberedUsername()
+    {
+        SqliteAppPreferencesStore store = CreateStore();
+        await store.InitializeAsync();
+
+        await store.SaveAsync(new AppPreferences
+        {
+            RememberedUsername = "  desktop@example.test  ",
+        });
+
+        AppPreferences preferences = await store.GetAsync();
+
+        Assert.That(preferences.RememberedUsername, Is.EqualTo("desktop@example.test"));
     }
 
     private SqliteAppPreferencesStore CreateStore()
