@@ -56,25 +56,35 @@ public sealed class CottonFileClient : ICottonFileClient
     /// <summary>
     /// Moves a file to a different parent node.
     /// </summary>
-    public Task<NodeFileManifestDto> MoveAsync(Guid nodeFileId, Guid parentId, CancellationToken cancellationToken = default)
+    public Task<NodeFileManifestDto> MoveAsync(
+        Guid nodeFileId,
+        Guid parentId,
+        string? expectedETag = null,
+        CancellationToken cancellationToken = default)
     {
         return _transport.SendJsonAsync<NodeFileManifestDto>(
             HttpMethod.Patch,
             $"/api/v1/files/{nodeFileId}/move",
             new MoveFileRequestDto { ParentId = parentId },
+            headers: CreateIfMatchHeader(expectedETag),
             cancellationToken: cancellationToken);
     }
 
     /// <summary>
     /// Renames a file.
     /// </summary>
-    public Task<NodeFileManifestDto> RenameAsync(Guid nodeFileId, string name, CancellationToken cancellationToken = default)
+    public Task<NodeFileManifestDto> RenameAsync(
+        Guid nodeFileId,
+        string name,
+        string? expectedETag = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         return _transport.SendJsonAsync<NodeFileManifestDto>(
             HttpMethod.Patch,
             $"/api/v1/files/{nodeFileId}/rename",
             new RenameFileRequestDto { Name = name.Trim() },
+            headers: CreateIfMatchHeader(expectedETag),
             cancellationToken: cancellationToken);
     }
 

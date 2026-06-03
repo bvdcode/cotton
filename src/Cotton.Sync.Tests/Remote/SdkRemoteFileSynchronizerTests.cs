@@ -295,12 +295,20 @@ public sealed class SdkRemoteFileSynchronizerTests
             return Task.FromResult(FileFromRequest(nodeFileId, request));
         }
 
-        public Task<NodeFileManifestDto> MoveAsync(Guid nodeFileId, Guid parentId, CancellationToken cancellationToken = default)
+        public Task<NodeFileManifestDto> MoveAsync(
+            Guid nodeFileId,
+            Guid parentId,
+            string? expectedETag = null,
+            CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
         }
 
-        public Task<NodeFileManifestDto> RenameAsync(Guid nodeFileId, string name, CancellationToken cancellationToken = default)
+        public Task<NodeFileManifestDto> RenameAsync(
+            Guid nodeFileId,
+            string name,
+            string? expectedETag = null,
+            CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
         }

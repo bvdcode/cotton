@@ -194,8 +194,23 @@ namespace Cotton.Server.Controllers
                 NodeFileId = nodeFileId,
                 ParentId = request.ParentId,
                 UserId = User.GetUserId(),
+                ExpectedETag = FileETagConcurrency.ReadIfMatch(Request),
             };
-            var dto = await _mediator.Send(command);
+            NodeFileManifestDto dto;
+            try
+            {
+                dto = await _mediator.Send(command);
+            }
+            catch (FilePreconditionFailedException ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "File move precondition failed for user {UserId} and file {NodeFileId}.",
+                    command.UserId,
+                    nodeFileId);
+                return CottonResult.PreconditionFailed(ex.Message);
+            }
+
             return Ok(dto);
         }
 
@@ -240,6 +255,11 @@ namespace Cotton.Server.Controllers
             if (nodeFile == null || nodeFile.Node.Type != NodeType.Default)
             {
                 return CottonResult.NotFound("File not found.");
+            }
+
+            if (!FileETagConcurrency.MatchesIfMatchHeader(FileETagConcurrency.ReadIfMatch(Request), nodeFile))
+            {
+                return CottonResult.PreconditionFailed("File content changed before rename.");
             }
 
             string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);

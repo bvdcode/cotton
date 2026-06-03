@@ -5,6 +5,7 @@ using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Models.Requests;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
@@ -440,6 +441,72 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.PreconditionFailed));
             Assert.That(list, Is.Not.Null);
             Assert.That(list!.Files.Select(x => x.Id), Does.Contain(file.Id));
+        });
+    }
+
+    [Test]
+    public async Task Rename_File_With_Stale_If_Match_Returns_Precondition_Failed_And_Keeps_Name()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+        Models.Dto.NodeDto rootNode = root!;
+
+        var file = await UploadTextFileAsync(rootNode, "etag-rename.txt", "first");
+        string staleETag = file.ETag;
+        file = await UpdateTextFileAsync(file, rootNode, "second");
+
+        using var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/v1/files/{file.Id}/rename")
+        {
+            Content = JsonContent.Create(new RenameFileRequest { Name = "renamed.txt" })
+        };
+        request.Headers.TryAddWithoutValidation("If-Match", staleETag);
+
+        var response = await _client.SendAsync(request);
+        var list = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.NodeContentDto>($"/api/v1/layouts/nodes/{rootNode.Id}/children");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.PreconditionFailed));
+            Assert.That(list, Is.Not.Null);
+            Assert.That(list!.Files.Single(x => x.Id == file.Id).Name, Is.EqualTo("etag-rename.txt"));
+        });
+    }
+
+    [Test]
+    public async Task Move_File_With_Stale_If_Match_Returns_Precondition_Failed_And_Keeps_Parent()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+        Models.Dto.NodeDto rootNode = root!;
+        var destination = await CreateFolderAsync(rootNode.Id, "etag-move-destination");
+
+        var file = await UploadTextFileAsync(rootNode, "etag-move.txt", "first");
+        string staleETag = file.ETag;
+        file = await UpdateTextFileAsync(file, rootNode, "second");
+
+        using var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/v1/files/{file.Id}/move")
+        {
+            Content = JsonContent.Create(new MoveFileRequest { ParentId = destination.Id })
+        };
+        request.Headers.TryAddWithoutValidation("If-Match", staleETag);
+
+        var response = await _client.SendAsync(request);
+        var rootList = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.NodeContentDto>($"/api/v1/layouts/nodes/{rootNode.Id}/children");
+        var destinationList = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.NodeContentDto>($"/api/v1/layouts/nodes/{destination.Id}/children");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.PreconditionFailed));
+            Assert.That(rootList, Is.Not.Null);
+            Assert.That(destinationList, Is.Not.Null);
+            Assert.That(rootList!.Files.Select(x => x.Id), Does.Contain(file.Id));
+            Assert.That(destinationList!.Files.Select(x => x.Id), Does.Not.Contain(file.Id));
         });
     }
 

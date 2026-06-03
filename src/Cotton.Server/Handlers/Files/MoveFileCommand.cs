@@ -32,6 +32,10 @@ namespace Cotton.Server.Handlers.Files
         /// Gets or sets the owning user identifier.
         /// </summary>
         public Guid UserId { get; set; }
+        /// <summary>
+        /// Gets or sets the optional expected file content ETag.
+        /// </summary>
+        public string? ExpectedETag { get; set; }
     }
 
     /// <summary>
@@ -78,6 +82,11 @@ namespace Cotton.Server.Handlers.Files
             if (nodeFile.Node.Type != NodeType.Default)
             {
                 throw new EntityNotFoundException<NodeFile>();
+            }
+
+            if (!FileETagConcurrency.MatchesIfMatchHeader(request.ExpectedETag, nodeFile))
+            {
+                throw new FilePreconditionFailedException("File content changed before move.");
             }
 
             if (nodeFile.NodeId == request.ParentId)

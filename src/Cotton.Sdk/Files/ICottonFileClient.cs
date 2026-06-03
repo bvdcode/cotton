@@ -27,12 +27,20 @@ public interface ICottonFileClient
     /// <summary>
     /// Moves a file to a different parent node.
     /// </summary>
-    Task<NodeFileManifestDto> MoveAsync(Guid nodeFileId, Guid parentId, CancellationToken cancellationToken = default);
+    Task<NodeFileManifestDto> MoveAsync(
+        Guid nodeFileId,
+        Guid parentId,
+        string? expectedETag = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Renames a file.
     /// </summary>
-    Task<NodeFileManifestDto> RenameAsync(Guid nodeFileId, string name, CancellationToken cancellationToken = default);
+    Task<NodeFileManifestDto> RenameAsync(
+        Guid nodeFileId,
+        string name,
+        string? expectedETag = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Merges metadata into a file entry.

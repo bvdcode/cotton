@@ -163,6 +163,45 @@ public sealed class CottonFileAndChunkClientTests
     }
 
     [Test]
+    public async Task MoveAsync_SendsExpectedETagAsIfMatch()
+    {
+        Guid nodeId = Guid.NewGuid();
+        Guid fileId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var handler = new QueuedHttpMessageHandler();
+        handler.EnqueueJson(HttpStatusCode.OK, FileManifestPayload(fileId, nodeId, "moved.txt", "moved-hash"));
+        var client = await CreateAuthorizedClientAsync(handler);
+
+        await client.Files.MoveAsync(fileId, nodeId, expectedETag: "sha256-current");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(handler.Requests[0].Method, Is.EqualTo(HttpMethod.Patch));
+            Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/files/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/move"));
+            Assert.That(handler.Requests[0].Headers[IfMatchHeaderName], Is.EqualTo("\"sha256-current\""));
+        });
+    }
+
+    [Test]
+    public async Task RenameAsync_SendsExpectedETagAsIfMatch()
+    {
+        Guid nodeId = Guid.NewGuid();
+        Guid fileId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var handler = new QueuedHttpMessageHandler();
+        handler.EnqueueJson(HttpStatusCode.OK, FileManifestPayload(fileId, nodeId, "renamed.txt", "renamed-hash"));
+        var client = await CreateAuthorizedClientAsync(handler);
+
+        await client.Files.RenameAsync(fileId, " renamed.txt ", expectedETag: "sha256-current");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(handler.Requests[0].Method, Is.EqualTo(HttpMethod.Patch));
+            Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/files/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/rename"));
+            Assert.That(handler.Requests[0].Headers[IfMatchHeaderName], Is.EqualTo("\"sha256-current\""));
+            Assert.That(handler.Requests[0].Body, Does.Contain("\"name\":\"renamed.txt\""));
+        });
+    }
+
+    [Test]
     public async Task DownloadContentAsync_CopiesResponseBodyAndReportsProgress()
     {
         var handler = new QueuedHttpMessageHandler();
