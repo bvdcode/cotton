@@ -167,6 +167,47 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         });
     }
 
+    [Test]
+    public async Task RunOnceAsync_DownloadsRemoteUpdateThroughSdkToLocal()
+    {
+        CottonCloudClient client = CreateClient();
+        await LoginAsync(client);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-remote-update");
+        NodeDto remoteDirectory = await client.Nodes.CreateAsync(remoteRoot.Id, "Docs");
+        NodeFileManifestDto remoteFile = await CreateRemoteTextFileAsync(
+            client,
+            remoteDirectory.Id,
+            "remote-update.txt",
+            "remote first");
+        string localRoot = Path.Combine(_tempDirectory, "client-remote-update");
+        Directory.CreateDirectory(localRoot);
+        SqliteSyncStateStore stateStore = CreateStateStore("client-remote-update-state.sqlite");
+        SyncEngine engine = CreateEngine(client, stateStore);
+        var syncPair = new SyncPair
+        {
+            SyncPairId = "client-remote-update",
+            LocalRootPath = localRoot,
+            RemoteRootNodeId = remoteRoot.Id,
+        };
+        await engine.RunOnceAsync(syncPair);
+
+        NodeFileManifestDto updatedRemoteFile = await UpdateRemoteTextFileAsync(client, remoteFile, "remote second");
+        SyncRunResult result = await engine.RunOnceAsync(syncPair);
+
+        string localContent = File.ReadAllText(Path.Combine(localRoot, "Docs", "remote-update.txt"), Encoding.UTF8);
+        SyncStateEntry? baseline = await stateStore.GetAsync("client-remote-update", "Docs/remote-update.txt");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Downloaded }));
+            Assert.That(localContent, Is.EqualTo("remote second"));
+            Assert.That(updatedRemoteFile.Id, Is.EqualTo(remoteFile.Id));
+            Assert.That(updatedRemoteFile.ContentHash, Is.Not.EqualTo(remoteFile.ContentHash));
+            Assert.That(baseline?.LocalContentHash, Is.EqualTo(updatedRemoteFile.ContentHash));
+            Assert.That(baseline?.RemoteContentHash, Is.EqualTo(updatedRemoteFile.ContentHash));
+        });
+    }
+
     private CottonCloudClient CreateClient()
     {
         Assert.That(_httpClient, Is.Not.Null);
@@ -190,6 +231,29 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
             Username = "testuser",
             Password = "testpassword",
         });
+    }
+
+    private static async Task<NodeFileManifestDto> UpdateRemoteTextFileAsync(
+        CottonCloudClient client,
+        NodeFileManifestDto existingFile,
+        string content)
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes(content);
+        string hash = Hasher.ToHexStringHash(Hasher.HashData(bytes));
+        await using var stream = new MemoryStream(bytes);
+        await client.Chunks.UploadRawAsync(hash, stream, "text/plain");
+        return await client.Files.UpdateContentAsync(
+            existingFile.Id,
+            new CreateFileFromChunksRequestDto
+            {
+                NodeId = existingFile.NodeId,
+                ChunkHashes = [hash],
+                Name = existingFile.Name,
+                ContentType = "text/plain",
+                Hash = hash,
+                Validate = true,
+            },
+            existingFile.ETag);
     }
 
     private static SyncEngine CreateEngine(CottonCloudClient client, SqliteSyncStateStore stateStore)
