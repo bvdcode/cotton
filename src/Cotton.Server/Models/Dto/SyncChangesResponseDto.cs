@@ -15,6 +15,12 @@ namespace Cotton.Server.Models.Dto
         /// <summary>Whether more changes are available after <see cref="NextCursor"/>.</summary>
         public bool HasMore { get; set; }
 
+        /// <summary>Whether the requested cursor is older than the retained change range.</summary>
+        public bool CursorExpired { get; set; }
+
+        /// <summary>Lowest cursor that can still be used without missing retained changes.</summary>
+        public long? EarliestAvailableCursor { get; set; }
+
         /// <summary>Ordered change page.</summary>
         public List<SyncChangeDto> Changes { get; set; } = [];
     }

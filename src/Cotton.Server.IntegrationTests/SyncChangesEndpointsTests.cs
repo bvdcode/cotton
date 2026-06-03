@@ -6,10 +6,13 @@ using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
+using Cotton.Database;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using NUnit.Framework;
 using System.Net.Http.Headers;
@@ -195,6 +198,43 @@ public sealed class SyncChangesEndpointsTests : IntegrationTestBase
         });
     }
 
+    [Test]
+    public async Task Changes_ReportsExpiredCursorWhenOlderChangesWerePruned()
+    {
+        string token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        NodeDto folder = await CreateNodeAsync(root!.Id, "retention-folder");
+        NodeFileManifestDto file = await CreateFileAsync(folder.Id, "retention.txt", "retained change");
+
+        await AgeFirstSyncChangeAsync();
+
+        SyncChangesResponseDto expired = await GetChangesAsync(0, 10);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(expired.CursorExpired, Is.True);
+            Assert.That(expired.Changes, Is.Empty);
+            Assert.That(expired.EarliestAvailableCursor, Is.Not.Null);
+            Assert.That(expired.NextCursor, Is.EqualTo(0));
+        });
+
+        SyncChangesResponseDto recovered = await GetChangesAsync(expired.EarliestAvailableCursor!.Value, 10);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(recovered.CursorExpired, Is.False);
+            Assert.That(recovered.Changes.Select(x => x.Kind), Is.EqualTo(new[]
+            {
+                SyncChangeKindDto.FileCreated,
+            }));
+            Assert.That(recovered.Changes.Single().NodeFileId, Is.EqualTo(file.Id));
+        });
+    }
+
     private async Task<SyncChangesResponseDto> GetChangesAsync(long since, int limit)
     {
         var page = await _client!.GetFromJsonAsync<SyncChangesResponseDto>(
@@ -283,6 +323,19 @@ public sealed class SyncChangesEndpointsTests : IntegrationTestBase
     {
         var response = await _client!.DeleteAsync($"/api/v1/files/{nodeFileId}");
         response.EnsureSuccessStatusCode();
+    }
+
+    private async Task AgeFirstSyncChangeAsync()
+    {
+        using IServiceScope scope = _factory!.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        var firstChange = await db.SyncChanges
+            .OrderBy(x => x.Revision)
+            .FirstAsync();
+        DateTime expiredAt = DateTime.UtcNow.AddDays(-31);
+        db.Entry(firstChange).Property(nameof(firstChange.CreatedAt)).CurrentValue = expiredAt;
+        db.Entry(firstChange).Property(nameof(firstChange.UpdatedAt)).CurrentValue = expiredAt;
+        await db.SaveChangesAsync();
     }
 
     private async Task<string> UploadChunkAsync(string body)

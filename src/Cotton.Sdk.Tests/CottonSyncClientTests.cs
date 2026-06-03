@@ -21,6 +21,8 @@ public sealed class CottonSyncClientTests
             sinceCursor = 41,
             nextCursor = 42,
             hasMore = false,
+            cursorExpired = false,
+            earliestAvailableCursor = 40,
             changes = new[]
             {
                 new
@@ -51,6 +53,8 @@ public sealed class CottonSyncClientTests
             Assert.That(handler.Requests[0].Method, Is.EqualTo(HttpMethod.Get));
             Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/sync/changes?since=41&limit=25"));
             Assert.That(page.NextCursor, Is.EqualTo(42));
+            Assert.That(page.EarliestAvailableCursor, Is.EqualTo(40));
+            Assert.That(page.CursorExpired, Is.False);
             Assert.That(page.Changes.Single().Kind, Is.EqualTo(SyncChangeKindDto.FileCreated));
             Assert.That(page.Changes.Single().NodeFileId, Is.EqualTo(nodeFileId));
         });

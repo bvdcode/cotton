@@ -5,6 +5,7 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Services;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +26,9 @@ namespace Cotton.Server.Handlers.Sync
     }
 
     /// <summary>Handles durable synchronization change-feed queries.</summary>
-    public sealed class GetSyncChangesQueryHandler(CottonDbContext _dbContext)
+    public sealed class GetSyncChangesQueryHandler(
+        CottonDbContext _dbContext,
+        SyncChangeRetentionService _retention)
         : IRequestHandler<GetSyncChangesQuery, SyncChangesResponseDto>
     {
         private const int DefaultLimit = 500;
@@ -34,6 +37,20 @@ namespace Cotton.Server.Handlers.Sync
         /// <inheritdoc />
         public async Task<SyncChangesResponseDto> Handle(GetSyncChangesQuery request, CancellationToken ct)
         {
+            await _retention.DeleteExpiredChangesAsync(request.UserId, ct);
+
+            long? earliestAvailableCursor = await GetEarliestAvailableCursorAsync(request.UserId, ct);
+            if (IsExpired(request.SinceCursor, earliestAvailableCursor))
+            {
+                return new SyncChangesResponseDto
+                {
+                    SinceCursor = request.SinceCursor,
+                    NextCursor = request.SinceCursor,
+                    CursorExpired = true,
+                    EarliestAvailableCursor = earliestAvailableCursor,
+                };
+            }
+
             int limit = NormalizeLimit(request.Limit);
             List<SyncChange> rows = await _dbContext.SyncChanges
                 .AsNoTracking()
@@ -57,8 +74,29 @@ namespace Cotton.Server.Handlers.Sync
                 SinceCursor = request.SinceCursor,
                 NextCursor = nextCursor,
                 HasMore = hasMore,
+                EarliestAvailableCursor = earliestAvailableCursor,
                 Changes = [.. rows.Select(Map)],
             };
+        }
+
+        private async Task<long?> GetEarliestAvailableCursorAsync(Guid userId, CancellationToken ct)
+        {
+            long? earliestRevision = await _dbContext.SyncChanges
+                .AsNoTracking()
+                .Where(x => x.OwnerId == userId)
+                .OrderBy(x => x.Revision)
+                .Select(x => (long?)x.Revision)
+                .FirstOrDefaultAsync(ct);
+
+            return earliestRevision.HasValue
+                ? Math.Max(0, earliestRevision.Value - 1)
+                : null;
+        }
+
+        private static bool IsExpired(long sinceCursor, long? earliestAvailableCursor)
+        {
+            return earliestAvailableCursor.HasValue
+                && sinceCursor < earliestAvailableCursor.Value;
         }
 
         private static int NormalizeLimit(int limit)

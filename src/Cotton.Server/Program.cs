@@ -145,6 +145,9 @@ namespace Cotton.Server
                 .AddOptions<StoragePressureOptions>()
                 .Bind(builder.Configuration.GetSection("StoragePressure"));
             builder.Services
+                .AddOptions<SyncChangeRetentionOptions>()
+                .Bind(builder.Configuration.GetSection(SyncChangeRetentionOptions.SectionName));
+            builder.Services
                 .AddMediator()
                 .AddQuartzJobs()
                 .AddMemoryCache()

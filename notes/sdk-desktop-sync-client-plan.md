@@ -116,7 +116,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [x] Include enough data for the client to update or invalidate remote state.
   Required data: event id/revision, event kind, entity id, parent id, path or enough identifiers to resolve path, file manifest id, content hash, ETag/version when relevant, deletion/restoration markers.
   Verification: commit `Add durable sync change feed`; `SyncChangeDto` returns cursor, kind, layout/node/file ids, current/previous parent ids, manifest id, original file id, name, content hash, ETag, size, and created timestamp.
-- [ ] Add retention behavior and expired-cursor response.
+- [x] Add retention behavior and expired-cursor response.
+  Verification: `SyncChangeRetentionService` prunes expired per-user rows, `SyncChangesResponseDto` returns `CursorExpired` and `EarliestAvailableCursor`, `SyncChangesEndpointsTests` passed 4/4, and `dotnet build src/Cotton.sln --configuration Release` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [x] Add SDK sync-change client.
   Verification: commit `Add durable sync change feed`; `ICottonSyncClient.GetChangesAsync` added to `ICottonCloudClient.Sync`.
 - [x] Add server integration tests for ordered create/update/delete/move/rename changes.
