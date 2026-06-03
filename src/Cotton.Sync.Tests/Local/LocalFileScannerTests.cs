@@ -1,0 +1,86 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
+
+using System.Security.Cryptography;
+using System.Text;
+using Cotton.Sync.Local;
+
+namespace Cotton.Sync.Tests.Local;
+
+public sealed class LocalFileScannerTests
+{
+    private string _root = string.Empty;
+
+    [SetUp]
+    public void SetUp()
+    {
+        _root = Path.Combine(Path.GetTempPath(), "cotton-local-scan", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(_root);
+    }
+
+    [TearDown]
+    public void TearDown()
+    {
+        if (Directory.Exists(_root))
+        {
+            Directory.Delete(_root, recursive: true);
+        }
+    }
+
+    [Test]
+    public async Task ScanAsync_ReturnsNestedFilesWithNormalizedPathsAndHashes()
+    {
+        WriteFile("alpha.txt", "alpha");
+        WriteFile(Path.Combine("Docs", "Report.txt"), "report");
+        var scanner = new LocalFileScanner();
+
+        IReadOnlyList<LocalFileSnapshot> files = await scanner.ScanAsync(_root);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(files.Select(x => x.RelativePath), Is.EqualTo(new[] { "alpha.txt", "Docs/Report.txt" }));
+            Assert.That(files.Single(x => x.RelativePath == "alpha.txt").ContentHash, Is.EqualTo(Hash("alpha")));
+            Assert.That(files.Single(x => x.RelativePath == "Docs/Report.txt").SizeBytes, Is.EqualTo(6));
+            Assert.That(files.All(x => x.LastWriteUtc.Kind == DateTimeKind.Utc), Is.True);
+        });
+    }
+
+    [Test]
+    public async Task ScanAsync_IgnoresTempFilesAndCottonWorkingFolder()
+    {
+        WriteFile("keep.txt", "keep");
+        WriteFile("upload.tmp", "tmp");
+        WriteFile("download.partial", "partial");
+        WriteFile("chrome.crdownload", "partial");
+        WriteFile("~$office.docx", "office");
+        WriteFile("backup~", "backup");
+        WriteFile(Path.Combine(".cotton-sync", "state.tmp"), "state");
+        var scanner = new LocalFileScanner();
+
+        IReadOnlyList<LocalFileSnapshot> files = await scanner.ScanAsync(_root);
+
+        Assert.That(files.Select(x => x.RelativePath), Is.EqualTo(new[] { "keep.txt" }));
+    }
+
+    [Test]
+    public void ScanAsync_RejectsMissingRoot()
+    {
+        var scanner = new LocalFileScanner();
+        string missing = Path.Combine(_root, "missing");
+
+        Assert.ThrowsAsync<DirectoryNotFoundException>(() => scanner.ScanAsync(missing));
+    }
+
+    private void WriteFile(string relativePath, string text)
+    {
+        string path = Path.Combine(_root, relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, text, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        File.SetLastWriteTimeUtc(path, new DateTime(2026, 6, 2, 13, 0, 0, DateTimeKind.Utc));
+    }
+
+    private static string Hash(string text)
+    {
+        return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
+    }
+}
