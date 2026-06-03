@@ -59,6 +59,49 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task SaveSelectedSyncPairNameCommand_PersistsTrimmedName()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Idle")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        viewModel.SelectedSyncPair!.EditableDisplayName = "  Work documents  ";
+
+        await ExecuteAsync(viewModel.SaveSelectedSyncPairNameCommand);
+
+        SyncPairRowViewModel selected = viewModel.SelectedSyncPair!;
+        Assert.Multiple(() =>
+        {
+            Assert.That(controller.RenamedSyncPairId, Is.EqualTo(syncPairId));
+            Assert.That(controller.RenamedSyncPairDisplayName, Is.EqualTo("Work documents"));
+            Assert.That(selected.DisplayName, Is.EqualTo("Work documents"));
+            Assert.That(selected.EditableDisplayName, Is.EqualTo("Work documents"));
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Folder renamed"));
+            Assert.That(viewModel.HasActionRequired, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task SaveSelectedSyncPairNameCommand_RejectsEmptyName()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Idle")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        viewModel.SelectedSyncPair!.EditableDisplayName = "   ";
+
+        await ExecuteAsync(viewModel.SaveSelectedSyncPairNameCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(controller.RenamedSyncPairId, Is.Null);
+            Assert.That(viewModel.SelectedSyncPair!.DisplayName, Is.EqualTo("Documents"));
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Action required"));
+            Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo("Sync folder name is required."));
+        });
+    }
+
+    [Test]
     public async Task SyncNowCommand_RetriesActionRequiredSyncAndClearsMessage()
     {
         Guid syncPairId = Guid.NewGuid();
@@ -304,6 +347,10 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public Guid? RemovedSyncPairId { get; private set; }
 
+        public Guid? RenamedSyncPairId { get; private set; }
+
+        public string? RenamedSyncPairDisplayName { get; private set; }
+
         public DesktopSelfTestSnapshot SelfTestSnapshot { get; set; } = new([]);
 
         public Dictionary<string, DesktopRemoteFolderListSnapshot> RemoteFoldersByPath { get; } = [];
@@ -336,6 +383,17 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             RemovedSyncPairId = syncPairId;
+            return Task.CompletedTask;
+        }
+
+        public Task RenameSyncPairAsync(
+            Guid syncPairId,
+            string displayName,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            RenamedSyncPairId = syncPairId;
+            RenamedSyncPairDisplayName = displayName;
             return Task.CompletedTask;
         }
 

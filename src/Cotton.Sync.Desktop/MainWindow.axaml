@@ -892,6 +892,22 @@
                       </ListBox>
                     </ScrollViewer>
                   </Border>
+                  <Grid ColumnDefinitions="48,*,Auto"
+                        ColumnSpacing="6"
+                        IsVisible="{Binding HasSyncPairs}">
+                    <TextBlock Text="Name"
+                               Classes="secondary"
+                               FontSize="12"
+                               VerticalAlignment="Center" />
+                    <TextBox Grid.Column="1"
+                             Text="{Binding SelectedSyncPair.EditableDisplayName}"
+                             Watermark="Sync folder"
+                             MinHeight="30" />
+                    <Button Grid.Column="2"
+                            Content="Save"
+                            Classes="compact"
+                            Command="{Binding SaveSelectedSyncPairNameCommand}" />
+                  </Grid>
                   <StackPanel Orientation="Horizontal"
                               Spacing="6"
                               IsVisible="{Binding HasSyncPairs}">

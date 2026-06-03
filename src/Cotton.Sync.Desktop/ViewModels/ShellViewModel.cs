@@ -100,6 +100,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             ToggleSelectedSyncPairEnabledAsync,
             () => IsSignedIn && SelectedSyncPair is not null && !IsBusy,
             HandleCommandError);
+        SaveSelectedSyncPairNameCommand = new AsyncRelayCommand(
+            SaveSelectedSyncPairNameAsync,
+            () => IsSignedIn && SelectedSyncPair is not null && !IsBusy,
+            HandleCommandError);
         RemoveSelectedSyncPairCommand = new AsyncRelayCommand(
             RemoveSelectedSyncPairAsync,
             () => IsSignedIn && SelectedSyncPair is not null && !IsBusy,
@@ -138,6 +142,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public AsyncRelayCommand OpenRemoteFolderCommand { get; }
 
     public AsyncRelayCommand RemoveSelectedSyncPairCommand { get; }
+
+    public AsyncRelayCommand SaveSelectedSyncPairNameCommand { get; }
 
     public AsyncRelayCommand ToggleSelectedSyncPairEnabledCommand { get; }
 
@@ -525,6 +531,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             {
                 OpenFolderCommand.RaiseCanExecuteChanged();
                 ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
+                SaveSelectedSyncPairNameCommand.RaiseCanExecuteChanged();
                 RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
             }
         }
@@ -780,6 +787,40 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             GlobalStatus = enabled ? "Ready" : "Folder disabled";
             ActionRequiredMessage = string.Empty;
             AddActivity("Pair", selected.LocalPath, enabled ? "Folder enabled" : "Folder disabled");
+            RefreshDiagnosticsItems();
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task SaveSelectedSyncPairNameAsync()
+    {
+        SyncPairRowViewModel? selected = SelectedSyncPair;
+        if (selected is null)
+        {
+            return;
+        }
+
+        string displayName = selected.EditableDisplayName.Trim();
+        if (displayName.Length == 0)
+        {
+            GlobalStatus = "Action required";
+            ActionRequiredMessage = "Sync folder name is required.";
+            AddActivity("Warning", selected.LocalPath, "Sync folder name is required");
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            await _controller.RenameSyncPairAsync(selected.Id, displayName).ConfigureAwait(true);
+            selected.DisplayName = displayName;
+            selected.EditableDisplayName = displayName;
+            GlobalStatus = "Folder renamed";
+            ActionRequiredMessage = string.Empty;
+            AddActivity("Pair", selected.LocalPath, "Sync folder renamed to " + displayName);
             RefreshDiagnosticsItems();
         }
         finally
@@ -1091,6 +1132,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(HasSyncPairs));
         OpenFolderCommand.RaiseCanExecuteChanged();
         ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
+        SaveSelectedSyncPairNameCommand.RaiseCanExecuteChanged();
         RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
         RefreshDiagnosticsItems();
     }
@@ -1307,6 +1349,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         ResumeCommand.RaiseCanExecuteChanged();
         OpenFolderCommand.RaiseCanExecuteChanged();
         ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
+        SaveSelectedSyncPairNameCommand.RaiseCanExecuteChanged();
         RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
         OpenWebCommand.RaiseCanExecuteChanged();
         ShowAddSyncPairCommand.RaiseCanExecuteChanged();
@@ -1340,6 +1383,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             Id = syncPair.Id,
             IsEnabled = syncPair.IsEnabled,
             DisplayName = syncPair.DisplayName,
+            EditableDisplayName = syncPair.DisplayName,
             LocalPath = syncPair.LocalRootPath,
             RemoteRootNodeId = syncPair.RemoteRootNodeId,
             RemotePath = syncPair.RemoteDisplayPath,
@@ -1354,6 +1398,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             Id = syncPair.Id,
             IsEnabled = !string.Equals(syncPair.Status, "Disabled", StringComparison.Ordinal),
             DisplayName = syncPair.DisplayName,
+            EditableDisplayName = syncPair.DisplayName,
             LocalPath = syncPair.LocalPath,
             RemoteRootNodeId = syncPair.RemoteRootNodeId,
             RemotePath = syncPair.RemotePath,

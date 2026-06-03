@@ -250,6 +250,50 @@ internal sealed class DesktopShellController : IDesktopShellController
         }
     }
 
+    public async Task RenameSyncPairAsync(
+        Guid syncPairId,
+        string displayName,
+        CancellationToken cancellationToken = default)
+    {
+        if (syncPairId == Guid.Empty)
+        {
+            throw new ArgumentException("Sync pair id is required.", nameof(syncPairId));
+        }
+
+        string normalizedDisplayName = NormalizeRequired(displayName, nameof(displayName));
+        await _syncPairStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        SyncPairSettings? syncPair = await _syncPairStore.GetAsync(syncPairId, cancellationToken).ConfigureAwait(false);
+        if (syncPair is null)
+        {
+            throw new InvalidOperationException("Sync pair was not found.");
+        }
+
+        if (string.Equals(syncPair.DisplayName, normalizedDisplayName, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        DesktopSyncApplicationHost? host = _host;
+        if (host is not null)
+        {
+            await host.App.StopSyncAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        try
+        {
+            syncPair.DisplayName = normalizedDisplayName;
+            syncPair.UpdatedAtUtc = DateTime.UtcNow;
+            await _syncPairStore.UpsertAsync(syncPair, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            if (host is not null)
+            {
+                await host.App.StartSyncAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
     public async Task RemoveSyncPairAsync(Guid syncPairId, CancellationToken cancellationToken = default)
     {
         if (syncPairId == Guid.Empty)

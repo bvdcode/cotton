@@ -9,6 +9,7 @@ namespace Cotton.Sync.Desktop.ViewModels;
 internal sealed class SyncPairRowViewModel : ViewModelBase
 {
     private string _displayName = string.Empty;
+    private string _editableDisplayName = string.Empty;
     private long? _changeCursor;
     private bool _isEnabled = true;
     private DateTime? _lastSyncedAtUtc;
@@ -38,6 +39,12 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
     {
         get => _displayName;
         set => SetProperty(ref _displayName, value);
+    }
+
+    public string EditableDisplayName
+    {
+        get => _editableDisplayName;
+        set => SetProperty(ref _editableDisplayName, value);
     }
 
     public string LocalPath

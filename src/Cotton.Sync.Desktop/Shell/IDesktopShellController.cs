@@ -27,6 +27,8 @@ internal interface IDesktopShellController : IDisposable
 
     Task SetSyncPairEnabledAsync(Guid syncPairId, bool enabled, CancellationToken cancellationToken = default);
 
+    Task RenameSyncPairAsync(Guid syncPairId, string displayName, CancellationToken cancellationToken = default);
+
     Task RemoveSyncPairAsync(Guid syncPairId, CancellationToken cancellationToken = default);
 
     Task SyncAllAsync(CancellationToken cancellationToken = default);

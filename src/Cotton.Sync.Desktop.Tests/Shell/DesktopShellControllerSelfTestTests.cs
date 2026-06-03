@@ -219,6 +219,27 @@ public sealed class DesktopShellControllerSelfTestTests
     }
 
     [Test]
+    public async Task RenameSyncPairAsync_PersistsDisplayName()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        var syncPairStore = new SqliteSyncPairSettingsStore(paths.AppDatabasePath);
+        await syncPairStore.InitializeAsync();
+        SyncPairSettings syncPair = CreateSyncPair(isEnabled: true);
+        await syncPairStore.UpsertAsync(syncPair);
+        using DesktopShellController controller = CreateController(paths, syncPairStore);
+
+        await controller.RenameSyncPairAsync(syncPair.Id, "  Work documents  ");
+
+        SyncPairSettings? persisted = await syncPairStore.GetAsync(syncPair.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(persisted, Is.Not.Null);
+            Assert.That(persisted!.DisplayName, Is.EqualTo("Work documents"));
+            Assert.That(persisted.UpdatedAtUtc, Is.GreaterThan(syncPair.UpdatedAtUtc));
+        });
+    }
+
+    [Test]
     public async Task RemoveSyncPairAsync_DeletesConfiguredPair()
     {
         DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
