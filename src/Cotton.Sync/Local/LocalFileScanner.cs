@@ -83,6 +83,7 @@ public sealed class LocalFileScanner : ILocalFileScanner
         string relativePath,
         CancellationToken cancellationToken)
     {
+        ValidatePlatformPermissions(file, relativePath);
         LocalFileMetadata before = ReadMetadata(file, relativePath);
         string contentHash = await ComputeHashAsync(file.FullName, relativePath, cancellationToken).ConfigureAwait(false);
         LocalFileMetadata after = ReadMetadata(file, relativePath);
@@ -99,6 +100,34 @@ public sealed class LocalFileScanner : ILocalFileScanner
             SizeBytes = after.Length,
             LastWriteUtc = after.LastWriteUtc,
         };
+    }
+
+    private static void ValidatePlatformPermissions(FileInfo file, string relativePath)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        UnixFileMode readMask = UnixFileMode.UserRead | UnixFileMode.GroupRead | UnixFileMode.OtherRead;
+        try
+        {
+            if ((File.GetUnixFileMode(file.FullName) & readMask) == 0)
+            {
+                throw new LocalFileUnavailableException(
+                    relativePath,
+                    file.FullName,
+                    "the file has no Unix read permission bits.");
+            }
+        }
+        catch (LocalFileUnavailableException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            throw new LocalFileUnavailableException(relativePath, file.FullName, exception);
+        }
     }
 
     private static LocalFileMetadata ReadMetadata(FileInfo file, string relativePath)

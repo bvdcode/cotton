@@ -102,6 +102,40 @@ public sealed class LocalFileScannerTests
     }
 
     [Test]
+    public async Task ScanAsync_ThrowsForUnreadableUnixFile()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.Ignore("Unix file modes are not available on this platform.");
+            return;
+        }
+
+        WriteFile("unreadable.txt", "secret");
+        string path = FullPath("unreadable.txt");
+        UnixFileMode originalMode = File.GetUnixFileMode(path);
+        var scanner = new LocalFileScanner();
+
+        try
+        {
+            File.SetUnixFileMode(path, UnixFileMode.None);
+
+            LocalFileUnavailableException? exception = Assert.ThrowsAsync<LocalFileUnavailableException>(() => scanner.ScanAsync(_root));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exception, Is.Not.Null);
+                Assert.That(exception!.RelativePath, Is.EqualTo("unreadable.txt"));
+                Assert.That(exception.FullPath, Is.EqualTo(path));
+                Assert.That(exception.Reason, Does.Contain("Unix read permission"));
+            });
+        }
+        finally
+        {
+            File.SetUnixFileMode(path, originalMode | UnixFileMode.UserRead | UnixFileMode.UserWrite);
+        }
+    }
+
+    [Test]
     public void ScanAsync_RejectsMissingRoot()
     {
         var scanner = new LocalFileScanner();

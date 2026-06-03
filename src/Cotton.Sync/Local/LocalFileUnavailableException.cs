@@ -16,6 +16,7 @@ public sealed class LocalFileUnavailableException : IOException
     {
         RelativePath = relativePath;
         FullPath = fullPath;
+        Reason = innerException.Message;
     }
 
     /// <summary>
@@ -26,6 +27,7 @@ public sealed class LocalFileUnavailableException : IOException
     {
         RelativePath = relativePath;
         FullPath = fullPath;
+        Reason = reason;
     }
 
     /// <summary>
@@ -37,4 +39,9 @@ public sealed class LocalFileUnavailableException : IOException
     /// Gets the absolute file path that could not be scanned.
     /// </summary>
     public string FullPath { get; }
+
+    /// <summary>
+    /// Gets the reason the file could not be scanned safely.
+    /// </summary>
+    public string Reason { get; }
 }

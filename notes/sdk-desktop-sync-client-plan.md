@@ -186,8 +186,9 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [x] Add Windows path validation.
   Required checks: reserved names, invalid characters, path length, case collisions.
   Verification: `SyncPath.Normalize` rejects portable-Windows-invalid paths through `SyncPathValidationException`: reserved device names, reserved/control characters, trailing dot/space segments, overlong segments, and overlong relative paths; case-insensitive collisions are rejected by `SyncPathCollisionException`. `SyncPathTests` passed 12/12, `SyncEngineTests` passed 21/21, full `Cotton.Sync.Tests` passed 62/62, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
-- [ ] Add Linux path validation.
+- [x] Add Linux path validation.
   Required checks: case-sensitive collisions with remote case-insensitive model assumptions, file permissions.
+  Verification: `SyncEngine` rejects case-insensitive collisions from Linux case-sensitive local paths through `SyncPathCollisionException`, and `LocalFileScanner` rejects Unix files with no read permission bits through `LocalFileUnavailableException`; `ScanAsync_ThrowsForUnreadableUnixFile` passed in `LocalFileScannerTests` 6/6, full `Cotton.Sync.Tests` passed 64/64, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [x] Add Unicode normalization policy.
   Verification: `SyncPath.Normalize` normalizes relative paths to Unicode Form C before validation/keying, so composed and decomposed names share the same sync identity; `Normalize_UsesUnicodeFormC` passed in `SyncPathTests` 13/13, full `Cotton.Sync.Tests` passed 63/63, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [ ] Add tests for every local/remote/base create-update-delete combination.
@@ -196,7 +197,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [x] Add tests for mass delete guard.
   Verification: `RunOnceAsync_BlocksRemoteDeletesOverRunLimit` and `RunOnceAsync_BlocksLocalDeletesOverRunLimit` prove over-limit delete runs emit `Skipped` activities without partially deleting files or baseline state; `SyncEngineTests` passed 20/20 and full `Cotton.Sync.Tests` passed 47/47.
 - [x] Add tests for locked or unreadable files.
-  Verification: `ScanAsync_ThrowsForLockedFile` holds a file with `FileShare.None` and verifies that scanning fails with `LocalFileUnavailableException` carrying the affected relative and full paths; `LocalFileScannerTests` passed 5/5 and full `Cotton.Sync.Tests` passed 48/48.
+  Verification: `ScanAsync_ThrowsForLockedFile` holds a file with `FileShare.None`, and `ScanAsync_ThrowsForUnreadableUnixFile` removes Unix read permission bits; both verify that scanning fails with `LocalFileUnavailableException` carrying the affected relative and full paths. `LocalFileScannerTests` passed 6/6 and full `Cotton.Sync.Tests` passed 64/64.
 - [x] Add tests for Windows reserved file names.
   Verification: `Normalize_RejectsWindowsReservedDeviceNames`, `Normalize_RejectsWindowsReservedCharacters`, `Normalize_RejectsWindowsTrailingDotOrSpace`, `Normalize_RejectsTooLongPathSegments`, and `Normalize_RejectsTooLongRelativePaths` cover reserved Windows names and path constraints; `SyncPathTests` passed 12/12 and full `Cotton.Sync.Tests` passed 62/62.
 - [x] Add tests for case conflicts.
