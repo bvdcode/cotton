@@ -28,12 +28,15 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     private string _password = string.Empty;
     private string _remoteBrowserPath = "/";
     private string _remoteFolderPath = string.Empty;
+    private bool _isApplyingStartWithOperatingSystem;
     private bool _isServerProbeChecking;
     private bool _isServerProbeFailed;
     private bool _isServerVerified;
     private bool _isAddSyncPairWizardVisible;
+    private bool _isLoadingSnapshot;
     private string _serverUrl = string.Empty;
     private string _serverProbeStatus = string.Empty;
+    private bool _startWithOperatingSystem;
     private CancellationTokenSource? _serverProbeCancellation;
     private RemoteFolderRowViewModel? _selectedRemoteFolder;
     private SyncPairRowViewModel? _selectedSyncPair;
@@ -140,6 +143,18 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public bool IsDashboardVisible => IsSignedIn;
 
     public bool IsSetupVisible => !IsSignedIn;
+
+    public bool StartWithOperatingSystem
+    {
+        get => _startWithOperatingSystem;
+        set
+        {
+            if (SetProperty(ref _startWithOperatingSystem, value) && !_isLoadingSnapshot)
+            {
+                _ = ApplyStartWithOperatingSystemAsync(value);
+            }
+        }
+    }
 
     public bool IsAddSyncPairWizardVisible
     {
@@ -325,11 +340,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public async Task InitializeAsync()
     {
         IsBusy = true;
+        _isLoadingSnapshot = true;
         try
         {
             DesktopShellSnapshot snapshot = await _controller.LoadAsync().ConfigureAwait(true);
             ServerUrl = snapshot.ServerUrl?.AbsoluteUri ?? string.Empty;
             Username = snapshot.RememberedUsername ?? string.Empty;
+            StartWithOperatingSystem = snapshot.StartWithOperatingSystem;
             SyncPairs.Clear();
             foreach (DesktopSyncPairSnapshot syncPair in snapshot.SyncPairs)
             {
@@ -356,6 +373,35 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         }
         finally
         {
+            _isLoadingSnapshot = false;
+            IsBusy = false;
+        }
+    }
+
+    private async Task ApplyStartWithOperatingSystemAsync(bool enabled)
+    {
+        if (_isApplyingStartWithOperatingSystem)
+        {
+            return;
+        }
+
+        _isApplyingStartWithOperatingSystem = true;
+        IsBusy = true;
+        try
+        {
+            await _controller.SetStartWithOperatingSystemAsync(enabled).ConfigureAwait(true);
+            AddActivity("App", string.Empty, enabled ? "Start with computer enabled" : "Start with computer disabled");
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _isLoadingSnapshot = true;
+            StartWithOperatingSystem = !enabled;
+            _isLoadingSnapshot = false;
+            HandleCommandError(exception);
+        }
+        finally
+        {
+            _isApplyingStartWithOperatingSystem = false;
             IsBusy = false;
         }
     }

@@ -7,5 +7,6 @@ internal sealed record DesktopShellSnapshot(
     Uri? ServerUrl,
     string? AccountName,
     string? RememberedUsername,
+    bool StartWithOperatingSystem,
     bool IsSignedIn,
     IReadOnlyList<DesktopSyncPairSnapshot> SyncPairs);

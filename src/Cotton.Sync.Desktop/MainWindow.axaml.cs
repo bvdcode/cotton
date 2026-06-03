@@ -25,6 +25,8 @@ public sealed partial class MainWindow : Window
     private const double SetupMinWidth = 380;
     private const double SetupWidth = 400;
 
+    private readonly bool _canHideToTray;
+    private readonly bool _hideAfterSessionRestore;
     private bool? _isDashboardWindowMode;
     private bool _isQuitRequested;
 
@@ -32,19 +34,31 @@ public sealed partial class MainWindow : Window
     /// Initializes a new instance of the <see cref="MainWindow" /> class.
     /// </summary>
     public MainWindow()
-        : this(DesktopShellController.CreateDefault())
+        : this(DesktopShellController.CreateDefault(), false, false)
     {
     }
 
-    internal MainWindow(IDesktopShellController controller)
+    internal MainWindow(
+        IDesktopShellController controller,
+        bool hideAfterSessionRestore = false,
+        bool canHideToTray = false)
     {
         ArgumentNullException.ThrowIfNull(controller);
+        _canHideToTray = canHideToTray;
+        _hideAfterSessionRestore = hideAfterSessionRestore && canHideToTray;
         InitializeComponent();
         var viewModel = new ShellViewModel(controller, new WindowLocalFolderPicker(this));
         DataContext = viewModel;
         ApplyWindowMode(viewModel.IsDashboardVisible);
         viewModel.PropertyChanged += OnViewModelPropertyChanged;
-        Opened += async (_, _) => await viewModel.InitializeAsync().ConfigureAwait(true);
+        Opened += async (_, _) =>
+        {
+            await viewModel.InitializeAsync().ConfigureAwait(true);
+            if (_hideAfterSessionRestore && viewModel.IsDashboardVisible)
+            {
+                Hide();
+            }
+        };
         Closing += OnClosing;
         Closed += (_, _) =>
         {
@@ -72,7 +86,7 @@ public sealed partial class MainWindow : Window
 
     private void OnClosing(object? sender, WindowClosingEventArgs e)
     {
-        if (_isQuitRequested)
+        if (_isQuitRequested || !_canHideToTray)
         {
             return;
         }

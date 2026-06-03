@@ -5,24 +5,33 @@ namespace Cotton.Sync.Desktop.Startup;
 
 internal sealed class DesktopStartupOptions
 {
-    private DesktopStartupOptions(Uri? serverUrl, string? username)
+    private DesktopStartupOptions(Uri? serverUrl, string? username, bool startMinimizedToTray)
     {
         ServerUrl = serverUrl;
         Username = username;
+        StartMinimizedToTray = startMinimizedToTray;
     }
 
-    public static DesktopStartupOptions Empty { get; } = new(null, null);
+    public static DesktopStartupOptions Empty { get; } = new(null, null, false);
 
     public Uri? ServerUrl { get; }
 
     public string? Username { get; }
+
+    public bool StartMinimizedToTray { get; }
 
     public static DesktopStartupOptions Parse(IReadOnlyList<string> args)
     {
         ArgumentNullException.ThrowIfNull(args);
         string? serverUrl = ReadOption(args, "--server-url") ?? ReadOption(args, "--server");
         string? username = ReadOption(args, "--username") ?? ReadOption(args, "--user");
-        return new DesktopStartupOptions(ParseServerUrl(serverUrl), NormalizeOptional(username));
+        bool startMinimizedToTray = HasFlag(args, "--start-minimized")
+            || HasFlag(args, "--minimized")
+            || HasFlag(args, "--tray");
+        return new DesktopStartupOptions(
+            ParseServerUrl(serverUrl),
+            NormalizeOptional(username),
+            startMinimizedToTray);
     }
 
     private static Uri? ParseServerUrl(string? value)
@@ -36,6 +45,11 @@ internal sealed class DesktopStartupOptions
         }
 
         return uri;
+    }
+
+    private static bool HasFlag(IReadOnlyList<string> args, string name)
+    {
+        return args.Any(argument => string.Equals(argument, name, StringComparison.Ordinal));
     }
 
     private static string? ReadOption(IReadOnlyList<string> args, string name)

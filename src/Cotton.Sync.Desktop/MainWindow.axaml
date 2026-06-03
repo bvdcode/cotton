@@ -131,6 +131,8 @@
                 Classes="primary"
                 HorizontalAlignment="Stretch"
                 Command="{Binding SignInCommand}" />
+        <CheckBox Content="Start with computer"
+                  IsChecked="{Binding StartWithOperatingSystem}" />
       </StackPanel>
     </Grid>
 
@@ -310,6 +312,9 @@
         <Grid Grid.Row="2"
               ColumnDefinitions="*,Auto,Auto"
               ColumnSpacing="6">
+          <CheckBox Content="Start with computer"
+                    IsChecked="{Binding StartWithOperatingSystem}"
+                    VerticalAlignment="Center" />
           <Button Grid.Column="1"
                   Content="Resume"
                   Classes="compact"

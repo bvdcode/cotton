@@ -24,6 +24,8 @@ internal sealed class DesktopTrayController : IDisposable
         _trayIcon = CreateTrayIcon();
     }
 
+    public static bool IsSupportedPlatform => OperatingSystem.IsWindows();
+
     public void Dispose()
     {
         if (_disposed)

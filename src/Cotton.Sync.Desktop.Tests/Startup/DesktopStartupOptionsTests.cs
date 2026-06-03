@@ -21,6 +21,7 @@ public sealed class DesktopStartupOptionsTests
         {
             Assert.That(options.ServerUrl, Is.EqualTo(new Uri("https://app.cottoncloud.dev/")));
             Assert.That(options.Username, Is.EqualTo("desktop@example.test"));
+            Assert.That(options.StartMinimizedToTray, Is.False);
         });
     }
 
@@ -40,5 +41,16 @@ public sealed class DesktopStartupOptionsTests
             Assert.That(options.ServerUrl, Is.Null);
             Assert.That(options.Username, Is.EqualTo("desktop@example.test"));
         });
+    }
+
+    [Test]
+    public void Parse_LoadsStartMinimizedFlag()
+    {
+        DesktopStartupOptions options = DesktopStartupOptions.Parse(
+            [
+                "--start-minimized",
+            ]);
+
+        Assert.That(options.StartMinimizedToTray, Is.True);
     }
 }

@@ -13,6 +13,7 @@ using Cotton.Sync.App.Status;
 using Cotton.Sync.App.SyncApplication;
 using Cotton.Sync.App.SyncPairs;
 using Cotton.Sync.Desktop.Composition;
+using Cotton.Sync.Desktop.Platform;
 using Cotton.Sync.Desktop.Startup;
 
 namespace Cotton.Sync.Desktop.Shell;
@@ -23,6 +24,7 @@ internal sealed class DesktopShellController : IDesktopShellController
 
     private readonly DesktopSyncApplicationFactory _factory;
     private readonly IPlatformCommandService _platformCommands;
+    private readonly IAutostartService _autostartService;
     private readonly SqliteAppPreferencesStore _preferencesStore;
     private readonly DesktopStartupOptions _startupOptions;
     private readonly SqliteSyncPairSettingsStore _syncPairStore;
@@ -34,12 +36,14 @@ internal sealed class DesktopShellController : IDesktopShellController
         SqliteAppPreferencesStore preferencesStore,
         SqliteSyncPairSettingsStore syncPairStore,
         IPlatformCommandService platformCommands,
+        IAutostartService autostartService,
         DesktopStartupOptions? startupOptions = null)
     {
         _factory = factory ?? throw new ArgumentNullException(nameof(factory));
         _preferencesStore = preferencesStore ?? throw new ArgumentNullException(nameof(preferencesStore));
         _syncPairStore = syncPairStore ?? throw new ArgumentNullException(nameof(syncPairStore));
         _platformCommands = platformCommands ?? throw new ArgumentNullException(nameof(platformCommands));
+        _autostartService = autostartService ?? throw new ArgumentNullException(nameof(autostartService));
         _startupOptions = startupOptions ?? DesktopStartupOptions.Empty;
     }
 
@@ -50,6 +54,9 @@ internal sealed class DesktopShellController : IDesktopShellController
         await _preferencesStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
         await _syncPairStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
         AppPreferences preferences = await _preferencesStore.GetAsync(cancellationToken).ConfigureAwait(false);
+        bool startWithOperatingSystem = await _autostartService
+            .IsEnabledAsync(cancellationToken)
+            .ConfigureAwait(false);
         IReadOnlyList<SyncPairSettings> syncPairs = await _syncPairStore.ListAsync(cancellationToken).ConfigureAwait(false);
         Uri? serverUrl = _startupOptions.ServerUrl ?? preferences.RememberedServerUrl;
         AuthSession? session = serverUrl is null
@@ -59,6 +66,7 @@ internal sealed class DesktopShellController : IDesktopShellController
             serverUrl,
             session?.Email ?? session?.Username,
             _startupOptions.Username ?? preferences.RememberedUsername,
+            startWithOperatingSystem,
             session is not null,
             syncPairs.Select(ToSnapshot).ToList());
     }
@@ -102,11 +110,9 @@ internal sealed class DesktopShellController : IDesktopShellController
                     TrustDevice = true,
                 },
                 cancellationToken).ConfigureAwait(false);
-            var preferences = new AppPreferences
-            {
-                RememberedServerUrl = serverUrl,
-                RememberedUsername = request.Username.Trim(),
-            };
+            AppPreferences preferences = await _preferencesStore.GetAsync(cancellationToken).ConfigureAwait(false);
+            preferences.RememberedServerUrl = serverUrl;
+            preferences.RememberedUsername = request.Username.Trim();
             await host.App.SavePreferencesAsync(preferences, cancellationToken).ConfigureAwait(false);
             await host.App.StartSyncAsync(cancellationToken).ConfigureAwait(false);
             ReplaceHost(host);
@@ -222,6 +228,16 @@ internal sealed class DesktopShellController : IDesktopShellController
         return _platformCommands.OpenFolderAsync(localPath, cancellationToken);
     }
 
+    public async Task SetStartWithOperatingSystemAsync(bool enabled, CancellationToken cancellationToken = default)
+    {
+        await _preferencesStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        await _autostartService.SetEnabledAsync(enabled, cancellationToken).ConfigureAwait(false);
+        AppPreferences preferences = await _preferencesStore.GetAsync(cancellationToken).ConfigureAwait(false);
+        preferences.StartWithOperatingSystem = enabled;
+        preferences.StartMinimizedToTray = enabled;
+        await _preferencesStore.SaveAsync(preferences, cancellationToken).ConfigureAwait(false);
+    }
+
     public void Dispose()
     {
         DesktopSyncApplicationHost? host = _host;
@@ -239,6 +255,7 @@ internal sealed class DesktopShellController : IDesktopShellController
             new SqliteAppPreferencesStore(paths.AppDatabasePath),
             new SqliteSyncPairSettingsStore(paths.AppDatabasePath),
             new ProcessPlatformCommandService(),
+            DesktopAutostartServiceFactory.CreateDefault(),
             startupOptions);
     }
 

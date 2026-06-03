@@ -30,11 +30,22 @@ public sealed partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-            var window = new MainWindow(DesktopShellController.CreateDefault(StartupOptions));
+            bool useTrayLifecycle = DesktopTrayController.IsSupportedPlatform;
+            if (useTrayLifecycle)
+            {
+                desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            }
+
+            var window = new MainWindow(
+                DesktopShellController.CreateDefault(StartupOptions),
+                StartupOptions.StartMinimizedToTray,
+                useTrayLifecycle);
             desktop.MainWindow = window;
-            _trayController = new DesktopTrayController(window, desktop);
-            desktop.Exit += (_, _) => _trayController?.Dispose();
+            if (useTrayLifecycle)
+            {
+                _trayController = new DesktopTrayController(window, desktop);
+                desktop.Exit += (_, _) => _trayController?.Dispose();
+            }
         }
 
         base.OnFrameworkInitializationCompleted();
