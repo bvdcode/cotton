@@ -130,6 +130,43 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         });
     }
 
+    [Test]
+    public async Task RunOnceAsync_DownloadsRemoteCreatedFileThroughSdkToLocal()
+    {
+        CottonCloudClient client = CreateClient();
+        await LoginAsync(client);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-download");
+        NodeDto remoteDirectory = await client.Nodes.CreateAsync(remoteRoot.Id, "Docs");
+        NodeFileManifestDto remoteFile = await CreateRemoteTextFileAsync(
+            client,
+            remoteDirectory.Id,
+            "remote.txt",
+            "remote-created content");
+        string localRoot = Path.Combine(_tempDirectory, "client-download");
+        Directory.CreateDirectory(localRoot);
+        SqliteSyncStateStore stateStore = CreateStateStore("client-download-state.sqlite");
+        SyncEngine engine = CreateEngine(client, stateStore);
+
+        SyncRunResult result = await engine.RunOnceAsync(new SyncPair
+        {
+            SyncPairId = "client-download",
+            LocalRootPath = localRoot,
+            RemoteRootNodeId = remoteRoot.Id,
+        });
+
+        string localContent = File.ReadAllText(Path.Combine(localRoot, "Docs", "remote.txt"), Encoding.UTF8);
+        SyncStateEntry? baseline = await stateStore.GetAsync("client-download", "Docs/remote.txt");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Downloaded }));
+            Assert.That(localContent, Is.EqualTo("remote-created content"));
+            Assert.That(baseline?.RemoteFileId, Is.EqualTo(remoteFile.Id));
+            Assert.That(baseline?.LocalContentHash, Is.EqualTo(remoteFile.ContentHash));
+            Assert.That(baseline?.RemoteContentHash, Is.EqualTo(remoteFile.ContentHash));
+        });
+    }
+
     private CottonCloudClient CreateClient()
     {
         Assert.That(_httpClient, Is.Not.Null);
@@ -186,6 +223,27 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         NodeDto directory = rootContent.Nodes.Single(node => string.Equals(node.Name, directoryName, StringComparison.Ordinal));
         NodeContentDto directoryContent = await client.Nodes.GetChildrenAsync(directory.Id);
         return directoryContent.Files.Single(file => string.Equals(file.Name, fileName, StringComparison.Ordinal));
+    }
+
+    private static async Task<NodeFileManifestDto> CreateRemoteTextFileAsync(
+        CottonCloudClient client,
+        Guid parentNodeId,
+        string fileName,
+        string content)
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes(content);
+        string hash = Hasher.ToHexStringHash(Hasher.HashData(bytes));
+        await using var stream = new MemoryStream(bytes);
+        await client.Chunks.UploadRawAsync(hash, stream, "text/plain");
+        return await client.Files.CreateFromChunksAsync(new CreateFileFromChunksRequestDto
+        {
+            NodeId = parentNodeId,
+            ChunkHashes = [hash],
+            Name = fileName,
+            ContentType = "text/plain",
+            Hash = hash,
+            Validate = true,
+        });
     }
 
     private static void WriteLocalFile(string localRoot, string relativePath, string content)

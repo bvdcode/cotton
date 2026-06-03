@@ -425,7 +425,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [x] One client: local update uploads to remote.
   Verification 2026-06-03: extended `SyncClientEndToEndTests` with `RunOnceAsync_UploadsLocalUpdateThroughSdkToServer`, which performs an initial upload, edits the local file, reruns `SyncEngine` with the same SQLite baseline, verifies the server file content changed through SDK download, and verifies the updated baseline hashes. Focused server-backed sync E2E tests passed 2/2, and full solution Release build passed with the known NU1903 warning.
 - [ ] One client: local delete moves remote item to trash or configured delete behavior.
-- [ ] One client: remote create downloads locally.
+- [x] One client: remote create downloads locally.
+  Verification 2026-06-03: extended `SyncClientEndToEndTests` with `RunOnceAsync_DownloadsRemoteCreatedFileThroughSdkToLocal`, which creates a remote folder and file through SDK node/chunk/file APIs, runs `SyncEngine` against an empty local root, verifies the local downloaded file content, and verifies the SQLite baseline. Focused server-backed sync E2E tests passed 3/3, and full solution Release build passed with the known NU1903 warning.
 - [ ] One client: remote update downloads locally.
 - [ ] One client: remote delete applies locally through safe delete behavior.
 - [ ] Two clients: local change on client A reaches client B.
