@@ -59,9 +59,16 @@
                        Text="{Binding TotpCode}" />
               <CheckBox Content="Trust this device"
                         IsChecked="{Binding TrustDevice}" />
-              <Button Content="Sign in"
-                      HorizontalAlignment="Stretch"
-                      Command="{Binding SignInCommand}" />
+              <Grid ColumnDefinitions="*,*"
+                    ColumnSpacing="8">
+                <Button Content="Sign in"
+                        HorizontalAlignment="Stretch"
+                        Command="{Binding SignInCommand}" />
+                <Button Grid.Column="1"
+                        Content="Sign out"
+                        HorizontalAlignment="Stretch"
+                        Command="{Binding SignOutCommand}" />
+              </Grid>
               <TextBlock Text="{Binding AccountName}"
                          Opacity="0.72" />
             </StackPanel>

@@ -111,6 +111,29 @@ internal sealed class DesktopShellController : IDesktopShellController
         return syncPair;
     }
 
+    public async Task SignOutAsync(CancellationToken cancellationToken = default)
+    {
+        DesktopSyncApplicationHost? host = _host;
+        if (host is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await host.App.SignOutAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            if (ReferenceEquals(_host, host))
+            {
+                _host = null;
+            }
+
+            host.Dispose();
+        }
+    }
+
     public Task SyncAllAsync(CancellationToken cancellationToken = default)
     {
         return RequireHost().App.SyncAllAsync(cancellationToken);

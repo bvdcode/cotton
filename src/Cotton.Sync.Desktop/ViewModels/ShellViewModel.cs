@@ -41,6 +41,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         SyncNowCommand = new AsyncRelayCommand(SyncNowAsync, () => IsSignedIn, HandleCommandError);
         PauseCommand = new AsyncRelayCommand(PauseAsync, () => IsSignedIn, HandleCommandError);
         ResumeCommand = new AsyncRelayCommand(ResumeAsync, () => IsSignedIn, HandleCommandError);
+        SignOutCommand = new AsyncRelayCommand(SignOutAsync, () => IsSignedIn, HandleCommandError);
         OpenFolderCommand = new AsyncRelayCommand(OpenFolderAsync, () => SelectedSyncPair is not null, HandleCommandError);
     }
 
@@ -59,6 +60,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public AsyncRelayCommand ResumeCommand { get; }
 
     public AsyncRelayCommand SignInCommand { get; }
+
+    public AsyncRelayCommand SignOutCommand { get; }
 
     public AsyncRelayCommand SyncNowCommand { get; }
 
@@ -312,6 +315,25 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         }
     }
 
+    private async Task SignOutAsync()
+    {
+        IsBusy = true;
+        try
+        {
+            await _controller.SignOutAsync().ConfigureAwait(true);
+            IsSignedIn = false;
+            AccountName = "Signed out";
+            GlobalStatus = "Signed out";
+            Password = string.Empty;
+            SetAllPairStatuses("Idle");
+            AddActivity("Account", string.Empty, "Signed out");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     private async Task SyncNowAsync()
     {
         IsBusy = true;
@@ -366,6 +388,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     private void RaiseCommandStates()
     {
         SignInCommand.RaiseCanExecuteChanged();
+        SignOutCommand.RaiseCanExecuteChanged();
         AddSyncPairCommand.RaiseCanExecuteChanged();
         BrowseLocalFolderCommand.RaiseCanExecuteChanged();
         SyncNowCommand.RaiseCanExecuteChanged();
