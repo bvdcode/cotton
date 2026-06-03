@@ -145,6 +145,26 @@ public sealed class SyncPairRunnerTests
         });
     }
 
+    [Test]
+    public async Task SyncNowAsync_CoalescesOverlappingRequestsIntoOneQueuedRun()
+    {
+        var work = new BlockingSyncPairWork();
+        SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true), work);
+
+        Task first = runner.SyncNowAsync();
+        await work.WaitForRunAsync(TimeSpan.FromSeconds(2));
+        Task second = runner.SyncNowAsync();
+        Task third = runner.SyncNowAsync();
+
+        await Task.WhenAll(second, third);
+        work.ReleaseCurrentRun();
+        await work.WaitForRunCountAsync(2, TimeSpan.FromSeconds(2));
+        work.ReleaseCurrentRun();
+        await first;
+
+        Assert.That(work.RunCount, Is.EqualTo(2));
+    }
+
     private static SyncPairRunner CreateRunner(
         SyncPairSettings syncPair,
         ISyncPairWork? work = null,
@@ -214,6 +234,69 @@ public sealed class SyncPairRunnerTests
             }
 
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class BlockingSyncPairWork : ISyncPairWork
+    {
+        private readonly object _gate = new();
+        private TaskCompletionSource _currentRunStarted = CreateCompletionSource();
+        private TaskCompletionSource _currentRunRelease = CreateCompletionSource();
+        private TaskCompletionSource _secondRunStarted = CreateCompletionSource();
+
+        public int RunCount { get; private set; }
+
+        public async Task RunOnceAsync(SyncPairSettings syncPair, CancellationToken cancellationToken = default)
+        {
+            TaskCompletionSource release;
+            lock (_gate)
+            {
+                RunCount++;
+                release = _currentRunRelease;
+                _currentRunStarted.TrySetResult();
+                if (RunCount >= 2)
+                {
+                    _secondRunStarted.TrySetResult();
+                }
+            }
+
+            await release.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        public void ReleaseCurrentRun()
+        {
+            lock (_gate)
+            {
+                _currentRunRelease.TrySetResult();
+                _currentRunStarted = CreateCompletionSource();
+                _currentRunRelease = CreateCompletionSource();
+            }
+        }
+
+        public Task WaitForRunAsync(TimeSpan timeout)
+        {
+            Task task;
+            lock (_gate)
+            {
+                task = _currentRunStarted.Task;
+            }
+
+            return task.WaitAsync(timeout);
+        }
+
+        public async Task WaitForRunCountAsync(int runCount, TimeSpan timeout)
+        {
+            if (RunCount >= runCount)
+            {
+                return;
+            }
+
+            await _secondRunStarted.Task.WaitAsync(timeout).ConfigureAwait(false);
+        }
+
+        private static TaskCompletionSource CreateCompletionSource()
+        {
+            return new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         }
     }
 }

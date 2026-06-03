@@ -196,7 +196,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Verification: commit `Add sync runner offline retry`; `SyncPairRunner` classifies transient network failures and 5xx/timeout/429 HTTP failures as `Offline`, with exponential bounded backoff between attempts. `dotnet test src/Cotton.Sync.App.Tests/Cotton.Sync.App.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~SyncPairRunnerTests` passed 8/8, and `dotnet build src/Cotton.sln --configuration Release` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [x] Add retry policy with bounded attempts and user-visible error state.
   Verification: commit `Add sync runner offline retry`; retry attempts are capped by `SyncPairRunnerRetryOptions`, transient final failures surface as `Offline`, and non-transient failures remain `Error` with `LastError`.
-- [ ] Add per-pair queue so repeated triggers collapse into one sync pass.
+- [x] Add per-pair queue so repeated triggers collapse into one sync pass.
+  Verification: commit `Coalesce sync pair run requests`; `SyncPairRunner` collapses overlapping `SyncNowAsync` requests into one queued follow-up run. `dotnet test src/Cotton.Sync.App.Tests/Cotton.Sync.App.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~SyncPairRunnerTests` passed 9/9, and `dotnet build src/Cotton.sln --configuration Release` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [ ] Add tests for local watcher event coalescing.
 - [ ] Add tests for remote SignalR trigger causing changes fetch.
 - [ ] Add tests for offline to online recovery.

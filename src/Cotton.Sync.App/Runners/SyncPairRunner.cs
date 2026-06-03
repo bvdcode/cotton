@@ -15,11 +15,14 @@ namespace Cotton.Sync.App.Runners;
 public sealed class SyncPairRunner : ISyncPairRunner
 {
     private readonly SemaphoreSlim _operationGate = new(1, 1);
+    private readonly object _syncRequestGate = new();
     private readonly object _statusGate = new();
     private readonly ILogger<SyncPairRunner> _logger;
     private readonly SyncPairRunnerRetryOptions _retryOptions;
     private readonly SyncPairSettings _syncPair;
     private readonly ISyncPairWork _work;
+    private bool _isSyncInProgress;
+    private bool _pendingSyncRequested;
     private SyncPairStatus _status;
 
     /// <summary>
@@ -101,6 +104,30 @@ public sealed class SyncPairRunner : ISyncPairRunner
     /// <inheritdoc />
     public async Task SyncNowAsync(CancellationToken cancellationToken = default)
     {
+        if (!TryStartSyncLoop())
+        {
+            return;
+        }
+
+        try
+        {
+            bool runAgain;
+            do
+            {
+                await RunSingleSyncAsync(cancellationToken).ConfigureAwait(false);
+                runAgain = CompleteSyncPassOrTakeQueued();
+            }
+            while (runAgain);
+        }
+        catch
+        {
+            FinishSyncLoopAfterFailure();
+            throw;
+        }
+    }
+
+    private async Task RunSingleSyncAsync(CancellationToken cancellationToken)
+    {
         await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -138,6 +165,46 @@ public sealed class SyncPairRunner : ISyncPairRunner
         finally
         {
             _operationGate.Release();
+        }
+    }
+
+    private bool TryStartSyncLoop()
+    {
+        lock (_syncRequestGate)
+        {
+            if (_isSyncInProgress)
+            {
+                _pendingSyncRequested = true;
+                return false;
+            }
+
+            _isSyncInProgress = true;
+            _pendingSyncRequested = false;
+            return true;
+        }
+    }
+
+    private bool CompleteSyncPassOrTakeQueued()
+    {
+        lock (_syncRequestGate)
+        {
+            if (_pendingSyncRequested)
+            {
+                _pendingSyncRequested = false;
+                return true;
+            }
+
+            _isSyncInProgress = false;
+            return false;
+        }
+    }
+
+    private void FinishSyncLoopAfterFailure()
+    {
+        lock (_syncRequestGate)
+        {
+            _isSyncInProgress = false;
+            _pendingSyncRequested = false;
         }
     }
 
