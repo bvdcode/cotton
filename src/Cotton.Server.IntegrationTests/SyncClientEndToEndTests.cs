@@ -819,6 +819,74 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task RunOnceAsync_PropagatesClientARenameMoveToClientB()
+    {
+        CottonCloudClient clientA = CreateClient();
+        CottonCloudClient clientB = CreateClient();
+        await LoginAsync(clientA);
+        await LoginAsync(clientB);
+        NodeDto remoteRoot = await new RemoteRootResolver(clientA.Nodes).EnsureAsync("sync-e2e-two-client-move");
+        string localRootA = Path.Combine(_tempDirectory, "client-move-a");
+        string localRootB = Path.Combine(_tempDirectory, "client-move-b");
+        Directory.CreateDirectory(localRootB);
+        const string initialPath = "Docs/draft.txt";
+        const string movedPath = "Archive/Reports/final.txt";
+        var syncPairA = new SyncPair
+        {
+            SyncPairId = "client-move-a",
+            LocalRootPath = localRootA,
+            RemoteRootNodeId = remoteRoot.Id,
+        };
+        var syncPairB = new SyncPair
+        {
+            SyncPairId = "client-move-b",
+            LocalRootPath = localRootB,
+            RemoteRootNodeId = remoteRoot.Id,
+        };
+        SqliteSyncStateStore stateStoreB = CreateStateStore("client-move-b-state.sqlite");
+        SyncEngine engineA = CreateEngine(clientA, CreateStateStore("client-move-a-state.sqlite"));
+        SyncEngine engineB = CreateEngine(clientB, stateStoreB);
+        WriteLocalFile(localRootA, initialPath, "moved by client A");
+        await engineA.RunOnceAsync(syncPairA);
+        await engineB.RunOnceAsync(syncPairB);
+
+        string sourcePath = Path.Combine(localRootA, "Docs", "draft.txt");
+        string targetPath = Path.Combine(localRootA, "Archive", "Reports", "final.txt");
+        Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
+        File.Move(sourcePath, targetPath);
+        SyncRunResult clientARun = await engineA.RunOnceAsync(syncPairA);
+        SyncRunResult clientBRun = await engineB.RunOnceAsync(syncPairB);
+
+        NodeFileManifestDto movedRemote = await FindRemoteFileAsync(clientA, remoteRoot.Id, movedPath);
+        string movedRemoteContent = await DownloadTextAsync(clientA, movedRemote.Id);
+        NodeContentDto rootContent = await clientA.Nodes.GetChildrenAsync(remoteRoot.Id);
+        NodeDto docs = rootContent.Nodes.Single(node => string.Equals(node.Name, "Docs", StringComparison.Ordinal));
+        NodeContentDto docsContent = await clientA.Nodes.GetChildrenAsync(docs.Id);
+        string movedClientBContent = File.ReadAllText(Path.Combine(localRootB, "Archive", "Reports", "final.txt"), Encoding.UTF8);
+        string[] quarantinedFiles = Directory.GetFiles(
+            Path.Combine(localRootB, ".cotton-sync", "deleted"),
+            "draft.txt",
+            SearchOption.AllDirectories);
+        SyncStateEntry? oldBaseline = await stateStoreB.GetAsync("client-move-b", initialPath);
+        SyncStateEntry? movedBaseline = await stateStoreB.GetAsync("client-move-b", movedPath);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(clientARun.Activities.Select(activity => activity.Kind), Is.EquivalentTo(new[] { SyncActivityKind.Uploaded, SyncActivityKind.DeletedRemote }));
+            Assert.That(clientBRun.Activities.Select(activity => activity.Kind), Is.EquivalentTo(new[] { SyncActivityKind.Downloaded, SyncActivityKind.DeletedLocal }));
+            Assert.That(File.Exists(Path.Combine(localRootB, "Docs", "draft.txt")), Is.False);
+            Assert.That(movedClientBContent, Is.EqualTo("moved by client A"));
+            Assert.That(movedRemoteContent, Is.EqualTo("moved by client A"));
+            Assert.That(docsContent.Files.Select(file => file.Name), Does.Not.Contain("draft.txt"));
+            Assert.That(quarantinedFiles, Has.Length.EqualTo(1));
+            Assert.That(File.ReadAllText(quarantinedFiles[0], Encoding.UTF8), Is.EqualTo("moved by client A"));
+            Assert.That(oldBaseline, Is.Null);
+            Assert.That(movedBaseline?.RemoteFileId, Is.EqualTo(movedRemote.Id));
+            Assert.That(movedBaseline?.RemoteContentHash, Is.EqualTo(movedRemote.ContentHash));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_CreatesConflictWhenTwoClientsEditSameFile()
     {
         CottonCloudClient clientA = CreateClient();
