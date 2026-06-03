@@ -42,7 +42,8 @@ Target layers:
 - [ ] `Cotton.Sync`: headless sync core, state store, local scanner/writer, remote crawler, reconciler, conflict handling, delete guards.
 - [ ] `Cotton.Sync.App`: application layer for sync-pair settings, auth session, continuous supervisor, status/activity streams, platform command orchestration.
 - [ ] `Cotton.Sync.Desktop`: Avalonia shell only. It displays state and sends commands to `Cotton.Sync.App`.
-- [ ] `Cotton.Sync.Cli`: headless validation and recovery tool using the same app/core services.
+- [x] `Cotton.Sync.Cli`: headless validation and recovery tool using the same app/core services.
+  Verification 2026-06-03: added real `Cotton.Sync.Cli` and `Cotton.Sync.Cli.Tests` projects to `src/Cotton.sln`; CLI supports `state-summary --database <path> --sync-pair <id>` through the existing EF-backed `SqliteSyncStateStore`, printing entry count and remote cursor for headless validation/recovery. `dotnet test src/Cotton.Sync.Cli.Tests/Cotton.Sync.Cli.Tests.csproj --configuration Release --no-restore` passed 3/3, and full solution Release build passed with the known NU1903 warning.
 - [ ] Platform adapters: autostart, tray, notifications, open folder/browser, secure token store, single instance.
 
 ## Phase 0 - Ground Truth And Branch Hygiene
