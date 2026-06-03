@@ -2,21 +2,26 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Runtime.Versioning;
-using Microsoft.Win32;
 
 namespace Cotton.Sync.Desktop.Platform;
 
-[SupportedOSPlatform("windows")]
 internal sealed class WindowsRunAutostartService : IAutostartService
 {
-    private const string RegistryKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string ValueName = "Cotton Sync";
 
     private readonly AutostartLaunchCommand _launchCommand;
+    private readonly IWindowsRunRegistry _registry;
 
+    [SupportedOSPlatform("windows")]
     public WindowsRunAutostartService(AutostartLaunchCommand launchCommand)
+        : this(launchCommand, new WindowsCurrentUserRunRegistry())
+    {
+    }
+
+    internal WindowsRunAutostartService(AutostartLaunchCommand launchCommand, IWindowsRunRegistry registry)
     {
         _launchCommand = launchCommand ?? throw new ArgumentNullException(nameof(launchCommand));
+        _registry = registry ?? throw new ArgumentNullException(nameof(registry));
     }
 
     public bool IsSupported => true;
@@ -24,9 +29,8 @@ internal sealed class WindowsRunAutostartService : IAutostartService
     public Task<bool> IsEnabledAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        using RegistryKey? key = Registry.CurrentUser.OpenSubKey(RegistryKeyPath, writable: false);
         return Task.FromResult(string.Equals(
-            key?.GetValue(ValueName) as string,
+            _registry.GetValue(ValueName),
             _launchCommand.ToString(),
             StringComparison.Ordinal));
     }
@@ -34,15 +38,13 @@ internal sealed class WindowsRunAutostartService : IAutostartService
     public Task SetEnabledAsync(bool enabled, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        using RegistryKey key = Registry.CurrentUser.CreateSubKey(RegistryKeyPath, writable: true)
-            ?? throw new InvalidOperationException("Unable to open the Windows startup registry key.");
         if (enabled)
         {
-            key.SetValue(ValueName, _launchCommand.ToString(), RegistryValueKind.String);
+            _registry.SetValue(ValueName, _launchCommand.ToString());
         }
         else
         {
-            key.DeleteValue(ValueName, throwOnMissingValue: false);
+            _registry.DeleteValue(ValueName);
         }
 
         return Task.CompletedTask;

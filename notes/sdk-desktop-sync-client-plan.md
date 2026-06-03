@@ -315,8 +315,9 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Add tray menu.
   Required commands: show app, open folder, open web, sync now, pause/resume, settings, quit.
   Partial 2026-06-03: commit `Expand desktop tray menu commands`; Windows tray menu now wires show app, open selected local folder, open Cotton Cloud in browser, sync now, pause, resume, settings overlay, and quit. Keep unchecked until menu behavior is manually verified on Windows.
-- [ ] Add Windows autostart adapter.
+- [x] Add Windows autostart adapter.
   Acceptable options: installer-managed startup, registry Run entry, startup shortcut, or scheduled task.
+  Verification 2026-06-03: `WindowsRunAutostartService` uses the current-user `Software\Microsoft\Windows\CurrentVersion\Run` entry `Cotton Sync` with the packaged launch command, and registry access is behind `IWindowsRunRegistry` so the enable/disable/matching-command behavior is covered without touching a real registry. `WindowsRunAutostartServiceTests` passed 3/3, full `Cotton.Sync.Desktop.Tests` passed 25/25, and solution Release build passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings. Manual reboot verification remains open below.
 - [x] Add Linux autostart adapter.
   Target: XDG autostart `.desktop`.
   Verification 2026-06-03: commit `Clarify desktop lifecycle platform support`; Linux uses an XDG autostart `.desktop` adapter, and the factory no longer adds `--start-minimized` on Linux while tray lifecycle is unsupported. `Cotton.Sync.Desktop.Tests` passed 15/15 including the Linux factory regression test, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
