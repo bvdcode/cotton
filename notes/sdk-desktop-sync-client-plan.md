@@ -189,7 +189,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Add tests for mass delete guard.
 - [ ] Add tests for locked or unreadable files.
 - [ ] Add tests for Windows reserved file names.
-- [ ] Add tests for case conflicts.
+- [x] Add tests for case conflicts.
+  Verification: `SyncEngine` rejects case-insensitive local and remote path collisions before reconciliation with `SyncPathCollisionException`; `RunOnceAsync_RejectsLocalCaseInsensitivePathCollision` and `RunOnceAsync_RejectsRemoteCaseInsensitivePathCollision` passed in `SyncEngineTests` 20/20, full `Cotton.Sync.Tests` passed 47/47, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [ ] Add tests for crash during download.
 - [ ] Add tests for crash after remote upload before baseline update.
 - [ ] Run full sync test suite.

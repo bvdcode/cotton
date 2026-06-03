@@ -448,7 +448,14 @@ public sealed class SyncEngine : ISyncEngine
         var result = new Dictionary<string, T>(PathComparer);
         foreach (T entry in entries)
         {
-            result[SyncPath.ToKey(pathSelector(entry))] = entry;
+            string relativePath = pathSelector(entry);
+            string key = SyncPath.ToKey(relativePath);
+            if (result.TryGetValue(key, out T? existing))
+            {
+                throw new SyncPathCollisionException(pathSelector(existing), relativePath);
+            }
+
+            result[key] = entry;
         }
 
         return result;

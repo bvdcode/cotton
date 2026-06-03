@@ -514,6 +514,48 @@ public sealed class SyncEngineTests
         Assert.That(scanner.ScanCalls, Is.Zero);
     }
 
+    [Test]
+    public void RunOnceAsync_RejectsLocalCaseInsensitivePathCollision()
+    {
+        var scanner = new FakeLocalFileScanner(
+            LocalFile("Case.txt", "first"),
+            LocalFile("case.txt", "second"));
+        SyncEngine engine = CreateEngine(scanner, EmptyRemoteTree(), new FakeRemoteFileSynchronizer(), out _);
+
+        SyncPathCollisionException? exception = Assert.ThrowsAsync<SyncPathCollisionException>(() => engine.RunOnceAsync(Pair()));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.FirstPath, Is.EqualTo("Case.txt"));
+            Assert.That(exception.SecondPath, Is.EqualTo("case.txt"));
+            Assert.That(exception.Message, Does.Contain("Case-insensitive path collision"));
+            Assert.That(exception.Message, Does.Contain("Case.txt"));
+            Assert.That(exception.Message, Does.Contain("case.txt"));
+        });
+    }
+
+    [Test]
+    public void RunOnceAsync_RejectsRemoteCaseInsensitivePathCollision()
+    {
+        RemoteTreeSnapshot remoteTree = RemoteTree(
+            RemoteFile("Remote.txt", HashText("first")),
+            RemoteFile("remote.txt", HashText("second")));
+        SyncEngine engine = CreateEngine(new FakeLocalFileScanner(), remoteTree, new FakeRemoteFileSynchronizer(), out _);
+
+        SyncPathCollisionException? exception = Assert.ThrowsAsync<SyncPathCollisionException>(() => engine.RunOnceAsync(Pair()));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.FirstPath, Is.EqualTo("Remote.txt"));
+            Assert.That(exception.SecondPath, Is.EqualTo("remote.txt"));
+            Assert.That(exception.Message, Does.Contain("Case-insensitive path collision"));
+            Assert.That(exception.Message, Does.Contain("Remote.txt"));
+            Assert.That(exception.Message, Does.Contain("remote.txt"));
+        });
+    }
+
     private SyncEngine CreateEngine(
         FakeLocalFileScanner scanner,
         RemoteTreeSnapshot remoteTree,
