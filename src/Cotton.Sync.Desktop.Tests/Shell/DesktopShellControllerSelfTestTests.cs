@@ -8,6 +8,7 @@ using Cotton.Sync.Desktop.Composition;
 using Cotton.Sync.Desktop.Diagnostics;
 using Cotton.Sync.Desktop.Platform;
 using Cotton.Sync.Desktop.Shell;
+using Cotton.Sync.State;
 
 namespace Cotton.Sync.Desktop.Tests.Shell;
 
@@ -79,6 +80,56 @@ public sealed class DesktopShellControllerSelfTestTests
             Assert.That(result.Items.Select(static item => item.Name), Does.Contain("Local root: Documents"));
             Assert.That(result.Items.Select(static item => item.Name), Does.Contain("Remote root: Documents"));
             Assert.That(result.Items.Single(static item => item.Name == "Remote root: Documents").Details, Is.EqualTo("Sign in to verify"));
+        });
+    }
+
+    [Test]
+    public async Task LoadAsync_IncludesDiagnosticsFieldsForSyncPairs()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        Guid syncPairId = Guid.NewGuid();
+        Guid remoteRootNodeId = Guid.NewGuid();
+        DateTime lastSyncedAtUtc = new(2026, 6, 3, 12, 30, 0, DateTimeKind.Utc);
+        var syncPairStore = new SqliteSyncPairSettingsStore(paths.AppDatabasePath);
+        await syncPairStore.InitializeAsync();
+        await syncPairStore.UpsertAsync(new SyncPairSettings
+        {
+            Id = syncPairId,
+            DisplayName = "Documents",
+            LocalRootPath = Path.Combine(_tempDirectory, "Documents"),
+            RemoteRootNodeId = remoteRootNodeId,
+            RemoteDisplayPath = "/Documents",
+            IsEnabled = true,
+            Mode = SyncPairMode.FullMirror,
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow,
+        });
+        var stateStore = new SqliteSyncStateStore(paths.SyncStateDatabasePath);
+        await stateStore.InitializeAsync();
+        await stateStore.UpsertAsync(new SyncStateEntry
+        {
+            SyncPairId = syncPairId.ToString(),
+            RelativePath = "file.txt",
+            Kind = SyncEntryKind.File,
+            SyncedAtUtc = lastSyncedAtUtc,
+        });
+        await stateStore.SaveChangeCursorAsync(new SyncChangeCursor
+        {
+            SyncPairId = syncPairId.ToString(),
+            LastCursor = 42,
+            UpdatedAtUtc = DateTime.UtcNow,
+        });
+        using DesktopShellController controller = CreateController(paths, syncPairStore);
+
+        DesktopShellSnapshot snapshot = await controller.LoadAsync();
+
+        DesktopSyncPairSnapshot syncPair = snapshot.SyncPairs.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(syncPair.RemoteRootNodeId, Is.EqualTo(remoteRootNodeId));
+            Assert.That(syncPair.LastSyncedAtUtc, Is.EqualTo(lastSyncedAtUtc));
+            Assert.That(syncPair.ChangeCursor, Is.EqualTo(42));
+            Assert.That(syncPair.LastError, Is.Null);
         });
     }
 

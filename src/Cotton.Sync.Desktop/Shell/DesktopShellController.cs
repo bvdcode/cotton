@@ -74,6 +74,9 @@ internal sealed class DesktopShellController : IDesktopShellController
         Uri? signInServerHint = session is not null || _startupOptions.ServerUrl is not null
             ? serverUrl
             : null;
+        IReadOnlyList<DesktopSyncPairSnapshot> syncPairSnapshots = await BuildSyncPairSnapshotsAsync(
+            syncPairs,
+            cancellationToken).ConfigureAwait(false);
         return new DesktopShellSnapshot(
             signInServerHint,
             session?.Email ?? session?.Username,
@@ -82,7 +85,7 @@ internal sealed class DesktopShellController : IDesktopShellController
             _autostartService.IsSupported,
             DesktopPlatformCapabilities.IsTrayLifecycleSupported,
             session is not null,
-            syncPairs.Select(ToSnapshot).ToList());
+            syncPairSnapshots);
     }
 
     public async Task<DesktopServerProbeResult> ProbeServerAsync(
@@ -397,7 +400,7 @@ internal sealed class DesktopShellController : IDesktopShellController
             typeof(App).Assembly.GetName().Version?.ToString() ?? "unknown",
             (_startupOptions.ServerUrl ?? preferences.RememberedServerUrl)?.AbsoluteUri,
             _host is null ? "Signed out" : preferences.RememberedUsername ?? "Signed in",
-            syncPairs.Select(ToSnapshot).ToList(),
+            await BuildSyncPairSnapshotsAsync(syncPairs, cancellationToken).ConfigureAwait(false),
             selfTest.Items);
         return await _diagnosticsExporter.ExportAsync(_paths, bundle, cancellationToken).ConfigureAwait(false);
     }
@@ -511,14 +514,55 @@ internal sealed class DesktopShellController : IDesktopShellController
         }
     }
 
-    private static DesktopSyncPairSnapshot ToSnapshot(SyncPairSettings settings)
+    private async Task<IReadOnlyList<DesktopSyncPairSnapshot>> BuildSyncPairSnapshotsAsync(
+        IReadOnlyList<SyncPairSettings> settings,
+        CancellationToken cancellationToken)
     {
+        if (settings.Count == 0)
+        {
+            return [];
+        }
+
+        var stateStore = new SqliteSyncStateStore(_paths.SyncStateDatabasePath);
+        await stateStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        SyncAppStatus? currentStatus = _host?.StatusPublisher.Current;
+        var snapshots = new List<DesktopSyncPairSnapshot>(settings.Count);
+        foreach (SyncPairSettings syncPair in settings)
+        {
+            string syncPairId = syncPair.Id.ToString();
+            IReadOnlyList<SyncStateEntry> entries = await stateStore
+                .LoadPairAsync(syncPairId, cancellationToken)
+                .ConfigureAwait(false);
+            SyncChangeCursor cursor = await stateStore
+                .GetChangeCursorAsync(syncPairId, cancellationToken)
+                .ConfigureAwait(false);
+            SyncPairStatus? status = currentStatus?.SyncPairs
+                .FirstOrDefault(pair => pair.SyncPairId == syncPair.Id);
+            snapshots.Add(ToSnapshot(syncPair, entries, cursor, status));
+        }
+
+        return snapshots;
+    }
+
+    private static DesktopSyncPairSnapshot ToSnapshot(
+        SyncPairSettings settings,
+        IReadOnlyList<SyncStateEntry>? entries = null,
+        SyncChangeCursor? cursor = null,
+        SyncPairStatus? status = null)
+    {
+        DateTime? lastSyncedAtUtc = entries is { Count: > 0 }
+            ? entries.Max(static entry => entry.SyncedAtUtc)
+            : null;
         return new DesktopSyncPairSnapshot(
             settings.Id,
             settings.DisplayName,
             settings.LocalRootPath,
             settings.RemoteDisplayPath,
-            settings.IsEnabled ? "Idle" : "Disabled");
+            status is null ? settings.IsEnabled ? "Idle" : "Disabled" : ToStatusText(status),
+            settings.RemoteRootNodeId,
+            lastSyncedAtUtc,
+            cursor?.LastCursor,
+            status?.LastError);
     }
 
     private static Uri ParseServerUrl(string serverUrl)

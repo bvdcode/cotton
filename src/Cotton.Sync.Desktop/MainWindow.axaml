@@ -574,114 +574,142 @@
                       Command="{Binding CloseSettingsCommand}" />
             </Grid>
 
-            <StackPanel Grid.Row="1"
-                        Spacing="12">
-              <StackPanel Spacing="3">
-                <TextBlock Text="Account"
-                           FontWeight="SemiBold" />
-                <TextBlock Text="{Binding AccountName}"
-                           FontSize="12"
-                           TextTrimming="CharacterEllipsis" />
-                <TextBlock Text="{Binding ServerUrl}"
-                           Classes="secondary"
-                           FontSize="12"
-                           TextTrimming="CharacterEllipsis" />
-              </StackPanel>
-
-              <Border Height="1"
-                      Background="{DynamicResource CottonBorderBrush}" />
-
-              <StackPanel Spacing="6">
-                <TextBlock Text="Startup"
-                           FontWeight="SemiBold" />
-                <CheckBox Content="Start with this computer"
-                          IsEnabled="{Binding IsStartWithOperatingSystemSupported}"
-                          IsChecked="{Binding StartWithOperatingSystem}" />
-                <TextBlock Text="{Binding AutostartStatusText}"
-                           Classes="secondary"
-                           FontSize="12"
-                           TextWrapping="Wrap" />
-                <TextBlock Text="{Binding TrayLifecycleStatusText}"
-                           Classes="secondary"
-                           FontSize="12"
-                           TextWrapping="Wrap"
-                           IsVisible="{Binding IsTrayLifecycleUnsupported}" />
-              </StackPanel>
-
-              <Border Height="1"
-                      Background="{DynamicResource CottonBorderBrush}" />
-
-              <StackPanel Spacing="7">
-                <TextBlock Text="Diagnostics"
-                           FontWeight="SemiBold" />
-                <StackPanel Orientation="Horizontal"
-                            Spacing="6">
-                  <Button Content="Run self-test"
-                          Classes="compact"
-                          Command="{Binding SelfTestCommand}" />
-                  <Button Content="Export"
-                          Classes="compact"
-                          ToolTip.Tip="Export diagnostics bundle"
-                          Command="{Binding ExportDiagnosticsCommand}" />
-                </StackPanel>
-                <TextBlock Text="Run self-test to check this computer."
-                           Classes="secondary"
-                           FontSize="12"
-                           TextWrapping="Wrap"
-                           IsVisible="{Binding HasNoSelfTestItems}" />
-                <Border MaxHeight="118"
-                        BorderBrush="{DynamicResource CottonBorderBrush}"
-                        BorderThickness="1"
-                        CornerRadius="6"
-                        IsVisible="{Binding HasSelfTestItems}">
-                  <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding SelfTestItems}">
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                          <Grid ColumnDefinitions="*,Auto"
-                                RowDefinitions="Auto,Auto"
-                                ColumnSpacing="8"
-                                Margin="8,6">
-                            <TextBlock Text="{Binding Name}"
-                                       FontSize="12"
-                                       FontWeight="SemiBold"
-                                       TextTrimming="CharacterEllipsis" />
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding ResultText}"
-                                       Classes="secondary"
-                                       FontSize="12" />
-                            <TextBlock Grid.Row="1"
-                                       Grid.ColumnSpan="2"
-                                       Text="{Binding Details}"
-                                       Classes="secondary"
-                                       FontSize="11"
-                                       TextTrimming="CharacterEllipsis" />
-                          </Grid>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                  </ScrollViewer>
-                </Border>
-              </StackPanel>
-
-              <Border Height="1"
-                      Background="{DynamicResource CottonBorderBrush}" />
-
-              <Grid ColumnDefinitions="*,Auto"
-                    ColumnSpacing="8">
-                <StackPanel Spacing="2">
-                  <TextBlock Text="Cotton Sync Desktop"
+            <ScrollViewer Grid.Row="1"
+                          MaxHeight="432"
+                          VerticalScrollBarVisibility="Auto">
+              <StackPanel Spacing="12">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Account"
                              FontWeight="SemiBold" />
-                  <TextBlock Text="Full mirror sync client"
+                  <TextBlock Text="{Binding AccountName}"
+                             FontSize="12"
+                             TextTrimming="CharacterEllipsis" />
+                  <TextBlock Text="{Binding ServerUrl}"
                              Classes="secondary"
-                             FontSize="12" />
+                             FontSize="12"
+                             TextTrimming="CharacterEllipsis" />
                 </StackPanel>
-                <Button Grid.Column="1"
-                        Content="Sign out"
-                        Classes="compact"
-                        Command="{Binding SignOutCommand}" />
-              </Grid>
-            </StackPanel>
+
+                <Border Height="1"
+                        Background="{DynamicResource CottonBorderBrush}" />
+
+                <StackPanel Spacing="6">
+                  <TextBlock Text="Startup"
+                             FontWeight="SemiBold" />
+                  <CheckBox Content="Start with this computer"
+                            IsEnabled="{Binding IsStartWithOperatingSystemSupported}"
+                            IsChecked="{Binding StartWithOperatingSystem}" />
+                  <TextBlock Text="{Binding AutostartStatusText}"
+                             Classes="secondary"
+                             FontSize="12"
+                             TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding TrayLifecycleStatusText}"
+                             Classes="secondary"
+                             FontSize="12"
+                             TextWrapping="Wrap"
+                             IsVisible="{Binding IsTrayLifecycleUnsupported}" />
+                </StackPanel>
+
+                <Border Height="1"
+                        Background="{DynamicResource CottonBorderBrush}" />
+
+                <StackPanel Spacing="7">
+                  <TextBlock Text="Diagnostics"
+                             FontWeight="SemiBold" />
+                  <Border MaxHeight="112"
+                          BorderBrush="{DynamicResource CottonBorderBrush}"
+                          BorderThickness="1"
+                          CornerRadius="6">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                      <ItemsControl ItemsSource="{Binding DiagnosticsItems}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Grid ColumnDefinitions="108,*"
+                                  ColumnSpacing="8"
+                                  Margin="8,5">
+                              <TextBlock Text="{Binding Label}"
+                                         Classes="secondary"
+                                         FontSize="11"
+                                         TextTrimming="CharacterEllipsis" />
+                              <TextBlock Grid.Column="1"
+                                         Text="{Binding Value}"
+                                         FontSize="11"
+                                         TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </ScrollViewer>
+                  </Border>
+                  <StackPanel Orientation="Horizontal"
+                              Spacing="6">
+                    <Button Content="Run self-test"
+                            Classes="compact"
+                            Command="{Binding SelfTestCommand}" />
+                    <Button Content="Export"
+                            Classes="compact"
+                            ToolTip.Tip="Export diagnostics bundle"
+                            Command="{Binding ExportDiagnosticsCommand}" />
+                  </StackPanel>
+                  <TextBlock Text="Run self-test to check this computer."
+                             Classes="secondary"
+                             FontSize="12"
+                             TextWrapping="Wrap"
+                             IsVisible="{Binding HasNoSelfTestItems}" />
+                  <Border MaxHeight="118"
+                          BorderBrush="{DynamicResource CottonBorderBrush}"
+                          BorderThickness="1"
+                          CornerRadius="6"
+                          IsVisible="{Binding HasSelfTestItems}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                      <ItemsControl ItemsSource="{Binding SelfTestItems}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Grid ColumnDefinitions="*,Auto"
+                                  RowDefinitions="Auto,Auto"
+                                  ColumnSpacing="8"
+                                  Margin="8,6">
+                              <TextBlock Text="{Binding Name}"
+                                         FontSize="12"
+                                         FontWeight="SemiBold"
+                                         TextTrimming="CharacterEllipsis" />
+                              <TextBlock Grid.Column="1"
+                                         Text="{Binding ResultText}"
+                                         Classes="secondary"
+                                         FontSize="12" />
+                              <TextBlock Grid.Row="1"
+                                         Grid.ColumnSpan="2"
+                                         Text="{Binding Details}"
+                                         Classes="secondary"
+                                         FontSize="11"
+                                         TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </ScrollViewer>
+                  </Border>
+                </StackPanel>
+
+                <Border Height="1"
+                        Background="{DynamicResource CottonBorderBrush}" />
+
+                <Grid ColumnDefinitions="*,Auto"
+                      ColumnSpacing="8">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="Cotton Sync Desktop"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="Full mirror sync client"
+                               Classes="secondary"
+                               FontSize="12" />
+                  </StackPanel>
+                  <Button Grid.Column="1"
+                          Content="Sign out"
+                          Classes="compact"
+                          Command="{Binding SignOutCommand}" />
+                </Grid>
+              </StackPanel>
+            </ScrollViewer>
           </Grid>
         </Border>
       </Border>

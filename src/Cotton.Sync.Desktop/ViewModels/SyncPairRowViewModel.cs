@@ -9,7 +9,11 @@ namespace Cotton.Sync.Desktop.ViewModels;
 internal sealed class SyncPairRowViewModel : ViewModelBase
 {
     private string _displayName = string.Empty;
+    private long? _changeCursor;
+    private DateTime? _lastSyncedAtUtc;
+    private string? _lastError;
     private string _localPath = string.Empty;
+    private Guid? _remoteRootNodeId;
     private string _remotePath = string.Empty;
     private string _status = string.Empty;
 
@@ -25,6 +29,30 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
     {
         get => _localPath;
         set => SetProperty(ref _localPath, value);
+    }
+
+    public DateTime? LastSyncedAtUtc
+    {
+        get => _lastSyncedAtUtc;
+        set => SetProperty(ref _lastSyncedAtUtc, value);
+    }
+
+    public long? ChangeCursor
+    {
+        get => _changeCursor;
+        set => SetProperty(ref _changeCursor, value);
+    }
+
+    public string? LastError
+    {
+        get => _lastError;
+        set => SetProperty(ref _lastError, value);
+    }
+
+    public Guid? RemoteRootNodeId
+    {
+        get => _remoteRootNodeId;
+        set => SetProperty(ref _remoteRootNodeId, value);
     }
 
     public string RemotePath

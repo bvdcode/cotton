@@ -82,6 +82,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
 
     public ObservableCollection<SelfTestItemRowViewModel> SelfTestItems { get; } = [];
 
+    public ObservableCollection<DiagnosticItemRowViewModel> DiagnosticsItems { get; } = [];
+
     public AsyncRelayCommand AddSyncPairCommand { get; }
 
     public AsyncRelayCommand BrowseLocalFolderCommand { get; }
@@ -121,6 +123,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         get => _accountName;
         private set => SetProperty(ref _accountName, value);
     }
+
+    public string AppVersion => typeof(ShellViewModel).Assembly.GetName().Version?.ToString() ?? "unknown";
 
     public string ActionRequiredMessage
     {
@@ -466,6 +470,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
                 AddActivity("Account", AccountName, "Session restored");
             }
 
+            RefreshDiagnosticsItems();
             RaiseCommandStates();
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -524,6 +529,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             RemoteFolders.Clear();
             GlobalStatus = "Sync requested";
             AddActivity("Pair", syncPair.LocalRootPath, "Folder added and initial sync requested");
+            RefreshDiagnosticsItems();
             RaiseCommandStates();
         }
         finally
@@ -623,6 +629,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             GlobalStatus = "Connected";
             ActionRequiredMessage = string.Empty;
             AddActivity("Account", AccountName, "Signed in");
+            RefreshDiagnosticsItems();
         }
         finally
         {
@@ -646,6 +653,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             RemoteFolders.Clear();
             SetAllPairStatuses("Idle");
             AddActivity("Account", string.Empty, "Signed out");
+            RefreshDiagnosticsItems();
         }
         finally
         {
@@ -847,6 +855,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(HasNoSyncPairs));
         OnPropertyChanged(nameof(HasSyncPairs));
         OpenFolderCommand.RaiseCanExecuteChanged();
+        RefreshDiagnosticsItems();
     }
 
     private void OnRemoteFoldersChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -907,6 +916,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             }
 
             row.Status = pairStatus.Status;
+            row.LastError = pairStatus.LastError;
             if (!string.IsNullOrWhiteSpace(pairStatus.LastError))
             {
                 AddActivity("Error", row.LocalPath, pairStatus.LastError);
@@ -915,6 +925,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
 
         GlobalStatus = ResolveGlobalStatus(status);
         ActionRequiredMessage = DesktopActionRequiredMessageResolver.FromStatus(status);
+        RefreshDiagnosticsItems();
     }
 
     private string ResolveGlobalStatus(DesktopSyncStatusSnapshot status)
@@ -1000,6 +1011,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             Id = syncPair.Id,
             DisplayName = syncPair.DisplayName,
             LocalPath = syncPair.LocalRootPath,
+            RemoteRootNodeId = syncPair.RemoteRootNodeId,
             RemotePath = syncPair.RemoteDisplayPath,
             Status = syncPair.IsEnabled ? "Idle" : "Disabled",
         };
@@ -1012,9 +1024,55 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             Id = syncPair.Id,
             DisplayName = syncPair.DisplayName,
             LocalPath = syncPair.LocalPath,
+            RemoteRootNodeId = syncPair.RemoteRootNodeId,
             RemotePath = syncPair.RemotePath,
             Status = syncPair.Status,
+            LastSyncedAtUtc = syncPair.LastSyncedAtUtc,
+            ChangeCursor = syncPair.ChangeCursor,
+            LastError = syncPair.LastError,
         };
+    }
+
+    private void RefreshDiagnosticsItems()
+    {
+        DiagnosticsItems.Clear();
+        AddDiagnosticItem("App version", AppVersion);
+        AddDiagnosticItem("Server", string.IsNullOrWhiteSpace(ServerUrl) ? "Not configured" : ServerUrl);
+        AddDiagnosticItem("Account", AccountName);
+        AddDiagnosticItem("Sync pairs", SyncPairs.Count.ToString(CultureInfo.InvariantCulture));
+        foreach (SyncPairRowViewModel syncPair in SyncPairs)
+        {
+            AddDiagnosticItem(syncPair.DisplayName + " id", syncPair.Id.ToString());
+            AddDiagnosticItem(syncPair.DisplayName + " local", syncPair.LocalPath);
+            AddDiagnosticItem(syncPair.DisplayName + " remote", syncPair.RemotePath);
+            AddDiagnosticItem(
+                syncPair.DisplayName + " remote id",
+                syncPair.RemoteRootNodeId?.ToString() ?? "Unknown");
+            AddDiagnosticItem(syncPair.DisplayName + " status", syncPair.Status);
+            AddDiagnosticItem(syncPair.DisplayName + " last sync", FormatDiagnosticUtc(syncPair.LastSyncedAtUtc));
+            AddDiagnosticItem(
+                syncPair.DisplayName + " cursor",
+                syncPair.ChangeCursor?.ToString(CultureInfo.InvariantCulture) ?? "0");
+            AddDiagnosticItem(
+                syncPair.DisplayName + " last error",
+                string.IsNullOrWhiteSpace(syncPair.LastError) ? "None" : syncPair.LastError);
+        }
+    }
+
+    private void AddDiagnosticItem(string label, string value)
+    {
+        DiagnosticsItems.Add(new DiagnosticItemRowViewModel
+        {
+            Label = label,
+            Value = value,
+        });
+    }
+
+    private static string FormatDiagnosticUtc(DateTime? value)
+    {
+        return value is null
+            ? "Never"
+            : DateTime.SpecifyKind(value.Value, DateTimeKind.Utc).ToString("u", CultureInfo.InvariantCulture);
     }
 
     private static string GetRemoteParentPath(string remotePath)

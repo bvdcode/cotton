@@ -338,9 +338,9 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Partial 2026-06-03: desktop composition now provides a trace-backed `ILoggerFactory` to sync runners, local/remote coordinators, periodic sync, session revocation, sync-root probes, filesystem watchers, and platform command services. `DesktopTraceLogger` redacts secrets before writing to the rotating trace log. Keep unchecked until SDK and sync-core instrumentation coverage is added.
 - [x] Add log rotation.
   Verification 2026-06-03: desktop startup installs a `RotatingFileTraceListener` into app-data `cotton-sync.log`; it retains rotated files as `.1`, `.2`, `.3` and is idempotent per log path. Focused `RotatingFileTraceListenerTests` passed 3/3. Full desktop tests and solution build are recorded in the commit verification.
-- [ ] Add diagnostics screen.
+- [x] Add diagnostics screen.
   Required fields: app version, server URL, account, sync pair ids, local paths, remote ids, last sync time, current cursor, last error.
-  Partial 2026-06-03: settings diagnostics now exposes self-test execution, diagnostics export, and a compact visible list of the latest self-test results. Keep unchecked until the full required field set is displayed and manually verified.
+  Verification 2026-06-03: settings diagnostics now shows app version, server URL, account, sync pair ids, local paths, remote paths, remote root ids, per-pair status, last sync time, current change cursor, and last error, plus self-test execution/export controls and latest self-test results. `DesktopShellControllerSelfTestTests` cover required self-test entries and enriched sync-pair diagnostics fields from sync state. Focused tests passed 3/3. Full desktop tests and solution build are recorded in the commit verification.
 - [x] Add export diagnostics bundle command.
   Verification 2026-06-03: settings now exposes an Export diagnostics command; `DesktopDiagnosticsExporter` writes a zip bundle under app-data `diagnostics/` containing `diagnostics.json` and rotated trace logs, while excluding token and SQLite files. Focused `DesktopDiagnosticsExporterTests` passed 2/2. Full desktop tests and solution build are recorded in the commit verification.
 - [x] Redact tokens and secrets from logs and diagnostics.

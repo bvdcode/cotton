@@ -8,4 +8,8 @@ internal sealed record DesktopSyncPairSnapshot(
     string DisplayName,
     string LocalPath,
     string RemotePath,
-    string Status);
+    string Status,
+    Guid? RemoteRootNodeId = null,
+    DateTime? LastSyncedAtUtc = null,
+    long? ChangeCursor = null,
+    string? LastError = null);
