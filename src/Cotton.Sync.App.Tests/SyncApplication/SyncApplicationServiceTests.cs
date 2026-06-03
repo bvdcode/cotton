@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Sync.App.Auth;
+using Cotton.Sync.App.Continuous;
 using Cotton.Sync.App.LocalChanges;
 using Cotton.Sync.App.Platform;
 using Cotton.Sync.App.Preferences;
@@ -43,12 +44,14 @@ public sealed class SyncApplicationServiceTests
         var supervisor = new FakeSyncSupervisor();
         var localChanges = new FakeLocalChangeSyncCoordinator();
         var remoteChanges = new FakeRemoteChangeSyncCoordinator();
+        var periodicSync = new FakePeriodicSyncCoordinator();
         SyncApplicationService service = CreateService(
             new InMemorySyncPairSettingsStore(),
             authFlow: authFlow,
             supervisor: supervisor,
             localChanges: localChanges,
-            remoteChanges: remoteChanges);
+            remoteChanges: remoteChanges,
+            periodicSync: periodicSync);
 
         await service.SignOutAsync();
 
@@ -58,6 +61,7 @@ public sealed class SyncApplicationServiceTests
             Assert.That(supervisor.StopCallCount, Is.EqualTo(1));
             Assert.That(localChanges.StopCallCount, Is.EqualTo(1));
             Assert.That(remoteChanges.StopCallCount, Is.EqualTo(1));
+            Assert.That(periodicSync.StopCallCount, Is.EqualTo(1));
         });
     }
 
@@ -68,12 +72,14 @@ public sealed class SyncApplicationServiceTests
         var supervisor = new FakeSyncSupervisor();
         var localChanges = new FakeLocalChangeSyncCoordinator();
         var remoteChanges = new FakeRemoteChangeSyncCoordinator();
+        var periodicSync = new FakePeriodicSyncCoordinator();
         SyncApplicationService service = CreateService(
             new InMemorySyncPairSettingsStore(),
             authFlow: authFlow,
             supervisor: supervisor,
             localChanges: localChanges,
-            remoteChanges: remoteChanges);
+            remoteChanges: remoteChanges,
+            periodicSync: periodicSync);
 
         AuthSession session = await service.RestoreSessionAsync();
 
@@ -83,6 +89,7 @@ public sealed class SyncApplicationServiceTests
             Assert.That(supervisor.StartCallCount, Is.EqualTo(1));
             Assert.That(localChanges.StartCallCount, Is.EqualTo(1));
             Assert.That(remoteChanges.StartCallCount, Is.EqualTo(1));
+            Assert.That(periodicSync.StartCallCount, Is.EqualTo(1));
             Assert.That(session, Is.SameAs(authFlow.Session));
         });
     }
@@ -93,11 +100,13 @@ public sealed class SyncApplicationServiceTests
         var supervisor = new FakeSyncSupervisor();
         var localChanges = new FakeLocalChangeSyncCoordinator();
         var remoteChanges = new FakeRemoteChangeSyncCoordinator();
+        var periodicSync = new FakePeriodicSyncCoordinator();
         SyncApplicationService service = CreateService(
             new InMemorySyncPairSettingsStore(),
             supervisor: supervisor,
             localChanges: localChanges,
-            remoteChanges: remoteChanges);
+            remoteChanges: remoteChanges,
+            periodicSync: periodicSync);
 
         await service.StartSyncAsync();
 
@@ -106,6 +115,7 @@ public sealed class SyncApplicationServiceTests
             Assert.That(supervisor.StartCallCount, Is.EqualTo(1));
             Assert.That(localChanges.StartCallCount, Is.EqualTo(1));
             Assert.That(remoteChanges.StartCallCount, Is.EqualTo(1));
+            Assert.That(periodicSync.StartCallCount, Is.EqualTo(1));
         });
     }
 
@@ -115,11 +125,13 @@ public sealed class SyncApplicationServiceTests
         var supervisor = new FakeSyncSupervisor();
         var localChanges = new FakeLocalChangeSyncCoordinator();
         var remoteChanges = new FakeRemoteChangeSyncCoordinator();
+        var periodicSync = new FakePeriodicSyncCoordinator();
         SyncApplicationService service = CreateService(
             new InMemorySyncPairSettingsStore(),
             supervisor: supervisor,
             localChanges: localChanges,
-            remoteChanges: remoteChanges);
+            remoteChanges: remoteChanges,
+            periodicSync: periodicSync);
 
         await service.StopSyncAsync();
 
@@ -127,6 +139,7 @@ public sealed class SyncApplicationServiceTests
         {
             Assert.That(localChanges.StopCallCount, Is.EqualTo(1));
             Assert.That(remoteChanges.StopCallCount, Is.EqualTo(1));
+            Assert.That(periodicSync.StopCallCount, Is.EqualTo(1));
             Assert.That(supervisor.StopCallCount, Is.EqualTo(1));
         });
     }
@@ -341,7 +354,8 @@ public sealed class SyncApplicationServiceTests
         ISyncSupervisor? supervisor = null,
         IPlatformCommandService? platformCommands = null,
         ILocalChangeSyncCoordinator? localChanges = null,
-        IRemoteChangeSyncCoordinator? remoteChanges = null)
+        IRemoteChangeSyncCoordinator? remoteChanges = null,
+        IPeriodicSyncCoordinator? periodicSync = null)
     {
         return new SyncApplicationService(
             store,
@@ -351,7 +365,8 @@ public sealed class SyncApplicationServiceTests
             supervisor ?? new FakeSyncSupervisor(),
             platformCommands ?? new FakePlatformCommandService(),
             localChanges,
-            remoteChanges);
+            remoteChanges,
+            periodicSync);
     }
 
     private static SyncPairSettings CreatePair(string localRootPath)
@@ -594,6 +609,25 @@ public sealed class SyncApplicationServiceTests
     }
 
     private sealed class FakeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoordinator
+    {
+        public int StartCallCount { get; private set; }
+
+        public int StopCallCount { get; private set; }
+
+        public Task StartAsync(CancellationToken cancellationToken = default)
+        {
+            StartCallCount++;
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken = default)
+        {
+            StopCallCount++;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakePeriodicSyncCoordinator : IPeriodicSyncCoordinator
     {
         public int StartCallCount { get; private set; }
 

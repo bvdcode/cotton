@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Sync.App.Auth;
+using Cotton.Sync.App.Continuous;
 using Cotton.Sync.App.LocalChanges;
 using Cotton.Sync.App.Platform;
 using Cotton.Sync.App.Preferences;
@@ -18,6 +19,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
 {
     private readonly IAuthFlow _authFlow;
     private readonly ILocalChangeSyncCoordinator _localChanges;
+    private readonly IPeriodicSyncCoordinator _periodicSync;
     private readonly IPlatformCommandService _platformCommands;
     private readonly IAppPreferencesStore _preferences;
     private readonly ISyncPairPrerequisiteValidator _prerequisites;
@@ -38,6 +40,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
         IPlatformCommandService platformCommands,
         ILocalChangeSyncCoordinator? localChanges = null,
         IRemoteChangeSyncCoordinator? remoteChanges = null,
+        IPeriodicSyncCoordinator? periodicSync = null,
         SyncPairSettingsValidator? validator = null)
     {
         _syncPairs = syncPairs ?? throw new ArgumentNullException(nameof(syncPairs));
@@ -48,6 +51,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
         _platformCommands = platformCommands ?? throw new ArgumentNullException(nameof(platformCommands));
         _localChanges = localChanges ?? NullLocalChangeSyncCoordinator.Instance;
         _remoteChanges = remoteChanges ?? NullRemoteChangeSyncCoordinator.Instance;
+        _periodicSync = periodicSync ?? NullPeriodicSyncCoordinator.Instance;
         _validator = validator ?? new SyncPairSettingsValidator();
     }
 
@@ -66,6 +70,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
         await _supervisor.StartAsync(cancellationToken).ConfigureAwait(false);
         await _localChanges.StartAsync(cancellationToken).ConfigureAwait(false);
         await _remoteChanges.StartAsync(cancellationToken).ConfigureAwait(false);
+        await _periodicSync.StartAsync(cancellationToken).ConfigureAwait(false);
         return session;
     }
 
@@ -73,6 +78,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
     public async Task SignOutAsync(CancellationToken cancellationToken = default)
     {
         await _remoteChanges.StopAsync(cancellationToken).ConfigureAwait(false);
+        await _periodicSync.StopAsync(cancellationToken).ConfigureAwait(false);
         await _localChanges.StopAsync(cancellationToken).ConfigureAwait(false);
         await _authFlow.SignOutAsync(cancellationToken).ConfigureAwait(false);
         await _supervisor.StopAsync(cancellationToken).ConfigureAwait(false);
@@ -215,11 +221,13 @@ public sealed class SyncApplicationService : ISyncApplicationService
         await _supervisor.StartAsync(cancellationToken).ConfigureAwait(false);
         await _localChanges.StartAsync(cancellationToken).ConfigureAwait(false);
         await _remoteChanges.StartAsync(cancellationToken).ConfigureAwait(false);
+        await _periodicSync.StartAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private async Task StopSyncCoreAsync(CancellationToken cancellationToken)
     {
         await _remoteChanges.StopAsync(cancellationToken).ConfigureAwait(false);
+        await _periodicSync.StopAsync(cancellationToken).ConfigureAwait(false);
         await _localChanges.StopAsync(cancellationToken).ConfigureAwait(false);
         await _supervisor.StopAsync(cancellationToken).ConfigureAwait(false);
     }
