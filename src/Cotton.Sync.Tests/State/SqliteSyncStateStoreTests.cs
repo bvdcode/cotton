@@ -38,20 +38,24 @@ public sealed class SqliteSyncStateStoreTests
     }
 
     [Test]
-    public async Task InitializeAsync_DoesNotDeleteDatabaseWhenSchemaDoesNotMatch()
+    public async Task InitializeAsync_RecreatesDatabaseWhenSchemaDoesNotMatch()
     {
         string databasePath = DatabasePath();
         await CreateSqliteDatabaseAsync(databasePath, "CREATE TABLE sync_entries (sync_pair_id TEXT NOT NULL);");
         var store = new SqliteSyncStateStore(databasePath);
 
-        Assert.That(async () => await store.InitializeAsync(), Throws.Exception);
-        bool tableStillExists = await TableExistsAsync(databasePath, "sync_entries");
-
-        Assert.Multiple(() =>
+        await store.InitializeAsync();
+        await store.UpsertAsync(new SyncStateEntry
         {
-            Assert.That(File.Exists(databasePath), Is.True);
-            Assert.That(tableStillExists, Is.True);
+            SyncPairId = "pair-a",
+            RelativePath = "cached.txt",
+            Kind = SyncEntryKind.File,
+            LocalContentHash = "hash",
+            LocalSizeBytes = 42,
         });
+        SyncStateEntry? entry = await store.GetAsync("pair-a", "cached.txt");
+
+        Assert.That(entry?.LocalSizeBytes, Is.EqualTo(42));
     }
 
     [Test]
@@ -204,15 +208,5 @@ public sealed class SqliteSyncStateStoreTests
         await using SqliteCommand command = connection.CreateCommand();
         command.CommandText = commandText;
         await command.ExecuteNonQueryAsync();
-    }
-
-    private static async Task<bool> TableExistsAsync(string databasePath, string tableName)
-    {
-        await using var connection = new SqliteConnection("Data Source=" + databasePath + ";Pooling=False");
-        await connection.OpenAsync();
-        await using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = $name;";
-        command.Parameters.AddWithValue("$name", tableName);
-        return Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
     }
 }

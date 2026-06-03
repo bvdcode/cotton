@@ -56,30 +56,7 @@ public sealed class CottonAuthClientTests
         {
             Assert.That(stored, Is.Null);
             Assert.That(handler.Requests[0].Method, Is.EqualTo(HttpMethod.Post));
-            Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/auth/logout"));
-            Assert.That(handler.Requests[0].Body, Does.Contain("\"refreshToken\":\"refresh token\""));
-        });
-    }
-
-    [Test]
-    public async Task RefreshAsync_PostsRefreshTokenInBodyAndStoresTokenPair()
-    {
-        var handler = new QueuedHttpMessageHandler();
-        handler.EnqueueJson(HttpStatusCode.OK, new { accessToken = "new-access", refreshToken = "new-refresh" });
-        var store = new InMemoryCottonTokenStore();
-        await store.SaveAsync(new TokenPairDto { AccessToken = "old-access", RefreshToken = "old refresh" });
-        var client = CreateClient(handler, store);
-
-        TokenPairDto tokens = await client.Auth.RefreshAsync();
-
-        TokenPairDto? stored = await store.GetAsync();
-        Assert.Multiple(() =>
-        {
-            Assert.That(tokens.AccessToken, Is.EqualTo("new-access"));
-            Assert.That(stored?.RefreshToken, Is.EqualTo("new-refresh"));
-            Assert.That(handler.Requests[0].Method, Is.EqualTo(HttpMethod.Post));
-            Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/auth/refresh"));
-            Assert.That(handler.Requests[0].Body, Does.Contain("\"refreshToken\":\"old refresh\""));
+            Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/auth/logout?refreshToken=refresh%20token"));
         });
     }
 

@@ -249,12 +249,8 @@ internal sealed class CottonHttpTransport
                 return false;
             }
 
-            using HttpRequestMessage request = new(HttpMethod.Post, "/api/v1/auth/refresh")
-            {
-                Content = JsonContent.Create(
-                    new RefreshTokenRequestDto { RefreshToken = tokens.RefreshToken },
-                    options: JsonOptions),
-            };
+            string path = "/api/v1/auth/refresh?refreshToken=" + Uri.EscapeDataString(tokens.RefreshToken);
+            using HttpRequestMessage request = new(HttpMethod.Post, path);
             using HttpResponseMessage response = await _httpClient.SendAsync(
                 request,
                 HttpCompletionOption.ResponseHeadersRead,

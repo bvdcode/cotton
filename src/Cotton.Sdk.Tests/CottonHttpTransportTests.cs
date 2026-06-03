@@ -39,12 +39,11 @@ public sealed class CottonHttpTransportTests
             Assert.That(handler.Requests.Select(x => x.PathAndQuery), Is.EqualTo(new[]
             {
                 "/api/v1/settings",
-                "/api/v1/auth/refresh",
+                "/api/v1/auth/refresh?refreshToken=old%20refresh",
                 "/api/v1/settings",
             }));
             Assert.That(handler.Requests[0].AuthorizationParameter, Is.EqualTo("old-access"));
             Assert.That(handler.Requests[1].AuthorizationParameter, Is.Null);
-            Assert.That(handler.Requests[1].Body, Does.Contain("\"refreshToken\":\"old refresh\""));
             Assert.That(handler.Requests[2].AuthorizationParameter, Is.EqualTo("new-access"));
         });
     }

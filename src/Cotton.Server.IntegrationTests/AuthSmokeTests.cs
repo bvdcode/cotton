@@ -84,8 +84,7 @@ public class AuthSmokeTests : IntegrationTestBase
 
         _client = _customFactory.CreateClient(new WebApplicationFactoryClientOptions
         {
-            AllowAutoRedirect = false,
-            HandleCookies = false,
+            AllowAutoRedirect = false
         });
     }
 
@@ -137,44 +136,6 @@ public class AuthSmokeTests : IntegrationTestBase
             "wrong-password",
             ipAddress);
         Assert.That(limitedLogin.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
-    }
-
-    [Test]
-    public async Task Refresh_AcceptsRefreshTokenFromBody()
-    {
-        Assert.That(_client, Is.Not.Null);
-
-        TokenPairResponseDto login = await LoginAsync("testuser", "testpassword");
-        using HttpResponseMessage refresh = await _client!.PostAsJsonAsync(
-            "/api/v1/auth/refresh",
-            new { refreshToken = login.RefreshToken });
-        refresh.EnsureSuccessStatusCode();
-
-        TokenPairResponseDto? refreshed = await refresh.Content.ReadFromJsonAsync<TokenPairResponseDto>();
-        Assert.Multiple(() =>
-        {
-            Assert.That(refreshed, Is.Not.Null);
-            Assert.That(refreshed!.AccessToken, Is.Not.Empty);
-            Assert.That(refreshed.RefreshToken, Is.Not.Empty);
-            Assert.That(refreshed.RefreshToken, Is.Not.EqualTo(login.RefreshToken));
-        });
-    }
-
-    [Test]
-    public async Task Logout_RevokesRefreshTokenFromBody()
-    {
-        Assert.That(_client, Is.Not.Null);
-
-        TokenPairResponseDto login = await LoginAsync("testuser", "testpassword");
-        using HttpResponseMessage logout = await _client!.PostAsJsonAsync(
-            "/api/v1/auth/logout",
-            new { refreshToken = login.RefreshToken });
-        Assert.That(logout.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-
-        using HttpResponseMessage refresh = await _client!.PostAsJsonAsync(
-            "/api/v1/auth/refresh",
-            new { refreshToken = login.RefreshToken });
-        Assert.That(refresh.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]

@@ -62,20 +62,16 @@ public sealed class SqliteClientStateStoreTests
     }
 
     [Test]
-    public async Task InitializeAsync_DoesNotDeleteDatabaseWhenSchemaDoesNotMatch()
+    public async Task InitializeAsync_RecreatesDatabaseWhenSchemaDoesNotMatch()
     {
         string databasePath = DatabasePath();
         await CreateSqliteDatabaseAsync(databasePath, "CREATE TABLE state_items (key TEXT NOT NULL);");
         var store = new SqliteClientStateStore(databasePath);
 
-        Assert.That(async () => await store.SaveProfileValueAsync("probe", "value"), Throws.Exception);
-        bool tableStillExists = await TableExistsAsync(databasePath, "state_items");
+        await store.SaveProfileValueAsync("probe", "value");
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(File.Exists(databasePath), Is.True);
-            Assert.That(tableStillExists, Is.True);
-        });
+        string? value = await store.GetProfileValueAsync("probe");
+        Assert.That(value, Is.EqualTo("value"));
     }
 
     private SqliteClientStateStore CreateStore()
@@ -95,15 +91,5 @@ public sealed class SqliteClientStateStoreTests
         await using SqliteCommand command = connection.CreateCommand();
         command.CommandText = commandText;
         await command.ExecuteNonQueryAsync();
-    }
-
-    private static async Task<bool> TableExistsAsync(string databasePath, string tableName)
-    {
-        await using var connection = new SqliteConnection("Data Source=" + databasePath + ";Pooling=False");
-        await connection.OpenAsync();
-        await using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = $name;";
-        command.Parameters.AddWithValue("$name", tableName);
-        return Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
     }
 }

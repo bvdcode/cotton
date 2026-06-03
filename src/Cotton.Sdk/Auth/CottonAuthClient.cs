@@ -54,8 +54,7 @@ public sealed class CottonAuthClient : ICottonAuthClient
 
         TokenPairDto tokens = await _transport.SendJsonAsync<TokenPairDto>(
             HttpMethod.Post,
-            "/api/v1/auth/refresh",
-            new RefreshTokenRequestDto { RefreshToken = refreshToken },
+            "/api/v1/auth/refresh?refreshToken=" + Uri.EscapeDataString(refreshToken),
             authorize: false,
             cancellationToken: cancellationToken).ConfigureAwait(false);
         await _tokenStore.SaveAsync(tokens, cancellationToken).ConfigureAwait(false);
@@ -73,13 +72,12 @@ public sealed class CottonAuthClient : ICottonAuthClient
             refreshToken = stored?.RefreshToken;
         }
 
-        RefreshTokenRequestDto? request = string.IsNullOrWhiteSpace(refreshToken)
-            ? null
-            : new RefreshTokenRequestDto { RefreshToken = refreshToken };
+        string path = string.IsNullOrWhiteSpace(refreshToken)
+            ? "/api/v1/auth/logout"
+            : "/api/v1/auth/logout?refreshToken=" + Uri.EscapeDataString(refreshToken);
         await _transport.SendNoContentAsync(
             HttpMethod.Post,
-            "/api/v1/auth/logout",
-            request,
+            path,
             authorize: false,
             cancellationToken: cancellationToken).ConfigureAwait(false);
         await _tokenStore.ClearAsync(cancellationToken).ConfigureAwait(false);
