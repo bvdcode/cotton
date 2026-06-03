@@ -19,7 +19,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.8" />
     <ProjectReference Include="../Cotton.Contracts/Cotton.Contracts.csproj" />
+    <ProjectReference Include="../Cotton.Shared/Cotton.csproj" />
   </ItemGroup>
 
 </Project>

@@ -6,6 +6,7 @@ using Cotton.Sdk.Chunks;
 using Cotton.Sdk.Files;
 using Cotton.Sdk.Internal;
 using Cotton.Sdk.Nodes;
+using Cotton.Sdk.Realtime;
 using Cotton.Sdk.Settings;
 using Cotton.Sdk.Sync;
 
@@ -31,6 +32,7 @@ public sealed class CottonCloudClient : ICottonCloudClient
         Files = new CottonFileClient(transport);
         Nodes = new CottonNodeClient(transport);
         Sync = new CottonSyncClient(transport);
+        Realtime = new CottonRealtimeClient(tokenStore, resolvedOptions);
     }
 
     /// <summary>
@@ -62,4 +64,9 @@ public sealed class CottonCloudClient : ICottonCloudClient
     /// Gets synchronization feed operations.
     /// </summary>
     public ICottonSyncClient Sync { get; }
+
+    /// <summary>
+    /// Gets realtime event hub operations.
+    /// </summary>
+    public ICottonRealtimeClient Realtime { get; }
 }

@@ -5,6 +5,7 @@ using Cotton.Sdk.Auth;
 using Cotton.Sdk.Chunks;
 using Cotton.Sdk.Files;
 using Cotton.Sdk.Nodes;
+using Cotton.Sdk.Realtime;
 using Cotton.Sdk.Settings;
 using Cotton.Sdk.Sync;
 
@@ -44,4 +45,9 @@ public interface ICottonCloudClient
     /// Gets synchronization feed operations.
     /// </summary>
     ICottonSyncClient Sync { get; }
+
+    /// <summary>
+    /// Gets realtime event hub operations.
+    /// </summary>
+    ICottonRealtimeClient Realtime { get; }
 }

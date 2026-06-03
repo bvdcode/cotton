@@ -12,6 +12,7 @@ using Cotton.Sdk.Auth;
 using Cotton.Sdk.Chunks;
 using Cotton.Sdk.Files;
 using Cotton.Sdk.Nodes;
+using Cotton.Sdk.Realtime;
 using Cotton.Sdk.Settings;
 using Cotton.Sdk.Sync;
 using Cotton.Sync.Local;
@@ -212,6 +213,8 @@ public sealed class SdkRemoteFileSynchronizerTests
         public ICottonNodeClient Nodes => NodesClient;
 
         public ICottonSyncClient Sync => throw new NotSupportedException();
+
+        public ICottonRealtimeClient Realtime => throw new NotSupportedException();
     }
 
     private sealed class FakeSettingsClient : ICottonSettingsClient
