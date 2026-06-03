@@ -297,6 +297,51 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         });
     }
 
+    [Test]
+    public async Task RunOnceAsync_PropagatesClientALocalChangeToClientB()
+    {
+        CottonCloudClient clientA = CreateClient();
+        CottonCloudClient clientB = CreateClient();
+        await LoginAsync(clientA);
+        await LoginAsync(clientB);
+        NodeDto remoteRoot = await new RemoteRootResolver(clientA.Nodes).EnsureAsync("sync-e2e-two-client");
+        string localRootA = Path.Combine(_tempDirectory, "client-two-a");
+        string localRootB = Path.Combine(_tempDirectory, "client-two-b");
+        Directory.CreateDirectory(localRootB);
+        const string relativePath = "Docs/shared.txt";
+        var syncPairA = new SyncPair
+        {
+            SyncPairId = "client-two-a",
+            LocalRootPath = localRootA,
+            RemoteRootNodeId = remoteRoot.Id,
+        };
+        var syncPairB = new SyncPair
+        {
+            SyncPairId = "client-two-b",
+            LocalRootPath = localRootB,
+            RemoteRootNodeId = remoteRoot.Id,
+        };
+        SyncEngine engineA = CreateEngine(clientA, CreateStateStore("client-two-a-state.sqlite"));
+        SyncEngine engineB = CreateEngine(clientB, CreateStateStore("client-two-b-state.sqlite"));
+
+        WriteLocalFile(localRootA, relativePath, "created by client A");
+        await engineA.RunOnceAsync(syncPairA);
+        SyncRunResult firstClientBRun = await engineB.RunOnceAsync(syncPairB);
+
+        WriteLocalFile(localRootA, relativePath, "updated by client A");
+        await engineA.RunOnceAsync(syncPairA);
+        SyncRunResult secondClientBRun = await engineB.RunOnceAsync(syncPairB);
+
+        string clientBContent = File.ReadAllText(Path.Combine(localRootB, "Docs", "shared.txt"), Encoding.UTF8);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstClientBRun.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Downloaded }));
+            Assert.That(secondClientBRun.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Downloaded }));
+            Assert.That(clientBContent, Is.EqualTo("updated by client A"));
+        });
+    }
+
     private CottonCloudClient CreateClient()
     {
         Assert.That(_httpClient, Is.Not.Null);
