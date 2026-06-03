@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Net;
+using Cotton.Sdk;
 using Cotton.Sync.App.Status;
 using Cotton.Sync.App.SyncPairs;
 using Cotton.Sync.Local;
@@ -155,7 +156,9 @@ public sealed class SyncPairRunner : ISyncPairRunner
             }
             catch (Exception exception)
             {
-                SetState(IsTransientNetworkFailure(exception) ? SyncPairRunState.Offline : SyncPairRunState.Error, exception.Message);
+                SetState(
+                    IsTransientNetworkFailure(exception) ? SyncPairRunState.Offline : SyncPairRunState.Error,
+                    CreateFailureMessage(exception));
                 _logger.LogError(
                     exception,
                     "Sync pair runner failed for {SyncPairId}.",
@@ -225,7 +228,7 @@ public sealed class SyncPairRunner : ISyncPairRunner
             catch (Exception exception) when (IsRetriableSyncFailure(exception) && attempt < _retryOptions.MaxAttempts)
             {
                 TimeSpan delay = GetRetryDelay(attempt);
-                SetState(GetRetriableFailureState(exception), exception.Message);
+                SetState(GetRetriableFailureState(exception), CreateFailureMessage(exception));
                 _logger.LogWarning(
                     exception,
                     "Retriable sync failure for {SyncPairId}; retrying attempt {NextAttempt} of {MaxAttempts} after {Delay}.",
@@ -306,6 +309,35 @@ public sealed class SyncPairRunner : ISyncPairRunner
     private static bool IsTransientNetworkFailure(Exception exception)
     {
         return exception is HttpRequestException requestException && IsTransientStatusCode(requestException.StatusCode);
+    }
+
+    private static string CreateFailureMessage(Exception exception)
+    {
+        return exception switch
+        {
+            CottonApiException apiException when IsQuotaExceededStatus(apiException.StatusCode)
+                => "Remote storage quota exceeded. Free space in Cotton Cloud or choose a smaller sync folder.",
+            CottonApiException apiException when apiException.StatusCode == HttpStatusCode.RequestEntityTooLarge
+                => "Remote upload was rejected because it is larger than the server limit.",
+            UnauthorizedAccessException
+                => "Permission denied while accessing local sync files. Check folder permissions and retry.",
+            IOException ioException when IsDiskFull(ioException)
+                => "Local disk is full. Free space on this computer and retry sync.",
+            LocalFileUnavailableException localFileUnavailable
+                => "Local file is not ready yet: " + localFileUnavailable.RelativePath + ". Sync will retry.",
+            _ => exception.Message,
+        };
+    }
+
+    private static bool IsQuotaExceededStatus(HttpStatusCode? statusCode)
+    {
+        return statusCode.HasValue && (int)statusCode.Value == 507;
+    }
+
+    private static bool IsDiskFull(IOException exception)
+    {
+        int errorCode = exception.HResult & 0xFFFF;
+        return errorCode is 28 or 39 or 112;
     }
 
     private static bool IsRetriableSyncFailure(Exception exception)

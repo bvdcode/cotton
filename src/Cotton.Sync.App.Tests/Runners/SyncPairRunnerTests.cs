@@ -4,6 +4,7 @@
 using Cotton.Sync.App.Runners;
 using Cotton.Sync.App.Status;
 using Cotton.Sync.App.SyncPairs;
+using Cotton.Sdk;
 using Cotton.Sync.Local;
 
 namespace Cotton.Sync.App.Tests.Runners;
@@ -119,6 +120,53 @@ public sealed class SyncPairRunnerTests
             Assert.That(exception, Is.Not.Null);
             Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Error));
             Assert.That(runner.Status.LastError, Is.EqualTo("sync failed"));
+        });
+    }
+
+    [Test]
+    public void SyncNowAsync_ReportsRemoteQuotaAsActionRequiredMessage()
+    {
+        var work = new FakeSyncPairWork
+        {
+            Failure = new CottonApiException(
+                (System.Net.HttpStatusCode)507,
+                null,
+                "Cotton API request failed with status 507."),
+        };
+        SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true), work);
+
+        CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(
+            async () => await runner.SyncNowAsync());
+
+        const string expected = "Remote storage quota exceeded. Free space in Cotton Cloud or choose a smaller sync folder.";
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Error));
+            Assert.That(runner.Status.LastError, Is.EqualTo(expected));
+            Assert.That(runner.Status.CurrentOperation, Is.EqualTo("Action required: " + expected));
+        });
+    }
+
+    [Test]
+    public void SyncNowAsync_ReportsLocalPermissionDeniedAsActionRequiredMessage()
+    {
+        var work = new FakeSyncPairWork
+        {
+            Failure = new UnauthorizedAccessException("Access to the path was denied."),
+        };
+        SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true), work);
+
+        UnauthorizedAccessException? exception = Assert.ThrowsAsync<UnauthorizedAccessException>(
+            async () => await runner.SyncNowAsync());
+
+        const string expected = "Permission denied while accessing local sync files. Check folder permissions and retry.";
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Error));
+            Assert.That(runner.Status.LastError, Is.EqualTo(expected));
+            Assert.That(runner.Status.CurrentOperation, Is.EqualTo("Action required: " + expected));
         });
     }
 

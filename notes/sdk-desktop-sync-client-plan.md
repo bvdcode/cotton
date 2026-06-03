@@ -435,7 +435,9 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Client crash during sync recovers.
 - [ ] Disk full shows action-required error.
 - [ ] Permission denied shows action-required error.
+  Partial 2026-06-03: `SyncPairRunner` now converts local `UnauthorizedAccessException` failures into the user-facing action-required message `Permission denied while accessing local sync files. Check folder permissions and retry.`, while retaining the original exception in logs. Focused runner tests passed 13/13, full `Cotton.Sync.App.Tests` passed 89/89, and full solution Release build passed with the known NU1903 warning. Keep unchecked until an end-to-end filesystem permission scenario is run through the desktop shell.
 - [ ] Quota exceeded shows action-required error.
+  Partial 2026-06-03: `SyncPairRunner` now converts remote HTTP 507 / Cotton API quota failures into the user-facing action-required message `Remote storage quota exceeded. Free space in Cotton Cloud or choose a smaller sync folder.`, which flows through existing desktop status/action-required handling. Focused runner tests passed 13/13, full `Cotton.Sync.App.Tests` passed 89/89, and full solution Release build passed with the known NU1903 warning. Keep unchecked until a server-backed quota scenario is run end to end.
 - [ ] Large file upload and download complete.
 - [ ] Many small files complete.
 - [ ] Deep nested paths complete or fail with clear path error.
