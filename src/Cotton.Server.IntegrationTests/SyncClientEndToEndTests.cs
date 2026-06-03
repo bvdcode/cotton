@@ -342,6 +342,57 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         });
     }
 
+    [Test]
+    public async Task RunOnceAsync_CreatesConflictWhenTwoClientsEditSameFile()
+    {
+        CottonCloudClient clientA = CreateClient();
+        CottonCloudClient clientB = CreateClient();
+        await LoginAsync(clientA);
+        await LoginAsync(clientB);
+        NodeDto remoteRoot = await new RemoteRootResolver(clientA.Nodes).EnsureAsync("sync-e2e-two-client-conflict");
+        string localRootA = Path.Combine(_tempDirectory, "client-conflict-a");
+        string localRootB = Path.Combine(_tempDirectory, "client-conflict-b");
+        Directory.CreateDirectory(localRootB);
+        const string relativePath = "Docs/conflict.txt";
+        var syncPairA = new SyncPair
+        {
+            SyncPairId = "client-conflict-a",
+            LocalRootPath = localRootA,
+            RemoteRootNodeId = remoteRoot.Id,
+        };
+        var syncPairB = new SyncPair
+        {
+            SyncPairId = "client-conflict-b",
+            LocalRootPath = localRootB,
+            RemoteRootNodeId = remoteRoot.Id,
+        };
+        SqliteSyncStateStore stateStoreB = CreateStateStore("client-conflict-b-state.sqlite");
+        SyncEngine engineA = CreateEngine(clientA, CreateStateStore("client-conflict-a-state.sqlite"));
+        SyncEngine engineB = CreateEngine(clientB, stateStoreB);
+        WriteLocalFile(localRootA, relativePath, "initial content");
+        await engineA.RunOnceAsync(syncPairA);
+        await engineB.RunOnceAsync(syncPairB);
+
+        WriteLocalFile(localRootA, relativePath, "client A content");
+        await engineA.RunOnceAsync(syncPairA);
+        WriteLocalFile(localRootB, relativePath, "client B content");
+        SyncRunResult conflictRun = await engineB.RunOnceAsync(syncPairB);
+
+        string clientBMainContent = File.ReadAllText(Path.Combine(localRootB, "Docs", "conflict.txt"), Encoding.UTF8);
+        string[] conflictFiles = Directory.GetFiles(localRootB, "*Cotton conflict*", SearchOption.AllDirectories);
+        SyncStateEntry? baseline = await stateStoreB.GetAsync("client-conflict-b", relativePath);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(conflictRun.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Conflict }));
+            Assert.That(conflictRun.Activities.Single().Details, Does.Contain("Cotton conflict"));
+            Assert.That(clientBMainContent, Is.EqualTo("client B content"));
+            Assert.That(conflictFiles, Has.Length.EqualTo(1));
+            Assert.That(File.ReadAllText(conflictFiles[0], Encoding.UTF8), Is.EqualTo("client A content"));
+            Assert.That(baseline?.LocalContentHash, Is.Not.EqualTo(baseline?.RemoteContentHash));
+        });
+    }
+
     private CottonCloudClient CreateClient()
     {
         Assert.That(_httpClient, Is.Not.Null);
