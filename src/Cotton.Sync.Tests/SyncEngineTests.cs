@@ -94,6 +94,54 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_UploadsUnicodeNamedLocalFileAndStoresBaseline()
+    {
+        const string relativePath = "Документы/設計-notes.txt";
+        LocalFileSnapshot local = LocalFile(relativePath, "unicode-local-content");
+        var scanner = new FakeLocalFileScanner(local);
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        SyncEngine engine = CreateEngine(scanner, EmptyRemoteTree(), remoteFiles, out SqliteSyncStateStore stateStore);
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+        SyncStateEntry? entry = await stateStore.GetAsync("pair-a", relativePath);
+        Assert.Multiple(() =>
+        {
+            Assert.That(remoteFiles.Uploads, Has.Count.EqualTo(1));
+            Assert.That(remoteFiles.Uploads[0].RelativePath, Is.EqualTo(relativePath));
+            Assert.That(result.Activities.Select(x => x.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
+            Assert.That(entry, Is.Not.Null);
+            Assert.That(entry!.RelativePath, Is.EqualTo(relativePath));
+            Assert.That(entry.LocalContentHash, Is.EqualTo(local.ContentHash));
+            Assert.That(entry.RemoteContentHash, Is.EqualTo(local.ContentHash));
+        });
+    }
+
+    [Test]
+    public async Task RunOnceAsync_DownloadsUnicodeNamedRemoteFileAndStoresBaseline()
+    {
+        const string relativePath = "Документы/設計-remote.txt";
+        byte[] content = Encoding.UTF8.GetBytes("unicode-remote-content");
+        NodeFileManifestDto remote = RemoteFile(relativePath, Hash(content));
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        remoteFiles.Downloads[remote.Id] = content;
+        SyncEngine engine = CreateEngine(new FakeLocalFileScanner(), RemoteTree(remote), remoteFiles, out SqliteSyncStateStore stateStore);
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+        SyncStateEntry? entry = await stateStore.GetAsync("pair-a", relativePath);
+        Assert.Multiple(() =>
+        {
+            Assert.That(File.ReadAllText(Path.Combine(_root, "Документы", "設計-remote.txt")), Is.EqualTo("unicode-remote-content"));
+            Assert.That(result.Activities.Select(x => x.Kind), Is.EqualTo(new[] { SyncActivityKind.Downloaded }));
+            Assert.That(entry, Is.Not.Null);
+            Assert.That(entry!.RelativePath, Is.EqualTo(relativePath));
+            Assert.That(entry.LocalContentHash, Is.EqualTo(remote.ContentHash));
+            Assert.That(entry.RemoteFileId, Is.EqualTo(remote.Id));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_UploadsLocalChangeWhenRemoteBaselineIsUnchanged()
     {
         LocalFileSnapshot local = LocalFile("changed.txt", "local-new");

@@ -445,6 +445,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Windows reserved names are blocked or mapped with clear UX.
 - [ ] Case conflict is detected and explained.
 - [ ] Unicode names sync consistently.
+  Partial 2026-06-03: `SyncEngine` now has focused coverage for Unicode relative paths in both local upload and remote download, preserving the display relative path and baseline state. Focused `SyncEngineTests` passed 33/33, full `Cotton.Sync.Tests` passed 91/91, and full solution Release build passed with the known NU1903 warning. Keep unchecked until a server-backed desktop end-to-end Unicode path scenario is run.
 - [ ] Temporary files are ignored.
 - [ ] Locked files retry and eventually sync after unlock.
 
