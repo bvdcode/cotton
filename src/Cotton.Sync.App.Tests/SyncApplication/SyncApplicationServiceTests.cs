@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Sync.App.Auth;
+using Cotton.Sync.App.LocalChanges;
 using Cotton.Sync.App.Platform;
 using Cotton.Sync.App.Preferences;
 using Cotton.Sync.App.SyncApplication;
@@ -39,10 +40,12 @@ public sealed class SyncApplicationServiceTests
     {
         var authFlow = new FakeAuthFlow();
         var supervisor = new FakeSyncSupervisor();
+        var localChanges = new FakeLocalChangeSyncCoordinator();
         SyncApplicationService service = CreateService(
             new InMemorySyncPairSettingsStore(),
             authFlow: authFlow,
-            supervisor: supervisor);
+            supervisor: supervisor,
+            localChanges: localChanges);
 
         await service.SignOutAsync();
 
@@ -50,6 +53,7 @@ public sealed class SyncApplicationServiceTests
         {
             Assert.That(authFlow.SignOutCallCount, Is.EqualTo(1));
             Assert.That(supervisor.StopCallCount, Is.EqualTo(1));
+            Assert.That(localChanges.StopCallCount, Is.EqualTo(1));
         });
     }
 
@@ -58,10 +62,12 @@ public sealed class SyncApplicationServiceTests
     {
         var authFlow = new FakeAuthFlow();
         var supervisor = new FakeSyncSupervisor();
+        var localChanges = new FakeLocalChangeSyncCoordinator();
         SyncApplicationService service = CreateService(
             new InMemorySyncPairSettingsStore(),
             authFlow: authFlow,
-            supervisor: supervisor);
+            supervisor: supervisor,
+            localChanges: localChanges);
 
         AuthSession session = await service.RestoreSessionAsync();
 
@@ -69,7 +75,46 @@ public sealed class SyncApplicationServiceTests
         {
             Assert.That(authFlow.RestoreSessionCallCount, Is.EqualTo(1));
             Assert.That(supervisor.StartCallCount, Is.EqualTo(1));
+            Assert.That(localChanges.StartCallCount, Is.EqualTo(1));
             Assert.That(session, Is.SameAs(authFlow.Session));
+        });
+    }
+
+    [Test]
+    public async Task StartSyncAsync_StartsSupervisorAndLocalChanges()
+    {
+        var supervisor = new FakeSyncSupervisor();
+        var localChanges = new FakeLocalChangeSyncCoordinator();
+        SyncApplicationService service = CreateService(
+            new InMemorySyncPairSettingsStore(),
+            supervisor: supervisor,
+            localChanges: localChanges);
+
+        await service.StartSyncAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(supervisor.StartCallCount, Is.EqualTo(1));
+            Assert.That(localChanges.StartCallCount, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task StopSyncAsync_StopsLocalChangesAndSupervisor()
+    {
+        var supervisor = new FakeSyncSupervisor();
+        var localChanges = new FakeLocalChangeSyncCoordinator();
+        SyncApplicationService service = CreateService(
+            new InMemorySyncPairSettingsStore(),
+            supervisor: supervisor,
+            localChanges: localChanges);
+
+        await service.StopSyncAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(localChanges.StopCallCount, Is.EqualTo(1));
+            Assert.That(supervisor.StopCallCount, Is.EqualTo(1));
         });
     }
 
@@ -281,7 +326,8 @@ public sealed class SyncApplicationServiceTests
         IAppPreferencesStore? preferences = null,
         IAuthFlow? authFlow = null,
         ISyncSupervisor? supervisor = null,
-        IPlatformCommandService? platformCommands = null)
+        IPlatformCommandService? platformCommands = null,
+        ILocalChangeSyncCoordinator? localChanges = null)
     {
         return new SyncApplicationService(
             store,
@@ -289,7 +335,8 @@ public sealed class SyncApplicationServiceTests
             preferences ?? new FakeAppPreferencesStore(),
             authFlow ?? new FakeAuthFlow(),
             supervisor ?? new FakeSyncSupervisor(),
-            platformCommands ?? new FakePlatformCommandService());
+            platformCommands ?? new FakePlatformCommandService(),
+            localChanges);
     }
 
     private static SyncPairSettings CreatePair(string localRootPath)
@@ -508,6 +555,25 @@ public sealed class SyncApplicationServiceTests
         {
             OpenWebCallCount++;
             LastOpenedUrl = url;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeLocalChangeSyncCoordinator : ILocalChangeSyncCoordinator
+    {
+        public int StartCallCount { get; private set; }
+
+        public int StopCallCount { get; private set; }
+
+        public Task StartAsync(CancellationToken cancellationToken = default)
+        {
+            StartCallCount++;
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken = default)
+        {
+            StopCallCount++;
             return Task.CompletedTask;
         }
     }
