@@ -116,6 +116,30 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task ConflictActivity_AddsConflictRow()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot());
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportActivity(new DesktopActivitySnapshot(
+            "Conflict",
+            "Documents/report.txt",
+            "Created conflict copy Documents/report.txt",
+            new DateTime(2026, 6, 3, 10, 15, 0, DateTimeKind.Utc)));
+
+        ConflictRowViewModel conflict = viewModel.Conflicts.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasConflicts, Is.True);
+            Assert.That(viewModel.ConflictCountLabel, Is.EqualTo("1 conflict"));
+            Assert.That(conflict.Path, Is.EqualTo("Documents/report.txt"));
+            Assert.That(conflict.Details, Is.EqualTo("Created conflict copy Documents/report.txt"));
+            Assert.That(viewModel.Activities.First().Kind, Is.EqualTo("Conflict"));
+        });
+    }
+
+    [Test]
     public void ActivityEmptyState_UpdatesWhenActivityIsReported()
     {
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot());

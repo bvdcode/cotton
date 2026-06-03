@@ -19,6 +19,7 @@ namespace Cotton.Sync.Desktop.ViewModels;
 internal sealed class ShellViewModel : ViewModelBase, IDisposable
 {
     private const int MaxActivityRows = 30;
+    private const int MaxConflictRows = 20;
 
     private readonly IDesktopShellController _controller;
     private readonly DesktopFeatureFlags _featureFlags;
@@ -74,6 +75,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         _themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
         _uiDispatcher = uiDispatcher ?? new AvaloniaDesktopUiDispatcher();
         Activities.CollectionChanged += OnActivitiesChanged;
+        Conflicts.CollectionChanged += OnConflictsChanged;
         SyncPairs.CollectionChanged += OnSyncPairsChanged;
         RemoteFolders.CollectionChanged += OnRemoteFoldersChanged;
         SelfTestItems.CollectionChanged += OnSelfTestItemsChanged;
@@ -110,6 +112,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public ObservableCollection<SyncPairRowViewModel> SyncPairs { get; } = [];
 
     public ObservableCollection<ActivityRowViewModel> Activities { get; } = [];
+
+    public ObservableCollection<ConflictRowViewModel> Conflicts { get; } = [];
 
     public ObservableCollection<RemoteFolderRowViewModel> RemoteFolders { get; } = [];
 
@@ -216,6 +220,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public bool HasNoActivities => Activities.Count == 0;
 
     public bool HasActivities => Activities.Count > 0;
+
+    public bool HasConflicts => Conflicts.Count > 0;
+
+    public string ConflictCountLabel => Conflicts.Count == 1 ? "1 conflict" : Conflicts.Count + " conflicts";
 
     public bool HasActionRequired => !string.IsNullOrWhiteSpace(ActionRequiredMessage);
 
@@ -545,6 +553,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         _controller.StatusChanged -= OnStatusChanged;
         _controller.ActivityReported -= OnActivityReported;
         Activities.CollectionChanged -= OnActivitiesChanged;
+        Conflicts.CollectionChanged -= OnConflictsChanged;
         SyncPairs.CollectionChanged -= OnSyncPairsChanged;
         RemoteFolders.CollectionChanged -= OnRemoteFoldersChanged;
         SelfTestItems.CollectionChanged -= OnSelfTestItemsChanged;
@@ -1092,6 +1101,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(HasActivities));
     }
 
+    private void OnConflictsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(HasConflicts));
+        OnPropertyChanged(nameof(ConflictCountLabel));
+    }
+
     private void OnRemoteFoldersChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         OnPropertyChanged(nameof(HasNoRemoteFolders));
@@ -1157,11 +1172,17 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
 
     private void ApplyActivity(DesktopActivitySnapshot activity)
     {
+        DateTimeOffset occurredAt = new DateTimeOffset(DateTime.SpecifyKind(activity.OccurredAtUtc, DateTimeKind.Utc))
+            .ToLocalTime();
         AddActivity(
             activity.Kind,
             activity.Path,
             activity.Details,
-            new DateTimeOffset(DateTime.SpecifyKind(activity.OccurredAtUtc, DateTimeKind.Utc)).ToLocalTime());
+            occurredAt);
+        if (string.Equals(activity.Kind, "Conflict", StringComparison.Ordinal))
+        {
+            AddConflict(activity.Path, activity.Details, occurredAt);
+        }
     }
 
     private void ApplyStatus(DesktopSyncStatusSnapshot status)
@@ -1255,6 +1276,20 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         while (Activities.Count > MaxActivityRows)
         {
             Activities.RemoveAt(Activities.Count - 1);
+        }
+    }
+
+    private void AddConflict(string path, string details, DateTimeOffset occurredAt)
+    {
+        Conflicts.Insert(0, new ConflictRowViewModel
+        {
+            Time = occurredAt.ToString("HH:mm", CultureInfo.CurrentCulture),
+            Path = path,
+            Details = details,
+        });
+        while (Conflicts.Count > MaxConflictRows)
+        {
+            Conflicts.RemoveAt(Conflicts.Count - 1);
         }
     }
 

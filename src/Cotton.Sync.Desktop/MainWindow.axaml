@@ -180,7 +180,7 @@
 
     <Grid Grid.Row="2"
           IsVisible="{Binding IsDashboardVisible}">
-      <Grid RowDefinitions="Auto,Auto,Auto,*"
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto,*"
             Margin="10"
             RowSpacing="8">
         <Border Padding="10"
@@ -280,7 +280,70 @@
           </ScrollViewer>
         </Border>
 
-        <Grid Grid.Row="3"
+        <Border Grid.Row="3"
+                Padding="10"
+                MaxHeight="116"
+                CornerRadius="6"
+                Background="{DynamicResource CottonErrorSoftBrush}"
+                BorderBrush="{DynamicResource CottonErrorBrush}"
+                BorderThickness="1"
+                IsVisible="{Binding HasConflicts}">
+          <Grid RowDefinitions="Auto,*"
+                RowSpacing="7">
+            <Grid ColumnDefinitions="*,Auto,Auto"
+                  ColumnSpacing="6">
+              <StackPanel Spacing="1">
+                <TextBlock Text="Conflicts"
+                           FontSize="14"
+                           FontWeight="SemiBold" />
+                <TextBlock Text="{Binding ConflictCountLabel}"
+                           Classes="secondary"
+                           FontSize="12" />
+              </StackPanel>
+              <Button Grid.Column="1"
+                      Content="Retry"
+                      Classes="compact"
+                      ToolTip.Tip="Run synchronization again"
+                      Command="{Binding SyncNowCommand}" />
+              <Button Grid.Column="2"
+                      Content="Open"
+                      Classes="compact"
+                      ToolTip.Tip="Open selected local folder"
+                      Command="{Binding OpenFolderCommand}" />
+            </Grid>
+
+            <ScrollViewer Grid.Row="1"
+                          VerticalScrollBarVisibility="Auto">
+              <ItemsControl ItemsSource="{Binding Conflicts}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="42,*"
+                          RowDefinitions="Auto,Auto"
+                          ColumnSpacing="8"
+                          Margin="0,3">
+                      <TextBlock Text="{Binding Time}"
+                                 Classes="secondary"
+                                 FontSize="11" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding Path}"
+                                 FontSize="12"
+                                 FontWeight="SemiBold"
+                                 TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Row="1"
+                                 Grid.Column="1"
+                                 Text="{Binding Details}"
+                                 Classes="secondary"
+                                 FontSize="11"
+                                 TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Grid>
+        </Border>
+
+        <Grid Grid.Row="4"
               RowDefinitions="*,148"
               RowSpacing="8">
           <Border Padding="10"
