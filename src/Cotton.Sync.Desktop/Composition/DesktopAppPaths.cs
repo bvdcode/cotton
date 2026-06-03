@@ -45,4 +45,10 @@ internal sealed class DesktopAppPaths
 
         return new DesktopAppPaths(Path.Combine(root, CompanyDirectoryName, ProductDirectoryName));
     }
+
+    internal static DesktopAppPaths CreateForDataDirectory(string dataDirectory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(dataDirectory);
+        return new DesktopAppPaths(dataDirectory);
+    }
 }

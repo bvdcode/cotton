@@ -70,6 +70,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         OpenFolderCommand = new AsyncRelayCommand(OpenFolderAsync, () => SelectedSyncPair is not null, HandleCommandError);
         OpenWebCommand = new AsyncRelayCommand(OpenWebAsync, () => IsSignedIn, HandleCommandError);
         SelfTestCommand = new AsyncRelayCommand(SelfTestAsync, () => !IsBusy, HandleCommandError);
+        ExportDiagnosticsCommand = new AsyncRelayCommand(ExportDiagnosticsAsync, () => !IsBusy, HandleCommandError);
     }
 
     public ObservableCollection<SyncPairRowViewModel> SyncPairs { get; } = [];
@@ -109,6 +110,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public AsyncRelayCommand SyncNowCommand { get; }
 
     public AsyncRelayCommand SelfTestCommand { get; }
+
+    public AsyncRelayCommand ExportDiagnosticsCommand { get; }
 
     public string AccountName
     {
@@ -678,6 +681,22 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         }
     }
 
+    private async Task ExportDiagnosticsAsync()
+    {
+        IsBusy = true;
+        try
+        {
+            string bundlePath = await _controller.ExportDiagnosticsAsync().ConfigureAwait(true);
+            GlobalStatus = "Diagnostics exported";
+            ActionRequiredMessage = string.Empty;
+            AddActivity("Diagnostics", bundlePath, "Diagnostics bundle exported");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     private Task ShowSettingsAsync()
     {
         IsSettingsVisible = true;
@@ -933,6 +952,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         ShowSettingsCommand.RaiseCanExecuteChanged();
         CloseSettingsCommand.RaiseCanExecuteChanged();
         SelfTestCommand.RaiseCanExecuteChanged();
+        ExportDiagnosticsCommand.RaiseCanExecuteChanged();
     }
 
     private void RaiseWizardStateProperties()

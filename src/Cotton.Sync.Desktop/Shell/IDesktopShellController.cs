@@ -35,4 +35,6 @@ internal interface IDesktopShellController : IDisposable
     Task SetStartWithOperatingSystemAsync(bool enabled, CancellationToken cancellationToken = default);
 
     Task<DesktopSelfTestSnapshot> RunSelfTestAsync(CancellationToken cancellationToken = default);
+
+    Task<string> ExportDiagnosticsAsync(CancellationToken cancellationToken = default);
 }

@@ -614,10 +614,16 @@
               <StackPanel Spacing="7">
                 <TextBlock Text="Diagnostics"
                            FontWeight="SemiBold" />
-                <Button Content="Run self-test"
-                        Classes="compact"
-                        HorizontalAlignment="Left"
-                        Command="{Binding SelfTestCommand}" />
+                <StackPanel Orientation="Horizontal"
+                            Spacing="6">
+                  <Button Content="Run self-test"
+                          Classes="compact"
+                          Command="{Binding SelfTestCommand}" />
+                  <Button Content="Export"
+                          Classes="compact"
+                          ToolTip.Tip="Export diagnostics bundle"
+                          Command="{Binding ExportDiagnosticsCommand}" />
+                </StackPanel>
               </StackPanel>
 
               <Border Height="1"

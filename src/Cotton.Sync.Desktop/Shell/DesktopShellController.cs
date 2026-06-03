@@ -13,6 +13,7 @@ using Cotton.Sync.App.Status;
 using Cotton.Sync.App.SyncApplication;
 using Cotton.Sync.App.SyncPairs;
 using Cotton.Sync.Desktop.Composition;
+using Cotton.Sync.Desktop.Diagnostics;
 using Cotton.Sync.Desktop.Platform;
 using Cotton.Sync.Desktop.Startup;
 
@@ -25,6 +26,8 @@ internal sealed class DesktopShellController : IDesktopShellController
     private readonly DesktopSyncApplicationFactory _factory;
     private readonly IPlatformCommandService _platformCommands;
     private readonly IAutostartService _autostartService;
+    private readonly DesktopDiagnosticsExporter _diagnosticsExporter;
+    private readonly DesktopAppPaths _paths;
     private readonly SqliteAppPreferencesStore _preferencesStore;
     private readonly DesktopStartupOptions _startupOptions;
     private readonly SqliteSyncPairSettingsStore _syncPairStore;
@@ -32,6 +35,7 @@ internal sealed class DesktopShellController : IDesktopShellController
     private IDisposable? _statusSubscription;
 
     public DesktopShellController(
+        DesktopAppPaths paths,
         DesktopSyncApplicationFactory factory,
         SqliteAppPreferencesStore preferencesStore,
         SqliteSyncPairSettingsStore syncPairStore,
@@ -39,11 +43,13 @@ internal sealed class DesktopShellController : IDesktopShellController
         IAutostartService autostartService,
         DesktopStartupOptions? startupOptions = null)
     {
+        _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         _factory = factory ?? throw new ArgumentNullException(nameof(factory));
         _preferencesStore = preferencesStore ?? throw new ArgumentNullException(nameof(preferencesStore));
         _syncPairStore = syncPairStore ?? throw new ArgumentNullException(nameof(syncPairStore));
         _platformCommands = platformCommands ?? throw new ArgumentNullException(nameof(platformCommands));
         _autostartService = autostartService ?? throw new ArgumentNullException(nameof(autostartService));
+        _diagnosticsExporter = new DesktopDiagnosticsExporter();
         _startupOptions = startupOptions ?? DesktopStartupOptions.Empty;
     }
 
@@ -341,6 +347,23 @@ internal sealed class DesktopShellController : IDesktopShellController
         return new DesktopSelfTestSnapshot(items);
     }
 
+    public async Task<string> ExportDiagnosticsAsync(CancellationToken cancellationToken = default)
+    {
+        await _preferencesStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        await _syncPairStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        AppPreferences preferences = await _preferencesStore.GetAsync(cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<SyncPairSettings> syncPairs = await _syncPairStore.ListAsync(cancellationToken).ConfigureAwait(false);
+        DesktopSelfTestSnapshot selfTest = await RunSelfTestAsync(cancellationToken).ConfigureAwait(false);
+        var bundle = new DesktopDiagnosticsBundle(
+            DateTimeOffset.UtcNow,
+            typeof(App).Assembly.GetName().Version?.ToString() ?? "unknown",
+            (_startupOptions.ServerUrl ?? preferences.RememberedServerUrl)?.AbsoluteUri,
+            _host is null ? "Signed out" : preferences.RememberedUsername ?? "Signed in",
+            syncPairs.Select(ToSnapshot).ToList(),
+            selfTest.Items);
+        return await _diagnosticsExporter.ExportAsync(_paths, bundle, cancellationToken).ConfigureAwait(false);
+    }
+
     public void Dispose()
     {
         DesktopSyncApplicationHost? host = _host;
@@ -361,6 +384,7 @@ internal sealed class DesktopShellController : IDesktopShellController
     {
         ArgumentNullException.ThrowIfNull(paths);
         return new DesktopShellController(
+            paths,
             new DesktopSyncApplicationFactory(paths),
             new SqliteAppPreferencesStore(paths.AppDatabasePath),
             new SqliteSyncPairSettingsStore(paths.AppDatabasePath),
