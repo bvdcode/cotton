@@ -2,6 +2,8 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Avalonia;
+using Cotton.Sync.Desktop.Composition;
+using Cotton.Sync.Desktop.Platform;
 using Cotton.Sync.Desktop.Startup;
 
 namespace Cotton.Sync.Desktop;
@@ -11,6 +13,13 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        using DesktopSingleInstanceGuard? singleInstance = DesktopSingleInstanceGuard
+            .TryAcquire(DesktopAppPaths.CreateDefault().SingleInstanceLockPath);
+        if (singleInstance is null)
+        {
+            return;
+        }
+
         App.StartupOptions = DesktopStartupOptions.Parse(args);
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }

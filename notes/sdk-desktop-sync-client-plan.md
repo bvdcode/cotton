@@ -300,7 +300,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 
 ## Phase 9 - Tray, Autostart, Notifications, And Lifecycle
 
-- [ ] Add single-instance enforcement.
+- [x] Add single-instance enforcement.
+  Verification 2026-06-03: commit `Add desktop single-instance guard`; desktop startup acquires a per-user app-data lock file before starting Avalonia, and a second process exits when the lock is already held. Focused `DesktopSingleInstanceGuardTests` passed 3/3, full `Cotton.Sync.Desktop.Tests` passed 18/18, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [ ] Add close-to-tray behavior.
 - [ ] Add explicit quit behavior.
 - [ ] Add tray icon states.
@@ -314,7 +315,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Verification 2026-06-03: commit `Clarify desktop lifecycle platform support`; Linux uses an XDG autostart `.desktop` adapter, and the factory no longer adds `--start-minimized` on Linux while tray lifecycle is unsupported. `Cotton.Sync.Desktop.Tests` passed 15/15 including the Linux factory regression test, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [ ] Add notification adapter.
   Required notifications: initial sync complete, conflict created, action-required error.
-- [ ] Add tests for single-instance lock where practical.
+- [x] Add tests for single-instance lock where practical.
+  Verification 2026-06-03: `DesktopSingleInstanceGuardTests` cover first acquire, blocked second acquire, and acquire after dispose; focused tests passed 3/3.
 - [ ] Add manual Windows verification: autostart after reboot, tray behavior, notifications.
 - [ ] Add manual Linux verification: autostart after login, tray behavior, notification behavior.
 - [ ] Document Linux tray limitations and actual tested desktop environments.
