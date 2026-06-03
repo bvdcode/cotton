@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-using System.Data.Common;
+using Cotton.Sync.App.State;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Sync.App.SyncPairs;
@@ -11,29 +11,28 @@ namespace Cotton.Sync.App.SyncPairs;
 /// </summary>
 public sealed class SqliteSyncPairSettingsStore : ISyncPairSettingsStore
 {
-    private readonly string _databasePath;
+    private readonly SqliteSyncAppDbContextFactory _contextFactory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SqliteSyncPairSettingsStore" /> class.
     /// </summary>
     public SqliteSyncPairSettingsStore(string databasePath)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
-        _databasePath = databasePath;
+        _contextFactory = new SqliteSyncAppDbContextFactory(databasePath);
     }
 
     /// <inheritdoc />
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        EnsureDirectoryExists();
-        await using SyncPairSettingsDbContext context = CreateContext();
+        _contextFactory.EnsureDirectoryExists();
+        await using SyncAppDbContext context = _contextFactory.Create();
         await context.Database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<SyncPairSettings>> ListAsync(CancellationToken cancellationToken = default)
     {
-        await using SyncPairSettingsDbContext context = CreateContext();
+        await using SyncAppDbContext context = _contextFactory.Create();
         List<SyncPairSettingsEntity> entities = await context.SyncPairSettings
             .AsNoTracking()
             .OrderBy(static entity => entity.DisplayName)
@@ -46,7 +45,7 @@ public sealed class SqliteSyncPairSettingsStore : ISyncPairSettingsStore
     /// <inheritdoc />
     public async Task<SyncPairSettings?> GetAsync(Guid syncPairId, CancellationToken cancellationToken = default)
     {
-        await using SyncPairSettingsDbContext context = CreateContext();
+        await using SyncAppDbContext context = _contextFactory.Create();
         SyncPairSettingsEntity? entity = await context.SyncPairSettings
             .AsNoTracking()
             .SingleOrDefaultAsync(item => item.Id == syncPairId, cancellationToken)
@@ -58,7 +57,7 @@ public sealed class SqliteSyncPairSettingsStore : ISyncPairSettingsStore
     public async Task UpsertAsync(SyncPairSettings syncPair, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(syncPair);
-        await using SyncPairSettingsDbContext context = CreateContext();
+        await using SyncAppDbContext context = _contextFactory.Create();
         SyncPairSettingsEntity? entity = await context.SyncPairSettings
             .SingleOrDefaultAsync(item => item.Id == syncPair.Id, cancellationToken)
             .ConfigureAwait(false);
@@ -75,7 +74,7 @@ public sealed class SqliteSyncPairSettingsStore : ISyncPairSettingsStore
     /// <inheritdoc />
     public async Task DeleteAsync(Guid syncPairId, CancellationToken cancellationToken = default)
     {
-        await using SyncPairSettingsDbContext context = CreateContext();
+        await using SyncAppDbContext context = _contextFactory.Create();
         await context.SyncPairSettings
             .Where(item => item.Id == syncPairId)
             .ExecuteDeleteAsync(cancellationToken)
@@ -91,8 +90,8 @@ public sealed class SqliteSyncPairSettingsStore : ISyncPairSettingsStore
         entity.RemoteDisplayPath = syncPair.RemoteDisplayPath.Trim();
         entity.IsEnabled = syncPair.IsEnabled;
         entity.Mode = syncPair.Mode;
-        entity.CreatedAtUtc = ToUtc(syncPair.CreatedAtUtc == default ? now : syncPair.CreatedAtUtc);
-        entity.UpdatedAtUtc = ToUtc(syncPair.UpdatedAtUtc == default ? now : syncPair.UpdatedAtUtc);
+        entity.CreatedAtUtc = UtcDateTime.Normalize(syncPair.CreatedAtUtc == default ? now : syncPair.CreatedAtUtc);
+        entity.UpdatedAtUtc = UtcDateTime.Normalize(syncPair.UpdatedAtUtc == default ? now : syncPair.UpdatedAtUtc);
     }
 
     private static SyncPairSettings ToModel(SyncPairSettingsEntity entity)
@@ -106,40 +105,8 @@ public sealed class SqliteSyncPairSettingsStore : ISyncPairSettingsStore
             RemoteDisplayPath = entity.RemoteDisplayPath,
             IsEnabled = entity.IsEnabled,
             Mode = entity.Mode,
-            CreatedAtUtc = ToUtc(entity.CreatedAtUtc),
-            UpdatedAtUtc = ToUtc(entity.UpdatedAtUtc),
-        };
-    }
-
-    private SyncPairSettingsDbContext CreateContext()
-    {
-        var connectionString = new DbConnectionStringBuilder
-        {
-            ["Data Source"] = _databasePath,
-            ["Pooling"] = false,
-        }.ToString();
-        DbContextOptions<SyncPairSettingsDbContext> options = new DbContextOptionsBuilder<SyncPairSettingsDbContext>()
-            .UseSqlite(connectionString)
-            .Options;
-        return new SyncPairSettingsDbContext(options);
-    }
-
-    private void EnsureDirectoryExists()
-    {
-        string? directory = Path.GetDirectoryName(_databasePath);
-        if (!string.IsNullOrEmpty(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-    }
-
-    private static DateTime ToUtc(DateTime value)
-    {
-        return value.Kind switch
-        {
-            DateTimeKind.Utc => value,
-            DateTimeKind.Unspecified => DateTime.SpecifyKind(value, DateTimeKind.Utc),
-            _ => value.ToUniversalTime(),
+            CreatedAtUtc = UtcDateTime.Normalize(entity.CreatedAtUtc),
+            UpdatedAtUtc = UtcDateTime.Normalize(entity.UpdatedAtUtc),
         };
     }
 }
