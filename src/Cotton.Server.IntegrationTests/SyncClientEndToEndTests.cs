@@ -253,6 +253,50 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         });
     }
 
+    [Test]
+    public async Task RunOnceAsync_MovesLocalFileToQuarantineWhenRemoteFileIsDeleted()
+    {
+        CottonCloudClient client = CreateClient();
+        await LoginAsync(client);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-remote-delete");
+        NodeDto remoteDirectory = await client.Nodes.CreateAsync(remoteRoot.Id, "Docs");
+        NodeFileManifestDto remoteFile = await CreateRemoteTextFileAsync(
+            client,
+            remoteDirectory.Id,
+            "remote-delete.txt",
+            "remote delete content");
+        string localRoot = Path.Combine(_tempDirectory, "client-remote-delete");
+        Directory.CreateDirectory(localRoot);
+        SqliteSyncStateStore stateStore = CreateStateStore("client-remote-delete-state.sqlite");
+        SyncEngine engine = CreateEngine(client, stateStore);
+        var syncPair = new SyncPair
+        {
+            SyncPairId = "client-remote-delete",
+            LocalRootPath = localRoot,
+            RemoteRootNodeId = remoteRoot.Id,
+        };
+        await engine.RunOnceAsync(syncPair);
+
+        await client.Files.DeleteAsync(remoteFile.Id);
+        SyncRunResult result = await engine.RunOnceAsync(syncPair);
+
+        string localFilePath = Path.Combine(localRoot, "Docs", "remote-delete.txt");
+        string[] quarantinedFiles = Directory.GetFiles(
+            Path.Combine(localRoot, ".cotton-sync", "deleted"),
+            "remote-delete.txt",
+            SearchOption.AllDirectories);
+        SyncStateEntry? baseline = await stateStore.GetAsync("client-remote-delete", "Docs/remote-delete.txt");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.DeletedLocal }));
+            Assert.That(File.Exists(localFilePath), Is.False);
+            Assert.That(quarantinedFiles, Has.Length.EqualTo(1));
+            Assert.That(File.ReadAllText(quarantinedFiles[0], Encoding.UTF8), Is.EqualTo("remote delete content"));
+            Assert.That(baseline, Is.Null);
+        });
+    }
+
     private CottonCloudClient CreateClient()
     {
         Assert.That(_httpClient, Is.Not.Null);
