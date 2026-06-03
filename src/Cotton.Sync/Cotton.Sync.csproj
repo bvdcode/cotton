@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Authors>Vadim Belov</Authors>
+    <Company>bvdcode</Company>
+    <Product>Cotton</Product>
+    <Description>Cross-platform synchronization core for Cotton Cloud clients.</Description>
+    <PackageId>Cotton.Sync</PackageId>
+    <PackageTags>Cloud,Storage,Sync,SQLite</PackageTags>
+    <PackageProjectUrl>https://github.com/bvdcode/cotton</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/bvdcode/cotton</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.8">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <ProjectReference Include="../Cotton.Contracts/Cotton.Contracts.csproj" />
+    <ProjectReference Include="../Cotton.Sdk/Cotton.Sdk.csproj" />
+  </ItemGroup>
+
+</Project>
