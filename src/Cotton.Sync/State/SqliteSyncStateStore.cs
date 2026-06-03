@@ -39,7 +39,7 @@ public sealed class SqliteSyncStateStore : ISyncStateStore
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            // удаляем бд при ошибках т.к. идёт разработка
+            // удаляем бд при ошибках т.к. идёт разработка - намеренное поведение
             DeleteDatabaseFiles();
             await using SyncStateDbContext context = CreateContext();
             await context.Database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
