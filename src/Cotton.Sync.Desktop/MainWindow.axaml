@@ -180,7 +180,7 @@
 
     <Grid Grid.Row="2"
           IsVisible="{Binding IsDashboardVisible}">
-      <Grid RowDefinitions="Auto,Auto,*"
+      <Grid RowDefinitions="Auto,Auto,Auto,*"
             Margin="10"
             RowSpacing="8">
         <Border Padding="10"
@@ -234,7 +234,39 @@
           </Grid>
         </Border>
 
-        <Grid Grid.Row="2"
+        <Border Grid.Row="2"
+                MaxHeight="94"
+                IsVisible="{Binding HasNotifications}">
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Notifications}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Padding="9"
+                          Margin="0,0,0,6"
+                          CornerRadius="6"
+                          Background="{DynamicResource CottonSurfaceMutedBrush}"
+                          BorderBrush="{DynamicResource CottonBorderBrush}"
+                          BorderThickness="1">
+                    <Grid RowDefinitions="Auto,Auto"
+                          RowSpacing="1">
+                      <TextBlock Text="{Binding Title}"
+                                 FontSize="13"
+                                 FontWeight="SemiBold"
+                                 TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Row="1"
+                                 Text="{Binding Message}"
+                                 Classes="secondary"
+                                 FontSize="12"
+                                 TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Border>
+
+        <Grid Grid.Row="3"
               RowDefinitions="*,148"
               RowSpacing="8">
           <Border Padding="10"

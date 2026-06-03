@@ -20,6 +20,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
 {
     private readonly IDesktopShellController _controller;
     private readonly ILocalFolderPicker _folderPicker;
+    private readonly DesktopNotificationTracker _notificationTracker = new();
     private string _accountName = "Signed out";
     private string _actionRequiredMessage = string.Empty;
     private string _globalStatus = "Loading";
@@ -54,6 +55,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         SyncPairs.CollectionChanged += OnSyncPairsChanged;
         RemoteFolders.CollectionChanged += OnRemoteFoldersChanged;
         SelfTestItems.CollectionChanged += OnSelfTestItemsChanged;
+        Notifications.CollectionChanged += OnNotificationsChanged;
         _controller.StatusChanged += OnStatusChanged;
         SignInCommand = new AsyncRelayCommand(SignInAsync, CanSignIn, HandleCommandError);
         AddSyncPairCommand = new AsyncRelayCommand(AddSyncPairAsync, CanAddSyncPair, HandleCommandError);
@@ -83,6 +85,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public ObservableCollection<SelfTestItemRowViewModel> SelfTestItems { get; } = [];
 
     public ObservableCollection<DiagnosticItemRowViewModel> DiagnosticsItems { get; } = [];
+
+    public ObservableCollection<NotificationRowViewModel> Notifications { get; } = [];
 
     public AsyncRelayCommand AddSyncPairCommand { get; }
 
@@ -181,6 +185,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public bool HasNoSelfTestItems => SelfTestItems.Count == 0;
 
     public bool HasSelfTestItems => SelfTestItems.Count > 0;
+
+    public bool HasNotifications => Notifications.Count > 0;
 
     public bool HasSyncPairs => SyncPairs.Count > 0;
 
@@ -435,6 +441,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         SyncPairs.CollectionChanged -= OnSyncPairsChanged;
         RemoteFolders.CollectionChanged -= OnRemoteFoldersChanged;
         SelfTestItems.CollectionChanged -= OnSelfTestItemsChanged;
+        Notifications.CollectionChanged -= OnNotificationsChanged;
         _serverProbeCancellation?.Cancel();
         _serverProbeCancellation?.Dispose();
         _controller.Dispose();
@@ -650,6 +657,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             IsAddSyncPairWizardVisible = false;
             IsSettingsVisible = false;
             ActionRequiredMessage = string.Empty;
+            Notifications.Clear();
+            _notificationTracker.Reset();
             RemoteFolders.Clear();
             SetAllPairStatuses("Idle");
             AddActivity("Account", string.Empty, "Signed out");
@@ -871,6 +880,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(HasSelfTestItems));
     }
 
+    private void OnNotificationsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(HasNotifications));
+    }
+
     private async Task LoadRemoteFoldersAsync(string remotePath)
     {
         IsBusy = true;
@@ -925,7 +939,26 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
 
         GlobalStatus = ResolveGlobalStatus(status);
         ActionRequiredMessage = DesktopActionRequiredMessageResolver.FromStatus(status);
+        AddNotifications(_notificationTracker.Apply(status, SyncPairs.ToDictionary(static pair => pair.Id, static pair => pair.DisplayName)));
         RefreshDiagnosticsItems();
+    }
+
+    private void AddNotifications(IReadOnlyList<DesktopNotificationRequest> requests)
+    {
+        foreach (DesktopNotificationRequest request in requests)
+        {
+            Notifications.Insert(0, new NotificationRowViewModel
+            {
+                Title = request.Title,
+                Message = request.Message,
+            });
+            AddActivity("Notification", string.Empty, request.Message);
+        }
+
+        while (Notifications.Count > 3)
+        {
+            Notifications.RemoveAt(Notifications.Count - 1);
+        }
     }
 
     private string ResolveGlobalStatus(DesktopSyncStatusSnapshot status)
