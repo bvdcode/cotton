@@ -58,6 +58,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cotton.Sync", "Cotton.Sync\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cotton.Sync.Tests", "Cotton.Sync.Tests\Cotton.Sync.Tests.csproj", "{1B688B1D-E9A7-4300-B465-C7067DFDE330}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cotton.Sync.Desktop", "Cotton.Sync.Desktop\Cotton.Sync.Desktop.csproj", "{29E37A76-0E07-436C-85FF-40F4ECCE4E19}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -366,6 +368,18 @@ Global
 		{1B688B1D-E9A7-4300-B465-C7067DFDE330}.Release|x64.Build.0 = Release|Any CPU
 		{1B688B1D-E9A7-4300-B465-C7067DFDE330}.Release|x86.ActiveCfg = Release|Any CPU
 		{1B688B1D-E9A7-4300-B465-C7067DFDE330}.Release|x86.Build.0 = Release|Any CPU
+		{29E37A76-0E07-436C-85FF-40F4ECCE4E19}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{29E37A76-0E07-436C-85FF-40F4ECCE4E19}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{29E37A76-0E07-436C-85FF-40F4ECCE4E19}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{29E37A76-0E07-436C-85FF-40F4ECCE4E19}.Debug|x64.Build.0 = Debug|Any CPU
+		{29E37A76-0E07-436C-85FF-40F4ECCE4E19}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{29E37A76-0E07-436C-85FF-40F4ECCE4E19}.Debug|x86.Build.0 = Debug|Any CPU
+		{29E37A76-0E07-436C-85FF-40F4ECCE4E19}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{29E37A76-0E07-436C-85FF-40F4ECCE4E19}.Release|Any CPU.Build.0 = Release|Any CPU
+		{29E37A76-0E07-436C-85FF-40F4ECCE4E19}.Release|x64.ActiveCfg = Release|Any CPU
+		{29E37A76-0E07-436C-85FF-40F4ECCE4E19}.Release|x64.Build.0 = Release|Any CPU
+		{29E37A76-0E07-436C-85FF-40F4ECCE4E19}.Release|x86.ActiveCfg = Release|Any CPU
+		{29E37A76-0E07-436C-85FF-40F4ECCE4E19}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

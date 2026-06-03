@@ -1,0 +1,172 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Cotton.Sync.Desktop.MainWindow"
+        Title="Cotton Sync"
+        Width="1120"
+        Height="720"
+        MinWidth="920"
+        MinHeight="620">
+  <Grid RowDefinitions="Auto,*"
+        Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
+    <Border Grid.Row="0"
+            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+            BorderThickness="0,0,0,1"
+            Padding="20,14">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+        <StackPanel Spacing="2">
+          <TextBlock Text="Cotton Sync"
+                     FontSize="22"
+                     FontWeight="SemiBold" />
+          <TextBlock Text="{Binding GlobalStatus}"
+                     Opacity="0.72" />
+        </StackPanel>
+        <StackPanel Grid.Column="1"
+                    Orientation="Horizontal"
+                    Spacing="8"
+                    VerticalAlignment="Center">
+          <Button Content="Sync"
+                  Command="{Binding SyncNowCommand}" />
+          <Button Content="Pause"
+                  Command="{Binding PauseCommand}" />
+          <Button Content="Resume"
+                  Command="{Binding ResumeCommand}" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1"
+          ColumnDefinitions="320,*,360"
+          ColumnSpacing="18"
+          Margin="20">
+      <ScrollViewer>
+        <StackPanel Spacing="18">
+          <Border Padding="16"
+                  CornerRadius="6"
+                  Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+            <StackPanel Spacing="10">
+              <TextBlock Text="Account"
+                         FontSize="16"
+                         FontWeight="SemiBold" />
+              <TextBox Watermark="Server URL"
+                       Text="{Binding ServerUrl}" />
+              <TextBox Watermark="Username"
+                       Text="{Binding Username}" />
+              <TextBox Watermark="Password"
+                       PasswordChar="*"
+                       Text="{Binding Password}" />
+              <TextBox Watermark="TOTP code"
+                       Text="{Binding TotpCode}" />
+              <CheckBox Content="Trust this device"
+                        IsChecked="{Binding TrustDevice}" />
+              <Button Content="Sign in"
+                      HorizontalAlignment="Stretch"
+                      Command="{Binding SignInCommand}" />
+              <TextBlock Text="{Binding AccountName}"
+                         Opacity="0.72" />
+            </StackPanel>
+          </Border>
+
+          <Border Padding="16"
+                  CornerRadius="6"
+                  Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+            <StackPanel Spacing="10">
+              <TextBlock Text="Add Folder"
+                         FontSize="16"
+                         FontWeight="SemiBold" />
+              <TextBox Watermark="Local folder"
+                       Text="{Binding LocalFolderPath}" />
+              <TextBox Watermark="Remote folder"
+                       Text="{Binding RemoteFolderPath}" />
+              <Button Content="Add"
+                      HorizontalAlignment="Stretch"
+                      Command="{Binding AddSyncPairCommand}" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </ScrollViewer>
+
+      <Border Grid.Column="1"
+              Padding="16"
+              CornerRadius="6"
+              Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+        <Grid RowDefinitions="Auto,*"
+              RowSpacing="12">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="Folders"
+                       FontSize="16"
+                       FontWeight="SemiBold" />
+            <Button Grid.Column="1"
+                    Content="Open"
+                    Command="{Binding OpenFolderCommand}" />
+          </Grid>
+          <ListBox Grid.Row="1"
+                   ItemsSource="{Binding SyncPairs}">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Grid ColumnDefinitions="*,Auto"
+                      RowDefinitions="Auto,Auto,Auto"
+                      Margin="0,8"
+                      ColumnSpacing="12">
+                  <TextBlock Text="{Binding DisplayName}"
+                             FontWeight="SemiBold" />
+                  <TextBlock Grid.Column="1"
+                             Text="{Binding Status}"
+                             Opacity="0.72" />
+                  <TextBlock Grid.Row="1"
+                             Grid.ColumnSpan="2"
+                             Text="{Binding LocalPath}"
+                             TextTrimming="CharacterEllipsis"
+                             Opacity="0.74" />
+                  <TextBlock Grid.Row="2"
+                             Grid.ColumnSpan="2"
+                             Text="{Binding RemotePath}"
+                             TextTrimming="CharacterEllipsis"
+                             Opacity="0.74" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </Border>
+
+      <Border Grid.Column="2"
+              Padding="16"
+              CornerRadius="6"
+              Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+        <Grid RowDefinitions="Auto,*"
+              RowSpacing="12">
+          <TextBlock Text="Recent Activity"
+                     FontSize="16"
+                     FontWeight="SemiBold" />
+          <ListBox Grid.Row="1"
+                   ItemsSource="{Binding Activities}">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Grid ColumnDefinitions="48,86,*"
+                      RowDefinitions="Auto,Auto"
+                      ColumnSpacing="8"
+                      Margin="0,6">
+                  <TextBlock Text="{Binding Time}"
+                             Opacity="0.68" />
+                  <TextBlock Grid.Column="1"
+                             Text="{Binding Kind}"
+                             FontWeight="SemiBold" />
+                  <TextBlock Grid.Column="2"
+                             Text="{Binding Path}"
+                             TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Row="1"
+                             Grid.Column="1"
+                             Grid.ColumnSpan="2"
+                             Text="{Binding Details}"
+                             TextTrimming="CharacterEllipsis"
+                             Opacity="0.72" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </Border>
+    </Grid>
+  </Grid>
+</Window>
