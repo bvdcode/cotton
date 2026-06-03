@@ -1109,6 +1109,56 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task RunOnceAsync_RecoversAfterRemoteUploadBeforeBaselineUpdateThroughSdkAndServer()
+    {
+        CottonCloudClient client = CreateClient();
+        await LoginAsync(client);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-client-crash");
+        string localRoot = Path.Combine(_tempDirectory, "client-crash");
+        const string relativePath = "Crash/uploaded-before-baseline.txt";
+        WriteLocalFile(localRoot, relativePath, "uploaded before baseline");
+        SqliteSyncStateStore stateStore = CreateStateStore("client-crash-state.sqlite");
+        var failingStateStore = new FailOnceUpsertStateStore(
+            stateStore,
+            new InvalidOperationException("simulated client crash before baseline update"));
+        SyncEngine crashingEngine = CreateEngine(client, failingStateStore);
+        var syncPair = new SyncPair
+        {
+            SyncPairId = "client-crash",
+            LocalRootPath = localRoot,
+            RemoteRootNodeId = remoteRoot.Id,
+        };
+
+        InvalidOperationException? crashException = Assert.ThrowsAsync<InvalidOperationException>(() => crashingEngine.RunOnceAsync(syncPair));
+
+        NodeFileManifestDto uploadedBeforeRecovery = await FindRemoteFileAsync(client, remoteRoot.Id, relativePath);
+        string uploadedContent = await DownloadTextAsync(client, uploadedBeforeRecovery.Id);
+        IReadOnlyList<SyncStateEntry> baselinesAfterCrash = await stateStore.LoadPairAsync(syncPair.SyncPairId);
+
+        SyncEngine recoveredEngine = CreateEngine(client, stateStore);
+        SyncRunResult recoveryResult = await recoveredEngine.RunOnceAsync(syncPair);
+
+        NodeFileManifestDto uploadedAfterRecovery = await FindRemoteFileAsync(client, remoteRoot.Id, relativePath);
+        NodeContentDto rootContent = await client.Nodes.GetChildrenAsync(remoteRoot.Id);
+        NodeDto crashDirectory = rootContent.Nodes.Single(node => string.Equals(node.Name, "Crash", StringComparison.Ordinal));
+        NodeContentDto crashDirectoryContent = await client.Nodes.GetChildrenAsync(crashDirectory.Id);
+        SyncStateEntry? baseline = await stateStore.GetAsync(syncPair.SyncPairId, relativePath);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(crashException, Is.Not.Null);
+            Assert.That(failingStateStore.UpsertAttempts, Is.EqualTo(1));
+            Assert.That(uploadedContent, Is.EqualTo("uploaded before baseline"));
+            Assert.That(baselinesAfterCrash, Is.Empty);
+            Assert.That(recoveryResult.Activities, Is.Empty);
+            Assert.That(uploadedAfterRecovery.Id, Is.EqualTo(uploadedBeforeRecovery.Id));
+            Assert.That(crashDirectoryContent.Files.Select(file => file.Name), Is.EqualTo(new[] { "uploaded-before-baseline.txt" }));
+            Assert.That(baseline?.RemoteFileId, Is.EqualTo(uploadedAfterRecovery.Id));
+            Assert.That(baseline?.RemoteContentHash, Is.EqualTo(uploadedAfterRecovery.ContentHash));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_CreatesConflictWhenTwoClientsEditSameFile()
     {
         CottonCloudClient clientA = CreateClient();
@@ -1215,7 +1265,7 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
             existingFile.ETag);
     }
 
-    private static SyncEngine CreateEngine(CottonCloudClient client, SqliteSyncStateStore stateStore)
+    private static SyncEngine CreateEngine(CottonCloudClient client, ISyncStateStore stateStore)
     {
         return new SyncEngine(
             new LocalFileScanner(),
@@ -1455,6 +1505,71 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
             }
 
             await _inner.RunOnceAsync(syncPair, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private sealed class FailOnceUpsertStateStore : ISyncStateStore
+    {
+        private readonly ISyncStateStore _inner;
+        private readonly Exception _failure;
+        private bool _hasFailed;
+
+        public FailOnceUpsertStateStore(ISyncStateStore inner, Exception failure)
+        {
+            _inner = inner;
+            _failure = failure;
+        }
+
+        public int UpsertAttempts { get; private set; }
+
+        public Task InitializeAsync(CancellationToken cancellationToken = default)
+        {
+            return _inner.InitializeAsync(cancellationToken);
+        }
+
+        public Task<IReadOnlyList<SyncStateEntry>> LoadPairAsync(string syncPairId, CancellationToken cancellationToken = default)
+        {
+            return _inner.LoadPairAsync(syncPairId, cancellationToken);
+        }
+
+        public Task<SyncChangeCursor> GetChangeCursorAsync(string syncPairId, CancellationToken cancellationToken = default)
+        {
+            return _inner.GetChangeCursorAsync(syncPairId, cancellationToken);
+        }
+
+        public Task<SyncStateEntry?> GetAsync(string syncPairId, string relativePath, CancellationToken cancellationToken = default)
+        {
+            return _inner.GetAsync(syncPairId, relativePath, cancellationToken);
+        }
+
+        public Task UpsertAsync(SyncStateEntry entry, CancellationToken cancellationToken = default)
+        {
+            UpsertAttempts++;
+            if (!_hasFailed)
+            {
+                _hasFailed = true;
+                throw _failure;
+            }
+
+            return _inner.UpsertAsync(entry, cancellationToken);
+        }
+
+        public Task SaveChangeCursorAsync(SyncChangeCursor cursor, CancellationToken cancellationToken = default)
+        {
+            return _inner.SaveChangeCursorAsync(cursor, cancellationToken);
+        }
+
+        public Task DeleteAsync(string syncPairId, string relativePath, CancellationToken cancellationToken = default)
+        {
+            return _inner.DeleteAsync(syncPairId, relativePath, cancellationToken);
+        }
+
+        public Task ReplacePairAsync(
+            string syncPairId,
+            IReadOnlyCollection<SyncStateEntry> entries,
+            CancellationToken cancellationToken = default)
+        {
+            return _inner.ReplacePairAsync(syncPairId, entries, cancellationToken);
         }
     }
 }
