@@ -16,6 +16,7 @@ using Cotton.Sync.Local;
 using Cotton.Sync.Remote;
 using Cotton.Sync.State;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
@@ -127,6 +128,50 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
             Assert.That(updated.ContentHash, Is.Not.EqualTo(initial.ContentHash));
             Assert.That(baseline?.LocalContentHash, Is.EqualTo(updated.ContentHash));
             Assert.That(baseline?.RemoteContentHash, Is.EqualTo(updated.ContentHash));
+        });
+    }
+
+    [Test]
+    public async Task RunOnceAsync_MovesRemoteFileToTrashWhenLocalFileIsDeleted()
+    {
+        CottonCloudClient client = CreateClient();
+        await LoginAsync(client);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-local-delete");
+        string localRoot = Path.Combine(_tempDirectory, "client-local-delete");
+        const string relativePath = "Docs/delete-me.txt";
+        string localFilePath = Path.Combine(localRoot, "Docs", "delete-me.txt");
+        WriteLocalFile(localRoot, relativePath, "delete me");
+        SqliteSyncStateStore stateStore = CreateStateStore("client-local-delete-state.sqlite");
+        SyncEngine engine = CreateEngine(client, stateStore);
+        var syncPair = new SyncPair
+        {
+            SyncPairId = "client-local-delete",
+            LocalRootPath = localRoot,
+            RemoteRootNodeId = remoteRoot.Id,
+        };
+        await engine.RunOnceAsync(syncPair);
+        NodeFileManifestDto uploaded = await FindRemoteFileAsync(client, remoteRoot.Id, "Docs", "delete-me.txt");
+
+        File.Delete(localFilePath);
+        SyncRunResult result = await engine.RunOnceAsync(syncPair);
+
+        NodeContentDto rootContent = await client.Nodes.GetChildrenAsync(remoteRoot.Id);
+        NodeDto docs = rootContent.Nodes.Single(node => string.Equals(node.Name, "Docs", StringComparison.Ordinal));
+        NodeContentDto docsContent = await client.Nodes.GetChildrenAsync(docs.Id);
+        SyncStateEntry? baseline = await stateStore.GetAsync("client-local-delete", relativePath);
+        DbContext.ChangeTracker.Clear();
+        Guid currentNodeId = await DbContext.NodeFiles
+            .AsNoTracking()
+            .Where(file => file.Id == uploaded.Id)
+            .Select(file => file.NodeId)
+            .SingleAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.DeletedRemote }));
+            Assert.That(docsContent.Files.Select(file => file.Id), Does.Not.Contain(uploaded.Id));
+            Assert.That(currentNodeId, Is.Not.EqualTo(docs.Id));
+            Assert.That(baseline, Is.Null);
         });
     }
 
