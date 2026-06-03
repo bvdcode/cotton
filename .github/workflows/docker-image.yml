@@ -152,6 +152,36 @@ jobs:
           name: nupkg
           path: nupkg
 
+      - name: Publish desktop Linux x64
+        run: dotnet publish src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj /p:PublishProfile=linux-x64 -p:Version='${{ steps.gitversion.outputs.SemVer }}' -p:InformationalVersion='${{ steps.gitversion.outputs.SemVer }}'
+
+      - name: Smoke desktop Linux self-test
+        run: |
+          temp_dir="$(mktemp -d)"
+          trap 'rm -rf "$temp_dir"' EXIT
+          src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64/Cotton.Sync.Desktop --self-test --data-dir "$temp_dir"
+
+      - name: Package desktop Linux x64 archive
+        run: tar -czf cotton-sync-desktop-linux-x64.tar.gz -C src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64 .
+
+      - name: Upload desktop Linux x64 artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: desktop-linux-x64
+          path: cotton-sync-desktop-linux-x64.tar.gz
+
+      - name: Publish desktop Windows x64
+        run: dotnet publish src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj /p:PublishProfile=win-x64 -p:Version='${{ steps.gitversion.outputs.SemVer }}' -p:InformationalVersion='${{ steps.gitversion.outputs.SemVer }}'
+
+      - name: Package desktop Windows x64 archive
+        run: tar -czf cotton-sync-desktop-win-x64.tar.gz -C src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64 .
+
+      - name: Upload desktop Windows x64 artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: desktop-win-x64
+          path: cotton-sync-desktop-win-x64.tar.gz
+
       - name: Write SixLabors license secret for Docker build
         env:
           SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
@@ -261,6 +291,20 @@ jobs:
           name: nupkg
           path: nupkg
 
+      - name: Download desktop Linux artifact
+        if: needs.build.outputs.CommitsSinceVersionSource > 0
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-linux-x64
+          path: release-artifacts
+
+      - name: Download desktop Windows artifact
+        if: needs.build.outputs.CommitsSinceVersionSource > 0
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-win-x64
+          path: release-artifacts
+
       - name: Create Release
         if: needs.build.outputs.CommitsSinceVersionSource > 0
         uses: ncipollo/release-action@v1
@@ -268,5 +312,5 @@ jobs:
           tag: ${{ needs.build.outputs.Version }}
           name: Release ${{ needs.build.outputs.Version }}
           body: ${{ github.event.head_commit.message }}
-          artifacts: "nupkg/*"
+          artifacts: "nupkg/*,release-artifacts/*"
           token: ${{ secrets.GITHUB_TOKEN }}

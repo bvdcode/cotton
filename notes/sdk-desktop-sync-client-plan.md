@@ -372,7 +372,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Verification 2026-06-03: `Cotton.Sync.Desktop.csproj` now generates `checksums.sha256` after publish. Verified with both `linux-x64` and `win-x64` publish profiles; checksum files include the Linux apphost, Windows `.exe`, and desktop DLL entries. Both publish commands passed with the known NU1903 warning.
 - [ ] Add signing plan.
   Windows code signing can be deferred only with an explicit release risk decision.
-- [ ] Add CI workflow for build, test, publish, package, and artifact upload.
+- [x] Add CI workflow for build, test, publish, package, and artifact upload.
+  Verification 2026-06-03: `.github/workflows/docker-image.yml` now publishes `linux-x64` and `win-x64` desktop profiles, runs the Linux published `--self-test --data-dir <temp>` smoke command, packages portable `cotton-sync-desktop-linux-x64.tar.gz` and `cotton-sync-desktop-win-x64.tar.gz` archives, uploads both as workflow artifacts, and attaches them to main-branch releases beside the NuGet package. Local workflow command simulation confirmed both archives contain the executable and `checksums.sha256`; YAML parsed successfully with PyYAML.
 - [x] Add smoke launch command or self-test command for packaged app.
   Verification 2026-06-03: added `--self-test`/`--smoke-test` desktop CLI mode plus `--data-dir` for isolated packaged smoke runs. The command prints self-test results and returns exit code `0` only when checks pass. Verified with `dotnet run --project src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj --configuration Release --no-restore -- --self-test --data-dir <temp>` and the published Linux executable `bin/Release/net10.0/publish/linux-x64/Cotton.Sync.Desktop --self-test --data-dir <temp>`; both passed. `win-x64` publish, full desktop tests 59/59, and full solution Release build passed with the known NU1903 warning.
 - [ ] Test Windows installer on a clean VM.
