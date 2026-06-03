@@ -197,6 +197,43 @@ public sealed class DesktopShellControllerSelfTestTests
         Assert.That(preferences.ThemeMode, Is.EqualTo(AppThemeMode.Light));
     }
 
+    [Test]
+    public async Task SetSyncPairEnabledAsync_PersistsEnabledState()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        var syncPairStore = new SqliteSyncPairSettingsStore(paths.AppDatabasePath);
+        await syncPairStore.InitializeAsync();
+        SyncPairSettings syncPair = CreateSyncPair(isEnabled: true);
+        await syncPairStore.UpsertAsync(syncPair);
+        using DesktopShellController controller = CreateController(paths, syncPairStore);
+
+        await controller.SetSyncPairEnabledAsync(syncPair.Id, enabled: false);
+
+        SyncPairSettings? persisted = await syncPairStore.GetAsync(syncPair.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(persisted, Is.Not.Null);
+            Assert.That(persisted!.IsEnabled, Is.False);
+            Assert.That(persisted.UpdatedAtUtc, Is.GreaterThan(syncPair.UpdatedAtUtc));
+        });
+    }
+
+    [Test]
+    public async Task RemoveSyncPairAsync_DeletesConfiguredPair()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        var syncPairStore = new SqliteSyncPairSettingsStore(paths.AppDatabasePath);
+        await syncPairStore.InitializeAsync();
+        SyncPairSettings syncPair = CreateSyncPair(isEnabled: true);
+        await syncPairStore.UpsertAsync(syncPair);
+        using DesktopShellController controller = CreateController(paths, syncPairStore);
+
+        await controller.RemoveSyncPairAsync(syncPair.Id);
+
+        SyncPairSettings? persisted = await syncPairStore.GetAsync(syncPair.Id);
+        Assert.That(persisted, Is.Null);
+    }
+
     private DesktopShellController CreateController()
     {
         DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
@@ -215,6 +252,22 @@ public sealed class DesktopShellControllerSelfTestTests
             syncPairStore,
             new FakePlatformCommandService(),
             new FakeAutostartService());
+    }
+
+    private SyncPairSettings CreateSyncPair(bool isEnabled)
+    {
+        return new SyncPairSettings
+        {
+            Id = Guid.NewGuid(),
+            DisplayName = "Documents",
+            LocalRootPath = Path.Combine(_tempDirectory, "Documents"),
+            RemoteRootNodeId = Guid.NewGuid(),
+            RemoteDisplayPath = "/Documents",
+            IsEnabled = isEnabled,
+            Mode = SyncPairMode.FullMirror,
+            CreatedAtUtc = DateTime.UtcNow.AddMinutes(-2),
+            UpdatedAtUtc = DateTime.UtcNow.AddMinutes(-1),
+        };
     }
 
     private sealed class FakeAutostartService : IAutostartService

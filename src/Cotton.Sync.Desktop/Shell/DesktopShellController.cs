@@ -202,6 +202,76 @@ internal sealed class DesktopShellController : IDesktopShellController
         return syncPair;
     }
 
+    public async Task SetSyncPairEnabledAsync(
+        Guid syncPairId,
+        bool enabled,
+        CancellationToken cancellationToken = default)
+    {
+        if (syncPairId == Guid.Empty)
+        {
+            throw new ArgumentException("Sync pair id is required.", nameof(syncPairId));
+        }
+
+        await _syncPairStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        SyncPairSettings? syncPair = await _syncPairStore.GetAsync(syncPairId, cancellationToken).ConfigureAwait(false);
+        if (syncPair is null)
+        {
+            throw new InvalidOperationException("Sync pair was not found.");
+        }
+
+        if (syncPair.IsEnabled == enabled)
+        {
+            return;
+        }
+
+        DesktopSyncApplicationHost? host = _host;
+        if (host is not null)
+        {
+            await host.App.StopSyncAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        try
+        {
+            syncPair.IsEnabled = enabled;
+            syncPair.UpdatedAtUtc = DateTime.UtcNow;
+            await _syncPairStore.UpsertAsync(syncPair, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            if (host is not null)
+            {
+                await host.App.StartSyncAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
+    public async Task RemoveSyncPairAsync(Guid syncPairId, CancellationToken cancellationToken = default)
+    {
+        if (syncPairId == Guid.Empty)
+        {
+            throw new ArgumentException("Sync pair id is required.", nameof(syncPairId));
+        }
+
+        DesktopSyncApplicationHost? host = _host;
+        if (host is not null)
+        {
+            await host.App.StopSyncAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        try
+        {
+            await _syncPairStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+            await _syncPairStore.DeleteAsync(syncPairId, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            if (host is not null)
+            {
+                await host.App.StartSyncAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
     public async Task SignOutAsync(CancellationToken cancellationToken = default)
     {
         DesktopSyncApplicationHost? host = _host;

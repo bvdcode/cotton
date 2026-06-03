@@ -674,6 +674,76 @@
                         Background="{DynamicResource CottonBorderBrush}" />
 
                 <StackPanel Spacing="7">
+                  <Grid ColumnDefinitions="*,Auto"
+                        ColumnSpacing="8">
+                    <TextBlock Text="Sync folders"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                    <Button Grid.Column="1"
+                            Content="+"
+                            Classes="icon"
+                            ToolTip.Tip="Add sync folder"
+                            Command="{Binding ShowAddSyncPairCommand}" />
+                  </Grid>
+                  <TextBlock Text="No folders configured"
+                             Classes="secondary"
+                             FontSize="12"
+                             IsVisible="{Binding HasNoSyncPairs}" />
+                  <Border MaxHeight="128"
+                          BorderBrush="{DynamicResource CottonBorderBrush}"
+                          BorderThickness="1"
+                          CornerRadius="6"
+                          IsVisible="{Binding HasSyncPairs}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                      <ListBox ItemsSource="{Binding SyncPairs}"
+                               SelectedItem="{Binding SelectedSyncPair}"
+                               BorderThickness="0"
+                               Background="Transparent">
+                        <ListBox.ItemTemplate>
+                          <DataTemplate>
+                            <Grid RowDefinitions="Auto,Auto"
+                                  ColumnDefinitions="*,Auto"
+                                  ColumnSpacing="8"
+                                  Margin="8,6">
+                              <TextBlock Text="{Binding DisplayName}"
+                                         FontSize="12"
+                                         FontWeight="SemiBold"
+                                         TextTrimming="CharacterEllipsis" />
+                              <TextBlock Grid.Column="1"
+                                         Text="{Binding Status}"
+                                         Classes="secondary"
+                                         FontSize="12" />
+                              <TextBlock Grid.Row="1"
+                                         Grid.ColumnSpan="2"
+                                         Text="{Binding LocalPath}"
+                                         Classes="secondary"
+                                         FontSize="11"
+                                         TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                          </DataTemplate>
+                        </ListBox.ItemTemplate>
+                      </ListBox>
+                    </ScrollViewer>
+                  </Border>
+                  <StackPanel Orientation="Horizontal"
+                              Spacing="6"
+                              IsVisible="{Binding HasSyncPairs}">
+                    <Button Content="Open"
+                            Classes="compact"
+                            Command="{Binding OpenFolderCommand}" />
+                    <Button Content="{Binding SelectedSyncPair.ToggleEnabledLabel}"
+                            Classes="compact"
+                            Command="{Binding ToggleSelectedSyncPairEnabledCommand}" />
+                    <Button Content="Remove"
+                            Classes="compact"
+                            Command="{Binding RemoveSelectedSyncPairCommand}" />
+                  </StackPanel>
+                </StackPanel>
+
+                <Border Height="1"
+                        Background="{DynamicResource CottonBorderBrush}" />
+
+                <StackPanel Spacing="7">
                   <TextBlock Text="Diagnostics"
                              FontWeight="SemiBold" />
                   <Border MaxHeight="112"

@@ -23,6 +23,10 @@ internal interface IDesktopShellController : IDisposable
 
     Task<SyncPairSettings> AddSyncPairAsync(DesktopSyncPairRequest request, CancellationToken cancellationToken = default);
 
+    Task SetSyncPairEnabledAsync(Guid syncPairId, bool enabled, CancellationToken cancellationToken = default);
+
+    Task RemoveSyncPairAsync(Guid syncPairId, CancellationToken cancellationToken = default);
+
     Task SyncAllAsync(CancellationToken cancellationToken = default);
 
     Task PauseAllAsync(CancellationToken cancellationToken = default);

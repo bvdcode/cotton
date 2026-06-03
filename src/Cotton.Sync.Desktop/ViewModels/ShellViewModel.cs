@@ -85,6 +85,14 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         ResumeCommand = new AsyncRelayCommand(ResumeAsync, () => IsSignedIn, HandleCommandError);
         SignOutCommand = new AsyncRelayCommand(SignOutAsync, () => IsSignedIn, HandleCommandError);
         OpenFolderCommand = new AsyncRelayCommand(OpenFolderAsync, () => SelectedSyncPair is not null, HandleCommandError);
+        ToggleSelectedSyncPairEnabledCommand = new AsyncRelayCommand(
+            ToggleSelectedSyncPairEnabledAsync,
+            () => IsSignedIn && SelectedSyncPair is not null && !IsBusy,
+            HandleCommandError);
+        RemoveSelectedSyncPairCommand = new AsyncRelayCommand(
+            RemoveSelectedSyncPairAsync,
+            () => IsSignedIn && SelectedSyncPair is not null && !IsBusy,
+            HandleCommandError);
         OpenWebCommand = new AsyncRelayCommand(OpenWebAsync, () => IsSignedIn, HandleCommandError);
         SelfTestCommand = new AsyncRelayCommand(SelfTestAsync, () => !IsBusy, HandleCommandError);
         ExportDiagnosticsCommand = new AsyncRelayCommand(ExportDiagnosticsAsync, () => !IsBusy, HandleCommandError);
@@ -115,6 +123,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public AsyncRelayCommand OpenWebCommand { get; }
 
     public AsyncRelayCommand OpenRemoteFolderCommand { get; }
+
+    public AsyncRelayCommand RemoveSelectedSyncPairCommand { get; }
+
+    public AsyncRelayCommand ToggleSelectedSyncPairEnabledCommand { get; }
 
     public AsyncRelayCommand PauseCommand { get; }
 
@@ -483,6 +495,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             if (SetProperty(ref _selectedSyncPair, value))
             {
                 OpenFolderCommand.RaiseCanExecuteChanged();
+                ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
+                RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -714,6 +728,60 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     {
         await _controller.OpenWebAsync().ConfigureAwait(true);
         AddActivity("Open", string.Empty, "Cotton Cloud opened");
+    }
+
+    private async Task ToggleSelectedSyncPairEnabledAsync()
+    {
+        SyncPairRowViewModel? selected = SelectedSyncPair;
+        if (selected is null)
+        {
+            return;
+        }
+
+        bool enabled = !selected.IsEnabled;
+        IsBusy = true;
+        try
+        {
+            await _controller.SetSyncPairEnabledAsync(selected.Id, enabled).ConfigureAwait(true);
+            selected.IsEnabled = enabled;
+            selected.Status = enabled ? "Idle" : "Disabled";
+            GlobalStatus = enabled ? "Ready" : "Folder disabled";
+            ActionRequiredMessage = string.Empty;
+            AddActivity("Pair", selected.LocalPath, enabled ? "Folder enabled" : "Folder disabled");
+            RefreshDiagnosticsItems();
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task RemoveSelectedSyncPairAsync()
+    {
+        SyncPairRowViewModel? selected = SelectedSyncPair;
+        if (selected is null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            await _controller.RemoveSyncPairAsync(selected.Id).ConfigureAwait(true);
+            int removedIndex = SyncPairs.IndexOf(selected);
+            SyncPairs.Remove(selected);
+            SelectedSyncPair = SyncPairs.Count == 0
+                ? null
+                : SyncPairs[Math.Clamp(removedIndex, 0, SyncPairs.Count - 1)];
+            GlobalStatus = SyncPairs.Count == 0 ? "Ready to add a folder" : "Ready";
+            ActionRequiredMessage = string.Empty;
+            AddActivity("Pair", selected.LocalPath, "Sync folder removed");
+            RefreshDiagnosticsItems();
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     private async Task PauseAsync()
@@ -991,6 +1059,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(HasNoSyncPairs));
         OnPropertyChanged(nameof(HasSyncPairs));
         OpenFolderCommand.RaiseCanExecuteChanged();
+        ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
+        RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
         RefreshDiagnosticsItems();
     }
 
@@ -1057,6 +1127,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             }
 
             row.Status = pairStatus.Status;
+            row.IsEnabled = !string.Equals(pairStatus.Status, "Disabled", StringComparison.Ordinal);
             row.LastError = pairStatus.LastError;
             if (!string.IsNullOrWhiteSpace(pairStatus.LastError))
             {
@@ -1143,6 +1214,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         PauseCommand.RaiseCanExecuteChanged();
         ResumeCommand.RaiseCanExecuteChanged();
         OpenFolderCommand.RaiseCanExecuteChanged();
+        ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
+        RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
         OpenWebCommand.RaiseCanExecuteChanged();
         ShowAddSyncPairCommand.RaiseCanExecuteChanged();
         ShowSettingsCommand.RaiseCanExecuteChanged();
@@ -1173,6 +1246,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         return new SyncPairRowViewModel
         {
             Id = syncPair.Id,
+            IsEnabled = syncPair.IsEnabled,
             DisplayName = syncPair.DisplayName,
             LocalPath = syncPair.LocalRootPath,
             RemoteRootNodeId = syncPair.RemoteRootNodeId,
@@ -1186,6 +1260,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         return new SyncPairRowViewModel
         {
             Id = syncPair.Id,
+            IsEnabled = !string.Equals(syncPair.Status, "Disabled", StringComparison.Ordinal),
             DisplayName = syncPair.DisplayName,
             LocalPath = syncPair.LocalPath,
             RemoteRootNodeId = syncPair.RemoteRootNodeId,

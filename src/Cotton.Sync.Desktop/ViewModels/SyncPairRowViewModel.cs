@@ -10,6 +10,7 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
 {
     private string _displayName = string.Empty;
     private long? _changeCursor;
+    private bool _isEnabled = true;
     private DateTime? _lastSyncedAtUtc;
     private string? _lastError;
     private string _localPath = string.Empty;
@@ -18,6 +19,20 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
     private string _status = string.Empty;
 
     public Guid Id { get; set; }
+
+    public bool IsEnabled
+    {
+        get => _isEnabled;
+        set
+        {
+            if (SetProperty(ref _isEnabled, value))
+            {
+                OnPropertyChanged(nameof(ToggleEnabledLabel));
+            }
+        }
+    }
+
+    public string ToggleEnabledLabel => IsEnabled ? "Disable" : "Enable";
 
     public string DisplayName
     {
