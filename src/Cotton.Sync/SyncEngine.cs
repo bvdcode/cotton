@@ -63,7 +63,7 @@ public sealed class SyncEngine : ISyncEngine
             entry => entry.RelativePath);
         List<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys);
         var result = new SyncRunResult();
-        var deleteBudget = new SyncDeleteBudget(options);
+        SyncDeleteGuard deleteGuard = BuildDeleteGuard(options, pathKeys, localByPath, remoteByPath, stateByPath);
 
         foreach (string key in pathKeys)
         {
@@ -79,7 +79,7 @@ public sealed class SyncEngine : ISyncEngine
                 continue;
             }
 
-            await ReconcileWithBaselineAsync(syncPair, options, result, deleteBudget, state, relativePath, local, remote, cancellationToken)
+            await ReconcileWithBaselineAsync(syncPair, options, result, deleteGuard, state, relativePath, local, remote, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -124,7 +124,7 @@ public sealed class SyncEngine : ISyncEngine
         SyncPair syncPair,
         SyncRunOptions options,
         SyncRunResult result,
-        SyncDeleteBudget deleteBudget,
+        SyncDeleteGuard deleteGuard,
         SyncStateEntry state,
         string relativePath,
         LocalFileSnapshot? local,
@@ -174,13 +174,13 @@ public sealed class SyncEngine : ISyncEngine
 
         if (localDeleted && !remoteChanged && remote is not null)
         {
-            await DeleteRemoteAsync(syncPair, options, result, deleteBudget, relativePath, remote.File, cancellationToken).ConfigureAwait(false);
+            await DeleteRemoteAsync(syncPair, options, result, deleteGuard, relativePath, remote.File, cancellationToken).ConfigureAwait(false);
             return;
         }
 
         if (remoteDeleted && !localChanged && local is not null)
         {
-            await DeleteLocalAsync(syncPair, options, result, deleteBudget, relativePath, cancellationToken).ConfigureAwait(false);
+            await DeleteLocalAsync(syncPair, options, result, deleteGuard, relativePath, cancellationToken).ConfigureAwait(false);
             return;
         }
 
@@ -260,12 +260,12 @@ public sealed class SyncEngine : ISyncEngine
         SyncPair syncPair,
         SyncRunOptions options,
         SyncRunResult result,
-        SyncDeleteBudget deleteBudget,
+        SyncDeleteGuard deleteGuard,
         string relativePath,
         NodeFileManifestDto remoteFile,
         CancellationToken cancellationToken)
     {
-        if (!deleteBudget.TryConsumeRemoteDelete(out string? details))
+        if (!deleteGuard.CanDeleteRemote(out string? details))
         {
             Report(result, options, SyncActivityKind.Skipped, relativePath, details);
             return;
@@ -301,11 +301,11 @@ public sealed class SyncEngine : ISyncEngine
         SyncPair syncPair,
         SyncRunOptions options,
         SyncRunResult result,
-        SyncDeleteBudget deleteBudget,
+        SyncDeleteGuard deleteGuard,
         string relativePath,
         CancellationToken cancellationToken)
     {
-        if (!deleteBudget.TryConsumeLocalDelete(out string? details))
+        if (!deleteGuard.CanDeleteLocal(out string? details))
         {
             Report(result, options, SyncActivityKind.Skipped, relativePath, details);
             return;
@@ -431,6 +431,90 @@ public sealed class SyncEngine : ISyncEngine
         }
     }
 
+    private static SyncDeleteGuard BuildDeleteGuard(
+        SyncRunOptions options,
+        IEnumerable<string> pathKeys,
+        IReadOnlyDictionary<string, LocalFileSnapshot> localByPath,
+        IReadOnlyDictionary<string, RemoteFileSnapshot> remoteByPath,
+        IReadOnlyDictionary<string, SyncStateEntry> stateByPath)
+    {
+        int plannedLocalDeletes = 0;
+        int plannedRemoteDeletes = 0;
+
+        foreach (string key in pathKeys)
+        {
+            localByPath.TryGetValue(key, out LocalFileSnapshot? local);
+            remoteByPath.TryGetValue(key, out RemoteFileSnapshot? remote);
+            stateByPath.TryGetValue(key, out SyncStateEntry? state);
+
+            switch (GetPlannedDeleteDirection(state, local, remote))
+            {
+                case SyncDeleteDirection.Local:
+                    plannedLocalDeletes++;
+                    break;
+                case SyncDeleteDirection.Remote:
+                    plannedRemoteDeletes++;
+                    break;
+            }
+        }
+
+        return new SyncDeleteGuard(options, plannedLocalDeletes, plannedRemoteDeletes);
+    }
+
+    private static SyncDeleteDirection GetPlannedDeleteDirection(
+        SyncStateEntry? state,
+        LocalFileSnapshot? local,
+        RemoteFileSnapshot? remote)
+    {
+        if (state is null)
+        {
+            return SyncDeleteDirection.None;
+        }
+
+        bool localDeleted = local is null && !string.IsNullOrWhiteSpace(state.LocalContentHash);
+        bool remoteDeleted = remote is null && state.RemoteFileId.HasValue;
+        bool localChanged = local is not null && !ContentMatches(local.ContentHash, state.LocalContentHash);
+        bool remoteChanged = remote is not null && !RemoteMatchesBaseline(remote.File, state);
+        bool baselineDiverged = !ContentMatches(state.LocalContentHash, state.RemoteContentHash);
+
+        if (local is null && remote is null)
+        {
+            return SyncDeleteDirection.None;
+        }
+
+        if (local is not null && remote is not null && ContentMatches(local.ContentHash, remote.File.ContentHash))
+        {
+            return SyncDeleteDirection.None;
+        }
+
+        if (baselineDiverged)
+        {
+            return SyncDeleteDirection.None;
+        }
+
+        if (!localDeleted && !remoteDeleted && !localChanged && !remoteChanged)
+        {
+            return SyncDeleteDirection.None;
+        }
+
+        if (localDeleted && remoteDeleted)
+        {
+            return SyncDeleteDirection.None;
+        }
+
+        if (localDeleted && !remoteChanged && remote is not null)
+        {
+            return SyncDeleteDirection.Remote;
+        }
+
+        if (remoteDeleted && !localChanged && local is not null)
+        {
+            return SyncDeleteDirection.Local;
+        }
+
+        return SyncDeleteDirection.None;
+    }
+
     private static bool ContentMatches(string? left, string? right)
     {
         return !string.IsNullOrWhiteSpace(left)
@@ -492,50 +576,58 @@ public sealed class SyncEngine : ISyncEngine
         options.ActivityProgress?.Report(activity);
     }
 
-    private sealed class SyncDeleteBudget
+    private enum SyncDeleteDirection
+    {
+        None,
+        Local,
+        Remote,
+    }
+
+    private sealed class SyncDeleteGuard
     {
         private readonly int _maximumLocalDeletes;
         private readonly int _maximumRemoteDeletes;
-        private int _localDeletes;
-        private int _remoteDeletes;
+        private readonly int _plannedLocalDeletes;
+        private readonly int _plannedRemoteDeletes;
 
-        public SyncDeleteBudget(SyncRunOptions options)
+        public SyncDeleteGuard(SyncRunOptions options, int plannedLocalDeletes, int plannedRemoteDeletes)
         {
             _maximumLocalDeletes = options.MaximumLocalDeletesPerRun;
             _maximumRemoteDeletes = options.MaximumRemoteDeletesPerRun;
+            _plannedLocalDeletes = plannedLocalDeletes;
+            _plannedRemoteDeletes = plannedRemoteDeletes;
         }
 
-        public bool TryConsumeLocalDelete(out string? details)
+        public bool CanDeleteLocal(out string? details)
         {
-            return TryConsume(
-                ref _localDeletes,
+            return CanDelete(
+                _plannedLocalDeletes,
                 _maximumLocalDeletes,
                 "Local delete blocked by mass-delete guard.",
                 out details);
         }
 
-        public bool TryConsumeRemoteDelete(out string? details)
+        public bool CanDeleteRemote(out string? details)
         {
-            return TryConsume(
-                ref _remoteDeletes,
+            return CanDelete(
+                _plannedRemoteDeletes,
                 _maximumRemoteDeletes,
                 "Remote delete blocked by mass-delete guard.",
                 out details);
         }
 
-        private static bool TryConsume(
-            ref int used,
+        private static bool CanDelete(
+            int planned,
             int maximum,
             string blockedDetails,
             out string? details)
         {
-            if (used >= maximum)
+            if (planned > maximum)
             {
-                details = blockedDetails;
+                details = blockedDetails + " " + planned + " pending deletes exceed limit " + maximum + ".";
                 return false;
             }
 
-            used++;
             details = null;
             return true;
         }

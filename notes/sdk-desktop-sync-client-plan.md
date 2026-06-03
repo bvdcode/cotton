@@ -172,7 +172,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Target: safe delete or recycle/trash where available; direct delete only when deliberately accepted.
 - [ ] Add remote delete strategy.
   Target: trash/soft-delete by default.
-- [ ] Add mass-delete guard per sync pair.
+- [x] Add mass-delete guard per sync pair.
+  Verification: `SyncEngine` preflights planned local and remote deletes per run and blocks all deletes for a direction when candidates exceed `SyncRunOptions` limits, preserving local files and sync baseline entries; `SyncEngineTests` passed 20/20, full `Cotton.Sync.Tests` passed 47/47, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [ ] Add debounce for files still being written.
 - [ ] Add handling for locked files.
 - [x] Add ignore patterns for common temporary files.
@@ -186,7 +187,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Add Unicode normalization policy.
 - [ ] Add tests for every local/remote/base create-update-delete combination.
 - [ ] Add tests for conflict naming uniqueness.
-- [ ] Add tests for mass delete guard.
+- [x] Add tests for mass delete guard.
+  Verification: `RunOnceAsync_BlocksRemoteDeletesOverRunLimit` and `RunOnceAsync_BlocksLocalDeletesOverRunLimit` prove over-limit delete runs emit `Skipped` activities without partially deleting files or baseline state; `SyncEngineTests` passed 20/20 and full `Cotton.Sync.Tests` passed 47/47.
 - [ ] Add tests for locked or unreadable files.
 - [ ] Add tests for Windows reserved file names.
 - [x] Add tests for case conflicts.

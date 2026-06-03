@@ -254,14 +254,15 @@ public sealed class SyncEngineTests
         SyncStateEntry? secondEntry = await stateStore.GetAsync("pair-a", "b.txt");
         Assert.Multiple(() =>
         {
-            Assert.That(remoteFiles.Deletes, Is.EqualTo(new[] { (firstRemote.Id, false, firstRemote.ETag) }));
+            Assert.That(remoteFiles.Deletes, Is.Empty);
             Assert.That(result.Activities.Select(x => x.Kind), Is.EqualTo(new[]
             {
-                SyncActivityKind.DeletedRemote,
+                SyncActivityKind.Skipped,
                 SyncActivityKind.Skipped,
             }));
-            Assert.That(result.Activities[1].Details, Does.Contain("mass-delete guard"));
-            Assert.That(firstEntry, Is.Null);
+            Assert.That(result.Activities[0].Details, Does.Contain("2 pending deletes exceed limit 1"));
+            Assert.That(result.Activities[1].Details, Does.Contain("2 pending deletes exceed limit 1"));
+            Assert.That(firstEntry, Is.Not.Null);
             Assert.That(secondEntry, Is.Not.Null);
         });
     }
@@ -329,15 +330,16 @@ public sealed class SyncEngineTests
         SyncStateEntry? secondEntry = await stateStore.GetAsync("pair-a", "b.txt");
         Assert.Multiple(() =>
         {
-            Assert.That(File.Exists(Path.Combine(_root, "a.txt")), Is.False);
+            Assert.That(File.Exists(Path.Combine(_root, "a.txt")), Is.True);
             Assert.That(File.Exists(Path.Combine(_root, "b.txt")), Is.True);
             Assert.That(result.Activities.Select(x => x.Kind), Is.EqualTo(new[]
             {
-                SyncActivityKind.DeletedLocal,
+                SyncActivityKind.Skipped,
                 SyncActivityKind.Skipped,
             }));
-            Assert.That(result.Activities[1].Details, Does.Contain("mass-delete guard"));
-            Assert.That(firstEntry, Is.Null);
+            Assert.That(result.Activities[0].Details, Does.Contain("2 pending deletes exceed limit 1"));
+            Assert.That(result.Activities[1].Details, Does.Contain("2 pending deletes exceed limit 1"));
+            Assert.That(firstEntry, Is.Not.Null);
             Assert.That(secondEntry, Is.Not.Null);
         });
     }
