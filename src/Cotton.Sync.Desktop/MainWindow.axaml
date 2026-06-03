@@ -576,6 +576,52 @@
                   </Grid>
                 </Border>
 
+                <StackPanel Spacing="7"
+                            IsVisible="{Binding IsFutureSyncModesVisible}">
+                  <TextBlock Text="Sync mode"
+                             FontSize="12"
+                             FontWeight="SemiBold" />
+                  <Grid ColumnDefinitions="*,*"
+                        ColumnSpacing="8">
+                    <Border Padding="9"
+                            CornerRadius="6"
+                            Background="{DynamicResource CottonPrimarySoftBrush}"
+                            BorderBrush="{DynamicResource CottonPrimaryBrush}"
+                            BorderThickness="1">
+                      <Grid RowDefinitions="Auto,Auto"
+                            RowSpacing="2">
+                        <TextBlock Text="{Binding SelectedSyncModeLabel}"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Row="1"
+                                   Text="Available"
+                                   Classes="secondary"
+                                   FontSize="11" />
+                      </Grid>
+                    </Border>
+                    <Border Grid.Column="1"
+                            Padding="9"
+                            CornerRadius="6"
+                            Background="{DynamicResource CottonSurfaceMutedBrush}"
+                            BorderBrush="{DynamicResource CottonBorderBrush}"
+                            BorderThickness="1"
+                            Opacity="0.62">
+                      <Grid RowDefinitions="Auto,Auto"
+                            RowSpacing="2">
+                        <TextBlock Text="Virtual files"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Row="1"
+                                   Text="Not implemented"
+                                   Classes="secondary"
+                                   FontSize="11" />
+                      </Grid>
+                    </Border>
+                  </Grid>
+                </StackPanel>
+
                 <Grid ColumnDefinitions="*,Auto"
                       ColumnSpacing="8">
                   <Button Grid.Column="1"

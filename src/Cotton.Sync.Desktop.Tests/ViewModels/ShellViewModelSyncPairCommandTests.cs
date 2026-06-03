@@ -115,6 +115,24 @@ public sealed class ShellViewModelSyncPairCommandTests
         });
     }
 
+    [Test]
+    public void FutureSyncModesVisibility_UsesFeatureFlag()
+    {
+        using ShellViewModel hiddenViewModel = CreateViewModel(
+            new FakeDesktopShellController(CreateSignedInSnapshot()),
+            new DesktopFeatureFlags(false));
+        using ShellViewModel visibleViewModel = CreateViewModel(
+            new FakeDesktopShellController(CreateSignedInSnapshot()),
+            new DesktopFeatureFlags(true));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(hiddenViewModel.IsFutureSyncModesVisible, Is.False);
+            Assert.That(visibleViewModel.IsFutureSyncModesVisible, Is.True);
+            Assert.That(visibleViewModel.SelectedSyncModeLabel, Is.EqualTo("Full mirror"));
+        });
+    }
+
     private static async Task ExecuteAsync(AsyncRelayCommand command)
     {
         Assert.That(command.CanExecute(null), Is.True);
@@ -305,14 +323,17 @@ public sealed class ShellViewModelSyncPairCommandTests
         }
     }
 
-    private static ShellViewModel CreateViewModel(FakeDesktopShellController controller)
+    private static ShellViewModel CreateViewModel(
+        FakeDesktopShellController controller,
+        DesktopFeatureFlags? featureFlags = null)
     {
         return new ShellViewModel(
             controller,
             new FakeLocalFolderPicker(),
             new FakeDesktopNotificationService(),
             new FakeDesktopThemeService(),
-            new InlineDesktopUiDispatcher());
+            new InlineDesktopUiDispatcher(),
+            featureFlags);
     }
 
     private sealed class FakeLocalFolderPicker : ILocalFolderPicker

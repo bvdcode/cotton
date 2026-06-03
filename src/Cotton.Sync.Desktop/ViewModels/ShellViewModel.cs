@@ -21,6 +21,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     private const int MaxActivityRows = 30;
 
     private readonly IDesktopShellController _controller;
+    private readonly DesktopFeatureFlags _featureFlags;
     private readonly ILocalFolderPicker _folderPicker;
     private readonly IDesktopNotificationService _notificationService;
     private readonly IDesktopThemeService _themeService;
@@ -63,9 +64,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         ILocalFolderPicker folderPicker,
         IDesktopNotificationService notificationService,
         IDesktopThemeService themeService,
-        IDesktopUiDispatcher? uiDispatcher = null)
+        IDesktopUiDispatcher? uiDispatcher = null,
+        DesktopFeatureFlags? featureFlags = null)
     {
         _controller = controller ?? throw new ArgumentNullException(nameof(controller));
+        _featureFlags = featureFlags ?? DesktopFeatureFlags.Default;
         _folderPicker = folderPicker ?? throw new ArgumentNullException(nameof(folderPicker));
         _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
         _themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
@@ -378,6 +381,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public string AddSyncPairWizardSubtitle => HasLocalFolderSelection
         ? "Pick where this computer folder should sync in Cotton Cloud."
         : "Start with the folder on this computer.";
+
+    public bool IsFutureSyncModesVisible => _featureFlags.ShowFutureSyncModes;
+
+    public string SelectedSyncModeLabel => "Full mirror";
 
     public string RemoteFolderSelectionLabel => string.IsNullOrWhiteSpace(RemoteFolderPath)
         ? "Cloud folder: /"
