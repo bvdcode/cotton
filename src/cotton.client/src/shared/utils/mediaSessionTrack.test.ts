@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildAudioMediaSessionTrack } from "./audioMediaSessionTrack";
+import {
+  buildAudioMediaSessionTrack,
+  buildVideoMediaSessionTrack,
+} from "./mediaSessionTrack";
 
-describe("buildAudioMediaSessionTrack", () => {
+describe("media session track builders", () => {
   it("uses the audio file name without the final extension as the title", () => {
     expect(
       buildAudioMediaSessionTrack({
@@ -20,7 +23,7 @@ describe("buildAudioMediaSessionTrack", () => {
     ).toBe(".mp3");
   });
 
-  it("uses previewUrl as media session artwork", () => {
+  it("uses audio previewUrl as media session artwork", () => {
     expect(
       buildAudioMediaSessionTrack({
         id: "track-1",
@@ -30,7 +33,7 @@ describe("buildAudioMediaSessionTrack", () => {
     ).toEqual({ src: "/api/v1/preview/cover.webp" });
   });
 
-  it("infers artist and album only from multi-level folder paths", () => {
+  it("infers audio artist and album only from multi-level folder paths", () => {
     expect(
       buildAudioMediaSessionTrack({
         id: "track-1",
@@ -46,5 +49,20 @@ describe("buildAudioMediaSessionTrack", () => {
         folderPath: "Maybe Artist Or Album",
       }),
     ).not.toHaveProperty("artist");
+  });
+
+  it("uses video names and posters without audio-only metadata guesses", () => {
+    expect(
+      buildVideoMediaSessionTrack({
+        id: "video-1",
+        kind: "video",
+        name: "Clip.mov",
+        previewUrl: "/api/v1/preview/poster.webp",
+        mimeType: "video/quicktime",
+      }),
+    ).toEqual({
+      title: "Clip",
+      artwork: { src: "/api/v1/preview/poster.webp" },
+    });
   });
 });

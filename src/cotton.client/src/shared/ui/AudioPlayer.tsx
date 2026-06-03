@@ -6,7 +6,7 @@ import "react-h5-audio-player/lib/styles.css";
 import { filesApi } from "../api/filesApi";
 import type { AudioPlaylistItem } from "../types/audio";
 import { useAudioMediaSession } from "../hooks/useAudioMediaSession";
-import { buildAudioMediaSessionTrack } from "../utils/audioMediaSessionTrack";
+import { buildAudioMediaSessionTrack } from "../utils/mediaSessionTrack";
 
 interface AudioPlayerProps {
   currentFileId: string;

@@ -35,6 +35,7 @@ interface HlsVideoSlideProps {
   width?: number;
   height?: number;
   active: boolean;
+  onVideoElementChange?: (element: HTMLVideoElement | null) => void;
   noticeText: string;
   errorText: string;
 }
@@ -103,6 +104,7 @@ export const HlsVideoSlide: React.FC<HlsVideoSlideProps> = ({
   width,
   height,
   active,
+  onVideoElementChange,
   noticeText,
   errorText,
 }) => {
@@ -116,6 +118,13 @@ export const HlsVideoSlide: React.FC<HlsVideoSlideProps> = ({
       ? statusState
       : createHlsSlideStatusState(statusKey, active);
   const { noticeVisible, loadFailed } = status;
+
+  React.useEffect(() => {
+    onVideoElementChange?.(active ? videoRef.current : null);
+    return () => {
+      onVideoElementChange?.(null);
+    };
+  }, [active, onVideoElementChange]);
 
   React.useEffect(() => {
     if (!active) {
