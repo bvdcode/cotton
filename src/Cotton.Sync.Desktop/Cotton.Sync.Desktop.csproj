@@ -35,4 +35,21 @@
     <ProjectReference Include="../Cotton.Sync.App/Cotton.Sync.App.csproj" />
   </ItemGroup>
 
+  <Target Name="GeneratePublishChecksums"
+          AfterTargets="Publish"
+          Condition="'$(PublishDir)' != '' and '$(GeneratePublishChecksums)' != 'false'">
+    <ItemGroup>
+      <CottonPublishedFile Include="$(PublishDir)**/*"
+                           Exclude="$(PublishDir)checksums.sha256" />
+    </ItemGroup>
+    <GetFileHash Files="@(CottonPublishedFile)"
+                 Algorithm="SHA256">
+      <Output TaskParameter="Items"
+              ItemName="CottonPublishedFileHash" />
+    </GetFileHash>
+    <WriteLinesToFile File="$(PublishDir)checksums.sha256"
+                      Lines="@(CottonPublishedFileHash->'%(FileHash)  %(RecursiveDir)%(Filename)%(Extension)')"
+                      Overwrite="true" />
+  </Target>
+
 </Project>

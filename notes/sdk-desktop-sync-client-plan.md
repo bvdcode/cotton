@@ -363,7 +363,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Verification 2026-06-03: added `src/Cotton.Sync.Desktop/Properties/PublishProfiles/linux-x64.pubxml`; `dotnet publish src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj /p:PublishProfile=linux-x64` passed and produced executable `bin/Release/net10.0/publish/linux-x64/Cotton.Sync.Desktop` with the known NU1903 warning.
 - [ ] Add app icon and metadata for packaged apps.
 - [ ] Add version/about metadata.
-- [ ] Add checksum generation.
+- [x] Add checksum generation.
+  Verification 2026-06-03: `Cotton.Sync.Desktop.csproj` now generates `checksums.sha256` after publish. Verified with both `linux-x64` and `win-x64` publish profiles; checksum files include the Linux apphost, Windows `.exe`, and desktop DLL entries. Both publish commands passed with the known NU1903 warning.
 - [ ] Add signing plan.
   Windows code signing can be deferred only with an explicit release risk decision.
 - [ ] Add CI workflow for build, test, publish, package, and artifact upload.
