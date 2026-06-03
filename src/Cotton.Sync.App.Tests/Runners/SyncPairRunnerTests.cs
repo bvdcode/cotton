@@ -171,6 +171,28 @@ public sealed class SyncPairRunnerTests
     }
 
     [Test]
+    public void SyncNowAsync_ReportsLocalDiskFullAsActionRequiredMessage()
+    {
+        var work = new FakeSyncPairWork
+        {
+            Failure = new TestIOException(unchecked((int)0x80070070)),
+        };
+        SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true), work);
+
+        IOException? exception = Assert.ThrowsAsync<TestIOException>(
+            async () => await runner.SyncNowAsync());
+
+        const string expected = "Local disk is full. Free space on this computer and retry sync.";
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Error));
+            Assert.That(runner.Status.LastError, Is.EqualTo(expected));
+            Assert.That(runner.Status.CurrentOperation, Is.EqualTo("Action required: " + expected));
+        });
+    }
+
+    [Test]
     public async Task SyncNowAsync_RetriesTransientNetworkFailureAndReturnsIdleOnRecovery()
     {
         var work = new FakeSyncPairWork
@@ -392,6 +414,15 @@ public sealed class SyncPairRunnerTests
         private static TaskCompletionSource CreateCompletionSource()
         {
             return new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+    }
+
+    private sealed class TestIOException : IOException
+    {
+        public TestIOException(int hresult)
+            : base("Synthetic I/O failure.")
+        {
+            HResult = hresult;
         }
     }
 }

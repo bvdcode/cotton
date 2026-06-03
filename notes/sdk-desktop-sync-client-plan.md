@@ -434,6 +434,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Server restart during sync recovers.
 - [ ] Client crash during sync recovers.
 - [ ] Disk full shows action-required error.
+  Partial 2026-06-03: `SyncPairRunner` classifies local disk-full `IOException` failures into the user-facing action-required message `Local disk is full. Free space on this computer and retry sync.`. Focused runner tests passed 14/14, full `Cotton.Sync.App.Tests` passed 90/90, and full solution Release build passed with the known NU1903 warning. Keep unchecked until a real filesystem/disk-full scenario is run end to end.
 - [ ] Permission denied shows action-required error.
   Partial 2026-06-03: `SyncPairRunner` now converts local `UnauthorizedAccessException` failures into the user-facing action-required message `Permission denied while accessing local sync files. Check folder permissions and retry.`, while retaining the original exception in logs. Focused runner tests passed 13/13, full `Cotton.Sync.App.Tests` passed 89/89, and full solution Release build passed with the known NU1903 warning. Keep unchecked until an end-to-end filesystem permission scenario is run through the desktop shell.
 - [ ] Quota exceeded shows action-required error.
