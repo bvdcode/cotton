@@ -74,6 +74,7 @@ internal sealed class DesktopShellController : IDesktopShellController
         Uri? signInServerHint = session is not null || _startupOptions.ServerUrl is not null
             ? serverUrl
             : null;
+        DesktopPlatformCapabilitySnapshot platformCapabilities = DesktopPlatformCapabilities.CreateSnapshot();
         IReadOnlyList<DesktopSyncPairSnapshot> syncPairSnapshots = await BuildSyncPairSnapshotsAsync(
             syncPairs,
             cancellationToken).ConfigureAwait(false);
@@ -82,8 +83,7 @@ internal sealed class DesktopShellController : IDesktopShellController
             session?.Email ?? session?.Username,
             _startupOptions.Username ?? preferences.RememberedUsername,
             startWithOperatingSystem,
-            _autostartService.IsSupported,
-            DesktopPlatformCapabilities.IsTrayLifecycleSupported,
+            platformCapabilities with { IsAutostartSupported = _autostartService.IsSupported },
             session is not null,
             syncPairSnapshots);
     }
@@ -328,10 +328,20 @@ internal sealed class DesktopShellController : IDesktopShellController
                 return isEnabled ? "Enabled" : "Disabled";
             }).ConfigureAwait(false);
 
+        DesktopPlatformCapabilitySnapshot platformCapabilities = DesktopPlatformCapabilities.CreateSnapshot();
+        items.Add(new DesktopSelfTestItemSnapshot(
+            "Desktop platform",
+            true,
+            platformCapabilities.OperatingSystemName
+                + "; session: "
+                + platformCapabilities.DesktopSession
+                + "; desktop: "
+                + platformCapabilities.CurrentDesktop));
+
         items.Add(new DesktopSelfTestItemSnapshot(
             "Tray lifecycle",
             true,
-            DesktopPlatformCapabilities.IsTrayLifecycleSupported ? "Supported" : "Not supported on this platform"));
+            platformCapabilities.TrayLifecycleDetails));
 
         await AddSelfTestCheckAsync(
             items,

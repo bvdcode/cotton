@@ -46,6 +46,8 @@ public sealed class DesktopShellControllerSelfTestTests
             Assert.That(names, Does.Contain("Sync pair database"));
             Assert.That(names, Does.Contain("Sync state database"));
             Assert.That(names, Does.Contain("Authentication state"));
+            Assert.That(names, Does.Contain("Desktop platform"));
+            Assert.That(names, Does.Contain("Tray lifecycle"));
             Assert.That(names, Does.Contain("File watcher"));
             Assert.That(names, Does.Contain("Server identity"));
         });

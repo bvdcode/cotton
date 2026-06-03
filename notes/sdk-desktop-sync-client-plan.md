@@ -330,7 +330,9 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Verification 2026-06-03: `DesktopSingleInstanceGuardTests` cover first acquire, blocked second acquire, and acquire after dispose; focused tests passed 3/3.
 - [ ] Add manual Windows verification: autostart after reboot, tray behavior, notifications.
 - [ ] Add manual Linux verification: autostart after login, tray behavior, notification behavior.
-- [ ] Document Linux tray limitations and actual tested desktop environments.
+- [x] Document Linux tray limitations in app capabilities and self-test.
+  Verification 2026-06-03: `DesktopPlatformCapabilities.CreateSnapshot()` records OS/session/current desktop and explains why Linux tray lifecycle is not release-supported yet; settings and self-test now surface that reason. `Cotton.Sync.Desktop.Tests` includes a Linux guard that verifies the app does not claim tray lifecycle support on Linux.
+- [ ] Record actual tested Linux desktop environments after clean-machine/manual runs.
   Partial 2026-06-03: desktop settings now explicitly explain when tray lifecycle is unavailable, and Linux/XDG autostart tests verify autostart does not use `--start-minimized` without tray lifecycle support. Keep unchecked until manual Linux desktop-environment results are recorded.
 
 ## Phase 10 - Diagnostics And Supportability

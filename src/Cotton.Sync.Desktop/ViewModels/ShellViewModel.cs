@@ -39,6 +39,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     private bool _isLoadingSnapshot;
     private bool _isStartWithOperatingSystemSupported = true;
     private bool _isTrayLifecycleSupported;
+    private string _trayLifecycleDetails = "Tray lifecycle is not supported on this platform yet.";
     private string _serverUrl = string.Empty;
     private string _serverProbeStatus = string.Empty;
     private bool _startWithOperatingSystem;
@@ -239,6 +240,19 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
 
     public bool IsTrayLifecycleUnsupported => !IsTrayLifecycleSupported;
 
+    public string TrayLifecycleDetails
+    {
+        get => _trayLifecycleDetails;
+        private set
+        {
+            if (SetProperty(ref _trayLifecycleDetails, value))
+            {
+                OnPropertyChanged(nameof(AutostartStatusText));
+                OnPropertyChanged(nameof(TrayLifecycleStatusText));
+            }
+        }
+    }
+
     public string AutostartStatusText
     {
         get
@@ -250,13 +264,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
 
             return IsTrayLifecycleSupported
                 ? "Cotton Sync can start minimized and keep running in the tray."
-                : "Cotton Sync can start with your desktop session and opens normally on this platform.";
+                : "Cotton Sync can start with your desktop session and opens as a normal window on this platform.";
         }
     }
 
     public string TrayLifecycleStatusText => IsTrayLifecycleSupported
         ? "Closing the window keeps Cotton Sync running from the tray."
-        : "Tray lifecycle is not available on this platform; closing the window exits the app.";
+        : TrayLifecycleDetails;
 
     public bool IsAddSyncPairWizardVisible
     {
@@ -456,8 +470,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             DesktopShellSnapshot snapshot = await _controller.LoadAsync().ConfigureAwait(true);
             ServerUrl = snapshot.ServerUrl?.AbsoluteUri ?? string.Empty;
             Username = snapshot.RememberedUsername ?? string.Empty;
-            IsStartWithOperatingSystemSupported = snapshot.IsAutostartSupported;
-            IsTrayLifecycleSupported = snapshot.IsTrayLifecycleSupported;
+            IsStartWithOperatingSystemSupported = snapshot.PlatformCapabilities.IsAutostartSupported;
+            IsTrayLifecycleSupported = snapshot.PlatformCapabilities.IsTrayLifecycleSupported;
+            TrayLifecycleDetails = snapshot.PlatformCapabilities.TrayLifecycleDetails;
             StartWithOperatingSystem = snapshot.StartWithOperatingSystem;
             SyncPairs.Clear();
             foreach (DesktopSyncPairSnapshot syncPair in snapshot.SyncPairs)
