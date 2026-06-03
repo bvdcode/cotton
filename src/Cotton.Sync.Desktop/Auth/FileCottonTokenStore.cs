@@ -70,13 +70,16 @@ internal sealed class FileCottonTokenStore : ICottonTokenStore
         try
         {
             EnsureDirectoryExists();
+            StoredTokenEnvelope? previousEnvelope = await ReadEnvelopeAsync(cancellationToken).ConfigureAwait(false);
             string tempPath = _path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            StoredTokenEnvelope? createdEnvelope = null;
+            bool committed = false;
             try
             {
-                StoredTokenEnvelope envelope = await CreateEnvelopeAsync(tokens, cancellationToken).ConfigureAwait(false);
+                createdEnvelope = await CreateEnvelopeAsync(tokens, cancellationToken).ConfigureAwait(false);
                 await using (FileStream stream = File.Create(tempPath))
                 {
-                    await JsonSerializer.SerializeAsync(stream, envelope, JsonOptions, cancellationToken)
+                    await JsonSerializer.SerializeAsync(stream, createdEnvelope, JsonOptions, cancellationToken)
                         .ConfigureAwait(false);
                     await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
                 }
@@ -84,9 +87,16 @@ internal sealed class FileCottonTokenStore : ICottonTokenStore
                 RestrictFileAccess(tempPath);
                 File.Move(tempPath, _path, overwrite: true);
                 RestrictFileAccess(_path);
+                committed = true;
+                await DeleteProtectedPayloadAsync(previousEnvelope, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
+                if (!committed)
+                {
+                    await DeleteProtectedPayloadAsync(createdEnvelope, CancellationToken.None).ConfigureAwait(false);
+                }
+
                 DeleteIfExists(tempPath);
             }
         }
@@ -102,7 +112,9 @@ internal sealed class FileCottonTokenStore : ICottonTokenStore
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
+            StoredTokenEnvelope? envelope = await ReadEnvelopeAsync(cancellationToken).ConfigureAwait(false);
             DeleteIfExists(_path);
+            await DeleteProtectedPayloadAsync(envelope, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -166,6 +178,60 @@ internal sealed class FileCottonTokenStore : ICottonTokenStore
         return JsonSerializer.Deserialize<TokenPairDto>(plaintext, JsonOptions);
     }
 
+    private async Task<StoredTokenEnvelope?> ReadEnvelopeAsync(CancellationToken cancellationToken)
+    {
+        if (!File.Exists(_path))
+        {
+            return null;
+        }
+
+        try
+        {
+            await using FileStream stream = File.OpenRead(_path);
+            return await JsonSerializer
+                .DeserializeAsync<StoredTokenEnvelope>(stream, JsonOptions, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception exception) when (IsUnreadableTokenFileException(exception))
+        {
+            Trace.TraceWarning("Stored Cotton token envelope is unreadable and cannot be cleaned up: {0}", exception);
+            return null;
+        }
+    }
+
+    private async Task DeleteProtectedPayloadAsync(
+        StoredTokenEnvelope? envelope,
+        CancellationToken cancellationToken)
+    {
+        if (_protector is not IDeletableTokenPayloadProtector deletable
+            || envelope is null
+            || !string.Equals(envelope.Scheme, _protector.Scheme, StringComparison.Ordinal)
+            || string.IsNullOrWhiteSpace(envelope.Payload))
+        {
+            return;
+        }
+
+        byte[] protectedPayload;
+        try
+        {
+            protectedPayload = Convert.FromBase64String(envelope.Payload);
+        }
+        catch (FormatException exception)
+        {
+            Trace.TraceWarning("Stored Cotton token envelope has an invalid protected payload: {0}", exception);
+            return;
+        }
+
+        try
+        {
+            await deletable.DeleteAsync(protectedPayload, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (IsExternalSecretCleanupException(exception))
+        {
+            Trace.TraceWarning("Stored Cotton token external payload cleanup failed: {0}", exception);
+        }
+    }
+
     private static TokenPairDto Clone(TokenPairDto tokens)
     {
         return new TokenPairDto
@@ -173,6 +239,14 @@ internal sealed class FileCottonTokenStore : ICottonTokenStore
             AccessToken = tokens.AccessToken,
             RefreshToken = tokens.RefreshToken,
         };
+    }
+
+    private static bool IsExternalSecretCleanupException(Exception exception)
+    {
+        return exception is CryptographicException
+            or PlatformNotSupportedException
+            or IOException
+            or UnauthorizedAccessException;
     }
 
     private static void RestrictFileAccess(string path)

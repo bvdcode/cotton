@@ -179,6 +179,107 @@ public sealed class FileCottonTokenStoreTests
     }
 
     [Test]
+    public async Task ClearAsync_DeletesExternalProtectedPayloadWhenSupported()
+    {
+        string directory = CreateTempDirectory();
+        try
+        {
+            string path = Path.Combine(directory, "tokens.json");
+            var protector = new RecordingDeletableTokenPayloadProtector("external-scheme");
+            var store = new FileCottonTokenStore(path, protector);
+
+            await store.SaveAsync(new TokenPairDto
+            {
+                AccessToken = "access-token",
+                RefreshToken = "refresh-token",
+            });
+
+            Assert.That(protector.StoredPayloadIds, Has.Count.EqualTo(1));
+            string savedPayloadId = protector.StoredPayloadIds[0];
+            await store.ClearAsync();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(File.Exists(path), Is.False);
+                Assert.That(protector.DeletedPayloadIds, Is.EqualTo(new[] { savedPayloadId }));
+            });
+        }
+        finally
+        {
+            DeleteTempDirectory(directory);
+        }
+    }
+
+    [Test]
+    public async Task SaveAsync_DeletesPreviousExternalProtectedPayloadAfterOverwrite()
+    {
+        string directory = CreateTempDirectory();
+        try
+        {
+            string path = Path.Combine(directory, "tokens.json");
+            var protector = new RecordingDeletableTokenPayloadProtector("external-scheme");
+            var store = new FileCottonTokenStore(path, protector);
+
+            await store.SaveAsync(new TokenPairDto
+            {
+                AccessToken = "first-access-token",
+                RefreshToken = "first-refresh-token",
+            });
+            Assert.That(protector.StoredPayloadIds, Has.Count.EqualTo(1));
+            string firstPayloadId = protector.StoredPayloadIds[0];
+
+            await store.SaveAsync(new TokenPairDto
+            {
+                AccessToken = "second-access-token",
+                RefreshToken = "second-refresh-token",
+            });
+            TokenPairDto? loaded = await store.GetAsync();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(protector.StoredPayloadIds, Has.Count.EqualTo(1));
+                Assert.That(protector.StoredPayloadIds, Does.Not.Contain(firstPayloadId));
+                Assert.That(protector.DeletedPayloadIds, Is.EqualTo(new[] { firstPayloadId }));
+                Assert.That(loaded, Is.Not.Null);
+                Assert.That(loaded!.AccessToken, Is.EqualTo("second-access-token"));
+                Assert.That(loaded.RefreshToken, Is.EqualTo("second-refresh-token"));
+            });
+        }
+        finally
+        {
+            DeleteTempDirectory(directory);
+        }
+    }
+
+    [Test]
+    public async Task SaveAsync_DeletesNewExternalProtectedPayloadWhenCommitFails()
+    {
+        string directory = CreateTempDirectory();
+        try
+        {
+            var protector = new RecordingDeletableTokenPayloadProtector("external-scheme");
+            var store = new FileCottonTokenStore(directory, protector);
+
+            Exception? exception = Assert.CatchAsync(async () => await store.SaveAsync(new TokenPairDto
+            {
+                AccessToken = "access-token",
+                RefreshToken = "refresh-token",
+            }));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exception, Is.TypeOf<IOException>().Or.TypeOf<UnauthorizedAccessException>());
+                Assert.That(protector.StoredPayloadIds, Is.Empty);
+                Assert.That(protector.DeletedPayloadIds, Is.EqualTo(new[] { "payload-1" }));
+            });
+        }
+        finally
+        {
+            DeleteTempDirectory(directory);
+        }
+    }
+
+    [Test]
     public async Task GetAsync_ReturnsNullForIncompleteTokenFile()
     {
         string directory = CreateTempDirectory();
@@ -318,6 +419,47 @@ public sealed class FileCottonTokenStoreTests
         public Task<byte[]> UnprotectAsync(byte[] protectedPayload, CancellationToken cancellationToken = default)
         {
             return Task.FromException<byte[]>(new CryptographicException("payload is unreadable"));
+        }
+    }
+
+    private sealed class RecordingDeletableTokenPayloadProtector : ITokenPayloadProtector, IDeletableTokenPayloadProtector
+    {
+        private readonly Dictionary<string, byte[]> _payloads = [];
+        private int _nextId;
+
+        public RecordingDeletableTokenPayloadProtector(string scheme)
+        {
+            Scheme = scheme;
+        }
+
+        public string Scheme { get; }
+
+        public IReadOnlyList<string> StoredPayloadIds => _payloads.Keys.Order().ToList();
+
+        public List<string> DeletedPayloadIds { get; } = [];
+
+        public Task<byte[]> ProtectAsync(byte[] plaintext, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string id = "payload-" + Interlocked.Increment(ref _nextId).ToString("D");
+            _payloads[id] = plaintext.ToArray();
+            return Task.FromResult(Encoding.UTF8.GetBytes(id));
+        }
+
+        public Task<byte[]> UnprotectAsync(byte[] protectedPayload, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string id = Encoding.UTF8.GetString(protectedPayload);
+            return Task.FromResult(_payloads[id].ToArray());
+        }
+
+        public Task DeleteAsync(byte[] protectedPayload, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string id = Encoding.UTF8.GetString(protectedPayload);
+            _payloads.Remove(id);
+            DeletedPayloadIds.Add(id);
+            return Task.CompletedTask;
         }
     }
 }
