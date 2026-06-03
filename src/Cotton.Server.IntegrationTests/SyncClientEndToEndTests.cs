@@ -1067,6 +1067,48 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task RunOnceAsync_RecoversAfterServerHostRestartWithExistingLocalState()
+    {
+        CottonCloudClient client = CreateClient();
+        await LoginAsync(client);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-server-restart");
+        string localRoot = Path.Combine(_tempDirectory, "client-server-restart");
+        const string relativePath = "Restart/restarted.txt";
+        WriteLocalFile(localRoot, relativePath, "before server restart");
+        SqliteSyncStateStore stateStore = CreateStateStore("client-server-restart-state.sqlite");
+        SyncEngine engine = CreateEngine(client, stateStore);
+        var syncPair = new SyncPair
+        {
+            SyncPairId = "client-server-restart",
+            LocalRootPath = localRoot,
+            RemoteRootNodeId = remoteRoot.Id,
+        };
+        await engine.RunOnceAsync(syncPair);
+        NodeFileManifestDto uploadedBeforeRestart = await FindRemoteFileAsync(client, remoteRoot.Id, relativePath);
+
+        RestartServerHost();
+        CottonCloudClient restartedClient = CreateClient();
+        await LoginAsync(restartedClient);
+        WriteLocalFile(localRoot, relativePath, "after server restart");
+        SyncEngine restartedEngine = CreateEngine(restartedClient, stateStore);
+        SyncRunResult result = await restartedEngine.RunOnceAsync(syncPair);
+
+        NodeFileManifestDto uploadedAfterRestart = await FindRemoteFileAsync(restartedClient, remoteRoot.Id, relativePath);
+        string remoteContent = await DownloadTextAsync(restartedClient, uploadedAfterRestart.Id);
+        SyncStateEntry? baseline = await stateStore.GetAsync(syncPair.SyncPairId, relativePath);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
+            Assert.That(uploadedAfterRestart.Id, Is.EqualTo(uploadedBeforeRestart.Id));
+            Assert.That(uploadedAfterRestart.ContentHash, Is.Not.EqualTo(uploadedBeforeRestart.ContentHash));
+            Assert.That(remoteContent, Is.EqualTo("after server restart"));
+            Assert.That(baseline?.RemoteFileId, Is.EqualTo(uploadedAfterRestart.Id));
+            Assert.That(baseline?.RemoteContentHash, Is.EqualTo(uploadedAfterRestart.ContentHash));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_CreatesConflictWhenTwoClientsEditSameFile()
     {
         CottonCloudClient clientA = CreateClient();
@@ -1131,6 +1173,14 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
                 UserAgent = "CottonSyncDesktop/IntegrationTest",
                 DeviceName = "Cotton Sync Desktop integration test",
             });
+    }
+
+    private void RestartServerHost()
+    {
+        _httpClient?.Dispose();
+        _factory?.Dispose();
+        _factory = new TestAppFactory(CreateServerOverrides());
+        _httpClient = _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
     }
 
     private static Task<TokenPairDto> LoginAsync(CottonCloudClient client)
