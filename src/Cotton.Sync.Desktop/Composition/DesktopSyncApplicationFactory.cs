@@ -64,8 +64,17 @@ internal sealed class DesktopSyncApplicationFactory
             syncPairStore,
             supervisor,
             new FileSystemLocalSyncRootWatcherFactory());
-        var remoteChanges = new RealtimeRemoteChangeSyncCoordinator(cottonClient.Realtime, supervisor);
         var periodicSync = new PeriodicSyncCoordinator(supervisor);
+        var authFlow = new PasswordAuthFlow(cottonClient.Auth);
+        var sessionRevocationHandler = new SessionRevocationHandler(
+            authFlow,
+            localChanges,
+            periodicSync,
+            supervisor);
+        var remoteChanges = new RealtimeRemoteChangeSyncCoordinator(
+            cottonClient.Realtime,
+            supervisor,
+            sessionRevocationHandler: sessionRevocationHandler);
         var prerequisites = new SyncPairPrerequisiteValidator(
             new FileSystemLocalSyncRootProbe(),
             new SdkRemoteSyncRootProbe(cottonClient.Nodes));
@@ -73,7 +82,7 @@ internal sealed class DesktopSyncApplicationFactory
             syncPairStore,
             prerequisites,
             preferencesStore,
-            new PasswordAuthFlow(cottonClient.Auth),
+            authFlow,
             supervisor,
             new ProcessPlatformCommandService(),
             localChanges,

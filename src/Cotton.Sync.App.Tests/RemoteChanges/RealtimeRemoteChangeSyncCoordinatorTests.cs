@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton.Sync.App.Auth;
 using Cotton.Sdk.Realtime;
 using Cotton.Sync.App.RemoteChanges;
 using Cotton.Sync.App.Status;
@@ -59,14 +60,78 @@ public sealed class RealtimeRemoteChangeSyncCoordinatorTests
     {
         var realtime = new FakeCottonRealtimeClient();
         var supervisor = new FakeSyncSupervisor();
-        var coordinator = new RealtimeRemoteChangeSyncCoordinator(realtime, supervisor, DebounceInterval);
+        var sessionRevocationHandler = new FakeSessionRevocationHandler();
+        var coordinator = new RealtimeRemoteChangeSyncCoordinator(
+            realtime,
+            supervisor,
+            DebounceInterval,
+            sessionRevocationHandler);
         await coordinator.StartAsync();
         await coordinator.StopAsync();
 
         realtime.RaiseRemoteFileTreeChanged("FileCreated");
+        realtime.RaiseSessionRevoked();
         await Task.Delay(DebounceInterval * 3);
 
-        Assert.That(supervisor.SyncAllCallCount, Is.Zero);
+        Assert.Multiple(() =>
+        {
+            Assert.That(supervisor.SyncAllCallCount, Is.Zero);
+            Assert.That(sessionRevocationHandler.CallCount, Is.Zero);
+        });
+    }
+
+    [Test]
+    public async Task SessionRevoked_InvokesHandlerAndStopsRealtime()
+    {
+        var realtime = new FakeCottonRealtimeClient();
+        var supervisor = new FakeSyncSupervisor();
+        var sessionRevocationHandler = new FakeSessionRevocationHandler();
+        var coordinator = new RealtimeRemoteChangeSyncCoordinator(
+            realtime,
+            supervisor,
+            DebounceInterval,
+            sessionRevocationHandler);
+        await coordinator.StartAsync();
+
+        realtime.RaiseSessionRevoked();
+
+        bool handled = await sessionRevocationHandler.WaitForCallAsync(TimeSpan.FromSeconds(2));
+        bool stopped = await realtime.WaitForStopAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(handled, Is.True);
+            Assert.That(stopped, Is.True);
+            Assert.That(sessionRevocationHandler.CallCount, Is.EqualTo(1));
+            Assert.That(supervisor.SyncAllCallCount, Is.Zero);
+            Assert.That(realtime.StopCallCount, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task SessionRevoked_CancelsPendingRemoteSyncRequest()
+    {
+        var realtime = new FakeCottonRealtimeClient();
+        var supervisor = new FakeSyncSupervisor();
+        var sessionRevocationHandler = new FakeSessionRevocationHandler();
+        var coordinator = new RealtimeRemoteChangeSyncCoordinator(
+            realtime,
+            supervisor,
+            TimeSpan.FromMilliseconds(100),
+            sessionRevocationHandler);
+        await coordinator.StartAsync();
+
+        realtime.RaiseRemoteFileTreeChanged("FileUpdated");
+        realtime.RaiseSessionRevoked();
+
+        bool handled = await sessionRevocationHandler.WaitForCallAsync(TimeSpan.FromSeconds(2));
+        await Task.Delay(TimeSpan.FromMilliseconds(150));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(handled, Is.True);
+            Assert.That(supervisor.SyncAllCallCount, Is.Zero);
+        });
     }
 
     private sealed class FakeCottonRealtimeClient : ICottonRealtimeClient
@@ -78,6 +143,8 @@ public sealed class RealtimeRemoteChangeSyncCoordinatorTests
         public int StartCallCount { get; private set; }
 
         public int StopCallCount { get; private set; }
+
+        private TaskCompletionSource StopRequested { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public ValueTask DisposeAsync()
         {
@@ -113,7 +180,14 @@ public sealed class RealtimeRemoteChangeSyncCoordinatorTests
         public Task StopAsync(CancellationToken cancellationToken = default)
         {
             StopCallCount++;
+            StopRequested.TrySetResult();
             return Task.CompletedTask;
+        }
+
+        public async Task<bool> WaitForStopAsync(TimeSpan timeout)
+        {
+            Task completed = await Task.WhenAny(StopRequested.Task, Task.Delay(timeout)).ConfigureAwait(false);
+            return completed == StopRequested.Task;
         }
     }
 
@@ -172,6 +246,27 @@ public sealed class RealtimeRemoteChangeSyncCoordinatorTests
         {
             Task completed = await Task.WhenAny(_syncRequested.Task, Task.Delay(timeout)).ConfigureAwait(false);
             return completed == _syncRequested.Task;
+        }
+    }
+
+    private sealed class FakeSessionRevocationHandler : ISessionRevocationHandler
+    {
+        private readonly TaskCompletionSource _called = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public int CallCount { get; private set; }
+
+        public Task HandleSessionRevokedAsync(CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            CallCount++;
+            _called.TrySetResult();
+            return Task.CompletedTask;
+        }
+
+        public async Task<bool> WaitForCallAsync(TimeSpan timeout)
+        {
+            Task completed = await Task.WhenAny(_called.Task, Task.Delay(timeout)).ConfigureAwait(false);
+            return completed == _called.Task;
         }
     }
 }

@@ -60,6 +60,26 @@ public sealed class CottonAuthClientTests
         });
     }
 
+    [Test]
+    public async Task LogoutAsync_ClearsStoreWhenServerLogoutFails()
+    {
+        var handler = new QueuedHttpMessageHandler();
+        handler.Enqueue(HttpStatusCode.Unauthorized);
+        var store = new InMemoryCottonTokenStore();
+        await store.SaveAsync(new TokenPairDto { AccessToken = "access", RefreshToken = "revoked" });
+        var client = CreateClient(handler, store);
+
+        Assert.ThrowsAsync<CottonApiException>(async () => await client.Auth.LogoutAsync());
+
+        TokenPairDto? stored = await store.GetAsync();
+        Assert.Multiple(() =>
+        {
+            Assert.That(stored, Is.Null);
+            Assert.That(handler.Requests, Has.Count.EqualTo(1));
+            Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/auth/logout?refreshToken=revoked"));
+        });
+    }
+
     private static CottonCloudClient CreateClient(QueuedHttpMessageHandler handler, ICottonTokenStore store)
     {
         return new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions

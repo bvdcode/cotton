@@ -75,12 +75,18 @@ public sealed class CottonAuthClient : ICottonAuthClient
         string path = string.IsNullOrWhiteSpace(refreshToken)
             ? "/api/v1/auth/logout"
             : "/api/v1/auth/logout?refreshToken=" + Uri.EscapeDataString(refreshToken);
-        await _transport.SendNoContentAsync(
-            HttpMethod.Post,
-            path,
-            authorize: false,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        await _tokenStore.ClearAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _transport.SendNoContentAsync(
+                HttpMethod.Post,
+                path,
+                authorize: false,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            await _tokenStore.ClearAsync(cancellationToken).ConfigureAwait(false);
+        }
     }
 
     /// <summary>

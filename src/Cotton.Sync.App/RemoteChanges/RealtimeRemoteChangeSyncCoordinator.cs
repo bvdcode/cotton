@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton.Sync.App.Auth;
 using Cotton.Sdk.Realtime;
 using Cotton.Sync.App.Supervision;
 using Microsoft.Extensions.Logging;
@@ -20,9 +21,11 @@ public sealed class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoord
     private readonly TimeSpan _debounceInterval;
     private readonly ILogger<RealtimeRemoteChangeSyncCoordinator> _logger;
     private readonly ICottonRealtimeClient _realtime;
+    private readonly ISessionRevocationHandler _sessionRevocationHandler;
     private readonly ISyncSupervisor _supervisor;
     private CancellationTokenSource? _lifetime;
     private CancellationTokenSource? _pendingSync;
+    private int _sessionRevocationRequested;
     private bool _isSubscribed;
 
     /// <summary>
@@ -32,10 +35,12 @@ public sealed class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoord
         ICottonRealtimeClient realtime,
         ISyncSupervisor supervisor,
         TimeSpan? debounceInterval = null,
+        ISessionRevocationHandler? sessionRevocationHandler = null,
         ILogger<RealtimeRemoteChangeSyncCoordinator>? logger = null)
     {
         _realtime = realtime ?? throw new ArgumentNullException(nameof(realtime));
         _supervisor = supervisor ?? throw new ArgumentNullException(nameof(supervisor));
+        _sessionRevocationHandler = sessionRevocationHandler ?? NullSessionRevocationHandler.Instance;
         _debounceInterval = debounceInterval ?? DefaultDebounceInterval;
         if (_debounceInterval < TimeSpan.Zero)
         {
@@ -52,8 +57,10 @@ public sealed class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoord
         try
         {
             await StopCoreAsync(cancellationToken).ConfigureAwait(false);
+            Interlocked.Exchange(ref _sessionRevocationRequested, 0);
             _lifetime = new CancellationTokenSource();
             _realtime.RemoteFileTreeChanged += OnRemoteFileTreeChanged;
+            _realtime.SessionRevoked += OnSessionRevoked;
             _isSubscribed = true;
             await _realtime.StartAsync(cancellationToken).ConfigureAwait(false);
         }
@@ -97,6 +104,7 @@ public sealed class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoord
         if (_isSubscribed)
         {
             _realtime.RemoteFileTreeChanged -= OnRemoteFileTreeChanged;
+            _realtime.SessionRevoked -= OnSessionRevoked;
             _isSubscribed = false;
             await _realtime.StopAsync(cancellationToken).ConfigureAwait(false);
         }
@@ -121,6 +129,48 @@ public sealed class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoord
         previous?.Cancel();
         previous?.Dispose();
         _ = RunDebouncedSyncAsync(change.MethodName, next);
+    }
+
+    private void OnSessionRevoked(object? sender, CottonRealtimeEvent change)
+    {
+        CancellationTokenSource? lifetime = _lifetime;
+        if (lifetime is null || lifetime.IsCancellationRequested)
+        {
+            return;
+        }
+
+        if (Interlocked.Exchange(ref _sessionRevocationRequested, 1) == 1)
+        {
+            return;
+        }
+
+        CancelPendingSyncRequest();
+        _ = HandleSessionRevokedAsync(change.MethodName, lifetime.Token);
+    }
+
+    private async Task HandleSessionRevokedAsync(string methodName, CancellationToken cancellationToken)
+    {
+        try
+        {
+            _logger.LogWarning(
+                "Handling server session revocation after realtime event {MethodName}.",
+                methodName);
+            await _sessionRevocationHandler.HandleSessionRevokedAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "Failed to handle server session revocation after realtime event {MethodName}.",
+                methodName);
+        }
+        finally
+        {
+            await StopAsync(CancellationToken.None).ConfigureAwait(false);
+        }
     }
 
     private async Task RunDebouncedSyncAsync(string methodName, CancellationTokenSource request)
@@ -160,5 +210,18 @@ public sealed class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoord
                 _pendingSync = null;
             }
         }
+    }
+
+    private void CancelPendingSyncRequest()
+    {
+        CancellationTokenSource? pendingSync;
+        lock (_pendingGate)
+        {
+            pendingSync = _pendingSync;
+            _pendingSync = null;
+        }
+
+        pendingSync?.Cancel();
+        pendingSync?.Dispose();
     }
 }
