@@ -149,6 +149,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Keep `RunOnceAsync` as the deterministic reconciliation primitive.
 - [x] Add durable per-pair remote change cursor state.
   Verification: commit `Add sync change cursor state`; `sync_change_cursors` stores the last accepted server cursor per sync pair through EF Core migration `20260603172105_AddSyncChangeCursors`; `dotnet test src/Cotton.Sync.Tests/Cotton.Sync.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~SqliteSyncStateStoreTests` passed 8/8, and `dotnet build src/Cotton.sln --configuration Release` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
+- [x] Add safe remote change-feed reader with explicit acknowledgement.
+  Verification: commit `Add remote change feed reader`; `RemoteChangeFeedReader.ReadAsync` reads from the stored cursor without advancing it, `AcknowledgeAsync` advances only after processing or marks expired cursors without skipping changes; `dotnet test src/Cotton.Sync.Tests/Cotton.Sync.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~RemoteChangeFeedReaderTests` passed 3/3, and `dotnet build src/Cotton.sln --configuration Release` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [ ] Add or refine remote snapshot representation for change-feed updates.
 - [ ] Add durable operation intent tracking if needed for crash recovery.
 - [ ] Ensure downloads always use temp file plus atomic replace.
