@@ -301,6 +301,62 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task RunOnceAsync_DoesNotUploadIgnoredTemporaryFiles()
+    {
+        CottonCloudClient client = CreateClient();
+        await LoginAsync(client);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-temp-ignore");
+        string localRoot = Path.Combine(_tempDirectory, "client-temp-ignore");
+        WriteLocalFile(localRoot, "Docs/keep.txt", "keep me");
+        WriteLocalFile(localRoot, "upload.tmp", "tmp");
+        WriteLocalFile(localRoot, "upload.temp", "temp");
+        WriteLocalFile(localRoot, "download.partial", "partial");
+        WriteLocalFile(localRoot, "download.part", "part");
+        WriteLocalFile(localRoot, "chrome.crdownload", "browser");
+        WriteLocalFile(localRoot, "browser.download", "browser");
+        WriteLocalFile(localRoot, ".notes.swp", "vim");
+        WriteLocalFile(localRoot, ".notes.swo", "vim");
+        WriteLocalFile(localRoot, ".notes.swn", "vim");
+        WriteLocalFile(localRoot, "~$office.docx", "office");
+        WriteLocalFile(localRoot, ".#emacs-lock", "emacs");
+        WriteLocalFile(localRoot, "backup~", "backup");
+        WriteLocalFile(localRoot, ".DS_Store", "mac");
+        WriteLocalFile(localRoot, "Thumbs.db", "windows");
+        WriteLocalFile(localRoot, "desktop.ini", "windows");
+        WriteLocalFile(localRoot, "Nested/skip.tmp", "nested tmp");
+        WriteLocalFile(localRoot, ".cotton-sync/state.tmp", "metadata");
+        SqliteSyncStateStore stateStore = CreateStateStore("client-temp-ignore-state.sqlite");
+        SyncEngine engine = CreateEngine(client, stateStore);
+
+        SyncRunResult result = await engine.RunOnceAsync(new SyncPair
+        {
+            SyncPairId = "client-temp-ignore",
+            LocalRootPath = localRoot,
+            RemoteRootNodeId = remoteRoot.Id,
+        });
+
+        NodeContentDto rootContent = await client.Nodes.GetChildrenAsync(remoteRoot.Id);
+        NodeDto docs = rootContent.Nodes.Single(node => string.Equals(node.Name, "Docs", StringComparison.Ordinal));
+        NodeContentDto docsContent = await client.Nodes.GetChildrenAsync(docs.Id);
+        SyncStateEntry? uploadedBaseline = await stateStore.GetAsync("client-temp-ignore", "Docs/keep.txt");
+        SyncStateEntry? ignoredBaseline = await stateStore.GetAsync("client-temp-ignore", "upload.tmp");
+        SyncStateEntry? nestedIgnoredBaseline = await stateStore.GetAsync("client-temp-ignore", "Nested/skip.tmp");
+        SyncStateEntry? metadataBaseline = await stateStore.GetAsync("client-temp-ignore", ".cotton-sync/state.tmp");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
+            Assert.That(rootContent.Files, Is.Empty);
+            Assert.That(rootContent.Nodes.Select(node => node.Name), Is.EqualTo(new[] { "Docs" }));
+            Assert.That(docsContent.Files.Select(file => file.Name), Is.EqualTo(new[] { "keep.txt" }));
+            Assert.That(uploadedBaseline, Is.Not.Null);
+            Assert.That(ignoredBaseline, Is.Null);
+            Assert.That(nestedIgnoredBaseline, Is.Null);
+            Assert.That(metadataBaseline, Is.Null);
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_MovesLocalFileToQuarantineWhenRemoteFileIsDeleted()
     {
         CottonCloudClient client = CreateClient();
