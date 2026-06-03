@@ -5,33 +5,49 @@ namespace Cotton.Sync.Desktop.Startup;
 
 internal sealed class DesktopStartupOptions
 {
-    private DesktopStartupOptions(Uri? serverUrl, string? username, bool startMinimizedToTray)
+    private DesktopStartupOptions(
+        Uri? serverUrl,
+        string? username,
+        string? dataDirectory,
+        bool startMinimizedToTray,
+        bool runSelfTest)
     {
         ServerUrl = serverUrl;
         Username = username;
+        DataDirectory = dataDirectory;
         StartMinimizedToTray = startMinimizedToTray;
+        RunSelfTest = runSelfTest;
     }
 
-    public static DesktopStartupOptions Empty { get; } = new(null, null, false);
+    public static DesktopStartupOptions Empty { get; } = new(null, null, null, false, false);
 
     public Uri? ServerUrl { get; }
 
     public string? Username { get; }
 
+    public string? DataDirectory { get; }
+
     public bool StartMinimizedToTray { get; }
+
+    public bool RunSelfTest { get; }
 
     public static DesktopStartupOptions Parse(IReadOnlyList<string> args)
     {
         ArgumentNullException.ThrowIfNull(args);
         string? serverUrl = ReadOption(args, "--server-url") ?? ReadOption(args, "--server");
         string? username = ReadOption(args, "--username") ?? ReadOption(args, "--user");
+        string? dataDirectory = ReadOption(args, "--data-dir") ?? ReadOption(args, "--data-directory");
         bool startMinimizedToTray = HasFlag(args, "--start-minimized")
             || HasFlag(args, "--minimized")
             || HasFlag(args, "--tray");
+        bool runSelfTest = HasFlag(args, "--self-test")
+            || HasFlag(args, "--smoke-test");
         return new DesktopStartupOptions(
             ParseServerUrl(serverUrl),
             NormalizeOptional(username),
-            startMinimizedToTray);
+            NormalizeOptional(dataDirectory),
+            startMinimizedToTray,
+            runSelfTest);
     }
 
     private static Uri? ParseServerUrl(string? value)

@@ -22,6 +22,8 @@ public sealed partial class App : Application
 
     internal static DesktopStartupOptions StartupOptions { get; set; } = DesktopStartupOptions.Empty;
 
+    internal static DesktopAppPaths? StartupPaths { get; set; }
+
     /// <inheritdoc />
     public override void Initialize()
     {
@@ -33,7 +35,7 @@ public sealed partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            DesktopAppPaths paths = DesktopAppPaths.CreateDefault();
+            DesktopAppPaths paths = StartupPaths ?? DesktopAppPaths.CreateDefault();
             DesktopTraceLogging.Install(paths);
             bool useTrayLifecycle = DesktopPlatformCapabilities.IsTrayLifecycleSupported;
             if (useTrayLifecycle)

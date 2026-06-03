@@ -373,7 +373,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Add signing plan.
   Windows code signing can be deferred only with an explicit release risk decision.
 - [ ] Add CI workflow for build, test, publish, package, and artifact upload.
-- [ ] Add smoke launch command or self-test command for packaged app.
+- [x] Add smoke launch command or self-test command for packaged app.
+  Verification 2026-06-03: added `--self-test`/`--smoke-test` desktop CLI mode plus `--data-dir` for isolated packaged smoke runs. The command prints self-test results and returns exit code `0` only when checks pass. Verified with `dotnet run --project src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj --configuration Release --no-restore -- --self-test --data-dir <temp>` and the published Linux executable `bin/Release/net10.0/publish/linux-x64/Cotton.Sync.Desktop --self-test --data-dir <temp>`; both passed. `win-x64` publish, full desktop tests 59/59, and full solution Release build passed with the known NU1903 warning.
 - [ ] Test Windows installer on a clean VM.
 - [ ] Test Windows portable archive on a clean VM.
 - [ ] Test Linux package/archive on a clean VM.

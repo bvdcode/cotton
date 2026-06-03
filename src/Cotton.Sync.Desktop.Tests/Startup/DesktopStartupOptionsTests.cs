@@ -21,7 +21,9 @@ public sealed class DesktopStartupOptionsTests
         {
             Assert.That(options.ServerUrl, Is.EqualTo(new Uri("https://app.cottoncloud.dev/")));
             Assert.That(options.Username, Is.EqualTo("desktop@example.test"));
+            Assert.That(options.DataDirectory, Is.Null);
             Assert.That(options.StartMinimizedToTray, Is.False);
+            Assert.That(options.RunSelfTest, Is.False);
         });
     }
 
@@ -52,5 +54,28 @@ public sealed class DesktopStartupOptionsTests
             ]);
 
         Assert.That(options.StartMinimizedToTray, Is.True);
+    }
+
+    [Test]
+    public void Parse_LoadsSelfTestFlag()
+    {
+        DesktopStartupOptions options = DesktopStartupOptions.Parse(
+            [
+                "--self-test",
+            ]);
+
+        Assert.That(options.RunSelfTest, Is.True);
+    }
+
+    [Test]
+    public void Parse_LoadsDataDirectory()
+    {
+        DesktopStartupOptions options = DesktopStartupOptions.Parse(
+            [
+                "--data-dir",
+                " /tmp/cotton-sync-smoke ",
+            ]);
+
+        Assert.That(options.DataDirectory, Is.EqualTo("/tmp/cotton-sync-smoke"));
     }
 }

@@ -11,17 +11,29 @@ namespace Cotton.Sync.Desktop;
 internal static class Program
 {
     [STAThread]
-    public static void Main(string[] args)
+    public static int Main(string[] args)
     {
-        using DesktopSingleInstanceGuard? singleInstance = DesktopSingleInstanceGuard
-            .TryAcquire(DesktopAppPaths.CreateDefault().SingleInstanceLockPath);
-        if (singleInstance is null)
+        DesktopStartupOptions startupOptions = DesktopStartupOptions.Parse(args);
+        DesktopAppPaths paths = DesktopStartupPathResolver.Resolve(startupOptions);
+        if (startupOptions.RunSelfTest)
         {
-            return;
+            return DesktopCommandLineRunner
+                .RunSelfTestAsync(paths, startupOptions, Console.Out)
+                .GetAwaiter()
+                .GetResult();
         }
 
-        App.StartupOptions = DesktopStartupOptions.Parse(args);
+        using DesktopSingleInstanceGuard? singleInstance = DesktopSingleInstanceGuard
+            .TryAcquire(paths.SingleInstanceLockPath);
+        if (singleInstance is null)
+        {
+            return 0;
+        }
+
+        App.StartupOptions = startupOptions;
+        App.StartupPaths = paths;
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        return 0;
     }
 
     public static AppBuilder BuildAvaloniaApp()
@@ -31,4 +43,5 @@ internal static class Program
             .WithInterFont()
             .LogToTrace();
     }
+
 }
