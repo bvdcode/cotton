@@ -50,6 +50,8 @@
       <Setter Property="Background" Value="{DynamicResource CottonPrimaryBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource CottonPrimaryBrush}" />
       <Setter Property="Foreground" Value="{DynamicResource CottonPrimaryTextBrush}" />
+      <Setter Property="MinHeight" Value="34" />
+      <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
     <Style Selector="Button.primary:pointerover">
       <Setter Property="Background" Value="{DynamicResource CottonPrimaryHoverBrush}" />
@@ -61,7 +63,7 @@
       <Setter Property="FontSize" Value="12" />
     </Style>
     <Style Selector="TextBox">
-      <Setter Property="MinHeight" Value="34" />
+      <Setter Property="MinHeight" Value="32" />
       <Setter Property="Background" Value="{DynamicResource CottonSurfaceBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource CottonBorderBrush}" />
     </Style>

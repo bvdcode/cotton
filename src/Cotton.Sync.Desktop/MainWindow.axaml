@@ -3,10 +3,10 @@
         x:Class="Cotton.Sync.Desktop.MainWindow"
         Title="Cotton Sync"
         Icon="/Assets/icon-192.png"
-        Width="360"
-        Height="390"
-        MinWidth="340"
-        MinHeight="370"
+        Width="344"
+        Height="382"
+        MinWidth="324"
+        MinHeight="360"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource CottonAppBackgroundBrush}">
   <Grid RowDefinitions="3,Auto,*"
@@ -18,7 +18,8 @@
             Background="{DynamicResource CottonSurfaceBrush}"
             BorderBrush="{DynamicResource CottonBorderBrush}"
             BorderThickness="0,0,0,1"
-            Padding="12,9">
+            Padding="12,9"
+            IsVisible="{Binding IsDashboardVisible}">
       <Grid ColumnDefinitions="Auto,*,Auto"
             ColumnSpacing="10">
         <Border Width="34"
@@ -63,26 +64,42 @@
     <Grid Grid.Row="2"
           Background="{DynamicResource CottonSurfaceBrush}"
           IsVisible="{Binding IsSetupVisible}">
-      <StackPanel Width="322"
-                  Spacing="8"
+      <StackPanel Width="306"
+                  Spacing="7"
                   HorizontalAlignment="Center"
                   VerticalAlignment="Center">
-        <StackPanel Spacing="2">
-          <TextBlock Text="Set up Cotton Sync"
-                     FontSize="18"
-                     FontWeight="SemiBold" />
-          <TextBlock Text="Connect this computer to Cotton Cloud."
+        <StackPanel Spacing="5"
+                    HorizontalAlignment="Center"
+                    Margin="0,0,0,6">
+          <Border Width="52"
+                  Height="52"
+                  CornerRadius="12"
+                  Background="{DynamicResource CottonPrimarySoftBrush}"
+                  HorizontalAlignment="Center">
+            <Image Source="avares://Cotton.Sync.Desktop/Assets/icon-192.png"
+                   Width="38"
+                   Height="38"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center" />
+          </Border>
+          <TextBlock Text="Cotton Sync"
+                     FontSize="21"
+                     FontWeight="SemiBold"
+                     HorizontalAlignment="Center" />
+          <TextBlock Text="Sign in to sync this computer."
                      Classes="secondary"
-                     FontSize="12" />
+                     FontSize="12"
+                     HorizontalAlignment="Center" />
         </StackPanel>
 
-        <Grid ColumnDefinitions="*,Auto"
-              ColumnSpacing="8">
-          <TextBox Watermark="Server URL"
+        <Grid>
+          <TextBox Watermark="Server"
+                   Padding="8,0,32,0"
                    Text="{Binding ServerUrl}" />
-          <Grid Grid.Column="1"
-                Width="22"
+          <Grid Width="22"
                 Height="22"
+                Margin="0,0,6,0"
+                HorizontalAlignment="Right"
                 VerticalAlignment="Center">
             <Border Width="18"
                     Height="18"
@@ -129,13 +146,13 @@
         <TextBox Watermark="Password"
                  PasswordChar="*"
                  Text="{Binding Password}" />
-        <TextBox Watermark="TOTP code (optional)"
+        <TextBox Watermark="Code (optional)"
                  Text="{Binding TotpCode}" />
         <Button Content="Sign in"
                 Classes="primary"
                 HorizontalAlignment="Stretch"
                 Command="{Binding SignInCommand}" />
-        <CheckBox Content="Start with computer"
+        <CheckBox Content="Start with this computer"
                   IsChecked="{Binding StartWithOperatingSystem}" />
       </StackPanel>
     </Grid>

@@ -347,7 +347,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         try
         {
             DesktopShellSnapshot snapshot = await _controller.LoadAsync().ConfigureAwait(true);
-            ServerUrl = snapshot.IsSignedIn ? snapshot.ServerUrl?.AbsoluteUri ?? string.Empty : string.Empty;
+            ServerUrl = snapshot.ServerUrl?.AbsoluteUri ?? string.Empty;
             Username = snapshot.RememberedUsername ?? string.Empty;
             StartWithOperatingSystem = snapshot.StartWithOperatingSystem;
             SyncPairs.Clear();

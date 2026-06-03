@@ -20,10 +20,10 @@ public sealed partial class MainWindow : Window
     private const double DashboardMinHeight = 540;
     private const double DashboardMinWidth = 420;
     private const double DashboardWidth = 440;
-    private const double SetupHeight = 390;
-    private const double SetupMinHeight = 370;
-    private const double SetupMinWidth = 340;
-    private const double SetupWidth = 360;
+    private const double SetupHeight = 382;
+    private const double SetupMinHeight = 360;
+    private const double SetupMinWidth = 324;
+    private const double SetupWidth = 344;
 
     private readonly bool _canHideToTray;
     private readonly bool _hideAfterSessionRestore;

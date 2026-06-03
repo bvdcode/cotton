@@ -62,8 +62,11 @@ internal sealed class DesktopShellController : IDesktopShellController
         AuthSession? session = serverUrl is null
             ? null
             : await TryRestoreSessionAsync(serverUrl, cancellationToken).ConfigureAwait(false);
+        Uri? signInServerHint = session is not null || _startupOptions.ServerUrl is not null
+            ? serverUrl
+            : null;
         return new DesktopShellSnapshot(
-            serverUrl,
+            signInServerHint,
             session?.Email ?? session?.Username,
             _startupOptions.Username ?? preferences.RememberedUsername,
             startWithOperatingSystem,

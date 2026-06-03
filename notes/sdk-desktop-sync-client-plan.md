@@ -286,7 +286,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Add responsive layout for minimum window size.
 - [ ] Ensure no user-visible strings are hardcoded if localization is required for desktop release.
 - [x] Run Avalonia desktop build.
-  Verification: commit `Refine desktop setup shell`; `dotnet build src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj --configuration Release` and `dotnet build src/Cotton.sln --configuration Release` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings. Headless setup screenshot was captured at `/tmp/cotton-sync-setup.png` for visual inspection.
+  Verification: commits `Refine desktop setup shell` and `Refine compact setup sign-in`; `dotnet build src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj --configuration Release --no-restore`, `dotnet test src/Cotton.Sync.Desktop.Tests/Cotton.Sync.Desktop.Tests.csproj --configuration Release --no-restore`, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings. Headless setup screenshots were captured at `/tmp/cotton-sync-setup.png` and `/tmp/cotton-sync-setup-2.png` for visual inspection.
 - [ ] Run manual UI walkthrough on Linux.
 - [ ] Run manual UI walkthrough on Windows.
 - [ ] Capture screenshots for onboarding, dashboard, settings, conflict state, and error state.
