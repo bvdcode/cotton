@@ -156,15 +156,18 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 
 ## Phase 5 - Sync Core Hardening
 
-- [ ] Keep `RunOnceAsync` as the deterministic reconciliation primitive.
+- [x] Keep `RunOnceAsync` as the deterministic reconciliation primitive.
+  Verification: `SyncEngine.RunOnceAsync` remains the single reconciliation entry point used by continuous/app layers, with deterministic sorted path processing; `dotnet test src/Cotton.Sync.Tests/Cotton.Sync.Tests.csproj --configuration Release --no-restore --filter SyncEngineTests` passed 18/18 and full `Cotton.Sync.Tests` passed 44/44.
 - [x] Add durable per-pair remote change cursor state.
   Verification: commit `Add sync change cursor state`; `sync_change_cursors` stores the last accepted server cursor per sync pair through EF Core migration `20260603172105_AddSyncChangeCursors`; `dotnet test src/Cotton.Sync.Tests/Cotton.Sync.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~SqliteSyncStateStoreTests` passed 8/8, and `dotnet build src/Cotton.sln --configuration Release` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [x] Add safe remote change-feed reader with explicit acknowledgement.
   Verification: commit `Add remote change feed reader`; `RemoteChangeFeedReader.ReadAsync` reads from the stored cursor without advancing it, `AcknowledgeAsync` advances only after processing or marks expired cursors without skipping changes; `dotnet test src/Cotton.Sync.Tests/Cotton.Sync.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~RemoteChangeFeedReaderTests` passed 3/3, and `dotnet build src/Cotton.sln --configuration Release` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [ ] Add or refine remote snapshot representation for change-feed updates.
 - [ ] Add durable operation intent tracking if needed for crash recovery.
-- [ ] Ensure downloads always use temp file plus atomic replace.
-- [ ] Ensure baseline updates happen only after successful local and remote operation.
+- [x] Ensure downloads always use temp file plus atomic replace.
+  Verification: `AtomicLocalFileSyncWriter.WriteFileAsync` writes into `.cotton-sync/tmp` and moves into place only after successful content write and flush; `WriteFileAsync_RemovesTemporaryFileWhenDownloadFailsAndPreservesExistingFile` and `RunOnceAsync_DoesNotUpdateBaselineWhenRemoteDownloadFails` passed in full `Cotton.Sync.Tests` 44/44.
+- [x] Ensure baseline updates happen only after successful local and remote operation.
+  Verification: `RunOnceAsync_DoesNotUpdateBaselineWhenRemoteUploadFails`, `RunOnceAsync_DoesNotUpdateBaselineWhenRemoteDownloadFails`, and `RunOnceAsync_DoesNotDeleteBaselineWhenRemoteDeleteFails` cover upload/download/delete failure ordering; `dotnet test src/Cotton.Sync.Tests/Cotton.Sync.Tests.csproj --configuration Release --no-restore --filter SyncEngineTests` passed 18/18 and full `Cotton.Sync.Tests` passed 44/44.
 - [ ] Add local delete strategy.
   Target: safe delete or recycle/trash where available; direct delete only when deliberately accepted.
 - [ ] Add remote delete strategy.

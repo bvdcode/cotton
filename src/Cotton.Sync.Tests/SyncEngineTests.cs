@@ -109,6 +109,31 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_DoesNotUpdateBaselineWhenRemoteUploadFails()
+    {
+        string relativePath = "upload-fails.txt";
+        LocalFileSnapshot local = LocalFile(relativePath, "local-new");
+        NodeFileManifestDto remote = RemoteFile(relativePath, HashText("old"));
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        remoteFiles.UploadFailureIds.Add(remote.Id);
+        SyncEngine engine = CreateEngine(new FakeLocalFileScanner(local), RemoteTree(remote), remoteFiles, out SqliteSyncStateStore stateStore);
+        await InsertBaselineAsync(stateStore, relativePath, HashText("old"), remote);
+
+        InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await engine.RunOnceAsync(Pair()));
+
+        SyncStateEntry? entry = await stateStore.GetAsync("pair-a", relativePath);
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(entry, Is.Not.Null);
+            Assert.That(entry!.LocalContentHash, Is.EqualTo(HashText("old")));
+            Assert.That(entry.RemoteContentHash, Is.EqualTo(remote.ContentHash));
+            Assert.That(remoteFiles.Uploads, Is.Empty);
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_DownloadsRemoteChangeWhenLocalBaselineIsUnchanged()
     {
         string relativePath = "changed-down.txt";
@@ -135,6 +160,38 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_DoesNotUpdateBaselineWhenRemoteDownloadFails()
+    {
+        string relativePath = "download-fails.txt";
+        WriteFile(relativePath, "old");
+        LocalFileSnapshot local = LocalFile(relativePath, "old");
+        NodeFileManifestDto remote = RemoteFile(relativePath, HashText("remote-new"));
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        remoteFiles.DownloadFailureIds.Add(remote.Id);
+        SyncEngine engine = CreateEngine(new FakeLocalFileScanner(local), RemoteTree(remote), remoteFiles, out SqliteSyncStateStore stateStore);
+        await InsertBaselineAsync(stateStore, relativePath, local.ContentHash, RemoteFile(relativePath, local.ContentHash, remote.Id));
+
+        InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await engine.RunOnceAsync(Pair()));
+
+        SyncStateEntry? entry = await stateStore.GetAsync("pair-a", relativePath);
+        string temporaryDirectory = Path.Combine(_root, ".cotton-sync", "tmp");
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(File.ReadAllText(Path.Combine(_root, relativePath)), Is.EqualTo("old"));
+            Assert.That(
+                Directory.Exists(temporaryDirectory)
+                    ? Directory.GetFiles(temporaryDirectory, "*", SearchOption.AllDirectories)
+                    : [],
+                Is.Empty);
+            Assert.That(entry, Is.Not.Null);
+            Assert.That(entry!.LocalContentHash, Is.EqualTo(local.ContentHash));
+            Assert.That(entry.RemoteContentHash, Is.EqualTo(local.ContentHash));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_DeletesRemoteOnlyWhenBaselineKnowsLocalDelete()
     {
         NodeFileManifestDto remote = RemoteFile("delete-remote.txt", HashText("old"));
@@ -150,6 +207,30 @@ public sealed class SyncEngineTests
             Assert.That(remoteFiles.Deletes, Is.EqualTo(new[] { (remote.Id, true, remote.ETag) }));
             Assert.That(result.Activities.Select(x => x.Kind), Is.EqualTo(new[] { SyncActivityKind.DeletedRemote }));
             Assert.That(entry, Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task RunOnceAsync_DoesNotDeleteBaselineWhenRemoteDeleteFails()
+    {
+        string relativePath = "delete-remote-fails.txt";
+        NodeFileManifestDto remote = RemoteFile(relativePath, HashText("old"));
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        remoteFiles.DeleteFailureIds.Add(remote.Id);
+        SyncEngine engine = CreateEngine(new FakeLocalFileScanner(), RemoteTree(remote), remoteFiles, out SqliteSyncStateStore stateStore);
+        await InsertBaselineAsync(stateStore, relativePath, remote.ContentHash, remote);
+
+        InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await engine.RunOnceAsync(Pair()));
+
+        SyncStateEntry? entry = await stateStore.GetAsync("pair-a", relativePath);
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(remoteFiles.Deletes, Is.EqualTo(new[] { (remote.Id, false, remote.ETag) }));
+            Assert.That(entry, Is.Not.Null);
+            Assert.That(entry!.RemoteFileId, Is.EqualTo(remote.Id));
+            Assert.That(entry.RemoteContentHash, Is.EqualTo(remote.ContentHash));
         });
     }
 
@@ -614,6 +695,12 @@ public sealed class SyncEngineTests
 
         public Dictionary<Guid, byte[]> Downloads { get; } = [];
 
+        public HashSet<Guid> UploadFailureIds { get; } = [];
+
+        public HashSet<Guid> DownloadFailureIds { get; } = [];
+
+        public HashSet<Guid> DeleteFailureIds { get; } = [];
+
         public HashSet<Guid> PreconditionFailedUploadIds { get; } = [];
 
         public HashSet<Guid> PreconditionFailedDeleteIds { get; } = [];
@@ -631,6 +718,11 @@ public sealed class SyncEngineTests
                     "Remote file changed before upload.",
                     inner: null,
                     HttpStatusCode.PreconditionFailed);
+            }
+
+            if (existingRemoteFile is not null && UploadFailureIds.Contains(existingRemoteFile.Id))
+            {
+                throw new InvalidOperationException("Remote upload failed.");
             }
 
             var returned = new NodeFileManifestDto
@@ -656,6 +748,11 @@ public sealed class SyncEngineTests
 
         public Task DownloadFileAsync(Guid nodeFileId, Stream destination, CancellationToken cancellationToken = default)
         {
+            if (DownloadFailureIds.Contains(nodeFileId))
+            {
+                throw new InvalidOperationException("Remote download failed.");
+            }
+
             byte[] bytes = Downloads[nodeFileId];
             return destination.WriteAsync(bytes, cancellationToken).AsTask();
         }
@@ -667,6 +764,11 @@ public sealed class SyncEngineTests
             CancellationToken cancellationToken = default)
         {
             Deletes.Add((nodeFileId, skipTrash, expectedETag));
+            if (DeleteFailureIds.Contains(nodeFileId))
+            {
+                throw new InvalidOperationException("Remote delete failed.");
+            }
+
             if (PreconditionFailedDeleteIds.Contains(nodeFileId))
             {
                 throw new HttpRequestException(
