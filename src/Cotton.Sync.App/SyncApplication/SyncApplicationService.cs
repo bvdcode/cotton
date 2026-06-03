@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton.Sync.App.Auth;
+using Cotton.Sync.App.Preferences;
+using Cotton.Sync.App.Supervision;
 using Cotton.Sync.App.SyncPairs;
 
 namespace Cotton.Sync.App.SyncApplication;
@@ -10,7 +13,10 @@ namespace Cotton.Sync.App.SyncApplication;
 /// </summary>
 public sealed class SyncApplicationService : ISyncApplicationService
 {
+    private readonly IAuthFlow _authFlow;
+    private readonly IAppPreferencesStore _preferences;
     private readonly ISyncPairPrerequisiteValidator _prerequisites;
+    private readonly ISyncSupervisor _supervisor;
     private readonly ISyncPairSettingsStore _syncPairs;
     private readonly SyncPairSettingsValidator _validator;
 
@@ -20,11 +26,47 @@ public sealed class SyncApplicationService : ISyncApplicationService
     public SyncApplicationService(
         ISyncPairSettingsStore syncPairs,
         ISyncPairPrerequisiteValidator prerequisites,
+        IAppPreferencesStore preferences,
+        IAuthFlow authFlow,
+        ISyncSupervisor supervisor,
         SyncPairSettingsValidator? validator = null)
     {
         _syncPairs = syncPairs ?? throw new ArgumentNullException(nameof(syncPairs));
         _prerequisites = prerequisites ?? throw new ArgumentNullException(nameof(prerequisites));
+        _preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));
+        _authFlow = authFlow ?? throw new ArgumentNullException(nameof(authFlow));
+        _supervisor = supervisor ?? throw new ArgumentNullException(nameof(supervisor));
         _validator = validator ?? new SyncPairSettingsValidator();
+    }
+
+    /// <inheritdoc />
+    public Task<AuthSession> SignInAsync(
+        PasswordSignInRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        return _authFlow.SignInAsync(request, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task SignOutAsync(CancellationToken cancellationToken = default)
+    {
+        await _authFlow.SignOutAsync(cancellationToken).ConfigureAwait(false);
+        await _supervisor.StopAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<AppPreferences> GetPreferencesAsync(CancellationToken cancellationToken = default)
+    {
+        await _preferences.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        return await _preferences.GetAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task SavePreferencesAsync(AppPreferences preferences, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(preferences);
+        await _preferences.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        await _preferences.SaveAsync(preferences, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -82,5 +124,53 @@ public sealed class SyncApplicationService : ISyncApplicationService
     {
         await _syncPairs.InitializeAsync(cancellationToken).ConfigureAwait(false);
         await _syncPairs.DeleteAsync(syncPairId, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public Task StartSyncAsync(CancellationToken cancellationToken = default)
+    {
+        return _supervisor.StartAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task SyncAllAsync(CancellationToken cancellationToken = default)
+    {
+        return _supervisor.SyncAllAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task SyncNowAsync(Guid syncPairId, CancellationToken cancellationToken = default)
+    {
+        return _supervisor.SyncNowAsync(syncPairId, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task PauseAllAsync(CancellationToken cancellationToken = default)
+    {
+        return _supervisor.PauseAllAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task PauseAsync(Guid syncPairId, CancellationToken cancellationToken = default)
+    {
+        return _supervisor.PauseAsync(syncPairId, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task ResumeAllAsync(CancellationToken cancellationToken = default)
+    {
+        return _supervisor.ResumeAllAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task ResumeAsync(Guid syncPairId, CancellationToken cancellationToken = default)
+    {
+        return _supervisor.ResumeAsync(syncPairId, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task StopSyncAsync(CancellationToken cancellationToken = default)
+    {
+        return _supervisor.StopAsync(cancellationToken);
     }
 }

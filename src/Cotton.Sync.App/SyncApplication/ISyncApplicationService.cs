@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton.Sync.App.Auth;
+using Cotton.Sync.App.Preferences;
 using Cotton.Sync.App.SyncPairs;
 
 namespace Cotton.Sync.App.SyncApplication;
@@ -10,6 +12,26 @@ namespace Cotton.Sync.App.SyncApplication;
 /// </summary>
 public interface ISyncApplicationService
 {
+    /// <summary>
+    /// Signs in with username/password credentials and optional TOTP.
+    /// </summary>
+    Task<AuthSession> SignInAsync(PasswordSignInRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Signs out and stops synchronization.
+    /// </summary>
+    Task SignOutAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Loads durable application preferences.
+    /// </summary>
+    Task<AppPreferences> GetPreferencesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Saves durable application preferences.
+    /// </summary>
+    Task SavePreferencesAsync(AppPreferences preferences, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Loads configured sync pairs.
     /// </summary>
@@ -31,4 +53,44 @@ public interface ISyncApplicationService
     /// Deletes a configured sync pair.
     /// </summary>
     Task DeleteSyncPairAsync(Guid syncPairId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Starts configured sync runners.
+    /// </summary>
+    Task StartSyncAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Requests one sync pass for every runner.
+    /// </summary>
+    Task SyncAllAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Requests one sync pass for a runner.
+    /// </summary>
+    Task SyncNowAsync(Guid syncPairId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Pauses every runner.
+    /// </summary>
+    Task PauseAllAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Pauses one runner.
+    /// </summary>
+    Task PauseAsync(Guid syncPairId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Resumes every runner.
+    /// </summary>
+    Task ResumeAllAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Resumes one runner.
+    /// </summary>
+    Task ResumeAsync(Guid syncPairId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Stops all sync runners.
+    /// </summary>
+    Task StopSyncAsync(CancellationToken cancellationToken = default);
 }

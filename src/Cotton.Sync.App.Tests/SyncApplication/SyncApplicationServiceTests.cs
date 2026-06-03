@@ -1,13 +1,114 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton.Sync.App.Auth;
+using Cotton.Sync.App.Preferences;
 using Cotton.Sync.App.SyncApplication;
 using Cotton.Sync.App.SyncPairs;
+using Cotton.Sync.App.Status;
+using Cotton.Sync.App.Supervision;
 
 namespace Cotton.Sync.App.Tests.SyncApplication;
 
 public sealed class SyncApplicationServiceTests
 {
+    [Test]
+    public async Task SignInAsync_DelegatesToAuthFlow()
+    {
+        var authFlow = new FakeAuthFlow();
+        SyncApplicationService service = CreateService(new InMemorySyncPairSettingsStore(), authFlow: authFlow);
+        var request = new PasswordSignInRequest
+        {
+            Username = "vadim",
+            Password = "password",
+        };
+
+        AuthSession session = await service.SignInAsync(request);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(authFlow.SignInCallCount, Is.EqualTo(1));
+            Assert.That(authFlow.LastSignInRequest, Is.SameAs(request));
+            Assert.That(session, Is.SameAs(authFlow.Session));
+        });
+    }
+
+    [Test]
+    public async Task SignOutAsync_SignsOutAndStopsSupervisor()
+    {
+        var authFlow = new FakeAuthFlow();
+        var supervisor = new FakeSyncSupervisor();
+        SyncApplicationService service = CreateService(
+            new InMemorySyncPairSettingsStore(),
+            authFlow: authFlow,
+            supervisor: supervisor);
+
+        await service.SignOutAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(authFlow.SignOutCallCount, Is.EqualTo(1));
+            Assert.That(supervisor.StopCallCount, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task GetPreferencesAsync_InitializesAndLoadsPreferences()
+    {
+        var preferencesStore = new FakeAppPreferencesStore();
+        SyncApplicationService service = CreateService(
+            new InMemorySyncPairSettingsStore(),
+            preferences: preferencesStore);
+
+        AppPreferences preferences = await service.GetPreferencesAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(preferencesStore.InitializeCallCount, Is.EqualTo(1));
+            Assert.That(preferences, Is.SameAs(preferencesStore.Preferences));
+        });
+    }
+
+    [Test]
+    public async Task SavePreferencesAsync_InitializesAndSavesPreferences()
+    {
+        var preferencesStore = new FakeAppPreferencesStore();
+        SyncApplicationService service = CreateService(
+            new InMemorySyncPairSettingsStore(),
+            preferences: preferencesStore);
+        var preferences = new AppPreferences
+        {
+            RememberedServerUrl = new Uri("https://cotton.example.test/"),
+        };
+
+        await service.SavePreferencesAsync(preferences);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(preferencesStore.InitializeCallCount, Is.EqualTo(1));
+            Assert.That(preferencesStore.SaveCallCount, Is.EqualTo(1));
+            Assert.That(preferencesStore.SavedPreferences, Is.SameAs(preferences));
+        });
+    }
+
+    [Test]
+    public async Task SyncNowAsync_DelegatesToSupervisor()
+    {
+        var supervisor = new FakeSyncSupervisor();
+        SyncApplicationService service = CreateService(
+            new InMemorySyncPairSettingsStore(),
+            supervisor: supervisor);
+        Guid syncPairId = Guid.NewGuid();
+
+        await service.SyncNowAsync(syncPairId);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(supervisor.SyncNowCallCount, Is.EqualTo(1));
+            Assert.That(supervisor.LastSyncNowPairId, Is.EqualTo(syncPairId));
+        });
+    }
+
     [Test]
     public async Task SaveSyncPairAsync_PersistsValidPair()
     {
@@ -120,9 +221,17 @@ public sealed class SyncApplicationServiceTests
 
     private static SyncApplicationService CreateService(
         ISyncPairSettingsStore store,
-        ISyncPairPrerequisiteValidator? prerequisites = null)
+        ISyncPairPrerequisiteValidator? prerequisites = null,
+        IAppPreferencesStore? preferences = null,
+        IAuthFlow? authFlow = null,
+        ISyncSupervisor? supervisor = null)
     {
-        return new SyncApplicationService(store, prerequisites ?? new FakeSyncPairPrerequisiteValidator([]));
+        return new SyncApplicationService(
+            store,
+            prerequisites ?? new FakeSyncPairPrerequisiteValidator([]),
+            preferences ?? new FakeAppPreferencesStore(),
+            authFlow ?? new FakeAuthFlow(),
+            supervisor ?? new FakeSyncSupervisor());
     }
 
     private static SyncPairSettings CreatePair(string localRootPath)
@@ -197,6 +306,115 @@ public sealed class SyncApplicationServiceTests
         {
             CallCount++;
             return Task.FromResult(_errors);
+        }
+    }
+
+    private sealed class FakeAppPreferencesStore : IAppPreferencesStore
+    {
+        public AppPreferences Preferences { get; } = new();
+
+        public int InitializeCallCount { get; private set; }
+
+        public int SaveCallCount { get; private set; }
+
+        public AppPreferences? SavedPreferences { get; private set; }
+
+        public Task InitializeAsync(CancellationToken cancellationToken = default)
+        {
+            InitializeCallCount++;
+            return Task.CompletedTask;
+        }
+
+        public Task<AppPreferences> GetAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(Preferences);
+        }
+
+        public Task SaveAsync(AppPreferences preferences, CancellationToken cancellationToken = default)
+        {
+            SaveCallCount++;
+            SavedPreferences = preferences;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeAuthFlow : IAuthFlow
+    {
+        public AuthSession Session { get; } = new(Guid.NewGuid(), "vadim", "vadim@example.test", false);
+
+        public int SignInCallCount { get; private set; }
+
+        public int SignOutCallCount { get; private set; }
+
+        public PasswordSignInRequest? LastSignInRequest { get; private set; }
+
+        public Task<AuthSession> SignInAsync(
+            PasswordSignInRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            SignInCallCount++;
+            LastSignInRequest = request;
+            return Task.FromResult(Session);
+        }
+
+        public Task SignOutAsync(CancellationToken cancellationToken = default)
+        {
+            SignOutCallCount++;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeSyncSupervisor : ISyncSupervisor
+    {
+        public IReadOnlyList<SyncPairStatus> CurrentStatuses => [];
+
+        public Guid? LastSyncNowPairId { get; private set; }
+
+        public int StopCallCount { get; private set; }
+
+        public int SyncNowCallCount { get; private set; }
+
+        public Task StartAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task SyncAllAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task SyncNowAsync(Guid syncPairId, CancellationToken cancellationToken = default)
+        {
+            SyncNowCallCount++;
+            LastSyncNowPairId = syncPairId;
+            return Task.CompletedTask;
+        }
+
+        public Task PauseAllAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task PauseAsync(Guid syncPairId, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task ResumeAllAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task ResumeAsync(Guid syncPairId, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken = default)
+        {
+            StopCallCount++;
+            return Task.CompletedTask;
         }
     }
 }
