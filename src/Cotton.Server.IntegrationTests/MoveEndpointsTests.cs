@@ -868,15 +868,17 @@ public class MoveEndpointsTests : IntegrationTestBase
 
 internal sealed class ThrowingEventNotificationService : IEventNotificationService
 {
-    public Task NotifyFileCreatedAsync(Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
-    public Task NotifyFileUpdatedAsync(Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
-    public Task NotifyFileDeletedAsync(Guid userId, Guid nodeFileId, Guid? parentNodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+    public Task NotifyFileCreatedAsync(Guid nodeFileId, CancellationToken ct = default) => Task.CompletedTask;
+    public Task NotifyFileUpdatedAsync(Guid nodeFileId, CancellationToken ct = default) => Task.CompletedTask;
+    public Task NotifyFileDeletedAsync(Guid userId, Guid nodeFileId, Guid? parentNodeId, CancellationToken ct = default) => Task.CompletedTask;
+    public Task NotifyFileRestoredAsync(Guid nodeFileId, CancellationToken ct = default) => Task.CompletedTask;
     public Task NotifyFileMovedAsync(Guid nodeFileId, Guid oldParentId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
-    public Task NotifyFileRenamedAsync(Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
-    public Task NotifyNodeCreatedAsync(Guid nodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
-    public Task NotifyNodeDeletedAsync(Guid userId, Guid nodeId, Guid? parentNodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+    public Task NotifyFileRenamedAsync(Guid nodeFileId, CancellationToken ct = default) => Task.CompletedTask;
+    public Task NotifyNodeCreatedAsync(Guid nodeId, CancellationToken ct = default) => Task.CompletedTask;
+    public Task NotifyNodeDeletedAsync(Guid userId, Guid nodeId, Guid? parentNodeId, CancellationToken ct = default) => Task.CompletedTask;
+    public Task NotifyNodeRestoredAsync(Guid nodeId, CancellationToken ct = default) => Task.CompletedTask;
     public Task NotifyNodeMovedAsync(Guid nodeId, Guid oldParentId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
-    public Task NotifyNodeRenamedAsync(Guid nodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+    public Task NotifyNodeRenamedAsync(Guid nodeId, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 internal sealed class WebDavDeleteEventRecorder
@@ -902,6 +904,7 @@ internal sealed class RecordingWebDavDeleteEventNotificationService(
 
     public Task NotifyFileMovedAsync(Guid nodeFileId, Guid oldParentId, CancellationToken ct = default) => Task.CompletedTask;
     public Task NotifyFileRenamedAsync(Guid nodeFileId, CancellationToken ct = default) => Task.CompletedTask;
+    public Task NotifyFileRestoredAsync(Guid nodeFileId, CancellationToken ct = default) => Task.CompletedTask;
     public Task NotifyNodeCreatedAsync(Guid nodeId, CancellationToken ct = default) => Task.CompletedTask;
 
     public Task NotifyNodeDeletedAsync(Guid userId, Guid nodeId, Guid? parentNodeId, CancellationToken ct = default)
@@ -913,4 +916,5 @@ internal sealed class RecordingWebDavDeleteEventNotificationService(
 
     public Task NotifyNodeMovedAsync(Guid nodeId, Guid oldParentId, CancellationToken ct = default) => Task.CompletedTask;
     public Task NotifyNodeRenamedAsync(Guid nodeId, CancellationToken ct = default) => Task.CompletedTask;
+    public Task NotifyNodeRestoredAsync(Guid nodeId, CancellationToken ct = default) => Task.CompletedTask;
 }

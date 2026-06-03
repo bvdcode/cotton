@@ -6,6 +6,7 @@ using Cotton.Sdk.Chunks;
 using Cotton.Sdk.Files;
 using Cotton.Sdk.Nodes;
 using Cotton.Sdk.Settings;
+using Cotton.Sdk.Sync;
 
 namespace Cotton.Sdk;
 
@@ -38,4 +39,9 @@ public interface ICottonCloudClient
     /// Gets node operations.
     /// </summary>
     ICottonNodeClient Nodes { get; }
+
+    /// <summary>
+    /// Gets synchronization feed operations.
+    /// </summary>
+    ICottonSyncClient Sync { get; }
 }

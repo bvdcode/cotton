@@ -7,6 +7,7 @@ using Cotton.Sdk.Files;
 using Cotton.Sdk.Internal;
 using Cotton.Sdk.Nodes;
 using Cotton.Sdk.Settings;
+using Cotton.Sdk.Sync;
 
 namespace Cotton.Sdk;
 
@@ -29,6 +30,7 @@ public sealed class CottonCloudClient : ICottonCloudClient
         Chunks = new CottonChunkClient(transport);
         Files = new CottonFileClient(transport);
         Nodes = new CottonNodeClient(transport);
+        Sync = new CottonSyncClient(transport);
     }
 
     /// <summary>
@@ -55,4 +57,9 @@ public sealed class CottonCloudClient : ICottonCloudClient
     /// Gets node operations.
     /// </summary>
     public ICottonNodeClient Nodes { get; }
+
+    /// <summary>
+    /// Gets synchronization feed operations.
+    /// </summary>
+    public ICottonSyncClient Sync { get; }
 }

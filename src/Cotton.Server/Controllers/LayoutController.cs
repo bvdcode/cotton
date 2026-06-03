@@ -42,6 +42,7 @@ namespace Cotton.Server.Controllers
         CottonDbContext _dbContext,
         ILayoutService _layouts,
         IHubContext<EventHub> _hubContext,
+        IEventNotificationService _eventNotification,
         ILogger<LayoutController> _logger,
         ILayoutNavigator _navigator,
         IStoragePipeline _storage,
@@ -215,7 +216,7 @@ namespace Cotton.Server.Controllers
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
             var mapped = node.Adapt<NodeDto>();
-            await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeRenamed", mapped);
+            await _eventNotification.NotifyNodeRenamedAsync(nodeId);
             return Ok(mapped);
         }
 
@@ -319,9 +320,7 @@ namespace Cotton.Server.Controllers
                 .SingleOrDefaultAsync();
             DeleteNodeQuery query = new(userId, nodeId, skipTrash);
             await _mediator.Send(query);
-            await _hubContext.Clients.User(userId.ToString()).SendAsync(
-                "NodeDeleted",
-                new NodeDeletedEventDto(nodeId, parentNodeId));
+            await _eventNotification.NotifyNodeDeletedAsync(userId, nodeId, parentNodeId);
             return Ok();
         }
 
@@ -345,12 +344,7 @@ namespace Cotton.Server.Controllers
 
             if (outcome.Status == RestoreStatus.Restored)
             {
-                object restoredNodePayload = outcome.RestoredNode is not null
-                    ? outcome.RestoredNode
-                    : new { id = nodeId };
-                await _hubContext.Clients.User(userId.ToString()).SendAsync(
-                    "NodeRestored",
-                    restoredNodePayload);
+                await _eventNotification.NotifyNodeRestoredAsync(nodeId);
             }
 
             return Ok(outcome);
@@ -438,7 +432,7 @@ namespace Cotton.Server.Controllers
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
             var mapped = newNode.Adapt<NodeDto>();
-            await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeCreated", mapped);
+            await _eventNotification.NotifyNodeCreatedAsync(newNode.Id);
             return Ok(mapped);
         }
 

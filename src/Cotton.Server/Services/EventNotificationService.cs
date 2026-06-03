@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models.Enums;
 using Cotton.Server.Hubs;
 using Cotton.Server.Models.Dto;
 using Mapster;
@@ -28,6 +29,10 @@ public interface IEventNotificationService
     /// </summary>
     Task NotifyFileDeletedAsync(Guid userId, Guid nodeFileId, Guid? parentNodeId, CancellationToken ct = default);
     /// <summary>
+    /// Notifies connected clients that file restored occurred.
+    /// </summary>
+    Task NotifyFileRestoredAsync(Guid nodeFileId, CancellationToken ct = default);
+    /// <summary>
     /// Notifies connected clients that file moved occurred.
     /// </summary>
     Task NotifyFileMovedAsync(Guid nodeFileId, Guid oldParentId, CancellationToken ct = default);
@@ -44,6 +49,10 @@ public interface IEventNotificationService
     /// </summary>
     Task NotifyNodeDeletedAsync(Guid userId, Guid nodeId, Guid? parentNodeId, CancellationToken ct = default);
     /// <summary>
+    /// Notifies connected clients that node restored occurred.
+    /// </summary>
+    Task NotifyNodeRestoredAsync(Guid nodeId, CancellationToken ct = default);
+    /// <summary>
     /// Notifies connected clients that node moved occurred.
     /// </summary>
     Task NotifyNodeMovedAsync(Guid nodeId, Guid oldParentId, CancellationToken ct = default);
@@ -58,7 +67,9 @@ public interface IEventNotificationService
 /// </summary>
 public class EventNotificationService(
     IHubContext<EventHub> _hubContext,
-    CottonDbContext _dbContext) : IEventNotificationService
+    CottonDbContext _dbContext,
+    ISyncChangeRecorder _syncChanges,
+    ILogger<EventNotificationService> _logger) : IEventNotificationService
 {
     /// <summary>
     /// Notifies connected clients that file created occurred.
@@ -72,8 +83,9 @@ public class EventNotificationService(
 
         if (nodeFile is not null)
         {
+            await _syncChanges.RecordFileChangeAsync(SyncChangeKind.FileCreated, nodeFileId, ct: ct);
             var dto = nodeFile.Adapt<NodeFileManifestDto>();
-            await _hubContext.Clients.User(nodeFile.OwnerId.ToString()).SendAsync("FileCreated", dto, ct);
+            await SendUserEventAsync(nodeFile.OwnerId, "FileCreated", dto, ct);
         }
     }
 
@@ -89,8 +101,9 @@ public class EventNotificationService(
 
         if (nodeFile is not null)
         {
+            await _syncChanges.RecordFileChangeAsync(SyncChangeKind.FileContentUpdated, nodeFileId, ct: ct);
             var dto = nodeFile.Adapt<NodeFileManifestDto>();
-            await _hubContext.Clients.User(nodeFile.OwnerId.ToString()).SendAsync("FileUpdated", dto, ct);
+            await SendUserEventAsync(nodeFile.OwnerId, "FileUpdated", dto, ct);
         }
     }
 
@@ -103,8 +116,27 @@ public class EventNotificationService(
         Guid? parentNodeId,
         CancellationToken ct = default)
     {
+        await _syncChanges.RecordFileDeletedAsync(userId, nodeFileId, parentNodeId, ct);
         var payload = new NodeFileDeletedEventDto(nodeFileId, parentNodeId);
-        await _hubContext.Clients.User(userId.ToString()).SendAsync("FileDeleted", payload, ct);
+        await SendUserEventAsync(userId, "FileDeleted", payload, ct);
+    }
+
+    /// <summary>
+    /// Notifies connected clients that file restored occurred.
+    /// </summary>
+    public async Task NotifyFileRestoredAsync(Guid nodeFileId, CancellationToken ct = default)
+    {
+        var nodeFile = await _dbContext.NodeFiles
+            .Include(x => x.FileManifest)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == nodeFileId, ct);
+
+        if (nodeFile is not null)
+        {
+            await _syncChanges.RecordFileChangeAsync(SyncChangeKind.FileRestored, nodeFileId, ct: ct);
+            var dto = nodeFile.Adapt<NodeFileManifestDto>();
+            await SendUserEventAsync(nodeFile.OwnerId, "FileRestored", dto, ct);
+        }
     }
 
     /// <summary>
@@ -119,9 +151,10 @@ public class EventNotificationService(
 
         if (nodeFile is not null)
         {
+            await _syncChanges.RecordFileChangeAsync(SyncChangeKind.FileMoved, nodeFileId, oldParentId, ct);
             var dto = nodeFile.Adapt<NodeFileManifestDto>();
             var payload = new NodeFileMovedEventDto(dto, oldParentId, nodeFile.NodeId);
-            await _hubContext.Clients.User(nodeFile.OwnerId.ToString()).SendAsync("FileMoved", payload, ct);
+            await SendUserEventAsync(nodeFile.OwnerId, "FileMoved", payload, ct);
         }
     }
 
@@ -137,8 +170,9 @@ public class EventNotificationService(
 
         if (nodeFile is not null)
         {
+            await _syncChanges.RecordFileChangeAsync(SyncChangeKind.FileRenamed, nodeFileId, ct: ct);
             var dto = nodeFile.Adapt<NodeFileManifestDto>();
-            await _hubContext.Clients.User(nodeFile.OwnerId.ToString()).SendAsync("FileRenamed", dto, ct);
+            await SendUserEventAsync(nodeFile.OwnerId, "FileRenamed", dto, ct);
         }
     }
 
@@ -153,8 +187,9 @@ public class EventNotificationService(
 
         if (node is not null)
         {
+            await _syncChanges.RecordNodeChangeAsync(SyncChangeKind.FolderCreated, nodeId, ct: ct);
             var dto = node.Adapt<NodeDto>();
-            await _hubContext.Clients.User(node.OwnerId.ToString()).SendAsync("NodeCreated", dto, ct);
+            await SendUserEventAsync(node.OwnerId, "NodeCreated", dto, ct);
         }
     }
 
@@ -167,8 +202,26 @@ public class EventNotificationService(
         Guid? parentNodeId,
         CancellationToken ct = default)
     {
+        await _syncChanges.RecordNodeDeletedAsync(userId, nodeId, parentNodeId, ct);
         var payload = new NodeDeletedEventDto(nodeId, parentNodeId);
-        await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeDeleted", payload, ct);
+        await SendUserEventAsync(userId, "NodeDeleted", payload, ct);
+    }
+
+    /// <summary>
+    /// Notifies connected clients that node restored occurred.
+    /// </summary>
+    public async Task NotifyNodeRestoredAsync(Guid nodeId, CancellationToken ct = default)
+    {
+        var node = await _dbContext.Nodes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == nodeId, ct);
+
+        if (node is not null)
+        {
+            await _syncChanges.RecordNodeChangeAsync(SyncChangeKind.FolderRestored, nodeId, ct: ct);
+            var dto = node.Adapt<NodeDto>();
+            await SendUserEventAsync(node.OwnerId, "NodeRestored", dto, ct);
+        }
     }
 
     /// <summary>
@@ -182,9 +235,10 @@ public class EventNotificationService(
 
         if (node is not null && node.ParentId.HasValue)
         {
+            await _syncChanges.RecordNodeChangeAsync(SyncChangeKind.FolderMoved, nodeId, oldParentId, ct);
             var dto = node.Adapt<NodeDto>();
             var payload = new NodeMovedEventDto(dto, oldParentId, node.ParentId.Value);
-            await _hubContext.Clients.User(node.OwnerId.ToString()).SendAsync("NodeMoved", payload, ct);
+            await SendUserEventAsync(node.OwnerId, "NodeMoved", payload, ct);
         }
     }
 
@@ -199,8 +253,29 @@ public class EventNotificationService(
 
         if (node is not null)
         {
+            await _syncChanges.RecordNodeChangeAsync(SyncChangeKind.FolderRenamed, nodeId, ct: ct);
             var dto = node.Adapt<NodeDto>();
-            await _hubContext.Clients.User(node.OwnerId.ToString()).SendAsync("NodeRenamed", dto, ct);
+            await SendUserEventAsync(node.OwnerId, "NodeRenamed", dto, ct);
+        }
+    }
+
+    private async Task SendUserEventAsync(Guid userId, string eventName, object payload, CancellationToken ct)
+    {
+        try
+        {
+            await _hubContext.Clients.User(userId.ToString()).SendAsync(eventName, payload, ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Failed to send realtime event {EventName} to user {UserId}.",
+                eventName,
+                userId);
         }
     }
 }

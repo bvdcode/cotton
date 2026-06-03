@@ -51,6 +51,7 @@ namespace Cotton.Server.Extensions
             services.AddScoped<FileVersionStorageService>();
             services.AddScoped<FileVersionRetentionService>();
             services.AddScoped<FileVersionService>();
+            services.AddScoped<ISyncChangeRecorder, SyncChangeRecorder>();
             services.AddScoped<IEventNotificationService, EventNotificationService>();
             return services;
         }
