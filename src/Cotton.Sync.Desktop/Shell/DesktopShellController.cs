@@ -352,7 +352,14 @@ internal sealed class DesktopShellController : IDesktopShellController
 
     public static DesktopShellController CreateDefault(DesktopStartupOptions? startupOptions = null)
     {
-        DesktopAppPaths paths = DesktopAppPaths.CreateDefault();
+        return CreateDefault(DesktopAppPaths.CreateDefault(), startupOptions);
+    }
+
+    public static DesktopShellController CreateDefault(
+        DesktopAppPaths paths,
+        DesktopStartupOptions? startupOptions = null)
+    {
+        ArgumentNullException.ThrowIfNull(paths);
         return new DesktopShellController(
             new DesktopSyncApplicationFactory(paths),
             new SqliteAppPreferencesStore(paths.AppDatabasePath),

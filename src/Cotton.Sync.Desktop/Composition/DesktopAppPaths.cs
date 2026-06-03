@@ -15,6 +15,7 @@ internal sealed class DesktopAppPaths
         SyncStateDatabasePath = Path.Combine(DataDirectory, "sync-state.db");
         TokenStorePath = Path.Combine(DataDirectory, "tokens.json");
         SingleInstanceLockPath = Path.Combine(DataDirectory, "cotton-sync.lock");
+        LogFilePath = Path.Combine(DataDirectory, "cotton-sync.log");
     }
 
     public string DataDirectory { get; }
@@ -26,6 +27,8 @@ internal sealed class DesktopAppPaths
     public string TokenStorePath { get; }
 
     public string SingleInstanceLockPath { get; }
+
+    public string LogFilePath { get; }
 
     public static DesktopAppPaths CreateDefault()
     {

@@ -335,7 +335,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 ## Phase 10 - Diagnostics And Supportability
 
 - [ ] Add structured logging for app, sync, SDK, and platform adapters.
-- [ ] Add log rotation.
+- [x] Add log rotation.
+  Verification 2026-06-03: desktop startup installs a `RotatingFileTraceListener` into app-data `cotton-sync.log`; it retains rotated files as `.1`, `.2`, `.3` and is idempotent per log path. Focused `RotatingFileTraceListenerTests` passed 3/3. Full desktop tests and solution build are recorded in the commit verification.
 - [ ] Add diagnostics screen.
   Required fields: app version, server URL, account, sync pair ids, local paths, remote ids, last sync time, current cursor, last error.
 - [ ] Add export diagnostics bundle command.

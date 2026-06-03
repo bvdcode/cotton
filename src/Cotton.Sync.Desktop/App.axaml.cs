@@ -5,6 +5,8 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Cotton.Sync.Desktop.Composition;
+using Cotton.Sync.Desktop.Diagnostics;
 using Cotton.Sync.Desktop.Platform;
 using Cotton.Sync.Desktop.Shell;
 using Cotton.Sync.Desktop.Startup;
@@ -31,6 +33,8 @@ public sealed partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            DesktopAppPaths paths = DesktopAppPaths.CreateDefault();
+            DesktopTraceLogging.Install(paths);
             bool useTrayLifecycle = DesktopPlatformCapabilities.IsTrayLifecycleSupported;
             if (useTrayLifecycle)
             {
@@ -38,7 +42,7 @@ public sealed partial class App : Application
             }
 
             var window = new MainWindow(
-                DesktopShellController.CreateDefault(StartupOptions),
+                DesktopShellController.CreateDefault(paths, StartupOptions),
                 StartupOptions.StartMinimizedToTray,
                 useTrayLifecycle);
             desktop.MainWindow = window;
