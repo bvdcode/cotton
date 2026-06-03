@@ -16,6 +16,7 @@ using Cotton.Sync.Desktop.Composition;
 using Cotton.Sync.Desktop.Diagnostics;
 using Cotton.Sync.Desktop.Platform;
 using Cotton.Sync.Desktop.Startup;
+using Microsoft.Extensions.Logging;
 
 namespace Cotton.Sync.Desktop.Shell;
 
@@ -383,12 +384,13 @@ internal sealed class DesktopShellController : IDesktopShellController
         DesktopStartupOptions? startupOptions = null)
     {
         ArgumentNullException.ThrowIfNull(paths);
+        var loggerFactory = new DesktopTraceLoggerFactory();
         return new DesktopShellController(
             paths,
-            new DesktopSyncApplicationFactory(paths),
+            new DesktopSyncApplicationFactory(paths, loggerFactory),
             new SqliteAppPreferencesStore(paths.AppDatabasePath),
             new SqliteSyncPairSettingsStore(paths.AppDatabasePath),
-            new ProcessPlatformCommandService(),
+            new ProcessPlatformCommandService(loggerFactory.CreateLogger<ProcessPlatformCommandService>()),
             DesktopAutostartServiceFactory.CreateDefault(),
             startupOptions);
     }

@@ -2,6 +2,8 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Sync.App.SyncPairs;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Sync.App.Runners;
 
@@ -11,20 +13,29 @@ namespace Cotton.Sync.App.Runners;
 public sealed class SyncPairRunnerFactory : ISyncPairRunnerFactory
 {
     private readonly SyncPairRunnerRetryOptions _retryOptions;
+    private readonly ILoggerFactory _loggerFactory;
     private readonly ISyncPairWork _work;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SyncPairRunnerFactory" /> class.
     /// </summary>
-    public SyncPairRunnerFactory(ISyncPairWork work, SyncPairRunnerRetryOptions? retryOptions = null)
+    public SyncPairRunnerFactory(
+        ISyncPairWork work,
+        SyncPairRunnerRetryOptions? retryOptions = null,
+        ILoggerFactory? loggerFactory = null)
     {
         _work = work ?? throw new ArgumentNullException(nameof(work));
         _retryOptions = (retryOptions ?? SyncPairRunnerRetryOptions.Default).Normalize();
+        _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
     }
 
     /// <inheritdoc />
     public ISyncPairRunner Create(SyncPairSettings syncPair)
     {
-        return new SyncPairRunner(syncPair, _work, _retryOptions);
+        return new SyncPairRunner(
+            syncPair,
+            _work,
+            _retryOptions,
+            _loggerFactory.CreateLogger<SyncPairRunner>());
     }
 }

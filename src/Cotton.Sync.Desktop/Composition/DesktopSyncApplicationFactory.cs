@@ -14,20 +14,24 @@ using Cotton.Sync.App.Supervision;
 using Cotton.Sync.App.SyncApplication;
 using Cotton.Sync.App.SyncPairs;
 using Cotton.Sync.Desktop.Auth;
+using Cotton.Sync.Desktop.Diagnostics;
 using Cotton.Sync.Local;
 using Cotton.Sync.Remote;
 using Cotton.Sync.State;
+using Microsoft.Extensions.Logging;
 using HeadlessSyncEngine = Cotton.Sync.SyncEngine;
 
 namespace Cotton.Sync.Desktop.Composition;
 
 internal sealed class DesktopSyncApplicationFactory
 {
+    private readonly ILoggerFactory _loggerFactory;
     private readonly DesktopAppPaths _paths;
 
-    public DesktopSyncApplicationFactory(DesktopAppPaths paths)
+    public DesktopSyncApplicationFactory(DesktopAppPaths paths, ILoggerFactory? loggerFactory = null)
     {
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
+        _loggerFactory = loggerFactory ?? new DesktopTraceLoggerFactory();
     }
 
     public DesktopSyncApplicationHost Create(Uri serverUrl)
@@ -59,34 +63,41 @@ internal sealed class DesktopSyncApplicationFactory
         ISyncPairWork pairWork = new RemoteChangeAwareSyncPairWork(
             new SyncEnginePairWork(syncEngine),
             remoteChangeFeed);
-        var runnerFactory = new SyncPairRunnerFactory(pairWork);
+        var runnerFactory = new SyncPairRunnerFactory(pairWork, loggerFactory: _loggerFactory);
         var statusPublisher = new InMemoryAppStatusPublisher();
         var supervisor = new SyncSupervisor(syncPairStore, runnerFactory, statusPublisher);
         var localChanges = new LocalChangeSyncCoordinator(
             syncPairStore,
             supervisor,
-            new FileSystemLocalSyncRootWatcherFactory());
-        var periodicSync = new PeriodicSyncCoordinator(supervisor);
+            new FileSystemLocalSyncRootWatcherFactory(_loggerFactory),
+            logger: _loggerFactory.CreateLogger<LocalChangeSyncCoordinator>());
+        var periodicSync = new PeriodicSyncCoordinator(
+            supervisor,
+            logger: _loggerFactory.CreateLogger<PeriodicSyncCoordinator>());
         var authFlow = new PasswordAuthFlow(cottonClient.Auth);
         var sessionRevocationHandler = new SessionRevocationHandler(
             authFlow,
             localChanges,
             periodicSync,
-            supervisor);
+            supervisor,
+            _loggerFactory.CreateLogger<SessionRevocationHandler>());
         var remoteChanges = new RealtimeRemoteChangeSyncCoordinator(
             cottonClient.Realtime,
             supervisor,
-            sessionRevocationHandler: sessionRevocationHandler);
+            sessionRevocationHandler: sessionRevocationHandler,
+            logger: _loggerFactory.CreateLogger<RealtimeRemoteChangeSyncCoordinator>());
         var prerequisites = new SyncPairPrerequisiteValidator(
-            new FileSystemLocalSyncRootProbe(),
-            new SdkRemoteSyncRootProbe(cottonClient.Nodes));
+            new FileSystemLocalSyncRootProbe(_loggerFactory.CreateLogger<FileSystemLocalSyncRootProbe>()),
+            new SdkRemoteSyncRootProbe(
+                cottonClient.Nodes,
+                _loggerFactory.CreateLogger<SdkRemoteSyncRootProbe>()));
         var appService = new SyncApplicationService(
             syncPairStore,
             prerequisites,
             preferencesStore,
             authFlow,
             supervisor,
-            new ProcessPlatformCommandService(),
+            new ProcessPlatformCommandService(_loggerFactory.CreateLogger<ProcessPlatformCommandService>()),
             localChanges,
             remoteChanges,
             periodicSync);
