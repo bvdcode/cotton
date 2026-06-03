@@ -16,14 +16,14 @@ namespace Cotton.Sync.Desktop;
 /// </summary>
 public sealed partial class MainWindow : Window
 {
-    private const double DashboardHeight = 620;
-    private const double DashboardMinHeight = 560;
+    private const double DashboardHeight = 600;
+    private const double DashboardMinHeight = 540;
     private const double DashboardMinWidth = 420;
-    private const double DashboardWidth = 460;
-    private const double SetupHeight = 420;
-    private const double SetupMinHeight = 400;
-    private const double SetupMinWidth = 380;
-    private const double SetupWidth = 400;
+    private const double DashboardWidth = 440;
+    private const double SetupHeight = 390;
+    private const double SetupMinHeight = 370;
+    private const double SetupMinWidth = 340;
+    private const double SetupWidth = 360;
 
     private readonly bool _canHideToTray;
     private readonly bool _hideAfterSessionRestore;

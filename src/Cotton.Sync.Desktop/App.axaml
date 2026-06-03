@@ -9,6 +9,7 @@
           <SolidColorBrush x:Key="CottonAppBackgroundBrush" Color="#F7F7F9" />
           <SolidColorBrush x:Key="CottonSurfaceBrush" Color="#FFFFFF" />
           <SolidColorBrush x:Key="CottonSurfaceMutedBrush" Color="#EEF2F3" />
+          <SolidColorBrush x:Key="CottonPrimarySoftBrush" Color="#EAF4C8" />
           <SolidColorBrush x:Key="CottonBorderBrush" Color="#14000000" />
           <SolidColorBrush x:Key="CottonTextPrimaryBrush" Color="#323232" />
           <SolidColorBrush x:Key="CottonTextSecondaryBrush" Color="#646464" />
@@ -24,6 +25,7 @@
           <SolidColorBrush x:Key="CottonAppBackgroundBrush" Color="#1F2022" />
           <SolidColorBrush x:Key="CottonSurfaceBrush" Color="#151A21" />
           <SolidColorBrush x:Key="CottonSurfaceMutedBrush" Color="#242B32" />
+          <SolidColorBrush x:Key="CottonPrimarySoftBrush" Color="#344115" />
           <SolidColorBrush x:Key="CottonBorderBrush" Color="#10FFFFFF" />
           <SolidColorBrush x:Key="CottonTextPrimaryBrush" Color="#EEEEEE" />
           <SolidColorBrush x:Key="CottonTextSecondaryBrush" Color="#A3A3A3" />
@@ -58,6 +60,11 @@
       <Setter Property="Padding" Value="10,4" />
       <Setter Property="FontSize" Value="12" />
     </Style>
+    <Style Selector="TextBox">
+      <Setter Property="MinHeight" Value="34" />
+      <Setter Property="Background" Value="{DynamicResource CottonSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource CottonBorderBrush}" />
+    </Style>
     <Style Selector="Button.icon">
       <Setter Property="Width" Value="32" />
       <Setter Property="Height" Value="32" />
@@ -77,10 +84,6 @@
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
-    </Style>
-    <Style Selector="TextBox">
-      <Setter Property="Background" Value="{DynamicResource CottonSurfaceBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource CottonBorderBrush}" />
     </Style>
   </Application.Styles>
 </Application>

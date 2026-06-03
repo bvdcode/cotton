@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <AvaloniaResource Include="../cotton.client/public/assets/icons/icon-192.png" Link="Assets/icon-192.png" />
+    <AvaloniaResource Include="../cotton.client/public/favicon.ico" Link="Assets/favicon.ico" />
   </ItemGroup>
 
   <ItemGroup>

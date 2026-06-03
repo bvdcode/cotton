@@ -2,25 +2,29 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="Cotton.Sync.Desktop.MainWindow"
         Title="Cotton Sync"
-        Width="400"
-        Height="420"
-        MinWidth="380"
-        MinHeight="400"
+        Icon="/Assets/icon-192.png"
+        Width="360"
+        Height="390"
+        MinWidth="340"
+        MinHeight="370"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource CottonAppBackgroundBrush}">
-  <Grid RowDefinitions="Auto,*"
+  <Grid RowDefinitions="3,Auto,*"
         Background="{DynamicResource CottonAppBackgroundBrush}">
     <Border Grid.Row="0"
+            Background="{DynamicResource CottonPrimaryBrush}" />
+
+    <Border Grid.Row="1"
             Background="{DynamicResource CottonSurfaceBrush}"
             BorderBrush="{DynamicResource CottonBorderBrush}"
             BorderThickness="0,0,0,1"
-            Padding="14,10">
+            Padding="12,9">
       <Grid ColumnDefinitions="Auto,*,Auto"
             ColumnSpacing="10">
         <Border Width="34"
                 Height="34"
                 CornerRadius="8"
-                Background="{DynamicResource CottonSurfaceMutedBrush}"
+                Background="{DynamicResource CottonPrimarySoftBrush}"
                 VerticalAlignment="Center">
           <Image Source="avares://Cotton.Sync.Desktop/Assets/icon-192.png"
                  Width="24"
@@ -56,16 +60,16 @@
       </Grid>
     </Border>
 
-    <Grid Grid.Row="1"
+    <Grid Grid.Row="2"
           Background="{DynamicResource CottonSurfaceBrush}"
           IsVisible="{Binding IsSetupVisible}">
       <StackPanel Width="322"
-                  Spacing="9"
+                  Spacing="8"
                   HorizontalAlignment="Center"
                   VerticalAlignment="Center">
         <StackPanel Spacing="2">
           <TextBlock Text="Set up Cotton Sync"
-                     FontSize="20"
+                     FontSize="18"
                      FontWeight="SemiBold" />
           <TextBlock Text="Connect this computer to Cotton Cloud."
                      Classes="secondary"
@@ -125,34 +129,25 @@
         <TextBox Watermark="Password"
                  PasswordChar="*"
                  Text="{Binding Password}" />
-        <TextBox Watermark="TOTP code"
+        <TextBox Watermark="TOTP code (optional)"
                  Text="{Binding TotpCode}" />
-        <Grid ColumnDefinitions="*,Auto"
-              ColumnSpacing="8">
-          <Button Content="Sign in"
-                  Classes="primary"
-                  HorizontalAlignment="Stretch"
-                  Command="{Binding SignInCommand}" />
-          <Button Grid.Column="1"
-                  Content="Test"
-                  Classes="compact"
-                  Command="{Binding SelfTestCommand}" />
-        </Grid>
+        <Button Content="Sign in"
+                Classes="primary"
+                HorizontalAlignment="Stretch"
+                Command="{Binding SignInCommand}" />
         <CheckBox Content="Start with computer"
                   IsChecked="{Binding StartWithOperatingSystem}" />
       </StackPanel>
     </Grid>
 
-    <Grid Grid.Row="1"
+    <Grid Grid.Row="2"
           IsVisible="{Binding IsDashboardVisible}">
       <Grid RowDefinitions="Auto,*,Auto"
-            Margin="14"
-            RowSpacing="12">
-        <Border Padding="14"
+            Margin="12"
+            RowSpacing="10">
+        <Border Padding="12"
                 CornerRadius="6"
-                Background="{DynamicResource CottonSurfaceBrush}"
-                BorderBrush="{DynamicResource CottonBorderBrush}"
-                BorderThickness="1">
+                Background="{DynamicResource CottonSurfaceMutedBrush}">
           <Grid ColumnDefinitions="Auto,*,Auto"
                 ColumnSpacing="10">
             <Border Width="12"
@@ -180,9 +175,9 @@
         </Border>
 
         <Grid Grid.Row="1"
-              RowDefinitions="*,150"
-              RowSpacing="12">
-          <Border Padding="14"
+              RowDefinitions="*,142"
+              RowSpacing="10">
+          <Border Padding="12"
                   CornerRadius="6"
                   Background="{DynamicResource CottonSurfaceBrush}"
                   BorderBrush="{DynamicResource CottonBorderBrush}"
@@ -275,7 +270,7 @@
           </Border>
 
           <Border Grid.Row="1"
-                  Padding="14"
+                  Padding="12"
                   CornerRadius="6"
                   Background="{DynamicResource CottonSurfaceBrush}"
                   BorderBrush="{DynamicResource CottonBorderBrush}"
@@ -339,8 +334,8 @@
 
       <Border Background="{DynamicResource CottonOverlayBrush}"
               IsVisible="{Binding IsAddSyncPairWizardVisible}">
-        <Border Width="420"
-                Padding="16"
+        <Border Width="390"
+                Padding="14"
                 CornerRadius="7"
                 Background="{DynamicResource CottonSurfaceBrush}"
                 BorderBrush="{DynamicResource CottonBorderBrush}"
