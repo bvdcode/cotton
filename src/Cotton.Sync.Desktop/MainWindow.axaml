@@ -646,6 +646,20 @@
                         Background="{DynamicResource CottonBorderBrush}" />
 
                 <StackPanel Spacing="6">
+                  <TextBlock Text="Appearance"
+                             FontWeight="SemiBold" />
+                  <ComboBox SelectedIndex="{Binding ThemeModeIndex}"
+                            HorizontalAlignment="Stretch">
+                    <ComboBoxItem Content="System" />
+                    <ComboBoxItem Content="Light" />
+                    <ComboBoxItem Content="Dark" />
+                  </ComboBox>
+                </StackPanel>
+
+                <Border Height="1"
+                        Background="{DynamicResource CottonBorderBrush}" />
+
+                <StackPanel Spacing="6">
                   <TextBlock Text="Notifications"
                              FontWeight="SemiBold" />
                   <CheckBox Content="Show desktop notifications"

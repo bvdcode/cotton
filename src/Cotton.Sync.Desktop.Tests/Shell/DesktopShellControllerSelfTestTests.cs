@@ -153,6 +153,22 @@ public sealed class DesktopShellControllerSelfTestTests
     }
 
     [Test]
+    public async Task LoadAsync_IncludesThemePreference()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        var preferencesStore = new SqliteAppPreferencesStore(paths.AppDatabasePath);
+        await preferencesStore.InitializeAsync();
+        AppPreferences preferences = await preferencesStore.GetAsync();
+        preferences.ThemeMode = AppThemeMode.Dark;
+        await preferencesStore.SaveAsync(preferences);
+        using DesktopShellController controller = CreateController(paths, new SqliteSyncPairSettingsStore(paths.AppDatabasePath));
+
+        DesktopShellSnapshot snapshot = await controller.LoadAsync();
+
+        Assert.That(snapshot.ThemeMode, Is.EqualTo(AppThemeMode.Dark));
+    }
+
+    [Test]
     public async Task SetNotificationsEnabledAsync_PersistsPreference()
     {
         DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
@@ -164,6 +180,20 @@ public sealed class DesktopShellControllerSelfTestTests
 
         AppPreferences preferences = await preferencesStore.GetAsync();
         Assert.That(preferences.EnableNotifications, Is.False);
+    }
+
+    [Test]
+    public async Task SetThemeModeAsync_PersistsPreference()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        var preferencesStore = new SqliteAppPreferencesStore(paths.AppDatabasePath);
+        await preferencesStore.InitializeAsync();
+        using DesktopShellController controller = CreateController(paths, new SqliteSyncPairSettingsStore(paths.AppDatabasePath));
+
+        await controller.SetThemeModeAsync(AppThemeMode.Light);
+
+        AppPreferences preferences = await preferencesStore.GetAsync();
+        Assert.That(preferences.ThemeMode, Is.EqualTo(AppThemeMode.Light));
     }
 
     private DesktopShellController CreateController()

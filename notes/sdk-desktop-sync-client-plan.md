@@ -299,12 +299,14 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Add settings screen.
   Required sections: account, sync pairs, startup, notifications, diagnostics, about.
   Partial 2026-06-03: desktop shell now has a settings overlay with account, startup, diagnostics, about, and sign-out controls; the dashboard secondary-action menu opens it. Keep unchecked until sync-pair management, notifications settings, and full settings navigation are complete.
+  Partial 2026-06-03: settings now includes persisted notification and appearance controls. Keep unchecked until sync-pair management and full settings navigation are complete.
 - [ ] Add conflict/error screen.
   Required behavior: show conflict files, action-required errors, retry/sync-now command.
   Partial 2026-06-03: dashboard now exposes an action-required banner when sync status, command failures, or self-test failures produce an error message. The message resolver is covered by `DesktopActionRequiredMessageResolverTests` 4/4, full `Cotton.Sync.Desktop.Tests` passed 29/29, and solution Release build passed with known NU1903 warnings. Keep unchecked until conflict-file listing and retry/action workflows are complete.
 - [ ] Add not-implemented UX for reserved future modes only in development builds or behind a feature flag.
 - [ ] Add polished empty states.
-- [ ] Add dark/light theme support.
+- [x] Add dark/light theme support.
+  Verification 2026-06-03: added persisted `AppThemeMode` values `System`, `Light`, and `Dark` through EF-generated migration `20260603211332_AddAppThemePreference`; settings exposes an Appearance selector, `ShellViewModel` applies the theme through `IDesktopThemeService`, and `AvaloniaDesktopThemeService` maps preferences to Avalonia `ThemeVariant`. Focused preferences tests passed 5/5, focused desktop theme/controller tests passed 13/13, full `Cotton.Sync.App.Tests` passed 83/83, full `Cotton.Sync.Desktop.Tests` passed 72/72, and full solution Release build passed with the known NU1903 warning.
 - [ ] Add responsive layout for minimum window size.
 - [ ] Ensure no user-visible strings are hardcoded if localization is required for desktop release.
 - [x] Run Avalonia desktop build.

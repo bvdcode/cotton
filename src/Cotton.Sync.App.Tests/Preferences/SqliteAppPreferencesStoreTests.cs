@@ -41,6 +41,7 @@ public sealed class SqliteAppPreferencesStoreTests
             Assert.That(preferences.StartWithOperatingSystem, Is.False);
             Assert.That(preferences.StartMinimizedToTray, Is.False);
             Assert.That(preferences.EnableNotifications, Is.True);
+            Assert.That(preferences.ThemeMode, Is.EqualTo(AppThemeMode.System));
         });
     }
 
@@ -57,6 +58,7 @@ public sealed class SqliteAppPreferencesStoreTests
             StartWithOperatingSystem = true,
             StartMinimizedToTray = true,
             EnableNotifications = false,
+            ThemeMode = AppThemeMode.Dark,
             CreatedAtUtc = new DateTime(2026, 6, 3, 10, 0, 0, DateTimeKind.Utc),
             UpdatedAtUtc = new DateTime(2026, 6, 3, 10, 1, 0, DateTimeKind.Utc),
         };
@@ -74,6 +76,7 @@ public sealed class SqliteAppPreferencesStoreTests
             Assert.That(actual.StartWithOperatingSystem, Is.True);
             Assert.That(actual.StartMinimizedToTray, Is.True);
             Assert.That(actual.EnableNotifications, Is.False);
+            Assert.That(actual.ThemeMode, Is.EqualTo(AppThemeMode.Dark));
             Assert.That(actual.CreatedAtUtc, Is.EqualTo(expected.CreatedAtUtc));
             Assert.That(actual.UpdatedAtUtc, Is.EqualTo(expected.UpdatedAtUtc));
         });

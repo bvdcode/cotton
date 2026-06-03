@@ -47,7 +47,8 @@ public sealed partial class MainWindow : Window
         var viewModel = new ShellViewModel(
             controller,
             new WindowLocalFolderPicker(this),
-            DesktopNotificationServiceFactory.CreateDefault());
+            DesktopNotificationServiceFactory.CreateDefault(),
+            new AvaloniaDesktopThemeService());
         DataContext = viewModel;
         ApplyWindowMode(viewModel.IsDashboardVisible);
         viewModel.PropertyChanged += OnViewModelPropertyChanged;

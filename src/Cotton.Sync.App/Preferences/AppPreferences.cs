@@ -34,6 +34,11 @@ public sealed class AppPreferences
     public bool EnableNotifications { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the preferred desktop theme.
+    /// </summary>
+    public AppThemeMode ThemeMode { get; set; } = AppThemeMode.System;
+
+    /// <summary>
     /// Gets or sets the UTC creation timestamp.
     /// </summary>
     public DateTime CreatedAtUtc { get; set; }

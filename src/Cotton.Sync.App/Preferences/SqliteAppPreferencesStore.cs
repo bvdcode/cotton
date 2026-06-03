@@ -73,6 +73,7 @@ public sealed class SqliteAppPreferencesStore : IAppPreferencesStore
         entity.StartWithOperatingSystem = preferences.StartWithOperatingSystem;
         entity.StartMinimizedToTray = preferences.StartMinimizedToTray;
         entity.EnableNotifications = preferences.EnableNotifications;
+        entity.ThemeMode = preferences.ThemeMode;
         entity.CreatedAtUtc = UtcDateTime.Normalize(createdAt);
         entity.UpdatedAtUtc = UtcDateTime.Normalize(updatedAt);
     }
@@ -88,6 +89,7 @@ public sealed class SqliteAppPreferencesStore : IAppPreferencesStore
             StartWithOperatingSystem = entity.StartWithOperatingSystem,
             StartMinimizedToTray = entity.StartMinimizedToTray,
             EnableNotifications = entity.EnableNotifications,
+            ThemeMode = entity.ThemeMode,
             CreatedAtUtc = UtcDateTime.Normalize(entity.CreatedAtUtc),
             UpdatedAtUtc = UtcDateTime.Normalize(entity.UpdatedAtUtc),
         };

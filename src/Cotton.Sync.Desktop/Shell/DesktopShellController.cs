@@ -84,6 +84,7 @@ internal sealed class DesktopShellController : IDesktopShellController
             _startupOptions.Username ?? preferences.RememberedUsername,
             startWithOperatingSystem,
             preferences.EnableNotifications,
+            preferences.ThemeMode,
             platformCapabilities with { IsAutostartSupported = _autostartService.IsSupported },
             session is not null,
             syncPairSnapshots);
@@ -284,6 +285,15 @@ internal sealed class DesktopShellController : IDesktopShellController
         await _preferencesStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
         AppPreferences preferences = await _preferencesStore.GetAsync(cancellationToken).ConfigureAwait(false);
         preferences.EnableNotifications = enabled;
+        await _preferencesStore.SaveAsync(preferences, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task SetThemeModeAsync(AppThemeMode themeMode, CancellationToken cancellationToken = default)
+    {
+        ValidateThemeMode(themeMode);
+        await _preferencesStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        AppPreferences preferences = await _preferencesStore.GetAsync(cancellationToken).ConfigureAwait(false);
+        preferences.ThemeMode = themeMode;
         await _preferencesStore.SaveAsync(preferences, cancellationToken).ConfigureAwait(false);
     }
 
@@ -636,6 +646,14 @@ internal sealed class DesktopShellController : IDesktopShellController
     {
         string? normalized = value?.Trim();
         return string.IsNullOrEmpty(normalized) ? null : normalized;
+    }
+
+    private static void ValidateThemeMode(AppThemeMode themeMode)
+    {
+        if (!Enum.IsDefined(themeMode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(themeMode), themeMode, "Unsupported desktop theme mode.");
+        }
     }
 
     private static string CreateDisplayName(string localPath, string remotePath, NodeDto remoteRoot)

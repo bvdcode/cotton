@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Sync.App.Auth;
+using Cotton.Sync.App.Preferences;
 using Cotton.Sync.App.SyncPairs;
 
 namespace Cotton.Sync.Desktop.Shell;
@@ -35,6 +36,8 @@ internal interface IDesktopShellController : IDisposable
     Task SetStartWithOperatingSystemAsync(bool enabled, CancellationToken cancellationToken = default);
 
     Task SetNotificationsEnabledAsync(bool enabled, CancellationToken cancellationToken = default);
+
+    Task SetThemeModeAsync(AppThemeMode themeMode, CancellationToken cancellationToken = default);
 
     Task<DesktopSelfTestSnapshot> RunSelfTestAsync(CancellationToken cancellationToken = default);
 

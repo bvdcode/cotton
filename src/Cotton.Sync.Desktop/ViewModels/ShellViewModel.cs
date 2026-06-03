@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Globalization;
 using Avalonia.Threading;
 using Cotton.Sync.App.Auth;
+using Cotton.Sync.App.Preferences;
 using Cotton.Sync.App.SyncPairs;
 using Cotton.Sync.Desktop.Platform;
 using Cotton.Sync.Desktop.Shell;
@@ -21,6 +22,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     private readonly IDesktopShellController _controller;
     private readonly ILocalFolderPicker _folderPicker;
     private readonly IDesktopNotificationService _notificationService;
+    private readonly IDesktopThemeService _themeService;
     private readonly DesktopNotificationTracker _notificationTracker = new();
     private string _accountName = "Signed out";
     private string _actionRequiredMessage = string.Empty;
@@ -34,6 +36,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     private bool _enableNotifications = true;
     private bool _isApplyingNotificationPreference;
     private bool _isApplyingStartWithOperatingSystem;
+    private bool _isApplyingThemePreference;
     private bool _isServerProbeChecking;
     private bool _isServerProbeFailed;
     private bool _isServerVerified;
@@ -46,6 +49,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     private string _serverUrl = string.Empty;
     private string _serverProbeStatus = string.Empty;
     private bool _startWithOperatingSystem;
+    private AppThemeMode _themeMode = AppThemeMode.System;
     private CancellationTokenSource? _serverProbeCancellation;
     private RemoteFolderRowViewModel? _selectedRemoteFolder;
     private SyncPairRowViewModel? _selectedSyncPair;
@@ -55,11 +59,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     internal ShellViewModel(
         IDesktopShellController controller,
         ILocalFolderPicker folderPicker,
-        IDesktopNotificationService notificationService)
+        IDesktopNotificationService notificationService,
+        IDesktopThemeService themeService)
     {
         _controller = controller ?? throw new ArgumentNullException(nameof(controller));
         _folderPicker = folderPicker ?? throw new ArgumentNullException(nameof(folderPicker));
         _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+        _themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
         SyncPairs.CollectionChanged += OnSyncPairsChanged;
         RemoteFolders.CollectionChanged += OnRemoteFoldersChanged;
         SelfTestItems.CollectionChanged += OnSelfTestItemsChanged;
@@ -230,6 +236,37 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             }
         }
     }
+
+    public int ThemeModeIndex
+    {
+        get => (int)_themeMode;
+        set
+        {
+            AppThemeMode themeMode = NormalizeThemeModeIndex(value);
+            if (_themeMode == themeMode)
+            {
+                return;
+            }
+
+            AppThemeMode previousThemeMode = _themeMode;
+            _themeMode = themeMode;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ThemeModeLabel));
+            _themeService.Apply(themeMode);
+            if (!_isLoadingSnapshot)
+            {
+                _ = ApplyThemeModeAsync(themeMode, previousThemeMode);
+            }
+        }
+    }
+
+    public string ThemeModeLabel => _themeMode switch
+    {
+        AppThemeMode.System => "System",
+        AppThemeMode.Light => "Light",
+        AppThemeMode.Dark => "Dark",
+        _ => "System",
+    };
 
     public bool IsStartWithOperatingSystemSupported
     {
@@ -494,6 +531,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             TrayLifecycleDetails = snapshot.PlatformCapabilities.TrayLifecycleDetails;
             StartWithOperatingSystem = snapshot.StartWithOperatingSystem;
             EnableNotifications = snapshot.EnableNotifications;
+            ThemeModeIndex = (int)snapshot.ThemeMode;
             SyncPairs.Clear();
             foreach (DesktopSyncPairSnapshot syncPair in snapshot.SyncPairs)
             {
@@ -577,6 +615,34 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         finally
         {
             _isApplyingNotificationPreference = false;
+        }
+    }
+
+    private async Task ApplyThemeModeAsync(AppThemeMode themeMode, AppThemeMode previousThemeMode)
+    {
+        if (_isApplyingThemePreference)
+        {
+            return;
+        }
+
+        _isApplyingThemePreference = true;
+        try
+        {
+            await _controller.SetThemeModeAsync(themeMode).ConfigureAwait(true);
+            AddActivity("Settings", string.Empty, "Theme set to " + ThemeModeLabel);
+            RefreshDiagnosticsItems();
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _themeMode = previousThemeMode;
+            OnPropertyChanged(nameof(ThemeModeIndex));
+            OnPropertyChanged(nameof(ThemeModeLabel));
+            _themeService.Apply(previousThemeMode);
+            HandleCommandError(exception);
+        }
+        finally
+        {
+            _isApplyingThemePreference = false;
         }
     }
 
@@ -1131,12 +1197,19 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         };
     }
 
+    private static AppThemeMode NormalizeThemeModeIndex(int index)
+    {
+        AppThemeMode themeMode = (AppThemeMode)index;
+        return Enum.IsDefined(themeMode) ? themeMode : AppThemeMode.System;
+    }
+
     private void RefreshDiagnosticsItems()
     {
         DiagnosticsItems.Clear();
         AddDiagnosticItem("App version", AppVersion);
         AddDiagnosticItem("Server", string.IsNullOrWhiteSpace(ServerUrl) ? "Not configured" : ServerUrl);
         AddDiagnosticItem("Account", AccountName);
+        AddDiagnosticItem("Theme", ThemeModeLabel);
         AddDiagnosticItem("Sync pairs", SyncPairs.Count.ToString(CultureInfo.InvariantCulture));
         foreach (SyncPairRowViewModel syncPair in SyncPairs)
         {

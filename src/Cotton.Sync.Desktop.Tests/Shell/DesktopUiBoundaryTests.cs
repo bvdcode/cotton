@@ -27,6 +27,7 @@ public sealed class DesktopUiBoundaryTests
             Assert.That(parameterTypes, Does.Contain(typeof(IDesktopShellController)));
             Assert.That(parameterTypes, Does.Contain(typeof(ILocalFolderPicker)));
             Assert.That(parameterTypes, Does.Contain(typeof(IDesktopNotificationService)));
+            Assert.That(parameterTypes, Does.Contain(typeof(IDesktopThemeService)));
             Assert.That(parameterTypes, Does.Not.Contain(typeof(CoreSyncEngine)));
             Assert.That(parameterTypes, Does.Not.Contain(typeof(SyncEnginePairWork)));
         });

@@ -30,6 +30,9 @@ internal sealed class AppPreferencesEntity
     [Column("enable_notifications")]
     public bool EnableNotifications { get; set; }
 
+    [Column("theme_mode")]
+    public AppThemeMode ThemeMode { get; set; }
+
     [Column("created_at_utc")]
     public DateTime CreatedAtUtc { get; set; }
 
