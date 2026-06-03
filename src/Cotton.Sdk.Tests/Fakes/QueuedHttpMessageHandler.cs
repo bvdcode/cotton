@@ -47,6 +47,10 @@ internal sealed class QueuedHttpMessageHandler : HttpMessageHandler
             request.RequestUri?.PathAndQuery ?? string.Empty,
             request.Headers.Authorization?.Scheme,
             request.Headers.Authorization?.Parameter,
+            request.Headers.ToDictionary(
+                header => header.Key,
+                header => string.Join(",", header.Value),
+                StringComparer.OrdinalIgnoreCase),
             request.Content?.Headers.ContentType?.MediaType,
             body,
             rawBody));
@@ -65,6 +69,7 @@ internal sealed record HttpRequestMessageSnapshot(
     string PathAndQuery,
     string? AuthorizationScheme,
     string? AuthorizationParameter,
+    IReadOnlyDictionary<string, string> Headers,
     string? ContentType,
     string Body,
     byte[] RawBody);

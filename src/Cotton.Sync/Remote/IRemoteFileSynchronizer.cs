@@ -29,5 +29,9 @@ public interface IRemoteFileSynchronizer
     /// <summary>
     /// Deletes a remote file entry.
     /// </summary>
-    Task DeleteFileAsync(Guid nodeFileId, bool skipTrash = false, CancellationToken cancellationToken = default);
+    Task DeleteFileAsync(
+        Guid nodeFileId,
+        bool skipTrash = false,
+        string? expectedETag = null,
+        CancellationToken cancellationToken = default);
 }

@@ -91,6 +91,7 @@ public sealed class SdkRemoteFileSynchronizerTests
             Assert.That(client.FilesClient.UpdateRequests[0].NodeFileId, Is.EqualTo(existing.Id));
             Assert.That(client.FilesClient.UpdateRequests[0].Request.NodeId, Is.EqualTo(docsId));
             Assert.That(client.FilesClient.UpdateRequests[0].Request.OriginalNodeFileId, Is.EqualTo(existing.OriginalNodeFileId));
+            Assert.That(client.FilesClient.UpdateRequests[0].ExpectedETag, Is.EqualTo(existing.ETag));
             Assert.That(updated.Id, Is.EqualTo(existing.Id));
             Assert.That(updated.ContentHash, Is.EqualTo(local.ContentHash));
         });
@@ -125,12 +126,12 @@ public sealed class SdkRemoteFileSynchronizerTests
         await using var destination = new MemoryStream();
 
         await synchronizer.DownloadFileAsync(fileId, destination);
-        await synchronizer.DeleteFileAsync(fileId, skipTrash: true);
+        await synchronizer.DeleteFileAsync(fileId, skipTrash: true, expectedETag: "sha256-current");
 
         Assert.Multiple(() =>
         {
             Assert.That(Encoding.UTF8.GetString(destination.ToArray()), Is.EqualTo("downloaded"));
-            Assert.That(client.FilesClient.Deletes, Is.EqualTo(new[] { (fileId, true) }));
+            Assert.That(client.FilesClient.Deletes, Is.EqualTo(new[] { (fileId, true, "sha256-current") }));
         });
     }
 
@@ -270,9 +271,9 @@ public sealed class SdkRemoteFileSynchronizerTests
     {
         public List<CreateFileFromChunksRequestDto> CreateRequests { get; } = [];
 
-        public List<(Guid NodeFileId, CreateFileFromChunksRequestDto Request)> UpdateRequests { get; } = [];
+        public List<(Guid NodeFileId, CreateFileFromChunksRequestDto Request, string? ExpectedETag)> UpdateRequests { get; } = [];
 
-        public List<(Guid NodeFileId, bool SkipTrash)> Deletes { get; } = [];
+        public List<(Guid NodeFileId, bool SkipTrash, string? ExpectedETag)> Deletes { get; } = [];
 
         public Dictionary<Guid, byte[]> Downloads { get; } = [];
 
@@ -287,9 +288,10 @@ public sealed class SdkRemoteFileSynchronizerTests
         public Task<NodeFileManifestDto> UpdateContentAsync(
             Guid nodeFileId,
             CreateFileFromChunksRequestDto request,
+            string? expectedETag = null,
             CancellationToken cancellationToken = default)
         {
-            UpdateRequests.Add((nodeFileId, request));
+            UpdateRequests.Add((nodeFileId, request, expectedETag));
             return Task.FromResult(FileFromRequest(nodeFileId, request));
         }
 
@@ -311,9 +313,13 @@ public sealed class SdkRemoteFileSynchronizerTests
             throw new NotSupportedException();
         }
 
-        public Task DeleteAsync(Guid nodeFileId, bool skipTrash = false, CancellationToken cancellationToken = default)
+        public Task DeleteAsync(
+            Guid nodeFileId,
+            bool skipTrash = false,
+            string? expectedETag = null,
+            CancellationToken cancellationToken = default)
         {
-            Deletes.Add((nodeFileId, skipTrash));
+            Deletes.Add((nodeFileId, skipTrash, expectedETag));
             return Task.CompletedTask;
         }
 

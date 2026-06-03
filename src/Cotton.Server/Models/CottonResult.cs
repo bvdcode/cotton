@@ -107,5 +107,18 @@ namespace Cotton.Server.Models
                 StatusCode = HttpStatusCode.Forbidden
             };
         }
+
+        /// <summary>
+        /// Creates a precondition-failed result.
+        /// </summary>
+        public static CottonResult PreconditionFailed(string message)
+        {
+            return new()
+            {
+                Success = false,
+                Message = message,
+                StatusCode = HttpStatusCode.PreconditionFailed
+            };
+        }
     }
 }

@@ -252,7 +252,11 @@ public sealed class SyncEngine : ISyncEngine
             return;
         }
 
-        await _remoteFiles.DeleteFileAsync(remoteFile.Id, options.DeleteRemotePermanently, cancellationToken).ConfigureAwait(false);
+        await _remoteFiles.DeleteFileAsync(
+            remoteFile.Id,
+            options.DeleteRemotePermanently,
+            remoteFile.ETag,
+            cancellationToken).ConfigureAwait(false);
         await _stateStore.DeleteAsync(syncPair.SyncPairId, relativePath, cancellationToken).ConfigureAwait(false);
         Report(result, options, SyncActivityKind.DeletedRemote, relativePath, null);
     }

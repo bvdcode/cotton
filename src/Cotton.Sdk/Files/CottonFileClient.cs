@@ -11,6 +11,8 @@ namespace Cotton.Sdk.Files;
 /// </summary>
 public sealed class CottonFileClient : ICottonFileClient
 {
+    private const string IfMatchHeaderName = "If-Match";
+
     private readonly CottonHttpTransport _transport;
 
     internal CottonFileClient(CottonHttpTransport transport)
@@ -39,6 +41,7 @@ public sealed class CottonFileClient : ICottonFileClient
     public Task<NodeFileManifestDto> UpdateContentAsync(
         Guid nodeFileId,
         CreateFileFromChunksRequestDto request,
+        string? expectedETag = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -46,6 +49,7 @@ public sealed class CottonFileClient : ICottonFileClient
             HttpMethod.Patch,
             $"/api/v1/files/{nodeFileId}/update-content",
             request,
+            headers: CreateIfMatchHeader(expectedETag),
             cancellationToken: cancellationToken);
     }
 
@@ -93,11 +97,16 @@ public sealed class CottonFileClient : ICottonFileClient
     /// <summary>
     /// Deletes a file entry.
     /// </summary>
-    public Task DeleteAsync(Guid nodeFileId, bool skipTrash = false, CancellationToken cancellationToken = default)
+    public Task DeleteAsync(
+        Guid nodeFileId,
+        bool skipTrash = false,
+        string? expectedETag = null,
+        CancellationToken cancellationToken = default)
     {
         return _transport.SendNoContentAsync(
             HttpMethod.Delete,
             $"/api/v1/files/{nodeFileId}?skipTrash={skipTrash.ToString().ToLowerInvariant()}",
+            headers: CreateIfMatchHeader(expectedETag),
             cancellationToken: cancellationToken);
     }
 
@@ -139,5 +148,22 @@ public sealed class CottonFileClient : ICottonFileClient
     {
         string path = $"/api/v1/files/{nodeFileId}/content?download={download.ToString().ToLowerInvariant()}";
         return _transport.DownloadAsync(path, destination, authorize: true, progress, cancellationToken);
+    }
+
+    private static IReadOnlyDictionary<string, string>? CreateIfMatchHeader(string? expectedETag)
+    {
+        if (string.IsNullOrWhiteSpace(expectedETag))
+        {
+            return null;
+        }
+
+        string trimmed = expectedETag.Trim();
+        string headerValue = trimmed == "*" || trimmed.StartsWith('"')
+            ? trimmed
+            : "\"" + trimmed.Trim('"') + "\"";
+        return new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [IfMatchHeaderName] = headerValue,
+        };
     }
 }

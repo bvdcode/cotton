@@ -135,8 +135,21 @@ namespace Cotton.Server.Controllers
                 .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
                 .Select(x => (Guid?)x.NodeId)
                 .SingleOrDefaultAsync();
-            DeleteFileQuery query = new(userId, nodeFileId, skipTrash);
-            await _mediator.Send(query);
+            DeleteFileQuery query = new(userId, nodeFileId, skipTrash, FileETagConcurrency.ReadIfMatch(Request));
+            try
+            {
+                await _mediator.Send(query);
+            }
+            catch (FilePreconditionFailedException ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "File delete precondition failed for user {UserId} and file {NodeFileId}.",
+                    userId,
+                    nodeFileId);
+                return CottonResult.PreconditionFailed(ex.Message);
+            }
+
             await _eventNotification.NotifyFileDeletedAsync(userId, nodeFileId, parentNodeId);
             return NoContent();
         }
@@ -496,6 +509,11 @@ namespace Cotton.Server.Controllers
             if (nodeFile is null)
             {
                 return this.ApiNotFound("Node file not found.");
+            }
+
+            if (!FileETagConcurrency.MatchesIfMatchHeader(FileETagConcurrency.ReadIfMatch(Request), nodeFile))
+            {
+                return CottonResult.PreconditionFailed("File content changed before update.");
             }
 
             string nameKey = NameValidator.NormalizeAndGetNameKey(normalizedName);

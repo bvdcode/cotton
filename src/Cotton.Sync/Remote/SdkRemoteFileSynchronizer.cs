@@ -62,7 +62,11 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileSynchronizer
 
         return existingRemoteFile is null
             ? await _client.Files.CreateFromChunksAsync(request, cancellationToken).ConfigureAwait(false)
-            : await _client.Files.UpdateContentAsync(existingRemoteFile.Id, request, cancellationToken).ConfigureAwait(false);
+            : await _client.Files.UpdateContentAsync(
+                existingRemoteFile.Id,
+                request,
+                existingRemoteFile.ETag,
+                cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -73,9 +77,13 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileSynchronizer
     }
 
     /// <inheritdoc />
-    public Task DeleteFileAsync(Guid nodeFileId, bool skipTrash = false, CancellationToken cancellationToken = default)
+    public Task DeleteFileAsync(
+        Guid nodeFileId,
+        bool skipTrash = false,
+        string? expectedETag = null,
+        CancellationToken cancellationToken = default)
     {
-        return _client.Files.DeleteAsync(nodeFileId, skipTrash, cancellationToken);
+        return _client.Files.DeleteAsync(nodeFileId, skipTrash, expectedETag, cancellationToken);
     }
 
     private async Task<IReadOnlyList<string>> UploadChunksAsync(string filePath, CancellationToken cancellationToken)

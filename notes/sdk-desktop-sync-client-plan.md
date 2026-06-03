@@ -133,16 +133,22 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 
 ## Phase 4 - Optimistic Concurrency And Safe Remote Operations
 
-- [ ] Add expected version/ETag support for file content update.
-- [ ] Add expected version/ETag support for file delete where possible.
+- [x] Add expected version/ETag support for file content update.
+  Verification: `FileController.UpdateFileContent` validates `If-Match` against the current content ETag inside the update transaction; `dotnet test src/Cotton.Server.IntegrationTests/Cotton.Server.IntegrationTests.csproj --configuration Release --no-restore --filter "Name~If_Match"` passed 2/2.
+- [x] Add expected version/ETag support for file delete where possible.
+  Verification: `DeleteFileQuery` validates `If-Match` before delete/trash mutation and `FileController.DeleteFile` returns explicit `412 PreconditionFailed`; `dotnet test src/Cotton.Server.IntegrationTests/Cotton.Server.IntegrationTests.csproj --configuration Release --no-restore --filter "Name~If_Match"` passed 2/2.
 - [ ] Add expected version/ETag support for move/rename where possible.
 - [ ] Return explicit conflict responses instead of silent overwrite.
-- [ ] Update SDK methods to pass expected remote state.
+- [x] Update SDK methods to pass expected remote state.
+  Verification: `ICottonFileClient.UpdateContentAsync` and `DeleteAsync` accept optional expected ETags, send `If-Match`, and `SdkRemoteFileSynchronizer` passes remote DTO ETags; SDK tests passed 6/6 for `CottonFileAndChunkClientTests`, sync tests passed 17/17 for `SdkRemoteFileSynchronizerTests|SyncEngineTests`.
 - [ ] Update sync core to preserve both versions when remote state changed after crawl.
-- [ ] Add tests for stale upload losing the concurrency race.
-- [ ] Add tests for stale delete losing the concurrency race.
+- [x] Add tests for stale upload losing the concurrency race.
+  Verification: `Update_File_Content_With_Stale_If_Match_Returns_Precondition_Failed` covers stale update returning `412`; `dotnet test src/Cotton.Server.IntegrationTests/Cotton.Server.IntegrationTests.csproj --configuration Release --no-restore --filter "Name~If_Match"` passed 2/2.
+- [x] Add tests for stale delete losing the concurrency race.
+  Verification: `Delete_File_With_Stale_If_Match_Returns_Precondition_Failed_And_Keeps_File` covers stale delete returning `412` and preserving the file; full `ChunksAndFilesEndpointsTests` passed 24/24.
 - [ ] Add tests for stale rename/move conflict.
-- [ ] Build and run server, SDK, and sync tests.
+- [x] Build and run server, SDK, and sync tests.
+  Verification: `dotnet test src/Cotton.Sdk.Tests/Cotton.Sdk.Tests.csproj --configuration Release --no-restore --filter CottonFileAndChunkClientTests` passed 6/6; `dotnet test src/Cotton.Sync.Tests/Cotton.Sync.Tests.csproj --configuration Release --no-restore --filter "SdkRemoteFileSynchronizerTests|SyncEngineTests"` passed 17/17; `dotnet test src/Cotton.Server.IntegrationTests/Cotton.Server.IntegrationTests.csproj --configuration Release --no-restore --filter ChunksAndFilesEndpointsTests` passed 24/24; `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 
 ## Phase 5 - Sync Core Hardening
 

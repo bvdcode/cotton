@@ -32,6 +32,7 @@ internal sealed class CottonHttpTransport
         string path,
         object? body = null,
         bool authorize = true,
+        IReadOnlyDictionary<string, string>? headers = null,
         CancellationToken cancellationToken = default)
     {
         using HttpResponseMessage response = await SendAsync(
@@ -39,6 +40,7 @@ internal sealed class CottonHttpTransport
             path,
             body,
             authorize,
+            headers,
             cancellationToken).ConfigureAwait(false);
         return await ReadRequiredJsonAsync<T>(response, cancellationToken).ConfigureAwait(false);
     }
@@ -48,6 +50,7 @@ internal sealed class CottonHttpTransport
         string path,
         object? body = null,
         bool authorize = true,
+        IReadOnlyDictionary<string, string>? headers = null,
         CancellationToken cancellationToken = default)
     {
         using HttpResponseMessage response = await SendAsync(
@@ -55,6 +58,7 @@ internal sealed class CottonHttpTransport
             path,
             body,
             authorize,
+            headers,
             cancellationToken).ConfigureAwait(false);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
     }
@@ -64,6 +68,7 @@ internal sealed class CottonHttpTransport
         string path,
         object? body = null,
         bool authorize = true,
+        IReadOnlyDictionary<string, string>? headers = null,
         CancellationToken cancellationToken = default)
     {
         using HttpRequestMessage request = await CreateRequestAsync(
@@ -71,6 +76,7 @@ internal sealed class CottonHttpTransport
             path,
             body,
             authorize,
+            headers,
             cancellationToken).ConfigureAwait(false);
         HttpResponseMessage response = await _httpClient.SendAsync(
             request,
@@ -89,6 +95,7 @@ internal sealed class CottonHttpTransport
             path,
             body,
             authorize,
+            headers,
             cancellationToken).ConfigureAwait(false);
         return await _httpClient.SendAsync(
             retry,
@@ -139,8 +146,9 @@ internal sealed class CottonHttpTransport
             HttpMethod.Post,
             path,
             body: null,
-            authorize,
-            cancellationToken).ConfigureAwait(false);
+            authorize: authorize,
+            headers: null,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
         try
         {
             request.Content = new StreamContent(content);
@@ -170,8 +178,9 @@ internal sealed class CottonHttpTransport
             HttpMethod.Get,
             path,
             body: null,
-            authorize,
-            cancellationToken).ConfigureAwait(false);
+            authorize: authorize,
+            headers: null,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
         await using Stream source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         byte[] buffer = new byte[64 * 1024];
@@ -211,6 +220,7 @@ internal sealed class CottonHttpTransport
         string path,
         object? body,
         bool authorize,
+        IReadOnlyDictionary<string, string>? headers,
         CancellationToken cancellationToken)
     {
         var request = new HttpRequestMessage(method, path);
@@ -225,6 +235,14 @@ internal sealed class CottonHttpTransport
             if (!string.IsNullOrWhiteSpace(tokens?.AccessToken))
             {
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
+            }
+        }
+
+        if (headers is not null)
+        {
+            foreach (KeyValuePair<string, string> header in headers)
+            {
+                request.Headers.Add(header.Key, header.Value);
             }
         }
 

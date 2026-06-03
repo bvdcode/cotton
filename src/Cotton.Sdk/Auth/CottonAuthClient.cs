@@ -31,7 +31,7 @@ public sealed class CottonAuthClient : ICottonAuthClient
             "/api/v1/auth/login",
             request,
             authorize: false,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
         await _tokenStore.SaveAsync(tokens, cancellationToken).ConfigureAwait(false);
         return tokens;
     }

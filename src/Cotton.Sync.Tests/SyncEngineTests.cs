@@ -146,7 +146,7 @@ public sealed class SyncEngineTests
         SyncStateEntry? entry = await stateStore.GetAsync("pair-a", "delete-remote.txt");
         Assert.Multiple(() =>
         {
-            Assert.That(remoteFiles.Deletes, Is.EqualTo(new[] { (remote.Id, true) }));
+            Assert.That(remoteFiles.Deletes, Is.EqualTo(new[] { (remote.Id, true, remote.ETag) }));
             Assert.That(result.Activities.Select(x => x.Kind), Is.EqualTo(new[] { SyncActivityKind.DeletedRemote }));
             Assert.That(entry, Is.Null);
         });
@@ -172,7 +172,7 @@ public sealed class SyncEngineTests
         SyncStateEntry? secondEntry = await stateStore.GetAsync("pair-a", "b.txt");
         Assert.Multiple(() =>
         {
-            Assert.That(remoteFiles.Deletes, Is.EqualTo(new[] { (firstRemote.Id, false) }));
+            Assert.That(remoteFiles.Deletes, Is.EqualTo(new[] { (firstRemote.Id, false, firstRemote.ETag) }));
             Assert.That(result.Activities.Select(x => x.Kind), Is.EqualTo(new[]
             {
                 SyncActivityKind.DeletedRemote,
@@ -515,7 +515,7 @@ public sealed class SyncEngineTests
     {
         public List<UploadCall> Uploads { get; } = [];
 
-        public List<(Guid NodeFileId, bool SkipTrash)> Deletes { get; } = [];
+        public List<(Guid NodeFileId, bool SkipTrash, string? ExpectedETag)> Deletes { get; } = [];
 
         public Dictionary<Guid, byte[]> Downloads { get; } = [];
 
@@ -553,9 +553,13 @@ public sealed class SyncEngineTests
             return destination.WriteAsync(bytes, cancellationToken).AsTask();
         }
 
-        public Task DeleteFileAsync(Guid nodeFileId, bool skipTrash = false, CancellationToken cancellationToken = default)
+        public Task DeleteFileAsync(
+            Guid nodeFileId,
+            bool skipTrash = false,
+            string? expectedETag = null,
+            CancellationToken cancellationToken = default)
         {
-            Deletes.Add((nodeFileId, skipTrash));
+            Deletes.Add((nodeFileId, skipTrash, expectedETag));
             return Task.CompletedTask;
         }
     }

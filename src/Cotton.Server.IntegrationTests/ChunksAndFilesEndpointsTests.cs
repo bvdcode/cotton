@@ -383,6 +383,67 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Update_File_Content_With_Stale_If_Match_Returns_Precondition_Failed()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+        Models.Dto.NodeDto rootNode = root!;
+
+        var file = await UploadTextFileAsync(rootNode, "etag-update.txt", "first");
+        string staleETag = file.ETag;
+        file = await UpdateTextFileAsync(file, rootNode, "second");
+        string rejectedHash = await UploadChunkAndGetHashAsync("third");
+
+        using var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/v1/files/{file.Id}/update-content")
+        {
+            Content = JsonContent.Create(new CreateFileRequest
+            {
+                ChunkHashes = [rejectedHash],
+                Name = file.Name,
+                ContentType = "text/plain",
+                Hash = rejectedHash,
+                NodeId = rootNode.Id,
+            })
+        };
+        request.Headers.TryAddWithoutValidation("If-Match", staleETag);
+
+        var response = await _client.SendAsync(request);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.PreconditionFailed));
+    }
+
+    [Test]
+    public async Task Delete_File_With_Stale_If_Match_Returns_Precondition_Failed_And_Keeps_File()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+        Models.Dto.NodeDto rootNode = root!;
+
+        var file = await UploadTextFileAsync(rootNode, "etag-delete.txt", "first");
+        string staleETag = file.ETag;
+        file = await UpdateTextFileAsync(file, rootNode, "second");
+
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/files/{file.Id}");
+        request.Headers.TryAddWithoutValidation("If-Match", staleETag);
+
+        var response = await _client.SendAsync(request);
+        var list = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.NodeContentDto>($"/api/v1/layouts/nodes/{rootNode.Id}/children");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.PreconditionFailed));
+            Assert.That(list, Is.Not.Null);
+            Assert.That(list!.Files.Select(x => x.Id), Does.Contain(file.Id));
+        });
+    }
+
+    [Test]
     public async Task Admin_Created_User_Gets_Default_Template_Files()
     {
         var token = await LoginAsync();

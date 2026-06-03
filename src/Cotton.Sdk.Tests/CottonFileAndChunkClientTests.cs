@@ -12,6 +12,8 @@ namespace Cotton.Sdk.Tests;
 
 public sealed class CottonFileAndChunkClientTests
 {
+    private const string IfMatchHeaderName = "If-Match";
+
     [Test]
     public async Task UploadRawAsync_PostsRawBodyToHashEndpoint()
     {
@@ -113,6 +115,54 @@ public sealed class CottonFileAndChunkClientTests
     }
 
     [Test]
+    public async Task UpdateContentAsync_SendsExpectedETagAsIfMatch()
+    {
+        Guid nodeId = Guid.NewGuid();
+        Guid fileId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var handler = new QueuedHttpMessageHandler();
+        handler.EnqueueJson(HttpStatusCode.OK, FileManifestPayload(fileId, nodeId, "updated.txt", "sha256-new"));
+        var client = await CreateAuthorizedClientAsync(handler);
+
+        await client.Files.UpdateContentAsync(
+            fileId,
+            new CreateFileFromChunksRequestDto
+            {
+                NodeId = nodeId,
+                ChunkHashes = ["chunk-hash"],
+                Name = "updated.txt",
+                ContentType = "text/plain",
+                Hash = "sha256-new",
+                Validate = true,
+            },
+            expectedETag: "sha256-old");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(handler.Requests[0].Method, Is.EqualTo(HttpMethod.Patch));
+            Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/files/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/update-content"));
+            Assert.That(handler.Requests[0].Headers[IfMatchHeaderName], Is.EqualTo("\"sha256-old\""));
+        });
+    }
+
+    [Test]
+    public async Task DeleteAsync_SendsExpectedETagAsIfMatch()
+    {
+        Guid fileId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var handler = new QueuedHttpMessageHandler();
+        handler.Enqueue(HttpStatusCode.NoContent);
+        var client = await CreateAuthorizedClientAsync(handler);
+
+        await client.Files.DeleteAsync(fileId, skipTrash: true, expectedETag: "\"sha256-current\"");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(handler.Requests[0].Method, Is.EqualTo(HttpMethod.Delete));
+            Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/files/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa?skipTrash=true"));
+            Assert.That(handler.Requests[0].Headers[IfMatchHeaderName], Is.EqualTo("\"sha256-current\""));
+        });
+    }
+
+    [Test]
     public async Task DownloadContentAsync_CopiesResponseBodyAndReportsProgress()
     {
         var handler = new QueuedHttpMessageHandler();
@@ -153,5 +203,27 @@ public sealed class CottonFileAndChunkClientTests
         {
             BaseAddress = new Uri("https://cotton.test"),
         });
+    }
+
+    private static object FileManifestPayload(Guid fileId, Guid nodeId, string name, string contentHash)
+    {
+        return new
+        {
+            id = fileId,
+            createdAt = DateTime.UtcNow,
+            updatedAt = DateTime.UtcNow,
+            nodeId,
+            fileManifestId = Guid.NewGuid(),
+            originalNodeFileId = fileId,
+            ownerId = Guid.NewGuid(),
+            name,
+            contentType = "text/plain",
+            sizeBytes = 5,
+            contentHash,
+            eTag = "sha256-" + contentHash,
+            metadata = new Dictionary<string, string>(),
+            requiresVideoTranscoding = false,
+            previewHashEncryptedHex = (string?)null,
+        };
     }
 }

@@ -18,7 +18,11 @@ public interface ICottonFileClient
     /// <summary>
     /// Updates file content from already uploaded chunks.
     /// </summary>
-    Task<NodeFileManifestDto> UpdateContentAsync(Guid nodeFileId, CreateFileFromChunksRequestDto request, CancellationToken cancellationToken = default);
+    Task<NodeFileManifestDto> UpdateContentAsync(
+        Guid nodeFileId,
+        CreateFileFromChunksRequestDto request,
+        string? expectedETag = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Moves a file to a different parent node.
@@ -38,7 +42,11 @@ public interface ICottonFileClient
     /// <summary>
     /// Deletes a file entry.
     /// </summary>
-    Task DeleteAsync(Guid nodeFileId, bool skipTrash = false, CancellationToken cancellationToken = default);
+    Task DeleteAsync(
+        Guid nodeFileId,
+        bool skipTrash = false,
+        string? expectedETag = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Restores a trashed file entry.
