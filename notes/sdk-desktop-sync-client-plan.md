@@ -204,10 +204,12 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Verification: `Normalize_RejectsWindowsReservedDeviceNames`, `Normalize_RejectsWindowsReservedCharacters`, `Normalize_RejectsWindowsTrailingDotOrSpace`, `Normalize_RejectsTooLongPathSegments`, and `Normalize_RejectsTooLongRelativePaths` cover reserved Windows names and path constraints; `SyncPathTests` passed 12/12 and full `Cotton.Sync.Tests` passed 62/62.
 - [x] Add tests for case conflicts.
   Verification: `SyncEngine` rejects case-insensitive local and remote path collisions before reconciliation with `SyncPathCollisionException`; `RunOnceAsync_RejectsLocalCaseInsensitivePathCollision` and `RunOnceAsync_RejectsRemoteCaseInsensitivePathCollision` passed in `SyncEngineTests` 20/20, full `Cotton.Sync.Tests` passed 47/47, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
-- [ ] Add tests for crash during download.
+- [x] Add tests for crash during download.
+  Verification: `RunOnceAsync_DoesNotUpdateBaselineWhenRemoteDownloadFails` verifies failed download preserves the existing local file, removes `.cotton-sync/tmp` partials, and leaves baseline unchanged; full `Cotton.Sync.Tests` passed 65/65 and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [x] Add tests for crash after remote upload before baseline update.
   Verification: `RunOnceAsync_RecoversAfterRemoteUploadBeforeBaselineUpdate` simulates state-store failure after remote upload, then verifies the next run adopts the remote file with matching content without uploading again; `SyncEngineTests` passed 22/22, full `Cotton.Sync.Tests` passed 65/65, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
-- [ ] Run full sync test suite.
+- [x] Run full sync test suite.
+  Verification: `dotnet test src/Cotton.Sync.Tests/Cotton.Sync.Tests.csproj --configuration Release --no-restore` passed 65/65 and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 
 ## Phase 6 - Continuous Sync
 
