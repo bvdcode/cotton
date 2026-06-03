@@ -250,19 +250,22 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Required implementations: password flow now, browser flow placeholder later.
   Verification: `IAuthFlow` is the app-layer auth boundary used by `SyncApplicationService`, with `PasswordAuthFlow` as the current implementation; focused auth/service tests passed 21/21 and full `Cotton.Sync.App.Tests` passed 77/77.
 - [ ] Add named-device metadata where server supports it.
-- [ ] Add secure token store abstraction.
-- [ ] Implement Windows secure token store.
+- [x] Add secure token store abstraction.
+  Verification: commit `Add token payload protection boundary`; desktop token persistence now writes a protected envelope through `ITokenPayloadProtector`, with tests proving the file store uses the protector, rejects mismatched protection schemes, ignores unreadable protected payloads, roundtrips valid tokens, clears tokens, and keeps Unix file permissions restricted. `dotnet test src/Cotton.Sync.Desktop.Tests/Cotton.Sync.Desktop.Tests.csproj --configuration Release --no-restore --filter FileCottonTokenStoreTests` passed 9/9.
+- [x] Implement Windows secure token store.
   Preferred target: Windows Credential Manager or DPAPI-backed per-user storage.
+  Verification: commit `Add token payload protection boundary`; `WindowsDpapiTokenPayloadProtector` uses DPAPI current-user protection via `System.Security.Cryptography.ProtectedData` and is selected by `DesktopTokenPayloadProtectorFactory` on Windows. The Windows-only roundtrip test is present in `FileCottonTokenStoreTests` and runs on Windows; Linux build/test verification passed, while manual Windows verification remains tracked below.
 - [ ] Implement Linux secure token store.
   Preferred target: Secret Service/libsecret where available.
-- [ ] Add explicit fallback policy for Linux environments without a secret service.
+- [x] Add explicit fallback policy for Linux environments without a secret service.
   Release decision must be explicit: block login, prompt user, or encrypted local store.
+  Verification: commit `Add token payload protection boundary`; current non-Windows fallback is explicitly `RestrictedFileTokenPayloadProtector` with a protected-envelope scheme and chmod-restricted token file. This is a deliberate development fallback, not a completed Linux secure-store implementation; `Implement Linux secure token store` and Linux manual verification remain open.
 - [x] Ensure logout clears tokens and stops all sync runners.
   Verification: `SyncApplicationService.SignOutAsync` stops remote changes, periodic sync, local changes, and supervisor before delegating to `IAuthFlow.SignOutAsync`; SDK `CottonAuthClient.LogoutAsync` clears `ICottonTokenStore`, including failed server logout responses. `SyncApplicationServiceTests` plus `PasswordAuthFlowTests` passed in focused auth/service tests 21/21, and `CottonAuthClientTests` passed 3/3.
 - [x] Handle refresh-token revocation and session-revoked SignalR event.
   Verification: `CottonAuthClient.LogoutAsync` clears saved tokens in a `finally` block when server logout fails, `RealtimeRemoteChangeSyncCoordinator` subscribes to SDK `SessionRevoked`, cancels pending remote-triggered sync, invokes `SessionRevocationHandler`, and stops realtime observation. `SessionRevocationHandler` stops periodic/local sync, signs out, and stops the supervisor while logging and continuing through non-cancellation failures. Focused `CottonAuthClientTests` passed 3/3; focused `RealtimeRemoteChangeSyncCoordinatorTests|SessionRevocationHandlerTests` passed 7/7; full `Cotton.Sdk.Tests` passed 18/18; full `Cotton.Sync.App.Tests` passed 81/81; `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [x] Add tests for login, refresh, logout, token clear, and invalid saved token.
-  Verification: `PasswordAuthFlowTests` cover login/TOTP/logout delegation, `CottonHttpTransportTests|CottonAuthClientTests` passed 3/3 for refresh/logout/token clear behavior, and `FileCottonTokenStoreTests` passed 5/5 including incomplete saved-token rejection.
+  Verification: `PasswordAuthFlowTests` cover login/TOTP/logout delegation, `CottonHttpTransportTests|CottonAuthClientTests` passed 3/3 for refresh/logout/token clear behavior, and `FileCottonTokenStoreTests` passed 9/9 including incomplete saved-token rejection.
 - [ ] Add manual verification on Windows secure storage.
 - [ ] Add manual verification on Linux secure storage.
 
