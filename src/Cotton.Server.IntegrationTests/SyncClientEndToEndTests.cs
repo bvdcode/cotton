@@ -794,6 +794,64 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task SyncPairRunner_ReportsDiskFullDuringDownloadThroughSdkAndServer()
+    {
+        CottonCloudClient client = CreateClient();
+        await LoginAsync(client);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-disk-full");
+        NodeDto remoteDirectory = await client.Nodes.CreateAsync(remoteRoot.Id, "DiskFull");
+        NodeFileManifestDto remoteFile = await CreateRemoteTextFileAsync(
+            client,
+            remoteDirectory.Id,
+            "remote-download.txt",
+            "cannot fit locally");
+        string localRoot = Path.Combine(_tempDirectory, "client-disk-full");
+        Directory.CreateDirectory(localRoot);
+        SqliteSyncStateStore stateStore = CreateStateStore("client-disk-full-state.sqlite");
+        var localWriter = new DiskFullLocalFileSyncWriter();
+        var engine = new SyncEngine(
+            new LocalFileScanner(),
+            new RemoteTreeCrawler(client.Nodes),
+            new SdkRemoteFileSynchronizer(client, new SdkRemoteFileSynchronizerOptions { ChunkSizeBytes = SyncTestChunkSizeBytes }),
+            stateStore,
+            localWriter);
+        var syncPair = new SyncPairSettings
+        {
+            Id = Guid.NewGuid(),
+            DisplayName = "Disk full",
+            LocalRootPath = localRoot,
+            RemoteRootNodeId = remoteRoot.Id,
+            RemoteDisplayPath = "/Disk full",
+            IsEnabled = true,
+            Mode = SyncPairMode.FullMirror,
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow,
+        };
+        var runner = new SyncPairRunner(
+            syncPair,
+            new SyncEnginePairWork(engine),
+            CreateNoDelayRetryOptions(maxAttempts: 1));
+
+        TestDiskFullIOException? exception = Assert.ThrowsAsync<TestDiskFullIOException>(() => runner.SyncNowAsync());
+
+        string localFilePath = Path.Combine(localRoot, "DiskFull", "remote-download.txt");
+        IReadOnlyList<SyncStateEntry> baselines = await stateStore.LoadPairAsync(syncPair.Id.ToString("D"));
+        const string expected = "Local disk is full. Free space on this computer and retry sync.";
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(localWriter.WriteAttempts, Is.EqualTo(1));
+            Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Error));
+            Assert.That(runner.Status.LastError, Is.EqualTo(expected));
+            Assert.That(runner.Status.CurrentOperation, Is.EqualTo("Action required: " + expected));
+            Assert.That(File.Exists(localFilePath), Is.False);
+            Assert.That(baselines, Is.Empty);
+            Assert.That(remoteFile.Name, Is.EqualTo("remote-download.txt"));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_MovesLocalFileToQuarantineWhenRemoteFileIsDeleted()
     {
         CottonCloudClient client = CreateClient();
@@ -1570,6 +1628,41 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
             CancellationToken cancellationToken = default)
         {
             return _inner.ReplacePairAsync(syncPairId, entries, cancellationToken);
+        }
+    }
+
+    private sealed class DiskFullLocalFileSyncWriter : ILocalFileSyncWriter
+    {
+        public int WriteAttempts { get; private set; }
+
+        public Task WriteFileAsync(
+            string rootPath,
+            string relativePath,
+            Func<Stream, CancellationToken, Task> writeContentAsync,
+            DateTime? lastWriteUtc = null,
+            CancellationToken cancellationToken = default)
+        {
+            WriteAttempts++;
+            throw new TestDiskFullIOException();
+        }
+
+        public Task DeleteFileAsync(string rootPath, string relativePath, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException("Disk-full smoke does not delete local files.");
+        }
+
+        public string CreateConflictRelativePath(string rootPath, string relativePath, DateTime timestampUtc)
+        {
+            throw new NotSupportedException("Disk-full smoke does not create conflicts.");
+        }
+    }
+
+    private sealed class TestDiskFullIOException : IOException
+    {
+        public TestDiskFullIOException()
+            : base("There is not enough space on the disk.")
+        {
+            HResult = unchecked((int)0x80070070);
         }
     }
 }
