@@ -6,6 +6,7 @@ using Cotton.Sync.App.Auth;
 using Cotton.Sync.App.LocalChanges;
 using Cotton.Sync.App.Platform;
 using Cotton.Sync.App.Preferences;
+using Cotton.Sync.App.RemoteChanges;
 using Cotton.Sync.App.Runners;
 using Cotton.Sync.App.Status;
 using Cotton.Sync.App.Supervision;
@@ -62,6 +63,7 @@ internal sealed class DesktopSyncApplicationFactory
             syncPairStore,
             supervisor,
             new FileSystemLocalSyncRootWatcherFactory());
+        var remoteChanges = new RealtimeRemoteChangeSyncCoordinator(cottonClient.Realtime, supervisor);
         var prerequisites = new SyncPairPrerequisiteValidator(
             new FileSystemLocalSyncRootProbe(),
             new SdkRemoteSyncRootProbe(cottonClient.Nodes));
@@ -72,7 +74,8 @@ internal sealed class DesktopSyncApplicationFactory
             new PasswordAuthFlow(cottonClient.Auth),
             supervisor,
             new ProcessPlatformCommandService(),
-            localChanges);
+            localChanges,
+            remoteChanges);
         var remoteRootResolver = new RemoteRootResolver(cottonClient.Nodes);
 
         return new DesktopSyncApplicationHost(

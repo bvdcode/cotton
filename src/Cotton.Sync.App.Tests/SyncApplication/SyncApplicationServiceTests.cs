@@ -5,6 +5,7 @@ using Cotton.Sync.App.Auth;
 using Cotton.Sync.App.LocalChanges;
 using Cotton.Sync.App.Platform;
 using Cotton.Sync.App.Preferences;
+using Cotton.Sync.App.RemoteChanges;
 using Cotton.Sync.App.SyncApplication;
 using Cotton.Sync.App.SyncPairs;
 using Cotton.Sync.App.Status;
@@ -41,11 +42,13 @@ public sealed class SyncApplicationServiceTests
         var authFlow = new FakeAuthFlow();
         var supervisor = new FakeSyncSupervisor();
         var localChanges = new FakeLocalChangeSyncCoordinator();
+        var remoteChanges = new FakeRemoteChangeSyncCoordinator();
         SyncApplicationService service = CreateService(
             new InMemorySyncPairSettingsStore(),
             authFlow: authFlow,
             supervisor: supervisor,
-            localChanges: localChanges);
+            localChanges: localChanges,
+            remoteChanges: remoteChanges);
 
         await service.SignOutAsync();
 
@@ -54,6 +57,7 @@ public sealed class SyncApplicationServiceTests
             Assert.That(authFlow.SignOutCallCount, Is.EqualTo(1));
             Assert.That(supervisor.StopCallCount, Is.EqualTo(1));
             Assert.That(localChanges.StopCallCount, Is.EqualTo(1));
+            Assert.That(remoteChanges.StopCallCount, Is.EqualTo(1));
         });
     }
 
@@ -63,11 +67,13 @@ public sealed class SyncApplicationServiceTests
         var authFlow = new FakeAuthFlow();
         var supervisor = new FakeSyncSupervisor();
         var localChanges = new FakeLocalChangeSyncCoordinator();
+        var remoteChanges = new FakeRemoteChangeSyncCoordinator();
         SyncApplicationService service = CreateService(
             new InMemorySyncPairSettingsStore(),
             authFlow: authFlow,
             supervisor: supervisor,
-            localChanges: localChanges);
+            localChanges: localChanges,
+            remoteChanges: remoteChanges);
 
         AuthSession session = await service.RestoreSessionAsync();
 
@@ -76,6 +82,7 @@ public sealed class SyncApplicationServiceTests
             Assert.That(authFlow.RestoreSessionCallCount, Is.EqualTo(1));
             Assert.That(supervisor.StartCallCount, Is.EqualTo(1));
             Assert.That(localChanges.StartCallCount, Is.EqualTo(1));
+            Assert.That(remoteChanges.StartCallCount, Is.EqualTo(1));
             Assert.That(session, Is.SameAs(authFlow.Session));
         });
     }
@@ -85,10 +92,12 @@ public sealed class SyncApplicationServiceTests
     {
         var supervisor = new FakeSyncSupervisor();
         var localChanges = new FakeLocalChangeSyncCoordinator();
+        var remoteChanges = new FakeRemoteChangeSyncCoordinator();
         SyncApplicationService service = CreateService(
             new InMemorySyncPairSettingsStore(),
             supervisor: supervisor,
-            localChanges: localChanges);
+            localChanges: localChanges,
+            remoteChanges: remoteChanges);
 
         await service.StartSyncAsync();
 
@@ -96,6 +105,7 @@ public sealed class SyncApplicationServiceTests
         {
             Assert.That(supervisor.StartCallCount, Is.EqualTo(1));
             Assert.That(localChanges.StartCallCount, Is.EqualTo(1));
+            Assert.That(remoteChanges.StartCallCount, Is.EqualTo(1));
         });
     }
 
@@ -104,16 +114,19 @@ public sealed class SyncApplicationServiceTests
     {
         var supervisor = new FakeSyncSupervisor();
         var localChanges = new FakeLocalChangeSyncCoordinator();
+        var remoteChanges = new FakeRemoteChangeSyncCoordinator();
         SyncApplicationService service = CreateService(
             new InMemorySyncPairSettingsStore(),
             supervisor: supervisor,
-            localChanges: localChanges);
+            localChanges: localChanges,
+            remoteChanges: remoteChanges);
 
         await service.StopSyncAsync();
 
         Assert.Multiple(() =>
         {
             Assert.That(localChanges.StopCallCount, Is.EqualTo(1));
+            Assert.That(remoteChanges.StopCallCount, Is.EqualTo(1));
             Assert.That(supervisor.StopCallCount, Is.EqualTo(1));
         });
     }
@@ -327,7 +340,8 @@ public sealed class SyncApplicationServiceTests
         IAuthFlow? authFlow = null,
         ISyncSupervisor? supervisor = null,
         IPlatformCommandService? platformCommands = null,
-        ILocalChangeSyncCoordinator? localChanges = null)
+        ILocalChangeSyncCoordinator? localChanges = null,
+        IRemoteChangeSyncCoordinator? remoteChanges = null)
     {
         return new SyncApplicationService(
             store,
@@ -336,7 +350,8 @@ public sealed class SyncApplicationServiceTests
             authFlow ?? new FakeAuthFlow(),
             supervisor ?? new FakeSyncSupervisor(),
             platformCommands ?? new FakePlatformCommandService(),
-            localChanges);
+            localChanges,
+            remoteChanges);
     }
 
     private static SyncPairSettings CreatePair(string localRootPath)
@@ -560,6 +575,25 @@ public sealed class SyncApplicationServiceTests
     }
 
     private sealed class FakeLocalChangeSyncCoordinator : ILocalChangeSyncCoordinator
+    {
+        public int StartCallCount { get; private set; }
+
+        public int StopCallCount { get; private set; }
+
+        public Task StartAsync(CancellationToken cancellationToken = default)
+        {
+            StartCallCount++;
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken = default)
+        {
+            StopCallCount++;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoordinator
     {
         public int StartCallCount { get; private set; }
 
