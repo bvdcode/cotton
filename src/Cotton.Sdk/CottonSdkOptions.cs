@@ -17,4 +17,14 @@ public sealed class CottonSdkOptions
     /// Gets or sets a value indicating whether the SDK should refresh tokens after an unauthorized response.
     /// </summary>
     public bool RefreshOnUnauthorized { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets an optional user agent sent with SDK HTTP requests.
+    /// </summary>
+    public string? UserAgent { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional user-visible device name sent when the server issues sessions.
+    /// </summary>
+    public string? DeviceName { get; set; }
 }

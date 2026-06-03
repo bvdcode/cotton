@@ -249,7 +249,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [x] Add `IAuthFlow` abstraction.
   Required implementations: password flow now, browser flow placeholder later.
   Verification: `IAuthFlow` is the app-layer auth boundary used by `SyncApplicationService`, with `PasswordAuthFlow` as the current implementation; focused auth/service tests passed 21/21 and full `Cotton.Sync.App.Tests` passed 77/77.
-- [ ] Add named-device metadata where server supports it.
+- [x] Add named-device metadata where server supports it.
+  Verification: commit `Send desktop device metadata`; SDK `CottonSdkOptions` now supports `UserAgent` and `DeviceName`, desktop factory sends a generated Cotton Sync Desktop user agent and device name, and server auth session issuing stores shared-contract `X-Cotton-Device-Name` into the existing refresh-token `Device` field when present. `CottonAuthClientTests` passed 6/6, full `Cotton.Sdk.Tests` passed 21/21, `AuthSmokeTests` passed 5/5 including session device persistence, and `dotnet build src/Cotton.sln --configuration Release` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [x] Add secure token store abstraction.
   Verification: commit `Add token payload protection boundary`; desktop token persistence now writes a protected envelope through `ITokenPayloadProtector`, with tests proving the file store uses the protector, rejects mismatched protection schemes, ignores unreadable protected payloads, roundtrips valid tokens, clears tokens, and keeps Unix file permissions restricted. `dotnet test src/Cotton.Sync.Desktop.Tests/Cotton.Sync.Desktop.Tests.csproj --configuration Release --no-restore --filter FileCottonTokenStoreTests` passed 9/9.
 - [x] Implement Windows secure token store.

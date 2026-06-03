@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Cotton.Contracts;
 using Cotton.Contracts.Auth;
 using Cotton.Sdk.Auth;
 
@@ -224,6 +225,7 @@ internal sealed class CottonHttpTransport
         CancellationToken cancellationToken)
     {
         var request = new HttpRequestMessage(method, path);
+        ApplyDefaultHeaders(request);
         if (body is not null)
         {
             request.Content = JsonContent.Create(body, options: JsonOptions);
@@ -269,6 +271,7 @@ internal sealed class CottonHttpTransport
 
             string path = "/api/v1/auth/refresh?refreshToken=" + Uri.EscapeDataString(tokens.RefreshToken);
             using HttpRequestMessage request = new(HttpMethod.Post, path);
+            ApplyDefaultHeaders(request);
             using HttpResponseMessage response = await _httpClient.SendAsync(
                 request,
                 HttpCompletionOption.ResponseHeadersRead,
@@ -287,5 +290,32 @@ internal sealed class CottonHttpTransport
         {
             _refreshGate.Release();
         }
+    }
+
+    private void ApplyDefaultHeaders(HttpRequestMessage request)
+    {
+        if (!string.IsNullOrWhiteSpace(_options.UserAgent))
+        {
+            request.Headers.UserAgent.ParseAdd(_options.UserAgent);
+        }
+
+        string? deviceName = NormalizeDeviceName(_options.DeviceName);
+        if (deviceName is not null)
+        {
+            request.Headers.TryAddWithoutValidation(CottonClientHeaders.DeviceName, deviceName);
+        }
+    }
+
+    private static string? NormalizeDeviceName(string? value)
+    {
+        string? normalized = value?.Trim();
+        if (string.IsNullOrEmpty(normalized))
+        {
+            return null;
+        }
+
+        return normalized.Length <= CottonClientHeaders.DeviceNameMaxLength
+            ? normalized
+            : normalized[..CottonClientHeaders.DeviceNameMaxLength];
     }
 }

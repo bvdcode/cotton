@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Contracts;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
@@ -103,7 +104,7 @@ public sealed class AuthSessionIssuer(
             IpAddress = ipAddress,
             UserAgent = request.Headers.UserAgent.ToString(),
             Token = HashRefreshToken(refreshToken),
-            Device = UserAgentHelpers.GetDevice(request.Headers.UserAgent.ToString()),
+            Device = ResolveDeviceName(request),
         };
         return (dbToken, refreshToken);
     }
@@ -164,5 +165,24 @@ public sealed class AuthSessionIssuer(
     private static string NormalizeGeoField(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? UnknownGeoLabel : value;
+    }
+
+    private static string ResolveDeviceName(HttpRequest request)
+    {
+        string? clientDeviceName = NormalizeDeviceName(request.Headers[CottonClientHeaders.DeviceName].FirstOrDefault());
+        return clientDeviceName ?? UserAgentHelpers.GetDevice(request.Headers.UserAgent.ToString());
+    }
+
+    private static string? NormalizeDeviceName(string? value)
+    {
+        string? normalized = value?.Trim();
+        if (string.IsNullOrEmpty(normalized))
+        {
+            return null;
+        }
+
+        return normalized.Length <= CottonClientHeaders.DeviceNameMaxLength
+            ? normalized
+            : normalized[..CottonClientHeaders.DeviceNameMaxLength];
     }
 }

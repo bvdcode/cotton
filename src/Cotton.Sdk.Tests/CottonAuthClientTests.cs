@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Net;
+using Cotton.Contracts;
 using Cotton.Contracts.Auth;
 using Cotton.Sdk.Auth;
 using Cotton.Sdk.Tests.Fakes;
@@ -57,6 +58,83 @@ public sealed class CottonAuthClientTests
             Assert.That(stored, Is.Null);
             Assert.That(handler.Requests[0].Method, Is.EqualTo(HttpMethod.Post));
             Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/auth/logout?refreshToken=refresh%20token"));
+        });
+    }
+
+    [Test]
+    public async Task LoginAsync_SendsConfiguredUserAgentAndDeviceName()
+    {
+        var handler = new QueuedHttpMessageHandler();
+        handler.EnqueueJson(HttpStatusCode.OK, new { accessToken = "access", refreshToken = "refresh" });
+        var store = new InMemoryCottonTokenStore();
+        var client = new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
+        {
+            BaseAddress = new Uri("https://cotton.test"),
+            UserAgent = "CottonSyncDesktop/1.2.3 (Linux; X64)",
+            DeviceName = "Cotton Sync Desktop (workstation)",
+        });
+
+        await client.Auth.LoginAsync(new LoginRequestDto
+        {
+            Username = "demo",
+            Password = "secret",
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(handler.Requests[0].Headers["User-Agent"], Is.EqualTo("CottonSyncDesktop/1.2.3,(Linux; X64)"));
+            Assert.That(
+                handler.Requests[0].Headers[CottonClientHeaders.DeviceName],
+                Is.EqualTo("Cotton Sync Desktop (workstation)"));
+        });
+    }
+
+    [Test]
+    public async Task LoginAsync_TruncatesConfiguredDeviceName()
+    {
+        var handler = new QueuedHttpMessageHandler();
+        handler.EnqueueJson(HttpStatusCode.OK, new { accessToken = "access", refreshToken = "refresh" });
+        var store = new InMemoryCottonTokenStore();
+        string longDeviceName = new('d', CottonClientHeaders.DeviceNameMaxLength + 1);
+        var client = new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
+        {
+            BaseAddress = new Uri("https://cotton.test"),
+            DeviceName = longDeviceName,
+        });
+
+        await client.Auth.LoginAsync(new LoginRequestDto
+        {
+            Username = "demo",
+            Password = "secret",
+        });
+
+        Assert.That(
+            handler.Requests[0].Headers[CottonClientHeaders.DeviceName],
+            Has.Length.EqualTo(CottonClientHeaders.DeviceNameMaxLength));
+    }
+
+    [Test]
+    public async Task RefreshAsync_SendsConfiguredUserAgentAndDeviceName()
+    {
+        var handler = new QueuedHttpMessageHandler();
+        handler.EnqueueJson(HttpStatusCode.OK, new { accessToken = "access", refreshToken = "refresh" });
+        var store = new InMemoryCottonTokenStore();
+        await store.SaveAsync(new TokenPairDto { AccessToken = "old-access", RefreshToken = "old-refresh" });
+        var client = new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
+        {
+            BaseAddress = new Uri("https://cotton.test"),
+            UserAgent = "CottonSyncDesktop/1.2.3 (Windows; X64)",
+            DeviceName = "Cotton Sync Desktop (laptop)",
+        });
+
+        await client.Auth.RefreshAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(handler.Requests[0].Headers["User-Agent"], Is.EqualTo("CottonSyncDesktop/1.2.3,(Windows; X64)"));
+            Assert.That(
+                handler.Requests[0].Headers[CottonClientHeaders.DeviceName],
+                Is.EqualTo("Cotton Sync Desktop (laptop)"));
         });
     }
 

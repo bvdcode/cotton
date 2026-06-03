@@ -35,6 +35,7 @@
 		<PackageReference Include="Mapster" Version="10.0.7" />
 		<PackageReference Include="Otp.NET" Version="1.4.1" />
 		<ProjectReference Include="..\Cotton.Localization\Cotton.Localization.csproj" />
+		<ProjectReference Include="..\Cotton.Contracts\Cotton.Contracts.csproj" />
 		<ProjectReference Include="..\Cotton.Shared\Cotton.csproj" />
 		<ProjectReference Include="..\Cotton.Crypto\Cotton.Crypto.csproj" />
 		<ProjectReference Include="..\Cotton.Storage\Cotton.Storage.csproj" />

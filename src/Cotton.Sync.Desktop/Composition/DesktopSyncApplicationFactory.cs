@@ -39,6 +39,8 @@ internal sealed class DesktopSyncApplicationFactory
         var sdkOptions = new CottonSdkOptions
         {
             BaseAddress = serverUrl,
+            UserAgent = DesktopDeviceIdentity.CreateUserAgent(),
+            DeviceName = DesktopDeviceIdentity.CreateDeviceName(),
         };
         var cottonClient = new CottonCloudClient(httpClient, tokenStore, sdkOptions);
 
