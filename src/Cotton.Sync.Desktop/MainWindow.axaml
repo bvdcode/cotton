@@ -74,8 +74,14 @@
               <TextBlock Text="Add Folder"
                          FontSize="16"
                          FontWeight="SemiBold" />
-              <TextBox Watermark="Local folder"
-                       Text="{Binding LocalFolderPath}" />
+              <Grid ColumnDefinitions="*,Auto"
+                    ColumnSpacing="8">
+                <TextBox Watermark="Local folder"
+                         Text="{Binding LocalFolderPath}" />
+                <Button Grid.Column="1"
+                        Content="Browse"
+                        Command="{Binding BrowseLocalFolderCommand}" />
+              </Grid>
               <TextBox Watermark="Remote folder"
                        Text="{Binding RemoteFolderPath}" />
               <Button Content="Add"
@@ -101,7 +107,8 @@
                     Command="{Binding OpenFolderCommand}" />
           </Grid>
           <ListBox Grid.Row="1"
-                   ItemsSource="{Binding SyncPairs}">
+                   ItemsSource="{Binding SyncPairs}"
+                   SelectedItem="{Binding SelectedSyncPair}">
             <ListBox.ItemTemplate>
               <DataTemplate>
                 <Grid ColumnDefinitions="*,Auto"

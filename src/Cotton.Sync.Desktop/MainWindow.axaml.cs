@@ -2,6 +2,8 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Avalonia.Controls;
+using Cotton.Sync.Desktop.Platform;
+using Cotton.Sync.Desktop.Shell;
 using Cotton.Sync.Desktop.ViewModels;
 
 namespace Cotton.Sync.Desktop;
@@ -15,14 +17,15 @@ public sealed partial class MainWindow : Window
     /// Initializes a new instance of the <see cref="MainWindow" /> class.
     /// </summary>
     public MainWindow()
-        : this(ShellViewModel.CreateDefault())
+        : this(DesktopShellController.CreateDefault())
     {
     }
 
-    internal MainWindow(ShellViewModel viewModel)
+    internal MainWindow(IDesktopShellController controller)
     {
-        ArgumentNullException.ThrowIfNull(viewModel);
+        ArgumentNullException.ThrowIfNull(controller);
         InitializeComponent();
+        var viewModel = new ShellViewModel(controller, new WindowLocalFolderPicker(this));
         DataContext = viewModel;
         Opened += async (_, _) => await viewModel.InitializeAsync().ConfigureAwait(true);
         Closed += (_, _) => viewModel.Dispose();

@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Globalization;
 using Cotton.Sync.App.Auth;
 using Cotton.Sync.App.SyncPairs;
+using Cotton.Sync.Desktop.Platform;
 using Cotton.Sync.Desktop.Shell;
 
 namespace Cotton.Sync.Desktop.ViewModels;
@@ -16,6 +17,7 @@ namespace Cotton.Sync.Desktop.ViewModels;
 internal sealed class ShellViewModel : ViewModelBase, IDisposable
 {
     private readonly IDesktopShellController _controller;
+    private readonly ILocalFolderPicker _folderPicker;
     private string _accountName = "Signed out";
     private string _globalStatus = "Loading";
     private bool _isBusy;
@@ -24,19 +26,22 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     private string _password = string.Empty;
     private string _remoteFolderPath = string.Empty;
     private string _serverUrl = string.Empty;
+    private SyncPairRowViewModel? _selectedSyncPair;
     private string _totpCode = string.Empty;
     private bool _trustDevice = true;
     private string _username = string.Empty;
 
-    private ShellViewModel(IDesktopShellController controller)
+    internal ShellViewModel(IDesktopShellController controller, ILocalFolderPicker folderPicker)
     {
         _controller = controller ?? throw new ArgumentNullException(nameof(controller));
+        _folderPicker = folderPicker ?? throw new ArgumentNullException(nameof(folderPicker));
         SignInCommand = new AsyncRelayCommand(SignInAsync, CanSignIn, HandleCommandError);
         AddSyncPairCommand = new AsyncRelayCommand(AddSyncPairAsync, CanAddSyncPair, HandleCommandError);
+        BrowseLocalFolderCommand = new AsyncRelayCommand(BrowseLocalFolderAsync, () => !IsBusy, HandleCommandError);
         SyncNowCommand = new AsyncRelayCommand(SyncNowAsync, () => IsSignedIn, HandleCommandError);
         PauseCommand = new AsyncRelayCommand(PauseAsync, () => IsSignedIn, HandleCommandError);
         ResumeCommand = new AsyncRelayCommand(ResumeAsync, () => IsSignedIn, HandleCommandError);
-        OpenFolderCommand = new AsyncRelayCommand(OpenFolderAsync, () => SyncPairs.Count > 0, HandleCommandError);
+        OpenFolderCommand = new AsyncRelayCommand(OpenFolderAsync, () => SelectedSyncPair is not null, HandleCommandError);
     }
 
     public ObservableCollection<SyncPairRowViewModel> SyncPairs { get; } = [];
@@ -44,6 +49,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public ObservableCollection<ActivityRowViewModel> Activities { get; } = [];
 
     public AsyncRelayCommand AddSyncPairCommand { get; }
+
+    public AsyncRelayCommand BrowseLocalFolderCommand { get; }
 
     public AsyncRelayCommand OpenFolderCommand { get; }
 
@@ -139,6 +146,18 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         }
     }
 
+    public SyncPairRowViewModel? SelectedSyncPair
+    {
+        get => _selectedSyncPair;
+        set
+        {
+            if (SetProperty(ref _selectedSyncPair, value))
+            {
+                OpenFolderCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
     public string TotpCode
     {
         get => _totpCode;
@@ -163,11 +182,6 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public static ShellViewModel CreateDefault()
-    {
-        return new ShellViewModel(DesktopShellController.CreateDefault());
-    }
-
     public void Dispose()
     {
         _controller.Dispose();
@@ -186,6 +200,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
                 SyncPairs.Add(ToRow(syncPair));
             }
 
+            SelectedSyncPair = SyncPairs.FirstOrDefault();
             GlobalStatus = SyncPairs.Count == 0 ? "Ready to connect" : "Ready";
             AddActivity("App", string.Empty, "Settings loaded");
             RaiseCommandStates();
@@ -207,7 +222,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         {
             SyncPairSettings syncPair = await _controller.AddSyncPairAsync(
                 new DesktopSyncPairRequest(LocalFolderPath, RemoteFolderPath)).ConfigureAwait(true);
-            SyncPairs.Add(ToRow(syncPair));
+            SyncPairRowViewModel row = ToRow(syncPair);
+            SyncPairs.Add(row);
+            SelectedSyncPair = row;
             LocalFolderPath = string.Empty;
             RemoteFolderPath = string.Empty;
             GlobalStatus = "Sync requested";
@@ -220,15 +237,28 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private async Task OpenFolderAsync()
+    private async Task BrowseLocalFolderAsync()
     {
-        if (SyncPairs.Count == 0)
+        string? selectedPath = await _folderPicker.PickFolderAsync().ConfigureAwait(true);
+        if (string.IsNullOrWhiteSpace(selectedPath))
         {
             return;
         }
 
-        await _controller.OpenFolderAsync(SyncPairs[0].LocalPath).ConfigureAwait(true);
-        AddActivity("Open", SyncPairs[0].LocalPath, "Folder opened");
+        LocalFolderPath = selectedPath;
+        AddActivity("Folder", selectedPath, "Local folder selected");
+    }
+
+    private async Task OpenFolderAsync()
+    {
+        SyncPairRowViewModel? selected = SelectedSyncPair;
+        if (selected is null)
+        {
+            return;
+        }
+
+        await _controller.OpenFolderAsync(selected.LocalPath).ConfigureAwait(true);
+        AddActivity("Open", selected.LocalPath, "Folder opened");
     }
 
     private async Task PauseAsync()
@@ -337,6 +367,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     {
         SignInCommand.RaiseCanExecuteChanged();
         AddSyncPairCommand.RaiseCanExecuteChanged();
+        BrowseLocalFolderCommand.RaiseCanExecuteChanged();
         SyncNowCommand.RaiseCanExecuteChanged();
         PauseCommand.RaiseCanExecuteChanged();
         ResumeCommand.RaiseCanExecuteChanged();
@@ -355,6 +386,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     {
         return new SyncPairRowViewModel
         {
+            Id = syncPair.Id,
             DisplayName = syncPair.DisplayName,
             LocalPath = syncPair.LocalRootPath,
             RemotePath = syncPair.RemoteDisplayPath,
@@ -366,6 +398,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     {
         return new SyncPairRowViewModel
         {
+            Id = syncPair.Id,
             DisplayName = syncPair.DisplayName,
             LocalPath = syncPair.LocalPath,
             RemotePath = syncPair.RemotePath,

@@ -4,7 +4,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using Cotton.Sync.Desktop.ViewModels;
+using Cotton.Sync.Desktop.Shell;
 
 namespace Cotton.Sync.Desktop;
 
@@ -24,7 +24,7 @@ public sealed partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow(ShellViewModel.CreateDefault());
+            desktop.MainWindow = new MainWindow(DesktopShellController.CreateDefault());
         }
 
         base.OnFrameworkInitializationCompleted();

@@ -13,6 +13,8 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
     private string _remotePath = string.Empty;
     private string _status = string.Empty;
 
+    public Guid Id { get; set; }
+
     public string DisplayName
     {
         get => _displayName;
