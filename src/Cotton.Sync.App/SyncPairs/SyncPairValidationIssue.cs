@@ -42,4 +42,14 @@ public enum SyncPairValidationIssue
     /// Two configured sync pairs use the same or nested local roots.
     /// </summary>
     OverlappingLocalRoots,
+
+    /// <summary>
+    /// The local root does not exist and cannot be created or accessed.
+    /// </summary>
+    LocalRootUnavailable,
+
+    /// <summary>
+    /// The remote root node cannot be resolved.
+    /// </summary>
+    RemoteRootUnavailable,
 }

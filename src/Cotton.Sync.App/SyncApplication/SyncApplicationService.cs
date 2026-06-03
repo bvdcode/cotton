@@ -10,6 +10,7 @@ namespace Cotton.Sync.App.SyncApplication;
 /// </summary>
 public sealed class SyncApplicationService : ISyncApplicationService
 {
+    private readonly ISyncPairPrerequisiteValidator _prerequisites;
     private readonly ISyncPairSettingsStore _syncPairs;
     private readonly SyncPairSettingsValidator _validator;
 
@@ -18,9 +19,11 @@ public sealed class SyncApplicationService : ISyncApplicationService
     /// </summary>
     public SyncApplicationService(
         ISyncPairSettingsStore syncPairs,
+        ISyncPairPrerequisiteValidator prerequisites,
         SyncPairSettingsValidator? validator = null)
     {
         _syncPairs = syncPairs ?? throw new ArgumentNullException(nameof(syncPairs));
+        _prerequisites = prerequisites ?? throw new ArgumentNullException(nameof(prerequisites));
         _validator = validator ?? new SyncPairSettingsValidator();
     }
 
@@ -60,6 +63,14 @@ public sealed class SyncApplicationService : ISyncApplicationService
         if (!validation.IsValid)
         {
             return SyncPairSaveResult.Rejected(validation);
+        }
+
+        IReadOnlyList<SyncPairValidationError> prerequisiteErrors = await _prerequisites
+            .ValidateAsync(syncPair, cancellationToken)
+            .ConfigureAwait(false);
+        if (prerequisiteErrors.Count > 0)
+        {
+            return SyncPairSaveResult.Rejected(new SyncPairValidationResult(prerequisiteErrors));
         }
 
         await _syncPairs.UpsertAsync(syncPair, cancellationToken).ConfigureAwait(false);

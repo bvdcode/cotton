@@ -12,7 +12,7 @@ public sealed class SyncApplicationServiceTests
     public async Task SaveSyncPairAsync_PersistsValidPair()
     {
         var store = new InMemorySyncPairSettingsStore();
-        var service = new SyncApplicationService(store);
+        SyncApplicationService service = CreateService(store);
         SyncPairSettings syncPair = CreatePair("/home/user/Cotton");
 
         SyncPairSaveResult result = await service.SaveSyncPairAsync(syncPair);
@@ -31,7 +31,7 @@ public sealed class SyncApplicationServiceTests
     public async Task SaveSyncPairAsync_RejectsOverlappingPairWithoutPersisting()
     {
         var store = new InMemorySyncPairSettingsStore();
-        var service = new SyncApplicationService(store);
+        SyncApplicationService service = CreateService(store);
         SyncPairSettings existing = CreatePair("/home/user/Cotton");
         SyncPairSettings overlapping = CreatePair("/home/user/Cotton/Work");
         await service.SaveSyncPairAsync(existing);
@@ -51,10 +51,53 @@ public sealed class SyncApplicationServiceTests
     }
 
     [Test]
+    public async Task SaveSyncPairAsync_RejectsPrerequisiteFailureWithoutPersisting()
+    {
+        var store = new InMemorySyncPairSettingsStore();
+        SyncPairSettings syncPair = CreatePair("/home/user/Cotton");
+        var prerequisites = new FakeSyncPairPrerequisiteValidator([
+            new SyncPairValidationError(
+                SyncPairValidationIssue.LocalRootUnavailable,
+                syncPair.Id,
+                null,
+                "Local root unavailable."),
+        ]);
+        SyncApplicationService service = CreateService(store, prerequisites);
+
+        SyncPairSaveResult result = await service.SaveSyncPairAsync(syncPair);
+
+        SyncPairSettings? saved = await store.GetAsync(syncPair.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsSaved, Is.False);
+            Assert.That(result.Validation.Errors.Select(error => error.Issue), Is.EqualTo(new[]
+            {
+                SyncPairValidationIssue.LocalRootUnavailable,
+            }));
+            Assert.That(saved, Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task SaveSyncPairAsync_SkipsPrerequisitesWhenStructuralValidationFails()
+    {
+        var store = new InMemorySyncPairSettingsStore();
+        var prerequisites = new FakeSyncPairPrerequisiteValidator([]);
+        SyncApplicationService service = CreateService(store, prerequisites);
+        SyncPairSettings existing = CreatePair("/home/user/Cotton");
+        SyncPairSettings overlapping = CreatePair("/home/user/Cotton/Work");
+        await service.SaveSyncPairAsync(existing);
+
+        await service.SaveSyncPairAsync(overlapping);
+
+        Assert.That(prerequisites.CallCount, Is.EqualTo(1));
+    }
+
+    [Test]
     public async Task DeleteSyncPairAsync_RemovesPair()
     {
         var store = new InMemorySyncPairSettingsStore();
-        var service = new SyncApplicationService(store);
+        SyncApplicationService service = CreateService(store);
         SyncPairSettings syncPair = CreatePair("/home/user/Cotton");
         await service.SaveSyncPairAsync(syncPair);
 
@@ -68,11 +111,18 @@ public sealed class SyncApplicationServiceTests
     public async Task ListSyncPairsAsync_InitializesStore()
     {
         var store = new InMemorySyncPairSettingsStore();
-        var service = new SyncApplicationService(store);
+        SyncApplicationService service = CreateService(store);
 
         await service.ListSyncPairsAsync();
 
         Assert.That(store.InitializeCallCount, Is.EqualTo(1));
+    }
+
+    private static SyncApplicationService CreateService(
+        ISyncPairSettingsStore store,
+        ISyncPairPrerequisiteValidator? prerequisites = null)
+    {
+        return new SyncApplicationService(store, prerequisites ?? new FakeSyncPairPrerequisiteValidator([]));
     }
 
     private static SyncPairSettings CreatePair(string localRootPath)
@@ -127,6 +177,26 @@ public sealed class SyncApplicationServiceTests
         {
             _syncPairs.Remove(syncPairId);
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeSyncPairPrerequisiteValidator : ISyncPairPrerequisiteValidator
+    {
+        private readonly IReadOnlyList<SyncPairValidationError> _errors;
+
+        public FakeSyncPairPrerequisiteValidator(IReadOnlyList<SyncPairValidationError> errors)
+        {
+            _errors = errors;
+        }
+
+        public int CallCount { get; private set; }
+
+        public Task<IReadOnlyList<SyncPairValidationError>> ValidateAsync(
+            SyncPairSettings syncPair,
+            CancellationToken cancellationToken = default)
+        {
+            CallCount++;
+            return Task.FromResult(_errors);
         }
     }
 }
