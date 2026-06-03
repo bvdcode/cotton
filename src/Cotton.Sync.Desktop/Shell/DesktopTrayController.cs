@@ -12,11 +12,10 @@ namespace Cotton.Sync.Desktop.Shell;
 
 internal sealed class DesktopTrayController : IDisposable
 {
-    private static readonly Uri IconUri = new("avares://Cotton.Sync.Desktop/Assets/icon-192.png");
-
     private readonly IClassicDesktopStyleApplicationLifetime _lifetime;
     private readonly MainWindow _window;
     private readonly TrayIcon _trayIcon;
+    private Uri _currentIconUri = DesktopTrayIconAssetResolver.Resolve(DesktopTrayStatusKind.SignedOut);
     private ShellViewModel? _viewModel;
     private bool _disposed;
 
@@ -42,9 +41,9 @@ internal sealed class DesktopTrayController : IDisposable
         _disposed = true;
     }
 
-    private static WindowIcon LoadIcon()
+    private static WindowIcon LoadIcon(Uri iconUri)
     {
-        using Stream stream = AssetLoader.Open(IconUri);
+        using Stream stream = AssetLoader.Open(iconUri);
         return new WindowIcon(stream);
     }
 
@@ -59,7 +58,7 @@ internal sealed class DesktopTrayController : IDisposable
     {
         var trayIcon = new TrayIcon
         {
-            Icon = LoadIcon(),
+            Icon = LoadIcon(_currentIconUri),
             ToolTipText = "Cotton Sync",
             IsVisible = true,
             Menu = new NativeMenu
@@ -122,6 +121,11 @@ internal sealed class DesktopTrayController : IDisposable
             _viewModel.GlobalStatus,
             _viewModel.HasActionRequired);
         _trayIcon.ToolTipText = status.ToolTipText;
+        if (_currentIconUri != status.IconUri)
+        {
+            _trayIcon.Icon = LoadIcon(status.IconUri);
+            _currentIconUri = status.IconUri;
+        }
     }
 
     private void Execute(Func<ShellViewModel, AsyncRelayCommand> selectCommand)

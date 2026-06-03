@@ -42,7 +42,7 @@ internal static class DesktopTrayStatusResolver
 
     private static DesktopTrayStatus Create(DesktopTrayStatusKind kind, string label)
     {
-        return new DesktopTrayStatus(kind, ToolTipPrefix + " - " + label);
+        return new DesktopTrayStatus(kind, ToolTipPrefix + " - " + label, DesktopTrayIconAssetResolver.Resolve(kind));
     }
 
     private static bool Contains(string value, string expected)

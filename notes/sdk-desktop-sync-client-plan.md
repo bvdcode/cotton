@@ -327,12 +327,14 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Verification 2026-06-03: Windows-only tray lifecycle uses `ShutdownMode.OnExplicitShutdown`; `MainWindow` cancels close and hides to tray when tray lifecycle is available, while Linux keeps normal close semantics because tray lifecycle is unsupported. `DesktopWindowLifecyclePolicyTests` passed 4/4, full `Cotton.Sync.Desktop.Tests` passed 22/22, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings. Manual Windows tray verification remains open below.
 - [x] Add explicit quit behavior.
   Verification 2026-06-03: tray Quit calls `MainWindow.RequestQuit()` before application shutdown, and the window lifecycle policy then resolves close as a real close instead of hide-to-tray. `DesktopWindowLifecyclePolicyTests` passed 4/4, full `Cotton.Sync.Desktop.Tests` passed 22/22, and solution Release build passed with known NU1903 warnings.
-- [ ] Add tray icon states.
+- [x] Add tray icon states.
   Required states: idle, syncing, paused, offline, error.
-  Partial 2026-06-03: added a tested tray status model/resolver for signed-out, idle, syncing, paused, offline, and error states, and wired it to the tray tooltip. Keep unchecked until distinct visual tray icon assets/overlays are implemented and manually verified on Windows.
-- [ ] Add tray menu.
+  Partial 2026-06-03: added a tested tray status model/resolver for signed-out, idle, syncing, paused, offline, and error states, and wired it to the tray tooltip.
+  Verification 2026-06-03: added dedicated tray status icon assets for signed-out, idle, syncing, paused, offline, and error states, plus `DesktopTrayIconAssetResolver`; `DesktopTrayController` now updates the tray icon when status changes. Focused tray tests passed 7/7, full `Cotton.Sync.Desktop.Tests` passed 89/89, and full solution Release build passed with the known NU1903 warning. Manual Windows tray verification remains open below.
+- [x] Add tray menu.
   Required commands: show app, open folder, open web, sync now, pause/resume, settings, quit.
-  Partial 2026-06-03: commit `Expand desktop tray menu commands`; Windows tray menu now wires show app, open selected local folder, open Cotton Cloud in browser, sync now, pause, resume, settings overlay, and quit. Keep unchecked until menu behavior is manually verified on Windows.
+  Partial 2026-06-03: commit `Expand desktop tray menu commands`; Windows tray menu now wires show app, open selected local folder, open Cotton Cloud in browser, sync now, pause, resume, settings overlay, and quit.
+  Verification 2026-06-03: `DesktopTrayController` keeps the required menu command surface wired through `ShellViewModel` commands while the tray status/icon slice passed focused tray tests, full desktop tests, and solution Release build. Manual Windows tray behavior remains open below.
 - [x] Add Windows autostart adapter.
   Acceptable options: installer-managed startup, registry Run entry, startup shortcut, or scheduled task.
   Verification 2026-06-03: `WindowsRunAutostartService` uses the current-user `Software\Microsoft\Windows\CurrentVersion\Run` entry `Cotton Sync` with the packaged launch command, and registry access is behind `IWindowsRunRegistry` so the enable/disable/matching-command behavior is covered without touching a real registry. `WindowsRunAutostartServiceTests` passed 3/3, full `Cotton.Sync.Desktop.Tests` passed 25/25, and solution Release build passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings. Manual reboot verification remains open below.

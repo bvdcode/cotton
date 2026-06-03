@@ -19,6 +19,7 @@ public sealed class DesktopTrayStatusResolverTests
         {
             Assert.That(status.Kind, Is.EqualTo(DesktopTrayStatusKind.SignedOut));
             Assert.That(status.ToolTipText, Is.EqualTo("Cotton Sync - Signed out"));
+            Assert.That(status.IconUri.ToString(), Does.EndWith("/Assets/tray-signed-out.png"));
         });
     }
 
@@ -34,6 +35,7 @@ public sealed class DesktopTrayStatusResolverTests
         {
             Assert.That(status.Kind, Is.EqualTo(DesktopTrayStatusKind.Error));
             Assert.That(status.ToolTipText, Is.EqualTo("Cotton Sync - Action required"));
+            Assert.That(status.IconUri.ToString(), Does.EndWith("/Assets/tray-error.png"));
         });
     }
 
@@ -83,5 +85,26 @@ public sealed class DesktopTrayStatusResolverTests
             Assert.That(status.Kind, Is.EqualTo(DesktopTrayStatusKind.Idle));
             Assert.That(status.ToolTipText, Is.EqualTo("Cotton Sync - Connected"));
         });
+    }
+
+    [Test]
+    public void Resolve_ReturnsDedicatedIconForTrayStates()
+    {
+        (DesktopTrayStatusKind Kind, string AssetName)[] cases =
+        [
+            (DesktopTrayStatusKind.Idle, "tray-idle.png"),
+            (DesktopTrayStatusKind.Syncing, "tray-syncing.png"),
+            (DesktopTrayStatusKind.Paused, "tray-paused.png"),
+            (DesktopTrayStatusKind.Offline, "tray-offline.png"),
+            (DesktopTrayStatusKind.Error, "tray-error.png"),
+            (DesktopTrayStatusKind.SignedOut, "tray-signed-out.png"),
+        ];
+
+        foreach ((DesktopTrayStatusKind kind, string assetName) in cases)
+        {
+            Uri iconUri = DesktopTrayIconAssetResolver.Resolve(kind);
+
+            Assert.That(iconUri.ToString(), Does.EndWith("/Assets/" + assetName));
+        }
     }
 }
