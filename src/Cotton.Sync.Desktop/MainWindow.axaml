@@ -180,7 +180,7 @@
 
     <Grid Grid.Row="2"
           IsVisible="{Binding IsDashboardVisible}">
-      <Grid RowDefinitions="Auto,*"
+      <Grid RowDefinitions="Auto,Auto,*"
             Margin="10"
             RowSpacing="8">
         <Border Padding="10"
@@ -207,7 +207,34 @@
           </Grid>
         </Border>
 
-        <Grid Grid.Row="1"
+        <Border Grid.Row="1"
+                Padding="10"
+                CornerRadius="6"
+                Background="{DynamicResource CottonErrorSoftBrush}"
+                BorderBrush="{DynamicResource CottonErrorBrush}"
+                BorderThickness="1"
+                IsVisible="{Binding HasActionRequired}">
+          <Grid ColumnDefinitions="Auto,*"
+                ColumnSpacing="8">
+            <Border Width="12"
+                    Height="12"
+                    CornerRadius="6"
+                    Background="{DynamicResource CottonErrorBrush}"
+                    VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1"
+                        Spacing="1">
+              <TextBlock Text="Action required"
+                         FontSize="14"
+                         FontWeight="SemiBold" />
+              <TextBlock Text="{Binding ActionRequiredMessage}"
+                         Classes="secondary"
+                         FontSize="12"
+                         TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Grid Grid.Row="2"
               RowDefinitions="*,148"
               RowSpacing="8">
           <Border Padding="10"

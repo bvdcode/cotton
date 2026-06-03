@@ -21,6 +21,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     private readonly IDesktopShellController _controller;
     private readonly ILocalFolderPicker _folderPicker;
     private string _accountName = "Signed out";
+    private string _actionRequiredMessage = string.Empty;
     private string _globalStatus = "Loading";
     private bool _isBusy;
     private bool _isSignedIn;
@@ -115,6 +116,18 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         private set => SetProperty(ref _accountName, value);
     }
 
+    public string ActionRequiredMessage
+    {
+        get => _actionRequiredMessage;
+        private set
+        {
+            if (SetProperty(ref _actionRequiredMessage, value))
+            {
+                OnPropertyChanged(nameof(HasActionRequired));
+            }
+        }
+    }
+
     public string GlobalStatus
     {
         get => _globalStatus;
@@ -148,6 +161,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     }
 
     public bool HasNoSyncPairs => SyncPairs.Count == 0;
+
+    public bool HasActionRequired => !string.IsNullOrWhiteSpace(ActionRequiredMessage);
 
     public bool HasNoRemoteFolders => RemoteFolders.Count == 0;
 
@@ -459,6 +474,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             LocalFolderPath = string.Empty;
             RemoteFolderPath = string.Empty;
             IsAddSyncPairWizardVisible = false;
+            ActionRequiredMessage = string.Empty;
             RemoteFolders.Clear();
             GlobalStatus = "Sync requested";
             AddActivity("Pair", syncPair.LocalRootPath, "Folder added and initial sync requested");
@@ -521,6 +537,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         {
             await _controller.PauseAllAsync().ConfigureAwait(true);
             GlobalStatus = "Paused";
+            ActionRequiredMessage = string.Empty;
             SetAllPairStatuses("Paused");
             AddActivity("Sync", string.Empty, "Synchronization paused");
         }
@@ -537,6 +554,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         {
             await _controller.ResumeAllAsync().ConfigureAwait(true);
             GlobalStatus = "Ready";
+            ActionRequiredMessage = string.Empty;
             SetAllPairStatuses("Idle");
             AddActivity("Sync", string.Empty, "Synchronization resumed");
         }
@@ -557,6 +575,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             AccountName = session.Email ?? session.Username;
             Password = string.Empty;
             GlobalStatus = "Connected";
+            ActionRequiredMessage = string.Empty;
             AddActivity("Account", AccountName, "Signed in");
         }
         finally
@@ -577,6 +596,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             Password = string.Empty;
             IsAddSyncPairWizardVisible = false;
             IsSettingsVisible = false;
+            ActionRequiredMessage = string.Empty;
             RemoteFolders.Clear();
             SetAllPairStatuses("Idle");
             AddActivity("Account", string.Empty, "Signed out");
@@ -594,6 +614,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         {
             await _controller.SyncAllAsync().ConfigureAwait(true);
             GlobalStatus = "Sync requested";
+            ActionRequiredMessage = string.Empty;
             SetAllPairStatuses("Sync requested");
             AddActivity("Sync", string.Empty, "Manual sync requested");
         }
@@ -610,6 +631,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         {
             DesktopSelfTestSnapshot result = await _controller.RunSelfTestAsync().ConfigureAwait(true);
             GlobalStatus = result.Passed ? "Self-test passed" : "Action required";
+            ActionRequiredMessage = DesktopActionRequiredMessageResolver.FromSelfTest(result);
             foreach (DesktopSelfTestItemSnapshot item in result.Items)
             {
                 AddActivity(item.Passed ? "Check" : "Warning", item.Name, item.Passed ? item.Details : "Failed: " + item.Details);
@@ -676,6 +698,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     {
         Trace.TraceError(exception.ToString());
         GlobalStatus = "Action failed";
+        ActionRequiredMessage = exception.Message;
         AddActivity("Error", string.Empty, exception.Message);
         IsBusy = false;
     }
@@ -816,6 +839,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         }
 
         GlobalStatus = ResolveGlobalStatus(status);
+        ActionRequiredMessage = DesktopActionRequiredMessageResolver.FromStatus(status);
     }
 
     private string ResolveGlobalStatus(DesktopSyncStatusSnapshot status)

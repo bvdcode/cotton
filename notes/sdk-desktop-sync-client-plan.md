@@ -289,6 +289,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Partial 2026-06-03: desktop shell now has a settings overlay with account, startup, diagnostics, about, and sign-out controls; the dashboard secondary-action menu opens it. Keep unchecked until sync-pair management, notifications settings, and full settings navigation are complete.
 - [ ] Add conflict/error screen.
   Required behavior: show conflict files, action-required errors, retry/sync-now command.
+  Partial 2026-06-03: dashboard now exposes an action-required banner when sync status, command failures, or self-test failures produce an error message. The message resolver is covered by `DesktopActionRequiredMessageResolverTests` 4/4, full `Cotton.Sync.Desktop.Tests` passed 29/29, and solution Release build passed with known NU1903 warnings. Keep unchecked until conflict-file listing and retry/action workflows are complete.
 - [ ] Add not-implemented UX for reserved future modes only in development builds or behind a feature flag.
 - [ ] Add polished empty states.
 - [ ] Add dark/light theme support.

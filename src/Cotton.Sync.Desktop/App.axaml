@@ -17,6 +17,7 @@
           <SolidColorBrush x:Key="CottonSecondaryBrush" Color="#1BCEA7" />
           <SolidColorBrush x:Key="CottonSuccessBrush" Color="#1BCEA7" />
           <SolidColorBrush x:Key="CottonErrorBrush" Color="#D32F2F" />
+          <SolidColorBrush x:Key="CottonErrorSoftBrush" Color="#FDECEC" />
           <SolidColorBrush x:Key="CottonOverlayBrush" Color="#66000000" />
           <SolidColorBrush x:Key="CottonPrimaryTextBrush" Color="#202300" />
           <SolidColorBrush x:Key="CottonPrimaryHoverBrush" Color="#A5CF08" />
@@ -33,6 +34,7 @@
           <SolidColorBrush x:Key="CottonSecondaryBrush" Color="#1BCEA7" />
           <SolidColorBrush x:Key="CottonSuccessBrush" Color="#1BCEA7" />
           <SolidColorBrush x:Key="CottonErrorBrush" Color="#EF5350" />
+          <SolidColorBrush x:Key="CottonErrorSoftBrush" Color="#3A2224" />
           <SolidColorBrush x:Key="CottonOverlayBrush" Color="#99000000" />
           <SolidColorBrush x:Key="CottonPrimaryTextBrush" Color="#202300" />
           <SolidColorBrush x:Key="CottonPrimaryHoverBrush" Color="#A5CF08" />
