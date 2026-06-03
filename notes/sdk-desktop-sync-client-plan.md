@@ -244,9 +244,11 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 
 ## Phase 7 - Authentication And Token Storage
 
-- [ ] Keep password/TOTP login as the first implemented auth flow.
-- [ ] Add `IAuthFlow` abstraction.
+- [x] Keep password/TOTP login as the first implemented auth flow.
+  Verification: `PasswordAuthFlow` maps username/password plus optional TOTP into SDK `LoginRequestDto`, trims user-entered non-secret fields, and returns `AuthSession`; `PasswordAuthFlowTests` passed 5/5, focused auth/service tests passed 21/21, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
+- [x] Add `IAuthFlow` abstraction.
   Required implementations: password flow now, browser flow placeholder later.
+  Verification: `IAuthFlow` is the app-layer auth boundary used by `SyncApplicationService`, with `PasswordAuthFlow` as the current implementation; focused auth/service tests passed 21/21 and full `Cotton.Sync.App.Tests` passed 77/77.
 - [ ] Add named-device metadata where server supports it.
 - [ ] Add secure token store abstraction.
 - [ ] Implement Windows secure token store.
@@ -255,9 +257,11 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Preferred target: Secret Service/libsecret where available.
 - [ ] Add explicit fallback policy for Linux environments without a secret service.
   Release decision must be explicit: block login, prompt user, or encrypted local store.
-- [ ] Ensure logout clears tokens and stops all sync runners.
+- [x] Ensure logout clears tokens and stops all sync runners.
+  Verification: `SyncApplicationService.SignOutAsync` stops remote changes, periodic sync, local changes, and supervisor before delegating to `IAuthFlow.SignOutAsync`; SDK `CottonAuthClient.LogoutAsync` clears `ICottonTokenStore`. `SyncApplicationServiceTests` plus `PasswordAuthFlowTests` passed in focused auth/service tests 21/21, and `CottonAuthClientTests` passed 2/2.
 - [ ] Handle refresh-token revocation and session-revoked SignalR event.
-- [ ] Add tests for login, refresh, logout, token clear, and invalid saved token.
+- [x] Add tests for login, refresh, logout, token clear, and invalid saved token.
+  Verification: `PasswordAuthFlowTests` cover login/TOTP/logout delegation, `CottonHttpTransportTests|CottonAuthClientTests` passed 3/3 for refresh/logout/token clear behavior, and `FileCottonTokenStoreTests` passed 5/5 including incomplete saved-token rejection.
 - [ ] Add manual verification on Windows secure storage.
 - [ ] Add manual verification on Linux secure storage.
 

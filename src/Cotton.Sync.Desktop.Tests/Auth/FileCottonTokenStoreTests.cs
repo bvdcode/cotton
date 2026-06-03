@@ -88,6 +88,26 @@ public sealed class FileCottonTokenStoreTests
     }
 
     [Test]
+    public async Task GetAsync_ReturnsNullForIncompleteTokenFile()
+    {
+        string directory = CreateTempDirectory();
+        try
+        {
+            string path = Path.Combine(directory, "tokens.json");
+            File.WriteAllText(path, """{"accessToken":"access-token"}""");
+            var store = new FileCottonTokenStore(path);
+
+            TokenPairDto? loaded = await store.GetAsync();
+
+            Assert.That(loaded, Is.Null);
+        }
+        finally
+        {
+            DeleteTempDirectory(directory);
+        }
+    }
+
+    [Test]
     public async Task SaveAsync_RestrictsUnixFileAccess()
     {
         if (OperatingSystem.IsWindows())
