@@ -168,14 +168,16 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Verification: `AtomicLocalFileSyncWriter.WriteFileAsync` writes into `.cotton-sync/tmp` and moves into place only after successful content write and flush; `WriteFileAsync_RemovesTemporaryFileWhenDownloadFailsAndPreservesExistingFile` and `RunOnceAsync_DoesNotUpdateBaselineWhenRemoteDownloadFails` passed in full `Cotton.Sync.Tests` 44/44.
 - [x] Ensure baseline updates happen only after successful local and remote operation.
   Verification: `RunOnceAsync_DoesNotUpdateBaselineWhenRemoteUploadFails`, `RunOnceAsync_DoesNotUpdateBaselineWhenRemoteDownloadFails`, and `RunOnceAsync_DoesNotDeleteBaselineWhenRemoteDeleteFails` cover upload/download/delete failure ordering; `dotnet test src/Cotton.Sync.Tests/Cotton.Sync.Tests.csproj --configuration Release --no-restore --filter SyncEngineTests` passed 18/18 and full `Cotton.Sync.Tests` passed 44/44.
-- [ ] Add local delete strategy.
+- [x] Add local delete strategy.
   Target: safe delete or recycle/trash where available; direct delete only when deliberately accepted.
+  Verification: `AtomicLocalFileSyncWriter.DeleteFileAsync` moves local deletes into `.cotton-sync/deleted/<timestamp-guid>/...` and removes empty parent folders without directly deleting file content; `DeleteFileAsync_MovesFileToDeletedQuarantine` passed in full `Cotton.Sync.Tests` 48/48.
 - [ ] Add remote delete strategy.
   Target: trash/soft-delete by default.
 - [x] Add mass-delete guard per sync pair.
   Verification: `SyncEngine` preflights planned local and remote deletes per run and blocks all deletes for a direction when candidates exceed `SyncRunOptions` limits, preserving local files and sync baseline entries; `SyncEngineTests` passed 20/20, full `Cotton.Sync.Tests` passed 47/47, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [ ] Add debounce for files still being written.
-- [ ] Add handling for locked files.
+- [x] Add handling for locked files.
+  Verification: `LocalFileScanner` throws `LocalFileUnavailableException` instead of returning a partial scan when a file cannot be read safely or changes during hashing; `ScanAsync_ThrowsForLockedFile` passed in `LocalFileScannerTests` 5/5, full `Cotton.Sync.Tests` passed 48/48, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [x] Add ignore patterns for common temporary files.
   Verification: `LocalFileScanner.ShouldIgnore` excludes `.cotton-sync`, Office temp files, backup suffixes, `.tmp`, `.partial`, and `.crdownload`; `ScanAsync_IgnoresTempFilesAndCottonWorkingFolder` passed in `LocalFileScannerTests` 4/4 and full `Cotton.Sync.Tests` 45/45.
 - [x] Add symlink/reparse-point policy.
@@ -189,7 +191,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Add tests for conflict naming uniqueness.
 - [x] Add tests for mass delete guard.
   Verification: `RunOnceAsync_BlocksRemoteDeletesOverRunLimit` and `RunOnceAsync_BlocksLocalDeletesOverRunLimit` prove over-limit delete runs emit `Skipped` activities without partially deleting files or baseline state; `SyncEngineTests` passed 20/20 and full `Cotton.Sync.Tests` passed 47/47.
-- [ ] Add tests for locked or unreadable files.
+- [x] Add tests for locked or unreadable files.
+  Verification: `ScanAsync_ThrowsForLockedFile` holds a file with `FileShare.None` and verifies that scanning fails with `LocalFileUnavailableException` carrying the affected relative and full paths; `LocalFileScannerTests` passed 5/5 and full `Cotton.Sync.Tests` passed 48/48.
 - [ ] Add tests for Windows reserved file names.
 - [x] Add tests for case conflicts.
   Verification: `SyncEngine` rejects case-insensitive local and remote path collisions before reconciliation with `SyncPathCollisionException`; `RunOnceAsync_RejectsLocalCaseInsensitivePathCollision` and `RunOnceAsync_RejectsRemoteCaseInsensitivePathCollision` passed in `SyncEngineTests` 20/20, full `Cotton.Sync.Tests` passed 47/47, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.

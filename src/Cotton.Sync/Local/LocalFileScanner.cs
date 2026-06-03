@@ -48,15 +48,8 @@ public sealed class LocalFileScanner : ILocalFileScanner
                 continue;
             }
 
-            string contentHash = await ComputeHashAsync(file.FullName, cancellationToken).ConfigureAwait(false);
-            snapshots.Add(new LocalFileSnapshot
-            {
-                RelativePath = relativePath,
-                FullPath = file.FullName,
-                ContentHash = contentHash,
-                SizeBytes = file.Length,
-                LastWriteUtc = file.LastWriteTimeUtc,
-            });
+            LocalFileSnapshot snapshot = await CreateSnapshotAsync(file, relativePath, cancellationToken).ConfigureAwait(false);
+            snapshots.Add(snapshot);
         }
 
         snapshots.Sort((left, right) => PathComparer.Compare(left.RelativePath, right.RelativePath));
@@ -85,10 +78,63 @@ public sealed class LocalFileScanner : ILocalFileScanner
         return SyncPath.Normalize(relative);
     }
 
-    private static async Task<string> ComputeHashAsync(string filePath, CancellationToken cancellationToken)
+    private static async Task<LocalFileSnapshot> CreateSnapshotAsync(
+        FileInfo file,
+        string relativePath,
+        CancellationToken cancellationToken)
     {
-        await using FileStream stream = File.OpenRead(filePath);
-        byte[] hash = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
-        return Convert.ToHexStringLower(hash);
+        LocalFileMetadata before = ReadMetadata(file, relativePath);
+        string contentHash = await ComputeHashAsync(file.FullName, relativePath, cancellationToken).ConfigureAwait(false);
+        LocalFileMetadata after = ReadMetadata(file, relativePath);
+        if (before.Length != after.Length || before.LastWriteUtc != after.LastWriteUtc)
+        {
+            throw new LocalFileUnavailableException(relativePath, file.FullName, "the file changed during scanning.");
+        }
+
+        return new LocalFileSnapshot
+        {
+            RelativePath = relativePath,
+            FullPath = file.FullName,
+            ContentHash = contentHash,
+            SizeBytes = after.Length,
+            LastWriteUtc = after.LastWriteUtc,
+        };
     }
+
+    private static LocalFileMetadata ReadMetadata(FileInfo file, string relativePath)
+    {
+        try
+        {
+            file.Refresh();
+            if (!file.Exists)
+            {
+                throw new FileNotFoundException("Local file disappeared during scanning.", file.FullName);
+            }
+
+            return new LocalFileMetadata(file.Length, file.LastWriteTimeUtc);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            throw new LocalFileUnavailableException(relativePath, file.FullName, exception);
+        }
+    }
+
+    private static async Task<string> ComputeHashAsync(
+        string filePath,
+        string relativePath,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using FileStream stream = File.OpenRead(filePath);
+            byte[] hash = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
+            return Convert.ToHexStringLower(hash);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            throw new LocalFileUnavailableException(relativePath, filePath, exception);
+        }
+    }
+
+    private readonly record struct LocalFileMetadata(long Length, DateTime LastWriteUtc);
 }

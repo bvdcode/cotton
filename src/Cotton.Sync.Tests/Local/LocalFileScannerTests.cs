@@ -79,6 +79,29 @@ public sealed class LocalFileScannerTests
     }
 
     [Test]
+    public async Task ScanAsync_ThrowsForLockedFile()
+    {
+        WriteFile("keep.txt", "keep");
+        WriteFile("locked.txt", "locked");
+        await using FileStream locked = new(
+            FullPath("locked.txt"),
+            FileMode.Open,
+            FileAccess.ReadWrite,
+            FileShare.None);
+        var scanner = new LocalFileScanner();
+
+        LocalFileUnavailableException? exception = Assert.ThrowsAsync<LocalFileUnavailableException>(() => scanner.ScanAsync(_root));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.RelativePath, Is.EqualTo("locked.txt"));
+            Assert.That(exception.FullPath, Is.EqualTo(FullPath("locked.txt")));
+            Assert.That(exception.InnerException, Is.TypeOf<IOException>());
+        });
+    }
+
+    [Test]
     public void ScanAsync_RejectsMissingRoot()
     {
         var scanner = new LocalFileScanner();
@@ -89,10 +112,15 @@ public sealed class LocalFileScannerTests
 
     private void WriteFile(string relativePath, string text)
     {
-        string path = Path.Combine(_root, relativePath);
+        string path = FullPath(relativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, text, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         File.SetLastWriteTimeUtc(path, new DateTime(2026, 6, 2, 13, 0, 0, DateTimeKind.Utc));
+    }
+
+    private string FullPath(string relativePath)
+    {
+        return Path.Combine(_root, relativePath.Replace('/', Path.DirectorySeparatorChar));
     }
 
     private static void TryCreateFileSymlink(string linkPath, string targetPath)
