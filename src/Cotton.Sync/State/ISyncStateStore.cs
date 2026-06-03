@@ -19,6 +19,11 @@ public interface ISyncStateStore
     Task<IReadOnlyList<SyncStateEntry>> LoadPairAsync(string syncPairId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Loads the remote change-feed checkpoint for a sync pair.
+    /// </summary>
+    Task<SyncChangeCursor> GetChangeCursorAsync(string syncPairId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Loads one entry by relative path.
     /// </summary>
     Task<SyncStateEntry?> GetAsync(string syncPairId, string relativePath, CancellationToken cancellationToken = default);
@@ -27,6 +32,11 @@ public interface ISyncStateStore
     /// Inserts or updates one sync entry.
     /// </summary>
     Task UpsertAsync(SyncStateEntry entry, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Inserts or updates the remote change-feed checkpoint for a sync pair.
+    /// </summary>
+    Task SaveChangeCursorAsync(SyncChangeCursor cursor, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deletes one sync entry by relative path.

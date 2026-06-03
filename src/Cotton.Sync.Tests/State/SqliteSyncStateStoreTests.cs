@@ -37,6 +37,89 @@ public sealed class SqliteSyncStateStoreTests
     }
 
     [Test]
+    public async Task GetChangeCursorAsync_ReturnsDefaultCursorForNewPair()
+    {
+        var store = CreateStore();
+        await store.InitializeAsync();
+
+        SyncChangeCursor cursor = await store.GetChangeCursorAsync("pair-a");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(cursor.SyncPairId, Is.EqualTo("pair-a"));
+            Assert.That(cursor.LastCursor, Is.Zero);
+            Assert.That(cursor.CursorExpired, Is.False);
+            Assert.That(cursor.EarliestAvailableCursor, Is.Null);
+            Assert.That(cursor.UpdatedAtUtc, Is.GreaterThan(DateTime.UtcNow.AddMinutes(-1)));
+        });
+    }
+
+    [Test]
+    public async Task SaveChangeCursorAsync_RoundtripsAndPersistsAfterReopen()
+    {
+        string databasePath = DatabasePath();
+        var first = new SqliteSyncStateStore(databasePath);
+        await first.InitializeAsync();
+        var updatedAt = new DateTime(2026, 6, 3, 10, 0, 0, DateTimeKind.Utc);
+        await first.SaveChangeCursorAsync(new SyncChangeCursor
+        {
+            SyncPairId = "pair-a",
+            LastCursor = 42,
+            CursorExpired = true,
+            EarliestAvailableCursor = 40,
+            UpdatedAtUtc = updatedAt,
+        });
+
+        var second = new SqliteSyncStateStore(databasePath);
+        await second.InitializeAsync();
+        SyncChangeCursor cursor = await second.GetChangeCursorAsync("pair-a");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(cursor.SyncPairId, Is.EqualTo("pair-a"));
+            Assert.That(cursor.LastCursor, Is.EqualTo(42));
+            Assert.That(cursor.CursorExpired, Is.True);
+            Assert.That(cursor.EarliestAvailableCursor, Is.EqualTo(40));
+            Assert.That(cursor.UpdatedAtUtc, Is.EqualTo(updatedAt));
+        });
+    }
+
+    [Test]
+    public async Task SaveChangeCursorAsync_UpdatesExistingPairOnly()
+    {
+        var store = CreateStore();
+        await store.InitializeAsync();
+        await store.SaveChangeCursorAsync(new SyncChangeCursor
+        {
+            SyncPairId = "pair-a",
+            LastCursor = 1,
+        });
+        await store.SaveChangeCursorAsync(new SyncChangeCursor
+        {
+            SyncPairId = "pair-b",
+            LastCursor = 7,
+        });
+
+        await store.SaveChangeCursorAsync(new SyncChangeCursor
+        {
+            SyncPairId = "pair-a",
+            LastCursor = 2,
+            EarliestAvailableCursor = 1,
+        });
+
+        SyncChangeCursor pairA = await store.GetChangeCursorAsync("pair-a");
+        SyncChangeCursor pairB = await store.GetChangeCursorAsync("pair-b");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pairA.LastCursor, Is.EqualTo(2));
+            Assert.That(pairA.EarliestAvailableCursor, Is.EqualTo(1));
+            Assert.That(pairB.LastCursor, Is.EqualTo(7));
+            Assert.That(pairB.EarliestAvailableCursor, Is.Null);
+        });
+    }
+
+    [Test]
     public async Task UpsertAsync_RoundtripsAndPersistsAfterReopen()
     {
         string databasePath = DatabasePath();

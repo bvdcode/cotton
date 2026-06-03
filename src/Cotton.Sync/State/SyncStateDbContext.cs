@@ -22,4 +22,9 @@ public sealed class SyncStateDbContext : DbContext
     /// Gets persisted synchronization baseline entries.
     /// </summary>
     public DbSet<SyncStateEntity> SyncEntries => Set<SyncStateEntity>();
+
+    /// <summary>
+    /// Gets persisted remote change-feed checkpoints.
+    /// </summary>
+    public DbSet<SyncChangeCursorEntity> SyncChangeCursors => Set<SyncChangeCursorEntity>();
 }

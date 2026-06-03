@@ -45,6 +45,20 @@ public sealed class SqliteSyncStateStore : ISyncStateStore
     }
 
     /// <inheritdoc />
+    public async Task<SyncChangeCursor> GetChangeCursorAsync(string syncPairId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(syncPairId);
+        await using SyncStateDbContext context = CreateContext();
+        SyncChangeCursorEntity? entity = await context.SyncChangeCursors
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                cursor => cursor.SyncPairId == syncPairId,
+                cancellationToken)
+            .ConfigureAwait(false);
+        return entity is null ? CreateDefaultCursor(syncPairId) : ToModel(entity);
+    }
+
+    /// <inheritdoc />
     public async Task<SyncStateEntry?> GetAsync(string syncPairId, string relativePath, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(syncPairId);
@@ -88,6 +102,32 @@ public sealed class SqliteSyncStateStore : ISyncStateStore
         }
 
         UpdateEntity(entity, entry, key);
+        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task SaveChangeCursorAsync(SyncChangeCursor cursor, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(cursor);
+        ArgumentException.ThrowIfNullOrWhiteSpace(cursor.SyncPairId);
+        ValidateCursor(cursor);
+
+        await using SyncStateDbContext context = CreateContext();
+        SyncChangeCursorEntity? entity = await context.SyncChangeCursors
+            .SingleOrDefaultAsync(
+                existing => existing.SyncPairId == cursor.SyncPairId,
+                cancellationToken)
+            .ConfigureAwait(false);
+        if (entity is null)
+        {
+            entity = new SyncChangeCursorEntity
+            {
+                SyncPairId = cursor.SyncPairId,
+            };
+            context.SyncChangeCursors.Add(entity);
+        }
+
+        UpdateEntity(entity, cursor);
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -166,6 +206,53 @@ public sealed class SqliteSyncStateStore : ISyncStateStore
             RemoteETag = entity.RemoteETag,
             SyncedAtUtc = ToUtc(entity.SyncedAtUtc) ?? DateTime.UtcNow,
         };
+    }
+
+    private static SyncChangeCursor CreateDefaultCursor(string syncPairId)
+    {
+        return new SyncChangeCursor
+        {
+            SyncPairId = syncPairId,
+            LastCursor = 0,
+            UpdatedAtUtc = DateTime.UtcNow,
+        };
+    }
+
+    private static void UpdateEntity(SyncChangeCursorEntity entity, SyncChangeCursor cursor)
+    {
+        entity.SyncPairId = cursor.SyncPairId;
+        entity.LastCursor = cursor.LastCursor;
+        entity.CursorExpired = cursor.CursorExpired;
+        entity.EarliestAvailableCursor = cursor.EarliestAvailableCursor;
+        entity.UpdatedAtUtc = ToUtc(cursor.UpdatedAtUtc) ?? DateTime.UtcNow;
+    }
+
+    private static SyncChangeCursor ToModel(SyncChangeCursorEntity entity)
+    {
+        return new SyncChangeCursor
+        {
+            SyncPairId = entity.SyncPairId,
+            LastCursor = entity.LastCursor,
+            CursorExpired = entity.CursorExpired,
+            EarliestAvailableCursor = entity.EarliestAvailableCursor,
+            UpdatedAtUtc = ToUtc(entity.UpdatedAtUtc) ?? DateTime.UtcNow,
+        };
+    }
+
+    private static void ValidateCursor(SyncChangeCursor cursor)
+    {
+        if (cursor.LastCursor < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(cursor), cursor.LastCursor, "Change cursor cannot be negative.");
+        }
+
+        if (cursor.EarliestAvailableCursor < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(cursor),
+                cursor.EarliestAvailableCursor,
+                "Earliest available cursor cannot be negative.");
+        }
     }
 
     private SyncStateDbContext CreateContext()
