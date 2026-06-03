@@ -99,9 +99,68 @@ public sealed class SyncPairRunnerTests
         });
     }
 
-    private static SyncPairRunner CreateRunner(SyncPairSettings syncPair, ISyncPairWork? work = null)
+    [Test]
+    public async Task SyncNowAsync_RetriesTransientNetworkFailureAndReturnsIdleOnRecovery()
     {
-        return new SyncPairRunner(syncPair, work ?? new FakeSyncPairWork());
+        var work = new FakeSyncPairWork
+        {
+            Failures =
+            [
+                new HttpRequestException("server unavailable", null, System.Net.HttpStatusCode.ServiceUnavailable),
+            ],
+        };
+        SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true), work, NoDelayRetryOptions());
+
+        await runner.SyncNowAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(work.RunCount, Is.EqualTo(2));
+            Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Idle));
+        });
+    }
+
+    [Test]
+    public void SyncNowAsync_SetsOfflineAndRethrowsWhenTransientNetworkFailurePersists()
+    {
+        var work = new FakeSyncPairWork
+        {
+            Failures =
+            [
+                new HttpRequestException("network down"),
+                new HttpRequestException("network down"),
+            ],
+        };
+        SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true), work, NoDelayRetryOptions(maxAttempts: 2));
+
+        HttpRequestException? exception = Assert.ThrowsAsync<HttpRequestException>(
+            async () => await runner.SyncNowAsync());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(work.RunCount, Is.EqualTo(2));
+            Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Offline));
+            Assert.That(runner.Status.LastError, Is.EqualTo("network down"));
+        });
+    }
+
+    private static SyncPairRunner CreateRunner(
+        SyncPairSettings syncPair,
+        ISyncPairWork? work = null,
+        SyncPairRunnerRetryOptions? retryOptions = null)
+    {
+        return new SyncPairRunner(syncPair, work ?? new FakeSyncPairWork(), retryOptions);
+    }
+
+    private static SyncPairRunnerRetryOptions NoDelayRetryOptions(int maxAttempts = 3)
+    {
+        return new SyncPairRunnerRetryOptions
+        {
+            MaxAttempts = maxAttempts,
+            InitialDelay = TimeSpan.Zero,
+            MaxDelay = TimeSpan.Zero,
+        };
     }
 
     private static SyncPairSettings CreatePair(bool isEnabled)
@@ -120,7 +179,21 @@ public sealed class SyncPairRunnerTests
 
     private sealed class FakeSyncPairWork : ISyncPairWork
     {
+        private readonly Queue<Exception> _failures = [];
+
         public Exception? Failure { get; set; }
+
+        public IReadOnlyList<Exception> Failures
+        {
+            set
+            {
+                _failures.Clear();
+                foreach (Exception failure in value)
+                {
+                    _failures.Enqueue(failure);
+                }
+            }
+        }
 
         public SyncPairSettings? LastSyncPair { get; private set; }
 
@@ -130,6 +203,11 @@ public sealed class SyncPairRunnerTests
         {
             RunCount++;
             LastSyncPair = syncPair;
+            if (_failures.Count > 0)
+            {
+                throw _failures.Dequeue();
+            }
+
             if (Failure is not null)
             {
                 throw Failure;

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Net;
 using Cotton.Sync.App.Status;
 using Cotton.Sync.App.SyncPairs;
 using Microsoft.Extensions.Logging;
@@ -16,6 +17,7 @@ public sealed class SyncPairRunner : ISyncPairRunner
     private readonly SemaphoreSlim _operationGate = new(1, 1);
     private readonly object _statusGate = new();
     private readonly ILogger<SyncPairRunner> _logger;
+    private readonly SyncPairRunnerRetryOptions _retryOptions;
     private readonly SyncPairSettings _syncPair;
     private readonly ISyncPairWork _work;
     private SyncPairStatus _status;
@@ -26,10 +28,12 @@ public sealed class SyncPairRunner : ISyncPairRunner
     public SyncPairRunner(
         SyncPairSettings syncPair,
         ISyncPairWork work,
+        SyncPairRunnerRetryOptions? retryOptions = null,
         ILogger<SyncPairRunner>? logger = null)
     {
         _syncPair = syncPair ?? throw new ArgumentNullException(nameof(syncPair));
         _work = work ?? throw new ArgumentNullException(nameof(work));
+        _retryOptions = (retryOptions ?? SyncPairRunnerRetryOptions.Default).Normalize();
         _logger = logger ?? NullLogger<SyncPairRunner>.Instance;
         _status = CreateStatus(syncPair.IsEnabled ? SyncPairRunState.Idle : SyncPairRunState.Disabled);
     }
@@ -109,7 +113,7 @@ public sealed class SyncPairRunner : ISyncPairRunner
             SetState(SyncPairRunState.Syncing);
             try
             {
-                await _work.RunOnceAsync(_syncPair, cancellationToken).ConfigureAwait(false);
+                await RunWorkWithRetryAsync(cancellationToken).ConfigureAwait(false);
                 SetState(SyncPairRunState.Idle);
             }
             catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
@@ -123,7 +127,7 @@ public sealed class SyncPairRunner : ISyncPairRunner
             }
             catch (Exception exception)
             {
-                SetState(SyncPairRunState.Error, exception.Message);
+                SetState(IsTransientNetworkFailure(exception) ? SyncPairRunState.Offline : SyncPairRunState.Error, exception.Message);
                 _logger.LogError(
                     exception,
                     "Sync pair runner failed for {SyncPairId}.",
@@ -134,6 +138,36 @@ public sealed class SyncPairRunner : ISyncPairRunner
         finally
         {
             _operationGate.Release();
+        }
+    }
+
+    private async Task RunWorkWithRetryAsync(CancellationToken cancellationToken)
+    {
+        for (int attempt = 1; attempt <= _retryOptions.MaxAttempts; attempt++)
+        {
+            try
+            {
+                await _work.RunOnceAsync(_syncPair, cancellationToken).ConfigureAwait(false);
+                return;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception) when (IsTransientNetworkFailure(exception) && attempt < _retryOptions.MaxAttempts)
+            {
+                TimeSpan delay = GetRetryDelay(attempt);
+                SetState(SyncPairRunState.Offline, exception.Message);
+                _logger.LogWarning(
+                    exception,
+                    "Transient sync failure for {SyncPairId}; retrying attempt {NextAttempt} of {MaxAttempts} after {Delay}.",
+                    _syncPair.Id,
+                    attempt + 1,
+                    _retryOptions.MaxAttempts,
+                    delay);
+                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                SetState(SyncPairRunState.Syncing);
+            }
         }
     }
 
@@ -168,5 +202,35 @@ public sealed class SyncPairRunner : ISyncPairRunner
             null,
             lastError,
             DateTime.UtcNow);
+    }
+
+    private TimeSpan GetRetryDelay(int completedAttempts)
+    {
+        if (_retryOptions.InitialDelay == TimeSpan.Zero || _retryOptions.MaxDelay == TimeSpan.Zero)
+        {
+            return TimeSpan.Zero;
+        }
+
+        double multiplier = Math.Pow(2, Math.Max(0, completedAttempts - 1));
+        double milliseconds = Math.Min(
+            _retryOptions.InitialDelay.TotalMilliseconds * multiplier,
+            _retryOptions.MaxDelay.TotalMilliseconds);
+        return TimeSpan.FromMilliseconds(milliseconds);
+    }
+
+    private static bool IsTransientNetworkFailure(Exception exception)
+    {
+        return exception is HttpRequestException requestException && IsTransientStatusCode(requestException.StatusCode);
+    }
+
+    private static bool IsTransientStatusCode(HttpStatusCode? statusCode)
+    {
+        return statusCode is null
+            or HttpStatusCode.RequestTimeout
+            or HttpStatusCode.TooManyRequests
+            or HttpStatusCode.InternalServerError
+            or HttpStatusCode.BadGateway
+            or HttpStatusCode.ServiceUnavailable
+            or HttpStatusCode.GatewayTimeout;
     }
 }
