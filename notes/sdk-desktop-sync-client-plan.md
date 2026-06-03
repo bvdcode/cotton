@@ -175,8 +175,10 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Add mass-delete guard per sync pair.
 - [ ] Add debounce for files still being written.
 - [ ] Add handling for locked files.
-- [ ] Add ignore patterns for common temporary files.
-- [ ] Add symlink/reparse-point policy.
+- [x] Add ignore patterns for common temporary files.
+  Verification: `LocalFileScanner.ShouldIgnore` excludes `.cotton-sync`, Office temp files, backup suffixes, `.tmp`, `.partial`, and `.crdownload`; `ScanAsync_IgnoresTempFilesAndCottonWorkingFolder` passed in `LocalFileScannerTests` 4/4 and full `Cotton.Sync.Tests` 45/45.
+- [x] Add symlink/reparse-point policy.
+  Verification: local scanning skips `FileAttributes.ReparsePoint` entries and does not traverse reparse-point directories through `EnumerationOptions.AttributesToSkip`; `ScanAsync_IgnoresSymlinkFilesAndDoesNotTraverseSymlinkDirectories` passed in `LocalFileScannerTests` 4/4 and full `Cotton.Sync.Tests` 45/45.
 - [ ] Add Windows path validation.
   Required checks: reserved names, invalid characters, path length, case collisions.
 - [ ] Add Linux path validation.

@@ -63,6 +63,22 @@ public sealed class LocalFileScannerTests
     }
 
     [Test]
+    public async Task ScanAsync_IgnoresSymlinkFilesAndDoesNotTraverseSymlinkDirectories()
+    {
+        WriteFile("target.txt", "target");
+        WriteFile(Path.Combine("real-dir", "inside.txt"), "inside");
+        string fileLinkPath = Path.Combine(_root, "target-link.txt");
+        string directoryLinkPath = Path.Combine(_root, "real-dir-link");
+        TryCreateFileSymlink(fileLinkPath, Path.Combine(_root, "target.txt"));
+        TryCreateDirectorySymlink(directoryLinkPath, Path.Combine(_root, "real-dir"));
+        var scanner = new LocalFileScanner();
+
+        IReadOnlyList<LocalFileSnapshot> files = await scanner.ScanAsync(_root);
+
+        Assert.That(files.Select(x => x.RelativePath), Is.EqualTo(new[] { "real-dir/inside.txt", "target.txt" }));
+    }
+
+    [Test]
     public void ScanAsync_RejectsMissingRoot()
     {
         var scanner = new LocalFileScanner();
@@ -77,6 +93,30 @@ public sealed class LocalFileScannerTests
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, text, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         File.SetLastWriteTimeUtc(path, new DateTime(2026, 6, 2, 13, 0, 0, DateTimeKind.Utc));
+    }
+
+    private static void TryCreateFileSymlink(string linkPath, string targetPath)
+    {
+        try
+        {
+            File.CreateSymbolicLink(linkPath, targetPath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
+        {
+            Assert.Ignore("File symlink creation is unavailable in this test environment: " + ex.Message);
+        }
+    }
+
+    private static void TryCreateDirectorySymlink(string linkPath, string targetPath)
+    {
+        try
+        {
+            Directory.CreateSymbolicLink(linkPath, targetPath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
+        {
+            Assert.Ignore("Directory symlink creation is unavailable in this test environment: " + ex.Message);
+        }
     }
 
     private static string Hash(string text)
