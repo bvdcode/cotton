@@ -199,9 +199,28 @@ public sealed class SyncEngineTests
         SyncEngine engine = CreateEngine(new FakeLocalFileScanner(), RemoteTree(remote), remoteFiles, out SqliteSyncStateStore stateStore);
         await InsertBaselineAsync(stateStore, "delete-remote.txt", remote.ContentHash, remote);
 
-        SyncRunResult result = await engine.RunOnceAsync(Pair(), new SyncRunOptions { DeleteRemotePermanently = true });
+        SyncRunResult result = await engine.RunOnceAsync(Pair());
 
         SyncStateEntry? entry = await stateStore.GetAsync("pair-a", "delete-remote.txt");
+        Assert.Multiple(() =>
+        {
+            Assert.That(remoteFiles.Deletes, Is.EqualTo(new[] { (remote.Id, false, remote.ETag) }));
+            Assert.That(result.Activities.Select(x => x.Kind), Is.EqualTo(new[] { SyncActivityKind.DeletedRemote }));
+            Assert.That(entry, Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task RunOnceAsync_CanBypassRemoteTrashWhenExplicitlyConfigured()
+    {
+        NodeFileManifestDto remote = RemoteFile("delete-remote-permanent.txt", HashText("old"));
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        SyncEngine engine = CreateEngine(new FakeLocalFileScanner(), RemoteTree(remote), remoteFiles, out SqliteSyncStateStore stateStore);
+        await InsertBaselineAsync(stateStore, "delete-remote-permanent.txt", remote.ContentHash, remote);
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair(), new SyncRunOptions { DeleteRemotePermanently = true });
+
+        SyncStateEntry? entry = await stateStore.GetAsync("pair-a", "delete-remote-permanent.txt");
         Assert.Multiple(() =>
         {
             Assert.That(remoteFiles.Deletes, Is.EqualTo(new[] { (remote.Id, true, remote.ETag) }));

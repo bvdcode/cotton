@@ -171,8 +171,9 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [x] Add local delete strategy.
   Target: safe delete or recycle/trash where available; direct delete only when deliberately accepted.
   Verification: `AtomicLocalFileSyncWriter.DeleteFileAsync` moves local deletes into `.cotton-sync/deleted/<timestamp-guid>/...` and removes empty parent folders without directly deleting file content; `DeleteFileAsync_MovesFileToDeletedQuarantine` passed in full `Cotton.Sync.Tests` 48/48.
-- [ ] Add remote delete strategy.
+- [x] Add remote delete strategy.
   Target: trash/soft-delete by default.
+  Verification: `SyncRunOptions.DeleteRemotePermanently` defaults to `false`, `SyncEngine` passes that value to `IRemoteFileSynchronizer.DeleteFileAsync`, and `RunOnceAsync_DeletesRemoteOnlyWhenBaselineKnowsLocalDelete` plus `RunOnceAsync_CanBypassRemoteTrashWhenExplicitlyConfigured` prove default trash delete and explicit permanent delete; `SyncEngineTests` passed 21/21, full `Cotton.Sync.Tests` passed 49/49, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [x] Add mass-delete guard per sync pair.
   Verification: `SyncEngine` preflights planned local and remote deletes per run and blocks all deletes for a direction when candidates exceed `SyncRunOptions` limits, preserving local files and sync baseline entries; `SyncEngineTests` passed 20/20, full `Cotton.Sync.Tests` passed 47/47, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [ ] Add debounce for files still being written.
