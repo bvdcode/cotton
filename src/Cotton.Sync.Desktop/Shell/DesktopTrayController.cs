@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform;
@@ -16,6 +17,7 @@ internal sealed class DesktopTrayController : IDisposable
     private readonly IClassicDesktopStyleApplicationLifetime _lifetime;
     private readonly MainWindow _window;
     private readonly TrayIcon _trayIcon;
+    private ShellViewModel? _viewModel;
     private bool _disposed;
 
     public DesktopTrayController(MainWindow window, IClassicDesktopStyleApplicationLifetime lifetime)
@@ -23,6 +25,7 @@ internal sealed class DesktopTrayController : IDisposable
         _window = window ?? throw new ArgumentNullException(nameof(window));
         _lifetime = lifetime ?? throw new ArgumentNullException(nameof(lifetime));
         _trayIcon = CreateTrayIcon();
+        AttachViewModel(_window.DataContext as ShellViewModel);
     }
 
     public static bool IsSupportedPlatform => DesktopPlatformCapabilities.IsTrayLifecycleSupported;
@@ -34,6 +37,7 @@ internal sealed class DesktopTrayController : IDisposable
             return;
         }
 
+        AttachViewModel(null);
         _trayIcon.Dispose();
         _disposed = true;
     }
@@ -76,6 +80,48 @@ internal sealed class DesktopTrayController : IDisposable
         };
         trayIcon.Clicked += (_, _) => ShowWindow();
         return trayIcon;
+    }
+
+    private void AttachViewModel(ShellViewModel? viewModel)
+    {
+        if (_viewModel is not null)
+        {
+            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        }
+
+        _viewModel = viewModel;
+        if (_viewModel is not null)
+        {
+            _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        }
+
+        UpdateTrayStatus();
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(ShellViewModel.GlobalStatus)
+            or nameof(ShellViewModel.IsSignedIn)
+            or nameof(ShellViewModel.ActionRequiredMessage)
+            or nameof(ShellViewModel.HasActionRequired))
+        {
+            UpdateTrayStatus();
+        }
+    }
+
+    private void UpdateTrayStatus()
+    {
+        if (_viewModel is null)
+        {
+            _trayIcon.ToolTipText = "Cotton Sync";
+            return;
+        }
+
+        DesktopTrayStatus status = DesktopTrayStatusResolver.FromShellState(
+            _viewModel.IsSignedIn,
+            _viewModel.GlobalStatus,
+            _viewModel.HasActionRequired);
+        _trayIcon.ToolTipText = status.ToolTipText;
     }
 
     private void Execute(Func<ShellViewModel, AsyncRelayCommand> selectCommand)

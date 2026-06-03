@@ -313,6 +313,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Verification 2026-06-03: tray Quit calls `MainWindow.RequestQuit()` before application shutdown, and the window lifecycle policy then resolves close as a real close instead of hide-to-tray. `DesktopWindowLifecyclePolicyTests` passed 4/4, full `Cotton.Sync.Desktop.Tests` passed 22/22, and solution Release build passed with known NU1903 warnings.
 - [ ] Add tray icon states.
   Required states: idle, syncing, paused, offline, error.
+  Partial 2026-06-03: added a tested tray status model/resolver for signed-out, idle, syncing, paused, offline, and error states, and wired it to the tray tooltip. Keep unchecked until distinct visual tray icon assets/overlays are implemented and manually verified on Windows.
 - [ ] Add tray menu.
   Required commands: show app, open folder, open web, sync now, pause/resume, settings, quit.
   Partial 2026-06-03: commit `Expand desktop tray menu commands`; Windows tray menu now wires show app, open selected local folder, open Cotton Cloud in browser, sync now, pause, resume, settings overlay, and quit. Keep unchecked until menu behavior is manually verified on Windows.
