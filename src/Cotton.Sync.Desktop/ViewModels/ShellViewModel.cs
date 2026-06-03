@@ -144,8 +144,30 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public bool IsAddSyncPairWizardVisible
     {
         get => _isAddSyncPairWizardVisible;
-        private set => SetProperty(ref _isAddSyncPairWizardVisible, value);
+        private set
+        {
+            if (SetProperty(ref _isAddSyncPairWizardVisible, value))
+            {
+                RaiseWizardStateProperties();
+            }
+        }
     }
+
+    public bool HasLocalFolderSelection => !string.IsNullOrWhiteSpace(LocalFolderPath);
+
+    public bool IsAddSyncPairLocalStepVisible => IsAddSyncPairWizardVisible && !HasLocalFolderSelection;
+
+    public bool IsAddSyncPairCloudStepVisible => IsAddSyncPairWizardVisible && HasLocalFolderSelection;
+
+    public string AddSyncPairWizardTitle => HasLocalFolderSelection ? "Choose cloud folder" : "Choose local folder";
+
+    public string AddSyncPairWizardSubtitle => HasLocalFolderSelection
+        ? "Pick where this computer folder should sync in Cotton Cloud."
+        : "Start with the folder on this computer.";
+
+    public string RemoteFolderSelectionLabel => string.IsNullOrWhiteSpace(RemoteFolderPath)
+        ? "Cloud folder: /"
+        : $"Cloud folder: {RemoteFolderPath}";
 
     public bool IsServerProbeChecking
     {
@@ -179,6 +201,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             if (SetProperty(ref _localFolderPath, value))
             {
                 AddSyncPairCommand.RaiseCanExecuteChanged();
+                RaiseWizardStateProperties();
             }
         }
     }
@@ -203,6 +226,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             if (SetProperty(ref _remoteFolderPath, value))
             {
                 AddSyncPairCommand.RaiseCanExecuteChanged();
+                OnPropertyChanged(nameof(RemoteFolderSelectionLabel));
             }
         }
     }
@@ -723,6 +747,15 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         ResumeCommand.RaiseCanExecuteChanged();
         OpenFolderCommand.RaiseCanExecuteChanged();
         ShowAddSyncPairCommand.RaiseCanExecuteChanged();
+    }
+
+    private void RaiseWizardStateProperties()
+    {
+        OnPropertyChanged(nameof(HasLocalFolderSelection));
+        OnPropertyChanged(nameof(IsAddSyncPairLocalStepVisible));
+        OnPropertyChanged(nameof(IsAddSyncPairCloudStepVisible));
+        OnPropertyChanged(nameof(AddSyncPairWizardTitle));
+        OnPropertyChanged(nameof(AddSyncPairWizardSubtitle));
     }
 
     private void SetAllPairStatuses(string status)
