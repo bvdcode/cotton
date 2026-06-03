@@ -134,6 +134,37 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_RecoversAfterRemoteUploadBeforeBaselineUpdate()
+    {
+        string relativePath = "uploaded-before-baseline.txt";
+        LocalFileSnapshot local = LocalFile(relativePath, "local-new");
+        var scanner = new FakeLocalFileScanner(local);
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        var durableStore = new SqliteSyncStateStore(_databasePath);
+        var failingStore = new FailingUpsertStateStore(durableStore);
+        SyncEngine firstRun = new(scanner, new FakeRemoteTreeCrawler(EmptyRemoteTree()), remoteFiles, failingStore);
+
+        InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await firstRun.RunOnceAsync(Pair()));
+
+        NodeFileManifestDto uploaded = remoteFiles.Uploads.Single().ReturnedFile;
+        SyncEngine secondRun = new(scanner, new FakeRemoteTreeCrawler(RemoteTree(uploaded)), remoteFiles, new SqliteSyncStateStore(_databasePath));
+        SyncRunResult result = await secondRun.RunOnceAsync(Pair());
+
+        SyncStateEntry? entry = await durableStore.GetAsync("pair-a", relativePath);
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(remoteFiles.Uploads, Has.Count.EqualTo(1));
+            Assert.That(result.Activities, Is.Empty);
+            Assert.That(entry, Is.Not.Null);
+            Assert.That(entry!.LocalContentHash, Is.EqualTo(local.ContentHash));
+            Assert.That(entry.RemoteContentHash, Is.EqualTo(uploaded.ContentHash));
+            Assert.That(entry.RemoteFileId, Is.EqualTo(uploaded.Id));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_DownloadsRemoteChangeWhenLocalBaselineIsUnchanged()
     {
         string relativePath = "changed-down.txt";
@@ -804,6 +835,7 @@ public sealed class SyncEngineTests
                 ETag = "sha256-" + localFile.ContentHash,
                 CreatedAt = new DateTime(2026, 6, 2, 14, 0, 0, DateTimeKind.Utc),
                 UpdatedAt = new DateTime(2026, 6, 2, 14, 0, 0, DateTimeKind.Utc),
+                Metadata = new Dictionary<string, string> { ["relativePath"] = relativePath.Replace('\\', '/') },
             };
             Uploads.Add(new UploadCall(rootNodeId, relativePath, localFile, existingRemoteFile, returned));
             return Task.FromResult(returned);
@@ -850,4 +882,54 @@ public sealed class SyncEngineTests
         LocalFileSnapshot LocalFile,
         NodeFileManifestDto? ExistingRemoteFile,
         NodeFileManifestDto ReturnedFile);
+
+    private sealed class FailingUpsertStateStore : ISyncStateStore
+    {
+        private readonly ISyncStateStore _inner;
+
+        public FailingUpsertStateStore(ISyncStateStore inner)
+        {
+            _inner = inner;
+        }
+
+        public Task InitializeAsync(CancellationToken cancellationToken = default)
+        {
+            return _inner.InitializeAsync(cancellationToken);
+        }
+
+        public Task<IReadOnlyList<SyncStateEntry>> LoadPairAsync(string syncPairId, CancellationToken cancellationToken = default)
+        {
+            return _inner.LoadPairAsync(syncPairId, cancellationToken);
+        }
+
+        public Task<SyncChangeCursor> GetChangeCursorAsync(string syncPairId, CancellationToken cancellationToken = default)
+        {
+            return _inner.GetChangeCursorAsync(syncPairId, cancellationToken);
+        }
+
+        public Task<SyncStateEntry?> GetAsync(string syncPairId, string relativePath, CancellationToken cancellationToken = default)
+        {
+            return _inner.GetAsync(syncPairId, relativePath, cancellationToken);
+        }
+
+        public Task UpsertAsync(SyncStateEntry entry, CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("State write failed.");
+        }
+
+        public Task SaveChangeCursorAsync(SyncChangeCursor cursor, CancellationToken cancellationToken = default)
+        {
+            return _inner.SaveChangeCursorAsync(cursor, cancellationToken);
+        }
+
+        public Task DeleteAsync(string syncPairId, string relativePath, CancellationToken cancellationToken = default)
+        {
+            return _inner.DeleteAsync(syncPairId, relativePath, cancellationToken);
+        }
+
+        public Task ReplacePairAsync(string syncPairId, IReadOnlyCollection<SyncStateEntry> entries, CancellationToken cancellationToken = default)
+        {
+            return _inner.ReplacePairAsync(syncPairId, entries, cancellationToken);
+        }
+    }
 }

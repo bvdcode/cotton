@@ -163,7 +163,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [x] Add safe remote change-feed reader with explicit acknowledgement.
   Verification: commit `Add remote change feed reader`; `RemoteChangeFeedReader.ReadAsync` reads from the stored cursor without advancing it, `AcknowledgeAsync` advances only after processing or marks expired cursors without skipping changes; `dotnet test src/Cotton.Sync.Tests/Cotton.Sync.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~RemoteChangeFeedReaderTests` passed 3/3, and `dotnet build src/Cotton.sln --configuration Release` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [ ] Add or refine remote snapshot representation for change-feed updates.
-- [ ] Add durable operation intent tracking if needed for crash recovery.
+- [x] Add durable operation intent tracking if needed for crash recovery.
+  Verification: no separate operation-intent table is needed for the current full-file sync primitive because operations update baseline only after success, downloads use temp files, and a remote upload that succeeds before baseline persistence is recovered by the next crawl without a duplicate upload; `RunOnceAsync_RecoversAfterRemoteUploadBeforeBaselineUpdate` passed in `SyncEngineTests` 22/22 and full `Cotton.Sync.Tests` passed 65/65.
 - [x] Ensure downloads always use temp file plus atomic replace.
   Verification: `AtomicLocalFileSyncWriter.WriteFileAsync` writes into `.cotton-sync/tmp` and moves into place only after successful content write and flush; `WriteFileAsync_RemovesTemporaryFileWhenDownloadFailsAndPreservesExistingFile` and `RunOnceAsync_DoesNotUpdateBaselineWhenRemoteDownloadFails` passed in full `Cotton.Sync.Tests` 44/44.
 - [x] Ensure baseline updates happen only after successful local and remote operation.
@@ -204,7 +205,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [x] Add tests for case conflicts.
   Verification: `SyncEngine` rejects case-insensitive local and remote path collisions before reconciliation with `SyncPathCollisionException`; `RunOnceAsync_RejectsLocalCaseInsensitivePathCollision` and `RunOnceAsync_RejectsRemoteCaseInsensitivePathCollision` passed in `SyncEngineTests` 20/20, full `Cotton.Sync.Tests` passed 47/47, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [ ] Add tests for crash during download.
-- [ ] Add tests for crash after remote upload before baseline update.
+- [x] Add tests for crash after remote upload before baseline update.
+  Verification: `RunOnceAsync_RecoversAfterRemoteUploadBeforeBaselineUpdate` simulates state-store failure after remote upload, then verifies the next run adopts the remote file with matching content without uploading again; `SyncEngineTests` passed 22/22, full `Cotton.Sync.Tests` passed 65/65, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [ ] Run full sync test suite.
 
 ## Phase 6 - Continuous Sync
