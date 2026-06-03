@@ -370,8 +370,9 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 
 ## Phase 11 - Packaging And Installers
 
-- [ ] Define release artifact matrix.
+- [x] Define release artifact matrix.
   Required artifacts: Windows installer, Windows portable archive, Linux AppImage or archive, Linux `.deb` if feasible.
+  Verification 2026-06-03: release matrix is defined as: Windows portable archive `cotton-sync-desktop-win-x64.tar.gz` now, Windows installer before release readiness, Linux portable archive `cotton-sync-desktop-linux-x64.tar.gz` now, Linux `.deb` or AppImage as feasible before release readiness, `checksums.sha256` inside each portable archive, and NuGet/shared package artifact unchanged. CI already uploads the two portable desktop archives; installer, `.deb`/AppImage, clean-machine smoke, uninstall, and upgrade checks remain open below.
 - [x] Configure self-contained publish for Windows x64.
   Verification 2026-06-03: added `src/Cotton.Sync.Desktop/Properties/PublishProfiles/win-x64.pubxml`; `dotnet publish src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj /p:PublishProfile=win-x64` passed and produced `bin/Release/net10.0/publish/win-x64/Cotton.Sync.Desktop.exe` with the known NU1903 warning.
 - [x] Configure self-contained publish for Linux x64.
@@ -382,8 +383,9 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Verification 2026-06-03: `Cotton.Sync.Desktop.csproj` now sets explicit title, `VersionPrefix=0.1.0`, `AssemblyVersion=0.1.0.0`, `FileVersion=0.1.0.0`, and `InformationalVersion=0.1.0-dev`; the settings/about and diagnostics paths already read the assembly version. `dotnet msbuild` confirmed `Version=0.1.0`, `InformationalVersion=0.1.0-dev`, and `ApplicationIcon=Assets/app.ico`; desktop tests passed 56/56.
 - [x] Add checksum generation.
   Verification 2026-06-03: `Cotton.Sync.Desktop.csproj` now generates `checksums.sha256` after publish. Verified with both `linux-x64` and `win-x64` publish profiles; checksum files include the Linux apphost, Windows `.exe`, and desktop DLL entries. Both publish commands passed with the known NU1903 warning.
-- [ ] Add signing plan.
+- [x] Add signing plan.
   Windows code signing can be deferred only with an explicit release risk decision.
+  Verification 2026-06-03: signing plan is explicit: final Windows installer/executable should be Authenticode-signed with a project code-signing certificate; portable archives must always include generated SHA-256 checksums; Linux archives remain checksum-verified, while future `.deb`/repository distribution should use package/repository signing. If Windows code signing is unavailable for an internal preview, the release notes must record an explicit unsigned-build risk decision before release readiness can be checked.
 - [x] Add CI workflow for build, test, publish, package, and artifact upload.
   Verification 2026-06-03: `.github/workflows/docker-image.yml` now publishes `linux-x64` and `win-x64` desktop profiles, runs the Linux published `--self-test --data-dir <temp>` smoke command, packages portable `cotton-sync-desktop-linux-x64.tar.gz` and `cotton-sync-desktop-win-x64.tar.gz` archives, uploads both as workflow artifacts, and attaches them to main-branch releases beside the NuGet package. Local workflow command simulation confirmed both archives contain the executable and `checksums.sha256`; YAML parsed successfully with PyYAML.
 - [x] Add smoke launch command or self-test command for packaged app.
