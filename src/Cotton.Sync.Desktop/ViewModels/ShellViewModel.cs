@@ -73,6 +73,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
         _themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
         _uiDispatcher = uiDispatcher ?? new AvaloniaDesktopUiDispatcher();
+        Activities.CollectionChanged += OnActivitiesChanged;
         SyncPairs.CollectionChanged += OnSyncPairsChanged;
         RemoteFolders.CollectionChanged += OnRemoteFoldersChanged;
         SelfTestItems.CollectionChanged += OnSelfTestItemsChanged;
@@ -211,6 +212,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     }
 
     public bool HasNoSyncPairs => SyncPairs.Count == 0;
+
+    public bool HasNoActivities => Activities.Count == 0;
+
+    public bool HasActivities => Activities.Count > 0;
 
     public bool HasActionRequired => !string.IsNullOrWhiteSpace(ActionRequiredMessage);
 
@@ -539,6 +544,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     {
         _controller.StatusChanged -= OnStatusChanged;
         _controller.ActivityReported -= OnActivityReported;
+        Activities.CollectionChanged -= OnActivitiesChanged;
         SyncPairs.CollectionChanged -= OnSyncPairsChanged;
         RemoteFolders.CollectionChanged -= OnRemoteFoldersChanged;
         SelfTestItems.CollectionChanged -= OnSelfTestItemsChanged;
@@ -1078,6 +1084,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
         RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
         RefreshDiagnosticsItems();
+    }
+
+    private void OnActivitiesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(HasNoActivities));
+        OnPropertyChanged(nameof(HasActivities));
     }
 
     private void OnRemoteFoldersChanged(object? sender, NotifyCollectionChangedEventArgs e)

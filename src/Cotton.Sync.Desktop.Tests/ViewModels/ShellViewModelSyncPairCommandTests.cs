@@ -116,6 +116,31 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public void ActivityEmptyState_UpdatesWhenActivityIsReported()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot());
+        using ShellViewModel viewModel = CreateViewModel(controller);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasNoActivities, Is.True);
+            Assert.That(viewModel.HasActivities, Is.False);
+        });
+
+        controller.ReportActivity(new DesktopActivitySnapshot(
+            "Downloaded",
+            "Documents/report.txt",
+            "Downloaded Documents/report.txt",
+            DateTime.UtcNow));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasNoActivities, Is.False);
+            Assert.That(viewModel.HasActivities, Is.True);
+        });
+    }
+
+    [Test]
     public async Task ShowAddSyncPairCommand_LoadsRemoteRootFolders()
     {
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot());

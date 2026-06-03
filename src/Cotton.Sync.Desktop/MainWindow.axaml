@@ -386,33 +386,48 @@
               <TextBlock Text="Activity"
                          FontSize="16"
                          FontWeight="SemiBold" />
-              <ListBox Grid.Row="1"
-                       ItemsSource="{Binding Activities}"
-                       BorderThickness="0"
-                       Background="Transparent">
-                <ListBox.ItemTemplate>
-                  <DataTemplate>
-                    <Grid ColumnDefinitions="42,*"
-                          RowDefinitions="Auto,Auto"
-                          ColumnSpacing="8"
-                          Margin="0,4">
-                      <TextBlock Text="{Binding Time}"
-                                 FontSize="12"
-                                 Opacity="0.68" />
-                      <TextBlock Grid.Column="1"
-                                 Text="{Binding Details}"
-                                 FontSize="12"
-                                 TextTrimming="CharacterEllipsis" />
-                      <TextBlock Grid.Row="1"
-                                 Grid.Column="1"
-                                 Text="{Binding Path}"
-                                 FontSize="11"
-                                 TextTrimming="CharacterEllipsis"
-                                 Opacity="0.68" />
-                    </Grid>
-                  </DataTemplate>
-                </ListBox.ItemTemplate>
-              </ListBox>
+              <Grid Grid.Row="1">
+                <StackPanel Spacing="3"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            IsVisible="{Binding HasNoActivities}">
+                  <TextBlock Text="No activity yet"
+                             FontSize="13"
+                             FontWeight="SemiBold"
+                             HorizontalAlignment="Center" />
+                  <TextBlock Text="Sync events will appear here."
+                             Classes="secondary"
+                             FontSize="12"
+                             HorizontalAlignment="Center" />
+                </StackPanel>
+                <ListBox ItemsSource="{Binding Activities}"
+                         BorderThickness="0"
+                         Background="Transparent"
+                         IsVisible="{Binding HasActivities}">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <Grid ColumnDefinitions="42,*"
+                            RowDefinitions="Auto,Auto"
+                            ColumnSpacing="8"
+                            Margin="0,4">
+                        <TextBlock Text="{Binding Time}"
+                                   FontSize="12"
+                                   Opacity="0.68" />
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding Details}"
+                                   FontSize="12"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Row="1"
+                                   Grid.Column="1"
+                                   Text="{Binding Path}"
+                                   FontSize="11"
+                                   TextTrimming="CharacterEllipsis"
+                                   Opacity="0.68" />
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </Grid>
             </Grid>
           </Border>
         </Grid>
@@ -540,11 +555,20 @@
                     </Grid>
 
                     <Grid Grid.Row="1">
-                      <TextBlock Text="No folders here"
-                                 Classes="secondary"
-                                 HorizontalAlignment="Center"
-                                 VerticalAlignment="Center"
-                                 IsVisible="{Binding HasNoRemoteFolders}" />
+                      <StackPanel Spacing="3"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  IsVisible="{Binding HasNoRemoteFolders}">
+                        <TextBlock Text="No folders here"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center" />
+                        <TextBlock Text="The current cloud folder can still be selected."
+                                   Classes="secondary"
+                                   FontSize="12"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap" />
+                      </StackPanel>
                       <ListBox ItemsSource="{Binding RemoteFolders}"
                                SelectedItem="{Binding SelectedRemoteFolder}"
                                BorderThickness="0"
@@ -745,10 +769,30 @@
                             ToolTip.Tip="Add sync folder"
                             Command="{Binding ShowAddSyncPairCommand}" />
                   </Grid>
-                  <TextBlock Text="No folders configured"
-                             Classes="secondary"
-                             FontSize="12"
-                             IsVisible="{Binding HasNoSyncPairs}" />
+                  <Border Padding="9"
+                          CornerRadius="6"
+                          Background="{DynamicResource CottonSurfaceMutedBrush}"
+                          BorderBrush="{DynamicResource CottonBorderBrush}"
+                          BorderThickness="1"
+                          IsVisible="{Binding HasNoSyncPairs}">
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="8">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="No folders configured"
+                                   FontSize="12"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Text="Add a local folder and match it to Cotton Cloud."
+                                   Classes="secondary"
+                                   FontSize="11"
+                                   TextWrapping="Wrap" />
+                      </StackPanel>
+                      <Button Grid.Column="1"
+                              Content="+"
+                              Classes="icon primary"
+                              ToolTip.Tip="Add sync folder"
+                              Command="{Binding ShowAddSyncPairCommand}" />
+                    </Grid>
+                  </Border>
                   <Border MaxHeight="128"
                           BorderBrush="{DynamicResource CottonBorderBrush}"
                           BorderThickness="1"
