@@ -943,6 +943,66 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task SyncPairRunner_DownloadsRemoteChangesAfterOfflineRecoveryThroughSdkAndServer()
+    {
+        CottonCloudClient client = CreateClient();
+        await LoginAsync(client);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-offline-remote");
+        NodeDto remoteDirectory = await client.Nodes.CreateAsync(remoteRoot.Id, "RemoteOffline");
+        NodeFileManifestDto remoteFile = await CreateRemoteTextFileAsync(
+            client,
+            remoteDirectory.Id,
+            "remote-created.txt",
+            "created remotely while offline");
+        string localRoot = Path.Combine(_tempDirectory, "client-offline-remote");
+        Directory.CreateDirectory(localRoot);
+        const string relativePath = "RemoteOffline/remote-created.txt";
+        SqliteSyncStateStore stateStore = CreateStateStore("client-offline-remote-state.sqlite");
+        await stateStore.InitializeAsync();
+        SyncEngine engine = CreateEngine(client, stateStore);
+        var syncPair = new SyncPairSettings
+        {
+            Id = Guid.NewGuid(),
+            DisplayName = "Offline remote recovery",
+            LocalRootPath = localRoot,
+            RemoteRootNodeId = remoteRoot.Id,
+            RemoteDisplayPath = "/Offline remote recovery",
+            IsEnabled = true,
+            Mode = SyncPairMode.FullMirror,
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow,
+        };
+        var work = new FailOnceBeforeDelegatingSyncPairWork(
+            new SyncEnginePairWork(engine),
+            new HttpRequestException("server unavailable", null, System.Net.HttpStatusCode.ServiceUnavailable));
+        var runner = new SyncPairRunner(syncPair, work, CreateNoDelayRetryOptions(maxAttempts: 1));
+
+        HttpRequestException? offlineException = Assert.ThrowsAsync<HttpRequestException>(() => runner.SyncNowAsync());
+        SyncPairStatus offlineStatus = runner.Status;
+        string localFilePath = Path.Combine(localRoot, "RemoteOffline", "remote-created.txt");
+        IReadOnlyList<SyncStateEntry> baselinesWhileOffline = await stateStore.LoadPairAsync(syncPair.Id.ToString("D"));
+
+        await runner.SyncNowAsync();
+
+        string downloadedContent = File.ReadAllText(localFilePath, Encoding.UTF8);
+        SyncStateEntry? baseline = await stateStore.GetAsync(syncPair.Id.ToString("D"), relativePath);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(offlineException, Is.Not.Null);
+            Assert.That(offlineStatus.State, Is.EqualTo(SyncPairRunState.Offline));
+            Assert.That(offlineStatus.CurrentOperation, Is.EqualTo("Waiting for connection: server unavailable"));
+            Assert.That(baselinesWhileOffline, Is.Empty);
+            Assert.That(work.RunCount, Is.EqualTo(2));
+            Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Idle));
+            Assert.That(File.Exists(localFilePath), Is.True);
+            Assert.That(downloadedContent, Is.EqualTo("created remotely while offline"));
+            Assert.That(baseline?.RemoteFileId, Is.EqualTo(remoteFile.Id));
+            Assert.That(baseline?.RemoteContentHash, Is.EqualTo(remoteFile.ContentHash));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_CreatesConflictWhenTwoClientsEditSameFile()
     {
         CottonCloudClient clientA = CreateClient();
