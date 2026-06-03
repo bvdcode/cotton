@@ -27,6 +27,8 @@ namespace Cotton.Server.IntegrationTests;
 [NonParallelizable]
 public sealed class SyncClientEndToEndTests : IntegrationTestBase
 {
+    private const int SyncTestChunkSizeBytes = 1024;
+
     private TestAppFactory? _factory;
     private HttpClient? _httpClient;
     private string _tempDirectory = string.Empty;
@@ -357,6 +359,67 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task RunOnceAsync_UploadsAndDownloadsLargeFilesThroughSdkAndServer()
+    {
+        CottonCloudClient client = CreateClient();
+        await LoginAsync(client);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-large-files");
+        string localRoot = Path.Combine(_tempDirectory, "client-large-files");
+        const string uploadPath = "Large/upload.bin";
+        const string downloadPath = "RemoteLarge/download.bin";
+        byte[] uploadBytes = CreateDeterministicBytes((SyncTestChunkSizeBytes * 5) + 333);
+        byte[] remoteBytes = CreateDeterministicBytes((SyncTestChunkSizeBytes * 7) + 111);
+        WriteLocalFile(localRoot, uploadPath, uploadBytes);
+        SqliteSyncStateStore stateStore = CreateStateStore("client-large-files-state.sqlite");
+        SyncEngine engine = CreateEngine(client, stateStore);
+        var syncPair = new SyncPair
+        {
+            SyncPairId = "client-large-files",
+            LocalRootPath = localRoot,
+            RemoteRootNodeId = remoteRoot.Id,
+        };
+
+        SyncRunResult uploadRun = await engine.RunOnceAsync(syncPair);
+        NodeFileManifestDto uploaded = await FindRemoteFileAsync(client, remoteRoot.Id, "Large", "upload.bin");
+        byte[] uploadedRoundTrip = await DownloadBytesAsync(client, uploaded.Id);
+        DbContext.ChangeTracker.Clear();
+        int uploadedChunkCount = await DbContext.FileManifestChunks
+            .CountAsync(chunk => chunk.FileManifestId == uploaded.FileManifestId);
+        NodeDto remoteDirectory = await client.Nodes.CreateAsync(remoteRoot.Id, "RemoteLarge");
+        NodeFileManifestDto remoteFile = await CreateRemoteFileAsync(
+            client,
+            remoteDirectory.Id,
+            "download.bin",
+            remoteBytes);
+        DbContext.ChangeTracker.Clear();
+        int remoteChunkCount = await DbContext.FileManifestChunks
+            .CountAsync(chunk => chunk.FileManifestId == remoteFile.FileManifestId);
+
+        SyncRunResult downloadRun = await engine.RunOnceAsync(syncPair);
+
+        byte[] downloadedBytes = await File.ReadAllBytesAsync(
+            Path.Combine(localRoot, "RemoteLarge", "download.bin"));
+        SyncStateEntry? uploadedBaseline = await stateStore.GetAsync("client-large-files", uploadPath);
+        SyncStateEntry? downloadedBaseline = await stateStore.GetAsync("client-large-files", downloadPath);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(uploadRun.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
+            Assert.That(downloadRun.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Downloaded }));
+            Assert.That(uploadedRoundTrip, Is.EqualTo(uploadBytes));
+            Assert.That(downloadedBytes, Is.EqualTo(remoteBytes));
+            Assert.That(uploaded.SizeBytes, Is.EqualTo(uploadBytes.Length));
+            Assert.That(remoteFile.SizeBytes, Is.EqualTo(remoteBytes.Length));
+            Assert.That(uploadedChunkCount, Is.GreaterThan(1));
+            Assert.That(remoteChunkCount, Is.GreaterThan(1));
+            Assert.That(uploadedBaseline?.RemoteFileId, Is.EqualTo(uploaded.Id));
+            Assert.That(uploadedBaseline?.RemoteContentHash, Is.EqualTo(uploaded.ContentHash));
+            Assert.That(downloadedBaseline?.RemoteFileId, Is.EqualTo(remoteFile.Id));
+            Assert.That(downloadedBaseline?.RemoteContentHash, Is.EqualTo(remoteFile.ContentHash));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_MovesLocalFileToQuarantineWhenRemoteFileIsDeleted()
     {
         CottonCloudClient client = CreateClient();
@@ -549,7 +612,7 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         return new SyncEngine(
             new LocalFileScanner(),
             new RemoteTreeCrawler(client.Nodes),
-            new SdkRemoteFileSynchronizer(client, new SdkRemoteFileSynchronizerOptions { ChunkSizeBytes = 1024 }),
+            new SdkRemoteFileSynchronizer(client, new SdkRemoteFileSynchronizerOptions { ChunkSizeBytes = SyncTestChunkSizeBytes }),
             stateStore);
     }
 
@@ -563,6 +626,13 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         await using var downloaded = new MemoryStream();
         await client.Files.DownloadContentAsync(nodeFileId, downloaded);
         return Encoding.UTF8.GetString(downloaded.ToArray());
+    }
+
+    private static async Task<byte[]> DownloadBytesAsync(CottonCloudClient client, Guid nodeFileId)
+    {
+        await using var downloaded = new MemoryStream();
+        await client.Files.DownloadContentAsync(nodeFileId, downloaded);
+        return downloaded.ToArray();
     }
 
     private static async Task<NodeFileManifestDto> FindRemoteFileAsync(
@@ -584,15 +654,24 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         string content)
     {
         byte[] bytes = Encoding.UTF8.GetBytes(content);
+        return await CreateRemoteFileAsync(client, parentNodeId, fileName, bytes, "text/plain");
+    }
+
+    private static async Task<NodeFileManifestDto> CreateRemoteFileAsync(
+        CottonCloudClient client,
+        Guid parentNodeId,
+        string fileName,
+        byte[] bytes,
+        string contentType = "application/octet-stream")
+    {
         string hash = Hasher.ToHexStringHash(Hasher.HashData(bytes));
-        await using var stream = new MemoryStream(bytes);
-        await client.Chunks.UploadRawAsync(hash, stream, "text/plain");
+        IReadOnlyList<string> chunkHashes = await UploadContentChunksAsync(client, bytes, contentType);
         return await client.Files.CreateFromChunksAsync(new CreateFileFromChunksRequestDto
         {
             NodeId = parentNodeId,
-            ChunkHashes = [hash],
+            ChunkHashes = chunkHashes.ToList(),
             Name = fileName,
-            ContentType = "text/plain",
+            ContentType = contentType,
             Hash = hash,
             Validate = true,
         });
@@ -604,6 +683,52 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         File.WriteAllText(fullPath, content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         File.SetLastWriteTimeUtc(fullPath, new DateTime(2026, 6, 3, 12, 0, 0, DateTimeKind.Utc));
+    }
+
+    private static void WriteLocalFile(string localRoot, string relativePath, byte[] content)
+    {
+        string fullPath = Path.Combine(localRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        File.WriteAllBytes(fullPath, content);
+        File.SetLastWriteTimeUtc(fullPath, new DateTime(2026, 6, 3, 12, 0, 0, DateTimeKind.Utc));
+    }
+
+    private static async Task<IReadOnlyList<string>> UploadContentChunksAsync(
+        CottonCloudClient client,
+        byte[] content,
+        string contentType)
+    {
+        var chunkHashes = new List<string>();
+        for (int offset = 0; offset < content.Length; offset += SyncTestChunkSizeBytes)
+        {
+            int count = Math.Min(SyncTestChunkSizeBytes, content.Length - offset);
+            byte[] chunk = content.AsSpan(offset, count).ToArray();
+            string chunkHash = Hasher.ToHexStringHash(Hasher.HashData(chunk));
+            await using var stream = new MemoryStream(chunk);
+            await client.Chunks.UploadRawAsync(chunkHash, stream, contentType);
+            chunkHashes.Add(chunkHash);
+        }
+
+        if (chunkHashes.Count == 0)
+        {
+            string emptyHash = Hasher.ToHexStringHash(Hasher.HashData(Array.Empty<byte>()));
+            await using var stream = new MemoryStream();
+            await client.Chunks.UploadRawAsync(emptyHash, stream, contentType);
+            chunkHashes.Add(emptyHash);
+        }
+
+        return chunkHashes;
+    }
+
+    private static byte[] CreateDeterministicBytes(int length)
+    {
+        var bytes = new byte[length];
+        for (int index = 0; index < bytes.Length; index++)
+        {
+            bytes[index] = (byte)((index * 31 + index / 7) % 251);
+        }
+
+        return bytes;
     }
 
     private Dictionary<string, string?> CreateServerOverrides()
