@@ -5,6 +5,8 @@ namespace Cotton.Sync.Desktop.Platform;
 
 internal sealed class UnsupportedAutostartService : IAutostartService
 {
+    public bool IsSupported => false;
+
     public Task<bool> IsEnabledAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();

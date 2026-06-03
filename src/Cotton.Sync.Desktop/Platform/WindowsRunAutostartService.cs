@@ -19,6 +19,8 @@ internal sealed class WindowsRunAutostartService : IAutostartService
         _launchCommand = launchCommand ?? throw new ArgumentNullException(nameof(launchCommand));
     }
 
+    public bool IsSupported => true;
+
     public Task<bool> IsEnabledAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();

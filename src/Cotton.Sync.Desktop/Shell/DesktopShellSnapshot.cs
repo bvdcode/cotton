@@ -8,5 +8,7 @@ internal sealed record DesktopShellSnapshot(
     string? AccountName,
     string? RememberedUsername,
     bool StartWithOperatingSystem,
+    bool IsAutostartSupported,
+    bool IsTrayLifecycleSupported,
     bool IsSignedIn,
     IReadOnlyList<DesktopSyncPairSnapshot> SyncPairs);

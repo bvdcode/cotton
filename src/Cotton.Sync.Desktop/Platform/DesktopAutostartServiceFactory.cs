@@ -7,14 +7,20 @@ internal static class DesktopAutostartServiceFactory
 {
     public static IAutostartService CreateDefault()
     {
+        if (!DesktopPlatformCapabilities.IsAutostartSupported)
+        {
+            return new UnsupportedAutostartService();
+        }
+
         if (OperatingSystem.IsLinux())
         {
-            return XdgAutostartService.CreateDefault();
+            return XdgAutostartService.CreateDefault(DesktopPlatformCapabilities.IsTrayLifecycleSupported);
         }
 
         if (OperatingSystem.IsWindows())
         {
-            return new WindowsRunAutostartService(AutostartLaunchCommand.CreateDefault());
+            return new WindowsRunAutostartService(
+                AutostartLaunchCommand.CreateDefault(DesktopPlatformCapabilities.IsTrayLifecycleSupported));
         }
 
         return new UnsupportedAutostartService();

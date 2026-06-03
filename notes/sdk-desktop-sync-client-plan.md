@@ -309,8 +309,9 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Required commands: show app, open folder, open web, sync now, pause/resume, settings, quit.
 - [ ] Add Windows autostart adapter.
   Acceptable options: installer-managed startup, registry Run entry, startup shortcut, or scheduled task.
-- [ ] Add Linux autostart adapter.
+- [x] Add Linux autostart adapter.
   Target: XDG autostart `.desktop`.
+  Verification 2026-06-03: commit `Clarify desktop lifecycle platform support`; Linux uses an XDG autostart `.desktop` adapter, and the factory no longer adds `--start-minimized` on Linux while tray lifecycle is unsupported. `Cotton.Sync.Desktop.Tests` passed 15/15 including the Linux factory regression test, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [ ] Add notification adapter.
   Required notifications: initial sync complete, conflict created, action-required error.
 - [ ] Add tests for single-instance lock where practical.

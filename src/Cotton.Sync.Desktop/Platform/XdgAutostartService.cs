@@ -25,7 +25,7 @@ internal sealed class XdgAutostartService : IAutostartService
         _iconPath = NormalizeOptional(iconPath);
     }
 
-    public static XdgAutostartService CreateDefault()
+    public static XdgAutostartService CreateDefault(bool startMinimized)
     {
         string configHome = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME") ?? string.Empty;
         if (string.IsNullOrWhiteSpace(configHome))
@@ -37,9 +37,11 @@ internal sealed class XdgAutostartService : IAutostartService
 
         return new XdgAutostartService(
             Path.Combine(configHome, "autostart"),
-            AutostartLaunchCommand.CreateDefault(),
+            AutostartLaunchCommand.CreateDefault(startMinimized),
             TryResolveIconPath());
     }
+
+    public bool IsSupported => true;
 
     public async Task<bool> IsEnabledAsync(CancellationToken cancellationToken = default)
     {

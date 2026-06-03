@@ -70,6 +70,8 @@ internal sealed class DesktopShellController : IDesktopShellController
             session?.Email ?? session?.Username,
             _startupOptions.Username ?? preferences.RememberedUsername,
             startWithOperatingSystem,
+            _autostartService.IsSupported,
+            DesktopPlatformCapabilities.IsTrayLifecycleSupported,
             session is not null,
             syncPairs.Select(ToSnapshot).ToList());
     }
@@ -233,11 +235,16 @@ internal sealed class DesktopShellController : IDesktopShellController
 
     public async Task SetStartWithOperatingSystemAsync(bool enabled, CancellationToken cancellationToken = default)
     {
+        if (enabled && !_autostartService.IsSupported)
+        {
+            throw new NotSupportedException("Autostart is not supported on this platform yet.");
+        }
+
         await _preferencesStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
         await _autostartService.SetEnabledAsync(enabled, cancellationToken).ConfigureAwait(false);
         AppPreferences preferences = await _preferencesStore.GetAsync(cancellationToken).ConfigureAwait(false);
         preferences.StartWithOperatingSystem = enabled;
-        preferences.StartMinimizedToTray = enabled;
+        preferences.StartMinimizedToTray = enabled && DesktopPlatformCapabilities.IsTrayLifecycleSupported;
         await _preferencesStore.SaveAsync(preferences, cancellationToken).ConfigureAwait(false);
     }
 
@@ -275,6 +282,11 @@ internal sealed class DesktopShellController : IDesktopShellController
                 bool isEnabled = await _autostartService.IsEnabledAsync(cancellationToken).ConfigureAwait(false);
                 return isEnabled ? "Enabled" : "Disabled";
             }).ConfigureAwait(false);
+
+        items.Add(new DesktopSelfTestItemSnapshot(
+            "Tray lifecycle",
+            true,
+            DesktopPlatformCapabilities.IsTrayLifecycleSupported ? "Supported" : "Not supported on this platform"));
 
         Uri? serverUrl = _startupOptions.ServerUrl ?? preferences?.RememberedServerUrl;
         if (serverUrl is null)

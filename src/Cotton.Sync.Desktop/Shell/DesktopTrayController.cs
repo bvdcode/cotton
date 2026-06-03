@@ -4,6 +4,7 @@
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform;
+using Cotton.Sync.Desktop.Platform;
 using Cotton.Sync.Desktop.ViewModels;
 
 namespace Cotton.Sync.Desktop.Shell;
@@ -24,7 +25,7 @@ internal sealed class DesktopTrayController : IDisposable
         _trayIcon = CreateTrayIcon();
     }
 
-    public static bool IsSupportedPlatform => OperatingSystem.IsWindows();
+    public static bool IsSupportedPlatform => DesktopPlatformCapabilities.IsTrayLifecycleSupported;
 
     public void Dispose()
     {

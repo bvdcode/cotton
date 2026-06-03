@@ -71,4 +71,36 @@ public sealed class XdgAutostartServiceTests
             Assert.That(isEnabled, Is.False);
         });
     }
+
+    [Test]
+    public async Task CreateDefault_OnLinux_DoesNotStartMinimizedWhenTrayLifecycleIsUnsupported()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            Assert.Pass("XDG autostart is only used on Linux.");
+        }
+
+        string? previousConfigHome = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", _tempDirectory);
+        try
+        {
+            IAutostartService service = DesktopAutostartServiceFactory.CreateDefault();
+
+            await service.SetEnabledAsync(true);
+
+            string desktopFilePath = Path.Combine(_tempDirectory, "autostart", "cotton-sync.desktop");
+            string content = await File.ReadAllTextAsync(desktopFilePath);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(DesktopPlatformCapabilities.IsTrayLifecycleSupported, Is.False);
+                Assert.That(content, Does.Contain("Exec="));
+                Assert.That(content, Does.Not.Contain("--start-minimized"));
+            });
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previousConfigHome);
+        }
+    }
 }

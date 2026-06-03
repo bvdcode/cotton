@@ -34,6 +34,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     private bool _isServerVerified;
     private bool _isAddSyncPairWizardVisible;
     private bool _isLoadingSnapshot;
+    private bool _isStartWithOperatingSystemSupported = true;
+    private bool _isTrayLifecycleSupported;
     private string _serverUrl = string.Empty;
     private string _serverProbeStatus = string.Empty;
     private bool _startWithOperatingSystem;
@@ -152,11 +154,28 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         get => _startWithOperatingSystem;
         set
         {
+            if (value && !IsStartWithOperatingSystemSupported)
+            {
+                return;
+            }
+
             if (SetProperty(ref _startWithOperatingSystem, value) && !_isLoadingSnapshot)
             {
                 _ = ApplyStartWithOperatingSystemAsync(value);
             }
         }
+    }
+
+    public bool IsStartWithOperatingSystemSupported
+    {
+        get => _isStartWithOperatingSystemSupported;
+        private set => SetProperty(ref _isStartWithOperatingSystemSupported, value);
+    }
+
+    public bool IsTrayLifecycleSupported
+    {
+        get => _isTrayLifecycleSupported;
+        private set => SetProperty(ref _isTrayLifecycleSupported, value);
     }
 
     public bool IsAddSyncPairWizardVisible
@@ -349,6 +368,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             DesktopShellSnapshot snapshot = await _controller.LoadAsync().ConfigureAwait(true);
             ServerUrl = snapshot.ServerUrl?.AbsoluteUri ?? string.Empty;
             Username = snapshot.RememberedUsername ?? string.Empty;
+            IsStartWithOperatingSystemSupported = snapshot.IsAutostartSupported;
+            IsTrayLifecycleSupported = snapshot.IsTrayLifecycleSupported;
             StartWithOperatingSystem = snapshot.StartWithOperatingSystem;
             SyncPairs.Clear();
             foreach (DesktopSyncPairSnapshot syncPair in snapshot.SyncPairs)

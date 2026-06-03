@@ -153,6 +153,7 @@
                 HorizontalAlignment="Stretch"
                 Command="{Binding SignInCommand}" />
         <CheckBox Content="Start with this computer"
+                  IsEnabled="{Binding IsStartWithOperatingSystemSupported}"
                   IsChecked="{Binding StartWithOperatingSystem}" />
       </StackPanel>
     </Grid>
@@ -332,6 +333,7 @@
               ColumnDefinitions="*,Auto,Auto,Auto"
               ColumnSpacing="6">
           <CheckBox Content="Start with computer"
+                    IsEnabled="{Binding IsStartWithOperatingSystemSupported}"
                     IsChecked="{Binding StartWithOperatingSystem}"
                     VerticalAlignment="Center" />
           <Button Grid.Column="1"

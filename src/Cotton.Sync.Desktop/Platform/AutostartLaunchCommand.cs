@@ -23,22 +23,23 @@ internal sealed class AutostartLaunchCommand
 
     public IReadOnlyList<string> Arguments { get; }
 
-    public static AutostartLaunchCommand CreateDefault()
+    public static AutostartLaunchCommand CreateDefault(bool startMinimized)
     {
         string[] commandLineArguments = Environment.GetCommandLineArgs();
         string? processPath = Environment.ProcessPath;
+        string[] startupArguments = startMinimized ? [StartMinimizedArgument] : [];
         if (IsDotnetHost(processPath) && IsManagedAssembly(commandLineArguments.FirstOrDefault()))
         {
             return new AutostartLaunchCommand(
                 processPath!,
-                [commandLineArguments[0], StartMinimizedArgument]);
+                [commandLineArguments[0], .. startupArguments]);
         }
 
         string executablePath = processPath
             ?? Process.GetCurrentProcess().MainModule?.FileName
             ?? commandLineArguments.FirstOrDefault()
             ?? AppContext.BaseDirectory;
-        return new AutostartLaunchCommand(executablePath, [StartMinimizedArgument]);
+        return new AutostartLaunchCommand(executablePath, startupArguments);
     }
 
     public override string ToString()

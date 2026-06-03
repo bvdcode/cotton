@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Cotton.Sync.Desktop.Platform;
 using Cotton.Sync.Desktop.Shell;
 using Cotton.Sync.Desktop.Startup;
 
@@ -30,7 +31,7 @@ public sealed partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            bool useTrayLifecycle = DesktopTrayController.IsSupportedPlatform;
+            bool useTrayLifecycle = DesktopPlatformCapabilities.IsTrayLifecycleSupported;
             if (useTrayLifecycle)
             {
                 desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
