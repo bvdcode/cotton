@@ -68,7 +68,7 @@ internal sealed class DesktopTrayController : IDisposable
                     CreateMenuItem("Sync now", () => Execute(commandSource => commandSource.SyncNowCommand)),
                     CreateMenuItem("Pause", () => Execute(commandSource => commandSource.PauseCommand)),
                     CreateMenuItem("Resume", () => Execute(commandSource => commandSource.ResumeCommand)),
-                    CreateMenuItem("Settings", ShowWindow),
+                    CreateMenuItem("Settings", ShowSettings),
                     new NativeMenuItemSeparator(),
                     CreateMenuItem("Quit", Quit),
                 },
@@ -101,5 +101,11 @@ internal sealed class DesktopTrayController : IDisposable
     private void ShowWindow()
     {
         _window.ShowShell();
+    }
+
+    private void ShowSettings()
+    {
+        ShowWindow();
+        Execute(commandSource => commandSource.ShowSettingsCommand);
     }
 }

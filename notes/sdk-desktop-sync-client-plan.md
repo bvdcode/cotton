@@ -314,7 +314,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Required states: idle, syncing, paused, offline, error.
 - [ ] Add tray menu.
   Required commands: show app, open folder, open web, sync now, pause/resume, settings, quit.
-  Partial 2026-06-03: commit `Expand desktop tray menu commands`; Windows tray menu now wires show app, open selected local folder, open Cotton Cloud in browser, sync now, pause, resume, settings/show window, and quit. Keep unchecked until settings opens the real settings screen and menu behavior is manually verified on Windows.
+  Partial 2026-06-03: commit `Expand desktop tray menu commands`; Windows tray menu now wires show app, open selected local folder, open Cotton Cloud in browser, sync now, pause, resume, settings overlay, and quit. Keep unchecked until menu behavior is manually verified on Windows.
 - [ ] Add Windows autostart adapter.
   Acceptable options: installer-managed startup, registry Run entry, startup shortcut, or scheduled task.
 - [x] Add Linux autostart adapter.
