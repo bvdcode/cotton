@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using Cotton.Contracts.Auth;
@@ -666,6 +667,69 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task SyncPairRunner_ReportsQuotaExceededThroughSdkAndServer()
+    {
+        CottonCloudClient client = CreateClient();
+        TokenPairDto tokens = await LoginAsync(client);
+        Assert.That(_httpClient, Is.Not.Null);
+        _httpClient!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
+
+        try
+        {
+            using HttpResponseMessage quotaResponse = await _httpClient.PatchAsJsonAsync(
+                "/api/v1/server/settings/default-user-storage-quota-bytes",
+                5L);
+            quotaResponse.EnsureSuccessStatusCode();
+            NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-quota-exceeded");
+            string localRoot = Path.Combine(_tempDirectory, "client-quota-exceeded");
+            WriteLocalFile(localRoot, "too-large.txt", "abcdef");
+            SqliteSyncStateStore stateStore = CreateStateStore("client-quota-exceeded-state.sqlite");
+            SyncEngine engine = CreateEngine(client, stateStore);
+            var syncPair = new SyncPairSettings
+            {
+                Id = Guid.NewGuid(),
+                DisplayName = "Quota exceeded",
+                LocalRootPath = localRoot,
+                RemoteRootNodeId = remoteRoot.Id,
+                RemoteDisplayPath = "/Quota exceeded",
+                IsEnabled = true,
+                Mode = SyncPairMode.FullMirror,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow,
+            };
+            var runner = new SyncPairRunner(
+                syncPair,
+                new SyncEnginePairWork(engine),
+                CreateNoDelayRetryOptions(maxAttempts: 1));
+
+            CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(() => runner.SyncNowAsync());
+
+            NodeContentDto rootContent = await client.Nodes.GetChildrenAsync(remoteRoot.Id);
+            IReadOnlyList<SyncStateEntry> baselines = await stateStore.LoadPairAsync(syncPair.Id.ToString("D"));
+            const string expected = "Remote storage quota exceeded. Free space in Cotton Cloud or choose a smaller sync folder.";
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exception, Is.Not.Null);
+                Assert.That(exception!.StatusCode, Is.EqualTo((System.Net.HttpStatusCode)507));
+                Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Error));
+                Assert.That(runner.Status.LastError, Is.EqualTo(expected));
+                Assert.That(runner.Status.CurrentOperation, Is.EqualTo("Action required: " + expected));
+                Assert.That(rootContent.Files, Is.Empty);
+                Assert.That(baselines, Is.Empty);
+            });
+        }
+        finally
+        {
+            using HttpResponseMessage resetQuotaResponse = await _httpClient.PatchAsJsonAsync(
+                "/api/v1/server/settings/default-user-storage-quota-bytes",
+                0L);
+            resetQuotaResponse.EnsureSuccessStatusCode();
+            _httpClient.DefaultRequestHeaders.Authorization = null;
+        }
+    }
+
+    [Test]
     public async Task RunOnceAsync_MovesLocalFileToQuarantineWhenRemoteFileIsDeleted()
     {
         CottonCloudClient client = CreateClient();
@@ -821,7 +885,7 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
             });
     }
 
-    private static Task LoginAsync(CottonCloudClient client)
+    private static Task<TokenPairDto> LoginAsync(CottonCloudClient client)
     {
         return client.Auth.LoginAsync(new LoginRequestDto
         {

@@ -5,7 +5,6 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
-using EasyExtensions.AspNetCore.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -176,8 +175,7 @@ public class UserStorageQuotaService(
         long usedBytes = await GetUsedBytesAsync(userId, ct);
         if (usedBytes > quotaBytes.Value - safeAdditionalBytes)
         {
-            throw new BadRequestException<User>(
-                $"Storage quota exceeded. Current usage is {usedBytes} bytes, quota is {quotaBytes.Value} bytes.");
+            throw new StorageQuotaExceededException(usedBytes, quotaBytes.Value, safeAdditionalBytes);
         }
 
         if (reserveInRequestCache)
