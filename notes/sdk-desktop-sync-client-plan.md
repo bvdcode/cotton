@@ -422,7 +422,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 
 - [x] One client: local create uploads to remote.
   Verification 2026-06-03: added `SyncClientEndToEndTests.RunOnceAsync_UploadsLocalFileThroughSdkToServer`, which logs in through `CottonCloudClient`, creates a remote sync root, runs `SyncEngine` with `LocalFileScanner`, `RemoteTreeCrawler`, `SdkRemoteFileSynchronizer`, and `SqliteSyncStateStore` against the integration-test server, verifies the uploaded remote file content by downloading it through the SDK, and verifies the local baseline. Focused server integration test passed 1/1, and full solution Release build passed with the known NU1903 warning.
-- [ ] One client: local update uploads to remote.
+- [x] One client: local update uploads to remote.
+  Verification 2026-06-03: extended `SyncClientEndToEndTests` with `RunOnceAsync_UploadsLocalUpdateThroughSdkToServer`, which performs an initial upload, edits the local file, reruns `SyncEngine` with the same SQLite baseline, verifies the server file content changed through SDK download, and verifies the updated baseline hashes. Focused server-backed sync E2E tests passed 2/2, and full solution Release build passed with the known NU1903 warning.
 - [ ] One client: local delete moves remote item to trash or configured delete behavior.
 - [ ] One client: remote create downloads locally.
 - [ ] One client: remote update downloads locally.

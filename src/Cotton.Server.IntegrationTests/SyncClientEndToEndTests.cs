@@ -64,20 +64,12 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
     public async Task RunOnceAsync_UploadsLocalFileThroughSdkToServer()
     {
         CottonCloudClient client = CreateClient();
-        await client.Auth.LoginAsync(new LoginRequestDto
-        {
-            Username = "testuser",
-            Password = "testpassword",
-        });
+        await LoginAsync(client);
         NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e");
         string localRoot = Path.Combine(_tempDirectory, "client-a");
         WriteLocalFile(localRoot, "Docs/hello.txt", "hello from sync core");
-        var stateStore = new SqliteSyncStateStore(Path.Combine(_tempDirectory, "client-a-state.sqlite"));
-        var engine = new SyncEngine(
-            new LocalFileScanner(),
-            new RemoteTreeCrawler(client.Nodes),
-            new SdkRemoteFileSynchronizer(client, new SdkRemoteFileSynchronizerOptions { ChunkSizeBytes = 1024 }),
-            stateStore);
+        SqliteSyncStateStore stateStore = CreateStateStore("client-a-state.sqlite");
+        SyncEngine engine = CreateEngine(client, stateStore);
 
         SyncRunResult result = await engine.RunOnceAsync(new SyncPair
         {
@@ -87,17 +79,54 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         });
 
         NodeFileManifestDto uploaded = await FindRemoteFileAsync(client, remoteRoot.Id, "Docs", "hello.txt");
-        await using var downloaded = new MemoryStream();
-        await client.Files.DownloadContentAsync(uploaded.Id, downloaded);
+        string downloaded = await DownloadTextAsync(client, uploaded.Id);
         SyncStateEntry? baseline = await stateStore.GetAsync("client-a", "Docs/hello.txt");
 
         Assert.Multiple(() =>
         {
             Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
-            Assert.That(Encoding.UTF8.GetString(downloaded.ToArray()), Is.EqualTo("hello from sync core"));
+            Assert.That(downloaded, Is.EqualTo("hello from sync core"));
             Assert.That(uploaded.ContentHash, Is.EqualTo(baseline?.RemoteContentHash));
             Assert.That(baseline?.LocalContentHash, Is.EqualTo(uploaded.ContentHash));
             Assert.That(baseline?.RemoteFileId, Is.EqualTo(uploaded.Id));
+        });
+    }
+
+    [Test]
+    public async Task RunOnceAsync_UploadsLocalUpdateThroughSdkToServer()
+    {
+        CottonCloudClient client = CreateClient();
+        await LoginAsync(client);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-update");
+        string localRoot = Path.Combine(_tempDirectory, "client-update");
+        const string relativePath = "Docs/update.txt";
+        WriteLocalFile(localRoot, relativePath, "first version");
+        SqliteSyncStateStore stateStore = CreateStateStore("client-update-state.sqlite");
+        SyncEngine engine = CreateEngine(client, stateStore);
+        var syncPair = new SyncPair
+        {
+            SyncPairId = "client-update",
+            LocalRootPath = localRoot,
+            RemoteRootNodeId = remoteRoot.Id,
+        };
+        await engine.RunOnceAsync(syncPair);
+        NodeFileManifestDto initial = await FindRemoteFileAsync(client, remoteRoot.Id, "Docs", "update.txt");
+
+        WriteLocalFile(localRoot, relativePath, "second version");
+        SyncRunResult result = await engine.RunOnceAsync(syncPair);
+
+        NodeFileManifestDto updated = await FindRemoteFileAsync(client, remoteRoot.Id, "Docs", "update.txt");
+        string downloaded = await DownloadTextAsync(client, updated.Id);
+        SyncStateEntry? baseline = await stateStore.GetAsync("client-update", relativePath);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
+            Assert.That(downloaded, Is.EqualTo("second version"));
+            Assert.That(updated.Id, Is.EqualTo(initial.Id));
+            Assert.That(updated.ContentHash, Is.Not.EqualTo(initial.ContentHash));
+            Assert.That(baseline?.LocalContentHash, Is.EqualTo(updated.ContentHash));
+            Assert.That(baseline?.RemoteContentHash, Is.EqualTo(updated.ContentHash));
         });
     }
 
@@ -115,6 +144,36 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
                 UserAgent = "CottonSyncDesktop/IntegrationTest",
                 DeviceName = "Cotton Sync Desktop integration test",
             });
+    }
+
+    private static Task LoginAsync(CottonCloudClient client)
+    {
+        return client.Auth.LoginAsync(new LoginRequestDto
+        {
+            Username = "testuser",
+            Password = "testpassword",
+        });
+    }
+
+    private static SyncEngine CreateEngine(CottonCloudClient client, SqliteSyncStateStore stateStore)
+    {
+        return new SyncEngine(
+            new LocalFileScanner(),
+            new RemoteTreeCrawler(client.Nodes),
+            new SdkRemoteFileSynchronizer(client, new SdkRemoteFileSynchronizerOptions { ChunkSizeBytes = 1024 }),
+            stateStore);
+    }
+
+    private SqliteSyncStateStore CreateStateStore(string fileName)
+    {
+        return new SqliteSyncStateStore(Path.Combine(_tempDirectory, fileName));
+    }
+
+    private static async Task<string> DownloadTextAsync(CottonCloudClient client, Guid nodeFileId)
+    {
+        await using var downloaded = new MemoryStream();
+        await client.Files.DownloadContentAsync(nodeFileId, downloaded);
+        return Encoding.UTF8.GetString(downloaded.ToArray());
     }
 
     private static async Task<NodeFileManifestDto> FindRemoteFileAsync(
