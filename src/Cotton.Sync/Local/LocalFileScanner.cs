@@ -37,7 +37,7 @@ public sealed class LocalFileScanner : ILocalFileScanner
         {
             cancellationToken.ThrowIfCancellationRequested();
             string relativePath = ToRelativePath(fullRoot, filePath);
-            if (ShouldIgnore(relativePath))
+            if (LocalFileIgnoreRules.ShouldIgnore(relativePath))
             {
                 continue;
             }
@@ -54,22 +54,6 @@ public sealed class LocalFileScanner : ILocalFileScanner
 
         snapshots.Sort((left, right) => PathComparer.Compare(left.RelativePath, right.RelativePath));
         return snapshots;
-    }
-
-    private static bool ShouldIgnore(string relativePath)
-    {
-        string[] segments = relativePath.Split('/');
-        if (segments.Any(x => string.Equals(x, ".cotton-sync", StringComparison.OrdinalIgnoreCase)))
-        {
-            return true;
-        }
-
-        string fileName = segments[^1];
-        return fileName.StartsWith("~$", StringComparison.Ordinal)
-            || fileName.EndsWith("~", StringComparison.Ordinal)
-            || fileName.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase)
-            || fileName.EndsWith(".partial", StringComparison.OrdinalIgnoreCase)
-            || fileName.EndsWith(".crdownload", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string ToRelativePath(string rootPath, string filePath)

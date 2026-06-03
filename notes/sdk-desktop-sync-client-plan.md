@@ -447,6 +447,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Unicode names sync consistently.
   Partial 2026-06-03: `SyncEngine` now has focused coverage for Unicode relative paths in both local upload and remote download, preserving the display relative path and baseline state. Focused `SyncEngineTests` passed 33/33, full `Cotton.Sync.Tests` passed 91/91, and full solution Release build passed with the known NU1903 warning. Keep unchecked until a server-backed desktop end-to-end Unicode path scenario is run.
 - [ ] Temporary files are ignored.
+  Partial 2026-06-03: `LocalFileScanner` now delegates to `LocalFileIgnoreRules`, covering Cotton metadata, Office locks, Emacs locks, Vim swap files, browser partial downloads, common temp suffixes, and OS metadata files before they enter the sync model. Focused `LocalFileScannerTests` passed 6/6, full `Cotton.Sync.Tests` passed 91/91, and full solution Release build passed with the known NU1903 warning. Keep unchecked until an end-to-end desktop sync smoke confirms ignored files are not uploaded.
 - [ ] Locked files retry and eventually sync after unlock.
 
 ## Phase 13 - Performance And Soak

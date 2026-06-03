@@ -50,10 +50,21 @@ public sealed class LocalFileScannerTests
     {
         WriteFile("keep.txt", "keep");
         WriteFile("upload.tmp", "tmp");
+        WriteFile("upload.temp", "temp");
         WriteFile("download.partial", "partial");
+        WriteFile("download.part", "part");
         WriteFile("chrome.crdownload", "partial");
+        WriteFile("browser.download", "download");
+        WriteFile(".notes.swp", "vim");
+        WriteFile(".notes.swo", "vim");
+        WriteFile(".notes.swn", "vim");
         WriteFile("~$office.docx", "office");
+        WriteFile(".#emacs-lock", "emacs");
         WriteFile("backup~", "backup");
+        WriteFile(".DS_Store", "mac");
+        WriteFile("Thumbs.db", "windows");
+        WriteFile("desktop.ini", "windows");
+        WriteFile(Path.Combine("Nested", "DESKTOP.INI"), "windows");
         WriteFile(Path.Combine(".cotton-sync", "state.tmp"), "state");
         var scanner = new LocalFileScanner();
 
