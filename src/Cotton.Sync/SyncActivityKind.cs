@@ -32,4 +32,9 @@ public enum SyncActivityKind
     /// Divergent local and remote changes were preserved without overwriting either side silently.
     /// </summary>
     Conflict = 5,
+
+    /// <summary>
+    /// A requested action was deliberately skipped by a safety guard.
+    /// </summary>
+    Skipped = 6,
 }

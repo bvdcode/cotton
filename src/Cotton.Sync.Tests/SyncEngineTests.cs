@@ -153,6 +153,38 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_BlocksRemoteDeletesOverRunLimit()
+    {
+        NodeFileManifestDto firstRemote = RemoteFile("a.txt", HashText("old-a"));
+        NodeFileManifestDto secondRemote = RemoteFile("b.txt", HashText("old-b"));
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        SyncEngine engine = CreateEngine(
+            new FakeLocalFileScanner(),
+            RemoteTree(firstRemote, secondRemote),
+            remoteFiles,
+            out SqliteSyncStateStore stateStore);
+        await InsertBaselineAsync(stateStore, "a.txt", firstRemote.ContentHash, firstRemote);
+        await InsertBaselineAsync(stateStore, "b.txt", secondRemote.ContentHash, secondRemote);
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair(), new SyncRunOptions { MaximumRemoteDeletesPerRun = 1 });
+
+        SyncStateEntry? firstEntry = await stateStore.GetAsync("pair-a", "a.txt");
+        SyncStateEntry? secondEntry = await stateStore.GetAsync("pair-a", "b.txt");
+        Assert.Multiple(() =>
+        {
+            Assert.That(remoteFiles.Deletes, Is.EqualTo(new[] { (firstRemote.Id, false) }));
+            Assert.That(result.Activities.Select(x => x.Kind), Is.EqualTo(new[]
+            {
+                SyncActivityKind.DeletedRemote,
+                SyncActivityKind.Skipped,
+            }));
+            Assert.That(result.Activities[1].Details, Does.Contain("mass-delete guard"));
+            Assert.That(firstEntry, Is.Null);
+            Assert.That(secondEntry, Is.Not.Null);
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_DownloadsRemoteFileInsteadOfDeletingWhenBaselineIsMissing()
     {
         byte[] content = Encoding.UTF8.GetBytes("no-baseline-remote");
@@ -189,6 +221,42 @@ public sealed class SyncEngineTests
             Assert.That(File.Exists(Path.Combine(_root, relativePath)), Is.False);
             Assert.That(result.Activities.Select(x => x.Kind), Is.EqualTo(new[] { SyncActivityKind.DeletedLocal }));
             Assert.That(entry, Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task RunOnceAsync_BlocksLocalDeletesOverRunLimit()
+    {
+        WriteFile("a.txt", "old-a");
+        WriteFile("b.txt", "old-b");
+        LocalFileSnapshot firstLocal = LocalFile("a.txt", "old-a");
+        LocalFileSnapshot secondLocal = LocalFile("b.txt", "old-b");
+        NodeFileManifestDto firstRemote = RemoteFile("a.txt", firstLocal.ContentHash);
+        NodeFileManifestDto secondRemote = RemoteFile("b.txt", secondLocal.ContentHash);
+        SyncEngine engine = CreateEngine(
+            new FakeLocalFileScanner(firstLocal, secondLocal),
+            EmptyRemoteTree(),
+            new FakeRemoteFileSynchronizer(),
+            out SqliteSyncStateStore stateStore);
+        await InsertBaselineAsync(stateStore, "a.txt", firstLocal.ContentHash, firstRemote);
+        await InsertBaselineAsync(stateStore, "b.txt", secondLocal.ContentHash, secondRemote);
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair(), new SyncRunOptions { MaximumLocalDeletesPerRun = 1 });
+
+        SyncStateEntry? firstEntry = await stateStore.GetAsync("pair-a", "a.txt");
+        SyncStateEntry? secondEntry = await stateStore.GetAsync("pair-a", "b.txt");
+        Assert.Multiple(() =>
+        {
+            Assert.That(File.Exists(Path.Combine(_root, "a.txt")), Is.False);
+            Assert.That(File.Exists(Path.Combine(_root, "b.txt")), Is.True);
+            Assert.That(result.Activities.Select(x => x.Kind), Is.EqualTo(new[]
+            {
+                SyncActivityKind.DeletedLocal,
+                SyncActivityKind.Skipped,
+            }));
+            Assert.That(result.Activities[1].Details, Does.Contain("mass-delete guard"));
+            Assert.That(firstEntry, Is.Null);
+            Assert.That(secondEntry, Is.Not.Null);
         });
     }
 

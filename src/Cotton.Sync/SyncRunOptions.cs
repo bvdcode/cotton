@@ -8,10 +8,22 @@ namespace Cotton.Sync;
 /// </summary>
 public sealed class SyncRunOptions
 {
+    private const int DefaultMaximumDeletesPerRun = 100;
+
     /// <summary>
     /// Gets or sets a value indicating whether remote file deletes bypass trash.
     /// </summary>
     public bool DeleteRemotePermanently { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum number of local files that can be removed in one sync pass.
+    /// </summary>
+    public int MaximumLocalDeletesPerRun { get; set; } = DefaultMaximumDeletesPerRun;
+
+    /// <summary>
+    /// Gets or sets the maximum number of remote files that can be removed in one sync pass.
+    /// </summary>
+    public int MaximumRemoteDeletesPerRun { get; set; } = DefaultMaximumDeletesPerRun;
 
     /// <summary>
     /// Gets or sets the optional live activity reporter used by UI and CLI clients.
