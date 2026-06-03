@@ -449,6 +449,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Temporary files are ignored.
   Partial 2026-06-03: `LocalFileScanner` now delegates to `LocalFileIgnoreRules`, covering Cotton metadata, Office locks, Emacs locks, Vim swap files, browser partial downloads, common temp suffixes, and OS metadata files before they enter the sync model. Focused `LocalFileScannerTests` passed 6/6, full `Cotton.Sync.Tests` passed 91/91, and full solution Release build passed with the known NU1903 warning. Keep unchecked until an end-to-end desktop sync smoke confirms ignored files are not uploaded.
 - [ ] Locked files retry and eventually sync after unlock.
+  Partial 2026-06-03: `SyncPairRunner` now has a focused test that runs a real `LocalFileScanner` against a locked local file, retries the `LocalFileUnavailableException`, and completes successfully after the lock is released. Focused runner tests passed 15/15, full `Cotton.Sync.App.Tests` passed 91/91, and full solution Release build passed with the known NU1903 warning. Keep unchecked until a desktop end-to-end scenario confirms the user-visible retry flow.
 
 ## Phase 13 - Performance And Soak
 

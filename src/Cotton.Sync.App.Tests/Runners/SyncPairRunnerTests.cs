@@ -238,6 +238,39 @@ public sealed class SyncPairRunnerTests
     }
 
     [Test]
+    public async Task SyncNowAsync_RetriesLockedLocalFileAfterItBecomesReadable()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "cotton-sync-runner-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        string filePath = Path.Combine(root, "locked.txt");
+        File.WriteAllText(filePath, "locked");
+        FileStream? locked = new(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        var work = new ReleasingLockedFileSyncPairWork(() =>
+        {
+            locked?.Dispose();
+            locked = null;
+        });
+        SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true, root), work, NoDelayRetryOptions());
+
+        try
+        {
+            await runner.SyncNowAsync();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(work.RunCount, Is.EqualTo(2));
+                Assert.That(work.ScannedPaths, Is.EqualTo(new[] { "locked.txt" }));
+                Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Idle));
+            });
+        }
+        finally
+        {
+            locked?.Dispose();
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Test]
     public void SyncNowAsync_SetsOfflineAndRethrowsWhenTransientNetworkFailurePersists()
     {
         var work = new FakeSyncPairWork
@@ -300,13 +333,13 @@ public sealed class SyncPairRunnerTests
         };
     }
 
-    private static SyncPairSettings CreatePair(bool isEnabled)
+    private static SyncPairSettings CreatePair(bool isEnabled, string? localRootPath = null)
     {
         return new SyncPairSettings
         {
             Id = Guid.NewGuid(),
             DisplayName = "Documents",
-            LocalRootPath = "/home/user/Cotton",
+            LocalRootPath = localRootPath ?? "/home/user/Cotton",
             RemoteRootNodeId = Guid.NewGuid(),
             RemoteDisplayPath = "/Documents",
             IsEnabled = isEnabled,
@@ -351,6 +384,38 @@ public sealed class SyncPairRunnerTests
             }
 
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class ReleasingLockedFileSyncPairWork : ISyncPairWork
+    {
+        private readonly Action _releaseLock;
+        private readonly LocalFileScanner _scanner = new();
+
+        public ReleasingLockedFileSyncPairWork(Action releaseLock)
+        {
+            _releaseLock = releaseLock;
+        }
+
+        public int RunCount { get; private set; }
+
+        public IReadOnlyList<string> ScannedPaths { get; private set; } = [];
+
+        public async Task RunOnceAsync(SyncPairSettings syncPair, CancellationToken cancellationToken = default)
+        {
+            RunCount++;
+            try
+            {
+                IReadOnlyList<LocalFileSnapshot> files = await _scanner
+                    .ScanAsync(syncPair.LocalRootPath, cancellationToken)
+                    .ConfigureAwait(false);
+                ScannedPaths = files.Select(file => file.RelativePath).ToList();
+            }
+            catch (LocalFileUnavailableException) when (RunCount == 1)
+            {
+                _releaseLock();
+                throw;
+            }
         }
     }
 
