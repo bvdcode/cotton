@@ -117,6 +117,54 @@ public sealed class SyncChangesEndpointsTests : IntegrationTestBase
         });
     }
 
+    [Test]
+    public async Task Changes_RecordsUpdateMoveAndFolderMutationKindsInOrder()
+    {
+        string token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        NodeDto source = await CreateNodeAsync(root!.Id, "source-folder");
+        NodeDto destination = await CreateNodeAsync(root.Id, "destination-folder");
+        NodeFileManifestDto file = await CreateFileAsync(source.Id, "matrix.txt", "first");
+        NodeFileManifestDto updated = await UpdateFileContentAsync(file, "second");
+        NodeFileManifestDto moved = await MoveFileAsync(updated.Id, destination.Id);
+        NodeFileManifestDto renamedFile = await RenameFileAsync(moved.Id, "matrix-renamed.txt");
+        NodeDto renamedSource = await RenameNodeAsync(source.Id, "source-renamed");
+        NodeDto movedSource = await MoveNodeAsync(renamedSource.Id, destination.Id);
+        await DeleteFileAsync(renamedFile.Id);
+
+        SyncChangesResponseDto page = await GetChangesAsync(0, 20);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(page.HasMore, Is.False);
+            Assert.That(page.Changes.Select(x => x.Kind), Is.EqualTo(new[]
+            {
+                SyncChangeKindDto.FolderCreated,
+                SyncChangeKindDto.FolderCreated,
+                SyncChangeKindDto.FileCreated,
+                SyncChangeKindDto.FileContentUpdated,
+                SyncChangeKindDto.FileMoved,
+                SyncChangeKindDto.FileRenamed,
+                SyncChangeKindDto.FolderRenamed,
+                SyncChangeKindDto.FolderMoved,
+                SyncChangeKindDto.FileDeleted,
+            }));
+            Assert.That(page.Changes[3].ContentHash, Is.EqualTo(updated.ContentHash));
+            Assert.That(page.Changes[4].ParentNodeId, Is.EqualTo(destination.Id));
+            Assert.That(page.Changes[4].PreviousParentNodeId, Is.EqualTo(source.Id));
+            Assert.That(page.Changes[5].Name, Is.EqualTo("matrix-renamed.txt"));
+            Assert.That(page.Changes[6].Name, Is.EqualTo("source-renamed"));
+            Assert.That(page.Changes[7].ParentNodeId, Is.EqualTo(destination.Id));
+            Assert.That(page.Changes[7].PreviousParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(page.Changes[7].NodeId, Is.EqualTo(movedSource.Id));
+            Assert.That(page.Changes[8].PreviousParentNodeId, Is.EqualTo(destination.Id));
+        });
+    }
+
     private async Task<SyncChangesResponseDto> GetChangesAsync(long since, int limit)
     {
         var page = await _client!.GetFromJsonAsync<SyncChangesResponseDto>(
@@ -157,6 +205,48 @@ public sealed class SyncChangesEndpointsTests : IntegrationTestBase
             new Models.Requests.RenameFileRequest { Name = name });
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<NodeFileManifestDto>())!;
+    }
+
+    private async Task<NodeFileManifestDto> UpdateFileContentAsync(NodeFileManifestDto file, string body)
+    {
+        string hash = await UploadChunkAsync(body);
+        var response = await _client!.PatchAsJsonAsync($"/api/v1/files/{file.Id}/update-content", new CreateFileRequest
+        {
+            ChunkHashes = [hash],
+            Name = file.Name,
+            ContentType = file.ContentType,
+            Hash = hash,
+            NodeId = file.NodeId,
+        });
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<NodeFileManifestDto>())!;
+    }
+
+    private async Task<NodeFileManifestDto> MoveFileAsync(Guid nodeFileId, Guid parentId)
+    {
+        var response = await _client!.PatchAsJsonAsync(
+            $"/api/v1/files/{nodeFileId}/move",
+            new Models.Requests.MoveFileRequest { ParentId = parentId });
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<NodeFileManifestDto>())!;
+    }
+
+    private async Task<NodeDto> RenameNodeAsync(Guid nodeId, string name)
+    {
+        var response = await _client!.PatchAsJsonAsync(
+            $"/api/v1/layouts/nodes/{nodeId}/rename",
+            new Models.Requests.RenameNodeRequest { Name = name });
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<NodeDto>())!;
+    }
+
+    private async Task<NodeDto> MoveNodeAsync(Guid nodeId, Guid parentId)
+    {
+        var response = await _client!.PatchAsJsonAsync(
+            $"/api/v1/layouts/nodes/{nodeId}/move",
+            new Models.Requests.MoveNodeRequest { ParentId = parentId });
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<NodeDto>())!;
     }
 
     private async Task DeleteFileAsync(Guid nodeFileId)

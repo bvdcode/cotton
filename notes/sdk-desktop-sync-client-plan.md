@@ -119,7 +119,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Add retention behavior and expired-cursor response.
 - [x] Add SDK sync-change client.
   Verification: commit `Add durable sync change feed`; `ICottonSyncClient.GetChangesAsync` added to `ICottonCloudClient.Sync`.
-- [ ] Add server integration tests for ordered create/update/delete/move/rename changes.
+- [x] Add server integration tests for ordered create/update/delete/move/rename changes.
+  Verification: `dotnet test src/Cotton.Server.IntegrationTests/Cotton.Server.IntegrationTests.csproj --configuration Release --no-restore --filter FullyQualifiedName~SyncChangesEndpointsTests` passed 2/2; `Changes_RecordsUpdateMoveAndFolderMutationKindsInOrder` covers file create/update/move/rename/delete and folder create/rename/move ordering.
 - [ ] Add server integration test for missed SignalR recovery through changes API.
 - [x] Add SDK tests for changes request and response parsing.
   Verification: `dotnet test src/Cotton.Sdk.Tests/Cotton.Sdk.Tests.csproj --configuration Release --no-restore` passed 11/11 after commit `Add durable sync change feed`.
