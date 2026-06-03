@@ -189,7 +189,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Required checks: case-sensitive collisions with remote case-insensitive model assumptions, file permissions.
 - [ ] Add Unicode normalization policy.
 - [ ] Add tests for every local/remote/base create-update-delete combination.
-- [ ] Add tests for conflict naming uniqueness.
+- [x] Add tests for conflict naming uniqueness.
+  Verification: `CreateConflictRelativePath_UsesIndexedSuffixWhenTimestampNameExists` proves conflict copy names are indexed instead of overwriting an existing conflict file with the same timestamp; `AtomicLocalFileSyncWriterTests` passed 3/3, full `Cotton.Sync.Tests` passed 50/50, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [x] Add tests for mass delete guard.
   Verification: `RunOnceAsync_BlocksRemoteDeletesOverRunLimit` and `RunOnceAsync_BlocksLocalDeletesOverRunLimit` prove over-limit delete runs emit `Skipped` activities without partially deleting files or baseline state; `SyncEngineTests` passed 20/20 and full `Cotton.Sync.Tests` passed 47/47.
 - [x] Add tests for locked or unreadable files.

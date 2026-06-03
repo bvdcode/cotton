@@ -78,6 +78,25 @@ public sealed class AtomicLocalFileSyncWriterTests
         });
     }
 
+    [Test]
+    public void CreateConflictRelativePath_UsesIndexedSuffixWhenTimestampNameExists()
+    {
+        var writer = new AtomicLocalFileSyncWriter();
+        DateTime timestamp = new(2026, 6, 3, 12, 30, 0, DateTimeKind.Utc);
+        string firstConflictPath = writer.CreateConflictRelativePath(_root, "Docs/file.txt", timestamp);
+        WriteFile(firstConflictPath, "first conflict");
+
+        string secondConflictPath = writer.CreateConflictRelativePath(_root, "Docs/file.txt", timestamp);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstConflictPath, Is.EqualTo("Docs/file (Cotton conflict 20260603T123000Z).txt"));
+            Assert.That(secondConflictPath, Is.EqualTo("Docs/file (Cotton conflict 20260603T123000Z-2).txt"));
+            Assert.That(File.Exists(FullPath(firstConflictPath)), Is.True);
+            Assert.That(File.Exists(FullPath(secondConflictPath)), Is.False);
+        });
+    }
+
     private string FullPath(string relativePath)
     {
         return Path.Combine(_root, relativePath.Replace('/', Path.DirectorySeparatorChar));
