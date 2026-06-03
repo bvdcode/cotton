@@ -43,10 +43,6 @@ export const useMediaSessionSource = ({
       onPreviousTrack,
       onNextTrack,
     });
-
-    return () => {
-      mediaSessionCoordinator.removeSource(sourceId);
-    };
   }, [
     active,
     mediaElement,
@@ -56,6 +52,12 @@ export const useMediaSessionSource = ({
     sourceId,
     track,
   ]);
+
+  useEffect(() => {
+    return () => {
+      mediaSessionCoordinator.removeSource(sourceId);
+    };
+  }, [sourceId]);
 
   useEffect(() => {
     if (!active || !mediaElement) {
