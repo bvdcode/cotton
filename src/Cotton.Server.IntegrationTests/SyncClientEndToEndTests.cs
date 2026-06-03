@@ -12,6 +12,9 @@ using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Services;
 using Cotton.Sync;
+using Cotton.Sync.App.Runners;
+using Cotton.Sync.App.Status;
+using Cotton.Sync.App.SyncPairs;
 using Cotton.Sync.Local;
 using Cotton.Sync.Remote;
 using Cotton.Sync.State;
@@ -604,6 +607,65 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task SyncPairRunner_UploadsLockedFileAfterItBecomesReadableThroughSdkAndServer()
+    {
+        CottonCloudClient client = CreateClient();
+        await LoginAsync(client);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-locked-file-retry");
+        string localRoot = Path.Combine(_tempDirectory, "client-locked-file-retry");
+        WriteLocalFile(localRoot, "locked.txt", "locked content");
+        FileStream? locked = new(
+            Path.Combine(localRoot, "locked.txt"),
+            FileMode.Open,
+            FileAccess.ReadWrite,
+            FileShare.None);
+        SqliteSyncStateStore stateStore = CreateStateStore("client-locked-file-retry-state.sqlite");
+        SyncEngine engine = CreateEngine(client, stateStore);
+        var syncPair = new SyncPairSettings
+        {
+            Id = Guid.NewGuid(),
+            DisplayName = "Locked file retry",
+            LocalRootPath = localRoot,
+            RemoteRootNodeId = remoteRoot.Id,
+            RemoteDisplayPath = "/Locked file retry",
+            IsEnabled = true,
+            Mode = SyncPairMode.FullMirror,
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow,
+        };
+        var work = new ReleaseLockAfterFirstUnavailableSyncPairWork(
+            new SyncEnginePairWork(engine),
+            () =>
+            {
+                locked?.Dispose();
+                locked = null;
+            });
+        var runner = new SyncPairRunner(syncPair, work, CreateNoDelayRetryOptions());
+
+        try
+        {
+            await runner.SyncNowAsync();
+
+            NodeFileManifestDto uploaded = await FindRemoteFileAsync(client, remoteRoot.Id, "locked.txt");
+            string uploadedContent = await DownloadTextAsync(client, uploaded.Id);
+            SyncStateEntry? baseline = await stateStore.GetAsync(syncPair.Id.ToString("D"), "locked.txt");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(work.RunCount, Is.EqualTo(2));
+                Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Idle));
+                Assert.That(uploadedContent, Is.EqualTo("locked content"));
+                Assert.That(baseline?.RemoteFileId, Is.EqualTo(uploaded.Id));
+                Assert.That(baseline?.RemoteContentHash, Is.EqualTo(uploaded.ContentHash));
+            });
+        }
+        finally
+        {
+            locked?.Dispose();
+        }
+    }
+
+    [Test]
     public async Task RunOnceAsync_MovesLocalFileToQuarantineWhenRemoteFileIsDeleted()
     {
         CottonCloudClient client = CreateClient();
@@ -945,6 +1007,16 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         }
     }
 
+    private static SyncPairRunnerRetryOptions CreateNoDelayRetryOptions(int maxAttempts = 3)
+    {
+        return new SyncPairRunnerRetryOptions
+        {
+            MaxAttempts = maxAttempts,
+            InitialDelay = TimeSpan.Zero,
+            MaxDelay = TimeSpan.Zero,
+        };
+    }
+
     private Dictionary<string, string?> CreateServerOverrides()
     {
         var csb = new NpgsqlConnectionStringBuilder
@@ -969,5 +1041,33 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
             ["CipherChunkSizeBytes"] = "20971520",
             ["JwtSettings:Key"] = "T3wNTuKqmTXKjJKXHJRGUpG9sdrmpSX4",
         };
+    }
+
+    private sealed class ReleaseLockAfterFirstUnavailableSyncPairWork : ISyncPairWork
+    {
+        private readonly ISyncPairWork _inner;
+        private readonly Action _releaseLock;
+
+        public ReleaseLockAfterFirstUnavailableSyncPairWork(ISyncPairWork inner, Action releaseLock)
+        {
+            _inner = inner;
+            _releaseLock = releaseLock;
+        }
+
+        public int RunCount { get; private set; }
+
+        public async Task RunOnceAsync(SyncPairSettings syncPair, CancellationToken cancellationToken = default)
+        {
+            RunCount++;
+            try
+            {
+                await _inner.RunOnceAsync(syncPair, cancellationToken).ConfigureAwait(false);
+            }
+            catch (LocalFileUnavailableException) when (RunCount == 1)
+            {
+                _releaseLock();
+                throw;
+            }
+        }
     }
 }
