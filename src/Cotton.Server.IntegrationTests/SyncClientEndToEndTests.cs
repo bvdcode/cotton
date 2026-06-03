@@ -566,6 +566,44 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task RunOnceAsync_RejectsWindowsReservedLocalFileNameThroughSdkAndServer()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.Ignore("Windows blocks reserved device filenames before the sync scanner can validate them.");
+        }
+
+        CottonCloudClient client = CreateClient();
+        await LoginAsync(client);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-windows-reserved-name");
+        string localRoot = Path.Combine(_tempDirectory, "client-windows-reserved-name");
+        WriteLocalFile(localRoot, "Docs/CON.txt", "reserved device name");
+        SqliteSyncStateStore stateStore = CreateStateStore("client-windows-reserved-name-state.sqlite");
+        SyncEngine engine = CreateEngine(client, stateStore);
+
+        SyncPathValidationException? exception = Assert.ThrowsAsync<SyncPathValidationException>(() => engine.RunOnceAsync(new SyncPair
+        {
+            SyncPairId = "client-windows-reserved-name",
+            LocalRootPath = localRoot,
+            RemoteRootNodeId = remoteRoot.Id,
+        }));
+
+        NodeContentDto rootContent = await client.Nodes.GetChildrenAsync(remoteRoot.Id);
+        IReadOnlyList<SyncStateEntry> baselines = await stateStore.LoadPairAsync("client-windows-reserved-name");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.RelativePath, Is.EqualTo("Docs/CON.txt"));
+            Assert.That(exception.Segment, Is.EqualTo("CON.txt"));
+            Assert.That(exception.Reason, Does.Contain("device name 'CON'"));
+            Assert.That(rootContent.Nodes, Is.Empty);
+            Assert.That(rootContent.Files, Is.Empty);
+            Assert.That(baselines, Is.Empty);
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_MovesLocalFileToQuarantineWhenRemoteFileIsDeleted()
     {
         CottonCloudClient client = CreateClient();
