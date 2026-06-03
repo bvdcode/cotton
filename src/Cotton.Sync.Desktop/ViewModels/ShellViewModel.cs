@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
 using Avalonia.Threading;
@@ -36,6 +37,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     {
         _controller = controller ?? throw new ArgumentNullException(nameof(controller));
         _folderPicker = folderPicker ?? throw new ArgumentNullException(nameof(folderPicker));
+        SyncPairs.CollectionChanged += OnSyncPairsChanged;
         _controller.StatusChanged += OnStatusChanged;
         SignInCommand = new AsyncRelayCommand(SignInAsync, CanSignIn, HandleCommandError);
         AddSyncPairCommand = new AsyncRelayCommand(AddSyncPairAsync, CanAddSyncPair, HandleCommandError);
@@ -98,10 +100,20 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         {
             if (SetProperty(ref _isSignedIn, value))
             {
+                OnPropertyChanged(nameof(IsDashboardVisible));
+                OnPropertyChanged(nameof(IsSetupVisible));
                 RaiseCommandStates();
             }
         }
     }
+
+    public bool HasNoSyncPairs => SyncPairs.Count == 0;
+
+    public bool HasSyncPairs => SyncPairs.Count > 0;
+
+    public bool IsDashboardVisible => IsSignedIn;
+
+    public bool IsSetupVisible => !IsSignedIn;
 
     public string LocalFolderPath
     {
@@ -190,6 +202,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         _controller.StatusChanged -= OnStatusChanged;
+        SyncPairs.CollectionChanged -= OnSyncPairsChanged;
         _controller.Dispose();
     }
 
@@ -384,6 +397,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         GlobalStatus = "Action failed";
         AddActivity("Error", string.Empty, exception.Message);
         IsBusy = false;
+    }
+
+    private void OnSyncPairsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(HasNoSyncPairs));
+        OnPropertyChanged(nameof(HasSyncPairs));
+        OpenFolderCommand.RaiseCanExecuteChanged();
     }
 
     private void OnStatusChanged(object? sender, DesktopSyncStatusSnapshot status)
