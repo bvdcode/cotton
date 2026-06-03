@@ -47,7 +47,7 @@
         </StackPanel>
         <StackPanel Grid.Column="2"
                     Orientation="Horizontal"
-                    Spacing="6"
+                    Spacing="5"
                     VerticalAlignment="Center"
                     IsVisible="{Binding IsDashboardVisible}">
           <Button Content="+"
@@ -57,6 +57,26 @@
           <Button Content="Sync"
                   Classes="compact"
                   Command="{Binding SyncNowCommand}" />
+          <Button Content="..."
+                  Classes="icon"
+                  ToolTip.Tip="More actions">
+            <Button.Flyout>
+              <MenuFlyout>
+                <MenuItem Header="Open Cotton Cloud"
+                          Command="{Binding OpenWebCommand}" />
+                <MenuItem Header="Open local folder"
+                          Command="{Binding OpenFolderCommand}" />
+                <MenuItem Header="Pause sync"
+                          Command="{Binding PauseCommand}" />
+                <MenuItem Header="Resume sync"
+                          Command="{Binding ResumeCommand}" />
+                <MenuItem Header="Diagnostics"
+                          Command="{Binding SelfTestCommand}" />
+                <MenuItem Header="Sign out"
+                          Command="{Binding SignOutCommand}" />
+              </MenuFlyout>
+            </Button.Flyout>
+          </Button>
         </StackPanel>
       </Grid>
     </Border>
@@ -161,13 +181,13 @@
     <Grid Grid.Row="2"
           IsVisible="{Binding IsDashboardVisible}">
       <Grid RowDefinitions="Auto,*,Auto"
-            Margin="12"
-            RowSpacing="10">
-        <Border Padding="12"
+            Margin="10"
+            RowSpacing="8">
+        <Border Padding="10"
                 CornerRadius="6"
-                Background="{DynamicResource CottonSurfaceMutedBrush}">
-          <Grid ColumnDefinitions="Auto,*,Auto"
-                ColumnSpacing="10">
+                Background="{DynamicResource CottonPrimarySoftBrush}">
+          <Grid ColumnDefinitions="Auto,*"
+                ColumnSpacing="9">
             <Border Width="12"
                     Height="12"
                     CornerRadius="6"
@@ -176,7 +196,7 @@
             <StackPanel Grid.Column="1"
                         Spacing="1">
               <TextBlock Text="{Binding GlobalStatus}"
-                         FontSize="16"
+                         FontSize="15"
                          FontWeight="SemiBold"
                          TextTrimming="CharacterEllipsis" />
               <TextBlock Text="{Binding AccountName}"
@@ -184,18 +204,13 @@
                          FontSize="12"
                          TextTrimming="CharacterEllipsis" />
             </StackPanel>
-            <Button Grid.Column="2"
-                    Content="..."
-                    Classes="icon"
-                    ToolTip.Tip="Pause"
-                    Command="{Binding PauseCommand}" />
           </Grid>
         </Border>
 
         <Grid Grid.Row="1"
-              RowDefinitions="*,142"
-              RowSpacing="10">
-          <Border Padding="12"
+              RowDefinitions="*,148"
+              RowSpacing="8">
+          <Border Padding="10"
                   CornerRadius="6"
                   Background="{DynamicResource CottonSurfaceBrush}"
                   BorderBrush="{DynamicResource CottonBorderBrush}"
@@ -203,12 +218,12 @@
             <Grid RowDefinitions="Auto,*"
                   RowSpacing="10">
               <Grid ColumnDefinitions="*,Auto,Auto"
-                    ColumnSpacing="6">
+                    ColumnSpacing="5">
                 <StackPanel Spacing="1">
                   <TextBlock Text="Folders"
-                             FontSize="17"
+                             FontSize="16"
                              FontWeight="SemiBold" />
-                  <TextBlock Text="Local sync roots"
+                  <TextBlock Text="Sync roots"
                              Classes="secondary"
                              FontSize="12" />
                 </StackPanel>
@@ -235,7 +250,7 @@
                           ToolTip.Tip="Add sync folder"
                           Command="{Binding ShowAddSyncPairCommand}" />
                   <TextBlock Text="Add a folder"
-                             FontSize="18"
+                             FontSize="17"
                              FontWeight="SemiBold"
                              HorizontalAlignment="Center" />
                   <TextBlock Text="Choose a local folder and a Cotton Cloud folder."
@@ -288,7 +303,7 @@
           </Border>
 
           <Border Grid.Row="1"
-                  Padding="12"
+                  Padding="10"
                   CornerRadius="6"
                   Background="{DynamicResource CottonSurfaceBrush}"
                   BorderBrush="{DynamicResource CottonBorderBrush}"
@@ -330,31 +345,19 @@
         </Grid>
 
         <Grid Grid.Row="2"
-              ColumnDefinitions="*,Auto,Auto,Auto"
-              ColumnSpacing="6">
+              ColumnDefinitions="*">
           <CheckBox Content="Start with computer"
                     IsEnabled="{Binding IsStartWithOperatingSystemSupported}"
                     IsChecked="{Binding StartWithOperatingSystem}"
+                    FontSize="12"
                     VerticalAlignment="Center" />
-          <Button Grid.Column="1"
-                  Content="Test"
-                  Classes="compact"
-                  Command="{Binding SelfTestCommand}" />
-          <Button Grid.Column="2"
-                  Content="Resume"
-                  Classes="compact"
-                  Command="{Binding ResumeCommand}" />
-          <Button Grid.Column="3"
-                  Content="Sign out"
-                  Classes="compact"
-                  Command="{Binding SignOutCommand}" />
         </Grid>
       </Grid>
 
       <Border Background="{DynamicResource CottonOverlayBrush}"
               IsVisible="{Binding IsAddSyncPairWizardVisible}">
-        <Border Width="390"
-                Padding="14"
+        <Border Width="372"
+                Padding="12"
                 CornerRadius="7"
                 Background="{DynamicResource CottonSurfaceBrush}"
                 BorderBrush="{DynamicResource CottonBorderBrush}"
@@ -367,7 +370,7 @@
                   ColumnSpacing="8">
               <StackPanel Spacing="2">
                 <TextBlock Text="{Binding AddSyncPairWizardTitle}"
-                           FontSize="19"
+                           FontSize="18"
                            FontWeight="SemiBold"
                            TextTrimming="CharacterEllipsis" />
                 <TextBlock Text="{Binding AddSyncPairWizardSubtitle}"
@@ -402,7 +405,7 @@
                              FontWeight="SemiBold"
                              VerticalAlignment="Center" />
                   <TextBlock Grid.Column="2"
-                             Text="Cloud"
+                             Text="Cloud folder"
                              Classes="secondary"
                              FontSize="12"
                              VerticalAlignment="Center" />
@@ -453,12 +456,13 @@
                 <Border Padding="10"
                         CornerRadius="6"
                         Background="{DynamicResource CottonSurfaceMutedBrush}">
-                  <Grid RowDefinitions="Auto,210,Auto"
+                  <Grid RowDefinitions="Auto,196,Auto"
                         RowSpacing="8">
                     <Grid ColumnDefinitions="Auto,*,Auto"
-                          ColumnSpacing="8">
+                          ColumnSpacing="6">
                       <Button Content="Up"
-                              Classes="compact"
+                              Classes="icon"
+                              ToolTip.Tip="Go up"
                               Command="{Binding RemoteFolderUpCommand}" />
                       <TextBlock Grid.Column="1"
                                  Text="{Binding RemoteBrowserPath}"
@@ -510,7 +514,7 @@
                 <Grid ColumnDefinitions="*,Auto"
                       ColumnSpacing="8">
                   <Button Grid.Column="1"
-                          Content="Sync this folder"
+                          Content="Sync folder"
                           Classes="primary"
                           Command="{Binding AddSyncPairCommand}" />
                 </Grid>
