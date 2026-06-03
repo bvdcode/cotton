@@ -31,6 +31,7 @@ using EasyExtensions.Models.Enums;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
@@ -495,15 +496,10 @@ namespace Cotton.Server.Controllers
         /// </summary>
         [EnableRateLimiting(AuthRateLimitPolicies.Refresh)]
         [HttpPost("refresh")]
-        public async Task<IActionResult> GetRefreshToken([FromQuery] string? refreshToken = null)
+        public async Task<IActionResult> GetRefreshToken(
+            [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] RefreshTokenBodyDto? request = null)
         {
-            if (string.IsNullOrEmpty(refreshToken))
-            {
-                if (Request.Cookies.TryGetValue(CookieRefreshTokenKey, out var cookieToken))
-                {
-                    refreshToken = cookieToken;
-                }
-            }
+            string? refreshToken = ResolveRefreshToken(request);
             if (string.IsNullOrEmpty(refreshToken))
             {
                 return NotFound();
@@ -543,15 +539,10 @@ namespace Cotton.Server.Controllers
         /// Revokes the current refresh token and clears auth cookies.
         /// </summary>
         [HttpPost("logout")]
-        public async Task<IActionResult> Logout([FromQuery] string? refreshToken = null)
+        public async Task<IActionResult> Logout(
+            [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] RefreshTokenBodyDto? request = null)
         {
-            if (string.IsNullOrEmpty(refreshToken))
-            {
-                if (Request.Cookies.TryGetValue(CookieRefreshTokenKey, out var cookieToken))
-                {
-                    refreshToken = cookieToken;
-                }
-            }
+            string? refreshToken = ResolveRefreshToken(request);
             if (!string.IsNullOrEmpty(refreshToken))
             {
                 string refreshTokenHash = AuthSessionIssuer.HashRefreshToken(refreshToken);
@@ -570,6 +561,18 @@ namespace Cotton.Server.Controllers
             Response.Cookies.Delete(CookieRefreshTokenKey);
             Response.Cookies.Delete(CookieAccessTokenKey);
             return Ok();
+        }
+
+        private string? ResolveRefreshToken(RefreshTokenBodyDto? request)
+        {
+            if (!string.IsNullOrWhiteSpace(request?.RefreshToken))
+            {
+                return request.RefreshToken;
+            }
+
+            return Request.Cookies.TryGetValue(CookieRefreshTokenKey, out var cookieToken)
+                ? cookieToken
+                : null;
         }
 
         /// <summary>
