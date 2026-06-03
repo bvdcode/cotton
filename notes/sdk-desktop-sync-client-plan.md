@@ -71,6 +71,7 @@ Target layers:
 - [x] Add a settings store through EF Core SQLite.
   Required stores: sync-pair settings, app preferences, remembered server URL, startup preferences.
   Verification 2026-06-03: `SqliteSyncPairSettingsStore` and `SqliteAppPreferencesStore` use EF Core SQLite through shared `SyncAppDbContext`; tests cover sync-pair and app-preferences roundtrip.
+  Verification 2026-06-03: commit `Version app settings database`; `sync-app.db` now uses EF-generated `InitialSyncAppState` migrations and store initialization calls `Database.MigrateAsync` instead of `EnsureCreatedAsync`. Focused SQLite store tests passed 10/10, full `Cotton.Sync.App.Tests` passed 81/81, and `dotnet build src/Cotton.sln --configuration Release` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [x] Keep token storage behind `ITokenStore`; do not couple it to app settings.
   Verification 2026-06-03: auth uses SDK `ICottonTokenStore` through `ICottonAuthClient`; app preferences store has no token fields.
 - [x] Add tests for settings roundtrip, pair enable/disable, and pair deletion.

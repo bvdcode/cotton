@@ -28,7 +28,7 @@ public sealed class SqliteAppPreferencesStore : IAppPreferencesStore
     {
         _contextFactory.EnsureDirectoryExists();
         await using SyncAppDbContext context = _contextFactory.Create();
-        await context.Database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
+        await context.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

@@ -26,7 +26,7 @@ public sealed class SqliteSyncPairSettingsStore : ISyncPairSettingsStore
     {
         _contextFactory.EnsureDirectoryExists();
         await using SyncAppDbContext context = _contextFactory.Create();
-        await context.Database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
+        await context.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
