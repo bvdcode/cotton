@@ -4,6 +4,7 @@
 using Cotton.Sync.App.Runners;
 using Cotton.Sync.App.Status;
 using Cotton.Sync.App.SyncPairs;
+using Cotton.Sync.Local;
 
 namespace Cotton.Sync.App.Tests.Runners;
 
@@ -107,6 +108,30 @@ public sealed class SyncPairRunnerTests
             Failures =
             [
                 new HttpRequestException("server unavailable", null, System.Net.HttpStatusCode.ServiceUnavailable),
+            ],
+        };
+        SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true), work, NoDelayRetryOptions());
+
+        await runner.SyncNowAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(work.RunCount, Is.EqualTo(2));
+            Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Idle));
+        });
+    }
+
+    [Test]
+    public async Task SyncNowAsync_RetriesUnavailableLocalFileAndReturnsIdleOnRecovery()
+    {
+        var work = new FakeSyncPairWork
+        {
+            Failures =
+            [
+                new LocalFileUnavailableException(
+                    "writing.txt",
+                    "/home/user/Cotton/writing.txt",
+                    "the file changed during scanning."),
             ],
         };
         SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true), work, NoDelayRetryOptions());

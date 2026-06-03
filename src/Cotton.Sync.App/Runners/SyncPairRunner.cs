@@ -4,6 +4,7 @@
 using System.Net;
 using Cotton.Sync.App.Status;
 using Cotton.Sync.App.SyncPairs;
+using Cotton.Sync.Local;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -221,13 +222,13 @@ public sealed class SyncPairRunner : ISyncPairRunner
             {
                 throw;
             }
-            catch (Exception exception) when (IsTransientNetworkFailure(exception) && attempt < _retryOptions.MaxAttempts)
+            catch (Exception exception) when (IsRetriableSyncFailure(exception) && attempt < _retryOptions.MaxAttempts)
             {
                 TimeSpan delay = GetRetryDelay(attempt);
-                SetState(SyncPairRunState.Offline, exception.Message);
+                SetState(GetRetriableFailureState(exception), exception.Message);
                 _logger.LogWarning(
                     exception,
-                    "Transient sync failure for {SyncPairId}; retrying attempt {NextAttempt} of {MaxAttempts} after {Delay}.",
+                    "Retriable sync failure for {SyncPairId}; retrying attempt {NextAttempt} of {MaxAttempts} after {Delay}.",
                     _syncPair.Id,
                     attempt + 1,
                     _retryOptions.MaxAttempts,
@@ -288,6 +289,16 @@ public sealed class SyncPairRunner : ISyncPairRunner
     private static bool IsTransientNetworkFailure(Exception exception)
     {
         return exception is HttpRequestException requestException && IsTransientStatusCode(requestException.StatusCode);
+    }
+
+    private static bool IsRetriableSyncFailure(Exception exception)
+    {
+        return IsTransientNetworkFailure(exception) || exception is LocalFileUnavailableException;
+    }
+
+    private static SyncPairRunState GetRetriableFailureState(Exception exception)
+    {
+        return IsTransientNetworkFailure(exception) ? SyncPairRunState.Offline : SyncPairRunState.Error;
     }
 
     private static bool IsTransientStatusCode(HttpStatusCode? statusCode)
