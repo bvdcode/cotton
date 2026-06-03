@@ -364,8 +364,10 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Verification 2026-06-03: added `src/Cotton.Sync.Desktop/Properties/PublishProfiles/win-x64.pubxml`; `dotnet publish src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj /p:PublishProfile=win-x64` passed and produced `bin/Release/net10.0/publish/win-x64/Cotton.Sync.Desktop.exe` with the known NU1903 warning.
 - [x] Configure self-contained publish for Linux x64.
   Verification 2026-06-03: added `src/Cotton.Sync.Desktop/Properties/PublishProfiles/linux-x64.pubxml`; `dotnet publish src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj /p:PublishProfile=linux-x64` passed and produced executable `bin/Release/net10.0/publish/linux-x64/Cotton.Sync.Desktop` with the known NU1903 warning.
-- [ ] Add app icon and metadata for packaged apps.
-- [ ] Add version/about metadata.
+- [x] Add app icon and metadata for packaged apps.
+  Verification 2026-06-03: generated `src/Cotton.Sync.Desktop/Assets/app.ico` from the real frontend PNG icon and set `ApplicationIcon=Assets/app.ico`; Avalonia window/tray resources continue to use the frontend `icon-192.png`. Desktop build and both `linux-x64`/`win-x64` publish profiles passed with the known NU1903 warning. Clean Windows visual icon verification remains open under package smoke tests.
+- [x] Add version/about metadata.
+  Verification 2026-06-03: `Cotton.Sync.Desktop.csproj` now sets explicit title, `VersionPrefix=0.1.0`, `AssemblyVersion=0.1.0.0`, `FileVersion=0.1.0.0`, and `InformationalVersion=0.1.0-dev`; the settings/about and diagnostics paths already read the assembly version. `dotnet msbuild` confirmed `Version=0.1.0`, `InformationalVersion=0.1.0-dev`, and `ApplicationIcon=Assets/app.ico`; desktop tests passed 56/56.
 - [x] Add checksum generation.
   Verification 2026-06-03: `Cotton.Sync.Desktop.csproj` now generates `checksums.sha256` after publish. Verified with both `linux-x64` and `win-x64` publish profiles; checksum files include the Linux apphost, Windows `.exe`, and desktop DLL entries. Both publish commands passed with the known NU1903 warning.
 - [ ] Add signing plan.
