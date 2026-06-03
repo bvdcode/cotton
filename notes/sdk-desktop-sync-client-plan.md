@@ -121,7 +121,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Verification: commit `Add durable sync change feed`; `ICottonSyncClient.GetChangesAsync` added to `ICottonCloudClient.Sync`.
 - [x] Add server integration tests for ordered create/update/delete/move/rename changes.
   Verification: `dotnet test src/Cotton.Server.IntegrationTests/Cotton.Server.IntegrationTests.csproj --configuration Release --no-restore --filter FullyQualifiedName~SyncChangesEndpointsTests` passed 2/2; `Changes_RecordsUpdateMoveAndFolderMutationKindsInOrder` covers file create/update/move/rename/delete and folder create/rename/move ordering.
-- [ ] Add server integration test for missed SignalR recovery through changes API.
+- [x] Add server integration test for missed SignalR recovery through changes API.
+  Verification: `dotnet test src/Cotton.Server.IntegrationTests/Cotton.Server.IntegrationTests.csproj --configuration Release --no-restore --filter FullyQualifiedName~SyncChangesEndpointsTests` passed 3/3; `Changes_ReplaysMutationsWhenRealtimeEventsWereMissed` creates remote changes without opening the SignalR hub and recovers them through `/api/v1/sync/changes`.
 - [x] Add SDK tests for changes request and response parsing.
   Verification: `dotnet test src/Cotton.Sdk.Tests/Cotton.Sdk.Tests.csproj --configuration Release --no-restore` passed 11/11 after commit `Add durable sync change feed`.
 - [x] Add local smoke check: create remote change, fetch it through changes API.

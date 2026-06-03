@@ -165,6 +165,36 @@ public sealed class SyncChangesEndpointsTests : IntegrationTestBase
         });
     }
 
+    [Test]
+    public async Task Changes_ReplaysMutationsWhenRealtimeEventsWereMissed()
+    {
+        string token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        SyncChangesResponseDto baseline = await GetChangesAsync(0, 10);
+        Assert.That(baseline.Changes, Is.Empty);
+
+        NodeDto folder = await CreateNodeAsync(root!.Id, "offline-folder");
+        NodeFileManifestDto file = await CreateFileAsync(folder.Id, "offline.txt", "created while no hub was connected");
+
+        SyncChangesResponseDto recovered = await GetChangesAsync(baseline.NextCursor, 10);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(recovered.Changes.Select(x => x.Kind), Is.EqualTo(new[]
+            {
+                SyncChangeKindDto.FolderCreated,
+                SyncChangeKindDto.FileCreated,
+            }));
+            Assert.That(recovered.Changes[0].NodeId, Is.EqualTo(folder.Id));
+            Assert.That(recovered.Changes[1].NodeFileId, Is.EqualTo(file.Id));
+            Assert.That(recovered.NextCursor, Is.GreaterThan(baseline.NextCursor));
+        });
+    }
+
     private async Task<SyncChangesResponseDto> GetChangesAsync(long since, int limit)
     {
         var page = await _client!.GetFromJsonAsync<SyncChangesResponseDto>(
