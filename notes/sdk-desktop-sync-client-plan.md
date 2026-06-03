@@ -357,8 +357,10 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 
 - [ ] Define release artifact matrix.
   Required artifacts: Windows installer, Windows portable archive, Linux AppImage or archive, Linux `.deb` if feasible.
-- [ ] Configure self-contained publish for Windows x64.
-- [ ] Configure self-contained publish for Linux x64.
+- [x] Configure self-contained publish for Windows x64.
+  Verification 2026-06-03: added `src/Cotton.Sync.Desktop/Properties/PublishProfiles/win-x64.pubxml`; `dotnet publish src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj /p:PublishProfile=win-x64` passed and produced `bin/Release/net10.0/publish/win-x64/Cotton.Sync.Desktop.exe` with the known NU1903 warning.
+- [x] Configure self-contained publish for Linux x64.
+  Verification 2026-06-03: added `src/Cotton.Sync.Desktop/Properties/PublishProfiles/linux-x64.pubxml`; `dotnet publish src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj /p:PublishProfile=linux-x64` passed and produced executable `bin/Release/net10.0/publish/linux-x64/Cotton.Sync.Desktop` with the known NU1903 warning.
 - [ ] Add app icon and metadata for packaged apps.
 - [ ] Add version/about metadata.
 - [ ] Add checksum generation.
