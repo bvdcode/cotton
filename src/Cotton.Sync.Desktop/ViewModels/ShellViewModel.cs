@@ -4,6 +4,7 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
+using Avalonia.Threading;
 using Cotton.Sync.App.Auth;
 using Cotton.Sync.App.SyncPairs;
 using Cotton.Sync.Desktop.Platform;
@@ -35,6 +36,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     {
         _controller = controller ?? throw new ArgumentNullException(nameof(controller));
         _folderPicker = folderPicker ?? throw new ArgumentNullException(nameof(folderPicker));
+        _controller.StatusChanged += OnStatusChanged;
         SignInCommand = new AsyncRelayCommand(SignInAsync, CanSignIn, HandleCommandError);
         AddSyncPairCommand = new AsyncRelayCommand(AddSyncPairAsync, CanAddSyncPair, HandleCommandError);
         BrowseLocalFolderCommand = new AsyncRelayCommand(BrowseLocalFolderAsync, () => !IsBusy, HandleCommandError);
@@ -187,6 +189,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
+        _controller.StatusChanged -= OnStatusChanged;
         _controller.Dispose();
     }
 
@@ -381,6 +384,58 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         GlobalStatus = "Action failed";
         AddActivity("Error", string.Empty, exception.Message);
         IsBusy = false;
+    }
+
+    private void OnStatusChanged(object? sender, DesktopSyncStatusSnapshot status)
+    {
+        Dispatcher.UIThread.Post(() => ApplyStatus(status));
+    }
+
+    private void ApplyStatus(DesktopSyncStatusSnapshot status)
+    {
+        foreach (DesktopSyncPairStatusSnapshot pairStatus in status.SyncPairs)
+        {
+            SyncPairRowViewModel? row = SyncPairs.FirstOrDefault(syncPair => syncPair.Id == pairStatus.Id);
+            if (row is null)
+            {
+                continue;
+            }
+
+            row.Status = pairStatus.Status;
+            if (!string.IsNullOrWhiteSpace(pairStatus.LastError))
+            {
+                AddActivity("Error", row.LocalPath, pairStatus.LastError);
+            }
+        }
+
+        GlobalStatus = ResolveGlobalStatus(status);
+    }
+
+    private string ResolveGlobalStatus(DesktopSyncStatusSnapshot status)
+    {
+        if (!IsSignedIn)
+        {
+            return "Signed out";
+        }
+
+        if (status.SyncPairs.Any(static pair => string.Equals(pair.Status, "Error", StringComparison.Ordinal)))
+        {
+            return "Action required";
+        }
+
+        if (status.SyncPairs.Any(static pair => string.Equals(pair.Status, "Syncing", StringComparison.Ordinal)
+            || string.Equals(pair.Status, "Scanning", StringComparison.Ordinal)))
+        {
+            return "Syncing";
+        }
+
+        if (status.SyncPairs.Count > 0
+            && status.SyncPairs.All(static pair => string.Equals(pair.Status, "Paused", StringComparison.Ordinal)))
+        {
+            return "Paused";
+        }
+
+        return "Connected";
     }
 
     private void AddActivity(string kind, string path, string details)

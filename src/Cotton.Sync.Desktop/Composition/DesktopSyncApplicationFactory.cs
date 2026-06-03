@@ -66,6 +66,6 @@ internal sealed class DesktopSyncApplicationFactory
             new ProcessPlatformCommandService());
         var remoteRootResolver = new RemoteRootResolver(cottonClient.Nodes);
 
-        return new DesktopSyncApplicationHost(appService, remoteRootResolver, tokenStore, httpClient);
+        return new DesktopSyncApplicationHost(appService, remoteRootResolver, statusPublisher, tokenStore, httpClient);
     }
 }

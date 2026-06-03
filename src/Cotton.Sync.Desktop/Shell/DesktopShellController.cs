@@ -6,6 +6,7 @@ using Cotton.Contracts.Nodes;
 using Cotton.Sync.App.Auth;
 using Cotton.Sync.App.Platform;
 using Cotton.Sync.App.Preferences;
+using Cotton.Sync.App.Status;
 using Cotton.Sync.App.SyncApplication;
 using Cotton.Sync.App.SyncPairs;
 using Cotton.Sync.Desktop.Composition;
@@ -21,6 +22,7 @@ internal sealed class DesktopShellController : IDesktopShellController
     private readonly SqliteAppPreferencesStore _preferencesStore;
     private readonly SqliteSyncPairSettingsStore _syncPairStore;
     private DesktopSyncApplicationHost? _host;
+    private IDisposable? _statusSubscription;
 
     public DesktopShellController(
         DesktopSyncApplicationFactory factory,
@@ -33,6 +35,8 @@ internal sealed class DesktopShellController : IDesktopShellController
         _syncPairStore = syncPairStore ?? throw new ArgumentNullException(nameof(syncPairStore));
         _platformCommands = platformCommands ?? throw new ArgumentNullException(nameof(platformCommands));
     }
+
+    public event EventHandler<DesktopSyncStatusSnapshot>? StatusChanged;
 
     public async Task<DesktopShellSnapshot> LoadAsync(CancellationToken cancellationToken = default)
     {
@@ -133,6 +137,8 @@ internal sealed class DesktopShellController : IDesktopShellController
             if (ReferenceEquals(_host, host))
             {
                 _host = null;
+                _statusSubscription?.Dispose();
+                _statusSubscription = null;
             }
 
             host.Dispose();
@@ -163,6 +169,8 @@ internal sealed class DesktopShellController : IDesktopShellController
     {
         DesktopSyncApplicationHost? host = _host;
         _host = null;
+        _statusSubscription?.Dispose();
+        _statusSubscription = null;
         host?.Dispose();
     }
 
@@ -252,8 +260,42 @@ internal sealed class DesktopShellController : IDesktopShellController
     private void ReplaceHost(DesktopSyncApplicationHost host)
     {
         DesktopSyncApplicationHost? previous = _host;
+        _statusSubscription?.Dispose();
         _host = host;
+        _statusSubscription = host.StatusPublisher.Subscribe(new StatusObserver(this));
         previous?.Dispose();
+    }
+
+    private static DesktopSyncStatusSnapshot ToStatusSnapshot(SyncAppStatus status)
+    {
+        return new DesktopSyncStatusSnapshot(
+            status.SyncPairs
+                .Select(static syncPair => new DesktopSyncPairStatusSnapshot(
+                    syncPair.SyncPairId,
+                    ToStatusText(syncPair),
+                    syncPair.LastError))
+                .ToList());
+    }
+
+    private static string ToStatusText(SyncPairStatus status)
+    {
+        return status.State switch
+        {
+            SyncPairRunState.Disabled => "Disabled",
+            SyncPairRunState.Idle => "Idle",
+            SyncPairRunState.Scanning => "Scanning",
+            SyncPairRunState.Syncing => "Syncing",
+            SyncPairRunState.Paused => "Paused",
+            SyncPairRunState.Offline => "Offline",
+            SyncPairRunState.Conflict => "Conflict",
+            SyncPairRunState.Error => "Error",
+            _ => status.State.ToString(),
+        };
+    }
+
+    private void OnStatusChanged(SyncAppStatus status)
+    {
+        StatusChanged?.Invoke(this, ToStatusSnapshot(status));
     }
 
     private async Task<AuthSession?> TryRestoreSessionAsync(
@@ -279,6 +321,30 @@ internal sealed class DesktopShellController : IDesktopShellController
             Trace.TraceWarning("Failed to restore desktop session because the server is unreachable: {0}", serverUrl);
             host.Dispose();
             return null;
+        }
+    }
+
+    private sealed class StatusObserver : IObserver<SyncAppStatus>
+    {
+        private readonly DesktopShellController _controller;
+
+        public StatusObserver(DesktopShellController controller)
+        {
+            _controller = controller;
+        }
+
+        public void OnCompleted()
+        {
+        }
+
+        public void OnError(Exception error)
+        {
+            Trace.TraceError(error.ToString());
+        }
+
+        public void OnNext(SyncAppStatus value)
+        {
+            _controller.OnStatusChanged(value);
         }
     }
 }

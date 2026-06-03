@@ -8,6 +8,8 @@ namespace Cotton.Sync.Desktop.Shell;
 
 internal interface IDesktopShellController : IDisposable
 {
+    event EventHandler<DesktopSyncStatusSnapshot>? StatusChanged;
+
     Task<DesktopShellSnapshot> LoadAsync(CancellationToken cancellationToken = default);
 
     Task<AuthSession> SignInAsync(DesktopSignInRequest request, CancellationToken cancellationToken = default);
