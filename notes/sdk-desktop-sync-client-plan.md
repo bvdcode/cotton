@@ -233,9 +233,12 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Verification: commit `Add sync runner offline retry`; retry attempts are capped by `SyncPairRunnerRetryOptions`, transient final failures surface as `Offline`, and non-transient failures remain `Error` with `LastError`.
 - [x] Add per-pair queue so repeated triggers collapse into one sync pass.
   Verification: commit `Coalesce sync pair run requests`; `SyncPairRunner` collapses overlapping `SyncNowAsync` requests into one queued follow-up run. `dotnet test src/Cotton.Sync.App.Tests/Cotton.Sync.App.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~SyncPairRunnerTests` passed 9/9, and `dotnet build src/Cotton.sln --configuration Release` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
-- [ ] Add tests for local watcher event coalescing.
-- [ ] Add tests for remote SignalR trigger causing changes fetch.
-- [ ] Add tests for offline to online recovery.
+- [x] Add tests for local watcher event coalescing.
+  Verification: `LocalChanges_AreCoalescedIntoOneSyncRequest` covers coalesced local watcher events per sync pair; focused continuous-sync tests passed 19/19, full `Cotton.Sync.App.Tests` passed 77/77, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
+- [x] Add tests for remote SignalR trigger causing changes fetch.
+  Verification: `RealtimeRemoteChangeSyncCoordinatorTests` cover SignalR wake-up debounce into sync requests, and `RemoteChangeAwareSyncPairWorkTests` cover change-feed read/acknowledge around sync work; focused continuous-sync tests passed 19/19 and full `Cotton.Sync.App.Tests` passed 77/77.
+- [x] Add tests for offline to online recovery.
+  Verification: `SyncNowAsync_RetriesTransientNetworkFailureAndReturnsIdleOnRecovery` covers transient offline recovery back to `Idle`; focused continuous-sync tests passed 19/19 and full `Cotton.Sync.App.Tests` passed 77/77.
 - [ ] Add two-client integration test against local dev server.
 - [ ] Run continuous sync soak test for at least 2 hours before this phase is considered done.
 
