@@ -20,4 +20,9 @@ public interface IRemoteChangeFeedReader
     /// Advances or marks the sync pair checkpoint after a batch has been processed.
     /// </summary>
     Task AcknowledgeAsync(RemoteChangeFeedBatch batch, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Advances the sync pair checkpoint after a successful full remote recrawl.
+    /// </summary>
+    Task AcknowledgeFullResyncAsync(RemoteChangeFeedBatch batch, CancellationToken cancellationToken = default);
 }

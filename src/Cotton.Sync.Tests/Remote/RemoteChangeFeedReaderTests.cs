@@ -127,6 +127,39 @@ public sealed class RemoteChangeFeedReaderTests
         });
     }
 
+    [Test]
+    public async Task AcknowledgeFullResyncAsync_RecoversExpiredCursorToEarliestAvailableCursor()
+    {
+        var stateStore = CreateStore();
+        await stateStore.InitializeAsync();
+        await stateStore.SaveChangeCursorAsync(new SyncChangeCursor
+        {
+            SyncPairId = "pair-a",
+            LastCursor = 10,
+            CursorExpired = true,
+            EarliestAvailableCursor = 15,
+        });
+        var reader = new RemoteChangeFeedReader(new FakeCottonSyncClient(), stateStore);
+        var batch = new RemoteChangeFeedBatch(
+            "pair-a",
+            sinceCursor: 10,
+            nextCursor: 10,
+            hasMore: false,
+            cursorExpired: true,
+            earliestAvailableCursor: 15,
+            changes: Array.Empty<SyncChangeDto>());
+
+        await reader.AcknowledgeFullResyncAsync(batch);
+
+        SyncChangeCursor cursor = await stateStore.GetChangeCursorAsync("pair-a");
+        Assert.Multiple(() =>
+        {
+            Assert.That(cursor.LastCursor, Is.EqualTo(15));
+            Assert.That(cursor.CursorExpired, Is.False);
+            Assert.That(cursor.EarliestAvailableCursor, Is.EqualTo(15));
+        });
+    }
+
     private SqliteSyncStateStore CreateStore()
     {
         return new SqliteSyncStateStore(Path.Combine(_tempDirectory, "sync-state.sqlite"));

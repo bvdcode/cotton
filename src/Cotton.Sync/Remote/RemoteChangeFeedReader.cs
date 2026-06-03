@@ -55,15 +55,45 @@ public sealed class RemoteChangeFeedReader : IRemoteChangeFeedReader
     {
         ArgumentNullException.ThrowIfNull(batch);
         long lastCursor = batch.CursorExpired ? batch.SinceCursor : batch.NextCursor;
-        await _stateStore.SaveChangeCursorAsync(
+        await SaveCursorAsync(
+            batch.SyncPairId,
+            lastCursor,
+            batch.CursorExpired,
+            batch.EarliestAvailableCursor,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task AcknowledgeFullResyncAsync(RemoteChangeFeedBatch batch, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(batch);
+        long lastCursor = batch.CursorExpired
+            ? batch.EarliestAvailableCursor ?? batch.SinceCursor
+            : batch.NextCursor;
+        await SaveCursorAsync(
+            batch.SyncPairId,
+            lastCursor,
+            cursorExpired: false,
+            batch.EarliestAvailableCursor,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private Task SaveCursorAsync(
+        string syncPairId,
+        long lastCursor,
+        bool cursorExpired,
+        long? earliestAvailableCursor,
+        CancellationToken cancellationToken)
+    {
+        return _stateStore.SaveChangeCursorAsync(
             new SyncChangeCursor
             {
-                SyncPairId = batch.SyncPairId,
+                SyncPairId = syncPairId,
                 LastCursor = lastCursor,
-                CursorExpired = batch.CursorExpired,
-                EarliestAvailableCursor = batch.EarliestAvailableCursor,
+                CursorExpired = cursorExpired,
+                EarliestAvailableCursor = earliestAvailableCursor,
                 UpdatedAtUtc = DateTime.UtcNow,
             },
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken);
     }
 }

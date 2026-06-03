@@ -46,12 +46,15 @@ internal sealed class DesktopSyncApplicationFactory
 
         var remoteTreeCrawler = new RemoteTreeCrawler(cottonClient.Nodes);
         var remoteFileSynchronizer = new SdkRemoteFileSynchronizer(cottonClient);
+        var remoteChangeFeed = new RemoteChangeFeedReader(cottonClient.Sync, stateStore);
         var syncEngine = new HeadlessSyncEngine(
             new LocalFileScanner(),
             remoteTreeCrawler,
             remoteFileSynchronizer,
             stateStore);
-        var pairWork = new SyncEnginePairWork(syncEngine);
+        ISyncPairWork pairWork = new RemoteChangeAwareSyncPairWork(
+            new SyncEnginePairWork(syncEngine),
+            remoteChangeFeed);
         var runnerFactory = new SyncPairRunnerFactory(pairWork);
         var statusPublisher = new InMemoryAppStatusPublisher();
         var supervisor = new SyncSupervisor(syncPairStore, runnerFactory, statusPublisher);

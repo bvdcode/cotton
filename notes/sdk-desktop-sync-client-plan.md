@@ -186,6 +186,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Add watcher debounce and event coalescing.
 - [ ] Add SignalR remote event listener through SDK.
 - [ ] Connect SignalR events to changes API fetch.
+- [x] Connect sync-pair runs to changes API checkpointing.
+  Verification: commit `Connect sync work to remote change feed`; `RemoteChangeAwareSyncPairWork` reads change-feed pages before full sync and acknowledges only after successful sync, with expired cursors recovered to the earliest retained cursor after full recrawl. `dotnet test src/Cotton.Sync.App.Tests/Cotton.Sync.App.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~RemoteChangeAwareSyncPairWorkTests` passed 3/3, `dotnet test src/Cotton.Sync.Tests/Cotton.Sync.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~RemoteChangeFeedReaderTests` passed 4/4, and `dotnet build src/Cotton.sln --configuration Release` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [ ] Add periodic reconcile as safety fallback.
 - [ ] Add offline detection and backoff.
 - [ ] Add retry policy with bounded attempts and user-visible error state.
