@@ -12,10 +12,12 @@ using Cotton.Sync.App.Preferences;
 using Cotton.Sync.App.Status;
 using Cotton.Sync.App.SyncApplication;
 using Cotton.Sync.App.SyncPairs;
+using Cotton.Sync.Desktop.Auth;
 using Cotton.Sync.Desktop.Composition;
 using Cotton.Sync.Desktop.Diagnostics;
 using Cotton.Sync.Desktop.Platform;
 using Cotton.Sync.Desktop.Startup;
+using Cotton.Sync.State;
 using Microsoft.Extensions.Logging;
 
 namespace Cotton.Sync.Desktop.Shell;
@@ -301,6 +303,21 @@ internal sealed class DesktopShellController : IDesktopShellController
 
         await AddSelfTestCheckAsync(
             items,
+            "Sync state database",
+            async () =>
+            {
+                var stateStore = new SqliteSyncStateStore(_paths.SyncStateDatabasePath);
+                await stateStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+                return "Ready";
+            }).ConfigureAwait(false);
+
+        await AddSelfTestCheckAsync(
+            items,
+            "Authentication state",
+            () => CheckAuthenticationStateAsync(cancellationToken)).ConfigureAwait(false);
+
+        await AddSelfTestCheckAsync(
+            items,
             "Autostart adapter",
             async () =>
             {
@@ -312,6 +329,11 @@ internal sealed class DesktopShellController : IDesktopShellController
             "Tray lifecycle",
             true,
             DesktopPlatformCapabilities.IsTrayLifecycleSupported ? "Supported" : "Not supported on this platform"));
+
+        await AddSelfTestCheckAsync(
+            items,
+            "File watcher",
+            () => CheckFileWatcherAsync(cancellationToken)).ConfigureAwait(false);
 
         Uri? serverUrl = _startupOptions.ServerUrl ?? preferences?.RememberedServerUrl;
         if (serverUrl is null)
@@ -343,6 +365,21 @@ internal sealed class DesktopShellController : IDesktopShellController
                 items,
                 "Local root: " + syncPair.DisplayName,
                 () => CheckLocalRootAsync(syncPair, cancellationToken)).ConfigureAwait(false);
+            DesktopSyncApplicationHost? host = _host;
+            if (host is null)
+            {
+                items.Add(new DesktopSelfTestItemSnapshot(
+                    "Remote root: " + syncPair.DisplayName,
+                    true,
+                    "Sign in to verify"));
+            }
+            else
+            {
+                await AddSelfTestCheckAsync(
+                    items,
+                    "Remote root: " + syncPair.DisplayName,
+                    () => CheckRemoteRootAsync(host, syncPair, cancellationToken)).ConfigureAwait(false);
+            }
         }
 
         return new DesktopSelfTestSnapshot(items);
@@ -407,6 +444,54 @@ internal sealed class DesktopShellController : IDesktopShellController
 
         _ = Directory.EnumerateFileSystemEntries(syncPair.LocalRootPath).Take(1).ToList();
         return Task.FromResult(syncPair.LocalRootPath);
+    }
+
+    private async Task<string> CheckAuthenticationStateAsync(CancellationToken cancellationToken)
+    {
+        DesktopSyncApplicationHost? host = _host;
+        if (host is not null)
+        {
+            var activeTokens = await host.TokenStore.GetAsync(cancellationToken).ConfigureAwait(false);
+            if (activeTokens is null)
+            {
+                throw new InvalidOperationException("Signed in session has no stored token pair.");
+            }
+
+            return "Signed in";
+        }
+
+        var tokenStore = new FileCottonTokenStore(_paths.TokenStorePath);
+        var storedTokens = await tokenStore.GetAsync(cancellationToken).ConfigureAwait(false);
+        return storedTokens is null ? "Signed out" : "Stored session available";
+    }
+
+    private static Task<string> CheckFileWatcherAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        string directory = Path.Combine(Path.GetTempPath(), "cotton-sync-watcher-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            using var watcher = new FileSystemWatcher(directory)
+            {
+                IncludeSubdirectories = true,
+                EnableRaisingEvents = true,
+            };
+            return Task.FromResult("Available");
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    private static async Task<string> CheckRemoteRootAsync(
+        DesktopSyncApplicationHost host,
+        SyncPairSettings syncPair,
+        CancellationToken cancellationToken)
+    {
+        _ = await host.Nodes.GetAsync(syncPair.RemoteRootNodeId, cancellationToken).ConfigureAwait(false);
+        return syncPair.RemoteRootNodeId.ToString();
     }
 
     private static async Task AddSelfTestCheckAsync(
