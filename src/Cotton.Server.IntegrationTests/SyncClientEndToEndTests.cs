@@ -887,6 +887,62 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task SyncPairRunner_UploadsLocalChangesAfterOfflineRecoveryThroughSdkAndServer()
+    {
+        CottonCloudClient client = CreateClient();
+        await LoginAsync(client);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-offline-local");
+        string localRoot = Path.Combine(_tempDirectory, "client-offline-local");
+        const string relativePath = "Offline/local-created.txt";
+        WriteLocalFile(localRoot, relativePath, "created while offline");
+        SqliteSyncStateStore stateStore = CreateStateStore("client-offline-local-state.sqlite");
+        await stateStore.InitializeAsync();
+        SyncEngine engine = CreateEngine(client, stateStore);
+        var syncPair = new SyncPairSettings
+        {
+            Id = Guid.NewGuid(),
+            DisplayName = "Offline local recovery",
+            LocalRootPath = localRoot,
+            RemoteRootNodeId = remoteRoot.Id,
+            RemoteDisplayPath = "/Offline local recovery",
+            IsEnabled = true,
+            Mode = SyncPairMode.FullMirror,
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow,
+        };
+        var work = new FailOnceBeforeDelegatingSyncPairWork(
+            new SyncEnginePairWork(engine),
+            new HttpRequestException("server unavailable", null, System.Net.HttpStatusCode.ServiceUnavailable));
+        var runner = new SyncPairRunner(syncPair, work, CreateNoDelayRetryOptions(maxAttempts: 1));
+
+        HttpRequestException? offlineException = Assert.ThrowsAsync<HttpRequestException>(() => runner.SyncNowAsync());
+        SyncPairStatus offlineStatus = runner.Status;
+        NodeContentDto remoteContentWhileOffline = await client.Nodes.GetChildrenAsync(remoteRoot.Id);
+        IReadOnlyList<SyncStateEntry> baselinesWhileOffline = await stateStore.LoadPairAsync(syncPair.Id.ToString("D"));
+
+        await runner.SyncNowAsync();
+
+        NodeFileManifestDto uploaded = await FindRemoteFileAsync(client, remoteRoot.Id, relativePath);
+        string uploadedContent = await DownloadTextAsync(client, uploaded.Id);
+        SyncStateEntry? baseline = await stateStore.GetAsync(syncPair.Id.ToString("D"), relativePath);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(offlineException, Is.Not.Null);
+            Assert.That(offlineStatus.State, Is.EqualTo(SyncPairRunState.Offline));
+            Assert.That(offlineStatus.CurrentOperation, Is.EqualTo("Waiting for connection: server unavailable"));
+            Assert.That(remoteContentWhileOffline.Nodes, Is.Empty);
+            Assert.That(remoteContentWhileOffline.Files, Is.Empty);
+            Assert.That(baselinesWhileOffline, Is.Empty);
+            Assert.That(work.RunCount, Is.EqualTo(2));
+            Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Idle));
+            Assert.That(uploadedContent, Is.EqualTo("created while offline"));
+            Assert.That(baseline?.RemoteFileId, Is.EqualTo(uploaded.Id));
+            Assert.That(baseline?.RemoteContentHash, Is.EqualTo(uploaded.ContentHash));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_CreatesConflictWhenTwoClientsEditSameFile()
     {
         CottonCloudClient clientA = CreateClient();
@@ -1200,6 +1256,31 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
                 _releaseLock();
                 throw;
             }
+        }
+    }
+
+    private sealed class FailOnceBeforeDelegatingSyncPairWork : ISyncPairWork
+    {
+        private readonly ISyncPairWork _inner;
+        private readonly Exception _failure;
+
+        public FailOnceBeforeDelegatingSyncPairWork(ISyncPairWork inner, Exception failure)
+        {
+            _inner = inner;
+            _failure = failure;
+        }
+
+        public int RunCount { get; private set; }
+
+        public async Task RunOnceAsync(SyncPairSettings syncPair, CancellationToken cancellationToken = default)
+        {
+            RunCount++;
+            if (RunCount == 1)
+            {
+                throw _failure;
+            }
+
+            await _inner.RunOnceAsync(syncPair, cancellationToken).ConfigureAwait(false);
         }
     }
 }
