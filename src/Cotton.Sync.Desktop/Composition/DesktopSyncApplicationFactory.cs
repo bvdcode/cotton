@@ -98,6 +98,7 @@ internal sealed class DesktopSyncApplicationFactory
             statusPublisher,
             tokenStore,
             cottonClient.Nodes,
-            httpClient);
+            httpClient,
+            serverUrl);
     }
 }

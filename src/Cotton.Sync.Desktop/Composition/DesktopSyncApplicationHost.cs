@@ -20,7 +20,8 @@ internal sealed class DesktopSyncApplicationHost : IDisposable
         IAppStatusPublisher statusPublisher,
         ICottonTokenStore tokenStore,
         ICottonNodeClient nodes,
-        HttpClient httpClient)
+        HttpClient httpClient,
+        Uri serverUrl)
     {
         App = app ?? throw new ArgumentNullException(nameof(app));
         RemoteRootResolver = remoteRootResolver ?? throw new ArgumentNullException(nameof(remoteRootResolver));
@@ -28,6 +29,7 @@ internal sealed class DesktopSyncApplicationHost : IDisposable
         TokenStore = tokenStore ?? throw new ArgumentNullException(nameof(tokenStore));
         Nodes = nodes ?? throw new ArgumentNullException(nameof(nodes));
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        ServerUrl = serverUrl ?? throw new ArgumentNullException(nameof(serverUrl));
     }
 
     public ISyncApplicationService App { get; }
@@ -39,6 +41,8 @@ internal sealed class DesktopSyncApplicationHost : IDisposable
     public ICottonTokenStore TokenStore { get; }
 
     public ICottonNodeClient Nodes { get; }
+
+    public Uri ServerUrl { get; }
 
     public void Dispose()
     {

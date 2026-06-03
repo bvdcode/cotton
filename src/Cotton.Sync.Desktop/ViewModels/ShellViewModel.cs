@@ -64,6 +64,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         ResumeCommand = new AsyncRelayCommand(ResumeAsync, () => IsSignedIn, HandleCommandError);
         SignOutCommand = new AsyncRelayCommand(SignOutAsync, () => IsSignedIn, HandleCommandError);
         OpenFolderCommand = new AsyncRelayCommand(OpenFolderAsync, () => SelectedSyncPair is not null, HandleCommandError);
+        OpenWebCommand = new AsyncRelayCommand(OpenWebAsync, () => IsSignedIn, HandleCommandError);
         SelfTestCommand = new AsyncRelayCommand(SelfTestAsync, () => !IsBusy, HandleCommandError);
     }
 
@@ -80,6 +81,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public AsyncRelayCommand CancelAddSyncPairCommand { get; }
 
     public AsyncRelayCommand OpenFolderCommand { get; }
+
+    public AsyncRelayCommand OpenWebCommand { get; }
 
     public AsyncRelayCommand OpenRemoteFolderCommand { get; }
 
@@ -492,6 +495,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         AddActivity("Open", selected.LocalPath, "Folder opened");
     }
 
+    private async Task OpenWebAsync()
+    {
+        await _controller.OpenWebAsync().ConfigureAwait(true);
+        AddActivity("Open", string.Empty, "Cotton Cloud opened");
+    }
+
     private async Task PauseAsync()
     {
         IsBusy = true;
@@ -834,6 +843,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         PauseCommand.RaiseCanExecuteChanged();
         ResumeCommand.RaiseCanExecuteChanged();
         OpenFolderCommand.RaiseCanExecuteChanged();
+        OpenWebCommand.RaiseCanExecuteChanged();
         ShowAddSyncPairCommand.RaiseCanExecuteChanged();
         SelfTestCommand.RaiseCanExecuteChanged();
     }

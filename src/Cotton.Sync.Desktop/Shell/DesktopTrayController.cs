@@ -63,9 +63,12 @@ internal sealed class DesktopTrayController : IDisposable
                 Items =
                 {
                     CreateMenuItem("Show", ShowWindow),
+                    CreateMenuItem("Open folder", () => Execute(commandSource => commandSource.OpenFolderCommand)),
+                    CreateMenuItem("Open web", () => Execute(commandSource => commandSource.OpenWebCommand)),
                     CreateMenuItem("Sync now", () => Execute(commandSource => commandSource.SyncNowCommand)),
                     CreateMenuItem("Pause", () => Execute(commandSource => commandSource.PauseCommand)),
                     CreateMenuItem("Resume", () => Execute(commandSource => commandSource.ResumeCommand)),
+                    CreateMenuItem("Settings", ShowWindow),
                     new NativeMenuItemSeparator(),
                     CreateMenuItem("Quit", Quit),
                 },

@@ -233,6 +233,24 @@ internal sealed class DesktopShellController : IDesktopShellController
         return _platformCommands.OpenFolderAsync(localPath, cancellationToken);
     }
 
+    public async Task OpenWebAsync(CancellationToken cancellationToken = default)
+    {
+        Uri? serverUrl = _host?.ServerUrl;
+        if (serverUrl is null)
+        {
+            await _preferencesStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+            AppPreferences preferences = await _preferencesStore.GetAsync(cancellationToken).ConfigureAwait(false);
+            serverUrl = _startupOptions.ServerUrl ?? preferences.RememberedServerUrl;
+        }
+
+        if (serverUrl is null)
+        {
+            throw new InvalidOperationException("Sign in before opening Cotton Cloud.");
+        }
+
+        await _platformCommands.OpenWebAsync(serverUrl, cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task SetStartWithOperatingSystemAsync(bool enabled, CancellationToken cancellationToken = default)
     {
         if (enabled && !_autostartService.IsSupported)
