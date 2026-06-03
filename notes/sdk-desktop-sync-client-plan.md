@@ -329,6 +329,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Add manual Windows verification: autostart after reboot, tray behavior, notifications.
 - [ ] Add manual Linux verification: autostart after login, tray behavior, notification behavior.
 - [ ] Document Linux tray limitations and actual tested desktop environments.
+  Partial 2026-06-03: desktop settings now explicitly explain when tray lifecycle is unavailable, and Linux/XDG autostart tests verify autostart does not use `--start-minimized` without tray lifecycle support. Keep unchecked until manual Linux desktop-environment results are recorded.
 
 ## Phase 10 - Diagnostics And Supportability
 

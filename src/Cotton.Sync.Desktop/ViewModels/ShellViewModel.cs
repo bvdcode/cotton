@@ -194,14 +194,49 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public bool IsStartWithOperatingSystemSupported
     {
         get => _isStartWithOperatingSystemSupported;
-        private set => SetProperty(ref _isStartWithOperatingSystemSupported, value);
+        private set
+        {
+            if (SetProperty(ref _isStartWithOperatingSystemSupported, value))
+            {
+                OnPropertyChanged(nameof(AutostartStatusText));
+            }
+        }
     }
 
     public bool IsTrayLifecycleSupported
     {
         get => _isTrayLifecycleSupported;
-        private set => SetProperty(ref _isTrayLifecycleSupported, value);
+        private set
+        {
+            if (SetProperty(ref _isTrayLifecycleSupported, value))
+            {
+                OnPropertyChanged(nameof(IsTrayLifecycleUnsupported));
+                OnPropertyChanged(nameof(AutostartStatusText));
+                OnPropertyChanged(nameof(TrayLifecycleStatusText));
+            }
+        }
     }
+
+    public bool IsTrayLifecycleUnsupported => !IsTrayLifecycleSupported;
+
+    public string AutostartStatusText
+    {
+        get
+        {
+            if (!IsStartWithOperatingSystemSupported)
+            {
+                return "Autostart is not available on this platform.";
+            }
+
+            return IsTrayLifecycleSupported
+                ? "Cotton Sync can start minimized and keep running in the tray."
+                : "Cotton Sync can start with your desktop session and opens normally on this platform.";
+        }
+    }
+
+    public string TrayLifecycleStatusText => IsTrayLifecycleSupported
+        ? "Closing the window keeps Cotton Sync running from the tray."
+        : "Tray lifecycle is not available on this platform; closing the window exits the app.";
 
     public bool IsAddSyncPairWizardVisible
     {

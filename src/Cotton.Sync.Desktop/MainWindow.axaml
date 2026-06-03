@@ -597,6 +597,15 @@
                 <CheckBox Content="Start with this computer"
                           IsEnabled="{Binding IsStartWithOperatingSystemSupported}"
                           IsChecked="{Binding StartWithOperatingSystem}" />
+                <TextBlock Text="{Binding AutostartStatusText}"
+                           Classes="secondary"
+                           FontSize="12"
+                           TextWrapping="Wrap" />
+                <TextBlock Text="{Binding TrayLifecycleStatusText}"
+                           Classes="secondary"
+                           FontSize="12"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding IsTrayLifecycleUnsupported}" />
               </StackPanel>
 
               <Border Height="1"
