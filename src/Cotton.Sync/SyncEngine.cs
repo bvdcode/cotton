@@ -184,6 +184,18 @@ public sealed class SyncEngine : ISyncEngine
             return;
         }
 
+        if (localDeleted && remoteChanged && remote is not null)
+        {
+            await PreserveConflictAsync(syncPair, options, result, relativePath, null, remote.File, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        if (remoteDeleted && localChanged && local is not null)
+        {
+            await PreserveConflictAsync(syncPair, options, result, relativePath, local, null, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
         if (localChanged && !remoteChanged && local is not null)
         {
             await UploadAsync(syncPair, options, result, relativePath, local, remote?.File, cancellationToken).ConfigureAwait(false);

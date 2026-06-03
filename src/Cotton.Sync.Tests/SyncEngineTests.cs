@@ -18,6 +18,13 @@ public sealed class SyncEngineTests
     private string _root = string.Empty;
     private string _databasePath = string.Empty;
 
+    public enum MatrixFileState
+    {
+        Missing,
+        Baseline,
+        Changed,
+    }
+
     [SetUp]
     public void SetUp()
     {
@@ -427,6 +434,56 @@ public sealed class SyncEngineTests
         });
     }
 
+    [TestCase(MatrixFileState.Missing, MatrixFileState.Missing, 0)]
+    [TestCase(MatrixFileState.Missing, MatrixFileState.Baseline, (int)SyncActivityKind.DeletedRemote)]
+    [TestCase(MatrixFileState.Missing, MatrixFileState.Changed, (int)SyncActivityKind.Conflict)]
+    [TestCase(MatrixFileState.Baseline, MatrixFileState.Missing, (int)SyncActivityKind.DeletedLocal)]
+    [TestCase(MatrixFileState.Baseline, MatrixFileState.Baseline, 0)]
+    [TestCase(MatrixFileState.Baseline, MatrixFileState.Changed, (int)SyncActivityKind.Downloaded)]
+    [TestCase(MatrixFileState.Changed, MatrixFileState.Missing, (int)SyncActivityKind.Conflict)]
+    [TestCase(MatrixFileState.Changed, MatrixFileState.Baseline, (int)SyncActivityKind.Uploaded)]
+    [TestCase(MatrixFileState.Changed, MatrixFileState.Changed, (int)SyncActivityKind.Conflict)]
+    public async Task RunOnceAsync_ReconcilesBaselineMatrix(
+        MatrixFileState localState,
+        MatrixFileState remoteState,
+        int expectedActivityKind)
+    {
+        string relativePath = $"matrix/{localState}-{remoteState}.txt";
+        string baselineContent = "base";
+        string localContent = localState == MatrixFileState.Changed ? "local-changed" : baselineContent;
+        string remoteContent = remoteState == MatrixFileState.Changed ? "remote-changed" : baselineContent;
+        Guid remoteId = Guid.NewGuid();
+        NodeFileManifestDto baselineRemote = RemoteFile(relativePath, HashText(baselineContent), remoteId);
+        LocalFileSnapshot? local = CreateMatrixLocal(relativePath, localState, localContent);
+        NodeFileManifestDto? remote = remoteState == MatrixFileState.Missing
+            ? null
+            : RemoteFile(relativePath, HashText(remoteContent), remoteId);
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        if (remote is not null && remoteState == MatrixFileState.Changed)
+        {
+            remoteFiles.Downloads[remote.Id] = Encoding.UTF8.GetBytes(remoteContent);
+        }
+
+        LocalFileSnapshot[] localFiles = local is null ? [] : [local];
+        SyncEngine engine = CreateEngine(
+            new FakeLocalFileScanner(localFiles),
+            remote is null ? EmptyRemoteTree() : RemoteTree(remote),
+            remoteFiles,
+            out SqliteSyncStateStore stateStore);
+        await InsertBaselineAsync(stateStore, relativePath, HashText(baselineContent), baselineRemote);
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+        IReadOnlyList<SyncActivityKind> expectedKinds = expectedActivityKind == 0
+            ? []
+            : [(SyncActivityKind)expectedActivityKind];
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(expectedKinds));
+            AssertMatrixSideEffects(relativePath, localState, remoteState, remoteFiles);
+        });
+    }
+
     [Test]
     public async Task RunOnceAsync_PreservesBothVersionsWhenStaleUploadLosesRemoteRace()
     {
@@ -677,6 +734,53 @@ public sealed class SyncEngineTests
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         File.WriteAllText(fullPath, content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         File.SetLastWriteTimeUtc(fullPath, new DateTime(2026, 6, 2, 13, 0, 0, DateTimeKind.Utc));
+    }
+
+    private LocalFileSnapshot? CreateMatrixLocal(string relativePath, MatrixFileState state, string content)
+    {
+        if (state == MatrixFileState.Missing)
+        {
+            return null;
+        }
+
+        WriteFile(relativePath, content);
+        return LocalFile(relativePath, content);
+    }
+
+    private void AssertMatrixSideEffects(
+        string relativePath,
+        MatrixFileState localState,
+        MatrixFileState remoteState,
+        FakeRemoteFileSynchronizer remoteFiles)
+    {
+        string fullPath = Path.Combine(_root, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        if (localState == MatrixFileState.Missing && remoteState == MatrixFileState.Baseline)
+        {
+            Assert.That(remoteFiles.Deletes, Has.Count.EqualTo(1));
+        }
+        else if (localState == MatrixFileState.Baseline && remoteState == MatrixFileState.Missing)
+        {
+            Assert.That(File.Exists(fullPath), Is.False);
+        }
+        else if (localState == MatrixFileState.Baseline && remoteState == MatrixFileState.Changed)
+        {
+            Assert.That(File.ReadAllText(fullPath), Is.EqualTo("remote-changed"));
+        }
+        else if (localState == MatrixFileState.Changed && remoteState is MatrixFileState.Missing or MatrixFileState.Baseline)
+        {
+            Assert.That(remoteFiles.Uploads, Has.Count.EqualTo(1));
+        }
+        else if (localState == MatrixFileState.Changed && remoteState == MatrixFileState.Changed)
+        {
+            string[] conflictFiles = Directory.GetFiles(_root, "*Cotton conflict*", SearchOption.AllDirectories);
+            Assert.That(File.ReadAllText(fullPath), Is.EqualTo("local-changed"));
+            Assert.That(conflictFiles, Has.Length.EqualTo(1));
+            Assert.That(File.ReadAllText(conflictFiles[0]), Is.EqualTo("remote-changed"));
+        }
+        else if (localState == MatrixFileState.Missing && remoteState == MatrixFileState.Changed)
+        {
+            Assert.That(File.ReadAllText(fullPath), Is.EqualTo("remote-changed"));
+        }
     }
 
     private RemoteTreeSnapshot EmptyRemoteTree()
