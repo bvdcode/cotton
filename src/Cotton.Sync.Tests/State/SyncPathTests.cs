@@ -15,6 +15,20 @@ public sealed class SyncPathTests
         Assert.That(normalized, Is.EqualTo("Docs/Reports/file.txt"));
     }
 
+    [Test]
+    public void Normalize_UsesUnicodeFormC()
+    {
+        string decomposed = "Docs/Cafe\u0301.txt";
+
+        string normalized = SyncPath.Normalize(decomposed);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(normalized, Is.EqualTo("Docs/Caf\u00e9.txt"));
+            Assert.That(SyncPath.ToKey(decomposed), Is.EqualTo(SyncPath.ToKey("Docs/Caf\u00e9.txt")));
+        });
+    }
+
     [TestCase("CON")]
     [TestCase("Docs/NUL.txt")]
     [TestCase("COM1.log")]

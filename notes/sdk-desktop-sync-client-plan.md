@@ -188,7 +188,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Verification: `SyncPath.Normalize` rejects portable-Windows-invalid paths through `SyncPathValidationException`: reserved device names, reserved/control characters, trailing dot/space segments, overlong segments, and overlong relative paths; case-insensitive collisions are rejected by `SyncPathCollisionException`. `SyncPathTests` passed 12/12, `SyncEngineTests` passed 21/21, full `Cotton.Sync.Tests` passed 62/62, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [ ] Add Linux path validation.
   Required checks: case-sensitive collisions with remote case-insensitive model assumptions, file permissions.
-- [ ] Add Unicode normalization policy.
+- [x] Add Unicode normalization policy.
+  Verification: `SyncPath.Normalize` normalizes relative paths to Unicode Form C before validation/keying, so composed and decomposed names share the same sync identity; `Normalize_UsesUnicodeFormC` passed in `SyncPathTests` 13/13, full `Cotton.Sync.Tests` passed 63/63, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [ ] Add tests for every local/remote/base create-update-delete combination.
 - [x] Add tests for conflict naming uniqueness.
   Verification: `CreateConflictRelativePath_UsesIndexedSuffixWhenTimestampNameExists` proves conflict copy names are indexed instead of overwriting an existing conflict file with the same timestamp; `AtomicLocalFileSyncWriterTests` passed 3/3, full `Cotton.Sync.Tests` passed 50/50, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.

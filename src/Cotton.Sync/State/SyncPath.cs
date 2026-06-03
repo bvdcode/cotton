@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Text;
+
 namespace Cotton.Sync.State;
 
 /// <summary>
@@ -49,6 +51,7 @@ public static class SyncPath
             throw new ArgumentException("Relative path must contain non-empty segments.", nameof(relativePath));
         }
 
+        normalized = normalized.Normalize(NormalizationForm.FormC);
         ValidatePortablePath(relativePath, normalized);
         return normalized;
     }
