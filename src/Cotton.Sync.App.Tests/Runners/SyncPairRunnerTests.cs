@@ -65,6 +65,28 @@ public sealed class SyncPairRunnerTests
     }
 
     [Test]
+    public async Task SyncNowAsync_ExposesCurrentOperationWhileWorkRuns()
+    {
+        var work = new BlockingSyncPairWork();
+        SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true), work);
+
+        Task syncTask = runner.SyncNowAsync();
+        await work.WaitForRunAsync(TimeSpan.FromSeconds(2));
+
+        SyncPairStatus runningStatus = runner.Status;
+        work.ReleaseCurrentRun();
+        await syncTask;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(runningStatus.State, Is.EqualTo(SyncPairRunState.Syncing));
+            Assert.That(runningStatus.CurrentOperation, Is.EqualTo("Syncing changes"));
+            Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Idle));
+            Assert.That(runner.Status.CurrentOperation, Is.Null);
+        });
+    }
+
+    [Test]
     public async Task SyncNowAsync_DoesNotRunWhenPaused()
     {
         var work = new FakeSyncPairWork();

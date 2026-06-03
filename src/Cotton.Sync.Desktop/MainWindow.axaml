@@ -203,6 +203,10 @@
                          Classes="secondary"
                          FontSize="12"
                          TextTrimming="CharacterEllipsis" />
+              <TextBlock Text="{Binding CurrentProgressText}"
+                         Classes="secondary"
+                         FontSize="12"
+                         TextTrimming="CharacterEllipsis" />
             </StackPanel>
           </Grid>
         </Border>

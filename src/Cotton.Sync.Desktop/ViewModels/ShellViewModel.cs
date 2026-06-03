@@ -30,6 +30,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     private readonly DesktopNotificationTracker _notificationTracker = new();
     private string _accountName = "Signed out";
     private string _actionRequiredMessage = string.Empty;
+    private string _currentProgressText = "Sign in to start sync.";
     private string _globalStatus = "Loading";
     private bool _isBusy;
     private bool _isSignedIn;
@@ -201,6 +202,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         private set => SetProperty(ref _globalStatus, value);
     }
 
+    public string CurrentProgressText
+    {
+        get => _currentProgressText;
+        private set => SetProperty(ref _currentProgressText, value);
+    }
+
     public bool IsBusy
     {
         get => _isBusy;
@@ -223,6 +230,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
                 OnPropertyChanged(nameof(IsDashboardVisible));
                 OnPropertyChanged(nameof(IsSetupVisible));
                 OnPropertyChanged(nameof(CanRetryActionRequired));
+                RefreshCurrentProgressText();
                 RaiseCommandStates();
             }
         }
@@ -616,6 +624,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             GlobalStatus = snapshot.IsSignedIn
                 ? "Connected"
                 : SyncPairs.Count == 0 ? "Ready to connect" : "Ready";
+            RefreshCurrentProgressText();
             AddActivity("App", string.Empty, "Settings loaded");
             if (snapshot.IsSignedIn)
             {
@@ -734,6 +743,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             ActionRequiredMessage = string.Empty;
             RemoteFolders.Clear();
             GlobalStatus = "Sync requested";
+            RefreshCurrentProgressText();
             AddActivity("Pair", syncPair.LocalRootPath, "Folder added and initial sync requested");
             RefreshDiagnosticsItems();
             RaiseCommandStates();
@@ -826,9 +836,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             await _controller.SetSyncPairEnabledAsync(selected.Id, enabled).ConfigureAwait(true);
             selected.IsEnabled = enabled;
             selected.Status = enabled ? "Idle" : "Disabled";
+            selected.CurrentOperation = string.Empty;
             GlobalStatus = enabled ? "Ready" : "Folder disabled";
             ActionRequiredMessage = string.Empty;
             AddActivity("Pair", selected.LocalPath, enabled ? "Folder enabled" : "Folder disabled");
+            RefreshCurrentProgressText();
             RefreshDiagnosticsItems();
         }
         finally
@@ -891,6 +903,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             GlobalStatus = SyncPairs.Count == 0 ? "Ready to add a folder" : "Ready";
             ActionRequiredMessage = string.Empty;
             AddActivity("Pair", selected.LocalPath, "Sync folder removed");
+            RefreshCurrentProgressText();
             RefreshDiagnosticsItems();
         }
         finally
@@ -908,6 +921,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             GlobalStatus = "Paused";
             ActionRequiredMessage = string.Empty;
             SetAllPairStatuses("Paused");
+            RefreshCurrentProgressText();
             AddActivity("Sync", string.Empty, "Synchronization paused");
         }
         finally
@@ -925,6 +939,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             GlobalStatus = "Ready";
             ActionRequiredMessage = string.Empty;
             SetAllPairStatuses("Idle");
+            RefreshCurrentProgressText();
             AddActivity("Sync", string.Empty, "Synchronization resumed");
         }
         finally
@@ -971,6 +986,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             _notificationTracker.Reset();
             RemoteFolders.Clear();
             SetAllPairStatuses("Idle");
+            RefreshCurrentProgressText();
             AddActivity("Account", string.Empty, "Signed out");
             RefreshDiagnosticsItems();
         }
@@ -988,7 +1004,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             await _controller.SyncAllAsync().ConfigureAwait(true);
             GlobalStatus = "Sync requested";
             ActionRequiredMessage = string.Empty;
-            SetAllPairStatuses("Sync requested");
+            SetAllPairStatuses("Sync requested", "Waiting to sync changes");
+            RefreshCurrentProgressText();
             AddActivity("Sync", string.Empty, "Manual sync requested");
         }
         finally
@@ -1176,6 +1193,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
         SaveSelectedSyncPairNameCommand.RaiseCanExecuteChanged();
         RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
+        RefreshCurrentProgressText();
         RefreshDiagnosticsItems();
     }
 
@@ -1283,6 +1301,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             row.Status = pairStatus.Status;
             row.IsEnabled = !string.Equals(pairStatus.Status, "Disabled", StringComparison.Ordinal);
             row.LastError = pairStatus.LastError;
+            row.CurrentOperation = pairStatus.CurrentOperation ?? string.Empty;
             if (!string.IsNullOrWhiteSpace(pairStatus.LastError))
             {
                 AddActivity("Error", row.LocalPath, pairStatus.LastError);
@@ -1291,6 +1310,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
 
         GlobalStatus = ResolveGlobalStatus(status);
         ActionRequiredMessage = DesktopActionRequiredMessageResolver.FromStatus(status);
+        RefreshCurrentProgressText();
         AddNotifications(_notificationTracker.Apply(status, SyncPairs.ToDictionary(static pair => pair.Id, static pair => pair.DisplayName)));
         RefreshDiagnosticsItems();
     }
@@ -1415,12 +1435,57 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(AddSyncPairWizardSubtitle));
     }
 
-    private void SetAllPairStatuses(string status)
+    private void SetAllPairStatuses(string status, string? currentOperation = null)
     {
         foreach (SyncPairRowViewModel syncPair in SyncPairs)
         {
             syncPair.Status = status;
+            syncPair.CurrentOperation = currentOperation ?? string.Empty;
         }
+    }
+
+    private void RefreshCurrentProgressText()
+    {
+        if (!IsSignedIn)
+        {
+            CurrentProgressText = "Sign in to start sync.";
+            return;
+        }
+
+        if (SyncPairs.Count == 0)
+        {
+            CurrentProgressText = "Add a folder to start syncing.";
+            return;
+        }
+
+        SyncPairRowViewModel? activePair = SyncPairs.FirstOrDefault(IsActiveProgressPair);
+        if (activePair is not null)
+        {
+            string operation = string.IsNullOrWhiteSpace(activePair.CurrentOperation)
+                ? activePair.Status
+                : activePair.CurrentOperation;
+            CurrentProgressText = activePair.DisplayName + ": " + operation;
+            return;
+        }
+
+        if (SyncPairs.Any(static pair => string.Equals(pair.Status, "Paused", StringComparison.Ordinal)))
+        {
+            CurrentProgressText = "Sync is paused.";
+            return;
+        }
+
+        CurrentProgressText = "All folders are up to date.";
+    }
+
+    private static bool IsActiveProgressPair(SyncPairRowViewModel syncPair)
+    {
+        return !string.IsNullOrWhiteSpace(syncPair.CurrentOperation)
+            || string.Equals(syncPair.Status, "Scanning", StringComparison.Ordinal)
+            || string.Equals(syncPair.Status, "Syncing", StringComparison.Ordinal)
+            || string.Equals(syncPair.Status, "Sync requested", StringComparison.Ordinal)
+            || string.Equals(syncPair.Status, "Offline", StringComparison.Ordinal)
+            || string.Equals(syncPair.Status, "Error", StringComparison.Ordinal)
+            || string.Equals(syncPair.Status, "Conflict", StringComparison.Ordinal);
     }
 
     private SyncPairRowViewModel? ResolveConflictSyncPair(ConflictRowViewModel conflict)

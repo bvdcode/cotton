@@ -137,6 +137,28 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task StatusChanged_UpdatesCurrentProgressText()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Idle")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportStatus(new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(syncPairId, "Syncing", null, "Uploading report.txt"),
+        ]));
+
+        SyncPairRowViewModel row = viewModel.SyncPairs.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(row.CurrentOperation, Is.EqualTo("Uploading report.txt"));
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Syncing"));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Documents: Uploading report.txt"));
+        });
+    }
+
+    [Test]
     public async Task ActivityReported_AddsRecentActivityRow()
     {
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot());
@@ -375,11 +397,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             _snapshot = snapshot;
         }
 
-        public event EventHandler<DesktopSyncStatusSnapshot>? StatusChanged
-        {
-            add { }
-            remove { }
-        }
+        public event EventHandler<DesktopSyncStatusSnapshot>? StatusChanged;
 
         public event EventHandler<DesktopActivitySnapshot>? ActivityReported;
 
@@ -404,6 +422,11 @@ public sealed class ShellViewModelSyncPairCommandTests
         public void ReportActivity(DesktopActivitySnapshot activity)
         {
             ActivityReported?.Invoke(this, activity);
+        }
+
+        public void ReportStatus(DesktopSyncStatusSnapshot status)
+        {
+            StatusChanged?.Invoke(this, status);
         }
 
         public Task<DesktopShellSnapshot> LoadAsync(CancellationToken cancellationToken = default)

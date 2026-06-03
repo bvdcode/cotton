@@ -6,4 +6,5 @@ namespace Cotton.Sync.Desktop.Shell;
 internal sealed record DesktopSyncPairStatusSnapshot(
     Guid Id,
     string Status,
-    string? LastError);
+    string? LastError,
+    string? CurrentOperation = null);

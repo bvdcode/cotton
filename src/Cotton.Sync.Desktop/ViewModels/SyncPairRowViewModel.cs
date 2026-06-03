@@ -11,6 +11,7 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
     private string _displayName = string.Empty;
     private string _editableDisplayName = string.Empty;
     private long? _changeCursor;
+    private string _currentOperation = string.Empty;
     private bool _isEnabled = true;
     private DateTime? _lastSyncedAtUtc;
     private string? _lastError;
@@ -39,6 +40,12 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
     {
         get => _displayName;
         set => SetProperty(ref _displayName, value);
+    }
+
+    public string CurrentOperation
+    {
+        get => _currentOperation;
+        set => SetProperty(ref _currentOperation, value);
     }
 
     public string EditableDisplayName

@@ -267,9 +267,26 @@ public sealed class SyncPairRunner : ISyncPairRunner
             _syncPair.Id,
             _syncPair.DisplayName,
             state,
-            null,
+            CreateCurrentOperation(state, lastError),
             lastError,
             DateTime.UtcNow);
+    }
+
+    private static string? CreateCurrentOperation(SyncPairRunState state, string? lastError)
+    {
+        return state switch
+        {
+            SyncPairRunState.Scanning => "Scanning changes",
+            SyncPairRunState.Syncing => "Syncing changes",
+            SyncPairRunState.Offline => string.IsNullOrWhiteSpace(lastError)
+                ? "Waiting for connection"
+                : "Waiting for connection: " + lastError.Trim(),
+            SyncPairRunState.Error => string.IsNullOrWhiteSpace(lastError)
+                ? "Action required"
+                : "Action required: " + lastError.Trim(),
+            SyncPairRunState.Conflict => "Conflict needs review",
+            _ => null,
+        };
     }
 
     private TimeSpan GetRetryDelay(int completedAttempts)

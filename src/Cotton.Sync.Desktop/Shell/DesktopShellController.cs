@@ -826,7 +826,8 @@ internal sealed class DesktopShellController : IDesktopShellController
                 .Select(static syncPair => new DesktopSyncPairStatusSnapshot(
                     syncPair.SyncPairId,
                     ToStatusText(syncPair),
-                    syncPair.LastError))
+                    syncPair.LastError,
+                    syncPair.CurrentOperation))
                 .ToList());
     }
 
