@@ -286,6 +286,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Add remote folder picker or searchable remote folder selector.
 - [ ] Add settings screen.
   Required sections: account, sync pairs, startup, notifications, diagnostics, about.
+  Partial 2026-06-03: desktop shell now has a settings overlay with account, startup, diagnostics, about, and sign-out controls; the dashboard secondary-action menu opens it. Keep unchecked until sync-pair management, notifications settings, and full settings navigation are complete.
 - [ ] Add conflict/error screen.
   Required behavior: show conflict files, action-required errors, retry/sync-now command.
 - [ ] Add not-implemented UX for reserved future modes only in development builds or behind a feature flag.
@@ -294,7 +295,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Add responsive layout for minimum window size.
 - [ ] Ensure no user-visible strings are hardcoded if localization is required for desktop release.
 - [x] Run Avalonia desktop build.
-  Verification: commits `Refine desktop setup shell` and `Refine compact setup sign-in`; `dotnet build src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj --configuration Release --no-restore`, `dotnet test src/Cotton.Sync.Desktop.Tests/Cotton.Sync.Desktop.Tests.csproj --configuration Release --no-restore`, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings. Headless setup screenshots were captured at `/tmp/cotton-sync-setup.png`, `/tmp/cotton-sync-setup-2.png`, and `/tmp/cotton-sync-setup-ui.png`; dashboard screenshots were captured at `/tmp/cotton-sync-dashboard-ui.png` and `/tmp/cotton-sync-dashboard-ui-fixed.png` for clipping/spacing inspection.
+  Verification: commits `Refine desktop setup shell` and `Refine compact setup sign-in`; `dotnet build src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj --configuration Release --no-restore`, `dotnet test src/Cotton.Sync.Desktop.Tests/Cotton.Sync.Desktop.Tests.csproj --configuration Release --no-restore`, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings. Headless setup screenshots were captured at `/tmp/cotton-sync-setup.png`, `/tmp/cotton-sync-setup-2.png`, and `/tmp/cotton-sync-setup-ui.png`; dashboard screenshots were captured at `/tmp/cotton-sync-dashboard-ui.png`, `/tmp/cotton-sync-dashboard-ui-fixed.png`, and `/tmp/cotton-sync-dashboard-settings-pass.png` for clipping/spacing inspection.
 - [ ] Run manual UI walkthrough on Linux.
 - [ ] Run manual UI walkthrough on Windows.
 - [ ] Capture screenshots for onboarding, dashboard, settings, conflict state, and error state.

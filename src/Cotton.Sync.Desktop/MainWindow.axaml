@@ -70,8 +70,8 @@
                           Command="{Binding PauseCommand}" />
                 <MenuItem Header="Resume sync"
                           Command="{Binding ResumeCommand}" />
-                <MenuItem Header="Diagnostics"
-                          Command="{Binding SelfTestCommand}" />
+                <MenuItem Header="Settings"
+                          Command="{Binding ShowSettingsCommand}" />
                 <MenuItem Header="Sign out"
                           Command="{Binding SignOutCommand}" />
               </MenuFlyout>
@@ -180,7 +180,7 @@
 
     <Grid Grid.Row="2"
           IsVisible="{Binding IsDashboardVisible}">
-      <Grid RowDefinitions="Auto,*,Auto"
+      <Grid RowDefinitions="Auto,*"
             Margin="10"
             RowSpacing="8">
         <Border Padding="10"
@@ -344,14 +344,6 @@
           </Border>
         </Grid>
 
-        <Grid Grid.Row="2"
-              ColumnDefinitions="*">
-          <CheckBox Content="Start with computer"
-                    IsEnabled="{Binding IsStartWithOperatingSystemSupported}"
-                    IsChecked="{Binding StartWithOperatingSystem}"
-                    FontSize="12"
-                    VerticalAlignment="Center" />
-        </Grid>
       </Grid>
 
       <Border Background="{DynamicResource CottonOverlayBrush}"
@@ -520,6 +512,96 @@
                 </Grid>
               </StackPanel>
             </Grid>
+          </Grid>
+        </Border>
+      </Border>
+
+      <Border Background="{DynamicResource CottonOverlayBrush}"
+              IsVisible="{Binding IsSettingsVisible}">
+        <Border Width="372"
+                Padding="12"
+                CornerRadius="7"
+                Background="{DynamicResource CottonSurfaceBrush}"
+                BorderBrush="{DynamicResource CottonBorderBrush}"
+                BorderThickness="1"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+          <Grid RowDefinitions="Auto,Auto"
+                RowSpacing="14">
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="8">
+              <StackPanel Spacing="2">
+                <TextBlock Text="Settings"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="Account, startup, and diagnostics"
+                           Classes="secondary"
+                           FontSize="12"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+              <Button Grid.Column="1"
+                      Content="x"
+                      Classes="icon"
+                      ToolTip.Tip="Close"
+                      Command="{Binding CloseSettingsCommand}" />
+            </Grid>
+
+            <StackPanel Grid.Row="1"
+                        Spacing="12">
+              <StackPanel Spacing="3">
+                <TextBlock Text="Account"
+                           FontWeight="SemiBold" />
+                <TextBlock Text="{Binding AccountName}"
+                           FontSize="12"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding ServerUrl}"
+                           Classes="secondary"
+                           FontSize="12"
+                           TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+
+              <Border Height="1"
+                      Background="{DynamicResource CottonBorderBrush}" />
+
+              <StackPanel Spacing="6">
+                <TextBlock Text="Startup"
+                           FontWeight="SemiBold" />
+                <CheckBox Content="Start with this computer"
+                          IsEnabled="{Binding IsStartWithOperatingSystemSupported}"
+                          IsChecked="{Binding StartWithOperatingSystem}" />
+              </StackPanel>
+
+              <Border Height="1"
+                      Background="{DynamicResource CottonBorderBrush}" />
+
+              <StackPanel Spacing="7">
+                <TextBlock Text="Diagnostics"
+                           FontWeight="SemiBold" />
+                <Button Content="Run self-test"
+                        Classes="compact"
+                        HorizontalAlignment="Left"
+                        Command="{Binding SelfTestCommand}" />
+              </StackPanel>
+
+              <Border Height="1"
+                      Background="{DynamicResource CottonBorderBrush}" />
+
+              <Grid ColumnDefinitions="*,Auto"
+                    ColumnSpacing="8">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="Cotton Sync Desktop"
+                             FontWeight="SemiBold" />
+                  <TextBlock Text="Full mirror sync client"
+                             Classes="secondary"
+                             FontSize="12" />
+                </StackPanel>
+                <Button Grid.Column="1"
+                        Content="Sign out"
+                        Classes="compact"
+                        Command="{Binding SignOutCommand}" />
+              </Grid>
+            </StackPanel>
           </Grid>
         </Border>
       </Border>

@@ -33,6 +33,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     private bool _isServerProbeFailed;
     private bool _isServerVerified;
     private bool _isAddSyncPairWizardVisible;
+    private bool _isSettingsVisible;
     private bool _isLoadingSnapshot;
     private bool _isStartWithOperatingSystemSupported = true;
     private bool _isTrayLifecycleSupported;
@@ -59,6 +60,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         OpenRemoteFolderCommand = new AsyncRelayCommand(OpenRemoteFolderAsync, () => SelectedRemoteFolder is not null && !IsBusy, HandleCommandError);
         RemoteFolderUpCommand = new AsyncRelayCommand(RemoteFolderUpAsync, CanGoUpRemoteFolder, HandleCommandError);
         ShowAddSyncPairCommand = new AsyncRelayCommand(ShowAddSyncPairAsync, () => IsSignedIn && !IsBusy, HandleCommandError);
+        ShowSettingsCommand = new AsyncRelayCommand(ShowSettingsAsync, () => IsSignedIn && !IsBusy, HandleCommandError);
+        CloseSettingsCommand = new AsyncRelayCommand(CloseSettingsAsync, () => !IsBusy, HandleCommandError);
         SyncNowCommand = new AsyncRelayCommand(SyncNowAsync, () => IsSignedIn, HandleCommandError);
         PauseCommand = new AsyncRelayCommand(PauseAsync, () => IsSignedIn, HandleCommandError);
         ResumeCommand = new AsyncRelayCommand(ResumeAsync, () => IsSignedIn, HandleCommandError);
@@ -80,6 +83,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
 
     public AsyncRelayCommand CancelAddSyncPairCommand { get; }
 
+    public AsyncRelayCommand CloseSettingsCommand { get; }
+
     public AsyncRelayCommand OpenFolderCommand { get; }
 
     public AsyncRelayCommand OpenWebCommand { get; }
@@ -97,6 +102,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public AsyncRelayCommand SignOutCommand { get; }
 
     public AsyncRelayCommand ShowAddSyncPairCommand { get; }
+
+    public AsyncRelayCommand ShowSettingsCommand { get; }
 
     public AsyncRelayCommand SyncNowCommand { get; }
 
@@ -198,6 +205,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public bool IsAddSyncPairLocalStepVisible => IsAddSyncPairWizardVisible && !HasLocalFolderSelection;
 
     public bool IsAddSyncPairCloudStepVisible => IsAddSyncPairWizardVisible && HasLocalFolderSelection;
+
+    public bool IsSettingsVisible
+    {
+        get => _isSettingsVisible;
+        private set => SetProperty(ref _isSettingsVisible, value);
+    }
 
     public string AddSyncPairWizardTitle => HasLocalFolderSelection ? "Choose cloud folder" : "Choose local folder";
 
@@ -563,6 +576,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             GlobalStatus = "Signed out";
             Password = string.Empty;
             IsAddSyncPairWizardVisible = false;
+            IsSettingsVisible = false;
             RemoteFolders.Clear();
             SetAllPairStatuses("Idle");
             AddActivity("Account", string.Empty, "Signed out");
@@ -605,6 +619,18 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         {
             IsBusy = false;
         }
+    }
+
+    private Task ShowSettingsAsync()
+    {
+        IsSettingsVisible = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseSettingsAsync()
+    {
+        IsSettingsVisible = false;
+        return Task.CompletedTask;
     }
 
     private async Task OpenRemoteFolderAsync()
@@ -845,6 +871,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         OpenFolderCommand.RaiseCanExecuteChanged();
         OpenWebCommand.RaiseCanExecuteChanged();
         ShowAddSyncPairCommand.RaiseCanExecuteChanged();
+        ShowSettingsCommand.RaiseCanExecuteChanged();
+        CloseSettingsCommand.RaiseCanExecuteChanged();
         SelfTestCommand.RaiseCanExecuteChanged();
     }
 
