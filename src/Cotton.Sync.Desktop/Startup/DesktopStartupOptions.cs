@@ -10,16 +10,18 @@ internal sealed class DesktopStartupOptions
         string? username,
         string? dataDirectory,
         bool startMinimizedToTray,
-        bool runSelfTest)
+        bool runSelfTest,
+        bool exportDiagnostics)
     {
         ServerUrl = serverUrl;
         Username = username;
         DataDirectory = dataDirectory;
         StartMinimizedToTray = startMinimizedToTray;
         RunSelfTest = runSelfTest;
+        ExportDiagnostics = exportDiagnostics;
     }
 
-    public static DesktopStartupOptions Empty { get; } = new(null, null, null, false, false);
+    public static DesktopStartupOptions Empty { get; } = new(null, null, null, false, false, false);
 
     public Uri? ServerUrl { get; }
 
@@ -30,6 +32,8 @@ internal sealed class DesktopStartupOptions
     public bool StartMinimizedToTray { get; }
 
     public bool RunSelfTest { get; }
+
+    public bool ExportDiagnostics { get; }
 
     public static DesktopStartupOptions Parse(IReadOnlyList<string> args)
     {
@@ -42,12 +46,15 @@ internal sealed class DesktopStartupOptions
             || HasFlag(args, "--tray");
         bool runSelfTest = HasFlag(args, "--self-test")
             || HasFlag(args, "--smoke-test");
+        bool exportDiagnostics = HasFlag(args, "--export-diagnostics")
+            || HasFlag(args, "--diagnostics");
         return new DesktopStartupOptions(
             ParseServerUrl(serverUrl),
             NormalizeOptional(username),
             NormalizeOptional(dataDirectory),
             startMinimizedToTray,
-            runSelfTest);
+            runSelfTest,
+            exportDiagnostics);
     }
 
     private static Uri? ParseServerUrl(string? value)

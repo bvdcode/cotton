@@ -43,4 +43,26 @@ public sealed class DesktopCommandLineRunnerTests
             Assert.That(report, Does.Contain("Result: passed"));
         });
     }
+
+    [Test]
+    public async Task RunExportDiagnosticsAsync_PrintsBundlePathAndCreatesArchive()
+    {
+        DesktopStartupOptions options = DesktopStartupOptions.Parse(["--data-dir", _tempDirectory]);
+        using var output = new StringWriter();
+
+        int exitCode = await DesktopCommandLineRunner.RunExportDiagnosticsAsync(options, output);
+
+        string report = output.ToString();
+        string bundlePrefix = "Bundle: ";
+        string bundlePath = report
+            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+            .Single(line => line.StartsWith(bundlePrefix, StringComparison.Ordinal))[bundlePrefix.Length..];
+        Assert.Multiple(() =>
+        {
+            Assert.That(exitCode, Is.EqualTo(0));
+            Assert.That(report, Does.Contain("Cotton Sync Desktop diagnostics"));
+            Assert.That(File.Exists(bundlePath), Is.True);
+            Assert.That(Path.GetDirectoryName(bundlePath), Is.EqualTo(Path.Combine(_tempDirectory, "diagnostics")));
+        });
+    }
 }

@@ -68,6 +68,17 @@ public sealed class DesktopStartupOptionsTests
     }
 
     [Test]
+    public void Parse_LoadsExportDiagnosticsFlag()
+    {
+        DesktopStartupOptions options = DesktopStartupOptions.Parse(
+            [
+                "--export-diagnostics",
+            ]);
+
+        Assert.That(options.ExportDiagnostics, Is.True);
+    }
+
+    [Test]
     public void Parse_LoadsDataDirectory()
     {
         DesktopStartupOptions options = DesktopStartupOptions.Parse(

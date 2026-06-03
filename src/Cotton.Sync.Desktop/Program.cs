@@ -23,6 +23,14 @@ internal static class Program
                 .GetResult();
         }
 
+        if (startupOptions.ExportDiagnostics)
+        {
+            return DesktopCommandLineRunner
+                .RunExportDiagnosticsAsync(paths, startupOptions, Console.Out)
+                .GetAwaiter()
+                .GetResult();
+        }
+
         using DesktopSingleInstanceGuard? singleInstance = DesktopSingleInstanceGuard
             .TryAcquire(paths.SingleInstanceLockPath);
         if (singleInstance is null)
