@@ -53,6 +53,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         _folderPicker = folderPicker ?? throw new ArgumentNullException(nameof(folderPicker));
         SyncPairs.CollectionChanged += OnSyncPairsChanged;
         RemoteFolders.CollectionChanged += OnRemoteFoldersChanged;
+        SelfTestItems.CollectionChanged += OnSelfTestItemsChanged;
         _controller.StatusChanged += OnStatusChanged;
         SignInCommand = new AsyncRelayCommand(SignInAsync, CanSignIn, HandleCommandError);
         AddSyncPairCommand = new AsyncRelayCommand(AddSyncPairAsync, CanAddSyncPair, HandleCommandError);
@@ -78,6 +79,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public ObservableCollection<ActivityRowViewModel> Activities { get; } = [];
 
     public ObservableCollection<RemoteFolderRowViewModel> RemoteFolders { get; } = [];
+
+    public ObservableCollection<SelfTestItemRowViewModel> SelfTestItems { get; } = [];
 
     public AsyncRelayCommand AddSyncPairCommand { get; }
 
@@ -170,6 +173,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public bool HasNoRemoteFolders => RemoteFolders.Count == 0;
 
     public bool HasRemoteFolders => RemoteFolders.Count > 0;
+
+    public bool HasNoSelfTestItems => SelfTestItems.Count == 0;
+
+    public bool HasSelfTestItems => SelfTestItems.Count > 0;
 
     public bool HasSyncPairs => SyncPairs.Count > 0;
 
@@ -423,6 +430,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         _controller.StatusChanged -= OnStatusChanged;
         SyncPairs.CollectionChanged -= OnSyncPairsChanged;
         RemoteFolders.CollectionChanged -= OnRemoteFoldersChanged;
+        SelfTestItems.CollectionChanged -= OnSelfTestItemsChanged;
         _serverProbeCancellation?.Cancel();
         _serverProbeCancellation?.Dispose();
         _controller.Dispose();
@@ -670,8 +678,15 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             DesktopSelfTestSnapshot result = await _controller.RunSelfTestAsync().ConfigureAwait(true);
             GlobalStatus = result.Passed ? "Self-test passed" : "Action required";
             ActionRequiredMessage = DesktopActionRequiredMessageResolver.FromSelfTest(result);
+            SelfTestItems.Clear();
             foreach (DesktopSelfTestItemSnapshot item in result.Items)
             {
+                SelfTestItems.Add(new SelfTestItemRowViewModel
+                {
+                    Name = item.Name,
+                    Details = item.Details,
+                    Passed = item.Passed,
+                });
                 AddActivity(item.Passed ? "Check" : "Warning", item.Name, item.Passed ? item.Details : "Failed: " + item.Details);
             }
         }
@@ -839,6 +854,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(HasNoRemoteFolders));
         OnPropertyChanged(nameof(HasRemoteFolders));
         OpenRemoteFolderCommand.RaiseCanExecuteChanged();
+    }
+
+    private void OnSelfTestItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(HasNoSelfTestItems));
+        OnPropertyChanged(nameof(HasSelfTestItems));
     }
 
     private async Task LoadRemoteFoldersAsync(string remotePath)

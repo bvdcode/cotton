@@ -339,6 +339,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Verification 2026-06-03: desktop startup installs a `RotatingFileTraceListener` into app-data `cotton-sync.log`; it retains rotated files as `.1`, `.2`, `.3` and is idempotent per log path. Focused `RotatingFileTraceListenerTests` passed 3/3. Full desktop tests and solution build are recorded in the commit verification.
 - [ ] Add diagnostics screen.
   Required fields: app version, server URL, account, sync pair ids, local paths, remote ids, last sync time, current cursor, last error.
+  Partial 2026-06-03: settings diagnostics now exposes self-test execution, diagnostics export, and a compact visible list of the latest self-test results. Keep unchecked until the full required field set is displayed and manually verified.
 - [x] Add export diagnostics bundle command.
   Verification 2026-06-03: settings now exposes an Export diagnostics command; `DesktopDiagnosticsExporter` writes a zip bundle under app-data `diagnostics/` containing `diagnostics.json` and rotated trace logs, while excluding token and SQLite files. Focused `DesktopDiagnosticsExporterTests` passed 2/2. Full desktop tests and solution build are recorded in the commit verification.
 - [x] Redact tokens and secrets from logs and diagnostics.
