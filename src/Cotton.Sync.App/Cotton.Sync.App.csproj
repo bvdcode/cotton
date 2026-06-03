@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Authors>Vadim Belov</Authors>
+    <Company>bvdcode</Company>
+    <Product>Cotton</Product>
+    <Description>Application services for the Cotton Cloud desktop synchronization client.</Description>
+    <PackageId>Cotton.Sync.App</PackageId>
+    <PackageTags>Cloud,Storage,Sync,Desktop</PackageTags>
+    <PackageProjectUrl>https://github.com/bvdcode/cotton</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/bvdcode/cotton</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
+  </PropertyGroup>
+
+</Project>
