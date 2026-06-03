@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Sync.App.Auth;
+using Cotton.Sync.App.Platform;
 using Cotton.Sync.App.Preferences;
 using Cotton.Sync.App.Supervision;
 using Cotton.Sync.App.SyncPairs;
@@ -14,6 +15,7 @@ namespace Cotton.Sync.App.SyncApplication;
 public sealed class SyncApplicationService : ISyncApplicationService
 {
     private readonly IAuthFlow _authFlow;
+    private readonly IPlatformCommandService _platformCommands;
     private readonly IAppPreferencesStore _preferences;
     private readonly ISyncPairPrerequisiteValidator _prerequisites;
     private readonly ISyncSupervisor _supervisor;
@@ -29,6 +31,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
         IAppPreferencesStore preferences,
         IAuthFlow authFlow,
         ISyncSupervisor supervisor,
+        IPlatformCommandService platformCommands,
         SyncPairSettingsValidator? validator = null)
     {
         _syncPairs = syncPairs ?? throw new ArgumentNullException(nameof(syncPairs));
@@ -36,6 +39,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
         _preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));
         _authFlow = authFlow ?? throw new ArgumentNullException(nameof(authFlow));
         _supervisor = supervisor ?? throw new ArgumentNullException(nameof(supervisor));
+        _platformCommands = platformCommands ?? throw new ArgumentNullException(nameof(platformCommands));
         _validator = validator ?? new SyncPairSettingsValidator();
     }
 
@@ -172,5 +176,17 @@ public sealed class SyncApplicationService : ISyncApplicationService
     public Task StopSyncAsync(CancellationToken cancellationToken = default)
     {
         return _supervisor.StopAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task OpenFolderAsync(string localPath, CancellationToken cancellationToken = default)
+    {
+        return _platformCommands.OpenFolderAsync(localPath, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task OpenWebAsync(Uri url, CancellationToken cancellationToken = default)
+    {
+        return _platformCommands.OpenWebAsync(url, cancellationToken);
     }
 }

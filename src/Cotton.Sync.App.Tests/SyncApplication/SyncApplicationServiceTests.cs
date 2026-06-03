@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Sync.App.Auth;
+using Cotton.Sync.App.Platform;
 using Cotton.Sync.App.Preferences;
 using Cotton.Sync.App.SyncApplication;
 using Cotton.Sync.App.SyncPairs;
@@ -106,6 +107,41 @@ public sealed class SyncApplicationServiceTests
         {
             Assert.That(supervisor.SyncNowCallCount, Is.EqualTo(1));
             Assert.That(supervisor.LastSyncNowPairId, Is.EqualTo(syncPairId));
+        });
+    }
+
+    [Test]
+    public async Task OpenFolderAsync_DelegatesToPlatformCommands()
+    {
+        var platformCommands = new FakePlatformCommandService();
+        SyncApplicationService service = CreateService(
+            new InMemorySyncPairSettingsStore(),
+            platformCommands: platformCommands);
+
+        await service.OpenFolderAsync("/home/user/Cotton");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(platformCommands.OpenFolderCallCount, Is.EqualTo(1));
+            Assert.That(platformCommands.LastOpenedFolder, Is.EqualTo("/home/user/Cotton"));
+        });
+    }
+
+    [Test]
+    public async Task OpenWebAsync_DelegatesToPlatformCommands()
+    {
+        var platformCommands = new FakePlatformCommandService();
+        SyncApplicationService service = CreateService(
+            new InMemorySyncPairSettingsStore(),
+            platformCommands: platformCommands);
+        var url = new Uri("https://cotton.example.test/");
+
+        await service.OpenWebAsync(url);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(platformCommands.OpenWebCallCount, Is.EqualTo(1));
+            Assert.That(platformCommands.LastOpenedUrl, Is.EqualTo(url));
         });
     }
 
@@ -224,14 +260,16 @@ public sealed class SyncApplicationServiceTests
         ISyncPairPrerequisiteValidator? prerequisites = null,
         IAppPreferencesStore? preferences = null,
         IAuthFlow? authFlow = null,
-        ISyncSupervisor? supervisor = null)
+        ISyncSupervisor? supervisor = null,
+        IPlatformCommandService? platformCommands = null)
     {
         return new SyncApplicationService(
             store,
             prerequisites ?? new FakeSyncPairPrerequisiteValidator([]),
             preferences ?? new FakeAppPreferencesStore(),
             authFlow ?? new FakeAuthFlow(),
-            supervisor ?? new FakeSyncSupervisor());
+            supervisor ?? new FakeSyncSupervisor(),
+            platformCommands ?? new FakePlatformCommandService());
     }
 
     private static SyncPairSettings CreatePair(string localRootPath)
@@ -414,6 +452,31 @@ public sealed class SyncApplicationServiceTests
         public Task StopAsync(CancellationToken cancellationToken = default)
         {
             StopCallCount++;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakePlatformCommandService : IPlatformCommandService
+    {
+        public string? LastOpenedFolder { get; private set; }
+
+        public Uri? LastOpenedUrl { get; private set; }
+
+        public int OpenFolderCallCount { get; private set; }
+
+        public int OpenWebCallCount { get; private set; }
+
+        public Task OpenFolderAsync(string localPath, CancellationToken cancellationToken = default)
+        {
+            OpenFolderCallCount++;
+            LastOpenedFolder = localPath;
+            return Task.CompletedTask;
+        }
+
+        public Task OpenWebAsync(Uri url, CancellationToken cancellationToken = default)
+        {
+            OpenWebCallCount++;
+            LastOpenedUrl = url;
             return Task.CompletedTask;
         }
     }

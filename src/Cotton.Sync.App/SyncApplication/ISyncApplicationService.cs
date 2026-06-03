@@ -93,4 +93,14 @@ public interface ISyncApplicationService
     /// Stops all sync runners.
     /// </summary>
     Task StopSyncAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Opens a local folder in the host file manager.
+    /// </summary>
+    Task OpenFolderAsync(string localPath, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Opens a URL in the default browser.
+    /// </summary>
+    Task OpenWebAsync(Uri url, CancellationToken cancellationToken = default);
 }
