@@ -37,8 +37,29 @@ public sealed class RemoteChangeFeedReader : IRemoteChangeFeedReader
         }
 
         SyncChangeCursor cursor = await _stateStore.GetChangeCursorAsync(syncPairId, cancellationToken).ConfigureAwait(false);
+        return await ReadFromCursorAsync(syncPairId, cursor.LastCursor, limit, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<RemoteChangeFeedBatch> ReadFromCursorAsync(
+        string syncPairId,
+        long sinceCursor,
+        int limit = RemoteChangeFeedDefaults.PageSize,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(syncPairId);
+        if (sinceCursor < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(sinceCursor), sinceCursor, "Cursor cannot be negative.");
+        }
+
+        if (limit <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(limit), limit, "Limit must be positive.");
+        }
+
         SyncChangesResponseDto response = await _syncClient
-            .GetChangesAsync(cursor.LastCursor, limit, cancellationToken)
+            .GetChangesAsync(sinceCursor, limit, cancellationToken)
             .ConfigureAwait(false);
         return new RemoteChangeFeedBatch(
             syncPairId,

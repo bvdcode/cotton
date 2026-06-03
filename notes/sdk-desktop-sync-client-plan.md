@@ -163,7 +163,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Verification: commit `Add sync change cursor state`; `sync_change_cursors` stores the last accepted server cursor per sync pair through EF Core migration `20260603172105_AddSyncChangeCursors`; `dotnet test src/Cotton.Sync.Tests/Cotton.Sync.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~SqliteSyncStateStoreTests` passed 8/8, and `dotnet build src/Cotton.sln --configuration Release` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [x] Add safe remote change-feed reader with explicit acknowledgement.
   Verification: commit `Add remote change feed reader`; `RemoteChangeFeedReader.ReadAsync` reads from the stored cursor without advancing it, `AcknowledgeAsync` advances only after processing or marks expired cursors without skipping changes; `dotnet test src/Cotton.Sync.Tests/Cotton.Sync.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~RemoteChangeFeedReaderTests` passed 3/3, and `dotnet build src/Cotton.sln --configuration Release` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
-- [ ] Add or refine remote snapshot representation for change-feed updates.
+- [x] Add or refine remote snapshot representation for change-feed updates.
+  Verification 2026-06-03: `RemoteChangeFeedSnapshot` and `RemoteChangeImpact` normalize durable change-feed DTOs into file/folder targets, semantic actions, affected node/file ids, and refresh hints; `RemoteChangeAwareSyncPairWork` now drains `HasMore` pages through explicit cursor reads before one sync pass and acknowledges only after success. Focused remote change-feed tests passed 19/19, `RemoteChangeAwareSyncPairWorkTests` passed 5/5, full `Cotton.Sync.Tests` passed 89/89, full `Cotton.Sync.App.Tests` passed 83/83, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [x] Add durable operation intent tracking if needed for crash recovery.
   Verification: no separate operation-intent table is needed for the current full-file sync primitive because operations update baseline only after success, downloads use temp files, and a remote upload that succeeds before baseline persistence is recovered by the next crawl without a duplicate upload; `RunOnceAsync_RecoversAfterRemoteUploadBeforeBaselineUpdate` passed in `SyncEngineTests` 22/22 and full `Cotton.Sync.Tests` passed 65/65.
 - [x] Ensure downloads always use temp file plus atomic replace.
@@ -211,7 +212,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [x] Add tests for crash after remote upload before baseline update.
   Verification: `RunOnceAsync_RecoversAfterRemoteUploadBeforeBaselineUpdate` simulates state-store failure after remote upload, then verifies the next run adopts the remote file with matching content without uploading again; `SyncEngineTests` passed 22/22, full `Cotton.Sync.Tests` passed 65/65, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [x] Run full sync test suite.
-  Verification: `dotnet test src/Cotton.Sync.Tests/Cotton.Sync.Tests.csproj --configuration Release --no-restore` passed 65/65 and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
+  Verification: `dotnet test src/Cotton.Sync.Tests/Cotton.Sync.Tests.csproj --configuration Release --no-restore` passed 89/89 and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 
 ## Phase 6 - Continuous Sync
 

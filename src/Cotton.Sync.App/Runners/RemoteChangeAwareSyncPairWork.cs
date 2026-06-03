@@ -27,8 +27,7 @@ public sealed class RemoteChangeAwareSyncPairWork : ISyncPairWork
     public async Task RunOnceAsync(SyncPairSettings syncPair, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(syncPair);
-        RemoteChangeFeedBatch remoteBatch = await _remoteChanges
-            .ReadAsync(syncPair.Id.ToString("D"), cancellationToken: cancellationToken)
+        RemoteChangeFeedBatch remoteBatch = await ReadRemoteChangesAsync(syncPair, cancellationToken)
             .ConfigureAwait(false);
 
         await _inner.RunOnceAsync(syncPair, cancellationToken).ConfigureAwait(false);
@@ -40,5 +39,39 @@ public sealed class RemoteChangeAwareSyncPairWork : ISyncPairWork
         }
 
         await _remoteChanges.AcknowledgeAsync(remoteBatch, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<RemoteChangeFeedBatch> ReadRemoteChangesAsync(
+        SyncPairSettings syncPair,
+        CancellationToken cancellationToken)
+    {
+        string syncPairId = syncPair.Id.ToString("D");
+        RemoteChangeFeedBatch batch = await _remoteChanges
+            .ReadAsync(syncPairId, cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+
+        while (ShouldReadNextPage(batch))
+        {
+            batch = await _remoteChanges
+                .ReadFromCursorAsync(syncPairId, batch.NextCursor, cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return batch;
+    }
+
+    private static bool ShouldReadNextPage(RemoteChangeFeedBatch batch)
+    {
+        if (!batch.HasMore || batch.CursorExpired)
+        {
+            return false;
+        }
+
+        if (batch.NextCursor <= batch.SinceCursor)
+        {
+            throw new InvalidOperationException("Remote change feed reported more pages without advancing the cursor.");
+        }
+
+        return true;
     }
 }

@@ -49,6 +49,7 @@ public sealed class RemoteChangeFeedBatch
         CursorExpired = cursorExpired;
         EarliestAvailableCursor = earliestAvailableCursor;
         Changes = changes.ToArray();
+        Snapshot = RemoteChangeFeedSnapshot.FromChanges(Changes);
     }
 
     /// <summary>
@@ -85,4 +86,9 @@ public sealed class RemoteChangeFeedBatch
     /// Gets ordered remote changes for this page.
     /// </summary>
     public IReadOnlyList<SyncChangeDto> Changes { get; }
+
+    /// <summary>
+    /// Gets a normalized summary of the changes in this page.
+    /// </summary>
+    public RemoteChangeFeedSnapshot Snapshot { get; }
 }

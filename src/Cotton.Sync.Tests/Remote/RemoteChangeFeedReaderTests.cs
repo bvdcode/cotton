@@ -71,6 +71,36 @@ public sealed class RemoteChangeFeedReaderTests
     }
 
     [Test]
+    public async Task ReadFromCursorAsync_UsesExplicitCursorAndDoesNotAdvanceSavedCursor()
+    {
+        var stateStore = CreateStore();
+        await stateStore.InitializeAsync();
+        await stateStore.SaveChangeCursorAsync(new SyncChangeCursor
+        {
+            SyncPairId = "pair-a",
+            LastCursor = 10,
+        });
+        var syncClient = new FakeCottonSyncClient(new SyncChangesResponseDto
+        {
+            SinceCursor = 12,
+            NextCursor = 14,
+            HasMore = false,
+        });
+        var reader = new RemoteChangeFeedReader(syncClient, stateStore);
+
+        RemoteChangeFeedBatch batch = await reader.ReadFromCursorAsync("pair-a", sinceCursor: 12, limit: 30);
+        SyncChangeCursor cursor = await stateStore.GetChangeCursorAsync("pair-a");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(syncClient.Requests, Is.EqualTo(new[] { (SinceCursor: 12L, Limit: 30) }));
+            Assert.That(batch.SinceCursor, Is.EqualTo(12));
+            Assert.That(batch.NextCursor, Is.EqualTo(14));
+            Assert.That(cursor.LastCursor, Is.EqualTo(10));
+        });
+    }
+
+    [Test]
     public async Task AcknowledgeAsync_SavesNextCursorForProcessedBatch()
     {
         var stateStore = CreateStore();

@@ -17,6 +17,15 @@ public interface IRemoteChangeFeedReader
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Reads one remote change-feed page from an explicit cursor without advancing the saved checkpoint.
+    /// </summary>
+    Task<RemoteChangeFeedBatch> ReadFromCursorAsync(
+        string syncPairId,
+        long sinceCursor,
+        int limit = RemoteChangeFeedDefaults.PageSize,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Advances or marks the sync pair checkpoint after a batch has been processed.
     /// </summary>
     Task AcknowledgeAsync(RemoteChangeFeedBatch batch, CancellationToken cancellationToken = default);

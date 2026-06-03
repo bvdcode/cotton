@@ -37,6 +37,82 @@ public sealed class RemoteChangeAwareSyncPairWorkTests
     }
 
     [Test]
+    public async Task RunOnceAsync_DrainsRemotePagesBeforeSingleInnerWorkPass()
+    {
+        var syncPair = CreateSyncPair();
+        var inner = new FakeSyncPairWork();
+        var firstBatch = new RemoteChangeFeedBatch(
+            syncPair.Id.ToString("D"),
+            sinceCursor: 10,
+            nextCursor: 12,
+            hasMore: true,
+            cursorExpired: false,
+            earliestAvailableCursor: 5,
+            changes:
+            [
+                new SyncChangeDto
+                {
+                    Cursor = 11,
+                    Kind = SyncChangeKindDto.FileCreated,
+                    Name = "report.txt",
+                },
+            ]);
+        var secondBatch = new RemoteChangeFeedBatch(
+            syncPair.Id.ToString("D"),
+            sinceCursor: 12,
+            nextCursor: 14,
+            hasMore: false,
+            cursorExpired: false,
+            earliestAvailableCursor: 5,
+            changes:
+            [
+                new SyncChangeDto
+                {
+                    Cursor = 13,
+                    Kind = SyncChangeKindDto.FolderRenamed,
+                    Name = "Archive",
+                },
+            ]);
+        var remoteChanges = new FakeRemoteChangeFeedReader(firstBatch, secondBatch);
+        var work = new RemoteChangeAwareSyncPairWork(inner, remoteChanges);
+
+        await work.RunOnceAsync(syncPair);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(inner.RunCallCount, Is.EqualTo(1));
+            Assert.That(remoteChanges.ReadSyncPairIds, Is.EqualTo(new[] { syncPair.Id.ToString("D") }));
+            Assert.That(remoteChanges.ReadFromCursorRequests, Is.EqualTo(new[] { (SyncPairId: syncPair.Id.ToString("D"), SinceCursor: 12L) }));
+            Assert.That(remoteChanges.AcknowledgedBatches, Is.EqualTo(new[] { secondBatch }));
+            Assert.That(remoteChanges.FullResyncAcknowledgedBatches, Is.Empty);
+        });
+    }
+
+    [Test]
+    public void RunOnceAsync_FailsWithoutAcknowledgementWhenRemoteFeedDoesNotAdvance()
+    {
+        var syncPair = CreateSyncPair();
+        var inner = new FakeSyncPairWork();
+        var remoteChanges = new FakeRemoteChangeFeedReader(new RemoteChangeFeedBatch(
+            syncPair.Id.ToString("D"),
+            sinceCursor: 10,
+            nextCursor: 10,
+            hasMore: true,
+            cursorExpired: false,
+            earliestAvailableCursor: null,
+            changes: Array.Empty<SyncChangeDto>()));
+        var work = new RemoteChangeAwareSyncPairWork(inner, remoteChanges);
+
+        Assert.ThrowsAsync<InvalidOperationException>(() => work.RunOnceAsync(syncPair));
+        Assert.Multiple(() =>
+        {
+            Assert.That(inner.RunCallCount, Is.Zero);
+            Assert.That(remoteChanges.AcknowledgedBatches, Is.Empty);
+            Assert.That(remoteChanges.FullResyncAcknowledgedBatches, Is.Empty);
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_AcknowledgesFullResyncWhenRemoteCursorExpired()
     {
         var syncPair = CreateSyncPair();
@@ -131,6 +207,8 @@ public sealed class RemoteChangeAwareSyncPairWorkTests
 
         public List<string> ReadSyncPairIds { get; } = [];
 
+        public List<(string SyncPairId, long SinceCursor)> ReadFromCursorRequests { get; } = [];
+
         public List<RemoteChangeFeedBatch> AcknowledgedBatches { get; } = [];
 
         public List<RemoteChangeFeedBatch> FullResyncAcknowledgedBatches { get; } = [];
@@ -141,6 +219,16 @@ public sealed class RemoteChangeAwareSyncPairWorkTests
             CancellationToken cancellationToken = default)
         {
             ReadSyncPairIds.Add(syncPairId);
+            return Task.FromResult(_batches.Dequeue());
+        }
+
+        public Task<RemoteChangeFeedBatch> ReadFromCursorAsync(
+            string syncPairId,
+            long sinceCursor,
+            int limit = RemoteChangeFeedDefaults.PageSize,
+            CancellationToken cancellationToken = default)
+        {
+            ReadFromCursorRequests.Add((syncPairId, sinceCursor));
             return Task.FromResult(_batches.Dequeue());
         }
 
