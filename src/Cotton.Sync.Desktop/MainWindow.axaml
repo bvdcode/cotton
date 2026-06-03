@@ -292,7 +292,7 @@
 
       <Border Background="{DynamicResource CottonOverlayBrush}"
               IsVisible="{Binding IsAddSyncPairWizardVisible}">
-        <Border Width="430"
+        <Border Width="480"
                 Padding="18"
                 CornerRadius="6"
                 Background="{DynamicResource CottonSurfaceBrush}"
@@ -318,8 +318,40 @@
                       Content="Browse"
                       Command="{Binding BrowseLocalFolderCommand}" />
             </Grid>
-            <TextBox Watermark="Remote folder"
-                     Text="{Binding RemoteFolderPath}" />
+            <Grid RowDefinitions="Auto,170"
+                  RowSpacing="8">
+              <Grid ColumnDefinitions="Auto,*,Auto"
+                    ColumnSpacing="8">
+                <Button Content="Up"
+                        Command="{Binding RemoteFolderUpCommand}" />
+                <TextBlock Grid.Column="1"
+                           Text="{Binding RemoteBrowserPath}"
+                           TextTrimming="CharacterEllipsis"
+                           VerticalAlignment="Center" />
+                <Button Grid.Column="2"
+                        Content="Open"
+                        Command="{Binding OpenRemoteFolderCommand}" />
+              </Grid>
+
+              <Grid Grid.Row="1">
+                <TextBlock Text="No cloud folders in this folder."
+                           Classes="secondary"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           IsVisible="{Binding HasNoRemoteFolders}" />
+                <ListBox ItemsSource="{Binding RemoteFolders}"
+                         SelectedItem="{Binding SelectedRemoteFolder}"
+                         IsVisible="{Binding HasRemoteFolders}">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Name}"
+                                 TextTrimming="CharacterEllipsis"
+                                 Margin="0,5" />
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </Grid>
+            </Grid>
             <Grid ColumnDefinitions="*,Auto,Auto"
                   ColumnSpacing="8">
               <Button Grid.Column="1"

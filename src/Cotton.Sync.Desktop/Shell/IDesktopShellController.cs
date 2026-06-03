@@ -16,6 +16,8 @@ internal interface IDesktopShellController : IDisposable
 
     Task<AuthSession> SignInAsync(DesktopSignInRequest request, CancellationToken cancellationToken = default);
 
+    Task<DesktopRemoteFolderListSnapshot> ListRemoteFoldersAsync(string remotePath, CancellationToken cancellationToken = default);
+
     Task SignOutAsync(CancellationToken cancellationToken = default);
 
     Task<SyncPairSettings> AddSyncPairAsync(DesktopSyncPairRequest request, CancellationToken cancellationToken = default);

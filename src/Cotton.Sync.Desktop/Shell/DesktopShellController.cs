@@ -119,6 +119,31 @@ internal sealed class DesktopShellController : IDesktopShellController
         }
     }
 
+    public async Task<DesktopRemoteFolderListSnapshot> ListRemoteFoldersAsync(
+        string remotePath,
+        CancellationToken cancellationToken = default)
+    {
+        DesktopSyncApplicationHost host = RequireHost();
+        string normalizedPath = NormalizeRemotePath(remotePath);
+        NodeDto current = await host.Nodes.ResolveAsync(
+            normalizedPath == "/" ? null : normalizedPath,
+            cancellationToken).ConfigureAwait(false);
+        NodeContentDto children = await host.Nodes.GetChildrenAsync(
+            current.Id,
+            page: 1,
+            pageSize: 200,
+            depth: 0,
+            cancellationToken).ConfigureAwait(false);
+        List<DesktopRemoteFolderSnapshot> folders = children.Nodes
+            .OrderBy(static node => node.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(node => new DesktopRemoteFolderSnapshot(
+                node.Id,
+                node.Name,
+                CombineRemotePath(normalizedPath, node.Name)))
+            .ToList();
+        return new DesktopRemoteFolderListSnapshot(normalizedPath, folders);
+    }
+
     public async Task<SyncPairSettings> AddSyncPairAsync(
         DesktopSyncPairRequest request,
         CancellationToken cancellationToken = default)
@@ -250,6 +275,12 @@ internal sealed class DesktopShellController : IDesktopShellController
         string normalized = NormalizeRequired(remotePath, nameof(remotePath)).Replace('\\', '/').Trim();
         normalized = normalized.Trim('/');
         return normalized.Length == 0 ? "/" : "/" + normalized;
+    }
+
+    private static string CombineRemotePath(string parentPath, string folderName)
+    {
+        string normalizedName = NormalizeRequired(folderName, nameof(folderName)).Trim('/');
+        return parentPath == "/" ? "/" + normalizedName : parentPath + "/" + normalizedName;
     }
 
     private static string NormalizeRequired(string value, string parameterName)

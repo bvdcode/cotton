@@ -26,6 +26,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     private bool _isSignedIn;
     private string _localFolderPath = string.Empty;
     private string _password = string.Empty;
+    private string _remoteBrowserPath = "/";
     private string _remoteFolderPath = string.Empty;
     private bool _isServerProbeChecking;
     private bool _isServerProbeFailed;
@@ -34,6 +35,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     private string _serverUrl = string.Empty;
     private string _serverProbeStatus = string.Empty;
     private CancellationTokenSource? _serverProbeCancellation;
+    private RemoteFolderRowViewModel? _selectedRemoteFolder;
     private SyncPairRowViewModel? _selectedSyncPair;
     private string _totpCode = string.Empty;
     private string _username = string.Empty;
@@ -43,11 +45,14 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         _controller = controller ?? throw new ArgumentNullException(nameof(controller));
         _folderPicker = folderPicker ?? throw new ArgumentNullException(nameof(folderPicker));
         SyncPairs.CollectionChanged += OnSyncPairsChanged;
+        RemoteFolders.CollectionChanged += OnRemoteFoldersChanged;
         _controller.StatusChanged += OnStatusChanged;
         SignInCommand = new AsyncRelayCommand(SignInAsync, CanSignIn, HandleCommandError);
         AddSyncPairCommand = new AsyncRelayCommand(AddSyncPairAsync, CanAddSyncPair, HandleCommandError);
         BrowseLocalFolderCommand = new AsyncRelayCommand(BrowseLocalFolderAsync, () => !IsBusy, HandleCommandError);
         CancelAddSyncPairCommand = new AsyncRelayCommand(CancelAddSyncPairAsync, () => !IsBusy, HandleCommandError);
+        OpenRemoteFolderCommand = new AsyncRelayCommand(OpenRemoteFolderAsync, () => SelectedRemoteFolder is not null && !IsBusy, HandleCommandError);
+        RemoteFolderUpCommand = new AsyncRelayCommand(RemoteFolderUpAsync, CanGoUpRemoteFolder, HandleCommandError);
         ShowAddSyncPairCommand = new AsyncRelayCommand(ShowAddSyncPairAsync, () => IsSignedIn && !IsBusy, HandleCommandError);
         SyncNowCommand = new AsyncRelayCommand(SyncNowAsync, () => IsSignedIn, HandleCommandError);
         PauseCommand = new AsyncRelayCommand(PauseAsync, () => IsSignedIn, HandleCommandError);
@@ -60,6 +65,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
 
     public ObservableCollection<ActivityRowViewModel> Activities { get; } = [];
 
+    public ObservableCollection<RemoteFolderRowViewModel> RemoteFolders { get; } = [];
+
     public AsyncRelayCommand AddSyncPairCommand { get; }
 
     public AsyncRelayCommand BrowseLocalFolderCommand { get; }
@@ -68,9 +75,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
 
     public AsyncRelayCommand OpenFolderCommand { get; }
 
+    public AsyncRelayCommand OpenRemoteFolderCommand { get; }
+
     public AsyncRelayCommand PauseCommand { get; }
 
     public AsyncRelayCommand ResumeCommand { get; }
+
+    public AsyncRelayCommand RemoteFolderUpCommand { get; }
 
     public AsyncRelayCommand SignInCommand { get; }
 
@@ -119,6 +130,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     }
 
     public bool HasNoSyncPairs => SyncPairs.Count == 0;
+
+    public bool HasNoRemoteFolders => RemoteFolders.Count == 0;
+
+    public bool HasRemoteFolders => RemoteFolders.Count > 0;
 
     public bool HasSyncPairs => SyncPairs.Count > 0;
 
@@ -192,6 +207,18 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         }
     }
 
+    public string RemoteBrowserPath
+    {
+        get => _remoteBrowserPath;
+        private set
+        {
+            if (SetProperty(ref _remoteBrowserPath, value))
+            {
+                RemoteFolderUpCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
     public string ServerUrl
     {
         get => _serverUrl;
@@ -218,6 +245,18 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     }
 
     public bool HasServerProbeStatus => !string.IsNullOrWhiteSpace(ServerProbeStatus);
+
+    public RemoteFolderRowViewModel? SelectedRemoteFolder
+    {
+        get => _selectedRemoteFolder;
+        set
+        {
+            if (SetProperty(ref _selectedRemoteFolder, value))
+            {
+                OpenRemoteFolderCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
 
     public SyncPairRowViewModel? SelectedSyncPair
     {
@@ -253,6 +292,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     {
         _controller.StatusChanged -= OnStatusChanged;
         SyncPairs.CollectionChanged -= OnSyncPairsChanged;
+        RemoteFolders.CollectionChanged -= OnRemoteFoldersChanged;
         _serverProbeCancellation?.Cancel();
         _serverProbeCancellation?.Dispose();
         _controller.Dispose();
@@ -309,6 +349,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             LocalFolderPath = string.Empty;
             RemoteFolderPath = string.Empty;
             IsAddSyncPairWizardVisible = false;
+            RemoteFolders.Clear();
             GlobalStatus = "Sync requested";
             AddActivity("Pair", syncPair.LocalRootPath, "Folder added and initial sync requested");
             RaiseCommandStates();
@@ -336,7 +377,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         LocalFolderPath = string.Empty;
         RemoteFolderPath = string.Empty;
         IsAddSyncPairWizardVisible = false;
+        RemoteFolders.Clear();
         return Task.CompletedTask;
+    }
+
+    private bool CanGoUpRemoteFolder()
+    {
+        return !IsBusy && IsAddSyncPairWizardVisible && RemoteBrowserPath != "/";
     }
 
     private async Task OpenFolderAsync()
@@ -413,6 +460,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             GlobalStatus = "Signed out";
             Password = string.Empty;
             IsAddSyncPairWizardVisible = false;
+            RemoteFolders.Clear();
             SetAllPairStatuses("Idle");
             AddActivity("Account", string.Empty, "Signed out");
         }
@@ -438,10 +486,26 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private Task ShowAddSyncPairAsync()
+    private async Task OpenRemoteFolderAsync()
+    {
+        RemoteFolderRowViewModel? selected = SelectedRemoteFolder;
+        if (selected is null)
+        {
+            return;
+        }
+
+        await LoadRemoteFoldersAsync(selected.Path).ConfigureAwait(true);
+    }
+
+    private async Task RemoteFolderUpAsync()
+    {
+        await LoadRemoteFoldersAsync(GetRemoteParentPath(RemoteBrowserPath)).ConfigureAwait(true);
+    }
+
+    private async Task ShowAddSyncPairAsync()
     {
         IsAddSyncPairWizardVisible = true;
-        return Task.CompletedTask;
+        await LoadRemoteFoldersAsync("/").ConfigureAwait(true);
     }
 
     private bool CanAddSyncPair()
@@ -546,6 +610,42 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         OpenFolderCommand.RaiseCanExecuteChanged();
     }
 
+    private void OnRemoteFoldersChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(HasNoRemoteFolders));
+        OnPropertyChanged(nameof(HasRemoteFolders));
+        OpenRemoteFolderCommand.RaiseCanExecuteChanged();
+    }
+
+    private async Task LoadRemoteFoldersAsync(string remotePath)
+    {
+        IsBusy = true;
+        try
+        {
+            DesktopRemoteFolderListSnapshot folders = await _controller
+                .ListRemoteFoldersAsync(remotePath)
+                .ConfigureAwait(true);
+            RemoteBrowserPath = folders.CurrentPath;
+            RemoteFolderPath = folders.CurrentPath;
+            RemoteFolders.Clear();
+            foreach (DesktopRemoteFolderSnapshot folder in folders.Folders)
+            {
+                RemoteFolders.Add(new RemoteFolderRowViewModel
+                {
+                    Id = folder.Id,
+                    Name = folder.Name,
+                    Path = folder.Path,
+                });
+            }
+
+            SelectedRemoteFolder = RemoteFolders.FirstOrDefault();
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     private void OnStatusChanged(object? sender, DesktopSyncStatusSnapshot status)
     {
         Dispatcher.UIThread.Post(() => ApplyStatus(status));
@@ -616,6 +716,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         AddSyncPairCommand.RaiseCanExecuteChanged();
         BrowseLocalFolderCommand.RaiseCanExecuteChanged();
         CancelAddSyncPairCommand.RaiseCanExecuteChanged();
+        OpenRemoteFolderCommand.RaiseCanExecuteChanged();
+        RemoteFolderUpCommand.RaiseCanExecuteChanged();
         SyncNowCommand.RaiseCanExecuteChanged();
         PauseCommand.RaiseCanExecuteChanged();
         ResumeCommand.RaiseCanExecuteChanged();
@@ -653,5 +755,19 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             RemotePath = syncPair.RemotePath,
             Status = syncPair.Status,
         };
+    }
+
+    private static string GetRemoteParentPath(string remotePath)
+    {
+        string normalized = string.IsNullOrWhiteSpace(remotePath)
+            ? "/"
+            : "/" + remotePath.Replace('\\', '/').Trim('/');
+        if (normalized == "/")
+        {
+            return "/";
+        }
+
+        int lastSlash = normalized.LastIndexOf('/');
+        return lastSlash <= 0 ? "/" : normalized[..lastSlash];
     }
 }
