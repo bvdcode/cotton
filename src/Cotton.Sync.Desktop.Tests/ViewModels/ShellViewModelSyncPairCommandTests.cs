@@ -66,6 +66,45 @@ public sealed class ShellViewModelSyncPairCommandTests
         });
     }
 
+    [Test]
+    public async Task SyncNowCommand_RetriesActionRequiredSyncAndClearsMessage()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Error")))
+        {
+            SelfTestSnapshot = new DesktopSelfTestSnapshot(
+            [
+                new DesktopSelfTestItemSnapshot("Server", false, "Cotton server not found."),
+            ]),
+        };
+        using var viewModel = new ShellViewModel(
+            controller,
+            new FakeLocalFolderPicker(),
+            new FakeDesktopNotificationService(),
+            new FakeDesktopThemeService());
+        await viewModel.InitializeAsync();
+
+        await ExecuteAsync(viewModel.SelfTestCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasActionRequired, Is.True);
+            Assert.That(viewModel.CanRetryActionRequired, Is.True);
+            Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo("Cotton server not found."));
+        });
+
+        await ExecuteAsync(viewModel.SyncNowCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(controller.SyncAllCalls, Is.EqualTo(1));
+            Assert.That(viewModel.HasActionRequired, Is.False);
+            Assert.That(viewModel.CanRetryActionRequired, Is.False);
+            Assert.That(viewModel.ActionRequiredMessage, Is.Empty);
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Sync requested"));
+        });
+    }
+
     private static async Task ExecuteAsync(AsyncRelayCommand command)
     {
         Assert.That(command.CanExecute(null), Is.True);
@@ -130,6 +169,10 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public Guid? RemovedSyncPairId { get; private set; }
 
+        public DesktopSelfTestSnapshot SelfTestSnapshot { get; set; } = new([]);
+
+        public int SyncAllCalls { get; private set; }
+
         public Task<DesktopShellSnapshot> LoadAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -189,7 +232,9 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public Task SyncAllAsync(CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException();
+            cancellationToken.ThrowIfCancellationRequested();
+            SyncAllCalls++;
+            return Task.CompletedTask;
         }
 
         public Task PauseAllAsync(CancellationToken cancellationToken = default)
@@ -229,7 +274,8 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public Task<DesktopSelfTestSnapshot> RunSelfTestAsync(CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException();
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(SelfTestSnapshot);
         }
 
         public Task<string> ExportDiagnosticsAsync(CancellationToken cancellationToken = default)

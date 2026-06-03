@@ -80,7 +80,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         ShowAddSyncPairCommand = new AsyncRelayCommand(ShowAddSyncPairAsync, () => IsSignedIn && !IsBusy, HandleCommandError);
         ShowSettingsCommand = new AsyncRelayCommand(ShowSettingsAsync, () => IsSignedIn && !IsBusy, HandleCommandError);
         CloseSettingsCommand = new AsyncRelayCommand(CloseSettingsAsync, () => !IsBusy, HandleCommandError);
-        SyncNowCommand = new AsyncRelayCommand(SyncNowAsync, () => IsSignedIn, HandleCommandError);
+        SyncNowCommand = new AsyncRelayCommand(SyncNowAsync, () => IsSignedIn && !IsBusy, HandleCommandError);
         PauseCommand = new AsyncRelayCommand(PauseAsync, () => IsSignedIn, HandleCommandError);
         ResumeCommand = new AsyncRelayCommand(ResumeAsync, () => IsSignedIn, HandleCommandError);
         SignOutCommand = new AsyncRelayCommand(SignOutAsync, () => IsSignedIn, HandleCommandError);
@@ -164,6 +164,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             if (SetProperty(ref _actionRequiredMessage, value))
             {
                 OnPropertyChanged(nameof(HasActionRequired));
+                OnPropertyChanged(nameof(CanRetryActionRequired));
             }
         }
     }
@@ -195,6 +196,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             {
                 OnPropertyChanged(nameof(IsDashboardVisible));
                 OnPropertyChanged(nameof(IsSetupVisible));
+                OnPropertyChanged(nameof(CanRetryActionRequired));
                 RaiseCommandStates();
             }
         }
@@ -203,6 +205,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public bool HasNoSyncPairs => SyncPairs.Count == 0;
 
     public bool HasActionRequired => !string.IsNullOrWhiteSpace(ActionRequiredMessage);
+
+    public bool CanRetryActionRequired => HasActionRequired && IsSignedIn;
 
     public bool HasNoRemoteFolders => RemoteFolders.Count == 0;
 

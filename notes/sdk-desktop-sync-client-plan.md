@@ -307,6 +307,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Add conflict/error screen.
   Required behavior: show conflict files, action-required errors, retry/sync-now command.
   Partial 2026-06-03: dashboard now exposes an action-required banner when sync status, command failures, or self-test failures produce an error message. The message resolver is covered by `DesktopActionRequiredMessageResolverTests` 4/4, full `Cotton.Sync.Desktop.Tests` passed 29/29, and solution Release build passed with known NU1903 warnings. Keep unchecked until conflict-file listing and retry/action workflows are complete.
+  Partial 2026-06-03: action-required banner now includes compact `Retry` and `Check` actions; `Retry` is visible only when signed in and invokes `SyncNowCommand`, while `Check` runs the desktop self-test. `ShellViewModelSyncPairCommandTests` covers self-test-created action-required state, retry visibility, sync retry invocation, and message clearing. Focused action-required tests passed 9/9, full `Cotton.Sync.Desktop.Tests` passed 94/94, and full solution Release build passed with the known NU1903 warning. Keep unchecked until conflict-file listing and conflict-specific actions are complete.
 - [ ] Add not-implemented UX for reserved future modes only in development builds or behind a feature flag.
 - [ ] Add polished empty states.
 - [x] Add dark/light theme support.

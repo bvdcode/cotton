@@ -214,7 +214,7 @@
                 BorderBrush="{DynamicResource CottonErrorBrush}"
                 BorderThickness="1"
                 IsVisible="{Binding HasActionRequired}">
-          <Grid ColumnDefinitions="Auto,*"
+          <Grid ColumnDefinitions="Auto,*,Auto"
                 ColumnSpacing="8">
             <Border Width="12"
                     Height="12"
@@ -230,6 +230,20 @@
                          Classes="secondary"
                          FontSize="12"
                          TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+            <StackPanel Grid.Column="2"
+                        Orientation="Horizontal"
+                        Spacing="6"
+                        VerticalAlignment="Center">
+              <Button Content="Retry"
+                      Classes="compact"
+                      ToolTip.Tip="Run synchronization again"
+                      IsVisible="{Binding CanRetryActionRequired}"
+                      Command="{Binding SyncNowCommand}" />
+              <Button Content="Check"
+                      Classes="compact"
+                      ToolTip.Tip="Run desktop self-test"
+                      Command="{Binding SelfTestCommand}" />
             </StackPanel>
           </Grid>
         </Border>
