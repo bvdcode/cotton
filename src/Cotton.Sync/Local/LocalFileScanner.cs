@@ -98,17 +98,21 @@ public sealed class LocalFileScanner : ILocalFileScanner
         {
             if ((File.GetUnixFileMode(file.FullName) & readMask) == 0)
             {
-                throw new LocalFileUnavailableException(
+                throw new LocalFilePermissionDeniedException(
                     relativePath,
                     file.FullName,
                     "the file has no Unix read permission bits.");
             }
         }
-        catch (LocalFileUnavailableException)
+        catch (LocalFilePermissionDeniedException)
         {
             throw;
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (UnauthorizedAccessException exception)
+        {
+            throw new LocalFilePermissionDeniedException(relativePath, file.FullName, exception);
+        }
+        catch (IOException exception)
         {
             throw new LocalFileUnavailableException(relativePath, file.FullName, exception);
         }
@@ -126,7 +130,11 @@ public sealed class LocalFileScanner : ILocalFileScanner
 
             return new LocalFileMetadata(file.Length, file.LastWriteTimeUtc);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (UnauthorizedAccessException exception)
+        {
+            throw new LocalFilePermissionDeniedException(relativePath, file.FullName, exception);
+        }
+        catch (IOException exception)
         {
             throw new LocalFileUnavailableException(relativePath, file.FullName, exception);
         }
@@ -143,7 +151,11 @@ public sealed class LocalFileScanner : ILocalFileScanner
             byte[] hash = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
             return Convert.ToHexStringLower(hash);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (UnauthorizedAccessException exception)
+        {
+            throw new LocalFilePermissionDeniedException(relativePath, filePath, exception);
+        }
+        catch (IOException exception)
         {
             throw new LocalFileUnavailableException(relativePath, filePath, exception);
         }

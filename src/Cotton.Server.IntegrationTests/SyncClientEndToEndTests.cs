@@ -730,6 +730,70 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task SyncPairRunner_ReportsPermissionDeniedForUnreadableLocalFileThroughSdkAndServer()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.Ignore("Windows permission-denied coverage requires an ACL-specific test on Windows.");
+            return;
+        }
+
+        CottonCloudClient client = CreateClient();
+        await LoginAsync(client);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-permission-denied");
+        string localRoot = Path.Combine(_tempDirectory, "client-permission-denied");
+        const string relativePath = "Private/secret.txt";
+        WriteLocalFile(localRoot, relativePath, "secret");
+        string filePath = Path.Combine(localRoot, "Private", "secret.txt");
+        UnixFileMode originalMode = File.GetUnixFileMode(filePath);
+        SqliteSyncStateStore stateStore = CreateStateStore("client-permission-denied-state.sqlite");
+        SyncEngine engine = CreateEngine(client, stateStore);
+        var syncPair = new SyncPairSettings
+        {
+            Id = Guid.NewGuid(),
+            DisplayName = "Permission denied",
+            LocalRootPath = localRoot,
+            RemoteRootNodeId = remoteRoot.Id,
+            RemoteDisplayPath = "/Permission denied",
+            IsEnabled = true,
+            Mode = SyncPairMode.FullMirror,
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow,
+        };
+        var runner = new SyncPairRunner(
+            syncPair,
+            new SyncEnginePairWork(engine),
+            CreateNoDelayRetryOptions(maxAttempts: 1));
+
+        try
+        {
+            File.SetUnixFileMode(filePath, UnixFileMode.None);
+
+            LocalFilePermissionDeniedException? exception = Assert.ThrowsAsync<LocalFilePermissionDeniedException>(() => runner.SyncNowAsync());
+
+            NodeContentDto rootContent = await client.Nodes.GetChildrenAsync(remoteRoot.Id);
+            IReadOnlyList<SyncStateEntry> baselines = await stateStore.LoadPairAsync(syncPair.Id.ToString("D"));
+            const string expected = "Permission denied while accessing local sync files. Check folder permissions and retry.";
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exception, Is.Not.Null);
+                Assert.That(exception!.RelativePath, Is.EqualTo(relativePath));
+                Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Error));
+                Assert.That(runner.Status.LastError, Is.EqualTo(expected));
+                Assert.That(runner.Status.CurrentOperation, Is.EqualTo("Action required: " + expected));
+                Assert.That(rootContent.Nodes, Is.Empty);
+                Assert.That(rootContent.Files, Is.Empty);
+                Assert.That(baselines, Is.Empty);
+            });
+        }
+        finally
+        {
+            File.SetUnixFileMode(filePath, originalMode | UnixFileMode.UserRead | UnixFileMode.UserWrite);
+        }
+    }
+
+    [Test]
     public async Task RunOnceAsync_MovesLocalFileToQuarantineWhenRemoteFileIsDeleted()
     {
         CottonCloudClient client = CreateClient();

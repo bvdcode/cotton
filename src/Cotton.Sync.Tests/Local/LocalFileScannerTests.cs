@@ -130,7 +130,7 @@ public sealed class LocalFileScannerTests
         {
             File.SetUnixFileMode(path, UnixFileMode.None);
 
-            LocalFileUnavailableException? exception = Assert.ThrowsAsync<LocalFileUnavailableException>(() => scanner.ScanAsync(_root));
+            LocalFilePermissionDeniedException? exception = Assert.ThrowsAsync<LocalFilePermissionDeniedException>(() => scanner.ScanAsync(_root));
 
             Assert.Multiple(() =>
             {
