@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Diagnostics;
 using Cotton.Contracts.Nodes;
 using Cotton.Sync.App.Auth;
 using Cotton.Sync.App.Platform;
@@ -39,8 +40,12 @@ internal sealed class DesktopShellController : IDesktopShellController
         await _syncPairStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
         AppPreferences preferences = await _preferencesStore.GetAsync(cancellationToken).ConfigureAwait(false);
         IReadOnlyList<SyncPairSettings> syncPairs = await _syncPairStore.ListAsync(cancellationToken).ConfigureAwait(false);
+        Uri serverUrl = preferences.RememberedServerUrl ?? DefaultServerUrl;
+        AuthSession? session = await TryRestoreSessionAsync(serverUrl, cancellationToken).ConfigureAwait(false);
         return new DesktopShellSnapshot(
-            preferences.RememberedServerUrl ?? DefaultServerUrl,
+            serverUrl,
+            session?.Email ?? session?.Username,
+            session is not null,
             syncPairs.Select(ToSnapshot).ToList());
     }
 
@@ -249,5 +254,31 @@ internal sealed class DesktopShellController : IDesktopShellController
         DesktopSyncApplicationHost? previous = _host;
         _host = host;
         previous?.Dispose();
+    }
+
+    private async Task<AuthSession?> TryRestoreSessionAsync(
+        Uri serverUrl,
+        CancellationToken cancellationToken)
+    {
+        DesktopSyncApplicationHost host = _factory.Create(serverUrl);
+        try
+        {
+            AuthSession session = await host.App.RestoreSessionAsync(cancellationToken).ConfigureAwait(false);
+            ReplaceHost(host);
+            return session;
+        }
+        catch (Cotton.Sdk.CottonApiException exception)
+        {
+            Trace.TraceWarning("Failed to restore desktop session: {0}", exception);
+            await host.TokenStore.ClearAsync(cancellationToken).ConfigureAwait(false);
+            host.Dispose();
+            return null;
+        }
+        catch (HttpRequestException)
+        {
+            Trace.TraceWarning("Failed to restore desktop session because the server is unreachable: {0}", serverUrl);
+            host.Dispose();
+            return null;
+        }
     }
 }

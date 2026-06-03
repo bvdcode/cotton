@@ -45,6 +45,13 @@ public sealed class PasswordAuthFlow : IAuthFlow
     }
 
     /// <inheritdoc />
+    public async Task<AuthSession> RestoreSessionAsync(CancellationToken cancellationToken = default)
+    {
+        UserDto user = await _authClient.MeAsync(cancellationToken).ConfigureAwait(false);
+        return ToSession(user);
+    }
+
+    /// <inheritdoc />
     public Task SignOutAsync(CancellationToken cancellationToken = default)
     {
         return _authClient.LogoutAsync(cancellationToken: cancellationToken);

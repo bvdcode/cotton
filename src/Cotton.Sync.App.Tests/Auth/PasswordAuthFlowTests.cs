@@ -109,11 +109,40 @@ public sealed class PasswordAuthFlowTests
         });
     }
 
+    [Test]
+    public async Task RestoreSessionAsync_ReturnsCurrentSdkUser()
+    {
+        Guid userId = Guid.NewGuid();
+        var authClient = new FakeCottonAuthClient
+        {
+            CurrentUser = new UserDto
+            {
+                Id = userId,
+                Username = "restored",
+                Email = "restored@example.test",
+                IsTotpEnabled = false,
+            },
+        };
+        var flow = new PasswordAuthFlow(authClient);
+
+        AuthSession session = await flow.RestoreSessionAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(authClient.MeCallCount, Is.EqualTo(1));
+            Assert.That(session.UserId, Is.EqualTo(userId));
+            Assert.That(session.Username, Is.EqualTo("restored"));
+            Assert.That(session.Email, Is.EqualTo("restored@example.test"));
+        });
+    }
+
     private sealed class FakeCottonAuthClient : ICottonAuthClient
     {
         public int LoginCallCount { get; private set; }
 
         public int LogoutCallCount { get; private set; }
+
+        public int MeCallCount { get; private set; }
 
         public LoginRequestDto? LastLoginRequest { get; private set; }
 
@@ -156,6 +185,7 @@ public sealed class PasswordAuthFlowTests
 
         public Task<UserDto> MeAsync(CancellationToken cancellationToken = default)
         {
+            MeCallCount++;
             return Task.FromResult(CurrentUser);
         }
     }

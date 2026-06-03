@@ -2,7 +2,6 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Sdk;
-using Cotton.Sdk.Auth;
 using Cotton.Sync.App.Auth;
 using Cotton.Sync.App.Platform;
 using Cotton.Sync.App.Preferences;
@@ -11,6 +10,7 @@ using Cotton.Sync.App.Status;
 using Cotton.Sync.App.Supervision;
 using Cotton.Sync.App.SyncApplication;
 using Cotton.Sync.App.SyncPairs;
+using Cotton.Sync.Desktop.Auth;
 using Cotton.Sync.Local;
 using Cotton.Sync.Remote;
 using Cotton.Sync.State;
@@ -32,7 +32,7 @@ internal sealed class DesktopSyncApplicationFactory
         ArgumentNullException.ThrowIfNull(serverUrl);
 
         var httpClient = new HttpClient();
-        var tokenStore = new InMemoryCottonTokenStore();
+        var tokenStore = new FileCottonTokenStore(_paths.TokenStorePath);
         var sdkOptions = new CottonSdkOptions
         {
             BaseAddress = serverUrl,
@@ -66,6 +66,6 @@ internal sealed class DesktopSyncApplicationFactory
             new ProcessPlatformCommandService());
         var remoteRootResolver = new RemoteRootResolver(cottonClient.Nodes);
 
-        return new DesktopSyncApplicationHost(appService, remoteRootResolver, httpClient);
+        return new DesktopSyncApplicationHost(appService, remoteRootResolver, tokenStore, httpClient);
     }
 }

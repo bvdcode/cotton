@@ -5,4 +5,6 @@ namespace Cotton.Sync.Desktop.Shell;
 
 internal sealed record DesktopShellSnapshot(
     Uri ServerUrl,
+    string? AccountName,
+    bool IsSignedIn,
     IReadOnlyList<DesktopSyncPairSnapshot> SyncPairs);

@@ -204,8 +204,17 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             }
 
             SelectedSyncPair = SyncPairs.FirstOrDefault();
-            GlobalStatus = SyncPairs.Count == 0 ? "Ready to connect" : "Ready";
+            IsSignedIn = snapshot.IsSignedIn;
+            AccountName = snapshot.AccountName ?? "Signed out";
+            GlobalStatus = snapshot.IsSignedIn
+                ? "Connected"
+                : SyncPairs.Count == 0 ? "Ready to connect" : "Ready";
             AddActivity("App", string.Empty, "Settings loaded");
+            if (snapshot.IsSignedIn)
+            {
+                AddActivity("Account", AccountName, "Session restored");
+            }
+
             RaiseCommandStates();
         }
         catch (Exception exception) when (exception is not OperationCanceledException)

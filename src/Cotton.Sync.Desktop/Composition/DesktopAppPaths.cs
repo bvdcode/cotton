@@ -13,6 +13,7 @@ internal sealed class DesktopAppPaths
         DataDirectory = dataDirectory;
         AppDatabasePath = Path.Combine(DataDirectory, "sync-app.db");
         SyncStateDatabasePath = Path.Combine(DataDirectory, "sync-state.db");
+        TokenStorePath = Path.Combine(DataDirectory, "tokens.json");
     }
 
     public string DataDirectory { get; }
@@ -20,6 +21,8 @@ internal sealed class DesktopAppPaths
     public string AppDatabasePath { get; }
 
     public string SyncStateDatabasePath { get; }
+
+    public string TokenStorePath { get; }
 
     public static DesktopAppPaths CreateDefault()
     {

@@ -52,6 +52,14 @@ public sealed class SyncApplicationService : ISyncApplicationService
     }
 
     /// <inheritdoc />
+    public async Task<AuthSession> RestoreSessionAsync(CancellationToken cancellationToken = default)
+    {
+        AuthSession session = await _authFlow.RestoreSessionAsync(cancellationToken).ConfigureAwait(false);
+        await _supervisor.StartAsync(cancellationToken).ConfigureAwait(false);
+        return session;
+    }
+
+    /// <inheritdoc />
     public async Task SignOutAsync(CancellationToken cancellationToken = default)
     {
         await _authFlow.SignOutAsync(cancellationToken).ConfigureAwait(false);

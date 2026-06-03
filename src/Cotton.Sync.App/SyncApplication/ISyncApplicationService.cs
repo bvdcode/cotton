@@ -18,6 +18,11 @@ public interface ISyncApplicationService
     Task<AuthSession> SignInAsync(PasswordSignInRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Restores a saved authenticated session.
+    /// </summary>
+    Task<AuthSession> RestoreSessionAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Signs out and stops synchronization.
     /// </summary>
     Task SignOutAsync(CancellationToken cancellationToken = default);

@@ -54,6 +54,26 @@ public sealed class SyncApplicationServiceTests
     }
 
     [Test]
+    public async Task RestoreSessionAsync_RestoresAuthAndStartsSupervisor()
+    {
+        var authFlow = new FakeAuthFlow();
+        var supervisor = new FakeSyncSupervisor();
+        SyncApplicationService service = CreateService(
+            new InMemorySyncPairSettingsStore(),
+            authFlow: authFlow,
+            supervisor: supervisor);
+
+        AuthSession session = await service.RestoreSessionAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(authFlow.RestoreSessionCallCount, Is.EqualTo(1));
+            Assert.That(supervisor.StartCallCount, Is.EqualTo(1));
+            Assert.That(session, Is.SameAs(authFlow.Session));
+        });
+    }
+
+    [Test]
     public async Task GetPreferencesAsync_InitializesAndLoadsPreferences()
     {
         var preferencesStore = new FakeAppPreferencesStore();
@@ -382,6 +402,8 @@ public sealed class SyncApplicationServiceTests
 
         public int SignInCallCount { get; private set; }
 
+        public int RestoreSessionCallCount { get; private set; }
+
         public int SignOutCallCount { get; private set; }
 
         public PasswordSignInRequest? LastSignInRequest { get; private set; }
@@ -392,6 +414,12 @@ public sealed class SyncApplicationServiceTests
         {
             SignInCallCount++;
             LastSignInRequest = request;
+            return Task.FromResult(Session);
+        }
+
+        public Task<AuthSession> RestoreSessionAsync(CancellationToken cancellationToken = default)
+        {
+            RestoreSessionCallCount++;
             return Task.FromResult(Session);
         }
 
@@ -408,12 +436,15 @@ public sealed class SyncApplicationServiceTests
 
         public Guid? LastSyncNowPairId { get; private set; }
 
+        public int StartCallCount { get; private set; }
+
         public int StopCallCount { get; private set; }
 
         public int SyncNowCallCount { get; private set; }
 
         public Task StartAsync(CancellationToken cancellationToken = default)
         {
+            StartCallCount++;
             return Task.CompletedTask;
         }
 
