@@ -213,9 +213,12 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 
 ## Phase 6 - Continuous Sync
 
-- [ ] Add local file watcher abstraction.
-- [ ] Implement Windows/Linux watcher adapter with fallback periodic scan.
-- [ ] Add watcher debounce and event coalescing.
+- [x] Add local file watcher abstraction.
+  Verification: `ILocalSyncRootWatcher`, `ILocalSyncRootWatcherFactory`, and `LocalChangeSyncCoordinator` isolate watcher behavior from sync supervision; `LocalChangeSyncCoordinatorTests` passed 3/3, full `Cotton.Sync.App.Tests` passed 77/77, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
+- [x] Implement Windows/Linux watcher adapter with fallback periodic scan.
+  Verification: `FileSystemLocalSyncRootWatcher` uses cross-platform `FileSystemWatcher`, `FileSystemLocalSyncRootWatcherTests` passed 2/2 for missing-root and file-event publication, and `PeriodicSyncCoordinator` remains the safety fallback when watcher events are missed; full `Cotton.Sync.App.Tests` passed 77/77.
+- [x] Add watcher debounce and event coalescing.
+  Verification: `LocalChangeSyncCoordinator` cancels superseded pending requests per sync pair and emits one sync request after the debounce interval; `LocalChanges_AreCoalescedIntoOneSyncRequest` passed in `LocalChangeSyncCoordinatorTests` 3/3 and full `Cotton.Sync.App.Tests` passed 77/77.
 - [x] Add SignalR remote event listener through SDK.
   Verification: commit `Add SDK realtime event hub client`; `CottonRealtimeClient` connects to `Routes.V1.EventHub` with SDK token storage, publishes file-tree mutation wake-up events and session-revoked events. `dotnet test src/Cotton.Sdk.Tests/Cotton.Sdk.Tests.csproj --configuration Release --filter FullyQualifiedName~CottonRealtimeClientTests` passed 2/2, and `dotnet build src/Cotton.sln --configuration Release` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [x] Connect SignalR events to changes API fetch.
