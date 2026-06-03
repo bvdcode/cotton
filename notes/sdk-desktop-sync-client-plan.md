@@ -452,8 +452,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Deep nested paths complete or fail with clear path error.
 - [ ] Windows reserved names are blocked or mapped with clear UX.
 - [ ] Case conflict is detected and explained.
-- [ ] Unicode names sync consistently.
-  Partial 2026-06-03: `SyncEngine` now has focused coverage for Unicode relative paths in both local upload and remote download, preserving the display relative path and baseline state. Focused `SyncEngineTests` passed 33/33, full `Cotton.Sync.Tests` passed 91/91, and full solution Release build passed with the known NU1903 warning. Keep unchecked until a server-backed desktop end-to-end Unicode path scenario is run.
+- [x] Unicode names sync consistently.
+  Verification 2026-06-03: `SyncEngine` has focused Unicode path coverage and `SyncClientEndToEndTests.RunOnceAsync_SyncsUnicodePathsThroughSdkAndServer` verifies Unicode paths through the SDK and integration-test server in both directions: local upload of `Документы/設計-notes.txt` and remote download of `共有/設計-remote.txt`, preserving relative paths and SQLite baselines. Focused server-backed sync E2E tests passed 9/9, and full solution Release build passed with the known NU1903 warning.
 - [ ] Temporary files are ignored.
   Partial 2026-06-03: `LocalFileScanner` now delegates to `LocalFileIgnoreRules`, covering Cotton metadata, Office locks, Emacs locks, Vim swap files, browser partial downloads, common temp suffixes, and OS metadata files before they enter the sync model. Focused `LocalFileScannerTests` passed 6/6, full `Cotton.Sync.Tests` passed 91/91, and full solution Release build passed with the known NU1903 warning. Keep unchecked until an end-to-end desktop sync smoke confirms ignored files are not uploaded.
 - [ ] Locked files retry and eventually sync after unlock.

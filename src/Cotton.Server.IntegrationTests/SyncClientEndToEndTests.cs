@@ -254,6 +254,53 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task RunOnceAsync_SyncsUnicodePathsThroughSdkAndServer()
+    {
+        CottonCloudClient client = CreateClient();
+        await LoginAsync(client);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-unicode");
+        string localRoot = Path.Combine(_tempDirectory, "client-unicode");
+        const string uploadPath = "Документы/設計-notes.txt";
+        const string downloadPath = "共有/設計-remote.txt";
+        WriteLocalFile(localRoot, uploadPath, "unicode local content");
+        SqliteSyncStateStore stateStore = CreateStateStore("client-unicode-state.sqlite");
+        SyncEngine engine = CreateEngine(client, stateStore);
+        var syncPair = new SyncPair
+        {
+            SyncPairId = "client-unicode",
+            LocalRootPath = localRoot,
+            RemoteRootNodeId = remoteRoot.Id,
+        };
+
+        SyncRunResult uploadRun = await engine.RunOnceAsync(syncPair);
+        NodeFileManifestDto uploaded = await FindRemoteFileAsync(client, remoteRoot.Id, "Документы", "設計-notes.txt");
+        string uploadedContent = await DownloadTextAsync(client, uploaded.Id);
+        NodeDto remoteDirectory = await client.Nodes.CreateAsync(remoteRoot.Id, "共有");
+        NodeFileManifestDto remoteFile = await CreateRemoteTextFileAsync(
+            client,
+            remoteDirectory.Id,
+            "設計-remote.txt",
+            "unicode remote content");
+
+        SyncRunResult downloadRun = await engine.RunOnceAsync(syncPair);
+
+        string downloadedContent = File.ReadAllText(Path.Combine(localRoot, "共有", "設計-remote.txt"), Encoding.UTF8);
+        SyncStateEntry? uploadedBaseline = await stateStore.GetAsync("client-unicode", uploadPath);
+        SyncStateEntry? downloadedBaseline = await stateStore.GetAsync("client-unicode", downloadPath);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(uploadRun.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
+            Assert.That(downloadRun.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Downloaded }));
+            Assert.That(uploadedContent, Is.EqualTo("unicode local content"));
+            Assert.That(downloadedContent, Is.EqualTo("unicode remote content"));
+            Assert.That(uploadedBaseline?.RelativePath, Is.EqualTo(uploadPath));
+            Assert.That(downloadedBaseline?.RelativePath, Is.EqualTo(downloadPath));
+            Assert.That(downloadedBaseline?.RemoteFileId, Is.EqualTo(remoteFile.Id));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_MovesLocalFileToQuarantineWhenRemoteFileIsDeleted()
     {
         CottonCloudClient client = CreateClient();
