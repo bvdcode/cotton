@@ -7,6 +7,7 @@ using Cotton;
 using Cotton.Contracts.Nodes;
 using Cotton.Models;
 using Cotton.Sync.App.Auth;
+using Cotton.Sync.App.Activities;
 using Cotton.Sync.App.Platform;
 using Cotton.Sync.App.Preferences;
 using Cotton.Sync.App.Status;
@@ -19,6 +20,7 @@ using Cotton.Sync.Desktop.Platform;
 using Cotton.Sync.Desktop.Startup;
 using Cotton.Sync.State;
 using Microsoft.Extensions.Logging;
+using AppSyncActivity = Cotton.Sync.App.Activities.SyncActivity;
 
 namespace Cotton.Sync.Desktop.Shell;
 
@@ -34,6 +36,7 @@ internal sealed class DesktopShellController : IDesktopShellController
     private readonly SqliteAppPreferencesStore _preferencesStore;
     private readonly DesktopStartupOptions _startupOptions;
     private readonly SqliteSyncPairSettingsStore _syncPairStore;
+    private IDisposable? _activitySubscription;
     private DesktopSyncApplicationHost? _host;
     private IDisposable? _statusSubscription;
 
@@ -57,6 +60,8 @@ internal sealed class DesktopShellController : IDesktopShellController
     }
 
     public event EventHandler<DesktopSyncStatusSnapshot>? StatusChanged;
+
+    public event EventHandler<DesktopActivitySnapshot>? ActivityReported;
 
     public async Task<DesktopShellSnapshot> LoadAsync(CancellationToken cancellationToken = default)
     {
@@ -289,6 +294,8 @@ internal sealed class DesktopShellController : IDesktopShellController
             if (ReferenceEquals(_host, host))
             {
                 _host = null;
+                _activitySubscription?.Dispose();
+                _activitySubscription = null;
                 _statusSubscription?.Dispose();
                 _statusSubscription = null;
             }
@@ -522,6 +529,8 @@ internal sealed class DesktopShellController : IDesktopShellController
     {
         DesktopSyncApplicationHost? host = _host;
         _host = null;
+        _activitySubscription?.Dispose();
+        _activitySubscription = null;
         _statusSubscription?.Dispose();
         _statusSubscription = null;
         host?.Dispose();
@@ -758,9 +767,11 @@ internal sealed class DesktopShellController : IDesktopShellController
     private void ReplaceHost(DesktopSyncApplicationHost host)
     {
         DesktopSyncApplicationHost? previous = _host;
+        _activitySubscription?.Dispose();
         _statusSubscription?.Dispose();
         _host = host;
         _statusSubscription = host.StatusPublisher.Subscribe(new StatusObserver(this));
+        _activitySubscription = host.ActivityPublisher.Subscribe(new ActivityObserver(this));
         previous?.Dispose();
     }
 
@@ -794,6 +805,20 @@ internal sealed class DesktopShellController : IDesktopShellController
     private void OnStatusChanged(SyncAppStatus status)
     {
         StatusChanged?.Invoke(this, ToStatusSnapshot(status));
+    }
+
+    private void OnActivityReported(AppSyncActivity activity)
+    {
+        ActivityReported?.Invoke(this, ToActivitySnapshot(activity));
+    }
+
+    private static DesktopActivitySnapshot ToActivitySnapshot(AppSyncActivity activity)
+    {
+        return new DesktopActivitySnapshot(
+            activity.Type.ToString(),
+            activity.ItemPath ?? string.Empty,
+            activity.Message,
+            activity.OccurredAtUtc);
     }
 
     private async Task<AuthSession?> TryRestoreSessionAsync(
@@ -843,6 +868,30 @@ internal sealed class DesktopShellController : IDesktopShellController
         public void OnNext(SyncAppStatus value)
         {
             _controller.OnStatusChanged(value);
+        }
+    }
+
+    private sealed class ActivityObserver : IObserver<AppSyncActivity>
+    {
+        private readonly DesktopShellController _controller;
+
+        public ActivityObserver(DesktopShellController controller)
+        {
+            _controller = controller;
+        }
+
+        public void OnCompleted()
+        {
+        }
+
+        public void OnError(Exception error)
+        {
+            Trace.TraceError(error.ToString());
+        }
+
+        public void OnNext(AppSyncActivity value)
+        {
+            _controller.OnActivityReported(value);
         }
     }
 }

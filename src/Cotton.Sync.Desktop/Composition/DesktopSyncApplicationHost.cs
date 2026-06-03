@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton.Sync.App.Activities;
 using Cotton.Sync.App.SyncApplication;
 using Cotton.Sync.App.Status;
 using Cotton.Sync.Remote;
@@ -18,6 +19,7 @@ internal sealed class DesktopSyncApplicationHost : IDisposable
         ISyncApplicationService app,
         IRemoteRootResolver remoteRootResolver,
         IAppStatusPublisher statusPublisher,
+        IAppActivityPublisher activityPublisher,
         ICottonTokenStore tokenStore,
         ICottonNodeClient nodes,
         HttpClient httpClient,
@@ -26,6 +28,7 @@ internal sealed class DesktopSyncApplicationHost : IDisposable
         App = app ?? throw new ArgumentNullException(nameof(app));
         RemoteRootResolver = remoteRootResolver ?? throw new ArgumentNullException(nameof(remoteRootResolver));
         StatusPublisher = statusPublisher ?? throw new ArgumentNullException(nameof(statusPublisher));
+        ActivityPublisher = activityPublisher ?? throw new ArgumentNullException(nameof(activityPublisher));
         TokenStore = tokenStore ?? throw new ArgumentNullException(nameof(tokenStore));
         Nodes = nodes ?? throw new ArgumentNullException(nameof(nodes));
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
@@ -37,6 +40,8 @@ internal sealed class DesktopSyncApplicationHost : IDisposable
     public IRemoteRootResolver RemoteRootResolver { get; }
 
     public IAppStatusPublisher StatusPublisher { get; }
+
+    public IAppActivityPublisher ActivityPublisher { get; }
 
     public ICottonTokenStore TokenStore { get; }
 

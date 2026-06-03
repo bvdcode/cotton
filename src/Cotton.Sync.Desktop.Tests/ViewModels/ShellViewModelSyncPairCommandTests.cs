@@ -17,11 +17,7 @@ public sealed class ShellViewModelSyncPairCommandTests
     {
         Guid syncPairId = Guid.NewGuid();
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Idle")));
-        using var viewModel = new ShellViewModel(
-            controller,
-            new FakeLocalFolderPicker(),
-            new FakeDesktopNotificationService(),
-            new FakeDesktopThemeService());
+        using ShellViewModel viewModel = CreateViewModel(controller);
         await viewModel.InitializeAsync();
 
         await ExecuteAsync(viewModel.ToggleSelectedSyncPairEnabledCommand);
@@ -47,11 +43,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             CreateSignedInSnapshot(
                 CreatePair(firstSyncPairId, "Documents", "Idle"),
                 CreatePair(secondSyncPairId, "Pictures", "Idle")));
-        using var viewModel = new ShellViewModel(
-            controller,
-            new FakeLocalFolderPicker(),
-            new FakeDesktopNotificationService(),
-            new FakeDesktopThemeService());
+        using ShellViewModel viewModel = CreateViewModel(controller);
         await viewModel.InitializeAsync();
 
         await ExecuteAsync(viewModel.RemoveSelectedSyncPairCommand);
@@ -77,11 +69,7 @@ public sealed class ShellViewModelSyncPairCommandTests
                 new DesktopSelfTestItemSnapshot("Server", false, "Cotton server not found."),
             ]),
         };
-        using var viewModel = new ShellViewModel(
-            controller,
-            new FakeLocalFolderPicker(),
-            new FakeDesktopNotificationService(),
-            new FakeDesktopThemeService());
+        using ShellViewModel viewModel = CreateViewModel(controller);
         await viewModel.InitializeAsync();
 
         await ExecuteAsync(viewModel.SelfTestCommand);
@@ -102,6 +90,28 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CanRetryActionRequired, Is.False);
             Assert.That(viewModel.ActionRequiredMessage, Is.Empty);
             Assert.That(viewModel.GlobalStatus, Is.EqualTo("Sync requested"));
+        });
+    }
+
+    [Test]
+    public async Task ActivityReported_AddsRecentActivityRow()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot());
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportActivity(new DesktopActivitySnapshot(
+            "Uploaded",
+            "Documents/report.txt",
+            "Uploaded Documents/report.txt",
+            new DateTime(2026, 6, 3, 10, 15, 0, DateTimeKind.Utc)));
+
+        ActivityRowViewModel activity = viewModel.Activities.First();
+        Assert.Multiple(() =>
+        {
+            Assert.That(activity.Kind, Is.EqualTo("Uploaded"));
+            Assert.That(activity.Path, Is.EqualTo("Documents/report.txt"));
+            Assert.That(activity.Details, Is.EqualTo("Uploaded Documents/report.txt"));
         });
     }
 
@@ -163,6 +173,8 @@ public sealed class ShellViewModelSyncPairCommandTests
             remove { }
         }
 
+        public event EventHandler<DesktopActivitySnapshot>? ActivityReported;
+
         public Guid? EnabledSyncPairId { get; private set; }
 
         public bool? EnabledSyncPairValue { get; private set; }
@@ -172,6 +184,11 @@ public sealed class ShellViewModelSyncPairCommandTests
         public DesktopSelfTestSnapshot SelfTestSnapshot { get; set; } = new([]);
 
         public int SyncAllCalls { get; private set; }
+
+        public void ReportActivity(DesktopActivitySnapshot activity)
+        {
+            ActivityReported?.Invoke(this, activity);
+        }
 
         public Task<DesktopShellSnapshot> LoadAsync(CancellationToken cancellationToken = default)
         {
@@ -288,6 +305,16 @@ public sealed class ShellViewModelSyncPairCommandTests
         }
     }
 
+    private static ShellViewModel CreateViewModel(FakeDesktopShellController controller)
+    {
+        return new ShellViewModel(
+            controller,
+            new FakeLocalFolderPicker(),
+            new FakeDesktopNotificationService(),
+            new FakeDesktopThemeService(),
+            new InlineDesktopUiDispatcher());
+    }
+
     private sealed class FakeLocalFolderPicker : ILocalFolderPicker
     {
         public Task<string?> PickFolderAsync(CancellationToken cancellationToken = default)
@@ -310,6 +337,26 @@ public sealed class ShellViewModelSyncPairCommandTests
     {
         public void Apply(AppThemeMode themeMode)
         {
+        }
+    }
+
+    private sealed class InlineDesktopUiDispatcher : IDesktopUiDispatcher
+    {
+        public bool CheckAccess()
+        {
+            return true;
+        }
+
+        public void Post(Action action)
+        {
+            action();
+        }
+
+        public Task InvokeAsync(Action action, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            action();
+            return Task.CompletedTask;
         }
     }
 }

@@ -5,7 +5,6 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
-using Avalonia.Threading;
 using Cotton.Sync.App.Auth;
 using Cotton.Sync.App.Preferences;
 using Cotton.Sync.App.SyncPairs;
@@ -19,10 +18,13 @@ namespace Cotton.Sync.Desktop.ViewModels;
 /// </summary>
 internal sealed class ShellViewModel : ViewModelBase, IDisposable
 {
+    private const int MaxActivityRows = 30;
+
     private readonly IDesktopShellController _controller;
     private readonly ILocalFolderPicker _folderPicker;
     private readonly IDesktopNotificationService _notificationService;
     private readonly IDesktopThemeService _themeService;
+    private readonly IDesktopUiDispatcher _uiDispatcher;
     private readonly DesktopNotificationTracker _notificationTracker = new();
     private string _accountName = "Signed out";
     private string _actionRequiredMessage = string.Empty;
@@ -60,16 +62,19 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         IDesktopShellController controller,
         ILocalFolderPicker folderPicker,
         IDesktopNotificationService notificationService,
-        IDesktopThemeService themeService)
+        IDesktopThemeService themeService,
+        IDesktopUiDispatcher? uiDispatcher = null)
     {
         _controller = controller ?? throw new ArgumentNullException(nameof(controller));
         _folderPicker = folderPicker ?? throw new ArgumentNullException(nameof(folderPicker));
         _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
         _themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
+        _uiDispatcher = uiDispatcher ?? new AvaloniaDesktopUiDispatcher();
         SyncPairs.CollectionChanged += OnSyncPairsChanged;
         RemoteFolders.CollectionChanged += OnRemoteFoldersChanged;
         SelfTestItems.CollectionChanged += OnSelfTestItemsChanged;
         Notifications.CollectionChanged += OnNotificationsChanged;
+        _controller.ActivityReported += OnActivityReported;
         _controller.StatusChanged += OnStatusChanged;
         SignInCommand = new AsyncRelayCommand(SignInAsync, CanSignIn, HandleCommandError);
         AddSyncPairCommand = new AsyncRelayCommand(AddSyncPairAsync, CanAddSyncPair, HandleCommandError);
@@ -526,6 +531,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         _controller.StatusChanged -= OnStatusChanged;
+        _controller.ActivityReported -= OnActivityReported;
         SyncPairs.CollectionChanged -= OnSyncPairsChanged;
         RemoteFolders.CollectionChanged -= OnRemoteFoldersChanged;
         SelfTestItems.CollectionChanged -= OnSelfTestItemsChanged;
@@ -995,10 +1001,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             await Task.Delay(TimeSpan.FromMilliseconds(450), cancellationToken).ConfigureAwait(false);
             DesktopServerProbeResult result = await _controller.ProbeServerAsync(serverUrl, cancellationToken)
                 .ConfigureAwait(false);
-            await Dispatcher.UIThread.InvokeAsync(
+            await _uiDispatcher.InvokeAsync(
                 () => ApplyServerProbeResult(result),
-                DispatcherPriority.Normal,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -1006,9 +1011,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         catch (Exception exception)
         {
             Trace.TraceWarning("Failed to probe Cotton server {0}: {1}", serverUrl, exception);
-            await Dispatcher.UIThread.InvokeAsync(
-                () => ApplyServerProbeFailure(),
-                DispatcherPriority.Normal);
+            await _uiDispatcher.InvokeAsync(
+                ApplyServerProbeFailure,
+                CancellationToken.None).ConfigureAwait(false);
         }
     }
 
@@ -1117,7 +1122,27 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
 
     private void OnStatusChanged(object? sender, DesktopSyncStatusSnapshot status)
     {
-        Dispatcher.UIThread.Post(() => ApplyStatus(status));
+        _uiDispatcher.Post(() => ApplyStatus(status));
+    }
+
+    private void OnActivityReported(object? sender, DesktopActivitySnapshot activity)
+    {
+        if (_uiDispatcher.CheckAccess())
+        {
+            ApplyActivity(activity);
+            return;
+        }
+
+        _uiDispatcher.Post(() => ApplyActivity(activity));
+    }
+
+    private void ApplyActivity(DesktopActivitySnapshot activity)
+    {
+        AddActivity(
+            activity.Kind,
+            activity.Path,
+            activity.Details,
+            new DateTimeOffset(DateTime.SpecifyKind(activity.OccurredAtUtc, DateTimeKind.Utc)).ToLocalTime());
     }
 
     private void ApplyStatus(DesktopSyncStatusSnapshot status)
@@ -1196,13 +1221,22 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
 
     private void AddActivity(string kind, string path, string details)
     {
+        AddActivity(kind, path, details, DateTimeOffset.Now);
+    }
+
+    private void AddActivity(string kind, string path, string details, DateTimeOffset occurredAt)
+    {
         Activities.Insert(0, new ActivityRowViewModel
         {
-            Time = DateTimeOffset.Now.ToString("HH:mm", CultureInfo.CurrentCulture),
+            Time = occurredAt.ToString("HH:mm", CultureInfo.CurrentCulture),
             Kind = kind,
             Path = path,
             Details = details,
         });
+        while (Activities.Count > MaxActivityRows)
+        {
+            Activities.RemoveAt(Activities.Count - 1);
+        }
     }
 
     private void RaiseCommandStates()

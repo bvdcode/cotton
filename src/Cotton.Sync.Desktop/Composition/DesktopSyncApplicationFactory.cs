@@ -3,6 +3,7 @@
 
 using Cotton.Sdk;
 using Cotton.Sync.App.Auth;
+using Cotton.Sync.App.Activities;
 using Cotton.Sync.App.Continuous;
 using Cotton.Sync.App.LocalChanges;
 using Cotton.Sync.App.Platform;
@@ -60,8 +61,9 @@ internal sealed class DesktopSyncApplicationFactory
             remoteTreeCrawler,
             remoteFileSynchronizer,
             stateStore);
+        var activityPublisher = new InMemoryAppActivityPublisher();
         ISyncPairWork pairWork = new RemoteChangeAwareSyncPairWork(
-            new SyncEnginePairWork(syncEngine),
+            new SyncEnginePairWork(syncEngine, activityPublisher),
             remoteChangeFeed);
         var runnerFactory = new SyncPairRunnerFactory(pairWork, loggerFactory: _loggerFactory);
         var statusPublisher = new InMemoryAppStatusPublisher();
@@ -107,6 +109,7 @@ internal sealed class DesktopSyncApplicationFactory
             appService,
             remoteRootResolver,
             statusPublisher,
+            activityPublisher,
             tokenStore,
             cottonClient.Nodes,
             httpClient,
