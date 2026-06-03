@@ -343,6 +343,12 @@ internal sealed class DesktopShellController : IDesktopShellController
             true,
             platformCapabilities.TrayLifecycleDetails));
 
+        IDesktopNotificationService notificationService = DesktopNotificationServiceFactory.CreateDefault();
+        items.Add(new DesktopSelfTestItemSnapshot(
+            "Notification adapter",
+            true,
+            notificationService.IsSupported ? "Supported" : "Not available on this platform"));
+
         await AddSelfTestCheckAsync(
             items,
             "File watcher",

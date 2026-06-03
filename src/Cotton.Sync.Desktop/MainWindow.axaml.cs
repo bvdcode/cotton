@@ -44,7 +44,10 @@ public sealed partial class MainWindow : Window
         ArgumentNullException.ThrowIfNull(controller);
         _lifecyclePolicy = new DesktopWindowLifecyclePolicy(hideAfterSessionRestore, canHideToTray);
         InitializeComponent();
-        var viewModel = new ShellViewModel(controller, new WindowLocalFolderPicker(this));
+        var viewModel = new ShellViewModel(
+            controller,
+            new WindowLocalFolderPicker(this),
+            DesktopNotificationServiceFactory.CreateDefault());
         DataContext = viewModel;
         ApplyWindowMode(viewModel.IsDashboardVisible);
         viewModel.PropertyChanged += OnViewModelPropertyChanged;

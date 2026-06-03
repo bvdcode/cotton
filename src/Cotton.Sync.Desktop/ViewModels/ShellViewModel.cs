@@ -20,6 +20,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
 {
     private readonly IDesktopShellController _controller;
     private readonly ILocalFolderPicker _folderPicker;
+    private readonly IDesktopNotificationService _notificationService;
     private readonly DesktopNotificationTracker _notificationTracker = new();
     private string _accountName = "Signed out";
     private string _actionRequiredMessage = string.Empty;
@@ -49,10 +50,14 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     private string _totpCode = string.Empty;
     private string _username = string.Empty;
 
-    internal ShellViewModel(IDesktopShellController controller, ILocalFolderPicker folderPicker)
+    internal ShellViewModel(
+        IDesktopShellController controller,
+        ILocalFolderPicker folderPicker,
+        IDesktopNotificationService notificationService)
     {
         _controller = controller ?? throw new ArgumentNullException(nameof(controller));
         _folderPicker = folderPicker ?? throw new ArgumentNullException(nameof(folderPicker));
+        _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
         SyncPairs.CollectionChanged += OnSyncPairsChanged;
         RemoteFolders.CollectionChanged += OnRemoteFoldersChanged;
         SelfTestItems.CollectionChanged += OnSelfTestItemsChanged;
@@ -968,6 +973,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
                 Message = request.Message,
             });
             AddActivity("Notification", string.Empty, request.Message);
+            _notificationService.Show(request.Title, request.Message);
         }
 
         while (Notifications.Count > 3)

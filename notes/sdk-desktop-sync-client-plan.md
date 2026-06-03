@@ -327,6 +327,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Add notification adapter.
   Required notifications: initial sync complete, conflict created, action-required error.
   Partial 2026-06-03: added a tested notification tracker for initial sync complete, conflict, and action-required error status transitions, and wired it to compact in-app dashboard notifications. Focused `DesktopNotificationTrackerTests` passed 5/5. Keep unchecked until native Windows/Linux notification adapters are implemented and manually verified.
+  Partial 2026-06-03: added `IDesktopNotificationService`, Linux `notify-send` support with safe unsupported fallback, and self-test reporting for the notification adapter. New platform notification tests passed, full `Cotton.Sync.Desktop.Tests` passed 62/62, `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with the known NU1903 warning, and local `--self-test --data-dir <temp>` reported `Notification adapter - Supported` on Linux/XFCE. Keep unchecked until Windows native notifications and manual OS notification checks are complete.
 - [x] Add tests for single-instance lock where practical.
   Verification 2026-06-03: `DesktopSingleInstanceGuardTests` cover first acquire, blocked second acquire, and acquire after dispose; focused tests passed 3/3.
 - [ ] Add manual Windows verification: autostart after reboot, tray behavior, notifications.

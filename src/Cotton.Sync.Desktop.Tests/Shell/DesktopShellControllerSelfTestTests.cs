@@ -48,6 +48,7 @@ public sealed class DesktopShellControllerSelfTestTests
             Assert.That(names, Does.Contain("Authentication state"));
             Assert.That(names, Does.Contain("Desktop platform"));
             Assert.That(names, Does.Contain("Tray lifecycle"));
+            Assert.That(names, Does.Contain("Notification adapter"));
             Assert.That(names, Does.Contain("File watcher"));
             Assert.That(names, Does.Contain("Server identity"));
         });
