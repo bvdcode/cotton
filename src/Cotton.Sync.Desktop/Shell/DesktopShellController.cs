@@ -83,6 +83,7 @@ internal sealed class DesktopShellController : IDesktopShellController
             session?.Email ?? session?.Username,
             _startupOptions.Username ?? preferences.RememberedUsername,
             startWithOperatingSystem,
+            preferences.EnableNotifications,
             platformCapabilities with { IsAutostartSupported = _autostartService.IsSupported },
             session is not null,
             syncPairSnapshots);
@@ -275,6 +276,14 @@ internal sealed class DesktopShellController : IDesktopShellController
         AppPreferences preferences = await _preferencesStore.GetAsync(cancellationToken).ConfigureAwait(false);
         preferences.StartWithOperatingSystem = enabled;
         preferences.StartMinimizedToTray = enabled && DesktopPlatformCapabilities.IsTrayLifecycleSupported;
+        await _preferencesStore.SaveAsync(preferences, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task SetNotificationsEnabledAsync(bool enabled, CancellationToken cancellationToken = default)
+    {
+        await _preferencesStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        AppPreferences preferences = await _preferencesStore.GetAsync(cancellationToken).ConfigureAwait(false);
+        preferences.EnableNotifications = enabled;
         await _preferencesStore.SaveAsync(preferences, cancellationToken).ConfigureAwait(false);
     }
 

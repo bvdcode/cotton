@@ -31,6 +31,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     private string _password = string.Empty;
     private string _remoteBrowserPath = "/";
     private string _remoteFolderPath = string.Empty;
+    private bool _enableNotifications = true;
+    private bool _isApplyingNotificationPreference;
     private bool _isApplyingStartWithOperatingSystem;
     private bool _isServerProbeChecking;
     private bool _isServerProbeFailed;
@@ -213,6 +215,18 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             if (SetProperty(ref _startWithOperatingSystem, value) && !_isLoadingSnapshot)
             {
                 _ = ApplyStartWithOperatingSystemAsync(value);
+            }
+        }
+    }
+
+    public bool EnableNotifications
+    {
+        get => _enableNotifications;
+        set
+        {
+            if (SetProperty(ref _enableNotifications, value) && !_isLoadingSnapshot)
+            {
+                _ = ApplyNotificationsEnabledAsync(value);
             }
         }
     }
@@ -479,6 +493,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             IsTrayLifecycleSupported = snapshot.PlatformCapabilities.IsTrayLifecycleSupported;
             TrayLifecycleDetails = snapshot.PlatformCapabilities.TrayLifecycleDetails;
             StartWithOperatingSystem = snapshot.StartWithOperatingSystem;
+            EnableNotifications = snapshot.EnableNotifications;
             SyncPairs.Clear();
             foreach (DesktopSyncPairSnapshot syncPair in snapshot.SyncPairs)
             {
@@ -536,6 +551,32 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         {
             _isApplyingStartWithOperatingSystem = false;
             IsBusy = false;
+        }
+    }
+
+    private async Task ApplyNotificationsEnabledAsync(bool enabled)
+    {
+        if (_isApplyingNotificationPreference)
+        {
+            return;
+        }
+
+        _isApplyingNotificationPreference = true;
+        try
+        {
+            await _controller.SetNotificationsEnabledAsync(enabled).ConfigureAwait(true);
+            AddActivity("Settings", string.Empty, enabled ? "Desktop notifications enabled" : "Desktop notifications disabled");
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _isLoadingSnapshot = true;
+            EnableNotifications = !enabled;
+            _isLoadingSnapshot = false;
+            HandleCommandError(exception);
+        }
+        finally
+        {
+            _isApplyingNotificationPreference = false;
         }
     }
 
@@ -973,7 +1014,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
                 Message = request.Message,
             });
             AddActivity("Notification", string.Empty, request.Message);
-            _notificationService.Show(request.Title, request.Message);
+            if (EnableNotifications)
+            {
+                _notificationService.Show(request.Title, request.Message);
+            }
         }
 
         while (Notifications.Count > 3)

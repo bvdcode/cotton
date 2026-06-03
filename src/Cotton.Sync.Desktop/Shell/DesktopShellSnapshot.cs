@@ -10,6 +10,7 @@ internal sealed record DesktopShellSnapshot(
     string? AccountName,
     string? RememberedUsername,
     bool StartWithOperatingSystem,
+    bool EnableNotifications,
     DesktopPlatformCapabilitySnapshot PlatformCapabilities,
     bool IsSignedIn,
     IReadOnlyList<DesktopSyncPairSnapshot> SyncPairs);

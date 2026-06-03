@@ -136,6 +136,36 @@ public sealed class DesktopShellControllerSelfTestTests
         });
     }
 
+    [Test]
+    public async Task LoadAsync_IncludesNotificationPreference()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        var preferencesStore = new SqliteAppPreferencesStore(paths.AppDatabasePath);
+        await preferencesStore.InitializeAsync();
+        AppPreferences preferences = await preferencesStore.GetAsync();
+        preferences.EnableNotifications = false;
+        await preferencesStore.SaveAsync(preferences);
+        using DesktopShellController controller = CreateController(paths, new SqliteSyncPairSettingsStore(paths.AppDatabasePath));
+
+        DesktopShellSnapshot snapshot = await controller.LoadAsync();
+
+        Assert.That(snapshot.EnableNotifications, Is.False);
+    }
+
+    [Test]
+    public async Task SetNotificationsEnabledAsync_PersistsPreference()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        var preferencesStore = new SqliteAppPreferencesStore(paths.AppDatabasePath);
+        await preferencesStore.InitializeAsync();
+        using DesktopShellController controller = CreateController(paths, new SqliteSyncPairSettingsStore(paths.AppDatabasePath));
+
+        await controller.SetNotificationsEnabledAsync(false);
+
+        AppPreferences preferences = await preferencesStore.GetAsync();
+        Assert.That(preferences.EnableNotifications, Is.False);
+    }
+
     private DesktopShellController CreateController()
     {
         DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);

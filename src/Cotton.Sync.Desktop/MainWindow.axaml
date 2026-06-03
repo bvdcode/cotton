@@ -645,6 +645,20 @@
                 <Border Height="1"
                         Background="{DynamicResource CottonBorderBrush}" />
 
+                <StackPanel Spacing="6">
+                  <TextBlock Text="Notifications"
+                             FontWeight="SemiBold" />
+                  <CheckBox Content="Show desktop notifications"
+                            IsChecked="{Binding EnableNotifications}" />
+                  <TextBlock Text="Initial sync, conflicts, and action-required errors."
+                             Classes="secondary"
+                             FontSize="12"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+
+                <Border Height="1"
+                        Background="{DynamicResource CottonBorderBrush}" />
+
                 <StackPanel Spacing="7">
                   <TextBlock Text="Diagnostics"
                              FontWeight="SemiBold" />
