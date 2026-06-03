@@ -110,8 +110,8 @@ Target layers:
   Verification 2026-06-03: `SyncSupervisorTests` cover start, pause/resume, sync-all, and stop transitions/status publishing.
 - [x] Add tests for pause/resume and app shutdown.
   Verification 2026-06-03: `SyncPairRunnerTests` and `SyncSupervisorTests` cover pause/resume states, while `SyncApplicationServiceTests` cover sign-out and stop-sync shutdown flow.
-- [ ] Add tests proving UI can use the app layer without directly constructing `SyncEngine`.
-  Partial 2026-06-03: `MainWindow` and `ShellViewModel` use `IDesktopShellController`; `DesktopSyncApplicationFactory` is the desktop composition root that creates the headless engine and `SyncApplicationService`. Keep unchecked until a focused test enforces that UI shell classes depend only on the controller/app abstractions.
+- [x] Add tests proving UI can use the app layer without directly constructing `SyncEngine`.
+  Verification 2026-06-03: `DesktopUiBoundaryTests` assert `ShellViewModel` constructor dependencies are `IDesktopShellController`, `ILocalFolderPicker`, and `IDesktopNotificationService`, and that `MainWindow`/`ShellViewModel` do not store or require `Cotton.Sync.SyncEngine` or `SyncEnginePairWork`. Focused boundary tests passed 2/2, full `Cotton.Sync.Desktop.Tests` passed 64/64, and full solution Release build passed with the known NU1903 warning.
 - [x] Build the solution.
   Verification 2026-06-03: `dotnet test src/Cotton.Sync.App.Tests/Cotton.Sync.App.Tests.csproj --configuration Release --no-restore` passed 83/83 and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with the known NU1903 Avalonia/Tmds.DBus.Protocol warning.
 
