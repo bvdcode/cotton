@@ -456,6 +456,10 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(installerScript, Does.Contain("OutputBaseFilename=cotton-sync-desktop-win-x64-setup"));
             Assert.That(installerScript, Does.Contain("SetupIconFile={#IconFile}"));
             Assert.That(installerScript, Does.Contain("UninstallDisplayIcon={app}\\Cotton.Sync.Desktop.exe"));
+            Assert.That(installerScript, Does.Contain("#define AppMutexName \"CottonSyncDesktop_B671C18E_1E77_437C_AB9B_5C5C9D877E18\""));
+            Assert.That(installerScript, Does.Contain("AppMutex={#AppMutexName}"));
+            Assert.That(installerScript, Does.Contain("CloseApplications=yes"));
+            Assert.That(installerScript, Does.Contain("RestartApplications=no"));
             Assert.That(installerScript, Does.Contain("Source: \"{#SourceDir}\\*\""));
             Assert.That(installerScript, Does.Contain("recursesubdirs createallsubdirs"));
             Assert.That(installerScript, Does.Contain("Cotton.Sync.Desktop.exe"));

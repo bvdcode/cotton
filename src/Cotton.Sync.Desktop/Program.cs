@@ -32,6 +32,7 @@ internal static class Program
         }
 
         DesktopAppIdentity.ApplyToCurrentProcess();
+        using DesktopInstallerRuntimeMutex installerMutex = DesktopInstallerRuntimeMutex.CreateForCurrentPlatform();
         using DesktopSingleInstanceGuard? singleInstance = DesktopSingleInstanceGuard
             .TryAcquire(paths.SingleInstanceLockPath);
         if (singleInstance is null)

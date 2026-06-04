@@ -19,6 +19,21 @@ public sealed class DesktopSingleInstanceStartupContractTests
     }
 
     [Test]
+    public void Program_HoldsInstallerRuntimeMutexForWindowsSetupDetection()
+    {
+        string program = File.ReadAllText(GetDesktopFilePath("Program.cs"));
+        string installerMutex = File.ReadAllText(GetDesktopFilePath(Path.Combine("Platform", "DesktopInstallerRuntimeMutex.cs")));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(program, Does.Contain("DesktopInstallerRuntimeMutex.CreateForCurrentPlatform()"));
+            Assert.That(installerMutex, Does.Contain("MutexName"));
+            Assert.That(installerMutex, Does.Contain("CottonSyncDesktop_B671C18E_1E77_437C_AB9B_5C5C9D877E18"));
+            Assert.That(installerMutex, Does.Contain("OperatingSystem.IsWindows()"));
+        });
+    }
+
+    [Test]
     public void App_StartsActivationServerForRunningInstance()
     {
         string app = File.ReadAllText(GetDesktopFilePath("App.axaml.cs"));
@@ -32,12 +47,12 @@ public sealed class DesktopSingleInstanceStartupContractTests
         });
     }
 
-    private static string GetDesktopFilePath(string fileName)
+    private static string GetDesktopFilePath(string relativePath)
     {
         string directory = TestContext.CurrentContext.TestDirectory;
         while (!string.IsNullOrWhiteSpace(directory))
         {
-            string candidate = Path.Combine(directory, "src", "Cotton.Sync.Desktop", fileName);
+            string candidate = Path.Combine(directory, "src", "Cotton.Sync.Desktop", relativePath);
             if (File.Exists(candidate))
             {
                 return candidate;
@@ -52,6 +67,6 @@ public sealed class DesktopSingleInstanceStartupContractTests
             directory = parent ?? string.Empty;
         }
 
-        throw new FileNotFoundException(fileName + " was not found from the test directory.");
+        throw new FileNotFoundException(relativePath + " was not found from the test directory.");
     }
 }

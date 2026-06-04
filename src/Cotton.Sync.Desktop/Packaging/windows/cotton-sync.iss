@@ -17,6 +17,10 @@
 #define IconFile "..\..\Assets\app.ico"
 #endif
 
+#ifndef AppMutexName
+#define AppMutexName "CottonSyncDesktop_B671C18E_1E77_437C_AB9B_5C5C9D877E18"
+#endif
+
 [Setup]
 AppId={{B671C18E-1E77-437C-AB9B-5C5C9D877E18}
 AppName=Cotton Sync
@@ -34,6 +38,9 @@ OutputDir={#OutputDir}
 OutputBaseFilename=cotton-sync-desktop-win-x64-setup
 SetupIconFile={#IconFile}
 UninstallDisplayIcon={app}\Cotton.Sync.Desktop.exe
+AppMutex={#AppMutexName}
+CloseApplications=yes
+RestartApplications=no
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
