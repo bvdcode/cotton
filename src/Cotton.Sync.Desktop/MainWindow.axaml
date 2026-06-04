@@ -114,44 +114,6 @@
                      HorizontalAlignment="Center" />
         </StackPanel>
 
-        <Grid ColumnDefinitions="*,*"
-              ColumnSpacing="10">
-          <StackPanel Orientation="Horizontal"
-                      Spacing="5"
-                      HorizontalAlignment="Left">
-            <Border Classes="setupStepBadge"
-                    Classes.active="{Binding IsServerStepActive}"
-                    Classes.complete="{Binding IsServerStepComplete}">
-              <TextBlock Text="1"
-                         Classes="setupStepBadgeText"
-                         HorizontalAlignment="Center"
-                         VerticalAlignment="Center" />
-            </Border>
-            <TextBlock Text="Server"
-                       Classes="setupStepLabel"
-                       VerticalAlignment="Center" />
-          </StackPanel>
-
-          <StackPanel Grid.Column="1"
-                      Orientation="Horizontal"
-                      Spacing="5"
-                      HorizontalAlignment="Left">
-            <Border Classes="setupStepBadge"
-                    Classes.active="{Binding IsAccountStepActive}"
-                    Classes.inactive="{Binding IsAccountStepInactive}">
-              <TextBlock Text="2"
-                         Classes="setupStepBadgeText"
-                         Classes.inactive="{Binding IsAccountStepInactive}"
-                         HorizontalAlignment="Center"
-                         VerticalAlignment="Center" />
-            </Border>
-            <TextBlock Text="Account"
-                       Classes="setupStepLabel"
-                       Classes.inactive="{Binding IsAccountStepInactive}"
-                       VerticalAlignment="Center" />
-          </StackPanel>
-        </Grid>
-
         <Border Padding="8"
                 CornerRadius="6"
                 Background="{DynamicResource CottonErrorSoftBrush}"

@@ -79,34 +79,6 @@
       <Setter Property="Padding" Value="10,4" />
       <Setter Property="FontSize" Value="12" />
     </Style>
-    <Style Selector="Border.setupStepBadge">
-      <Setter Property="Width" Value="18" />
-      <Setter Property="Height" Value="18" />
-      <Setter Property="CornerRadius" Value="9" />
-      <Setter Property="Background" Value="{DynamicResource CottonSurfaceMutedBrush}" />
-    </Style>
-    <Style Selector="Border.setupStepBadge.active">
-      <Setter Property="Background" Value="{DynamicResource CottonPrimaryBrush}" />
-    </Style>
-    <Style Selector="Border.setupStepBadge.complete">
-      <Setter Property="Background" Value="{DynamicResource CottonPrimaryBrush}" />
-    </Style>
-    <Style Selector="TextBlock.setupStepBadgeText">
-      <Setter Property="Foreground" Value="{DynamicResource CottonPrimaryTextBrush}" />
-      <Setter Property="FontSize" Value="11" />
-      <Setter Property="FontWeight" Value="Bold" />
-    </Style>
-    <Style Selector="TextBlock.setupStepBadgeText.inactive">
-      <Setter Property="Foreground" Value="{DynamicResource CottonTextSecondaryBrush}" />
-    </Style>
-    <Style Selector="TextBlock.setupStepLabel">
-      <Setter Property="Foreground" Value="{DynamicResource CottonTextPrimaryBrush}" />
-      <Setter Property="FontSize" Value="12" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-    </Style>
-    <Style Selector="TextBlock.setupStepLabel.inactive">
-      <Setter Property="Foreground" Value="{DynamicResource CottonTextSecondaryBrush}" />
-    </Style>
     <Style Selector="TextBox">
       <Setter Property="MinHeight" Value="32" />
       <Setter Property="Background" Value="{DynamicResource CottonSurfaceBrush}" />
