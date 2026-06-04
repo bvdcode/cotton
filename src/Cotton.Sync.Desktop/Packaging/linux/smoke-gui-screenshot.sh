@@ -21,6 +21,7 @@ if [ -z "${DISPLAY:-}" ]; then
 fi
 
 command -v ffmpeg >/dev/null
+command -v ffprobe >/dev/null
 
 output_dir="$(dirname "$output_png")"
 mkdir -p "$output_dir"
@@ -64,6 +65,25 @@ ffmpeg \
 if [ ! -s "$output_png" ]; then
   cat "$log_file" >&2 || true
   echo "GUI screenshot was not created: $output_png" >&2
+  exit 1
+fi
+
+actual_size="$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "$output_png")"
+if [ "$actual_size" != "$capture_size" ]; then
+  echo "GUI screenshot has unexpected size: expected $capture_size, got $actual_size." >&2
+  exit 1
+fi
+
+signal_stats="$(ffmpeg -hide_banner -loglevel error -i "$output_png" -vf "signalstats,metadata=print:file=-" -frames:v 1 -f null -)"
+y_min="$(printf '%s\n' "$signal_stats" | awk -F= '/lavfi.signalstats.YMIN=/{ print $2; exit }')"
+y_max="$(printf '%s\n' "$signal_stats" | awk -F= '/lavfi.signalstats.YMAX=/{ print $2; exit }')"
+if [ -z "$y_min" ] || [ -z "$y_max" ]; then
+  echo "GUI screenshot pixel statistics were not produced." >&2
+  exit 1
+fi
+
+if [ "$y_min" = "$y_max" ]; then
+  echo "GUI screenshot appears to be a single-color frame." >&2
   exit 1
 fi
 

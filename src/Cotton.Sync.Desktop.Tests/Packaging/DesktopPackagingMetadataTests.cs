@@ -139,12 +139,16 @@ public sealed class DesktopPackagingMetadataTests
         {
             Assert.That(smokeScript, Does.Contain("DISPLAY is required"));
             Assert.That(smokeScript, Does.Contain("command -v ffmpeg"));
+            Assert.That(smokeScript, Does.Contain("command -v ffprobe"));
             Assert.That(smokeScript, Does.Contain("\"$app_executable\" --data-dir \"$data_dir\""));
             Assert.That(smokeScript, Does.Contain("-f x11grab"));
             Assert.That(smokeScript, Does.Contain("-draw_mouse 0"));
             Assert.That(smokeScript, Does.Contain("-video_size \"$capture_size\""));
             Assert.That(smokeScript, Does.Contain("-frames:v 1"));
             Assert.That(smokeScript, Does.Contain("GUI screenshot was not created"));
+            Assert.That(smokeScript, Does.Contain("ffprobe -v error"));
+            Assert.That(smokeScript, Does.Contain("lavfi.signalstats.YMIN"));
+            Assert.That(smokeScript, Does.Contain("GUI screenshot appears to be a single-color frame."));
             Assert.That(smokeScript, Does.Contain("Captured desktop GUI screenshot"));
         });
     }
