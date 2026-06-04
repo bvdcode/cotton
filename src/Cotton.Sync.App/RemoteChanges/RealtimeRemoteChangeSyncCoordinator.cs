@@ -24,7 +24,8 @@ public sealed class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoord
     private readonly ISessionRevocationHandler _sessionRevocationHandler;
     private readonly ISyncSupervisor _supervisor;
     private CancellationTokenSource? _lifetime;
-    private CancellationTokenSource? _pendingSync;
+    private PendingRemoteSyncRequest? _pendingSync;
+    private readonly HashSet<PendingRemoteSyncRequest> _pendingRequests = [];
     private int _sessionRevocationRequested;
     private bool _isSubscribed;
 
@@ -99,15 +100,20 @@ public sealed class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoord
         lifetime?.Cancel();
         lifetime?.Dispose();
 
-        CancellationTokenSource? pendingSync;
+        List<PendingRemoteSyncRequest> pendingSyncs;
         lock (_pendingGate)
         {
-            pendingSync = _pendingSync;
+            pendingSyncs = _pendingRequests.ToList();
             _pendingSync = null;
+            _pendingRequests.Clear();
         }
 
-        pendingSync?.Cancel();
-        pendingSync?.Dispose();
+        foreach (PendingRemoteSyncRequest pendingSync in pendingSyncs)
+        {
+            pendingSync.Cancellation.Cancel();
+        }
+
+        await WaitForPendingSyncsAsync(pendingSyncs, cancellationToken).ConfigureAwait(false);
 
         if (_isSubscribed)
         {
@@ -126,17 +132,17 @@ public sealed class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoord
             return;
         }
 
-        CancellationTokenSource next = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
-        CancellationTokenSource? previous;
+        var next = new PendingRemoteSyncRequest(CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token));
+        PendingRemoteSyncRequest? previous;
         lock (_pendingGate)
         {
             previous = _pendingSync;
             _pendingSync = next;
+            _pendingRequests.Add(next);
+            next.Runner = RunDebouncedSyncAsync(change.MethodName, next);
         }
 
-        previous?.Cancel();
-        previous?.Dispose();
-        _ = RunDebouncedSyncAsync(change.MethodName, next);
+        previous?.Cancellation.Cancel();
     }
 
     private void OnSessionRevoked(object? sender, CottonRealtimeEvent change)
@@ -181,18 +187,18 @@ public sealed class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoord
         }
     }
 
-    private async Task RunDebouncedSyncAsync(string methodName, CancellationTokenSource request)
+    private async Task RunDebouncedSyncAsync(string methodName, PendingRemoteSyncRequest request)
     {
         try
         {
-            await Task.Delay(_debounceInterval, request.Token).ConfigureAwait(false);
-            RemovePendingSync(request);
+            await Task.Delay(_debounceInterval, request.Cancellation.Token).ConfigureAwait(false);
+            RemoveCurrentPendingSync(request);
             _logger.LogDebug(
                 "Requesting remote-change sync after realtime event {MethodName}.",
                 methodName);
-            await _supervisor.SyncAllAsync(request.Token).ConfigureAwait(false);
+            await _supervisor.SyncAllAsync(request.Cancellation.Token).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (request.IsCancellationRequested)
+        catch (OperationCanceledException) when (request.Cancellation.IsCancellationRequested)
         {
         }
         catch (Exception exception)
@@ -204,12 +210,12 @@ public sealed class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoord
         }
         finally
         {
-            RemovePendingSync(request);
-            request.Dispose();
+            CompletePendingSync(request);
+            request.Cancellation.Dispose();
         }
     }
 
-    private void RemovePendingSync(CancellationTokenSource request)
+    private void RemoveCurrentPendingSync(PendingRemoteSyncRequest request)
     {
         lock (_pendingGate)
         {
@@ -220,16 +226,56 @@ public sealed class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoord
         }
     }
 
+    private void CompletePendingSync(PendingRemoteSyncRequest request)
+    {
+        lock (_pendingGate)
+        {
+            if (ReferenceEquals(_pendingSync, request))
+            {
+                _pendingSync = null;
+            }
+
+            _pendingRequests.Remove(request);
+        }
+    }
+
     private void CancelPendingSyncRequest()
     {
-        CancellationTokenSource? pendingSync;
+        PendingRemoteSyncRequest? pendingSync;
         lock (_pendingGate)
         {
             pendingSync = _pendingSync;
             _pendingSync = null;
         }
 
-        pendingSync?.Cancel();
-        pendingSync?.Dispose();
+        pendingSync?.Cancellation.Cancel();
+    }
+
+    private static async Task WaitForPendingSyncsAsync(
+        IReadOnlyList<PendingRemoteSyncRequest> pendingSyncs,
+        CancellationToken cancellationToken)
+    {
+        Task[] runners = pendingSyncs
+            .Select(static request => request.Runner)
+            .OfType<Task>()
+            .ToArray();
+        if (runners.Length == 0)
+        {
+            return;
+        }
+
+        await Task.WhenAll(runners).WaitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private sealed class PendingRemoteSyncRequest
+    {
+        public PendingRemoteSyncRequest(CancellationTokenSource cancellation)
+        {
+            Cancellation = cancellation;
+        }
+
+        public CancellationTokenSource Cancellation { get; }
+
+        public Task? Runner { get; set; }
     }
 }

@@ -56,6 +56,37 @@ public sealed class RealtimeRemoteChangeSyncCoordinatorTests
     }
 
     [Test]
+    public async Task StopAsync_WaitsForRunningSyncRequest()
+    {
+        var realtime = new FakeCottonRealtimeClient();
+        var supervisor = new FakeSyncSupervisor
+        {
+            BlockSyncAll = true,
+        };
+        var coordinator = new RealtimeRemoteChangeSyncCoordinator(
+            realtime,
+            supervisor,
+            TimeSpan.Zero);
+        await coordinator.StartAsync();
+
+        realtime.RaiseRemoteFileTreeChanged("FileCreated");
+        bool observed = await supervisor.WaitForSyncAsync(TimeSpan.FromSeconds(2));
+        Task stopTask = coordinator.StopAsync();
+        await Task.Delay(TimeSpan.FromMilliseconds(75));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(observed, Is.True);
+            Assert.That(stopTask.IsCompleted, Is.False);
+        });
+
+        supervisor.ReleaseSyncAll();
+        await stopTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.That(supervisor.SyncAllCallCount, Is.EqualTo(1));
+    }
+
+    [Test]
     public async Task StopAsync_UnsubscribesFromRealtimeEvents()
     {
         var realtime = new FakeCottonRealtimeClient();
@@ -235,8 +266,11 @@ public sealed class RealtimeRemoteChangeSyncCoordinatorTests
     private sealed class FakeSyncSupervisor : ISyncSupervisor
     {
         private readonly TaskCompletionSource _syncRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _releaseSyncAll = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public IReadOnlyList<SyncPairStatus> CurrentStatuses => [];
+
+        public bool BlockSyncAll { get; set; }
 
         public int SyncAllCallCount { get; private set; }
 
@@ -275,7 +309,9 @@ public sealed class RealtimeRemoteChangeSyncCoordinatorTests
             cancellationToken.ThrowIfCancellationRequested();
             SyncAllCallCount++;
             _syncRequested.TrySetResult();
-            return Task.CompletedTask;
+            return BlockSyncAll
+                ? _releaseSyncAll.Task
+                : Task.CompletedTask;
         }
 
         public Task SyncNowAsync(Guid syncPairId, CancellationToken cancellationToken = default)
@@ -287,6 +323,11 @@ public sealed class RealtimeRemoteChangeSyncCoordinatorTests
         {
             Task completed = await Task.WhenAny(_syncRequested.Task, Task.Delay(timeout)).ConfigureAwait(false);
             return completed == _syncRequested.Task;
+        }
+
+        public void ReleaseSyncAll()
+        {
+            _releaseSyncAll.TrySetResult();
         }
     }
 

@@ -22,7 +22,8 @@ public sealed class LocalChangeSyncCoordinator : ILocalChangeSyncCoordinator
     private readonly ISyncPairSettingsStore _syncPairs;
     private readonly ISyncSupervisor _supervisor;
     private readonly ILocalSyncRootWatcherFactory _watcherFactory;
-    private readonly Dictionary<Guid, CancellationTokenSource> _pendingSyncs = [];
+    private readonly Dictionary<Guid, PendingLocalSyncRequest> _pendingSyncs = [];
+    private readonly HashSet<PendingLocalSyncRequest> _pendingRequests = [];
     private readonly Dictionary<Guid, ILocalSyncRootWatcher> _watchers = [];
     private CancellationTokenSource? _lifetime;
 
@@ -101,18 +102,20 @@ public sealed class LocalChangeSyncCoordinator : ILocalChangeSyncCoordinator
         lifetime?.Cancel();
         lifetime?.Dispose();
 
-        List<CancellationTokenSource> pendingSyncs;
+        List<PendingLocalSyncRequest> pendingSyncs;
         lock (_pendingGate)
         {
-            pendingSyncs = _pendingSyncs.Values.ToList();
+            pendingSyncs = _pendingRequests.ToList();
             _pendingSyncs.Clear();
+            _pendingRequests.Clear();
         }
 
-        foreach (CancellationTokenSource pendingSync in pendingSyncs)
+        foreach (PendingLocalSyncRequest pendingSync in pendingSyncs)
         {
-            pendingSync.Cancel();
-            pendingSync.Dispose();
+            pendingSync.Cancellation.Cancel();
         }
+
+        await WaitForPendingSyncsAsync(pendingSyncs, cancellationToken).ConfigureAwait(false);
 
         foreach (ILocalSyncRootWatcher watcher in _watchers.Values)
         {
@@ -132,32 +135,32 @@ public sealed class LocalChangeSyncCoordinator : ILocalChangeSyncCoordinator
             return;
         }
 
-        CancellationTokenSource next = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
-        CancellationTokenSource? previous;
+        var next = new PendingLocalSyncRequest(CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token));
+        PendingLocalSyncRequest? previous;
         lock (_pendingGate)
         {
             _pendingSyncs.TryGetValue(change.SyncPairId, out previous);
             _pendingSyncs[change.SyncPairId] = next;
+            _pendingRequests.Add(next);
+            next.Runner = RunDebouncedSyncAsync(change.SyncPairId, change.FullPath, next);
         }
 
-        previous?.Cancel();
-        previous?.Dispose();
-        _ = RunDebouncedSyncAsync(change.SyncPairId, change.FullPath, next);
+        previous?.Cancellation.Cancel();
     }
 
-    private async Task RunDebouncedSyncAsync(Guid syncPairId, string changedPath, CancellationTokenSource request)
+    private async Task RunDebouncedSyncAsync(Guid syncPairId, string changedPath, PendingLocalSyncRequest request)
     {
         try
         {
-            await Task.Delay(_debounceInterval, request.Token).ConfigureAwait(false);
-            RemovePendingSync(syncPairId, request);
+            await Task.Delay(_debounceInterval, request.Cancellation.Token).ConfigureAwait(false);
+            RemoveCurrentPendingSync(syncPairId, request);
             _logger.LogDebug(
                 "Requesting local-change sync for {SyncPairId} after change at {ChangedPath}.",
                 syncPairId,
                 changedPath);
-            await _supervisor.SyncNowAsync(syncPairId, request.Token).ConfigureAwait(false);
+            await _supervisor.SyncNowAsync(syncPairId, request.Cancellation.Token).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (request.IsCancellationRequested)
+        catch (OperationCanceledException) when (request.Cancellation.IsCancellationRequested)
         {
         }
         catch (Exception exception)
@@ -169,20 +172,62 @@ public sealed class LocalChangeSyncCoordinator : ILocalChangeSyncCoordinator
         }
         finally
         {
-            RemovePendingSync(syncPairId, request);
-            request.Dispose();
+            CompletePendingSync(syncPairId, request);
+            request.Cancellation.Dispose();
         }
     }
 
-    private void RemovePendingSync(Guid syncPairId, CancellationTokenSource request)
+    private void RemoveCurrentPendingSync(Guid syncPairId, PendingLocalSyncRequest request)
     {
         lock (_pendingGate)
         {
-            if (_pendingSyncs.TryGetValue(syncPairId, out CancellationTokenSource? current)
+            if (_pendingSyncs.TryGetValue(syncPairId, out PendingLocalSyncRequest? current)
                 && ReferenceEquals(current, request))
             {
                 _pendingSyncs.Remove(syncPairId);
             }
         }
+    }
+
+    private void CompletePendingSync(Guid syncPairId, PendingLocalSyncRequest request)
+    {
+        lock (_pendingGate)
+        {
+            if (_pendingSyncs.TryGetValue(syncPairId, out PendingLocalSyncRequest? current)
+                && ReferenceEquals(current, request))
+            {
+                _pendingSyncs.Remove(syncPairId);
+            }
+
+            _pendingRequests.Remove(request);
+        }
+    }
+
+    private static async Task WaitForPendingSyncsAsync(
+        IReadOnlyList<PendingLocalSyncRequest> pendingSyncs,
+        CancellationToken cancellationToken)
+    {
+        Task[] runners = pendingSyncs
+            .Select(static request => request.Runner)
+            .OfType<Task>()
+            .ToArray();
+        if (runners.Length == 0)
+        {
+            return;
+        }
+
+        await Task.WhenAll(runners).WaitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private sealed class PendingLocalSyncRequest
+    {
+        public PendingLocalSyncRequest(CancellationTokenSource cancellation)
+        {
+            Cancellation = cancellation;
+        }
+
+        public CancellationTokenSource Cancellation { get; }
+
+        public Task? Runner { get; set; }
     }
 }

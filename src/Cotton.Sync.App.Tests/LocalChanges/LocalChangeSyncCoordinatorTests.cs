@@ -78,6 +78,39 @@ public sealed class LocalChangeSyncCoordinatorTests
     }
 
     [Test]
+    public async Task StopAsync_WaitsForRunningSyncRequest()
+    {
+        SyncPairSettings syncPair = CreatePair(isEnabled: true);
+        var watcherFactory = new FakeWatcherFactory();
+        var supervisor = new FakeSyncSupervisor
+        {
+            BlockSyncNow = true,
+        };
+        var coordinator = new LocalChangeSyncCoordinator(
+            new FakeSyncPairSettingsStore([syncPair]),
+            supervisor,
+            watcherFactory,
+            TimeSpan.Zero);
+        await coordinator.StartAsync();
+
+        watcherFactory.CreatedWatchers[syncPair.Id].Raise("/home/user/Cotton/a.txt");
+        bool observed = await supervisor.WaitForSyncAsync(TimeSpan.FromSeconds(2));
+        Task stopTask = coordinator.StopAsync();
+        await Task.Delay(TimeSpan.FromMilliseconds(75));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(observed, Is.True);
+            Assert.That(stopTask.IsCompleted, Is.False);
+        });
+
+        supervisor.ReleaseSyncNow();
+        await stopTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.That(supervisor.SyncNowCallCount, Is.EqualTo(1));
+    }
+
+    [Test]
     public async Task StartAsync_CleansCreatedWatchersWhenLaterWatcherFails()
     {
         SyncPairSettings firstPair = CreatePair(isEnabled: true);
@@ -234,8 +267,11 @@ public sealed class LocalChangeSyncCoordinatorTests
     private sealed class FakeSyncSupervisor : ISyncSupervisor
     {
         private readonly TaskCompletionSource _syncRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _releaseSyncNow = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public IReadOnlyList<SyncPairStatus> CurrentStatuses => [];
+
+        public bool BlockSyncNow { get; set; }
 
         public int SyncNowCallCount { get; private set; }
 
@@ -282,13 +318,20 @@ public sealed class LocalChangeSyncCoordinatorTests
             SyncNowCallCount++;
             LastSyncNowPairId = syncPairId;
             _syncRequested.TrySetResult();
-            return Task.CompletedTask;
+            return BlockSyncNow
+                ? _releaseSyncNow.Task
+                : Task.CompletedTask;
         }
 
         public async Task<bool> WaitForSyncAsync(TimeSpan timeout)
         {
             Task completed = await Task.WhenAny(_syncRequested.Task, Task.Delay(timeout)).ConfigureAwait(false);
             return completed == _syncRequested.Task;
+        }
+
+        public void ReleaseSyncNow()
+        {
+            _releaseSyncNow.TrySetResult();
         }
     }
 }
