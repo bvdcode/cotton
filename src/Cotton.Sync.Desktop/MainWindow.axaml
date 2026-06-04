@@ -900,7 +900,8 @@
 
             <TabControl Grid.Row="1"
                         Classes="settingsTabs"
-                        FontSize="13">
+                        FontSize="13"
+                        SelectedIndex="{Binding SelectedSettingsTabIndex}">
               <TabItem Header="Account">
                 <StackPanel Margin="0,10,0,0"
                             Spacing="14">
@@ -1002,6 +1003,22 @@
                        ToolTip.Tip="Diagnostics">
                 <StackPanel Margin="0,10,0,0"
                             Spacing="8">
+                  <StackPanel Orientation="Horizontal"
+                              Spacing="6">
+                    <Button Content="Run checks"
+                            Classes="compact"
+                            ToolTip.Tip="Run desktop self-test"
+                            Command="{Binding SelfTestCommand}" />
+                    <Button Content="Export bundle"
+                            Classes="compact"
+                            ToolTip.Tip="Export diagnostics bundle"
+                            Command="{Binding ExportDiagnosticsCommand}" />
+                  </StackPanel>
+                  <TextBlock Text="Run checks to verify this computer."
+                             Classes="secondary"
+                             FontSize="12"
+                             TextWrapping="Wrap"
+                             IsVisible="{Binding HasNoSelfTestItems}" />
                   <Border BorderBrush="{DynamicResource CottonBorderBrush}"
                           BorderThickness="1"
                           CornerRadius="6">
@@ -1024,22 +1041,6 @@
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
                   </Border>
-                  <StackPanel Orientation="Horizontal"
-                              Spacing="6">
-                    <Button Content="Check"
-                            Classes="compact"
-                            ToolTip.Tip="Run desktop self-test"
-                            Command="{Binding SelfTestCommand}" />
-                    <Button Content="Export"
-                            Classes="compact"
-                            ToolTip.Tip="Export diagnostics bundle"
-                            Command="{Binding ExportDiagnosticsCommand}" />
-                  </StackPanel>
-                  <TextBlock Text="Run checks to verify this computer."
-                             Classes="secondary"
-                             FontSize="12"
-                             TextWrapping="Wrap"
-                             IsVisible="{Binding HasNoSelfTestItems}" />
                   <Border BorderBrush="{DynamicResource CottonBorderBrush}"
                           BorderThickness="1"
                           CornerRadius="6"

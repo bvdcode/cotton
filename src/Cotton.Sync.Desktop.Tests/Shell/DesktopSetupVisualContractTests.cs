@@ -127,6 +127,7 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(settingsOverlay, Does.Contain("RowDefinitions=\"Auto,*\""));
             Assert.That(settingsOverlay, Does.Contain("<TabControl Grid.Row=\"1\""));
             Assert.That(settingsOverlay, Does.Contain("Classes=\"settingsTabs\""));
+            Assert.That(settingsOverlay, Does.Contain("SelectedIndex=\"{Binding SelectedSettingsTabIndex}\""));
             Assert.That(settingsOverlay, Does.Not.Contain("<Border Width=\"372\""));
             Assert.That(settingsOverlay, Does.Not.Contain("MaxHeight=\"432\""));
             Assert.That(settingsOverlay, Does.Not.Contain("<ScrollViewer Grid.Row=\"1\""));
@@ -227,7 +228,7 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
-    public void SettingsDiagnostics_UsesCompactExportAction()
+    public void SettingsDiagnostics_UsesClearDiagnosticsActions()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
         string diagnosticsSection = GetSlice(
@@ -237,7 +238,8 @@ public sealed class DesktopSetupVisualContractTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(diagnosticsSection, Does.Contain("Content=\"Export\""));
+            Assert.That(diagnosticsSection, Does.Contain("Content=\"Run checks\""));
+            Assert.That(diagnosticsSection, Does.Contain("Content=\"Export bundle\""));
             Assert.That(diagnosticsSection, Does.Not.Contain("Content=\"Export diagnostics\""));
             Assert.That(diagnosticsSection, Does.Contain("ToolTip.Tip=\"Export diagnostics bundle\""));
         });

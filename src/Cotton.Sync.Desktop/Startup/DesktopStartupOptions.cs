@@ -107,7 +107,10 @@ internal sealed class DesktopStartupOptions
             return null;
         }
 
-        return Enum.TryParse(normalized, ignoreCase: true, out DesktopVisualSmokeScenario scenario)
+        string enumName = normalized
+            .Replace("-", string.Empty, StringComparison.Ordinal)
+            .Replace("_", string.Empty, StringComparison.Ordinal);
+        return Enum.TryParse(enumName, ignoreCase: true, out DesktopVisualSmokeScenario scenario)
             ? scenario
             : null;
     }

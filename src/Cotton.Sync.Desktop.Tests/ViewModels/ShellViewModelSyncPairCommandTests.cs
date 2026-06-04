@@ -204,7 +204,27 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         await viewModel.ApplyVisualSmokeScenarioAsync(DesktopVisualSmokeScenario.Settings);
 
-        Assert.That(viewModel.IsSettingsVisible, Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsSettingsVisible, Is.True);
+            Assert.That(viewModel.SelectedSettingsTabIndex, Is.EqualTo(0));
+        });
+    }
+
+    [Test]
+    public async Task ApplyVisualSmokeScenarioAsync_ShowsSettingsDiagnosticsTab()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Idle")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        await viewModel.ApplyVisualSmokeScenarioAsync(DesktopVisualSmokeScenario.SettingsDiagnostics);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsSettingsVisible, Is.True);
+            Assert.That(viewModel.SelectedSettingsTabIndex, Is.EqualTo(3));
+        });
     }
 
     [Test]

@@ -51,6 +51,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private bool _isLoadingSnapshot;
     private bool _isStartWithOperatingSystemSupported = true;
     private bool _isTrayLifecycleSupported;
+    private int _selectedSettingsTabIndex;
     private string _trayLifecycleDetails = "Tray lifecycle is not supported on this platform yet.";
     private string _serverUrl = string.Empty;
     private string _serverProbeStatus = string.Empty;
@@ -476,6 +477,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         private set => SetProperty(ref _isSettingsVisible, value);
     }
 
+    public int SelectedSettingsTabIndex
+    {
+        get => _selectedSettingsTabIndex;
+        set => SetProperty(ref _selectedSettingsTabIndex, value);
+    }
+
     public string AddSyncPairWizardTitle => HasLocalFolderSelection ? "Choose cloud folder" : "Choose local folder";
 
     public string AddSyncPairWizardSubtitle => HasLocalFolderSelection
@@ -765,6 +772,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         switch (scenario)
         {
             case DesktopVisualSmokeScenario.Settings:
+                SelectedSettingsTabIndex = 0;
+                await ShowSettingsAsync().ConfigureAwait(true);
+                break;
+            case DesktopVisualSmokeScenario.SettingsDiagnostics:
+                SelectedSettingsTabIndex = 3;
                 await ShowSettingsAsync().ConfigureAwait(true);
                 break;
             case DesktopVisualSmokeScenario.Error:

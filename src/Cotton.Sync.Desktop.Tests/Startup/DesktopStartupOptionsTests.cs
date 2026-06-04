@@ -103,6 +103,18 @@ public sealed class DesktopStartupOptionsTests
     }
 
     [Test]
+    public void Parse_LoadsHyphenatedVisualSmokeScenario()
+    {
+        DesktopStartupOptions options = DesktopStartupOptions.Parse(
+            [
+                "--visual-smoke",
+                "settings-diagnostics",
+            ]);
+
+        Assert.That(options.VisualSmokeScenario, Is.EqualTo(DesktopVisualSmokeScenario.SettingsDiagnostics));
+    }
+
+    [Test]
     public void Parse_LoadsScreenshotStateAlias()
     {
         DesktopStartupOptions options = DesktopStartupOptions.Parse(

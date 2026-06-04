@@ -7,6 +7,7 @@ internal enum DesktopVisualSmokeScenario
 {
     Dashboard,
     Settings,
+    SettingsDiagnostics,
     Error,
     Conflict,
 }
