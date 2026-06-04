@@ -74,6 +74,12 @@
                       Overwrite="true" />
   </Target>
 
+  <Target Name="CleanDesktopPublishDirectory"
+          BeforeTargets="PrepareForPublish"
+          Condition="'$(PublishDir)' != '' and Exists('$(PublishDir)')">
+    <RemoveDir Directories="$(PublishDir)" />
+  </Target>
+
   <Target Name="ValidateDesktopLooseAssets"
           AfterTargets="Build">
     <Error Condition="!Exists('$(OutDir)Assets/icon-192.png')"

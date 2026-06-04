@@ -161,10 +161,12 @@ jobs:
       - name: Install desktop Linux smoke dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends dbus-x11 gnome-keyring libsecret-tools
+          sudo apt-get install -y --no-install-recommends dbus-x11 ffmpeg gnome-keyring libsecret-tools xauth xvfb
           command -v dbus-run-session
+          command -v ffmpeg
           command -v gnome-keyring-daemon
           command -v secret-tool
+          command -v xvfb-run
 
       - name: Restore NuGet package project
         run: dotnet restore src/Cotton.Shared/Cotton.csproj
@@ -192,6 +194,26 @@ jobs:
           eval "$(gnome-keyring-daemon --start --components=secrets)"
           src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64/Cotton.Sync.Desktop --self-test --data-dir "$temp_dir"
           EOF
+
+      - name: Smoke desktop Linux GUI screenshot
+        run: |
+          xvfb-run -a -s "-screen 0 1024x768x24" \
+            dbus-run-session -- bash -euo pipefail <<'EOF'
+          eval "$(gnome-keyring-daemon --start --components=secrets)"
+          src/Cotton.Sync.Desktop/Packaging/linux/smoke-gui-screenshot.sh \
+            src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64/Cotton.Sync.Desktop \
+            cotton-sync-desktop-linux-gui.png
+          EOF
+
+      - name: Upload desktop Linux GUI screenshot
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: desktop-linux-gui-screenshot
+          path: |
+            cotton-sync-desktop-linux-gui.png
+            cotton-sync-desktop-linux-gui.png.log
+          if-no-files-found: ignore
 
       - name: Package desktop Linux x64 archive
         run: tar -czf cotton-sync-desktop-linux-x64.tar.gz -C src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64 .

@@ -71,6 +71,27 @@ public sealed class DesktopPackagingMetadataTests
     }
 
     [Test]
+    public void DesktopProject_CleansPublishDirectoryBeforePublishing()
+    {
+        XDocument project = XDocument.Load(GetDesktopProjectPath());
+        XElement target = project.Root!
+            .Elements("Target")
+            .Single(static element => string.Equals(
+                element.Attribute("Name")?.Value,
+                "CleanDesktopPublishDirectory",
+                StringComparison.Ordinal));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(target.Attribute("BeforeTargets")?.Value, Is.EqualTo("PrepareForPublish"));
+            Assert.That(target.Attribute("Condition")?.Value, Does.Contain("Exists('$(PublishDir)')"));
+            Assert.That(
+                target.Elements("RemoveDir").Single().Attribute("Directories")?.Value,
+                Is.EqualTo("$(PublishDir)"));
+        });
+    }
+
+    [Test]
     public void LinuxDesktopEntry_DefinesLauncherMetadata()
     {
         string desktopEntry = File.ReadAllText(GetDesktopFilePath("Packaging/linux/cotton-sync.desktop"));
@@ -110,6 +131,25 @@ public sealed class DesktopPackagingMetadataTests
     }
 
     [Test]
+    public void LinuxGuiScreenshotSmokeScript_CapturesPublishedAppWindow()
+    {
+        string smokeScript = File.ReadAllText(GetDesktopFilePath("Packaging/linux/smoke-gui-screenshot.sh"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(smokeScript, Does.Contain("DISPLAY is required"));
+            Assert.That(smokeScript, Does.Contain("command -v ffmpeg"));
+            Assert.That(smokeScript, Does.Contain("\"$app_executable\" --data-dir \"$data_dir\""));
+            Assert.That(smokeScript, Does.Contain("-f x11grab"));
+            Assert.That(smokeScript, Does.Contain("-draw_mouse 0"));
+            Assert.That(smokeScript, Does.Contain("-video_size \"$capture_size\""));
+            Assert.That(smokeScript, Does.Contain("-frames:v 1"));
+            Assert.That(smokeScript, Does.Contain("GUI screenshot was not created"));
+            Assert.That(smokeScript, Does.Contain("Captured desktop GUI screenshot"));
+        });
+    }
+
+    [Test]
     public void CiWorkflow_BuildsAndUploadsLinuxDebArtifact()
     {
         string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
@@ -122,6 +162,24 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(
                 Regex.Matches(workflow, "cotton-sync-desktop-linux-x64\\.deb").Count,
                 Is.GreaterThanOrEqualTo(2));
+        });
+    }
+
+    [Test]
+    public void CiWorkflow_CapturesLinuxGuiScreenshot()
+    {
+        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(workflow, Does.Contain("ffmpeg gnome-keyring libsecret-tools xauth xvfb"));
+            Assert.That(workflow, Does.Contain("Smoke desktop Linux GUI screenshot"));
+            Assert.That(workflow, Does.Contain("xvfb-run -a -s \"-screen 0 1024x768x24\""));
+            Assert.That(workflow, Does.Contain("Packaging/linux/smoke-gui-screenshot.sh"));
+            Assert.That(workflow, Does.Contain("cotton-sync-desktop-linux-gui.png"));
+            Assert.That(workflow, Does.Contain("Upload desktop Linux GUI screenshot"));
+            Assert.That(workflow, Does.Contain("name: desktop-linux-gui-screenshot"));
+            Assert.That(workflow, Does.Contain("cotton-sync-desktop-linux-gui.png.log"));
         });
     }
 
