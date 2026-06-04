@@ -129,9 +129,10 @@ public static class SyncCliCommandRunner
             return 2;
         }
 
-        if (!Uri.TryCreate(server, UriKind.Absolute, out Uri? serverUri))
+        Uri? serverUri = CottonServerUrl.NormalizeOptional(server);
+        if (serverUri is null)
         {
-            await error.WriteLineAsync("--server must be an absolute URI.").ConfigureAwait(false);
+            await error.WriteLineAsync("--server must be an HTTP or HTTPS URL.").ConfigureAwait(false);
             return 2;
         }
 
@@ -241,7 +242,7 @@ public static class SyncCliCommandRunner
             Commands:
               state-summary --database <path> --sync-pair <id>
                   Initializes and summarizes a sync-state SQLite database for one sync pair.
-              sync-once --server <url> --username <name>
+              sync-once --server <url-or-host> --username <name>
                   (--password <password> | --password-env <name>) --local-root <path>
                   --remote-root <node-id> --sync-pair <id> --database <path>
                   [--two-factor-code <code>]

@@ -115,6 +115,79 @@ public sealed class SyncCliCommandRunnerTests
     }
 
     [Test]
+    public async Task RunAsync_AcceptsBareSyncOnceServerHostBeforeRemoteRootValidation()
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        int exitCode = await SyncCliCommandRunner.RunAsync(
+            [
+                "sync-once",
+                "--server",
+                "app.cottoncloud.dev",
+                "--username",
+                "testuser",
+                "--password",
+                "testpassword",
+                "--local-root",
+                _tempDirectory,
+                "--remote-root",
+                "not-a-guid",
+                "--sync-pair",
+                "pair",
+                "--database",
+                Path.Combine(_tempDirectory, "sync-state.db"),
+            ],
+            output,
+            error);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exitCode, Is.EqualTo(2));
+            Assert.That(output.ToString(), Is.Empty);
+            Assert.That(error.ToString(), Does.Contain("--remote-root"));
+            Assert.That(error.ToString(), Does.Contain("GUID"));
+            Assert.That(error.ToString(), Does.Not.Contain("--server"));
+        });
+    }
+
+    [Test]
+    public async Task RunAsync_ReturnsErrorForUnsupportedSyncOnceServerScheme()
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        int exitCode = await SyncCliCommandRunner.RunAsync(
+            [
+                "sync-once",
+                "--server",
+                "ftp://app.cottoncloud.dev",
+                "--username",
+                "testuser",
+                "--password",
+                "testpassword",
+                "--local-root",
+                _tempDirectory,
+                "--remote-root",
+                Guid.NewGuid().ToString("D"),
+                "--sync-pair",
+                "pair",
+                "--database",
+                Path.Combine(_tempDirectory, "sync-state.db"),
+            ],
+            output,
+            error);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exitCode, Is.EqualTo(2));
+            Assert.That(output.ToString(), Is.Empty);
+            Assert.That(error.ToString(), Does.Contain("--server"));
+            Assert.That(error.ToString(), Does.Contain("HTTP or HTTPS"));
+        });
+    }
+
+    [Test]
     public async Task StateSummary_PrintsEntryCountAndCursor()
     {
         string databasePath = Path.Combine(_tempDirectory, "sync-state.db");

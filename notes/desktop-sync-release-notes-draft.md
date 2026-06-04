@@ -14,7 +14,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 - Local sync state and desktop settings use EF Core SQLite. Normal app state does not use raw SQL commands.
 - Token storage is abstracted and release-gated: Windows DPAPI and Linux Secret Service are treated as release-secure; restricted-file storage fails self-test.
 - Diagnostics include structured logging, log rotation, self-test, support bundle export, and secret redaction.
-- CLI recovery support includes state summary and one-shot sync commands for headless validation.
+- CLI recovery support includes state summary and one-shot sync commands for headless validation, including shared server URL normalization for absolute URLs and bare Cotton hosts.
 - Tray lifecycle is implemented for Windows. Linux currently uses normal window lifecycle because tray support varies by desktop environment.
 
 ## Artifacts
