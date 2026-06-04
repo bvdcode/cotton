@@ -441,6 +441,7 @@ namespace Cotton.Server.Controllers
             newNode.SetParent(parentNode);
             newNode.SetName(request.Name);
             await _dbContext.Nodes.AddAsync(newNode);
+            _syncChanges.StageFolderChange(SyncChangeKind.FolderCreated, newNode, parentNode.Id);
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
             var mapped = newNode.Adapt<NodeDto>();

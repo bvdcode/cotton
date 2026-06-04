@@ -127,6 +127,27 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task CreateFolder_StagesFolderCreatedChangeWithParentNodeId()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+        NodeDto folder = await CreateFolderAsync(root.Id, "sync-created-folder");
+
+        SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
+        SyncChangeDto change = response.Changes.Single(x => x.ItemId == folder.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FolderCreated));
+            Assert.That(change.LayoutId, Is.EqualTo(folder.LayoutId));
+            Assert.That(change.ParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(change.Name, Is.EqualTo("sync-created-folder"));
+        });
+    }
+
+    [Test]
     public async Task RenameFile_StagesFileRenamedChangeWithParentNodeId()
     {
         await SignInAsync();
