@@ -539,6 +539,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Partial 2026-06-04: Windows CI now runs the generated Inno Setup uninstaller silently and fails if `Cotton.Sync.Desktop.exe` remains under the temp install directory. Linux uninstall and real clean-machine uninstall behavior remain open.
   Partial 2026-06-04: Linux CI now runs `sudo dpkg -r cotton-sync-desktop` after installed-package self-test and verifies the installed apphost and `/usr/bin/cotton-sync` symlink are removed. Real clean-machine uninstall behavior remains open.
 - [ ] Test upgrade over previous build.
+  Partial 2026-06-04: Linux CI now builds a lower-version `cotton-sync-desktop-linux-x64-old.deb`, installs it, installs the current `.deb` over it, verifies `dpkg-query` reports the current GitVersion SemVer, runs the upgraded apphost self-test inside a Secret Service session, and removes the package. Windows installer upgrade and real clean-machine upgrade behavior remain open.
 
 ## Phase 12 - End-To-End Test Matrix
 
