@@ -2,18 +2,15 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Models.Enums;
+using EasyExtensions.Models.Dto;
 
 namespace Cotton.Server.Models.Dto
 {
     /// <summary>
     /// Represents one durable sync-change API payload.
     /// </summary>
-    public class SyncChangeDto
+    public class SyncChangeDto : BaseDto<long>
     {
-        /// <summary>
-        /// Gets or sets the revision assigned to this change.
-        /// </summary>
-        public long Revision { get; set; }
         /// <summary>
         /// Gets or sets the mutation kind.
         /// </summary>
@@ -42,9 +39,5 @@ namespace Cotton.Server.Models.Dto
         /// Gets or sets the display name captured at the time of the mutation.
         /// </summary>
         public string Name { get; set; } = null!;
-        /// <summary>
-        /// Gets or sets the time when the change was recorded.
-        /// </summary>
-        public DateTime CreatedAt { get; set; }
     }
 }
