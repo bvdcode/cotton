@@ -287,6 +287,39 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
             await CreateBackfillService().BackfillUnsignedPhaseOneRowsAsync(CancellationToken.None));
     }
 
+    [Test]
+    public async Task BridgeBackfill_RejectsUnsupportedStaleSchemaVersion()
+    {
+        var user = new User
+        {
+            Username = "unsupported-stale",
+            PasswordPhc = "password-phc",
+            WebDavTokenPhc = "webdav-phc",
+            Role = UserRole.User
+        };
+        await DbContext.Users.AddAsync(user);
+        await DbContext.SaveChangesAsync();
+        DbContext.ChangeTracker.Clear();
+
+        await CreateBackfillService().BackfillUnsignedPhaseOneRowsAsync(CancellationToken.None);
+        await DbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"UPDATE users SET integrity_version = 999 WHERE id = {user.Id}");
+        DbContext.ChangeTracker.Clear();
+
+        var reporter = new CapturingDatabaseIntegrityFailureReporter();
+        Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await CreateBackfillService(reporter: reporter).BackfillUnsignedPhaseOneRowsAsync(CancellationToken.None));
+
+        Assert.That(reporter.Failures, Has.Count.EqualTo(1));
+        DatabaseIntegrityFailure failure = reporter.Failures[0];
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(failure.EntityName, Is.EqualTo("users"));
+            Assert.That(failure.EntityKey, Is.EqualTo(user.Id.ToString("D")));
+            Assert.That(failure.Boundary, Is.EqualTo("bridge.legacy-upgrade"));
+        }
+    }
+
     private byte[]? ReadMac(object entity)
     {
         return (byte[]?)DbContext.Entry(entity)
@@ -365,13 +398,16 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
         }
     }
 
-    private DatabaseIntegrityBridgeBackfillService CreateBackfillService(CottonDbContext? dbContext = null)
+    private DatabaseIntegrityBridgeBackfillService CreateBackfillService(
+        CottonDbContext? dbContext = null,
+        IDatabaseIntegrityFailureReporter? reporter = null)
     {
         return new DatabaseIntegrityBridgeBackfillService(
             dbContext ?? DbContext,
             CreateProtector(),
             new DatabaseIntegrityDescriptorRegistry(CreateDescriptors()),
-            NullLogger<DatabaseIntegrityBridgeBackfillService>.Instance);
+            NullLogger<DatabaseIntegrityBridgeBackfillService>.Instance,
+            reporter);
     }
 
     private static DatabaseIntegrityProtector CreateProtector()

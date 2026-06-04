@@ -278,8 +278,8 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
         where TEntity : class
     {
         // Transitional rollout bridge: existing installations started without integrity metadata.
-        // Startup signs missing rows only; stale non-null schema versions stay hard failures so
-        // Cotton never silently blesses data whose signed payload format is known to have changed.
+        // Startup signs missing rows directly; stale non-null schema versions must validate through
+        // RequireValidForBackfill before Cotton re-signs them with the current descriptor.
         List<TEntity> rows = await _dbContext.Set<TEntity>()
             .Where(x => EF.Property<byte[]?>(x, DatabaseIntegrityColumns.MacProperty) == null
                 || EF.Property<int?>(x, DatabaseIntegrityColumns.VersionProperty) != descriptor.SchemaVersion)
