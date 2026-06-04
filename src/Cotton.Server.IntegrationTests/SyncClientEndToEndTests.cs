@@ -144,6 +144,7 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         var stateStore = new SqliteSyncStateStore(databasePath);
         await stateStore.InitializeAsync();
         SyncStateEntry? baseline = await stateStore.GetAsync("sync-cli-e2e", relativePath);
+        SyncStateEntry? directoryBaseline = await stateStore.GetAsync("sync-cli-e2e", "Cli");
         string outputText = output.ToString();
 
         Assert.Multiple(() =>
@@ -151,9 +152,13 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
             Assert.That(exitCode, Is.EqualTo(0));
             Assert.That(error.ToString(), Is.Empty);
             Assert.That(outputText, Does.Contain("Cotton Sync one-shot run"));
-            Assert.That(outputText, Does.Contain("Activities: 1"));
-            Assert.That(outputText, Does.Contain("State entries: 1"));
+            Assert.That(outputText, Does.Contain("Activities: 2"));
+            Assert.That(outputText, Does.Contain("Uploaded Cli - Created remote folder."));
+            Assert.That(outputText, Does.Contain("Uploaded Cli/report.txt"));
+            Assert.That(outputText, Does.Contain("State entries: 2"));
             Assert.That(downloaded, Is.EqualTo("hello from sync cli"));
+            Assert.That(directoryBaseline?.Kind, Is.EqualTo(SyncEntryKind.Directory));
+            Assert.That(directoryBaseline?.RemoteNodeId, Is.Not.Null);
             Assert.That(baseline?.RemoteFileId, Is.EqualTo(uploaded.Id));
             Assert.That(baseline?.RemoteContentHash, Is.EqualTo(uploaded.ContentHash));
         });
