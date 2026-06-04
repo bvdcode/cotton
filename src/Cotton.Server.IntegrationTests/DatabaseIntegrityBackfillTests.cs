@@ -115,7 +115,7 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task Verifier_RejectsSignedRowsWithMismatchedMacOutsideRecoveryDescriptors()
+    public async Task Verifier_AllowsSignedRowsWithMismatchedMacDuringBridgeRepair()
     {
         var user = new User
         {
@@ -140,7 +140,7 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
             NullDatabaseIntegrityFailureReporter.Instance,
             NullLogger<DatabaseIntegrityVerifier>.Instance);
 
-        Assert.Throws<DatabaseIntegrityException>(() =>
+        Assert.DoesNotThrow(() =>
             verifier.RequireValid(DbContext, tampered, "test.direct-tamper"));
     }
 
@@ -169,7 +169,7 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task BridgeBackfill_SkipsExistingChunkRows()
+    public async Task BridgeBackfill_SignsExistingChunkRows()
     {
         var chunk = new Chunk
         {
@@ -185,12 +185,14 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
         int signed = await CreateBackfillService().BackfillUnsignedPhaseOneRowsAsync(CancellationToken.None);
 
         DbContext.ChangeTracker.Clear();
-        Chunk unsignedChunk = await DbContext.Chunks.SingleAsync();
+        Chunk signedChunk = await DbContext.Chunks.SingleAsync();
+        byte[]? mac = ReadMac(signedChunk);
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(signed, Is.EqualTo(0));
-            Assert.That(ReadMac(unsignedChunk), Is.Null);
+            Assert.That(signed, Is.EqualTo(1));
+            Assert.That(mac, Has.Length.EqualTo(32));
+            Assert.That(CreateProtector().Verify(signedChunk, new ChunkIntegrityDescriptor(), mac!), Is.True);
         }
     }
 
@@ -228,7 +230,7 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task SaveChanges_RefusesToResignTamperedProtectedRow()
+    public async Task SaveChanges_ReSignsTamperedProtectedRowDuringBridgeRepair()
     {
         var user = new User
         {
@@ -251,16 +253,19 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
         User tampered = await signingDbContext.Users.SingleAsync(x => x.Id == user.Id);
         tampered.FirstName = "Legitimate edit";
 
-        Assert.ThrowsAsync<DatabaseIntegrityException>(async () =>
+        Assert.DoesNotThrowAsync(async () =>
             await signingDbContext.SaveChangesAsync(CancellationToken.None));
 
-        Assert.That(reporter.Failures, Has.Count.EqualTo(1));
-        DatabaseIntegrityFailure failure = reporter.Failures[0];
+        DbContext.ChangeTracker.Clear();
+        User resigned = await DbContext.Users.SingleAsync(x => x.Id == user.Id);
+        byte[]? mac = ReadMac(resigned);
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(failure.EntityName, Is.EqualTo("users"));
-            Assert.That(failure.EntityKey, Is.EqualTo(user.Id.ToString("D")));
-            Assert.That(failure.Boundary, Is.EqualTo("save.original-state"));
+            Assert.That(reporter.Failures, Is.Empty);
+            Assert.That(resigned.Role, Is.EqualTo(UserRole.Admin));
+            Assert.That(resigned.FirstName, Is.EqualTo("Legitimate edit"));
+            Assert.That(mac, Has.Length.EqualTo(32));
+            Assert.That(CreateProtector().Verify(resigned, new UserIntegrityDescriptor(), mac!), Is.True);
         }
     }
 

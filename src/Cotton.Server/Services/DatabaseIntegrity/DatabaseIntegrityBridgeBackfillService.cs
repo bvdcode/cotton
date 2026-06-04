@@ -3,9 +3,9 @@
 
 using Cotton.Database;
 using Cotton.Database.Integrity;
-using Cotton.Database.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
@@ -24,29 +24,13 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
 {
     private const int BatchSize = 250;
     private static readonly TimeSpan InterBatchDelay = TimeSpan.FromMilliseconds(50);
-    private static readonly Type[] BulkEntityTypes =
-    [
-        typeof(Chunk),
-        typeof(FileManifestChunk)
-    ];
-    private static readonly Type[] ForceResignEntityTypes =
-    [
-        typeof(FileManifest)
-    ];
-    private static readonly System.Reflection.MethodInfo MarkAllRowsForResignCoreMethod = typeof(DatabaseIntegrityBridgeBackfillService)
+    private static readonly System.Reflection.MethodInfo BackfillEntitySetCoreMethod = typeof(DatabaseIntegrityBridgeBackfillService)
         .GetMethod(
-            nameof(MarkAllRowsForResignCoreAsync),
+            nameof(BackfillEntitySetCoreAsync),
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
         ?? throw new MissingMethodException(
             nameof(DatabaseIntegrityBridgeBackfillService),
-            nameof(MarkAllRowsForResignCoreAsync));
-    private static readonly System.Reflection.MethodInfo LoadRowsToSignCoreMethod = typeof(DatabaseIntegrityBridgeBackfillService)
-        .GetMethod(
-            nameof(LoadRowsToSignCoreAsync),
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
-        ?? throw new MissingMethodException(
-            nameof(DatabaseIntegrityBridgeBackfillService),
-            nameof(LoadRowsToSignCoreAsync));
+            nameof(BackfillEntitySetCoreAsync));
 
     private readonly IReadOnlyCollection<IDatabaseIntegrityDescriptor> _descriptorsToBackfill = _descriptors.All;
 
@@ -56,19 +40,6 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
         int total = 0;
         foreach (IDatabaseIntegrityDescriptor descriptor in _descriptorsToBackfill)
         {
-            if (IsBulkDescriptor(descriptor))
-            {
-                _logger.LogInformation(
-                    "Database integrity bridge skipped bulk table {EntityName}; existing rows remain soft-validated during the rollout window.",
-                    descriptor.EntityName);
-                continue;
-            }
-
-            if (ShouldForceResignCurrentState(descriptor))
-            {
-                await MarkAllRowsForResignAsync(descriptor, cancellationToken);
-            }
-
             int count = await BackfillEntitySetAsync(descriptor, cancellationToken);
             if (count == 0)
             {
@@ -85,35 +56,13 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
         return total;
     }
 
-    private static bool IsBulkDescriptor(IDatabaseIntegrityDescriptor descriptor) =>
-        BulkEntityTypes.Contains(descriptor.EntityType);
-
-    private static bool ShouldForceResignCurrentState(IDatabaseIntegrityDescriptor descriptor) =>
-        ForceResignEntityTypes.Contains(descriptor.EntityType);
-
     private async Task<int> BackfillEntitySetAsync(
         IDatabaseIntegrityDescriptor descriptor,
         CancellationToken cancellationToken)
     {
-        int signed = 0;
-        while (true)
-        {
-            List<object> rows = await LoadRowsToSignAsync(descriptor, cancellationToken);
-            if (rows.Count == 0)
-            {
-                return signed;
-            }
-
-            foreach (object row in rows)
-            {
-                byte[] mac = _protector.Sign(row, descriptor);
-                await UpdateIntegrityMetadataAsync(descriptor, row, mac, cancellationToken);
-            }
-
-            signed += rows.Count;
-            _dbContext.ChangeTracker.Clear();
-            await Task.Delay(InterBatchDelay, cancellationToken);
-        }
+        var genericMethod = BackfillEntitySetCoreMethod.MakeGenericMethod(descriptor.EntityType);
+        var task = (Task<int>)genericMethod.Invoke(this, [descriptor, cancellationToken])!;
+        return await task;
     }
 
     private async Task UpdateIntegrityMetadataAsync(
@@ -189,49 +138,71 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
         return $"\"{identifier.Replace("\"", "\"\"")}\"";
     }
 
-    private async Task MarkAllRowsForResignAsync(
-        IDatabaseIntegrityDescriptor descriptor,
-        CancellationToken cancellationToken)
-    {
-        var genericMethod = MarkAllRowsForResignCoreMethod.MakeGenericMethod(descriptor.EntityType);
-        var task = (Task)genericMethod.Invoke(this, [descriptor, cancellationToken])!;
-        await task;
-    }
-
-    private async Task<List<object>> LoadRowsToSignAsync(
-        IDatabaseIntegrityDescriptor descriptor,
-        CancellationToken cancellationToken)
-    {
-        var genericMethod = LoadRowsToSignCoreMethod.MakeGenericMethod(descriptor.EntityType);
-        var task = (Task<List<object>>)genericMethod.Invoke(this, [descriptor, cancellationToken])!;
-        return await task;
-    }
-
-    private async Task MarkAllRowsForResignCoreAsync<TEntity>(
+    private async Task<int> BackfillEntitySetCoreAsync<TEntity>(
         IDatabaseIntegrityDescriptor descriptor,
         CancellationToken cancellationToken)
         where TEntity : class
     {
         IEntityType entityType = _dbContext.Model.FindEntityType(descriptor.EntityType)
             ?? throw new InvalidOperationException($"Protected entity type {descriptor.EntityType.Name} is not mapped.");
+        IKey primaryKey = entityType.FindPrimaryKey()
+            ?? throw new InvalidOperationException($"Protected entity type {descriptor.EntityName} has no primary key.");
+        if (primaryKey.Properties.Count != 1)
+        {
+            throw new InvalidOperationException($"Protected entity type {descriptor.EntityName} must have a single-column primary key for bridge backfill.");
+        }
+
         StoreObjectIdentifier storeObject = GetStoreObject(entityType, descriptor);
-        string versionColumn = GetColumnName(entityType, DatabaseIntegrityColumns.VersionProperty, storeObject);
-        string sql = $"UPDATE {QuoteQualifiedTable(storeObject)} SET {QuoteIdentifier(versionColumn)} = NULL WHERE {QuoteIdentifier(versionColumn)} IS NOT NULL";
-        await _dbContext.Database.ExecuteSqlRawAsync(sql, cancellationToken);
+        IProperty keyProperty = primaryKey.Properties[0];
+        string keyColumn = GetColumnName(keyProperty, storeObject);
+
+        int signed = 0;
+        object? lastKey = null;
+        while (true)
+        {
+            List<TEntity> rows = await LoadNextBatchAsync<TEntity>(
+                storeObject,
+                keyColumn,
+                lastKey,
+                cancellationToken);
+            if (rows.Count == 0)
+            {
+                return signed;
+            }
+
+            await using IDbContextTransaction transaction =
+                await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            foreach (TEntity row in rows)
+            {
+                byte[] mac = _protector.Sign(row, descriptor);
+                await UpdateIntegrityMetadataAsync(descriptor, row, mac, cancellationToken);
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+
+            lastKey = _dbContext.Entry(rows[^1]).Property(keyProperty.Name).CurrentValue
+                ?? throw new InvalidOperationException($"Protected entity type {descriptor.EntityName} has a null primary key value.");
+            signed += rows.Count;
+            _dbContext.ChangeTracker.Clear();
+            await Task.Delay(InterBatchDelay, cancellationToken);
+        }
     }
 
-    private async Task<List<object>> LoadRowsToSignCoreAsync<TEntity>(
-        IDatabaseIntegrityDescriptor descriptor,
+    private async Task<List<TEntity>> LoadNextBatchAsync<TEntity>(
+        StoreObjectIdentifier storeObject,
+        string keyColumn,
+        object? lastKey,
         CancellationToken cancellationToken)
         where TEntity : class
     {
-        List<TEntity> rows = await _dbContext.Set<TEntity>()
-            .Where(x => EF.Property<byte[]?>(x, DatabaseIntegrityColumns.MacProperty) == null
-                || EF.Property<int?>(x, DatabaseIntegrityColumns.VersionProperty) == null
-                || EF.Property<int?>(x, DatabaseIntegrityColumns.VersionProperty) != descriptor.SchemaVersion)
-            .Take(BatchSize)
-            .ToListAsync(cancellationToken);
+        string table = QuoteQualifiedTable(storeObject);
+        string quotedKey = QuoteIdentifier(keyColumn);
+        string sql = lastKey is null
+            ? $"SELECT * FROM {table} ORDER BY {quotedKey} LIMIT {BatchSize}"
+            : $"SELECT * FROM {table} WHERE {quotedKey} > {{0}} ORDER BY {quotedKey} LIMIT {BatchSize}";
 
-        return rows.Cast<object>().ToList();
+        return lastKey is null
+            ? await _dbContext.Set<TEntity>().FromSqlRaw(sql).ToListAsync(cancellationToken)
+            : await _dbContext.Set<TEntity>().FromSqlRaw(sql, lastKey).ToListAsync(cancellationToken);
     }
 }
