@@ -21,7 +21,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 - Tray lifecycle is implemented for Windows. Linux currently uses normal window lifecycle because tray support varies by desktop environment.
 - Single-instance startup now raises the existing desktop window when the app is launched again.
 - Windows installer/uninstaller detection now uses an Inno Setup `AppMutex` backed by a Windows-only runtime mutex held by the desktop app, so install/uninstall can detect that Cotton Sync is still running before replacing or removing installed files.
-- Windows installer Start Menu group includes both launch and uninstall shortcuts; CI verifies they exist after install and upgrade, and are removed after uninstall.
+- Windows installer Start Menu group includes both launch and uninstall shortcuts; launch shortcuts carry the same AppUserModelID as the running desktop process, CI verifies shortcuts exist after install and upgrade, and removes them after uninstall.
 - Linux `.deb` uninstall now removes stale Cotton Sync XDG autostart entries that point at the packaged `/opt/cotton-sync/Cotton.Sync.Desktop` executable.
 
 ## Artifacts

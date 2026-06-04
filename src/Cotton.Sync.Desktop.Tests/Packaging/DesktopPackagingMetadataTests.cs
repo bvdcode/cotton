@@ -3,6 +3,7 @@
 
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using Cotton.Sync.Desktop.Platform;
 
 namespace Cotton.Sync.Desktop.Tests.Packaging;
 
@@ -465,6 +466,7 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(installerScript, Does.Contain("SetupIconFile={#IconFile}"));
             Assert.That(installerScript, Does.Contain("UninstallDisplayIcon={app}\\Cotton.Sync.Desktop.exe"));
             Assert.That(installerScript, Does.Contain("#define AppMutexName \"CottonSyncDesktop_B671C18E_1E77_437C_AB9B_5C5C9D877E18\""));
+            Assert.That(installerScript, Does.Contain("#define AppUserModelId \"" + DesktopAppIdentity.AppUserModelId + "\""));
             Assert.That(installerScript, Does.Contain("AppMutex={#AppMutexName}"));
             Assert.That(installerScript, Does.Contain("CloseApplications=yes"));
             Assert.That(installerScript, Does.Contain("RestartApplications=no"));
@@ -475,6 +477,7 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(installerScript, Does.Contain("Name: \"{group}\\Uninstall Cotton Sync\""));
             Assert.That(installerScript, Does.Contain("Filename: \"{uninstallexe}\""));
             Assert.That(installerScript, Does.Contain("IconFilename: \"{app}\\Cotton.Sync.Desktop.exe\""));
+            Assert.That(Regex.Matches(installerScript, "AppUserModelID: \"\\{#AppUserModelId\\}\"").Count, Is.EqualTo(2));
             Assert.That(installerScript, Does.Contain("Create a desktop shortcut"));
             Assert.That(installerScript, Does.Contain("Flags: nowait postinstall skipifsilent"));
             Assert.That(installerScript, Does.Contain("CurUninstallStepChanged"));

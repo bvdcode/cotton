@@ -21,6 +21,10 @@
 #define AppMutexName "CottonSyncDesktop_B671C18E_1E77_437C_AB9B_5C5C9D877E18"
 #endif
 
+#ifndef AppUserModelId
+#define AppUserModelId "Cotton.Sync.Desktop"
+#endif
+
 [Setup]
 AppId={{B671C18E-1E77-437C-AB9B-5C5C9D877E18}
 AppName=Cotton Sync
@@ -52,9 +56,9 @@ Name: desktopicon; Description: "Create a desktop shortcut"; GroupDescription: "
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\Cotton Sync"; Filename: "{app}\Cotton.Sync.Desktop.exe"; IconFilename: "{app}\Cotton.Sync.Desktop.exe"
+Name: "{group}\Cotton Sync"; Filename: "{app}\Cotton.Sync.Desktop.exe"; IconFilename: "{app}\Cotton.Sync.Desktop.exe"; AppUserModelID: "{#AppUserModelId}"
 Name: "{group}\Uninstall Cotton Sync"; Filename: "{uninstallexe}"
-Name: "{userdesktop}\Cotton Sync"; Filename: "{app}\Cotton.Sync.Desktop.exe"; IconFilename: "{app}\Cotton.Sync.Desktop.exe"; Tasks: desktopicon
+Name: "{userdesktop}\Cotton Sync"; Filename: "{app}\Cotton.Sync.Desktop.exe"; IconFilename: "{app}\Cotton.Sync.Desktop.exe"; AppUserModelID: "{#AppUserModelId}"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\Cotton.Sync.Desktop.exe"; Description: "Launch Cotton Sync"; Flags: nowait postinstall skipifsilent
