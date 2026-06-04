@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Diagnostics;
 using Cotton.Contracts.Sync;
 using Cotton.Sdk.Sync;
 using Cotton.Sync.Remote;
@@ -190,9 +191,80 @@ public sealed class RemoteChangeFeedReaderTests
         });
     }
 
+    [Test]
+    public async Task ReadAsync_CatchesUpFiveThousandRemoteChangesWithinSmokeTarget()
+    {
+        const int pageSize = 500;
+        const int pageCount = 10;
+        const int expectedChangeCount = pageSize * pageCount;
+        TimeSpan smokeTarget = TimeSpan.FromSeconds(10);
+        var stateStore = CreateStore();
+        await stateStore.InitializeAsync();
+        var syncClient = new FakeCottonSyncClient(CreateChangePages(pageSize, pageCount));
+        var reader = new RemoteChangeFeedReader(syncClient, stateStore);
+        int totalChanges = 0;
+
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        RemoteChangeFeedBatch batch;
+        do
+        {
+            batch = await reader.ReadAsync("pair-a", pageSize);
+            totalChanges += batch.Changes.Count;
+            await reader.AcknowledgeAsync(batch);
+        }
+        while (batch.HasMore);
+
+        stopwatch.Stop();
+        SyncChangeCursor cursor = await stateStore.GetChangeCursorAsync("pair-a");
+        TestContext.WriteLine(
+            "Remote change cursor catch-up smoke for {0} changes completed in {1:N0} ms.",
+            expectedChangeCount,
+            stopwatch.Elapsed.TotalMilliseconds);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(totalChanges, Is.EqualTo(expectedChangeCount));
+            Assert.That(cursor.LastCursor, Is.EqualTo(expectedChangeCount));
+            Assert.That(cursor.CursorExpired, Is.False);
+            Assert.That(syncClient.Requests, Has.Count.EqualTo(pageCount));
+            Assert.That(syncClient.Requests.Select(request => request.SinceCursor), Is.EqualTo(Enumerable.Range(0, pageCount).Select(page => (long)(page * pageSize))));
+            Assert.That(syncClient.Requests.Select(request => request.Limit), Is.All.EqualTo(pageSize));
+            Assert.That(stopwatch.Elapsed, Is.LessThan(smokeTarget));
+        });
+    }
+
     private SqliteSyncStateStore CreateStore()
     {
         return new SqliteSyncStateStore(Path.Combine(_tempDirectory, "sync-state.sqlite"));
+    }
+
+    private static SyncChangesResponseDto[] CreateChangePages(int pageSize, int pageCount)
+    {
+        var pages = new SyncChangesResponseDto[pageCount];
+        for (int page = 0; page < pageCount; page++)
+        {
+            long sinceCursor = page * pageSize;
+            long nextCursor = sinceCursor + pageSize;
+            pages[page] = new SyncChangesResponseDto
+            {
+                SinceCursor = sinceCursor,
+                NextCursor = nextCursor,
+                HasMore = page < pageCount - 1,
+                Changes = Enumerable.Range(1, pageSize)
+                    .Select(offset => new SyncChangeDto
+                    {
+                        Cursor = sinceCursor + offset,
+                        Kind = SyncChangeKindDto.FileContentUpdated,
+                        NodeFileId = Guid.NewGuid(),
+                        Name = "file-" + (sinceCursor + offset).ToString("D5", System.Globalization.CultureInfo.InvariantCulture) + ".txt",
+                        ContentHash = "hash-" + (sinceCursor + offset).ToString("D5", System.Globalization.CultureInfo.InvariantCulture),
+                        CreatedAt = new DateTime(2026, 6, 4, 12, 0, 0, DateTimeKind.Utc),
+                    })
+                    .ToList(),
+            };
+        }
+
+        return pages;
     }
 
     private sealed class FakeCottonSyncClient : ICottonSyncClient
