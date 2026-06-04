@@ -155,6 +155,35 @@ public sealed class SyncSupervisorTests
         });
     }
 
+    [Test]
+    public async Task StopAsync_ReachesRunnerWhileSyncAllIsRunning()
+    {
+        SyncPairSettings documents = CreatePair("Documents", isEnabled: true);
+        var factory = new FakeSyncPairRunnerFactory();
+        var supervisor = new SyncSupervisor(
+            new FakeSyncPairSettingsStore([documents]),
+            factory,
+            new InMemoryAppStatusPublisher());
+        await supervisor.StartAsync();
+        FakeSyncPairRunner runner = factory.CreatedRunners[documents.Id];
+        runner.BlockSyncNow = true;
+
+        Task syncAll = supervisor.SyncAllAsync();
+        await runner.WaitForSyncNowAsync(TimeSpan.FromSeconds(2));
+        Task stop = supervisor.StopAsync();
+        bool stopReachedRunner = await runner.WaitForStopAsync(TimeSpan.FromMilliseconds(250));
+        runner.ReleaseSyncNow();
+        await Task.WhenAll(syncAll, stop).WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(stopReachedRunner, Is.True);
+            Assert.That(runner.SyncNowCallCount, Is.EqualTo(1));
+            Assert.That(runner.StopCallCount, Is.EqualTo(1));
+            Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Disabled));
+        });
+    }
+
     private static SyncPairSettings CreatePair(string displayName, bool isEnabled)
     {
         return new SyncPairSettings
@@ -232,6 +261,9 @@ public sealed class SyncSupervisorTests
     private sealed class FakeSyncPairRunner : ISyncPairRunner
     {
         private readonly SyncPairSettings _syncPair;
+        private readonly TaskCompletionSource _stopStarted = CreateCompletionSource();
+        private readonly TaskCompletionSource _syncNowRelease = CreateCompletionSource();
+        private readonly TaskCompletionSource _syncNowStarted = CreateCompletionSource();
         private SyncPairRunState _state;
 
         public FakeSyncPairRunner(SyncPairSettings syncPair)
@@ -249,6 +281,8 @@ public sealed class SyncSupervisorTests
         public int StopCallCount { get; private set; }
 
         public int SyncNowCallCount { get; private set; }
+
+        public bool BlockSyncNow { get; set; }
 
         public Exception? StartException { get; set; }
 
@@ -288,17 +322,50 @@ public sealed class SyncSupervisorTests
             return Task.CompletedTask;
         }
 
-        public Task SyncNowAsync(CancellationToken cancellationToken = default)
+        public async Task SyncNowAsync(CancellationToken cancellationToken = default)
         {
             SyncNowCallCount++;
-            return Task.CompletedTask;
+            _syncNowStarted.TrySetResult();
+            if (BlockSyncNow)
+            {
+                await _syncNowRelease.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
         }
 
         public Task StopAsync(CancellationToken cancellationToken = default)
         {
             StopCallCount++;
+            _stopStarted.TrySetResult();
             _state = SyncPairRunState.Disabled;
             return Task.CompletedTask;
+        }
+
+        public void ReleaseSyncNow()
+        {
+            _syncNowRelease.TrySetResult();
+        }
+
+        public async Task<bool> WaitForStopAsync(TimeSpan timeout)
+        {
+            try
+            {
+                await _stopStarted.Task.WaitAsync(timeout).ConfigureAwait(false);
+                return true;
+            }
+            catch (TimeoutException)
+            {
+                return false;
+            }
+        }
+
+        public Task WaitForSyncNowAsync(TimeSpan timeout)
+        {
+            return _syncNowStarted.Task.WaitAsync(timeout);
+        }
+
+        private static TaskCompletionSource CreateCompletionSource()
+        {
+            return new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         }
     }
 }

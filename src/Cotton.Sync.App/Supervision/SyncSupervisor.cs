@@ -75,41 +75,42 @@ public sealed class SyncSupervisor : ISyncSupervisor
     /// <inheritdoc />
     public async Task SyncAllAsync(CancellationToken cancellationToken = default)
     {
-        SyncAppStatus status;
+        IReadOnlyList<ISyncPairRunner> runners;
         await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            foreach (ISyncPairRunner runner in _runners.Values)
-            {
-                await runner.SyncNowAsync(cancellationToken).ConfigureAwait(false);
-            }
-
-            status = CreateAppStatusSnapshot();
+            runners = _runners.Values.ToList();
         }
         finally
         {
             _operationGate.Release();
         }
 
-        _statusPublisher.Publish(status);
+        foreach (ISyncPairRunner runner in runners)
+        {
+            await runner.SyncNowAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        _statusPublisher.Publish(CreateAppStatusSnapshot());
     }
 
     /// <inheritdoc />
     public async Task SyncNowAsync(Guid syncPairId, CancellationToken cancellationToken = default)
     {
-        SyncAppStatus status;
+        ISyncPairRunner runner;
         await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            await GetRunner(syncPairId).SyncNowAsync(cancellationToken).ConfigureAwait(false);
-            status = CreateAppStatusSnapshot();
+            runner = GetRunner(syncPairId);
         }
         finally
         {
             _operationGate.Release();
         }
 
-        _statusPublisher.Publish(status);
+        await runner.SyncNowAsync(cancellationToken).ConfigureAwait(false);
+
+        _statusPublisher.Publish(CreateAppStatusSnapshot());
     }
 
     /// <inheritdoc />
