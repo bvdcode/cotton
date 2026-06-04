@@ -524,11 +524,14 @@
                               Command="{Binding RemoveSelectedSyncPairCommand}" />
                       <TextBlock Grid.Row="1"
                                  Grid.ColumnSpan="5"
-                                 Text="{Binding SelectedSyncPair.LocalPath}"
                                  ToolTip.Tip="{Binding SelectedSyncPair.LocalPath}"
                                  Classes="secondary"
                                  FontSize="11"
-                                 TextTrimming="CharacterEllipsis" />
+                                 TextTrimming="CharacterEllipsis">
+                        <Run Text="{Binding SelectedSyncPair.ModeLabel}" />
+                        <Run Text=" · " />
+                        <Run Text="{Binding SelectedSyncPair.LocalPath}" />
+                      </TextBlock>
                     </Grid>
                   </Border>
 

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton.Sync.App.SyncPairs;
+
 namespace Cotton.Sync.Desktop.ViewModels;
 
 /// <summary>
@@ -16,6 +18,7 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
     private DateTime? _lastSyncedAtUtc;
     private string? _lastError;
     private string _localPath = string.Empty;
+    private SyncPairMode _mode = SyncPairMode.FullMirror;
     private Guid? _remoteRootNodeId;
     private string _remotePath = string.Empty;
     private string _status = string.Empty;
@@ -39,6 +42,13 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
 
     public string ToggleEnabledIcon => IsEnabled ? "⏸" : "▶";
 
+    public string ModeLabel => Mode switch
+    {
+        SyncPairMode.FullMirror => "Full mirror",
+        SyncPairMode.VirtualFilesPlaceholder => "Virtual files",
+        _ => "Unknown",
+    };
+
     public string DisplayName
     {
         get => _displayName;
@@ -61,6 +71,18 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
     {
         get => _localPath;
         set => SetProperty(ref _localPath, value);
+    }
+
+    public SyncPairMode Mode
+    {
+        get => _mode;
+        set
+        {
+            if (SetProperty(ref _mode, value))
+            {
+                OnPropertyChanged(nameof(ModeLabel));
+            }
+        }
     }
 
     public DateTime? LastSyncedAtUtc

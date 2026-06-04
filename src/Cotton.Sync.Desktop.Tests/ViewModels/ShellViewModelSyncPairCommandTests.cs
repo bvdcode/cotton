@@ -33,6 +33,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(selected.IsEnabled, Is.False);
             Assert.That(selected.ToggleEnabledLabel, Is.EqualTo("Enable"));
             Assert.That(selected.ToggleEnabledIcon, Is.EqualTo("▶"));
+            Assert.That(selected.ModeLabel, Is.EqualTo("Full mirror"));
             Assert.That(selected.Status, Is.EqualTo("Disabled"));
             Assert.That(viewModel.GlobalStatus, Is.EqualTo("Folder disabled"));
         });

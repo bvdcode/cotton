@@ -852,7 +852,8 @@ internal sealed class DesktopShellController : IDesktopShellController
             settings.RemoteRootNodeId,
             lastSyncedAtUtc,
             cursor?.LastCursor,
-            status?.LastError);
+            status?.LastError,
+            settings.Mode);
     }
 
     private static Uri ParseServerUrl(string serverUrl)
