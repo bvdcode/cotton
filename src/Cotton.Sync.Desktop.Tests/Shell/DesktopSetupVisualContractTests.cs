@@ -86,6 +86,26 @@ public sealed class DesktopSetupVisualContractTests
         });
     }
 
+    [Test]
+    public void SettingsOverlay_StretchesWithinDashboardWindow()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string settingsOverlay = GetSlice(
+            mainWindowXaml,
+            "IsVisible=\"{Binding IsSettingsVisible}\"",
+            "</Window>");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(settingsOverlay, Does.Contain("MaxWidth=\"372\""));
+            Assert.That(settingsOverlay, Does.Contain("HorizontalAlignment=\"Stretch\""));
+            Assert.That(settingsOverlay, Does.Contain("VerticalAlignment=\"Stretch\""));
+            Assert.That(settingsOverlay, Does.Contain("RowDefinitions=\"Auto,*\""));
+            Assert.That(settingsOverlay, Does.Not.Contain("<Border Width=\"372\""));
+            Assert.That(settingsOverlay, Does.Not.Contain("MaxHeight=\"432\""));
+        });
+    }
+
     private static string GetDesktopFilePath(string fileName)
     {
         string directory = TestContext.CurrentContext.TestDirectory;
