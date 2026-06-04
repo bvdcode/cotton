@@ -667,18 +667,18 @@
                         RowSpacing="8">
                     <Grid ColumnDefinitions="Auto,*,Auto"
                           ColumnSpacing="6">
-                      <Button Content="Up"
-                              Classes="compact"
-                              ToolTip.Tip="Go up"
+                      <Button Content="^"
+                              Classes="icon"
+                              ToolTip.Tip="Go to parent folder"
                               Command="{Binding RemoteFolderUpCommand}" />
                       <TextBlock Grid.Column="1"
                                  Text="{Binding RemoteBrowserPath}"
                                  TextTrimming="CharacterEllipsis"
                                  VerticalAlignment="Center" />
                       <Button Grid.Column="2"
-                              Content="Open"
-                              Classes="compact"
-                              ToolTip.Tip="Open selected folder"
+                              Content=">"
+                              Classes="icon"
+                              ToolTip.Tip="Open selected cloud folder"
                               Command="{Binding OpenRemoteFolderCommand}" />
                     </Grid>
 

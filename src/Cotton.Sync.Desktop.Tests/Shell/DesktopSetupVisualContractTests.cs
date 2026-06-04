@@ -123,6 +123,25 @@ public sealed class DesktopSetupVisualContractTests
         });
     }
 
+    [Test]
+    public void CloudFolderPicker_UsesCompactIconNavigationButtons()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string cloudFolderPicker = GetSlice(
+            mainWindowXaml,
+            "IsVisible=\"{Binding IsAddSyncPairCloudStepVisible}\"",
+            "IsVisible=\"{Binding HasNoRemoteFolders}\"");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(cloudFolderPicker, Does.Contain("Content=\"^\""));
+            Assert.That(cloudFolderPicker, Does.Contain("Content=\">\""));
+            Assert.That(CountOccurrences(cloudFolderPicker, "Classes=\"icon\""), Is.EqualTo(2));
+            Assert.That(cloudFolderPicker, Does.Not.Contain("Content=\"Up\""));
+            Assert.That(cloudFolderPicker, Does.Not.Contain("Content=\"Open\""));
+        });
+    }
+
     private static string GetDesktopFilePath(string fileName)
     {
         string directory = TestContext.CurrentContext.TestDirectory;
