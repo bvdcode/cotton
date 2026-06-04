@@ -3,6 +3,7 @@
 
 using System.Net;
 using Cotton.Contracts.Files;
+using Cotton.Contracts.Nodes;
 using Cotton.Sync.Local;
 using Cotton.Sync.Remote;
 using Cotton.Sync.State;
@@ -16,6 +17,8 @@ public sealed class SyncEngine : ISyncEngine
 {
     private static readonly StringComparer PathComparer = StringComparer.OrdinalIgnoreCase;
     private readonly ILocalFileScanner _localScanner;
+    private readonly ILocalTreeScanner? _localTreeScanner;
+    private readonly IRemoteDirectorySynchronizer? _remoteDirectories;
     private readonly IRemoteTreeCrawler _remoteCrawler;
     private readonly IRemoteFileSynchronizer _remoteFiles;
     private readonly ISyncStateStore _stateStore;
@@ -29,13 +32,16 @@ public sealed class SyncEngine : ISyncEngine
         IRemoteTreeCrawler remoteCrawler,
         IRemoteFileSynchronizer remoteFiles,
         ISyncStateStore stateStore,
-        ILocalFileSyncWriter? localWriter = null)
+        ILocalFileSyncWriter? localWriter = null,
+        IRemoteDirectorySynchronizer? remoteDirectories = null)
     {
         _localScanner = localScanner ?? throw new ArgumentNullException(nameof(localScanner));
+        _localTreeScanner = localScanner as ILocalTreeScanner;
         _remoteCrawler = remoteCrawler ?? throw new ArgumentNullException(nameof(remoteCrawler));
         _remoteFiles = remoteFiles ?? throw new ArgumentNullException(nameof(remoteFiles));
         _stateStore = stateStore ?? throw new ArgumentNullException(nameof(stateStore));
         _localWriter = localWriter ?? new AtomicLocalFileSyncWriter();
+        _remoteDirectories = remoteDirectories;
     }
 
     /// <inheritdoc />
@@ -52,17 +58,32 @@ public sealed class SyncEngine : ISyncEngine
         options ??= new SyncRunOptions();
         ValidateOptions(options);
         await _stateStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
-        IReadOnlyList<LocalFileSnapshot> localFiles = await _localScanner.ScanAsync(syncPair.LocalRootPath, cancellationToken).ConfigureAwait(false);
+        LocalTreeSnapshot localTree = await ScanLocalTreeAsync(syncPair.LocalRootPath, cancellationToken).ConfigureAwait(false);
         RemoteTreeSnapshot remoteTree = await _remoteCrawler.CrawlAsync(syncPair.RemoteRootNodeId, cancellationToken).ConfigureAwait(false);
         IReadOnlyList<SyncStateEntry> stateEntries = await _stateStore.LoadPairAsync(syncPair.SyncPairId, cancellationToken).ConfigureAwait(false);
+        var result = new SyncRunResult();
 
-        Dictionary<string, LocalFileSnapshot> localByPath = ToDictionary(localFiles, file => file.RelativePath);
+        Dictionary<string, LocalDirectorySnapshot> localDirectoriesByPath = ToDictionary(localTree.Directories, directory => directory.RelativePath);
+        Dictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath = ToDictionary(remoteTree.Directories, directory => directory.RelativePath);
+        Dictionary<string, SyncStateEntry> directoryStateByPath = ToDictionary(
+            stateEntries.Where(entry => entry.Kind == SyncEntryKind.Directory),
+            entry => entry.RelativePath);
+        await ReconcileDirectoriesWithoutBaselineAsync(
+            syncPair,
+            options,
+            result,
+            localDirectoriesByPath,
+            remoteDirectoriesByPath,
+            directoryStateByPath,
+            remoteTree.RootNode,
+            cancellationToken).ConfigureAwait(false);
+
+        Dictionary<string, LocalFileSnapshot> localByPath = ToDictionary(localTree.Files, file => file.RelativePath);
         Dictionary<string, RemoteFileSnapshot> remoteByPath = ToDictionary(remoteTree.Files, file => file.RelativePath);
         Dictionary<string, SyncStateEntry> stateByPath = ToDictionary(
             stateEntries.Where(entry => entry.Kind == SyncEntryKind.File),
             entry => entry.RelativePath);
         List<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys);
-        var result = new SyncRunResult();
         SyncDeleteGuard deleteGuard = BuildDeleteGuard(options, pathKeys, localByPath, remoteByPath, stateByPath);
 
         foreach (string key in pathKeys)
@@ -84,6 +105,93 @@ public sealed class SyncEngine : ISyncEngine
         }
 
         return result;
+    }
+
+    private async Task<LocalTreeSnapshot> ScanLocalTreeAsync(string localRootPath, CancellationToken cancellationToken)
+    {
+        if (_localTreeScanner is not null)
+        {
+            return await _localTreeScanner.ScanTreeAsync(localRootPath, cancellationToken).ConfigureAwait(false);
+        }
+
+        IReadOnlyList<LocalFileSnapshot> files = await _localScanner.ScanAsync(localRootPath, cancellationToken).ConfigureAwait(false);
+        return new LocalTreeSnapshot
+        {
+            Files = files.ToList(),
+        };
+    }
+
+    private async Task ReconcileDirectoriesWithoutBaselineAsync(
+        SyncPair syncPair,
+        SyncRunOptions options,
+        SyncRunResult result,
+        IReadOnlyDictionary<string, LocalDirectorySnapshot> localByPath,
+        IDictionary<string, RemoteDirectorySnapshot> remoteByPath,
+        IReadOnlyDictionary<string, SyncStateEntry> stateByPath,
+        NodeDto remoteRootNode,
+        CancellationToken cancellationToken)
+    {
+        Dictionary<string, Guid> remoteNodeIdsByPath = remoteByPath.ToDictionary(
+            static item => item.Key,
+            static item => item.Value.Node.Id,
+            PathComparer);
+        remoteNodeIdsByPath[string.Empty] = remoteRootNode.Id;
+
+        List<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys)
+            .OrderBy(static key => GetPathDepth(key))
+            .ThenBy(static key => key, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        foreach (string key in pathKeys)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (stateByPath.ContainsKey(key))
+            {
+                continue;
+            }
+
+            localByPath.TryGetValue(key, out LocalDirectorySnapshot? local);
+            remoteByPath.TryGetValue(key, out RemoteDirectorySnapshot? remote);
+            string relativePath = local?.RelativePath ?? remote?.RelativePath ?? key;
+            if (local is null && remote is not null)
+            {
+                await _localWriter.CreateDirectoryAsync(syncPair.LocalRootPath, relativePath, cancellationToken).ConfigureAwait(false);
+                await _stateStore.UpsertAsync(BuildDirectoryBaseline(syncPair, relativePath, remote.Node), cancellationToken)
+                    .ConfigureAwait(false);
+                Report(result, options, SyncActivityKind.Downloaded, relativePath, "Created local folder.");
+                continue;
+            }
+
+            if (local is not null && remote is null && _remoteDirectories is not null)
+            {
+                string parentPath = GetParentPath(relativePath);
+                string parentKey = string.IsNullOrEmpty(parentPath) ? string.Empty : SyncPath.ToKey(parentPath);
+                if (!remoteNodeIdsByPath.TryGetValue(parentKey, out Guid parentNodeId))
+                {
+                    continue;
+                }
+
+                NodeDto created = await _remoteDirectories
+                    .CreateDirectoryAsync(parentNodeId, GetFileName(relativePath), cancellationToken)
+                    .ConfigureAwait(false);
+                var createdSnapshot = new RemoteDirectorySnapshot
+                {
+                    RelativePath = relativePath,
+                    Node = created,
+                };
+                remoteByPath[SyncPath.ToKey(relativePath)] = createdSnapshot;
+                remoteNodeIdsByPath[SyncPath.ToKey(relativePath)] = created.Id;
+                await _stateStore.UpsertAsync(BuildDirectoryBaseline(syncPair, relativePath, created), cancellationToken)
+                    .ConfigureAwait(false);
+                Report(result, options, SyncActivityKind.Uploaded, relativePath, "Created remote folder.");
+                continue;
+            }
+
+            if (local is not null && remote is not null)
+            {
+                await _stateStore.UpsertAsync(BuildDirectoryBaseline(syncPair, relativePath, remote.Node), cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
     }
 
     private async Task ReconcileWithoutBaselineAsync(
@@ -409,6 +517,42 @@ public sealed class SyncEngine : ISyncEngine
             RemoteETag = remoteFile?.ETag,
             SyncedAtUtc = DateTime.UtcNow,
         };
+    }
+
+    private static SyncStateEntry BuildDirectoryBaseline(
+        SyncPair syncPair,
+        string relativePath,
+        NodeDto remoteNode)
+    {
+        return new SyncStateEntry
+        {
+            SyncPairId = syncPair.SyncPairId,
+            RelativePath = SyncPath.Normalize(relativePath),
+            Kind = SyncEntryKind.Directory,
+            RemoteNodeId = remoteNode.Id,
+            SyncedAtUtc = DateTime.UtcNow,
+        };
+    }
+
+    private static int GetPathDepth(string relativePath)
+    {
+        return string.IsNullOrWhiteSpace(relativePath)
+            ? 0
+            : relativePath.Count(static character => character == '/') + 1;
+    }
+
+    private static string GetParentPath(string relativePath)
+    {
+        string normalized = SyncPath.Normalize(relativePath);
+        int lastSlashIndex = normalized.LastIndexOf('/');
+        return lastSlashIndex < 0 ? string.Empty : normalized[..lastSlashIndex];
+    }
+
+    private static string GetFileName(string relativePath)
+    {
+        string normalized = SyncPath.Normalize(relativePath);
+        int lastSlashIndex = normalized.LastIndexOf('/');
+        return lastSlashIndex < 0 ? normalized : normalized[(lastSlashIndex + 1)..];
     }
 
     private static bool RemoteMatchesBaseline(NodeFileManifestDto remoteFile, SyncStateEntry state)

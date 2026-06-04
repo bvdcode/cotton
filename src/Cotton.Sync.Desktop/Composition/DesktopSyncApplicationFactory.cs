@@ -55,12 +55,14 @@ internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFac
 
         var remoteTreeCrawler = new RemoteTreeCrawler(cottonClient.Nodes);
         var remoteFileSynchronizer = new SdkRemoteFileSynchronizer(cottonClient);
+        var remoteDirectorySynchronizer = new SdkRemoteDirectorySynchronizer(cottonClient.Nodes);
         var remoteChangeFeed = new RemoteChangeFeedReader(cottonClient.Sync, stateStore);
         var syncEngine = new HeadlessSyncEngine(
             new LocalFileScanner(),
             remoteTreeCrawler,
             remoteFileSynchronizer,
-            stateStore);
+            stateStore,
+            remoteDirectories: remoteDirectorySynchronizer);
         var activityPublisher = new InMemoryAppActivityPublisher();
         ISyncPairWork pairWork = new RemoteChangeAwareSyncPairWork(
             new SyncEnginePairWork(syncEngine, activityPublisher),

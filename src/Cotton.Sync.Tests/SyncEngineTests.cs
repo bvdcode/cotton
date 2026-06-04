@@ -94,6 +94,69 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_CreatesRemoteFolderForLocalOnlyEmptyDirectoryAndStoresBaseline()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "Projects", "Archive"));
+        var scanner = new FakeLocalFileScanner
+        {
+            Directories =
+            {
+                LocalDirectory("Projects"),
+                LocalDirectory("Projects/Archive"),
+            },
+        };
+        var remoteDirectories = new FakeRemoteDirectorySynchronizer();
+        SyncEngine engine = CreateEngine(
+            scanner,
+            EmptyRemoteTree(),
+            new FakeRemoteFileSynchronizer(),
+            out SqliteSyncStateStore stateStore,
+            remoteDirectories);
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+        IReadOnlyList<SyncStateEntry> state = await stateStore.LoadPairAsync("pair-a");
+        Assert.Multiple(() =>
+        {
+            Assert.That(remoteDirectories.Creates, Has.Count.EqualTo(2));
+            Assert.That(remoteDirectories.Creates[0].ParentNodeId, Is.EqualTo(_remoteRootNodeId));
+            Assert.That(remoteDirectories.Creates[0].Name, Is.EqualTo("Projects"));
+            Assert.That(remoteDirectories.Creates[1].ParentNodeId, Is.EqualTo(remoteDirectories.Creates[0].ReturnedNode.Id));
+            Assert.That(remoteDirectories.Creates[1].Name, Is.EqualTo("Archive"));
+            Assert.That(state.Select(entry => entry.Kind), Is.EqualTo(new[] { SyncEntryKind.Directory, SyncEntryKind.Directory }));
+            Assert.That(state.Select(entry => entry.RelativePath), Is.EqualTo(new[] { "Projects", "Projects/Archive" }));
+            Assert.That(state.Select(entry => entry.RemoteNodeId), Is.EqualTo(remoteDirectories.Creates.Select(call => call.ReturnedNode.Id)));
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded, SyncActivityKind.Uploaded }));
+        });
+    }
+
+    [Test]
+    public async Task RunOnceAsync_CreatesLocalFolderForRemoteOnlyEmptyDirectoryAndStoresBaseline()
+    {
+        RemoteDirectorySnapshot remoteDirectory = RemoteDirectory("Projects");
+        RemoteTreeSnapshot remoteTree = EmptyRemoteTree();
+        remoteTree.Directories.Add(remoteDirectory);
+        SyncEngine engine = CreateEngine(
+            new FakeLocalFileScanner(),
+            remoteTree,
+            new FakeRemoteFileSynchronizer(),
+            out SqliteSyncStateStore stateStore);
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+        IReadOnlyList<SyncStateEntry> state = await stateStore.LoadPairAsync("pair-a");
+        Assert.Multiple(() =>
+        {
+            Assert.That(Directory.Exists(Path.Combine(_root, "Projects")), Is.True);
+            Assert.That(state, Has.Count.EqualTo(1));
+            Assert.That(state[0].Kind, Is.EqualTo(SyncEntryKind.Directory));
+            Assert.That(state[0].RelativePath, Is.EqualTo("Projects"));
+            Assert.That(state[0].RemoteNodeId, Is.EqualTo(remoteDirectory.Node.Id));
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Downloaded }));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_UploadsUnicodeNamedLocalFileAndStoresBaseline()
     {
         const string relativePath = "Документы/設計-notes.txt";
@@ -732,6 +795,22 @@ public sealed class SyncEngineTests
         return new SyncEngine(scanner, new FakeRemoteTreeCrawler(remoteTrees), remoteFiles, stateStore);
     }
 
+    private SyncEngine CreateEngine(
+        FakeLocalFileScanner scanner,
+        RemoteTreeSnapshot remoteTree,
+        FakeRemoteFileSynchronizer remoteFiles,
+        out SqliteSyncStateStore stateStore,
+        FakeRemoteDirectorySynchronizer remoteDirectories)
+    {
+        stateStore = new SqliteSyncStateStore(_databasePath);
+        return new SyncEngine(
+            scanner,
+            new FakeRemoteTreeCrawler(remoteTree),
+            remoteFiles,
+            stateStore,
+            remoteDirectories: remoteDirectories);
+    }
+
     private SyncPair Pair()
     {
         return new SyncPair
@@ -773,6 +852,15 @@ public sealed class SyncEngineTests
             ContentHash = HashText(content),
             SizeBytes = Encoding.UTF8.GetByteCount(content),
             LastWriteUtc = new DateTime(2026, 6, 2, 13, 0, 0, DateTimeKind.Utc),
+        };
+    }
+
+    private LocalDirectorySnapshot LocalDirectory(string relativePath)
+    {
+        return new LocalDirectorySnapshot
+        {
+            RelativePath = relativePath.Replace('\\', '/'),
+            FullPath = Path.Combine(_root, relativePath.Replace('/', Path.DirectorySeparatorChar)),
         };
     }
 
@@ -858,6 +946,20 @@ public sealed class SyncEngineTests
         return tree;
     }
 
+    private RemoteDirectorySnapshot RemoteDirectory(string relativePath)
+    {
+        return new RemoteDirectorySnapshot
+        {
+            RelativePath = relativePath.Replace('\\', '/'),
+            Node = new NodeDto
+            {
+                Id = Guid.NewGuid(),
+                ParentId = _remoteRootNodeId,
+                Name = relativePath.Split('/')[^1],
+            },
+        };
+    }
+
     private NodeFileManifestDto RemoteFile(string relativePath, string contentHash, Guid? id = null)
     {
         return new NodeFileManifestDto
@@ -888,12 +990,14 @@ public sealed class SyncEngineTests
         return Convert.ToHexStringLower(SHA256.HashData(bytes));
     }
 
-    private sealed class FakeLocalFileScanner : ILocalFileScanner
+    private sealed class FakeLocalFileScanner : ILocalFileScanner, ILocalTreeScanner
     {
         public FakeLocalFileScanner(params LocalFileSnapshot[] files)
         {
             Files = files.ToList();
         }
+
+        public List<LocalDirectorySnapshot> Directories { get; } = [];
 
         public List<LocalFileSnapshot> Files { get; }
 
@@ -903,6 +1007,16 @@ public sealed class SyncEngineTests
         {
             ScanCalls++;
             return Task.FromResult<IReadOnlyList<LocalFileSnapshot>>(Files);
+        }
+
+        public Task<LocalTreeSnapshot> ScanTreeAsync(string rootPath, CancellationToken cancellationToken = default)
+        {
+            ScanCalls++;
+            return Task.FromResult(new LocalTreeSnapshot
+            {
+                Directories = Directories,
+                Files = Files,
+            });
         }
     }
 
@@ -1027,6 +1141,36 @@ public sealed class SyncEngineTests
             return Task.CompletedTask;
         }
     }
+
+    private sealed class FakeRemoteDirectorySynchronizer : IRemoteDirectorySynchronizer
+    {
+        public List<CreateDirectoryCall> Creates { get; } = [];
+
+        public List<(Guid NodeId, bool SkipTrash)> Deletes { get; } = [];
+
+        public Task<NodeDto> CreateDirectoryAsync(
+            Guid parentNodeId,
+            string name,
+            CancellationToken cancellationToken = default)
+        {
+            NodeDto node = new()
+            {
+                Id = Guid.NewGuid(),
+                ParentId = parentNodeId,
+                Name = name,
+            };
+            Creates.Add(new CreateDirectoryCall(parentNodeId, name, node));
+            return Task.FromResult(node);
+        }
+
+        public Task DeleteDirectoryAsync(Guid nodeId, bool skipTrash = false, CancellationToken cancellationToken = default)
+        {
+            Deletes.Add((nodeId, skipTrash));
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed record CreateDirectoryCall(Guid ParentNodeId, string Name, NodeDto ReturnedNode);
 
     private sealed record UploadCall(
         Guid RootNodeId,
