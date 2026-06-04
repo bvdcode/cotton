@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Net;
+using System.Text;
 using Cotton.Contracts.Auth;
 using Cotton.Contracts.Sync;
 using Cotton.Sdk.Auth;
@@ -67,6 +68,30 @@ public sealed class CottonSyncClientTests
         var client = await CreateAuthorizedClientAsync(handler);
 
         Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => client.Sync.GetChangesAsync(-1));
+    }
+
+    [Test]
+    public async Task GetChangesAsync_ReportsHtmlSpaFallbackAsApiException()
+    {
+        var handler = new QueuedHttpMessageHandler();
+        handler.Enqueue(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("<!doctype html><html>App</html>", Encoding.UTF8, "text/html"),
+        });
+        var client = await CreateAuthorizedClientAsync(handler);
+
+        CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(
+            async () => await client.Sync.GetChangesAsync(0, 10));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.Message, Does.Contain("GET /api/v1/sync/changes?since=0&limit=10"));
+            Assert.That(exception.Message, Does.Contain("invalid JSON"));
+            Assert.That(exception.Message, Does.Contain("text/html"));
+            Assert.That(exception.Message, Does.Contain("<!doctype html>"));
+            Assert.That(exception.ResponseBody, Does.StartWith("<!doctype html>"));
+        });
     }
 
     private static async Task<CottonCloudClient> CreateAuthorizedClientAsync(QueuedHttpMessageHandler handler)
