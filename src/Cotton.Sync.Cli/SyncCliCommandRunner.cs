@@ -169,7 +169,8 @@ public static class SyncCliCommandRunner
             new LocalFileScanner(),
             new RemoteTreeCrawler(client.Nodes),
             new SdkRemoteFileSynchronizer(client),
-            stateStore);
+            stateStore,
+            remoteDirectories: new SdkRemoteDirectorySynchronizer(client.Nodes));
         SyncRunResult result = await engine.RunOnceAsync(
             new SyncPair
             {
