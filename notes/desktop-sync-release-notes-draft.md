@@ -14,6 +14,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 - Local sync state and desktop settings use EF Core SQLite. Normal app state does not use raw SQL commands.
 - Token storage is abstracted and release-gated: Windows DPAPI and Linux Secret Service are treated as release-secure; restricted-file storage fails self-test.
 - Diagnostics include structured logging, log rotation, self-test, support bundle export, and secret redaction.
+- CLI recovery support includes state summary and one-shot sync commands for headless validation.
 - Tray lifecycle is implemented for Windows. Linux currently uses normal window lifecycle because tray support varies by desktop environment.
 
 ## Artifacts
@@ -30,6 +31,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 
 - Full solution Release builds have passed locally with 0 warnings after recent desktop packaging and UX slices.
 - Desktop tests have passed locally, most recently `Cotton.Sync.Desktop.Tests` 234/234.
+- CLI one-shot sync has been smoke-tested against the integration-test server, verifying remote upload and SQLite baseline creation.
 - Desktop packaging metadata tests cover publish profiles, clean publish-directory behavior, app icon metadata, Linux `.desktop` metadata, `.deb` packaging script, reusable Linux/Windows diagnostics export smoke scripts, Linux package smoke wiring, Linux GUI screenshot smoke wiring with deterministic dashboard/settings/settings-diagnostics/error/conflict visual-smoke states, Linux archive/installed diagnostics export smoke wiring, Linux `.deb` install/upgrade smoke wiring, Windows CI smoke, Windows `.zip` artifact upload/self-test/diagnostics smoke, Windows installer script/install/diagnostics/upgrade smoke wiring, and release artifact checksum generation.
 - Local Linux publish succeeded.
 - Local Windows publish succeeded from Linux cross-publish.

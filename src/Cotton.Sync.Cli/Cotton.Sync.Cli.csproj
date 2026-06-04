@@ -12,6 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../Cotton.Sdk/Cotton.Sdk.csproj" />
     <ProjectReference Include="../Cotton.Sync/Cotton.Sync.csproj" />
   </ItemGroup>
 

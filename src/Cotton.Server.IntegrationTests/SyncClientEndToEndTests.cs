@@ -16,6 +16,7 @@ using Cotton.Sync;
 using Cotton.Sync.App.Runners;
 using Cotton.Sync.App.Status;
 using Cotton.Sync.App.SyncPairs;
+using Cotton.Sync.Cli;
 using Cotton.Sync.Local;
 using Cotton.Sync.Remote;
 using Cotton.Sync.State;
@@ -96,6 +97,65 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
             Assert.That(uploaded.ContentHash, Is.EqualTo(baseline?.RemoteContentHash));
             Assert.That(baseline?.LocalContentHash, Is.EqualTo(uploaded.ContentHash));
             Assert.That(baseline?.RemoteFileId, Is.EqualTo(uploaded.Id));
+        });
+    }
+
+    [Test]
+    public async Task SyncCliCommandRunner_SyncOnceUploadsLocalFileThroughSdkToServer()
+    {
+        Assert.That(_httpClient, Is.Not.Null);
+        Assert.That(_httpClient!.BaseAddress, Is.Not.Null);
+        Assert.That(_factory, Is.Not.Null);
+        CottonCloudClient setupClient = CreateClient();
+        await LoginAsync(setupClient);
+        NodeDto remoteRoot = await new RemoteRootResolver(setupClient.Nodes).EnsureAsync("sync-cli-e2e");
+        string localRoot = Path.Combine(_tempDirectory, "cli-client");
+        const string relativePath = "Cli/report.txt";
+        WriteLocalFile(localRoot, relativePath, "hello from sync cli");
+        string databasePath = Path.Combine(_tempDirectory, "cli-sync-state.sqlite");
+        using HttpClient cliHttpClient = _factory!.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        int exitCode = await SyncCliCommandRunner.RunAsync(
+            [
+                "sync-once",
+                "--server",
+                cliHttpClient.BaseAddress!.ToString(),
+                "--username",
+                "testuser",
+                "--password",
+                "testpassword",
+                "--local-root",
+                localRoot,
+                "--remote-root",
+                remoteRoot.Id.ToString("D"),
+                "--sync-pair",
+                "sync-cli-e2e",
+                "--database",
+                databasePath,
+            ],
+            output,
+            error,
+            cliHttpClient);
+
+        NodeFileManifestDto uploaded = await FindRemoteFileAsync(setupClient, remoteRoot.Id, relativePath);
+        string downloaded = await DownloadTextAsync(setupClient, uploaded.Id);
+        var stateStore = new SqliteSyncStateStore(databasePath);
+        await stateStore.InitializeAsync();
+        SyncStateEntry? baseline = await stateStore.GetAsync("sync-cli-e2e", relativePath);
+        string outputText = output.ToString();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exitCode, Is.EqualTo(0));
+            Assert.That(error.ToString(), Is.Empty);
+            Assert.That(outputText, Does.Contain("Cotton Sync one-shot run"));
+            Assert.That(outputText, Does.Contain("Activities: 1"));
+            Assert.That(outputText, Does.Contain("State entries: 1"));
+            Assert.That(downloaded, Is.EqualTo("hello from sync cli"));
+            Assert.That(baseline?.RemoteFileId, Is.EqualTo(uploaded.Id));
+            Assert.That(baseline?.RemoteContentHash, Is.EqualTo(uploaded.ContentHash));
         });
     }
 

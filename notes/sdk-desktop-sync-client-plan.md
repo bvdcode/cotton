@@ -44,6 +44,7 @@ Target layers:
 - [ ] `Cotton.Sync.Desktop`: Avalonia shell only. It displays state and sends commands to `Cotton.Sync.App`.
 - [x] `Cotton.Sync.Cli`: headless validation and recovery tool using the same app/core services.
   Verification 2026-06-03: added real `Cotton.Sync.Cli` and `Cotton.Sync.Cli.Tests` projects to `src/Cotton.sln`; CLI supports `state-summary --database <path> --sync-pair <id>` through the existing EF-backed `SqliteSyncStateStore`, printing entry count and remote cursor for headless validation/recovery. `dotnet test src/Cotton.Sync.Cli.Tests/Cotton.Sync.Cli.Tests.csproj --configuration Release --no-restore` passed 3/3, and full solution Release build passed with the known NU1903 warning.
+  Verification 2026-06-04: CLI now also supports `sync-once --server <url> --username <name> (--password <password> | --password-env <name>) --local-root <path> --remote-root <node-id> --sync-pair <id> --database <path> [--two-factor-code <code>]`, using the SDK and `SyncEngine` for a real one-shot full-mirror sync pass without persisting tokens. `SyncCliCommandRunnerTests` passed 5/5, and `SyncClientEndToEndTests.SyncCliCommandRunner_SyncOnceUploadsLocalFileThroughSdkToServer` verified the CLI path against the integration-test server, remote upload, downloaded content, and SQLite baseline.
 - [ ] Platform adapters: autostart, tray, notifications, open folder/browser, secure token store, single instance.
 
 ## Phase 0 - Ground Truth And Branch Hygiene

@@ -38,6 +38,7 @@ public sealed class SyncCliCommandRunnerTests
         {
             Assert.That(exitCode, Is.EqualTo(0));
             Assert.That(output.ToString(), Does.Contain("state-summary"));
+            Assert.That(output.ToString(), Does.Contain("sync-once"));
             Assert.That(error.ToString(), Is.Empty);
         });
     }
@@ -56,6 +57,60 @@ public sealed class SyncCliCommandRunnerTests
             Assert.That(output.ToString(), Is.Empty);
             Assert.That(error.ToString(), Does.Contain("--database"));
             Assert.That(error.ToString(), Does.Contain("--sync-pair"));
+        });
+    }
+
+    [Test]
+    public async Task RunAsync_ReturnsErrorForMissingSyncOnceArguments()
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        int exitCode = await SyncCliCommandRunner.RunAsync(["sync-once"], output, error);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exitCode, Is.EqualTo(2));
+            Assert.That(output.ToString(), Is.Empty);
+            Assert.That(error.ToString(), Does.Contain("--server"));
+            Assert.That(error.ToString(), Does.Contain("--remote-root"));
+            Assert.That(error.ToString(), Does.Contain("--database"));
+        });
+    }
+
+    [Test]
+    public async Task RunAsync_ReturnsErrorForInvalidSyncOnceRemoteRoot()
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        int exitCode = await SyncCliCommandRunner.RunAsync(
+            [
+                "sync-once",
+                "--server",
+                "https://cloud.example.test/",
+                "--username",
+                "testuser",
+                "--password",
+                "testpassword",
+                "--local-root",
+                _tempDirectory,
+                "--remote-root",
+                "not-a-guid",
+                "--sync-pair",
+                "pair",
+                "--database",
+                Path.Combine(_tempDirectory, "sync-state.db"),
+            ],
+            output,
+            error);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exitCode, Is.EqualTo(2));
+            Assert.That(output.ToString(), Is.Empty);
+            Assert.That(error.ToString(), Does.Contain("--remote-root"));
+            Assert.That(error.ToString(), Does.Contain("GUID"));
         });
     }
 
