@@ -20,6 +20,22 @@ public sealed class DesktopSetupVisualContractTests
         });
     }
 
+    [Test]
+    public void FoldersHeader_DoesNotDuplicateAddFolderCommand()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string foldersHeader = GetSlice(
+            mainWindowXaml,
+            "<TextBlock Text=\"Folders\"",
+            "<Grid Grid.Row=\"1\">");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(foldersHeader, Does.Not.Contain("ShowAddSyncPairCommand"));
+            Assert.That(mainWindowXaml, Does.Contain("ToolTip.Tip=\"Add another sync folder\""));
+        });
+    }
+
     private static string GetDesktopFilePath(string fileName)
     {
         string directory = TestContext.CurrentContext.TestDirectory;
@@ -41,5 +57,22 @@ public sealed class DesktopSetupVisualContractTests
         }
 
         throw new FileNotFoundException(fileName + " was not found from the test directory.");
+    }
+
+    private static string GetSlice(string text, string startMarker, string endMarker)
+    {
+        int start = text.IndexOf(startMarker, StringComparison.Ordinal);
+        if (start < 0)
+        {
+            throw new InvalidOperationException(startMarker + " was not found.");
+        }
+
+        int end = text.IndexOf(endMarker, start, StringComparison.Ordinal);
+        if (end < 0)
+        {
+            throw new InvalidOperationException(endMarker + " was not found.");
+        }
+
+        return text[start..end];
     }
 }
