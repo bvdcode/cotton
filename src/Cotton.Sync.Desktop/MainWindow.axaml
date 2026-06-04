@@ -50,8 +50,8 @@
                     Spacing="5"
                     VerticalAlignment="Center"
                     IsVisible="{Binding IsDashboardVisible}">
-          <Button Content="Sync"
-                  Classes="compact"
+          <Button Content="↻"
+                  Classes="icon"
                   ToolTip.Tip="Sync now"
                   Command="{Binding SyncNowCommand}" />
           <Button Content="..."

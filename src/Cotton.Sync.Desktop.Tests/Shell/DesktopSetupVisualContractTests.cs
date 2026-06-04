@@ -172,6 +172,10 @@ public sealed class DesktopSetupVisualContractTests
     public void DashboardActionRows_UseIconButtonsForNarrowActions()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string dashboardHeader = GetSlice(
+            mainWindowXaml,
+            "<TextBlock Text=\"Cotton Sync\"",
+            "<Grid Grid.Row=\"2\"");
         string actionRequiredRow = GetSlice(
             mainWindowXaml,
             "<TextBlock Text=\"Action required\"",
@@ -183,6 +187,9 @@ public sealed class DesktopSetupVisualContractTests
 
         Assert.Multiple(() =>
         {
+            Assert.That(dashboardHeader, Does.Contain("ToolTip.Tip=\"Sync now\""));
+            Assert.That(dashboardHeader, Does.Contain("Content=\"↻\""));
+            Assert.That(dashboardHeader, Does.Not.Contain("Content=\"Sync\""));
             Assert.That(actionRequiredRow, Does.Contain("Content=\"↻\""));
             Assert.That(actionRequiredRow, Does.Contain("Content=\"✓\""));
             Assert.That(actionRequiredRow, Does.Not.Contain("Content=\"Retry\""));
