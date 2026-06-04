@@ -159,6 +159,38 @@ public sealed class SqliteSyncStateStoreTests
     }
 
     [Test]
+    public async Task UpsertAsync_RoundtripsDirectoryEntry()
+    {
+        string databasePath = DatabasePath();
+        Guid nodeId = Guid.NewGuid();
+        var first = new SqliteSyncStateStore(databasePath);
+        await first.InitializeAsync();
+        await first.UpsertAsync(new SyncStateEntry
+        {
+            SyncPairId = "pair-a",
+            RelativePath = "Docs/Empty",
+            Kind = SyncEntryKind.Directory,
+            RemoteNodeId = nodeId,
+            SyncedAtUtc = new DateTime(2026, 6, 4, 10, 0, 0, DateTimeKind.Utc),
+        });
+
+        var second = new SqliteSyncStateStore(databasePath);
+        await second.InitializeAsync();
+        SyncStateEntry? entry = await second.GetAsync("pair-a", "docs/empty");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(entry, Is.Not.Null);
+            Assert.That(entry!.Kind, Is.EqualTo(SyncEntryKind.Directory));
+            Assert.That(entry.RelativePath, Is.EqualTo("Docs/Empty"));
+            Assert.That(entry.RemoteNodeId, Is.EqualTo(nodeId));
+            Assert.That(entry.RemoteFileId, Is.Null);
+            Assert.That(entry.LocalContentHash, Is.Null);
+            Assert.That(entry.RemoteContentHash, Is.Null);
+        });
+    }
+
+    [Test]
     public async Task UpsertAsync_UsesCaseInsensitivePathKeyWithinPair()
     {
         var store = CreateStore();
