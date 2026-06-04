@@ -102,7 +102,7 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
-    public void SettingsDiagnostics_DoesNotNestSelfTestScrolling()
+    public void SettingsDiagnostics_ScrollsWholeTabWithoutNestedSelfTestScrolling()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
         string diagnosticsSection = GetSlice(
@@ -121,7 +121,7 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(selfTestIndex, Is.GreaterThanOrEqualTo(0));
             Assert.That(diagnosticsIndex, Is.GreaterThan(selfTestIndex));
             Assert.That(diagnosticsSection, Does.Not.Contain("MaxHeight=\"118\""));
-            Assert.That(diagnosticsSection, Does.Not.Contain("<ScrollViewer"));
+            Assert.That(diagnosticsSection, Does.Contain("<ScrollViewer Margin=\"0,10,0,0\""));
         });
     }
 
@@ -150,7 +150,7 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
-    public void DashboardContent_ScrollsInsteadOfOverlappingDenseStates()
+    public void DashboardContent_StretchesActivityIntoRemainingSpace()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
         string dashboardView = GetSlice(
@@ -160,11 +160,13 @@ public sealed class DesktopSetupVisualContractTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(dashboardView, Does.Contain("<ScrollViewer Margin=\"10\""));
-            Assert.That(dashboardView, Does.Contain("VerticalScrollBarVisibility=\"Auto\""));
-            Assert.That(dashboardView, Does.Contain("<StackPanel Spacing=\"8\">"));
+            Assert.That(dashboardView, Does.Contain("RowDefinitions=\"Auto,*\""));
+            Assert.That(dashboardView, Does.Contain("<StackPanel Grid.Row=\"0\""));
+            Assert.That(dashboardView, Does.Contain("<Border Grid.Row=\"1\""));
             Assert.That(dashboardView, Does.Contain("MaxHeight=\"250\""));
+            Assert.That(dashboardView, Does.Not.Contain("<ScrollViewer Margin=\"10\""));
             Assert.That(dashboardView, Does.Not.Contain("RowDefinitions=\"Auto,Auto,Auto,Auto,*\""));
+            Assert.That(dashboardView, Does.Not.Contain("RowDefinitions=\"Auto,132\""));
         });
     }
 
@@ -275,6 +277,8 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(diagnosticsSection, Does.Contain("Content=\"Export bundle\""));
             Assert.That(diagnosticsSection, Does.Not.Contain("Content=\"Export diagnostics\""));
             Assert.That(diagnosticsSection, Does.Contain("ToolTip.Tip=\"Export diagnostics bundle\""));
+            Assert.That(diagnosticsSection, Does.Contain("LastDiagnosticsBundlePath"));
+            Assert.That(diagnosticsSection, Does.Contain("OpenDiagnosticsBundleFolderCommand"));
         });
     }
 
@@ -291,6 +295,7 @@ public sealed class DesktopSetupVisualContractTests
         {
             Assert.That(addFolderWizard, Does.Contain("MaxWidth=\"372\""));
             Assert.That(addFolderWizard, Does.Contain("HorizontalAlignment=\"Stretch\""));
+            Assert.That(addFolderWizard, Does.Contain("ToolTip.Tip=\"{Binding ActionRequiredMessage}\""));
             Assert.That(addFolderWizard, Does.Not.Contain("<Border Width=\"372\""));
         });
     }
@@ -307,8 +312,11 @@ public sealed class DesktopSetupVisualContractTests
         Assert.Multiple(() =>
         {
             Assert.That(cloudFolderPicker, Does.Contain("Content=\"←\""));
+            Assert.That(cloudFolderPicker, Does.Contain("ToolTip.Tip=\"Create cloud folder\""));
+            Assert.That(cloudFolderPicker, Does.Contain("ShowCreateRemoteFolderCommand"));
+            Assert.That(cloudFolderPicker, Does.Contain("CreateRemoteFolderCommand"));
             Assert.That(cloudFolderPicker, Does.Contain("Content=\"→\""));
-            Assert.That(CountOccurrences(cloudFolderPicker, "Classes=\"icon\""), Is.EqualTo(2));
+            Assert.That(CountOccurrences(cloudFolderPicker, "Classes=\"icon\""), Is.EqualTo(4));
             Assert.That(cloudFolderPicker, Does.Not.Contain("Content=\"^\""));
             Assert.That(cloudFolderPicker, Does.Not.Contain("Content=\">\""));
             Assert.That(cloudFolderPicker, Does.Not.Contain("Content=\"Up\""));

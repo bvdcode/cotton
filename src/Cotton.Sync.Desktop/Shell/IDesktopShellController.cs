@@ -21,6 +21,11 @@ internal interface IDesktopShellController : IDisposable, IAsyncDisposable
 
     Task<DesktopRemoteFolderListSnapshot> ListRemoteFoldersAsync(string remotePath, CancellationToken cancellationToken = default);
 
+    Task<DesktopRemoteFolderSnapshot> CreateRemoteFolderAsync(
+        string parentPath,
+        string folderName,
+        CancellationToken cancellationToken = default);
+
     Task SignOutAsync(CancellationToken cancellationToken = default);
 
     Task<SyncPairSettings> AddSyncPairAsync(DesktopSyncPairRequest request, CancellationToken cancellationToken = default);

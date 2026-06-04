@@ -201,6 +201,20 @@ internal sealed class VisualSmokeShellController : IDesktopShellController
         return Task.FromResult(Path.Combine(Path.GetTempPath(), "cotton-sync-visual-smoke-diagnostics.zip"));
     }
 
+    public Task<DesktopRemoteFolderSnapshot> CreateRemoteFolderAsync(
+        string parentPath,
+        string folderName,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        string normalizedParent = string.IsNullOrWhiteSpace(parentPath) ? "/" : parentPath;
+        string normalizedName = folderName.Trim();
+        string path = normalizedParent == "/"
+            ? "/" + normalizedName
+            : normalizedParent.TrimEnd('/') + "/" + normalizedName;
+        return Task.FromResult(new DesktopRemoteFolderSnapshot(Guid.NewGuid(), normalizedName, path));
+    }
+
     public void Dispose()
     {
     }

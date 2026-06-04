@@ -217,10 +217,12 @@
     </Grid>
 
     <Grid Grid.Row="2"
+          Margin="10"
+          RowDefinitions="Auto,*"
+          RowSpacing="8"
           IsVisible="{Binding IsDashboardVisible}">
-      <ScrollViewer Margin="10"
-                    VerticalScrollBarVisibility="Auto">
-        <StackPanel Spacing="8">
+      <StackPanel Grid.Row="0"
+                  Spacing="8">
           <Border Padding="10"
                   CornerRadius="6"
                   Classes="statusCard"
@@ -387,14 +389,12 @@
           </Grid>
         </Border>
 
-        <Grid RowDefinitions="Auto,132"
-              RowSpacing="8">
-          <Border Padding="10"
-                  MaxHeight="250"
-                  CornerRadius="6"
-                  Background="{DynamicResource CottonSurfaceBrush}"
-                  BorderBrush="{DynamicResource CottonBorderBrush}"
-                  BorderThickness="1">
+        <Border Padding="10"
+                MaxHeight="250"
+                CornerRadius="6"
+                Background="{DynamicResource CottonSurfaceBrush}"
+                BorderBrush="{DynamicResource CottonBorderBrush}"
+                BorderThickness="1">
             <Grid RowDefinitions="Auto,*"
                   RowSpacing="10">
               <StackPanel Spacing="1">
@@ -574,14 +574,15 @@
                 </Grid>
               </Grid>
             </Grid>
-          </Border>
+        </Border>
+      </StackPanel>
 
-          <Border Grid.Row="1"
-                  Padding="10"
-                  CornerRadius="6"
-                  Background="{DynamicResource CottonSurfaceBrush}"
-                  BorderBrush="{DynamicResource CottonBorderBrush}"
-                  BorderThickness="1">
+      <Border Grid.Row="1"
+              Padding="10"
+              CornerRadius="6"
+              Background="{DynamicResource CottonSurfaceBrush}"
+              BorderBrush="{DynamicResource CottonBorderBrush}"
+              BorderThickness="1">
             <Grid RowDefinitions="Auto,*"
                   RowSpacing="8">
               <TextBlock Text="Activity"
@@ -630,10 +631,7 @@
                 </ListBox>
               </Grid>
             </Grid>
-          </Border>
-        </Grid>
-        </StackPanel>
-      </ScrollViewer>
+      </Border>
 
       <Border Background="{DynamicResource CottonOverlayBrush}"
               IsVisible="{Binding IsAddSyncPairWizardVisible}">
@@ -646,7 +644,7 @@
                 BorderThickness="1"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Center">
-          <Grid RowDefinitions="Auto,*"
+          <Grid RowDefinitions="Auto,Auto,*"
                 RowSpacing="14">
             <Grid ColumnDefinitions="*,Auto"
                   ColumnSpacing="8">
@@ -667,7 +665,21 @@
                       Command="{Binding CancelAddSyncPairCommand}" />
             </Grid>
 
-            <Grid Grid.Row="1">
+            <Border Grid.Row="1"
+                    Padding="8"
+                    CornerRadius="6"
+                    Background="{DynamicResource CottonErrorSoftBrush}"
+                    BorderBrush="{DynamicResource CottonErrorBrush}"
+                    BorderThickness="1"
+                    ToolTip.Tip="{Binding ActionRequiredMessage}"
+                    IsVisible="{Binding HasActionRequired}">
+              <TextBlock Text="{Binding ActionRequiredMessage}"
+                         Classes="secondary"
+                         FontSize="12"
+                         TextTrimming="CharacterEllipsis" />
+            </Border>
+
+            <Grid Grid.Row="2">
               <StackPanel Spacing="12"
                           IsVisible="{Binding IsAddSyncPairLocalStepVisible}">
                 <Grid ColumnDefinitions="Auto,*,Auto"
@@ -739,9 +751,9 @@
                 <Border Padding="10"
                         CornerRadius="6"
                         Background="{DynamicResource CottonSurfaceMutedBrush}">
-                  <Grid RowDefinitions="Auto,196,Auto"
+                  <Grid RowDefinitions="Auto,Auto,160,Auto"
                         RowSpacing="8">
-                    <Grid ColumnDefinitions="Auto,*,Auto"
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto"
                           ColumnSpacing="6">
                       <Button Content="←"
                               Classes="icon"
@@ -752,13 +764,36 @@
                                  TextTrimming="CharacterEllipsis"
                                  VerticalAlignment="Center" />
                       <Button Grid.Column="2"
+                              Content="+"
+                              Classes="icon primary"
+                              ToolTip.Tip="Create cloud folder"
+                              Command="{Binding ShowCreateRemoteFolderCommand}" />
+                      <Button Grid.Column="3"
                               Content="→"
                               Classes="icon"
                               ToolTip.Tip="Open selected cloud folder"
                               Command="{Binding OpenRemoteFolderCommand}" />
                     </Grid>
 
-                    <Grid Grid.Row="1">
+                    <Grid Grid.Row="1"
+                          ColumnDefinitions="*,Auto,Auto"
+                          ColumnSpacing="6"
+                          IsVisible="{Binding IsCreateRemoteFolderVisible}">
+                      <TextBox Text="{Binding NewRemoteFolderName}"
+                               PlaceholderText="New folder name" />
+                      <Button Grid.Column="1"
+                              Content="✓"
+                              Classes="icon"
+                              ToolTip.Tip="Create folder"
+                              Command="{Binding CreateRemoteFolderCommand}" />
+                      <Button Grid.Column="2"
+                              Content="x"
+                              Classes="icon"
+                              ToolTip.Tip="Cancel"
+                              Command="{Binding CancelCreateRemoteFolderCommand}" />
+                    </Grid>
+
+                    <Grid Grid.Row="2">
                       <StackPanel Spacing="3"
                                   HorizontalAlignment="Center"
                                   VerticalAlignment="Center"
@@ -797,7 +832,7 @@
                       </ListBox>
                     </Grid>
 
-                    <TextBlock Grid.Row="2"
+                    <TextBlock Grid.Row="3"
                                Text="{Binding RemoteFolderSelectionLabel}"
                                ToolTip.Tip="{Binding RemoteFolderSelectionLabel}"
                                Classes="secondary"
@@ -1001,77 +1036,98 @@
 
               <TabItem Header="Diag"
                        ToolTip.Tip="Diagnostics">
-                <StackPanel Margin="0,10,0,0"
-                            Spacing="8">
-                  <StackPanel Orientation="Horizontal"
-                              Spacing="6">
-                    <Button Content="Run checks"
-                            Classes="compact"
-                            ToolTip.Tip="Run desktop self-test"
-                            Command="{Binding SelfTestCommand}" />
-                    <Button Content="Export bundle"
-                            Classes="compact"
-                            ToolTip.Tip="Export diagnostics bundle"
-                            Command="{Binding ExportDiagnosticsCommand}" />
+                <ScrollViewer Margin="0,10,0,0"
+                              VerticalScrollBarVisibility="Auto">
+                  <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="6">
+                      <Button Content="Run checks"
+                              Classes="compact"
+                              ToolTip.Tip="Run desktop self-test"
+                              Command="{Binding SelfTestCommand}" />
+                      <Button Content="Export bundle"
+                              Classes="compact"
+                              ToolTip.Tip="Export diagnostics bundle"
+                              Command="{Binding ExportDiagnosticsCommand}" />
+                    </StackPanel>
+                    <Border Padding="8"
+                            CornerRadius="6"
+                            Background="{DynamicResource CottonSurfaceMutedBrush}"
+                            IsVisible="{Binding HasLastDiagnosticsBundlePath}">
+                      <Grid ColumnDefinitions="*,Auto"
+                            ColumnSpacing="6">
+                        <TextBlock Text="{Binding LastDiagnosticsBundlePath}"
+                                   Classes="secondary"
+                                   FontSize="11"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTip.Tip="{Binding LastDiagnosticsBundlePath}"
+                                   VerticalAlignment="Center" />
+                        <Button Grid.Column="1"
+                                Content="Open"
+                                Classes="compact"
+                                ToolTip.Tip="Open diagnostics folder"
+                                Command="{Binding OpenDiagnosticsBundleFolderCommand}" />
+                      </Grid>
+                    </Border>
+                    <TextBlock Text="Run checks to verify this computer."
+                               Classes="secondary"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               IsVisible="{Binding HasNoSelfTestItems}" />
+                    <Border BorderBrush="{DynamicResource CottonBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            IsVisible="{Binding HasSelfTestItems}">
+                      <ItemsControl ItemsSource="{Binding SelfTestItems}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Grid ColumnDefinitions="*,Auto"
+                                  RowDefinitions="Auto,Auto"
+                                  ColumnSpacing="8"
+                                  Margin="8,6">
+                              <TextBlock Text="{Binding Name}"
+                                         FontSize="12"
+                                         FontWeight="SemiBold"
+                                         TextTrimming="CharacterEllipsis" />
+                              <TextBlock Grid.Column="1"
+                                         Text="{Binding ResultText}"
+                                         Classes="secondary"
+                                         FontSize="12" />
+                              <TextBlock Grid.Row="1"
+                                         Grid.ColumnSpan="2"
+                                         Text="{Binding Details}"
+                                         Classes="secondary"
+                                         FontSize="11"
+                                         TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </Border>
+                    <Border BorderBrush="{DynamicResource CottonBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6">
+                      <ItemsControl ItemsSource="{Binding DiagnosticsItems}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Grid ColumnDefinitions="108,*"
+                                  ColumnSpacing="8"
+                                  Margin="8,5">
+                              <TextBlock Text="{Binding Label}"
+                                         Classes="secondary"
+                                         FontSize="11"
+                                         TextTrimming="CharacterEllipsis" />
+                              <TextBlock Grid.Column="1"
+                                         Text="{Binding Value}"
+                                         FontSize="11"
+                                         TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </Border>
                   </StackPanel>
-                  <TextBlock Text="Run checks to verify this computer."
-                             Classes="secondary"
-                             FontSize="12"
-                             TextWrapping="Wrap"
-                             IsVisible="{Binding HasNoSelfTestItems}" />
-                  <Border BorderBrush="{DynamicResource CottonBorderBrush}"
-                          BorderThickness="1"
-                          CornerRadius="6"
-                          IsVisible="{Binding HasSelfTestItems}">
-                    <ItemsControl ItemsSource="{Binding SelfTestItems}">
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                          <Grid ColumnDefinitions="*,Auto"
-                                RowDefinitions="Auto,Auto"
-                                ColumnSpacing="8"
-                                Margin="8,6">
-                            <TextBlock Text="{Binding Name}"
-                                       FontSize="12"
-                                       FontWeight="SemiBold"
-                                       TextTrimming="CharacterEllipsis" />
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding ResultText}"
-                                       Classes="secondary"
-                                       FontSize="12" />
-                            <TextBlock Grid.Row="1"
-                                       Grid.ColumnSpan="2"
-                                       Text="{Binding Details}"
-                                       Classes="secondary"
-                                       FontSize="11"
-                                       TextTrimming="CharacterEllipsis" />
-                          </Grid>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                  </Border>
-                  <Border BorderBrush="{DynamicResource CottonBorderBrush}"
-                          BorderThickness="1"
-                          CornerRadius="6">
-                    <ItemsControl ItemsSource="{Binding DiagnosticsItems}">
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                          <Grid ColumnDefinitions="108,*"
-                                ColumnSpacing="8"
-                                Margin="8,5">
-                            <TextBlock Text="{Binding Label}"
-                                       Classes="secondary"
-                                       FontSize="11"
-                                       TextTrimming="CharacterEllipsis" />
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding Value}"
-                                       FontSize="11"
-                                       TextTrimming="CharacterEllipsis" />
-                          </Grid>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                  </Border>
-                </StackPanel>
+                </ScrollViewer>
               </TabItem>
             </TabControl>
           </Grid>

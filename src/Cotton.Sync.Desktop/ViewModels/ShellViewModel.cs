@@ -35,7 +35,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private string _globalStatus = "Loading";
     private bool _isBusy;
     private bool _isSignedIn;
+    private string _lastDiagnosticsBundlePath = string.Empty;
     private string _localFolderPath = string.Empty;
+    private string _newRemoteFolderName = string.Empty;
     private string _password = string.Empty;
     private string _remoteBrowserPath = "/";
     private string _remoteFolderPath = string.Empty;
@@ -47,6 +49,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private bool _isServerProbeFailed;
     private bool _isServerVerified;
     private bool _isAddSyncPairWizardVisible;
+    private bool _isCreateRemoteFolderVisible;
     private bool _isSettingsVisible;
     private bool _isLoadingSnapshot;
     private bool _isStartWithOperatingSystemSupported = true;
@@ -92,8 +95,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         AddSyncPairCommand = new AsyncRelayCommand(AddSyncPairAsync, CanAddSyncPair, HandleCommandError);
         BrowseLocalFolderCommand = new AsyncRelayCommand(BrowseLocalFolderAsync, () => !IsBusy, HandleCommandError);
         CancelAddSyncPairCommand = new AsyncRelayCommand(CancelAddSyncPairAsync, () => !IsBusy, HandleCommandError);
+        CancelCreateRemoteFolderCommand = new AsyncRelayCommand(CancelCreateRemoteFolderAsync, () => !IsBusy, HandleCommandError);
+        CreateRemoteFolderCommand = new AsyncRelayCommand(CreateRemoteFolderAsync, CanCreateRemoteFolder, HandleCommandError);
         OpenRemoteFolderCommand = new AsyncRelayCommand(OpenRemoteFolderAsync, () => SelectedRemoteFolder is not null && !IsBusy, HandleCommandError);
         RemoteFolderUpCommand = new AsyncRelayCommand(RemoteFolderUpAsync, CanGoUpRemoteFolder, HandleCommandError);
+        ShowCreateRemoteFolderCommand = new AsyncRelayCommand(ShowCreateRemoteFolderAsync, () => !IsBusy && IsAddSyncPairCloudStepVisible, HandleCommandError);
         ShowAddSyncPairCommand = new AsyncRelayCommand(ShowAddSyncPairAsync, () => IsSignedIn && !IsBusy, HandleCommandError);
         ShowSettingsCommand = new AsyncRelayCommand(ShowSettingsAsync, () => IsSignedIn && !IsBusy, HandleCommandError);
         CloseSettingsCommand = new AsyncRelayCommand(CloseSettingsAsync, () => !IsBusy, HandleCommandError);
@@ -133,6 +139,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OpenWebCommand = new AsyncRelayCommand(OpenWebAsync, () => IsSignedIn, HandleCommandError);
         SelfTestCommand = new AsyncRelayCommand(SelfTestAsync, () => !IsBusy, HandleCommandError);
         ExportDiagnosticsCommand = new AsyncRelayCommand(ExportDiagnosticsAsync, () => !IsBusy, HandleCommandError);
+        OpenDiagnosticsBundleFolderCommand = new AsyncRelayCommand(
+            OpenDiagnosticsBundleFolderAsync,
+            () => HasLastDiagnosticsBundlePath && !IsBusy,
+            HandleCommandError);
     }
 
     public ObservableCollection<SyncPairRowViewModel> SyncPairs { get; } = [];
@@ -155,6 +165,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public AsyncRelayCommand CancelAddSyncPairCommand { get; }
 
+    public AsyncRelayCommand CancelCreateRemoteFolderCommand { get; }
+
     public AsyncRelayCommand CancelRemoveSyncPairCommand { get; }
 
     public AsyncRelayCommand ChangeServerCommand { get; }
@@ -162,6 +174,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public AsyncRelayCommand CloseSettingsCommand { get; }
 
     public AsyncRelayCommand ConfirmRemoveSelectedSyncPairCommand { get; }
+
+    public AsyncRelayCommand CreateRemoteFolderCommand { get; }
+
+    public AsyncRelayCommand OpenDiagnosticsBundleFolderCommand { get; }
 
     public AsyncRelayCommand OpenFolderCommand { get; }
 
@@ -190,6 +206,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public AsyncRelayCommand SignOutCommand { get; }
 
     public AsyncRelayCommand ShowAddSyncPairCommand { get; }
+
+    public AsyncRelayCommand ShowCreateRemoteFolderCommand { get; }
 
     public AsyncRelayCommand ShowSettingsCommand { get; }
 
@@ -488,6 +506,19 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public bool IsAddSyncPairCloudStepVisible => IsAddSyncPairWizardVisible && HasLocalFolderSelection;
 
+    public bool IsCreateRemoteFolderVisible
+    {
+        get => _isCreateRemoteFolderVisible;
+        private set
+        {
+            if (SetProperty(ref _isCreateRemoteFolderVisible, value))
+            {
+                ShowCreateRemoteFolderCommand.RaiseCanExecuteChanged();
+                CreateRemoteFolderCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
     public bool IsSettingsVisible
     {
         get => _isSettingsVisible;
@@ -548,6 +579,33 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             {
                 AddSyncPairCommand.RaiseCanExecuteChanged();
                 RaiseWizardStateProperties();
+            }
+        }
+    }
+
+    public string LastDiagnosticsBundlePath
+    {
+        get => _lastDiagnosticsBundlePath;
+        private set
+        {
+            if (SetProperty(ref _lastDiagnosticsBundlePath, value))
+            {
+                OnPropertyChanged(nameof(HasLastDiagnosticsBundlePath));
+                OpenDiagnosticsBundleFolderCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public bool HasLastDiagnosticsBundlePath => !string.IsNullOrWhiteSpace(LastDiagnosticsBundlePath);
+
+    public string NewRemoteFolderName
+    {
+        get => _newRemoteFolderName;
+        set
+        {
+            if (SetProperty(ref _newRemoteFolderName, value))
+            {
+                CreateRemoteFolderCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -966,6 +1024,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         AddActivity("Folder", selectedPath, "Local folder selected");
         if (IsAddSyncPairWizardVisible)
         {
+            NewRemoteFolderName = string.Empty;
+            IsCreateRemoteFolderVisible = false;
             await LoadRemoteFoldersAsync("/").ConfigureAwait(true);
         }
     }
@@ -973,6 +1033,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private Task CancelAddSyncPairAsync()
     {
         LocalFolderPath = string.Empty;
+        NewRemoteFolderName = string.Empty;
+        IsCreateRemoteFolderVisible = false;
         ResetRemoteFolderSelection();
         IsAddSyncPairWizardVisible = false;
         return Task.CompletedTask;
@@ -1226,10 +1288,6 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             ActionRequiredMessage = string.Empty;
             AddActivity("Account", AccountName, "Signed in");
             RefreshDiagnosticsItems();
-            if (SyncPairs.Count == 0)
-            {
-                await ShowAddSyncPairAsync().ConfigureAwait(true);
-            }
         }
         finally
         {
@@ -1315,14 +1373,32 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         try
         {
             string bundlePath = await _controller.ExportDiagnosticsAsync().ConfigureAwait(true);
+            LastDiagnosticsBundlePath = bundlePath;
             GlobalStatus = "Diagnostics exported";
             ActionRequiredMessage = string.Empty;
-            AddActivity("Diagnostics", bundlePath, "Diagnostics bundle exported");
+            AddActivity("Diagnostics", bundlePath, "Diagnostics bundle exported to " + bundlePath);
         }
         finally
         {
             IsBusy = false;
         }
+    }
+
+    private async Task OpenDiagnosticsBundleFolderAsync()
+    {
+        if (string.IsNullOrWhiteSpace(LastDiagnosticsBundlePath))
+        {
+            return;
+        }
+
+        string? directory = Path.GetDirectoryName(LastDiagnosticsBundlePath);
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            return;
+        }
+
+        await _controller.OpenFolderAsync(directory).ConfigureAwait(true);
+        AddActivity("Open", directory, "Diagnostics folder opened");
     }
 
     private Task ShowSettingsAsync()
@@ -1356,19 +1432,56 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private async Task ShowAddSyncPairAsync()
     {
         IsAddSyncPairWizardVisible = true;
-        if (!HasLocalFolderSelection)
-        {
-            await BrowseLocalFolderAsync().ConfigureAwait(true);
-            if (!HasLocalFolderSelection)
-            {
-                ResetRemoteFolderSelection();
-                return;
-            }
-        }
+        NewRemoteFolderName = string.Empty;
+        IsCreateRemoteFolderVisible = false;
 
-        if (string.IsNullOrWhiteSpace(RemoteFolderPath))
+        if (HasLocalFolderSelection && string.IsNullOrWhiteSpace(RemoteFolderPath))
         {
             await LoadRemoteFoldersAsync("/").ConfigureAwait(true);
+        }
+    }
+
+    private Task ShowCreateRemoteFolderAsync()
+    {
+        IsCreateRemoteFolderVisible = true;
+        NewRemoteFolderName = string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task CancelCreateRemoteFolderAsync()
+    {
+        NewRemoteFolderName = string.Empty;
+        IsCreateRemoteFolderVisible = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task CreateRemoteFolderAsync()
+    {
+        string folderName = NewRemoteFolderName.Trim();
+        if (folderName.Length == 0)
+        {
+            GlobalStatus = "Action required";
+            ActionRequiredMessage = "Cloud folder name is required.";
+            AddActivity("Warning", RemoteBrowserPath, "Cloud folder name is required");
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            DesktopRemoteFolderSnapshot folder = await _controller
+                .CreateRemoteFolderAsync(RemoteBrowserPath, folderName)
+                .ConfigureAwait(true);
+            NewRemoteFolderName = string.Empty;
+            IsCreateRemoteFolderVisible = false;
+            await LoadRemoteFoldersAsync(folder.Path).ConfigureAwait(true);
+            GlobalStatus = "Cloud folder created";
+            ActionRequiredMessage = string.Empty;
+            AddActivity("Cloud", folder.Path, "Cloud folder created");
+        }
+        finally
+        {
+            IsBusy = false;
         }
     }
 
@@ -1378,6 +1491,14 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             && IsSignedIn
             && !string.IsNullOrWhiteSpace(LocalFolderPath)
             && !string.IsNullOrWhiteSpace(RemoteFolderPath);
+    }
+
+    private bool CanCreateRemoteFolder()
+    {
+        return !IsBusy
+            && IsSignedIn
+            && IsAddSyncPairCloudStepVisible
+            && !string.IsNullOrWhiteSpace(NewRemoteFolderName);
     }
 
     private bool CanSignIn()
@@ -1546,6 +1667,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         IsBusy = true;
         try
         {
+            NewRemoteFolderName = string.Empty;
+            IsCreateRemoteFolderVisible = false;
             DesktopRemoteFolderListSnapshot folders = await _controller
                 .ListRemoteFoldersAsync(remotePath)
                 .ConfigureAwait(true);
@@ -1575,6 +1698,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         RemoteBrowserPath = "/";
         RemoteFolderPath = string.Empty;
         SelectedRemoteFolder = null;
+        NewRemoteFolderName = string.Empty;
+        IsCreateRemoteFolderVisible = false;
         RemoteFolders.Clear();
     }
 
@@ -1736,8 +1861,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         AddSyncPairCommand.RaiseCanExecuteChanged();
         BrowseLocalFolderCommand.RaiseCanExecuteChanged();
         CancelAddSyncPairCommand.RaiseCanExecuteChanged();
+        CancelCreateRemoteFolderCommand.RaiseCanExecuteChanged();
         CancelRemoveSyncPairCommand.RaiseCanExecuteChanged();
         ChangeServerCommand.RaiseCanExecuteChanged();
+        CreateRemoteFolderCommand.RaiseCanExecuteChanged();
         OpenRemoteFolderCommand.RaiseCanExecuteChanged();
         RemoteFolderUpCommand.RaiseCanExecuteChanged();
         SyncNowCommand.RaiseCanExecuteChanged();
@@ -1752,10 +1879,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         ConfirmRemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
         OpenWebCommand.RaiseCanExecuteChanged();
         ShowAddSyncPairCommand.RaiseCanExecuteChanged();
+        ShowCreateRemoteFolderCommand.RaiseCanExecuteChanged();
         ShowSettingsCommand.RaiseCanExecuteChanged();
         CloseSettingsCommand.RaiseCanExecuteChanged();
         SelfTestCommand.RaiseCanExecuteChanged();
         ExportDiagnosticsCommand.RaiseCanExecuteChanged();
+        OpenDiagnosticsBundleFolderCommand.RaiseCanExecuteChanged();
     }
 
     private void RaiseSyncStateProperties()
@@ -1782,8 +1911,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OnPropertyChanged(nameof(HasLocalFolderSelection));
         OnPropertyChanged(nameof(IsAddSyncPairLocalStepVisible));
         OnPropertyChanged(nameof(IsAddSyncPairCloudStepVisible));
+        OnPropertyChanged(nameof(IsCreateRemoteFolderVisible));
         OnPropertyChanged(nameof(AddSyncPairWizardTitle));
         OnPropertyChanged(nameof(AddSyncPairWizardSubtitle));
+        ShowCreateRemoteFolderCommand.RaiseCanExecuteChanged();
+        CreateRemoteFolderCommand.RaiseCanExecuteChanged();
     }
 
     private void SetAllPairStatuses(string status, string? currentOperation = null, bool enabledOnly = false)

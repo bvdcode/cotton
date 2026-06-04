@@ -191,6 +191,30 @@ internal sealed class DesktopShellController : IDesktopShellController
         return new DesktopRemoteFolderListSnapshot(normalizedPath, folders);
     }
 
+    public async Task<DesktopRemoteFolderSnapshot> CreateRemoteFolderAsync(
+        string parentPath,
+        string folderName,
+        CancellationToken cancellationToken = default)
+    {
+        DesktopSyncApplicationHost host = RequireHost();
+        string normalizedPath = NormalizeRemotePath(parentPath);
+        string normalizedName = NormalizeRequired(folderName, nameof(folderName));
+        if (normalizedName.Contains('/') || normalizedName.Contains('\\'))
+        {
+            throw new ArgumentException("Cloud folder name cannot contain path separators.", nameof(folderName));
+        }
+
+        NodeDto parent = await host.Nodes.ResolveAsync(
+            normalizedPath == "/" ? null : normalizedPath,
+            cancellationToken).ConfigureAwait(false);
+        NodeDto created = await host.Nodes.CreateAsync(parent.Id, normalizedName, cancellationToken)
+            .ConfigureAwait(false);
+        return new DesktopRemoteFolderSnapshot(
+            created.Id,
+            created.Name,
+            CombineRemotePath(normalizedPath, created.Name));
+    }
+
     public async Task<SyncPairSettings> AddSyncPairAsync(
         DesktopSyncPairRequest request,
         CancellationToken cancellationToken = default)
