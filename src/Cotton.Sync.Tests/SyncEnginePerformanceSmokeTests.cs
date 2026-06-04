@@ -107,6 +107,59 @@ public sealed class SyncEnginePerformanceSmokeTests
         });
     }
 
+    [Test]
+    public async Task RunOnceAsync_UploadsOneThousandSmallFilesWithinSmokeTarget()
+    {
+        const int fileCount = 1_000;
+        TimeSpan smokeTarget = TimeSpan.FromSeconds(30);
+        for (int index = 0; index < fileCount; index++)
+        {
+            string relativePath = $"Upload/{index / 100:D2}/small-{index:D4}.txt";
+            byte[] content = Encoding.UTF8.GetBytes("small-upload-" + index.ToString("D4", System.Globalization.CultureInfo.InvariantCulture));
+            WriteFile(relativePath, content);
+        }
+
+        SqliteSyncStateStore stateStore = new(_databasePath);
+        var remoteFilesClient = new RecordingRemoteFileSynchronizer();
+        var engine = new SyncEngine(
+            new LocalFileScanner(),
+            new StaticRemoteTreeCrawler([]),
+            remoteFilesClient,
+            stateStore);
+
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        SyncRunResult result = await engine.RunOnceAsync(new SyncPair
+        {
+            SyncPairId = "performance-upload-small",
+            LocalRootPath = _root,
+            RemoteRootNodeId = RemoteRootNodeId,
+        });
+        stopwatch.Stop();
+
+        IReadOnlyList<SyncStateEntry> baselines = await stateStore.LoadPairAsync("performance-upload-small");
+        int distinctRemoteFileIds = baselines
+            .Select(entry => entry.RemoteFileId)
+            .Where(id => id.HasValue)
+            .Distinct()
+            .Count();
+        TestContext.WriteLine(
+            "Initial upload smoke for {0} small files completed in {1:N0} ms.",
+            fileCount,
+            stopwatch.Elapsed.TotalMilliseconds);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(remoteFilesClient.UploadCalls, Is.EqualTo(fileCount));
+            Assert.That(remoteFilesClient.DownloadCalls, Is.Zero);
+            Assert.That(remoteFilesClient.DeleteCalls, Is.Zero);
+            Assert.That(result.Activities, Has.Count.EqualTo(fileCount));
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.All.EqualTo(SyncActivityKind.Uploaded));
+            Assert.That(baselines, Has.Count.EqualTo(fileCount));
+            Assert.That(distinctRemoteFileIds, Is.EqualTo(fileCount));
+            Assert.That(stopwatch.Elapsed, Is.LessThan(smokeTarget));
+        });
+    }
+
     private string FullPath(string relativePath)
     {
         return Path.Combine(_root, relativePath.Replace('/', Path.DirectorySeparatorChar));
@@ -201,6 +254,46 @@ public sealed class SyncEnginePerformanceSmokeTests
         {
             DeleteCalls++;
             throw new InvalidOperationException("No-op performance smoke must not delete files.");
+        }
+    }
+
+    private sealed class RecordingRemoteFileSynchronizer : IRemoteFileSynchronizer
+    {
+        public int UploadCalls { get; private set; }
+
+        public int DownloadCalls { get; private set; }
+
+        public int DeleteCalls { get; private set; }
+
+        public Task<NodeFileManifestDto> UploadFileAsync(
+            Guid rootNodeId,
+            string relativePath,
+            LocalFileSnapshot localFile,
+            NodeFileManifestDto? existingRemoteFile = null,
+            CancellationToken cancellationToken = default)
+        {
+            UploadCalls++;
+            NodeFileManifestDto uploaded = RemoteFile(relativePath, localFile.ContentHash, localFile.SizeBytes);
+            uploaded.Id = existingRemoteFile?.Id ?? uploaded.Id;
+            uploaded.NodeId = existingRemoteFile?.NodeId ?? rootNodeId;
+            uploaded.UpdatedAt = localFile.LastWriteUtc;
+            return Task.FromResult(uploaded);
+        }
+
+        public Task DownloadFileAsync(Guid nodeFileId, Stream destination, CancellationToken cancellationToken = default)
+        {
+            DownloadCalls++;
+            throw new InvalidOperationException("Initial upload performance smoke must not download files.");
+        }
+
+        public Task DeleteFileAsync(
+            Guid nodeFileId,
+            bool skipTrash = false,
+            string? expectedETag = null,
+            CancellationToken cancellationToken = default)
+        {
+            DeleteCalls++;
+            throw new InvalidOperationException("Initial upload performance smoke must not delete files.");
         }
     }
 }

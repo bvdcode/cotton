@@ -475,7 +475,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Verification 2026-06-03: initial smoke targets are now concrete enough to guard regressions without pretending to be final benchmarks: 1,000-file no-op sync must finish under 20 seconds in `Cotton.Sync.Tests`, no remote mutations may occur during no-op, and future release targets must add separate 10k-file, large-file, memory, and UI-responsiveness measurements before Phase 13 is complete.
 - [x] Add benchmark or measured smoke for no-op sync.
   Verification 2026-06-03: `SyncEnginePerformanceSmokeTests.RunOnceAsync_NoOpForOneThousandFilesCompletesWithinSmokeTarget` creates 1,000 local files with matching remote snapshots and SQLite baselines, measures only the `SyncEngine.RunOnceAsync` no-op pass, asserts no upload/download/delete activity occurs, keeps all 1,000 baselines, and enforces a 20-second smoke ceiling. Focused no-op performance smoke passed 1/1, full `Cotton.Sync.Tests` passed 92/92, and full solution Release build passed with the known NU1903 warning.
-- [ ] Add measured smoke for 1,000 small files.
+- [x] Add measured smoke for 1,000 small files.
+  Verification 2026-06-04: `SyncEnginePerformanceSmokeTests.RunOnceAsync_UploadsOneThousandSmallFilesWithinSmokeTarget` creates 1,000 small local files across 10 folders, measures the initial `SyncEngine.RunOnceAsync` upload pass with real `LocalFileScanner` and EF Core SQLite state, asserts 1,000 upload activities, no downloads/deletes, 1,000 distinct remote file ids in baseline, and enforces a 30-second smoke ceiling. Focused 1,000-file upload smoke passed 1/1, full `Cotton.Sync.Tests` passed 93/93, and full solution Release build passed with the known NU1903 warning.
 - [ ] Add measured smoke for one large file.
 - [ ] Add measured smoke for remote changes catch-up through cursor.
 - [ ] Run 24-hour soak test with one client.
