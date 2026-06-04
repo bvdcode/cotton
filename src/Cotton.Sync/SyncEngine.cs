@@ -66,7 +66,10 @@ public sealed class SyncEngine : ISyncEngine
         await _stateStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
         LocalTreeSnapshot localTree = await ScanLocalTreeAsync(syncPair.LocalRootPath, cancellationToken).ConfigureAwait(false);
         RemoteTreeSnapshot remoteTree = await _remoteCrawler.CrawlAsync(syncPair.RemoteRootNodeId, cancellationToken).ConfigureAwait(false);
-        IReadOnlyList<SyncStateEntry> stateEntries = await _stateStore.LoadPairAsync(syncPair.SyncPairId, cancellationToken).ConfigureAwait(false);
+        List<SyncStateEntry> stateEntries = (await _stateStore
+            .LoadPairAsync(syncPair.SyncPairId, cancellationToken)
+            .ConfigureAwait(false)).ToList();
+        await RemoveIgnoredStateEntriesAsync(syncPair.SyncPairId, stateEntries, cancellationToken).ConfigureAwait(false);
         var result = new SyncRunResult();
 
         Dictionary<string, LocalDirectorySnapshot> localDirectoriesByPath = ToDictionary(localTree.Directories, directory => directory.RelativePath);
@@ -135,6 +138,24 @@ public sealed class SyncEngine : ISyncEngine
             syncPair.SyncPairId,
             result.Activities.Count);
         return result;
+    }
+
+    private async Task RemoveIgnoredStateEntriesAsync(
+        string syncPairId,
+        List<SyncStateEntry> stateEntries,
+        CancellationToken cancellationToken)
+    {
+        for (int index = stateEntries.Count - 1; index >= 0; index--)
+        {
+            SyncStateEntry entry = stateEntries[index];
+            if (!SyncPathIgnoreRules.ShouldIgnore(entry.RelativePath))
+            {
+                continue;
+            }
+
+            await _stateStore.DeleteAsync(syncPairId, entry.RelativePath, cancellationToken).ConfigureAwait(false);
+            stateEntries.RemoveAt(index);
+        }
     }
 
     private async Task<LocalTreeSnapshot> ScanLocalTreeAsync(string localRootPath, CancellationToken cancellationToken)

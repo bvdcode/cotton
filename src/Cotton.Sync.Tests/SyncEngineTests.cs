@@ -1165,6 +1165,17 @@ public sealed class SyncEngineTests
     {
         NodeFileManifestDto remote = RemoteFile(".cotton-sync/remote-file.txt", HashText("remote"));
         SyncEngine engine = CreateEngine(new FakeLocalFileScanner(), RemoteTree(remote), new FakeRemoteFileSynchronizer(), out SqliteSyncStateStore stateStore);
+        await stateStore.InitializeAsync();
+        await stateStore.UpsertAsync(new SyncStateEntry
+        {
+            SyncPairId = "pair-a",
+            RelativePath = ".cotton-sync/remote-file.txt",
+            Kind = SyncEntryKind.File,
+            RemoteFileId = remote.Id,
+            RemoteNodeId = remote.NodeId,
+            RemoteContentHash = remote.ContentHash,
+            RemoteETag = remote.ETag,
+        });
 
         SyncRunResult result = await engine.RunOnceAsync(Pair());
 
