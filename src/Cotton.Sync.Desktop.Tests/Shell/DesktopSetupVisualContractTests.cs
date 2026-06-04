@@ -91,6 +91,7 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Contain("ConfirmRemoveSelectedSyncPairCommand"));
             Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"Manage sync folder\""));
             Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"Open local folder\""));
+            Assert.That(foldersSection, Does.Not.Contain("ToolTip.Tip=\"Open selected local folder\""));
             Assert.That(foldersSection, Does.Contain("SelectedSyncPair.ToggleEnabledIcon"));
             Assert.That(foldersSection, Does.Contain("SelectedSyncPair.ModeLabel"));
         });
