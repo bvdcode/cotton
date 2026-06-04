@@ -55,15 +55,23 @@ public sealed class LocalChangeSyncCoordinator : ILocalChangeSyncCoordinator
         try
         {
             await StopCoreAsync(cancellationToken).ConfigureAwait(false);
-            _lifetime = new CancellationTokenSource();
-            await _syncPairs.InitializeAsync(cancellationToken).ConfigureAwait(false);
-            IReadOnlyList<SyncPairSettings> syncPairs = await _syncPairs.ListAsync(cancellationToken).ConfigureAwait(false);
-            foreach (SyncPairSettings syncPair in syncPairs.Where(static pair => pair.IsEnabled))
+            try
             {
-                ILocalSyncRootWatcher watcher = _watcherFactory.Create(syncPair);
-                watcher.Changed += OnLocalChange;
-                await watcher.StartAsync(cancellationToken).ConfigureAwait(false);
-                _watchers[syncPair.Id] = watcher;
+                _lifetime = new CancellationTokenSource();
+                await _syncPairs.InitializeAsync(cancellationToken).ConfigureAwait(false);
+                IReadOnlyList<SyncPairSettings> syncPairs = await _syncPairs.ListAsync(cancellationToken).ConfigureAwait(false);
+                foreach (SyncPairSettings syncPair in syncPairs.Where(static pair => pair.IsEnabled))
+                {
+                    ILocalSyncRootWatcher watcher = _watcherFactory.Create(syncPair);
+                    watcher.Changed += OnLocalChange;
+                    _watchers[syncPair.Id] = watcher;
+                    await watcher.StartAsync(cancellationToken).ConfigureAwait(false);
+                }
+            }
+            catch
+            {
+                await StopCoreAsync(CancellationToken.None).ConfigureAwait(false);
+                throw;
             }
         }
         finally

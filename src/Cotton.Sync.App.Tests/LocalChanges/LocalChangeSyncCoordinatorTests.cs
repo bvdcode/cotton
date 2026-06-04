@@ -77,6 +77,40 @@ public sealed class LocalChangeSyncCoordinatorTests
         Assert.That(supervisor.SyncNowCallCount, Is.Zero);
     }
 
+    [Test]
+    public async Task StartAsync_CleansCreatedWatchersWhenLaterWatcherFails()
+    {
+        SyncPairSettings firstPair = CreatePair(isEnabled: true);
+        SyncPairSettings secondPair = CreatePair(isEnabled: true);
+        var watcherFactory = new FakeWatcherFactory
+        {
+            FailingStartPairId = secondPair.Id,
+        };
+        var supervisor = new FakeSyncSupervisor();
+        var coordinator = new LocalChangeSyncCoordinator(
+            new FakeSyncPairSettingsStore([firstPair, secondPair]),
+            supervisor,
+            watcherFactory,
+            DebounceInterval);
+
+        InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await coordinator.StartAsync());
+
+        watcherFactory.CreatedWatchers[firstPair.Id].Raise("/home/user/Cotton/a.txt");
+        await Task.Delay(DebounceInterval * 3);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.Message, Is.EqualTo("Watcher failed to start."));
+            Assert.That(watcherFactory.CreatedWatchers[firstPair.Id].StopCallCount, Is.EqualTo(1));
+            Assert.That(watcherFactory.CreatedWatchers[firstPair.Id].DisposeAsyncCallCount, Is.EqualTo(1));
+            Assert.That(watcherFactory.CreatedWatchers[secondPair.Id].StopCallCount, Is.EqualTo(1));
+            Assert.That(watcherFactory.CreatedWatchers[secondPair.Id].DisposeAsyncCallCount, Is.EqualTo(1));
+            Assert.That(supervisor.SyncNowCallCount, Is.Zero);
+        });
+    }
+
     private static SyncPairSettings CreatePair(bool isEnabled)
     {
         return new SyncPairSettings
@@ -95,9 +129,16 @@ public sealed class LocalChangeSyncCoordinatorTests
     {
         public Dictionary<Guid, FakeWatcher> CreatedWatchers { get; } = [];
 
+        public Guid? FailingStartPairId { get; set; }
+
         public ILocalSyncRootWatcher Create(SyncPairSettings syncPair)
         {
             var watcher = new FakeWatcher(syncPair.Id);
+            if (syncPair.Id == FailingStartPairId)
+            {
+                watcher.StartException = new InvalidOperationException("Watcher failed to start.");
+            }
+
             CreatedWatchers.Add(syncPair.Id, watcher);
             return watcher;
         }
@@ -114,8 +155,15 @@ public sealed class LocalChangeSyncCoordinatorTests
 
         public event EventHandler<LocalSyncRootChange>? Changed;
 
+        public Exception? StartException { get; set; }
+
+        public int DisposeAsyncCallCount { get; private set; }
+
+        public int StopCallCount { get; private set; }
+
         public ValueTask DisposeAsync()
         {
+            DisposeAsyncCallCount++;
             return ValueTask.CompletedTask;
         }
 
@@ -130,12 +178,18 @@ public sealed class LocalChangeSyncCoordinatorTests
         public Task StartAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (StartException is not null)
+            {
+                throw StartException;
+            }
+
             return Task.CompletedTask;
         }
 
         public Task StopAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            StopCallCount++;
             return Task.CompletedTask;
         }
     }
