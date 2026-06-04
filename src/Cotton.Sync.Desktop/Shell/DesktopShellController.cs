@@ -668,7 +668,10 @@ internal sealed class DesktopShellController : IDesktopShellController
     public void Dispose()
     {
         DesktopSyncApplicationHost? host = DetachHost();
-        host?.Dispose();
+        if (host is not null)
+        {
+            StopAndDisposeHostAsync(host).GetAwaiter().GetResult();
+        }
     }
 
     public async ValueTask DisposeAsync()

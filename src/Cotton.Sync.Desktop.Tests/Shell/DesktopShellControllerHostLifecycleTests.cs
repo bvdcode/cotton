@@ -104,6 +104,32 @@ public sealed class DesktopShellControllerHostLifecycleTests
     }
 
     [Test]
+    public async Task Dispose_StopsActiveRestoredHost()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        Uri serverUrl = new("https://cotton.example.test/");
+        var preferencesStore = new SqliteAppPreferencesStore(paths.AppDatabasePath);
+        await preferencesStore.InitializeAsync();
+        await preferencesStore.SaveAsync(new AppPreferences
+        {
+            RememberedServerUrl = serverUrl,
+        });
+        FakeDesktopApplicationHost host = FakeDesktopApplicationHost.Create(serverUrl);
+        var factory = new QueueingDesktopSyncApplicationFactory(host.Host);
+        DesktopShellController controller = CreateController(paths, factory);
+
+        await controller.LoadAsync();
+        controller.Dispose();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(host.App.RestoreSessionCalls, Is.EqualTo(1));
+            Assert.That(host.App.StopSyncCalls, Is.EqualTo(1));
+            Assert.That(host.AsyncResource.DisposeAsyncCalls, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
     public async Task SignInAsync_RejectsInsecureTokenStorageBeforeCreatingHost()
     {
         DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
