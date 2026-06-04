@@ -79,20 +79,20 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         await CreateUserAsync("otheruser", "otherpass");
         Guid otherOwnerId = await GetUserIdAsync("otheruser");
 
-        await AddSyncChangeAsync(ownerId, revision: 1, "ignored-before-cursor");
-        await AddSyncChangeAsync(ownerId, revision: 2, "included");
-        await AddSyncChangeAsync(ownerId, revision: 3, "next-page");
-        await AddSyncChangeAsync(otherOwnerId, revision: 1, "other-user");
+        long firstOwnerChangeId = await AddSyncChangeAsync(ownerId, "ignored-before-cursor");
+        await AddSyncChangeAsync(otherOwnerId, "other-user");
+        long includedChangeId = await AddSyncChangeAsync(ownerId, "included");
+        await AddSyncChangeAsync(ownerId, "next-page");
 
-        SyncChangesResponseDto response = await GetChangesAsync(since: 1, limit: 1);
+        SyncChangesResponseDto response = await GetChangesAsync(since: firstOwnerChangeId, limit: 1);
 
         Assert.Multiple(() =>
         {
-            Assert.That(response.SinceCursor, Is.EqualTo(1));
-            Assert.That(response.NextCursor, Is.EqualTo(2));
+            Assert.That(response.SinceCursor, Is.EqualTo(firstOwnerChangeId));
+            Assert.That(response.NextCursor, Is.EqualTo(includedChangeId));
             Assert.That(response.HasMore, Is.True);
             Assert.That(response.Changes, Has.Count.EqualTo(1));
-            Assert.That(response.Changes[0].Revision, Is.EqualTo(2));
+            Assert.That(response.Changes[0].Id, Is.EqualTo(includedChangeId));
             Assert.That(response.Changes[0].Name, Is.EqualTo("included"));
             Assert.That(response.Changes[0].Kind, Is.EqualTo(SyncChangeKind.FileCreated));
         });
@@ -172,23 +172,25 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         response.EnsureSuccessStatusCode();
     }
 
-    private async Task AddSyncChangeAsync(Guid ownerId, long revision, string name)
+    private async Task<long> AddSyncChangeAsync(Guid ownerId, string name)
     {
         using IServiceScope scope = _factory!.Services.CreateScope();
         CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
 
-        dbContext.SyncChanges.Add(new SyncChange
+        var change = new SyncChange
         {
             OwnerId = ownerId,
-            Revision = revision,
             Kind = SyncChangeKind.FileCreated,
             LayoutId = Guid.NewGuid(),
             ItemId = Guid.NewGuid(),
             ParentNodeId = Guid.NewGuid(),
             Name = name,
-        });
+        };
+
+        dbContext.SyncChanges.Add(change);
 
         await dbContext.SaveChangesAsync();
+        return change.Id;
     }
 
     private async Task<SyncChangesResponseDto> GetChangesAsync(long since, int limit)

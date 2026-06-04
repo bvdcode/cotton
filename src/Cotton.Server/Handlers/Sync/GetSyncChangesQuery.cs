@@ -48,8 +48,8 @@ namespace Cotton.Server.Handlers.Sync
             int limit = Math.Min(request.Limit, MaximumLimit);
             List<SyncChange> rows = await _dbContext.SyncChanges
                 .AsNoTracking()
-                .Where(x => x.OwnerId == request.UserId && x.Revision > request.SinceCursor)
-                .OrderBy(x => x.Revision)
+                .Where(x => x.OwnerId == request.UserId && x.Id > request.SinceCursor)
+                .OrderBy(x => x.Id)
                 .Take(limit + 1)
                 .ToListAsync(ct);
 
@@ -60,7 +60,7 @@ namespace Cotton.Server.Handlers.Sync
             }
 
             long nextCursor = rows.Count > 0
-                ? rows[^1].Revision
+                ? rows[^1].Id
                 : request.SinceCursor;
 
             return new SyncChangesResponseDto
