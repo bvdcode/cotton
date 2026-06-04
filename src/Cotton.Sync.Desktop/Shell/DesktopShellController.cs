@@ -1101,7 +1101,9 @@ internal sealed class DesktopShellController : IDesktopShellController
             progress.TransferredBytes,
             progress.TotalBytes,
             progress.IsCompleted,
-            progress.OccurredAtUtc);
+            progress.OccurredAtUtc,
+            progress.SpeedBytesPerSecond,
+            progress.EstimatedTimeRemaining);
     }
 
     private static DesktopRunProgressSnapshot ToRunProgressSnapshot(AppRunProgress progress)

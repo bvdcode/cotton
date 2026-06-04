@@ -10,4 +10,6 @@ internal sealed record DesktopTransferProgressSnapshot(
     long TransferredBytes,
     long? TotalBytes,
     bool IsCompleted,
-    DateTime OccurredAtUtc);
+    DateTime OccurredAtUtc,
+    double? SpeedBytesPerSecond = null,
+    TimeSpan? EstimatedTimeRemaining = null);

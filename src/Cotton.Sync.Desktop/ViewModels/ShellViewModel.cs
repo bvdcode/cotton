@@ -77,7 +77,6 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private SyncPairRowViewModel? _selectedSyncPair;
     private SyncPairRowViewModel? _pendingRemoveSyncPair;
     private string _totpCode = string.Empty;
-    private DateTime? _transferStartedAtUtc;
     private DesktopTransferDirection _transferDirection = DesktopTransferDirection.Unknown;
     private Guid? _transferSyncPairId;
     private string _transferRelativePath = string.Empty;
@@ -1133,7 +1132,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             TransferredBytes: 6_291_456,
             TotalBytes: 25_165_824,
             IsCompleted: false,
-            startedAtUtc.AddSeconds(2)));
+            startedAtUtc.AddSeconds(2),
+            SpeedBytesPerSecond: 3_145_728,
+            EstimatedTimeRemaining: TimeSpan.FromSeconds(6)));
         AddActivity("Upload", "Reports/quarterly-budget.xlsx", "Uploading quarterly-budget.xlsx");
     }
 
@@ -2044,13 +2045,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             return;
         }
 
-        DateTime occurredAtUtc = DateTime.SpecifyKind(progress.OccurredAtUtc, DateTimeKind.Utc);
         bool isNewTransfer = _transferSyncPairId != progress.SyncPairId
             || _transferDirection != progress.Direction
             || !string.Equals(_transferRelativePath, progress.RelativePath, StringComparison.Ordinal);
         if (isNewTransfer)
         {
-            _transferStartedAtUtc = occurredAtUtc;
             _transferSyncPairId = progress.SyncPairId;
             _transferDirection = progress.Direction;
             _transferRelativePath = progress.RelativePath;
@@ -2060,7 +2059,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         IsCurrentTransferIndeterminate = !progress.TotalBytes.HasValue && !progress.IsCompleted;
         CurrentTransferProgressValue = CalculateProgressValue(progress);
         CurrentTransferTitle = CreateTransferTitle(progress, syncPair.DisplayName);
-        CurrentTransferDetails = CreateTransferDetails(progress, occurredAtUtc);
+        CurrentTransferDetails = CreateTransferDetails(progress);
         syncPair.CurrentOperation = CreateTransferOperation(progress);
         RaiseCurrentWorkProgressProperties();
         RefreshCurrentProgressText();
@@ -2384,7 +2383,6 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         CurrentTransferProgressValue = 0;
         CurrentTransferTitle = string.Empty;
         CurrentTransferDetails = string.Empty;
-        _transferStartedAtUtc = null;
         _transferSyncPairId = null;
         _transferDirection = DesktopTransferDirection.Unknown;
         _transferRelativePath = string.Empty;
@@ -2508,36 +2506,24 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         return action + " " + GetDisplayFileName(progress.RelativePath);
     }
 
-    private string CreateTransferDetails(DesktopTransferProgressSnapshot progress, DateTime occurredAtUtc)
+    private static string CreateTransferDetails(DesktopTransferProgressSnapshot progress)
     {
         string size = progress.TotalBytes.HasValue
             ? FormatBytes(progress.TransferredBytes) + " / " + FormatBytes(progress.TotalBytes.Value)
             : FormatBytes(progress.TransferredBytes);
-        double? bytesPerSecond = CalculateBytesPerSecond(progress, occurredAtUtc);
+        double? bytesPerSecond = progress.SpeedBytesPerSecond;
         if (!bytesPerSecond.HasValue || bytesPerSecond.Value <= 0 || progress.IsCompleted)
         {
             return size;
         }
 
         string details = size + " · " + FormatBytes(bytesPerSecond.Value) + "/s";
-        if (progress.TotalBytes.HasValue && progress.TotalBytes.Value > progress.TransferredBytes)
+        if (progress.EstimatedTimeRemaining.HasValue)
         {
-            double secondsRemaining = (progress.TotalBytes.Value - progress.TransferredBytes) / bytesPerSecond.Value;
-            details += " · " + FormatDuration(TimeSpan.FromSeconds(secondsRemaining)) + " left";
+            details += " · " + FormatDuration(progress.EstimatedTimeRemaining.Value) + " left";
         }
 
         return details;
-    }
-
-    private double? CalculateBytesPerSecond(DesktopTransferProgressSnapshot progress, DateTime occurredAtUtc)
-    {
-        if (!_transferStartedAtUtc.HasValue || progress.TransferredBytes <= 0)
-        {
-            return null;
-        }
-
-        double seconds = Math.Max((occurredAtUtc - _transferStartedAtUtc.Value).TotalSeconds, 0);
-        return seconds <= 0 ? null : progress.TransferredBytes / seconds;
     }
 
     private static string GetDisplayFileName(string relativePath)

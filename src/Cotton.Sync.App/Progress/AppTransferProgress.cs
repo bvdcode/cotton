@@ -20,7 +20,9 @@ public sealed class AppTransferProgress
         long transferredBytes,
         long? totalBytes,
         bool isCompleted,
-        DateTime occurredAtUtc)
+        DateTime occurredAtUtc,
+        double? speedBytesPerSecond = null,
+        TimeSpan? estimatedTimeRemaining = null)
     {
         if (direction == AppTransferDirection.Unknown)
         {
@@ -38,6 +40,16 @@ public sealed class AppTransferProgress
             }
         }
 
+        if (speedBytesPerSecond.HasValue)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(speedBytesPerSecond.Value);
+        }
+
+        if (estimatedTimeRemaining.HasValue && estimatedTimeRemaining.Value < TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(estimatedTimeRemaining), "Estimated time remaining cannot be negative.");
+        }
+
         SyncPairId = syncPairId;
         Direction = direction;
         RelativePath = relativePath.Trim();
@@ -45,6 +57,8 @@ public sealed class AppTransferProgress
         TotalBytes = totalBytes;
         IsCompleted = isCompleted;
         OccurredAtUtc = UtcDateTime.Normalize(occurredAtUtc);
+        SpeedBytesPerSecond = speedBytesPerSecond;
+        EstimatedTimeRemaining = estimatedTimeRemaining;
     }
 
     /// <summary>
@@ -81,4 +95,14 @@ public sealed class AppTransferProgress
     /// Gets the UTC timestamp when the progress sample was produced.
     /// </summary>
     public DateTime OccurredAtUtc { get; }
+
+    /// <summary>
+    /// Gets the rolling transfer speed in bytes per second when enough samples are available.
+    /// </summary>
+    public double? SpeedBytesPerSecond { get; }
+
+    /// <summary>
+    /// Gets the estimated time remaining when total bytes and rolling speed are known.
+    /// </summary>
+    public TimeSpan? EstimatedTimeRemaining { get; }
 }

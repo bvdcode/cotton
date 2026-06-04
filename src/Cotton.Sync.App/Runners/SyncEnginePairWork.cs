@@ -87,7 +87,8 @@ public sealed class SyncEnginePairWork : ISyncPairWork
 
     private static AppTransferProgress ToAppProgress(
         Guid syncPairId,
-        CoreSyncTransferProgress progress)
+        CoreSyncTransferProgress progress,
+        AppTransferProgressEstimate estimate)
     {
         return new AppTransferProgress(
             syncPairId,
@@ -96,7 +97,9 @@ public sealed class SyncEnginePairWork : ISyncPairWork
             progress.TransferredBytes,
             progress.TotalBytes,
             progress.IsCompleted,
-            progress.OccurredAtUtc);
+            progress.OccurredAtUtc,
+            estimate.SpeedBytesPerSecond,
+            estimate.EstimatedTimeRemaining);
     }
 
     private static AppRunProgress ToAppRunProgress(
@@ -190,6 +193,7 @@ public sealed class SyncEnginePairWork : ISyncPairWork
 
     private sealed class AppTransferProgressReporter : IProgress<CoreSyncTransferProgress>
     {
+        private readonly AppTransferProgressEstimator _estimator = new();
         private readonly IAppTransferProgressPublisher _publisher;
         private readonly Guid _syncPairId;
 
@@ -202,7 +206,15 @@ public sealed class SyncEnginePairWork : ISyncPairWork
         public void Report(CoreSyncTransferProgress value)
         {
             ArgumentNullException.ThrowIfNull(value);
-            _publisher.Publish(ToAppProgress(_syncPairId, value));
+            AppTransferDirection direction = ToAppTransferDirection(value.Direction);
+            AppTransferProgressEstimate estimate = _estimator.AddSample(
+                direction,
+                value.RelativePath,
+                value.TransferredBytes,
+                value.TotalBytes,
+                value.IsCompleted,
+                value.OccurredAtUtc);
+            _publisher.Publish(ToAppProgress(_syncPairId, value, estimate));
         }
     }
 
