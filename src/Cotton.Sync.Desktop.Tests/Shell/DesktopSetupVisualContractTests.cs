@@ -51,7 +51,7 @@ public sealed class DesktopSetupVisualContractTests
         string emptyFoldersState = GetSlice(
             mainWindowXaml,
             "IsVisible=\"{Binding HasNoSyncPairs}\"",
-            "<Grid RowDefinitions=\"*,Auto,Auto,Auto\"");
+            "<Grid RowDefinitions=\"Auto,Auto,Auto,Auto\"");
 
         Assert.Multiple(() =>
         {
@@ -72,14 +72,21 @@ public sealed class DesktopSetupVisualContractTests
 
         Assert.Multiple(() =>
         {
+            Assert.That(foldersSection, Does.Contain("ShowSelectedSyncPairEditorCommand"));
+            Assert.That(foldersSection, Does.Contain("CommandParameter=\"{Binding}\""));
+            Assert.That(foldersSection, Does.Contain("<ItemsControl ItemsSource=\"{Binding SyncPairs}\">"));
+            Assert.That(foldersSection, Does.Not.Contain("SelectedItem=\"{Binding SelectedSyncPair}\""));
+            Assert.That(foldersSection, Does.Contain("IsVisible=\"{Binding IsSelectedSyncPairEditorVisible}\""));
             Assert.That(foldersSection, Does.Contain("SelectedSyncPairEditableDisplayName"));
             Assert.That(foldersSection, Does.Contain("SaveSelectedSyncPairNameCommand"));
             Assert.That(foldersSection, Does.Contain("ToggleSelectedSyncPairEnabledCommand"));
             Assert.That(foldersSection, Does.Contain("RemoveSelectedSyncPairCommand"));
+            Assert.That(foldersSection, Does.Contain("CancelSelectedSyncPairEditorCommand"));
             Assert.That(foldersSection, Does.Contain("IsRemoveSyncPairConfirmationVisible"));
             Assert.That(foldersSection, Does.Contain("CancelRemoveSyncPairCommand"));
             Assert.That(foldersSection, Does.Contain("ConfirmRemoveSelectedSyncPairCommand"));
-            Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"Open selected local folder\""));
+            Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"Manage sync folder\""));
+            Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"Open local folder\""));
             Assert.That(foldersSection, Does.Contain("SelectedSyncPair.ToggleEnabledIcon"));
             Assert.That(foldersSection, Does.Contain("SelectedSyncPair.ModeLabel"));
         });
@@ -163,7 +170,7 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(dashboardView, Does.Contain("RowDefinitions=\"Auto,*\""));
             Assert.That(dashboardView, Does.Contain("<StackPanel Grid.Row=\"0\""));
             Assert.That(dashboardView, Does.Contain("<Border Grid.Row=\"1\""));
-            Assert.That(dashboardView, Does.Contain("MaxHeight=\"250\""));
+            Assert.That(dashboardView, Does.Contain("MaxHeight=\"320\""));
             Assert.That(dashboardView, Does.Not.Contain("<ScrollViewer Margin=\"10\""));
             Assert.That(dashboardView, Does.Not.Contain("RowDefinitions=\"Auto,Auto,Auto,Auto,*\""));
             Assert.That(dashboardView, Does.Not.Contain("RowDefinitions=\"Auto,132\""));

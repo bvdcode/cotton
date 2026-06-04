@@ -390,7 +390,7 @@
         </Border>
 
         <Border Padding="10"
-                MaxHeight="250"
+                MaxHeight="320"
                 CornerRadius="6"
                 Background="{DynamicResource CottonSurfaceBrush}"
                 BorderBrush="{DynamicResource CottonBorderBrush}"
@@ -436,65 +436,74 @@
                   </Grid>
                 </Border>
 
-                <Grid RowDefinitions="*,Auto,Auto,Auto"
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto"
                       RowSpacing="7"
                       IsVisible="{Binding HasSyncPairs}">
-                  <ListBox ItemsSource="{Binding SyncPairs}"
-                           SelectedItem="{Binding SelectedSyncPair}"
-                           BorderThickness="0"
-                           Background="Transparent">
-                    <ListBox.ItemTemplate>
-                      <DataTemplate>
-                        <Border Padding="8"
-                                Margin="0,4"
-                                CornerRadius="6"
-                                Background="{DynamicResource CottonSurfaceMutedBrush}">
-                          <Grid ColumnDefinitions="*,Auto,Auto"
-                                RowDefinitions="Auto,Auto,Auto"
-                                ColumnSpacing="10">
-                            <TextBlock Text="{Binding DisplayName}"
-                                       FontWeight="SemiBold"
-                                       TextTrimming="CharacterEllipsis" />
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding Status}"
-                                       FontSize="12"
-                                       Opacity="0.74" />
-                            <TextBlock Grid.Row="1"
-                                       Grid.ColumnSpan="2"
-                                       Text="{Binding LocalPath}"
-                                       ToolTip.Tip="{Binding LocalPath}"
-                                       FontSize="12"
-                                       TextTrimming="CharacterEllipsis"
-                                       Opacity="0.74" />
-                            <TextBlock Grid.Row="2"
-                                       Grid.ColumnSpan="2"
-                                       Text="{Binding RemotePath}"
-                                       ToolTip.Tip="{Binding RemotePath}"
-                                       FontSize="12"
-                                       TextTrimming="CharacterEllipsis"
-                                       Opacity="0.74" />
-                            <Button Grid.Column="2"
-                                    Grid.RowSpan="3"
-                                    Content="↗"
-                                    Classes="icon"
-                                    ToolTip.Tip="Open local folder"
-                                    Command="{Binding $parent[Window].DataContext.OpenFolderCommand}"
-                                    CommandParameter="{Binding}"
-                                    VerticalAlignment="Center" />
-                          </Grid>
-                        </Border>
-                      </DataTemplate>
-                    </ListBox.ItemTemplate>
-                  </ListBox>
+                  <ScrollViewer MaxHeight="176"
+                                VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding SyncPairs}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Border Padding="8"
+                                  Margin="0,0,0,7"
+                                  CornerRadius="6"
+                                  Background="{DynamicResource CottonSurfaceMutedBrush}">
+                            <Grid ColumnDefinitions="*,Auto,Auto,Auto"
+                                  RowDefinitions="Auto,Auto,Auto"
+                                  ColumnSpacing="10">
+                              <TextBlock Text="{Binding DisplayName}"
+                                         FontWeight="SemiBold"
+                                         TextTrimming="CharacterEllipsis" />
+                              <TextBlock Grid.Column="1"
+                                         Text="{Binding Status}"
+                                         FontSize="12"
+                                         Opacity="0.74" />
+                              <TextBlock Grid.Row="1"
+                                         Grid.ColumnSpan="2"
+                                         Text="{Binding LocalPath}"
+                                         ToolTip.Tip="{Binding LocalPath}"
+                                         FontSize="12"
+                                         TextTrimming="CharacterEllipsis"
+                                         Opacity="0.74" />
+                              <TextBlock Grid.Row="2"
+                                         Grid.ColumnSpan="2"
+                                         Text="{Binding RemotePath}"
+                                         ToolTip.Tip="{Binding RemotePath}"
+                                         FontSize="12"
+                                         TextTrimming="CharacterEllipsis"
+                                         Opacity="0.74" />
+                              <Button Grid.Column="2"
+                                      Grid.RowSpan="3"
+                                      Content="↗"
+                                      Classes="icon"
+                                      ToolTip.Tip="Open local folder"
+                                      Command="{Binding $parent[Window].DataContext.OpenFolderCommand}"
+                                      CommandParameter="{Binding}"
+                                      VerticalAlignment="Center" />
+                              <Button Grid.Column="3"
+                                      Grid.RowSpan="3"
+                                      Content="..."
+                                      Classes="icon"
+                                      ToolTip.Tip="Manage sync folder"
+                                      Command="{Binding $parent[Window].DataContext.ShowSelectedSyncPairEditorCommand}"
+                                      CommandParameter="{Binding}"
+                                      VerticalAlignment="Center" />
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </ScrollViewer>
 
                   <Border Grid.Row="1"
                           Padding="8"
                           CornerRadius="6"
                           Background="{DynamicResource CottonSurfaceMutedBrush}"
                           BorderBrush="{DynamicResource CottonBorderBrush}"
-                          BorderThickness="1">
+                          BorderThickness="1"
+                          IsVisible="{Binding IsSelectedSyncPairEditorVisible}">
                     <Grid RowDefinitions="Auto,Auto"
-                          ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+                          ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto"
                           RowSpacing="6"
                           ColumnSpacing="6">
                       <TextBox Text="{Binding SelectedSyncPairEditableDisplayName}"
@@ -515,12 +524,17 @@
                               ToolTip.Tip="Open selected local folder"
                               Command="{Binding OpenFolderCommand}" />
                       <Button Grid.Column="4"
-                              Content="x"
+                              Content="-"
                               Classes="icon"
                               ToolTip.Tip="Remove sync folder"
                               Command="{Binding RemoveSelectedSyncPairCommand}" />
+                      <Button Grid.Column="5"
+                              Content="x"
+                              Classes="icon"
+                              ToolTip.Tip="Close folder controls"
+                              Command="{Binding CancelSelectedSyncPairEditorCommand}" />
                       <TextBlock Grid.Row="1"
-                                 Grid.ColumnSpan="5"
+                                 Grid.ColumnSpan="6"
                                  ToolTip.Tip="{Binding SelectedSyncPair.LocalPath}"
                                  Classes="secondary"
                                  FontSize="11"

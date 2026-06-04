@@ -50,6 +50,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private bool _isServerVerified;
     private bool _isAddSyncPairWizardVisible;
     private bool _isCreateRemoteFolderVisible;
+    private bool _isSelectedSyncPairEditorVisible;
     private bool _isSettingsVisible;
     private bool _isLoadingSnapshot;
     private bool _isStartWithOperatingSystemSupported = true;
@@ -128,6 +129,14 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             RequestRemoveSelectedSyncPairAsync,
             () => IsSignedIn && SelectedSyncPair is not null && !IsBusy && !IsRemoveSyncPairConfirmationVisible,
             HandleCommandError);
+        ShowSelectedSyncPairEditorCommand = new AsyncRelayCommand(
+            ShowSelectedSyncPairEditorAsync,
+            parameter => IsSignedIn && ResolveSyncPairTarget(parameter) is not null && !IsBusy,
+            HandleCommandError);
+        CancelSelectedSyncPairEditorCommand = new AsyncRelayCommand(
+            CancelSelectedSyncPairEditorAsync,
+            () => IsSelectedSyncPairEditorVisible && !IsBusy,
+            HandleCommandError);
         ConfirmRemoveSelectedSyncPairCommand = new AsyncRelayCommand(
             ConfirmRemoveSelectedSyncPairAsync,
             () => IsSignedIn && _pendingRemoveSyncPair is not null && !IsBusy,
@@ -169,6 +178,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public AsyncRelayCommand CancelRemoveSyncPairCommand { get; }
 
+    public AsyncRelayCommand CancelSelectedSyncPairEditorCommand { get; }
+
     public AsyncRelayCommand ChangeServerCommand { get; }
 
     public AsyncRelayCommand CloseSettingsCommand { get; }
@@ -208,6 +219,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public AsyncRelayCommand ShowAddSyncPairCommand { get; }
 
     public AsyncRelayCommand ShowCreateRemoteFolderCommand { get; }
+
+    public AsyncRelayCommand ShowSelectedSyncPairEditorCommand { get; }
 
     public AsyncRelayCommand ShowSettingsCommand { get; }
 
@@ -334,6 +347,19 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public bool HasNotifications => Notifications.Count > 0;
 
     public bool HasSyncPairs => SyncPairs.Count > 0;
+
+    public bool IsSelectedSyncPairEditorVisible
+    {
+        get => _isSelectedSyncPairEditorVisible;
+        private set
+        {
+            if (SetProperty(ref _isSelectedSyncPairEditorVisible, value))
+            {
+                CancelSelectedSyncPairEditorCommand.RaiseCanExecuteChanged();
+                RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
 
     public bool CanSyncNow => IsSignedIn && !IsBusy && HasEnabledSyncPairs && !IsSyncPaused;
 
@@ -716,8 +742,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
                 SaveSelectedSyncPairNameCommand.RaiseCanExecuteChanged();
                 RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
+                ShowSelectedSyncPairEditorCommand.RaiseCanExecuteChanged();
                 ConfirmRemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
                 CancelRemoveSyncPairCommand.RaiseCanExecuteChanged();
+                CancelSelectedSyncPairEditorCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -1000,6 +1028,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             IsAddSyncPairWizardVisible = false;
             ActionRequiredMessage = string.Empty;
             RemoteFolders.Clear();
+            IsSelectedSyncPairEditorVisible = false;
             GlobalStatus = "Sync requested";
             RefreshCurrentProgressText();
             AddActivity("Pair", syncPair.LocalRootPath, "Folder added and initial sync requested");
@@ -1068,6 +1097,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     }
 
     private SyncPairRowViewModel? ResolveOpenFolderTarget(object? parameter)
+    {
+        return parameter as SyncPairRowViewModel ?? SelectedSyncPair;
+    }
+
+    private SyncPairRowViewModel? ResolveSyncPairTarget(object? parameter)
     {
         return parameter as SyncPairRowViewModel ?? SelectedSyncPair;
     }
@@ -1170,6 +1204,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         SyncPairRowViewModel? selected = SelectedSyncPair;
         if (selected is not null)
         {
+            IsSelectedSyncPairEditorVisible = true;
             SetPendingRemoveSyncPair(selected);
         }
 
@@ -1179,6 +1214,27 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private Task CancelRemoveSyncPairAsync()
     {
         ClearRemoveSyncPairConfirmation();
+        return Task.CompletedTask;
+    }
+
+    private Task ShowSelectedSyncPairEditorAsync(object? parameter)
+    {
+        SyncPairRowViewModel? target = ResolveSyncPairTarget(parameter);
+        if (target is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        SelectedSyncPair = target;
+        ClearRemoveSyncPairConfirmation();
+        IsSelectedSyncPairEditorVisible = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CancelSelectedSyncPairEditorAsync()
+    {
+        ClearRemoveSyncPairConfirmation();
+        IsSelectedSyncPairEditorVisible = false;
         return Task.CompletedTask;
     }
 
@@ -1197,6 +1253,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             int removedIndex = SyncPairs.IndexOf(selected);
             SyncPairs.Remove(selected);
             ClearRemoveSyncPairConfirmation();
+            IsSelectedSyncPairEditorVisible = false;
             SelectedSyncPair = SyncPairs.Count == 0
                 ? null
                 : SyncPairs[Math.Clamp(removedIndex, 0, SyncPairs.Count - 1)];
@@ -1308,6 +1365,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             TotpCode = string.Empty;
             IsAddSyncPairWizardVisible = false;
             IsSettingsVisible = false;
+            IsSelectedSyncPairEditorVisible = false;
             ActionRequiredMessage = string.Empty;
             Notifications.Clear();
             _notificationTracker.Reset();
@@ -1623,6 +1681,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
         SaveSelectedSyncPairNameCommand.RaiseCanExecuteChanged();
         RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
+        ShowSelectedSyncPairEditorCommand.RaiseCanExecuteChanged();
         RefreshCurrentProgressText();
         RefreshDiagnosticsItems();
     }
@@ -1876,7 +1935,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
         SaveSelectedSyncPairNameCommand.RaiseCanExecuteChanged();
         RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
+        ShowSelectedSyncPairEditorCommand.RaiseCanExecuteChanged();
         ConfirmRemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
+        CancelSelectedSyncPairEditorCommand.RaiseCanExecuteChanged();
         OpenWebCommand.RaiseCanExecuteChanged();
         ShowAddSyncPairCommand.RaiseCanExecuteChanged();
         ShowCreateRemoteFolderCommand.RaiseCanExecuteChanged();
