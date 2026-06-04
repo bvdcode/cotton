@@ -294,6 +294,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Add onboarding flow.
   Steps: welcome, sign in, optional autostart, add first sync pair, initial sync, finished state.
   Partial 2026-06-03: sign-in onboarding now keeps a fresh app database empty, remembers the saved server URL and username as sign-in hints after real user input, and skips session-restore network calls when the token store is empty. Focused `DesktopShellControllerSelfTestTests` passed 12/12, full `Cotton.Sync.Desktop.Tests` passed 119/119, and full solution Release build passed with the known NU1903 warning. Keep unchecked until the full onboarding flow, first-pair setup, initial sync, and screenshot QA are verified together.
+  Partial 2026-06-04: sign-in startup/probe/sign-in URL handling now accepts bare server hosts such as `app.cottoncloud.dev` and normalizes them to HTTPS while still rejecting unsupported schemes. Focused startup URL tests passed 21/21, full `Cotton.Sync.Desktop.Tests` passed 133/133, full solution Release build passed with the known NU1903 warning, and a headless setup screenshot with `--server app.cottoncloud.dev` showed the normalized URL plus green Cotton Cloud verification without clipping.
 - [ ] Add main dashboard.
   Required content: global status, sync-pair list, per-pair status, current progress, recent activity.
   Partial 2026-06-03: compact dashboard flyout now shows global status, account, sync-pair list/empty state, per-pair status rows, recent activity, quick add/sync actions, and a menu for secondary actions. Keep unchecked until screenshot-based visual QA confirms the dashboard hierarchy and spacing.
@@ -330,6 +331,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Run manual UI walkthrough on Linux.
 - [ ] Run manual UI walkthrough on Windows.
 - [ ] Capture screenshots for onboarding, dashboard, settings, conflict state, and error state.
+  Partial 2026-06-04: captured headless setup screenshots at `/tmp/cotton-sync-setup-current.png` and `/tmp/cotton-sync-setup-bare-server.png`; the bare-host server screenshot verified centered setup layout, normalized `https://app.cottoncloud.dev/`, and visible green server verification. Keep unchecked until onboarding, dashboard, settings, conflict, and error states are all captured and reviewed.
 - [ ] Review screenshots for clipping, overlap, weak hierarchy, and inconsistent spacing.
 - [ ] Run visual QA checklist from `notes/visual-qa-checklist.md` or replace it with an updated desktop checklist.
 

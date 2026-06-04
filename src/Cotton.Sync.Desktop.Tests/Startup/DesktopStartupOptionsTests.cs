@@ -46,6 +46,18 @@ public sealed class DesktopStartupOptionsTests
     }
 
     [Test]
+    public void Parse_NormalizesBareServerHostToHttps()
+    {
+        DesktopStartupOptions options = DesktopStartupOptions.Parse(
+            [
+                "--server",
+                "app.cottoncloud.dev",
+            ]);
+
+        Assert.That(options.ServerUrl, Is.EqualTo(new Uri("https://app.cottoncloud.dev/")));
+    }
+
+    [Test]
     public void Parse_LoadsStartMinimizedFlag()
     {
         DesktopStartupOptions options = DesktopStartupOptions.Parse(

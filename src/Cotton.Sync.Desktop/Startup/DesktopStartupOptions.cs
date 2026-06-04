@@ -49,25 +49,12 @@ internal sealed class DesktopStartupOptions
         bool exportDiagnostics = HasFlag(args, "--export-diagnostics")
             || HasFlag(args, "--diagnostics");
         return new DesktopStartupOptions(
-            ParseServerUrl(serverUrl),
+            DesktopServerUrl.NormalizeOptional(serverUrl),
             NormalizeOptional(username),
             NormalizeOptional(dataDirectory),
             startMinimizedToTray,
             runSelfTest,
             exportDiagnostics);
-    }
-
-    private static Uri? ParseServerUrl(string? value)
-    {
-        string? normalized = NormalizeOptional(value);
-        if (normalized is null
-            || !Uri.TryCreate(normalized, UriKind.Absolute, out Uri? uri)
-            || !IsHttpScheme(uri))
-        {
-            return null;
-        }
-
-        return uri;
     }
 
     private static bool HasFlag(IReadOnlyList<string> args, string name)
@@ -93,12 +80,6 @@ internal sealed class DesktopStartupOptions
         }
 
         return null;
-    }
-
-    private static bool IsHttpScheme(Uri uri)
-    {
-        return string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string? NormalizeOptional(string? value)
