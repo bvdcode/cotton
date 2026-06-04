@@ -844,6 +844,27 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task InitializeAsync_WhenLoadFailsBeforeSignInStepShowsActionRequired()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedOutSnapshot())
+        {
+            LoadException = new InvalidOperationException("Preferences database is unavailable."),
+        };
+        using ShellViewModel viewModel = CreateViewModel(controller);
+
+        await viewModel.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsSignedIn, Is.False);
+            Assert.That(viewModel.IsServerStepVisible, Is.True);
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Action required"));
+            Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo("Preferences database is unavailable."));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Sign in to continue."));
+        });
+    }
+
+    [Test]
     public async Task ChangeServerCommand_ReturnsSetupFlowToServerStepAndClearsSecrets()
     {
         var controller = new FakeDesktopShellController(CreateSignedOutSnapshot())
@@ -1182,6 +1203,8 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public DesktopSignInRequest? SignInRequest { get; private set; }
 
+        public Exception? LoadException { get; set; }
+
         public Dictionary<string, DesktopRemoteFolderListSnapshot> RemoteFoldersByPath { get; } = [];
 
         public List<string> ListRemoteFolderPaths { get; } = [];
@@ -1217,6 +1240,11 @@ public sealed class ShellViewModelSyncPairCommandTests
         public Task<DesktopShellSnapshot> LoadAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (LoadException is not null)
+            {
+                throw LoadException;
+            }
+
             return Task.FromResult(_snapshot);
         }
 

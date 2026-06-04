@@ -1375,12 +1375,22 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private void HandleCommandError(Exception exception)
     {
         Trace.TraceError(exception.ToString());
-        GlobalStatus = IsSignedIn ? "Action required" : "Sign-in failed";
+        GlobalStatus = ResolveCommandFailureStatus();
         string actionRequiredMessage = DesktopActionRequiredMessageResolver.FromException(exception);
         ActionRequiredMessage = actionRequiredMessage;
         AddActivity("Error", string.Empty, actionRequiredMessage);
         RefreshCurrentProgressText();
         IsBusy = false;
+    }
+
+    private string ResolveCommandFailureStatus()
+    {
+        if (IsSignedIn)
+        {
+            return "Action required";
+        }
+
+        return IsSignInStepVisible ? "Sign-in failed" : "Action required";
     }
 
     private async Task ProbeServerAfterDelayAsync(string serverUrl, CancellationToken cancellationToken)
