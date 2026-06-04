@@ -206,7 +206,7 @@ public sealed class DesktopPackagingMetadataTests
         Assert.Multiple(() =>
         {
             Assert.That(installerScript, Does.Contain("AppName=Cotton Sync"));
-            Assert.That(installerScript, Does.Contain("DefaultDirName={autopf}\\Cotton Sync"));
+            Assert.That(installerScript, Does.Contain("DefaultDirName={localappdata}\\Programs\\Cotton Sync"));
             Assert.That(installerScript, Does.Contain("PrivilegesRequired=lowest"));
             Assert.That(installerScript, Does.Contain("ArchitecturesAllowed=x64compatible"));
             Assert.That(installerScript, Does.Contain("OutputBaseFilename=cotton-sync-desktop-win-x64-setup"));
@@ -237,6 +237,28 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("Upload desktop Windows installer artifact"));
             Assert.That(workflow, Does.Contain("name: desktop-windows-installer"));
             Assert.That(workflow, Does.Contain("Download desktop Windows installer artifact"));
+        });
+    }
+
+    [Test]
+    public void CiWorkflow_SmokesWindowsInstallerInstallAndUninstall()
+    {
+        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(workflow, Does.Contain("Smoke desktop Windows installer"));
+            Assert.That(workflow, Does.Contain("cotton-sync-installed"));
+            Assert.That(workflow, Does.Contain("cotton-sync-installer-data"));
+            Assert.That(workflow, Does.Contain("/VERYSILENT"));
+            Assert.That(workflow, Does.Contain("/SUPPRESSMSGBOXES"));
+            Assert.That(workflow, Does.Contain("/NORESTART"));
+            Assert.That(workflow, Does.Contain("/TASKS="));
+            Assert.That(workflow, Does.Contain("/DIR=$installDir"));
+            Assert.That(workflow, Does.Contain("Cotton.Sync.Desktop.exe\""));
+            Assert.That(workflow, Does.Contain("--self-test --data-dir"));
+            Assert.That(workflow, Does.Contain("unins000.exe"));
+            Assert.That(workflow, Does.Contain("Installed desktop executable remained after uninstall."));
         });
     }
 

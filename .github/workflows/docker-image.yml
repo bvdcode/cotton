@@ -427,6 +427,53 @@ jobs:
             throw "Windows installer was not created."
           }
 
+      - name: Smoke desktop Windows installer
+        shell: pwsh
+        run: |
+          $installDir = Join-Path $env:RUNNER_TEMP "cotton-sync-installed"
+          $dataDir = Join-Path $env:RUNNER_TEMP "cotton-sync-installer-data"
+          $installLog = Join-Path $env:RUNNER_TEMP "cotton-sync-install.log"
+          $uninstallLog = Join-Path $env:RUNNER_TEMP "cotton-sync-uninstall.log"
+          New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
+
+          $install = Start-Process `
+            -FilePath ".\cotton-sync-desktop-win-x64-setup.exe" `
+            -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/TASKS=", "/DIR=$installDir", "/LOG=$installLog") `
+            -Wait `
+            -PassThru
+          if ($install.ExitCode -ne 0) {
+            Get-Content $installLog -ErrorAction SilentlyContinue
+            throw "Windows installer exited with code $($install.ExitCode)."
+          }
+
+          $installedExe = Join-Path $installDir "Cotton.Sync.Desktop.exe"
+          if (-not (Test-Path $installedExe)) {
+            Get-ChildItem $installDir -Recurse -ErrorAction SilentlyContinue
+            throw "Installed desktop executable was not found."
+          }
+
+          & $installedExe --self-test --data-dir "$dataDir"
+
+          $uninstaller = Join-Path $installDir "unins000.exe"
+          if (-not (Test-Path $uninstaller)) {
+            throw "Windows uninstaller was not found."
+          }
+
+          $uninstall = Start-Process `
+            -FilePath $uninstaller `
+            -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/LOG=$uninstallLog") `
+            -Wait `
+            -PassThru
+          if ($uninstall.ExitCode -ne 0) {
+            Get-Content $uninstallLog -ErrorAction SilentlyContinue
+            throw "Windows uninstaller exited with code $($uninstall.ExitCode)."
+          }
+
+          if (Test-Path $installedExe) {
+            Get-ChildItem $installDir -Recurse -ErrorAction SilentlyContinue
+            throw "Installed desktop executable remained after uninstall."
+          }
+
       - name: Upload desktop Windows installer artifact
         uses: actions/upload-artifact@v5
         with:
