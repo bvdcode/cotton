@@ -6,7 +6,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 
 - Desktop sync client built on the existing .NET stack: `Cotton.Sdk`, `Cotton.Sync`, `Cotton.Sync.App`, EF Core SQLite, and Avalonia.
 - Full-mirror sync for one or more local-to-remote sync pairs.
-- First-run setup flow with Cotton server probing, password/TOTP sign-in, remembered server URL and username, and automatic add-folder wizard for the first sync pair.
+- First-run setup flow with Cotton server probing, password/TOTP sign-in, remembered server URL and username, and an explicit add-folder wizard for choosing the first sync pair.
 - First-run windows default to the dark Cotton theme, with System/Light/Dark theme switching still available in Settings.
 - Dashboard with global status, per-folder status, current progress, activity history, action-required errors, conflict list, and direct sync-folder management.
 - Action-required sync failures use a consistent dashboard state and preserve the concrete reason in the error panel instead of mixing a generic failure state with an up-to-date progress message; add-folder/settings overlays hide background dashboard chrome so wizard errors stay readable.

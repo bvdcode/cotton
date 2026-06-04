@@ -46,8 +46,8 @@ Do not mark the release UI screenshot review complete from this checklist alone.
 - [ ] Server entry starts empty on a fresh profile.
 - [ ] Server verification shows a clear success/failure state.
 - [ ] Wrong password, missing TOTP, and invalid TOTP show human-readable errors on the sign-in form.
-- [ ] Sign-in with no sync folders opens the add-folder wizard.
-- [ ] Add folder opens the native local folder picker before cloud selection.
+- [ ] Sign-in with no sync folders leaves the empty dashboard visible until the user chooses Add folder.
+- [ ] Add folder opens the wizard first; the native local folder picker opens only after the user chooses the local-folder action.
 - [ ] Cloud folder navigation supports parent/open actions and double-click open.
 - [ ] Existing sync folders expose edit name, save, enable/disable, open, and remove actions on the dashboard.
 - [ ] Pause and resume are mutually exclusive in menus.
