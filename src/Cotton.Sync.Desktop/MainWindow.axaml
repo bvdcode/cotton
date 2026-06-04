@@ -270,7 +270,7 @@
                     VerticalAlignment="Center" />
             <StackPanel Grid.Column="1"
                         Spacing="1">
-              <TextBlock Text="{Binding GlobalStatus}"
+              <TextBlock Text="{Binding StatusCardTitle}"
                          FontSize="15"
                          FontWeight="SemiBold"
                          TextTrimming="CharacterEllipsis" />

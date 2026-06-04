@@ -198,6 +198,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             {
                 OnPropertyChanged(nameof(HasActionRequired));
                 OnPropertyChanged(nameof(CanRetryActionRequired));
+                OnPropertyChanged(nameof(StatusCardTitle));
             }
         }
     }
@@ -205,8 +206,16 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public string GlobalStatus
     {
         get => _globalStatus;
-        private set => SetProperty(ref _globalStatus, value);
+        private set
+        {
+            if (SetProperty(ref _globalStatus, value))
+            {
+                OnPropertyChanged(nameof(StatusCardTitle));
+            }
+        }
     }
+
+    public string StatusCardTitle => HasActionRequired ? "Sync needs attention" : GlobalStatus;
 
     public string CurrentProgressText
     {

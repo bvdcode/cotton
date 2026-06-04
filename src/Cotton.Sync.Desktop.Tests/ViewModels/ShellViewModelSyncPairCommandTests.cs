@@ -152,6 +152,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.GlobalStatus, Is.EqualTo("Action failed"));
+            Assert.That(viewModel.StatusCardTitle, Is.EqualTo("Sync needs attention"));
             Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo("Cotton API returned HTML instead of JSON."));
             Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Fix the issue below to continue syncing."));
         });
