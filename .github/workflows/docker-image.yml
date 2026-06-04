@@ -568,8 +568,12 @@ jobs:
             throw "Installed desktop executable was not found."
           }
           $startMenuShortcut = Join-Path ([Environment]::GetFolderPath("Programs")) "Cotton Sync\Cotton Sync.lnk"
+          $startMenuUninstallShortcut = Join-Path ([Environment]::GetFolderPath("Programs")) "Cotton Sync\Uninstall Cotton Sync.lnk"
           if (-not (Test-Path $startMenuShortcut)) {
             throw "Installed Start Menu shortcut was not found."
+          }
+          if (-not (Test-Path $startMenuUninstallShortcut)) {
+            throw "Installed Start Menu uninstall shortcut was not found."
           }
 
           & $installedExe --self-test --data-dir "$dataDir"
@@ -607,6 +611,9 @@ jobs:
           }
           if (Test-Path $startMenuShortcut) {
             throw "Start Menu shortcut remained after uninstall."
+          }
+          if (Test-Path $startMenuUninstallShortcut) {
+            throw "Start Menu uninstall shortcut remained after uninstall."
           }
           $runValue = (Get-ItemProperty -Path $runKey -Name "Cotton Sync" -ErrorAction SilentlyContinue)."Cotton Sync"
           if ($runValue) {

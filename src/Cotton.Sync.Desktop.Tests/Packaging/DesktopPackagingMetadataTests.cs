@@ -472,6 +472,8 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(installerScript, Does.Contain("recursesubdirs createallsubdirs"));
             Assert.That(installerScript, Does.Contain("Cotton.Sync.Desktop.exe"));
             Assert.That(installerScript, Does.Contain("Name: \"{group}\\Cotton Sync\""));
+            Assert.That(installerScript, Does.Contain("Name: \"{group}\\Uninstall Cotton Sync\""));
+            Assert.That(installerScript, Does.Contain("Filename: \"{uninstallexe}\""));
             Assert.That(installerScript, Does.Contain("IconFilename: \"{app}\\Cotton.Sync.Desktop.exe\""));
             Assert.That(installerScript, Does.Contain("Create a desktop shortcut"));
             Assert.That(installerScript, Does.Contain("Flags: nowait postinstall skipifsilent"));
@@ -517,7 +519,9 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("/DIR=$installDir"));
             Assert.That(workflow, Does.Contain("[Environment]::GetFolderPath(\"Programs\")"));
             Assert.That(workflow, Does.Contain("Cotton Sync\\Cotton Sync.lnk"));
+            Assert.That(workflow, Does.Contain("Cotton Sync\\Uninstall Cotton Sync.lnk"));
             Assert.That(workflow, Does.Contain("Installed Start Menu shortcut was not found."));
+            Assert.That(workflow, Does.Contain("Installed Start Menu uninstall shortcut was not found."));
             Assert.That(workflow, Does.Contain("Cotton.Sync.Desktop.exe\""));
             Assert.That(workflow, Does.Contain("--self-test --data-dir"));
             Assert.That(workflow, Does.Contain("-PublishDirectory $installDir"));
@@ -529,6 +533,7 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("Set-ItemProperty -Path $runKey -Name \"Cotton Sync\""));
             Assert.That(workflow, Does.Contain("Installed desktop executable remained after uninstall."));
             Assert.That(workflow, Does.Contain("Start Menu shortcut remained after uninstall."));
+            Assert.That(workflow, Does.Contain("Start Menu uninstall shortcut remained after uninstall."));
             Assert.That(workflow, Does.Contain("Autostart registry value remained after uninstall."));
         });
     }
