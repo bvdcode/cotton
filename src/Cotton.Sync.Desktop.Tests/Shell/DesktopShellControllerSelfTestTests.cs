@@ -154,6 +154,45 @@ public sealed class DesktopShellControllerSelfTestTests
     }
 
     [Test]
+    public async Task LoadAsync_ReturnsEmptySignInHintsForNewPreferences()
+    {
+        using DesktopShellController controller = CreateController();
+
+        DesktopShellSnapshot snapshot = await controller.LoadAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.ServerUrl, Is.Null);
+            Assert.That(snapshot.RememberedUsername, Is.Null);
+            Assert.That(snapshot.IsSignedIn, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task LoadAsync_ReturnsRememberedSignInHintsWithoutStoredSession()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        var preferencesStore = new SqliteAppPreferencesStore(paths.AppDatabasePath);
+        await preferencesStore.InitializeAsync();
+        await preferencesStore.SaveAsync(new AppPreferences
+        {
+            RememberedServerUrl = new Uri("https://cotton.example.test/"),
+            RememberedUsername = "desktop@example.test",
+        });
+        using DesktopShellController controller = CreateController(paths, new SqliteSyncPairSettingsStore(paths.AppDatabasePath));
+
+        DesktopShellSnapshot snapshot = await controller.LoadAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.ServerUrl, Is.EqualTo(new Uri("https://cotton.example.test/")));
+            Assert.That(snapshot.RememberedUsername, Is.EqualTo("desktop@example.test"));
+            Assert.That(snapshot.IsSignedIn, Is.False);
+            Assert.That(snapshot.AccountName, Is.Null);
+        });
+    }
+
+    [Test]
     public async Task LoadAsync_IncludesThemePreference()
     {
         DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);

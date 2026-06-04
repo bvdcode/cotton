@@ -293,6 +293,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Replace prototype screen with release-grade app structure.
 - [ ] Add onboarding flow.
   Steps: welcome, sign in, optional autostart, add first sync pair, initial sync, finished state.
+  Partial 2026-06-03: sign-in onboarding now keeps a fresh app database empty, remembers the saved server URL and username as sign-in hints after real user input, and skips session-restore network calls when the token store is empty. Focused `DesktopShellControllerSelfTestTests` passed 12/12, full `Cotton.Sync.Desktop.Tests` passed 119/119, and full solution Release build passed with the known NU1903 warning. Keep unchecked until the full onboarding flow, first-pair setup, initial sync, and screenshot QA are verified together.
 - [ ] Add main dashboard.
   Required content: global status, sync-pair list, per-pair status, current progress, recent activity.
   Partial 2026-06-03: compact dashboard flyout now shows global status, account, sync-pair list/empty state, per-pair status rows, recent activity, quick add/sync actions, and a menu for secondary actions. Keep unchecked until screenshot-based visual QA confirms the dashboard hierarchy and spacing.

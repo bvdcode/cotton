@@ -76,15 +76,12 @@ internal sealed class DesktopShellController : IDesktopShellController
         AuthSession? session = serverUrl is null
             ? null
             : await TryRestoreSessionAsync(serverUrl, cancellationToken).ConfigureAwait(false);
-        Uri? signInServerHint = session is not null || _startupOptions.ServerUrl is not null
-            ? serverUrl
-            : null;
         DesktopPlatformCapabilitySnapshot platformCapabilities = DesktopPlatformCapabilities.CreateSnapshot();
         IReadOnlyList<DesktopSyncPairSnapshot> syncPairSnapshots = await BuildSyncPairSnapshotsAsync(
             syncPairs,
             cancellationToken).ConfigureAwait(false);
         return new DesktopShellSnapshot(
-            signInServerHint,
+            serverUrl,
             session?.Email ?? session?.Username,
             _startupOptions.Username ?? preferences.RememberedUsername,
             startWithOperatingSystem,
@@ -874,6 +871,12 @@ internal sealed class DesktopShellController : IDesktopShellController
         DesktopSyncApplicationHost host = _factory.Create(serverUrl);
         try
         {
+            if (await host.TokenStore.GetAsync(cancellationToken).ConfigureAwait(false) is null)
+            {
+                host.Dispose();
+                return null;
+            }
+
             AuthSession session = await host.App.RestoreSessionAsync(cancellationToken).ConfigureAwait(false);
             ReplaceHost(host);
             return session;
