@@ -160,6 +160,54 @@ public sealed class SyncEnginePerformanceSmokeTests
         });
     }
 
+    [Test]
+    public async Task RunOnceAsync_UploadsOneLargeFileWithinSmokeTarget()
+    {
+        const int fileSizeBytes = 8 * 1024 * 1024;
+        const string relativePath = "Large/single-large.bin";
+        TimeSpan smokeTarget = TimeSpan.FromSeconds(15);
+        byte[] content = CreateDeterministicBytes(fileSizeBytes);
+        string expectedHash = Hash(content);
+        WriteFile(relativePath, content);
+        SqliteSyncStateStore stateStore = new(_databasePath);
+        var remoteFilesClient = new RecordingRemoteFileSynchronizer();
+        var engine = new SyncEngine(
+            new LocalFileScanner(),
+            new StaticRemoteTreeCrawler([]),
+            remoteFilesClient,
+            stateStore);
+
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        SyncRunResult result = await engine.RunOnceAsync(new SyncPair
+        {
+            SyncPairId = "performance-upload-large",
+            LocalRootPath = _root,
+            RemoteRootNodeId = RemoteRootNodeId,
+        });
+        stopwatch.Stop();
+
+        SyncStateEntry? baseline = await stateStore.GetAsync("performance-upload-large", relativePath);
+        TestContext.WriteLine(
+            "Initial upload smoke for one {0:N0}-byte file completed in {1:N0} ms.",
+            fileSizeBytes,
+            stopwatch.Elapsed.TotalMilliseconds);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(remoteFilesClient.UploadCalls, Is.EqualTo(1));
+            Assert.That(remoteFilesClient.DownloadCalls, Is.Zero);
+            Assert.That(remoteFilesClient.DeleteCalls, Is.Zero);
+            Assert.That(remoteFilesClient.Uploads.Single().RelativePath, Is.EqualTo(relativePath));
+            Assert.That(remoteFilesClient.Uploads.Single().LocalFile.SizeBytes, Is.EqualTo(fileSizeBytes));
+            Assert.That(remoteFilesClient.Uploads.Single().LocalFile.ContentHash, Is.EqualTo(expectedHash));
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
+            Assert.That(baseline, Is.Not.Null);
+            Assert.That(baseline!.LocalContentHash, Is.EqualTo(expectedHash));
+            Assert.That(baseline.RemoteContentHash, Is.EqualTo(expectedHash));
+            Assert.That(stopwatch.Elapsed, Is.LessThan(smokeTarget));
+        });
+    }
+
     private string FullPath(string relativePath)
     {
         return Path.Combine(_root, relativePath.Replace('/', Path.DirectorySeparatorChar));
@@ -176,6 +224,17 @@ public sealed class SyncEnginePerformanceSmokeTests
     private static string Hash(byte[] bytes)
     {
         return Convert.ToHexStringLower(SHA256.HashData(bytes));
+    }
+
+    private static byte[] CreateDeterministicBytes(int length)
+    {
+        byte[] bytes = new byte[length];
+        for (int index = 0; index < bytes.Length; index++)
+        {
+            bytes[index] = (byte)((index * 31 + index / 17) % 251);
+        }
+
+        return bytes;
     }
 
     private static NodeFileManifestDto RemoteFile(string relativePath, string contentHash, long sizeBytes)
@@ -259,6 +318,8 @@ public sealed class SyncEnginePerformanceSmokeTests
 
     private sealed class RecordingRemoteFileSynchronizer : IRemoteFileSynchronizer
     {
+        public List<UploadCall> Uploads { get; } = [];
+
         public int UploadCalls { get; private set; }
 
         public int DownloadCalls { get; private set; }
@@ -277,6 +338,7 @@ public sealed class SyncEnginePerformanceSmokeTests
             uploaded.Id = existingRemoteFile?.Id ?? uploaded.Id;
             uploaded.NodeId = existingRemoteFile?.NodeId ?? rootNodeId;
             uploaded.UpdatedAt = localFile.LastWriteUtc;
+            Uploads.Add(new UploadCall(rootNodeId, relativePath, localFile, existingRemoteFile, uploaded));
             return Task.FromResult(uploaded);
         }
 
@@ -296,4 +358,11 @@ public sealed class SyncEnginePerformanceSmokeTests
             throw new InvalidOperationException("Initial upload performance smoke must not delete files.");
         }
     }
+
+    private sealed record UploadCall(
+        Guid RootNodeId,
+        string RelativePath,
+        LocalFileSnapshot LocalFile,
+        NodeFileManifestDto? ExistingRemoteFile,
+        NodeFileManifestDto ReturnedFile);
 }
