@@ -410,6 +410,21 @@ public sealed class DesktopPackagingMetadataTests
     }
 
     [Test]
+    public void WindowsShortcutAppIdVerifier_ReadsShortcutAppUserModelId()
+    {
+        string script = File.ReadAllText(GetDesktopFilePath("Packaging/windows/verify-shortcut-app-id.ps1"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(script, Does.Contain("New-Object -ComObject Shell.Application"));
+            Assert.That(script, Does.Contain("System.AppUserModel.ID"));
+            Assert.That(script, Does.Contain("ExpectedAppUserModelId"));
+            Assert.That(script, Does.Contain("Windows shortcut AppUserModelID"));
+            Assert.That(script, Does.Contain("Verified Windows shortcut AppUserModelID"));
+        });
+    }
+
+    [Test]
     public void CiWorkflow_SmokesWindowsZipArchiveOnWindows()
     {
         string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
@@ -525,6 +540,9 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("Cotton Sync\\Uninstall Cotton Sync.lnk"));
             Assert.That(workflow, Does.Contain("Installed Start Menu shortcut was not found."));
             Assert.That(workflow, Does.Contain("Installed Start Menu uninstall shortcut was not found."));
+            Assert.That(workflow, Does.Contain("Packaging/windows/verify-shortcut-app-id.ps1"));
+            Assert.That(workflow, Does.Contain("-ShortcutPath $startMenuShortcut"));
+            Assert.That(workflow, Does.Contain("-ExpectedAppUserModelId \"Cotton.Sync.Desktop\""));
             Assert.That(workflow, Does.Contain("Cotton.Sync.Desktop.exe\""));
             Assert.That(workflow, Does.Contain("--self-test --data-dir"));
             Assert.That(workflow, Does.Contain("-PublishDirectory $installDir"));
@@ -559,6 +577,9 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("Cotton Sync\\Uninstall Cotton Sync.lnk"));
             Assert.That(workflow, Does.Contain("Upgraded Start Menu shortcut was not found."));
             Assert.That(workflow, Does.Contain("Upgraded Start Menu uninstall shortcut was not found."));
+            Assert.That(workflow, Does.Contain("Packaging/windows/verify-shortcut-app-id.ps1"));
+            Assert.That(workflow, Does.Contain("-ShortcutPath $startMenuShortcut"));
+            Assert.That(workflow, Does.Contain("-ExpectedAppUserModelId \"Cotton.Sync.Desktop\""));
             Assert.That(workflow, Does.Contain("& $installedExe --self-test --data-dir"));
             Assert.That(workflow, Does.Contain("-PublishDirectory $installDir"));
             Assert.That(workflow, Does.Contain("-ExpectedIcon \"src/Cotton.Sync.Desktop/Assets/app.ico\""));

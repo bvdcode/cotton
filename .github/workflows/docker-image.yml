@@ -576,6 +576,9 @@ jobs:
             throw "Installed Start Menu uninstall shortcut was not found."
           }
 
+          & "src/Cotton.Sync.Desktop/Packaging/windows/verify-shortcut-app-id.ps1" `
+            -ShortcutPath $startMenuShortcut `
+            -ExpectedAppUserModelId "Cotton.Sync.Desktop"
           & $installedExe --self-test --data-dir "$dataDir"
           & "src/Cotton.Sync.Desktop/Packaging/windows/verify-checksums.ps1" `
             -PublishDirectory $installDir
@@ -680,6 +683,9 @@ jobs:
             throw "Upgraded Start Menu uninstall shortcut was not found."
           }
 
+          & "src/Cotton.Sync.Desktop/Packaging/windows/verify-shortcut-app-id.ps1" `
+            -ShortcutPath $startMenuShortcut `
+            -ExpectedAppUserModelId "Cotton.Sync.Desktop"
           & $installedExe --self-test --data-dir "$dataDir"
           & "src/Cotton.Sync.Desktop/Packaging/windows/verify-checksums.ps1" `
             -PublishDirectory $installDir
