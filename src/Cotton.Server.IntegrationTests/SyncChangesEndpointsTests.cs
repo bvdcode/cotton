@@ -148,6 +148,28 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task CreateFile_StagesFileCreatedChangeWithParentNodeId()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "file-create-parent");
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        NodeFileManifestDto file = await CreateFileAsync(folder.Id, "sync-created-file.txt", "created-body");
+
+        SyncChangeDto change = await GetSingleChangeAsync(cursor, file.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FileCreated));
+            Assert.That(change.ParentNodeId, Is.EqualTo(folder.Id));
+            Assert.That(change.FileManifestId, Is.EqualTo(file.FileManifestId));
+            Assert.That(change.Name, Is.EqualTo("sync-created-file.txt"));
+        });
+    }
+
+    [Test]
     public async Task RenameFile_StagesFileRenamedChangeWithParentNodeId()
     {
         await SignInAsync();
@@ -171,6 +193,186 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
             Assert.That(change.ParentNodeId, Is.EqualTo(folder.Id));
             Assert.That(change.FileManifestId, Is.EqualTo(file.FileManifestId));
             Assert.That(change.Name, Is.EqualTo("sync-after-rename.txt"));
+        });
+    }
+
+    [Test]
+    public async Task MoveFile_StagesFileMovedChangeWithPreviousParentNodeId()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto source = await CreateFolderAsync(root.Id, "move-file-source");
+        NodeDto target = await CreateFolderAsync(root.Id, "move-file-target");
+        NodeFileManifestDto file = await CreateFileAsync(source.Id, "sync-moved-file.txt", "moved-body");
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage moveResponse = await _client!.PatchAsJsonAsync(
+            $"{Routes.V1.Files}/{file.Id}/move",
+            new MoveFileRequest { ParentId = target.Id });
+        moveResponse.EnsureSuccessStatusCode();
+
+        SyncChangeDto change = await GetSingleChangeAsync(cursor, file.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FileMoved));
+            Assert.That(change.ParentNodeId, Is.EqualTo(target.Id));
+            Assert.That(change.PreviousParentNodeId, Is.EqualTo(source.Id));
+            Assert.That(change.Name, Is.EqualTo("sync-moved-file.txt"));
+        });
+    }
+
+    [Test]
+    public async Task MoveFolder_StagesFolderMovedChangeWithPreviousParentNodeId()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto source = await CreateFolderAsync(root.Id, "move-folder-source");
+        NodeDto target = await CreateFolderAsync(root.Id, "move-folder-target");
+        NodeDto folder = await CreateFolderAsync(source.Id, "sync-moved-folder");
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage moveResponse = await _client!.PatchAsJsonAsync(
+            $"{Routes.V1.Layouts}/nodes/{folder.Id}/move",
+            new MoveNodeRequest { ParentId = target.Id });
+        moveResponse.EnsureSuccessStatusCode();
+
+        SyncChangeDto change = await GetSingleChangeAsync(cursor, folder.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FolderMoved));
+            Assert.That(change.ParentNodeId, Is.EqualTo(target.Id));
+            Assert.That(change.PreviousParentNodeId, Is.EqualTo(source.Id));
+            Assert.That(change.Name, Is.EqualTo("sync-moved-folder"));
+        });
+    }
+
+    [Test]
+    public async Task DeleteFile_StagesFileDeletedChangeWithOriginalParentNodeId()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "delete-file-parent");
+        NodeFileManifestDto file = await CreateFileAsync(folder.Id, "sync-deleted-file.txt", "deleted-body");
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage deleteResponse = await _client!.DeleteAsync($"{Routes.V1.Files}/{file.Id}");
+        deleteResponse.EnsureSuccessStatusCode();
+
+        SyncChangeDto change = await GetSingleChangeAsync(cursor, file.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FileDeleted));
+            Assert.That(change.ParentNodeId, Is.EqualTo(folder.Id));
+            Assert.That(change.FileManifestId, Is.EqualTo(file.FileManifestId));
+            Assert.That(change.Name, Is.EqualTo("sync-deleted-file.txt"));
+        });
+    }
+
+    [Test]
+    public async Task DeleteFolder_StagesFolderDeletedChangeWithOriginalParentNodeId()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "sync-deleted-folder");
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage deleteResponse = await _client!.DeleteAsync($"{Routes.V1.Layouts}/nodes/{folder.Id}");
+        deleteResponse.EnsureSuccessStatusCode();
+
+        SyncChangeDto change = await GetSingleChangeAsync(cursor, folder.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FolderDeleted));
+            Assert.That(change.ParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(change.Name, Is.EqualTo("sync-deleted-folder"));
+        });
+    }
+
+    [Test]
+    public async Task RestoreFile_StagesFileRestoredChangeWithRestoredParentNodeId()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "restore-file-parent");
+        NodeFileManifestDto file = await CreateFileAsync(folder.Id, "sync-restored-file.txt", "restore-file-body");
+        using HttpResponseMessage deleteResponse = await _client!.DeleteAsync($"{Routes.V1.Files}/{file.Id}");
+        deleteResponse.EnsureSuccessStatusCode();
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage restoreResponse = await _client!.PostAsJsonAsync(
+            $"{Routes.V1.Files}/{file.Id}/restore",
+            new RestoreItemRequest());
+        restoreResponse.EnsureSuccessStatusCode();
+
+        SyncChangeDto change = await GetSingleChangeAsync(cursor, file.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FileRestored));
+            Assert.That(change.ParentNodeId, Is.EqualTo(folder.Id));
+            Assert.That(change.FileManifestId, Is.EqualTo(file.FileManifestId));
+            Assert.That(change.Name, Is.EqualTo("sync-restored-file.txt"));
+        });
+    }
+
+    [Test]
+    public async Task RestoreFolder_StagesFolderRestoredChangeWithRestoredParentNodeId()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "sync-restored-folder");
+        using HttpResponseMessage deleteResponse = await _client!.DeleteAsync($"{Routes.V1.Layouts}/nodes/{folder.Id}");
+        deleteResponse.EnsureSuccessStatusCode();
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage restoreResponse = await _client!.PostAsJsonAsync(
+            $"{Routes.V1.Layouts}/nodes/{folder.Id}/restore",
+            new RestoreItemRequest());
+        restoreResponse.EnsureSuccessStatusCode();
+
+        SyncChangeDto change = await GetSingleChangeAsync(cursor, folder.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FolderRestored));
+            Assert.That(change.ParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(change.Name, Is.EqualTo("sync-restored-folder"));
+        });
+    }
+
+    [Test]
+    public async Task UpdateFileMetadata_StagesFileContentUpdatedChange()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "metadata-update-parent");
+        NodeFileManifestDto file = await CreateFileAsync(folder.Id, "sync-updated-file.txt", "metadata-body");
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage updateResponse = await _client!.PatchAsJsonAsync(
+            $"{Routes.V1.Files}/{file.Id}/metadata",
+            new Dictionary<string, string?> { ["label"] = "synced" });
+        updateResponse.EnsureSuccessStatusCode();
+
+        SyncChangeDto change = await GetSingleChangeAsync(cursor, file.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FileContentUpdated));
+            Assert.That(change.ParentNodeId, Is.EqualTo(folder.Id));
+            Assert.That(change.FileManifestId, Is.EqualTo(file.FileManifestId));
+            Assert.That(change.Name, Is.EqualTo("sync-updated-file.txt"));
         });
     }
 
@@ -337,6 +539,12 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
 
         Assert.That(response, Is.Not.Null);
         return response!;
+    }
+
+    private async Task<SyncChangeDto> GetSingleChangeAsync(long cursor, Guid itemId)
+    {
+        SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 20);
+        return response.Changes.Single(x => x.ItemId == itemId);
     }
 
     private static void ResetSettingsProviderCaches()
