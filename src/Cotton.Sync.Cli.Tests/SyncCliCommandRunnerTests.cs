@@ -432,6 +432,9 @@ public sealed class SyncCliCommandRunnerTests
             Assert.That(text, Does.Contain("Peak working set bytes:"));
             Assert.That(text, Does.Contain("Peak managed memory bytes:"));
             Assert.That(text, Does.Contain("Iterations completed: 1"));
+            Assert.That(text, Does.Contain("Final convergence activities: 0"));
+            Assert.That(text, Does.Contain("Final state entries: 1"));
+            Assert.That(text, Does.Contain("Converged: yes"));
             Assert.That(text, Does.Contain("Failures: 0"));
             Assert.That(entry, Is.Not.Null);
             Assert.That(entry!.RemoteFileId, Is.EqualTo(handler.CreatedFileId));

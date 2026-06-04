@@ -19,6 +19,7 @@ internal sealed class SyncOnceUploadServerHandler : HttpMessageHandler
     private readonly string _expectedRelativePath;
     private readonly Guid _ownerId = Guid.Parse("22222222-2222-2222-2222-222222222222");
     private readonly Guid _remoteRootId;
+    private bool _fileCreated;
 
     public SyncOnceUploadServerHandler(
         Guid remoteRootId,
@@ -84,6 +85,16 @@ internal sealed class SyncOnceUploadServerHandler : HttpMessageHandler
         if (request.Method == HttpMethod.Get
             && request.PathAndQuery == "/api/v1/layouts/nodes/" + _remoteRootId.ToString("D") + "/children?page=1&pageSize=100&depth=0")
         {
+            if (_fileCreated)
+            {
+                return Json(HttpStatusCode.OK, new NodeContentDto
+                {
+                    Id = _remoteRootId,
+                    TotalCount = 1,
+                    Files = [CreateManifest()],
+                });
+            }
+
             return Json(HttpStatusCode.OK, new NodeContentDto
             {
                 Id = _remoteRootId,
@@ -126,24 +137,30 @@ internal sealed class SyncOnceUploadServerHandler : HttpMessageHandler
                 Assert.That(createRequest.Validate, Is.True);
             });
 
-            return Json(HttpStatusCode.OK, new NodeFileManifestDto
-            {
-                Id = CreatedFileId,
-                NodeId = _remoteRootId,
-                FileManifestId = Guid.Parse("44444444-4444-4444-4444-444444444444"),
-                OriginalNodeFileId = CreatedFileId,
-                OwnerId = _ownerId,
-                Name = Path.GetFileName(_expectedRelativePath),
-                ContentType = "text/plain",
-                SizeBytes = _expectedContent.Length,
-                ContentHash = _expectedContentHash,
-                ETag = "sha256-" + _expectedContentHash,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-            });
+            _fileCreated = true;
+            return Json(HttpStatusCode.OK, CreateManifest());
         }
 
         throw new InvalidOperationException("Unexpected request: " + request.Method + " " + request.PathAndQuery);
+    }
+
+    private NodeFileManifestDto CreateManifest()
+    {
+        return new NodeFileManifestDto
+        {
+            Id = CreatedFileId,
+            NodeId = _remoteRootId,
+            FileManifestId = Guid.Parse("44444444-4444-4444-4444-444444444444"),
+            OriginalNodeFileId = CreatedFileId,
+            OwnerId = _ownerId,
+            Name = Path.GetFileName(_expectedRelativePath),
+            ContentType = "text/plain",
+            SizeBytes = _expectedContent.Length,
+            ContentHash = _expectedContentHash,
+            ETag = "sha256-" + _expectedContentHash,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        };
     }
 
     private static HttpResponseMessage Json(HttpStatusCode statusCode, object payload)
