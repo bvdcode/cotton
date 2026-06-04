@@ -1116,6 +1116,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     private async Task ShowAddSyncPairAsync()
     {
         IsAddSyncPairWizardVisible = true;
+        if (!HasLocalFolderSelection)
+        {
+            await BrowseLocalFolderAsync().ConfigureAwait(true);
+        }
+
         await LoadRemoteFoldersAsync("/").ConfigureAwait(true);
     }
 

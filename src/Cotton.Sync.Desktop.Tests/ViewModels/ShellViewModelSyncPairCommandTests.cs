@@ -297,6 +297,57 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task ShowAddSyncPairCommand_PromptsForLocalFolderAndShowsCloudStepAfterSelection()
+    {
+        var localFolderPicker = new FakeLocalFolderPicker("/home/user/Cotton");
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot());
+        controller.RemoteFoldersByPath["/"] = new DesktopRemoteFolderListSnapshot(
+            "/",
+            [
+                new DesktopRemoteFolderSnapshot(Guid.NewGuid(), "Documents", "/Documents"),
+            ]);
+        using ShellViewModel viewModel = CreateViewModel(controller, localFolderPicker: localFolderPicker);
+        await viewModel.InitializeAsync();
+
+        await ExecuteAsync(viewModel.ShowAddSyncPairCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(localFolderPicker.PickFolderCalls, Is.EqualTo(1));
+            Assert.That(viewModel.LocalFolderPath, Is.EqualTo("/home/user/Cotton"));
+            Assert.That(viewModel.IsAddSyncPairWizardVisible, Is.True);
+            Assert.That(viewModel.IsAddSyncPairLocalStepVisible, Is.False);
+            Assert.That(viewModel.IsAddSyncPairCloudStepVisible, Is.True);
+            Assert.That(viewModel.RemoteBrowserPath, Is.EqualTo("/"));
+            Assert.That(viewModel.RemoteFolderPath, Is.EqualTo("/"));
+            Assert.That(viewModel.RemoteFolders.Single().Name, Is.EqualTo("Documents"));
+        });
+    }
+
+    [Test]
+    public async Task ShowAddSyncPairCommand_StaysOnLocalStepWhenFolderSelectionIsCanceled()
+    {
+        var localFolderPicker = new FakeLocalFolderPicker();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot());
+        controller.RemoteFoldersByPath["/"] = new DesktopRemoteFolderListSnapshot("/", []);
+        using ShellViewModel viewModel = CreateViewModel(controller, localFolderPicker: localFolderPicker);
+        await viewModel.InitializeAsync();
+
+        await ExecuteAsync(viewModel.ShowAddSyncPairCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(localFolderPicker.PickFolderCalls, Is.EqualTo(1));
+            Assert.That(viewModel.LocalFolderPath, Is.Empty);
+            Assert.That(viewModel.IsAddSyncPairWizardVisible, Is.True);
+            Assert.That(viewModel.IsAddSyncPairLocalStepVisible, Is.True);
+            Assert.That(viewModel.IsAddSyncPairCloudStepVisible, Is.False);
+            Assert.That(viewModel.RemoteBrowserPath, Is.EqualTo("/"));
+            Assert.That(viewModel.RemoteFolderPath, Is.EqualTo("/"));
+        });
+    }
+
+    [Test]
     public async Task OpenRemoteFolderCommand_NavigatesToSelectedCloudFolder()
     {
         Guid archiveId = Guid.NewGuid();
@@ -728,11 +779,12 @@ public sealed class ShellViewModelSyncPairCommandTests
 
     private static ShellViewModel CreateViewModel(
         FakeDesktopShellController controller,
-        DesktopFeatureFlags? featureFlags = null)
+        DesktopFeatureFlags? featureFlags = null,
+        FakeLocalFolderPicker? localFolderPicker = null)
     {
         return new ShellViewModel(
             controller,
-            new FakeLocalFolderPicker(),
+            localFolderPicker ?? new FakeLocalFolderPicker(),
             new FakeDesktopNotificationService(),
             new FakeDesktopThemeService(),
             new InlineDesktopUiDispatcher(),
@@ -741,9 +793,20 @@ public sealed class ShellViewModelSyncPairCommandTests
 
     private sealed class FakeLocalFolderPicker : ILocalFolderPicker
     {
+        private readonly string? _selectedPath;
+
+        public FakeLocalFolderPicker(string? selectedPath = null)
+        {
+            _selectedPath = selectedPath;
+        }
+
+        public int PickFolderCalls { get; private set; }
+
         public Task<string?> PickFolderAsync(CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException();
+            cancellationToken.ThrowIfCancellationRequested();
+            PickFolderCalls++;
+            return Task.FromResult(_selectedPath);
         }
     }
 
