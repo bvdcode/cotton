@@ -496,6 +496,32 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task SignOutCommand_ClearsSensitiveSetupState()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Idle")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        viewModel.Password = "password";
+        viewModel.TotpCode = "123456";
+        await ExecuteAsync(viewModel.ShowSettingsCommand);
+
+        await ExecuteAsync(viewModel.SignOutCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(controller.SignOutCalls, Is.EqualTo(1));
+            Assert.That(viewModel.IsSignedIn, Is.False);
+            Assert.That(viewModel.IsSetupVisible, Is.True);
+            Assert.That(viewModel.AccountName, Is.EqualTo("Signed out"));
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Signed out"));
+            Assert.That(viewModel.Password, Is.Empty);
+            Assert.That(viewModel.TotpCode, Is.Empty);
+            Assert.That(viewModel.IsSettingsVisible, Is.False);
+            Assert.That(viewModel.SignOutCommand.CanExecute(null), Is.False);
+        });
+    }
+
+    [Test]
     public void FutureSyncModesVisibility_UsesFeatureFlag()
     {
         using ShellViewModel hiddenViewModel = CreateViewModel(
@@ -614,6 +640,8 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public string? RenamedSyncPairDisplayName { get; private set; }
 
+        public int SignOutCalls { get; private set; }
+
         public DesktopSelfTestSnapshot SelfTestSnapshot { get; set; } = new([]);
 
         public DesktopServerProbeResult? ServerProbeResult { get; set; }
@@ -707,7 +735,9 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public Task SignOutAsync(CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException();
+            cancellationToken.ThrowIfCancellationRequested();
+            SignOutCalls++;
+            return Task.CompletedTask;
         }
 
         public Task<SyncPairSettings> AddSyncPairAsync(

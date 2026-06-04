@@ -1008,6 +1008,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             AccountName = "Signed out";
             GlobalStatus = "Signed out";
             Password = string.Empty;
+            TotpCode = string.Empty;
             IsAddSyncPairWizardVisible = false;
             IsSettingsVisible = false;
             ActionRequiredMessage = string.Empty;
