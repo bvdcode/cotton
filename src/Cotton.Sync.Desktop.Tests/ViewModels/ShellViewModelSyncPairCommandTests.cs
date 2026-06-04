@@ -408,6 +408,43 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task SignInCommand_OpensAddFolderWizardWhenNoSyncPairsExist()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedOutSnapshot())
+        {
+            ServerProbeResult = new DesktopServerProbeResult(
+                new Uri("https://app.cottoncloud.dev/"),
+                true,
+                "Cotton Cloud",
+                "instance-hash"),
+        };
+        controller.RemoteFoldersByPath["/"] = new DesktopRemoteFolderListSnapshot(
+            "/",
+            [
+                new DesktopRemoteFolderSnapshot(Guid.NewGuid(), "Documents", "/Documents"),
+            ]);
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        viewModel.ServerUrl = "app.cottoncloud.dev";
+        viewModel.Username = "desktop@example.test";
+        viewModel.Password = "password";
+        await WaitForAsync(() => viewModel.IsSignInStepVisible);
+
+        await ExecuteAsync(viewModel.SignInCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsSignedIn, Is.True);
+            Assert.That(viewModel.IsAddSyncPairWizardVisible, Is.True);
+            Assert.That(viewModel.IsAddSyncPairLocalStepVisible, Is.True);
+            Assert.That(viewModel.RemoteBrowserPath, Is.EqualTo("/"));
+            Assert.That(viewModel.RemoteFolderPath, Is.EqualTo("/"));
+            Assert.That(viewModel.RemoteFolders.Single().Name, Is.EqualTo("Documents"));
+            Assert.That(controller.SignInRequest?.ServerUrl, Is.EqualTo("https://app.cottoncloud.dev/"));
+        });
+    }
+
+    [Test]
     public void FutureSyncModesVisibility_UsesFeatureFlag()
     {
         using ShellViewModel hiddenViewModel = CreateViewModel(
@@ -530,6 +567,8 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public DesktopServerProbeResult? ServerProbeResult { get; set; }
 
+        public DesktopSignInRequest? SignInRequest { get; private set; }
+
         public Dictionary<string, DesktopRemoteFolderListSnapshot> RemoteFoldersByPath { get; } = [];
 
         public List<string> ProbedServerUrls { get; } = [];
@@ -596,7 +635,13 @@ public sealed class ShellViewModelSyncPairCommandTests
             DesktopSignInRequest request,
             CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException();
+            cancellationToken.ThrowIfCancellationRequested();
+            SignInRequest = request;
+            return Task.FromResult(new AuthSession(
+                Guid.NewGuid(),
+                request.Username,
+                request.Username,
+                false));
         }
 
         public Task<DesktopRemoteFolderListSnapshot> ListRemoteFoldersAsync(

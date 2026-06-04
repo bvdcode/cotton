@@ -987,6 +987,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             ActionRequiredMessage = string.Empty;
             AddActivity("Account", AccountName, "Signed in");
             RefreshDiagnosticsItems();
+            if (SyncPairs.Count == 0)
+            {
+                await ShowAddSyncPairAsync().ConfigureAwait(true);
+            }
         }
         finally
         {
