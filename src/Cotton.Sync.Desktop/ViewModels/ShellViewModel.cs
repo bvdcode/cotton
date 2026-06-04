@@ -85,6 +85,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         _controller.ActivityReported += OnActivityReported;
         _controller.StatusChanged += OnStatusChanged;
         SignInCommand = new AsyncRelayCommand(SignInAsync, CanSignIn, HandleCommandError);
+        ChangeServerCommand = new AsyncRelayCommand(ChangeServerAsync, () => !IsBusy, HandleCommandError);
         AddSyncPairCommand = new AsyncRelayCommand(AddSyncPairAsync, CanAddSyncPair, HandleCommandError);
         BrowseLocalFolderCommand = new AsyncRelayCommand(BrowseLocalFolderAsync, () => !IsBusy, HandleCommandError);
         CancelAddSyncPairCommand = new AsyncRelayCommand(CancelAddSyncPairAsync, () => !IsBusy, HandleCommandError);
@@ -138,6 +139,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public AsyncRelayCommand BrowseLocalFolderCommand { get; }
 
     public AsyncRelayCommand CancelAddSyncPairCommand { get; }
+
+    public AsyncRelayCommand ChangeServerCommand { get; }
 
     public AsyncRelayCommand CloseSettingsCommand { get; }
 
@@ -229,6 +232,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             {
                 OnPropertyChanged(nameof(IsDashboardVisible));
                 OnPropertyChanged(nameof(IsSetupVisible));
+                RaiseSetupStateProperties();
                 OnPropertyChanged(nameof(CanRetryActionRequired));
                 RefreshCurrentProgressText();
                 RaiseCommandStates();
@@ -265,6 +269,16 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     public bool IsDashboardVisible => IsSignedIn;
 
     public bool IsSetupVisible => !IsSignedIn;
+
+    public bool IsServerStepVisible => IsSetupVisible && !IsServerVerified;
+
+    public bool IsSignInStepVisible => IsSetupVisible && IsServerVerified;
+
+    public string SetupTitle => IsServerVerified ? "Sign in" : "Connect Cotton Sync";
+
+    public string SetupSubtitle => IsServerVerified
+        ? "Use your Cotton Cloud account."
+        : "Choose the Cotton Cloud server for this computer.";
 
     public bool StartWithOperatingSystem
     {
@@ -444,6 +458,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
             if (SetProperty(ref _isServerVerified, value))
             {
                 SignInCommand.RaiseCanExecuteChanged();
+                RaiseSetupStateProperties();
             }
         }
     }
@@ -772,6 +787,16 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         RemoteFolderPath = string.Empty;
         IsAddSyncPairWizardVisible = false;
         RemoteFolders.Clear();
+        return Task.CompletedTask;
+    }
+
+    private Task ChangeServerAsync()
+    {
+        Password = string.Empty;
+        TotpCode = string.Empty;
+        IsServerVerified = false;
+        IsServerProbeFailed = false;
+        ServerProbeStatus = "Edit server address";
         return Task.CompletedTask;
     }
 
@@ -1422,6 +1447,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         AddSyncPairCommand.RaiseCanExecuteChanged();
         BrowseLocalFolderCommand.RaiseCanExecuteChanged();
         CancelAddSyncPairCommand.RaiseCanExecuteChanged();
+        ChangeServerCommand.RaiseCanExecuteChanged();
         OpenRemoteFolderCommand.RaiseCanExecuteChanged();
         RemoteFolderUpCommand.RaiseCanExecuteChanged();
         SyncNowCommand.RaiseCanExecuteChanged();
@@ -1438,6 +1464,14 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         CloseSettingsCommand.RaiseCanExecuteChanged();
         SelfTestCommand.RaiseCanExecuteChanged();
         ExportDiagnosticsCommand.RaiseCanExecuteChanged();
+    }
+
+    private void RaiseSetupStateProperties()
+    {
+        OnPropertyChanged(nameof(IsServerStepVisible));
+        OnPropertyChanged(nameof(IsSignInStepVisible));
+        OnPropertyChanged(nameof(SetupTitle));
+        OnPropertyChanged(nameof(SetupSubtitle));
     }
 
     private void RaiseWizardStateProperties()

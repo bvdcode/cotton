@@ -3,10 +3,10 @@
         x:Class="Cotton.Sync.Desktop.MainWindow"
         Title="Cotton Sync"
         Icon="/Assets/icon-192.png"
-        Width="344"
-        Height="382"
-        MinWidth="324"
-        MinHeight="360"
+        Width="336"
+        Height="300"
+        MinWidth="316"
+        MinHeight="280"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource CottonAppBackgroundBrush}">
   <Grid RowDefinitions="3,Auto,*"
@@ -84,97 +84,175 @@
     <Grid Grid.Row="2"
           Background="{DynamicResource CottonSurfaceBrush}"
           IsVisible="{Binding IsSetupVisible}">
-      <StackPanel Width="306"
-                  Spacing="7"
+      <StackPanel Width="296"
+                  Spacing="9"
                   HorizontalAlignment="Center"
                   VerticalAlignment="Center">
-        <StackPanel Spacing="5"
+        <StackPanel Spacing="4"
                     HorizontalAlignment="Center"
-                    Margin="0,0,0,6">
-          <Border Width="52"
-                  Height="52"
-                  CornerRadius="12"
-                  Background="{DynamicResource CottonPrimarySoftBrush}"
-                  HorizontalAlignment="Center">
+                    Margin="0,0,0,4">
+          <Border Width="50"
+                  Height="50"
+                  CornerRadius="10"
+                  Background="{DynamicResource CottonPrimaryBrush}"
+                  HorizontalAlignment="Center"
+                  BorderBrush="{DynamicResource CottonSecondaryBrush}"
+                  BorderThickness="1">
             <Image Source="avares://Cotton.Sync.Desktop/Assets/icon-192.png"
-                   Width="38"
-                   Height="38"
+                   Width="36"
+                   Height="36"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center" />
           </Border>
-          <TextBlock Text="Cotton Sync"
-                     FontSize="21"
+          <TextBlock Text="{Binding SetupTitle}"
+                     FontSize="20"
                      FontWeight="SemiBold"
-                     HorizontalAlignment="Center" />
-          <TextBlock Text="Sign in to sync this computer."
+                     TextAlignment="Center"
+                     HorizontalAlignment="Center"
+                     TextTrimming="CharacterEllipsis" />
+          <TextBlock Text="{Binding SetupSubtitle}"
                      Classes="secondary"
                      FontSize="12"
+                     TextAlignment="Center"
                      HorizontalAlignment="Center" />
         </StackPanel>
 
-        <Grid>
-          <TextBox Watermark="Server"
-                   Padding="8,0,32,0"
-                   Text="{Binding ServerUrl}" />
-          <Grid Width="22"
-                Height="22"
-                Margin="0,0,6,0"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Center">
+        <Grid ColumnDefinitions="*,8,*"
+              Margin="0,1,0,2">
+          <Grid ColumnDefinitions="Auto,*"
+                ColumnSpacing="6">
             <Border Width="18"
                     Height="18"
                     CornerRadius="9"
-                    Background="{DynamicResource CottonSurfaceMutedBrush}"
-                    IsVisible="{Binding IsServerProbeChecking}">
-              <TextBlock Text="..."
-                         FontSize="10"
+                    Background="{DynamicResource CottonPrimaryBrush}">
+              <TextBlock Text="1"
+                         FontSize="11"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource CottonPrimaryTextBrush}"
                          HorizontalAlignment="Center"
                          VerticalAlignment="Center" />
             </Border>
+            <TextBlock Grid.Column="1"
+                       Text="Server"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center" />
+          </Grid>
+          <Border Grid.Column="1"
+                  Height="1"
+                  Background="{DynamicResource CottonBorderBrush}"
+                  VerticalAlignment="Center" />
+          <Grid Grid.Column="2"
+                ColumnDefinitions="Auto,*"
+                ColumnSpacing="6"
+                IsEnabled="{Binding IsServerVerified}">
             <Border Width="18"
                     Height="18"
                     CornerRadius="9"
-                    Background="{DynamicResource CottonSuccessBrush}"
-                    IsVisible="{Binding IsServerVerified}">
-              <TextBlock Text="✓"
-                         FontSize="12"
-                         FontWeight="Bold"
+                    Background="{DynamicResource CottonPrimaryBrush}">
+              <TextBlock Text="2"
+                         FontSize="11"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource CottonPrimaryTextBrush}"
                          HorizontalAlignment="Center"
                          VerticalAlignment="Center" />
             </Border>
-            <Border Width="18"
-                    Height="18"
-                    CornerRadius="9"
-                    Background="{DynamicResource CottonErrorBrush}"
-                    IsVisible="{Binding IsServerProbeFailed}">
-              <TextBlock Text="!"
-                         Foreground="White"
-                         FontSize="12"
-                         FontWeight="Bold"
-                         HorizontalAlignment="Center"
-                         VerticalAlignment="Center" />
-            </Border>
+            <TextBlock Grid.Column="1"
+                       Text="Account"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center" />
           </Grid>
         </Grid>
-        <TextBlock Text="{Binding ServerProbeStatus}"
-                   Classes="secondary"
-                   FontSize="12"
-                   TextTrimming="CharacterEllipsis"
-                   IsVisible="{Binding HasServerProbeStatus}" />
-        <TextBox Watermark="Username"
-                 Text="{Binding Username}" />
-        <TextBox Watermark="Password"
-                 PasswordChar="*"
-                 Text="{Binding Password}" />
-        <TextBox Watermark="Code (optional)"
-                 Text="{Binding TotpCode}" />
-        <Button Content="Sign in"
-                Classes="primary"
-                HorizontalAlignment="Stretch"
-                Command="{Binding SignInCommand}" />
-        <CheckBox Content="Start with this computer"
-                  IsEnabled="{Binding IsStartWithOperatingSystemSupported}"
-                  IsChecked="{Binding StartWithOperatingSystem}" />
+
+        <StackPanel Spacing="8"
+                    IsVisible="{Binding IsServerStepVisible}">
+          <Grid>
+            <TextBox PlaceholderText="Server address"
+                     Padding="8,0,34,0"
+                     Text="{Binding ServerUrl}" />
+            <Grid Width="24"
+                  Height="24"
+                  Margin="0,0,5,0"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Center">
+              <Border Width="18"
+                      Height="18"
+                      CornerRadius="9"
+                      Background="{DynamicResource CottonSurfaceMutedBrush}"
+                      IsVisible="{Binding IsServerProbeChecking}">
+                <TextBlock Text="..."
+                           FontSize="10"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+              </Border>
+              <Border Width="18"
+                      Height="18"
+                      CornerRadius="9"
+                      Background="{DynamicResource CottonErrorBrush}"
+                      IsVisible="{Binding IsServerProbeFailed}">
+                <TextBlock Text="!"
+                           Foreground="White"
+                           FontSize="12"
+                           FontWeight="Bold"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+              </Border>
+            </Grid>
+          </Grid>
+          <TextBlock Text="{Binding ServerProbeStatus}"
+                     Classes="secondary"
+                     FontSize="12"
+                     TextTrimming="CharacterEllipsis"
+                     IsVisible="{Binding HasServerProbeStatus}" />
+        </StackPanel>
+
+        <StackPanel Spacing="8"
+                    IsVisible="{Binding IsSignInStepVisible}">
+          <Border Padding="8"
+                  CornerRadius="6"
+                  Background="{DynamicResource CottonPrimarySoftBrush}">
+            <Grid ColumnDefinitions="Auto,*,Auto"
+                  ColumnSpacing="7">
+              <Border Width="18"
+                      Height="18"
+                      CornerRadius="9"
+                      Background="{DynamicResource CottonSuccessBrush}"
+                      VerticalAlignment="Center">
+                <TextBlock Text="✓"
+                           FontSize="12"
+                           FontWeight="Bold"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+              </Border>
+              <TextBlock Grid.Column="1"
+                         Text="{Binding ServerUrl}"
+                         FontSize="12"
+                         FontWeight="SemiBold"
+                         TextTrimming="CharacterEllipsis"
+                         VerticalAlignment="Center" />
+              <Button Grid.Column="2"
+                      Content="Change"
+                      Classes="compact"
+                      Command="{Binding ChangeServerCommand}" />
+            </Grid>
+          </Border>
+
+          <TextBox PlaceholderText="Username"
+                   Text="{Binding Username}" />
+          <TextBox PlaceholderText="Password"
+                   PasswordChar="*"
+                   Text="{Binding Password}" />
+          <TextBox PlaceholderText="2FA code"
+                   Text="{Binding TotpCode}" />
+          <Button Content="Sign in"
+                  Classes="primary"
+                  HorizontalAlignment="Stretch"
+                  Command="{Binding SignInCommand}" />
+          <CheckBox Content="Start with this computer"
+                    IsEnabled="{Binding IsStartWithOperatingSystemSupported}"
+                    IsChecked="{Binding StartWithOperatingSystem}" />
+        </StackPanel>
       </StackPanel>
     </Grid>
 
@@ -908,7 +986,7 @@
                                VerticalAlignment="Center" />
                     <TextBox Grid.Column="1"
                              Text="{Binding SelectedSyncPair.EditableDisplayName}"
-                             Watermark="Sync folder"
+                             PlaceholderText="Sync folder"
                              MinHeight="30" />
                     <Button Grid.Column="2"
                             Content="Save"

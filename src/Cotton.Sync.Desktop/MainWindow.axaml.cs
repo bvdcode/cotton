@@ -20,13 +20,15 @@ public sealed partial class MainWindow : Window
     private const double DashboardMinHeight = 520;
     private const double DashboardMinWidth = 388;
     private const double DashboardWidth = 400;
-    private const double SetupHeight = 382;
-    private const double SetupMinHeight = 360;
-    private const double SetupMinWidth = 324;
-    private const double SetupWidth = 344;
+    private const double SetupServerHeight = 300;
+    private const double SetupServerMinHeight = 280;
+    private const double SetupSignInHeight = 360;
+    private const double SetupSignInMinHeight = 340;
+    private const double SetupMinWidth = 316;
+    private const double SetupWidth = 336;
 
     private readonly DesktopWindowLifecyclePolicy _lifecyclePolicy;
-    private bool? _isDashboardWindowMode;
+    private WindowProfile? _windowProfile;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MainWindow" /> class.
@@ -50,7 +52,7 @@ public sealed partial class MainWindow : Window
             DesktopNotificationServiceFactory.CreateDefault(),
             new AvaloniaDesktopThemeService());
         DataContext = viewModel;
-        ApplyWindowMode(viewModel.IsDashboardVisible);
+        ApplyWindowMode(viewModel);
         viewModel.PropertyChanged += OnViewModelPropertyChanged;
         Opened += async (_, _) =>
         {
@@ -100,23 +102,50 @@ public sealed partial class MainWindow : Window
     {
         if (e.PropertyName == nameof(ShellViewModel.IsDashboardVisible) && sender is ShellViewModel viewModel)
         {
-            ApplyWindowMode(viewModel.IsDashboardVisible);
+            ApplyWindowMode(viewModel);
+            return;
+        }
+
+        if (e.PropertyName == nameof(ShellViewModel.IsSignInStepVisible) && sender is ShellViewModel setupViewModel)
+        {
+            ApplyWindowMode(setupViewModel);
         }
     }
 
-    private void ApplyWindowMode(bool isDashboard)
+    private void ApplyWindowMode(ShellViewModel viewModel)
     {
-        if (_isDashboardWindowMode == isDashboard)
+        WindowProfile profile = ResolveWindowProfile(viewModel);
+        if (_windowProfile == profile)
         {
             return;
         }
 
-        _isDashboardWindowMode = isDashboard;
-        MinWidth = isDashboard ? DashboardMinWidth : SetupMinWidth;
-        MinHeight = isDashboard ? DashboardMinHeight : SetupMinHeight;
-        Width = isDashboard ? DashboardWidth : SetupWidth;
-        Height = isDashboard ? DashboardHeight : SetupHeight;
+        _windowProfile = profile;
+        MinWidth = profile == WindowProfile.Dashboard ? DashboardMinWidth : SetupMinWidth;
+        MinHeight = profile switch
+        {
+            WindowProfile.Dashboard => DashboardMinHeight,
+            WindowProfile.SetupSignIn => SetupSignInMinHeight,
+            _ => SetupServerMinHeight,
+        };
+        Width = profile == WindowProfile.Dashboard ? DashboardWidth : SetupWidth;
+        Height = profile switch
+        {
+            WindowProfile.Dashboard => DashboardHeight,
+            WindowProfile.SetupSignIn => SetupSignInHeight,
+            _ => SetupServerHeight,
+        };
         CenterOnCurrentScreen();
+    }
+
+    private static WindowProfile ResolveWindowProfile(ShellViewModel viewModel)
+    {
+        if (viewModel.IsDashboardVisible)
+        {
+            return WindowProfile.Dashboard;
+        }
+
+        return viewModel.IsSignInStepVisible ? WindowProfile.SetupSignIn : WindowProfile.SetupServer;
     }
 
     private void CenterOnCurrentScreen()
@@ -134,5 +163,12 @@ public sealed partial class MainWindow : Window
         Position = new PixelPoint(
             workingArea.X + Math.Max(0, workingArea.Width - pixelWidth) / 2,
             workingArea.Y + Math.Max(0, workingArea.Height - pixelHeight) / 2);
+    }
+
+    private enum WindowProfile
+    {
+        SetupServer,
+        SetupSignIn,
+        Dashboard,
     }
 }

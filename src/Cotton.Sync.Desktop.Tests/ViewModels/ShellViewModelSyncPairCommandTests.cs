@@ -353,7 +353,57 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.ServerUrl, Is.EqualTo("https://app.cottoncloud.dev/"));
             Assert.That(viewModel.IsServerProbeFailed, Is.False);
             Assert.That(viewModel.ServerProbeStatus, Is.EqualTo("Cotton Cloud"));
+            Assert.That(viewModel.IsServerStepVisible, Is.False);
+            Assert.That(viewModel.IsSignInStepVisible, Is.True);
+            Assert.That(viewModel.SetupTitle, Is.EqualTo("Sign in"));
             Assert.That(viewModel.SignInCommand.CanExecute(null), Is.True);
+        });
+    }
+
+    [Test]
+    public async Task SetupFlow_StartsWithServerStepUntilCottonServerIsVerified()
+    {
+        using ShellViewModel viewModel = CreateViewModel(new FakeDesktopShellController(CreateSignedOutSnapshot()));
+        await viewModel.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsSetupVisible, Is.True);
+            Assert.That(viewModel.IsServerStepVisible, Is.True);
+            Assert.That(viewModel.IsSignInStepVisible, Is.False);
+            Assert.That(viewModel.SetupTitle, Is.EqualTo("Connect Cotton Sync"));
+            Assert.That(viewModel.SignInCommand.CanExecute(null), Is.False);
+        });
+    }
+
+    [Test]
+    public async Task ChangeServerCommand_ReturnsSetupFlowToServerStepAndClearsSecrets()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedOutSnapshot())
+        {
+            ServerProbeResult = new DesktopServerProbeResult(
+                new Uri("https://app.cottoncloud.dev/"),
+                true,
+                "Cotton Cloud",
+                "instance-hash"),
+        };
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        viewModel.ServerUrl = "app.cottoncloud.dev";
+        viewModel.Password = "password";
+        viewModel.TotpCode = "123456";
+        await WaitForAsync(() => viewModel.IsSignInStepVisible);
+
+        await ExecuteAsync(viewModel.ChangeServerCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsServerVerified, Is.False);
+            Assert.That(viewModel.IsServerStepVisible, Is.True);
+            Assert.That(viewModel.IsSignInStepVisible, Is.False);
+            Assert.That(viewModel.Password, Is.Empty);
+            Assert.That(viewModel.TotpCode, Is.Empty);
+            Assert.That(viewModel.ServerProbeStatus, Is.EqualTo("Edit server address"));
         });
     }
 
