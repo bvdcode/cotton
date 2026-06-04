@@ -15,12 +15,22 @@ internal static class DesktopActionRequiredMessageResolver
     private const string HtmlInsteadOfJsonMessage =
         "Cotton API returned a web page instead of JSON. Check the server URL or backend deployment and retry.";
 
+    private const string GenericSyncErrorMessage =
+        "One or more sync folders reported an error. Check diagnostics and retry.";
+
     public static string FromStatus(DesktopSyncStatusSnapshot status)
     {
         ArgumentNullException.ThrowIfNull(status);
         DesktopSyncPairStatusSnapshot? failedPair = status.SyncPairs
             .FirstOrDefault(static pair => !string.IsNullOrWhiteSpace(pair.LastError));
-        return Normalize(failedPair?.LastError) ?? string.Empty;
+        if (failedPair is not null)
+        {
+            return Normalize(failedPair.LastError) ?? GenericSyncErrorMessage;
+        }
+
+        return status.SyncPairs.Any(static pair => string.Equals(pair.Status, "Error", StringComparison.Ordinal))
+            ? GenericSyncErrorMessage
+            : string.Empty;
     }
 
     public static string FromSelfTest(DesktopSelfTestSnapshot selfTest)

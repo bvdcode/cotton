@@ -76,6 +76,21 @@ public sealed class DesktopActionRequiredMessageResolverTests
     }
 
     [Test]
+    public void FromStatus_ReturnsGenericMessageWhenPairErrorHasNoDetails()
+    {
+        var status = new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(Guid.NewGuid(), "Error", null),
+        ]);
+
+        string message = DesktopActionRequiredMessageResolver.FromStatus(status);
+
+        Assert.That(
+            message,
+            Is.EqualTo("One or more sync folders reported an error. Check diagnostics and retry."));
+    }
+
+    [Test]
     public void FromSelfTest_ReturnsFirstFailedCheckDetails()
     {
         var result = new DesktopSelfTestSnapshot(
