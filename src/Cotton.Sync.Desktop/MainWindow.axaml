@@ -6,7 +6,7 @@
         Width="336"
         Height="300"
         MinWidth="316"
-        MinHeight="280"
+        MinHeight="288"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource CottonAppBackgroundBrush}">
   <Grid RowDefinitions="3,Auto,*"
@@ -114,6 +114,44 @@
                      HorizontalAlignment="Center" />
         </StackPanel>
 
+        <Grid ColumnDefinitions="*,*"
+              ColumnSpacing="10">
+          <StackPanel Orientation="Horizontal"
+                      Spacing="5"
+                      HorizontalAlignment="Left">
+            <Border Classes="setupStepBadge"
+                    Classes.active="{Binding IsServerStepActive}"
+                    Classes.complete="{Binding IsServerStepComplete}">
+              <TextBlock Text="1"
+                         Classes="setupStepBadgeText"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+            </Border>
+            <TextBlock Text="Server"
+                       Classes="setupStepLabel"
+                       VerticalAlignment="Center" />
+          </StackPanel>
+
+          <StackPanel Grid.Column="1"
+                      Orientation="Horizontal"
+                      Spacing="5"
+                      HorizontalAlignment="Left">
+            <Border Classes="setupStepBadge"
+                    Classes.active="{Binding IsAccountStepActive}"
+                    Classes.inactive="{Binding IsAccountStepInactive}">
+              <TextBlock Text="2"
+                         Classes="setupStepBadgeText"
+                         Classes.inactive="{Binding IsAccountStepInactive}"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+            </Border>
+            <TextBlock Text="Account"
+                       Classes="setupStepLabel"
+                       Classes.inactive="{Binding IsAccountStepInactive}"
+                       VerticalAlignment="Center" />
+          </StackPanel>
+        </Grid>
+
         <Border Padding="8"
                 CornerRadius="6"
                 Background="{DynamicResource CottonErrorSoftBrush}"
@@ -209,9 +247,6 @@
                   Classes="primary"
                   HorizontalAlignment="Stretch"
                   Command="{Binding SignInCommand}" />
-          <CheckBox Content="Start at login"
-                    IsEnabled="{Binding IsStartWithOperatingSystemSupported}"
-                    IsChecked="{Binding StartWithOperatingSystem}" />
         </StackPanel>
       </StackPanel>
     </Grid>
@@ -853,7 +888,7 @@
                 <StackPanel Spacing="6">
                   <TextBlock Text="Startup"
                              FontWeight="SemiBold" />
-                  <CheckBox Content="Start at login"
+                  <CheckBox Content="Launch on startup"
                             IsEnabled="{Binding IsStartWithOperatingSystemSupported}"
                             IsChecked="{Binding StartWithOperatingSystem}" />
                   <TextBlock Text="{Binding AutostartStatusText}"

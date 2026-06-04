@@ -21,10 +21,10 @@ public sealed partial class MainWindow : Window
     private const double DashboardMinHeight = 520;
     private const double DashboardMinWidth = 388;
     private const double DashboardWidth = 400;
-    private const double SetupServerHeight = 252;
-    private const double SetupServerMinHeight = 236;
-    private const double SetupSignInHeight = 388;
-    private const double SetupSignInMinHeight = 368;
+    private const double SetupServerHeight = 300;
+    private const double SetupServerMinHeight = 288;
+    private const double SetupSignInHeight = 384;
+    private const double SetupSignInMinHeight = 376;
     private const double SetupMinWidth = 316;
     private const double SetupWidth = 336;
 

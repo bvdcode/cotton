@@ -75,9 +75,9 @@ internal sealed class DesktopShellController : IDesktopShellController
         await _preferencesStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
         await _syncPairStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
         AppPreferences preferences = await _preferencesStore.GetAsync(cancellationToken).ConfigureAwait(false);
-        bool startWithOperatingSystem = await _autostartService
-            .IsEnabledAsync(cancellationToken)
-            .ConfigureAwait(false);
+        bool startWithOperatingSystem = await ResolveStartWithOperatingSystemAsync(
+            preferences,
+            cancellationToken).ConfigureAwait(false);
         IReadOnlyList<SyncPairSettings> syncPairs = await _syncPairStore.ListAsync(cancellationToken).ConfigureAwait(false);
         Uri? serverUrl = _startupOptions.ServerUrl ?? preferences.RememberedServerUrl;
         AuthSession? session = serverUrl is null
@@ -142,6 +142,7 @@ internal sealed class DesktopShellController : IDesktopShellController
             AppPreferences preferences = await _preferencesStore.GetAsync(cancellationToken).ConfigureAwait(false);
             preferences.RememberedServerUrl = serverUrl;
             preferences.RememberedUsername = request.Username.Trim();
+            await TryApplyPreferredAutostartAsync(preferences, cancellationToken).ConfigureAwait(false);
             await host.App.SavePreferencesAsync(preferences, cancellationToken).ConfigureAwait(false);
             await host.App.StartSyncAsync(cancellationToken).ConfigureAwait(false);
             await ReplaceHostAsync(host, cancellationToken).ConfigureAwait(false);
@@ -407,6 +408,66 @@ internal sealed class DesktopShellController : IDesktopShellController
         preferences.StartWithOperatingSystem = enabled;
         preferences.StartMinimizedToTray = enabled && DesktopPlatformCapabilities.IsTrayLifecycleSupported;
         await _preferencesStore.SaveAsync(preferences, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<bool> ResolveStartWithOperatingSystemAsync(
+        AppPreferences preferences,
+        CancellationToken cancellationToken)
+    {
+        bool isEnabled = await TryReadStartWithOperatingSystemAsync(cancellationToken).ConfigureAwait(false);
+        if (isEnabled || !preferences.StartWithOperatingSystem || !_autostartService.IsSupported)
+        {
+            return isEnabled;
+        }
+
+        bool applied = await TryApplyPreferredAutostartAsync(preferences, cancellationToken).ConfigureAwait(false);
+        if (!applied)
+        {
+            return isEnabled;
+        }
+
+        await _preferencesStore.SaveAsync(preferences, cancellationToken).ConfigureAwait(false);
+        return true;
+    }
+
+    private async Task<bool> TryReadStartWithOperatingSystemAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _autostartService.IsEnabledAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            Trace.TraceError("Failed to read Cotton Sync autostart state. {0}", exception);
+            return false;
+        }
+    }
+
+    private async Task<bool> TryApplyPreferredAutostartAsync(
+        AppPreferences preferences,
+        CancellationToken cancellationToken)
+    {
+        if (!preferences.StartWithOperatingSystem || !_autostartService.IsSupported)
+        {
+            return false;
+        }
+
+        try
+        {
+            bool isEnabled = await _autostartService.IsEnabledAsync(cancellationToken).ConfigureAwait(false);
+            if (!isEnabled)
+            {
+                await _autostartService.SetEnabledAsync(true, cancellationToken).ConfigureAwait(false);
+            }
+
+            preferences.StartMinimizedToTray = DesktopPlatformCapabilities.IsTrayLifecycleSupported;
+            return true;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            Trace.TraceError("Failed to apply Cotton Sync autostart preference. {0}", exception);
+            return false;
+        }
     }
 
     public async Task SetNotificationsEnabledAsync(bool enabled, CancellationToken cancellationToken = default)

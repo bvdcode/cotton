@@ -21,7 +21,7 @@ public sealed class AppPreferences
     /// <summary>
     /// Gets or sets a value indicating whether the app should start with the operating system.
     /// </summary>
-    public bool StartWithOperatingSystem { get; set; }
+    public bool StartWithOperatingSystem { get; set; } = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether the app should start minimized to the tray.
