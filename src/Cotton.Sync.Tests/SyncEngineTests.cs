@@ -157,6 +157,148 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_DeletesRemoteEmptyDirectoryWhenBaselineKnowsLocalDelete()
+    {
+        RemoteDirectorySnapshot remoteDirectory = RemoteDirectory("Projects");
+        RemoteTreeSnapshot remoteTree = EmptyRemoteTree();
+        remoteTree.Directories.Add(remoteDirectory);
+        var remoteDirectories = new FakeRemoteDirectorySynchronizer();
+        SyncEngine engine = CreateEngine(
+            new FakeLocalFileScanner(),
+            remoteTree,
+            new FakeRemoteFileSynchronizer(),
+            out SqliteSyncStateStore stateStore,
+            remoteDirectories);
+        await InsertDirectoryBaselineAsync(stateStore, "Projects", remoteDirectory.Node);
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+        IReadOnlyList<SyncStateEntry> state = await stateStore.LoadPairAsync("pair-a");
+        Assert.Multiple(() =>
+        {
+            Assert.That(remoteDirectories.Deletes, Is.EqualTo(new[] { (remoteDirectory.Node.Id, false) }));
+            Assert.That(state, Is.Empty);
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.DeletedRemote }));
+        });
+    }
+
+    [Test]
+    public async Task RunOnceAsync_DeletesLocalEmptyDirectoryWhenBaselineKnowsRemoteDelete()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "Projects"));
+        RemoteDirectorySnapshot remoteDirectory = RemoteDirectory("Projects");
+        var scanner = new FakeLocalFileScanner
+        {
+            Directories =
+            {
+                LocalDirectory("Projects"),
+            },
+        };
+        SyncEngine engine = CreateEngine(scanner, EmptyRemoteTree(), new FakeRemoteFileSynchronizer(), out SqliteSyncStateStore stateStore);
+        await InsertDirectoryBaselineAsync(stateStore, "Projects", remoteDirectory.Node);
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+        IReadOnlyList<SyncStateEntry> state = await stateStore.LoadPairAsync("pair-a");
+        Assert.Multiple(() =>
+        {
+            Assert.That(Directory.Exists(Path.Combine(_root, "Projects")), Is.False);
+            Assert.That(state, Is.Empty);
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.DeletedLocal }));
+        });
+    }
+
+    [Test]
+    public async Task RunOnceAsync_SkipsLocalDirectoryDeleteWhenFolderIsNotEmpty()
+    {
+        WriteFile("Projects/keep.txt", "keep");
+        RemoteDirectorySnapshot remoteDirectory = RemoteDirectory("Projects");
+        LocalFileSnapshot localFile = LocalFile("Projects/keep.txt", "keep");
+        var scanner = new FakeLocalFileScanner(localFile)
+        {
+            Directories =
+            {
+                LocalDirectory("Projects"),
+            },
+        };
+        SyncEngine engine = CreateEngine(scanner, EmptyRemoteTree(), new FakeRemoteFileSynchronizer(), out SqliteSyncStateStore stateStore);
+        await InsertDirectoryBaselineAsync(stateStore, "Projects", remoteDirectory.Node);
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+        SyncStateEntry? state = await stateStore.GetAsync("pair-a", "Projects");
+        Assert.Multiple(() =>
+        {
+            Assert.That(Directory.Exists(Path.Combine(_root, "Projects")), Is.True);
+            Assert.That(File.Exists(Path.Combine(_root, "Projects", "keep.txt")), Is.True);
+            Assert.That(state, Is.Not.Null);
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Skipped, SyncActivityKind.Uploaded }));
+            Assert.That(result.Activities[0].Details, Does.Contain("not empty"));
+        });
+    }
+
+    [Test]
+    public async Task RunOnceAsync_BlocksRemoteDirectoryDeletesOverRunLimit()
+    {
+        RemoteDirectorySnapshot first = RemoteDirectory("One");
+        RemoteDirectorySnapshot second = RemoteDirectory("Two");
+        RemoteTreeSnapshot remoteTree = EmptyRemoteTree();
+        remoteTree.Directories.Add(first);
+        remoteTree.Directories.Add(second);
+        var remoteDirectories = new FakeRemoteDirectorySynchronizer();
+        SyncEngine engine = CreateEngine(
+            new FakeLocalFileScanner(),
+            remoteTree,
+            new FakeRemoteFileSynchronizer(),
+            out SqliteSyncStateStore stateStore,
+            remoteDirectories);
+        await InsertDirectoryBaselineAsync(stateStore, "One", first.Node);
+        await InsertDirectoryBaselineAsync(stateStore, "Two", second.Node);
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair(), new SyncRunOptions { MaximumRemoteDeletesPerRun = 1 });
+
+        IReadOnlyList<SyncStateEntry> state = await stateStore.LoadPairAsync("pair-a");
+        Assert.Multiple(() =>
+        {
+            Assert.That(remoteDirectories.Deletes, Is.Empty);
+            Assert.That(state.Select(entry => entry.RelativePath), Is.EqualTo(new[] { "One", "Two" }));
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Skipped, SyncActivityKind.Skipped }));
+            Assert.That(result.Activities[0].Details, Does.Contain("2 pending deletes exceed limit 1"));
+            Assert.That(result.Activities[1].Details, Does.Contain("2 pending deletes exceed limit 1"));
+        });
+    }
+
+    [Test]
+    public async Task RunOnceAsync_DoesNotCascadeRemoteDirectoryDeletesInsideOneRun()
+    {
+        RemoteDirectorySnapshot parent = RemoteDirectory("Projects");
+        RemoteDirectorySnapshot child = RemoteDirectory("Projects/Archive", parent.Node.Id);
+        RemoteTreeSnapshot remoteTree = EmptyRemoteTree();
+        remoteTree.Directories.Add(parent);
+        remoteTree.Directories.Add(child);
+        var remoteDirectories = new FakeRemoteDirectorySynchronizer();
+        SyncEngine engine = CreateEngine(
+            new FakeLocalFileScanner(),
+            remoteTree,
+            new FakeRemoteFileSynchronizer(),
+            out SqliteSyncStateStore stateStore,
+            remoteDirectories);
+        await InsertDirectoryBaselineAsync(stateStore, "Projects", parent.Node);
+        await InsertDirectoryBaselineAsync(stateStore, "Projects/Archive", child.Node);
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair(), new SyncRunOptions { MaximumRemoteDeletesPerRun = 1 });
+
+        IReadOnlyList<SyncStateEntry> state = await stateStore.LoadPairAsync("pair-a");
+        Assert.Multiple(() =>
+        {
+            Assert.That(remoteDirectories.Deletes, Is.EqualTo(new[] { (child.Node.Id, false) }));
+            Assert.That(state.Select(entry => entry.RelativePath), Is.EqualTo(new[] { "Projects" }));
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.DeletedRemote, SyncActivityKind.Skipped }));
+            Assert.That(result.Activities[1].Details, Does.Contain("not empty"));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_UploadsUnicodeNamedLocalFileAndStoresBaseline()
     {
         const string relativePath = "Документы/設計-notes.txt";
@@ -843,6 +985,22 @@ public sealed class SyncEngineTests
         });
     }
 
+    private async Task InsertDirectoryBaselineAsync(
+        SqliteSyncStateStore stateStore,
+        string relativePath,
+        NodeDto remoteNode)
+    {
+        await stateStore.InitializeAsync();
+        await stateStore.UpsertAsync(new SyncStateEntry
+        {
+            SyncPairId = "pair-a",
+            RelativePath = relativePath,
+            Kind = SyncEntryKind.Directory,
+            RemoteNodeId = remoteNode.Id,
+            SyncedAtUtc = new DateTime(2026, 6, 2, 13, 1, 0, DateTimeKind.Utc),
+        });
+    }
+
     private LocalFileSnapshot LocalFile(string relativePath, string content)
     {
         return new LocalFileSnapshot
@@ -946,7 +1104,7 @@ public sealed class SyncEngineTests
         return tree;
     }
 
-    private RemoteDirectorySnapshot RemoteDirectory(string relativePath)
+    private RemoteDirectorySnapshot RemoteDirectory(string relativePath, Guid? parentNodeId = null)
     {
         return new RemoteDirectorySnapshot
         {
@@ -954,7 +1112,7 @@ public sealed class SyncEngineTests
             Node = new NodeDto
             {
                 Id = Guid.NewGuid(),
-                ParentId = _remoteRootNodeId,
+                ParentId = parentNodeId ?? _remoteRootNodeId,
                 Name = relativePath.Split('/')[^1],
             },
         };

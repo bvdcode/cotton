@@ -84,7 +84,27 @@ public sealed class SyncEngine : ISyncEngine
             stateEntries.Where(entry => entry.Kind == SyncEntryKind.File),
             entry => entry.RelativePath);
         List<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys);
-        SyncDeleteGuard deleteGuard = BuildDeleteGuard(options, pathKeys, localByPath, remoteByPath, stateByPath);
+        SyncDeleteGuard deleteGuard = BuildDeleteGuard(
+            options,
+            pathKeys,
+            localByPath,
+            remoteByPath,
+            stateByPath,
+            localDirectoriesByPath,
+            remoteDirectoriesByPath,
+            directoryStateByPath);
+
+        await ReconcileDirectoryDeletesAsync(
+            syncPair,
+            options,
+            result,
+            deleteGuard,
+            localDirectoriesByPath,
+            remoteDirectoriesByPath,
+            directoryStateByPath,
+            localByPath,
+            remoteByPath,
+            cancellationToken).ConfigureAwait(false);
 
         foreach (string key in pathKeys)
         {
@@ -190,6 +210,66 @@ public sealed class SyncEngine : ISyncEngine
             {
                 await _stateStore.UpsertAsync(BuildDirectoryBaseline(syncPair, relativePath, remote.Node), cancellationToken)
                     .ConfigureAwait(false);
+            }
+        }
+    }
+
+    private async Task ReconcileDirectoryDeletesAsync(
+        SyncPair syncPair,
+        SyncRunOptions options,
+        SyncRunResult result,
+        SyncDeleteGuard deleteGuard,
+        IReadOnlyDictionary<string, LocalDirectorySnapshot> localByPath,
+        IReadOnlyDictionary<string, RemoteDirectorySnapshot> remoteByPath,
+        IReadOnlyDictionary<string, SyncStateEntry> stateByPath,
+        IReadOnlyDictionary<string, LocalFileSnapshot> localFilesByPath,
+        IReadOnlyDictionary<string, RemoteFileSnapshot> remoteFilesByPath,
+        CancellationToken cancellationToken)
+    {
+        List<string> stateKeys = stateByPath.Keys
+            .OrderByDescending(static key => GetPathDepth(key))
+            .ThenBy(static key => key, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        foreach (string key in stateKeys)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            SyncStateEntry state = stateByPath[key];
+            localByPath.TryGetValue(key, out LocalDirectorySnapshot? local);
+            remoteByPath.TryGetValue(key, out RemoteDirectorySnapshot? remote);
+            string relativePath = local?.RelativePath ?? remote?.RelativePath ?? state.RelativePath;
+
+            if (local is null && remote is null)
+            {
+                await _stateStore.DeleteAsync(syncPair.SyncPairId, relativePath, cancellationToken).ConfigureAwait(false);
+                continue;
+            }
+
+            if (local is null && remote is not null)
+            {
+                await DeleteRemoteDirectoryAsync(
+                    syncPair,
+                    options,
+                    result,
+                    deleteGuard,
+                    relativePath,
+                    remote,
+                    remoteByPath,
+                    remoteFilesByPath,
+                    cancellationToken).ConfigureAwait(false);
+                continue;
+            }
+
+            if (remote is null && local is not null)
+            {
+                await DeleteLocalDirectoryAsync(
+                    syncPair,
+                    options,
+                    result,
+                    deleteGuard,
+                    relativePath,
+                    localByPath,
+                    localFilesByPath,
+                    cancellationToken).ConfigureAwait(false);
             }
         }
     }
@@ -436,6 +516,69 @@ public sealed class SyncEngine : ISyncEngine
         Report(result, options, SyncActivityKind.DeletedLocal, relativePath, null);
     }
 
+    private async Task DeleteRemoteDirectoryAsync(
+        SyncPair syncPair,
+        SyncRunOptions options,
+        SyncRunResult result,
+        SyncDeleteGuard deleteGuard,
+        string relativePath,
+        RemoteDirectorySnapshot remote,
+        IReadOnlyDictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath,
+        IReadOnlyDictionary<string, RemoteFileSnapshot> remoteFilesByPath,
+        CancellationToken cancellationToken)
+    {
+        if (_remoteDirectories is null)
+        {
+            Report(result, options, SyncActivityKind.Skipped, relativePath, "Remote folder delete is not available.");
+            return;
+        }
+
+        if (!IsRemoteDirectoryEmpty(relativePath, remoteDirectoriesByPath, remoteFilesByPath))
+        {
+            Report(result, options, SyncActivityKind.Skipped, relativePath, "Remote folder delete skipped because the folder is not empty.");
+            return;
+        }
+
+        if (!deleteGuard.CanDeleteRemote(out string? details))
+        {
+            Report(result, options, SyncActivityKind.Skipped, relativePath, details);
+            return;
+        }
+
+        await _remoteDirectories
+            .DeleteDirectoryAsync(remote.Node.Id, options.DeleteRemotePermanently, cancellationToken)
+            .ConfigureAwait(false);
+        await _stateStore.DeleteAsync(syncPair.SyncPairId, relativePath, cancellationToken).ConfigureAwait(false);
+        Report(result, options, SyncActivityKind.DeletedRemote, relativePath, "Deleted remote folder.");
+    }
+
+    private async Task DeleteLocalDirectoryAsync(
+        SyncPair syncPair,
+        SyncRunOptions options,
+        SyncRunResult result,
+        SyncDeleteGuard deleteGuard,
+        string relativePath,
+        IReadOnlyDictionary<string, LocalDirectorySnapshot> localDirectoriesByPath,
+        IReadOnlyDictionary<string, LocalFileSnapshot> localFilesByPath,
+        CancellationToken cancellationToken)
+    {
+        if (!IsLocalDirectoryEmpty(relativePath, localDirectoriesByPath, localFilesByPath))
+        {
+            Report(result, options, SyncActivityKind.Skipped, relativePath, "Local folder delete skipped because the folder is not empty.");
+            return;
+        }
+
+        if (!deleteGuard.CanDeleteLocal(out string? details))
+        {
+            Report(result, options, SyncActivityKind.Skipped, relativePath, details);
+            return;
+        }
+
+        await _localWriter.DeleteDirectoryAsync(syncPair.LocalRootPath, relativePath, cancellationToken).ConfigureAwait(false);
+        await _stateStore.DeleteAsync(syncPair.SyncPairId, relativePath, cancellationToken).ConfigureAwait(false);
+        Report(result, options, SyncActivityKind.DeletedLocal, relativePath, "Deleted local folder.");
+    }
+
     private async Task PreserveConflictAsync(
         SyncPair syncPair,
         SyncRunOptions options,
@@ -555,6 +698,31 @@ public sealed class SyncEngine : ISyncEngine
         return lastSlashIndex < 0 ? normalized : normalized[(lastSlashIndex + 1)..];
     }
 
+    private static bool IsLocalDirectoryEmpty(
+        string relativePath,
+        IReadOnlyDictionary<string, LocalDirectorySnapshot> localDirectoriesByPath,
+        IReadOnlyDictionary<string, LocalFileSnapshot> localFilesByPath)
+    {
+        string prefix = SyncPath.ToKey(relativePath) + "/";
+        return !HasDescendant(prefix, localDirectoriesByPath.Keys)
+            && !HasDescendant(prefix, localFilesByPath.Keys);
+    }
+
+    private static bool IsRemoteDirectoryEmpty(
+        string relativePath,
+        IReadOnlyDictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath,
+        IReadOnlyDictionary<string, RemoteFileSnapshot> remoteFilesByPath)
+    {
+        string prefix = SyncPath.ToKey(relativePath) + "/";
+        return !HasDescendant(prefix, remoteDirectoriesByPath.Keys)
+            && !HasDescendant(prefix, remoteFilesByPath.Keys);
+    }
+
+    private static bool HasDescendant(string prefix, IEnumerable<string> keys)
+    {
+        return keys.Any(key => key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+    }
+
     private static bool RemoteMatchesBaseline(NodeFileManifestDto remoteFile, SyncStateEntry state)
     {
         if (!string.IsNullOrWhiteSpace(state.RemoteContentHash))
@@ -592,7 +760,10 @@ public sealed class SyncEngine : ISyncEngine
         IEnumerable<string> pathKeys,
         IReadOnlyDictionary<string, LocalFileSnapshot> localByPath,
         IReadOnlyDictionary<string, RemoteFileSnapshot> remoteByPath,
-        IReadOnlyDictionary<string, SyncStateEntry> stateByPath)
+        IReadOnlyDictionary<string, SyncStateEntry> stateByPath,
+        IReadOnlyDictionary<string, LocalDirectorySnapshot> localDirectoriesByPath,
+        IReadOnlyDictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath,
+        IReadOnlyDictionary<string, SyncStateEntry> directoryStateByPath)
     {
         int plannedLocalDeletes = 0;
         int plannedRemoteDeletes = 0;
@@ -614,7 +785,59 @@ public sealed class SyncEngine : ISyncEngine
             }
         }
 
+        foreach (string key in directoryStateByPath.Keys)
+        {
+            localDirectoriesByPath.TryGetValue(key, out LocalDirectorySnapshot? local);
+            remoteDirectoriesByPath.TryGetValue(key, out RemoteDirectorySnapshot? remote);
+            SyncStateEntry state = directoryStateByPath[key];
+
+            switch (GetPlannedDirectoryDeleteDirection(
+                state,
+                local,
+                remote,
+                localDirectoriesByPath,
+                localByPath,
+                remoteDirectoriesByPath,
+                remoteByPath))
+            {
+                case SyncDeleteDirection.Local:
+                    plannedLocalDeletes++;
+                    break;
+                case SyncDeleteDirection.Remote:
+                    plannedRemoteDeletes++;
+                    break;
+            }
+        }
+
         return new SyncDeleteGuard(options, plannedLocalDeletes, plannedRemoteDeletes);
+    }
+
+    private static SyncDeleteDirection GetPlannedDirectoryDeleteDirection(
+        SyncStateEntry state,
+        LocalDirectorySnapshot? local,
+        RemoteDirectorySnapshot? remote,
+        IReadOnlyDictionary<string, LocalDirectorySnapshot> localDirectoriesByPath,
+        IReadOnlyDictionary<string, LocalFileSnapshot> localFilesByPath,
+        IReadOnlyDictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath,
+        IReadOnlyDictionary<string, RemoteFileSnapshot> remoteFilesByPath)
+    {
+        if (state.RemoteNodeId is null || local is null && remote is null)
+        {
+            return SyncDeleteDirection.None;
+        }
+
+        string relativePath = local?.RelativePath ?? remote?.RelativePath ?? state.RelativePath;
+        if (local is null && remote is not null && IsRemoteDirectoryEmpty(relativePath, remoteDirectoriesByPath, remoteFilesByPath))
+        {
+            return SyncDeleteDirection.Remote;
+        }
+
+        if (remote is null && local is not null && IsLocalDirectoryEmpty(relativePath, localDirectoriesByPath, localFilesByPath))
+        {
+            return SyncDeleteDirection.Local;
+        }
+
+        return SyncDeleteDirection.None;
     }
 
     private static SyncDeleteDirection GetPlannedDeleteDirection(
