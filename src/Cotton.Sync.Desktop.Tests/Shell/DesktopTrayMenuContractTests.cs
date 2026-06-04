@@ -6,15 +6,17 @@ namespace Cotton.Sync.Desktop.Tests.Shell;
 public sealed class DesktopTrayMenuContractTests
 {
     [Test]
-    public void TrayMenu_UsesSpecificFolderAndCloudLabels()
+    public void TrayMenu_UsesDeterministicFolderAndCloudLabels()
     {
         string trayController = File.ReadAllText(GetDesktopShellFilePath("DesktopTrayController.cs"));
 
         Assert.Multiple(() =>
         {
-            Assert.That(trayController, Does.Contain("\"Open selected folder\""));
+            Assert.That(trayController, Does.Contain("\"Open folder\""));
             Assert.That(trayController, Does.Contain("\"Open Cotton Cloud\""));
-            Assert.That(trayController, Does.Not.Contain("\"Open folder\""));
+            Assert.That(trayController, Does.Contain("TrayOpenFolderLabel"));
+            Assert.That(trayController, Does.Contain("OpenTrayFolderCommand"));
+            Assert.That(trayController, Does.Not.Contain("\"Open selected folder\""));
             Assert.That(trayController, Does.Not.Contain("\"Open web\""));
         });
     }
@@ -30,7 +32,9 @@ public sealed class DesktopTrayMenuContractTests
             Assert.That(trayController, Does.Contain("_syncNowMenuItem"));
             Assert.That(trayController, Does.Contain("_settingsMenuItem"));
             Assert.That(trayController, Does.Contain("SetMenuItemEnabled(_openFolderMenuItem"));
-            Assert.That(trayController, Does.Contain("nameof(ShellViewModel.SelectedSyncPair)"));
+            Assert.That(trayController, Does.Contain("nameof(ShellViewModel.CanOpenTrayFolder)"));
+            Assert.That(trayController, Does.Contain("nameof(ShellViewModel.TrayOpenFolderLabel)"));
+            Assert.That(trayController, Does.Not.Contain("nameof(ShellViewModel.SelectedSyncPair)"));
         });
     }
 

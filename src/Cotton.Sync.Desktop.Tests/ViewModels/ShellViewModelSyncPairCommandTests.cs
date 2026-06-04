@@ -488,6 +488,44 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task OpenTrayFolderCommand_OpensSingleSyncPair()
+    {
+        var controller = new FakeDesktopShellController(
+            CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Idle")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.CanOpenTrayFolder, Is.True);
+            Assert.That(viewModel.TrayOpenFolderLabel, Is.EqualTo("Open Documents"));
+            Assert.That(viewModel.OpenTrayFolderCommand.CanExecute(null), Is.True);
+        });
+
+        await ExecuteAsync(viewModel.OpenTrayFolderCommand);
+
+        Assert.That(controller.OpenedFolderPath, Is.EqualTo("/home/vadim/Documents"));
+    }
+
+    [Test]
+    public async Task OpenTrayFolderCommand_IsDisabledForMultipleSyncPairs()
+    {
+        var controller = new FakeDesktopShellController(
+            CreateSignedInSnapshot(
+                CreatePair(Guid.NewGuid(), "Documents", "Idle"),
+                CreatePair(Guid.NewGuid(), "Pictures", "Idle")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.CanOpenTrayFolder, Is.False);
+            Assert.That(viewModel.TrayOpenFolderLabel, Is.EqualTo("Open folder"));
+            Assert.That(viewModel.OpenTrayFolderCommand.CanExecute(null), Is.False);
+        });
+    }
+
+    [Test]
     public async Task StatusChanged_UpdatesCurrentProgressText()
     {
         Guid syncPairId = Guid.NewGuid();

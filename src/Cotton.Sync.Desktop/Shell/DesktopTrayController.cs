@@ -61,7 +61,7 @@ internal sealed class DesktopTrayController : IDisposable
 
     private TrayIcon CreateTrayIcon()
     {
-        _openFolderMenuItem = CreateMenuItem("Open selected folder", () => Execute(commandSource => commandSource.OpenFolderCommand));
+        _openFolderMenuItem = CreateMenuItem("Open folder", () => Execute(commandSource => commandSource.OpenTrayFolderCommand));
         _openWebMenuItem = CreateMenuItem("Open Cotton Cloud", () => Execute(commandSource => commandSource.OpenWebCommand));
         _syncNowMenuItem = CreateMenuItem("Sync now", () => Execute(commandSource => commandSource.SyncNowCommand));
         _pauseResumeMenuItem = CreateMenuItem("Pause", () => Execute(commandSource => commandSource.PauseResumeCommand));
@@ -118,15 +118,16 @@ internal sealed class DesktopTrayController : IDisposable
 
         if (e.PropertyName is nameof(ShellViewModel.PauseResumeTrayLabel)
             or nameof(ShellViewModel.CanSyncNow)
-            or nameof(ShellViewModel.CanTogglePauseResumeSync))
+            or nameof(ShellViewModel.CanTogglePauseResumeSync)
+            or nameof(ShellViewModel.CanOpenTrayFolder)
+            or nameof(ShellViewModel.TrayOpenFolderLabel))
         {
             UpdateTrayActions();
             return;
         }
 
         if (e.PropertyName is nameof(ShellViewModel.IsSignedIn)
-            or nameof(ShellViewModel.IsBusy)
-            or nameof(ShellViewModel.SelectedSyncPair))
+            or nameof(ShellViewModel.IsBusy))
         {
             UpdateTrayActions();
         }
@@ -156,6 +157,11 @@ internal sealed class DesktopTrayController : IDisposable
     {
         if (_viewModel is null)
         {
+            if (_openFolderMenuItem is not null)
+            {
+                _openFolderMenuItem.Header = "Open folder";
+            }
+
             SetMenuItemEnabled(_openFolderMenuItem, false);
             SetMenuItemEnabled(_openWebMenuItem, false);
             SetMenuItemEnabled(_syncNowMenuItem, false);
@@ -164,7 +170,12 @@ internal sealed class DesktopTrayController : IDisposable
             return;
         }
 
-        SetMenuItemEnabled(_openFolderMenuItem, _viewModel.OpenFolderCommand.CanExecute(null));
+        if (_openFolderMenuItem is not null)
+        {
+            _openFolderMenuItem.Header = _viewModel.TrayOpenFolderLabel;
+            _openFolderMenuItem.IsEnabled = _viewModel.OpenTrayFolderCommand.CanExecute(null);
+        }
+
         SetMenuItemEnabled(_openWebMenuItem, _viewModel.OpenWebCommand.CanExecute(null));
         SetMenuItemEnabled(_syncNowMenuItem, _viewModel.SyncNowCommand.CanExecute(null));
         SetMenuItemEnabled(_settingsMenuItem, _viewModel.ShowSettingsCommand.CanExecute(null));

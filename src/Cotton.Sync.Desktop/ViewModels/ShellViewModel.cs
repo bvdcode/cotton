@@ -113,6 +113,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             OpenFolderAsync,
             parameter => ResolveOpenFolderTarget(parameter) is not null,
             HandleCommandError);
+        OpenTrayFolderCommand = new AsyncRelayCommand(
+            OpenTrayFolderAsync,
+            () => CanOpenTrayFolder,
+            HandleCommandError);
         OpenSelectedConflictCommand = new AsyncRelayCommand(
             OpenSelectedConflictAsync,
             () => SelectedConflict is not null && !IsBusy,
@@ -193,6 +197,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public AsyncRelayCommand OpenFolderCommand { get; }
 
     public AsyncRelayCommand OpenSelectedConflictCommand { get; }
+
+    public AsyncRelayCommand OpenTrayFolderCommand { get; }
 
     public AsyncRelayCommand OpenWebCommand { get; }
 
@@ -398,6 +404,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public string PauseResumeSyncLabel => IsSyncPaused ? "Resume sync" : "Pause sync";
 
     public string PauseResumeTrayLabel => IsSyncPaused ? "Resume" : "Pause";
+
+    public bool CanOpenTrayFolder => IsSignedIn && !IsBusy && SyncPairs.Count == 1;
+
+    public string TrayOpenFolderLabel => SyncPairs.Count == 1
+        ? "Open " + SyncPairs[0].DisplayName
+        : "Open folder";
 
     public bool IsSyncPaused => HasEnabledSyncPairs
         && SyncPairs
@@ -1124,6 +1136,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         AddActivity("Open", selected.LocalPath, "Folder opened");
     }
 
+    private Task OpenTrayFolderAsync()
+    {
+        return SyncPairs.Count == 1
+            ? OpenFolderAsync(SyncPairs[0])
+            : Task.CompletedTask;
+    }
+
     private SyncPairRowViewModel? ResolveOpenFolderTarget(object? parameter)
     {
         return parameter as SyncPairRowViewModel ?? SelectedSyncPair;
@@ -1216,6 +1235,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             selected.DisplayName = displayName;
             selected.EditableDisplayName = displayName;
             OnPropertyChanged(nameof(SelectedSyncPairEditableDisplayName));
+            RaiseTrayOpenFolderState();
             GlobalStatus = "Folder renamed";
             ActionRequiredMessage = string.Empty;
             AddActivity("Pair", selected.LocalPath, "Sync folder renamed to " + displayName);
@@ -1707,6 +1727,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OnPropertyChanged(nameof(IsStatusCardVisible));
         RaiseSyncStateProperties();
         OpenFolderCommand.RaiseCanExecuteChanged();
+        RaiseTrayOpenFolderState();
         ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
         SaveSelectedSyncPairNameCommand.RaiseCanExecuteChanged();
         RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
@@ -1963,6 +1984,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         ResumeCommand.RaiseCanExecuteChanged();
         PauseResumeCommand.RaiseCanExecuteChanged();
         OpenFolderCommand.RaiseCanExecuteChanged();
+        OpenTrayFolderCommand.RaiseCanExecuteChanged();
         OpenSelectedConflictCommand.RaiseCanExecuteChanged();
         ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
         SaveSelectedSyncPairNameCommand.RaiseCanExecuteChanged();
@@ -1978,6 +2000,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         SelfTestCommand.RaiseCanExecuteChanged();
         ExportDiagnosticsCommand.RaiseCanExecuteChanged();
         OpenDiagnosticsBundleFolderCommand.RaiseCanExecuteChanged();
+        RaiseTrayOpenFolderProperties();
     }
 
     private void RaiseSyncStateProperties()
@@ -1989,6 +2012,18 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OnPropertyChanged(nameof(PauseResumeSyncLabel));
         OnPropertyChanged(nameof(PauseResumeTrayLabel));
         OnPropertyChanged(nameof(IsSyncPaused));
+    }
+
+    private void RaiseTrayOpenFolderState()
+    {
+        OpenTrayFolderCommand.RaiseCanExecuteChanged();
+        RaiseTrayOpenFolderProperties();
+    }
+
+    private void RaiseTrayOpenFolderProperties()
+    {
+        OnPropertyChanged(nameof(CanOpenTrayFolder));
+        OnPropertyChanged(nameof(TrayOpenFolderLabel));
     }
 
     private void RaiseSetupStateProperties()
