@@ -97,6 +97,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         SyncNowCommand = new AsyncRelayCommand(SyncNowAsync, () => CanSyncNow, HandleCommandError);
         PauseCommand = new AsyncRelayCommand(PauseAsync, () => CanPauseSync, HandleCommandError);
         ResumeCommand = new AsyncRelayCommand(ResumeAsync, () => CanResumeSync, HandleCommandError);
+        PauseResumeCommand = new AsyncRelayCommand(PauseResumeAsync, () => CanTogglePauseResumeSync, HandleCommandError);
         SignOutCommand = new AsyncRelayCommand(SignOutAsync, () => IsSignedIn, HandleCommandError);
         OpenFolderCommand = new AsyncRelayCommand(
             OpenFolderAsync,
@@ -162,6 +163,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public AsyncRelayCommand ToggleSelectedSyncPairEnabledCommand { get; }
 
     public AsyncRelayCommand PauseCommand { get; }
+
+    public AsyncRelayCommand PauseResumeCommand { get; }
 
     public AsyncRelayCommand ResumeCommand { get; }
 
@@ -283,6 +286,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public bool CanPauseSync => IsSignedIn && !IsBusy && HasEnabledSyncPairs && !IsSyncPaused;
 
     public bool CanResumeSync => IsSignedIn && !IsBusy && IsSyncPaused;
+
+    public bool CanTogglePauseResumeSync => IsSignedIn && !IsBusy && HasEnabledSyncPairs;
+
+    public string PauseResumeSyncLabel => IsSyncPaused ? "Resume sync" : "Pause sync";
+
+    public string PauseResumeTrayLabel => IsSyncPaused ? "Resume" : "Pause";
 
     public bool IsSyncPaused => HasEnabledSyncPairs
         && SyncPairs
@@ -1018,6 +1027,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
     }
 
+    private Task PauseResumeAsync()
+    {
+        return IsSyncPaused ? ResumeAsync() : PauseAsync();
+    }
+
     private async Task ResumeAsync()
     {
         IsBusy = true;
@@ -1552,6 +1566,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         SyncNowCommand.RaiseCanExecuteChanged();
         PauseCommand.RaiseCanExecuteChanged();
         ResumeCommand.RaiseCanExecuteChanged();
+        PauseResumeCommand.RaiseCanExecuteChanged();
         OpenFolderCommand.RaiseCanExecuteChanged();
         OpenSelectedConflictCommand.RaiseCanExecuteChanged();
         ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
@@ -1570,6 +1585,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OnPropertyChanged(nameof(CanSyncNow));
         OnPropertyChanged(nameof(CanPauseSync));
         OnPropertyChanged(nameof(CanResumeSync));
+        OnPropertyChanged(nameof(CanTogglePauseResumeSync));
+        OnPropertyChanged(nameof(PauseResumeSyncLabel));
+        OnPropertyChanged(nameof(PauseResumeTrayLabel));
         OnPropertyChanged(nameof(IsSyncPaused));
     }
 
@@ -1607,6 +1625,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         SyncNowCommand.RaiseCanExecuteChanged();
         PauseCommand.RaiseCanExecuteChanged();
         ResumeCommand.RaiseCanExecuteChanged();
+        PauseResumeCommand.RaiseCanExecuteChanged();
     }
 
     private void RefreshCurrentProgressText()

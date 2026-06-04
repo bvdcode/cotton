@@ -171,27 +171,36 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             Assert.That(viewModel.CanPauseSync, Is.True);
             Assert.That(viewModel.CanResumeSync, Is.False);
+            Assert.That(viewModel.CanTogglePauseResumeSync, Is.True);
+            Assert.That(viewModel.PauseResumeSyncLabel, Is.EqualTo("Pause sync"));
+            Assert.That(viewModel.PauseResumeTrayLabel, Is.EqualTo("Pause"));
             Assert.That(viewModel.SyncNowCommand.CanExecute(null), Is.True);
         });
 
-        await ExecuteAsync(viewModel.PauseCommand);
+        await ExecuteAsync(viewModel.PauseResumeCommand);
 
         Assert.Multiple(() =>
         {
             Assert.That(controller.PauseAllCalls, Is.EqualTo(1));
             Assert.That(viewModel.CanPauseSync, Is.False);
             Assert.That(viewModel.CanResumeSync, Is.True);
+            Assert.That(viewModel.CanTogglePauseResumeSync, Is.True);
+            Assert.That(viewModel.PauseResumeSyncLabel, Is.EqualTo("Resume sync"));
+            Assert.That(viewModel.PauseResumeTrayLabel, Is.EqualTo("Resume"));
             Assert.That(viewModel.SyncNowCommand.CanExecute(null), Is.False);
             Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Sync is paused."));
         });
 
-        await ExecuteAsync(viewModel.ResumeCommand);
+        await ExecuteAsync(viewModel.PauseResumeCommand);
 
         Assert.Multiple(() =>
         {
             Assert.That(controller.ResumeAllCalls, Is.EqualTo(1));
             Assert.That(viewModel.CanPauseSync, Is.True);
             Assert.That(viewModel.CanResumeSync, Is.False);
+            Assert.That(viewModel.CanTogglePauseResumeSync, Is.True);
+            Assert.That(viewModel.PauseResumeSyncLabel, Is.EqualTo("Pause sync"));
+            Assert.That(viewModel.PauseResumeTrayLabel, Is.EqualTo("Pause"));
             Assert.That(viewModel.SyncNowCommand.CanExecute(null), Is.True);
         });
     }

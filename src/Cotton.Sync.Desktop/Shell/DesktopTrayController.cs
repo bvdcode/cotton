@@ -15,6 +15,7 @@ internal sealed class DesktopTrayController : IDisposable
     private readonly IClassicDesktopStyleApplicationLifetime _lifetime;
     private readonly MainWindow _window;
     private readonly TrayIcon _trayIcon;
+    private NativeMenuItem? _pauseResumeMenuItem;
     private Uri _currentIconUri = DesktopTrayIconAssetResolver.Resolve(DesktopTrayStatusKind.SignedOut);
     private ShellViewModel? _viewModel;
     private bool _disposed;
@@ -56,6 +57,7 @@ internal sealed class DesktopTrayController : IDisposable
 
     private TrayIcon CreateTrayIcon()
     {
+        _pauseResumeMenuItem = CreateMenuItem("Pause", () => Execute(commandSource => commandSource.PauseResumeCommand));
         var trayIcon = new TrayIcon
         {
             Icon = LoadIcon(_currentIconUri),
@@ -69,8 +71,7 @@ internal sealed class DesktopTrayController : IDisposable
                     CreateMenuItem("Open folder", () => Execute(commandSource => commandSource.OpenFolderCommand)),
                     CreateMenuItem("Open web", () => Execute(commandSource => commandSource.OpenWebCommand)),
                     CreateMenuItem("Sync now", () => Execute(commandSource => commandSource.SyncNowCommand)),
-                    CreateMenuItem("Pause", () => Execute(commandSource => commandSource.PauseCommand)),
-                    CreateMenuItem("Resume", () => Execute(commandSource => commandSource.ResumeCommand)),
+                    _pauseResumeMenuItem,
                     CreateMenuItem("Settings", ShowSettings),
                     new NativeMenuItemSeparator(),
                     CreateMenuItem("Quit", Quit),
@@ -95,6 +96,7 @@ internal sealed class DesktopTrayController : IDisposable
         }
 
         UpdateTrayStatus();
+        UpdateTrayActions();
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -105,6 +107,12 @@ internal sealed class DesktopTrayController : IDisposable
             or nameof(ShellViewModel.HasActionRequired))
         {
             UpdateTrayStatus();
+        }
+
+        if (e.PropertyName is nameof(ShellViewModel.PauseResumeTrayLabel)
+            or nameof(ShellViewModel.CanTogglePauseResumeSync))
+        {
+            UpdateTrayActions();
         }
     }
 
@@ -126,6 +134,17 @@ internal sealed class DesktopTrayController : IDisposable
             _trayIcon.Icon = LoadIcon(status.IconUri);
             _currentIconUri = status.IconUri;
         }
+    }
+
+    private void UpdateTrayActions()
+    {
+        if (_pauseResumeMenuItem is null)
+        {
+            return;
+        }
+
+        _pauseResumeMenuItem.Header = _viewModel?.PauseResumeTrayLabel ?? "Pause";
+        _pauseResumeMenuItem.IsEnabled = _viewModel?.CanTogglePauseResumeSync ?? false;
     }
 
     private void Execute(Func<ShellViewModel, AsyncRelayCommand> selectCommand)

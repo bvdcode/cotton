@@ -61,12 +61,9 @@
               <MenuFlyout>
                 <MenuItem Header="Open Cotton Cloud"
                           Command="{Binding OpenWebCommand}" />
-                <MenuItem Header="Pause sync"
-                          IsVisible="{Binding CanPauseSync}"
-                          Command="{Binding PauseCommand}" />
-                <MenuItem Header="Resume sync"
-                          IsVisible="{Binding CanResumeSync}"
-                          Command="{Binding ResumeCommand}" />
+                <MenuItem Header="{Binding PauseResumeSyncLabel}"
+                          IsVisible="{Binding CanTogglePauseResumeSync}"
+                          Command="{Binding PauseResumeCommand}" />
                 <MenuItem Header="Settings"
                           Command="{Binding ShowSettingsCommand}" />
                 <MenuItem Header="Sign out"
