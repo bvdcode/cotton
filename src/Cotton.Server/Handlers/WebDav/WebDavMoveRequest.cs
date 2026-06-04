@@ -2,6 +2,8 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models.Enums;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Handlers.Nodes;
 using Cotton.Server.Services;
@@ -71,6 +73,7 @@ public class WebDavMoveRequestHandler(
     IMediator _mediator,
     IWebDavPathResolver _pathResolver,
     IEventNotificationService _eventNotification,
+    ISyncChangeRecorder _syncChanges,
     ILogger<WebDavMoveRequestHandler> _logger)
     : IRequestHandler<WebDavMoveRequest, WebDavMoveResult>
 {
@@ -94,7 +97,12 @@ public class WebDavMoveRequestHandler(
             return lockedMove.Failure;
         }
 
-        var moveFailure = await TryPerformMoveAsync(request, lockedMove.Source!, lockedMove.DestinationParent!, ct);
+        var moveFailure = await TryPerformMoveAsync(
+            request,
+            lockedMove.Source!,
+            lockedMove.DestinationParent!,
+            lockedMove.OldParentId,
+            ct);
         if (moveFailure is not null)
         {
             return moveFailure;
@@ -384,6 +392,7 @@ public class WebDavMoveRequestHandler(
         WebDavMoveRequest request,
         WebDavResolveResult sourceResult,
         WebDavParentResult destParentResult,
+        Guid? oldParentId,
         CancellationToken ct)
     {
         if (sourceResult.IsCollection && sourceResult.Node is not null)
@@ -400,6 +409,11 @@ public class WebDavMoveRequestHandler(
 
             node.SetParent(destParentResult.ParentNode!);
             node.SetName(destParentResult.ResourceName!);
+            _syncChanges.StageFolderChange(
+                SyncChangeKind.FolderMoved,
+                node,
+                destParentResult.ParentNode.Id,
+                oldParentId);
             return null;
         }
 
@@ -410,6 +424,11 @@ public class WebDavMoveRequestHandler(
 
             nodeFile.NodeId = destParentResult.ParentNode!.Id;
             nodeFile.SetName(destParentResult.ResourceName!);
+            _syncChanges.StageFileChange(
+                SyncChangeKind.FileMoved,
+                nodeFile,
+                destParentResult.ParentNode.LayoutId,
+                oldParentId);
         }
 
         return null;

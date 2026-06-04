@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
@@ -28,6 +29,7 @@ public sealed class FileVersionService(
     FileVersionRetentionService _retention,
     FileVersionStorageService _storage,
     UserStorageQuotaService _quota,
+    ISyncChangeRecorder _syncChanges,
     ILogger<FileVersionService> _logger)
 {
     private const int VersionDownloadTokenLength = 16;
@@ -115,6 +117,7 @@ public sealed class FileVersionService(
             protectedVersionIds: new HashSet<Guid> { version.Id },
             ct: ct);
         current.FileManifest = version.FileManifest;
+        _syncChanges.StageFileChange(SyncChangeKind.FileContentUpdated, current, current.Node.LayoutId);
 
         await _dbContext.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
