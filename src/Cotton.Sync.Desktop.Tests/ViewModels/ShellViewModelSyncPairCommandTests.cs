@@ -364,7 +364,9 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.GlobalStatus, Is.EqualTo("Action required"));
             Assert.That(viewModel.StatusCardTitle, Is.EqualTo("Sync needs attention"));
             Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Fix the issue below to continue syncing."));
-            Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo("Sync API unavailable."));
+            Assert.That(
+                viewModel.ActionRequiredMessage,
+                Is.EqualTo("This Cotton server does not expose the desktop sync changes API yet. Deploy the latest Cotton backend and retry sync."));
         });
     }
 

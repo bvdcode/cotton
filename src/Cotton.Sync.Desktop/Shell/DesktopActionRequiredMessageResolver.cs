@@ -8,7 +8,7 @@ namespace Cotton.Sync.Desktop.Shell;
 
 internal static class DesktopActionRequiredMessageResolver
 {
-    private const string MissingDesktopSyncChangesApiMessage =
+    internal const string MissingDesktopSyncChangesApiMessage =
         "This Cotton server does not expose the desktop sync changes API yet. Deploy the latest Cotton backend and retry sync.";
 
     private const string HtmlInsteadOfJsonMessage =

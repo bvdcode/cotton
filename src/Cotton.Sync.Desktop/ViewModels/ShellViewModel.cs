@@ -1067,7 +1067,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 break;
             case DesktopVisualSmokeScenario.Error:
                 GlobalStatus = "Action required";
-                ActionRequiredMessage = "Sync API unavailable.";
+                ActionRequiredMessage = DesktopActionRequiredMessageResolver.MissingDesktopSyncChangesApiMessage;
                 AddActivity("Error", SelectedSyncPair?.LocalPath ?? string.Empty, ActionRequiredMessage);
                 break;
             case DesktopVisualSmokeScenario.Progress:
