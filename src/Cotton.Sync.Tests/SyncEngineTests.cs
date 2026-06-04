@@ -831,6 +831,84 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_RecoversAfterRemoteDeleteBeforeBaselineDelete()
+    {
+        string relativePath = "remote-deleted-before-baseline.txt";
+        NodeFileManifestDto remote = RemoteFile(relativePath, HashText("old"));
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        var durableStore = new SqliteSyncStateStore(_databasePath);
+        await InsertBaselineAsync(durableStore, relativePath, remote.ContentHash, remote);
+        var failingStore = new FailingDeleteStateStore(durableStore);
+        SyncEngine firstRun = new(
+            new FakeLocalFileScanner(),
+            new FakeRemoteTreeCrawler(RemoteTree(remote)),
+            remoteFiles,
+            failingStore);
+
+        InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await firstRun.RunOnceAsync(Pair()));
+
+        SyncStateEntry? staleEntry = await durableStore.GetAsync("pair-a", relativePath);
+        SyncEngine secondRun = new(
+            new FakeLocalFileScanner(),
+            new FakeRemoteTreeCrawler(EmptyRemoteTree()),
+            remoteFiles,
+            durableStore);
+        SyncRunResult result = await secondRun.RunOnceAsync(Pair());
+
+        SyncStateEntry? entry = await durableStore.GetAsync("pair-a", relativePath);
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(staleEntry, Is.Not.Null);
+            Assert.That(remoteFiles.Deletes, Is.EqualTo(new[] { (remote.Id, false, remote.ETag) }));
+            Assert.That(result.Activities, Is.Empty);
+            Assert.That(entry, Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task RunOnceAsync_RecoversAfterLocalDeleteBeforeBaselineDelete()
+    {
+        string relativePath = "local-deleted-before-baseline.txt";
+        WriteFile(relativePath, "old");
+        LocalFileSnapshot local = LocalFile(relativePath, "old");
+        NodeFileManifestDto remote = RemoteFile(relativePath, local.ContentHash);
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        var durableStore = new SqliteSyncStateStore(_databasePath);
+        await InsertBaselineAsync(durableStore, relativePath, local.ContentHash, remote);
+        var failingStore = new FailingDeleteStateStore(durableStore);
+        SyncEngine firstRun = new(
+            new FakeLocalFileScanner(local),
+            new FakeRemoteTreeCrawler(EmptyRemoteTree()),
+            remoteFiles,
+            failingStore);
+
+        InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await firstRun.RunOnceAsync(Pair()));
+
+        SyncStateEntry? staleEntry = await durableStore.GetAsync("pair-a", relativePath);
+        SyncEngine secondRun = new(
+            new FakeLocalFileScanner(),
+            new FakeRemoteTreeCrawler(EmptyRemoteTree()),
+            remoteFiles,
+            durableStore);
+        SyncRunResult result = await secondRun.RunOnceAsync(Pair());
+
+        SyncStateEntry? entry = await durableStore.GetAsync("pair-a", relativePath);
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(File.Exists(Path.Combine(_root, relativePath)), Is.False);
+            Assert.That(staleEntry, Is.Not.Null);
+            Assert.That(remoteFiles.Uploads, Is.Empty);
+            Assert.That(remoteFiles.Deletes, Is.Empty);
+            Assert.That(result.Activities, Is.Empty);
+            Assert.That(entry, Is.Null);
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_BlocksRemoteDeletesOverRunLimit()
     {
         NodeFileManifestDto firstRemote = RemoteFile("a.txt", HashText("old-a"));
@@ -1699,58 +1777,84 @@ public sealed class SyncEngineTests
         NodeFileManifestDto? ExistingRemoteFile,
         NodeFileManifestDto ReturnedFile);
 
-    private sealed class FailingUpsertStateStore : ISyncStateStore
+    private abstract class DelegatingStateStore : ISyncStateStore
     {
         private readonly ISyncStateStore _inner;
 
-        public FailingUpsertStateStore(ISyncStateStore inner)
+        protected DelegatingStateStore(ISyncStateStore inner)
         {
             _inner = inner;
         }
 
-        public Task InitializeAsync(CancellationToken cancellationToken = default)
+        public virtual Task InitializeAsync(CancellationToken cancellationToken = default)
         {
             return _inner.InitializeAsync(cancellationToken);
         }
 
-        public Task<IReadOnlyList<SyncStateEntry>> LoadPairAsync(string syncPairId, CancellationToken cancellationToken = default)
+        public virtual Task<IReadOnlyList<SyncStateEntry>> LoadPairAsync(string syncPairId, CancellationToken cancellationToken = default)
         {
             return _inner.LoadPairAsync(syncPairId, cancellationToken);
         }
 
-        public Task<SyncChangeCursor> GetChangeCursorAsync(string syncPairId, CancellationToken cancellationToken = default)
+        public virtual Task<SyncChangeCursor> GetChangeCursorAsync(string syncPairId, CancellationToken cancellationToken = default)
         {
             return _inner.GetChangeCursorAsync(syncPairId, cancellationToken);
         }
 
-        public Task<SyncStateEntry?> GetAsync(string syncPairId, string relativePath, CancellationToken cancellationToken = default)
+        public virtual Task<SyncStateEntry?> GetAsync(string syncPairId, string relativePath, CancellationToken cancellationToken = default)
         {
             return _inner.GetAsync(syncPairId, relativePath, cancellationToken);
         }
 
-        public Task UpsertAsync(SyncStateEntry entry, CancellationToken cancellationToken = default)
+        public virtual Task UpsertAsync(SyncStateEntry entry, CancellationToken cancellationToken = default)
         {
-            throw new InvalidOperationException("State write failed.");
+            return _inner.UpsertAsync(entry, cancellationToken);
         }
 
-        public Task SaveChangeCursorAsync(SyncChangeCursor cursor, CancellationToken cancellationToken = default)
+        public virtual Task SaveChangeCursorAsync(SyncChangeCursor cursor, CancellationToken cancellationToken = default)
         {
             return _inner.SaveChangeCursorAsync(cursor, cancellationToken);
         }
 
-        public Task DeleteAsync(string syncPairId, string relativePath, CancellationToken cancellationToken = default)
+        public virtual Task DeleteAsync(string syncPairId, string relativePath, CancellationToken cancellationToken = default)
         {
             return _inner.DeleteAsync(syncPairId, relativePath, cancellationToken);
         }
 
-        public Task DeletePairAsync(string syncPairId, CancellationToken cancellationToken = default)
+        public virtual Task DeletePairAsync(string syncPairId, CancellationToken cancellationToken = default)
         {
             return _inner.DeletePairAsync(syncPairId, cancellationToken);
         }
 
-        public Task ReplacePairAsync(string syncPairId, IReadOnlyCollection<SyncStateEntry> entries, CancellationToken cancellationToken = default)
+        public virtual Task ReplacePairAsync(string syncPairId, IReadOnlyCollection<SyncStateEntry> entries, CancellationToken cancellationToken = default)
         {
             return _inner.ReplacePairAsync(syncPairId, entries, cancellationToken);
+        }
+    }
+
+    private sealed class FailingUpsertStateStore : DelegatingStateStore
+    {
+        public FailingUpsertStateStore(ISyncStateStore inner)
+            : base(inner)
+        {
+        }
+
+        public override Task UpsertAsync(SyncStateEntry entry, CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("State write failed.");
+        }
+    }
+
+    private sealed class FailingDeleteStateStore : DelegatingStateStore
+    {
+        public FailingDeleteStateStore(ISyncStateStore inner)
+            : base(inner)
+        {
+        }
+
+        public override Task DeleteAsync(string syncPairId, string relativePath, CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("State delete failed.");
         }
     }
 }
