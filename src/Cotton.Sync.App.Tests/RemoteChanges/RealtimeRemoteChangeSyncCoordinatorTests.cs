@@ -81,6 +81,39 @@ public sealed class RealtimeRemoteChangeSyncCoordinatorTests
     }
 
     [Test]
+    public async Task StartAsync_UnsubscribesWhenRealtimeStartFails()
+    {
+        var realtime = new FakeCottonRealtimeClient
+        {
+            StartException = new InvalidOperationException("Realtime failed to start."),
+        };
+        var supervisor = new FakeSyncSupervisor();
+        var sessionRevocationHandler = new FakeSessionRevocationHandler();
+        var coordinator = new RealtimeRemoteChangeSyncCoordinator(
+            realtime,
+            supervisor,
+            DebounceInterval,
+            sessionRevocationHandler);
+
+        InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await coordinator.StartAsync());
+
+        realtime.RaiseRemoteFileTreeChanged("FileCreated");
+        realtime.RaiseSessionRevoked();
+        await Task.Delay(DebounceInterval * 3);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.Message, Is.EqualTo("Realtime failed to start."));
+            Assert.That(realtime.StartCallCount, Is.EqualTo(1));
+            Assert.That(realtime.StopCallCount, Is.EqualTo(1));
+            Assert.That(supervisor.SyncAllCallCount, Is.Zero);
+            Assert.That(sessionRevocationHandler.CallCount, Is.Zero);
+        });
+    }
+
+    [Test]
     public async Task SessionRevoked_InvokesHandlerAndStopsRealtime()
     {
         var realtime = new FakeCottonRealtimeClient();
@@ -144,6 +177,8 @@ public sealed class RealtimeRemoteChangeSyncCoordinatorTests
 
         public int StopCallCount { get; private set; }
 
+        public Exception? StartException { get; set; }
+
         private TaskCompletionSource StopRequested { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public ValueTask DisposeAsync()
@@ -173,7 +208,13 @@ public sealed class RealtimeRemoteChangeSyncCoordinatorTests
 
         public Task StartAsync(CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             StartCallCount++;
+            if (StartException is not null)
+            {
+                throw StartException;
+            }
+
             return Task.CompletedTask;
         }
 

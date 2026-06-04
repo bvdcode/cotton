@@ -57,12 +57,20 @@ public sealed class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoord
         try
         {
             await StopCoreAsync(cancellationToken).ConfigureAwait(false);
-            Interlocked.Exchange(ref _sessionRevocationRequested, 0);
-            _lifetime = new CancellationTokenSource();
-            _realtime.RemoteFileTreeChanged += OnRemoteFileTreeChanged;
-            _realtime.SessionRevoked += OnSessionRevoked;
-            _isSubscribed = true;
-            await _realtime.StartAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                Interlocked.Exchange(ref _sessionRevocationRequested, 0);
+                _lifetime = new CancellationTokenSource();
+                _realtime.RemoteFileTreeChanged += OnRemoteFileTreeChanged;
+                _realtime.SessionRevoked += OnSessionRevoked;
+                _isSubscribed = true;
+                await _realtime.StartAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch
+            {
+                await StopCoreAsync(CancellationToken.None).ConfigureAwait(false);
+                throw;
+            }
         }
         finally
         {
