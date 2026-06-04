@@ -1025,7 +1025,7 @@
                 <StackPanel Margin="0,10,0,0"
                             Spacing="7">
                   <CheckBox Content="Launch on startup"
-                            IsEnabled="{Binding IsStartWithOperatingSystemSupported}"
+                            IsVisible="{Binding IsStartWithOperatingSystemSupported}"
                             IsChecked="{Binding StartWithOperatingSystem}" />
                   <TextBlock Text="{Binding AutostartStatusText}"
                              Classes="secondary"

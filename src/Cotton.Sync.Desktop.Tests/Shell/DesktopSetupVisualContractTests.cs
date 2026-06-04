@@ -220,6 +220,24 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
+    public void SettingsStart_HidesUnsupportedAutostartAction()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string startSection = GetSlice(
+            mainWindowXaml,
+            "<TabItem Header=\"Start\"",
+            "</TabItem>");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(startSection, Does.Contain("Content=\"Launch on startup\""));
+            Assert.That(startSection, Does.Contain("IsVisible=\"{Binding IsStartWithOperatingSystemSupported}\""));
+            Assert.That(startSection, Does.Not.Contain("IsEnabled=\"{Binding IsStartWithOperatingSystemSupported}\""));
+            Assert.That(startSection, Does.Contain("Text=\"{Binding AutostartStatusText}\""));
+        });
+    }
+
+    [Test]
     public void SettingsAccountTab_IncludesAboutSectionWithoutAddingExtraTab()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
