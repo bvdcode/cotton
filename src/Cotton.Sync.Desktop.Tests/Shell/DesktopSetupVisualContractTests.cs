@@ -263,6 +263,7 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(dashboardHeader, Does.Not.Contain("<TextBlock Text=\"Cotton Sync\""));
             Assert.That(dashboardHeader, Does.Contain("ToolTip.Tip=\"Sync now\""));
             Assert.That(dashboardHeader, Does.Contain("Content=\"↻\""));
+            Assert.That(dashboardHeader, Does.Contain("IsVisible=\"{Binding CanSyncNow}\""));
             Assert.That(dashboardHeader, Does.Not.Contain("Content=\"Sync\""));
             Assert.That(actionRequiredRow, Does.Contain("Content=\"↻\""));
             Assert.That(actionRequiredRow, Does.Contain("Content=\"✓\""));

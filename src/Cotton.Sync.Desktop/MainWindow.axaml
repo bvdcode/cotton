@@ -53,6 +53,7 @@
           <Button Content="↻"
                   Classes="icon"
                   ToolTip.Tip="Sync now"
+                  IsVisible="{Binding CanSyncNow}"
                   Command="{Binding SyncNowCommand}" />
           <Button Content="..."
                   Classes="icon"
