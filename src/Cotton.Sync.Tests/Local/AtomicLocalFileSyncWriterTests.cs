@@ -89,32 +89,43 @@ public sealed class AtomicLocalFileSyncWriterTests
     }
 
     [Test]
-    public async Task DeleteDirectoryAsync_RemovesOnlyTargetEmptyDirectory()
+    public async Task DeleteDirectoryAsync_MovesEmptyDirectoryToDeletedQuarantine()
     {
         Directory.CreateDirectory(FullPath("Docs/Empty"));
         var writer = new AtomicLocalFileSyncWriter();
 
         await writer.DeleteDirectoryAsync(_root, "Docs/Empty");
 
+        string[] deletedDirectories = Directory.GetDirectories(
+            Path.Combine(_root, ".cotton-sync", "deleted"),
+            "Empty",
+            SearchOption.AllDirectories);
         Assert.Multiple(() =>
         {
             Assert.That(Directory.Exists(FullPath("Docs/Empty")), Is.False);
+            Assert.That(deletedDirectories, Has.Length.EqualTo(1));
             Assert.That(Directory.Exists(FullPath("Docs")), Is.True);
         });
     }
 
     [Test]
-    public void DeleteDirectoryAsync_PreservesNonEmptyDirectory()
+    public async Task DeleteDirectoryAsync_MovesNonEmptyDirectoryToDeletedQuarantine()
     {
         WriteFile("Docs/NotEmpty/file.txt", "keep");
         var writer = new AtomicLocalFileSyncWriter();
 
-        Assert.ThrowsAsync<IOException>(() => writer.DeleteDirectoryAsync(_root, "Docs/NotEmpty"));
+        await writer.DeleteDirectoryAsync(_root, "Docs/NotEmpty");
 
+        string[] deletedFiles = Directory.GetFiles(
+            Path.Combine(_root, ".cotton-sync", "deleted"),
+            "file.txt",
+            SearchOption.AllDirectories);
         Assert.Multiple(() =>
         {
-            Assert.That(Directory.Exists(FullPath("Docs/NotEmpty")), Is.True);
-            Assert.That(ReadFile("Docs/NotEmpty/file.txt"), Is.EqualTo("keep"));
+            Assert.That(Directory.Exists(FullPath("Docs/NotEmpty")), Is.False);
+            Assert.That(deletedFiles, Has.Length.EqualTo(1));
+            Assert.That(File.ReadAllText(deletedFiles[0]), Is.EqualTo("keep"));
+            Assert.That(Directory.Exists(FullPath("Docs")), Is.True);
         });
     }
 

@@ -81,7 +81,7 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
         string targetPath = Path.Combine(fullRoot, normalizedPath.Replace('/', Path.DirectorySeparatorChar));
         if (File.Exists(targetPath))
         {
-            string preservedPath = CreateDeletedFilePath(fullRoot, normalizedPath);
+            string preservedPath = CreateDeletedPath(fullRoot, normalizedPath);
             string? preservedDirectory = Path.GetDirectoryName(preservedPath);
             if (!string.IsNullOrWhiteSpace(preservedDirectory))
             {
@@ -115,7 +115,14 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
         string targetPath = Path.Combine(fullRoot, normalizedPath.Replace('/', Path.DirectorySeparatorChar));
         if (Directory.Exists(targetPath))
         {
-            Directory.Delete(targetPath);
+            string preservedPath = CreateDeletedPath(fullRoot, normalizedPath);
+            string? preservedParentDirectory = Path.GetDirectoryName(preservedPath);
+            if (!string.IsNullOrWhiteSpace(preservedParentDirectory))
+            {
+                Directory.CreateDirectory(preservedParentDirectory);
+            }
+
+            Directory.Move(targetPath, preservedPath);
         }
 
         return Task.CompletedTask;
@@ -149,7 +156,7 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
         throw new InvalidOperationException("Unable to allocate a unique conflict file path.");
     }
 
-    private static string CreateDeletedFilePath(string fullRoot, string normalizedPath)
+    private static string CreateDeletedPath(string fullRoot, string normalizedPath)
     {
         string quarantineName = DateTime.UtcNow.ToString("yyyyMMddTHHmmssfffZ", CultureInfo.InvariantCulture)
             + "-"

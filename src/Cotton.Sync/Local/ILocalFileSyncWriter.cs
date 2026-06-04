@@ -19,7 +19,7 @@ public interface ILocalFileSyncWriter
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Removes a local file if it exists.
+    /// Moves a local file out of the sync tree if it exists.
     /// </summary>
     Task DeleteFileAsync(string rootPath, string relativePath, CancellationToken cancellationToken = default);
 
@@ -29,7 +29,7 @@ public interface ILocalFileSyncWriter
     Task CreateDirectoryAsync(string rootPath, string relativePath, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Deletes an empty local directory if it exists.
+    /// Moves a local directory out of the sync tree if it exists.
     /// </summary>
     Task DeleteDirectoryAsync(string rootPath, string relativePath, CancellationToken cancellationToken = default);
 
