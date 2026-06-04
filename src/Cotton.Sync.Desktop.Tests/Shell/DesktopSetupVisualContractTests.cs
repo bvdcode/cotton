@@ -106,6 +106,23 @@ public sealed class DesktopSetupVisualContractTests
         });
     }
 
+    [Test]
+    public void AddFolderWizard_StretchesWithinDashboardWindow()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string addFolderWizard = GetSlice(
+            mainWindowXaml,
+            "IsVisible=\"{Binding IsAddSyncPairWizardVisible}\"",
+            "IsVisible=\"{Binding IsSettingsVisible}\"");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(addFolderWizard, Does.Contain("MaxWidth=\"372\""));
+            Assert.That(addFolderWizard, Does.Contain("HorizontalAlignment=\"Stretch\""));
+            Assert.That(addFolderWizard, Does.Not.Contain("<Border Width=\"372\""));
+        });
+    }
+
     private static string GetDesktopFilePath(string fileName)
     {
         string directory = TestContext.CurrentContext.TestDirectory;

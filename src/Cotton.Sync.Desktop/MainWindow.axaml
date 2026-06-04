@@ -561,13 +561,14 @@
 
       <Border Background="{DynamicResource CottonOverlayBrush}"
               IsVisible="{Binding IsAddSyncPairWizardVisible}">
-        <Border Width="372"
+        <Border MaxWidth="372"
+                Margin="10"
                 Padding="12"
                 CornerRadius="7"
                 Background="{DynamicResource CottonSurfaceBrush}"
                 BorderBrush="{DynamicResource CottonBorderBrush}"
                 BorderThickness="1"
-                HorizontalAlignment="Center"
+                HorizontalAlignment="Stretch"
                 VerticalAlignment="Center">
           <Grid RowDefinitions="Auto,*"
                 RowSpacing="14">
