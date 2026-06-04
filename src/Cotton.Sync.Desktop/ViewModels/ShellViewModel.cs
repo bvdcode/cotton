@@ -275,6 +275,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         {
             if (SetProperty(ref _actionRequiredMessage, value))
             {
+                if (IsMissingDesktopSyncChangesApiMessage(value))
+                {
+                    SetDesktopSyncChangesApiUnavailable(true);
+                }
+
                 OnPropertyChanged(nameof(HasActionRequired));
                 OnPropertyChanged(nameof(HasStatusAttention));
                 OnPropertyChanged(nameof(IsStatusCardVisible));
@@ -1929,11 +1934,6 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         Trace.TraceError(exception.ToString());
         GlobalStatus = ResolveCommandFailureStatus();
         string actionRequiredMessage = DesktopActionRequiredMessageResolver.FromException(exception);
-        if (IsMissingDesktopSyncChangesApiMessage(actionRequiredMessage))
-        {
-            SetDesktopSyncChangesApiUnavailable(true);
-        }
-
         ActionRequiredMessage = actionRequiredMessage;
         AddActivity("Error", string.Empty, actionRequiredMessage);
         RefreshCurrentProgressText();
