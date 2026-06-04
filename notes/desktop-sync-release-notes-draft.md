@@ -33,7 +33,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 
 ## Verification Already Exercised
 
-- Full solution Release builds have passed locally with 0 warnings after recent desktop packaging and UX slices.
+- Full local `dotnet test src/Cotton.sln --configuration Release --no-restore` has passed after current `develop` integration, including desktop 254/254 and server integration 365/365.
 - Desktop tests have passed locally, most recently `Cotton.Sync.Desktop.Tests` 254/254.
 - Server integration tests have passed locally, most recently `Cotton.Server.IntegrationTests` 365/365.
 - CLI one-shot sync has been smoke-tested against the integration-test server and covered in CLI tests with fake Cotton HTTP responses, verifying SDK file/folder upload requests and SQLite baseline creation.
