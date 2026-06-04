@@ -442,11 +442,12 @@ public sealed class SyncEngine : ISyncEngine
         NodeFileManifestDto uploaded;
         try
         {
-            uploaded = await _remoteFiles.UploadFileAsync(
+            uploaded = await UploadFileWithProgressAsync(
                 syncPair.RemoteRootNodeId,
                 relativePath,
                 local,
                 existingRemoteFile,
+                options,
                 cancellationToken).ConfigureAwait(false);
         }
         catch (HttpRequestException exception) when (existingRemoteFile is not null && IsRemotePreconditionFailed(exception))
@@ -479,7 +480,7 @@ public sealed class SyncEngine : ISyncEngine
         await _localWriter.WriteFileAsync(
             syncPair.LocalRootPath,
             relativePath,
-            (stream, token) => _remoteFiles.DownloadFileAsync(remoteFile.Id, stream, token),
+            (stream, token) => DownloadFileWithProgressAsync(remoteFile, relativePath, options, stream, token),
             remoteFile.UpdatedAt == default ? null : remoteFile.UpdatedAt,
             cancellationToken).ConfigureAwait(false);
         await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, remoteFile.ContentHash, remoteFile.UpdatedAt, remoteFile), cancellationToken)
@@ -626,7 +627,7 @@ public sealed class SyncEngine : ISyncEngine
             await _localWriter.WriteFileAsync(
                 syncPair.LocalRootPath,
                 conflictPath,
-                (stream, token) => _remoteFiles.DownloadFileAsync(remoteFile.Id, stream, token),
+                (stream, token) => DownloadFileWithProgressAsync(remoteFile, relativePath, options, stream, token),
                 remoteFile.UpdatedAt == default ? null : remoteFile.UpdatedAt,
                 cancellationToken).ConfigureAwait(false);
             details = "Remote version saved as " + conflictPath;
@@ -635,11 +636,12 @@ public sealed class SyncEngine : ISyncEngine
         }
         else if (local is not null)
         {
-            NodeFileManifestDto uploaded = await _remoteFiles.UploadFileAsync(
+            NodeFileManifestDto uploaded = await UploadFileWithProgressAsync(
                 syncPair.RemoteRootNodeId,
                 relativePath,
                 local,
                 null,
+                options,
                 cancellationToken).ConfigureAwait(false);
             details = "Remote deletion conflicted with local change; local version was uploaded again.";
             await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, uploaded), cancellationToken)
@@ -650,7 +652,7 @@ public sealed class SyncEngine : ISyncEngine
             await _localWriter.WriteFileAsync(
                 syncPair.LocalRootPath,
                 relativePath,
-                (stream, token) => _remoteFiles.DownloadFileAsync(remoteFile.Id, stream, token),
+                (stream, token) => DownloadFileWithProgressAsync(remoteFile, relativePath, options, stream, token),
                 remoteFile.UpdatedAt == default ? null : remoteFile.UpdatedAt,
                 cancellationToken).ConfigureAwait(false);
             details = "Local deletion conflicted with remote change; remote version was restored locally.";
@@ -659,6 +661,82 @@ public sealed class SyncEngine : ISyncEngine
         }
 
         Report(result, options, SyncActivityKind.Conflict, relativePath, details);
+    }
+
+    private async Task<NodeFileManifestDto> UploadFileWithProgressAsync(
+        Guid rootNodeId,
+        string relativePath,
+        LocalFileSnapshot local,
+        NodeFileManifestDto? existingRemoteFile,
+        SyncRunOptions options,
+        CancellationToken cancellationToken)
+    {
+        if (_remoteFiles is IRemoteFileTransferProgressSynchronizer progressSynchronizer)
+        {
+            return await progressSynchronizer.UploadFileAsync(
+                rootNodeId,
+                relativePath,
+                local,
+                existingRemoteFile,
+                options.TransferProgress,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        ReportTransfer(
+            options,
+            SyncTransferDirection.Upload,
+            relativePath,
+            transferredBytes: 0,
+            totalBytes: local.SizeBytes);
+        NodeFileManifestDto uploaded = await _remoteFiles.UploadFileAsync(
+            rootNodeId,
+            relativePath,
+            local,
+            existingRemoteFile,
+            cancellationToken).ConfigureAwait(false);
+        ReportTransfer(
+            options,
+            SyncTransferDirection.Upload,
+            relativePath,
+            local.SizeBytes,
+            local.SizeBytes,
+            isCompleted: true);
+        return uploaded;
+    }
+
+    private async Task DownloadFileWithProgressAsync(
+        NodeFileManifestDto remoteFile,
+        string relativePath,
+        SyncRunOptions options,
+        Stream destination,
+        CancellationToken cancellationToken)
+    {
+        if (_remoteFiles is IRemoteFileTransferProgressSynchronizer progressSynchronizer)
+        {
+            await progressSynchronizer.DownloadFileAsync(
+                remoteFile.Id,
+                relativePath,
+                remoteFile.SizeBytes,
+                destination,
+                options.TransferProgress,
+                cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        ReportTransfer(
+            options,
+            SyncTransferDirection.Download,
+            relativePath,
+            transferredBytes: 0,
+            totalBytes: remoteFile.SizeBytes);
+        await _remoteFiles.DownloadFileAsync(remoteFile.Id, destination, cancellationToken).ConfigureAwait(false);
+        ReportTransfer(
+            options,
+            SyncTransferDirection.Download,
+            relativePath,
+            remoteFile.SizeBytes,
+            remoteFile.SizeBytes,
+            isCompleted: true);
     }
 
     private async Task<NodeFileManifestDto?> FindLatestRemoteFileAsync(
@@ -989,6 +1067,22 @@ public sealed class SyncEngine : ISyncEngine
         };
         result.Activities.Add(activity);
         options.ActivityProgress?.Report(activity);
+    }
+
+    private static void ReportTransfer(
+        SyncRunOptions options,
+        SyncTransferDirection direction,
+        string relativePath,
+        long transferredBytes,
+        long? totalBytes,
+        bool isCompleted = false)
+    {
+        options.TransferProgress?.Report(new SyncTransferProgress(
+            direction,
+            relativePath,
+            transferredBytes,
+            totalBytes,
+            isCompleted));
     }
 
     private enum SyncDeleteDirection

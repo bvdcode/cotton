@@ -32,9 +32,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private string _accountName = "Signed out";
     private string _actionRequiredMessage = string.Empty;
     private string _currentProgressText = "Sign in to start sync.";
+    private string _currentTransferDetails = string.Empty;
+    private string _currentTransferTitle = string.Empty;
     private string _globalStatus = "Loading";
+    private bool _hasCurrentTransfer;
     private bool _isBusy;
     private bool _isSignedIn;
+    private bool _isCurrentTransferIndeterminate;
     private string _lastDiagnosticsBundlePath = string.Empty;
     private string _localFolderPath = string.Empty;
     private string _newRemoteFolderName = string.Empty;
@@ -61,12 +65,17 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private string _serverProbeStatus = string.Empty;
     private bool _startWithOperatingSystem;
     private AppThemeMode _themeMode = AppThemeMode.Dark;
+    private double _currentTransferProgressValue;
     private CancellationTokenSource? _serverProbeCancellation;
     private ConflictRowViewModel? _selectedConflict;
     private RemoteFolderRowViewModel? _selectedRemoteFolder;
     private SyncPairRowViewModel? _selectedSyncPair;
     private SyncPairRowViewModel? _pendingRemoveSyncPair;
     private string _totpCode = string.Empty;
+    private DateTime? _transferStartedAtUtc;
+    private DesktopTransferDirection _transferDirection = DesktopTransferDirection.Unknown;
+    private Guid? _transferSyncPairId;
+    private string _transferRelativePath = string.Empty;
     private string _username = string.Empty;
 
     internal ShellViewModel(
@@ -90,6 +99,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         SelfTestItems.CollectionChanged += OnSelfTestItemsChanged;
         Notifications.CollectionChanged += OnNotificationsChanged;
         _controller.ActivityReported += OnActivityReported;
+        _controller.TransferProgressChanged += OnTransferProgressChanged;
         _controller.StatusChanged += OnStatusChanged;
         SignInCommand = new AsyncRelayCommand(SignInAsync, CanSignIn, HandleCommandError);
         ChangeServerCommand = new AsyncRelayCommand(ChangeServerAsync, () => !IsBusy, HandleCommandError);
@@ -317,6 +327,50 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             }
         }
     }
+
+    public bool HasCurrentTransfer
+    {
+        get => _hasCurrentTransfer;
+        private set
+        {
+            if (SetProperty(ref _hasCurrentTransfer, value))
+            {
+                OnPropertyChanged(nameof(IsCurrentTransferDeterminate));
+            }
+        }
+    }
+
+    public string CurrentTransferTitle
+    {
+        get => _currentTransferTitle;
+        private set => SetProperty(ref _currentTransferTitle, value);
+    }
+
+    public string CurrentTransferDetails
+    {
+        get => _currentTransferDetails;
+        private set => SetProperty(ref _currentTransferDetails, value);
+    }
+
+    public double CurrentTransferProgressValue
+    {
+        get => _currentTransferProgressValue;
+        private set => SetProperty(ref _currentTransferProgressValue, value);
+    }
+
+    public bool IsCurrentTransferIndeterminate
+    {
+        get => _isCurrentTransferIndeterminate;
+        private set
+        {
+            if (SetProperty(ref _isCurrentTransferIndeterminate, value))
+            {
+                OnPropertyChanged(nameof(IsCurrentTransferDeterminate));
+            }
+        }
+    }
+
+    public bool IsCurrentTransferDeterminate => HasCurrentTransfer && !IsCurrentTransferIndeterminate;
 
     public bool IsBusy
     {
@@ -845,6 +899,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         _controller.StatusChanged -= OnStatusChanged;
         _controller.ActivityReported -= OnActivityReported;
+        _controller.TransferProgressChanged -= OnTransferProgressChanged;
         Activities.CollectionChanged -= OnActivitiesChanged;
         Conflicts.CollectionChanged -= OnConflictsChanged;
         SyncPairs.CollectionChanged -= OnSyncPairsChanged;
@@ -1418,6 +1473,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             Notifications.Clear();
             _notificationTracker.Reset();
             RemoteFolders.Clear();
+            ClearTransferProgress();
             SetAllPairStatuses("Idle");
             RefreshCurrentProgressText();
             AddActivity("Account", string.Empty, "Signed out");
@@ -1831,6 +1887,17 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         _uiDispatcher.Post(() => ApplyActivity(activity));
     }
 
+    private void OnTransferProgressChanged(object? sender, DesktopTransferProgressSnapshot progress)
+    {
+        if (_uiDispatcher.CheckAccess())
+        {
+            ApplyTransferProgress(progress);
+            return;
+        }
+
+        _uiDispatcher.Post(() => ApplyTransferProgress(progress));
+    }
+
     private void ApplyActivity(DesktopActivitySnapshot activity)
     {
         DateTimeOffset occurredAt = new DateTimeOffset(DateTime.SpecifyKind(activity.OccurredAtUtc, DateTimeKind.Utc))
@@ -1844,6 +1911,35 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         {
             AddConflict(activity.SyncPairId, activity.Path, activity.Details, occurredAt);
         }
+    }
+
+    private void ApplyTransferProgress(DesktopTransferProgressSnapshot progress)
+    {
+        SyncPairRowViewModel? syncPair = SyncPairs.FirstOrDefault(pair => pair.Id == progress.SyncPairId);
+        if (syncPair is null || progress.Direction == DesktopTransferDirection.Unknown)
+        {
+            return;
+        }
+
+        DateTime occurredAtUtc = DateTime.SpecifyKind(progress.OccurredAtUtc, DateTimeKind.Utc);
+        bool isNewTransfer = _transferSyncPairId != progress.SyncPairId
+            || _transferDirection != progress.Direction
+            || !string.Equals(_transferRelativePath, progress.RelativePath, StringComparison.Ordinal);
+        if (isNewTransfer)
+        {
+            _transferStartedAtUtc = occurredAtUtc;
+            _transferSyncPairId = progress.SyncPairId;
+            _transferDirection = progress.Direction;
+            _transferRelativePath = progress.RelativePath;
+        }
+
+        HasCurrentTransfer = true;
+        IsCurrentTransferIndeterminate = !progress.TotalBytes.HasValue && !progress.IsCompleted;
+        CurrentTransferProgressValue = CalculateProgressValue(progress);
+        CurrentTransferTitle = CreateTransferTitle(progress, syncPair.DisplayName);
+        CurrentTransferDetails = CreateTransferDetails(progress, occurredAtUtc);
+        syncPair.CurrentOperation = CreateTransferOperation(progress);
+        RefreshCurrentProgressText();
     }
 
     private void ApplyStatus(DesktopSyncStatusSnapshot status)
@@ -1873,6 +1969,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
         GlobalStatus = ResolveGlobalStatus(status);
         ActionRequiredMessage = DesktopActionRequiredMessageResolver.FromStatus(status);
+        if (!status.SyncPairs.Any(IsActiveTransferStatus))
+        {
+            ClearTransferProgress();
+        }
+
         RaiseSyncStateProperties();
         RefreshCurrentProgressText();
         AddNotifications(_notificationTracker.Apply(status, SyncPairs.ToDictionary(static pair => pair.Id, static pair => pair.DisplayName)));
@@ -2127,6 +2228,118 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
 
         CurrentProgressText = "All folders are up to date.";
+    }
+
+    private void ClearTransferProgress()
+    {
+        HasCurrentTransfer = false;
+        IsCurrentTransferIndeterminate = false;
+        CurrentTransferProgressValue = 0;
+        CurrentTransferTitle = string.Empty;
+        CurrentTransferDetails = string.Empty;
+        _transferStartedAtUtc = null;
+        _transferSyncPairId = null;
+        _transferDirection = DesktopTransferDirection.Unknown;
+        _transferRelativePath = string.Empty;
+    }
+
+    private static bool IsActiveTransferStatus(DesktopSyncPairStatusSnapshot status)
+    {
+        return string.Equals(status.Status, "Syncing", StringComparison.Ordinal)
+            || string.Equals(status.Status, "Scanning", StringComparison.Ordinal);
+    }
+
+    private static double CalculateProgressValue(DesktopTransferProgressSnapshot progress)
+    {
+        if (progress.TotalBytes is > 0)
+        {
+            return Math.Clamp((double)progress.TransferredBytes / progress.TotalBytes.Value * 100, 0, 100);
+        }
+
+        return progress.IsCompleted ? 100 : 0;
+    }
+
+    private static string CreateTransferTitle(DesktopTransferProgressSnapshot progress, string syncPairName)
+    {
+        string action = progress.IsCompleted
+            ? progress.Direction == DesktopTransferDirection.Upload ? "Uploaded" : "Downloaded"
+            : progress.Direction == DesktopTransferDirection.Upload ? "Uploading" : "Downloading";
+        return syncPairName + ": " + action + " " + GetDisplayFileName(progress.RelativePath);
+    }
+
+    private static string CreateTransferOperation(DesktopTransferProgressSnapshot progress)
+    {
+        string action = progress.Direction == DesktopTransferDirection.Upload ? "Uploading" : "Downloading";
+        return action + " " + GetDisplayFileName(progress.RelativePath);
+    }
+
+    private string CreateTransferDetails(DesktopTransferProgressSnapshot progress, DateTime occurredAtUtc)
+    {
+        string size = progress.TotalBytes.HasValue
+            ? FormatBytes(progress.TransferredBytes) + " / " + FormatBytes(progress.TotalBytes.Value)
+            : FormatBytes(progress.TransferredBytes);
+        double? bytesPerSecond = CalculateBytesPerSecond(progress, occurredAtUtc);
+        if (!bytesPerSecond.HasValue || bytesPerSecond.Value <= 0 || progress.IsCompleted)
+        {
+            return size;
+        }
+
+        string details = size + " · " + FormatBytes(bytesPerSecond.Value) + "/s";
+        if (progress.TotalBytes.HasValue && progress.TotalBytes.Value > progress.TransferredBytes)
+        {
+            double secondsRemaining = (progress.TotalBytes.Value - progress.TransferredBytes) / bytesPerSecond.Value;
+            details += " · " + FormatDuration(TimeSpan.FromSeconds(secondsRemaining)) + " left";
+        }
+
+        return details;
+    }
+
+    private double? CalculateBytesPerSecond(DesktopTransferProgressSnapshot progress, DateTime occurredAtUtc)
+    {
+        if (!_transferStartedAtUtc.HasValue || progress.TransferredBytes <= 0)
+        {
+            return null;
+        }
+
+        double seconds = Math.Max((occurredAtUtc - _transferStartedAtUtc.Value).TotalSeconds, 0);
+        return seconds <= 0 ? null : progress.TransferredBytes / seconds;
+    }
+
+    private static string GetDisplayFileName(string relativePath)
+    {
+        string normalized = relativePath.Replace('\\', '/').Trim('/');
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return "item";
+        }
+
+        int separatorIndex = normalized.LastIndexOf('/');
+        return separatorIndex < 0 ? normalized : normalized[(separatorIndex + 1)..];
+    }
+
+    private static string FormatBytes(double bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        double value = bytes;
+        int unitIndex = 0;
+        while (value >= 1024 && unitIndex < units.Length - 1)
+        {
+            value /= 1024;
+            unitIndex++;
+        }
+
+        string format = unitIndex == 0 || value >= 10 ? "0" : "0.0";
+        return value.ToString(format, CultureInfo.CurrentCulture) + " " + units[unitIndex];
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalHours >= 1)
+        {
+            return duration.ToString(@"h\:mm", CultureInfo.InvariantCulture);
+        }
+
+        return duration.ToString(@"m\:ss", CultureInfo.InvariantCulture);
     }
 
     private static bool IsActiveProgressPair(SyncPairRowViewModel syncPair)

@@ -32,6 +32,12 @@ internal sealed class VisualSmokeShellController : IDesktopShellController
         remove { }
     }
 
+    public event EventHandler<DesktopTransferProgressSnapshot>? TransferProgressChanged
+    {
+        add { }
+        remove { }
+    }
+
     public static VisualSmokeShellController Create(DesktopVisualSmokeScenario scenario)
     {
         return new VisualSmokeShellController(scenario);

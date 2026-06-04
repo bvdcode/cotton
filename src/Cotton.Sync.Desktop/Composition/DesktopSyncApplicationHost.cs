@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Sync.App.Activities;
+using Cotton.Sync.App.Progress;
 using Cotton.Sync.App.SyncApplication;
 using Cotton.Sync.App.Status;
 using Cotton.Sync.Remote;
@@ -22,6 +23,7 @@ internal sealed class DesktopSyncApplicationHost : IDisposable, IAsyncDisposable
         IRemoteRootResolver remoteRootResolver,
         IAppStatusPublisher statusPublisher,
         IAppActivityPublisher activityPublisher,
+        IAppTransferProgressPublisher transferProgressPublisher,
         ICottonTokenStore tokenStore,
         ICottonNodeClient nodes,
         ICottonSyncClient sync,
@@ -33,6 +35,7 @@ internal sealed class DesktopSyncApplicationHost : IDisposable, IAsyncDisposable
         RemoteRootResolver = remoteRootResolver ?? throw new ArgumentNullException(nameof(remoteRootResolver));
         StatusPublisher = statusPublisher ?? throw new ArgumentNullException(nameof(statusPublisher));
         ActivityPublisher = activityPublisher ?? throw new ArgumentNullException(nameof(activityPublisher));
+        TransferProgressPublisher = transferProgressPublisher ?? throw new ArgumentNullException(nameof(transferProgressPublisher));
         TokenStore = tokenStore ?? throw new ArgumentNullException(nameof(tokenStore));
         Nodes = nodes ?? throw new ArgumentNullException(nameof(nodes));
         Sync = sync ?? throw new ArgumentNullException(nameof(sync));
@@ -48,6 +51,8 @@ internal sealed class DesktopSyncApplicationHost : IDisposable, IAsyncDisposable
     public IAppStatusPublisher StatusPublisher { get; }
 
     public IAppActivityPublisher ActivityPublisher { get; }
+
+    public IAppTransferProgressPublisher TransferProgressPublisher { get; }
 
     public ICottonTokenStore TokenStore { get; }
 

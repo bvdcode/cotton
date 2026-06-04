@@ -10,6 +10,7 @@ using Cotton.Sync.App.Auth;
 using Cotton.Sync.App.Activities;
 using Cotton.Sync.App.Platform;
 using Cotton.Sync.App.Preferences;
+using Cotton.Sync.App.Progress;
 using Cotton.Sync.App.Status;
 using Cotton.Sync.App.SyncApplication;
 using Cotton.Sync.App.SyncPairs;
@@ -21,6 +22,7 @@ using Cotton.Sync.Desktop.Startup;
 using Cotton.Sync.State;
 using Microsoft.Extensions.Logging;
 using AppSyncActivity = Cotton.Sync.App.Activities.SyncActivity;
+using AppTransferProgress = Cotton.Sync.App.Progress.AppTransferProgress;
 
 namespace Cotton.Sync.Desktop.Shell;
 
@@ -40,6 +42,7 @@ internal sealed class DesktopShellController : IDesktopShellController
     private IDisposable? _activitySubscription;
     private DesktopSyncApplicationHost? _host;
     private IDisposable? _statusSubscription;
+    private IDisposable? _transferProgressSubscription;
 
     public DesktopShellController(
         DesktopAppPaths paths,
@@ -69,6 +72,8 @@ internal sealed class DesktopShellController : IDesktopShellController
     public event EventHandler<DesktopSyncStatusSnapshot>? StatusChanged;
 
     public event EventHandler<DesktopActivitySnapshot>? ActivityReported;
+
+    public event EventHandler<DesktopTransferProgressSnapshot>? TransferProgressChanged;
 
     public async Task<DesktopShellSnapshot> LoadAsync(CancellationToken cancellationToken = default)
     {
@@ -394,6 +399,8 @@ internal sealed class DesktopShellController : IDesktopShellController
                 _activitySubscription = null;
                 _statusSubscription?.Dispose();
                 _statusSubscription = null;
+                _transferProgressSubscription?.Dispose();
+                _transferProgressSubscription = null;
             }
 
             await host.DisposeAsync().ConfigureAwait(false);
@@ -977,6 +984,8 @@ internal sealed class DesktopShellController : IDesktopShellController
         _activitySubscription = null;
         _statusSubscription?.Dispose();
         _statusSubscription = null;
+        _transferProgressSubscription?.Dispose();
+        _transferProgressSubscription = null;
         return host;
     }
 
@@ -987,8 +996,10 @@ internal sealed class DesktopShellController : IDesktopShellController
         _host = host;
         _activitySubscription?.Dispose();
         _statusSubscription?.Dispose();
+        _transferProgressSubscription?.Dispose();
         _statusSubscription = host.StatusPublisher.Subscribe(new StatusObserver(this));
         _activitySubscription = host.ActivityPublisher.Subscribe(new ActivityObserver(this));
+        _transferProgressSubscription = host.TransferProgressPublisher.Subscribe(new TransferProgressObserver(this));
         if (previous is not null)
         {
             await StopAndDisposeHostAsync(previous).ConfigureAwait(false);
@@ -1050,6 +1061,11 @@ internal sealed class DesktopShellController : IDesktopShellController
         ActivityReported?.Invoke(this, ToActivitySnapshot(activity));
     }
 
+    private void OnTransferProgressChanged(AppTransferProgress progress)
+    {
+        TransferProgressChanged?.Invoke(this, ToTransferProgressSnapshot(progress));
+    }
+
     private static DesktopActivitySnapshot ToActivitySnapshot(AppSyncActivity activity)
     {
         return new DesktopActivitySnapshot(
@@ -1058,6 +1074,28 @@ internal sealed class DesktopShellController : IDesktopShellController
             activity.Message,
             activity.OccurredAtUtc,
             activity.SyncPairId);
+    }
+
+    private static DesktopTransferProgressSnapshot ToTransferProgressSnapshot(AppTransferProgress progress)
+    {
+        return new DesktopTransferProgressSnapshot(
+            progress.SyncPairId,
+            ToDesktopTransferDirection(progress.Direction),
+            progress.RelativePath,
+            progress.TransferredBytes,
+            progress.TotalBytes,
+            progress.IsCompleted,
+            progress.OccurredAtUtc);
+    }
+
+    private static DesktopTransferDirection ToDesktopTransferDirection(AppTransferDirection direction)
+    {
+        return direction switch
+        {
+            AppTransferDirection.Upload => DesktopTransferDirection.Upload,
+            AppTransferDirection.Download => DesktopTransferDirection.Download,
+            _ => DesktopTransferDirection.Unknown,
+        };
     }
 
     private async Task<AuthSession?> TryRestoreSessionAsync(
@@ -1176,6 +1214,30 @@ internal sealed class DesktopShellController : IDesktopShellController
         public void OnNext(AppSyncActivity value)
         {
             _controller.OnActivityReported(value);
+        }
+    }
+
+    private sealed class TransferProgressObserver : IObserver<AppTransferProgress>
+    {
+        private readonly DesktopShellController _controller;
+
+        public TransferProgressObserver(DesktopShellController controller)
+        {
+            _controller = controller;
+        }
+
+        public void OnCompleted()
+        {
+        }
+
+        public void OnError(Exception error)
+        {
+            Trace.TraceError(error.ToString());
+        }
+
+        public void OnNext(AppTransferProgress value)
+        {
+            _controller.OnTransferProgressChanged(value);
         }
     }
 }

@@ -117,6 +117,32 @@ public sealed class SdkRemoteFileSynchronizerTests
     }
 
     [Test]
+    public async Task UploadFileAsync_ReportsChunkProgress()
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes("abcdefghij");
+        LocalFileSnapshot local = WriteLocalFile("Docs/file.txt", bytes);
+        var client = new FakeCottonCloudClient(chunkSizeBytes: 4);
+        var synchronizer = new SdkRemoteFileSynchronizer(client);
+        var progress = new RecordingProgress<SyncTransferProgress>();
+
+        await synchronizer.UploadFileAsync(
+            _rootNodeId,
+            local.RelativePath,
+            local,
+            existingRemoteFile: null,
+            transferProgress: progress);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(progress.Values.Select(value => value.TransferredBytes), Is.EqualTo(new long[] { 0, 4, 8, 10, 10 }));
+            Assert.That(progress.Values.Select(value => value.TotalBytes), Is.All.EqualTo(10));
+            Assert.That(progress.Values.Select(value => value.Direction), Is.All.EqualTo(SyncTransferDirection.Upload));
+            Assert.That(progress.Values.Select(value => value.RelativePath), Is.All.EqualTo("Docs/file.txt"));
+            Assert.That(progress.Values[^1].IsCompleted, Is.True);
+        });
+    }
+
+    [Test]
     public async Task DownloadFileAsync_And_DeleteFileAsync_DelegateToSdkFileClient()
     {
         Guid fileId = Guid.NewGuid();
@@ -132,6 +158,33 @@ public sealed class SdkRemoteFileSynchronizerTests
         {
             Assert.That(Encoding.UTF8.GetString(destination.ToArray()), Is.EqualTo("downloaded"));
             Assert.That(client.FilesClient.Deletes, Is.EqualTo(new[] { (fileId, true, "sha256-current") }));
+        });
+    }
+
+    [Test]
+    public async Task DownloadFileAsync_ReportsSdkDownloadProgress()
+    {
+        Guid fileId = Guid.NewGuid();
+        var client = new FakeCottonCloudClient(chunkSizeBytes: 8);
+        client.FilesClient.Downloads[fileId] = Encoding.UTF8.GetBytes("downloaded");
+        var synchronizer = new SdkRemoteFileSynchronizer(client);
+        await using var destination = new MemoryStream();
+        var progress = new RecordingProgress<SyncTransferProgress>();
+
+        await synchronizer.DownloadFileAsync(
+            fileId,
+            "Docs/file.txt",
+            totalBytes: 10,
+            destination,
+            progress);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(progress.Values.Select(value => value.TransferredBytes), Is.EqualTo(new long[] { 0, 10, 10 }));
+            Assert.That(progress.Values.Select(value => value.TotalBytes), Is.All.EqualTo(10));
+            Assert.That(progress.Values.Select(value => value.Direction), Is.All.EqualTo(SyncTransferDirection.Download));
+            Assert.That(progress.Values.Select(value => value.RelativePath), Is.All.EqualTo("Docs/file.txt"));
+            Assert.That(progress.Values[^1].IsCompleted, Is.True);
         });
     }
 
@@ -186,6 +239,16 @@ public sealed class SdkRemoteFileSynchronizerTests
     private static string Hash(byte[] bytes)
     {
         return Convert.ToHexStringLower(SHA256.HashData(bytes));
+    }
+
+    private sealed class RecordingProgress<T> : IProgress<T>
+    {
+        public List<T> Values { get; } = [];
+
+        public void Report(T value)
+        {
+            Values.Add(value);
+        }
     }
 
     private sealed class FakeCottonCloudClient : ICottonCloudClient

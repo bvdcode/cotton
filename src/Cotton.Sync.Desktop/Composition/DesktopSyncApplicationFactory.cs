@@ -8,6 +8,7 @@ using Cotton.Sync.App.Continuous;
 using Cotton.Sync.App.LocalChanges;
 using Cotton.Sync.App.Platform;
 using Cotton.Sync.App.Preferences;
+using Cotton.Sync.App.Progress;
 using Cotton.Sync.App.RemoteChanges;
 using Cotton.Sync.App.Runners;
 using Cotton.Sync.App.Status;
@@ -65,8 +66,9 @@ internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFac
             remoteDirectories: remoteDirectorySynchronizer,
             logger: _loggerFactory.CreateLogger<HeadlessSyncEngine>());
         var activityPublisher = new InMemoryAppActivityPublisher();
+        var transferProgressPublisher = new InMemoryAppTransferProgressPublisher();
         ISyncPairWork pairWork = new RemoteChangeAwareSyncPairWork(
-            new SyncEnginePairWork(syncEngine, activityPublisher),
+            new SyncEnginePairWork(syncEngine, activityPublisher, transferProgressPublisher),
             remoteChangeFeed);
         var runnerFactory = new SyncPairRunnerFactory(pairWork, loggerFactory: _loggerFactory);
         var statusPublisher = new InMemoryAppStatusPublisher();
@@ -114,6 +116,7 @@ internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFac
             remoteRootResolver,
             statusPublisher,
             activityPublisher,
+            transferProgressPublisher,
             tokenStore,
             cottonClient.Nodes,
             cottonClient.Sync,

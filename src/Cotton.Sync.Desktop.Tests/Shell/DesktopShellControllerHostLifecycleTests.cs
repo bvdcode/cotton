@@ -12,6 +12,7 @@ using Cotton.Sync.App.Activities;
 using Cotton.Sync.App.Auth;
 using Cotton.Sync.App.Platform;
 using Cotton.Sync.App.Preferences;
+using Cotton.Sync.App.Progress;
 using Cotton.Sync.App.Status;
 using Cotton.Sync.App.SyncApplication;
 using Cotton.Sync.App.SyncPairs;
@@ -365,6 +366,7 @@ public sealed class DesktopShellControllerHostLifecycleTests
                 new FakeRemoteRootResolver(),
                 StatusPublisher,
                 new InMemoryAppActivityPublisher(),
+                new InMemoryAppTransferProgressPublisher(),
                 new FakeCottonTokenStore(),
                 new FakeCottonNodeClient(),
                 new FakeCottonSyncClient(),

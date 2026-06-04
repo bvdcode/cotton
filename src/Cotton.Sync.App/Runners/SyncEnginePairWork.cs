@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Sync.App.Activities;
+using Cotton.Sync.App.Progress;
 using Cotton.Sync.App.SyncPairs;
 using AppSyncActivity = Cotton.Sync.App.Activities.SyncActivity;
 using AppSyncActivityType = Cotton.Sync.App.Activities.SyncActivityType;
@@ -10,6 +11,8 @@ using CoreSyncActivityKind = Cotton.Sync.SyncActivityKind;
 using CoreSyncEngine = Cotton.Sync.ISyncEngine;
 using CoreSyncPair = Cotton.Sync.SyncPair;
 using CoreSyncRunOptions = Cotton.Sync.SyncRunOptions;
+using CoreSyncTransferDirection = Cotton.Sync.SyncTransferDirection;
+using CoreSyncTransferProgress = Cotton.Sync.SyncTransferProgress;
 
 namespace Cotton.Sync.App.Runners;
 
@@ -19,26 +22,32 @@ namespace Cotton.Sync.App.Runners;
 public sealed class SyncEnginePairWork : ISyncPairWork
 {
     private readonly IAppActivityPublisher? _activityPublisher;
+    private readonly IAppTransferProgressPublisher? _progressPublisher;
     private readonly CoreSyncEngine _syncEngine;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SyncEnginePairWork" /> class.
     /// </summary>
-    public SyncEnginePairWork(CoreSyncEngine syncEngine, IAppActivityPublisher? activityPublisher = null)
+    public SyncEnginePairWork(
+        CoreSyncEngine syncEngine,
+        IAppActivityPublisher? activityPublisher = null,
+        IAppTransferProgressPublisher? progressPublisher = null)
     {
         _syncEngine = syncEngine ?? throw new ArgumentNullException(nameof(syncEngine));
         _activityPublisher = activityPublisher;
+        _progressPublisher = progressPublisher;
     }
 
     /// <inheritdoc />
     public async Task RunOnceAsync(SyncPairSettings syncPair, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(syncPair);
-        CoreSyncRunOptions? options = _activityPublisher is null
+        CoreSyncRunOptions? options = _activityPublisher is null && _progressPublisher is null
             ? null
             : new CoreSyncRunOptions
             {
-                ActivityProgress = new AppActivityProgress(syncPair.Id, _activityPublisher),
+                ActivityProgress = _activityPublisher is null ? null : new AppActivityProgress(syncPair.Id, _activityPublisher),
+                TransferProgress = _progressPublisher is null ? null : new AppTransferProgressReporter(syncPair.Id, _progressPublisher),
             };
         _ = await _syncEngine
             .RunOnceAsync(ToCorePair(syncPair), options, cancellationToken)
@@ -68,6 +77,30 @@ public sealed class SyncEnginePairWork : ISyncPairWork
             string.IsNullOrWhiteSpace(relativePath) ? null : relativePath,
             message,
             DateTime.UtcNow);
+    }
+
+    private static AppTransferProgress ToAppProgress(
+        Guid syncPairId,
+        CoreSyncTransferProgress progress)
+    {
+        return new AppTransferProgress(
+            syncPairId,
+            ToAppTransferDirection(progress.Direction),
+            progress.RelativePath,
+            progress.TransferredBytes,
+            progress.TotalBytes,
+            progress.IsCompleted,
+            progress.OccurredAtUtc);
+    }
+
+    private static AppTransferDirection ToAppTransferDirection(CoreSyncTransferDirection direction)
+    {
+        return direction switch
+        {
+            CoreSyncTransferDirection.Upload => AppTransferDirection.Upload,
+            CoreSyncTransferDirection.Download => AppTransferDirection.Download,
+            _ => AppTransferDirection.Unknown,
+        };
     }
 
     private static AppSyncActivityType ToAppActivityType(CoreSyncActivityKind kind)
@@ -118,6 +151,24 @@ public sealed class SyncEnginePairWork : ISyncPairWork
         {
             ArgumentNullException.ThrowIfNull(value);
             _publisher.Publish(ToAppActivity(_syncPairId, value));
+        }
+    }
+
+    private sealed class AppTransferProgressReporter : IProgress<CoreSyncTransferProgress>
+    {
+        private readonly IAppTransferProgressPublisher _publisher;
+        private readonly Guid _syncPairId;
+
+        public AppTransferProgressReporter(Guid syncPairId, IAppTransferProgressPublisher publisher)
+        {
+            _syncPairId = syncPairId;
+            _publisher = publisher;
+        }
+
+        public void Report(CoreSyncTransferProgress value)
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _publisher.Publish(ToAppProgress(_syncPairId, value));
         }
     }
 }

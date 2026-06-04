@@ -548,6 +548,68 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task TransferProgressChanged_UpdatesCurrentTransferState()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            syncPairId,
+            DesktopTransferDirection.Upload,
+            "Reports/report.txt",
+            TransferredBytes: 512,
+            TotalBytes: 1024,
+            IsCompleted: false,
+            new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasCurrentTransfer, Is.True);
+            Assert.That(viewModel.IsCurrentTransferIndeterminate, Is.False);
+            Assert.That(viewModel.CurrentTransferProgressValue, Is.EqualTo(50).Within(0.01));
+            Assert.That(viewModel.CurrentTransferTitle, Is.EqualTo("Documents: Uploading report.txt"));
+            Assert.That(viewModel.CurrentTransferDetails, Is.EqualTo("512 B / 1.0 KB"));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Documents: Uploading report.txt"));
+        });
+    }
+
+    [Test]
+    public async Task StatusChanged_ClearsCurrentTransferWhenSyncBecomesIdle()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            syncPairId,
+            DesktopTransferDirection.Download,
+            "Reports/report.txt",
+            TransferredBytes: 1024,
+            TotalBytes: 1024,
+            IsCompleted: true,
+            new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc)));
+
+        controller.ReportStatus(new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(
+                syncPairId,
+                "Idle",
+                null,
+                LastSyncedAtUtc: new DateTime(2026, 6, 4, 9, 1, 0, DateTimeKind.Utc)),
+        ]));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasCurrentTransfer, Is.False);
+            Assert.That(viewModel.CurrentTransferTitle, Is.Empty);
+            Assert.That(viewModel.CurrentTransferDetails, Is.Empty);
+            Assert.That(viewModel.CurrentTransferProgressValue, Is.Zero);
+        });
+    }
+
+    [Test]
     public async Task Initialize_ShowsFirstSyncPendingUntilPairHasBaseline()
     {
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Idle")));
@@ -1341,6 +1403,8 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public event EventHandler<DesktopActivitySnapshot>? ActivityReported;
 
+        public event EventHandler<DesktopTransferProgressSnapshot>? TransferProgressChanged;
+
         public Guid? EnabledSyncPairId { get; private set; }
 
         public bool? EnabledSyncPairValue { get; private set; }
@@ -1393,6 +1457,11 @@ public sealed class ShellViewModelSyncPairCommandTests
         public void ReportStatus(DesktopSyncStatusSnapshot status)
         {
             StatusChanged?.Invoke(this, status);
+        }
+
+        public void ReportTransferProgress(DesktopTransferProgressSnapshot progress)
+        {
+            TransferProgressChanged?.Invoke(this, progress);
         }
 
         public Task<DesktopShellSnapshot> LoadAsync(CancellationToken cancellationToken = default)
