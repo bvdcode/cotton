@@ -30,9 +30,9 @@ Draft status: not release-ready. This document records the current desktop-sync 
 ## Verification Already Exercised
 
 - Full solution Release builds have passed locally with 0 warnings after recent desktop packaging and UX slices.
-- Desktop tests have passed locally, most recently `Cotton.Sync.Desktop.Tests` 234/234.
+- Desktop tests have passed locally, most recently `Cotton.Sync.Desktop.Tests` 241/241.
 - CLI one-shot sync has been smoke-tested against the integration-test server, verifying remote upload and SQLite baseline creation.
-- Desktop packaging metadata tests cover publish profiles, clean publish-directory behavior, app icon metadata, Linux `.desktop` metadata, `.deb` packaging script, reusable Linux/Windows diagnostics export smoke scripts, Linux package smoke wiring, Linux GUI screenshot smoke wiring with deterministic sign-in-error/add-folder/dashboard/settings/settings-diagnostics/error/conflict visual-smoke states, Linux archive/installed diagnostics export smoke wiring, Linux `.deb` install/upgrade smoke wiring, Windows CI smoke, Windows `.zip` artifact upload/self-test/diagnostics smoke, Windows installer script/install/diagnostics/upgrade smoke wiring, and release artifact checksum generation.
+- Desktop packaging metadata tests cover publish profiles, clean publish-directory behavior, app icon metadata, Linux `.desktop` metadata, `.deb` packaging script, reusable Linux/Windows diagnostics export smoke scripts, Linux package smoke wiring, reusable Linux GUI screenshot matrix smoke with deterministic sign-in-error/add-folder/dashboard/settings/settings-diagnostics/error/conflict visual-smoke states, Linux archive/installed diagnostics export smoke wiring, Linux `.deb` install/upgrade smoke wiring, Windows CI smoke, Windows `.zip` artifact upload/self-test/diagnostics smoke, Windows installer script/install/diagnostics/upgrade smoke wiring, and release artifact checksum generation.
 - Local Linux publish succeeded.
 - Local Windows publish succeeded from Linux cross-publish.
 - Local `.deb` build succeeded through `dpkg-deb`; extracted package layout starts the desktop apphost and runs self-test up to the expected local token-storage failure.

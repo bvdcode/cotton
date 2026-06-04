@@ -200,15 +200,9 @@ jobs:
           xvfb-run -a -s "-screen 0 1024x768x24" \
             dbus-run-session -- bash -euo pipefail <<'EOF'
           eval "$(gnome-keyring-daemon --start --components=secrets)"
-          src/Cotton.Sync.Desktop/Packaging/linux/smoke-gui-screenshot.sh \
+          src/Cotton.Sync.Desktop/Packaging/linux/smoke-gui-screenshot-matrix.sh \
             src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64/Cotton.Sync.Desktop \
-            cotton-sync-desktop-linux-gui.png
-          for scenario in sign-in-error add-folder dashboard settings settings-diagnostics error conflict; do
-            src/Cotton.Sync.Desktop/Packaging/linux/smoke-gui-screenshot.sh \
-              src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64/Cotton.Sync.Desktop \
-              "cotton-sync-desktop-linux-${scenario}.png" \
-              --visual-smoke "$scenario"
-          done
+            .
           EOF
 
       - name: Upload desktop Linux GUI screenshot

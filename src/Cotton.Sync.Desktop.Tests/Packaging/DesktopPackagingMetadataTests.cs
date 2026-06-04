@@ -159,6 +159,23 @@ public sealed class DesktopPackagingMetadataTests
     }
 
     [Test]
+    public void LinuxGuiScreenshotMatrixScript_CapturesDefaultVisualSmokeStates()
+    {
+        string smokeScript = File.ReadAllText(GetDesktopFilePath("Packaging/linux/smoke-gui-screenshot-matrix.sh"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(smokeScript, Does.Contain("Usage: smoke-gui-screenshot-matrix.sh <app-executable> <output-dir> [scenario...]"));
+            Assert.That(smokeScript, Does.Contain("DISPLAY is required"));
+            Assert.That(smokeScript, Does.Contain("set -- sign-in-error add-folder dashboard settings settings-diagnostics error conflict"));
+            Assert.That(smokeScript, Does.Contain("smoke-gui-screenshot.sh"));
+            Assert.That(smokeScript, Does.Contain("cotton-sync-desktop-linux-gui.png"));
+            Assert.That(smokeScript, Does.Contain("cotton-sync-desktop-linux-${scenario}.png"));
+            Assert.That(smokeScript, Does.Contain("--visual-smoke \"$scenario\""));
+        });
+    }
+
+    [Test]
     public void LinuxDiagnosticsExportSmokeScript_VerifiesBundlePath()
     {
         string smokeScript = File.ReadAllText(GetDesktopFilePath("Packaging/linux/smoke-diagnostics-export.sh"));
@@ -216,10 +233,7 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("ffmpeg gnome-keyring libsecret-tools xauth xvfb"));
             Assert.That(workflow, Does.Contain("Smoke desktop Linux GUI screenshot"));
             Assert.That(workflow, Does.Contain("xvfb-run -a -s \"-screen 0 1024x768x24\""));
-            Assert.That(workflow, Does.Contain("Packaging/linux/smoke-gui-screenshot.sh"));
-            Assert.That(workflow, Does.Contain("cotton-sync-desktop-linux-gui.png"));
-            Assert.That(workflow, Does.Contain("for scenario in sign-in-error add-folder dashboard settings settings-diagnostics error conflict; do"));
-            Assert.That(workflow, Does.Contain("--visual-smoke \"$scenario\""));
+            Assert.That(workflow, Does.Contain("Packaging/linux/smoke-gui-screenshot-matrix.sh"));
             Assert.That(workflow, Does.Contain("Upload desktop Linux GUI screenshot"));
             Assert.That(workflow, Does.Contain("name: desktop-linux-gui-screenshot"));
             Assert.That(workflow, Does.Contain("cotton-sync-desktop-linux-*.png"));
