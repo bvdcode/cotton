@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.IntegrationTests.Abstractions;
@@ -9,10 +10,12 @@ using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
+using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using NUnit.Framework;
 using System.Net.Http.Headers;
@@ -73,15 +76,13 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
     {
         await SignInAsync();
         Guid ownerId = await GetUserIdAsync(Username);
-        await SignInAsync("otheruser", "otherpass");
+        await CreateUserAsync("otheruser", "otherpass");
         Guid otherOwnerId = await GetUserIdAsync("otheruser");
 
         await AddSyncChangeAsync(ownerId, revision: 1, "ignored-before-cursor");
         await AddSyncChangeAsync(ownerId, revision: 2, "included");
         await AddSyncChangeAsync(ownerId, revision: 3, "next-page");
         await AddSyncChangeAsync(otherOwnerId, revision: 1, "other-user");
-
-        await SignInAsync();
 
         SyncChangesResponseDto response = await GetChangesAsync(since: 1, limit: 1);
 
@@ -149,18 +150,34 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
 
     private async Task<Guid> GetUserIdAsync(string username)
     {
-        DbContext.ChangeTracker.Clear();
+        using IServiceScope scope = _factory!.Services.CreateScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
 
-        User user = await DbContext.Users
+        User user = await dbContext.Users
             .AsNoTracking()
             .SingleAsync(x => x.Username == username);
 
         return user.Id;
     }
 
+    private async Task CreateUserAsync(string username, string password)
+    {
+        using HttpResponseMessage response = await _client!.PostAsJsonAsync(Routes.V1.Users, new
+        {
+            username,
+            password,
+            role = UserRole.User,
+        });
+
+        response.EnsureSuccessStatusCode();
+    }
+
     private async Task AddSyncChangeAsync(Guid ownerId, long revision, string name)
     {
-        DbContext.SyncChanges.Add(new SyncChange
+        using IServiceScope scope = _factory!.Services.CreateScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+
+        dbContext.SyncChanges.Add(new SyncChange
         {
             OwnerId = ownerId,
             Revision = revision,
@@ -171,7 +188,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
             Name = name,
         });
 
-        await DbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
     }
 
     private async Task<SyncChangesResponseDto> GetChangesAsync(long since, int limit)
