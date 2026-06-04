@@ -214,7 +214,14 @@ public sealed class ShellViewModelSyncPairCommandTests
     [Test]
     public async Task ApplyVisualSmokeScenarioAsync_ShowsSettingsDiagnosticsTab()
     {
-        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Idle")));
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Idle")))
+        {
+            SelfTestSnapshot = new DesktopSelfTestSnapshot(
+            [
+                new DesktopSelfTestItemSnapshot("Preferences database", true, "Writable"),
+                new DesktopSelfTestItemSnapshot("Token storage", true, "Release-secure storage available"),
+            ]),
+        };
         using ShellViewModel viewModel = CreateViewModel(controller);
         await viewModel.InitializeAsync();
 
@@ -224,6 +231,9 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             Assert.That(viewModel.IsSettingsVisible, Is.True);
             Assert.That(viewModel.SelectedSettingsTabIndex, Is.EqualTo(3));
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Self-test passed"));
+            Assert.That(viewModel.HasSelfTestItems, Is.True);
+            Assert.That(viewModel.SelfTestItems, Has.Count.EqualTo(2));
         });
     }
 

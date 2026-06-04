@@ -1021,28 +1021,6 @@
                              IsVisible="{Binding HasNoSelfTestItems}" />
                   <Border BorderBrush="{DynamicResource CottonBorderBrush}"
                           BorderThickness="1"
-                          CornerRadius="6">
-                    <ItemsControl ItemsSource="{Binding DiagnosticsItems}">
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                          <Grid ColumnDefinitions="108,*"
-                                ColumnSpacing="8"
-                                Margin="8,5">
-                            <TextBlock Text="{Binding Label}"
-                                       Classes="secondary"
-                                       FontSize="11"
-                                       TextTrimming="CharacterEllipsis" />
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding Value}"
-                                       FontSize="11"
-                                       TextTrimming="CharacterEllipsis" />
-                          </Grid>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                  </Border>
-                  <Border BorderBrush="{DynamicResource CottonBorderBrush}"
-                          BorderThickness="1"
                           CornerRadius="6"
                           IsVisible="{Binding HasSelfTestItems}">
                     <ItemsControl ItemsSource="{Binding SelfTestItems}">
@@ -1064,6 +1042,28 @@
                                        Grid.ColumnSpan="2"
                                        Text="{Binding Details}"
                                        Classes="secondary"
+                                       FontSize="11"
+                                       TextTrimming="CharacterEllipsis" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </Border>
+                  <Border BorderBrush="{DynamicResource CottonBorderBrush}"
+                          BorderThickness="1"
+                          CornerRadius="6">
+                    <ItemsControl ItemsSource="{Binding DiagnosticsItems}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Grid ColumnDefinitions="108,*"
+                                ColumnSpacing="8"
+                                Margin="8,5">
+                            <TextBlock Text="{Binding Label}"
+                                       Classes="secondary"
+                                       FontSize="11"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Value}"
                                        FontSize="11"
                                        TextTrimming="CharacterEllipsis" />
                           </Grid>

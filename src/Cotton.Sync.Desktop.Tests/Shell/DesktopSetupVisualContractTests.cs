@@ -101,10 +101,17 @@ public sealed class DesktopSetupVisualContractTests
             mainWindowXaml,
             "<TabItem Header=\"Diag\"",
             "</TabItem>");
+        int selfTestIndex = diagnosticsSection.IndexOf(
+            "ItemsSource=\"{Binding SelfTestItems}\"",
+            StringComparison.Ordinal);
+        int diagnosticsIndex = diagnosticsSection.IndexOf(
+            "ItemsSource=\"{Binding DiagnosticsItems}\"",
+            StringComparison.Ordinal);
 
         Assert.Multiple(() =>
         {
-            Assert.That(diagnosticsSection, Does.Contain("ItemsSource=\"{Binding SelfTestItems}\""));
+            Assert.That(selfTestIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(diagnosticsIndex, Is.GreaterThan(selfTestIndex));
             Assert.That(diagnosticsSection, Does.Not.Contain("MaxHeight=\"118\""));
             Assert.That(diagnosticsSection, Does.Not.Contain("<ScrollViewer"));
         });
