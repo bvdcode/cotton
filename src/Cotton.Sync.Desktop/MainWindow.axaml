@@ -470,7 +470,7 @@
                 <Grid RowDefinitions="Auto,Auto"
                       RowSpacing="7"
                       IsVisible="{Binding HasSyncPairs}">
-                  <ScrollViewer MaxHeight="176"
+                  <ScrollViewer MaxHeight="236"
                                 VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{Binding SyncPairs}">
                       <ItemsControl.ItemTemplate>

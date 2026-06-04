@@ -108,6 +108,22 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
+    public void DashboardFolders_LeavesRoomForExpandedInlineControls()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string foldersSection = GetSlice(
+            mainWindowXaml,
+            "<TextBlock Text=\"Folders\"",
+            "<TextBlock Text=\"Activity\"");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(foldersSection, Does.Contain("<ScrollViewer MaxHeight=\"236\""));
+            Assert.That(foldersSection, Does.Not.Contain("<ScrollViewer MaxHeight=\"176\""));
+        });
+    }
+
+    [Test]
     public void SetupErrorArea_ReservesSpaceWithoutReflowingTheForm()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
