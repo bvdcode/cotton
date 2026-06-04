@@ -10,20 +10,22 @@ using System.Reflection;
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
 /// <summary>
-/// Rollout bridge that signs protected rows created before integrity metadata existed.
+/// Rollout bridge that signs protected rows created before integrity metadata existed or upgrades known legacy formats.
 /// </summary>
 /// <remarks>
 /// This bridge signs rows that predate integrity metadata and any later legacy row that is still unsigned while
-/// bridge mode is enabled. Existing metadata is never ignored: unsupported schema versions still stop startup rather than
-/// being re-signed blindly.
+/// bridge mode is enabled. Existing metadata is never ignored: stale schema versions must verify against a descriptor's
+/// known legacy payloads before the row is re-signed with the current payload.
 /// </remarks>
 public sealed class DatabaseIntegrityBridgeBackfillService(
     CottonDbContext _dbContext,
     IDatabaseIntegrityProtector _protector,
     IDatabaseIntegrityDescriptorRegistry _descriptors,
-    ILogger<DatabaseIntegrityBridgeBackfillService> _logger) : IDatabaseIntegrityBridgeBackfillService
+    ILogger<DatabaseIntegrityBridgeBackfillService> _logger,
+    IDatabaseIntegrityFailureReporter? failures = null) : IDatabaseIntegrityBridgeBackfillService
 {
     private const int BatchSize = 250;
+    private const string LegacyUpgradeBoundary = "bridge.legacy-upgrade";
     private static readonly MethodInfo CountMissingRowsCoreMethod = typeof(DatabaseIntegrityBridgeBackfillService)
         .GetMethod(
             nameof(CountMissingRowsCoreAsync),
@@ -47,6 +49,7 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
             nameof(LoadUnsignedBatchCoreAsync));
 
     private readonly IReadOnlyCollection<IDatabaseIntegrityDescriptor> _descriptorsToBackfill = _descriptors.All;
+    private readonly IDatabaseIntegrityFailureReporter _failures = failures ?? NullDatabaseIntegrityFailureReporter.Instance;
 
     /// <inheritdoc />
     public async Task<int> BackfillUnsignedPhaseOneRowsAsync(CancellationToken cancellationToken)
@@ -55,13 +58,6 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
         if (state.MissingRows == 0 && state.StaleRows == 0)
         {
             return 0;
-        }
-
-        if (state.StaleRows > 0)
-        {
-            throw new InvalidOperationException(
-                "Database integrity bridge found protected rows with an unsupported integrity schema version. " +
-                "Refusing to re-sign existing data because that could bless database tampering.");
         }
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
@@ -76,7 +72,7 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
 
             total += count;
             _logger.LogWarning(
-                "Database integrity bridge signed {Count} existing {EntityName} rows. " +
+                "Database integrity bridge signed or upgraded {Count} existing {EntityName} rows. " +
                 "This migration bridge is enabled; remove it after all supported upgrades have crossed the integrity migration.",
                 count,
                 descriptor.EntityName);
@@ -114,6 +110,7 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
 
             foreach (object row in rows)
             {
+                RequireValidForBackfill(descriptor, row);
                 byte[] mac = _protector.Sign(row, descriptor);
                 await UpdateIntegrityMetadataAsync(descriptor, row, mac, cancellationToken);
             }
@@ -121,6 +118,58 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
             signed += rows.Count;
             _dbContext.ChangeTracker.Clear();
         }
+    }
+
+    private void RequireValidForBackfill(IDatabaseIntegrityDescriptor currentDescriptor, object row)
+    {
+        var entry = _dbContext.Entry(row);
+        byte[]? existingMac = entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue as byte[];
+        object? existingVersionValue = entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue;
+        int? existingVersion = existingVersionValue is int version ? version : null;
+        if (existingMac is null || existingVersion is null || existingVersion == currentDescriptor.SchemaVersion)
+        {
+            return;
+        }
+
+        if (currentDescriptor is not IDatabaseIntegrityLegacyDescriptorProvider legacyProvider)
+        {
+            FailUnsupportedLegacyVersion(currentDescriptor, row, existingVersion.Value);
+            return;
+        }
+
+        foreach (IDatabaseIntegrityDescriptor legacyDescriptor in legacyProvider.LegacyDescriptors)
+        {
+            if (legacyDescriptor.EntityType != currentDescriptor.EntityType
+                || legacyDescriptor.EntityName != currentDescriptor.EntityName
+                || legacyDescriptor.SchemaVersion != existingVersion.Value)
+            {
+                continue;
+            }
+
+            if (_protector.Verify(row, legacyDescriptor, existingMac))
+            {
+                return;
+            }
+        }
+
+        FailUnsupportedLegacyVersion(currentDescriptor, row, existingVersion.Value);
+    }
+
+    private void FailUnsupportedLegacyVersion(
+        IDatabaseIntegrityDescriptor currentDescriptor,
+        object row,
+        int existingVersion)
+    {
+        string entityKey = currentDescriptor.GetEntityKey(row);
+        _failures.Report(new DatabaseIntegrityFailure(
+            currentDescriptor.EntityName,
+            entityKey,
+            LegacyUpgradeBoundary,
+            DateTime.UtcNow));
+        throw new InvalidOperationException(
+            $"Database integrity bridge cannot upgrade {currentDescriptor.EntityName} {entityKey} " +
+            $"from integrity schema version {existingVersion} to {currentDescriptor.SchemaVersion}. " +
+            "Refusing to re-sign existing data because that could bless database tampering.");
     }
 
     private async Task UpdateIntegrityMetadataAsync(
@@ -229,8 +278,8 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
         where TEntity : class
     {
         // Transitional rollout bridge: existing installations started without integrity metadata.
-        // Startup signs missing rows only; stale non-null schema versions stay hard failures so
-        // Cotton never silently blesses data whose signed payload format is known to have changed.
+        // Startup signs missing rows directly; stale non-null schema versions must validate through
+        // RequireValidForBackfill before Cotton re-signs them with the current descriptor.
         List<TEntity> rows = await _dbContext.Set<TEntity>()
             .Where(x => EF.Property<byte[]?>(x, DatabaseIntegrityColumns.MacProperty) == null
                 || EF.Property<int?>(x, DatabaseIntegrityColumns.VersionProperty) != descriptor.SchemaVersion)
