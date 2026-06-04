@@ -231,22 +231,6 @@ jobs:
             cotton-sync-desktop-win-x64.tar.gz
             cotton-sync-desktop-win-x64.zip
 
-      - name: Generate desktop artifact checksums
-        run: |
-          sha256sum \
-            cotton-sync-desktop-linux-x64.tar.gz \
-            cotton-sync-desktop-linux-x64.deb \
-            cotton-sync-desktop-win-x64.tar.gz \
-            cotton-sync-desktop-win-x64.zip \
-            > desktop-artifact-checksums.sha256
-          cat desktop-artifact-checksums.sha256
-
-      - name: Upload desktop artifact checksums
-        uses: actions/upload-artifact@v5
-        with:
-          name: desktop-artifact-checksums
-          path: desktop-artifact-checksums.sha256
-
       - name: Write SixLabors license secret for Docker build
         env:
           SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
@@ -395,20 +379,11 @@ jobs:
             throw "Windows installer was not created."
           }
 
-      - name: Generate desktop Windows installer checksum
-        shell: pwsh
-        run: |
-          $hash = Get-FileHash cotton-sync-desktop-win-x64-setup.exe -Algorithm SHA256
-          "{0}  {1}" -f $hash.Hash.ToLowerInvariant(), "cotton-sync-desktop-win-x64-setup.exe" | Set-Content desktop-windows-installer-checksums.sha256
-          Get-Content desktop-windows-installer-checksums.sha256
-
       - name: Upload desktop Windows installer artifact
         uses: actions/upload-artifact@v5
         with:
           name: desktop-windows-installer
-          path: |
-            cotton-sync-desktop-win-x64-setup.exe
-            desktop-windows-installer-checksums.sha256
+          path: cotton-sync-desktop-win-x64-setup.exe
 
   release:
     name: Create Release
@@ -448,12 +423,14 @@ jobs:
           name: desktop-windows-installer
           path: release-artifacts
 
-      - name: Download desktop artifact checksums
+      - name: Generate release artifact checksums
         if: needs.build.outputs.CommitsSinceVersionSource > 0
-        uses: actions/download-artifact@v4
-        with:
-          name: desktop-artifact-checksums
-          path: release-artifacts
+        run: |
+          find nupkg release-artifacts -maxdepth 1 -type f ! -name '*.sha256' -print0 \
+            | sort -z \
+            | xargs -0 sha256sum \
+            > release-artifacts/release-artifact-checksums.sha256
+          cat release-artifacts/release-artifact-checksums.sha256
 
       - name: Create Release
         if: needs.build.outputs.CommitsSinceVersionSource > 0

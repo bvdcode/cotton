@@ -199,8 +199,6 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("Packaging/windows/cotton-sync.iss"));
             Assert.That(workflow, Does.Contain("/DIconFile=$iconFile"));
             Assert.That(workflow, Does.Contain("cotton-sync-desktop-win-x64-setup.exe"));
-            Assert.That(workflow, Does.Contain("Generate desktop Windows installer checksum"));
-            Assert.That(workflow, Does.Contain("desktop-windows-installer-checksums.sha256"));
             Assert.That(workflow, Does.Contain("Upload desktop Windows installer artifact"));
             Assert.That(workflow, Does.Contain("name: desktop-windows-installer"));
             Assert.That(workflow, Does.Contain("Download desktop Windows installer artifact"));
@@ -208,20 +206,22 @@ public sealed class DesktopPackagingMetadataTests
     }
 
     [Test]
-    public void CiWorkflow_AttachesDesktopArtifactChecksumsToRelease()
+    public void CiWorkflow_GeneratesReleaseArtifactChecksums()
     {
         string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
 
         Assert.Multiple(() =>
         {
-            Assert.That(workflow, Does.Contain("Generate desktop artifact checksums"));
-            Assert.That(workflow, Does.Contain("desktop-artifact-checksums.sha256"));
+            Assert.That(workflow, Does.Contain("Generate release artifact checksums"));
+            Assert.That(workflow, Does.Contain("release-artifact-checksums.sha256"));
+            Assert.That(workflow, Does.Contain("find nupkg release-artifacts"));
+            Assert.That(workflow, Does.Contain("! -name '*.sha256'"));
+            Assert.That(workflow, Does.Contain("xargs -0 sha256sum"));
             Assert.That(workflow, Does.Contain("cotton-sync-desktop-linux-x64.tar.gz"));
             Assert.That(workflow, Does.Contain("cotton-sync-desktop-linux-x64.deb"));
             Assert.That(workflow, Does.Contain("cotton-sync-desktop-win-x64.tar.gz"));
             Assert.That(workflow, Does.Contain("cotton-sync-desktop-win-x64.zip"));
-            Assert.That(workflow, Does.Contain("name: desktop-artifact-checksums"));
-            Assert.That(workflow, Does.Contain("Download desktop artifact checksums"));
+            Assert.That(workflow, Does.Contain("cotton-sync-desktop-win-x64-setup.exe"));
         });
     }
 
