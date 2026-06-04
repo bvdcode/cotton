@@ -59,6 +59,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private bool _isServerVerified;
     private bool _isAddSyncPairWizardVisible;
     private bool _isCreateRemoteFolderVisible;
+    private bool _isDesktopSyncChangesApiUnavailable;
     private bool _isLocalFolderSelectionError;
     private bool _isSelectedSyncPairEditorVisible;
     private bool _isSettingsVisible;
@@ -1324,6 +1325,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         Password = string.Empty;
         TotpCode = string.Empty;
+        SetDesktopSyncChangesApiUnavailable(false);
         IsServerVerified = false;
         IsServerProbeFailed = false;
         ServerProbeStatus = "Edit server address";
@@ -1677,8 +1679,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         try
         {
             DesktopSelfTestSnapshot result = await _controller.RunSelfTestAsync().ConfigureAwait(true);
+            string actionRequiredMessage = DesktopActionRequiredMessageResolver.FromSelfTest(result);
+            SetDesktopSyncChangesApiUnavailable(IsMissingDesktopSyncChangesApiMessage(actionRequiredMessage));
             GlobalStatus = result.Passed ? "Self-test passed" : "Action required";
-            ActionRequiredMessage = DesktopActionRequiredMessageResolver.FromSelfTest(result);
+            ActionRequiredMessage = actionRequiredMessage;
             SelfTestItems.Clear();
             foreach (DesktopSelfTestItemSnapshot item in result.Items)
             {
@@ -1699,13 +1703,18 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private async Task ExportDiagnosticsAsync()
     {
+        bool preserveActionRequired = HasActionRequired;
         IsBusy = true;
         try
         {
             string bundlePath = await _controller.ExportDiagnosticsAsync().ConfigureAwait(true);
             LastDiagnosticsBundlePath = bundlePath;
-            GlobalStatus = "Diagnostics exported";
-            ActionRequiredMessage = string.Empty;
+            if (!preserveActionRequired)
+            {
+                GlobalStatus = "Diagnostics exported";
+                ActionRequiredMessage = string.Empty;
+            }
+
             AddActivity("Diagnostics", bundlePath, "Diagnostics bundle exported to " + bundlePath);
         }
         finally
@@ -1904,10 +1913,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             && !string.IsNullOrWhiteSpace(NewRemoteFolderName);
     }
 
-    private bool CanUseAddSyncPairFlow => !string.Equals(
-        ActionRequiredMessage,
-        DesktopActionRequiredMessageResolver.MissingDesktopSyncChangesApiMessage,
-        StringComparison.Ordinal);
+    private bool CanUseAddSyncPairFlow => !_isDesktopSyncChangesApiUnavailable;
 
     private bool CanSignIn()
     {
@@ -1923,6 +1929,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         Trace.TraceError(exception.ToString());
         GlobalStatus = ResolveCommandFailureStatus();
         string actionRequiredMessage = DesktopActionRequiredMessageResolver.FromException(exception);
+        if (IsMissingDesktopSyncChangesApiMessage(actionRequiredMessage))
+        {
+            SetDesktopSyncChangesApiUnavailable(true);
+        }
+
         ActionRequiredMessage = actionRequiredMessage;
         AddActivity("Error", string.Empty, actionRequiredMessage);
         RefreshCurrentProgressText();
@@ -1975,6 +1986,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         IsServerProbeChecking = false;
         if (result.IsCottonServer)
         {
+            SetDesktopSyncChangesApiUnavailable(false);
             ApplyNormalizedServerUrl(result.ServerUrl);
         }
 
@@ -1996,10 +2008,30 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private void ResetServerProbe()
     {
+        SetDesktopSyncChangesApiUnavailable(false);
         IsServerProbeChecking = false;
         IsServerVerified = false;
         IsServerProbeFailed = false;
         ServerProbeStatus = string.Empty;
+    }
+
+    private void SetDesktopSyncChangesApiUnavailable(bool isUnavailable)
+    {
+        if (_isDesktopSyncChangesApiUnavailable == isUnavailable)
+        {
+            return;
+        }
+
+        _isDesktopSyncChangesApiUnavailable = isUnavailable;
+        RaiseAddSyncPairFlowCommandStates();
+    }
+
+    private static bool IsMissingDesktopSyncChangesApiMessage(string message)
+    {
+        return string.Equals(
+            message,
+            DesktopActionRequiredMessageResolver.MissingDesktopSyncChangesApiMessage,
+            StringComparison.Ordinal);
     }
 
     private void ScheduleServerProbe(string serverUrl)

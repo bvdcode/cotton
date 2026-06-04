@@ -1248,6 +1248,57 @@ public sealed class ShellViewModelSyncPairCommandTests
                 viewModel.ActionRequiredMessage,
                 Is.EqualTo("This Cotton server does not expose the desktop sync changes API yet. Deploy the latest Cotton backend and retry sync."));
         });
+
+        await ExecuteAsync(viewModel.ExportDiagnosticsCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.ShowAddSyncPairCommand.CanExecute(null), Is.False);
+            Assert.That(viewModel.BrowseLocalFolderCommand.CanExecute(null), Is.False);
+            Assert.That(viewModel.AddSyncPairCommand.CanExecute(null), Is.False);
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Action required"));
+            Assert.That(
+                viewModel.ActionRequiredMessage,
+                Is.EqualTo("This Cotton server does not expose the desktop sync changes API yet. Deploy the latest Cotton backend and retry sync."));
+            Assert.That(viewModel.HasLastDiagnosticsBundlePath, Is.True);
+        });
+    }
+
+    [Test]
+    public async Task SelfTestPass_ClearsMissingDesktopSyncChangesApiAddFolderBlock()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot())
+        {
+            SelfTestSnapshot = new DesktopSelfTestSnapshot(
+            [
+                new DesktopSelfTestItemSnapshot(
+                    "Desktop sync change feed",
+                    false,
+                    "Cotton API request GET /api/v1/sync/changes?since=0&limit=1 returned invalid JSON "
+                    + "with content type 'text/html' and status 200 (OK)."),
+            ]),
+        };
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        viewModel.LocalFolderPath = "/home/user/Cotton";
+        viewModel.RemoteFolderPath = "/";
+
+        await ExecuteAsync(viewModel.SelfTestCommand);
+        Assert.That(viewModel.AddSyncPairCommand.CanExecute(null), Is.False);
+
+        controller.SelfTestSnapshot = new DesktopSelfTestSnapshot(
+        [
+            new DesktopSelfTestItemSnapshot("Desktop sync change feed", true, "Ready"),
+        ]);
+
+        await ExecuteAsync(viewModel.SelfTestCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Self-test passed"));
+            Assert.That(viewModel.HasActionRequired, Is.False);
+            Assert.That(viewModel.AddSyncPairCommand.CanExecute(null), Is.True);
+        });
     }
 
     [Test]
