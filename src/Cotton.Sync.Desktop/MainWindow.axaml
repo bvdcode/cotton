@@ -4,9 +4,9 @@
         Title="Cotton Sync"
         Icon="/Assets/app.ico"
         Width="336"
-        Height="300"
+        Height="272"
         MinWidth="316"
-        MinHeight="288"
+        MinHeight="264"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource CottonAppBackgroundBrush}">
   <Grid RowDefinitions="3,Auto,*"
