@@ -42,6 +42,11 @@ public sealed class SyncSupervisor : ISyncSupervisor
         await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            foreach (ISyncPairRunner runner in _runners.Values)
+            {
+                await runner.StopAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             _runners.Clear();
             await _syncPairs.InitializeAsync(cancellationToken).ConfigureAwait(false);
             IReadOnlyList<SyncPairSettings> syncPairs = await _syncPairs.ListAsync(cancellationToken).ConfigureAwait(false);

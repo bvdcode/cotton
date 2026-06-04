@@ -36,6 +36,29 @@ public sealed class SyncSupervisorTests
     }
 
     [Test]
+    public async Task StartAsync_StopsExistingRunnersBeforeReplacingThem()
+    {
+        SyncPairSettings documents = CreatePair("Documents", isEnabled: true);
+        var store = new FakeSyncPairSettingsStore([documents]);
+        var factory = new FakeSyncPairRunnerFactory();
+        var supervisor = new SyncSupervisor(store, factory, new InMemoryAppStatusPublisher());
+        await supervisor.StartAsync();
+        FakeSyncPairRunner firstRunner = factory.CreatedRunners[documents.Id];
+
+        await supervisor.StartAsync();
+
+        FakeSyncPairRunner secondRunner = factory.CreatedRunners[documents.Id];
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstRunner.StopCallCount, Is.EqualTo(1));
+            Assert.That(secondRunner, Is.Not.SameAs(firstRunner));
+            Assert.That(secondRunner.StartCallCount, Is.EqualTo(1));
+            Assert.That(factory.AllCreatedRunners, Has.Count.EqualTo(2));
+        });
+    }
+
+
+    [Test]
     public async Task PauseAndResumeAsync_UpdateSelectedRunnerAndPublishStatus()
     {
         SyncPairSettings documents = CreatePair("Documents", isEnabled: true);
@@ -162,10 +185,13 @@ public sealed class SyncSupervisorTests
     {
         public Dictionary<Guid, FakeSyncPairRunner> CreatedRunners { get; } = [];
 
+        public List<FakeSyncPairRunner> AllCreatedRunners { get; } = [];
+
         public ISyncPairRunner Create(SyncPairSettings syncPair)
         {
             var runner = new FakeSyncPairRunner(syncPair);
-            CreatedRunners.Add(syncPair.Id, runner);
+            CreatedRunners[syncPair.Id] = runner;
+            AllCreatedRunners.Add(runner);
             return runner;
         }
     }
