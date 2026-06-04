@@ -922,6 +922,11 @@ public sealed class SyncEngine : ISyncEngine
         foreach (T entry in entries)
         {
             string relativePath = pathSelector(entry);
+            if (SyncPathIgnoreRules.ShouldIgnore(relativePath))
+            {
+                continue;
+            }
+
             string key = SyncPath.ToKey(relativePath);
             if (result.TryGetValue(key, out T? existing))
             {

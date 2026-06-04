@@ -1160,6 +1160,23 @@ public sealed class SyncEngineTests
         });
     }
 
+    [Test]
+    public async Task RunOnceAsync_IgnoresRemoteMetadataPathsAtEngineBoundary()
+    {
+        NodeFileManifestDto remote = RemoteFile(".cotton-sync/remote-file.txt", HashText("remote"));
+        SyncEngine engine = CreateEngine(new FakeLocalFileScanner(), RemoteTree(remote), new FakeRemoteFileSynchronizer(), out SqliteSyncStateStore stateStore);
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+        IReadOnlyList<SyncStateEntry> entries = await stateStore.LoadPairAsync("pair-a");
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Activities, Is.Empty);
+            Assert.That(entries, Is.Empty);
+            Assert.That(File.Exists(Path.Combine(_root, ".cotton-sync", "remote-file.txt")), Is.False);
+        });
+    }
+
     private SyncEngine CreateEngine(
         FakeLocalFileScanner scanner,
         RemoteTreeSnapshot remoteTree,
