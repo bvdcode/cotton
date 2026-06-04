@@ -4,6 +4,7 @@
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Platform;
 using Cotton.Sync.Desktop.Platform;
 using Cotton.Sync.Desktop.Shell;
@@ -110,6 +111,17 @@ public sealed partial class MainWindow : Window
         {
             ApplyWindowMode(setupViewModel);
         }
+    }
+
+    private void RemoteFoldersListBox_DoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (DataContext is not ShellViewModel viewModel
+            || !viewModel.OpenRemoteFolderCommand.CanExecute(null))
+        {
+            return;
+        }
+
+        viewModel.OpenRemoteFolderCommand.Execute(null);
     }
 
     private void ApplyWindowMode(ShellViewModel viewModel)
