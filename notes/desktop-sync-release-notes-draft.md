@@ -8,7 +8,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 - Full-mirror sync for one or more local-to-remote sync pairs.
 - First-run setup flow with Cotton server probing, password/TOTP sign-in, remembered server URL and username, and an explicit add-folder wizard for choosing the first sync pair.
 - First-run windows default to the dark Cotton theme, with System/Light/Dark theme switching still available in Settings.
-- Dashboard with global status, per-folder status, current progress, activity history, action-required errors, conflict list, and direct sync-folder management.
+- Dashboard with global status, per-folder status/current operation, current progress, activity history, action-required errors, conflict list, and direct sync-folder management.
 - Action-required sync failures use a consistent dashboard state and preserve the concrete reason in the error panel instead of mixing a generic failure state with an up-to-date progress message; add-folder/settings overlays hide background dashboard chrome so wizard errors stay readable, and missing desktop sync API errors block add-folder actions until the server check is resolved.
 - Folder management supports add, rename, enable/disable, open local folder, and remove with explicit confirmation.
 - Continuous sync uses local filesystem watcher triggers, SignalR wake-up events, durable change-feed catch-up, and periodic reconciliation as a safety fallback.

@@ -58,8 +58,16 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
     public string CurrentOperation
     {
         get => _currentOperation;
-        set => SetProperty(ref _currentOperation, value);
+        set
+        {
+            if (SetProperty(ref _currentOperation, value))
+            {
+                OnPropertyChanged(nameof(HasCurrentOperation));
+            }
+        }
     }
+
+    public bool HasCurrentOperation => !string.IsNullOrWhiteSpace(CurrentOperation);
 
     public string EditableDisplayName
     {

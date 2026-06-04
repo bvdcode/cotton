@@ -94,6 +94,8 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Not.Contain("ToolTip.Tip=\"Open selected local folder\""));
             Assert.That(foldersSection, Does.Contain("SelectedSyncPair.ToggleEnabledIcon"));
             Assert.That(foldersSection, Does.Contain("SelectedSyncPair.ModeLabel"));
+            Assert.That(foldersSection, Does.Contain("Text=\"{Binding CurrentOperation}\""));
+            Assert.That(foldersSection, Does.Contain("IsVisible=\"{Binding HasCurrentOperation}\""));
         });
     }
 

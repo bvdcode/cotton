@@ -571,6 +571,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(row.CurrentOperation, Is.EqualTo("Uploading report.txt"));
+            Assert.That(row.HasCurrentOperation, Is.True);
             Assert.That(viewModel.GlobalStatus, Is.EqualTo("Syncing"));
             Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Documents: Uploading report.txt"));
         });
@@ -595,11 +596,14 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         Assert.Multiple(() =>
         {
+            SyncPairRowViewModel row = viewModel.SyncPairs.Single();
             Assert.That(viewModel.HasCurrentTransfer, Is.True);
             Assert.That(viewModel.IsCurrentTransferIndeterminate, Is.False);
             Assert.That(viewModel.CurrentTransferProgressValue, Is.EqualTo(50).Within(0.01));
             Assert.That(viewModel.CurrentTransferTitle, Is.EqualTo("Documents: Uploading report.txt"));
             Assert.That(viewModel.CurrentTransferDetails, Is.EqualTo("512 B / 1.0 KB"));
+            Assert.That(row.CurrentOperation, Is.EqualTo("Uploading report.txt"));
+            Assert.That(row.HasCurrentOperation, Is.True);
             Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Documents: Uploading report.txt"));
         });
     }
@@ -624,6 +628,7 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         Assert.Multiple(() =>
         {
+            SyncPairRowViewModel row = viewModel.SyncPairs.Single();
             Assert.That(viewModel.HasCurrentRunProgress, Is.True);
             Assert.That(viewModel.IsCurrentRunProgressIndeterminate, Is.False);
             Assert.That(viewModel.CurrentRunProgressValue, Is.EqualTo(30).Within(0.01));
@@ -632,6 +637,8 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.HasCurrentWorkProgress, Is.True);
             Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents: Checking files"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("3 of 10 files · report.txt"));
+            Assert.That(row.CurrentOperation, Is.EqualTo("Checking files 3 of 10"));
+            Assert.That(row.HasCurrentOperation, Is.True);
             Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Documents: Checking files 3 of 10"));
         });
     }
@@ -664,10 +671,13 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         Assert.Multiple(() =>
         {
+            SyncPairRowViewModel row = viewModel.SyncPairs.Single();
             Assert.That(viewModel.HasCurrentRunProgress, Is.False);
             Assert.That(viewModel.CurrentRunProgressTitle, Is.Empty);
             Assert.That(viewModel.CurrentRunProgressDetails, Is.Empty);
             Assert.That(viewModel.CurrentRunProgressValue, Is.Zero);
+            Assert.That(row.CurrentOperation, Is.Empty);
+            Assert.That(row.HasCurrentOperation, Is.False);
         });
     }
 
@@ -698,10 +708,13 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         Assert.Multiple(() =>
         {
+            SyncPairRowViewModel row = viewModel.SyncPairs.Single();
             Assert.That(viewModel.HasCurrentTransfer, Is.False);
             Assert.That(viewModel.CurrentTransferTitle, Is.Empty);
             Assert.That(viewModel.CurrentTransferDetails, Is.Empty);
             Assert.That(viewModel.CurrentTransferProgressValue, Is.Zero);
+            Assert.That(row.CurrentOperation, Is.Empty);
+            Assert.That(row.HasCurrentOperation, Is.False);
         });
     }
 
