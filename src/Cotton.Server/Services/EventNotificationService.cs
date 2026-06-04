@@ -2,7 +2,6 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
-using Cotton.Database.Models.Enums;
 using Cotton.Server.Hubs;
 using Cotton.Server.Models.Dto;
 using Mapster;
@@ -68,7 +67,6 @@ public interface IEventNotificationService
 public class EventNotificationService(
     IHubContext<EventHub> _hubContext,
     CottonDbContext _dbContext,
-    ISyncChangeRecorder _syncChanges,
     ILogger<EventNotificationService> _logger) : IEventNotificationService
 {
     /// <summary>
@@ -83,7 +81,6 @@ public class EventNotificationService(
 
         if (nodeFile is not null)
         {
-            await _syncChanges.RecordFileChangeAsync(SyncChangeKind.FileCreated, nodeFileId, ct: ct);
             var dto = nodeFile.Adapt<NodeFileManifestDto>();
             await SendUserEventAsync(nodeFile.OwnerId, "FileCreated", dto, ct);
         }
@@ -101,7 +98,6 @@ public class EventNotificationService(
 
         if (nodeFile is not null)
         {
-            await _syncChanges.RecordFileChangeAsync(SyncChangeKind.FileContentUpdated, nodeFileId, ct: ct);
             var dto = nodeFile.Adapt<NodeFileManifestDto>();
             await SendUserEventAsync(nodeFile.OwnerId, "FileUpdated", dto, ct);
         }
@@ -116,7 +112,6 @@ public class EventNotificationService(
         Guid? parentNodeId,
         CancellationToken ct = default)
     {
-        await _syncChanges.RecordFileDeletedAsync(userId, nodeFileId, parentNodeId, ct);
         var payload = new NodeFileDeletedEventDto(nodeFileId, parentNodeId);
         await SendUserEventAsync(userId, "FileDeleted", payload, ct);
     }
@@ -133,7 +128,6 @@ public class EventNotificationService(
 
         if (nodeFile is not null)
         {
-            await _syncChanges.RecordFileChangeAsync(SyncChangeKind.FileRestored, nodeFileId, ct: ct);
             var dto = nodeFile.Adapt<NodeFileManifestDto>();
             await SendUserEventAsync(nodeFile.OwnerId, "FileRestored", dto, ct);
         }
@@ -151,7 +145,6 @@ public class EventNotificationService(
 
         if (nodeFile is not null)
         {
-            await _syncChanges.RecordFileChangeAsync(SyncChangeKind.FileMoved, nodeFileId, oldParentId, ct);
             var dto = nodeFile.Adapt<NodeFileManifestDto>();
             var payload = new NodeFileMovedEventDto(dto, oldParentId, nodeFile.NodeId);
             await SendUserEventAsync(nodeFile.OwnerId, "FileMoved", payload, ct);
@@ -170,7 +163,6 @@ public class EventNotificationService(
 
         if (nodeFile is not null)
         {
-            await _syncChanges.RecordFileChangeAsync(SyncChangeKind.FileRenamed, nodeFileId, ct: ct);
             var dto = nodeFile.Adapt<NodeFileManifestDto>();
             await SendUserEventAsync(nodeFile.OwnerId, "FileRenamed", dto, ct);
         }
@@ -187,7 +179,6 @@ public class EventNotificationService(
 
         if (node is not null)
         {
-            await _syncChanges.RecordNodeChangeAsync(SyncChangeKind.FolderCreated, nodeId, ct: ct);
             var dto = node.Adapt<NodeDto>();
             await SendUserEventAsync(node.OwnerId, "NodeCreated", dto, ct);
         }
@@ -202,7 +193,6 @@ public class EventNotificationService(
         Guid? parentNodeId,
         CancellationToken ct = default)
     {
-        await _syncChanges.RecordNodeDeletedAsync(userId, nodeId, parentNodeId, ct);
         var payload = new NodeDeletedEventDto(nodeId, parentNodeId);
         await SendUserEventAsync(userId, "NodeDeleted", payload, ct);
     }
@@ -218,7 +208,6 @@ public class EventNotificationService(
 
         if (node is not null)
         {
-            await _syncChanges.RecordNodeChangeAsync(SyncChangeKind.FolderRestored, nodeId, ct: ct);
             var dto = node.Adapt<NodeDto>();
             await SendUserEventAsync(node.OwnerId, "NodeRestored", dto, ct);
         }
@@ -235,7 +224,6 @@ public class EventNotificationService(
 
         if (node is not null && node.ParentId.HasValue)
         {
-            await _syncChanges.RecordNodeChangeAsync(SyncChangeKind.FolderMoved, nodeId, oldParentId, ct);
             var dto = node.Adapt<NodeDto>();
             var payload = new NodeMovedEventDto(dto, oldParentId, node.ParentId.Value);
             await SendUserEventAsync(node.OwnerId, "NodeMoved", payload, ct);
@@ -253,7 +241,6 @@ public class EventNotificationService(
 
         if (node is not null)
         {
-            await _syncChanges.RecordNodeChangeAsync(SyncChangeKind.FolderRenamed, nodeId, ct: ct);
             var dto = node.Adapt<NodeDto>();
             await SendUserEventAsync(node.OwnerId, "NodeRenamed", dto, ct);
         }

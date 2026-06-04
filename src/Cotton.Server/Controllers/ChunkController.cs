@@ -121,7 +121,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> UploadRawChunk([FromQuery] string hash)
         {
             long? contentLength = Request.ContentLength;
-            if (!contentLength.HasValue || contentLength.Value < 0)
+            if (!contentLength.HasValue)
             {
                 return CottonResult.BadRequest("No file uploaded.");
             }

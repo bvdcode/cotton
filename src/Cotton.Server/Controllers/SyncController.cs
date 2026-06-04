@@ -4,33 +4,39 @@
 using Cotton.Server.Handlers.Sync;
 using Cotton.Server.Models.Dto;
 using EasyExtensions;
-using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cotton.Server.Controllers
 {
-    /// <summary>Exposes durable synchronization endpoints.</summary>
+    /// <summary>
+    /// Exposes HTTP endpoints for synchronization clients.
+    /// </summary>
     [ApiController]
     [Authorize]
     [Route(Routes.V1.Sync)]
-    public sealed class SyncController(IMediator _mediator) : ControllerBase
+    public class SyncController(IMediator _mediator) : ControllerBase
     {
-        /// <summary>Returns ordered remote mutations after the supplied cursor.</summary>
+        /// <summary>
+        /// Gets durable file-tree changes after the supplied cursor.
+        /// </summary>
         [HttpGet("changes")]
-        [ProducesResponseType<SyncChangesResponseDto>(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetChanges(
+        public async Task<ActionResult<SyncChangesResponseDto>> GetChanges(
             [FromQuery] long since = 0,
-            [FromQuery] int limit = 500)
+            [FromQuery] int limit = 500,
+            CancellationToken cancellationToken = default)
         {
             if (since < 0)
             {
-                return this.ApiBadRequest("Cursor must be greater than or equal to zero.");
+                return BadRequest("Cursor must be greater than or equal to zero.");
             }
 
             Guid userId = User.GetUserId();
-            SyncChangesResponseDto response = await _mediator.Send(new GetSyncChangesQuery(userId, since, limit));
+            SyncChangesResponseDto response = await _mediator.Send(
+                new GetSyncChangesQuery(userId, since, limit),
+                cancellationToken);
+
             return Ok(response);
         }
     }

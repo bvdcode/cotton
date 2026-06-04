@@ -2445,6 +2445,9 @@
     "conflicts": {
       "title": "文件已存在",
       "description": "此文件夹中已存在同名文件。改为以 {{newName}} 上传？",
+      "overwriteDescription": "此文件夹中已存在同名文件。替换它，还是改为以 {{newName}} 上传？",
+      "rename": "以 {{newName}} 上传",
+      "overwrite": "替换",
       "skip": "跳过",
       "skipAll": "全部跳过"
     },

@@ -6,6 +6,7 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Previews;
 using Cotton.Previews.Http;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Jobs;
@@ -41,6 +42,7 @@ namespace Cotton.Server.Controllers
         IMediator _mediator,
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
+        ISyncChangeRecorder _syncChanges,
         ISchedulerFactory _scheduler,
         IEventNotificationService _eventNotification,
         FileManifestService _fileManifestService,
@@ -286,6 +288,7 @@ namespace Cotton.Server.Controllers
             }
 
             nodeFile.SetName(request.Name);
+            _syncChanges.StageFileChange(SyncChangeKind.FileRenamed, nodeFile, nodeFile.Node.LayoutId);
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
             var mapped = nodeFile.Adapt<NodeFileManifestDto>();
@@ -340,6 +343,7 @@ namespace Cotton.Server.Controllers
             }
 
             nodeFile.Metadata = metadata;
+            _syncChanges.StageFileChange(SyncChangeKind.FileContentUpdated, nodeFile, nodeFile.Node.LayoutId);
             await _dbContext.SaveChangesAsync();
 
             var mapped = nodeFile.Adapt<NodeFileManifestDto>();
@@ -552,6 +556,7 @@ namespace Cotton.Server.Controllers
                 request.Metadata,
                 userId);
 
+            _syncChanges.StageFileChange(SyncChangeKind.FileContentUpdated, nodeFile, layoutId.Value);
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
             _quota.RecordLogicalBytesAdded(userId, addedBytes);

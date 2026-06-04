@@ -149,6 +149,32 @@ describe("UploadManager task facade", () => {
       tasks: [],
     });
   });
+
+  it("passes replacement targets to upload finalization", async () => {
+    const taskManager = createManager();
+    mocks.uploadFileToNode.mockResolvedValue(undefined);
+
+    taskManager.enqueue(
+      [
+        {
+          file: new File(["replacement"], "report.txt"),
+          replaceNodeFileId: "file-1",
+        },
+      ],
+      "node-1",
+      "Library",
+    );
+
+    await waitFor(() => mocks.uploadFileToNode.mock.calls.length > 0);
+
+    expect(mocks.uploadFileToNode).toHaveBeenCalledWith(
+      expect.objectContaining({
+        file: expect.any(File),
+        nodeId: "node-1",
+        replaceNodeFileId: "file-1",
+      }),
+    );
+  });
 });
 
 const waitFor = async (predicate: () => boolean): Promise<void> => {

@@ -3,25 +3,34 @@
 
 namespace Cotton.Server.Models.Dto
 {
-    /// <summary>Represents a page from the durable synchronization change feed.</summary>
-    public sealed class SyncChangesResponseDto
+    /// <summary>
+    /// Represents a page of durable sync changes after a cursor.
+    /// </summary>
+    public class SyncChangesResponseDto
     {
-        /// <summary>Cursor supplied by the caller.</summary>
+        /// <summary>
+        /// Gets or sets the cursor supplied by the client.
+        /// </summary>
         public long SinceCursor { get; set; }
-
-        /// <summary>Cursor clients should persist after applying this response.</summary>
+        /// <summary>
+        /// Gets or sets the cursor the client should persist after this response.
+        /// </summary>
         public long NextCursor { get; set; }
-
-        /// <summary>Whether more changes are available after <see cref="NextCursor"/>.</summary>
+        /// <summary>
+        /// Gets or sets whether more changes are available after <see cref="NextCursor"/>.
+        /// </summary>
         public bool HasMore { get; set; }
-
-        /// <summary>Whether the requested cursor is older than the retained change range.</summary>
+        /// <summary>
+        /// Gets or sets whether the supplied cursor is older than retained changes.
+        /// </summary>
         public bool CursorExpired { get; set; }
-
-        /// <summary>Lowest cursor that can still be used without missing retained changes.</summary>
+        /// <summary>
+        /// Gets or sets the earliest cursor that can still be used, if any changes are retained.
+        /// </summary>
         public long? EarliestAvailableCursor { get; set; }
-
-        /// <summary>Ordered change page.</summary>
+        /// <summary>
+        /// Gets or sets the returned changes.
+        /// </summary>
         public List<SyncChangeDto> Changes { get; set; } = [];
     }
 }

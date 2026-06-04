@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Services;
 using Cotton.Topology.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
@@ -46,6 +47,7 @@ namespace Cotton.Server.Handlers.Files
         ILayoutNavigator _navigator,
         ILogger<DeleteFileQueryHandler> _logger,
         UserStorageQuotaService _quota,
+        ISyncChangeRecorder _syncChanges,
         FileVersionService _versions)
             : IRequestHandler<DeleteFileQuery>
     {
@@ -89,6 +91,7 @@ namespace Cotton.Server.Handlers.Files
                 .Where(t => t.CreatedByUserId == command.UserId && t.NodeFileId == nodeFile.Id)
                 .ExecuteDeleteAsync(ct);
             long removedBytes = nodeFile.FileManifest.SizeBytes + removedVersionBytes;
+            _syncChanges.StageFileChange(SyncChangeKind.FileDeleted, nodeFile, nodeFile.Node.LayoutId);
             _dbContext.NodeFiles.Remove(nodeFile);
             await _dbContext.SaveChangesAsync(ct);
             if (tx is not null)
@@ -137,6 +140,7 @@ namespace Cotton.Server.Handlers.Files
             }
 
             var trashItem = await _layouts.CreateTrashItemAsync(command.UserId);
+            _syncChanges.StageFileChange(SyncChangeKind.FileDeleted, nodeFile, nodeFile.Node.LayoutId);
             nodeFile.NodeId = trashItem.Id;
             foreach (var share in nodeFile.DownloadTokens)
             {

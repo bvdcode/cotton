@@ -8,7 +8,7 @@ import { uploadConfig } from "./config";
 import { uploadFileToNode } from "./uploadFileToNode";
 import { RollingBytesPerSecondEstimator } from "./RollingBytesPerSecondEstimator";
 import { globalHashWorkerPool } from "./hash/HashWorkerPool";
-import type { UploadServerParams } from "./types";
+import type { UploadFileQueueItem, UploadServerParams } from "./types";
 import { formatBytes } from "../utils/formatBytes";
 import type {
   AppTask,
@@ -45,6 +45,7 @@ export interface UploadTask {
 interface UploadTaskInternal extends UploadTask {
   _file: File;
   _encrypt: boolean;
+  _replaceNodeFileId?: Guid | null;
   _startedAt?: number;
   _sawProgress?: boolean;
   _laneProbeConsumed?: boolean;
@@ -61,6 +62,8 @@ export interface EnqueueOptions {
   encrypt?: boolean;
 }
 
+type UploadQueueEntry = File | UploadFileQueueItem;
+
 export interface UploadFilePickerContext {
   nodeId: Guid;
   nodeLabel: string;
@@ -71,6 +74,19 @@ export interface UploadFilePickerContext {
 type Listener = () => void;
 
 const makeId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+const normalizeUploadQueueEntries = (
+  files: FileList | UploadQueueEntry[],
+): UploadFileQueueItem[] => {
+  const list = Array.isArray(files) ? files : Array.from(files);
+  return list.map((entry) => {
+    if ("file" in entry) {
+      return entry;
+    }
+
+    return { file: entry };
+  });
+};
 
 const MAX_FINISHED_TASKS = 10000;
 const FINISHED_TASK_TTL_MS = 30 * 60 * 1000;
@@ -249,12 +265,12 @@ export class UploadManager {
   }
 
   enqueue(
-    files: FileList | File[],
+    files: FileList | UploadQueueEntry[],
     nodeId: Guid,
     nodeLabel: string,
     options?: EnqueueOptions,
   ) {
-    const list = Array.isArray(files) ? files : Array.from(files);
+    const list = normalizeUploadQueueEntries(files);
 
     if (!this.hasActiveTasks()) {
       this.overallBytesTotal = 0;
@@ -265,18 +281,19 @@ export class UploadManager {
     }
 
     for (const file of list) {
-      this.overallBytesTotal += file.size;
+      this.overallBytesTotal += file.file.size;
       this.tasks.unshift({
         id: makeId(),
         nodeId,
         nodeLabel,
-        fileName: file.name,
-        bytesTotal: file.size,
+        fileName: file.file.name,
+        bytesTotal: file.file.size,
         bytesUploaded: 0,
         progress01: 0,
         status: "queued",
-        _file: file,
+        _file: file.file,
         _encrypt: options?.encrypt ?? false,
+        _replaceNodeFileId: file.replaceNodeFileId,
       });
     }
 
@@ -488,6 +505,10 @@ export class UploadManager {
   }
 
   private tryReserveQuotaForTask(task: UploadTaskInternal): boolean {
+    if (task._replaceNodeFileId) {
+      return true;
+    }
+
     const quota = this.quotaSnapshot;
     if (!quota?.quotaBytes || quota.availableBytes === null) {
       return true;
@@ -597,6 +618,7 @@ export class UploadManager {
         await uploadFileToNode({
           file: task._file,
           nodeId: task.nodeId,
+          replaceNodeFileId: task._replaceNodeFileId,
           server,
           encrypt: task._encrypt,
           onEncryptProgress: (bytesEncrypted, bytesTotal) => {

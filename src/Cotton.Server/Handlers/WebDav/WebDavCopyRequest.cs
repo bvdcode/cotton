@@ -3,6 +3,8 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Database.Models.Enums;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Handlers.Nodes;
 using Cotton.Server.Services;
@@ -73,6 +75,7 @@ public class WebDavCopyRequestHandler(
     IWebDavPathResolver _pathResolver,
     UserStorageQuotaService _quota,
     IEventNotificationService _eventNotification,
+    ISyncChangeRecorder _syncChanges,
     ILogger<WebDavCopyRequestHandler> _logger)
     : IRequestHandler<WebDavCopyRequest, WebDavCopyResult>
 {
@@ -430,6 +433,10 @@ public class WebDavCopyRequestHandler(
             await _dbContext.NodeFiles.AddAsync(newNodeFile, ct);
             await _dbContext.SaveChangesAsync(ct);
             newNodeFile.OriginalNodeFileId = newNodeFile.Id;
+            _syncChanges.StageFileChange(
+                SyncChangeKind.FileCreated,
+                newNodeFile,
+                destParentResult.ParentNode.LayoutId);
             return (null, newNodeFile.Id, addedBytes);
         }
 
@@ -459,6 +466,7 @@ public class WebDavCopyRequestHandler(
         newNode.SetName(newName);
 
         await _dbContext.Nodes.AddAsync(newNode, ct);
+        _syncChanges.StageFolderChange(SyncChangeKind.FolderCreated, newNode, destParent.Id);
         await _dbContext.SaveChangesAsync(ct);
 
         long addedBytes = 0;
@@ -498,6 +506,7 @@ public class WebDavCopyRequestHandler(
 
             await _dbContext.NodeFiles.AddAsync(newFile, ct);
             newFile.OriginalNodeFileId = newFile.Id;
+            _syncChanges.StageFileChange(SyncChangeKind.FileCreated, newFile, layoutId);
         }
 
         return (newNode.Id, addedBytes);

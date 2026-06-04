@@ -12,6 +12,7 @@ import { ConflictAction } from "../utils/uploadConflicts";
 interface FileConflictDialogProps {
   open: boolean;
   newName: string;
+  canOverwrite: boolean;
   onResolve: (resolution: ConflictAction) => void;
   onExited: () => void;
 }
@@ -19,6 +20,7 @@ interface FileConflictDialogProps {
 export const FileConflictDialog = ({
   open,
   newName,
+  canOverwrite,
   onResolve,
   onExited,
 }: FileConflictDialogProps) => {
@@ -33,7 +35,12 @@ export const FileConflictDialog = ({
       <DialogTitle>{t("conflicts.title", { ns: "files" })}</DialogTitle>
       <DialogContent>
         <DialogContentText>
-          {t("conflicts.description", { ns: "files", newName })}
+          {t(
+            canOverwrite
+              ? "conflicts.overwriteDescription"
+              : "conflicts.description",
+            { ns: "files", newName },
+          )}
         </DialogContentText>
       </DialogContent>
       <DialogActions>
@@ -48,10 +55,18 @@ export const FileConflictDialog = ({
         </Button>
         <Button
           onClick={() => onResolve(ConflictAction.Rename)}
-          variant="contained"
+          variant={canOverwrite ? "text" : "contained"}
         >
-          {t("common:actions.confirm")}
+          {t("conflicts.rename", { ns: "files", newName })}
         </Button>
+        {canOverwrite && (
+          <Button
+            onClick={() => onResolve(ConflictAction.Overwrite)}
+            variant="contained"
+          >
+            {t("conflicts.overwrite", { ns: "files" })}
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );

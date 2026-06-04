@@ -1,13 +1,18 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Database;
+using Cotton.Database.Models;
+using Cotton.Database.Models.Enums;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Models.Requests;
+using Cotton.Server.Providers;
 using Cotton.Server.Services;
-using Cotton.Database;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
+using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -15,39 +20,604 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using NUnit.Framework;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Reflection;
 using System.Text;
 
 namespace Cotton.Server.IntegrationTests;
 
 [NonParallelizable]
-public sealed class SyncChangesEndpointsTests : IntegrationTestBase
+public class SyncChangesEndpointsTests : IntegrationTestBase
 {
+    private const string Username = "testuser";
+    private const string Password = "testpassword";
+
     private TestAppFactory? _factory;
     private HttpClient? _client;
 
     [SetUp]
     public void SetUp()
     {
-        var creator = DbContext.GetService<IRelationalDatabaseCreator>();
+        ResetSettingsProviderCaches();
+
+        IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
         creator.Create();
+
+        _factory = new TestAppFactory(CreateOverrides());
+        _client = _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+    }
+
+    [TearDown]
+    public void TearDown()
+    {
+        _client?.Dispose();
+        _factory?.Dispose();
+        ResetSettingsProviderCaches();
+    }
+
+    [Test]
+    public async Task GetChanges_WhenFeedIsEmpty_ReturnsEmptyPage()
+    {
+        await SignInAsync();
+
+        SyncChangesResponseDto response = await GetChangesAsync(since: 0, limit: 10);
+
         Assert.Multiple(() =>
         {
-            Assert.That(creator.Exists(), Is.True);
-            Assert.That(creator.HasTables(), Is.False);
+            Assert.That(response.SinceCursor, Is.EqualTo(0));
+            Assert.That(response.NextCursor, Is.EqualTo(0));
+            Assert.That(response.HasMore, Is.False);
+            Assert.That(response.Changes, Is.Empty);
         });
+    }
 
+    [Test]
+    public async Task GetChanges_ReturnsOrderedCurrentUserPageAfterCursor()
+    {
+        await SignInAsync();
+        Guid ownerId = await GetUserIdAsync(Username);
+        await CreateUserAsync("otheruser", "otherpass");
+        Guid otherOwnerId = await GetUserIdAsync("otheruser");
+
+        long firstOwnerChangeId = await AddSyncChangeAsync(ownerId, "ignored-before-cursor");
+        await AddSyncChangeAsync(otherOwnerId, "other-user");
+        long includedChangeId = await AddSyncChangeAsync(ownerId, "included");
+        await AddSyncChangeAsync(ownerId, "next-page");
+
+        SyncChangesResponseDto response = await GetChangesAsync(since: firstOwnerChangeId, limit: 1);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.SinceCursor, Is.EqualTo(firstOwnerChangeId));
+            Assert.That(response.NextCursor, Is.EqualTo(includedChangeId));
+            Assert.That(response.HasMore, Is.True);
+            Assert.That(response.Changes, Has.Count.EqualTo(1));
+            Assert.That(response.Changes[0].Id, Is.EqualTo(includedChangeId));
+            Assert.That(response.Changes[0].Name, Is.EqualTo("included"));
+            Assert.That(response.Changes[0].Kind, Is.EqualTo(SyncChangeKind.FileCreated));
+        });
+    }
+
+    [Test]
+    public async Task GetChanges_WhenCursorIsNegative_ReturnsBadRequest()
+    {
+        await SignInAsync();
+
+        using HttpResponseMessage response = await _client!.GetAsync($"{Routes.V1.Sync}/changes?since=-1&limit=10");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+    }
+
+    [Test]
+    public async Task GetChanges_WhenCursorIsOlderThanRetainedFeed_ReturnsExpiredCursor()
+    {
+        await SignInAsync();
+        Guid ownerId = await GetUserIdAsync(Username);
+
+        long expiredId = await AddSyncChangeAsync(ownerId, "expired");
+        long retainedId = await AddSyncChangeAsync(ownerId, "retained");
+        await DeleteSyncChangeAsync(expiredId);
+
+        SyncChangesResponseDto response = await GetChangesAsync(since: 0, limit: 10);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.CursorExpired, Is.True);
+            Assert.That(response.SinceCursor, Is.EqualTo(0));
+            Assert.That(response.NextCursor, Is.EqualTo(0));
+            Assert.That(response.EarliestAvailableCursor, Is.EqualTo(retainedId - 1));
+            Assert.That(response.Changes, Is.Empty);
+        });
+    }
+
+    [Test]
+    public async Task RenameFolder_StagesFolderRenamedChangeWithParentNodeId()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "sync-before-rename");
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage renameResponse = await _client!.PatchAsJsonAsync(
+            $"{Routes.V1.Layouts}/nodes/{folder.Id}/rename",
+            new RenameNodeRequest { Name = "sync-after-rename" });
+        renameResponse.EnsureSuccessStatusCode();
+
+        SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
+        SyncChangeDto change = response.Changes.Single(x => x.ItemId == folder.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FolderRenamed));
+            Assert.That(change.LayoutId, Is.EqualTo(folder.LayoutId));
+            Assert.That(change.ParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(change.Name, Is.EqualTo("sync-after-rename"));
+        });
+    }
+
+    [Test]
+    public async Task CreateFolder_StagesFolderCreatedChangeWithParentNodeId()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+        NodeDto folder = await CreateFolderAsync(root.Id, "sync-created-folder");
+
+        SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
+        SyncChangeDto change = response.Changes.Single(x => x.ItemId == folder.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FolderCreated));
+            Assert.That(change.LayoutId, Is.EqualTo(folder.LayoutId));
+            Assert.That(change.ParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(change.Name, Is.EqualTo("sync-created-folder"));
+        });
+    }
+
+    [Test]
+    public async Task CreateFile_StagesFileCreatedChangeWithParentNodeId()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "file-create-parent");
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        NodeFileManifestDto file = await CreateFileAsync(folder.Id, "sync-created-file.txt", "created-body");
+
+        SyncChangeDto change = await GetSingleChangeAsync(cursor, file.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FileCreated));
+            Assert.That(change.ParentNodeId, Is.EqualTo(folder.Id));
+            Assert.That(change.FileManifestId, Is.EqualTo(file.FileManifestId));
+            Assert.That(change.Name, Is.EqualTo("sync-created-file.txt"));
+        });
+    }
+
+    [Test]
+    public async Task RenameFile_StagesFileRenamedChangeWithParentNodeId()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "file-rename-parent");
+        NodeFileManifestDto file = await CreateFileAsync(folder.Id, "sync-before-rename.txt", "rename-body");
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage renameResponse = await _client!.PatchAsJsonAsync(
+            $"{Routes.V1.Files}/{file.Id}/rename",
+            new RenameFileRequest { Name = "sync-after-rename.txt" });
+        renameResponse.EnsureSuccessStatusCode();
+
+        SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
+        SyncChangeDto change = response.Changes.Single(x => x.ItemId == file.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FileRenamed));
+            Assert.That(change.ParentNodeId, Is.EqualTo(folder.Id));
+            Assert.That(change.FileManifestId, Is.EqualTo(file.FileManifestId));
+            Assert.That(change.Name, Is.EqualTo("sync-after-rename.txt"));
+        });
+    }
+
+    [Test]
+    public async Task MoveFile_StagesFileMovedChangeWithPreviousParentNodeId()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto source = await CreateFolderAsync(root.Id, "move-file-source");
+        NodeDto target = await CreateFolderAsync(root.Id, "move-file-target");
+        NodeFileManifestDto file = await CreateFileAsync(source.Id, "sync-moved-file.txt", "moved-body");
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage moveResponse = await _client!.PatchAsJsonAsync(
+            $"{Routes.V1.Files}/{file.Id}/move",
+            new MoveFileRequest { ParentId = target.Id });
+        moveResponse.EnsureSuccessStatusCode();
+
+        SyncChangeDto change = await GetSingleChangeAsync(cursor, file.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FileMoved));
+            Assert.That(change.ParentNodeId, Is.EqualTo(target.Id));
+            Assert.That(change.PreviousParentNodeId, Is.EqualTo(source.Id));
+            Assert.That(change.Name, Is.EqualTo("sync-moved-file.txt"));
+        });
+    }
+
+    [Test]
+    public async Task MoveFolder_StagesFolderMovedChangeWithPreviousParentNodeId()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto source = await CreateFolderAsync(root.Id, "move-folder-source");
+        NodeDto target = await CreateFolderAsync(root.Id, "move-folder-target");
+        NodeDto folder = await CreateFolderAsync(source.Id, "sync-moved-folder");
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage moveResponse = await _client!.PatchAsJsonAsync(
+            $"{Routes.V1.Layouts}/nodes/{folder.Id}/move",
+            new MoveNodeRequest { ParentId = target.Id });
+        moveResponse.EnsureSuccessStatusCode();
+
+        SyncChangeDto change = await GetSingleChangeAsync(cursor, folder.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FolderMoved));
+            Assert.That(change.ParentNodeId, Is.EqualTo(target.Id));
+            Assert.That(change.PreviousParentNodeId, Is.EqualTo(source.Id));
+            Assert.That(change.Name, Is.EqualTo("sync-moved-folder"));
+        });
+    }
+
+    [Test]
+    public async Task DeleteFile_StagesFileDeletedChangeWithOriginalParentNodeId()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "delete-file-parent");
+        NodeFileManifestDto file = await CreateFileAsync(folder.Id, "sync-deleted-file.txt", "deleted-body");
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage deleteResponse = await _client!.DeleteAsync($"{Routes.V1.Files}/{file.Id}");
+        deleteResponse.EnsureSuccessStatusCode();
+
+        SyncChangeDto change = await GetSingleChangeAsync(cursor, file.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FileDeleted));
+            Assert.That(change.ParentNodeId, Is.EqualTo(folder.Id));
+            Assert.That(change.FileManifestId, Is.EqualTo(file.FileManifestId));
+            Assert.That(change.Name, Is.EqualTo("sync-deleted-file.txt"));
+        });
+    }
+
+    [Test]
+    public async Task DeleteFolder_StagesFolderDeletedChangeWithOriginalParentNodeId()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "sync-deleted-folder");
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage deleteResponse = await _client!.DeleteAsync($"{Routes.V1.Layouts}/nodes/{folder.Id}");
+        deleteResponse.EnsureSuccessStatusCode();
+
+        SyncChangeDto change = await GetSingleChangeAsync(cursor, folder.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FolderDeleted));
+            Assert.That(change.ParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(change.Name, Is.EqualTo("sync-deleted-folder"));
+        });
+    }
+
+    [Test]
+    public async Task RestoreFile_StagesFileRestoredChangeWithRestoredParentNodeId()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "restore-file-parent");
+        NodeFileManifestDto file = await CreateFileAsync(folder.Id, "sync-restored-file.txt", "restore-file-body");
+        using HttpResponseMessage deleteResponse = await _client!.DeleteAsync($"{Routes.V1.Files}/{file.Id}");
+        deleteResponse.EnsureSuccessStatusCode();
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage restoreResponse = await _client!.PostAsJsonAsync(
+            $"{Routes.V1.Files}/{file.Id}/restore",
+            new RestoreItemRequest());
+        restoreResponse.EnsureSuccessStatusCode();
+
+        SyncChangeDto change = await GetSingleChangeAsync(cursor, file.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FileRestored));
+            Assert.That(change.ParentNodeId, Is.EqualTo(folder.Id));
+            Assert.That(change.FileManifestId, Is.EqualTo(file.FileManifestId));
+            Assert.That(change.Name, Is.EqualTo("sync-restored-file.txt"));
+        });
+    }
+
+    [Test]
+    public async Task RestoreFolder_StagesFolderRestoredChangeWithRestoredParentNodeId()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "sync-restored-folder");
+        using HttpResponseMessage deleteResponse = await _client!.DeleteAsync($"{Routes.V1.Layouts}/nodes/{folder.Id}");
+        deleteResponse.EnsureSuccessStatusCode();
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage restoreResponse = await _client!.PostAsJsonAsync(
+            $"{Routes.V1.Layouts}/nodes/{folder.Id}/restore",
+            new RestoreItemRequest());
+        restoreResponse.EnsureSuccessStatusCode();
+
+        SyncChangeDto change = await GetSingleChangeAsync(cursor, folder.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FolderRestored));
+            Assert.That(change.ParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(change.Name, Is.EqualTo("sync-restored-folder"));
+        });
+    }
+
+    [Test]
+    public async Task RestoreFile_WithMissingParentCreation_StagesParentFolderCreatedBeforeFileRestored()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto parent = await CreateFolderAsync(root.Id, "file-restore-created-parent");
+        NodeFileManifestDto file = await CreateFileAsync(parent.Id, "sync-restored-with-parent.txt", "restore-created-parent-body");
+        using HttpResponseMessage deleteFileResponse = await _client!.DeleteAsync($"{Routes.V1.Files}/{file.Id}");
+        deleteFileResponse.EnsureSuccessStatusCode();
+        using HttpResponseMessage deleteParentResponse = await _client.DeleteAsync($"{Routes.V1.Layouts}/nodes/{parent.Id}");
+        deleteParentResponse.EnsureSuccessStatusCode();
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage restoreResponse = await _client.PostAsJsonAsync(
+            $"{Routes.V1.Files}/{file.Id}/restore",
+            new RestoreItemRequest { CreateMissingParents = true });
+        restoreResponse.EnsureSuccessStatusCode();
+
+        SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
+        SyncChangeDto parentCreated = response.Changes.Single(x =>
+            x.Kind == SyncChangeKind.FolderCreated && x.Name == "file-restore-created-parent");
+        SyncChangeDto fileRestored = response.Changes.Single(x => x.ItemId == file.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(parentCreated.ParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(fileRestored.Kind, Is.EqualTo(SyncChangeKind.FileRestored));
+            Assert.That(fileRestored.ParentNodeId, Is.EqualTo(parentCreated.ItemId));
+            Assert.That(fileRestored.Name, Is.EqualTo("sync-restored-with-parent.txt"));
+        });
+    }
+
+    [Test]
+    public async Task RestoreFolder_WithMissingParentCreation_StagesParentFolderCreatedBeforeFolderRestored()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto parent = await CreateFolderAsync(root.Id, "folder-restore-created-parent");
+        NodeDto folder = await CreateFolderAsync(parent.Id, "sync-restored-folder-with-parent");
+        using HttpResponseMessage deleteFolderResponse = await _client!.DeleteAsync($"{Routes.V1.Layouts}/nodes/{folder.Id}");
+        deleteFolderResponse.EnsureSuccessStatusCode();
+        using HttpResponseMessage deleteParentResponse = await _client.DeleteAsync($"{Routes.V1.Layouts}/nodes/{parent.Id}");
+        deleteParentResponse.EnsureSuccessStatusCode();
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage restoreResponse = await _client.PostAsJsonAsync(
+            $"{Routes.V1.Layouts}/nodes/{folder.Id}/restore",
+            new RestoreItemRequest { CreateMissingParents = true });
+        restoreResponse.EnsureSuccessStatusCode();
+
+        SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
+        SyncChangeDto parentCreated = response.Changes.Single(x =>
+            x.Kind == SyncChangeKind.FolderCreated && x.Name == "folder-restore-created-parent");
+        SyncChangeDto folderRestored = response.Changes.Single(x => x.ItemId == folder.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(parentCreated.ParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(folderRestored.Kind, Is.EqualTo(SyncChangeKind.FolderRestored));
+            Assert.That(folderRestored.ParentNodeId, Is.EqualTo(parentCreated.ItemId));
+            Assert.That(folderRestored.Name, Is.EqualTo("sync-restored-folder-with-parent"));
+        });
+    }
+
+    [Test]
+    public async Task UpdateFileMetadata_StagesFileContentUpdatedChange()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "metadata-update-parent");
+        NodeFileManifestDto file = await CreateFileAsync(folder.Id, "sync-updated-file.txt", "metadata-body");
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage updateResponse = await _client!.PatchAsJsonAsync(
+            $"{Routes.V1.Files}/{file.Id}/metadata",
+            new Dictionary<string, string?> { ["label"] = "synced" });
+        updateResponse.EnsureSuccessStatusCode();
+
+        SyncChangeDto change = await GetSingleChangeAsync(cursor, file.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FileContentUpdated));
+            Assert.That(change.ParentNodeId, Is.EqualTo(folder.Id));
+            Assert.That(change.FileManifestId, Is.EqualTo(file.FileManifestId));
+            Assert.That(change.Name, Is.EqualTo("sync-updated-file.txt"));
+        });
+    }
+
+    [Test]
+    public async Task WebDavPutFile_StagesFileCreatedChange()
+    {
+        string accessToken = await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        UseWebDavBasicAuth();
+        using HttpResponseMessage putResponse = await SendWebDavPutAsync(
+            "/api/v1/webdav/webdav-created-file.txt",
+            "webdav-created-body");
+        putResponse.EnsureSuccessStatusCode();
+
+        UseBearerAuth(accessToken);
+        SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
+        SyncChangeDto change = response.Changes.Single(x => x.Name == "webdav-created-file.txt");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FileCreated));
+            Assert.That(change.ParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(change.FileManifestId, Is.Not.Null);
+        });
+    }
+
+    [Test]
+    public async Task WebDavMkCol_StagesFolderCreatedChange()
+    {
+        string accessToken = await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        UseWebDavBasicAuth();
+        using HttpResponseMessage mkColResponse = await SendWebDavMkColAsync("/api/v1/webdav/webdav-created-folder");
+        mkColResponse.EnsureSuccessStatusCode();
+
+        UseBearerAuth(accessToken);
+        SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
+        SyncChangeDto change = response.Changes.Single(x => x.Name == "webdav-created-folder");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FolderCreated));
+            Assert.That(change.ParentNodeId, Is.EqualTo(root.Id));
+        });
+    }
+
+    [Test]
+    public async Task WebDavMoveFile_StagesFileMovedChange()
+    {
+        string accessToken = await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeFileManifestDto file = await CreateFileAsync(root.Id, "webdav-move-source.txt", "webdav-move-body");
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        UseWebDavBasicAuth();
+        using HttpResponseMessage moveResponse = await SendWebDavMoveAsync(
+            "/api/v1/webdav/webdav-move-source.txt",
+            "/api/v1/webdav/webdav-move-target.txt");
+        moveResponse.EnsureSuccessStatusCode();
+
+        UseBearerAuth(accessToken);
+        SyncChangeDto change = await GetSingleChangeAsync(cursor, file.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FileMoved));
+            Assert.That(change.ParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(change.PreviousParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(change.Name, Is.EqualTo("webdav-move-target.txt"));
+        });
+    }
+
+    [Test]
+    public async Task WebDavCopyFile_StagesFileCreatedChange()
+    {
+        string accessToken = await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeFileManifestDto file = await CreateFileAsync(root.Id, "webdav-copy-source.txt", "webdav-copy-body");
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        UseWebDavBasicAuth();
+        using HttpResponseMessage copyResponse = await SendWebDavCopyAsync(
+            "/api/v1/webdav/webdav-copy-source.txt",
+            "/api/v1/webdav/webdav-copy-target.txt");
+        copyResponse.EnsureSuccessStatusCode();
+
+        UseBearerAuth(accessToken);
+        SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
+        SyncChangeDto change = response.Changes.Single(x => x.Name == "webdav-copy-target.txt");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FileCreated));
+            Assert.That(change.ParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(change.FileManifestId, Is.EqualTo(file.FileManifestId));
+        });
+    }
+
+    [Test]
+    public async Task RestoreFileVersion_StagesFileContentUpdatedChange()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeFileManifestDto file = await CreateFileAsync(root.Id, "versioned-file.txt", "version-one");
+        await UpdateFileContentAsync(file.Id, root.Id, "versioned-file.txt", "version-two");
+        List<FileVersionDto> versions = await GetFileVersionsAsync(file.Id);
+        FileVersionDto historicalVersion = versions.Single(x => !x.IsCurrent);
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage restoreResponse = await _client!.PostAsync(
+            $"{Routes.V1.Files}/{file.Id}/versions/{historicalVersion.Id}/restore",
+            null);
+        restoreResponse.EnsureSuccessStatusCode();
+
+        SyncChangeDto change = await GetSingleChangeAsync(cursor, file.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FileContentUpdated));
+            Assert.That(change.ParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(change.FileManifestId, Is.EqualTo(historicalVersion.FileManifestId));
+            Assert.That(change.Name, Is.EqualTo("versioned-file.txt"));
+        });
+    }
+
+    private Dictionary<string, string?> CreateOverrides()
+    {
         var csb = new NpgsqlConnectionStringBuilder
         {
-            Host = "localhost",
-            Port = 5432,
-            Database = DatabaseName,
-            Username = "postgres",
-            Password = "postgres"
+            Host = TestPostgresHost,
+            Port = TestPostgresPort,
+            Database = CurrentDatabaseName,
+            Username = TestPostgresUsername,
+            Password = TestPostgresPassword,
         };
-        var overrides = new Dictionary<string, string?>
+
+        return new Dictionary<string, string?>
         {
             ["DatabaseSettings:Host"] = csb.Host,
             ["DatabaseSettings:Port"] = csb.Port.ToString(),
@@ -59,283 +629,122 @@ public sealed class SyncChangesEndpointsTests : IntegrationTestBase
             ["EncryptionThreads"] = "1",
             ["MaxChunkSizeBytes"] = "16777216",
             ["CipherChunkSizeBytes"] = "20971520",
-            ["JwtSettings:Key"] = "T3wNTuKqmTXKjJKXHJRGUpG9sdrmpSX4"
+            ["JwtSettings:Key"] = "T3wNTuKqmTXKjJKXHJRGUpG9sdrmpSX4",
         };
-
-        _factory = new TestAppFactory(overrides);
-        _client = _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
     }
 
-    [TearDown]
-    public void TearDown()
+    private async Task<string> SignInAsync(string username = Username, string password = Password)
     {
-        _client?.Dispose();
-        _factory?.Dispose();
-    }
-
-    [Test]
-    public async Task Changes_ReturnsOrderedMutationPagesAfterCursor()
-    {
-        string token = await LoginAsync();
-        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
-        Assert.That(root, Is.Not.Null);
-
-        SyncChangesResponseDto initial = await GetChangesAsync(0, 10);
-        Assert.That(initial.Changes, Is.Empty);
-
-        NodeDto folder = await CreateNodeAsync(root!.Id, "feed-folder");
-        NodeFileManifestDto file = await CreateFileAsync(folder.Id, "feed.txt", "first");
-        NodeFileManifestDto renamed = await RenameFileAsync(file.Id, "feed-renamed.txt");
-        await DeleteFileAsync(renamed.Id);
-
-        SyncChangesResponseDto firstPage = await GetChangesAsync(0, 2);
-        Assert.Multiple(() =>
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{Routes.V1.Auth}/login")
         {
-            Assert.That(firstPage.HasMore, Is.True);
-            Assert.That(firstPage.Changes.Select(x => x.Kind), Is.EqualTo(new[]
+            Content = JsonContent.Create(new LoginRequestDto
             {
-                SyncChangeKindDto.FolderCreated,
-                SyncChangeKindDto.FileCreated,
-            }));
-            Assert.That(firstPage.Changes[0].NodeId, Is.EqualTo(folder.Id));
-            Assert.That(firstPage.Changes[1].NodeFileId, Is.EqualTo(file.Id));
-        });
+                Username = username,
+                Password = password,
+            }),
+        };
+        request.Headers.Add("X-Forwarded-For", "8.8.8.8");
 
-        SyncChangesResponseDto secondPage = await GetChangesAsync(firstPage.NextCursor, 10);
-        Assert.Multiple(() =>
-        {
-            Assert.That(secondPage.HasMore, Is.False);
-            Assert.That(secondPage.Changes.Select(x => x.Kind), Is.EqualTo(new[]
-            {
-                SyncChangeKindDto.FileRenamed,
-                SyncChangeKindDto.FileDeleted,
-            }));
-            Assert.That(secondPage.Changes[0].NodeFileId, Is.EqualTo(file.Id));
-            Assert.That(secondPage.Changes[0].Name, Is.EqualTo("feed-renamed.txt"));
-            Assert.That(secondPage.Changes[1].NodeFileId, Is.EqualTo(file.Id));
-            Assert.That(secondPage.Changes[1].PreviousParentNodeId, Is.EqualTo(folder.Id));
-            Assert.That(secondPage.NextCursor, Is.GreaterThan(firstPage.NextCursor));
-        });
-    }
-
-    [Test]
-    public async Task Changes_RecordsUpdateMoveAndFolderMutationKindsInOrder()
-    {
-        string token = await LoginAsync();
-        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
-        Assert.That(root, Is.Not.Null);
-
-        NodeDto source = await CreateNodeAsync(root!.Id, "source-folder");
-        NodeDto destination = await CreateNodeAsync(root.Id, "destination-folder");
-        NodeFileManifestDto file = await CreateFileAsync(source.Id, "matrix.txt", "first");
-        NodeFileManifestDto updated = await UpdateFileContentAsync(file, "second");
-        NodeFileManifestDto moved = await MoveFileAsync(updated.Id, destination.Id);
-        NodeFileManifestDto renamedFile = await RenameFileAsync(moved.Id, "matrix-renamed.txt");
-        NodeDto renamedSource = await RenameNodeAsync(source.Id, "source-renamed");
-        NodeDto movedSource = await MoveNodeAsync(renamedSource.Id, destination.Id);
-        await DeleteFileAsync(renamedFile.Id);
-
-        SyncChangesResponseDto page = await GetChangesAsync(0, 20);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(page.HasMore, Is.False);
-            Assert.That(page.Changes.Select(x => x.Kind), Is.EqualTo(new[]
-            {
-                SyncChangeKindDto.FolderCreated,
-                SyncChangeKindDto.FolderCreated,
-                SyncChangeKindDto.FileCreated,
-                SyncChangeKindDto.FileContentUpdated,
-                SyncChangeKindDto.FileMoved,
-                SyncChangeKindDto.FileRenamed,
-                SyncChangeKindDto.FolderRenamed,
-                SyncChangeKindDto.FolderMoved,
-                SyncChangeKindDto.FileDeleted,
-            }));
-            Assert.That(page.Changes[3].ContentHash, Is.EqualTo(updated.ContentHash));
-            Assert.That(page.Changes[4].ParentNodeId, Is.EqualTo(destination.Id));
-            Assert.That(page.Changes[4].PreviousParentNodeId, Is.EqualTo(source.Id));
-            Assert.That(page.Changes[5].Name, Is.EqualTo("matrix-renamed.txt"));
-            Assert.That(page.Changes[6].Name, Is.EqualTo("source-renamed"));
-            Assert.That(page.Changes[7].ParentNodeId, Is.EqualTo(destination.Id));
-            Assert.That(page.Changes[7].PreviousParentNodeId, Is.EqualTo(root.Id));
-            Assert.That(page.Changes[7].NodeId, Is.EqualTo(movedSource.Id));
-            Assert.That(page.Changes[8].PreviousParentNodeId, Is.EqualTo(destination.Id));
-        });
-    }
-
-    [Test]
-    public async Task Changes_ReplaysMutationsWhenRealtimeEventsWereMissed()
-    {
-        string token = await LoginAsync();
-        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
-        Assert.That(root, Is.Not.Null);
-
-        SyncChangesResponseDto baseline = await GetChangesAsync(0, 10);
-        Assert.That(baseline.Changes, Is.Empty);
-
-        NodeDto folder = await CreateNodeAsync(root!.Id, "offline-folder");
-        NodeFileManifestDto file = await CreateFileAsync(folder.Id, "offline.txt", "created while no hub was connected");
-
-        SyncChangesResponseDto recovered = await GetChangesAsync(baseline.NextCursor, 10);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(recovered.Changes.Select(x => x.Kind), Is.EqualTo(new[]
-            {
-                SyncChangeKindDto.FolderCreated,
-                SyncChangeKindDto.FileCreated,
-            }));
-            Assert.That(recovered.Changes[0].NodeId, Is.EqualTo(folder.Id));
-            Assert.That(recovered.Changes[1].NodeFileId, Is.EqualTo(file.Id));
-            Assert.That(recovered.NextCursor, Is.GreaterThan(baseline.NextCursor));
-        });
-    }
-
-    [Test]
-    public async Task Changes_ReportsExpiredCursorWhenOlderChangesWerePruned()
-    {
-        string token = await LoginAsync();
-        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
-        Assert.That(root, Is.Not.Null);
-
-        NodeDto folder = await CreateNodeAsync(root!.Id, "retention-folder");
-        NodeFileManifestDto file = await CreateFileAsync(folder.Id, "retention.txt", "retained change");
-
-        await AgeFirstSyncChangeAsync();
-
-        SyncChangesResponseDto expired = await GetChangesAsync(0, 10);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(expired.CursorExpired, Is.True);
-            Assert.That(expired.Changes, Is.Empty);
-            Assert.That(expired.EarliestAvailableCursor, Is.Not.Null);
-            Assert.That(expired.NextCursor, Is.EqualTo(0));
-        });
-
-        SyncChangesResponseDto recovered = await GetChangesAsync(expired.EarliestAvailableCursor!.Value, 10);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(recovered.CursorExpired, Is.False);
-            Assert.That(recovered.Changes.Select(x => x.Kind), Is.EqualTo(new[]
-            {
-                SyncChangeKindDto.FileCreated,
-            }));
-            Assert.That(recovered.Changes.Single().NodeFileId, Is.EqualTo(file.Id));
-        });
-    }
-
-    private async Task<SyncChangesResponseDto> GetChangesAsync(long since, int limit)
-    {
-        var page = await _client!.GetFromJsonAsync<SyncChangesResponseDto>(
-            $"/api/v1/sync/changes?since={since}&limit={limit}");
-        Assert.That(page, Is.Not.Null);
-        return page!;
-    }
-
-    private async Task<NodeDto> CreateNodeAsync(Guid parentId, string name)
-    {
-        var response = await _client!.PutAsJsonAsync(
-            "/api/v1/layouts/nodes",
-            new Models.Requests.CreateNodeRequest { ParentId = parentId, Name = name });
+        using HttpResponseMessage response = await _client!.SendAsync(request);
         response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<NodeDto>())!;
+
+        TokenPairResponseDto? login = await response.Content.ReadFromJsonAsync<TokenPairResponseDto>();
+        Assert.That(login, Is.Not.Null);
+
+        UseBearerAuth(login!.AccessToken);
+        return login.AccessToken;
+    }
+
+    private async Task<Guid> GetUserIdAsync(string username)
+    {
+        using IServiceScope scope = _factory!.Services.CreateScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+
+        User user = await dbContext.Users
+            .AsNoTracking()
+            .SingleAsync(x => x.Username == username);
+
+        return user.Id;
+    }
+
+    private async Task CreateUserAsync(string username, string password)
+    {
+        using HttpResponseMessage response = await _client!.PostAsJsonAsync(Routes.V1.Users, new
+        {
+            username,
+            password,
+            role = UserRole.User,
+        });
+
+        response.EnsureSuccessStatusCode();
+    }
+
+    private async Task<NodeDto> GetRootAsync()
+    {
+        NodeDto? root = await _client!.GetFromJsonAsync<NodeDto>($"{Routes.V1.Layouts}/resolver");
+        Assert.That(root, Is.Not.Null);
+        return root!;
+    }
+
+    private async Task<NodeDto> CreateFolderAsync(Guid parentId, string name)
+    {
+        using HttpResponseMessage response = await _client!.PutAsJsonAsync(
+            $"{Routes.V1.Layouts}/nodes",
+            new CreateNodeRequest { ParentId = parentId, Name = name });
+        response.EnsureSuccessStatusCode();
+
+        NodeDto? node = await response.Content.ReadFromJsonAsync<NodeDto>();
+        Assert.That(node, Is.Not.Null);
+        return node!;
     }
 
     private async Task<NodeFileManifestDto> CreateFileAsync(Guid nodeId, string name, string body)
     {
         string hash = await UploadChunkAsync(body);
-        var fileReq = new CreateFileRequest
-        {
-            ChunkHashes = [hash],
-            Name = name,
-            ContentType = "text/plain",
-            Hash = hash,
-            NodeId = nodeId,
-        };
-        var response = await _client!.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
+        using HttpResponseMessage response = await _client!.PostAsJsonAsync(
+            $"{Routes.V1.Files}/from-chunks",
+            new CreateFileRequest
+            {
+                ChunkHashes = [hash],
+                Name = name,
+                ContentType = "application/octet-stream",
+                Hash = hash,
+                NodeId = nodeId,
+            });
         response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<NodeFileManifestDto>())!;
+
+        NodeFileManifestDto? file = await response.Content.ReadFromJsonAsync<NodeFileManifestDto>();
+        Assert.That(file, Is.Not.Null);
+        return file!;
     }
 
-    private async Task<NodeFileManifestDto> RenameFileAsync(Guid nodeFileId, string name)
-    {
-        var response = await _client!.PatchAsJsonAsync(
-            $"/api/v1/files/{nodeFileId}/rename",
-            new Models.Requests.RenameFileRequest { Name = name });
-        response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<NodeFileManifestDto>())!;
-    }
-
-    private async Task<NodeFileManifestDto> UpdateFileContentAsync(NodeFileManifestDto file, string body)
+    private async Task<NodeFileManifestDto> UpdateFileContentAsync(Guid nodeFileId, Guid nodeId, string name, string body)
     {
         string hash = await UploadChunkAsync(body);
-        var response = await _client!.PatchAsJsonAsync($"/api/v1/files/{file.Id}/update-content", new CreateFileRequest
-        {
-            ChunkHashes = [hash],
-            Name = file.Name,
-            ContentType = file.ContentType,
-            Hash = hash,
-            NodeId = file.NodeId,
-        });
+        using HttpResponseMessage response = await _client!.PatchAsJsonAsync(
+            $"{Routes.V1.Files}/{nodeFileId}/update-content",
+            new CreateFileRequest
+            {
+                ChunkHashes = [hash],
+                Name = name,
+                ContentType = "application/octet-stream",
+                Hash = hash,
+                NodeId = nodeId,
+            });
         response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<NodeFileManifestDto>())!;
+
+        NodeFileManifestDto? file = await response.Content.ReadFromJsonAsync<NodeFileManifestDto>();
+        Assert.That(file, Is.Not.Null);
+        return file!;
     }
 
-    private async Task<NodeFileManifestDto> MoveFileAsync(Guid nodeFileId, Guid parentId)
+    private async Task<List<FileVersionDto>> GetFileVersionsAsync(Guid nodeFileId)
     {
-        var response = await _client!.PatchAsJsonAsync(
-            $"/api/v1/files/{nodeFileId}/move",
-            new Models.Requests.MoveFileRequest { ParentId = parentId });
-        response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<NodeFileManifestDto>())!;
-    }
+        List<FileVersionDto>? versions = await _client!.GetFromJsonAsync<List<FileVersionDto>>(
+            $"{Routes.V1.Files}/{nodeFileId}/versions");
 
-    private async Task<NodeDto> RenameNodeAsync(Guid nodeId, string name)
-    {
-        var response = await _client!.PatchAsJsonAsync(
-            $"/api/v1/layouts/nodes/{nodeId}/rename",
-            new Models.Requests.RenameNodeRequest { Name = name });
-        response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<NodeDto>())!;
-    }
-
-    private async Task<NodeDto> MoveNodeAsync(Guid nodeId, Guid parentId)
-    {
-        var response = await _client!.PatchAsJsonAsync(
-            $"/api/v1/layouts/nodes/{nodeId}/move",
-            new Models.Requests.MoveNodeRequest { ParentId = parentId });
-        response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<NodeDto>())!;
-    }
-
-    private async Task DeleteFileAsync(Guid nodeFileId)
-    {
-        var response = await _client!.DeleteAsync($"/api/v1/files/{nodeFileId}");
-        response.EnsureSuccessStatusCode();
-    }
-
-    private async Task AgeFirstSyncChangeAsync()
-    {
-        using IServiceScope scope = _factory!.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-        var firstChange = await db.SyncChanges
-            .OrderBy(x => x.Revision)
-            .FirstAsync();
-        DateTime expiredAt = DateTime.UtcNow.AddDays(-31);
-        db.Entry(firstChange).Property(nameof(firstChange.CreatedAt)).CurrentValue = expiredAt;
-        db.Entry(firstChange).Property(nameof(firstChange.UpdatedAt)).CurrentValue = expiredAt;
-        await db.SaveChangesAsync();
+        Assert.That(versions, Is.Not.Null);
+        return versions!;
     }
 
     private async Task<string> UploadChunkAsync(string body)
@@ -355,26 +764,108 @@ public sealed class SyncChangesEndpointsTests : IntegrationTestBase
             { new StringContent(hash), "hash" },
         };
 
-        var response = await _client!.PostAsync("/api/v1/chunks", form);
+        using HttpResponseMessage response = await _client!.PostAsync(Routes.V1.Chunks, form);
         response.EnsureSuccessStatusCode();
         return hash;
     }
 
-    private async Task<string> LoginAsync()
+    private void UseBearerAuth(string accessToken)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+    }
+
+    private void UseWebDavBasicAuth()
+    {
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Basic",
+            Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Username}:{Password}")));
+    }
+
+    private async Task<HttpResponseMessage> SendWebDavPutAsync(string path, string body)
+    {
+        using var content = new StringContent(body, Encoding.UTF8, "text/plain");
+        using var request = new HttpRequestMessage(HttpMethod.Put, path)
         {
-            Content = JsonContent.Create(new LoginRequestDto
-            {
-                Username = "testuser",
-                Password = "testpassword"
-            })
+            Content = content,
         };
-        request.Headers.Add("X-Forwarded-For", "8.8.8.8");
-        var response = await _client!.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-        var login = await response.Content.ReadFromJsonAsync<TokenPairResponseDto>();
-        Assert.That(login, Is.Not.Null);
-        return login!.AccessToken;
+
+        return await _client!.SendAsync(request);
+    }
+
+    private async Task<HttpResponseMessage> SendWebDavMkColAsync(string path)
+    {
+        using var request = new HttpRequestMessage(new HttpMethod("MKCOL"), path);
+        return await _client!.SendAsync(request);
+    }
+
+    private async Task<HttpResponseMessage> SendWebDavMoveAsync(string sourcePath, string destinationPath)
+    {
+        using var request = new HttpRequestMessage(new HttpMethod("MOVE"), sourcePath);
+        request.Headers.Add("Destination", destinationPath);
+        request.Headers.Add("Overwrite", "F");
+        return await _client!.SendAsync(request);
+    }
+
+    private async Task<HttpResponseMessage> SendWebDavCopyAsync(string sourcePath, string destinationPath)
+    {
+        using var request = new HttpRequestMessage(new HttpMethod("COPY"), sourcePath);
+        request.Headers.Add("Destination", destinationPath);
+        request.Headers.Add("Overwrite", "F");
+        return await _client!.SendAsync(request);
+    }
+
+    private async Task<long> AddSyncChangeAsync(Guid ownerId, string name)
+    {
+        using IServiceScope scope = _factory!.Services.CreateScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+
+        var change = new SyncChange
+        {
+            OwnerId = ownerId,
+            Kind = SyncChangeKind.FileCreated,
+            LayoutId = Guid.NewGuid(),
+            ItemId = Guid.NewGuid(),
+            ParentNodeId = Guid.NewGuid(),
+            Name = name,
+        };
+
+        dbContext.SyncChanges.Add(change);
+        await dbContext.SaveChangesAsync();
+        return change.Id;
+    }
+
+    private async Task DeleteSyncChangeAsync(long id)
+    {
+        using IServiceScope scope = _factory!.Services.CreateScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+
+        await dbContext.SyncChanges
+            .Where(x => x.Id == id)
+            .ExecuteDeleteAsync();
+    }
+
+    private async Task<SyncChangesResponseDto> GetChangesAsync(long since, int limit)
+    {
+        SyncChangesResponseDto? response = await _client!.GetFromJsonAsync<SyncChangesResponseDto>(
+            $"{Routes.V1.Sync}/changes?since={since}&limit={limit}");
+
+        Assert.That(response, Is.Not.Null);
+        return response!;
+    }
+
+    private async Task<SyncChangeDto> GetSingleChangeAsync(long cursor, Guid itemId)
+    {
+        SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 20);
+        return response.Changes.Single(x => x.ItemId == itemId);
+    }
+
+    private static void ResetSettingsProviderCaches()
+    {
+        const BindingFlags Flags = BindingFlags.Static | BindingFlags.NonPublic;
+        Type settingsProviderType = typeof(SettingsProvider);
+
+        settingsProviderType.GetField("_cache", Flags)?.SetValue(null, null);
+        settingsProviderType.GetField("_isServerInitializedCache", Flags)?.SetValue(null, null);
+        settingsProviderType.GetField("_serverHasUsersCache", Flags)?.SetValue(null, null);
     }
 }

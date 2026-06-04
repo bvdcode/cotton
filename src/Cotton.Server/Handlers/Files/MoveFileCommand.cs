@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Exceptions;
@@ -43,6 +44,7 @@ namespace Cotton.Server.Handlers.Files
     /// </summary>
     public class MoveFileCommandHandler(
         CottonDbContext _dbContext,
+        ISyncChangeRecorder _syncChanges,
         IEventNotificationService _eventNotification,
         ILogger<MoveFileCommandHandler> _logger)
         : IRequestHandler<MoveFileCommand, NodeFileManifestDto>
@@ -111,6 +113,7 @@ namespace Cotton.Server.Handlers.Files
 
             Guid oldParentId = nodeFile.NodeId;
             nodeFile.NodeId = targetParent.Id;
+            _syncChanges.StageFileChange(SyncChangeKind.FileMoved, nodeFile, sourceLayoutId, oldParentId);
             try
             {
                 await _dbContext.SaveChangesAsync(cancellationToken);

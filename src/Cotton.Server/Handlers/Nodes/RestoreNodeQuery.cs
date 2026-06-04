@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using Cotton.Topology.Abstractions;
@@ -49,6 +50,7 @@ namespace Cotton.Server.Handlers.Nodes
         ILayoutService _layouts,
         TrashRestoreCoordinator _restore,
         NodeSubtreeService _subtree,
+        ISyncChangeRecorder _syncChanges,
         ILogger<RestoreNodeQueryHandler> _logger)
         : IRequestHandler<RestoreNodeQuery, RestoreOutcomeDto>
     {
@@ -87,7 +89,13 @@ namespace Cotton.Server.Handlers.Nodes
                     return conflictOutcome;
                 }
 
-                await RestoreNodeAsync(request, node, wrapperOutcome.Wrapper!, parentOutcome.Parent!, ct);
+                await RestoreNodeAsync(
+                    request,
+                    node,
+                    wrapperOutcome.Wrapper!,
+                    parentOutcome.Parent!,
+                    parentOutcome.CreatedParents,
+                    ct);
                 await tx.CommitAsync(ct);
 
                 return BuildRestoredOutcome(request, node, parentOutcome.Parent!, originalParentPath);
@@ -170,7 +178,7 @@ namespace Cotton.Server.Handlers.Nodes
 
             return resolution.Parent is null
                 ? RestoreParentOutcome.Failed(ParentMissing(originalParentPath))
-                : RestoreParentOutcome.Success(resolution.Parent);
+                : RestoreParentOutcome.Success(resolution.Parent, resolution.CreatedParents);
         }
 
         private async Task<RestoreOutcomeDto?> ResolveConflictAsync(
@@ -200,13 +208,30 @@ namespace Cotton.Server.Handlers.Nodes
             Node node,
             Node wrapper,
             Node targetParent,
+            IReadOnlyList<Node> createdParents,
             CancellationToken ct)
         {
             node.SetParent(targetParent, NodeType.Default);
             node.Metadata = TrashRestoreCoordinator.RemoveOriginalParentPath(node.Metadata);
             await _subtree.SetSubtreeTypeAsync(request.UserId, node.Id, NodeType.Default, ct);
+            StageCreatedParents(createdParents);
+            _syncChanges.StageFolderChange(SyncChangeKind.FolderRestored, node, targetParent.Id);
             await _dbContext.SaveChangesAsync(ct);
             await _restore.DeleteWrapperIfEmptyAsync(request.UserId, wrapper, ct);
+        }
+
+        private void StageCreatedParents(IReadOnlyList<Node> createdParents)
+        {
+            foreach (Node createdParent in createdParents)
+            {
+                if (createdParent.ParentId.HasValue)
+                {
+                    _syncChanges.StageFolderChange(
+                        SyncChangeKind.FolderCreated,
+                        createdParent,
+                        createdParent.ParentId.Value);
+                }
+            }
         }
 
         private RestoreOutcomeDto BuildRestoredOutcome(
@@ -274,16 +299,20 @@ namespace Cotton.Server.Handlers.Nodes
             public static TopLevelTrashWrapperOutcome NotRestorable(string reason) => new(null, RestoreNodeQueryHandler.NotRestorable(reason));
         }
 
-        private sealed record RestoreParentOutcome(Node? Parent, RestoreOutcomeDto? Failure)
+        private sealed record RestoreParentOutcome(
+            Node? Parent,
+            IReadOnlyList<Node> CreatedParents,
+            RestoreOutcomeDto? Failure)
         {
             /// <summary>
             /// Creates a successful operation result.
             /// </summary>
-            public static RestoreParentOutcome Success(Node parent) => new(parent, null);
+            public static RestoreParentOutcome Success(Node parent, IReadOnlyList<Node> createdParents) =>
+                new(parent, createdParents, null);
             /// <summary>
             /// Creates a failed operation result.
             /// </summary>
-            public static RestoreParentOutcome Failed(RestoreOutcomeDto failure) => new(null, failure);
+            public static RestoreParentOutcome Failed(RestoreOutcomeDto failure) => new(null, [], failure);
         }
 
         private static RestoreOutcomeDto NotRestorable(string reason, string? originalParentPath = null) => new()

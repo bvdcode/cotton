@@ -14,8 +14,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cotton.Database.Migrations
 {
     [DbContext(typeof(CottonDbContext))]
-    [Migration("20260603165614_AddSyncChanges")]
-    partial class AddSyncChanges
+    [Migration("20260604061604_AddSyncChangesLongId")]
+    partial class AddSyncChangesLongId
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -973,59 +973,43 @@ namespace Cotton.Database.Migrations
 
             modelBuilder.Entity("Cotton.Database.Models.SyncChange", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("bigint")
                         .HasColumnName("id");
 
-                    b.Property<string>("ContentHash")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)")
-                        .HasColumnName("content_hash");
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<string>("ETag")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("e_tag");
-
                     b.Property<Guid?>("FileManifestId")
                         .HasColumnType("uuid")
                         .HasColumnName("file_manifest_id");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_id");
 
                     b.Property<int>("Kind")
                         .HasColumnType("integer")
                         .HasColumnName("kind");
 
-                    b.Property<Guid?>("LayoutId")
+                    b.Property<Guid>("LayoutId")
                         .HasColumnType("uuid")
                         .HasColumnName("layout_id");
 
                     b.Property<string>("Name")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)")
+                        .IsRequired()
+                        .HasColumnType("text")
                         .HasColumnName("name");
-
-                    b.Property<Guid?>("NodeFileId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("node_file_id");
-
-                    b.Property<Guid?>("NodeId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("node_id");
-
-                    b.Property<Guid?>("OriginalNodeFileId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("original_node_file_id");
 
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uuid")
                         .HasColumnName("owner_id");
 
-                    b.Property<Guid?>("ParentNodeId")
+                    b.Property<Guid>("ParentNodeId")
                         .HasColumnType("uuid")
                         .HasColumnName("parent_node_id");
 
@@ -1033,31 +1017,13 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("previous_parent_node_id");
 
-                    b.Property<long>("Revision")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("revision");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Revision"));
-
-                    b.Property<long?>("SizeBytes")
-                        .HasColumnType("bigint")
-                        .HasColumnName("size_bytes");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OwnerId", "NodeFileId");
-
-                    b.HasIndex("OwnerId", "NodeId");
-
-                    b.HasIndex("OwnerId", "Revision")
-                        .IsUnique();
-
-                    b.HasIndex("OwnerId", "LayoutId", "Revision");
+                    b.HasIndex("OwnerId", "Id");
 
                     b.ToTable("sync_changes");
                 });
@@ -1436,7 +1402,7 @@ namespace Cotton.Database.Migrations
                     b.HasOne("Cotton.Database.Models.User", "Owner")
                         .WithMany("ChunkOwnerships")
                         .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Chunk");
@@ -1487,7 +1453,7 @@ namespace Cotton.Database.Migrations
                     b.HasOne("Cotton.Database.Models.User", "Owner")
                         .WithMany()
                         .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Owner");
@@ -1504,7 +1470,7 @@ namespace Cotton.Database.Migrations
                     b.HasOne("Cotton.Database.Models.User", "Owner")
                         .WithMany()
                         .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Cotton.Database.Models.Node", "Parent")
@@ -1536,7 +1502,7 @@ namespace Cotton.Database.Migrations
                     b.HasOne("Cotton.Database.Models.User", "Owner")
                         .WithMany("NodeFiles")
                         .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("FileManifest");

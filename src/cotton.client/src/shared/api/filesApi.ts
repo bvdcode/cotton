@@ -55,8 +55,10 @@ export const filesApi = {
   updateFileContent: async (
     nodeFileId: Guid,
     request: CreateFileFromChunksRequest,
-  ): Promise<void> => {
-    await httpClient.patch(`files/${nodeFileId}/update-content`, request);
+  ): Promise<NodeFileManifestDto> => {
+    const url = `files/${nodeFileId}/update-content`;
+    const response = await httpClient.patch<unknown>(url, request);
+    return parseValidated(url, response.data, nodeFileManifestSchema);
   },
 
   getDownloadLink: async (

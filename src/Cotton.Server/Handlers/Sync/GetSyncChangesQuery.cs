@@ -3,44 +3,52 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
-using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Dto;
-using Cotton.Server.Services;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
+using Mapster;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Sync
 {
-    /// <summary>Queries the durable synchronization change feed for one user.</summary>
-    public sealed class GetSyncChangesQuery(Guid userId, long sinceCursor, int limit) : IRequest<SyncChangesResponseDto>
+    /// <summary>
+    /// Represents a durable sync-change feed query sent through the mediator pipeline.
+    /// </summary>
+    public class GetSyncChangesQuery(Guid userId, long sinceCursor, int limit)
+        : IRequest<SyncChangesResponseDto>
     {
-        /// <summary>Owning user identifier.</summary>
+        /// <summary>
+        /// Gets the owning user identifier.
+        /// </summary>
         public Guid UserId { get; } = userId;
-
-        /// <summary>Exclusive cursor lower bound.</summary>
+        /// <summary>
+        /// Gets the exclusive cursor lower bound.
+        /// </summary>
         public long SinceCursor { get; } = sinceCursor;
-
-        /// <summary>Maximum number of changes to return.</summary>
+        /// <summary>
+        /// Gets the maximum number of changes to return.
+        /// </summary>
         public int Limit { get; } = limit;
     }
 
-    /// <summary>Handles durable synchronization change-feed queries.</summary>
-    public sealed class GetSyncChangesQueryHandler(
-        CottonDbContext _dbContext,
-        SyncChangeRetentionService _retention)
+    /// <summary>
+    /// Handles durable sync-change feed queries in the mediator pipeline.
+    /// </summary>
+    public class GetSyncChangesQueryHandler(CottonDbContext _dbContext)
         : IRequestHandler<GetSyncChangesQuery, SyncChangesResponseDto>
     {
-        private const int DefaultLimit = 500;
         private const int MaximumLimit = 1000;
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Handles the request through the mediator pipeline.
+        /// </summary>
         public async Task<SyncChangesResponseDto> Handle(GetSyncChangesQuery request, CancellationToken ct)
         {
-            await _retention.DeleteExpiredChangesAsync(request.UserId, ct);
-
+            ArgumentOutOfRangeException.ThrowIfNegative(request.SinceCursor);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.Limit);
+            int limit = Math.Min(request.Limit, MaximumLimit);
             long? earliestAvailableCursor = await GetEarliestAvailableCursorAsync(request.UserId, ct);
-            if (IsExpired(request.SinceCursor, earliestAvailableCursor))
+            if (earliestAvailableCursor.HasValue && request.SinceCursor < earliestAvailableCursor.Value)
             {
                 return new SyncChangesResponseDto
                 {
@@ -51,11 +59,10 @@ namespace Cotton.Server.Handlers.Sync
                 };
             }
 
-            int limit = NormalizeLimit(request.Limit);
             List<SyncChange> rows = await _dbContext.SyncChanges
                 .AsNoTracking()
-                .Where(x => x.OwnerId == request.UserId && x.Revision > request.SinceCursor)
-                .OrderBy(x => x.Revision)
+                .Where(x => x.OwnerId == request.UserId && x.Id > request.SinceCursor)
+                .OrderBy(x => x.Id)
                 .Take(limit + 1)
                 .ToListAsync(ct);
 
@@ -66,7 +73,7 @@ namespace Cotton.Server.Handlers.Sync
             }
 
             long nextCursor = rows.Count > 0
-                ? rows[^1].Revision
+                ? rows[^1].Id
                 : request.SinceCursor;
 
             return new SyncChangesResponseDto
@@ -75,78 +82,22 @@ namespace Cotton.Server.Handlers.Sync
                 NextCursor = nextCursor,
                 HasMore = hasMore,
                 EarliestAvailableCursor = earliestAvailableCursor,
-                Changes = [.. rows.Select(Map)],
+                Changes = rows.Adapt<List<SyncChangeDto>>(),
             };
         }
 
         private async Task<long?> GetEarliestAvailableCursorAsync(Guid userId, CancellationToken ct)
         {
-            long? earliestRevision = await _dbContext.SyncChanges
+            long? earliestId = await _dbContext.SyncChanges
                 .AsNoTracking()
                 .Where(x => x.OwnerId == userId)
-                .OrderBy(x => x.Revision)
-                .Select(x => (long?)x.Revision)
+                .OrderBy(x => x.Id)
+                .Select(x => (long?)x.Id)
                 .FirstOrDefaultAsync(ct);
 
-            return earliestRevision.HasValue
-                ? Math.Max(0, earliestRevision.Value - 1)
+            return earliestId.HasValue
+                ? Math.Max(0, earliestId.Value - 1)
                 : null;
-        }
-
-        private static bool IsExpired(long sinceCursor, long? earliestAvailableCursor)
-        {
-            return earliestAvailableCursor.HasValue
-                && sinceCursor < earliestAvailableCursor.Value;
-        }
-
-        private static int NormalizeLimit(int limit)
-        {
-            if (limit <= 0)
-            {
-                return DefaultLimit;
-            }
-
-            return Math.Min(limit, MaximumLimit);
-        }
-
-        private static SyncChangeDto Map(SyncChange row)
-        {
-            return new SyncChangeDto
-            {
-                Cursor = row.Revision,
-                Kind = MapKind(row.Kind),
-                LayoutId = row.LayoutId,
-                NodeId = row.NodeId,
-                NodeFileId = row.NodeFileId,
-                ParentNodeId = row.ParentNodeId,
-                PreviousParentNodeId = row.PreviousParentNodeId,
-                FileManifestId = row.FileManifestId,
-                OriginalNodeFileId = row.OriginalNodeFileId,
-                Name = row.Name,
-                ContentHash = row.ContentHash,
-                ETag = row.ETag,
-                SizeBytes = row.SizeBytes,
-                CreatedAt = row.CreatedAt,
-            };
-        }
-
-        private static SyncChangeKindDto MapKind(SyncChangeKind kind)
-        {
-            return kind switch
-            {
-                SyncChangeKind.FileCreated => SyncChangeKindDto.FileCreated,
-                SyncChangeKind.FileContentUpdated => SyncChangeKindDto.FileContentUpdated,
-                SyncChangeKind.FileRenamed => SyncChangeKindDto.FileRenamed,
-                SyncChangeKind.FileMoved => SyncChangeKindDto.FileMoved,
-                SyncChangeKind.FileDeleted => SyncChangeKindDto.FileDeleted,
-                SyncChangeKind.FileRestored => SyncChangeKindDto.FileRestored,
-                SyncChangeKind.FolderCreated => SyncChangeKindDto.FolderCreated,
-                SyncChangeKind.FolderRenamed => SyncChangeKindDto.FolderRenamed,
-                SyncChangeKind.FolderMoved => SyncChangeKindDto.FolderMoved,
-                SyncChangeKind.FolderDeleted => SyncChangeKindDto.FolderDeleted,
-                SyncChangeKind.FolderRestored => SyncChangeKindDto.FolderRestored,
-                _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown sync change kind."),
-            };
         }
     }
 }

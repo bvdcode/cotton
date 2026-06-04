@@ -2432,6 +2432,9 @@
     "conflicts": {
       "title": "Datei existiert bereits",
       "description": "Eine Datei mit diesem Namen existiert in diesem Ordner bereits. Als {{newName}} hochladen?",
+      "overwriteDescription": "Eine Datei mit diesem Namen existiert in diesem Ordner bereits. Ersetzen oder als {{newName}} hochladen?",
+      "rename": "Als {{newName}} hochladen",
+      "overwrite": "Ersetzen",
       "skip": "Überspringen",
       "skipAll": "Alle überspringen"
     },

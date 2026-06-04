@@ -2438,6 +2438,9 @@
     "conflicts": {
       "title": "Il file esiste già",
       "description": "In questa cartella esiste già un file con questo nome. Caricare come {{newName}}?",
+      "overwriteDescription": "In questa cartella esiste già un file con questo nome. Sostituirlo o caricare come {{newName}}?",
+      "rename": "Carica come {{newName}}",
+      "overwrite": "Sostituisci",
       "skip": "Salta",
       "skipAll": "Salta tutto"
     },

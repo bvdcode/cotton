@@ -2231,6 +2231,9 @@
     "conflicts": {
       "title": "File already exists",
       "description": "A file with this name already exists in this folder. Upload as {{newName}}?",
+      "overwriteDescription": "A file with this name already exists in this folder. Replace it, or upload as {{newName}}?",
+      "rename": "Upload as {{newName}}",
+      "overwrite": "Replace",
       "skip": "Skip",
       "skipAll": "Skip all"
     },

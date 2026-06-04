@@ -20,6 +20,7 @@ export type { UploadServerParams } from "./types";
 export async function uploadFileToNode(options: {
   file: File;
   nodeId: Guid;
+  replaceNodeFileId?: Guid | null;
   server: UploadServerParams;
   client?: UploadFileToNodeOptions;
   encrypt?: boolean;
@@ -74,7 +75,7 @@ export async function uploadFileToNode(options: {
 
   options.onFinalizing?.();
 
-  return filesApi.createFromChunks({
+  const request = {
     nodeId,
     chunkHashes,
     name,
@@ -82,7 +83,13 @@ export async function uploadFileToNode(options: {
     hash: fileHash,
     originalNodeFileId: null,
     metadata,
-  });
+  };
+
+  if (options.replaceNodeFileId) {
+    return filesApi.updateFileContent(options.replaceNodeFileId, request);
+  }
+
+  return filesApi.createFromChunks(request);
 }
 
 export function createOpaqueServerFileName(): string {
