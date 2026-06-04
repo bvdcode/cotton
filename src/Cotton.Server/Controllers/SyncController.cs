@@ -3,7 +3,7 @@
 
 using Cotton.Server.Handlers.Sync;
 using Cotton.Server.Models.Dto;
-using EasyExtensions.Helpers;
+using EasyExtensions;
 using EasyExtensions.Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
