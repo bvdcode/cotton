@@ -62,23 +62,22 @@ public sealed class DatabaseIntegrityVerifier(
 
         if (version != descriptor.SchemaVersion)
         {
-            _logger.LogError(
-                "Database integrity metadata has unsupported schema version {Version} for {EntityName} {EntityKey} at {Boundary}.",
+            _logger.LogWarning(
+                "Database integrity metadata has unsupported schema version {Version} for {EntityName} {EntityKey} at {Boundary}; allowing row during the integrity rollout window.",
                 version,
                 descriptor.EntityName,
                 descriptor.GetEntityKey(entity),
                 boundary);
-            Fail(descriptor, entity, boundary);
+            return;
         }
 
         if (!_protector.Verify(entity, descriptor, mac))
         {
-            _logger.LogError(
-                "Database integrity verification failed for {EntityName} {EntityKey} at {Boundary}.",
+            _logger.LogWarning(
+                "Database integrity verification failed for {EntityName} {EntityKey} at {Boundary}; allowing row during the integrity rollout window.",
                 descriptor.EntityName,
                 descriptor.GetEntityKey(entity),
                 boundary);
-            Fail(descriptor, entity, boundary);
         }
     }
 

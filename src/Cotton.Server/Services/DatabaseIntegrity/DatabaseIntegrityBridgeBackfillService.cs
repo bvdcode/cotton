@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Integrity;
+using Cotton.Database.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 
@@ -22,6 +23,16 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
     ILogger<DatabaseIntegrityBridgeBackfillService> _logger) : IDatabaseIntegrityBridgeBackfillService
 {
     private const int BatchSize = 250;
+    private static readonly TimeSpan InterBatchDelay = TimeSpan.FromMilliseconds(50);
+    private static readonly Type[] BulkEntityTypes =
+    [
+        typeof(Chunk),
+        typeof(FileManifestChunk)
+    ];
+    private static readonly Type[] ForceResignEntityTypes =
+    [
+        typeof(FileManifest)
+    ];
     private static readonly System.Reflection.MethodInfo MarkAllRowsForResignCoreMethod = typeof(DatabaseIntegrityBridgeBackfillService)
         .GetMethod(
             nameof(MarkAllRowsForResignCoreAsync),
@@ -42,11 +53,22 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
     /// <inheritdoc />
     public async Task<int> BackfillUnsignedPhaseOneRowsAsync(CancellationToken cancellationToken)
     {
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         int total = 0;
         foreach (IDatabaseIntegrityDescriptor descriptor in _descriptorsToBackfill)
         {
-            await MarkAllRowsForResignAsync(descriptor, cancellationToken);
+            if (IsBulkDescriptor(descriptor))
+            {
+                _logger.LogInformation(
+                    "Database integrity bridge skipped bulk table {EntityName}; existing rows remain soft-validated during the rollout window.",
+                    descriptor.EntityName);
+                continue;
+            }
+
+            if (ShouldForceResignCurrentState(descriptor))
+            {
+                await MarkAllRowsForResignAsync(descriptor, cancellationToken);
+            }
+
             int count = await BackfillEntitySetAsync(descriptor, cancellationToken);
             if (count == 0)
             {
@@ -60,9 +82,14 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
                 descriptor.EntityName);
         }
 
-        await transaction.CommitAsync(cancellationToken);
         return total;
     }
+
+    private static bool IsBulkDescriptor(IDatabaseIntegrityDescriptor descriptor) =>
+        BulkEntityTypes.Contains(descriptor.EntityType);
+
+    private static bool ShouldForceResignCurrentState(IDatabaseIntegrityDescriptor descriptor) =>
+        ForceResignEntityTypes.Contains(descriptor.EntityType);
 
     private async Task<int> BackfillEntitySetAsync(
         IDatabaseIntegrityDescriptor descriptor,
@@ -85,6 +112,7 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
 
             signed += rows.Count;
             _dbContext.ChangeTracker.Clear();
+            await Task.Delay(InterBatchDelay, cancellationToken);
         }
     }
 
@@ -188,7 +216,7 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
             ?? throw new InvalidOperationException($"Protected entity type {descriptor.EntityType.Name} is not mapped.");
         StoreObjectIdentifier storeObject = GetStoreObject(entityType, descriptor);
         string versionColumn = GetColumnName(entityType, DatabaseIntegrityColumns.VersionProperty, storeObject);
-        string sql = $"UPDATE {QuoteQualifiedTable(storeObject)} SET {QuoteIdentifier(versionColumn)} = NULL";
+        string sql = $"UPDATE {QuoteQualifiedTable(storeObject)} SET {QuoteIdentifier(versionColumn)} = NULL WHERE {QuoteIdentifier(versionColumn)} IS NOT NULL";
         await _dbContext.Database.ExecuteSqlRawAsync(sql, cancellationToken);
     }
 

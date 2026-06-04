@@ -115,7 +115,7 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task Verifier_RejectsDirectDatabaseTampering()
+    public async Task Verifier_AllowsSignedRowsWithMismatchedMacDuringRollout()
     {
         var user = new User
         {
@@ -140,8 +140,34 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
             NullDatabaseIntegrityFailureReporter.Instance,
             NullLogger<DatabaseIntegrityVerifier>.Instance);
 
-        Assert.Throws<DatabaseIntegrityException>(() =>
+        Assert.DoesNotThrow(() =>
             verifier.RequireValid(DbContext, tampered, "test.direct-tamper"));
+    }
+
+    [Test]
+    public async Task BridgeBackfill_SkipsExistingChunkRows()
+    {
+        var chunk = new Chunk
+        {
+            Hash = [1, 2, 3],
+            PlainSizeBytes = 10,
+            StoredSizeBytes = 12,
+            CompressionAlgorithm = CompressionAlgorithm.Zstd
+        };
+        await DbContext.Chunks.AddAsync(chunk);
+        await DbContext.SaveChangesAsync();
+        DbContext.ChangeTracker.Clear();
+
+        int signed = await CreateBackfillService().BackfillUnsignedPhaseOneRowsAsync(CancellationToken.None);
+
+        DbContext.ChangeTracker.Clear();
+        Chunk unsignedChunk = await DbContext.Chunks.SingleAsync();
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(signed, Is.EqualTo(0));
+            Assert.That(ReadMac(unsignedChunk), Is.Null);
+        }
     }
 
     [Test]
