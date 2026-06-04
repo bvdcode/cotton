@@ -344,7 +344,7 @@ jobs:
   desktop-windows-smoke:
     name: Desktop Windows Smoke
     runs-on: windows-latest
-    needs: test
+    needs: build
     steps:
       - name: check repository
         uses: actions/checkout@v5
@@ -358,7 +358,7 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Publish desktop Windows x64
-        run: dotnet publish src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj /p:PublishProfile=win-x64 -p:GeneratePublishChecksums=false
+        run: dotnet publish src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj /p:PublishProfile=win-x64 -p:Version='${{ needs.build.outputs.Version }}' -p:InformationalVersion='${{ needs.build.outputs.Version }}'
 
       - name: Smoke desktop Windows self-test
         shell: pwsh
@@ -366,6 +366,49 @@ jobs:
           $dataDir = Join-Path $env:RUNNER_TEMP "cotton-sync-smoke"
           New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
           src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64/Cotton.Sync.Desktop.exe --self-test --data-dir "$dataDir"
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup --yes --no-progress
+          $compiler = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $compiler)) {
+            throw "Inno Setup compiler was not found at $compiler"
+          }
+
+          "INNO_SETUP_COMPILER=$compiler" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Package desktop Windows installer
+        shell: pwsh
+        run: |
+          $publishDir = Resolve-Path "src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64"
+          $iconFile = Resolve-Path "src/Cotton.Sync.Desktop/Assets/app.ico"
+          $outputDir = Resolve-Path "."
+          & "$env:INNO_SETUP_COMPILER" `
+            "/DSourceDir=$publishDir" `
+            "/DIconFile=$iconFile" `
+            "/DOutputDir=$outputDir" `
+            "/DAppVersion=${{ needs.build.outputs.Version }}" `
+            "src/Cotton.Sync.Desktop/Packaging/windows/cotton-sync.iss"
+
+          if (-not (Test-Path "cotton-sync-desktop-win-x64-setup.exe")) {
+            throw "Windows installer was not created."
+          }
+
+      - name: Generate desktop Windows installer checksum
+        shell: pwsh
+        run: |
+          $hash = Get-FileHash cotton-sync-desktop-win-x64-setup.exe -Algorithm SHA256
+          "{0}  {1}" -f $hash.Hash.ToLowerInvariant(), "cotton-sync-desktop-win-x64-setup.exe" | Set-Content desktop-windows-installer-checksums.sha256
+          Get-Content desktop-windows-installer-checksums.sha256
+
+      - name: Upload desktop Windows installer artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: desktop-windows-installer
+          path: |
+            cotton-sync-desktop-win-x64-setup.exe
+            desktop-windows-installer-checksums.sha256
 
   release:
     name: Create Release
@@ -396,6 +439,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: desktop-win-x64
+          path: release-artifacts
+
+      - name: Download desktop Windows installer artifact
+        if: needs.build.outputs.CommitsSinceVersionSource > 0
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-windows-installer
           path: release-artifacts
 
       - name: Download desktop artifact checksums

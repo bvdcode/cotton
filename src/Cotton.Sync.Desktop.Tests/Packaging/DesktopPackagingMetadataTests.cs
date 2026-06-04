@@ -134,7 +134,9 @@ public sealed class DesktopPackagingMetadataTests
         {
             Assert.That(workflow, Does.Contain("desktop-windows-smoke:"));
             Assert.That(workflow, Does.Contain("runs-on: windows-latest"));
-            Assert.That(workflow, Does.Contain("/p:PublishProfile=win-x64 -p:GeneratePublishChecksums=false"));
+            Assert.That(workflow, Does.Contain("needs: build"));
+            Assert.That(workflow, Does.Contain("/p:PublishProfile=win-x64"));
+            Assert.That(workflow, Does.Contain("-p:Version='${{ needs.build.outputs.Version }}'"));
             Assert.That(workflow, Does.Contain("Cotton.Sync.Desktop.exe --self-test --data-dir"));
             Assert.That(workflow, Does.Contain("- desktop-windows-smoke"));
         });
@@ -173,12 +175,35 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(installerScript, Does.Contain("PrivilegesRequired=lowest"));
             Assert.That(installerScript, Does.Contain("ArchitecturesAllowed=x64compatible"));
             Assert.That(installerScript, Does.Contain("OutputBaseFilename=cotton-sync-desktop-win-x64-setup"));
-            Assert.That(installerScript, Does.Contain("SetupIconFile={#SourceDir}\\Assets\\app.ico"));
+            Assert.That(installerScript, Does.Contain("SetupIconFile={#IconFile}"));
             Assert.That(installerScript, Does.Contain("Source: \"{#SourceDir}\\*\""));
             Assert.That(installerScript, Does.Contain("recursesubdirs createallsubdirs"));
             Assert.That(installerScript, Does.Contain("Cotton.Sync.Desktop.exe"));
+            Assert.That(installerScript, Does.Contain("IconFilename: \"{app}\\Cotton.Sync.Desktop.exe\""));
             Assert.That(installerScript, Does.Contain("Create a desktop shortcut"));
             Assert.That(installerScript, Does.Contain("Flags: nowait postinstall skipifsilent"));
+        });
+    }
+
+    [Test]
+    public void CiWorkflow_BuildsAndUploadsWindowsInstallerArtifact()
+    {
+        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(workflow, Does.Contain("Install Inno Setup"));
+            Assert.That(workflow, Does.Contain("choco install innosetup"));
+            Assert.That(workflow, Does.Contain("INNO_SETUP_COMPILER"));
+            Assert.That(workflow, Does.Contain("Package desktop Windows installer"));
+            Assert.That(workflow, Does.Contain("Packaging/windows/cotton-sync.iss"));
+            Assert.That(workflow, Does.Contain("/DIconFile=$iconFile"));
+            Assert.That(workflow, Does.Contain("cotton-sync-desktop-win-x64-setup.exe"));
+            Assert.That(workflow, Does.Contain("Generate desktop Windows installer checksum"));
+            Assert.That(workflow, Does.Contain("desktop-windows-installer-checksums.sha256"));
+            Assert.That(workflow, Does.Contain("Upload desktop Windows installer artifact"));
+            Assert.That(workflow, Does.Contain("name: desktop-windows-installer"));
+            Assert.That(workflow, Does.Contain("Download desktop Windows installer artifact"));
         });
     }
 
