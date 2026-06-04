@@ -55,6 +55,57 @@ public sealed class SqliteSyncStateStoreTests
     }
 
     [Test]
+    public async Task GetChangeCursorAsync_InitializesNewDatabaseWithoutExplicitInitialize()
+    {
+        var store = CreateStore();
+
+        SyncChangeCursor cursor = await store.GetChangeCursorAsync("pair-a");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(cursor.SyncPairId, Is.EqualTo("pair-a"));
+            Assert.That(cursor.LastCursor, Is.Zero);
+            Assert.That(cursor.CursorExpired, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task SaveChangeCursorAsync_InitializesNewDatabaseWithoutExplicitInitialize()
+    {
+        string databasePath = DatabasePath();
+        var first = new SqliteSyncStateStore(databasePath);
+
+        await first.SaveChangeCursorAsync(new SyncChangeCursor
+        {
+            SyncPairId = "pair-a",
+            LastCursor = 9,
+        });
+
+        var second = new SqliteSyncStateStore(databasePath);
+        SyncChangeCursor cursor = await second.GetChangeCursorAsync("pair-a");
+
+        Assert.That(cursor.LastCursor, Is.EqualTo(9));
+    }
+
+    [Test]
+    public async Task UpsertAsync_InitializesNewDatabaseWithoutExplicitInitialize()
+    {
+        var store = CreateStore();
+
+        await store.UpsertAsync(new SyncStateEntry
+        {
+            SyncPairId = "pair-a",
+            RelativePath = "ready.txt",
+            Kind = SyncEntryKind.File,
+            LocalContentHash = "hash",
+        });
+
+        SyncStateEntry? entry = await store.GetAsync("pair-a", "READY.txt");
+
+        Assert.That(entry?.LocalContentHash, Is.EqualTo("hash"));
+    }
+
+    [Test]
     public async Task SaveChangeCursorAsync_RoundtripsAndPersistsAfterReopen()
     {
         string databasePath = DatabasePath();
