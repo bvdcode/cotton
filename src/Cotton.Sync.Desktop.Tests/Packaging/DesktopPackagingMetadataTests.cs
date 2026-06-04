@@ -442,16 +442,21 @@ public sealed class DesktopPackagingMetadataTests
         {
             Assert.That(installerScript, Does.Contain("AppName=Cotton Sync"));
             Assert.That(installerScript, Does.Contain("DefaultDirName={localappdata}\\Programs\\Cotton Sync"));
+            Assert.That(installerScript, Does.Contain("DefaultGroupName=Cotton Sync"));
             Assert.That(installerScript, Does.Contain("PrivilegesRequired=lowest"));
             Assert.That(installerScript, Does.Contain("ArchitecturesAllowed=x64compatible"));
             Assert.That(installerScript, Does.Contain("OutputBaseFilename=cotton-sync-desktop-win-x64-setup"));
             Assert.That(installerScript, Does.Contain("SetupIconFile={#IconFile}"));
+            Assert.That(installerScript, Does.Contain("UninstallDisplayIcon={app}\\Cotton.Sync.Desktop.exe"));
             Assert.That(installerScript, Does.Contain("Source: \"{#SourceDir}\\*\""));
             Assert.That(installerScript, Does.Contain("recursesubdirs createallsubdirs"));
             Assert.That(installerScript, Does.Contain("Cotton.Sync.Desktop.exe"));
+            Assert.That(installerScript, Does.Contain("Name: \"{group}\\Cotton Sync\""));
             Assert.That(installerScript, Does.Contain("IconFilename: \"{app}\\Cotton.Sync.Desktop.exe\""));
             Assert.That(installerScript, Does.Contain("Create a desktop shortcut"));
             Assert.That(installerScript, Does.Contain("Flags: nowait postinstall skipifsilent"));
+            Assert.That(installerScript, Does.Contain("CurUninstallStepChanged"));
+            Assert.That(installerScript, Does.Contain("RegDeleteValue(HKCU, 'Software\\Microsoft\\Windows\\CurrentVersion\\Run', 'Cotton Sync')"));
         });
     }
 
@@ -490,6 +495,9 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("/NORESTART"));
             Assert.That(workflow, Does.Contain("/TASKS="));
             Assert.That(workflow, Does.Contain("/DIR=$installDir"));
+            Assert.That(workflow, Does.Contain("[Environment]::GetFolderPath(\"Programs\")"));
+            Assert.That(workflow, Does.Contain("Cotton Sync\\Cotton Sync.lnk"));
+            Assert.That(workflow, Does.Contain("Installed Start Menu shortcut was not found."));
             Assert.That(workflow, Does.Contain("Cotton.Sync.Desktop.exe\""));
             Assert.That(workflow, Does.Contain("--self-test --data-dir"));
             Assert.That(workflow, Does.Contain("-PublishDirectory $installDir"));
@@ -497,7 +505,11 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("-ExpectedIcon \"src/Cotton.Sync.Desktop/Assets/app.ico\""));
             Assert.That(workflow, Does.Contain("Packaging/windows/smoke-diagnostics-export.ps1"));
             Assert.That(workflow, Does.Contain("unins000.exe"));
+            Assert.That(workflow, Does.Contain("HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"));
+            Assert.That(workflow, Does.Contain("Set-ItemProperty -Path $runKey -Name \"Cotton Sync\""));
             Assert.That(workflow, Does.Contain("Installed desktop executable remained after uninstall."));
+            Assert.That(workflow, Does.Contain("Start Menu shortcut remained after uninstall."));
+            Assert.That(workflow, Does.Contain("Autostart registry value remained after uninstall."));
         });
     }
 

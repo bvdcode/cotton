@@ -8,6 +8,7 @@ namespace Cotton.Sync.Desktop.Platform;
 internal sealed class AutostartLaunchCommand
 {
     private const string StartMinimizedArgument = "--start-minimized";
+    private const string PublishDirectorySegment = "/publish/";
 
     public AutostartLaunchCommand(string executablePath, IReadOnlyList<string> arguments)
     {
@@ -42,6 +43,38 @@ internal sealed class AutostartLaunchCommand
         return new AutostartLaunchCommand(executablePath, startupArguments);
     }
 
+    public static AutostartLaunchCommand? TryCreateDefault(bool startMinimized)
+    {
+        string[] commandLineArguments = Environment.GetCommandLineArgs();
+        string? processPath = Environment.ProcessPath;
+        return TryCreate(processPath, commandLineArguments, AppContext.BaseDirectory, startMinimized);
+    }
+
+    internal static AutostartLaunchCommand? TryCreate(
+        string? processPath,
+        IReadOnlyList<string> commandLineArguments,
+        string baseDirectory,
+        bool startMinimized)
+    {
+        ArgumentNullException.ThrowIfNull(commandLineArguments);
+        ArgumentException.ThrowIfNullOrWhiteSpace(baseDirectory);
+        string[] startupArguments = startMinimized ? [StartMinimizedArgument] : [];
+        if (IsDotnetHost(processPath))
+        {
+            return null;
+        }
+
+        string? executablePath = NormalizeExecutablePath(processPath)
+            ?? NormalizeExecutablePath(Process.GetCurrentProcess().MainModule?.FileName)
+            ?? NormalizeExecutablePath(commandLineArguments.FirstOrDefault());
+        if (executablePath is null || IsDevelopmentBuildOutput(executablePath, baseDirectory))
+        {
+            return null;
+        }
+
+        return new AutostartLaunchCommand(executablePath, startupArguments);
+    }
+
     public override string ToString()
     {
         return string.Join(
@@ -52,13 +85,73 @@ internal sealed class AutostartLaunchCommand
     private static bool IsDotnetHost(string? processPath)
     {
         return !string.IsNullOrWhiteSpace(processPath)
-            && string.Equals(Path.GetFileNameWithoutExtension(processPath), "dotnet", StringComparison.OrdinalIgnoreCase);
+            && string.Equals(GetPortableFileNameWithoutExtension(processPath), "dotnet", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsManagedAssembly(string? commandLinePath)
     {
         return !string.IsNullOrWhiteSpace(commandLinePath)
             && string.Equals(Path.GetExtension(commandLinePath), ".dll", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? NormalizeExecutablePath(string? executablePath)
+    {
+        if (string.IsNullOrWhiteSpace(executablePath))
+        {
+            return null;
+        }
+
+        string normalized = executablePath.Trim();
+        if (string.Equals(Path.GetExtension(normalized), ".dll", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return File.Exists(normalized) || Path.HasExtension(normalized) ? normalized : null;
+    }
+
+    private static bool IsDevelopmentBuildOutput(string executablePath, string baseDirectory)
+    {
+        string normalizedExecutableDirectory = NormalizePathForSegmentChecks(
+            GetPortableDirectoryName(executablePath) ?? baseDirectory);
+        return IsBuildOutputDirectory(normalizedExecutableDirectory)
+            && !normalizedExecutableDirectory.Contains(PublishDirectorySegment, StringComparison.Ordinal);
+    }
+
+    private static bool IsBuildOutputDirectory(string path)
+    {
+        return path.Contains("/bin/debug/", StringComparison.Ordinal)
+            || path.Contains("/bin/release/", StringComparison.Ordinal);
+    }
+
+    private static string NormalizePathForSegmentChecks(string path)
+    {
+        return "/" + path.Trim()
+            .Replace('\\', '/')
+            .Trim('/')
+            .ToLowerInvariant()
+            + "/";
+    }
+
+    private static string GetPortableFileNameWithoutExtension(string path)
+    {
+        string fileName = GetPortableFileName(path);
+        string extension = Path.GetExtension(fileName);
+        return extension.Length == 0 ? fileName : fileName[..^extension.Length];
+    }
+
+    private static string GetPortableFileName(string path)
+    {
+        string normalized = path.Replace('\\', '/');
+        int separatorIndex = normalized.LastIndexOf('/');
+        return separatorIndex < 0 ? normalized : normalized[(separatorIndex + 1)..];
+    }
+
+    private static string? GetPortableDirectoryName(string path)
+    {
+        string normalized = path.Replace('\\', '/');
+        int separatorIndex = normalized.LastIndexOf('/');
+        return separatorIndex < 0 ? null : normalized[..separatorIndex];
     }
 
     private static string Quote(string value)

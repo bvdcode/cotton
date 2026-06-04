@@ -555,6 +555,10 @@ jobs:
             Get-ChildItem $installDir -Recurse -ErrorAction SilentlyContinue
             throw "Installed desktop executable was not found."
           }
+          $startMenuShortcut = Join-Path ([Environment]::GetFolderPath("Programs")) "Cotton Sync\Cotton Sync.lnk"
+          if (-not (Test-Path $startMenuShortcut)) {
+            throw "Installed Start Menu shortcut was not found."
+          }
 
           & $installedExe --self-test --data-dir "$dataDir"
           & "src/Cotton.Sync.Desktop/Packaging/windows/verify-checksums.ps1" `
@@ -571,6 +575,10 @@ jobs:
             throw "Windows uninstaller was not found."
           }
 
+          $runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+          New-Item -Path $runKey -Force | Out-Null
+          Set-ItemProperty -Path $runKey -Name "Cotton Sync" -Value "`"$installedExe`" --start-minimized"
+
           $uninstall = Start-Process `
             -FilePath $uninstaller `
             -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/LOG=$uninstallLog") `
@@ -584,6 +592,13 @@ jobs:
           if (Test-Path $installedExe) {
             Get-ChildItem $installDir -Recurse -ErrorAction SilentlyContinue
             throw "Installed desktop executable remained after uninstall."
+          }
+          if (Test-Path $startMenuShortcut) {
+            throw "Start Menu shortcut remained after uninstall."
+          }
+          $runValue = (Get-ItemProperty -Path $runKey -Name "Cotton Sync" -ErrorAction SilentlyContinue)."Cotton Sync"
+          if ($runValue) {
+            throw "Autostart registry value remained after uninstall."
           }
 
       - name: Smoke desktop Windows installer upgrade

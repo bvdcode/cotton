@@ -19,8 +19,11 @@ internal static class DesktopAutostartServiceFactory
 
         if (OperatingSystem.IsWindows())
         {
-            return new WindowsRunAutostartService(
-                AutostartLaunchCommand.CreateDefault(DesktopPlatformCapabilities.IsTrayLifecycleSupported));
+            AutostartLaunchCommand? launchCommand = AutostartLaunchCommand.TryCreateDefault(
+                DesktopPlatformCapabilities.IsTrayLifecycleSupported);
+            return launchCommand is null
+                ? new UnsupportedAutostartService()
+                : new WindowsRunAutostartService(launchCommand);
         }
 
         return new UnsupportedAutostartService();
