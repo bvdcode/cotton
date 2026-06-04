@@ -236,14 +236,9 @@ jobs:
           tar -xzf cotton-sync-desktop-linux-x64.tar.gz -C "$extract_dir"
           eval "$(gnome-keyring-daemon --start --components=secrets)"
           "$extract_dir/Cotton.Sync.Desktop" --self-test --data-dir "$data_dir"
-          diagnostics_output="$("$extract_dir/Cotton.Sync.Desktop" --export-diagnostics --data-dir "$data_dir")"
-          printf '%s\n' "$diagnostics_output"
-          bundle_path="$(printf '%s\n' "$diagnostics_output" | sed -n 's/^Bundle: //p' | head -n 1)"
-          if [ -z "$bundle_path" ]; then
-            echo "Diagnostics bundle path was not reported." >&2
-            exit 1
-          fi
-          test -s "$bundle_path"
+          src/Cotton.Sync.Desktop/Packaging/linux/smoke-diagnostics-export.sh \
+            "$extract_dir/Cotton.Sync.Desktop" \
+            "$data_dir"
           EOF
 
       - name: Smoke desktop Linux deb artifact
@@ -278,14 +273,9 @@ jobs:
           trap 'rm -rf "$temp_dir"' EXIT
           eval "$(gnome-keyring-daemon --start --components=secrets)"
           /opt/cotton-sync/Cotton.Sync.Desktop --self-test --data-dir "$temp_dir"
-          diagnostics_output="$(/opt/cotton-sync/Cotton.Sync.Desktop --export-diagnostics --data-dir "$temp_dir")"
-          printf '%s\n' "$diagnostics_output"
-          bundle_path="$(printf '%s\n' "$diagnostics_output" | sed -n 's/^Bundle: //p' | head -n 1)"
-          if [ -z "$bundle_path" ]; then
-            echo "Diagnostics bundle path was not reported." >&2
-            exit 1
-          fi
-          test -s "$bundle_path"
+          src/Cotton.Sync.Desktop/Packaging/linux/smoke-diagnostics-export.sh \
+            /opt/cotton-sync/Cotton.Sync.Desktop \
+            "$temp_dir"
           EOF
 
           sudo dpkg -r cotton-sync-desktop
@@ -319,6 +309,9 @@ jobs:
           trap 'rm -rf "$temp_dir"' EXIT
           eval "$(gnome-keyring-daemon --start --components=secrets)"
           /opt/cotton-sync/Cotton.Sync.Desktop --self-test --data-dir "$temp_dir"
+          src/Cotton.Sync.Desktop/Packaging/linux/smoke-diagnostics-export.sh \
+            /opt/cotton-sync/Cotton.Sync.Desktop \
+            "$temp_dir"
           EOF
 
           sudo dpkg -r cotton-sync-desktop
@@ -490,21 +483,9 @@ jobs:
           New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
           Expand-Archive cotton-sync-desktop-win-x64-smoke.zip -DestinationPath $extractDir -Force
           & (Join-Path $extractDir "Cotton.Sync.Desktop.exe") --self-test --data-dir "$dataDir"
-          $diagnosticsOutput = & (Join-Path $extractDir "Cotton.Sync.Desktop.exe") --export-diagnostics --data-dir "$dataDir"
-          if ($LASTEXITCODE -ne 0) {
-            throw "Windows zip diagnostics export exited with code $LASTEXITCODE."
-          }
-
-          $diagnosticsOutput | ForEach-Object { Write-Host $_ }
-          $bundleLine = $diagnosticsOutput | Where-Object { $_.StartsWith("Bundle: ") } | Select-Object -First 1
-          if ([string]::IsNullOrWhiteSpace($bundleLine)) {
-            throw "Diagnostics bundle path was not reported."
-          }
-
-          $bundlePath = $bundleLine.Substring("Bundle: ".Length)
-          if (-not (Test-Path $bundlePath)) {
-            throw "Diagnostics bundle was not created at $bundlePath."
-          }
+          & "src/Cotton.Sync.Desktop/Packaging/windows/smoke-diagnostics-export.ps1" `
+            -AppExecutable (Join-Path $extractDir "Cotton.Sync.Desktop.exe") `
+            -DataDirectory $dataDir
 
       - name: Install Inno Setup
         shell: pwsh
@@ -560,21 +541,9 @@ jobs:
           }
 
           & $installedExe --self-test --data-dir "$dataDir"
-          $diagnosticsOutput = & $installedExe --export-diagnostics --data-dir "$dataDir"
-          if ($LASTEXITCODE -ne 0) {
-            throw "Installed Windows diagnostics export exited with code $LASTEXITCODE."
-          }
-
-          $diagnosticsOutput | ForEach-Object { Write-Host $_ }
-          $bundleLine = $diagnosticsOutput | Where-Object { $_.StartsWith("Bundle: ") } | Select-Object -First 1
-          if ([string]::IsNullOrWhiteSpace($bundleLine)) {
-            throw "Diagnostics bundle path was not reported."
-          }
-
-          $bundlePath = $bundleLine.Substring("Bundle: ".Length)
-          if (-not (Test-Path $bundlePath)) {
-            throw "Diagnostics bundle was not created at $bundlePath."
-          }
+          & "src/Cotton.Sync.Desktop/Packaging/windows/smoke-diagnostics-export.ps1" `
+            -AppExecutable $installedExe `
+            -DataDirectory $dataDir
 
           $uninstaller = Join-Path $installDir "unins000.exe"
           if (-not (Test-Path $uninstaller)) {
@@ -648,6 +617,9 @@ jobs:
           }
 
           & $installedExe --self-test --data-dir "$dataDir"
+          & "src/Cotton.Sync.Desktop/Packaging/windows/smoke-diagnostics-export.ps1" `
+            -AppExecutable $installedExe `
+            -DataDirectory $dataDir
 
           $uninstaller = Join-Path $installDir "unins000.exe"
           if (-not (Test-Path $uninstaller)) {

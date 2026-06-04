@@ -29,13 +29,13 @@ Draft status: not release-ready. This document records the current desktop-sync 
 ## Verification Already Exercised
 
 - Full solution Release builds have passed locally with 0 warnings after recent desktop packaging and UX slices.
-- Desktop tests have passed locally, most recently `Cotton.Sync.Desktop.Tests` 221/221.
-- Desktop packaging metadata tests cover publish profiles, clean publish-directory behavior, app icon metadata, Linux `.desktop` metadata, `.deb` packaging script, Linux package smoke wiring, Linux GUI screenshot smoke wiring, Linux archive/installed diagnostics export smoke wiring, Linux `.deb` install/upgrade smoke wiring, Windows CI smoke, Windows `.zip` artifact upload/self-test/diagnostics smoke, Windows installer script/install/diagnostics/upgrade smoke wiring, and release artifact checksum generation.
+- Desktop tests have passed locally, most recently `Cotton.Sync.Desktop.Tests` 223/223.
+- Desktop packaging metadata tests cover publish profiles, clean publish-directory behavior, app icon metadata, Linux `.desktop` metadata, `.deb` packaging script, reusable Linux/Windows diagnostics export smoke scripts, Linux package smoke wiring, Linux GUI screenshot smoke wiring, Linux archive/installed diagnostics export smoke wiring, Linux `.deb` install/upgrade smoke wiring, Windows CI smoke, Windows `.zip` artifact upload/self-test/diagnostics smoke, Windows installer script/install/diagnostics/upgrade smoke wiring, and release artifact checksum generation.
 - Local Linux publish succeeded.
 - Local Windows publish succeeded from Linux cross-publish.
 - Local `.deb` build succeeded through `dpkg-deb`; extracted package layout starts the desktop apphost and runs self-test up to the expected local token-storage failure.
 - Local Windows `.zip` build succeeded through Python `zipfile`; archive contains `Cotton.Sync.Desktop.exe` and desktop icon assets.
-- CI contains Linux publish self-test, Linux GUI screenshot capture under Xvfb, Linux archive/deb extraction self-tests, Linux archive and installed `.deb` diagnostics export smoke, Linux `.deb` install/uninstall/upgrade self-tests with Secret Service setup, Windows apphost self-test, Windows zip extraction self-test plus diagnostics export smoke, Windows installer install/uninstall/diagnostics/upgrade self-tests, and Windows installer build/upload on `windows-latest`.
+- CI contains Linux publish self-test, Linux GUI screenshot capture under Xvfb, Linux archive/deb extraction self-tests, Linux archive and installed/upgrade-installed `.deb` diagnostics export smoke, Linux `.deb` install/uninstall/upgrade self-tests with Secret Service setup, Windows apphost self-test, Windows zip extraction self-test plus diagnostics export smoke, Windows installer install/uninstall/diagnostics/upgrade self-tests, and Windows installer build/upload on `windows-latest`.
 
 ## Known Release Gates Still Open
 

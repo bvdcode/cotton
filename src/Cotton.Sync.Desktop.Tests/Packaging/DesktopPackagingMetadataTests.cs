@@ -150,6 +150,38 @@ public sealed class DesktopPackagingMetadataTests
     }
 
     [Test]
+    public void LinuxDiagnosticsExportSmokeScript_VerifiesBundlePath()
+    {
+        string smokeScript = File.ReadAllText(GetDesktopFilePath("Packaging/linux/smoke-diagnostics-export.sh"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(smokeScript, Does.Contain("Usage: $0 <app-executable> <data-dir>"));
+            Assert.That(smokeScript, Does.Contain("--export-diagnostics --data-dir"));
+            Assert.That(smokeScript, Does.Contain("sed -n 's/^Bundle: //p'"));
+            Assert.That(smokeScript, Does.Contain("Diagnostics bundle path was not reported."));
+            Assert.That(smokeScript, Does.Contain("Diagnostics bundle was not created at $bundle_path."));
+            Assert.That(smokeScript, Does.Contain("Exported diagnostics bundle:"));
+        });
+    }
+
+    [Test]
+    public void WindowsDiagnosticsExportSmokeScript_VerifiesBundlePath()
+    {
+        string smokeScript = File.ReadAllText(GetDesktopFilePath("Packaging/windows/smoke-diagnostics-export.ps1"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(smokeScript, Does.Contain("[string]$AppExecutable"));
+            Assert.That(smokeScript, Does.Contain("[string]$DataDirectory"));
+            Assert.That(smokeScript, Does.Contain("--export-diagnostics --data-dir"));
+            Assert.That(smokeScript, Does.Contain("Diagnostics bundle path was not reported."));
+            Assert.That(smokeScript, Does.Contain("Diagnostics bundle was not created at $bundlePath."));
+            Assert.That(smokeScript, Does.Contain("Exported diagnostics bundle:"));
+        });
+    }
+
+    [Test]
     public void CiWorkflow_BuildsAndUploadsLinuxDebArtifact()
     {
         string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
@@ -193,9 +225,7 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("Smoke desktop Linux archive artifact"));
             Assert.That(workflow, Does.Contain("tar -xzf cotton-sync-desktop-linux-x64.tar.gz"));
             Assert.That(workflow, Does.Contain("\"$extract_dir/Cotton.Sync.Desktop\" --self-test --data-dir"));
-            Assert.That(workflow, Does.Contain("\"$extract_dir/Cotton.Sync.Desktop\" --export-diagnostics --data-dir"));
-            Assert.That(workflow, Does.Contain("Diagnostics bundle path was not reported."));
-            Assert.That(workflow, Does.Contain("test -s \"$bundle_path\""));
+            Assert.That(workflow, Does.Contain("Packaging/linux/smoke-diagnostics-export.sh"));
             Assert.That(workflow, Does.Contain("Smoke desktop Linux deb artifact"));
             Assert.That(workflow, Does.Contain("dpkg-deb -x cotton-sync-desktop-linux-x64.deb"));
             Assert.That(workflow, Does.Contain("test -f \"$extract_dir/usr/share/applications/cotton-sync.desktop\""));
@@ -218,7 +248,7 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("test -x /opt/cotton-sync/Cotton.Sync.Desktop"));
             Assert.That(workflow, Does.Contain("test -L /usr/bin/cotton-sync"));
             Assert.That(workflow, Does.Contain("/opt/cotton-sync/Cotton.Sync.Desktop --self-test --data-dir"));
-            Assert.That(workflow, Does.Contain("/opt/cotton-sync/Cotton.Sync.Desktop --export-diagnostics --data-dir"));
+            Assert.That(workflow, Does.Contain("Packaging/linux/smoke-diagnostics-export.sh"));
             Assert.That(workflow, Does.Contain("test ! -e /opt/cotton-sync/Cotton.Sync.Desktop"));
             Assert.That(workflow, Does.Contain("test ! -e /usr/bin/cotton-sync"));
         });
@@ -239,6 +269,7 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("dpkg-query -W -f='${Version}' cotton-sync-desktop"));
             Assert.That(workflow, Does.Contain("Expected upgraded package version"));
             Assert.That(workflow, Does.Contain("/opt/cotton-sync/Cotton.Sync.Desktop --self-test --data-dir"));
+            Assert.That(workflow, Does.Contain("Packaging/linux/smoke-diagnostics-export.sh"));
             Assert.That(workflow, Does.Contain("sudo dpkg -r cotton-sync-desktop"));
         });
     }
@@ -273,9 +304,8 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("cotton-sync-desktop-win-x64-smoke.zip"));
             Assert.That(workflow, Does.Contain("Expand-Archive cotton-sync-desktop-win-x64-smoke.zip"));
             Assert.That(workflow, Does.Contain("Cotton.Sync.Desktop.exe\") --self-test --data-dir"));
-            Assert.That(workflow, Does.Contain("Cotton.Sync.Desktop.exe\") --export-diagnostics --data-dir"));
-            Assert.That(workflow, Does.Contain("Diagnostics bundle path was not reported."));
-            Assert.That(workflow, Does.Contain("Diagnostics bundle was not created at $bundlePath."));
+            Assert.That(workflow, Does.Contain("Packaging/windows/smoke-diagnostics-export.ps1"));
+            Assert.That(workflow, Does.Contain("-AppExecutable (Join-Path $extractDir \"Cotton.Sync.Desktop.exe\")"));
         });
     }
 
@@ -359,10 +389,10 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("/DIR=$installDir"));
             Assert.That(workflow, Does.Contain("Cotton.Sync.Desktop.exe\""));
             Assert.That(workflow, Does.Contain("--self-test --data-dir"));
-            Assert.That(workflow, Does.Contain("& $installedExe --export-diagnostics --data-dir"));
+            Assert.That(workflow, Does.Contain("Packaging/windows/smoke-diagnostics-export.ps1"));
+            Assert.That(workflow, Does.Contain("-AppExecutable $installedExe"));
             Assert.That(workflow, Does.Contain("unins000.exe"));
             Assert.That(workflow, Does.Contain("Installed desktop executable remained after uninstall."));
-            Assert.That(workflow, Does.Contain("Installed Windows diagnostics export exited with code"));
         });
     }
 
@@ -381,6 +411,7 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("-FilePath \".\\cotton-sync-desktop-win-x64-setup.exe\""));
             Assert.That(workflow, Does.Contain("Current Windows installer exited with code"));
             Assert.That(workflow, Does.Contain("& $installedExe --self-test --data-dir"));
+            Assert.That(workflow, Does.Contain("Packaging/windows/smoke-diagnostics-export.ps1"));
             Assert.That(workflow, Does.Contain("Windows uninstaller was not found after upgrade."));
             Assert.That(workflow, Does.Contain("Upgraded desktop executable remained after uninstall."));
         });
