@@ -101,4 +101,24 @@ public sealed class DesktopStartupOptionsTests
 
         Assert.That(options.DataDirectory, Is.EqualTo("/tmp/cotton-sync-smoke"));
     }
+
+    [Test]
+    public void Parse_DoesNotTreatNextFlagAsOptionValue()
+    {
+        DesktopStartupOptions options = DesktopStartupOptions.Parse(
+            [
+                "--data-dir",
+                "--self-test",
+                "--server-url",
+                "--username",
+            ]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(options.DataDirectory, Is.Null);
+            Assert.That(options.ServerUrl, Is.Null);
+            Assert.That(options.Username, Is.Null);
+            Assert.That(options.RunSelfTest, Is.True);
+        });
+    }
 }

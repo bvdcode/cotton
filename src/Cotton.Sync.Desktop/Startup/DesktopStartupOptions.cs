@@ -69,7 +69,7 @@ internal sealed class DesktopStartupOptions
             string current = args[index];
             if (string.Equals(current, name, StringComparison.Ordinal))
             {
-                return index + 1 < args.Count ? args[index + 1] : null;
+                return index + 1 < args.Count && !IsOptionName(args[index + 1]) ? args[index + 1] : null;
             }
 
             string prefix = name + "=";
@@ -80,6 +80,11 @@ internal sealed class DesktopStartupOptions
         }
 
         return null;
+    }
+
+    private static bool IsOptionName(string value)
+    {
+        return value.StartsWith("--", StringComparison.Ordinal);
     }
 
     private static string? NormalizeOptional(string? value)
