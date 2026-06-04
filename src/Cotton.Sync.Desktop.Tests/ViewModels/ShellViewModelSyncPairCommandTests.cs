@@ -100,6 +100,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.SelectedSyncPair!.DisplayName, Is.EqualTo("Documents"));
             Assert.That(viewModel.GlobalStatus, Is.EqualTo("Action required"));
             Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo("Sync folder name is required."));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Fix the issue below to continue syncing."));
         });
     }
 
@@ -124,6 +125,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.HasActionRequired, Is.True);
             Assert.That(viewModel.CanRetryActionRequired, Is.True);
             Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo("Cotton server not found."));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Fix the issue below to continue syncing."));
         });
 
         await ExecuteAsync(viewModel.SyncNowCommand);

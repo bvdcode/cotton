@@ -203,6 +203,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 OnPropertyChanged(nameof(ActionRequiredOpacity));
                 OnPropertyChanged(nameof(CanRetryActionRequired));
                 OnPropertyChanged(nameof(StatusCardTitle));
+                RefreshCurrentProgressText();
             }
         }
     }
