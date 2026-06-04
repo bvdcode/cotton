@@ -102,7 +102,8 @@ internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFac
             new ProcessPlatformCommandService(_loggerFactory.CreateLogger<ProcessPlatformCommandService>()),
             localChanges,
             remoteChanges,
-            periodicSync);
+            periodicSync,
+            logger: _loggerFactory.CreateLogger<SyncApplicationService>());
         var remoteRootResolver = new RemoteRootResolver(cottonClient.Nodes);
 
         return new DesktopSyncApplicationHost(

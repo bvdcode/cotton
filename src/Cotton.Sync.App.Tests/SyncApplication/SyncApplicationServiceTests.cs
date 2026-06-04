@@ -120,6 +120,92 @@ public sealed class SyncApplicationServiceTests
     }
 
     [Test]
+    public void StartSyncAsync_RollsBackStartedComponentsWhenRemoteStartupFails()
+    {
+        List<string> calls = [];
+        var startupError = new InvalidOperationException("Remote listener failed.");
+        var supervisor = new FakeSyncSupervisor(calls);
+        var localChanges = new FakeLocalChangeSyncCoordinator(calls);
+        var remoteChanges = new FakeRemoteChangeSyncCoordinator(calls)
+        {
+            StartException = startupError,
+        };
+        var periodicSync = new FakePeriodicSyncCoordinator(calls);
+        SyncApplicationService service = CreateService(
+            new InMemorySyncPairSettingsStore(),
+            supervisor: supervisor,
+            localChanges: localChanges,
+            remoteChanges: remoteChanges,
+            periodicSync: periodicSync);
+
+        InvalidOperationException error = Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.StartSyncAsync())!;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(error, Is.SameAs(startupError));
+            Assert.That(supervisor.StopCallCount, Is.EqualTo(1));
+            Assert.That(localChanges.StopCallCount, Is.EqualTo(1));
+            Assert.That(remoteChanges.StopCallCount, Is.Zero);
+            Assert.That(periodicSync.StartCallCount, Is.Zero);
+            Assert.That(periodicSync.StopCallCount, Is.Zero);
+            Assert.That(calls, Is.EqualTo(new[]
+            {
+                "supervisor:start",
+                "local:start",
+                "remote:start",
+                "local:stop",
+                "supervisor:stop",
+            }));
+        });
+    }
+
+    [Test]
+    public void RestoreSessionAsync_RollsBackStartedComponentsWhenPeriodicStartupFails()
+    {
+        List<string> calls = [];
+        var startupError = new InvalidOperationException("Periodic sync failed.");
+        var authFlow = new FakeAuthFlow();
+        var supervisor = new FakeSyncSupervisor(calls);
+        var localChanges = new FakeLocalChangeSyncCoordinator(calls);
+        var remoteChanges = new FakeRemoteChangeSyncCoordinator(calls);
+        var periodicSync = new FakePeriodicSyncCoordinator(calls)
+        {
+            StartException = startupError,
+        };
+        SyncApplicationService service = CreateService(
+            new InMemorySyncPairSettingsStore(),
+            authFlow: authFlow,
+            supervisor: supervisor,
+            localChanges: localChanges,
+            remoteChanges: remoteChanges,
+            periodicSync: periodicSync);
+
+        InvalidOperationException error = Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.RestoreSessionAsync())!;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(error, Is.SameAs(startupError));
+            Assert.That(authFlow.RestoreSessionCallCount, Is.EqualTo(1));
+            Assert.That(remoteChanges.StopCallCount, Is.EqualTo(1));
+            Assert.That(localChanges.StopCallCount, Is.EqualTo(1));
+            Assert.That(supervisor.StopCallCount, Is.EqualTo(1));
+            Assert.That(periodicSync.StopCallCount, Is.Zero);
+            Assert.That(calls, Is.EqualTo(new[]
+            {
+                "supervisor:start",
+                "local:start",
+                "remote:start",
+                "periodic:start",
+                "remote:stop",
+                "local:stop",
+                "supervisor:stop",
+            }));
+        });
+    }
+
+    [Test]
     public async Task StopSyncAsync_StopsLocalChangesAndSupervisor()
     {
         var supervisor = new FakeSyncSupervisor();
@@ -509,6 +595,13 @@ public sealed class SyncApplicationServiceTests
 
     private sealed class FakeSyncSupervisor : ISyncSupervisor
     {
+        private readonly ICollection<string>? _calls;
+
+        public FakeSyncSupervisor(ICollection<string>? calls = null)
+        {
+            _calls = calls;
+        }
+
         public IReadOnlyList<SyncPairStatus> CurrentStatuses => [];
 
         public Guid? LastSyncNowPairId { get; private set; }
@@ -522,6 +615,7 @@ public sealed class SyncApplicationServiceTests
         public Task StartAsync(CancellationToken cancellationToken = default)
         {
             StartCallCount++;
+            _calls?.Add("supervisor:start");
             return Task.CompletedTask;
         }
 
@@ -560,6 +654,7 @@ public sealed class SyncApplicationServiceTests
         public Task StopAsync(CancellationToken cancellationToken = default)
         {
             StopCallCount++;
+            _calls?.Add("supervisor:stop");
             return Task.CompletedTask;
         }
     }
@@ -591,57 +686,105 @@ public sealed class SyncApplicationServiceTests
 
     private sealed class FakeLocalChangeSyncCoordinator : ILocalChangeSyncCoordinator
     {
+        private readonly ICollection<string>? _calls;
+
+        public FakeLocalChangeSyncCoordinator(ICollection<string>? calls = null)
+        {
+            _calls = calls;
+        }
+
         public int StartCallCount { get; private set; }
 
         public int StopCallCount { get; private set; }
 
+        public Exception? StartException { get; init; }
+
         public Task StartAsync(CancellationToken cancellationToken = default)
         {
             StartCallCount++;
+            _calls?.Add("local:start");
+            if (StartException is not null)
+            {
+                throw StartException;
+            }
+
             return Task.CompletedTask;
         }
 
         public Task StopAsync(CancellationToken cancellationToken = default)
         {
             StopCallCount++;
+            _calls?.Add("local:stop");
             return Task.CompletedTask;
         }
     }
 
     private sealed class FakeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoordinator
     {
+        private readonly ICollection<string>? _calls;
+
+        public FakeRemoteChangeSyncCoordinator(ICollection<string>? calls = null)
+        {
+            _calls = calls;
+        }
+
         public int StartCallCount { get; private set; }
 
         public int StopCallCount { get; private set; }
 
+        public Exception? StartException { get; init; }
+
         public Task StartAsync(CancellationToken cancellationToken = default)
         {
             StartCallCount++;
+            _calls?.Add("remote:start");
+            if (StartException is not null)
+            {
+                throw StartException;
+            }
+
             return Task.CompletedTask;
         }
 
         public Task StopAsync(CancellationToken cancellationToken = default)
         {
             StopCallCount++;
+            _calls?.Add("remote:stop");
             return Task.CompletedTask;
         }
     }
 
     private sealed class FakePeriodicSyncCoordinator : IPeriodicSyncCoordinator
     {
+        private readonly ICollection<string>? _calls;
+
+        public FakePeriodicSyncCoordinator(ICollection<string>? calls = null)
+        {
+            _calls = calls;
+        }
+
         public int StartCallCount { get; private set; }
 
         public int StopCallCount { get; private set; }
 
+        public Exception? StartException { get; init; }
+
         public Task StartAsync(CancellationToken cancellationToken = default)
         {
             StartCallCount++;
+            _calls?.Add("periodic:start");
+            if (StartException is not null)
+            {
+                throw StartException;
+            }
+
             return Task.CompletedTask;
         }
 
         public Task StopAsync(CancellationToken cancellationToken = default)
         {
             StopCallCount++;
+            _calls?.Add("periodic:stop");
             return Task.CompletedTask;
         }
     }

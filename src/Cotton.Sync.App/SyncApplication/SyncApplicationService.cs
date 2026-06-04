@@ -9,6 +9,8 @@ using Cotton.Sync.App.Preferences;
 using Cotton.Sync.App.RemoteChanges;
 using Cotton.Sync.App.Supervision;
 using Cotton.Sync.App.SyncPairs;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Sync.App.SyncApplication;
 
@@ -27,6 +29,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
     private readonly ISyncSupervisor _supervisor;
     private readonly ISyncPairSettingsStore _syncPairs;
     private readonly SyncPairSettingsValidator _validator;
+    private readonly ILogger<SyncApplicationService> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SyncApplicationService" /> class.
@@ -41,7 +44,8 @@ public sealed class SyncApplicationService : ISyncApplicationService
         ILocalChangeSyncCoordinator? localChanges = null,
         IRemoteChangeSyncCoordinator? remoteChanges = null,
         IPeriodicSyncCoordinator? periodicSync = null,
-        SyncPairSettingsValidator? validator = null)
+        SyncPairSettingsValidator? validator = null,
+        ILogger<SyncApplicationService>? logger = null)
     {
         _syncPairs = syncPairs ?? throw new ArgumentNullException(nameof(syncPairs));
         _prerequisites = prerequisites ?? throw new ArgumentNullException(nameof(prerequisites));
@@ -53,6 +57,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
         _remoteChanges = remoteChanges ?? NullRemoteChangeSyncCoordinator.Instance;
         _periodicSync = periodicSync ?? NullPeriodicSyncCoordinator.Instance;
         _validator = validator ?? new SyncPairSettingsValidator();
+        _logger = logger ?? NullLogger<SyncApplicationService>.Instance;
     }
 
     /// <inheritdoc />
@@ -67,10 +72,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
     public async Task<AuthSession> RestoreSessionAsync(CancellationToken cancellationToken = default)
     {
         AuthSession session = await _authFlow.RestoreSessionAsync(cancellationToken).ConfigureAwait(false);
-        await _supervisor.StartAsync(cancellationToken).ConfigureAwait(false);
-        await _localChanges.StartAsync(cancellationToken).ConfigureAwait(false);
-        await _remoteChanges.StartAsync(cancellationToken).ConfigureAwait(false);
-        await _periodicSync.StartAsync(cancellationToken).ConfigureAwait(false);
+        await StartSyncCoreAsync(cancellationToken).ConfigureAwait(false);
         return session;
     }
 
@@ -218,10 +220,36 @@ public sealed class SyncApplicationService : ISyncApplicationService
 
     private async Task StartSyncCoreAsync(CancellationToken cancellationToken)
     {
-        await _supervisor.StartAsync(cancellationToken).ConfigureAwait(false);
-        await _localChanges.StartAsync(cancellationToken).ConfigureAwait(false);
-        await _remoteChanges.StartAsync(cancellationToken).ConfigureAwait(false);
-        await _periodicSync.StartAsync(cancellationToken).ConfigureAwait(false);
+        var startedComponents = new List<StartedSyncComponent>();
+
+        try
+        {
+            await _supervisor.StartAsync(cancellationToken).ConfigureAwait(false);
+            startedComponents.Add(new StartedSyncComponent(
+                "sync supervisor",
+                token => _supervisor.StopAsync(token)));
+
+            await _localChanges.StartAsync(cancellationToken).ConfigureAwait(false);
+            startedComponents.Add(new StartedSyncComponent(
+                "local change coordinator",
+                token => _localChanges.StopAsync(token)));
+
+            await _remoteChanges.StartAsync(cancellationToken).ConfigureAwait(false);
+            startedComponents.Add(new StartedSyncComponent(
+                "remote change coordinator",
+                token => _remoteChanges.StopAsync(token)));
+
+            await _periodicSync.StartAsync(cancellationToken).ConfigureAwait(false);
+            startedComponents.Add(new StartedSyncComponent(
+                "periodic sync coordinator",
+                token => _periodicSync.StopAsync(token)));
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Failed to start sync background components.");
+            await RollBackStartedComponentsAsync(startedComponents).ConfigureAwait(false);
+            throw;
+        }
     }
 
     private async Task StopSyncCoreAsync(CancellationToken cancellationToken)
@@ -231,4 +259,28 @@ public sealed class SyncApplicationService : ISyncApplicationService
         await _localChanges.StopAsync(cancellationToken).ConfigureAwait(false);
         await _supervisor.StopAsync(cancellationToken).ConfigureAwait(false);
     }
+
+    private async Task RollBackStartedComponentsAsync(IReadOnlyList<StartedSyncComponent> startedComponents)
+    {
+        for (int index = startedComponents.Count - 1; index >= 0; index--)
+        {
+            StartedSyncComponent component = startedComponents[index];
+
+            try
+            {
+                await component.StopAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Failed to stop {ComponentName} during sync startup rollback.",
+                    component.Name);
+            }
+        }
+    }
+
+    private sealed record StartedSyncComponent(
+        string Name,
+        Func<CancellationToken, Task> StopAsync);
 }
