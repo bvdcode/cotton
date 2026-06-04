@@ -412,7 +412,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Partial 2026-06-04: reviewed `/tmp/cotton-setup.png` and `/tmp/cotton-signin.png`; server-step and sign-in-step windows are centered, text fits, and the sign-in step expands to contain the credential fields. Keep unchecked until the full screenshot matrix is reviewed.
   Partial 2026-06-04: reviewed `/tmp/cotton-signin-current.png`; the sign-in window remains centered and compact, credential fields fit, autostart stays out of the login form, and no binding warnings were written to the Xvfb smoke log. Keep unchecked until the dashboard/settings/conflict/error screenshot matrix is reviewed.
   Partial 2026-06-04: reviewed `/tmp/cotton-desktop-smoke-full.png`; the previous cropped 900x700 capture was misleading because Xvfb uses a 1280x1024 screen, and the full capture confirms centered sign-in positioning with no clipping. Keep unchecked until dashboard/settings/conflict/error screenshots are refreshed.
-- [ ] Run visual QA checklist from `notes/visual-qa-checklist.md` or replace it with an updated desktop checklist.
+- [x] Run visual QA checklist from `notes/visual-qa-checklist.md` or replace it with an updated desktop checklist.
+  Verification 2026-06-04: replaced the stale web/MUI visual QA checklist with a Cotton Sync Desktop Avalonia checklist covering setup, add-folder wizard, dashboard, settings, action-required/conflict states, tray/taskbar, platform storage, and screenshot evidence. The actual screenshot capture/review and OS walkthrough items remain open above.
 
 ## Phase 9 - Tray, Autostart, Notifications, And Lifecycle
 
