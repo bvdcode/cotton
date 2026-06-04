@@ -32,6 +32,13 @@ internal static class DesktopActionRequiredMessageResolver
             : string.Empty;
     }
 
+    public static string FromSyncPairStatus(DesktopSyncPairStatusSnapshot pair)
+    {
+        return string.Equals(pair.Status, "Error", StringComparison.Ordinal)
+            ? Normalize(pair.LastError) ?? GenericSyncErrorMessage
+            : string.Empty;
+    }
+
     public static string FromSelfTest(DesktopSelfTestSnapshot selfTest)
     {
         ArgumentNullException.ThrowIfNull(selfTest);

@@ -71,6 +71,49 @@ public sealed class DesktopNotificationTrackerTests
     }
 
     [Test]
+    public void Apply_NormalizesActionRequiredErrorNotification()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var tracker = new DesktopNotificationTracker();
+        const string rawError = "Cotton API request GET /api/v1/sync/changes?since=0&limit=500 returned invalid JSON "
+            + "with content type 'text/html' and status 200 (OK). Response: <!doctype html><html>App</html>";
+
+        IReadOnlyList<DesktopNotificationRequest> notifications = tracker.Apply(
+            CreateStatus(syncPairId, "Error", rawError),
+            DisplayNames(syncPairId));
+
+        DesktopNotificationRequest notification = notifications.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(notification.Kind, Is.EqualTo(DesktopNotificationKind.ActionRequiredError));
+            Assert.That(
+                notification.Message,
+                Is.EqualTo("Documents: This Cotton server does not expose the desktop sync changes API yet. Deploy the latest Cotton backend and retry sync."));
+            Assert.That(notification.Message, Does.Not.Contain("invalid JSON"));
+            Assert.That(notification.Message, Does.Not.Contain("<!doctype html>"));
+        });
+    }
+
+    [Test]
+    public void Apply_EmitsGenericActionRequiredErrorNotificationWhenDetailsAreMissing()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var tracker = new DesktopNotificationTracker();
+
+        IReadOnlyList<DesktopNotificationRequest> notifications = tracker.Apply(
+            CreateStatus(syncPairId, "Error"),
+            DisplayNames(syncPairId));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(notifications.Single().Kind, Is.EqualTo(DesktopNotificationKind.ActionRequiredError));
+            Assert.That(
+                notifications.Single().Message,
+                Is.EqualTo("Documents: One or more sync folders reported an error. Check diagnostics and retry."));
+        });
+    }
+
+    [Test]
     public void Reset_AllowsInitialSyncCompleteNotificationAgain()
     {
         Guid syncPairId = Guid.NewGuid();

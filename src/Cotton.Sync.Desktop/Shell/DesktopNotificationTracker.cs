@@ -21,9 +21,10 @@ internal sealed class DesktopNotificationTracker
             string previousStatus = _previousStatuses.GetValueOrDefault(pair.Id, string.Empty);
             string displayName = displayNames.GetValueOrDefault(pair.Id, "Sync folder");
             string? previousError = _previousErrors.GetValueOrDefault(pair.Id);
-            AddNotificationIfNeeded(notifications, pair, previousStatus, previousError, displayName);
+            string currentError = DesktopActionRequiredMessageResolver.FromSyncPairStatus(pair);
+            AddNotificationIfNeeded(notifications, pair, previousStatus, previousError, currentError, displayName);
             _previousStatuses[pair.Id] = pair.Status;
-            _previousErrors[pair.Id] = pair.LastError;
+            _previousErrors[pair.Id] = string.IsNullOrWhiteSpace(currentError) ? null : currentError;
         }
 
         return notifications;
@@ -41,19 +42,20 @@ internal sealed class DesktopNotificationTracker
         DesktopSyncPairStatusSnapshot pair,
         string previousStatus,
         string? previousError,
+        string currentError,
         string displayName)
     {
         if (string.Equals(pair.Status, "Error", StringComparison.Ordinal)
-            && !string.IsNullOrWhiteSpace(pair.LastError))
+            && !string.IsNullOrWhiteSpace(currentError))
         {
             if (!string.Equals(previousStatus, pair.Status, StringComparison.Ordinal)
-                || !string.Equals(previousError, pair.LastError, StringComparison.Ordinal))
+                || !string.Equals(previousError, currentError, StringComparison.Ordinal))
             {
                 notifications.Add(new DesktopNotificationRequest(
                     DesktopNotificationKind.ActionRequiredError,
                     pair.Id,
                     "Action required",
-                    displayName + ": " + pair.LastError));
+                    displayName + ": " + currentError));
             }
 
             return;
