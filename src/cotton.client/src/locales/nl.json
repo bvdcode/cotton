@@ -2437,6 +2437,9 @@
     "conflicts": {
       "title": "Bestand bestaat al",
       "description": "Een bestand met deze naam bestaat al in deze map. Uploaden als {{newName}}?",
+      "overwriteDescription": "Een bestand met deze naam bestaat al in deze map. Vervangen of uploaden als {{newName}}?",
+      "rename": "Uploaden als {{newName}}",
+      "overwrite": "Vervangen",
       "skip": "Overslaan",
       "skipAll": "Alles overslaan"
     },

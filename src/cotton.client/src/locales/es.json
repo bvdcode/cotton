@@ -2435,6 +2435,9 @@
     "conflicts": {
       "title": "El archivo ya existe",
       "description": "Ya existe un archivo con este nombre en esta carpeta. ¿Subirlo como {{newName}}?",
+      "overwriteDescription": "Ya existe un archivo con este nombre en esta carpeta. ¿Reemplazarlo o subirlo como {{newName}}?",
+      "rename": "Subir como {{newName}}",
+      "overwrite": "Reemplazar",
       "skip": "Omitir",
       "skipAll": "Omitir todo"
     },

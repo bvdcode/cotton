@@ -12,6 +12,11 @@ export interface UploadFileToNodeOptions {
   concurrency?: number;
 }
 
+export interface UploadFileQueueItem {
+  file: File;
+  replaceNodeFileId?: string | null;
+}
+
 export interface UploadProgressSnapshot {
   // Current display progress. This includes confirmed chunks plus bytes sent by
   // active requests, and may decrease if a request is interrupted and retried.

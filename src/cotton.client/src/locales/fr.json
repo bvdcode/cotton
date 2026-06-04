@@ -2436,6 +2436,9 @@
     "conflicts": {
       "title": "Le fichier existe déjà",
       "description": "Un fichier portant ce nom existe déjà dans ce dossier. Téléverser sous {{newName}} ?",
+      "overwriteDescription": "Un fichier portant ce nom existe déjà dans ce dossier. Le remplacer ou téléverser sous {{newName}} ?",
+      "rename": "Téléverser sous {{newName}}",
+      "overwrite": "Remplacer",
       "skip": "Ignorer",
       "skipAll": "Tout ignorer"
     },

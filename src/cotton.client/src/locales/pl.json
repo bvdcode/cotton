@@ -2452,6 +2452,9 @@
     "conflicts": {
       "title": "Plik już istnieje",
       "description": "Plik o tej nazwie już istnieje w tym folderze. Przesłać jako {{newName}}?",
+      "overwriteDescription": "Plik o tej nazwie już istnieje w tym folderze. Zastąpić go czy przesłać jako {{newName}}?",
+      "rename": "Prześlij jako {{newName}}",
+      "overwrite": "Zastąp",
       "skip": "Pomiń",
       "skipAll": "Pomiń wszystko"
     },

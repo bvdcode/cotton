@@ -2449,6 +2449,9 @@
     "conflicts": {
       "title": "Soubor již existuje",
       "description": "V této složce již existuje soubor s tímto názvem. Nahrát jako {{newName}}?",
+      "overwriteDescription": "V této složce již existuje soubor s tímto názvem. Nahradit ho, nebo nahrát jako {{newName}}?",
+      "rename": "Nahrát jako {{newName}}",
+      "overwrite": "Nahradit",
       "skip": "Přeskočit",
       "skipAll": "Přeskočit vše"
     },

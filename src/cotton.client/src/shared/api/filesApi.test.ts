@@ -70,10 +70,12 @@ describe("filesApi chunk manifests", () => {
 
   it("updates file content through the content update endpoint", async () => {
     const patch = vi.spyOn(httpClient, "patch").mockResolvedValue({
-      data: undefined,
+      data: chunkResponse,
     });
 
-    await filesApi.updateFileContent(fileId, chunkRequest);
+    await expect(filesApi.updateFileContent(fileId, chunkRequest)).resolves.toEqual(
+      chunkResponse,
+    );
 
     expect(patch).toHaveBeenCalledWith(
       `files/${fileId}/update-content`,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { MediaSessionTrackInfo } from "../types/mediaSession";
 import { mediaSessionCoordinator } from "../utils/mediaSessionCoordinator";
 
@@ -12,11 +12,18 @@ interface UseMediaSessionSourceOptions {
 }
 
 let nextSourceId = 0;
+const TRACK_CHANGE_PAUSE_GRACE_MS = 1500;
+const HAVE_CURRENT_DATA = 2;
+const NETWORK_LOADING = 2;
 
 const createSourceId = (): string => {
   nextSourceId += 1;
   return `media-session-source-${nextSourceId}`;
 };
+
+const isReloadingMedia = (mediaElement: HTMLMediaElement): boolean =>
+  mediaElement.readyState < HAVE_CURRENT_DATA ||
+  mediaElement.networkState === NETWORK_LOADING;
 
 export const useMediaSessionSource = ({
   mediaElement,
@@ -27,14 +34,48 @@ export const useMediaSessionSource = ({
   onNextTrack,
 }: UseMediaSessionSourceOptions): void => {
   const [sourceId] = useState(createSourceId);
+  const previousTrackRef = useRef<MediaSessionTrackInfo | null>(null);
+  const pauseGraceUntilRef = useRef(0);
+  const pauseGraceTimerRef = useRef<number | null>(null);
   const active = Boolean(enabled && mediaElement && track);
+
+  const clearPauseGraceTimer = useCallback((): void => {
+    if (pauseGraceTimerRef.current === null) {
+      return;
+    }
+
+    window.clearTimeout(pauseGraceTimerRef.current);
+    pauseGraceTimerRef.current = null;
+  }, []);
 
   useEffect(() => {
     if (!active || !mediaElement || !track) {
       mediaSessionCoordinator.removeSource(sourceId);
+      previousTrackRef.current = null;
+      pauseGraceUntilRef.current = 0;
+      clearPauseGraceTimer();
       return;
     }
 
+    const previousTrack = previousTrackRef.current;
+    if (previousTrack && previousTrack !== track && !mediaElement.paused) {
+      const graceUntil = Date.now() + TRACK_CHANGE_PAUSE_GRACE_MS;
+      pauseGraceUntilRef.current = graceUntil;
+      clearPauseGraceTimer();
+      pauseGraceTimerRef.current = window.setTimeout(() => {
+        if (pauseGraceUntilRef.current !== graceUntil) {
+          return;
+        }
+
+        pauseGraceUntilRef.current = 0;
+        pauseGraceTimerRef.current = null;
+        if (mediaElement.paused) {
+          mediaSessionCoordinator.updateSourcePlayback(sourceId, "paused");
+        }
+      }, TRACK_CHANGE_PAUSE_GRACE_MS);
+    }
+
+    previousTrackRef.current = track;
     mediaSessionCoordinator.upsertSource({
       id: sourceId,
       priority,
@@ -51,13 +92,15 @@ export const useMediaSessionSource = ({
     priority,
     sourceId,
     track,
+    clearPauseGraceTimer,
   ]);
 
   useEffect(() => {
     return () => {
+      clearPauseGraceTimer();
       mediaSessionCoordinator.removeSource(sourceId);
     };
-  }, [sourceId]);
+  }, [sourceId, clearPauseGraceTimer]);
 
   useEffect(() => {
     if (!active || !mediaElement) {
@@ -65,9 +108,19 @@ export const useMediaSessionSource = ({
     }
 
     const markPlaying = (): void => {
+      pauseGraceUntilRef.current = 0;
+      clearPauseGraceTimer();
       mediaSessionCoordinator.updateSourcePlayback(sourceId, "playing");
     };
     const markPaused = (): void => {
+      if (
+        pauseGraceUntilRef.current > Date.now() &&
+        isReloadingMedia(mediaElement)
+      ) {
+        mediaSessionCoordinator.updateSourcePlayback(sourceId, "playing");
+        return;
+      }
+
       mediaSessionCoordinator.updateSourcePlayback(sourceId, "paused");
     };
     const updatePosition = (): void => {
@@ -101,5 +154,5 @@ export const useMediaSessionSource = ({
       mediaElement.removeEventListener("seeked", updatePosition);
       mediaElement.removeEventListener("ratechange", updatePosition);
     };
-  }, [active, mediaElement, sourceId]);
+  }, [active, mediaElement, sourceId, clearPauseGraceTimer]);
 };

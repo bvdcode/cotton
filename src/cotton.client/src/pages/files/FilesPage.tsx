@@ -1523,6 +1523,7 @@ const FilesPreviewLayers: React.FC<FilesPreviewLayersProps> = ({
     <FileConflictDialog
       open={fileUpload.conflictDialog.state.open}
       newName={fileUpload.conflictDialog.state.newName}
+      canOverwrite={fileUpload.conflictDialog.state.canOverwrite}
       onResolve={fileUpload.conflictDialog.onResolve}
       onExited={fileUpload.conflictDialog.onExited}
     />
