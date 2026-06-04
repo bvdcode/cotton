@@ -16,22 +16,28 @@ internal static partial class DesktopSecretRedactor
             return value;
         }
 
-        string redacted = BearerTokenRegex().Replace(value, "Bearer [redacted]");
+        string redacted = AuthorizationHeaderRegex().Replace(value, "$1$2 [redacted]");
+        redacted = BearerTokenRegex().Replace(redacted, "Bearer [redacted]");
         redacted = JsonSecretRegex().Replace(redacted, RedactedValue);
         redacted = QuerySecretRegex().Replace(redacted, RedactedValue);
         return redacted;
     }
 
+    [GeneratedRegex(
+        @"(Authorization\s*:\s*)(Bearer|Basic)\s+[^\r\n\s]+",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex AuthorizationHeaderRegex();
+
     [GeneratedRegex(@"Bearer\s+[A-Za-z0-9._~+/=-]+", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex BearerTokenRegex();
 
     [GeneratedRegex(
-        """("(?:accessToken|refreshToken|password|twoFactorCode|totpCode)"\s*:\s*")([^"]*)(")""",
+        """("(?:(?:access|refresh|id)[_-]?token|client[_-]?secret|password|two[_-]?factor[_-]?code|totp[_-]?code|api[_-]?key)"\s*:\s*")([^"]*)(")""",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex JsonSecretRegex();
 
     [GeneratedRegex(
-        @"((?:access_token|refresh_token|password|two_factor_code|totp_code)=)([^&\s]+)(&?)",
+        @"((?:(?:access|refresh|id)[_-]?token|client[_-]?secret|password|two[_-]?factor[_-]?code|totp[_-]?code|api[_-]?key)=)([^&\s]+)(&?)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex QuerySecretRegex();
 }
