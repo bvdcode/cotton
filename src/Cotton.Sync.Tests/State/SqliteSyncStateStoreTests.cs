@@ -261,6 +261,30 @@ public sealed class SqliteSyncStateStoreTests
     }
 
     [Test]
+    public async Task InitializeAsync_SerializesConcurrentStoresSharingDatabase()
+    {
+        string databasePath = DatabasePath();
+        Task[] migrations = Enumerable.Range(0, 12)
+            .Select(_ => new SqliteSyncStateStore(databasePath).InitializeAsync())
+            .ToArray();
+
+        await Task.WhenAll(migrations);
+
+        var store = new SqliteSyncStateStore(databasePath);
+        await store.UpsertAsync(new SyncStateEntry
+        {
+            SyncPairId = "pair-a",
+            RelativePath = "ready.txt",
+            Kind = SyncEntryKind.File,
+            LocalContentHash = "hash",
+        });
+
+        SyncStateEntry? entry = await store.GetAsync("pair-a", "READY.txt");
+
+        Assert.That(entry?.LocalContentHash, Is.EqualTo("hash"));
+    }
+
+    [Test]
     public async Task DeleteAsync_RemovesOneEntryOnly()
     {
         var store = CreateStore();

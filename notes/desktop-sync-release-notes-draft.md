@@ -14,6 +14,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 - Continuous sync uses local filesystem watcher triggers, SignalR wake-up events, durable change-feed catch-up, and periodic reconciliation as a safety fallback.
 - Conflict handling preserves both versions and exposes conflict entries in the desktop UI.
 - Local sync state and desktop settings use EF Core SQLite. Normal app state does not use raw SQL commands.
+- Sync-state and app-settings SQLite migrations are serialized per database path so multiple startup runners do not race the same database.
 - Token storage is abstracted and release-gated: Windows DPAPI and Linux Secret Service are treated as release-secure; restricted-file storage fails self-test.
 - Diagnostics include structured logging, log rotation, self-test, support bundle export, and secret redaction.
 - CLI recovery support includes state summary and one-shot sync commands for headless validation, including shared server URL normalization for absolute URLs and bare Cotton hosts.

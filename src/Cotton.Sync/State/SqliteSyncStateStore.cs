@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Collections.Concurrent;
 using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,6 +12,8 @@ namespace Cotton.Sync.State;
 /// </summary>
 public sealed class SqliteSyncStateStore : ISyncStateStore
 {
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> MigrationGates = new(StringComparer.OrdinalIgnoreCase);
+
     private readonly string _databasePath;
 
     /// <summary>
@@ -26,8 +29,19 @@ public sealed class SqliteSyncStateStore : ISyncStateStore
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         EnsureDirectoryExists();
-        await using SyncStateDbContext context = CreateContext();
-        await context.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
+        SemaphoreSlim gate = MigrationGates.GetOrAdd(
+            Path.GetFullPath(_databasePath),
+            static _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await using SyncStateDbContext context = CreateContext();
+            await context.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     /// <inheritdoc />
