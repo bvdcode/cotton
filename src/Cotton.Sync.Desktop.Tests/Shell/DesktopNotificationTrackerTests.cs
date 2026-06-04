@@ -15,7 +15,7 @@ public sealed class DesktopNotificationTrackerTests
         _ = tracker.Apply(CreateStatus(syncPairId, "Syncing"), DisplayNames(syncPairId));
 
         IReadOnlyList<DesktopNotificationRequest> notifications = tracker.Apply(
-            CreateStatus(syncPairId, "Idle"),
+            CreateStatus(syncPairId, "Idle", lastSyncedAtUtc: DateTime.UtcNow),
             DisplayNames(syncPairId));
 
         Assert.Multiple(() =>
@@ -24,6 +24,20 @@ public sealed class DesktopNotificationTrackerTests
             Assert.That(notifications[0].Kind, Is.EqualTo(DesktopNotificationKind.InitialSyncComplete));
             Assert.That(notifications[0].Message, Does.Contain("Documents"));
         });
+    }
+
+    [Test]
+    public void Apply_DoesNotEmitInitialSyncCompleteWithoutSuccessfulSyncTimestamp()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var tracker = new DesktopNotificationTracker();
+        _ = tracker.Apply(CreateStatus(syncPairId, "Syncing"), DisplayNames(syncPairId));
+
+        IReadOnlyList<DesktopNotificationRequest> notifications = tracker.Apply(
+            CreateStatus(syncPairId, "Idle"),
+            DisplayNames(syncPairId));
+
+        Assert.That(notifications, Is.Empty);
     }
 
     [Test]
@@ -62,12 +76,12 @@ public sealed class DesktopNotificationTrackerTests
         Guid syncPairId = Guid.NewGuid();
         var tracker = new DesktopNotificationTracker();
         _ = tracker.Apply(CreateStatus(syncPairId, "Syncing"), DisplayNames(syncPairId));
-        _ = tracker.Apply(CreateStatus(syncPairId, "Idle"), DisplayNames(syncPairId));
+        _ = tracker.Apply(CreateStatus(syncPairId, "Idle", lastSyncedAtUtc: DateTime.UtcNow), DisplayNames(syncPairId));
 
         tracker.Reset();
         _ = tracker.Apply(CreateStatus(syncPairId, "Syncing"), DisplayNames(syncPairId));
         IReadOnlyList<DesktopNotificationRequest> notifications = tracker.Apply(
-            CreateStatus(syncPairId, "Idle"),
+            CreateStatus(syncPairId, "Idle", lastSyncedAtUtc: DateTime.UtcNow),
             DisplayNames(syncPairId));
 
         Assert.That(notifications.Single().Kind, Is.EqualTo(DesktopNotificationKind.InitialSyncComplete));
@@ -92,11 +106,12 @@ public sealed class DesktopNotificationTrackerTests
     private static DesktopSyncStatusSnapshot CreateStatus(
         Guid syncPairId,
         string status,
-        string? lastError = null)
+        string? lastError = null,
+        DateTime? lastSyncedAtUtc = null)
     {
         return new DesktopSyncStatusSnapshot(
         [
-            new DesktopSyncPairStatusSnapshot(syncPairId, status, lastError),
+            new DesktopSyncPairStatusSnapshot(syncPairId, status, lastError, LastSyncedAtUtc: lastSyncedAtUtc),
         ]);
     }
 

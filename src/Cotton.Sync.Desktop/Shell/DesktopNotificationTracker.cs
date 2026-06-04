@@ -72,6 +72,7 @@ internal sealed class DesktopNotificationTracker
 
         if (!_initialSyncCompleted.Contains(pair.Id)
             && string.Equals(pair.Status, "Idle", StringComparison.Ordinal)
+            && pair.LastSyncedAtUtc.HasValue
             && IsSyncingLike(previousStatus))
         {
             _initialSyncCompleted.Add(pair.Id);
