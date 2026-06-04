@@ -22,7 +22,7 @@ public sealed class DesktopTrayMenuContractTests
     }
 
     [Test]
-    public void TrayMenu_RefreshesEnabledStateForContextualActions()
+    public void TrayMenu_HidesUnavailableFolderAction()
     {
         string trayController = File.ReadAllText(GetDesktopShellFilePath("DesktopTrayController.cs"));
 
@@ -31,9 +31,10 @@ public sealed class DesktopTrayMenuContractTests
             Assert.That(trayController, Does.Contain("_openFolderMenuItem"));
             Assert.That(trayController, Does.Contain("_syncNowMenuItem"));
             Assert.That(trayController, Does.Contain("_settingsMenuItem"));
-            Assert.That(trayController, Does.Contain("SetMenuItemEnabled(_openFolderMenuItem"));
+            Assert.That(trayController, Does.Contain("_openFolderMenuItem.IsVisible = _viewModel.CanOpenTrayFolder"));
             Assert.That(trayController, Does.Contain("nameof(ShellViewModel.CanOpenTrayFolder)"));
             Assert.That(trayController, Does.Contain("nameof(ShellViewModel.TrayOpenFolderLabel)"));
+            Assert.That(trayController, Does.Not.Contain("SetMenuItemEnabled(_openFolderMenuItem"));
             Assert.That(trayController, Does.Not.Contain("nameof(ShellViewModel.SelectedSyncPair)"));
         });
     }

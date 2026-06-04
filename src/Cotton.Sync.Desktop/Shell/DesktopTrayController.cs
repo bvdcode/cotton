@@ -160,9 +160,9 @@ internal sealed class DesktopTrayController : IDisposable
             if (_openFolderMenuItem is not null)
             {
                 _openFolderMenuItem.Header = "Open folder";
+                _openFolderMenuItem.IsVisible = false;
             }
 
-            SetMenuItemEnabled(_openFolderMenuItem, false);
             SetMenuItemEnabled(_openWebMenuItem, false);
             SetMenuItemEnabled(_syncNowMenuItem, false);
             SetMenuItemEnabled(_pauseResumeMenuItem, false);
@@ -173,6 +173,7 @@ internal sealed class DesktopTrayController : IDisposable
         if (_openFolderMenuItem is not null)
         {
             _openFolderMenuItem.Header = _viewModel.TrayOpenFolderLabel;
+            _openFolderMenuItem.IsVisible = _viewModel.CanOpenTrayFolder;
             _openFolderMenuItem.IsEnabled = _viewModel.OpenTrayFolderCommand.CanExecute(null);
         }
 
