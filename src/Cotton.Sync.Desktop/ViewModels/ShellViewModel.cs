@@ -56,7 +56,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private string _serverUrl = string.Empty;
     private string _serverProbeStatus = string.Empty;
     private bool _startWithOperatingSystem;
-    private AppThemeMode _themeMode = AppThemeMode.System;
+    private AppThemeMode _themeMode = AppThemeMode.Dark;
     private CancellationTokenSource? _serverProbeCancellation;
     private ConflictRowViewModel? _selectedConflict;
     private RemoteFolderRowViewModel? _selectedRemoteFolder;

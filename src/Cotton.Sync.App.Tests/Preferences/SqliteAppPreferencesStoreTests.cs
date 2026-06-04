@@ -41,7 +41,7 @@ public sealed class SqliteAppPreferencesStoreTests
             Assert.That(preferences.StartWithOperatingSystem, Is.True);
             Assert.That(preferences.StartMinimizedToTray, Is.False);
             Assert.That(preferences.EnableNotifications, Is.True);
-            Assert.That(preferences.ThemeMode, Is.EqualTo(AppThemeMode.System));
+            Assert.That(preferences.ThemeMode, Is.EqualTo(AppThemeMode.Dark));
         });
     }
 

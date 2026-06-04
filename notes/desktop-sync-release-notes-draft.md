@@ -7,6 +7,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 - Desktop sync client built on the existing .NET stack: `Cotton.Sdk`, `Cotton.Sync`, `Cotton.Sync.App`, EF Core SQLite, and Avalonia.
 - Full-mirror sync for one or more local-to-remote sync pairs.
 - First-run setup flow with Cotton server probing, password/TOTP sign-in, remembered server URL and username, and automatic add-folder wizard for the first sync pair.
+- First-run windows default to the dark Cotton theme, with System/Light/Dark theme switching still available in Settings.
 - Dashboard with global status, per-folder status, current progress, activity history, action-required errors, conflict list, and direct sync-folder management.
 - Folder management supports add, rename, enable/disable, open local folder, and remove with explicit confirmation.
 - Continuous sync uses local filesystem watcher triggers, SignalR wake-up events, durable change-feed catch-up, and periodic reconciliation as a safety fallback.
@@ -31,7 +32,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 ## Verification Already Exercised
 
 - Full solution Release builds have passed locally with 0 warnings after recent desktop packaging and UX slices.
-- Desktop tests have passed locally, most recently `Cotton.Sync.Desktop.Tests` 250/250.
+- Desktop tests have passed locally, most recently `Cotton.Sync.Desktop.Tests` 251/251.
 - CLI one-shot sync has been smoke-tested against the integration-test server and covered in CLI tests with fake Cotton HTTP responses, verifying SDK file/folder upload requests and SQLite baseline creation.
 - Desktop packaging metadata tests cover publish profiles, clean publish-directory behavior, app icon metadata, Linux `.desktop` metadata, `.deb` packaging script, reusable Linux/Windows diagnostics export smoke scripts, Linux package smoke wiring, reusable Linux GUI screenshot matrix smoke with deterministic sign-in-error/add-folder/dashboard/settings/settings-diagnostics/error/conflict visual-smoke states, Linux archive/installed diagnostics export smoke wiring, Linux `.deb` install/upgrade smoke wiring, Windows CI smoke, Windows `.zip` artifact upload/self-test/diagnostics smoke, Windows installer script/install/diagnostics/upgrade smoke wiring, and release artifact checksum generation.
 - Local Linux publish succeeded.

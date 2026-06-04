@@ -6,6 +6,14 @@ namespace Cotton.Sync.Desktop.Tests.Shell;
 public sealed class DesktopSetupVisualContractTests
 {
     [Test]
+    public void Application_DefaultsToDarkThemeForFirstRun()
+    {
+        string appXaml = File.ReadAllText(GetDesktopFilePath("App.axaml"));
+
+        Assert.That(appXaml, Does.Contain("RequestedThemeVariant=\"Dark\""));
+    }
+
+    [Test]
     public void SetupView_DoesNotRenderNumberedStepper()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));

@@ -36,7 +36,7 @@ public sealed class AppPreferences
     /// <summary>
     /// Gets or sets the preferred desktop theme.
     /// </summary>
-    public AppThemeMode ThemeMode { get; set; } = AppThemeMode.System;
+    public AppThemeMode ThemeMode { get; set; } = AppThemeMode.Dark;
 
     /// <summary>
     /// Gets or sets the UTC creation timestamp.
