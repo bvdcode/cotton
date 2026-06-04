@@ -197,6 +197,47 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task GlobalSyncCommands_DoNotChangeDisabledPairRows()
+    {
+        Guid enabledPairId = Guid.NewGuid();
+        Guid disabledPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(
+            CreateSignedInSnapshot(
+                CreatePair(enabledPairId, "Documents", "Idle"),
+                CreatePair(disabledPairId, "Archive", "Disabled")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        await ExecuteAsync(viewModel.SyncNowCommand);
+
+        SyncPairRowViewModel enabledPair = viewModel.SyncPairs.Single(pair => pair.Id == enabledPairId);
+        SyncPairRowViewModel disabledPair = viewModel.SyncPairs.Single(pair => pair.Id == disabledPairId);
+        Assert.Multiple(() =>
+        {
+            Assert.That(enabledPair.Status, Is.EqualTo("Sync requested"));
+            Assert.That(enabledPair.CurrentOperation, Is.EqualTo("Waiting to sync changes"));
+            Assert.That(disabledPair.Status, Is.EqualTo("Disabled"));
+            Assert.That(disabledPair.CurrentOperation, Is.Empty);
+        });
+
+        await ExecuteAsync(viewModel.PauseCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(enabledPair.Status, Is.EqualTo("Paused"));
+            Assert.That(disabledPair.Status, Is.EqualTo("Disabled"));
+        });
+
+        await ExecuteAsync(viewModel.ResumeCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(enabledPair.Status, Is.EqualTo("Idle"));
+            Assert.That(disabledPair.Status, Is.EqualTo("Disabled"));
+        });
+    }
+
+    [Test]
     public async Task OpenFolderCommand_UsesRowParameterWhenProvided()
     {
         var controller = new FakeDesktopShellController(

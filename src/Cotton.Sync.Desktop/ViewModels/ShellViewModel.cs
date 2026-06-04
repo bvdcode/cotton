@@ -1016,7 +1016,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             await _controller.PauseAllAsync().ConfigureAwait(true);
             GlobalStatus = "Paused";
             ActionRequiredMessage = string.Empty;
-            SetAllPairStatuses("Paused");
+            SetAllPairStatuses("Paused", enabledOnly: true);
             RefreshCurrentProgressText();
             AddActivity("Sync", string.Empty, "Synchronization paused");
         }
@@ -1034,7 +1034,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             await _controller.ResumeAllAsync().ConfigureAwait(true);
             GlobalStatus = "Ready";
             ActionRequiredMessage = string.Empty;
-            SetAllPairStatuses("Idle");
+            SetAllPairStatuses("Idle", enabledOnly: true);
             RefreshCurrentProgressText();
             AddActivity("Sync", string.Empty, "Synchronization resumed");
         }
@@ -1105,7 +1105,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             await _controller.SyncAllAsync().ConfigureAwait(true);
             GlobalStatus = "Sync requested";
             ActionRequiredMessage = string.Empty;
-            SetAllPairStatuses("Sync requested", "Waiting to sync changes");
+            SetAllPairStatuses("Sync requested", "Waiting to sync changes", enabledOnly: true);
             RefreshCurrentProgressText();
             AddActivity("Sync", string.Empty, "Manual sync requested");
         }
@@ -1602,10 +1602,15 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OnPropertyChanged(nameof(AddSyncPairWizardSubtitle));
     }
 
-    private void SetAllPairStatuses(string status, string? currentOperation = null)
+    private void SetAllPairStatuses(string status, string? currentOperation = null, bool enabledOnly = false)
     {
         foreach (SyncPairRowViewModel syncPair in SyncPairs)
         {
+            if (enabledOnly && !syncPair.IsEnabled)
+            {
+                continue;
+            }
+
             syncPair.Status = status;
             syncPair.CurrentOperation = currentOperation ?? string.Empty;
         }
