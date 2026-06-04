@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.IO.Compression;
+using System.Text.Json;
 using Cotton.Sync.Desktop.Composition;
 using Cotton.Sync.Desktop.Diagnostics;
 using Cotton.Sync.Desktop.Shell;
@@ -88,6 +89,25 @@ public sealed class DesktopDiagnosticsExporterTests
             Assert.That(logContent, Does.Not.Contain("refresh-token"));
             Assert.That(logContent, Does.Not.Contain("secret"));
         });
+    }
+
+    [Test]
+    public async Task ExportAsync_SerializesSyncPairModeAsReadableString()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        var exporter = new DesktopDiagnosticsExporter();
+
+        string archivePath = await exporter.ExportAsync(paths, CreateBundle());
+
+        using ZipArchive archive = ZipFile.OpenRead(archivePath);
+        string diagnosticsJson = ReadEntry(archive, "diagnostics.json");
+        using JsonDocument document = JsonDocument.Parse(diagnosticsJson);
+        string? mode = document.RootElement
+            .GetProperty("syncPairs")[0]
+            .GetProperty("mode")
+            .GetString();
+
+        Assert.That(mode, Is.EqualTo("fullMirror"));
     }
 
     private static DesktopDiagnosticsBundle CreateBundle()

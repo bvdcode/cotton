@@ -5,6 +5,8 @@ using System.Globalization;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using Cotton.Sync.App.SyncPairs;
 using Cotton.Sync.Desktop.Composition;
 
 namespace Cotton.Sync.Desktop.Diagnostics;
@@ -14,10 +16,7 @@ internal sealed class DesktopDiagnosticsExporter
     private const string DiagnosticsDirectoryName = "diagnostics";
     private const string DiagnosticsJsonEntryName = "diagnostics.json";
     private const string LogEntryPrefix = "logs/";
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
-    {
-        WriteIndented = true,
-    };
+    private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
 
     public async Task<string> ExportAsync(
         DesktopAppPaths paths,
@@ -47,6 +46,16 @@ internal sealed class DesktopDiagnosticsExporter
         string json = JsonSerializer.Serialize(bundle, JsonOptions);
         string redactedJson = DesktopSecretRedactor.Redact(json);
         await entryStream.WriteAsync(Encoding.UTF8.GetBytes(redactedJson), cancellationToken).ConfigureAwait(false);
+    }
+
+    private static JsonSerializerOptions CreateJsonOptions()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        {
+            WriteIndented = true,
+        };
+        options.Converters.Add(new JsonStringEnumConverter<SyncPairMode>(JsonNamingPolicy.CamelCase));
+        return options;
     }
 
     private static async Task AddLogEntriesAsync(
