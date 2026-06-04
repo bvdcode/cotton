@@ -30,6 +30,8 @@ namespace Cotton.Sync.Desktop.Shell;
 
 internal sealed class DesktopShellController : IDesktopShellController
 {
+    private const string SelfTestSyncPairId = "__desktop_self_test__";
+
     private static readonly TimeSpan ServerProbeTimeout = TimeSpan.FromSeconds(5);
 
     private readonly IDesktopSyncApplicationFactory _factory;
@@ -570,7 +572,8 @@ internal sealed class DesktopShellController : IDesktopShellController
             {
                 var stateStore = new SqliteSyncStateStore(_paths.SyncStateDatabasePath);
                 await stateStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
-                return "Ready";
+                await stateStore.GetChangeCursorAsync(SelfTestSyncPairId, cancellationToken).ConfigureAwait(false);
+                return "Ready: " + _paths.SyncStateDatabasePath;
             }).ConfigureAwait(false);
 
         await AddSelfTestCheckAsync(

@@ -115,6 +115,27 @@ public sealed class DesktopShellControllerSelfTestTests
     }
 
     [Test]
+    public async Task RunSelfTestAsync_VerifiesSyncStateCursorStoreAndReportsPath()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        using DesktopShellController controller = CreateController(paths, new SqliteSyncPairSettingsStore(paths.AppDatabasePath));
+
+        DesktopSelfTestSnapshot result = await controller.RunSelfTestAsync();
+
+        DesktopSelfTestItemSnapshot item = result.Items.Single(static selfTestItem => selfTestItem.Name == "Sync state database");
+        var stateStore = new SqliteSyncStateStore(paths.SyncStateDatabasePath);
+        SyncChangeCursor cursor = await stateStore.GetChangeCursorAsync("pair-a");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(item.Passed, Is.True);
+            Assert.That(item.Details, Does.Contain(paths.SyncStateDatabasePath));
+            Assert.That(File.Exists(paths.SyncStateDatabasePath), Is.True);
+            Assert.That(cursor.LastCursor, Is.Zero);
+        });
+    }
+
+    [Test]
     public async Task RunSelfTestAsync_IncludesLocalAndRemoteRootChecksForSyncPairs()
     {
         DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
