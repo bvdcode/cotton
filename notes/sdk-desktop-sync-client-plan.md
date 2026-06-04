@@ -70,6 +70,7 @@ Target layers:
 - [x] Add sync pair validation.
   Required checks: local path exists or can be created, local roots do not overlap, remote target is resolvable, mode is supported.
   Verification 2026-06-03: structural validator plus async prerequisite validator implemented; tests cover overlap, unsupported mode, local root creation/unavailable path, remote prerequisite errors, and save rejection without persistence.
+  Verification 2026-06-04: sync-pair update flow now has regression coverage proving an existing pair is replaced in the validation set before overlap checks, so editing the same pair does not self-reject as an overlapping local root. Focused `SyncApplicationServiceTests` passed 19/19, full `Cotton.Sync.App.Tests` passed 107/107, and `dotnet build src/Cotton.sln --configuration Release` passed with 0 warnings.
 - [x] Add a settings store through EF Core SQLite.
   Required stores: sync-pair settings, app preferences, remembered server URL, startup preferences.
   Verification 2026-06-03: `SqliteSyncPairSettingsStore` and `SqliteAppPreferencesStore` use EF Core SQLite through shared `SyncAppDbContext`; tests cover sync-pair and app-preferences roundtrip.
