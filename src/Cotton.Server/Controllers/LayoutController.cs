@@ -216,7 +216,7 @@ namespace Cotton.Server.Controllers
             node.SetName(request.Name);
             if (node.ParentId.HasValue)
             {
-                _syncChanges.StageFolderChange(SyncChangeKind.FolderRenamed, node);
+                _syncChanges.StageFolderChange(SyncChangeKind.FolderRenamed, node, node.ParentId.Value);
             }
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
