@@ -42,22 +42,27 @@ public sealed class SyncSupervisor : ISyncSupervisor
         await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            foreach (ISyncPairRunner runner in _runners.Values)
-            {
-                await runner.StopAsync(cancellationToken).ConfigureAwait(false);
-            }
-
+            await StopRunnersAsync(cancellationToken).ConfigureAwait(false);
             _runners.Clear();
-            await _syncPairs.InitializeAsync(cancellationToken).ConfigureAwait(false);
-            IReadOnlyList<SyncPairSettings> syncPairs = await _syncPairs.ListAsync(cancellationToken).ConfigureAwait(false);
-            foreach (SyncPairSettings syncPair in syncPairs)
+            try
             {
-                ISyncPairRunner runner = _runnerFactory.Create(syncPair);
-                _runners[syncPair.Id] = runner;
-                await runner.StartAsync(cancellationToken).ConfigureAwait(false);
-            }
+                await _syncPairs.InitializeAsync(cancellationToken).ConfigureAwait(false);
+                IReadOnlyList<SyncPairSettings> syncPairs = await _syncPairs.ListAsync(cancellationToken).ConfigureAwait(false);
+                foreach (SyncPairSettings syncPair in syncPairs)
+                {
+                    ISyncPairRunner runner = _runnerFactory.Create(syncPair);
+                    _runners[syncPair.Id] = runner;
+                    await runner.StartAsync(cancellationToken).ConfigureAwait(false);
+                }
 
-            status = CreateAppStatusSnapshot();
+                status = CreateAppStatusSnapshot();
+            }
+            catch
+            {
+                await StopRunnersAsync(CancellationToken.None).ConfigureAwait(false);
+                _runners.Clear();
+                throw;
+            }
         }
         finally
         {
@@ -194,11 +199,7 @@ public sealed class SyncSupervisor : ISyncSupervisor
         await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            foreach (ISyncPairRunner runner in _runners.Values)
-            {
-                await runner.StopAsync(cancellationToken).ConfigureAwait(false);
-            }
-
+            await StopRunnersAsync(cancellationToken).ConfigureAwait(false);
             status = CreateAppStatusSnapshot();
         }
         finally
@@ -207,6 +208,14 @@ public sealed class SyncSupervisor : ISyncSupervisor
         }
 
         _statusPublisher.Publish(status);
+    }
+
+    private async Task StopRunnersAsync(CancellationToken cancellationToken)
+    {
+        foreach (ISyncPairRunner runner in _runners.Values)
+        {
+            await runner.StopAsync(cancellationToken).ConfigureAwait(false);
+        }
     }
 
     private ISyncPairRunner GetRunner(Guid syncPairId)

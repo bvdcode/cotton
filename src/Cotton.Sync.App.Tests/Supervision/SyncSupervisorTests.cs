@@ -57,6 +57,32 @@ public sealed class SyncSupervisorTests
         });
     }
 
+    [Test]
+    public async Task StartAsync_StopsCreatedRunnersWhenLaterRunnerFails()
+    {
+        SyncPairSettings documents = CreatePair("Documents", isEnabled: true);
+        SyncPairSettings pictures = CreatePair("Pictures", isEnabled: true);
+        var store = new FakeSyncPairSettingsStore([documents, pictures]);
+        var factory = new FakeSyncPairRunnerFactory
+        {
+            FailingStartPairId = pictures.Id,
+        };
+        var publisher = new InMemoryAppStatusPublisher(new SyncAppStatus(true, [], DateTime.UtcNow));
+        var supervisor = new SyncSupervisor(store, factory, publisher);
+
+        InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await supervisor.StartAsync());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.Message, Is.EqualTo("Runner failed to start."));
+            Assert.That(factory.CreatedRunners[documents.Id].StopCallCount, Is.EqualTo(1));
+            Assert.That(factory.CreatedRunners[pictures.Id].StopCallCount, Is.EqualTo(1));
+            Assert.That(supervisor.CurrentStatuses, Is.Empty);
+            Assert.That(publisher.Current.SyncPairs, Is.Empty);
+        });
+    }
 
     [Test]
     public async Task PauseAndResumeAsync_UpdateSelectedRunnerAndPublishStatus()
@@ -187,9 +213,16 @@ public sealed class SyncSupervisorTests
 
         public List<FakeSyncPairRunner> AllCreatedRunners { get; } = [];
 
+        public Guid? FailingStartPairId { get; set; }
+
         public ISyncPairRunner Create(SyncPairSettings syncPair)
         {
             var runner = new FakeSyncPairRunner(syncPair);
+            if (syncPair.Id == FailingStartPairId)
+            {
+                runner.StartException = new InvalidOperationException("Runner failed to start.");
+            }
+
             CreatedRunners[syncPair.Id] = runner;
             AllCreatedRunners.Add(runner);
             return runner;
@@ -217,6 +250,8 @@ public sealed class SyncSupervisorTests
 
         public int SyncNowCallCount { get; private set; }
 
+        public Exception? StartException { get; set; }
+
         public Guid SyncPairId => _syncPair.Id;
 
         public SyncPairStatus Status => new(
@@ -230,6 +265,11 @@ public sealed class SyncSupervisorTests
         public Task StartAsync(CancellationToken cancellationToken = default)
         {
             StartCallCount++;
+            if (StartException is not null)
+            {
+                throw StartException;
+            }
+
             _state = _syncPair.IsEnabled ? SyncPairRunState.Idle : SyncPairRunState.Disabled;
             return Task.CompletedTask;
         }
