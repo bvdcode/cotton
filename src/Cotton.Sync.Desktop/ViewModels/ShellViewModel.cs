@@ -215,6 +215,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             if (SetProperty(ref _actionRequiredMessage, value))
             {
                 OnPropertyChanged(nameof(HasActionRequired));
+                OnPropertyChanged(nameof(HasStatusAttention));
                 OnPropertyChanged(nameof(ActionRequiredOpacity));
                 OnPropertyChanged(nameof(CanRetryActionRequired));
                 OnPropertyChanged(nameof(StatusCardTitle));
@@ -230,12 +231,26 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         {
             if (SetProperty(ref _globalStatus, value))
             {
+                OnPropertyChanged(nameof(HeaderStatusText));
                 OnPropertyChanged(nameof(StatusCardTitle));
             }
         }
     }
 
-    public string StatusCardTitle => HasActionRequired ? "Sync needs attention" : GlobalStatus;
+    public string HeaderStatusText => HasConflicts ? "Conflicts need review" : GlobalStatus;
+
+    public string StatusCardTitle
+    {
+        get
+        {
+            if (HasActionRequired)
+            {
+                return "Sync needs attention";
+            }
+
+            return HasConflicts ? "Conflicts need review" : GlobalStatus;
+        }
+    }
 
     public string CurrentProgressText
     {
@@ -283,6 +298,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public string ConflictCountLabel => Conflicts.Count == 1 ? "1 conflict" : Conflicts.Count + " conflicts";
 
     public bool HasActionRequired => !string.IsNullOrWhiteSpace(ActionRequiredMessage);
+
+    public bool HasStatusAttention => HasActionRequired || HasConflicts;
 
     public double ActionRequiredOpacity => HasActionRequired ? 1 : 0;
 
@@ -1498,7 +1515,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private void OnConflictsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         OnPropertyChanged(nameof(HasConflicts));
+        OnPropertyChanged(nameof(HasStatusAttention));
         OnPropertyChanged(nameof(ConflictCountLabel));
+        OnPropertyChanged(nameof(HeaderStatusText));
+        OnPropertyChanged(nameof(StatusCardTitle));
+        RefreshCurrentProgressText();
         OpenSelectedConflictCommand.RaiseCanExecuteChanged();
     }
 
@@ -1830,6 +1851,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         if (SyncPairs.Any(static pair => string.Equals(pair.Status, "Paused", StringComparison.Ordinal)))
         {
             CurrentProgressText = "Sync is paused.";
+            return;
+        }
+
+        if (HasConflicts)
+        {
+            CurrentProgressText = "Review conflicts below to continue syncing.";
             return;
         }
 

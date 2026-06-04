@@ -40,7 +40,7 @@
                      Foreground="{DynamicResource CottonTextPrimaryBrush}"
                      FontSize="17"
                      FontWeight="SemiBold" />
-          <TextBlock Text="{Binding GlobalStatus}"
+          <TextBlock Text="{Binding HeaderStatusText}"
                      Classes="secondary"
                      FontSize="12"
                      TextTrimming="CharacterEllipsis" />
@@ -224,14 +224,14 @@
           <Border Padding="10"
                   CornerRadius="6"
                   Classes="statusCard"
-                  Classes.actionRequired="{Binding HasActionRequired}">
+                  Classes.actionRequired="{Binding HasStatusAttention}">
             <Grid ColumnDefinitions="Auto,*"
                   ColumnSpacing="9">
               <Border Width="12"
                       Height="12"
                       CornerRadius="6"
                       Classes="statusDot"
-                      Classes.actionRequired="{Binding HasActionRequired}"
+                      Classes.actionRequired="{Binding HasStatusAttention}"
                       VerticalAlignment="Center" />
               <StackPanel Grid.Column="1"
                           Spacing="1">

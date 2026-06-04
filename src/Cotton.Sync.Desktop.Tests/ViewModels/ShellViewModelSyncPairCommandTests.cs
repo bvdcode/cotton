@@ -563,7 +563,11 @@ public sealed class ShellViewModelSyncPairCommandTests
     public async Task ConflictActivity_AddsConflictRow()
     {
         Guid syncPairId = Guid.NewGuid();
-        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Idle")));
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(
+            syncPairId,
+            "Documents",
+            "Idle",
+            new DateTime(2026, 6, 4, 8, 0, 0, DateTimeKind.Utc))));
         using ShellViewModel viewModel = CreateViewModel(controller);
         await viewModel.InitializeAsync();
 
@@ -578,7 +582,11 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.HasConflicts, Is.True);
+            Assert.That(viewModel.HasStatusAttention, Is.True);
             Assert.That(viewModel.ConflictCountLabel, Is.EqualTo("1 conflict"));
+            Assert.That(viewModel.HeaderStatusText, Is.EqualTo("Conflicts need review"));
+            Assert.That(viewModel.StatusCardTitle, Is.EqualTo("Conflicts need review"));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Review conflicts below to continue syncing."));
             Assert.That(viewModel.SelectedConflict, Is.SameAs(conflict));
             Assert.That(conflict.SyncPairId, Is.EqualTo(syncPairId));
             Assert.That(conflict.Path, Is.EqualTo("Documents/report.txt"));

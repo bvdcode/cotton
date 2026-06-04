@@ -243,6 +243,24 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
+    public void StatusCard_UsesAttentionStateForActionRequiredAndConflicts()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string statusCard = GetSlice(
+            mainWindowXaml,
+            "Classes=\"statusCard\"",
+            "<TextBlock Text=\"Action required\"");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(mainWindowXaml, Does.Contain("Text=\"{Binding HeaderStatusText}\""));
+            Assert.That(mainWindowXaml, Does.Not.Contain("Text=\"{Binding GlobalStatus}\""));
+            Assert.That(statusCard, Does.Contain("Classes.actionRequired=\"{Binding HasStatusAttention}\""));
+            Assert.That(statusCard, Does.Not.Contain("Classes.actionRequired=\"{Binding HasActionRequired}\""));
+        });
+    }
+
+    [Test]
     public void SettingsDiagnostics_UsesClearDiagnosticsActions()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
