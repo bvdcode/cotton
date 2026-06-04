@@ -24,17 +24,54 @@ public sealed class DesktopPackagingMetadataTests
         });
     }
 
+    [TestCase("win-x64")]
+    [TestCase("linux-x64")]
+    public void PublishProfile_DefinesSelfContainedPortableArtifact(string runtimeIdentifier)
+    {
+        XDocument profile = XDocument.Load(GetPublishProfilePath(runtimeIdentifier));
+        XElement propertyGroup = profile.Root!.Elements("PropertyGroup").Single();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(GetProperty(propertyGroup, "PublishProtocol"), Is.EqualTo("FileSystem"));
+            Assert.That(GetProperty(propertyGroup, "Configuration"), Is.EqualTo("Release"));
+            Assert.That(GetProperty(propertyGroup, "TargetFramework"), Is.EqualTo("net10.0"));
+            Assert.That(GetProperty(propertyGroup, "RuntimeIdentifier"), Is.EqualTo(runtimeIdentifier));
+            Assert.That(GetProperty(propertyGroup, "SelfContained"), Is.EqualTo("true"));
+            Assert.That(GetProperty(propertyGroup, "UseAppHost"), Is.EqualTo("true"));
+            Assert.That(GetProperty(propertyGroup, "PublishSingleFile"), Is.EqualTo("false"));
+            Assert.That(GetProperty(propertyGroup, "PublishTrimmed"), Is.EqualTo("false"));
+            Assert.That(GetProperty(propertyGroup, "PublishReadyToRun"), Is.EqualTo("false"));
+            Assert.That(NormalizeProfilePath(GetProperty(propertyGroup, "PublishDir")), Does.EndWith("/publish/" + runtimeIdentifier + "/"));
+        });
+    }
+
     private static string? GetProperty(XElement propertyGroup, string name)
     {
         return propertyGroup.Element(name)?.Value;
     }
 
+    private static string NormalizeProfilePath(string? value)
+    {
+        return (value ?? string.Empty).Replace('\\', '/');
+    }
+
     private static string GetDesktopProjectPath()
+    {
+        return GetDesktopFilePath("Cotton.Sync.Desktop.csproj");
+    }
+
+    private static string GetPublishProfilePath(string runtimeIdentifier)
+    {
+        return GetDesktopFilePath(Path.Combine("Properties", "PublishProfiles", runtimeIdentifier + ".pubxml"));
+    }
+
+    private static string GetDesktopFilePath(string relativePath)
     {
         string directory = TestContext.CurrentContext.TestDirectory;
         while (!string.IsNullOrWhiteSpace(directory))
         {
-            string candidate = Path.Combine(directory, "src", "Cotton.Sync.Desktop", "Cotton.Sync.Desktop.csproj");
+            string candidate = Path.Combine(directory, "src", "Cotton.Sync.Desktop", relativePath);
             if (File.Exists(candidate))
             {
                 return candidate;
@@ -49,6 +86,6 @@ public sealed class DesktopPackagingMetadataTests
             directory = parent ?? string.Empty;
         }
 
-        throw new FileNotFoundException("Cotton.Sync.Desktop.csproj was not found from the test directory.");
+        throw new FileNotFoundException(relativePath + " was not found from the test directory.");
     }
 }
