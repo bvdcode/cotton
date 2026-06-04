@@ -111,14 +111,14 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         SignInCommand = new AsyncRelayCommand(SignInAsync, CanSignIn, HandleCommandError);
         ChangeServerCommand = new AsyncRelayCommand(ChangeServerAsync, () => !IsBusy, HandleCommandError);
         AddSyncPairCommand = new AsyncRelayCommand(AddSyncPairAsync, CanAddSyncPair, HandleCommandError);
-        BrowseLocalFolderCommand = new AsyncRelayCommand(BrowseLocalFolderAsync, () => !IsBusy, HandleCommandError);
+        BrowseLocalFolderCommand = new AsyncRelayCommand(BrowseLocalFolderAsync, CanBrowseLocalFolder, HandleCommandError);
         CancelAddSyncPairCommand = new AsyncRelayCommand(CancelAddSyncPairAsync, () => !IsBusy, HandleCommandError);
         CancelCreateRemoteFolderCommand = new AsyncRelayCommand(CancelCreateRemoteFolderAsync, () => !IsBusy, HandleCommandError);
         CreateRemoteFolderCommand = new AsyncRelayCommand(CreateRemoteFolderAsync, CanCreateRemoteFolder, HandleCommandError);
-        OpenRemoteFolderCommand = new AsyncRelayCommand(OpenRemoteFolderAsync, () => SelectedRemoteFolder is not null && !IsBusy, HandleCommandError);
+        OpenRemoteFolderCommand = new AsyncRelayCommand(OpenRemoteFolderAsync, CanOpenRemoteFolder, HandleCommandError);
         RemoteFolderUpCommand = new AsyncRelayCommand(RemoteFolderUpAsync, CanGoUpRemoteFolder, HandleCommandError);
-        ShowCreateRemoteFolderCommand = new AsyncRelayCommand(ShowCreateRemoteFolderAsync, () => !IsBusy && IsAddSyncPairCloudStepVisible, HandleCommandError);
-        ShowAddSyncPairCommand = new AsyncRelayCommand(ShowAddSyncPairAsync, () => IsSignedIn && !IsBusy, HandleCommandError);
+        ShowCreateRemoteFolderCommand = new AsyncRelayCommand(ShowCreateRemoteFolderAsync, CanShowCreateRemoteFolder, HandleCommandError);
+        ShowAddSyncPairCommand = new AsyncRelayCommand(ShowAddSyncPairAsync, CanShowAddSyncPair, HandleCommandError);
         ShowSettingsCommand = new AsyncRelayCommand(ShowSettingsAsync, () => IsSignedIn && !IsBusy, HandleCommandError);
         CloseSettingsCommand = new AsyncRelayCommand(CloseSettingsAsync, () => !IsBusy, HandleCommandError);
         SyncNowCommand = new AsyncRelayCommand(SyncNowAsync, () => CanSyncNow, HandleCommandError);
@@ -282,6 +282,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 OnPropertyChanged(nameof(StatusCardTitle));
                 OnPropertyChanged(nameof(StatusCardDetailText));
                 OnPropertyChanged(nameof(HasStatusCardDetail));
+                RaiseAddSyncPairFlowCommandStates();
                 RefreshCurrentProgressText();
             }
         }
@@ -1316,7 +1317,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private bool CanGoUpRemoteFolder()
     {
-        return !IsBusy && IsAddSyncPairWizardVisible && RemoteBrowserPath != "/";
+        return !IsBusy
+            && CanUseAddSyncPairFlow
+            && IsAddSyncPairWizardVisible
+            && RemoteBrowserPath != "/";
     }
 
     private async Task OpenFolderAsync(object? parameter)
@@ -1791,9 +1795,36 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private bool CanAddSyncPair()
     {
         return !IsBusy
+            && CanUseAddSyncPairFlow
             && IsSignedIn
             && !string.IsNullOrWhiteSpace(LocalFolderPath)
             && !string.IsNullOrWhiteSpace(RemoteFolderPath);
+    }
+
+    private bool CanBrowseLocalFolder()
+    {
+        return !IsBusy && CanUseAddSyncPairFlow;
+    }
+
+    private bool CanOpenRemoteFolder()
+    {
+        return !IsBusy
+            && CanUseAddSyncPairFlow
+            && SelectedRemoteFolder is not null;
+    }
+
+    private bool CanShowAddSyncPair()
+    {
+        return IsSignedIn
+            && !IsBusy
+            && CanUseAddSyncPairFlow;
+    }
+
+    private bool CanShowCreateRemoteFolder()
+    {
+        return !IsBusy
+            && CanUseAddSyncPairFlow
+            && IsAddSyncPairCloudStepVisible;
     }
 
     private bool IsLocalFolderOverlappingExistingSyncRoot(string localPath)
@@ -1844,10 +1875,16 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private bool CanCreateRemoteFolder()
     {
         return !IsBusy
+            && CanUseAddSyncPairFlow
             && IsSignedIn
             && IsAddSyncPairCloudStepVisible
             && !string.IsNullOrWhiteSpace(NewRemoteFolderName);
     }
+
+    private bool CanUseAddSyncPairFlow => !string.Equals(
+        ActionRequiredMessage,
+        DesktopActionRequiredMessageResolver.MissingDesktopSyncChangesApiMessage,
+        StringComparison.Ordinal);
 
     private bool CanSignIn()
     {
@@ -2344,6 +2381,17 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         OnPropertyChanged(nameof(CanOpenTrayFolder));
         OnPropertyChanged(nameof(TrayOpenFolderLabel));
+    }
+
+    private void RaiseAddSyncPairFlowCommandStates()
+    {
+        AddSyncPairCommand.RaiseCanExecuteChanged();
+        BrowseLocalFolderCommand.RaiseCanExecuteChanged();
+        CreateRemoteFolderCommand.RaiseCanExecuteChanged();
+        OpenRemoteFolderCommand.RaiseCanExecuteChanged();
+        RemoteFolderUpCommand.RaiseCanExecuteChanged();
+        ShowAddSyncPairCommand.RaiseCanExecuteChanged();
+        ShowCreateRemoteFolderCommand.RaiseCanExecuteChanged();
     }
 
     private void RaiseSetupStateProperties()

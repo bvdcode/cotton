@@ -1117,6 +1117,54 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task MissingDesktopSyncChangesApi_BlocksAddFolderFlowWithoutReplacingTheServerError()
+    {
+        var localFolderPicker = new FakeLocalFolderPicker("/home/user/Downloads");
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(
+            Guid.NewGuid(),
+            "Downloads",
+            "Idle",
+            localPath: "/home/user/Downloads")))
+        {
+            SelfTestSnapshot = new DesktopSelfTestSnapshot(
+            [
+                new DesktopSelfTestItemSnapshot(
+                    "Desktop sync change feed",
+                    false,
+                    "Cotton API request GET /api/v1/sync/changes?since=0&limit=1 returned invalid JSON "
+                    + "with content type 'text/html' and status 200 (OK)."),
+            ]),
+        };
+        using ShellViewModel viewModel = CreateViewModel(controller, localFolderPicker: localFolderPicker);
+        await viewModel.InitializeAsync();
+        viewModel.LocalFolderPath = "/home/user/Cotton";
+        viewModel.RemoteFolderPath = "/";
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.ShowAddSyncPairCommand.CanExecute(null), Is.True);
+            Assert.That(viewModel.BrowseLocalFolderCommand.CanExecute(null), Is.True);
+            Assert.That(viewModel.AddSyncPairCommand.CanExecute(null), Is.True);
+        });
+
+        await ExecuteAsync(viewModel.ShowAddSyncPairCommand);
+        await ExecuteAsync(viewModel.SelfTestCommand);
+        viewModel.BrowseLocalFolderCommand.Execute(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(localFolderPicker.PickFolderCalls, Is.Zero);
+            Assert.That(viewModel.ShowAddSyncPairCommand.CanExecute(null), Is.False);
+            Assert.That(viewModel.BrowseLocalFolderCommand.CanExecute(null), Is.False);
+            Assert.That(viewModel.AddSyncPairCommand.CanExecute(null), Is.False);
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Action required"));
+            Assert.That(
+                viewModel.ActionRequiredMessage,
+                Is.EqualTo("This Cotton server does not expose the desktop sync changes API yet. Deploy the latest Cotton backend and retry sync."));
+        });
+    }
+
+    [Test]
     public async Task CancelAddSyncPairCommand_ClearsLocalFolderOverlapError()
     {
         var localFolderPicker = new FakeLocalFolderPicker("/home/user/Downloads");
