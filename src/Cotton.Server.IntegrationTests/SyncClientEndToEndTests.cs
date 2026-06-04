@@ -210,7 +210,9 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
 
         Assert.Multiple(() =>
         {
-            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Downloaded }));
+            Assert.That(
+                GetActivityPaths(result, SyncActivityKind.Downloaded),
+                Is.EquivalentTo(new[] { "Docs", "Docs/remote.txt" }));
             Assert.That(localContent, Is.EqualTo("remote-created content"));
             Assert.That(baseline?.RemoteFileId, Is.EqualTo(remoteFile.Id));
             Assert.That(baseline?.LocalContentHash, Is.EqualTo(remoteFile.ContentHash));
@@ -250,7 +252,9 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
 
         Assert.Multiple(() =>
         {
-            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Downloaded }));
+            Assert.That(
+                GetActivityPaths(result, SyncActivityKind.Downloaded),
+                Is.EquivalentTo(new[] { "Docs/remote-update.txt" }));
             Assert.That(localContent, Is.EqualTo("remote second"));
             Assert.That(updatedRemoteFile.Id, Is.EqualTo(remoteFile.Id));
             Assert.That(updatedRemoteFile.ContentHash, Is.Not.EqualTo(remoteFile.ContentHash));
@@ -297,7 +301,9 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         Assert.Multiple(() =>
         {
             Assert.That(uploadRun.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
-            Assert.That(downloadRun.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Downloaded }));
+            Assert.That(
+                GetActivityPaths(downloadRun, SyncActivityKind.Downloaded),
+                Is.EquivalentTo(new[] { "共有", downloadPath }));
             Assert.That(uploadedContent, Is.EqualTo("unicode local content"));
             Assert.That(downloadedContent, Is.EqualTo("unicode remote content"));
             Assert.That(uploadedBaseline?.RelativePath, Is.EqualTo(uploadPath));
@@ -409,7 +415,9 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         Assert.Multiple(() =>
         {
             Assert.That(uploadRun.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
-            Assert.That(downloadRun.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Downloaded }));
+            Assert.That(
+                GetActivityPaths(downloadRun, SyncActivityKind.Downloaded),
+                Is.EquivalentTo(new[] { "RemoteLarge", downloadPath }));
             Assert.That(uploadedRoundTrip, Is.EqualTo(uploadBytes));
             Assert.That(downloadedBytes, Is.EqualTo(remoteBytes));
             Assert.That(uploaded.SizeBytes, Is.EqualTo(uploadBytes.Length));
@@ -521,7 +529,9 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         Assert.Multiple(() =>
         {
             Assert.That(uploadRun.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
-            Assert.That(downloadRun.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Downloaded }));
+            Assert.That(
+                GetActivityPaths(downloadRun, SyncActivityKind.Downloaded),
+                Is.EquivalentTo(GetDirectoryPrefixes(remoteDirectory).Append(downloadPath)));
             Assert.That(uploadedContent, Is.EqualTo("deep local content"));
             Assert.That(downloadedContent, Is.EqualTo("deep remote content"));
             Assert.That(uploadedBaseline?.RelativePath, Is.EqualTo(uploadPath));
@@ -561,7 +571,7 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         Assert.Multiple(() =>
         {
             Assert.That(exception, Is.Not.Null);
-            Assert.That(new[] { exception!.FirstPath, exception.SecondPath }, Is.EquivalentTo(new[] { "Case/File.txt", "case/file.txt" }));
+            Assert.That(new[] { exception!.FirstPath, exception.SecondPath }, Is.EquivalentTo(new[] { "Case", "case" }));
             Assert.That(exception.Message, Does.Contain("Case-insensitive path collision"));
             Assert.That(rootContent.Nodes, Is.Empty);
             Assert.That(rootContent.Files, Is.Empty);
@@ -846,7 +856,10 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
             Assert.That(runner.Status.LastError, Is.EqualTo(expected));
             Assert.That(runner.Status.CurrentOperation, Is.EqualTo("Action required: " + expected));
             Assert.That(File.Exists(localFilePath), Is.False);
-            Assert.That(baselines, Is.Empty);
+            Assert.That(
+                baselines.Where(entry => entry.Kind == SyncEntryKind.Directory).Select(entry => entry.RelativePath),
+                Is.EquivalentTo(new[] { "DiskFull" }));
+            Assert.That(baselines.Where(entry => entry.Kind == SyncEntryKind.File), Is.Empty);
             Assert.That(remoteFile.Name, Is.EqualTo("remote-download.txt"));
         });
     }
@@ -934,8 +947,8 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
 
         Assert.Multiple(() =>
         {
-            Assert.That(firstClientBRun.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Downloaded }));
-            Assert.That(secondClientBRun.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Downloaded }));
+            Assert.That(GetActivityPaths(firstClientBRun, SyncActivityKind.Downloaded), Is.EquivalentTo(new[] { "Docs", "Docs/shared.txt" }));
+            Assert.That(GetActivityPaths(secondClientBRun, SyncActivityKind.Downloaded), Is.EquivalentTo(new[] { "Docs/shared.txt" }));
             Assert.That(clientBContent, Is.EqualTo("updated by client A"));
         });
     }
@@ -995,7 +1008,8 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         Assert.Multiple(() =>
         {
             Assert.That(clientARun.Activities.Select(activity => activity.Kind), Is.EquivalentTo(new[] { SyncActivityKind.Uploaded, SyncActivityKind.DeletedRemote }));
-            Assert.That(clientBRun.Activities.Select(activity => activity.Kind), Is.EquivalentTo(new[] { SyncActivityKind.Downloaded, SyncActivityKind.DeletedLocal }));
+            Assert.That(GetActivityPaths(clientBRun, SyncActivityKind.Downloaded), Is.EquivalentTo(new[] { "Archive", "Archive/Reports", movedPath }));
+            Assert.That(GetActivityPaths(clientBRun, SyncActivityKind.DeletedLocal), Is.EquivalentTo(new[] { initialPath }));
             Assert.That(File.Exists(Path.Combine(localRootB, "Docs", "draft.txt")), Is.False);
             Assert.That(movedClientBContent, Is.EqualTo("moved by client A"));
             Assert.That(movedRemoteContent, Is.EqualTo("moved by client A"));
@@ -1477,6 +1491,25 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         }
     }
 
+    private static IEnumerable<string> GetActivityPaths(SyncRunResult result, SyncActivityKind kind)
+    {
+        return result.Activities
+            .Where(activity => activity.Kind == kind)
+            .Select(activity => activity.RelativePath);
+    }
+
+    private static IEnumerable<string> GetDirectoryPrefixes(string relativeDirectoryPath)
+    {
+        string currentPath = string.Empty;
+        foreach (string segment in relativeDirectoryPath.Split('/'))
+        {
+            currentPath = string.IsNullOrEmpty(currentPath)
+                ? segment
+                : $"{currentPath}/{segment}";
+            yield return currentPath;
+        }
+    }
+
     private static SyncPairRunnerRetryOptions CreateNoDelayRetryOptions(int maxAttempts = 3)
     {
         return new SyncPairRunnerRetryOptions
@@ -1658,7 +1691,9 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
 
         public Task CreateDirectoryAsync(string rootPath, string relativePath, CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException("Disk-full smoke does not create local directories.");
+            cancellationToken.ThrowIfCancellationRequested();
+            Directory.CreateDirectory(Path.Combine(rootPath, relativePath.Replace('/', Path.DirectorySeparatorChar)));
+            return Task.CompletedTask;
         }
 
         public Task DeleteDirectoryAsync(string rootPath, string relativePath, CancellationToken cancellationToken = default)

@@ -271,7 +271,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Verification: `RealtimeRemoteChangeSyncCoordinatorTests` cover SignalR wake-up debounce into sync requests, and `RemoteChangeAwareSyncPairWorkTests` cover change-feed read/acknowledge around sync work; focused continuous-sync tests passed 19/19 and full `Cotton.Sync.App.Tests` passed 77/77.
 - [x] Add tests for offline to online recovery.
   Verification: `SyncNowAsync_RetriesTransientNetworkFailureAndReturnsIdleOnRecovery` covers transient offline recovery back to `Idle`; focused continuous-sync tests passed 19/19 and full `Cotton.Sync.App.Tests` passed 77/77.
-- [ ] Add two-client integration test against local dev server.
+- [x] Add two-client integration test against local dev server.
+  Verification: `SyncClientEndToEndTests` covers two-client create/update propagation, rename/move propagation, and simultaneous edit conflict against the local integration server. Focused 8-test sync e2e run passed, full `dotnet test src/Cotton.Server.IntegrationTests/Cotton.Server.IntegrationTests.csproj --configuration Release --logger "console;verbosity=minimal"` passed 363/363, and `dotnet build src/Cotton.sln --configuration Release` passed with 0 warnings.
 - [ ] Run continuous sync soak test for at least 2 hours before this phase is considered done.
 
 ## Phase 7 - Authentication And Token Storage
