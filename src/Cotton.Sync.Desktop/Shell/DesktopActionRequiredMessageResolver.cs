@@ -80,6 +80,17 @@ internal static class DesktopActionRequiredMessageResolver
         return Normalize(exception.Message) ?? "Operation could not be completed. Check diagnostics and retry.";
     }
 
+    internal static bool IsMissingDesktopSyncChangesApi(string? message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return false;
+        }
+
+        return string.Equals(message, MissingDesktopSyncChangesApiMessage, StringComparison.Ordinal)
+            || LooksLikeMissingDesktopSyncChangesApi(message, responseBody: null);
+    }
+
     private static string? NormalizeApiException(CottonApiException exception)
     {
         string? responseMessage = ExtractResponseMessage(exception.ResponseBody);

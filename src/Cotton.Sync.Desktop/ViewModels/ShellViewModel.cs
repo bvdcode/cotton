@@ -1685,7 +1685,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         {
             DesktopSelfTestSnapshot result = await _controller.RunSelfTestAsync().ConfigureAwait(true);
             string actionRequiredMessage = DesktopActionRequiredMessageResolver.FromSelfTest(result);
-            SetDesktopSyncChangesApiUnavailable(IsMissingDesktopSyncChangesApiMessage(actionRequiredMessage));
+            SetDesktopSyncChangesApiUnavailable(HasMissingDesktopSyncChangesApiFailure(result));
             GlobalStatus = result.Passed ? "Self-test passed" : "Action required";
             ActionRequiredMessage = actionRequiredMessage;
             SelfTestItems.Clear();
@@ -2028,10 +2028,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private static bool IsMissingDesktopSyncChangesApiMessage(string message)
     {
-        return string.Equals(
-            message,
-            DesktopActionRequiredMessageResolver.MissingDesktopSyncChangesApiMessage,
-            StringComparison.Ordinal);
+        return DesktopActionRequiredMessageResolver.IsMissingDesktopSyncChangesApi(message);
+    }
+
+    private static bool HasMissingDesktopSyncChangesApiFailure(DesktopSelfTestSnapshot selfTest)
+    {
+        return selfTest.Items.Any(static item => DesktopActionRequiredMessageResolver.IsMissingDesktopSyncChangesApi(item.Details));
     }
 
     private void ScheduleServerProbe(string serverUrl)

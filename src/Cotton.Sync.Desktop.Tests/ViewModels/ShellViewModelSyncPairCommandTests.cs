@@ -1302,6 +1302,37 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task SelfTest_BlocksAddFolderWhenMissingSyncApiFailureIsNotFirst()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot())
+        {
+            SelfTestSnapshot = new DesktopSelfTestSnapshot(
+            [
+                new DesktopSelfTestItemSnapshot("Token storage", false, "Restricted file storage is not release-secure."),
+                new DesktopSelfTestItemSnapshot(
+                    "Desktop sync change feed",
+                    false,
+                    "Cotton API request GET /api/v1/sync/changes?since=0&limit=1 returned invalid JSON "
+                    + "with content type 'text/html' and status 200 (OK)."),
+            ]),
+        };
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        viewModel.LocalFolderPath = "/home/user/Cotton";
+        viewModel.RemoteFolderPath = "/";
+
+        await ExecuteAsync(viewModel.SelfTestCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Action required"));
+            Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo("Restricted file storage is not release-secure."));
+            Assert.That(viewModel.ShowAddSyncPairCommand.CanExecute(null), Is.False);
+            Assert.That(viewModel.AddSyncPairCommand.CanExecute(null), Is.False);
+        });
+    }
+
+    [Test]
     public async Task StatusChanged_MissingDesktopSyncChangesApiBlocksAddFolderFlow()
     {
         Guid syncPairId = Guid.NewGuid();
