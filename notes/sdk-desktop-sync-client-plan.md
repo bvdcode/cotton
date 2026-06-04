@@ -205,6 +205,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [x] Add ignore patterns for common temporary files.
   Verification: `LocalFileScanner.ShouldIgnore` excludes `.cotton-sync`, Office temp files, backup suffixes, `.tmp`, `.partial`, and `.crdownload`; `ScanAsync_IgnoresTempFilesAndCottonWorkingFolder` passed in `LocalFileScannerTests` 4/4 and full `Cotton.Sync.Tests` 45/45.
   Verification 2026-06-04: ignore rules were lifted to `SyncPathIgnoreRules` and applied to remote tree crawling too, so remote `.cotton-sync` or temporary paths cannot enter the local writer/baseline model. Focused remote/local ignore tests passed 11/11, full `Cotton.Sync.Tests` passed 118/118, and `dotnet build src/Cotton.sln --configuration Release` passed with 0 warnings.
+  Verification 2026-06-04: `SyncEngine` now filters ignored paths while building reconciliation indexes too, so future remote crawler implementations or stale ignored baselines cannot drive local writes/deletes. Focused `SyncEngineTests` passed 48/48, full `Cotton.Sync.Tests` passed 119/119, and `dotnet build src/Cotton.sln --configuration Release` passed with 0 warnings.
 - [x] Add symlink/reparse-point policy.
   Verification: local scanning skips `FileAttributes.ReparsePoint` entries and does not traverse reparse-point directories through `EnumerationOptions.AttributesToSkip`; `ScanAsync_IgnoresSymlinkFilesAndDoesNotTraverseSymlinkDirectories` passed in `LocalFileScannerTests` 4/4 and full `Cotton.Sync.Tests` 45/45.
 - [x] Add empty-directory reconciliation.
