@@ -439,7 +439,7 @@
                   </Grid>
                 </Border>
 
-                <Grid RowDefinitions="*,Auto"
+                <Grid RowDefinitions="*,Auto,Auto"
                       RowSpacing="7"
                       IsVisible="{Binding HasSyncPairs}">
                   <ListBox ItemsSource="{Binding SyncPairs}"
@@ -489,7 +489,50 @@
                       </DataTemplate>
                     </ListBox.ItemTemplate>
                   </ListBox>
-                  <Button Grid.Row="1"
+
+                  <Border Grid.Row="1"
+                          Padding="8"
+                          CornerRadius="6"
+                          Background="{DynamicResource CottonSurfaceMutedBrush}"
+                          BorderBrush="{DynamicResource CottonBorderBrush}"
+                          BorderThickness="1">
+                    <Grid RowDefinitions="Auto,Auto"
+                          ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+                          RowSpacing="6"
+                          ColumnSpacing="6">
+                      <TextBox Text="{Binding SelectedSyncPairEditableDisplayName}"
+                               PlaceholderText="Folder name" />
+                      <Button Grid.Column="1"
+                              Content="✓"
+                              Classes="icon"
+                              ToolTip.Tip="Save folder name"
+                              Command="{Binding SaveSelectedSyncPairNameCommand}" />
+                      <Button Grid.Column="2"
+                              Content="{Binding SelectedSyncPair.ToggleEnabledIcon}"
+                              Classes="icon"
+                              ToolTip.Tip="{Binding SelectedSyncPair.ToggleEnabledLabel}"
+                              Command="{Binding ToggleSelectedSyncPairEnabledCommand}" />
+                      <Button Grid.Column="3"
+                              Content="↗"
+                              Classes="icon"
+                              ToolTip.Tip="Open selected local folder"
+                              Command="{Binding OpenFolderCommand}" />
+                      <Button Grid.Column="4"
+                              Content="x"
+                              Classes="icon"
+                              ToolTip.Tip="Remove sync folder"
+                              Command="{Binding RemoveSelectedSyncPairCommand}" />
+                      <TextBlock Grid.Row="1"
+                                 Grid.ColumnSpan="5"
+                                 Text="{Binding SelectedSyncPair.LocalPath}"
+                                 ToolTip.Tip="{Binding SelectedSyncPair.LocalPath}"
+                                 Classes="secondary"
+                                 FontSize="11"
+                                 TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                  </Border>
+
+                  <Button Grid.Row="2"
                           Content="+"
                           Classes="icon primary"
                           ToolTip.Tip="Add another sync folder"

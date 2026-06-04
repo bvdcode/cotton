@@ -30,11 +30,14 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
             if (SetProperty(ref _isEnabled, value))
             {
                 OnPropertyChanged(nameof(ToggleEnabledLabel));
+                OnPropertyChanged(nameof(ToggleEnabledIcon));
             }
         }
     }
 
     public string ToggleEnabledLabel => IsEnabled ? "Disable" : "Enable";
+
+    public string ToggleEnabledIcon => IsEnabled ? "⏸" : "▶";
 
     public string DisplayName
     {

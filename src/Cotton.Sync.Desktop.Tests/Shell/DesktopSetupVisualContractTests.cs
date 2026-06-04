@@ -43,13 +43,33 @@ public sealed class DesktopSetupVisualContractTests
         string emptyFoldersState = GetSlice(
             mainWindowXaml,
             "IsVisible=\"{Binding HasNoSyncPairs}\"",
-            "<Grid RowDefinitions=\"*,Auto\"");
+            "<Grid RowDefinitions=\"*,Auto,Auto\"");
 
         Assert.Multiple(() =>
         {
             Assert.That(CountOccurrences(emptyFoldersState, "ShowAddSyncPairCommand"), Is.EqualTo(1));
             Assert.That(CountOccurrences(emptyFoldersState, "Content=\"+\""), Is.EqualTo(1));
             Assert.That(emptyFoldersState, Does.Not.Contain("<TextBlock Text=\"+\""));
+        });
+    }
+
+    [Test]
+    public void DashboardFolders_ExposeSelectedPairManagementActions()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string foldersSection = GetSlice(
+            mainWindowXaml,
+            "<TextBlock Text=\"Folders\"",
+            "<TextBlock Text=\"Activity\"");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(foldersSection, Does.Contain("SelectedSyncPairEditableDisplayName"));
+            Assert.That(foldersSection, Does.Contain("SaveSelectedSyncPairNameCommand"));
+            Assert.That(foldersSection, Does.Contain("ToggleSelectedSyncPairEnabledCommand"));
+            Assert.That(foldersSection, Does.Contain("RemoveSelectedSyncPairCommand"));
+            Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"Open selected local folder\""));
+            Assert.That(foldersSection, Does.Contain("SelectedSyncPair.ToggleEnabledIcon"));
         });
     }
 
