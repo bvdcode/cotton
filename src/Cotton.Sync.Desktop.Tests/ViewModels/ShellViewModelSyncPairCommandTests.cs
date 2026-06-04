@@ -805,6 +805,11 @@ public sealed class ShellViewModelSyncPairCommandTests
         public void Dispose()
         {
         }
+
+        public ValueTask DisposeAsync()
+        {
+            return ValueTask.CompletedTask;
+        }
     }
 
     private static ShellViewModel CreateViewModel(

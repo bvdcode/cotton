@@ -579,13 +579,17 @@ internal sealed class DesktopShellController : IDesktopShellController
 
     public void Dispose()
     {
-        DesktopSyncApplicationHost? host = _host;
-        _host = null;
-        _activitySubscription?.Dispose();
-        _activitySubscription = null;
-        _statusSubscription?.Dispose();
-        _statusSubscription = null;
+        DesktopSyncApplicationHost? host = DetachHost();
         host?.Dispose();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        DesktopSyncApplicationHost? host = DetachHost();
+        if (host is not null)
+        {
+            await StopAndDisposeHostAsync(host).ConfigureAwait(false);
+        }
     }
 
     public static DesktopShellController CreateDefault(DesktopStartupOptions? startupOptions = null)
@@ -813,6 +817,17 @@ internal sealed class DesktopShellController : IDesktopShellController
     private DesktopSyncApplicationHost RequireHost()
     {
         return _host ?? throw new InvalidOperationException("Sign in before running sync commands.");
+    }
+
+    private DesktopSyncApplicationHost? DetachHost()
+    {
+        DesktopSyncApplicationHost? host = _host;
+        _host = null;
+        _activitySubscription?.Dispose();
+        _activitySubscription = null;
+        _statusSubscription?.Dispose();
+        _statusSubscription = null;
+        return host;
     }
 
     private async Task ReplaceHostAsync(DesktopSyncApplicationHost host, CancellationToken cancellationToken)

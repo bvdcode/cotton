@@ -64,11 +64,11 @@ public sealed partial class MainWindow : Window
             }
         };
         Closing += OnClosing;
-        Closed += (_, _) =>
+        Closed += async (_, _) =>
         {
             Closing -= OnClosing;
             viewModel.PropertyChanged -= OnViewModelPropertyChanged;
-            viewModel.Dispose();
+            await viewModel.DisposeAsync().ConfigureAwait(true);
         };
     }
 

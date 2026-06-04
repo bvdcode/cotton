@@ -16,7 +16,7 @@ namespace Cotton.Sync.Desktop.ViewModels;
 /// <summary>
 /// Main desktop shell view model.
 /// </summary>
-internal sealed class ShellViewModel : ViewModelBase, IDisposable
+internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposable
 {
     private const int MaxActivityRows = 30;
     private const int MaxConflictRows = 20;
@@ -599,6 +599,18 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
+        DisposeViewModelResources();
+        _controller.Dispose();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        DisposeViewModelResources();
+        await _controller.DisposeAsync().ConfigureAwait(true);
+    }
+
+    private void DisposeViewModelResources()
+    {
         _controller.StatusChanged -= OnStatusChanged;
         _controller.ActivityReported -= OnActivityReported;
         Activities.CollectionChanged -= OnActivitiesChanged;
@@ -609,7 +621,6 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
         Notifications.CollectionChanged -= OnNotificationsChanged;
         _serverProbeCancellation?.Cancel();
         _serverProbeCancellation?.Dispose();
-        _controller.Dispose();
     }
 
     public async Task InitializeAsync()
