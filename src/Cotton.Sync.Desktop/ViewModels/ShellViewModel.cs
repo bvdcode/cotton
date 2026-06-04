@@ -1225,8 +1225,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         Trace.TraceError(exception.ToString());
         GlobalStatus = "Action failed";
-        ActionRequiredMessage = exception.Message;
-        AddActivity("Error", string.Empty, exception.Message);
+        string actionRequiredMessage = DesktopActionRequiredMessageResolver.FromException(exception);
+        ActionRequiredMessage = actionRequiredMessage;
+        AddActivity("Error", string.Empty, actionRequiredMessage);
         RefreshCurrentProgressText();
         IsBusy = false;
     }

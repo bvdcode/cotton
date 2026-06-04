@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Net;
+using Cotton.Sdk;
 using Cotton.Sync.Desktop.Shell;
 
 namespace Cotton.Sync.Desktop.Tests.Shell;
@@ -20,6 +22,25 @@ public sealed class DesktopActionRequiredMessageResolverTests
         string message = DesktopActionRequiredMessageResolver.FromStatus(status);
 
         Assert.That(message, Is.EqualTo("Remote folder is unavailable."));
+    }
+
+    [Test]
+    public void FromStatus_ExplainsMissingDesktopSyncChangesApi()
+    {
+        var status = new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(
+                Guid.NewGuid(),
+                "Error",
+                "Cotton API request GET /api/v1/sync/changes?since=0&limit=500 returned invalid JSON "
+                + "with content type 'text/html' and status 200 (OK). Response: <!doctype html><html>App</html>"),
+        ]);
+
+        string message = DesktopActionRequiredMessageResolver.FromStatus(status);
+
+        Assert.That(
+            message,
+            Is.EqualTo("This Cotton server does not expose the desktop sync changes API yet. Deploy the latest Cotton backend and retry sync."));
     }
 
     [Test]
@@ -62,5 +83,20 @@ public sealed class DesktopActionRequiredMessageResolverTests
         string message = DesktopActionRequiredMessageResolver.FromSelfTest(result);
 
         Assert.That(message, Is.Empty);
+    }
+
+    [Test]
+    public void FromException_ExplainsHtmlApiResponse()
+    {
+        var exception = new CottonApiException(
+            HttpStatusCode.OK,
+            "<!doctype html><html>App</html>",
+            "Cotton API request GET /api/v1/settings returned invalid JSON with content type 'text/html' and status 200 (OK).");
+
+        string message = DesktopActionRequiredMessageResolver.FromException(exception);
+
+        Assert.That(
+            message,
+            Is.EqualTo("Cotton API returned a web page instead of JSON. Check the server URL or backend deployment and retry."));
     }
 }
