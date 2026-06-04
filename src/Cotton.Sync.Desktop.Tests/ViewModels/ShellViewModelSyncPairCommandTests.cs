@@ -816,6 +816,40 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task SignInCommand_ShowsHumanInvalidPasswordMessage()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedOutSnapshot())
+        {
+            ServerProbeResult = new DesktopServerProbeResult(
+                new Uri("https://app.cottoncloud.dev/"),
+                true,
+                "Cotton Cloud",
+                "instance-hash"),
+            SignInException = new CottonApiException(
+                HttpStatusCode.Forbidden,
+                "{\"success\":false,\"message\":\"Invalid password\"}",
+                "Cotton API request POST /api/v1/auth/login failed with status 403 (Forbidden)."),
+        };
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        viewModel.ServerUrl = "app.cottoncloud.dev";
+        viewModel.Username = "desktop@example.test";
+        viewModel.Password = "wrong-password";
+        await WaitForAsync(() => viewModel.IsSignInStepVisible);
+
+        viewModel.SignInCommand.Execute(null);
+        await WaitForAsync(() => viewModel.HasActionRequired);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsSignInStepVisible, Is.True);
+            Assert.That(viewModel.IsSignedIn, Is.False);
+            Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo("Invalid username or password."));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Sign in to continue."));
+        });
+    }
+
+    [Test]
     public async Task SignOutCommand_ClearsSensitiveSetupState()
     {
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Idle")));
