@@ -44,8 +44,21 @@ namespace Cotton.Server.Handlers.Sync
         /// </summary>
         public async Task<SyncChangesResponseDto> Handle(GetSyncChangesQuery request, CancellationToken ct)
         {
+            ArgumentOutOfRangeException.ThrowIfNegative(request.SinceCursor);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.Limit);
             int limit = Math.Min(request.Limit, MaximumLimit);
+            long? earliestAvailableCursor = await GetEarliestAvailableCursorAsync(request.UserId, ct);
+            if (earliestAvailableCursor.HasValue && request.SinceCursor < earliestAvailableCursor.Value)
+            {
+                return new SyncChangesResponseDto
+                {
+                    SinceCursor = request.SinceCursor,
+                    NextCursor = request.SinceCursor,
+                    CursorExpired = true,
+                    EarliestAvailableCursor = earliestAvailableCursor,
+                };
+            }
+
             List<SyncChange> rows = await _dbContext.SyncChanges
                 .AsNoTracking()
                 .Where(x => x.OwnerId == request.UserId && x.Id > request.SinceCursor)
@@ -68,8 +81,23 @@ namespace Cotton.Server.Handlers.Sync
                 SinceCursor = request.SinceCursor,
                 NextCursor = nextCursor,
                 HasMore = hasMore,
+                EarliestAvailableCursor = earliestAvailableCursor,
                 Changes = rows.Adapt<List<SyncChangeDto>>(),
             };
+        }
+
+        private async Task<long?> GetEarliestAvailableCursorAsync(Guid userId, CancellationToken ct)
+        {
+            long? earliestId = await _dbContext.SyncChanges
+                .AsNoTracking()
+                .Where(x => x.OwnerId == userId)
+                .OrderBy(x => x.Id)
+                .Select(x => (long?)x.Id)
+                .FirstOrDefaultAsync(ct);
+
+            return earliestId.HasValue
+                ? Math.Max(0, earliestId.Value - 1)
+                : null;
         }
     }
 }
