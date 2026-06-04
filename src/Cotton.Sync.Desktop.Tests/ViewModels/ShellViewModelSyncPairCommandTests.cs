@@ -145,7 +145,11 @@ public sealed class ShellViewModelSyncPairCommandTests
     {
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Idle")))
         {
-            SyncAllException = new InvalidOperationException("Cotton API returned HTML instead of JSON."),
+            SyncAllException = new CottonApiException(
+                HttpStatusCode.OK,
+                "<!doctype html><html>App</html>",
+                "Cotton API request GET /api/v1/sync/changes?since=0&limit=500 returned invalid JSON "
+                + "with content type 'text/html' and status 200 (OK)."),
         };
         using ShellViewModel viewModel = CreateViewModel(controller);
         await viewModel.InitializeAsync();
@@ -157,7 +161,9 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             Assert.That(viewModel.GlobalStatus, Is.EqualTo("Action failed"));
             Assert.That(viewModel.StatusCardTitle, Is.EqualTo("Sync needs attention"));
-            Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo("Cotton API returned HTML instead of JSON."));
+            Assert.That(
+                viewModel.ActionRequiredMessage,
+                Is.EqualTo("This Cotton server does not expose the desktop sync changes API yet. Deploy the latest Cotton backend and retry sync."));
             Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Fix the issue below to continue syncing."));
         });
     }
