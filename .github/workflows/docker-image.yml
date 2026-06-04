@@ -161,7 +161,9 @@ jobs:
       - name: Install desktop Linux smoke dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libsecret-tools
+          sudo apt-get install -y --no-install-recommends dbus-x11 gnome-keyring libsecret-tools
+          command -v dbus-run-session
+          command -v gnome-keyring-daemon
           command -v secret-tool
 
       - name: Restore NuGet package project
@@ -184,9 +186,12 @@ jobs:
 
       - name: Smoke desktop Linux self-test
         run: |
+          dbus-run-session -- bash -euo pipefail <<'EOF'
           temp_dir="$(mktemp -d)"
           trap 'rm -rf "$temp_dir"' EXIT
+          eval "$(gnome-keyring-daemon --start --components=secrets)"
           src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64/Cotton.Sync.Desktop --self-test --data-dir "$temp_dir"
+          EOF
 
       - name: Package desktop Linux x64 archive
         run: tar -czf cotton-sync-desktop-linux-x64.tar.gz -C src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64 .

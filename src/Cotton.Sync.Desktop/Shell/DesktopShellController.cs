@@ -32,7 +32,7 @@ internal sealed class DesktopShellController : IDesktopShellController
     private readonly IPlatformCommandService _platformCommands;
     private readonly IAutostartService _autostartService;
     private readonly DesktopDiagnosticsExporter _diagnosticsExporter;
-    private readonly Func<DesktopTokenStorageCapabilitySnapshot> _tokenStorageCapabilities;
+    private readonly Func<CancellationToken, Task<DesktopTokenStorageCapabilitySnapshot>> _tokenStorageVerifier;
     private readonly DesktopAppPaths _paths;
     private readonly SqliteAppPreferencesStore _preferencesStore;
     private readonly DesktopStartupOptions _startupOptions;
@@ -49,7 +49,8 @@ internal sealed class DesktopShellController : IDesktopShellController
         IPlatformCommandService platformCommands,
         IAutostartService autostartService,
         DesktopStartupOptions? startupOptions = null,
-        Func<DesktopTokenStorageCapabilitySnapshot>? tokenStorageCapabilities = null)
+        Func<DesktopTokenStorageCapabilitySnapshot>? tokenStorageCapabilities = null,
+        Func<CancellationToken, Task<DesktopTokenStorageCapabilitySnapshot>>? tokenStorageVerifier = null)
     {
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         _factory = factory ?? throw new ArgumentNullException(nameof(factory));
@@ -59,7 +60,10 @@ internal sealed class DesktopShellController : IDesktopShellController
         _autostartService = autostartService ?? throw new ArgumentNullException(nameof(autostartService));
         _diagnosticsExporter = new DesktopDiagnosticsExporter();
         _startupOptions = startupOptions ?? DesktopStartupOptions.Empty;
-        _tokenStorageCapabilities = tokenStorageCapabilities ?? DesktopTokenStorageCapabilities.CreateSnapshot;
+        _tokenStorageVerifier = tokenStorageVerifier
+            ?? (tokenStorageCapabilities is null
+                ? DesktopTokenStorageCapabilities.CreateVerifiedSnapshotAsync
+                : cancellationToken => Task.FromResult(tokenStorageCapabilities()));
     }
 
     public event EventHandler<DesktopSyncStatusSnapshot>? StatusChanged;
@@ -122,7 +126,7 @@ internal sealed class DesktopShellController : IDesktopShellController
     {
         ArgumentNullException.ThrowIfNull(request);
         Uri serverUrl = ParseServerUrl(request.ServerUrl);
-        EnsureReleaseSecureTokenStorage();
+        await EnsureReleaseSecureTokenStorageAsync(cancellationToken).ConfigureAwait(false);
         DesktopSyncApplicationHost host = _factory.Create(serverUrl);
         try
         {
@@ -463,7 +467,8 @@ internal sealed class DesktopShellController : IDesktopShellController
             "Authentication state",
             () => CheckAuthenticationStateAsync(cancellationToken)).ConfigureAwait(false);
 
-        DesktopTokenStorageCapabilitySnapshot tokenStorage = _tokenStorageCapabilities();
+        DesktopTokenStorageCapabilitySnapshot tokenStorage = await _tokenStorageVerifier(cancellationToken)
+            .ConfigureAwait(false);
         items.Add(new DesktopSelfTestItemSnapshot(
             "Token storage",
             tokenStorage.IsReleaseSecure,
@@ -914,7 +919,7 @@ internal sealed class DesktopShellController : IDesktopShellController
         Uri serverUrl,
         CancellationToken cancellationToken)
     {
-        if (!CanUseStoredSession())
+        if (!await CanUseStoredSessionAsync(cancellationToken).ConfigureAwait(false))
         {
             return null;
         }
@@ -947,9 +952,10 @@ internal sealed class DesktopShellController : IDesktopShellController
         }
     }
 
-    private void EnsureReleaseSecureTokenStorage()
+    private async Task EnsureReleaseSecureTokenStorageAsync(CancellationToken cancellationToken)
     {
-        DesktopTokenStorageCapabilitySnapshot tokenStorage = _tokenStorageCapabilities();
+        DesktopTokenStorageCapabilitySnapshot tokenStorage = await _tokenStorageVerifier(cancellationToken)
+            .ConfigureAwait(false);
         if (tokenStorage.IsReleaseSecure)
         {
             return;
@@ -958,9 +964,10 @@ internal sealed class DesktopShellController : IDesktopShellController
         throw new InvalidOperationException(CreateTokenStorageUnavailableMessage(tokenStorage));
     }
 
-    private bool CanUseStoredSession()
+    private async Task<bool> CanUseStoredSessionAsync(CancellationToken cancellationToken)
     {
-        DesktopTokenStorageCapabilitySnapshot tokenStorage = _tokenStorageCapabilities();
+        DesktopTokenStorageCapabilitySnapshot tokenStorage = await _tokenStorageVerifier(cancellationToken)
+            .ConfigureAwait(false);
         if (tokenStorage.IsReleaseSecure)
         {
             return true;
