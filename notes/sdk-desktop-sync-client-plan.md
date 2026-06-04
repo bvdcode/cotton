@@ -528,6 +528,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Partial 2026-06-04: the Inno Setup script exists and is covered by metadata tests, but the installer has not yet been built on Windows or installed on a clean VM.
   Partial 2026-06-04: CI is now configured to build and upload the installer on `windows-latest`; this still does not replace a clean Windows VM install/uninstall smoke.
 - [ ] Test Windows portable archive on a clean VM.
+  Partial 2026-06-04: Windows CI now creates a zip archive from the published `win-x64` output, extracts it on `windows-latest`, and runs `Cotton.Sync.Desktop.exe --self-test --data-dir <temp>` from the extracted archive. This verifies archive layout on Windows, but it is not a clean VM smoke of the uploaded release artifact.
 - [ ] Test Linux package/archive on a clean VM.
   Partial 2026-06-04: locally extracted `/tmp/cotton-sync-desktop-linux-x64.deb` with `dpkg-deb -x` and ran `/opt/cotton-sync/Cotton.Sync.Desktop --self-test --data-dir <temp>` from the extracted package layout. The packaged apphost started, found the packaged desktop icon, opened SQLite state, detected Linux/XFCE platform capabilities, and reported notification/file-watcher checks. The self-test correctly failed only at `Token storage` because this local environment lacks `secret-tool`, so this does not replace the required clean Linux VM smoke with Secret Service available.
 - [ ] Test uninstall behavior.
