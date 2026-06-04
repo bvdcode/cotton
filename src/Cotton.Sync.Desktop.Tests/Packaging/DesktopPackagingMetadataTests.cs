@@ -126,6 +126,25 @@ public sealed class DesktopPackagingMetadataTests
     }
 
     [Test]
+    public void CiWorkflow_SmokesLinuxPackageArtifacts()
+    {
+        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(workflow, Does.Contain("Smoke desktop Linux archive artifact"));
+            Assert.That(workflow, Does.Contain("tar -xzf cotton-sync-desktop-linux-x64.tar.gz"));
+            Assert.That(workflow, Does.Contain("\"$extract_dir/Cotton.Sync.Desktop\" --self-test --data-dir"));
+            Assert.That(workflow, Does.Contain("Smoke desktop Linux deb artifact"));
+            Assert.That(workflow, Does.Contain("dpkg-deb -x cotton-sync-desktop-linux-x64.deb"));
+            Assert.That(workflow, Does.Contain("test -f \"$extract_dir/usr/share/applications/cotton-sync.desktop\""));
+            Assert.That(workflow, Does.Contain("test -f \"$extract_dir/usr/share/icons/hicolor/192x192/apps/cotton-sync.png\""));
+            Assert.That(workflow, Does.Contain("test -L \"$extract_dir/usr/bin/cotton-sync\""));
+            Assert.That(workflow, Does.Contain("\"$extract_dir/opt/cotton-sync/Cotton.Sync.Desktop\" --self-test --data-dir"));
+        });
+    }
+
+    [Test]
     public void CiWorkflow_RunsWindowsDesktopSmokeBeforeRelease()
     {
         string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));

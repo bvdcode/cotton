@@ -203,6 +203,35 @@ jobs:
             cotton-sync-desktop-linux-x64.deb \
             '${{ steps.gitversion.outputs.SemVer }}'
 
+      - name: Smoke desktop Linux archive artifact
+        run: |
+          dbus-run-session -- bash -euo pipefail <<'EOF'
+          temp_dir="$(mktemp -d)"
+          trap 'rm -rf "$temp_dir"' EXIT
+          extract_dir="$temp_dir/archive"
+          data_dir="$temp_dir/data"
+          mkdir -p "$extract_dir" "$data_dir"
+          tar -xzf cotton-sync-desktop-linux-x64.tar.gz -C "$extract_dir"
+          eval "$(gnome-keyring-daemon --start --components=secrets)"
+          "$extract_dir/Cotton.Sync.Desktop" --self-test --data-dir "$data_dir"
+          EOF
+
+      - name: Smoke desktop Linux deb artifact
+        run: |
+          dbus-run-session -- bash -euo pipefail <<'EOF'
+          temp_dir="$(mktemp -d)"
+          trap 'rm -rf "$temp_dir"' EXIT
+          extract_dir="$temp_dir/deb"
+          data_dir="$temp_dir/data"
+          mkdir -p "$extract_dir" "$data_dir"
+          dpkg-deb -x cotton-sync-desktop-linux-x64.deb "$extract_dir"
+          test -f "$extract_dir/usr/share/applications/cotton-sync.desktop"
+          test -f "$extract_dir/usr/share/icons/hicolor/192x192/apps/cotton-sync.png"
+          test -L "$extract_dir/usr/bin/cotton-sync"
+          eval "$(gnome-keyring-daemon --start --components=secrets)"
+          "$extract_dir/opt/cotton-sync/Cotton.Sync.Desktop" --self-test --data-dir "$data_dir"
+          EOF
+
       - name: Upload desktop Linux x64 artifact
         uses: actions/upload-artifact@v5
         with:
