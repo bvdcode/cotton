@@ -895,6 +895,22 @@
                             Classes="compact"
                             Command="{Binding SignOutCommand}" />
                   </Grid>
+
+                  <Border Height="1"
+                          Background="{DynamicResource CottonBorderBrush}" />
+
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="About"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="Cross-platform folder sync for Cotton Cloud."
+                               Classes="secondary"
+                               FontSize="12"
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding AppVersion}"
+                               Classes="secondary"
+                               FontSize="12"
+                               TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
                 </StackPanel>
               </TabItem>
 

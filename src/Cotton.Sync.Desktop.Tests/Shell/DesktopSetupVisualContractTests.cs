@@ -147,6 +147,27 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
+    public void SettingsAccountTab_IncludesAboutSectionWithoutAddingExtraTab()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string settingsOverlay = GetSlice(
+            mainWindowXaml,
+            "IsVisible=\"{Binding IsSettingsVisible}\"",
+            "</Window>");
+        string accountTab = GetSlice(
+            settingsOverlay,
+            "<TabItem Header=\"Account\">",
+            "<TabItem Header=\"Startup\">");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(accountTab, Does.Contain("Text=\"About\""));
+            Assert.That(accountTab, Does.Contain("Text=\"{Binding AppVersion}\""));
+            Assert.That(CountOccurrences(settingsOverlay, "<TabItem Header="), Is.EqualTo(4));
+        });
+    }
+
+    [Test]
     public void DashboardActionRows_UseIconButtonsForNarrowActions()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
