@@ -33,6 +33,10 @@
     <AvaloniaResource Include="../cotton.client/public/assets/icons/icon-192.png" Link="Assets/icon-192.png" />
     <AvaloniaResource Include="../cotton.client/public/favicon.ico" Link="Assets/favicon.ico" />
     <AvaloniaResource Include="Assets/tray-*.png" />
+    <Content Include="../cotton.client/public/assets/icons/icon-192.png"
+             Link="Assets/icon-192.png"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
@@ -57,6 +61,12 @@
     <WriteLinesToFile File="$(PublishDir)checksums.sha256"
                       Lines="@(CottonPublishedFileHash->'%(FileHash)  %(RecursiveDir)%(Filename)%(Extension)')"
                       Overwrite="true" />
+  </Target>
+
+  <Target Name="ValidateDesktopLooseAssets"
+          AfterTargets="Build">
+    <Error Condition="!Exists('$(OutDir)Assets/icon-192.png')"
+           Text="Cotton Sync desktop icon must be copied to Assets/icon-192.png for Linux desktop entries and packaged app metadata." />
   </Target>
 
 </Project>

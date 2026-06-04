@@ -355,6 +355,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [x] Add Linux autostart adapter.
   Target: XDG autostart `.desktop`.
   Verification 2026-06-03: commit `Clarify desktop lifecycle platform support`; Linux uses an XDG autostart `.desktop` adapter, and the factory no longer adds `--start-minimized` on Linux while tray lifecycle is unsupported. `Cotton.Sync.Desktop.Tests` passed 15/15 including the Linux factory regression test, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
+  Verification 2026-06-03: the frontend `icon-192.png` is now copied as a loose `Assets/icon-192.png` desktop asset for XDG `.desktop` `Icon=` paths; `ValidateDesktopLooseAssets` fails the build if it is missing. `dotnet build src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj --configuration Release --no-restore` produced `Assets/icon-192.png`, and `dotnet publish ... -p:GeneratePublishChecksums=false` produced the same loose icon file.
 - [ ] Add notification adapter.
   Required notifications: initial sync complete, conflict created, action-required error.
   Partial 2026-06-03: added a tested notification tracker for initial sync complete, conflict, and action-required error status transitions, and wired it to compact in-app dashboard notifications. Focused `DesktopNotificationTrackerTests` passed 5/5. Keep unchecked until native Windows/Linux notification adapters are implemented and manually verified.
