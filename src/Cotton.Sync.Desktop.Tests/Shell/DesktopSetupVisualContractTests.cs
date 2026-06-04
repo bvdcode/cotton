@@ -52,6 +52,23 @@ public sealed class DesktopSetupVisualContractTests
         });
     }
 
+    [Test]
+    public void SettingsDiagnostics_DoesNotNestSelfTestScrolling()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string diagnosticsSection = GetSlice(
+            mainWindowXaml,
+            "<TextBlock Text=\"Diagnostics\"",
+            "<TextBlock Text=\"Cotton Sync Desktop\"");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(diagnosticsSection, Does.Contain("ItemsSource=\"{Binding SelfTestItems}\""));
+            Assert.That(diagnosticsSection, Does.Not.Contain("MaxHeight=\"118\""));
+            Assert.That(diagnosticsSection, Does.Not.Contain("<ScrollViewer"));
+        });
+    }
+
     private static string GetDesktopFilePath(string fileName)
     {
         string directory = TestContext.CurrentContext.TestDirectory;
