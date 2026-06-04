@@ -22,18 +22,26 @@ public sealed class DesktopTrayMenuContractTests
     }
 
     [Test]
-    public void TrayMenu_HidesUnavailableFolderAction()
+    public void TrayMenu_HidesUnavailableActions()
     {
         string trayController = File.ReadAllText(GetDesktopShellFilePath("DesktopTrayController.cs"));
 
         Assert.Multiple(() =>
         {
             Assert.That(trayController, Does.Contain("_openFolderMenuItem"));
+            Assert.That(trayController, Does.Contain("_openWebMenuItem"));
             Assert.That(trayController, Does.Contain("_syncNowMenuItem"));
+            Assert.That(trayController, Does.Contain("_pauseResumeMenuItem"));
             Assert.That(trayController, Does.Contain("_settingsMenuItem"));
-            Assert.That(trayController, Does.Contain("_openFolderMenuItem.IsVisible = _viewModel.CanOpenTrayFolder"));
+            Assert.That(trayController, Does.Contain("SetMenuItemAvailability(_openFolderMenuItem"));
+            Assert.That(trayController, Does.Contain("SetMenuItemAvailability(_openWebMenuItem"));
+            Assert.That(trayController, Does.Contain("SetMenuItemAvailability(_syncNowMenuItem"));
+            Assert.That(trayController, Does.Contain("SetMenuItemAvailability(_settingsMenuItem"));
+            Assert.That(trayController, Does.Contain("SetMenuItemAvailability(_pauseResumeMenuItem"));
+            Assert.That(trayController, Does.Contain("menuItem.IsVisible = isAvailable"));
             Assert.That(trayController, Does.Contain("nameof(ShellViewModel.CanOpenTrayFolder)"));
             Assert.That(trayController, Does.Contain("nameof(ShellViewModel.TrayOpenFolderLabel)"));
+            Assert.That(trayController, Does.Not.Contain("SetMenuItemEnabled"));
             Assert.That(trayController, Does.Not.Contain("SetMenuItemEnabled(_openFolderMenuItem"));
             Assert.That(trayController, Does.Not.Contain("nameof(ShellViewModel.SelectedSyncPair)"));
         });

@@ -157,41 +157,38 @@ internal sealed class DesktopTrayController : IDisposable
     {
         if (_viewModel is null)
         {
-            if (_openFolderMenuItem is not null)
-            {
-                _openFolderMenuItem.Header = "Open folder";
-                _openFolderMenuItem.IsVisible = false;
-            }
-
-            SetMenuItemEnabled(_openWebMenuItem, false);
-            SetMenuItemEnabled(_syncNowMenuItem, false);
-            SetMenuItemEnabled(_pauseResumeMenuItem, false);
-            SetMenuItemEnabled(_settingsMenuItem, false);
+            SetMenuItemAvailability(_openFolderMenuItem, false);
+            SetMenuItemAvailability(_openWebMenuItem, false);
+            SetMenuItemAvailability(_syncNowMenuItem, false);
+            SetMenuItemAvailability(_pauseResumeMenuItem, false);
+            SetMenuItemAvailability(_settingsMenuItem, false);
             return;
         }
 
         if (_openFolderMenuItem is not null)
         {
             _openFolderMenuItem.Header = _viewModel.TrayOpenFolderLabel;
-            _openFolderMenuItem.IsVisible = _viewModel.CanOpenTrayFolder;
-            _openFolderMenuItem.IsEnabled = _viewModel.OpenTrayFolderCommand.CanExecute(null);
+            SetMenuItemAvailability(
+                _openFolderMenuItem,
+                _viewModel.CanOpenTrayFolder && _viewModel.OpenTrayFolderCommand.CanExecute(null));
         }
 
-        SetMenuItemEnabled(_openWebMenuItem, _viewModel.OpenWebCommand.CanExecute(null));
-        SetMenuItemEnabled(_syncNowMenuItem, _viewModel.SyncNowCommand.CanExecute(null));
-        SetMenuItemEnabled(_settingsMenuItem, _viewModel.ShowSettingsCommand.CanExecute(null));
+        SetMenuItemAvailability(_openWebMenuItem, _viewModel.OpenWebCommand.CanExecute(null));
+        SetMenuItemAvailability(_syncNowMenuItem, _viewModel.SyncNowCommand.CanExecute(null));
+        SetMenuItemAvailability(_settingsMenuItem, _viewModel.ShowSettingsCommand.CanExecute(null));
         if (_pauseResumeMenuItem is not null)
         {
             _pauseResumeMenuItem.Header = _viewModel.PauseResumeTrayLabel;
-            _pauseResumeMenuItem.IsEnabled = _viewModel.PauseResumeCommand.CanExecute(null);
+            SetMenuItemAvailability(_pauseResumeMenuItem, _viewModel.PauseResumeCommand.CanExecute(null));
         }
     }
 
-    private static void SetMenuItemEnabled(NativeMenuItem? menuItem, bool isEnabled)
+    private static void SetMenuItemAvailability(NativeMenuItem? menuItem, bool isAvailable)
     {
         if (menuItem is not null)
         {
-            menuItem.IsEnabled = isEnabled;
+            menuItem.IsVisible = isAvailable;
+            menuItem.IsEnabled = isAvailable;
         }
     }
 
