@@ -9,6 +9,7 @@ using Cotton.Contracts.Nodes;
 using Cotton.Sync.Local;
 using Cotton.Sync.Remote;
 using Cotton.Sync.State;
+using Microsoft.Extensions.Logging;
 
 namespace Cotton.Sync.Tests;
 
@@ -23,6 +24,27 @@ public sealed class SyncEngineTests
         Missing,
         Baseline,
         Changed,
+    }
+
+    [Test]
+    public async Task RunOnceAsync_WritesStructuredStartAndCompletionLogs()
+    {
+        var logger = new RecordingLogger<SyncEngine>();
+        SyncEngine engine = CreateEngine(
+            new FakeLocalFileScanner(),
+            EmptyRemoteTree(),
+            new FakeRemoteFileSynchronizer(),
+            out _,
+            logger: logger);
+
+        await engine.RunOnceAsync(Pair());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(logger.Entries.Select(entry => entry.Level), Is.EqualTo(new[] { LogLevel.Information, LogLevel.Information }));
+            Assert.That(logger.Entries[0].Message, Does.Contain("Starting sync pass for pair pair-a"));
+            Assert.That(logger.Entries[1].Message, Does.Contain("Completed sync pass for pair pair-a with 0 activities"));
+        });
     }
 
     [SetUp]
@@ -1142,9 +1164,10 @@ public sealed class SyncEngineTests
         FakeLocalFileScanner scanner,
         RemoteTreeSnapshot remoteTree,
         FakeRemoteFileSynchronizer remoteFiles,
-        out SqliteSyncStateStore stateStore)
+        out SqliteSyncStateStore stateStore,
+        ILogger<SyncEngine>? logger = null)
     {
-        return CreateEngine(scanner, remoteFiles, out stateStore, remoteTree);
+        return CreateEngineWithLogger(scanner, remoteFiles, out stateStore, logger, remoteTree);
     }
 
     private SyncEngine CreateEngine(
@@ -1153,8 +1176,18 @@ public sealed class SyncEngineTests
         out SqliteSyncStateStore stateStore,
         params RemoteTreeSnapshot[] remoteTrees)
     {
+        return CreateEngineWithLogger(scanner, remoteFiles, out stateStore, null, remoteTrees);
+    }
+
+    private SyncEngine CreateEngineWithLogger(
+        FakeLocalFileScanner scanner,
+        FakeRemoteFileSynchronizer remoteFiles,
+        out SqliteSyncStateStore stateStore,
+        ILogger<SyncEngine>? logger,
+        params RemoteTreeSnapshot[] remoteTrees)
+    {
         stateStore = new SqliteSyncStateStore(_databasePath);
-        return new SyncEngine(scanner, new FakeRemoteTreeCrawler(remoteTrees), remoteFiles, stateStore);
+        return new SyncEngine(scanner, new FakeRemoteTreeCrawler(remoteTrees), remoteFiles, stateStore, logger: logger);
     }
 
     private SyncEngine CreateEngine(
@@ -1162,7 +1195,8 @@ public sealed class SyncEngineTests
         RemoteTreeSnapshot remoteTree,
         FakeRemoteFileSynchronizer remoteFiles,
         out SqliteSyncStateStore stateStore,
-        FakeRemoteDirectorySynchronizer remoteDirectories)
+        FakeRemoteDirectorySynchronizer remoteDirectories,
+        ILogger<SyncEngine>? logger = null)
     {
         stateStore = new SqliteSyncStateStore(_databasePath);
         return new SyncEngine(
@@ -1170,7 +1204,8 @@ public sealed class SyncEngineTests
             new FakeRemoteTreeCrawler(remoteTree),
             remoteFiles,
             stateStore,
-            remoteDirectories: remoteDirectories);
+            remoteDirectories: remoteDirectories,
+            logger: logger);
     }
 
     private SyncPair Pair()
@@ -1422,6 +1457,41 @@ public sealed class SyncEngineTests
             }
 
             return Task.FromResult(_lastSnapshot);
+        }
+    }
+
+    private sealed class RecordingLogger<T> : ILogger<T>
+    {
+        public List<(LogLevel Level, string Message)> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull
+        {
+            return NullScope.Instance;
+        }
+
+        public bool IsEnabled(LogLevel logLevel)
+        {
+            return true;
+        }
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            Entries.Add((logLevel, formatter(state, exception)));
+        }
+    }
+
+    private sealed class NullScope : IDisposable
+    {
+        public static readonly NullScope Instance = new();
+
+        public void Dispose()
+        {
         }
     }
 

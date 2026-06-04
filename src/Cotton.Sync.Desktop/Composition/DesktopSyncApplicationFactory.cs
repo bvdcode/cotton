@@ -62,7 +62,8 @@ internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFac
             remoteTreeCrawler,
             remoteFileSynchronizer,
             stateStore,
-            remoteDirectories: remoteDirectorySynchronizer);
+            remoteDirectories: remoteDirectorySynchronizer,
+            logger: _loggerFactory.CreateLogger<HeadlessSyncEngine>());
         var activityPublisher = new InMemoryAppActivityPublisher();
         ISyncPairWork pairWork = new RemoteChangeAwareSyncPairWork(
             new SyncEnginePairWork(syncEngine, activityPublisher),

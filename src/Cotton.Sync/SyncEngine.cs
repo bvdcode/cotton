@@ -7,6 +7,8 @@ using Cotton.Contracts.Nodes;
 using Cotton.Sync.Local;
 using Cotton.Sync.Remote;
 using Cotton.Sync.State;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Sync;
 
@@ -23,6 +25,7 @@ public sealed class SyncEngine : ISyncEngine
     private readonly IRemoteFileSynchronizer _remoteFiles;
     private readonly ISyncStateStore _stateStore;
     private readonly ILocalFileSyncWriter _localWriter;
+    private readonly ILogger<SyncEngine> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SyncEngine" /> class.
@@ -33,7 +36,8 @@ public sealed class SyncEngine : ISyncEngine
         IRemoteFileSynchronizer remoteFiles,
         ISyncStateStore stateStore,
         ILocalFileSyncWriter? localWriter = null,
-        IRemoteDirectorySynchronizer? remoteDirectories = null)
+        IRemoteDirectorySynchronizer? remoteDirectories = null,
+        ILogger<SyncEngine>? logger = null)
     {
         _localScanner = localScanner ?? throw new ArgumentNullException(nameof(localScanner));
         _localTreeScanner = localScanner as ILocalTreeScanner;
@@ -42,6 +46,7 @@ public sealed class SyncEngine : ISyncEngine
         _stateStore = stateStore ?? throw new ArgumentNullException(nameof(stateStore));
         _localWriter = localWriter ?? new AtomicLocalFileSyncWriter();
         _remoteDirectories = remoteDirectories;
+        _logger = logger ?? NullLogger<SyncEngine>.Instance;
     }
 
     /// <inheritdoc />
@@ -57,6 +62,7 @@ public sealed class SyncEngine : ISyncEngine
 
         options ??= new SyncRunOptions();
         ValidateOptions(options);
+        _logger.LogInformation("Starting sync pass for pair {SyncPairId}.", syncPair.SyncPairId);
         await _stateStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
         LocalTreeSnapshot localTree = await ScanLocalTreeAsync(syncPair.LocalRootPath, cancellationToken).ConfigureAwait(false);
         RemoteTreeSnapshot remoteTree = await _remoteCrawler.CrawlAsync(syncPair.RemoteRootNodeId, cancellationToken).ConfigureAwait(false);
@@ -124,6 +130,10 @@ public sealed class SyncEngine : ISyncEngine
                 .ConfigureAwait(false);
         }
 
+        _logger.LogInformation(
+            "Completed sync pass for pair {SyncPairId} with {ActivityCount} activities.",
+            syncPair.SyncPairId,
+            result.Activities.Count);
         return result;
     }
 

@@ -407,6 +407,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 
 - [ ] Add structured logging for app, sync, SDK, and platform adapters.
   Partial 2026-06-03: desktop composition now provides a trace-backed `ILoggerFactory` to sync runners, local/remote coordinators, periodic sync, session revocation, sync-root probes, filesystem watchers, and platform command services. `DesktopTraceLogger` redacts secrets before writing to the rotating trace log. Keep unchecked until SDK and sync-core instrumentation coverage is added.
+  Partial 2026-06-04: `SyncEngine` now accepts an optional `ILogger<SyncEngine>` and records structured start/completion entries for every sync pass with sync-pair id and activity count; desktop composition wires this into the existing trace-backed logger factory. Focused sync logging test passed 1/1, full `Cotton.Sync.Tests` passed 117/117, full `Cotton.Sync.Desktop.Tests` passed 145/145, and `dotnet build src/Cotton.sln --configuration Release` passed with 0 warnings. Keep unchecked until SDK instrumentation coverage is added.
 - [x] Add log rotation.
   Verification 2026-06-03: desktop startup installs a `RotatingFileTraceListener` into app-data `cotton-sync.log`; it retains rotated files as `.1`, `.2`, `.3` and is idempotent per log path. Focused `RotatingFileTraceListenerTests` passed 3/3. Full desktop tests and solution build are recorded in the commit verification.
 - [x] Add diagnostics screen.
