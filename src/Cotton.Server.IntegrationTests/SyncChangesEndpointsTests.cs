@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Dto;
@@ -125,6 +126,33 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         });
     }
 
+    [Test]
+    public async Task RenameFile_StagesFileRenamedChangeWithParentNodeId()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "file-rename-parent");
+        NodeFileManifestDto file = await CreateFileAsync(folder.Id, "sync-before-rename.txt", "rename-body");
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage renameResponse = await _client!.PatchAsJsonAsync(
+            $"{Routes.V1.Files}/{file.Id}/rename",
+            new RenameFileRequest { Name = "sync-after-rename.txt" });
+        renameResponse.EnsureSuccessStatusCode();
+
+        SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
+        SyncChangeDto change = response.Changes.Single(x => x.ItemId == file.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FileRenamed));
+            Assert.That(change.ParentNodeId, Is.EqualTo(folder.Id));
+            Assert.That(change.FileManifestId, Is.EqualTo(file.FileManifestId));
+            Assert.That(change.Name, Is.EqualTo("sync-after-rename.txt"));
+        });
+    }
+
     private Dictionary<string, string?> CreateOverrides()
     {
         var csb = new NpgsqlConnectionStringBuilder
@@ -216,6 +244,48 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         NodeDto? node = await response.Content.ReadFromJsonAsync<NodeDto>();
         Assert.That(node, Is.Not.Null);
         return node!;
+    }
+
+    private async Task<NodeFileManifestDto> CreateFileAsync(Guid nodeId, string name, string body)
+    {
+        string hash = await UploadChunkAsync(body);
+        using HttpResponseMessage response = await _client!.PostAsJsonAsync(
+            $"{Routes.V1.Files}/from-chunks",
+            new CreateFileRequest
+            {
+                ChunkHashes = [hash],
+                Name = name,
+                ContentType = "application/octet-stream",
+                Hash = hash,
+                NodeId = nodeId,
+            });
+        response.EnsureSuccessStatusCode();
+
+        NodeFileManifestDto? file = await response.Content.ReadFromJsonAsync<NodeFileManifestDto>();
+        Assert.That(file, Is.Not.Null);
+        return file!;
+    }
+
+    private async Task<string> UploadChunkAsync(string body)
+    {
+        byte[] content = Encoding.UTF8.GetBytes(body);
+        string hash = Hasher.ToHexStringHash(Hasher.HashData(content));
+        using var form = new MultipartFormDataContent
+        {
+            {
+                new ByteArrayContent(content)
+                {
+                    Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") },
+                },
+                "file",
+                "chunk.bin"
+            },
+            { new StringContent(hash), "hash" },
+        };
+
+        using HttpResponseMessage response = await _client!.PostAsync(Routes.V1.Chunks, form);
+        response.EnsureSuccessStatusCode();
+        return hash;
     }
 
     private async Task<long> AddSyncChangeAsync(Guid ownerId, string name)
