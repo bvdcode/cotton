@@ -51,7 +51,7 @@ Do not mark the release UI screenshot review complete from this checklist alone.
 - [ ] Cloud folder navigation supports parent/open actions and double-click open.
 - [ ] Existing sync folders expose edit name, save, enable/disable, open, and remove actions on the dashboard.
 - [ ] Pause and resume are mutually exclusive in menus.
-- [ ] Sync now is disabled while paused.
+- [ ] Sync now is hidden while paused, busy, or unavailable.
 - [ ] Settings closes without changing unrelated state.
 - [ ] Sign out clears password/TOTP fields and closes transient overlays.
 
@@ -60,7 +60,7 @@ Do not mark the release UI screenshot review complete from this checklist alone.
 - [ ] Brand icon is visible and crisp in setup, dashboard, tray, and taskbar where supported.
 - [ ] The lime accent is used deliberately and does not dominate the whole UI.
 - [ ] Light and dark themes both have readable contrast.
-- [ ] Disabled controls look disabled, not broken.
+- [ ] Unavailable actions are hidden when they would only add clutter; intentionally disabled preview controls still look disabled, not broken.
 - [ ] Status colors are consistent: healthy, paused, offline, error.
 - [ ] Empty states are useful but compact.
 - [ ] Diagnostics and self-test rows are scannable.

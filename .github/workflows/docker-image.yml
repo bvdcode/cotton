@@ -275,6 +275,14 @@ jobs:
           test -x /opt/cotton-sync/Cotton.Sync.Desktop
           test -L /usr/bin/cotton-sync
           src/Cotton.Sync.Desktop/Packaging/linux/verify-checksums.sh /opt/cotton-sync
+          mkdir -p "$HOME/.config/autostart"
+          cat > "$HOME/.config/autostart/cotton-sync.desktop" <<'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=Cotton Sync
+          Exec=/opt/cotton-sync/Cotton.Sync.Desktop
+          X-GNOME-Autostart-enabled=true
+          EOF
 
           dbus-run-session -- bash -euo pipefail <<'EOF'
           temp_dir="$(mktemp -d)"
@@ -290,6 +298,7 @@ jobs:
           trap - EXIT
           test ! -e /opt/cotton-sync/Cotton.Sync.Desktop
           test ! -e /usr/bin/cotton-sync
+          test ! -e "$HOME/.config/autostart/cotton-sync.desktop"
 
       - name: Smoke desktop Linux deb upgrade
         run: |

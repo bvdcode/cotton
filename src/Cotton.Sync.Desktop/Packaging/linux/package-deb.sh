@@ -72,4 +72,32 @@ Description: Cotton Cloud desktop synchronization client
  Cotton Sync keeps local folders synchronized with Cotton Cloud.
 EOF
 
+cat > "$package_root/DEBIAN/postrm" <<'EOF'
+#!/bin/sh
+set -e
+
+cleanup_autostart_file() {
+  autostart_file="$1"
+  if [ -f "$autostart_file" ] \
+    && grep -Fq "Name=Cotton Sync" "$autostart_file" \
+    && grep -Fq "Exec=/opt/cotton-sync/Cotton.Sync.Desktop" "$autostart_file"; then
+    rm -f "$autostart_file"
+  fi
+}
+
+case "$1" in
+  remove|purge)
+    cleanup_autostart_file "/root/.config/autostart/cotton-sync.desktop"
+    for home_dir in /home/*; do
+      if [ -d "$home_dir" ]; then
+        cleanup_autostart_file "$home_dir/.config/autostart/cotton-sync.desktop"
+      fi
+    done
+    ;;
+esac
+
+exit 0
+EOF
+chmod 755 "$package_root/DEBIAN/postrm"
+
 dpkg-deb --root-owner-group --build "$package_root" "$output_deb"

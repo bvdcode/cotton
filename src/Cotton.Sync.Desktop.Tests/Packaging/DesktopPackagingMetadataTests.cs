@@ -146,6 +146,11 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(packageScript, Does.Not.Contain("rm -f \"$package_root/opt/cotton-sync/cotton-sync.desktop\""));
             Assert.That(packageScript, Does.Contain("checksums.sha256"));
             Assert.That(packageScript, Does.Contain("Package: cotton-sync-desktop"));
+            Assert.That(packageScript, Does.Contain("cat > \"$package_root/DEBIAN/postrm\""));
+            Assert.That(packageScript, Does.Contain("cleanup_autostart_file"));
+            Assert.That(packageScript, Does.Contain("Name=Cotton Sync"));
+            Assert.That(packageScript, Does.Contain("Exec=/opt/cotton-sync/Cotton.Sync.Desktop"));
+            Assert.That(packageScript, Does.Contain("chmod 755 \"$package_root/DEBIAN/postrm\""));
             Assert.That(packageScript, Does.Contain("Architecture: amd64"));
             Assert.That(packageScript, Does.Contain("Depends: libsecret-tools"));
             Assert.That(packageScript, Does.Contain("dpkg-deb --root-owner-group --build"));
@@ -342,6 +347,9 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("Packaging/linux/smoke-diagnostics-export.sh"));
             Assert.That(workflow, Does.Contain("test ! -e /opt/cotton-sync/Cotton.Sync.Desktop"));
             Assert.That(workflow, Does.Contain("test ! -e /usr/bin/cotton-sync"));
+            Assert.That(workflow, Does.Contain("$HOME/.config/autostart/cotton-sync.desktop"));
+            Assert.That(workflow, Does.Contain("Exec=/opt/cotton-sync/Cotton.Sync.Desktop"));
+            Assert.That(workflow, Does.Contain("test ! -e \"$HOME/.config/autostart/cotton-sync.desktop\""));
         });
     }
 
