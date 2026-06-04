@@ -47,11 +47,27 @@ public sealed class DesktopShellControllerSelfTestTests
             Assert.That(names, Does.Contain("Sync state database"));
             Assert.That(names, Does.Contain("Authentication state"));
             Assert.That(names, Does.Contain("Token storage"));
+            Assert.That(names, Does.Contain("Desktop icon"));
             Assert.That(names, Does.Contain("Desktop platform"));
             Assert.That(names, Does.Contain("Tray lifecycle"));
             Assert.That(names, Does.Contain("Notification adapter"));
             Assert.That(names, Does.Contain("File watcher"));
             Assert.That(names, Does.Contain("Server identity"));
+        });
+    }
+
+    [Test]
+    public async Task RunSelfTestAsync_VerifiesLooseDesktopIconAsset()
+    {
+        using DesktopShellController controller = CreateController();
+
+        DesktopSelfTestSnapshot result = await controller.RunSelfTestAsync();
+
+        DesktopSelfTestItemSnapshot icon = result.Items.Single(static item => item.Name == "Desktop icon");
+        Assert.Multiple(() =>
+        {
+            Assert.That(icon.Passed, Is.True);
+            Assert.That(icon.Details, Does.EndWith(Path.Combine("Assets", "icon-192.png")));
         });
     }
 

@@ -466,6 +466,11 @@ internal sealed class DesktopShellController : IDesktopShellController
 
         await AddSelfTestCheckAsync(
             items,
+            "Desktop icon",
+            () => CheckDesktopIconAsync(cancellationToken)).ConfigureAwait(false);
+
+        await AddSelfTestCheckAsync(
+            items,
             "Autostart adapter",
             async () =>
             {
@@ -649,6 +654,18 @@ internal sealed class DesktopShellController : IDesktopShellController
         {
             Directory.Delete(directory, recursive: true);
         }
+    }
+
+    private static Task<string> CheckDesktopIconAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        string iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "icon-192.png");
+        if (!File.Exists(iconPath))
+        {
+            throw new FileNotFoundException("Desktop icon asset was not found.", iconPath);
+        }
+
+        return Task.FromResult(iconPath);
     }
 
     private static async Task<string> CheckRemoteRootAsync(
