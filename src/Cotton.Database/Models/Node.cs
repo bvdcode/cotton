@@ -12,7 +12,7 @@ namespace Cotton.Database.Models
     /// <summary>Represents a folder-like node inside one layout tree.</summary>
     [Table("nodes")]
     [Index(nameof(LayoutId), nameof(ParentId), nameof(Type), nameof(NameKey), IsUnique = true)]
-    public class Node : BaseOwnedEntity
+    public class Node : BaseOwnedEntity<Guid>
     {
         /// <summary>Identifier of the layout tree that contains this node.</summary>
         [Column("layout_id")]

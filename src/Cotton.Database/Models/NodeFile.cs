@@ -12,7 +12,7 @@ namespace Cotton.Database.Models
     [Table("node_files")]
     [Index(nameof(NodeId), nameof(NameKey))]
     [Index(nameof(FileManifestId), nameof(NodeId))]
-    public class NodeFile : BaseOwnedEntity
+    public class NodeFile : BaseOwnedEntity<Guid>
     {
         /// <summary>Identifier of the immutable file manifest referenced by this row.</summary>
         [Column("file_manifest_id")]

@@ -9,7 +9,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Cotton.Database.Abstractions
 {
     /// <summary>Base entity for rows that belong to a specific Cotton user.</summary>
-    public abstract class BaseOwnedEntity : BaseEntity<Guid>
+    public abstract class BaseOwnedEntity<TKey> : BaseEntity<TKey>
+        where TKey : struct
     {
         /// <summary>Identifier of the user who owns this row.</summary>
         [Column("owner_id")]

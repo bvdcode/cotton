@@ -10,13 +10,9 @@ namespace Cotton.Database.Models
 {
     /// <summary>Represents one durable ordered file-tree mutation for synchronization clients.</summary>
     [Table("sync_changes")]
-    [Index(nameof(OwnerId), nameof(Revision), IsUnique = true)]
-    public class SyncChange : BaseOwnedEntity
+    [Index(nameof(OwnerId), nameof(Id))]
+    public class SyncChange : BaseOwnedEntity<long>
     {
-        /// <summary>Monotonic server cursor used by clients to resume remote change reads.</summary>
-        [Column("revision")]
-        public long Revision { get; set; }
-
         /// <summary>Mutation kind.</summary>
         [Column("kind")]
         public SyncChangeKind Kind { get; set; }
