@@ -31,7 +31,7 @@ internal sealed class WindowsRunAutostartService : IAutostartService
         cancellationToken.ThrowIfCancellationRequested();
         return Task.FromResult(string.Equals(
             _registry.GetValue(ValueName),
-            _launchCommand.ToString(),
+            _launchCommand.ToWindowsRunCommandLine(),
             StringComparison.Ordinal));
     }
 
@@ -40,7 +40,7 @@ internal sealed class WindowsRunAutostartService : IAutostartService
         cancellationToken.ThrowIfCancellationRequested();
         if (enabled)
         {
-            _registry.SetValue(ValueName, _launchCommand.ToString());
+            _registry.SetValue(ValueName, _launchCommand.ToWindowsRunCommandLine());
         }
         else
         {

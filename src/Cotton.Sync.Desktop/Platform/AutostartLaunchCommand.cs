@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Diagnostics;
+using System.Text;
 
 namespace Cotton.Sync.Desktop.Platform;
 
@@ -79,7 +80,14 @@ internal sealed class AutostartLaunchCommand
     {
         return string.Join(
             " ",
-            new[] { Quote(ExecutablePath) }.Concat(Arguments.Select(Quote)));
+            new[] { QuoteDesktopEntryArgument(ExecutablePath) }.Concat(Arguments.Select(QuoteDesktopEntryArgument)));
+    }
+
+    public string ToWindowsRunCommandLine()
+    {
+        return string.Join(
+            " ",
+            new[] { QuoteWindowsCommandLineArgument(ExecutablePath) }.Concat(Arguments.Select(QuoteWindowsCommandLineArgument)));
     }
 
     private static bool IsDotnetHost(string? processPath)
@@ -154,7 +162,7 @@ internal sealed class AutostartLaunchCommand
         return separatorIndex < 0 ? null : normalized[..separatorIndex];
     }
 
-    private static string Quote(string value)
+    private static string QuoteDesktopEntryArgument(string value)
     {
         string escaped = value
             .Replace("\\", "\\\\", StringComparison.Ordinal)
@@ -164,5 +172,41 @@ internal sealed class AutostartLaunchCommand
         return escaped.Any(static character => char.IsWhiteSpace(character) || character is '"' or '\\' or '$' or '`')
             ? "\"" + escaped + "\""
             : escaped;
+    }
+
+    private static string QuoteWindowsCommandLineArgument(string value)
+    {
+        if (!value.Any(static character => char.IsWhiteSpace(character) || character is '"'))
+        {
+            return value;
+        }
+
+        var builder = new StringBuilder();
+        builder.Append('"');
+        var backslashes = 0;
+        foreach (char character in value)
+        {
+            if (character == '\\')
+            {
+                backslashes++;
+                continue;
+            }
+
+            if (character == '"')
+            {
+                builder.Append('\\', backslashes * 2 + 1);
+                builder.Append('"');
+                backslashes = 0;
+                continue;
+            }
+
+            builder.Append('\\', backslashes);
+            backslashes = 0;
+            builder.Append(character);
+        }
+
+        builder.Append('\\', backslashes * 2);
+        builder.Append('"');
+        return builder.ToString();
     }
 }

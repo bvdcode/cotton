@@ -55,6 +55,18 @@ public sealed class XdgAutostartServiceTests
     }
 
     [Test]
+    public void LaunchCommand_ToString_UsesDesktopEntryExecEscaping()
+    {
+        var command = new AutostartLaunchCommand(
+            "/opt/Cotton Sync/Cotton.Sync.Desktop",
+            ["--data-dir", "/home/qa/Cotton $Sync"]);
+
+        Assert.That(
+            command.ToString(),
+            Is.EqualTo("\"/opt/Cotton Sync/Cotton.Sync.Desktop\" --data-dir \"/home/qa/Cotton \\$Sync\""));
+    }
+
+    [Test]
     public async Task SetEnabledAsync_Disabled_RemovesDesktopEntry()
     {
         var service = new XdgAutostartService(

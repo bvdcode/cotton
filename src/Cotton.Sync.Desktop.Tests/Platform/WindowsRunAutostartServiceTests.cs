@@ -60,9 +60,22 @@ public sealed class WindowsRunAutostartServiceTests
         Assert.Multiple(() =>
         {
             Assert.That(command, Is.Not.Null);
-            Assert.That(command!.ToString(), Does.Contain("--start-minimized"));
-            Assert.That(command.ToString(), Does.Contain("Cotton Sync"));
+            Assert.That(
+                command!.ToWindowsRunCommandLine(),
+                Is.EqualTo("\"C:\\Users\\qa\\AppData\\Local\\Programs\\Cotton Sync\\Cotton.Sync.Desktop.exe\" --start-minimized"));
         });
+    }
+
+    [Test]
+    public void ToWindowsRunCommandLine_UsesWindowsQuotingWithoutEscapingPathBackslashes()
+    {
+        var command = new AutostartLaunchCommand(
+            @"C:\Program Files\Cotton Sync\Cotton.Sync.Desktop.exe",
+            ["--data-dir", @"C:\Users\qa\AppData\Local\Cotton Sync"]);
+
+        Assert.That(
+            command.ToWindowsRunCommandLine(),
+            Is.EqualTo("\"C:\\Program Files\\Cotton Sync\\Cotton.Sync.Desktop.exe\" --data-dir \"C:\\Users\\qa\\AppData\\Local\\Cotton Sync\""));
     }
 
     [Test]
@@ -80,7 +93,7 @@ public sealed class WindowsRunAutostartServiceTests
         {
             Assert.That(service.IsSupported, Is.True);
             Assert.That(registry.Values, Has.Count.EqualTo(1));
-            Assert.That(registry.Values["Cotton Sync"], Is.EqualTo(command.ToString()));
+            Assert.That(registry.Values["Cotton Sync"], Is.EqualTo(command.ToWindowsRunCommandLine()));
         });
     }
 
@@ -94,7 +107,7 @@ public sealed class WindowsRunAutostartServiceTests
         {
             Values =
             {
-                ["Cotton Sync"] = command.ToString(),
+                ["Cotton Sync"] = command.ToWindowsRunCommandLine(),
             },
         };
         var service = new WindowsRunAutostartService(command, registry);
