@@ -130,6 +130,38 @@ public sealed class AtomicLocalFileSyncWriterTests
     }
 
     [Test]
+    public async Task PayloadOperations_RejectIgnoredPaths()
+    {
+        var writer = new AtomicLocalFileSyncWriter();
+        const string ignoredFilePath = ".cotton-sync/payload.txt";
+        const string ignoredDirectoryPath = ".cotton-sync/payload";
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                async () => await writer.WriteFileAsync(
+                    _root,
+                    ignoredFilePath,
+                    async (stream, cancellationToken) =>
+                        await stream.WriteAsync(Encoding.UTF8.GetBytes("payload"), cancellationToken)),
+                Throws.ArgumentException);
+            Assert.That(
+                async () => await writer.DeleteFileAsync(_root, ignoredFilePath),
+                Throws.ArgumentException);
+            Assert.That(
+                async () => await writer.CreateDirectoryAsync(_root, ignoredDirectoryPath),
+                Throws.ArgumentException);
+            Assert.That(
+                async () => await writer.DeleteDirectoryAsync(_root, ignoredDirectoryPath),
+                Throws.ArgumentException);
+            Assert.That(
+                () => writer.CreateConflictRelativePath(_root, ignoredFilePath, DateTime.UtcNow),
+                Throws.ArgumentException);
+            Assert.That(Directory.Exists(Path.Combine(_root, ".cotton-sync")), Is.False);
+        });
+    }
+
+    [Test]
     public void CreateConflictRelativePath_UsesIndexedSuffixWhenTimestampNameExists()
     {
         var writer = new AtomicLocalFileSyncWriter();

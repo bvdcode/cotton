@@ -25,7 +25,7 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
         ArgumentNullException.ThrowIfNull(writeContentAsync);
-        string normalizedPath = SyncPath.Normalize(relativePath);
+        string normalizedPath = NormalizeWritablePath(relativePath);
         string fullRoot = Path.GetFullPath(rootPath);
         Directory.CreateDirectory(fullRoot);
 
@@ -76,7 +76,7 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
         cancellationToken.ThrowIfCancellationRequested();
-        string normalizedPath = SyncPath.Normalize(relativePath);
+        string normalizedPath = NormalizeWritablePath(relativePath);
         string fullRoot = Path.GetFullPath(rootPath);
         string targetPath = Path.Combine(fullRoot, normalizedPath.Replace('/', Path.DirectorySeparatorChar));
         if (File.Exists(targetPath))
@@ -99,7 +99,7 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
         cancellationToken.ThrowIfCancellationRequested();
-        string normalizedPath = SyncPath.Normalize(relativePath);
+        string normalizedPath = NormalizeWritablePath(relativePath);
         string fullRoot = Path.GetFullPath(rootPath);
         Directory.CreateDirectory(Path.Combine(fullRoot, normalizedPath.Replace('/', Path.DirectorySeparatorChar)));
         return Task.CompletedTask;
@@ -110,7 +110,7 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
         cancellationToken.ThrowIfCancellationRequested();
-        string normalizedPath = SyncPath.Normalize(relativePath);
+        string normalizedPath = NormalizeWritablePath(relativePath);
         string fullRoot = Path.GetFullPath(rootPath);
         string targetPath = Path.Combine(fullRoot, normalizedPath.Replace('/', Path.DirectorySeparatorChar));
         if (Directory.Exists(targetPath))
@@ -132,7 +132,7 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
     public string CreateConflictRelativePath(string rootPath, string relativePath, DateTime timestampUtc)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
-        string normalizedPath = SyncPath.Normalize(relativePath);
+        string normalizedPath = NormalizeWritablePath(relativePath);
         string directory = Path.GetDirectoryName(normalizedPath.Replace('/', Path.DirectorySeparatorChar)) ?? string.Empty;
         string fileName = Path.GetFileNameWithoutExtension(normalizedPath);
         string extension = Path.GetExtension(normalizedPath);
@@ -156,6 +156,17 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
         throw new InvalidOperationException("Unable to allocate a unique conflict file path.");
     }
 
+    private static string NormalizeWritablePath(string relativePath)
+    {
+        string normalizedPath = SyncPath.Normalize(relativePath);
+        if (SyncPathIgnoreRules.ShouldIgnore(normalizedPath))
+        {
+            throw new ArgumentException("Ignored sync paths cannot be written by the local sync writer.", nameof(relativePath));
+        }
+
+        return normalizedPath;
+    }
+
     private static string CreateDeletedPath(string fullRoot, string normalizedPath)
     {
         string quarantineName = DateTime.UtcNow.ToString("yyyyMMddTHHmmssfffZ", CultureInfo.InvariantCulture)
@@ -168,5 +179,4 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
             quarantineName,
             normalizedPath.Replace('/', Path.DirectorySeparatorChar));
     }
-
 }
