@@ -101,9 +101,63 @@ public sealed class DesktopShellControllerHostLifecycleTests
         });
     }
 
+    [Test]
+    public async Task SignInAsync_RejectsInsecureTokenStorageBeforeCreatingHost()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        var factory = new QueueingDesktopSyncApplicationFactory();
+        using DesktopShellController controller = CreateController(
+            paths,
+            factory,
+            tokenStorageCapabilities: CreateInsecureTokenStorage);
+
+        InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await controller.SignInAsync(
+                new DesktopSignInRequest(
+                    "https://cotton.example.test/",
+                    "desktop@example.test",
+                    "password",
+                    string.Empty)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.Message, Does.Contain("Secure token storage is unavailable"));
+            Assert.That(factory.CreatedServerUrls, Is.Empty);
+        });
+    }
+
+    [Test]
+    public async Task LoadAsync_SkipsSessionRestoreWhenTokenStorageIsInsecure()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        Uri serverUrl = new("https://cotton.example.test/");
+        var preferencesStore = new SqliteAppPreferencesStore(paths.AppDatabasePath);
+        await preferencesStore.InitializeAsync();
+        await preferencesStore.SaveAsync(new AppPreferences
+        {
+            RememberedServerUrl = serverUrl,
+        });
+        var factory = new QueueingDesktopSyncApplicationFactory();
+        using DesktopShellController controller = CreateController(
+            paths,
+            factory,
+            tokenStorageCapabilities: CreateInsecureTokenStorage);
+
+        DesktopShellSnapshot snapshot = await controller.LoadAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.ServerUrl, Is.EqualTo(serverUrl));
+            Assert.That(snapshot.IsSignedIn, Is.False);
+            Assert.That(factory.CreatedServerUrls, Is.Empty);
+        });
+    }
+
     private static DesktopShellController CreateController(
         DesktopAppPaths paths,
-        IDesktopSyncApplicationFactory factory)
+        IDesktopSyncApplicationFactory factory,
+        Func<DesktopTokenStorageCapabilitySnapshot>? tokenStorageCapabilities = null)
     {
         return new DesktopShellController(
             paths,
@@ -112,10 +166,23 @@ public sealed class DesktopShellControllerHostLifecycleTests
             new SqliteSyncPairSettingsStore(paths.AppDatabasePath),
             new FakePlatformCommandService(),
             new FakeAutostartService(),
-            tokenStorageCapabilities: static () => new DesktopTokenStorageCapabilitySnapshot(
-                "test-secure",
-                IsReleaseSecure: true,
-                "Test secure token storage"));
+            tokenStorageCapabilities: tokenStorageCapabilities ?? CreateSecureTokenStorage);
+    }
+
+    private static DesktopTokenStorageCapabilitySnapshot CreateSecureTokenStorage()
+    {
+        return new DesktopTokenStorageCapabilitySnapshot(
+            "test-secure",
+            IsReleaseSecure: true,
+            "Test secure token storage");
+    }
+
+    private static DesktopTokenStorageCapabilitySnapshot CreateInsecureTokenStorage()
+    {
+        return new DesktopTokenStorageCapabilitySnapshot(
+            "restricted-file-v1",
+            IsReleaseSecure: false,
+            "Development fallback");
     }
 
     private sealed class QueueingDesktopSyncApplicationFactory : IDesktopSyncApplicationFactory

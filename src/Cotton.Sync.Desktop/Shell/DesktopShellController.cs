@@ -122,6 +122,7 @@ internal sealed class DesktopShellController : IDesktopShellController
     {
         ArgumentNullException.ThrowIfNull(request);
         Uri serverUrl = ParseServerUrl(request.ServerUrl);
+        EnsureReleaseSecureTokenStorage();
         DesktopSyncApplicationHost host = _factory.Create(serverUrl);
         try
         {
@@ -913,6 +914,11 @@ internal sealed class DesktopShellController : IDesktopShellController
         Uri serverUrl,
         CancellationToken cancellationToken)
     {
+        if (!CanUseStoredSession())
+        {
+            return null;
+        }
+
         DesktopSyncApplicationHost host = _factory.Create(serverUrl);
         try
         {
@@ -939,6 +945,38 @@ internal sealed class DesktopShellController : IDesktopShellController
             await host.DisposeAsync().ConfigureAwait(false);
             return null;
         }
+    }
+
+    private void EnsureReleaseSecureTokenStorage()
+    {
+        DesktopTokenStorageCapabilitySnapshot tokenStorage = _tokenStorageCapabilities();
+        if (tokenStorage.IsReleaseSecure)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(CreateTokenStorageUnavailableMessage(tokenStorage));
+    }
+
+    private bool CanUseStoredSession()
+    {
+        DesktopTokenStorageCapabilitySnapshot tokenStorage = _tokenStorageCapabilities();
+        if (tokenStorage.IsReleaseSecure)
+        {
+            return true;
+        }
+
+        Trace.TraceWarning(
+            "Skipping desktop session restore because token storage is not release secure: {0}",
+            tokenStorage.Details);
+        return false;
+    }
+
+    private static string CreateTokenStorageUnavailableMessage(DesktopTokenStorageCapabilitySnapshot tokenStorage)
+    {
+        return "Secure token storage is unavailable: "
+            + tokenStorage.Details
+            + ". Configure Windows DPAPI or Linux Secret Service before signing in.";
     }
 
     private sealed class StatusObserver : IObserver<SyncAppStatus>
