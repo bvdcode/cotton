@@ -2,54 +2,49 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Net;
-using System.Text.Json;
 using Cotton.Contracts.Auth;
 using Cotton.Contracts.Files;
 using Cotton.Contracts.Nodes;
-using Cotton.Contracts.Settings;
 
 namespace Cotton.Sync.Cli.Tests.TestSupport;
 
-internal sealed class SyncProcessCrashHttpServer : SyncProcessCrashHttpServerBase
+internal sealed class SyncProcessRemoteDeleteCrashHttpServer : SyncProcessCrashHttpServerBase
 {
-    private readonly TaskCompletionSource _fileCommitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    private readonly TaskCompletionSource _releaseCreateResponse = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    private readonly byte[] _expectedContent;
+    private readonly TaskCompletionSource _fileDeleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource _releaseDeleteResponse = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly string _expectedContentHash;
     private readonly string _expectedRelativePath;
     private readonly Guid _ownerId = Guid.Parse("22222222-2222-2222-2222-222222222222");
     private readonly Guid _remoteRootId;
-    private bool _fileCreated;
+    private bool _fileDeletedOnRemote;
 
-    public SyncProcessCrashHttpServer(
+    public SyncProcessRemoteDeleteCrashHttpServer(
         Guid remoteRootId,
         string expectedRelativePath,
-        string expectedContentHash,
-        byte[] expectedContent)
-        : base("Crash-smoke HTTP server failed")
+        string expectedContentHash)
+        : base("Remote-delete crash-smoke HTTP server failed")
     {
         _remoteRootId = remoteRootId;
         _expectedRelativePath = expectedRelativePath;
         _expectedContentHash = expectedContentHash;
-        _expectedContent = expectedContent;
         Start();
     }
 
-    public Guid CreatedFileId { get; } = Guid.Parse("33333333-3333-3333-3333-333333333333");
+    public Guid RemoteFileId { get; } = Guid.Parse("33333333-3333-3333-3333-333333333333");
 
-    public async Task WaitForFileCommittedAsync(TimeSpan timeout)
+    public async Task WaitForFileDeletedAsync(TimeSpan timeout)
     {
-        await _fileCommitted.Task.WaitAsync(timeout).ConfigureAwait(false);
+        await _fileDeleted.Task.WaitAsync(timeout).ConfigureAwait(false);
     }
 
-    public void ReleaseBlockedCreateResponse()
+    public void ReleaseBlockedDeleteResponse()
     {
-        _releaseCreateResponse.TrySetResult();
+        _releaseDeleteResponse.TrySetResult();
     }
 
     protected override void ReleaseBlockedResponses()
     {
-        _releaseCreateResponse.TrySetResult();
+        _releaseDeleteResponse.TrySetResult();
     }
 
     protected override async Task WriteResponseAsync(
@@ -95,52 +90,19 @@ internal sealed class SyncProcessCrashHttpServer : SyncProcessCrashHttpServerBas
             return;
         }
 
-        if (request.Method == HttpMethod.Get && request.PathAndQuery == "/api/v1/settings")
+        if (request.Method == HttpMethod.Delete
+            && request.PathAndQuery == "/api/v1/files/" + RemoteFileId.ToString("D") + "?skipTrash=false")
         {
-            await WriteJsonAsync(response, HttpStatusCode.OK, new ClientSettingsDto
+            string? ifMatch = request.GetHeader("If-Match");
+            if (!string.Equals(ifMatch, "\"sha256-" + _expectedContentHash + "\"", StringComparison.Ordinal))
             {
-                Version = "test",
-                MaxChunkSizeBytes = 1024,
-                SupportedHashAlgorithm = "SHA-256",
-            }, cancellationToken).ConfigureAwait(false);
-            return;
-        }
-
-        if (request.Method == HttpMethod.Get && request.PathAndQuery == "/api/v1/chunks/" + _expectedContentHash + "/exists")
-        {
-            await WriteTextAsync(response, HttpStatusCode.OK, "false", cancellationToken).ConfigureAwait(false);
-            return;
-        }
-
-        if (request.Method == HttpMethod.Post && request.PathAndQuery == "/api/v1/chunks/raw?hash=" + _expectedContentHash)
-        {
-            if (!request.RawBody.SequenceEqual(_expectedContent))
-            {
-                throw new InvalidOperationException("Unexpected uploaded chunk content.");
+                throw new InvalidOperationException("Unexpected delete If-Match header.");
             }
 
-            await WriteTextAsync(response, HttpStatusCode.Created, string.Empty, cancellationToken).ConfigureAwait(false);
-            return;
-        }
-
-        if (request.Method == HttpMethod.Post && request.PathAndQuery == "/api/v1/files/from-chunks")
-        {
-            CreateFileFromChunksRequestDto createRequest = JsonSerializer.Deserialize<CreateFileFromChunksRequestDto>(
-                request.Body,
-                JsonOptions) ?? throw new InvalidOperationException("File-create request body is missing.");
-            if (createRequest.NodeId != _remoteRootId
-                || !string.Equals(createRequest.Name, Path.GetFileName(_expectedRelativePath), StringComparison.Ordinal)
-                || !string.Equals(createRequest.Hash, _expectedContentHash, StringComparison.Ordinal)
-                || !createRequest.ChunkHashes.SequenceEqual(new[] { _expectedContentHash })
-                || !createRequest.Validate)
-            {
-                throw new InvalidOperationException("Unexpected file-create request.");
-            }
-
-            _fileCreated = true;
-            _fileCommitted.TrySetResult();
-            await _releaseCreateResponse.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
-            await WriteJsonAsync(response, HttpStatusCode.OK, CreateManifest(), cancellationToken).ConfigureAwait(false);
+            _fileDeletedOnRemote = true;
+            _fileDeleted.TrySetResult();
+            await _releaseDeleteResponse.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            response.StatusCode = (int)HttpStatusCode.NoContent;
             return;
         }
 
@@ -149,7 +111,7 @@ internal sealed class SyncProcessCrashHttpServer : SyncProcessCrashHttpServerBas
 
     private NodeContentDto CreateRootContent()
     {
-        if (!_fileCreated)
+        if (_fileDeletedOnRemote)
         {
             return new NodeContentDto
             {
@@ -170,14 +132,14 @@ internal sealed class SyncProcessCrashHttpServer : SyncProcessCrashHttpServerBas
     {
         return new NodeFileManifestDto
         {
-            Id = CreatedFileId,
+            Id = RemoteFileId,
             NodeId = _remoteRootId,
             FileManifestId = Guid.Parse("44444444-4444-4444-4444-444444444444"),
-            OriginalNodeFileId = CreatedFileId,
+            OriginalNodeFileId = RemoteFileId,
             OwnerId = _ownerId,
             Name = Path.GetFileName(_expectedRelativePath),
             ContentType = "text/plain",
-            SizeBytes = _expectedContent.Length,
+            SizeBytes = 128,
             ContentHash = _expectedContentHash,
             ETag = "sha256-" + _expectedContentHash,
             CreatedAt = DateTime.UtcNow,

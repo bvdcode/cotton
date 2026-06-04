@@ -8,4 +8,13 @@ internal sealed record HttpRequestSnapshot(
     string PathAndQuery,
     string? AuthorizationParameter,
     string Body,
-    byte[] RawBody);
+    byte[] RawBody)
+{
+    public IReadOnlyDictionary<string, string> Headers { get; init; } =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+    public string? GetHeader(string name)
+    {
+        return Headers.TryGetValue(name, out string? value) ? value : null;
+    }
+}
