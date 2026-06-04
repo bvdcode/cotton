@@ -1037,6 +1037,105 @@ public sealed class ShellViewModelSyncPairCommandTests
         });
     }
 
+    [TestCase("/home/user/Downloads", "/home/user/Downloads")]
+    [TestCase("/home/user/Downloads", "/home/user/Downloads/Work")]
+    [TestCase(@"C:\Users\Vadim\Downloads", @"c:\users\vadim\downloads\Work")]
+    public async Task BrowseLocalFolderCommand_RejectsExistingOrNestedSyncRootBeforeCloudStep(
+        string existingLocalPath,
+        string selectedLocalPath)
+    {
+        var localFolderPicker = new FakeLocalFolderPicker(selectedLocalPath);
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(
+            Guid.NewGuid(),
+            "Downloads",
+            "Idle",
+            localPath: existingLocalPath)));
+        controller.RemoteFoldersByPath["/"] = new DesktopRemoteFolderListSnapshot(
+            "/",
+            [
+                new DesktopRemoteFolderSnapshot(Guid.NewGuid(), "Documents", "/Documents"),
+            ]);
+        using ShellViewModel viewModel = CreateViewModel(controller, localFolderPicker: localFolderPicker);
+        await viewModel.InitializeAsync();
+
+        await ExecuteAsync(viewModel.ShowAddSyncPairCommand);
+        await ExecuteAsync(viewModel.BrowseLocalFolderCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(localFolderPicker.PickFolderCalls, Is.EqualTo(1));
+            Assert.That(viewModel.LocalFolderPath, Is.Empty);
+            Assert.That(viewModel.IsAddSyncPairWizardVisible, Is.True);
+            Assert.That(viewModel.IsAddSyncPairLocalStepVisible, Is.True);
+            Assert.That(viewModel.IsAddSyncPairCloudStepVisible, Is.False);
+            Assert.That(viewModel.RemoteFolderPath, Is.Empty);
+            Assert.That(viewModel.RemoteFolders, Is.Empty);
+            Assert.That(controller.ListRemoteFolderPaths, Is.Empty);
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Action required"));
+            Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo("Local sync roots must not be equal or nested."));
+            Assert.That(viewModel.AddSyncPairCommand.CanExecute(null), Is.False);
+        });
+    }
+
+    [Test]
+    public async Task BrowseLocalFolderCommand_ClearsOverlapErrorWhenNextSelectionIsValid()
+    {
+        var localFolderPicker = new FakeLocalFolderPicker("/home/user/Downloads", "/home/user/Cotton");
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(
+            Guid.NewGuid(),
+            "Downloads",
+            "Idle",
+            localPath: "/home/user/Downloads")));
+        controller.RemoteFoldersByPath["/"] = new DesktopRemoteFolderListSnapshot(
+            "/",
+            [
+                new DesktopRemoteFolderSnapshot(Guid.NewGuid(), "Documents", "/Documents"),
+            ]);
+        using ShellViewModel viewModel = CreateViewModel(controller, localFolderPicker: localFolderPicker);
+        await viewModel.InitializeAsync();
+        await ExecuteAsync(viewModel.ShowAddSyncPairCommand);
+        await ExecuteAsync(viewModel.BrowseLocalFolderCommand);
+
+        await ExecuteAsync(viewModel.BrowseLocalFolderCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(localFolderPicker.PickFolderCalls, Is.EqualTo(2));
+            Assert.That(viewModel.LocalFolderPath, Is.EqualTo("/home/user/Cotton"));
+            Assert.That(viewModel.IsAddSyncPairCloudStepVisible, Is.True);
+            Assert.That(viewModel.RemoteFolderPath, Is.EqualTo("/"));
+            Assert.That(viewModel.RemoteFolders.Single().Name, Is.EqualTo("Documents"));
+            Assert.That(controller.ListRemoteFolderPaths, Is.EqualTo(new[] { "/" }));
+            Assert.That(viewModel.HasActionRequired, Is.False);
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Connected"));
+        });
+    }
+
+    [Test]
+    public async Task CancelAddSyncPairCommand_ClearsLocalFolderOverlapError()
+    {
+        var localFolderPicker = new FakeLocalFolderPicker("/home/user/Downloads");
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(
+            Guid.NewGuid(),
+            "Downloads",
+            "Idle",
+            localPath: "/home/user/Downloads")));
+        using ShellViewModel viewModel = CreateViewModel(controller, localFolderPicker: localFolderPicker);
+        await viewModel.InitializeAsync();
+        await ExecuteAsync(viewModel.ShowAddSyncPairCommand);
+        await ExecuteAsync(viewModel.BrowseLocalFolderCommand);
+
+        await ExecuteAsync(viewModel.CancelAddSyncPairCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsAddSyncPairWizardVisible, Is.False);
+            Assert.That(viewModel.LocalFolderPath, Is.Empty);
+            Assert.That(viewModel.HasActionRequired, Is.False);
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Connected"));
+        });
+    }
+
     [Test]
     public async Task CreateRemoteFolderCommand_CreatesFolderAndUsesItAsCurrentCloudTarget()
     {
@@ -1470,12 +1569,13 @@ public sealed class ShellViewModelSyncPairCommandTests
         Guid id,
         string displayName,
         string status,
-        DateTime? lastSyncedAtUtc = null)
+        DateTime? lastSyncedAtUtc = null,
+        string? localPath = null)
     {
         return new DesktopSyncPairSnapshot(
             id,
             displayName,
-            "/home/vadim/" + displayName,
+            localPath ?? "/home/vadim/" + displayName,
             "/" + displayName,
             status,
             Guid.NewGuid(),

@@ -29,6 +29,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private readonly IDesktopThemeService _themeService;
     private readonly IDesktopUiDispatcher _uiDispatcher;
     private readonly DesktopNotificationTracker _notificationTracker = new();
+    private readonly SyncPairSettingsValidator _syncPairSettingsValidator = new();
     private string _accountName = "Signed out";
     private string _actionRequiredMessage = string.Empty;
     private string _currentProgressText = "Sign in to start sync.";
@@ -58,6 +59,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private bool _isServerVerified;
     private bool _isAddSyncPairWizardVisible;
     private bool _isCreateRemoteFolderVisible;
+    private bool _isLocalFolderSelectionError;
     private bool _isSelectedSyncPairEditorVisible;
     private bool _isSettingsVisible;
     private bool _isLoadingSnapshot;
@@ -1256,7 +1258,23 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             return;
         }
 
+        if (IsLocalFolderOverlappingExistingSyncRoot(selectedPath))
+        {
+            LocalFolderPath = string.Empty;
+            NewRemoteFolderName = string.Empty;
+            IsCreateRemoteFolderVisible = false;
+            ResetRemoteFolderSelection();
+            RemoteFolders.Clear();
+            _isLocalFolderSelectionError = true;
+            GlobalStatus = "Action required";
+            ActionRequiredMessage = "Local sync roots must not be equal or nested.";
+            AddActivity("Warning", selectedPath, ActionRequiredMessage);
+            RefreshCurrentProgressText();
+            return;
+        }
+
         LocalFolderPath = selectedPath;
+        ClearLocalFolderSelectionError();
         AddActivity("Folder", selectedPath, "Local folder selected");
         if (IsAddSyncPairWizardVisible)
         {
@@ -1272,6 +1290,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         NewRemoteFolderName = string.Empty;
         IsCreateRemoteFolderVisible = false;
         ResetRemoteFolderSelection();
+        ClearLocalFolderSelectionError();
         IsAddSyncPairWizardVisible = false;
         return Task.CompletedTask;
     }
@@ -1766,6 +1785,51 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             && IsSignedIn
             && !string.IsNullOrWhiteSpace(LocalFolderPath)
             && !string.IsNullOrWhiteSpace(RemoteFolderPath);
+    }
+
+    private bool IsLocalFolderOverlappingExistingSyncRoot(string localPath)
+    {
+        if (SyncPairs.Count == 0)
+        {
+            return false;
+        }
+
+        Guid candidateId = Guid.NewGuid();
+        List<SyncPairSettings> syncPairs = SyncPairs
+            .Select(ToSettingsForValidation)
+            .Append(new SyncPairSettings
+            {
+                Id = candidateId,
+                DisplayName = "Candidate",
+                LocalRootPath = localPath,
+                RemoteRootNodeId = Guid.NewGuid(),
+                RemoteDisplayPath = "/",
+                IsEnabled = true,
+                Mode = SyncPairMode.FullMirror,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow,
+            })
+            .ToList();
+        return _syncPairSettingsValidator
+            .Validate(syncPairs)
+            .Errors
+            .Any(error => error.Issue == SyncPairValidationIssue.OverlappingLocalRoots
+                && (error.SyncPairId == candidateId || error.OtherSyncPairId == candidateId));
+    }
+
+    private void ClearLocalFolderSelectionError()
+    {
+        if (!_isLocalFolderSelectionError)
+        {
+            return;
+        }
+
+        _isLocalFolderSelectionError = false;
+        ActionRequiredMessage = string.Empty;
+        if (IsSignedIn)
+        {
+            GlobalStatus = "Connected";
+        }
     }
 
     private bool CanCreateRemoteFolder()
@@ -2659,6 +2723,25 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             LastSyncedAtUtc = syncPair.LastSyncedAtUtc,
             ChangeCursor = syncPair.ChangeCursor,
             LastError = syncPair.LastError,
+        };
+    }
+
+    private static SyncPairSettings ToSettingsForValidation(SyncPairRowViewModel syncPair)
+    {
+        Guid remoteRootNodeId = syncPair.RemoteRootNodeId is { } value && value != Guid.Empty
+            ? value
+            : Guid.NewGuid();
+        return new SyncPairSettings
+        {
+            Id = syncPair.Id,
+            DisplayName = syncPair.DisplayName,
+            LocalRootPath = syncPair.LocalPath,
+            RemoteRootNodeId = remoteRootNodeId,
+            RemoteDisplayPath = string.IsNullOrWhiteSpace(syncPair.RemotePath) ? "/" : syncPair.RemotePath,
+            IsEnabled = syncPair.IsEnabled,
+            Mode = syncPair.Mode,
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow,
         };
     }
 
