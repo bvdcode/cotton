@@ -115,7 +115,7 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task Verifier_AllowsSignedRowsWithMismatchedMacDuringRollout()
+    public async Task Verifier_RejectsSignedRowsWithMismatchedMacOutsideRecoveryDescriptors()
     {
         var user = new User
         {
@@ -140,8 +140,32 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
             NullDatabaseIntegrityFailureReporter.Instance,
             NullLogger<DatabaseIntegrityVerifier>.Instance);
 
-        Assert.DoesNotThrow(() =>
+        Assert.Throws<DatabaseIntegrityException>(() =>
             verifier.RequireValid(DbContext, tampered, "test.direct-tamper"));
+    }
+
+    [Test]
+    public async Task Verifier_AllowsFileManifestMismatchedMacDuringBridgeRecovery()
+    {
+        FileManifest manifest = await AddUnsignedManifestAsync(
+            previewGenerationError: "codec failed before upgrade",
+            previewGeneratorVersion: 7);
+        var descriptor = new FileManifestIntegrityDescriptor();
+        byte[] mac = CreateProtector().Sign(manifest, descriptor);
+        await WriteIntegrityMetadataAsync(manifest, descriptor.SchemaVersion, mac);
+        await DbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"UPDATE file_manifests SET size_bytes = 999 WHERE id = {manifest.Id}");
+        DbContext.ChangeTracker.Clear();
+
+        FileManifest stale = await DbContext.FileManifests.SingleAsync(x => x.Id == manifest.Id);
+        var verifier = new DatabaseIntegrityVerifier(
+            CreateProtector(),
+            new DatabaseIntegrityDescriptorRegistry(CreateDescriptors()),
+            NullDatabaseIntegrityFailureReporter.Instance,
+            NullLogger<DatabaseIntegrityVerifier>.Instance);
+
+        Assert.DoesNotThrow(() =>
+            verifier.RequireValid(DbContext, stale, "test.file-manifest-recovery"));
     }
 
     [Test]

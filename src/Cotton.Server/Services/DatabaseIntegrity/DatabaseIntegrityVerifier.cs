@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Integrity;
+using Cotton.Database.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics.CodeAnalysis;
 
@@ -73,6 +74,11 @@ public sealed class DatabaseIntegrityVerifier(
 
         if (!_protector.Verify(entity, descriptor, mac))
         {
+            if (!AllowsMismatchedMacDuringBridge(descriptor))
+            {
+                Fail(descriptor, entity, boundary);
+            }
+
             _logger.LogWarning(
                 "Database integrity verification failed for {EntityName} {EntityKey} at {Boundary}; allowing row during the integrity rollout window.",
                 descriptor.EntityName,
@@ -80,6 +86,9 @@ public sealed class DatabaseIntegrityVerifier(
                 boundary);
         }
     }
+
+    private static bool AllowsMismatchedMacDuringBridge(IDatabaseIntegrityDescriptor descriptor) =>
+        descriptor.EntityType == typeof(FileManifest);
 
     [DoesNotReturn]
     private void Fail(
