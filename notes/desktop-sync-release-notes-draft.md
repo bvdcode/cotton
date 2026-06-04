@@ -11,6 +11,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 - Dashboard with global status, per-folder status/current operation, current progress, activity history, action-required errors, conflict list, and direct sync-folder management.
 - Action-required sync failures use a consistent dashboard state and preserve the concrete reason in the error panel instead of mixing a generic failure state with an up-to-date progress message; add-folder/settings overlays hide background dashboard chrome so wizard errors stay readable, and missing desktop sync API errors block add-folder actions until the server check is resolved.
 - Folder management supports add, rename, enable/disable, open local folder, and remove with explicit confirmation.
+- Folder management controls expand inline inside the folder row instead of duplicating the selected folder as a second editor row.
 - Continuous sync uses local filesystem watcher triggers, SignalR wake-up events, durable change-feed catch-up, and periodic reconciliation as a safety fallback.
 - Conflict handling preserves both versions and exposes conflict entries in the desktop UI.
 - Local sync state and desktop settings use EF Core SQLite. Normal app state does not use raw SQL commands.

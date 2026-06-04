@@ -54,7 +54,7 @@ public sealed class DesktopSetupVisualContractTests
         string emptyFoldersState = GetSlice(
             mainWindowXaml,
             "IsVisible=\"{Binding HasNoSyncPairs}\"",
-            "<Grid RowDefinitions=\"Auto,Auto,Auto\"");
+            "<Grid RowDefinitions=\"Auto,Auto\"");
 
         Assert.Multiple(() =>
         {
@@ -80,8 +80,10 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Contain("CommandParameter=\"{Binding}\""));
             Assert.That(foldersSection, Does.Contain("<ItemsControl ItemsSource=\"{Binding SyncPairs}\">"));
             Assert.That(foldersSection, Does.Not.Contain("SelectedItem=\"{Binding SelectedSyncPair}\""));
-            Assert.That(foldersSection, Does.Contain("IsVisible=\"{Binding IsSelectedSyncPairEditorVisible}\""));
-            Assert.That(foldersSection, Does.Contain("SelectedSyncPairEditableDisplayName"));
+            Assert.That(foldersSection, Does.Contain("IsVisible=\"{Binding IsEditorVisible}\""));
+            Assert.That(foldersSection, Does.Not.Contain("IsVisible=\"{Binding IsSelectedSyncPairEditorVisible}\""));
+            Assert.That(foldersSection, Does.Contain("Text=\"{Binding EditableDisplayName}\""));
+            Assert.That(foldersSection, Does.Not.Contain("SelectedSyncPairEditableDisplayName"));
             Assert.That(foldersSection, Does.Contain("SaveSelectedSyncPairNameCommand"));
             Assert.That(foldersSection, Does.Contain("ToggleSelectedSyncPairEnabledCommand"));
             Assert.That(foldersSection, Does.Contain("RemoveSelectedSyncPairCommand"));
@@ -92,8 +94,10 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"Manage sync folder\""));
             Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"Open local folder\""));
             Assert.That(foldersSection, Does.Not.Contain("ToolTip.Tip=\"Open selected local folder\""));
-            Assert.That(foldersSection, Does.Contain("SelectedSyncPair.ToggleEnabledIcon"));
-            Assert.That(foldersSection, Does.Contain("SelectedSyncPair.ModeLabel"));
+            Assert.That(foldersSection, Does.Contain("ToggleEnabledIcon"));
+            Assert.That(foldersSection, Does.Contain("ModeLabel"));
+            Assert.That(foldersSection, Does.Not.Contain("SelectedSyncPair.ToggleEnabledIcon"));
+            Assert.That(foldersSection, Does.Not.Contain("SelectedSyncPair.ModeLabel"));
             Assert.That(foldersSection, Does.Contain("Text=\"{Binding CurrentOperation}\""));
             Assert.That(foldersSection, Does.Contain("IsVisible=\"{Binding HasCurrentOperation}\""));
             Assert.That(foldersSection, Does.Contain("Value=\"{Binding CurrentProgressValue}\""));

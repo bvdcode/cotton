@@ -513,6 +513,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         {
             if (SetProperty(ref _isSelectedSyncPairEditorVisible, value))
             {
+                UpdateSelectedSyncPairEditorVisibility();
                 CancelSelectedSyncPairEditorCommand.RaiseCanExecuteChanged();
                 RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
             }
@@ -900,8 +901,15 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         get => _selectedSyncPair;
         set
         {
+            SyncPairRowViewModel? previous = _selectedSyncPair;
             if (SetProperty(ref _selectedSyncPair, value))
             {
+                if (previous is not null)
+                {
+                    previous.IsEditorVisible = false;
+                }
+
+                UpdateSelectedSyncPairEditorVisibility();
                 OnPropertyChanged(nameof(SelectedSyncPairEditableDisplayName));
                 OnPropertyChanged(nameof(SelectedSyncPairToggleEnabledLabel));
                 if (_pendingRemoveSyncPair is not null && !ReferenceEquals(_pendingRemoveSyncPair, value))
@@ -1535,6 +1543,14 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private void ClearRemoveSyncPairConfirmation()
     {
         SetPendingRemoveSyncPair(null);
+    }
+
+    private void UpdateSelectedSyncPairEditorVisibility()
+    {
+        if (SelectedSyncPair is { } selected)
+        {
+            selected.IsEditorVisible = IsSelectedSyncPairEditorVisible;
+        }
     }
 
     private async Task PauseAsync()

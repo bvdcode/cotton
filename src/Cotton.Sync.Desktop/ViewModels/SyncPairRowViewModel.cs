@@ -17,6 +17,7 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
     private double _currentProgressValue;
     private bool _hasCurrentProgress;
     private bool _isEnabled = true;
+    private bool _isEditorVisible;
     private bool _isCurrentProgressIndeterminate;
     private DateTime? _lastSyncedAtUtc;
     private string? _lastError;
@@ -44,6 +45,12 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
     public string ToggleEnabledLabel => IsEnabled ? "Disable" : "Enable";
 
     public string ToggleEnabledIcon => IsEnabled ? "⏸" : "▶";
+
+    public bool IsEditorVisible
+    {
+        get => _isEditorVisible;
+        set => SetProperty(ref _isEditorVisible, value);
+    }
 
     public string ModeLabel => Mode switch
     {

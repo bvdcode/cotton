@@ -467,7 +467,7 @@
                   </StackPanel>
                 </Border>
 
-                <Grid RowDefinitions="Auto,Auto,Auto"
+                <Grid RowDefinitions="Auto,Auto"
                       RowSpacing="7"
                       IsVisible="{Binding HasSyncPairs}">
                   <ScrollViewer MaxHeight="176"
@@ -480,7 +480,7 @@
                                   CornerRadius="6"
                                   Background="{DynamicResource CottonSurfaceMutedBrush}">
                             <Grid ColumnDefinitions="*,Auto,Auto,Auto"
-                                  RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                                  RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
                                   ColumnSpacing="10">
                               <TextBlock Text="{Binding DisplayName}"
                                          FontWeight="SemiBold"
@@ -534,6 +534,59 @@
                                       Command="{Binding $parent[Window].DataContext.ShowSelectedSyncPairEditorCommand}"
                                       CommandParameter="{Binding}"
                                       VerticalAlignment="Center" />
+                              <Border Grid.Row="5"
+                                      Grid.ColumnSpan="4"
+                                      Margin="0,8,0,0"
+                                      Padding="8"
+                                      CornerRadius="6"
+                                      Background="{DynamicResource CottonSurfaceBrush}"
+                                      BorderBrush="{DynamicResource CottonBorderBrush}"
+                                      BorderThickness="1"
+                                      IsVisible="{Binding IsEditorVisible}">
+                                <Grid RowDefinitions="Auto,Auto"
+                                      ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto"
+                                      RowSpacing="6"
+                                      ColumnSpacing="6">
+                                  <TextBox Text="{Binding EditableDisplayName}"
+                                           PlaceholderText="Folder name" />
+                                  <Button Grid.Column="1"
+                                          Content="✓"
+                                          Classes="icon"
+                                          ToolTip.Tip="Save folder name"
+                                          Command="{Binding $parent[Window].DataContext.SaveSelectedSyncPairNameCommand}" />
+                                  <Button Grid.Column="2"
+                                          Content="{Binding ToggleEnabledIcon}"
+                                          Classes="icon"
+                                          ToolTip.Tip="{Binding ToggleEnabledLabel}"
+                                          Command="{Binding $parent[Window].DataContext.ToggleSelectedSyncPairEnabledCommand}" />
+                                  <Button Grid.Column="3"
+                                          Content="↗"
+                                          Classes="icon"
+                                          ToolTip.Tip="Open local folder"
+                                          Command="{Binding $parent[Window].DataContext.OpenFolderCommand}"
+                                          CommandParameter="{Binding}" />
+                                  <Button Grid.Column="4"
+                                          Content="-"
+                                          Classes="icon"
+                                          ToolTip.Tip="Remove sync folder"
+                                          Command="{Binding $parent[Window].DataContext.RemoveSelectedSyncPairCommand}" />
+                                  <Button Grid.Column="5"
+                                          Content="x"
+                                          Classes="icon"
+                                          ToolTip.Tip="Close folder controls"
+                                          Command="{Binding $parent[Window].DataContext.CancelSelectedSyncPairEditorCommand}" />
+                                  <TextBlock Grid.Row="1"
+                                             Grid.ColumnSpan="6"
+                                             ToolTip.Tip="{Binding LocalPath}"
+                                             Classes="secondary"
+                                             FontSize="11"
+                                             TextTrimming="CharacterEllipsis">
+                                    <Run Text="{Binding ModeLabel}" />
+                                    <Run Text=" · " />
+                                    <Run Text="{Binding LocalPath}" />
+                                  </TextBlock>
+                                </Grid>
+                              </Border>
                             </Grid>
                           </Border>
                         </DataTemplate>
@@ -542,57 +595,6 @@
                   </ScrollViewer>
 
                   <Border Grid.Row="1"
-                          Padding="8"
-                          CornerRadius="6"
-                          Background="{DynamicResource CottonSurfaceMutedBrush}"
-                          BorderBrush="{DynamicResource CottonBorderBrush}"
-                          BorderThickness="1"
-                          IsVisible="{Binding IsSelectedSyncPairEditorVisible}">
-                    <Grid RowDefinitions="Auto,Auto"
-                          ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto"
-                          RowSpacing="6"
-                          ColumnSpacing="6">
-                      <TextBox Text="{Binding SelectedSyncPairEditableDisplayName}"
-                               PlaceholderText="Folder name" />
-                      <Button Grid.Column="1"
-                              Content="✓"
-                              Classes="icon"
-                              ToolTip.Tip="Save folder name"
-                              Command="{Binding SaveSelectedSyncPairNameCommand}" />
-                      <Button Grid.Column="2"
-                              Content="{Binding SelectedSyncPair.ToggleEnabledIcon}"
-                              Classes="icon"
-                              ToolTip.Tip="{Binding SelectedSyncPair.ToggleEnabledLabel}"
-                              Command="{Binding ToggleSelectedSyncPairEnabledCommand}" />
-                      <Button Grid.Column="3"
-                              Content="↗"
-                              Classes="icon"
-                              ToolTip.Tip="Open local folder"
-                              Command="{Binding OpenFolderCommand}" />
-                      <Button Grid.Column="4"
-                              Content="-"
-                              Classes="icon"
-                              ToolTip.Tip="Remove sync folder"
-                              Command="{Binding RemoveSelectedSyncPairCommand}" />
-                      <Button Grid.Column="5"
-                              Content="x"
-                              Classes="icon"
-                              ToolTip.Tip="Close folder controls"
-                              Command="{Binding CancelSelectedSyncPairEditorCommand}" />
-                      <TextBlock Grid.Row="1"
-                                 Grid.ColumnSpan="6"
-                                 ToolTip.Tip="{Binding SelectedSyncPair.LocalPath}"
-                                 Classes="secondary"
-                                 FontSize="11"
-                                 TextTrimming="CharacterEllipsis">
-                        <Run Text="{Binding SelectedSyncPair.ModeLabel}" />
-                        <Run Text=" · " />
-                        <Run Text="{Binding SelectedSyncPair.LocalPath}" />
-                      </TextBlock>
-                    </Grid>
-                  </Border>
-
-                  <Border Grid.Row="2"
                           Padding="8"
                           CornerRadius="6"
                           Background="{DynamicResource CottonErrorSoftBrush}"

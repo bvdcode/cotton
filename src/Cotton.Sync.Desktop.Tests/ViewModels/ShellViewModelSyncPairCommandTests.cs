@@ -58,6 +58,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             Assert.That(controller.RemovedSyncPairId, Is.Null);
             Assert.That(viewModel.IsSelectedSyncPairEditorVisible, Is.True);
+            Assert.That(viewModel.SelectedSyncPair?.IsEditorVisible, Is.True);
             Assert.That(viewModel.IsRemoveSyncPairConfirmationVisible, Is.True);
             Assert.That(viewModel.RemoveSyncPairConfirmationTitle, Is.EqualTo("Remove Documents?"));
             Assert.That(viewModel.RemoveSyncPairConfirmationPath, Does.EndWith("Documents"));
@@ -84,6 +85,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.SyncPairs.Single().Id, Is.EqualTo(secondSyncPairId));
             Assert.That(viewModel.SelectedSyncPair?.Id, Is.EqualTo(secondSyncPairId));
             Assert.That(viewModel.IsSelectedSyncPairEditorVisible, Is.False);
+            Assert.That(viewModel.SyncPairs.Single().IsEditorVisible, Is.False);
             Assert.That(viewModel.IsRemoveSyncPairConfirmationVisible, Is.False);
             Assert.That(viewModel.GlobalStatus, Is.EqualTo("Ready"));
         });
@@ -100,6 +102,7 @@ public sealed class ShellViewModelSyncPairCommandTests
                 CreatePair(secondSyncPairId, "Pictures", "Idle")));
         using ShellViewModel viewModel = CreateViewModel(controller);
         await viewModel.InitializeAsync();
+        SyncPairRowViewModel firstPair = viewModel.SyncPairs.Single(pair => pair.Id == firstSyncPairId);
         SyncPairRowViewModel secondPair = viewModel.SyncPairs.Single(pair => pair.Id == secondSyncPairId);
 
         await ExecuteAsync(viewModel.ShowSelectedSyncPairEditorCommand, secondPair);
@@ -108,6 +111,8 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             Assert.That(viewModel.SelectedSyncPair?.Id, Is.EqualTo(secondSyncPairId));
             Assert.That(viewModel.IsSelectedSyncPairEditorVisible, Is.True);
+            Assert.That(firstPair.IsEditorVisible, Is.False);
+            Assert.That(secondPair.IsEditorVisible, Is.True);
             Assert.That(viewModel.IsRemoveSyncPairConfirmationVisible, Is.False);
             Assert.That(viewModel.CancelSelectedSyncPairEditorCommand.CanExecute(null), Is.True);
         });
@@ -117,6 +122,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.IsSelectedSyncPairEditorVisible, Is.False);
+            Assert.That(secondPair.IsEditorVisible, Is.False);
             Assert.That(viewModel.CancelSelectedSyncPairEditorCommand.CanExecute(null), Is.False);
         });
     }
