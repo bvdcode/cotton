@@ -115,6 +115,18 @@ public sealed class DesktopStartupOptionsTests
     }
 
     [Test]
+    public void Parse_LoadsEmptyDashboardVisualSmokeScenario()
+    {
+        DesktopStartupOptions options = DesktopStartupOptions.Parse(
+            [
+                "--visual-smoke",
+                "empty-dashboard",
+            ]);
+
+        Assert.That(options.VisualSmokeScenario, Is.EqualTo(DesktopVisualSmokeScenario.EmptyDashboard));
+    }
+
+    [Test]
     public void Parse_LoadsSignInErrorVisualSmokeScenario()
     {
         DesktopStartupOptions options = DesktopStartupOptions.Parse(

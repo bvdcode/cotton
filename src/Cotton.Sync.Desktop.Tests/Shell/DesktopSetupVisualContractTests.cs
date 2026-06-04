@@ -224,7 +224,7 @@ public sealed class DesktopSetupVisualContractTests
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
         string dashboardHeader = GetSlice(
             mainWindowXaml,
-            "<TextBlock Text=\"Cotton Sync\"",
+            "Text=\"{Binding HeaderTitleText}\"",
             "<Grid Grid.Row=\"2\"");
         string actionRequiredRow = GetSlice(
             mainWindowXaml,
@@ -237,6 +237,8 @@ public sealed class DesktopSetupVisualContractTests
 
         Assert.Multiple(() =>
         {
+            Assert.That(dashboardHeader, Does.Contain("Text=\"{Binding HeaderTitleText}\""));
+            Assert.That(dashboardHeader, Does.Not.Contain("<TextBlock Text=\"Cotton Sync\""));
             Assert.That(dashboardHeader, Does.Contain("ToolTip.Tip=\"Sync now\""));
             Assert.That(dashboardHeader, Does.Contain("Content=\"↻\""));
             Assert.That(dashboardHeader, Does.Not.Contain("Content=\"Sync\""));
@@ -262,10 +264,16 @@ public sealed class DesktopSetupVisualContractTests
 
         Assert.Multiple(() =>
         {
+            Assert.That(mainWindowXaml, Does.Contain("Text=\"{Binding HeaderTitleText}\""));
             Assert.That(mainWindowXaml, Does.Contain("Text=\"{Binding HeaderStatusText}\""));
             Assert.That(mainWindowXaml, Does.Not.Contain("Text=\"{Binding GlobalStatus}\""));
+            Assert.That(statusCard, Does.Contain("IsVisible=\"{Binding IsStatusCardVisible}\""));
             Assert.That(statusCard, Does.Contain("Classes.actionRequired=\"{Binding HasStatusAttention}\""));
             Assert.That(statusCard, Does.Not.Contain("Classes.actionRequired=\"{Binding HasActionRequired}\""));
+            Assert.That(statusCard, Does.Contain("Text=\"{Binding StatusCardDetailText}\""));
+            Assert.That(statusCard, Does.Contain("IsVisible=\"{Binding HasStatusCardDetail}\""));
+            Assert.That(statusCard, Does.Not.Contain("Text=\"{Binding AccountName}\""));
+            Assert.That(statusCard, Does.Not.Contain("Text=\"{Binding CurrentProgressText}\""));
         });
     }
 

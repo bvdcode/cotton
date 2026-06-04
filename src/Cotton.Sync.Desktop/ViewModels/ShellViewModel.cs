@@ -233,7 +233,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public string AccountName
     {
         get => _accountName;
-        private set => SetProperty(ref _accountName, value);
+        private set
+        {
+            if (SetProperty(ref _accountName, value))
+            {
+                OnPropertyChanged(nameof(HeaderTitleText));
+            }
+        }
     }
 
     public string AppVersion => DesktopAppVersion.Current;
@@ -247,9 +253,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             {
                 OnPropertyChanged(nameof(HasActionRequired));
                 OnPropertyChanged(nameof(HasStatusAttention));
+                OnPropertyChanged(nameof(IsStatusCardVisible));
                 OnPropertyChanged(nameof(ActionRequiredOpacity));
                 OnPropertyChanged(nameof(CanRetryActionRequired));
                 OnPropertyChanged(nameof(StatusCardTitle));
+                OnPropertyChanged(nameof(StatusCardDetailText));
+                OnPropertyChanged(nameof(HasStatusCardDetail));
                 RefreshCurrentProgressText();
             }
         }
@@ -270,6 +279,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public string HeaderStatusText => HasConflicts ? "Conflicts need review" : GlobalStatus;
 
+    public string HeaderTitleText => IsSignedIn ? AccountName : "Cotton Sync";
+
     public string StatusCardTitle
     {
         get
@@ -279,14 +290,26 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 return "Sync needs attention";
             }
 
-            return HasConflicts ? "Conflicts need review" : GlobalStatus;
+            return HasConflicts ? "Conflicts need review" : CurrentProgressText;
         }
     }
+
+    public string StatusCardDetailText => HasActionRequired || HasConflicts ? CurrentProgressText : string.Empty;
+
+    public bool HasStatusCardDetail => !string.IsNullOrWhiteSpace(StatusCardDetailText);
 
     public string CurrentProgressText
     {
         get => _currentProgressText;
-        private set => SetProperty(ref _currentProgressText, value);
+        private set
+        {
+            if (SetProperty(ref _currentProgressText, value))
+            {
+                OnPropertyChanged(nameof(StatusCardTitle));
+                OnPropertyChanged(nameof(StatusCardDetailText));
+                OnPropertyChanged(nameof(HasStatusCardDetail));
+            }
+        }
     }
 
     public bool IsBusy
@@ -310,6 +333,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             {
                 OnPropertyChanged(nameof(IsDashboardVisible));
                 OnPropertyChanged(nameof(IsSetupVisible));
+                OnPropertyChanged(nameof(HeaderTitleText));
                 RaiseSetupStateProperties();
                 OnPropertyChanged(nameof(CanRetryActionRequired));
                 RefreshCurrentProgressText();
@@ -331,6 +355,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public bool HasActionRequired => !string.IsNullOrWhiteSpace(ActionRequiredMessage);
 
     public bool HasStatusAttention => HasActionRequired || HasConflicts;
+
+    public bool IsStatusCardVisible => HasStatusAttention || HasSyncPairs;
 
     public double ActionRequiredOpacity => HasActionRequired ? 1 : 0;
 
@@ -890,6 +916,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 LocalFolderPath = CreateVisualSmokeLocalRootPath();
                 IsAddSyncPairWizardVisible = true;
                 await LoadRemoteFoldersAsync("/").ConfigureAwait(true);
+                break;
+            case DesktopVisualSmokeScenario.EmptyDashboard:
                 break;
             case DesktopVisualSmokeScenario.Settings:
                 SelectedSettingsTabIndex = 0;
@@ -1676,6 +1704,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         OnPropertyChanged(nameof(HasNoSyncPairs));
         OnPropertyChanged(nameof(HasSyncPairs));
+        OnPropertyChanged(nameof(IsStatusCardVisible));
         RaiseSyncStateProperties();
         OpenFolderCommand.RaiseCanExecuteChanged();
         ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
@@ -1696,9 +1725,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         OnPropertyChanged(nameof(HasConflicts));
         OnPropertyChanged(nameof(HasStatusAttention));
+        OnPropertyChanged(nameof(IsStatusCardVisible));
         OnPropertyChanged(nameof(ConflictCountLabel));
         OnPropertyChanged(nameof(HeaderStatusText));
         OnPropertyChanged(nameof(StatusCardTitle));
+        OnPropertyChanged(nameof(StatusCardDetailText));
+        OnPropertyChanged(nameof(HasStatusCardDetail));
         RefreshCurrentProgressText();
         OpenSelectedConflictCommand.RaiseCanExecuteChanged();
     }
@@ -2015,7 +2047,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
         if (SyncPairs.Count == 0)
         {
-            CurrentProgressText = "Add a folder to start syncing.";
+            CurrentProgressText = string.Empty;
             return;
         }
 

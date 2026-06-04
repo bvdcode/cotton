@@ -302,6 +302,29 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task ApplyVisualSmokeScenarioAsync_ShowsEmptyDashboardWithoutOpeningWizard()
+    {
+        var localFolderPicker = new FakeLocalFolderPicker();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot());
+        using ShellViewModel viewModel = CreateViewModel(controller, localFolderPicker: localFolderPicker);
+        await viewModel.InitializeAsync();
+
+        await viewModel.ApplyVisualSmokeScenarioAsync(DesktopVisualSmokeScenario.EmptyDashboard);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(localFolderPicker.PickFolderCalls, Is.EqualTo(0));
+            Assert.That(viewModel.IsSignedIn, Is.True);
+            Assert.That(viewModel.SyncPairs, Is.Empty);
+            Assert.That(viewModel.IsAddSyncPairWizardVisible, Is.False);
+            Assert.That(viewModel.IsStatusCardVisible, Is.False);
+            Assert.That(viewModel.CurrentProgressText, Is.Empty);
+            Assert.That(viewModel.HeaderTitleText, Is.EqualTo("vadim@example.com"));
+            Assert.That(viewModel.HeaderStatusText, Is.EqualTo("Connected"));
+        });
+    }
+
+    [Test]
     public async Task ApplyVisualSmokeScenarioAsync_ShowsSettingsDiagnosticsTab()
     {
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Idle")))
@@ -494,7 +517,13 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         await viewModel.InitializeAsync();
 
-        Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Waiting for first sync."));
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsStatusCardVisible, Is.True);
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Waiting for first sync."));
+            Assert.That(viewModel.StatusCardTitle, Is.EqualTo("Waiting for first sync."));
+            Assert.That(viewModel.HasStatusCardDetail, Is.False);
+        });
     }
 
     [Test]
@@ -509,7 +538,13 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         await viewModel.InitializeAsync();
 
-        Assert.That(viewModel.CurrentProgressText, Is.EqualTo("All folders are up to date."));
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsStatusCardVisible, Is.True);
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("All folders are up to date."));
+            Assert.That(viewModel.StatusCardTitle, Is.EqualTo("All folders are up to date."));
+            Assert.That(viewModel.HasStatusCardDetail, Is.False);
+        });
     }
 
     [Test]
@@ -1004,6 +1039,10 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.IsAddSyncPairWizardVisible, Is.False);
             Assert.That(viewModel.IsAddSyncPairLocalStepVisible, Is.False);
             Assert.That(viewModel.HasNoSyncPairs, Is.True);
+            Assert.That(viewModel.HeaderTitleText, Is.EqualTo("desktop@example.test"));
+            Assert.That(viewModel.HeaderStatusText, Is.EqualTo("Connected"));
+            Assert.That(viewModel.IsStatusCardVisible, Is.False);
+            Assert.That(viewModel.CurrentProgressText, Is.Empty);
             Assert.That(viewModel.RemoteBrowserPath, Is.EqualTo("/"));
             Assert.That(viewModel.RemoteFolderPath, Is.Empty);
             Assert.That(viewModel.RemoteFolders, Is.Empty);

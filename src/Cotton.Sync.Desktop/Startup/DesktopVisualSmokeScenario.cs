@@ -7,6 +7,7 @@ internal enum DesktopVisualSmokeScenario
 {
     SignInError,
     AddFolder,
+    EmptyDashboard,
     Dashboard,
     Settings,
     SettingsDiagnostics,

@@ -234,7 +234,9 @@ internal sealed class VisualSmokeShellController : IDesktopShellController
 
     private IReadOnlyList<DesktopSyncPairSnapshot> CreatePairs(DateTime syncedAt)
     {
-        return _scenario is DesktopVisualSmokeScenario.SignInError or DesktopVisualSmokeScenario.AddFolder
+        return _scenario is DesktopVisualSmokeScenario.SignInError
+            or DesktopVisualSmokeScenario.AddFolder
+            or DesktopVisualSmokeScenario.EmptyDashboard
             ? []
             : CreateDashboardPairs(syncedAt);
     }

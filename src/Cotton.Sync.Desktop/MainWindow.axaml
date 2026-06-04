@@ -36,7 +36,7 @@
         <StackPanel Grid.Column="1"
                     Spacing="1"
                     VerticalAlignment="Center">
-          <TextBlock Text="Cotton Sync"
+          <TextBlock Text="{Binding HeaderTitleText}"
                      Foreground="{DynamicResource CottonTextPrimaryBrush}"
                      FontSize="17"
                      FontWeight="SemiBold" />
@@ -226,7 +226,8 @@
           <Border Padding="10"
                   CornerRadius="6"
                   Classes="statusCard"
-                  Classes.actionRequired="{Binding HasStatusAttention}">
+                  Classes.actionRequired="{Binding HasStatusAttention}"
+                  IsVisible="{Binding IsStatusCardVisible}">
             <Grid ColumnDefinitions="Auto,*"
                   ColumnSpacing="9">
               <Border Width="12"
@@ -241,14 +242,11 @@
                            FontSize="15"
                            FontWeight="SemiBold"
                            TextTrimming="CharacterEllipsis" />
-                <TextBlock Text="{Binding AccountName}"
+                <TextBlock Text="{Binding StatusCardDetailText}"
                            Classes="secondary"
                            FontSize="12"
-                           TextTrimming="CharacterEllipsis" />
-                <TextBlock Text="{Binding CurrentProgressText}"
-                           Classes="secondary"
-                           FontSize="12"
-                           TextTrimming="CharacterEllipsis" />
+                           TextTrimming="CharacterEllipsis"
+                           IsVisible="{Binding HasStatusCardDetail}" />
               </StackPanel>
             </Grid>
           </Border>

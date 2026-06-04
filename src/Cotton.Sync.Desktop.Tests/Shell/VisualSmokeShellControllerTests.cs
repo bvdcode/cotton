@@ -56,6 +56,21 @@ public sealed class VisualSmokeShellControllerTests
     }
 
     [Test]
+    public async Task LoadAsync_ReturnsSignedInEmptyDashboardForEmptyDashboardScenario()
+    {
+        using VisualSmokeShellController controller = VisualSmokeShellController.Create(DesktopVisualSmokeScenario.EmptyDashboard);
+
+        DesktopShellSnapshot snapshot = await controller.LoadAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.IsSignedIn, Is.True);
+            Assert.That(snapshot.SyncPairs, Is.Empty);
+            Assert.That(snapshot.AccountName, Is.EqualTo("qa@cottoncloud.dev"));
+        });
+    }
+
+    [Test]
     public async Task LoadAsync_ReturnsSignedOutSetupSnapshotForSignInErrorScenario()
     {
         using VisualSmokeShellController controller = VisualSmokeShellController.Create(DesktopVisualSmokeScenario.SignInError);
