@@ -96,6 +96,34 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
     }
 
     /// <inheritdoc />
+    public Task CreateDirectoryAsync(string rootPath, string relativePath, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
+        cancellationToken.ThrowIfCancellationRequested();
+        string normalizedPath = SyncPath.Normalize(relativePath);
+        string fullRoot = Path.GetFullPath(rootPath);
+        Directory.CreateDirectory(Path.Combine(fullRoot, normalizedPath.Replace('/', Path.DirectorySeparatorChar)));
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task DeleteDirectoryAsync(string rootPath, string relativePath, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
+        cancellationToken.ThrowIfCancellationRequested();
+        string normalizedPath = SyncPath.Normalize(relativePath);
+        string fullRoot = Path.GetFullPath(rootPath);
+        string targetPath = Path.Combine(fullRoot, normalizedPath.Replace('/', Path.DirectorySeparatorChar));
+        if (Directory.Exists(targetPath))
+        {
+            Directory.Delete(targetPath);
+            DeleteEmptyParents(fullRoot, Path.GetDirectoryName(targetPath));
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
     public string CreateConflictRelativePath(string rootPath, string relativePath, DateTime timestampUtc)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);

@@ -79,6 +79,46 @@ public sealed class AtomicLocalFileSyncWriterTests
     }
 
     [Test]
+    public async Task CreateDirectoryAsync_CreatesLocalDirectory()
+    {
+        var writer = new AtomicLocalFileSyncWriter();
+
+        await writer.CreateDirectoryAsync(_root, "Docs/Empty");
+
+        Assert.That(Directory.Exists(FullPath("Docs/Empty")), Is.True);
+    }
+
+    [Test]
+    public async Task DeleteDirectoryAsync_RemovesOnlyEmptyDirectoryAndParents()
+    {
+        Directory.CreateDirectory(FullPath("Docs/Empty"));
+        var writer = new AtomicLocalFileSyncWriter();
+
+        await writer.DeleteDirectoryAsync(_root, "Docs/Empty");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Directory.Exists(FullPath("Docs/Empty")), Is.False);
+            Assert.That(Directory.Exists(FullPath("Docs")), Is.False);
+        });
+    }
+
+    [Test]
+    public void DeleteDirectoryAsync_PreservesNonEmptyDirectory()
+    {
+        WriteFile("Docs/NotEmpty/file.txt", "keep");
+        var writer = new AtomicLocalFileSyncWriter();
+
+        Assert.ThrowsAsync<IOException>(() => writer.DeleteDirectoryAsync(_root, "Docs/NotEmpty"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Directory.Exists(FullPath("Docs/NotEmpty")), Is.True);
+            Assert.That(ReadFile("Docs/NotEmpty/file.txt"), Is.EqualTo("keep"));
+        });
+    }
+
+    [Test]
     public void CreateConflictRelativePath_UsesIndexedSuffixWhenTimestampNameExists()
     {
         var writer = new AtomicLocalFileSyncWriter();

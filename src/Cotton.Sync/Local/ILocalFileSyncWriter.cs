@@ -24,6 +24,16 @@ public interface ILocalFileSyncWriter
     Task DeleteFileAsync(string rootPath, string relativePath, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Creates a local directory if it does not exist.
+    /// </summary>
+    Task CreateDirectoryAsync(string rootPath, string relativePath, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes an empty local directory if it exists.
+    /// </summary>
+    Task DeleteDirectoryAsync(string rootPath, string relativePath, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Creates a unique conflict-copy relative path for a file.
     /// </summary>
     string CreateConflictRelativePath(string rootPath, string relativePath, DateTime timestampUtc);

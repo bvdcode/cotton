@@ -1656,6 +1656,16 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
             throw new NotSupportedException("Disk-full smoke does not delete local files.");
         }
 
+        public Task CreateDirectoryAsync(string rootPath, string relativePath, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException("Disk-full smoke does not create local directories.");
+        }
+
+        public Task DeleteDirectoryAsync(string rootPath, string relativePath, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException("Disk-full smoke does not delete local directories.");
+        }
+
         public string CreateConflictRelativePath(string rootPath, string relativePath, DateTime timestampUtc)
         {
             throw new NotSupportedException("Disk-full smoke does not create conflicts.");
