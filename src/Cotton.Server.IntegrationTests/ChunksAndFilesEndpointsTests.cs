@@ -178,6 +178,49 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Upload_Empty_Raw_Chunk_And_Create_Empty_File_Works()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        byte[] content = [];
+        string contentHash = Hasher.ToHexStringHash(Hasher.HashData(content));
+        using var body = new ByteArrayContent(content)
+        {
+            Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
+        };
+
+        var uploadResponse = await _client.PostAsync($"/api/v1/chunks/raw?hash={contentHash}", body);
+        uploadResponse.EnsureSuccessStatusCode();
+
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", new CreateFileRequest
+        {
+            ChunkHashes = [contentHash],
+            Name = "empty-raw.txt",
+            ContentType = "text/plain",
+            Hash = contentHash,
+            NodeId = root!.Id,
+            Validate = true,
+        });
+        createResponse.EnsureSuccessStatusCode();
+
+        var created = await createResponse.Content.ReadFromJsonAsync<NodeFileManifestDto>();
+        Assert.That(created, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(created!.Name, Is.EqualTo("empty-raw.txt"));
+            Assert.That(created.SizeBytes, Is.Zero);
+            Assert.That(created.ContentHash, Is.EqualTo(contentHash));
+        });
+
+        byte[] downloaded = await _client.GetByteArrayAsync($"/api/v1/files/{created!.Id}/content");
+        Assert.That(downloaded, Is.Empty);
+    }
+
+    [Test]
     public async Task Create_File_Returns_Sync_Metadata_In_Create_Response_And_Children_List()
     {
         var token = await LoginAsync();
