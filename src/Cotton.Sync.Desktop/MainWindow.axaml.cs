@@ -29,6 +29,7 @@ public sealed partial class MainWindow : Window
     private const double SetupWidth = 336;
 
     private readonly DesktopWindowLifecyclePolicy _lifecyclePolicy;
+    private bool _hasOpened;
     private WindowProfile? _windowProfile;
 
     /// <summary>
@@ -57,6 +58,8 @@ public sealed partial class MainWindow : Window
         viewModel.PropertyChanged += OnViewModelPropertyChanged;
         Opened += async (_, _) =>
         {
+            _hasOpened = true;
+            CenterOnCurrentScreen();
             await viewModel.InitializeAsync().ConfigureAwait(true);
             if (_lifecyclePolicy.ShouldHideAfterSessionRestore(viewModel.IsDashboardVisible))
             {
@@ -147,7 +150,10 @@ public sealed partial class MainWindow : Window
             WindowProfile.SetupSignIn => SetupSignInHeight,
             _ => SetupServerHeight,
         };
-        CenterOnCurrentScreen();
+        if (_hasOpened)
+        {
+            CenterOnCurrentScreen();
+        }
     }
 
     private static WindowProfile ResolveWindowProfile(ShellViewModel viewModel)
