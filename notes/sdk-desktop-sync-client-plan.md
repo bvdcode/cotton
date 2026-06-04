@@ -104,6 +104,7 @@ Target layers:
 - [x] Add `SyncPairRunner` for per-pair state.
   States: disabled, idle, scanning, syncing, paused, offline, conflict, error.
   Verification 2026-06-03: `SyncPairRunState` defines disabled, idle, scanning, syncing, paused, offline, conflict, and error; `SyncPairRunner` manages disabled/idle/paused/syncing/offline/error transitions and queue-collapsed sync requests. `SyncPairRunnerTests` cover disabled start, pause/resume, paused no-op sync, successful sync, queued requests, retry, offline transient failures, and error state; full `Cotton.Sync.App.Tests` passed 83/83.
+  Verification 2026-06-04: `SyncPairRunner` now blocks incoming queued sync requests as soon as pause or stop is requested, so an in-flight sync can finish without launching a stale follow-up pass. `SyncPairRunnerTests` passed 20/20, full `Cotton.Sync.App.Tests` passed 112/112, and `dotnet build src/Cotton.sln --configuration Release` passed with 0 warnings.
 - [x] Add `IAppStatusPublisher` or equivalent observable status stream.
   Verification 2026-06-03: `IAppStatusPublisher` and `InMemoryAppStatusPublisher` expose current app status and observable updates; tests cover current snapshot, immediate subscriber replay, publish delivery, and unsubscribe behavior.
 - [x] Add activity history model.
@@ -120,6 +121,7 @@ Target layers:
   Verification 2026-06-03: `SyncSupervisorTests` cover start, pause/resume, sync-all, and stop transitions/status publishing.
 - [x] Add tests for pause/resume and app shutdown.
   Verification 2026-06-03: `SyncPairRunnerTests` and `SyncSupervisorTests` cover pause/resume states, while `SyncApplicationServiceTests` cover sign-out and stop-sync shutdown flow.
+  Verification 2026-06-04: added runner coverage for queued sync suppression during pause/stop and for canceled pause/stop calls restoring future sync-request acceptance; focused runner tests passed 20/20.
 - [x] Add tests proving UI can use the app layer without directly constructing `SyncEngine`.
   Verification 2026-06-03: `DesktopUiBoundaryTests` assert `ShellViewModel` constructor dependencies are `IDesktopShellController`, `ILocalFolderPicker`, and `IDesktopNotificationService`, and that `MainWindow`/`ShellViewModel` do not store or require `Cotton.Sync.SyncEngine` or `SyncEnginePairWork`. Focused boundary tests passed 2/2, full `Cotton.Sync.Desktop.Tests` passed 64/64, and full solution Release build passed with the known NU1903 warning.
 - [x] Build the solution.
@@ -277,6 +279,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Verification: commit `Add sync runner offline retry`; retry attempts are capped by `SyncPairRunnerRetryOptions`, transient final failures surface as `Offline`, and non-transient failures remain `Error` with `LastError`.
 - [x] Add per-pair queue so repeated triggers collapse into one sync pass.
   Verification: commit `Coalesce sync pair run requests`; `SyncPairRunner` collapses overlapping `SyncNowAsync` requests into one queued follow-up run. `dotnet test src/Cotton.Sync.App.Tests/Cotton.Sync.App.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~SyncPairRunnerTests` passed 9/9, and `dotnet build src/Cotton.sln --configuration Release` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
+  Verification 2026-06-04: pause/stop now clear pending per-pair queue state before waiting on the active run, preventing repeated triggers from surviving an explicit user pause or shutdown. `SyncPairRunnerTests` passed 20/20, full `Cotton.Sync.App.Tests` passed 112/112, and `dotnet build src/Cotton.sln --configuration Release` passed with 0 warnings.
 - [x] Add tests for local watcher event coalescing.
   Verification: `LocalChanges_AreCoalescedIntoOneSyncRequest` covers coalesced local watcher events per sync pair; focused continuous-sync tests passed 19/19, full `Cotton.Sync.App.Tests` passed 77/77, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [x] Add tests for remote SignalR trigger causing changes fetch.
