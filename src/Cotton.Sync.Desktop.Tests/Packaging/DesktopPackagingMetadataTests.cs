@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 namespace Cotton.Sync.Desktop.Tests.Packaging;
@@ -88,6 +89,40 @@ public sealed class DesktopPackagingMetadataTests
         });
     }
 
+    [Test]
+    public void LinuxDebPackageScript_DefinesReleaseInstallLayout()
+    {
+        string packageScript = File.ReadAllText(GetDesktopFilePath("Packaging/linux/package-deb.sh"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(packageScript, Does.Contain("/opt/cotton-sync"));
+            Assert.That(packageScript, Does.Contain("/usr/bin/cotton-sync"));
+            Assert.That(packageScript, Does.Contain("/usr/share/applications/cotton-sync.desktop"));
+            Assert.That(packageScript, Does.Contain("/usr/share/icons/hicolor/192x192/apps/cotton-sync.png"));
+            Assert.That(packageScript, Does.Contain("Package: cotton-sync-desktop"));
+            Assert.That(packageScript, Does.Contain("Architecture: amd64"));
+            Assert.That(packageScript, Does.Contain("Depends: libsecret-tools"));
+            Assert.That(packageScript, Does.Contain("dpkg-deb --root-owner-group --build"));
+        });
+    }
+
+    [Test]
+    public void CiWorkflow_BuildsAndUploadsLinuxDebArtifact()
+    {
+        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(workflow, Does.Contain("Package desktop Linux x64 deb"));
+            Assert.That(workflow, Does.Contain("src/Cotton.Sync.Desktop/Packaging/linux/package-deb.sh"));
+            Assert.That(workflow, Does.Contain("cotton-sync-desktop-linux-x64.deb"));
+            Assert.That(
+                Regex.Matches(workflow, "cotton-sync-desktop-linux-x64\\.deb").Count,
+                Is.GreaterThanOrEqualTo(2));
+        });
+    }
+
     private static string? GetProperty(XElement propertyGroup, string name)
     {
         return propertyGroup.Element(name)?.Value;
@@ -110,10 +145,32 @@ public sealed class DesktopPackagingMetadataTests
 
     private static string GetDesktopFilePath(string relativePath)
     {
+        string? path = TryGetRepositoryFilePath(Path.Combine("src", "Cotton.Sync.Desktop", relativePath));
+        if (path is not null)
+        {
+            return path;
+        }
+
+        throw new FileNotFoundException(relativePath + " was not found from the test directory.");
+    }
+
+    private static string GetRepositoryFilePath(string relativePath)
+    {
+        string? path = TryGetRepositoryFilePath(relativePath);
+        if (path is not null)
+        {
+            return path;
+        }
+
+        throw new FileNotFoundException(relativePath + " was not found from the test directory.");
+    }
+
+    private static string? TryGetRepositoryFilePath(string relativePath)
+    {
         string directory = TestContext.CurrentContext.TestDirectory;
         while (!string.IsNullOrWhiteSpace(directory))
         {
-            string candidate = Path.Combine(directory, "src", "Cotton.Sync.Desktop", relativePath);
+            string candidate = Path.Combine(directory, relativePath);
             if (File.Exists(candidate))
             {
                 return candidate;
@@ -128,6 +185,6 @@ public sealed class DesktopPackagingMetadataTests
             directory = parent ?? string.Empty;
         }
 
-        throw new FileNotFoundException(relativePath + " was not found from the test directory.");
+        return null;
     }
 }

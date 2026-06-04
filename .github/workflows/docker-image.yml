@@ -196,11 +196,20 @@ jobs:
       - name: Package desktop Linux x64 archive
         run: tar -czf cotton-sync-desktop-linux-x64.tar.gz -C src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64 .
 
+      - name: Package desktop Linux x64 deb
+        run: |
+          src/Cotton.Sync.Desktop/Packaging/linux/package-deb.sh \
+            src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64 \
+            cotton-sync-desktop-linux-x64.deb \
+            '${{ steps.gitversion.outputs.SemVer }}'
+
       - name: Upload desktop Linux x64 artifact
         uses: actions/upload-artifact@v5
         with:
           name: desktop-linux-x64
-          path: cotton-sync-desktop-linux-x64.tar.gz
+          path: |
+            cotton-sync-desktop-linux-x64.tar.gz
+            cotton-sync-desktop-linux-x64.deb
 
       - name: Publish desktop Windows x64
         run: dotnet publish src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj /p:PublishProfile=win-x64 -p:Version='${{ steps.gitversion.outputs.SemVer }}' -p:InformationalVersion='${{ steps.gitversion.outputs.SemVer }}'
