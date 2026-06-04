@@ -193,6 +193,9 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("Smoke desktop Linux archive artifact"));
             Assert.That(workflow, Does.Contain("tar -xzf cotton-sync-desktop-linux-x64.tar.gz"));
             Assert.That(workflow, Does.Contain("\"$extract_dir/Cotton.Sync.Desktop\" --self-test --data-dir"));
+            Assert.That(workflow, Does.Contain("\"$extract_dir/Cotton.Sync.Desktop\" --export-diagnostics --data-dir"));
+            Assert.That(workflow, Does.Contain("Diagnostics bundle path was not reported."));
+            Assert.That(workflow, Does.Contain("test -s \"$bundle_path\""));
             Assert.That(workflow, Does.Contain("Smoke desktop Linux deb artifact"));
             Assert.That(workflow, Does.Contain("dpkg-deb -x cotton-sync-desktop-linux-x64.deb"));
             Assert.That(workflow, Does.Contain("test -f \"$extract_dir/usr/share/applications/cotton-sync.desktop\""));
@@ -269,6 +272,9 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("cotton-sync-desktop-win-x64-smoke.zip"));
             Assert.That(workflow, Does.Contain("Expand-Archive cotton-sync-desktop-win-x64-smoke.zip"));
             Assert.That(workflow, Does.Contain("Cotton.Sync.Desktop.exe\") --self-test --data-dir"));
+            Assert.That(workflow, Does.Contain("Cotton.Sync.Desktop.exe\") --export-diagnostics --data-dir"));
+            Assert.That(workflow, Does.Contain("Diagnostics bundle path was not reported."));
+            Assert.That(workflow, Does.Contain("Diagnostics bundle was not created at $bundlePath."));
         });
     }
 
