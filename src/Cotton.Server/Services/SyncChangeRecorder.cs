@@ -53,10 +53,5 @@ namespace Cotton.Server.Services
                 Name = node.Name,
             });
         }
-
-        private static void EnsureKnownKind(SyncChangeKind kind)
-        {
-            ArgumentOutOfRangeException.ThrowIfEqual(kind, SyncChangeKind.Unknown);
-        }
     }
 }
