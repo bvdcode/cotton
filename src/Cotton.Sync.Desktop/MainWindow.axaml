@@ -2,7 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="Cotton.Sync.Desktop.MainWindow"
         Title="Cotton Sync"
-        Icon="/Assets/icon-192.png"
+        Icon="/Assets/app.ico"
         Width="336"
         Height="300"
         MinWidth="316"
