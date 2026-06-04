@@ -771,6 +771,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
         switch (scenario)
         {
+            case DesktopVisualSmokeScenario.AddFolder:
+                LocalFolderPath = CreateVisualSmokeLocalRootPath();
+                IsAddSyncPairWizardVisible = true;
+                await LoadRemoteFoldersAsync("/").ConfigureAwait(true);
+                break;
             case DesktopVisualSmokeScenario.Settings:
                 SelectedSettingsTabIndex = 0;
                 await ShowSettingsAsync().ConfigureAwait(true);
@@ -802,6 +807,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         RefreshCurrentProgressText();
         RefreshDiagnosticsItems();
         RaiseCommandStates();
+    }
+
+    private static string CreateVisualSmokeLocalRootPath()
+    {
+        return OperatingSystem.IsWindows()
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Cotton")
+            : "/home/qa/Cotton";
     }
 
     private async Task ApplyStartWithOperatingSystemAsync(bool enabled)

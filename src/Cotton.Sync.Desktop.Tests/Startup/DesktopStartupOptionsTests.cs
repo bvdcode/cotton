@@ -108,6 +108,18 @@ public sealed class DesktopStartupOptionsTests
         DesktopStartupOptions options = DesktopStartupOptions.Parse(
             [
                 "--visual-smoke",
+                "add-folder",
+            ]);
+
+        Assert.That(options.VisualSmokeScenario, Is.EqualTo(DesktopVisualSmokeScenario.AddFolder));
+    }
+
+    [Test]
+    public void Parse_LoadsMultiWordVisualSmokeScenario()
+    {
+        DesktopStartupOptions options = DesktopStartupOptions.Parse(
+            [
+                "--visual-smoke",
                 "settings-diagnostics",
             ]);
 

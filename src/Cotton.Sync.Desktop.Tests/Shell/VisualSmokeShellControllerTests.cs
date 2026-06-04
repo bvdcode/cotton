@@ -39,4 +39,19 @@ public sealed class VisualSmokeShellControllerTests
             Assert.That(snapshot.SyncPairs[0].LastError, Is.EqualTo("Sync API unavailable."));
         });
     }
+
+    [Test]
+    public async Task LoadAsync_ReturnsSignedInEmptyDashboardForAddFolderScenario()
+    {
+        using VisualSmokeShellController controller = VisualSmokeShellController.Create(DesktopVisualSmokeScenario.AddFolder);
+
+        DesktopShellSnapshot snapshot = await controller.LoadAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.IsSignedIn, Is.True);
+            Assert.That(snapshot.SyncPairs, Is.Empty);
+            Assert.That(snapshot.AccountName, Is.EqualTo("qa@cottoncloud.dev"));
+        });
+    }
 }

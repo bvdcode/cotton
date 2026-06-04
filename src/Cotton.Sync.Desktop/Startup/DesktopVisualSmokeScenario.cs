@@ -5,6 +5,7 @@ namespace Cotton.Sync.Desktop.Startup;
 
 internal enum DesktopVisualSmokeScenario
 {
+    AddFolder,
     Dashboard,
     Settings,
     SettingsDiagnostics,

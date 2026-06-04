@@ -41,30 +41,9 @@ internal sealed class VisualSmokeShellController : IDesktopShellController
     {
         cancellationToken.ThrowIfCancellationRequested();
         DateTime syncedAt = DateTime.UtcNow.AddMinutes(-7);
-        IReadOnlyList<DesktopSyncPairSnapshot> pairs =
-        [
-            new DesktopSyncPairSnapshot(
-                DocumentsPairId,
-                "Documents",
-                CreateLocalPath("Documents"),
-                "/Documents",
-                _scenario == DesktopVisualSmokeScenario.Error ? "Error" : "Idle",
-                Guid.Parse("29f81b10-b9a8-4f1d-88b0-9bdc6861b4e6"),
-                syncedAt,
-                1842,
-                _scenario == DesktopVisualSmokeScenario.Error
-                    ? "Sync API unavailable."
-                    : null),
-            new DesktopSyncPairSnapshot(
-                PhotosPairId,
-                "Camera uploads",
-                CreateLocalPath("Pictures", "Camera Uploads"),
-                "/Photos/Camera Uploads",
-                "Idle",
-                Guid.Parse("c88c7b48-66a3-49dc-aee3-dd7b28614f96"),
-                syncedAt.AddMinutes(-3),
-                1859),
-        ];
+        IReadOnlyList<DesktopSyncPairSnapshot> pairs = _scenario == DesktopVisualSmokeScenario.AddFolder
+            ? []
+            : CreateDashboardPairs(syncedAt);
 
         var snapshot = new DesktopShellSnapshot(
             new Uri("https://app.cottoncloud.dev/"),
@@ -238,5 +217,33 @@ internal sealed class VisualSmokeShellController : IDesktopShellController
             ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Cotton")
             : "/home/qa/Cotton";
         return segments.Aggregate(root, Path.Combine);
+    }
+
+    private IReadOnlyList<DesktopSyncPairSnapshot> CreateDashboardPairs(DateTime syncedAt)
+    {
+        return
+        [
+            new DesktopSyncPairSnapshot(
+                DocumentsPairId,
+                "Documents",
+                CreateLocalPath("Documents"),
+                "/Documents",
+                _scenario == DesktopVisualSmokeScenario.Error ? "Error" : "Idle",
+                Guid.Parse("29f81b10-b9a8-4f1d-88b0-9bdc6861b4e6"),
+                syncedAt,
+                1842,
+                _scenario == DesktopVisualSmokeScenario.Error
+                    ? "Sync API unavailable."
+                    : null),
+            new DesktopSyncPairSnapshot(
+                PhotosPairId,
+                "Camera uploads",
+                CreateLocalPath("Pictures", "Camera Uploads"),
+                "/Photos/Camera Uploads",
+                "Idle",
+                Guid.Parse("c88c7b48-66a3-49dc-aee3-dd7b28614f96"),
+                syncedAt.AddMinutes(-3),
+                1859),
+        ];
     }
 }

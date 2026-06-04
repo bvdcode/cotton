@@ -215,7 +215,7 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("xvfb-run -a -s \"-screen 0 1024x768x24\""));
             Assert.That(workflow, Does.Contain("Packaging/linux/smoke-gui-screenshot.sh"));
             Assert.That(workflow, Does.Contain("cotton-sync-desktop-linux-gui.png"));
-            Assert.That(workflow, Does.Contain("for scenario in dashboard settings settings-diagnostics error conflict; do"));
+            Assert.That(workflow, Does.Contain("for scenario in add-folder dashboard settings settings-diagnostics error conflict; do"));
             Assert.That(workflow, Does.Contain("--visual-smoke \"$scenario\""));
             Assert.That(workflow, Does.Contain("Upload desktop Linux GUI screenshot"));
             Assert.That(workflow, Does.Contain("name: desktop-linux-gui-screenshot"));
