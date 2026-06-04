@@ -65,6 +65,27 @@ jobs:
       - name: Restore .NET dependencies
         run: dotnet restore src/Cotton.sln
 
+      - name: Check .NET package vulnerabilities
+        run: |
+          mkdir -p package-vulnerability-reports
+          found=0
+          count=0
+          while IFS= read -r project; do
+            count=$((count + 1))
+            report="package-vulnerability-reports/$(basename "${project%.csproj}").txt"
+            dotnet list "$project" package --vulnerable --include-transitive --no-restore > "$report"
+            if grep -q "has the following vulnerable packages" "$report"; then
+              found=1
+              cat "$report"
+            fi
+          done < <(find src -name '*.csproj' | sort)
+
+          echo "Scanned $count .NET project files for vulnerable packages."
+          if [ "$found" -ne 0 ]; then
+            echo "Vulnerable .NET packages were found." >&2
+            exit 1
+          fi
+
       - name: Install frontend dependencies
         working-directory: src/cotton.client
         run: npm ci
