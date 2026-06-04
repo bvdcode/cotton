@@ -42,6 +42,7 @@ public sealed class SyncCliCommandRunnerTests
             Assert.That(exitCode, Is.EqualTo(0));
             Assert.That(output.ToString(), Does.Contain("state-summary"));
             Assert.That(output.ToString(), Does.Contain("sync-once"));
+            Assert.That(output.ToString(), Does.Contain("sync-soak"));
             Assert.That(error.ToString(), Is.Empty);
         });
     }
@@ -78,6 +79,81 @@ public sealed class SyncCliCommandRunnerTests
             Assert.That(error.ToString(), Does.Contain("--server"));
             Assert.That(error.ToString(), Does.Contain("--remote-root"));
             Assert.That(error.ToString(), Does.Contain("--database"));
+        });
+    }
+
+    [Test]
+    public async Task RunAsync_ReturnsErrorForMissingSyncSoakLimiter()
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        int exitCode = await SyncCliCommandRunner.RunAsync(
+            [
+                "sync-soak",
+                "--server",
+                "https://cloud.example.test/",
+                "--username",
+                "testuser",
+                "--password",
+                "testpassword",
+                "--local-root",
+                _tempDirectory,
+                "--remote-root",
+                Guid.NewGuid().ToString("D"),
+                "--sync-pair",
+                "pair",
+                "--database",
+                Path.Combine(_tempDirectory, "sync-state.db"),
+            ],
+            output,
+            error);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exitCode, Is.EqualTo(2));
+            Assert.That(output.ToString(), Is.Empty);
+            Assert.That(error.ToString(), Does.Contain("--iterations"));
+            Assert.That(error.ToString(), Does.Contain("--duration-seconds"));
+        });
+    }
+
+    [Test]
+    public async Task RunAsync_ReturnsErrorForInvalidSyncSoakProbeFile()
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        int exitCode = await SyncCliCommandRunner.RunAsync(
+            [
+                "sync-soak",
+                "--server",
+                "https://cloud.example.test/",
+                "--username",
+                "testuser",
+                "--password",
+                "testpassword",
+                "--local-root",
+                _tempDirectory,
+                "--remote-root",
+                Guid.NewGuid().ToString("D"),
+                "--sync-pair",
+                "pair",
+                "--database",
+                Path.Combine(_tempDirectory, "sync-state.db"),
+                "--iterations",
+                "1",
+                "--probe-file",
+                "../outside.txt",
+            ],
+            output,
+            error);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exitCode, Is.EqualTo(2));
+            Assert.That(output.ToString(), Is.Empty);
+            Assert.That(error.ToString(), Does.Contain("--probe-file"));
         });
     }
 
@@ -296,6 +372,66 @@ public sealed class SyncCliCommandRunnerTests
                 "/api/v1/chunks/raw?hash=" + contentHash,
                 "/api/v1/files/from-chunks",
             }));
+        });
+    }
+
+    [Test]
+    public async Task SyncSoak_RunsOneIterationAndPrintsSummary()
+    {
+        string localRoot = Path.Combine(_tempDirectory, "soak-local");
+        Directory.CreateDirectory(localRoot);
+        const string relativePath = "soak.txt";
+        byte[] content = Encoding.UTF8.GetBytes("hello from sync soak");
+        string localFilePath = Path.Combine(localRoot, relativePath);
+        File.WriteAllBytes(localFilePath, content);
+        File.SetLastWriteTimeUtc(localFilePath, new DateTime(2026, 6, 4, 12, 0, 0, DateTimeKind.Utc));
+        string contentHash = Convert.ToHexStringLower(SHA256.HashData(content));
+        string databasePath = Path.Combine(_tempDirectory, "sync-soak-state.db");
+        string syncPairId = Guid.NewGuid().ToString("D");
+        Guid remoteRootId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var handler = new SyncOnceUploadServerHandler(remoteRootId, relativePath, contentHash, content);
+        using var httpClient = new HttpClient(handler);
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        int exitCode = await SyncCliCommandRunner.RunAsync(
+            [
+                "sync-soak",
+                "--server",
+                "cotton.test",
+                "--username",
+                "testuser",
+                "--password",
+                "testpassword",
+                "--local-root",
+                localRoot,
+                "--remote-root",
+                remoteRootId.ToString("D"),
+                "--sync-pair",
+                syncPairId,
+                "--database",
+                databasePath,
+                "--iterations",
+                "1",
+            ],
+            output,
+            error,
+            httpClient);
+
+        var store = new SqliteSyncStateStore(databasePath);
+        SyncStateEntry? entry = await store.GetAsync(syncPairId, relativePath);
+        string text = output.ToString();
+        Assert.Multiple(() =>
+        {
+            Assert.That(exitCode, Is.EqualTo(0));
+            Assert.That(error.ToString(), Is.Empty);
+            Assert.That(text, Does.Contain("Cotton Sync soak run"));
+            Assert.That(text, Does.Contain("Iteration 1: activities=1, stateEntries=1"));
+            Assert.That(text, Does.Contain("Iterations completed: 1"));
+            Assert.That(text, Does.Contain("Failures: 0"));
+            Assert.That(entry, Is.Not.Null);
+            Assert.That(entry!.RemoteFileId, Is.EqualTo(handler.CreatedFileId));
+            Assert.That(entry.RemoteContentHash, Is.EqualTo(contentHash));
         });
     }
 

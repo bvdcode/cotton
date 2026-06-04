@@ -304,6 +304,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [x] Add two-client integration test against local dev server.
   Verification: `SyncClientEndToEndTests` covers two-client create/update propagation, rename/move propagation, and simultaneous edit conflict against the local integration server. Focused 8-test sync e2e run passed, full `dotnet test src/Cotton.Server.IntegrationTests/Cotton.Server.IntegrationTests.csproj --configuration Release --logger "console;verbosity=minimal"` passed 363/363, and `dotnet build src/Cotton.sln --configuration Release` passed with 0 warnings.
 - [ ] Run continuous sync soak test for at least 2 hours before this phase is considered done.
+  Partial 2026-06-04: added `Cotton.Sync.Cli sync-soak` as a repeatable release soak harness. It signs in through the SDK, reuses the same sync state database and `SyncEngine`, repeats full-mirror sync passes by iteration count or duration, optionally updates a relative probe file inside the local root before each pass, and prints iteration/activity/state-entry totals plus a zero-failure summary. Verification: `SyncCliCommandRunnerTests` cover help, required soak limiter validation, invalid probe path rejection, and a one-iteration fake-server soak upload; full `Cotton.Sync.Cli.Tests` passed 12/12, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with 0 warnings. Keep unchecked until the actual 2-hour run completes and records final convergence/memory/error evidence.
 
 ## Phase 7 - Authentication And Token Storage
 
