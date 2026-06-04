@@ -352,6 +352,36 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task BrowseLocalFolderCommand_LoadsCloudStepAfterCanceledInitialPicker()
+    {
+        var localFolderPicker = new FakeLocalFolderPicker(null, "/home/user/Cotton");
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot());
+        controller.RemoteFoldersByPath["/"] = new DesktopRemoteFolderListSnapshot(
+            "/",
+            [
+                new DesktopRemoteFolderSnapshot(Guid.NewGuid(), "Documents", "/Documents"),
+            ]);
+        using ShellViewModel viewModel = CreateViewModel(controller, localFolderPicker: localFolderPicker);
+        await viewModel.InitializeAsync();
+
+        await ExecuteAsync(viewModel.ShowAddSyncPairCommand);
+        await ExecuteAsync(viewModel.BrowseLocalFolderCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(localFolderPicker.PickFolderCalls, Is.EqualTo(2));
+            Assert.That(viewModel.LocalFolderPath, Is.EqualTo("/home/user/Cotton"));
+            Assert.That(viewModel.IsAddSyncPairLocalStepVisible, Is.False);
+            Assert.That(viewModel.IsAddSyncPairCloudStepVisible, Is.True);
+            Assert.That(viewModel.RemoteBrowserPath, Is.EqualTo("/"));
+            Assert.That(viewModel.RemoteFolderPath, Is.EqualTo("/"));
+            Assert.That(viewModel.RemoteFolders.Single().Name, Is.EqualTo("Documents"));
+            Assert.That(controller.ListRemoteFolderPaths, Is.EqualTo(new[] { "/" }));
+        });
+    }
+
+
+    [Test]
     public async Task OpenRemoteFolderCommand_NavigatesToSelectedCloudFolder()
     {
         Guid archiveId = Guid.NewGuid();
@@ -837,11 +867,11 @@ public sealed class ShellViewModelSyncPairCommandTests
 
     private sealed class FakeLocalFolderPicker : ILocalFolderPicker
     {
-        private readonly string? _selectedPath;
+        private readonly Queue<string?> _selectedPaths;
 
-        public FakeLocalFolderPicker(string? selectedPath = null)
+        public FakeLocalFolderPicker(params string?[] selectedPaths)
         {
-            _selectedPath = selectedPath;
+            _selectedPaths = new Queue<string?>(selectedPaths);
         }
 
         public int PickFolderCalls { get; private set; }
@@ -850,7 +880,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             PickFolderCalls++;
-            return Task.FromResult(_selectedPath);
+            return Task.FromResult(_selectedPaths.Count == 0 ? null : _selectedPaths.Dequeue());
         }
     }
 

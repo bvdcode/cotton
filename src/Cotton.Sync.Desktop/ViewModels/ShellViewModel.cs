@@ -790,6 +790,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
         LocalFolderPath = selectedPath;
         AddActivity("Folder", selectedPath, "Local folder selected");
+        if (IsAddSyncPairWizardVisible)
+        {
+            await LoadRemoteFoldersAsync("/").ConfigureAwait(true);
+        }
     }
 
     private Task CancelAddSyncPairAsync()
@@ -1137,7 +1141,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             }
         }
 
-        await LoadRemoteFoldersAsync("/").ConfigureAwait(true);
+        if (string.IsNullOrWhiteSpace(RemoteFolderPath))
+        {
+            await LoadRemoteFoldersAsync("/").ConfigureAwait(true);
+        }
     }
 
     private bool CanAddSyncPair()
