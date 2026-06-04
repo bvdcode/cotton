@@ -11,9 +11,9 @@ namespace Cotton.Server.Models.Dto
     public class SyncChangeDto
     {
         /// <summary>
-        /// Gets or sets the cursor assigned to this change.
+        /// Gets or sets the revision assigned to this change.
         /// </summary>
-        public long Cursor { get; set; }
+        public long Revision { get; set; }
         /// <summary>
         /// Gets or sets the mutation kind.
         /// </summary>
