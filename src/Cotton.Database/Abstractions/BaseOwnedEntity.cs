@@ -3,6 +3,7 @@
 
 using Cotton.Database.Models;
 using EasyExtensions.EntityFrameworkCore.Abstractions;
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cotton.Database.Abstractions
@@ -15,6 +16,7 @@ namespace Cotton.Database.Abstractions
         public Guid OwnerId { get; set; }
 
         /// <summary>Navigation property for the owning user.</summary>
+        [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual User Owner { get; set; } = null!;
     }
 }
