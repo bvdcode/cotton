@@ -24,7 +24,7 @@ using HeadlessSyncEngine = Cotton.Sync.SyncEngine;
 
 namespace Cotton.Sync.Desktop.Composition;
 
-internal sealed class DesktopSyncApplicationFactory
+internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFactory
 {
     private readonly ILoggerFactory _loggerFactory;
     private readonly DesktopAppPaths _paths;

@@ -28,7 +28,7 @@ internal sealed class DesktopShellController : IDesktopShellController
 {
     private static readonly TimeSpan ServerProbeTimeout = TimeSpan.FromSeconds(5);
 
-    private readonly DesktopSyncApplicationFactory _factory;
+    private readonly IDesktopSyncApplicationFactory _factory;
     private readonly IPlatformCommandService _platformCommands;
     private readonly IAutostartService _autostartService;
     private readonly DesktopDiagnosticsExporter _diagnosticsExporter;
@@ -43,7 +43,7 @@ internal sealed class DesktopShellController : IDesktopShellController
 
     public DesktopShellController(
         DesktopAppPaths paths,
-        DesktopSyncApplicationFactory factory,
+        IDesktopSyncApplicationFactory factory,
         SqliteAppPreferencesStore preferencesStore,
         SqliteSyncPairSettingsStore syncPairStore,
         IPlatformCommandService platformCommands,
@@ -139,7 +139,7 @@ internal sealed class DesktopShellController : IDesktopShellController
             preferences.RememberedUsername = request.Username.Trim();
             await host.App.SavePreferencesAsync(preferences, cancellationToken).ConfigureAwait(false);
             await host.App.StartSyncAsync(cancellationToken).ConfigureAwait(false);
-            ReplaceHost(host);
+            await ReplaceHostAsync(host, cancellationToken).ConfigureAwait(false);
             return session;
         }
         catch
@@ -815,15 +815,35 @@ internal sealed class DesktopShellController : IDesktopShellController
         return _host ?? throw new InvalidOperationException("Sign in before running sync commands.");
     }
 
-    private void ReplaceHost(DesktopSyncApplicationHost host)
+    private async Task ReplaceHostAsync(DesktopSyncApplicationHost host, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         DesktopSyncApplicationHost? previous = _host;
+        _host = host;
         _activitySubscription?.Dispose();
         _statusSubscription?.Dispose();
-        _host = host;
         _statusSubscription = host.StatusPublisher.Subscribe(new StatusObserver(this));
         _activitySubscription = host.ActivityPublisher.Subscribe(new ActivityObserver(this));
-        previous?.Dispose();
+        if (previous is not null)
+        {
+            await StopAndDisposeHostAsync(previous).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task StopAndDisposeHostAsync(DesktopSyncApplicationHost host)
+    {
+        try
+        {
+            await host.App.StopSyncAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            Trace.TraceWarning("Failed to stop previous desktop sync host: {0}", exception);
+        }
+        finally
+        {
+            host.Dispose();
+        }
     }
 
     private static DesktopSyncStatusSnapshot ToStatusSnapshot(SyncAppStatus status)
@@ -888,7 +908,7 @@ internal sealed class DesktopShellController : IDesktopShellController
             }
 
             AuthSession session = await host.App.RestoreSessionAsync(cancellationToken).ConfigureAwait(false);
-            ReplaceHost(host);
+            await ReplaceHostAsync(host, cancellationToken).ConfigureAwait(false);
             return session;
         }
         catch (Cotton.Sdk.CottonApiException exception)

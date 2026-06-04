@@ -107,6 +107,7 @@ Target layers:
   Verification 2026-06-03: `SyncActivity` and `SyncActivityType` include uploaded, downloaded, deleted local, deleted remote, conflict, skipped, error, and warning; `SyncActivityTests` cover UTC normalization and activity fields.
 - [x] Add cancellation and shutdown flow.
   Verification 2026-06-03: app commands accept cancellation tokens, `SyncApplicationService.SignOutAsync` and `StopSyncAsync` stop remote, periodic, local, and supervisor components in order, and `DesktopShellController.Dispose` disposes the host/status subscription. App-layer tests cover start/stop and sign-out shutdown; full `Cotton.Sync.App.Tests` passed 83/83.
+  Verification 2026-06-04: desktop host replacement is now async and stops the previous sync host before disposing it, preventing old watchers/remote listeners from surviving a restored-session replacement. `LoadAsync_StopsPreviousRestoredHostWhenSessionIsRestoredAgain` covers the regression; full `Cotton.Sync.Desktop.Tests` passed 143/143 and `dotnet build src/Cotton.sln --configuration Release` passed with 0 warnings.
 - [x] Add tests for supervisor state transitions.
   Verification 2026-06-03: `SyncSupervisorTests` cover start, pause/resume, sync-all, and stop transitions/status publishing.
 - [x] Add tests for pause/resume and app shutdown.
