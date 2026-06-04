@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using Cotton.Sync.Desktop.Composition;
 using Cotton.Sync.Desktop.Diagnostics;
 using Cotton.Sync.Desktop.Platform;
@@ -18,6 +19,7 @@ namespace Cotton.Sync.Desktop;
 /// </summary>
 public sealed partial class App : Application
 {
+    private DesktopSingleInstanceActivationServer? _singleInstanceActivationServer;
     private DesktopTrayController? _trayController;
 
     internal static DesktopStartupOptions StartupOptions { get; set; } = DesktopStartupOptions.Empty;
@@ -55,8 +57,16 @@ public sealed partial class App : Application
             if (useTrayLifecycle)
             {
                 _trayController = new DesktopTrayController(window, desktop);
-                desktop.Exit += (_, _) => _trayController?.Dispose();
             }
+
+            _singleInstanceActivationServer = DesktopSingleInstanceActivation.StartServer(
+                paths.SingleInstanceLockPath,
+                () => Dispatcher.UIThread.Post(window.ShowShell));
+            desktop.Exit += (_, _) =>
+            {
+                _trayController?.Dispose();
+                _singleInstanceActivationServer?.Dispose();
+            };
         }
 
         base.OnFrameworkInitializationCompleted();

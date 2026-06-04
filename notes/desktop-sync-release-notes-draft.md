@@ -16,6 +16,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 - Diagnostics include structured logging, log rotation, self-test, support bundle export, and secret redaction.
 - CLI recovery support includes state summary and one-shot sync commands for headless validation, including shared server URL normalization for absolute URLs and bare Cotton hosts.
 - Tray lifecycle is implemented for Windows. Linux currently uses normal window lifecycle because tray support varies by desktop environment.
+- Single-instance startup now raises the existing desktop window when the app is launched again.
 
 ## Artifacts
 

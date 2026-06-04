@@ -36,6 +36,10 @@ internal static class Program
             .TryAcquire(paths.SingleInstanceLockPath);
         if (singleInstance is null)
         {
+            DesktopSingleInstanceActivation
+                .TryRequestShowAsync(paths.SingleInstanceLockPath)
+                .GetAwaiter()
+                .GetResult();
             return 0;
         }
 
