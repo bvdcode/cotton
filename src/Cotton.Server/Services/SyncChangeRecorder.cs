@@ -12,10 +12,51 @@ namespace Cotton.Server.Services
     public class SyncChangeRecorder(CottonDbContext _dbContext) : ISyncChangeRecorder
     {
         /// <inheritdoc />
-        public void Stage(SyncChange change)
+        public void StageFileChange(
+            SyncChangeKind kind,
+            NodeFile nodeFile,
+            Guid layoutId,
+            Guid? previousParentNodeId = null)
         {
-            ArgumentOutOfRangeException.ThrowIfEqual(change.Kind, SyncChangeKind.Unknown);
-            _dbContext.SyncChanges.Add(change);
+            EnsureKnownKind(kind);
+
+            _dbContext.SyncChanges.Add(new SyncChange
+            {
+                OwnerId = nodeFile.OwnerId,
+                Kind = kind,
+                LayoutId = layoutId,
+                ItemId = nodeFile.Id,
+                ParentNodeId = nodeFile.NodeId,
+                PreviousParentNodeId = previousParentNodeId,
+                FileManifestId = nodeFile.FileManifestId,
+                Name = nodeFile.Name,
+            });
+        }
+
+        /// <inheritdoc />
+        public void StageFolderChange(
+            SyncChangeKind kind,
+            Node node,
+            Guid? previousParentNodeId = null)
+        {
+            EnsureKnownKind(kind);
+
+            _dbContext.SyncChanges.Add(new SyncChange
+            {
+                OwnerId = node.OwnerId,
+                Kind = kind,
+                LayoutId = node.LayoutId,
+                ItemId = node.Id,
+                ParentNodeId = node.ParentId
+                    ?? throw new InvalidOperationException("Root nodes cannot be recorded as sync folder changes."),
+                PreviousParentNodeId = previousParentNodeId,
+                Name = node.Name,
+            });
+        }
+
+        private static void EnsureKnownKind(SyncChangeKind kind)
+        {
+            ArgumentOutOfRangeException.ThrowIfEqual(kind, SyncChangeKind.Unknown);
         }
     }
 }

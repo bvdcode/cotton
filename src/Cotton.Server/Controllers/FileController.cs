@@ -6,6 +6,7 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Previews;
 using Cotton.Previews.Http;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Hubs;
@@ -43,6 +44,7 @@ namespace Cotton.Server.Controllers
         IMediator _mediator,
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
+        ISyncChangeRecorder _syncChanges,
         ISchedulerFactory _scheduler,
         IHubContext<EventHub> _hubContext,
         FileManifestService _fileManifestService,
@@ -262,6 +264,7 @@ namespace Cotton.Server.Controllers
             }
 
             nodeFile.SetName(request.Name);
+            _syncChanges.StageFileChange(SyncChangeKind.FileRenamed, nodeFile, nodeFile.Node.LayoutId);
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
             var mapped = nodeFile.Adapt<NodeFileManifestDto>();
