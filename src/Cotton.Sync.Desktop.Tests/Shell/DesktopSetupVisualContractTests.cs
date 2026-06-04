@@ -305,6 +305,24 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
+    public void AddFolderWizard_WrapsActionRequiredMessage()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string wizardError = GetSlice(
+            mainWindowXaml,
+            "ToolTip.Tip=\"{Binding ActionRequiredMessage}\"",
+            "<Grid Grid.Row=\"2\">");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(wizardError, Does.Contain("Text=\"{Binding ActionRequiredMessage}\""));
+            Assert.That(wizardError, Does.Contain("MaxLines=\"3\""));
+            Assert.That(wizardError, Does.Contain("TextWrapping=\"Wrap\""));
+            Assert.That(wizardError, Does.Contain("TextTrimming=\"CharacterEllipsis\""));
+        });
+    }
+
+    [Test]
     public void StatusCard_UsesAttentionStateForActionRequiredAndConflicts()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
