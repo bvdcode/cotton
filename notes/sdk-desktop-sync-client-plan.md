@@ -497,6 +497,7 @@ Release can be considered only when every item in this section is checked.
 
 - [ ] Full solution Release build passes.
   Partial 2026-06-04: cleared the desktop `Tmds.DBus.Protocol 0.21.2` NU1903 high-severity warning by overriding the transitive package to `0.94.1`. `dotnet list ... package --vulnerable --include-transitive` reports no vulnerable packages for `Cotton.Sync.Desktop` and `Cotton.Sync.Desktop.Tests`; `dotnet test src/Cotton.Sync.Desktop.Tests/Cotton.Sync.Desktop.Tests.csproj --configuration Release --no-restore` passed 134/134 without NU1903, and `dotnet build src/Cotton.sln --configuration Release` passed with 0 warnings. Keep unchecked until the full release gate is re-run as a final clean-machine build.
+  Partial 2026-06-04: scanned all 28 `.csproj` files with `dotnet list <project> package --vulnerable --include-transitive`; vulnerability findings were 0. The solution-level command itself is not usable because `src/cotton.client/cotton.client.esproj` uses package.config-style NuGet metadata, so the per-project scan is the current .NET package evidence.
 - [ ] SDK tests pass.
 - [ ] Sync core tests pass.
 - [ ] Server integration tests for sync endpoints pass.
