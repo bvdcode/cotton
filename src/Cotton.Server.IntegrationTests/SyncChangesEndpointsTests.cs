@@ -112,6 +112,28 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task GetChanges_WhenCursorIsOlderThanRetainedFeed_ReturnsExpiredCursor()
+    {
+        await SignInAsync();
+        Guid ownerId = await GetUserIdAsync(Username);
+
+        long expiredId = await AddSyncChangeAsync(ownerId, "expired");
+        long retainedId = await AddSyncChangeAsync(ownerId, "retained");
+        await DeleteSyncChangeAsync(expiredId);
+
+        SyncChangesResponseDto response = await GetChangesAsync(since: 0, limit: 10);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.CursorExpired, Is.True);
+            Assert.That(response.SinceCursor, Is.EqualTo(0));
+            Assert.That(response.NextCursor, Is.EqualTo(0));
+            Assert.That(response.EarliestAvailableCursor, Is.EqualTo(retainedId - 1));
+            Assert.That(response.Changes, Is.Empty);
+        });
+    }
+
+    [Test]
     public async Task RenameFolder_StagesFolderRenamedChangeWithParentNodeId()
     {
         await SignInAsync();
@@ -810,6 +832,16 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         dbContext.SyncChanges.Add(change);
         await dbContext.SaveChangesAsync();
         return change.Id;
+    }
+
+    private async Task DeleteSyncChangeAsync(long id)
+    {
+        using IServiceScope scope = _factory!.Services.CreateScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+
+        await dbContext.SyncChanges
+            .Where(x => x.Id == id)
+            .ExecuteDeleteAsync();
     }
 
     private async Task<SyncChangesResponseDto> GetChangesAsync(long since, int limit)

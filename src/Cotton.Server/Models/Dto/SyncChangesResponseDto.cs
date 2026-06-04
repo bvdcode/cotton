@@ -21,6 +21,14 @@ namespace Cotton.Server.Models.Dto
         /// </summary>
         public bool HasMore { get; set; }
         /// <summary>
+        /// Gets or sets whether the supplied cursor is older than retained changes.
+        /// </summary>
+        public bool CursorExpired { get; set; }
+        /// <summary>
+        /// Gets or sets the earliest cursor that can still be used, if any changes are retained.
+        /// </summary>
+        public long? EarliestAvailableCursor { get; set; }
+        /// <summary>
         /// Gets or sets the returned changes.
         /// </summary>
         public List<SyncChangeDto> Changes { get; set; } = [];
