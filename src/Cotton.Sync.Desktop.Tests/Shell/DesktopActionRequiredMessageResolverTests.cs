@@ -171,4 +171,43 @@ public sealed class DesktopActionRequiredMessageResolverTests
 
         Assert.That(message, Is.EqualTo("Invalid username or password."));
     }
+
+    [Test]
+    public void FromException_UsesHumanInvalidPasswordMessageForForbiddenServerResponse()
+    {
+        var exception = new CottonApiException(
+            HttpStatusCode.Forbidden,
+            "{\"success\":false,\"message\":\"Invalid password\"}",
+            "Cotton API request POST /api/v1/auth/login failed with status 403 (Forbidden).");
+
+        string message = DesktopActionRequiredMessageResolver.FromException(exception);
+
+        Assert.That(message, Is.EqualTo("Invalid username or password."));
+    }
+
+    [Test]
+    public void FromException_UsesHumanInvalidTotpMessage()
+    {
+        var exception = new CottonApiException(
+            HttpStatusCode.Forbidden,
+            "{\"success\":false,\"message\":\"Invalid two-factor authentication code\"}",
+            "Cotton API request POST /api/v1/auth/login failed with status 403 (Forbidden).");
+
+        string message = DesktopActionRequiredMessageResolver.FromException(exception);
+
+        Assert.That(message, Is.EqualTo("Invalid 2FA code."));
+    }
+
+    [Test]
+    public void FromException_UsesHumanTotpLockoutMessage()
+    {
+        var exception = new CottonApiException(
+            HttpStatusCode.Forbidden,
+            "{\"success\":false,\"message\":\"Maximum number of TOTP verification attempts exceeded\"}",
+            "Cotton API request POST /api/v1/auth/login failed with status 403 (Forbidden).");
+
+        string message = DesktopActionRequiredMessageResolver.FromException(exception);
+
+        Assert.That(message, Is.EqualTo("Too many invalid 2FA attempts. Try again later or sign in from the web app."));
+    }
 }

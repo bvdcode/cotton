@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-using System.Net;
 using System.Text.Json;
 using Cotton.Sdk;
 
@@ -60,7 +59,7 @@ internal static class DesktopActionRequiredMessageResolver
     private static string? NormalizeApiException(CottonApiException exception)
     {
         string? responseMessage = ExtractResponseMessage(exception.ResponseBody);
-        string? authMessage = NormalizeAuthMessage(responseMessage, exception.StatusCode);
+        string? authMessage = NormalizeAuthMessage(responseMessage);
         if (authMessage is not null)
         {
             return authMessage;
@@ -90,7 +89,7 @@ internal static class DesktopActionRequiredMessageResolver
         return message;
     }
 
-    private static string? NormalizeAuthMessage(string? message, HttpStatusCode? statusCode)
+    private static string? NormalizeAuthMessage(string? message)
     {
         if (string.IsNullOrWhiteSpace(message))
         {
@@ -113,10 +112,9 @@ internal static class DesktopActionRequiredMessageResolver
             return "Too many invalid 2FA attempts. Try again later or sign in from the web app.";
         }
 
-        if (statusCode == HttpStatusCode.Unauthorized
-            && (string.Equals(normalized, "User not found", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(normalized, "Invalid password", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(normalized, "Invalid username or password", StringComparison.OrdinalIgnoreCase)))
+        if (string.Equals(normalized, "User not found", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(normalized, "Invalid password", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(normalized, "Invalid username or password", StringComparison.OrdinalIgnoreCase))
         {
             return "Invalid username or password.";
         }
