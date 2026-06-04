@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using Cotton.Sync.Cli;
@@ -376,6 +377,75 @@ public sealed class SyncCliCommandRunnerTests
     }
 
     [Test]
+    public async Task SyncOnce_ExternalProcessRecoversAfterRemoteUploadBeforeBaselineUpdate()
+    {
+        string localRoot = Path.Combine(_tempDirectory, "process-crash-local");
+        Directory.CreateDirectory(localRoot);
+        const string relativePath = "crash-recovery.txt";
+        byte[] content = Encoding.UTF8.GetBytes("uploaded before process crash");
+        string localFilePath = Path.Combine(localRoot, relativePath);
+        File.WriteAllBytes(localFilePath, content);
+        File.SetLastWriteTimeUtc(localFilePath, new DateTime(2026, 6, 4, 12, 0, 0, DateTimeKind.Utc));
+        string contentHash = Convert.ToHexStringLower(SHA256.HashData(content));
+        string databasePath = Path.Combine(_tempDirectory, "process-crash-state.db");
+        string syncPairId = Guid.NewGuid().ToString("D");
+        Guid remoteRootId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        await using var server = new SyncProcessCrashHttpServer(remoteRootId, relativePath, contentHash, content);
+        string[] args = CreateSyncOnceProcessArgs(server.BaseUri, localRoot, remoteRootId, syncPairId, databasePath);
+
+        using Process crashingProcess = StartCliProcess(args);
+        Task<string> firstOutputTask = crashingProcess.StandardOutput.ReadToEndAsync();
+        Task<string> firstErrorTask = crashingProcess.StandardError.ReadToEndAsync();
+        try
+        {
+            await server.WaitForFileCommittedAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+            KillProcessTree(crashingProcess);
+            await WaitForProcessExitAsync(crashingProcess, TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+        }
+        finally
+        {
+            server.ReleaseBlockedCreateResponse();
+            KillProcessTree(crashingProcess);
+        }
+
+        _ = await firstOutputTask.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+        _ = await firstErrorTask.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+
+        var storeAfterCrash = new SqliteSyncStateStore(databasePath);
+        IReadOnlyList<SyncStateEntry> entriesAfterCrash = await storeAfterCrash.LoadPairAsync(syncPairId);
+
+        using Process recoveryProcess = StartCliProcess(args);
+        Task<string> recoveryOutputTask = recoveryProcess.StandardOutput.ReadToEndAsync();
+        Task<string> recoveryErrorTask = recoveryProcess.StandardError.ReadToEndAsync();
+        await WaitForProcessExitAsync(recoveryProcess, TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+        string recoveryOutput = await recoveryOutputTask.ConfigureAwait(false);
+        string recoveryError = await recoveryErrorTask.ConfigureAwait(false);
+
+        var storeAfterRecovery = new SqliteSyncStateStore(databasePath);
+        SyncStateEntry? entry = await storeAfterRecovery.GetAsync(syncPairId, relativePath);
+        IReadOnlyList<HttpRequestSnapshot> requests = server.Requests;
+        server.AssertNoFaults();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(crashingProcess.ExitCode, Is.Not.EqualTo(0));
+            Assert.That(entriesAfterCrash, Is.Empty);
+            Assert.That(recoveryProcess.ExitCode, Is.EqualTo(0), recoveryError);
+            Assert.That(recoveryError, Is.Empty);
+            Assert.That(recoveryOutput, Does.Contain("Activities: 0"));
+            Assert.That(recoveryOutput, Does.Contain("State entries: 1"));
+            Assert.That(entry, Is.Not.Null);
+            Assert.That(entry!.Kind, Is.EqualTo(SyncEntryKind.File));
+            Assert.That(entry.LocalContentHash, Is.EqualTo(contentHash));
+            Assert.That(entry.RemoteContentHash, Is.EqualTo(contentHash));
+            Assert.That(entry.RemoteFileId, Is.EqualTo(server.CreatedFileId));
+            Assert.That(
+                requests.Count(static request => request.Method == HttpMethod.Post && request.PathAndQuery == "/api/v1/files/from-chunks"),
+                Is.EqualTo(1));
+        });
+    }
+
+    [Test]
     public async Task SyncSoak_RunsOneIterationAndPrintsSummary()
     {
         string localRoot = Path.Combine(_tempDirectory, "soak-local");
@@ -500,6 +570,78 @@ public sealed class SyncCliCommandRunnerTests
                 "/api/v1/layouts/nodes",
             }));
         });
+    }
+
+    private static string[] CreateSyncOnceProcessArgs(
+        Uri serverUri,
+        string localRoot,
+        Guid remoteRootId,
+        string syncPairId,
+        string databasePath)
+    {
+        return
+        [
+            "sync-once",
+            "--server",
+            serverUri.AbsoluteUri,
+            "--username",
+            "testuser",
+            "--password",
+            "testpassword",
+            "--local-root",
+            localRoot,
+            "--remote-root",
+            remoteRootId.ToString("D"),
+            "--sync-pair",
+            syncPairId,
+            "--database",
+            databasePath,
+        ];
+    }
+
+    private static Process StartCliProcess(IEnumerable<string> args)
+    {
+        string cliPath = typeof(SyncCliCommandRunner).Assembly.Location;
+        var startInfo = new ProcessStartInfo("dotnet")
+        {
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        startInfo.ArgumentList.Add(cliPath);
+        foreach (string arg in args)
+        {
+            startInfo.ArgumentList.Add(arg);
+        }
+
+        return Process.Start(startInfo) ?? throw new InvalidOperationException("Failed to start Cotton Sync CLI process.");
+    }
+
+    private static async Task WaitForProcessExitAsync(Process process, TimeSpan timeout)
+    {
+        try
+        {
+            await process.WaitForExitAsync().WaitAsync(timeout).ConfigureAwait(false);
+        }
+        catch (TimeoutException exception)
+        {
+            KillProcessTree(process);
+            throw new AssertionException("Cotton Sync CLI process did not exit within " + timeout.TotalSeconds.ToStringInvariant() + " seconds.", exception);
+        }
+    }
+
+    private static void KillProcessTree(Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
+        catch (InvalidOperationException)
+        {
+        }
     }
 
 }
