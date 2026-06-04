@@ -32,7 +32,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 
 - Full solution Release builds have passed locally with 0 warnings after recent desktop packaging and UX slices.
 - Desktop tests have passed locally, most recently `Cotton.Sync.Desktop.Tests` 249/249.
-- CLI one-shot sync has been smoke-tested against the integration-test server, verifying remote upload and SQLite baseline creation.
+- CLI one-shot sync has been smoke-tested against the integration-test server and covered in CLI tests with fake Cotton HTTP responses, verifying SDK upload requests and SQLite baseline creation.
 - Desktop packaging metadata tests cover publish profiles, clean publish-directory behavior, app icon metadata, Linux `.desktop` metadata, `.deb` packaging script, reusable Linux/Windows diagnostics export smoke scripts, Linux package smoke wiring, reusable Linux GUI screenshot matrix smoke with deterministic sign-in-error/add-folder/dashboard/settings/settings-diagnostics/error/conflict visual-smoke states, Linux archive/installed diagnostics export smoke wiring, Linux `.deb` install/upgrade smoke wiring, Windows CI smoke, Windows `.zip` artifact upload/self-test/diagnostics smoke, Windows installer script/install/diagnostics/upgrade smoke wiring, and release artifact checksum generation.
 - Local Linux publish succeeded.
 - Local Windows publish succeeded from Linux cross-publish.
