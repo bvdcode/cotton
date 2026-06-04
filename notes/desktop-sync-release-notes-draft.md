@@ -20,6 +20,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 - CLI recovery support includes state summary and one-shot sync commands for headless validation, including shared server URL normalization for absolute URLs and bare Cotton hosts.
 - Tray lifecycle is implemented for Windows. Linux currently uses normal window lifecycle because tray support varies by desktop environment.
 - Single-instance startup now raises the existing desktop window when the app is launched again.
+- Windows installer/uninstaller detection now uses an Inno Setup `AppMutex` backed by a Windows-only runtime mutex held by the desktop app, so install/uninstall can detect that Cotton Sync is still running before replacing or removing installed files.
 
 ## Artifacts
 
@@ -34,10 +35,10 @@ Draft status: not release-ready. This document records the current desktop-sync 
 ## Verification Already Exercised
 
 - Full local `dotnet test src/Cotton.sln --configuration Release --no-restore` has passed after current `develop` integration, including desktop 254/254 and server integration 365/365.
-- Desktop tests have passed locally, most recently `Cotton.Sync.Desktop.Tests` 257/257.
-- Server integration tests have passed locally, most recently `Cotton.Server.IntegrationTests` 365/365.
+- Desktop tests have passed locally, most recently `Cotton.Sync.Desktop.Tests` 286/286.
+- Server integration tests have passed locally, most recently `Cotton.Server.IntegrationTests` 373/373.
 - CLI one-shot sync has been smoke-tested against the integration-test server and covered in CLI tests with fake Cotton HTTP responses, verifying SDK file/folder upload requests and SQLite baseline creation.
-- Desktop packaging metadata tests cover publish profiles, clean publish-directory behavior, app icon metadata, Linux `.desktop` metadata, `.deb` packaging script, reusable Linux/Windows diagnostics export smoke scripts, Linux package smoke wiring, reusable Linux GUI screenshot matrix smoke with deterministic sign-in-error/add-folder/dashboard/settings/settings-diagnostics/error/conflict visual-smoke states, Linux archive/installed diagnostics export smoke wiring, Linux `.deb` install/upgrade smoke wiring, Windows CI smoke, Windows `.zip` artifact upload/self-test/diagnostics smoke, Windows installer script/install/diagnostics/upgrade smoke wiring, and release artifact checksum generation.
+- Desktop packaging metadata tests cover publish profiles, clean publish-directory behavior, app icon metadata, Linux `.desktop` metadata, `.deb` packaging script, reusable Linux/Windows diagnostics export smoke scripts, Linux package smoke wiring, reusable Linux GUI screenshot matrix smoke with deterministic sign-in-error/add-folder/dashboard/settings/settings-diagnostics/error/conflict visual-smoke states, Linux archive/installed diagnostics export smoke wiring, Linux `.deb` install/upgrade smoke wiring, Windows CI smoke, Windows `.zip` artifact upload/self-test/diagnostics smoke, Windows installer script/install/diagnostics/upgrade smoke wiring, running-app install/uninstall detection metadata, and release artifact checksum generation.
 - Local Linux publish succeeded.
 - Local Windows publish succeeded from Linux cross-publish.
 - Local `.deb` build succeeded through `dpkg-deb`; extracted package layout starts the desktop apphost and runs self-test up to the expected local token-storage failure.
