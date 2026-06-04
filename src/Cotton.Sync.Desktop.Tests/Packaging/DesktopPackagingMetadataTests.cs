@@ -139,6 +139,22 @@ public sealed class DesktopPackagingMetadataTests
         });
     }
 
+    [Test]
+    public void CiWorkflow_UploadsWindowsZipPortableArtifact()
+    {
+        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(workflow, Does.Contain("Package desktop Windows x64 zip"));
+            Assert.That(workflow, Does.Contain("cotton-sync-desktop-win-x64.zip"));
+            Assert.That(workflow, Does.Contain("from zipfile import ZIP_DEFLATED, ZipFile"));
+            Assert.That(
+                Regex.Matches(workflow, "cotton-sync-desktop-win-x64\\.zip").Count,
+                Is.GreaterThanOrEqualTo(2));
+        });
+    }
+
     private static string? GetProperty(XElement propertyGroup, string name)
     {
         return propertyGroup.Element(name)?.Value;
