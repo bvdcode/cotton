@@ -613,6 +613,32 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task StatusChanged_UsesHumanDiskFullActionRequiredMessage()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(
+            CreateSignedInSnapshotWithNotifications(
+                enableNotifications: false,
+                CreatePair(syncPairId, "Documents", "Idle")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportStatus(new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(syncPairId, "Error", "No space left on device"),
+        ]));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Action required"));
+            Assert.That(
+                viewModel.ActionRequiredMessage,
+                Is.EqualTo("This computer does not have enough free disk space for sync. Free space and retry."));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Fix the issue below to continue syncing."));
+        });
+    }
+
+    [Test]
     public async Task TransferProgressChanged_UpdatesCurrentTransferState()
     {
         Guid syncPairId = Guid.NewGuid();
@@ -1662,12 +1688,19 @@ public sealed class ShellViewModelSyncPairCommandTests
 
     private static DesktopShellSnapshot CreateSignedInSnapshot(params DesktopSyncPairSnapshot[] syncPairs)
     {
+        return CreateSignedInSnapshotWithNotifications(enableNotifications: true, syncPairs);
+    }
+
+    private static DesktopShellSnapshot CreateSignedInSnapshotWithNotifications(
+        bool enableNotifications,
+        params DesktopSyncPairSnapshot[] syncPairs)
+    {
         return new DesktopShellSnapshot(
             null,
             "vadim@example.com",
             "vadim@example.com",
             false,
-            true,
+            enableNotifications,
             AppThemeMode.System,
             new DesktopPlatformCapabilitySnapshot(
                 "Linux",

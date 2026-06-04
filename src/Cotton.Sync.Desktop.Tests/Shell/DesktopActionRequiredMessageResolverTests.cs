@@ -4,6 +4,7 @@
 using System.Net;
 using Cotton.Sdk;
 using Cotton.Sync.Desktop.Shell;
+using Cotton.Sync.Local;
 
 namespace Cotton.Sync.Desktop.Tests.Shell;
 
@@ -59,6 +60,39 @@ public sealed class DesktopActionRequiredMessageResolverTests
         Assert.That(
             message,
             Is.EqualTo("Cotton API returned a web page instead of JSON. Check the server URL or backend deployment and retry."));
+    }
+
+    [Test]
+    public void FromStatus_ExplainsLocalPermissionDeniedMessage()
+    {
+        var status = new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(
+                Guid.NewGuid(),
+                "Error",
+                "Local file 'Locked/report.docx' cannot be read because permission was denied."),
+        ]);
+
+        string message = DesktopActionRequiredMessageResolver.FromStatus(status);
+
+        Assert.That(
+            message,
+            Is.EqualTo("Cotton Sync cannot access 'Locked/report.docx'. Grant file permissions and retry sync."));
+    }
+
+    [Test]
+    public void FromStatus_ExplainsDiskFullMessage()
+    {
+        var status = new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(Guid.NewGuid(), "Error", "There is not enough space on the disk."),
+        ]);
+
+        string message = DesktopActionRequiredMessageResolver.FromStatus(status);
+
+        Assert.That(
+            message,
+            Is.EqualTo("This computer does not have enough free disk space for sync. Free space and retry."));
     }
 
     [Test]
@@ -144,6 +178,33 @@ public sealed class DesktopActionRequiredMessageResolverTests
         Assert.That(
             message,
             Is.EqualTo("Cotton API returned a web page instead of JSON. Check the server URL or backend deployment and retry."));
+    }
+
+    [Test]
+    public void FromException_ExplainsLocalPermissionDeniedException()
+    {
+        var exception = new LocalFilePermissionDeniedException(
+            "Locked/report.docx",
+            "/home/qa/Cotton/Locked/report.docx",
+            "owner does not have read permission");
+
+        string message = DesktopActionRequiredMessageResolver.FromException(exception);
+
+        Assert.That(
+            message,
+            Is.EqualTo("Cotton Sync cannot access 'Locked/report.docx'. Grant file permissions and retry sync."));
+    }
+
+    [Test]
+    public void FromException_ExplainsDiskFullException()
+    {
+        var exception = new IOException("No space left on device");
+
+        string message = DesktopActionRequiredMessageResolver.FromException(exception);
+
+        Assert.That(
+            message,
+            Is.EqualTo("This computer does not have enough free disk space for sync. Free space and retry."));
     }
 
     [Test]

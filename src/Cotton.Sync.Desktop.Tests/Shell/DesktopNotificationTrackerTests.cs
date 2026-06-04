@@ -95,6 +95,26 @@ public sealed class DesktopNotificationTrackerTests
     }
 
     [Test]
+    public void Apply_NormalizesDiskFullActionRequiredErrorNotification()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var tracker = new DesktopNotificationTracker();
+
+        IReadOnlyList<DesktopNotificationRequest> notifications = tracker.Apply(
+            CreateStatus(syncPairId, "Error", "No space left on device"),
+            DisplayNames(syncPairId));
+
+        DesktopNotificationRequest notification = notifications.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(notification.Kind, Is.EqualTo(DesktopNotificationKind.ActionRequiredError));
+            Assert.That(
+                notification.Message,
+                Is.EqualTo("Documents: This computer does not have enough free disk space for sync. Free space and retry."));
+        });
+    }
+
+    [Test]
     public void Apply_EmitsGenericActionRequiredErrorNotificationWhenDetailsAreMissing()
     {
         Guid syncPairId = Guid.NewGuid();

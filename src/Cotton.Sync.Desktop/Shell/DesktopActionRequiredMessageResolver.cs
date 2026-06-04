@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Cotton.Sdk;
+using Cotton.Sync.Local;
 
 namespace Cotton.Sync.Desktop.Shell;
 
@@ -16,6 +17,12 @@ internal static class DesktopActionRequiredMessageResolver
 
     private const string GenericSyncErrorMessage =
         "One or more sync folders reported an error. Check diagnostics and retry.";
+
+    private const string DiskFullMessage =
+        "This computer does not have enough free disk space for sync. Free space and retry.";
+
+    private const string LocalPermissionDeniedMessage =
+        "Cotton Sync cannot access one of the local files. Grant file permissions and retry sync.";
 
     public static string FromStatus(DesktopSyncStatusSnapshot status)
     {
@@ -60,6 +67,16 @@ internal static class DesktopActionRequiredMessageResolver
                 ?? "Cotton API request failed. Check diagnostics and retry.";
         }
 
+        if (exception is LocalFilePermissionDeniedException permissionDeniedException)
+        {
+            return CreateLocalPermissionDeniedMessage(permissionDeniedException.RelativePath);
+        }
+
+        if (exception is IOException && LooksLikeDiskFull(exception.Message))
+        {
+            return DiskFullMessage;
+        }
+
         return Normalize(exception.Message) ?? "Operation could not be completed. Check diagnostics and retry.";
     }
 
@@ -93,7 +110,24 @@ internal static class DesktopActionRequiredMessageResolver
             return HtmlInsteadOfJsonMessage;
         }
 
+        if (LooksLikeDiskFull(message))
+        {
+            return DiskFullMessage;
+        }
+
+        if (LooksLikeLocalPermissionDenied(message))
+        {
+            return CreateLocalPermissionDeniedMessage(ExtractSingleQuotedPath(message));
+        }
+
         return message;
+    }
+
+    private static string CreateLocalPermissionDeniedMessage(string? relativePath)
+    {
+        return string.IsNullOrWhiteSpace(relativePath)
+            ? LocalPermissionDeniedMessage
+            : "Cotton Sync cannot access '" + relativePath + "'. Grant file permissions and retry sync.";
     }
 
     private static string? NormalizeAuthMessage(string? message)
@@ -193,6 +227,34 @@ internal static class DesktopActionRequiredMessageResolver
     {
         return message.Contains("'<' is an invalid start of a value", StringComparison.OrdinalIgnoreCase)
             || message.Contains("\"<\" is an invalid start of a value", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool LooksLikeDiskFull(string message)
+    {
+        return message.Contains("no space left on device", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("not enough space", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("not enough disk space", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("disk full", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool LooksLikeLocalPermissionDenied(string message)
+    {
+        return (message.Contains("local file", StringComparison.OrdinalIgnoreCase)
+                && message.Contains("permission was denied", StringComparison.OrdinalIgnoreCase))
+            || (message.Contains("access to the path", StringComparison.OrdinalIgnoreCase)
+                && message.Contains("is denied", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string? ExtractSingleQuotedPath(string message)
+    {
+        int start = message.IndexOf('\'');
+        if (start < 0)
+        {
+            return null;
+        }
+
+        int end = message.IndexOf('\'', start + 1);
+        return end > start + 1 ? message[(start + 1)..end] : null;
     }
 
     private static bool LooksLikeHtml(string? value)

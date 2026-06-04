@@ -10,6 +10,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 - First-run windows default to the dark Cotton theme, with System/Light/Dark theme switching still available in Settings.
 - Dashboard with global status, per-folder status/current operation, current progress, activity history, action-required errors, conflict list, and direct sync-folder management.
 - Action-required sync failures use a consistent dashboard state and preserve the concrete reason in the error panel instead of mixing a generic failure state with an up-to-date progress message; add-folder/settings overlays hide background dashboard chrome so wizard errors stay readable, and missing desktop sync API errors block add-folder actions until the server check is resolved.
+- Disk-full and local file-permission sync failures are normalized into readable dashboard and notification messages instead of raw OS exception text.
 - Folder management supports add, rename, enable/disable, open local folder, and remove with explicit confirmation.
 - Folder management controls expand inline inside the folder row instead of duplicating the selected folder as a second editor row.
 - Continuous sync uses local filesystem watcher triggers, SignalR wake-up events, durable change-feed catch-up, and periodic reconciliation as a safety fallback.
@@ -39,7 +40,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 ## Verification Already Exercised
 
 - Full local `dotnet test src/Cotton.sln --configuration Release --no-restore` has passed after the current desktop packaging and UI hardening, including desktop 290/290 and server integration 373/373.
-- Desktop tests have passed locally, most recently `Cotton.Sync.Desktop.Tests` 295/295.
+- Desktop tests have passed locally, most recently `Cotton.Sync.Desktop.Tests` 301/301.
 - Server integration tests have passed locally, most recently `Cotton.Server.IntegrationTests` 373/373.
 - CLI one-shot sync has been smoke-tested against the integration-test server and covered in CLI tests with fake Cotton HTTP responses, verifying SDK file/folder upload requests and SQLite baseline creation.
 - Desktop packaging metadata tests cover publish profiles, clean publish-directory behavior, app icon metadata, Linux `.desktop` metadata, `.deb` packaging script, reusable Linux/Windows diagnostics export smoke scripts, Linux package smoke wiring, reusable Linux GUI screenshot matrix smoke with deterministic sign-in-error/add-folder/dashboard/folder-controls/settings/settings-diagnostics/error/conflict visual-smoke states, Linux archive/installed diagnostics export smoke wiring, Linux `.deb` install/upgrade smoke wiring, Windows CI smoke, Windows `.zip` artifact upload/self-test/diagnostics smoke, Windows installer script/install/diagnostics/upgrade smoke wiring, Windows shortcut AppUserModelID verification, running-app install/uninstall detection metadata, and release artifact checksum generation.
