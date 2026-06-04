@@ -167,7 +167,7 @@ public sealed class SyncEngineTests
     public async Task RunOnceAsync_DownloadsRemoteOnlyFileAndStoresBaseline()
     {
         byte[] content = Encoding.UTF8.GetBytes("remote-content");
-        NodeFileManifestDto remote = RemoteFile("remote.txt", Hash(content));
+        NodeFileManifestDto remote = RemoteFile("remote.txt", Hash(content), sizeBytes: content.Length);
         var remoteFiles = new FakeRemoteFileSynchronizer();
         remoteFiles.Downloads[remote.Id] = content;
         SyncEngine engine = CreateEngine(new FakeLocalFileScanner(), RemoteTree(remote), remoteFiles, out SqliteSyncStateStore stateStore);
@@ -640,7 +640,7 @@ public sealed class SyncEngineTests
     {
         const string relativePath = "Документы/設計-remote.txt";
         byte[] content = Encoding.UTF8.GetBytes("unicode-remote-content");
-        NodeFileManifestDto remote = RemoteFile(relativePath, Hash(content));
+        NodeFileManifestDto remote = RemoteFile(relativePath, Hash(content), sizeBytes: content.Length);
         var remoteFiles = new FakeRemoteFileSynchronizer();
         remoteFiles.Downloads[remote.Id] = content;
         SyncEngine engine = CreateEngine(new FakeLocalFileScanner(), RemoteTree(remote), remoteFiles, out SqliteSyncStateStore stateStore);
@@ -744,7 +744,7 @@ public sealed class SyncEngineTests
         WriteFile(relativePath, "old");
         LocalFileSnapshot local = LocalFile(relativePath, "old");
         byte[] remoteContent = Encoding.UTF8.GetBytes("remote-new");
-        NodeFileManifestDto remote = RemoteFile(relativePath, Hash(remoteContent));
+        NodeFileManifestDto remote = RemoteFile(relativePath, Hash(remoteContent), sizeBytes: remoteContent.Length);
         var remoteFiles = new FakeRemoteFileSynchronizer();
         remoteFiles.Downloads[remote.Id] = remoteContent;
         SyncEngine engine = CreateEngine(new FakeLocalFileScanner(local), RemoteTree(remote), remoteFiles, out SqliteSyncStateStore stateStore);
@@ -769,7 +769,10 @@ public sealed class SyncEngineTests
         string relativePath = "download-fails.txt";
         WriteFile(relativePath, "old");
         LocalFileSnapshot local = LocalFile(relativePath, "old");
-        NodeFileManifestDto remote = RemoteFile(relativePath, HashText("remote-new"));
+        NodeFileManifestDto remote = RemoteFile(
+            relativePath,
+            HashText("remote-new"),
+            sizeBytes: Encoding.UTF8.GetByteCount("remote-new"));
         var remoteFiles = new FakeRemoteFileSynchronizer();
         remoteFiles.DownloadFailureIds.Add(remote.Id);
         SyncEngine engine = CreateEngine(new FakeLocalFileScanner(local), RemoteTree(remote), remoteFiles, out SqliteSyncStateStore stateStore);
@@ -796,11 +799,43 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_RejectsDownloadedContentThatDoesNotMatchManifest()
+    {
+        string relativePath = "download-corrupt.txt";
+        byte[] expectedContent = Encoding.UTF8.GetBytes("complete remote file");
+        byte[] partialContent = Encoding.UTF8.GetBytes("partial");
+        NodeFileManifestDto remote = RemoteFile(
+            relativePath,
+            Hash(expectedContent),
+            sizeBytes: expectedContent.Length);
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        remoteFiles.Downloads[remote.Id] = partialContent;
+        SyncEngine engine = CreateEngine(new FakeLocalFileScanner(), RemoteTree(remote), remoteFiles, out SqliteSyncStateStore stateStore);
+
+        InvalidDataException? exception = Assert.ThrowsAsync<InvalidDataException>(
+            async () => await engine.RunOnceAsync(Pair()));
+
+        SyncStateEntry? entry = await stateStore.GetAsync("pair-a", relativePath);
+        string temporaryDirectory = Path.Combine(_root, ".cotton-sync", "tmp");
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(File.Exists(Path.Combine(_root, relativePath)), Is.False);
+            Assert.That(entry, Is.Null);
+            Assert.That(
+                Directory.Exists(temporaryDirectory)
+                    ? Directory.GetFiles(temporaryDirectory, "*", SearchOption.AllDirectories)
+                    : [],
+                Is.Empty);
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_RecoversAfterRemoteDownloadBeforeBaselineUpdate()
     {
         string relativePath = "downloaded-before-baseline.txt";
         byte[] remoteContent = Encoding.UTF8.GetBytes("remote-new");
-        NodeFileManifestDto remote = RemoteFile(relativePath, Hash(remoteContent));
+        NodeFileManifestDto remote = RemoteFile(relativePath, Hash(remoteContent), sizeBytes: remoteContent.Length);
         var remoteFiles = new FakeRemoteFileSynchronizer();
         remoteFiles.Downloads[remote.Id] = remoteContent;
         var durableStore = new SqliteSyncStateStore(_databasePath);
@@ -1016,7 +1051,7 @@ public sealed class SyncEngineTests
     public async Task RunOnceAsync_DownloadsRemoteFileInsteadOfDeletingWhenBaselineIsMissing()
     {
         byte[] content = Encoding.UTF8.GetBytes("no-baseline-remote");
-        NodeFileManifestDto remote = RemoteFile("safe-download.txt", Hash(content));
+        NodeFileManifestDto remote = RemoteFile("safe-download.txt", Hash(content), sizeBytes: content.Length);
         var remoteFiles = new FakeRemoteFileSynchronizer();
         remoteFiles.Downloads[remote.Id] = content;
         SyncEngine engine = CreateEngine(new FakeLocalFileScanner(), RemoteTree(remote), remoteFiles, out _);
@@ -1096,7 +1131,7 @@ public sealed class SyncEngineTests
         WriteFile(relativePath, "local-new");
         LocalFileSnapshot local = LocalFile(relativePath, "local-new");
         byte[] remoteContent = Encoding.UTF8.GetBytes("remote-new");
-        NodeFileManifestDto remote = RemoteFile(relativePath, Hash(remoteContent));
+        NodeFileManifestDto remote = RemoteFile(relativePath, Hash(remoteContent), sizeBytes: remoteContent.Length);
         var remoteFiles = new FakeRemoteFileSynchronizer();
         remoteFiles.Downloads[remote.Id] = remoteContent;
         SyncEngine engine = CreateEngine(new FakeLocalFileScanner(local), RemoteTree(remote), remoteFiles, out SqliteSyncStateStore stateStore);
@@ -1145,7 +1180,7 @@ public sealed class SyncEngineTests
         LocalFileSnapshot? local = CreateMatrixLocal(relativePath, localState, localContent);
         NodeFileManifestDto? remote = remoteState == MatrixFileState.Missing
             ? null
-            : RemoteFile(relativePath, HashText(remoteContent), remoteId);
+            : RemoteFile(relativePath, HashText(remoteContent), remoteId, Encoding.UTF8.GetByteCount(remoteContent));
         var remoteFiles = new FakeRemoteFileSynchronizer();
         if (remote is not null && remoteState == MatrixFileState.Changed)
         {
@@ -1182,7 +1217,7 @@ public sealed class SyncEngineTests
         NodeFileManifestDto baselineRemote = RemoteFile(relativePath, HashText("old"), remoteId);
         NodeFileManifestDto initialRemote = RemoteFile(relativePath, HashText("old"), remoteId);
         byte[] latestRemoteContent = Encoding.UTF8.GetBytes("remote-new");
-        NodeFileManifestDto latestRemote = RemoteFile(relativePath, Hash(latestRemoteContent), remoteId);
+        NodeFileManifestDto latestRemote = RemoteFile(relativePath, Hash(latestRemoteContent), remoteId, latestRemoteContent.Length);
         var remoteFiles = new FakeRemoteFileSynchronizer();
         remoteFiles.PreconditionFailedUploadIds.Add(remoteId);
         remoteFiles.Downloads[remoteId] = latestRemoteContent;
@@ -1219,7 +1254,7 @@ public sealed class SyncEngineTests
         NodeFileManifestDto baselineRemote = RemoteFile(relativePath, HashText("old"), remoteId);
         NodeFileManifestDto initialRemote = RemoteFile(relativePath, HashText("old"), remoteId);
         byte[] latestRemoteContent = Encoding.UTF8.GetBytes("remote-new");
-        NodeFileManifestDto latestRemote = RemoteFile(relativePath, Hash(latestRemoteContent), remoteId);
+        NodeFileManifestDto latestRemote = RemoteFile(relativePath, Hash(latestRemoteContent), remoteId, latestRemoteContent.Length);
         var remoteFiles = new FakeRemoteFileSynchronizer();
         remoteFiles.PreconditionFailedDeleteIds.Add(remoteId);
         remoteFiles.Downloads[remoteId] = latestRemoteContent;
@@ -1276,7 +1311,7 @@ public sealed class SyncEngineTests
         WriteFile(relativePath, "local-new");
         LocalFileSnapshot local = LocalFile(relativePath, "local-new");
         byte[] remoteContent = Encoding.UTF8.GetBytes("remote-newer");
-        NodeFileManifestDto remote = RemoteFile(relativePath, Hash(remoteContent));
+        NodeFileManifestDto remote = RemoteFile(relativePath, Hash(remoteContent), sizeBytes: remoteContent.Length);
         var remoteFiles = new FakeRemoteFileSynchronizer();
         remoteFiles.Downloads[remote.Id] = remoteContent;
         SyncEngine engine = CreateEngine(new FakeLocalFileScanner(local), RemoteTree(remote), remoteFiles, out SqliteSyncStateStore stateStore);
@@ -1594,7 +1629,7 @@ public sealed class SyncEngineTests
         };
     }
 
-    private NodeFileManifestDto RemoteFile(string relativePath, string contentHash, Guid? id = null)
+    private NodeFileManifestDto RemoteFile(string relativePath, string contentHash, Guid? id = null, long sizeBytes = 1)
     {
         return new NodeFileManifestDto
         {
@@ -1607,7 +1642,7 @@ public sealed class SyncEngineTests
             OwnerId = Guid.Parse("22222222-2222-2222-2222-222222222222"),
             Name = relativePath.Split('/')[^1],
             ContentType = "text/plain",
-            SizeBytes = 1,
+            SizeBytes = sizeBytes,
             ContentHash = contentHash,
             ETag = "sha256-" + contentHash,
             Metadata = new Dictionary<string, string> { ["relativePath"] = relativePath.Replace('\\', '/') },

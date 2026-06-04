@@ -492,7 +492,7 @@ public sealed class SyncEngine : ISyncEngine
         await _localWriter.WriteFileAsync(
             syncPair.LocalRootPath,
             relativePath,
-            (stream, token) => DownloadFileWithProgressAsync(remoteFile, relativePath, options, stream, token),
+            (stream, token) => DownloadAndVerifyFileAsync(remoteFile, relativePath, options, stream, token),
             remoteFile.UpdatedAt == default ? null : remoteFile.UpdatedAt,
             cancellationToken).ConfigureAwait(false);
         await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, remoteFile.ContentHash, remoteFile.UpdatedAt, remoteFile), cancellationToken)
@@ -639,7 +639,7 @@ public sealed class SyncEngine : ISyncEngine
             await _localWriter.WriteFileAsync(
                 syncPair.LocalRootPath,
                 conflictPath,
-                (stream, token) => DownloadFileWithProgressAsync(remoteFile, relativePath, options, stream, token),
+                (stream, token) => DownloadAndVerifyFileAsync(remoteFile, relativePath, options, stream, token),
                 remoteFile.UpdatedAt == default ? null : remoteFile.UpdatedAt,
                 cancellationToken).ConfigureAwait(false);
             details = "Remote version saved as " + conflictPath;
@@ -664,7 +664,7 @@ public sealed class SyncEngine : ISyncEngine
             await _localWriter.WriteFileAsync(
                 syncPair.LocalRootPath,
                 relativePath,
-                (stream, token) => DownloadFileWithProgressAsync(remoteFile, relativePath, options, stream, token),
+                (stream, token) => DownloadAndVerifyFileAsync(remoteFile, relativePath, options, stream, token),
                 remoteFile.UpdatedAt == default ? null : remoteFile.UpdatedAt,
                 cancellationToken).ConfigureAwait(false);
             details = "Local deletion conflicted with remote change; remote version was restored locally.";
@@ -749,6 +749,19 @@ public sealed class SyncEngine : ISyncEngine
             remoteFile.SizeBytes,
             remoteFile.SizeBytes,
             isCompleted: true);
+    }
+
+    private async Task DownloadAndVerifyFileAsync(
+        NodeFileManifestDto remoteFile,
+        string relativePath,
+        SyncRunOptions options,
+        Stream destination,
+        CancellationToken cancellationToken)
+    {
+        await using var verifiedDestination = new VerifyingDownloadStream(destination);
+        await DownloadFileWithProgressAsync(remoteFile, relativePath, options, verifiedDestination, cancellationToken)
+            .ConfigureAwait(false);
+        verifiedDestination.Verify(remoteFile.ContentHash, remoteFile.SizeBytes, relativePath);
     }
 
     private async Task<NodeFileManifestDto?> FindLatestRemoteFileAsync(

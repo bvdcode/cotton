@@ -38,6 +38,7 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
 
         string temporaryDirectory = Path.Combine(fullRoot, MetadataDirectoryName, TemporaryDirectoryName);
         Directory.CreateDirectory(temporaryDirectory);
+        CleanupTemporaryDownloads(temporaryDirectory);
         string temporaryPath = Path.Combine(temporaryDirectory, Guid.NewGuid().ToString("N") + ".download");
         bool moved = false;
         try
@@ -165,6 +166,23 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
         }
 
         return normalizedPath;
+    }
+
+    private static void CleanupTemporaryDownloads(string temporaryDirectory)
+    {
+        foreach (string temporaryFile in Directory.EnumerateFiles(temporaryDirectory, "*.download"))
+        {
+            try
+            {
+                File.Delete(temporaryFile);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
     }
 
     private static string CreateDeletedPath(string fullRoot, string normalizedPath)

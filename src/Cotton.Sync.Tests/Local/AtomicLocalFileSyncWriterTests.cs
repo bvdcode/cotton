@@ -57,6 +57,29 @@ public sealed class AtomicLocalFileSyncWriterTests
     }
 
     [Test]
+    public async Task WriteFileAsync_RemovesStaleTemporaryDownloadsBeforeWriting()
+    {
+        string temporaryDirectory = Path.Combine(_root, ".cotton-sync", "tmp");
+        Directory.CreateDirectory(temporaryDirectory);
+        string staleDownload = Path.Combine(temporaryDirectory, "stale.download");
+        File.WriteAllText(staleDownload, "partial", new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        var writer = new AtomicLocalFileSyncWriter();
+
+        await writer.WriteFileAsync(
+            _root,
+            "Docs/file.txt",
+            async (stream, cancellationToken) =>
+                await stream.WriteAsync(Encoding.UTF8.GetBytes("complete"), cancellationToken));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(File.Exists(staleDownload), Is.False);
+            Assert.That(ReadFile("Docs/file.txt"), Is.EqualTo("complete"));
+            Assert.That(Directory.GetFiles(temporaryDirectory, "*.download", SearchOption.AllDirectories), Is.Empty);
+        });
+    }
+
+    [Test]
     public async Task DeleteFileAsync_MovesFileToDeletedQuarantineAndPreservesParentDirectory()
     {
         string relativePath = "Docs/file.txt";

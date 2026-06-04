@@ -446,6 +446,80 @@ public sealed class SyncCliCommandRunnerTests
     }
 
     [Test]
+    public async Task SyncOnce_ExternalProcessRecoversAfterCrashDuringRemoteDownload()
+    {
+        string localRoot = Path.Combine(_tempDirectory, "process-download-crash-local");
+        Directory.CreateDirectory(localRoot);
+        const string relativePath = "remote-download-crash.txt";
+        byte[] content = Encoding.UTF8.GetBytes("download interrupted before the first process can finish");
+        string contentHash = Convert.ToHexStringLower(SHA256.HashData(content));
+        string databasePath = Path.Combine(_tempDirectory, "process-download-crash-state.db");
+        string syncPairId = Guid.NewGuid().ToString("D");
+        Guid remoteRootId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        string targetPath = Path.Combine(localRoot, relativePath);
+        string temporaryDirectory = Path.Combine(localRoot, ".cotton-sync", "tmp");
+        await using var server = new SyncProcessDownloadCrashHttpServer(remoteRootId, relativePath, contentHash, content);
+        string[] args = CreateSyncOnceProcessArgs(server.BaseUri, localRoot, remoteRootId, syncPairId, databasePath);
+
+        using Process crashingProcess = StartCliProcess(args);
+        Task<string> firstOutputTask = crashingProcess.StandardOutput.ReadToEndAsync();
+        Task<string> firstErrorTask = crashingProcess.StandardError.ReadToEndAsync();
+        try
+        {
+            await server.WaitForFirstDownloadStartedAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+            await WaitForTemporaryDownloadAsync(temporaryDirectory, TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+            KillProcessTree(crashingProcess);
+            await WaitForProcessExitAsync(crashingProcess, TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+        }
+        finally
+        {
+            server.ReleaseFirstDownload();
+            KillProcessTree(crashingProcess);
+        }
+
+        _ = await firstOutputTask.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+        _ = await firstErrorTask.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+
+        var store = new SqliteSyncStateStore(databasePath);
+        SyncStateEntry? entryAfterCrash = await store.GetAsync(syncPairId, relativePath);
+        string[] staleTemporaryFiles = ListTemporaryDownloads(temporaryDirectory);
+        bool targetExistsAfterCrash = File.Exists(targetPath);
+
+        using Process recoveryProcess = StartCliProcess(args);
+        Task<string> recoveryOutputTask = recoveryProcess.StandardOutput.ReadToEndAsync();
+        Task<string> recoveryErrorTask = recoveryProcess.StandardError.ReadToEndAsync();
+        await WaitForProcessExitAsync(recoveryProcess, TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+        string recoveryOutput = await recoveryOutputTask.ConfigureAwait(false);
+        string recoveryError = await recoveryErrorTask.ConfigureAwait(false);
+
+        SyncStateEntry? entryAfterRecovery = await store.GetAsync(syncPairId, relativePath);
+        string[] remainingTemporaryFiles = ListTemporaryDownloads(temporaryDirectory);
+        IReadOnlyList<HttpRequestSnapshot> requests = server.Requests;
+        string downloadPath = "/api/v1/files/" + server.RemoteFileId.ToString("D") + "/content?download=false";
+        server.AssertNoFaults();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(crashingProcess.ExitCode, Is.Not.EqualTo(0));
+            Assert.That(targetExistsAfterCrash, Is.False);
+            Assert.That(entryAfterCrash, Is.Null);
+            Assert.That(staleTemporaryFiles, Is.Not.Empty);
+            Assert.That(recoveryProcess.ExitCode, Is.EqualTo(0), recoveryError);
+            Assert.That(recoveryError, Is.Empty);
+            Assert.That(recoveryOutput, Does.Contain("Downloaded remote-download-crash.txt"));
+            Assert.That(recoveryOutput, Does.Contain("State entries: 1"));
+            Assert.That(File.ReadAllBytes(targetPath), Is.EqualTo(content));
+            Assert.That(entryAfterRecovery, Is.Not.Null);
+            Assert.That(entryAfterRecovery!.RemoteFileId, Is.EqualTo(server.RemoteFileId));
+            Assert.That(entryAfterRecovery.RemoteContentHash, Is.EqualTo(contentHash));
+            Assert.That(remainingTemporaryFiles, Is.Empty);
+            Assert.That(
+                requests.Count(request => request.Method == HttpMethod.Get && request.PathAndQuery == downloadPath),
+                Is.EqualTo(2));
+        });
+    }
+
+    [Test]
     public async Task SyncOnce_ExternalProcessRecoversAfterRemoteDeleteBeforeBaselineDelete()
     {
         string localRoot = Path.Combine(_tempDirectory, "process-delete-crash-local");
@@ -763,6 +837,37 @@ public sealed class SyncCliCommandRunnerTests
             KillProcessTree(process);
             throw new AssertionException("Cotton Sync CLI process did not exit within " + timeout.TotalSeconds.ToStringInvariant() + " seconds.", exception);
         }
+    }
+
+    private static async Task WaitForTemporaryDownloadAsync(string temporaryDirectory, TimeSpan timeout)
+    {
+        using var cancellation = new CancellationTokenSource(timeout);
+        try
+        {
+            while (!cancellation.IsCancellationRequested)
+            {
+                if (ListTemporaryDownloads(temporaryDirectory).Length > 0)
+                {
+                    return;
+                }
+
+                await Task.Delay(25, cancellation.Token).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+
+        throw new AssertionException("Cotton Sync CLI process did not create a temporary download file within "
+            + timeout.TotalSeconds.ToStringInvariant()
+            + " seconds.");
+    }
+
+    private static string[] ListTemporaryDownloads(string temporaryDirectory)
+    {
+        return Directory.Exists(temporaryDirectory)
+            ? Directory.GetFiles(temporaryDirectory, "*.download", SearchOption.AllDirectories)
+            : [];
     }
 
     private static void KillProcessTree(Process process)
