@@ -127,6 +127,18 @@ public sealed class DesktopStartupOptionsTests
     }
 
     [Test]
+    public void Parse_LoadsFolderControlsVisualSmokeScenario()
+    {
+        DesktopStartupOptions options = DesktopStartupOptions.Parse(
+            [
+                "--visual-smoke",
+                "folder-controls",
+            ]);
+
+        Assert.That(options.VisualSmokeScenario, Is.EqualTo(DesktopVisualSmokeScenario.FolderControls));
+    }
+
+    [Test]
     public void Parse_LoadsEmptyDashboardVisualSmokeScenario()
     {
         DesktopStartupOptions options = DesktopStartupOptions.Parse(

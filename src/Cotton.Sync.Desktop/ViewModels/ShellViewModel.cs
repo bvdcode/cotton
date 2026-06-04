@@ -1091,6 +1091,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             case DesktopVisualSmokeScenario.Progress:
                 ApplyVisualSmokeProgressScenario();
                 break;
+            case DesktopVisualSmokeScenario.FolderControls:
+                if (SyncPairs.FirstOrDefault() is { } syncPair)
+                {
+                    await ShowSelectedSyncPairEditorAsync(syncPair).ConfigureAwait(true);
+                }
+
+                break;
             case DesktopVisualSmokeScenario.Conflict:
                 AddActivity("Conflict", "Reports/budget.xlsx", "Local and cloud versions changed at the same time.");
                 AddConflict(

@@ -404,6 +404,32 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task ApplyVisualSmokeScenarioAsync_ShowsFolderControls()
+    {
+        Guid firstPairId = Guid.NewGuid();
+        Guid secondPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(
+            CreateSignedInSnapshot(
+                CreatePair(firstPairId, "Documents", "Idle"),
+                CreatePair(secondPairId, "Photos", "Idle")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        await viewModel.ApplyVisualSmokeScenarioAsync(DesktopVisualSmokeScenario.FolderControls);
+
+        SyncPairRowViewModel firstPair = viewModel.SyncPairs.Single(pair => pair.Id == firstPairId);
+        SyncPairRowViewModel secondPair = viewModel.SyncPairs.Single(pair => pair.Id == secondPairId);
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsSelectedSyncPairEditorVisible, Is.True);
+            Assert.That(viewModel.SelectedSyncPair?.Id, Is.EqualTo(firstPairId));
+            Assert.That(firstPair.IsEditorVisible, Is.True);
+            Assert.That(secondPair.IsEditorVisible, Is.False);
+            Assert.That(viewModel.IsRemoveSyncPairConfirmationVisible, Is.False);
+        });
+    }
+
+    [Test]
     public async Task ApplyVisualSmokeScenarioAsync_ShowsConflictList()
     {
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Idle")));
