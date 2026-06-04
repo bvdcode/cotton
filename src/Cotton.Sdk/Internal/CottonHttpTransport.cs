@@ -35,7 +35,14 @@ internal sealed class CottonHttpTransport
         _tokenStore = tokenStore;
         _options = options;
         _logger = logger ?? NullLogger<CottonHttpTransport>.Instance;
-        _httpClient.BaseAddress = options.BaseAddress;
+        if (_httpClient.BaseAddress is null)
+        {
+            _httpClient.BaseAddress = options.BaseAddress;
+        }
+        else if (!_httpClient.BaseAddress.Equals(options.BaseAddress))
+        {
+            throw new InvalidOperationException("The supplied HttpClient BaseAddress must match CottonSdkOptions.BaseAddress.");
+        }
     }
 
     public async Task<T> SendJsonAsync<T>(

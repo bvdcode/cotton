@@ -13,6 +13,64 @@ namespace Cotton.Sdk.Tests;
 public sealed class CottonHttpTransportTests
 {
     [Test]
+    public async Task Client_ReusesAlreadyStartedHttpClientWhenBaseAddressMatches()
+    {
+        var handler = new QueuedHttpMessageHandler();
+        handler.Enqueue(HttpStatusCode.OK, "warmup");
+        handler.EnqueueJson(HttpStatusCode.OK, new
+        {
+            version = "1.2.3",
+            maxChunkSizeBytes = 4194304,
+            supportedHashAlgorithm = "SHA256",
+        });
+        var baseAddress = new Uri("https://cotton.test");
+        var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = baseAddress,
+        };
+        using HttpResponseMessage warmupResponse = await httpClient.GetAsync("/warmup");
+        warmupResponse.EnsureSuccessStatusCode();
+        var client = new CottonCloudClient(
+            httpClient,
+            new InMemoryCottonTokenStore(),
+            new CottonSdkOptions
+            {
+                BaseAddress = baseAddress,
+            });
+
+        var settings = await client.Settings.GetAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(settings.MaxChunkSizeBytes, Is.EqualTo(4194304));
+            Assert.That(handler.Requests.Select(static request => request.PathAndQuery), Is.EqualTo(new[]
+            {
+                "/warmup",
+                "/api/v1/settings",
+            }));
+        });
+    }
+
+    [Test]
+    public void Client_RejectsPreconfiguredHttpClientWhenBaseAddressDiffers()
+    {
+        var httpClient = new HttpClient(new QueuedHttpMessageHandler())
+        {
+            BaseAddress = new Uri("https://other.test"),
+        };
+
+        InvalidOperationException? exception = Assert.Throws<InvalidOperationException>(() => new CottonCloudClient(
+            httpClient,
+            new InMemoryCottonTokenStore(),
+            new CottonSdkOptions
+            {
+                BaseAddress = new Uri("https://cotton.test"),
+            }));
+
+        Assert.That(exception?.Message, Does.Contain("BaseAddress"));
+    }
+
+    [Test]
     public async Task RequestLogging_RecordsMethodPathAndStatus()
     {
         var handler = new QueuedHttpMessageHandler();
