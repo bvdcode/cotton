@@ -60,17 +60,30 @@
   <Target Name="GeneratePublishChecksums"
           AfterTargets="Publish"
           Condition="'$(PublishDir)' != '' and '$(GeneratePublishChecksums)' != 'false'">
+    <PropertyGroup>
+      <CottonPublishDir>$([MSBuild]::EnsureTrailingSlash($([System.IO.Path]::GetFullPath('$(PublishDir)'))))</CottonPublishDir>
+    </PropertyGroup>
     <ItemGroup>
-      <CottonPublishedFile Include="$(PublishDir)**/*"
-                           Exclude="$(PublishDir)checksums.sha256" />
+      <CottonPublishedFile Include="$(CottonPublishDir)**/*"
+                           Exclude="$(CottonPublishDir)checksums.sha256" />
     </ItemGroup>
-    <GetFileHash Files="@(CottonPublishedFile)"
+    <AssignTargetPath Files="@(CottonPublishedFile)"
+                      RootFolder="$(CottonPublishDir)">
+      <Output TaskParameter="AssignedFiles"
+              ItemName="CottonPublishedFileWithTargetPath" />
+    </AssignTargetPath>
+    <ItemGroup>
+      <CottonPublishedFileWithManifest Include="@(CottonPublishedFileWithTargetPath)">
+        <ManifestPath>%(TargetPath)</ManifestPath>
+      </CottonPublishedFileWithManifest>
+    </ItemGroup>
+    <GetFileHash Files="@(CottonPublishedFileWithManifest)"
                  Algorithm="SHA256">
       <Output TaskParameter="Items"
               ItemName="CottonPublishedFileHash" />
     </GetFileHash>
     <WriteLinesToFile File="$(PublishDir)checksums.sha256"
-                      Lines="@(CottonPublishedFileHash->'%(FileHash)  %(RecursiveDir)%(Filename)%(Extension)')"
+                      Lines="@(CottonPublishedFileHash->'%(FileHash)  %(ManifestPath)')"
                       Overwrite="true" />
   </Target>
 

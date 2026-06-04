@@ -192,6 +192,8 @@ jobs:
           temp_dir="$(mktemp -d)"
           trap 'rm -rf "$temp_dir"' EXIT
           eval "$(gnome-keyring-daemon --start --components=secrets)"
+          src/Cotton.Sync.Desktop/Packaging/linux/verify-checksums.sh \
+            src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64
           src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64/Cotton.Sync.Desktop --self-test --data-dir "$temp_dir"
           EOF
 
@@ -234,6 +236,7 @@ jobs:
           data_dir="$temp_dir/data"
           mkdir -p "$extract_dir" "$data_dir"
           tar -xzf cotton-sync-desktop-linux-x64.tar.gz -C "$extract_dir"
+          src/Cotton.Sync.Desktop/Packaging/linux/verify-checksums.sh "$extract_dir"
           eval "$(gnome-keyring-daemon --start --components=secrets)"
           "$extract_dir/Cotton.Sync.Desktop" --self-test --data-dir "$data_dir"
           src/Cotton.Sync.Desktop/Packaging/linux/smoke-diagnostics-export.sh \
@@ -253,6 +256,7 @@ jobs:
           test -f "$extract_dir/usr/share/applications/cotton-sync.desktop"
           test -f "$extract_dir/usr/share/icons/hicolor/192x192/apps/cotton-sync.png"
           test -L "$extract_dir/usr/bin/cotton-sync"
+          src/Cotton.Sync.Desktop/Packaging/linux/verify-checksums.sh "$extract_dir/opt/cotton-sync"
           eval "$(gnome-keyring-daemon --start --components=secrets)"
           "$extract_dir/opt/cotton-sync/Cotton.Sync.Desktop" --self-test --data-dir "$data_dir"
           EOF
@@ -267,6 +271,7 @@ jobs:
 
           test -x /opt/cotton-sync/Cotton.Sync.Desktop
           test -L /usr/bin/cotton-sync
+          src/Cotton.Sync.Desktop/Packaging/linux/verify-checksums.sh /opt/cotton-sync
 
           dbus-run-session -- bash -euo pipefail <<'EOF'
           temp_dir="$(mktemp -d)"
@@ -298,6 +303,7 @@ jobs:
           trap cleanup EXIT
 
           sudo dpkg -i cotton-sync-desktop-linux-x64.deb
+          src/Cotton.Sync.Desktop/Packaging/linux/verify-checksums.sh /opt/cotton-sync
           installed_version="$(dpkg-query -W -f='${Version}' cotton-sync-desktop)"
           if [ "$installed_version" != "${{ steps.gitversion.outputs.SemVer }}" ]; then
             echo "Expected upgraded package version ${{ steps.gitversion.outputs.SemVer }}, got $installed_version." >&2
@@ -468,6 +474,8 @@ jobs:
         run: |
           $dataDir = Join-Path $env:RUNNER_TEMP "cotton-sync-smoke"
           New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
+          & "src/Cotton.Sync.Desktop/Packaging/windows/verify-checksums.ps1" `
+            -PublishDirectory "src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64"
           src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64/Cotton.Sync.Desktop.exe --self-test --data-dir "$dataDir"
 
       - name: Smoke desktop Windows zip archive
@@ -482,6 +490,8 @@ jobs:
           New-Item -ItemType Directory -Path $extractDir -Force | Out-Null
           New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
           Expand-Archive cotton-sync-desktop-win-x64-smoke.zip -DestinationPath $extractDir -Force
+          & "src/Cotton.Sync.Desktop/Packaging/windows/verify-checksums.ps1" `
+            -PublishDirectory $extractDir
           & (Join-Path $extractDir "Cotton.Sync.Desktop.exe") --self-test --data-dir "$dataDir"
           & "src/Cotton.Sync.Desktop/Packaging/windows/smoke-diagnostics-export.ps1" `
             -AppExecutable (Join-Path $extractDir "Cotton.Sync.Desktop.exe") `
@@ -541,6 +551,8 @@ jobs:
           }
 
           & $installedExe --self-test --data-dir "$dataDir"
+          & "src/Cotton.Sync.Desktop/Packaging/windows/verify-checksums.ps1" `
+            -PublishDirectory $installDir
           & "src/Cotton.Sync.Desktop/Packaging/windows/smoke-diagnostics-export.ps1" `
             -AppExecutable $installedExe `
             -DataDirectory $dataDir
@@ -617,6 +629,8 @@ jobs:
           }
 
           & $installedExe --self-test --data-dir "$dataDir"
+          & "src/Cotton.Sync.Desktop/Packaging/windows/verify-checksums.ps1" `
+            -PublishDirectory $installDir
           & "src/Cotton.Sync.Desktop/Packaging/windows/smoke-diagnostics-export.ps1" `
             -AppExecutable $installedExe `
             -DataDirectory $dataDir
