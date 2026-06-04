@@ -94,6 +94,21 @@ public sealed class SyncPairSettingsValidatorTests
     }
 
     [Test]
+    public void Validate_RejectsNestedUncRootsIgnoringCase()
+    {
+        SyncPairSettings first = CreatePair(@"\\Server\Share\Cotton");
+        SyncPairSettings second = CreatePair(@"\\server\share\cotton\Work");
+
+        SyncPairValidationResult result = _validator.Validate([first, second]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsValid, Is.False);
+            Assert.That(result.Errors.Single().Issue, Is.EqualTo(SyncPairValidationIssue.OverlappingLocalRoots));
+        });
+    }
+
+    [Test]
     public void Validate_RejectsNestedUnixRoots()
     {
         SyncPairSettings first = CreatePair("/home/user/cotton");
