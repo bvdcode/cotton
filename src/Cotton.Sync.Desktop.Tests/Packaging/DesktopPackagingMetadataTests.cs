@@ -300,6 +300,26 @@ public sealed class DesktopPackagingMetadataTests
     }
 
     [Test]
+    public void CiWorkflow_SmokesWindowsInstallerUpgrade()
+    {
+        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(workflow, Does.Contain("Smoke desktop Windows installer upgrade"));
+            Assert.That(workflow, Does.Contain("cotton-sync-old-installer"));
+            Assert.That(workflow, Does.Contain("/DAppVersion=0.0.1-ci-upgrade"));
+            Assert.That(workflow, Does.Contain("Old Windows installer was not created."));
+            Assert.That(workflow, Does.Contain("-FilePath $oldInstaller"));
+            Assert.That(workflow, Does.Contain("-FilePath \".\\cotton-sync-desktop-win-x64-setup.exe\""));
+            Assert.That(workflow, Does.Contain("Current Windows installer exited with code"));
+            Assert.That(workflow, Does.Contain("& $installedExe --self-test --data-dir"));
+            Assert.That(workflow, Does.Contain("Windows uninstaller was not found after upgrade."));
+            Assert.That(workflow, Does.Contain("Upgraded desktop executable remained after uninstall."));
+        });
+    }
+
+    [Test]
     public void CiWorkflow_GeneratesReleaseArtifactChecksums()
     {
         string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));

@@ -528,6 +528,79 @@ jobs:
             throw "Installed desktop executable remained after uninstall."
           }
 
+      - name: Smoke desktop Windows installer upgrade
+        shell: pwsh
+        run: |
+          $publishDir = Resolve-Path "src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64"
+          $iconFile = Resolve-Path "src/Cotton.Sync.Desktop/Assets/app.ico"
+          $oldOutputDir = Join-Path $env:RUNNER_TEMP "cotton-sync-old-installer"
+          $installDir = Join-Path $env:RUNNER_TEMP "cotton-sync-upgrade-installed"
+          $dataDir = Join-Path $env:RUNNER_TEMP "cotton-sync-upgrade-data"
+          $installLog = Join-Path $env:RUNNER_TEMP "cotton-sync-upgrade-install.log"
+          $upgradeLog = Join-Path $env:RUNNER_TEMP "cotton-sync-upgrade-current.log"
+          $uninstallLog = Join-Path $env:RUNNER_TEMP "cotton-sync-upgrade-uninstall.log"
+          New-Item -ItemType Directory -Path $oldOutputDir -Force | Out-Null
+          New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
+
+          & "$env:INNO_SETUP_COMPILER" `
+            "/DSourceDir=$publishDir" `
+            "/DIconFile=$iconFile" `
+            "/DOutputDir=$oldOutputDir" `
+            "/DAppVersion=0.0.1-ci-upgrade" `
+            "src/Cotton.Sync.Desktop/Packaging/windows/cotton-sync.iss"
+
+          $oldInstaller = Join-Path $oldOutputDir "cotton-sync-desktop-win-x64-setup.exe"
+          if (-not (Test-Path $oldInstaller)) {
+            throw "Old Windows installer was not created."
+          }
+
+          $oldInstall = Start-Process `
+            -FilePath $oldInstaller `
+            -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/TASKS=", "/DIR=$installDir", "/LOG=$installLog") `
+            -Wait `
+            -PassThru
+          if ($oldInstall.ExitCode -ne 0) {
+            Get-Content $installLog -ErrorAction SilentlyContinue
+            throw "Old Windows installer exited with code $($oldInstall.ExitCode)."
+          }
+
+          $installedExe = Join-Path $installDir "Cotton.Sync.Desktop.exe"
+          if (-not (Test-Path $installedExe)) {
+            throw "Old installed desktop executable was not found."
+          }
+
+          $currentInstall = Start-Process `
+            -FilePath ".\cotton-sync-desktop-win-x64-setup.exe" `
+            -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/TASKS=", "/DIR=$installDir", "/LOG=$upgradeLog") `
+            -Wait `
+            -PassThru
+          if ($currentInstall.ExitCode -ne 0) {
+            Get-Content $upgradeLog -ErrorAction SilentlyContinue
+            throw "Current Windows installer exited with code $($currentInstall.ExitCode)."
+          }
+
+          & $installedExe --self-test --data-dir "$dataDir"
+
+          $uninstaller = Join-Path $installDir "unins000.exe"
+          if (-not (Test-Path $uninstaller)) {
+            throw "Windows uninstaller was not found after upgrade."
+          }
+
+          $uninstall = Start-Process `
+            -FilePath $uninstaller `
+            -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/LOG=$uninstallLog") `
+            -Wait `
+            -PassThru
+          if ($uninstall.ExitCode -ne 0) {
+            Get-Content $uninstallLog -ErrorAction SilentlyContinue
+            throw "Windows upgraded app uninstaller exited with code $($uninstall.ExitCode)."
+          }
+
+          if (Test-Path $installedExe) {
+            Get-ChildItem $installDir -Recurse -ErrorAction SilentlyContinue
+            throw "Upgraded desktop executable remained after uninstall."
+          }
+
       - name: Upload desktop Windows installer artifact
         uses: actions/upload-artifact@v5
         with:
