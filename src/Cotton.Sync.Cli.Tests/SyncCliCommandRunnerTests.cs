@@ -513,6 +513,66 @@ public sealed class SyncCliCommandRunnerTests
     }
 
     [Test]
+    public async Task SyncSoak_ReturnsFailureWhenFinalConvergenceStillHasActivities()
+    {
+        string localRoot = Path.Combine(_tempDirectory, "soak-non-converged-local");
+        Directory.CreateDirectory(localRoot);
+        const string relativePath = "soak-non-converged.txt";
+        byte[] content = Encoding.UTF8.GetBytes("remote never reports this file");
+        string localFilePath = Path.Combine(localRoot, relativePath);
+        File.WriteAllBytes(localFilePath, content);
+        File.SetLastWriteTimeUtc(localFilePath, new DateTime(2026, 6, 4, 12, 0, 0, DateTimeKind.Utc));
+        string contentHash = Convert.ToHexStringLower(SHA256.HashData(content));
+        string databasePath = Path.Combine(_tempDirectory, "sync-soak-non-converged-state.db");
+        string syncPairId = Guid.NewGuid().ToString("D");
+        Guid remoteRootId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var handler = new SyncOnceUploadServerHandler(
+            remoteRootId,
+            relativePath,
+            contentHash,
+            content,
+            exposeCreatedFileInChildren: false);
+        using var httpClient = new HttpClient(handler);
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        int exitCode = await SyncCliCommandRunner.RunAsync(
+            [
+                "sync-soak",
+                "--server",
+                "cotton.test",
+                "--username",
+                "testuser",
+                "--password",
+                "testpassword",
+                "--local-root",
+                localRoot,
+                "--remote-root",
+                remoteRootId.ToString("D"),
+                "--sync-pair",
+                syncPairId,
+                "--database",
+                databasePath,
+                "--iterations",
+                "1",
+            ],
+            output,
+            error,
+            httpClient);
+
+        string text = output.ToString();
+        Assert.Multiple(() =>
+        {
+            Assert.That(exitCode, Is.EqualTo(1));
+            Assert.That(error.ToString(), Is.Empty);
+            Assert.That(text, Does.Contain("Iteration 1: activities=1, stateEntries=1"));
+            Assert.That(text, Does.Contain("Final convergence activities: 1"));
+            Assert.That(text, Does.Contain("Converged: no"));
+            Assert.That(text, Does.Contain("Failures: 1"));
+        });
+    }
+
+    [Test]
     public async Task SyncOnce_UploadsEmptyLocalDirectoryAndPersistsDirectoryBaseline()
     {
         string localRoot = Path.Combine(_tempDirectory, "local-empty-directory");

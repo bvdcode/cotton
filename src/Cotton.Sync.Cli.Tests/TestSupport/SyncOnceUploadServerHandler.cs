@@ -17,6 +17,7 @@ internal sealed class SyncOnceUploadServerHandler : HttpMessageHandler
     private readonly byte[] _expectedContent;
     private readonly string _expectedContentHash;
     private readonly string _expectedRelativePath;
+    private readonly bool _exposeCreatedFileInChildren;
     private readonly Guid _ownerId = Guid.Parse("22222222-2222-2222-2222-222222222222");
     private readonly Guid _remoteRootId;
     private bool _fileCreated;
@@ -25,12 +26,14 @@ internal sealed class SyncOnceUploadServerHandler : HttpMessageHandler
         Guid remoteRootId,
         string expectedRelativePath,
         string expectedContentHash,
-        byte[] expectedContent)
+        byte[] expectedContent,
+        bool exposeCreatedFileInChildren = true)
     {
         _remoteRootId = remoteRootId;
         _expectedRelativePath = expectedRelativePath;
         _expectedContentHash = expectedContentHash;
         _expectedContent = expectedContent;
+        _exposeCreatedFileInChildren = exposeCreatedFileInChildren;
     }
 
     public Guid CreatedFileId { get; } = Guid.Parse("33333333-3333-3333-3333-333333333333");
@@ -85,7 +88,7 @@ internal sealed class SyncOnceUploadServerHandler : HttpMessageHandler
         if (request.Method == HttpMethod.Get
             && request.PathAndQuery == "/api/v1/layouts/nodes/" + _remoteRootId.ToString("D") + "/children?page=1&pageSize=100&depth=0")
         {
-            if (_fileCreated)
+            if (_fileCreated && _exposeCreatedFileInChildren)
             {
                 return Json(HttpStatusCode.OK, new NodeContentDto
                 {
