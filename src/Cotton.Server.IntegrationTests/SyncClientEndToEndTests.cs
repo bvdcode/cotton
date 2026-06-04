@@ -101,6 +101,57 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task RunOnceAsync_ReportsUploadProgressThroughSdkToServer()
+    {
+        CottonCloudClient client = CreateClient();
+        await LoginAsync(client);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-progress");
+        string localRoot = Path.Combine(_tempDirectory, "client-progress");
+        const string relativePath = "Docs/progress.bin";
+        byte[] content = CreateDeterministicBytes((SyncTestChunkSizeBytes * 2) + 123);
+        WriteLocalFile(localRoot, relativePath, content);
+        SqliteSyncStateStore stateStore = CreateStateStore("client-progress-state.sqlite");
+        SyncEngine engine = CreateEngine(client, stateStore);
+        var transferProgress = new RecordingProgress<SyncTransferProgress>();
+        var runProgress = new RecordingProgress<SyncRunProgress>();
+        var activityProgress = new RecordingProgress<SyncActivity>();
+
+        SyncRunResult result = await engine.RunOnceAsync(
+            new SyncPair
+            {
+                SyncPairId = "client-progress",
+                LocalRootPath = localRoot,
+                RemoteRootNodeId = remoteRoot.Id,
+            },
+            new SyncRunOptions
+            {
+                ActivityProgress = activityProgress,
+                TransferProgress = transferProgress,
+                RunProgress = runProgress,
+            });
+
+        NodeFileManifestDto uploaded = await FindRemoteFileAsync(client, remoteRoot.Id, relativePath);
+        byte[] roundTrip = await DownloadBytesAsync(client, uploaded.Id);
+        IReadOnlyList<long> transferredBytes = transferProgress.Values.Select(progress => progress.TransferredBytes).ToList();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
+            Assert.That(activityProgress.Values.Select(activity => activity.RelativePath), Is.EqualTo(new[] { relativePath }));
+            Assert.That(runProgress.Values.Any(progress => progress.Stage == SyncRunProgressStage.ReconcilingFiles && progress.CurrentPath == relativePath), Is.True);
+            Assert.That(runProgress.Values[^1].Stage, Is.EqualTo(SyncRunProgressStage.Completed));
+            Assert.That(runProgress.Values[^1].IsCompleted, Is.True);
+            Assert.That(transferProgress.Values.Select(progress => progress.Direction), Is.All.EqualTo(SyncTransferDirection.Upload));
+            Assert.That(transferProgress.Values.Select(progress => progress.RelativePath), Is.All.EqualTo(relativePath));
+            Assert.That(transferProgress.Values.Select(progress => progress.TotalBytes), Is.All.EqualTo(content.Length));
+            Assert.That(transferredBytes, Is.EqualTo(new long[] { 0, SyncTestChunkSizeBytes, SyncTestChunkSizeBytes * 2, content.Length, content.Length }));
+            Assert.That(transferProgress.Values[^1].IsCompleted, Is.True);
+            Assert.That(uploaded.SizeBytes, Is.EqualTo(content.Length));
+            Assert.That(roundTrip, Is.EqualTo(content));
+        });
+    }
+
+    [Test]
     public async Task SyncCliCommandRunner_SyncOnceUploadsLocalFileThroughSdkToServer()
     {
         Assert.That(_httpClient, Is.Not.Null);
@@ -1617,6 +1668,16 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
         return result.Activities
             .Where(activity => activity.Kind == kind)
             .Select(activity => activity.RelativePath);
+    }
+
+    private sealed class RecordingProgress<T> : IProgress<T>
+    {
+        public List<T> Values { get; } = [];
+
+        public void Report(T value)
+        {
+            Values.Add(value);
+        }
     }
 
     private static IEnumerable<string> GetDirectoryPrefixes(string relativeDirectoryPath)
