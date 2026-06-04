@@ -85,7 +85,7 @@ public sealed class XdgAutostartServiceTests
     }
 
     [Test]
-    public async Task CreateDefault_OnLinux_DoesNotStartMinimizedWhenTrayLifecycleIsUnsupported()
+    public async Task CreateDefault_OnLinux_ReturnsUnsupportedForDevelopmentBuildOutput()
     {
         if (!OperatingSystem.IsLinux())
         {
@@ -98,16 +98,15 @@ public sealed class XdgAutostartServiceTests
         {
             IAutostartService service = DesktopAutostartServiceFactory.CreateDefault();
 
-            await service.SetEnabledAsync(true);
-
             string desktopFilePath = Path.Combine(_tempDirectory, "autostart", "cotton-sync.desktop");
-            string content = await File.ReadAllTextAsync(desktopFilePath);
+            Func<Task> enableAutostart = () => service.SetEnabledAsync(true);
 
             Assert.Multiple(() =>
             {
                 Assert.That(DesktopPlatformCapabilities.IsTrayLifecycleSupported, Is.False);
-                Assert.That(content, Does.Contain("Exec="));
-                Assert.That(content, Does.Not.Contain("--start-minimized"));
+                Assert.That(service, Is.TypeOf<UnsupportedAutostartService>());
+                Assert.That(enableAutostart, Throws.TypeOf<NotSupportedException>());
+                Assert.That(File.Exists(desktopFilePath), Is.False);
             });
         }
         finally

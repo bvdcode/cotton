@@ -27,18 +27,18 @@ internal sealed class XdgAutostartService : IAutostartService
 
     public static XdgAutostartService CreateDefault(bool startMinimized)
     {
-        string configHome = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME") ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(configHome))
-        {
-            configHome = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                ".config");
-        }
-
         return new XdgAutostartService(
-            Path.Combine(configHome, "autostart"),
+            GetAutostartDirectory(),
             AutostartLaunchCommand.CreateDefault(startMinimized),
             TryResolveIconPath());
+    }
+
+    public static XdgAutostartService? TryCreateDefault(bool startMinimized)
+    {
+        AutostartLaunchCommand? launchCommand = AutostartLaunchCommand.TryCreateDefault(startMinimized);
+        return launchCommand is null
+            ? null
+            : new XdgAutostartService(GetAutostartDirectory(), launchCommand, TryResolveIconPath());
     }
 
     public bool IsSupported => true;
@@ -82,6 +82,19 @@ internal sealed class XdgAutostartService : IAutostartService
     }
 
     private string DesktopFilePath => Path.Combine(_autostartDirectory, DesktopFileName);
+
+    private static string GetAutostartDirectory()
+    {
+        string configHome = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME") ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(configHome))
+        {
+            configHome = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".config");
+        }
+
+        return Path.Combine(configHome, "autostart");
+    }
 
     private string CreateDesktopFile()
     {

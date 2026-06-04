@@ -14,7 +14,9 @@ internal static class DesktopAutostartServiceFactory
 
         if (OperatingSystem.IsLinux())
         {
-            return XdgAutostartService.CreateDefault(DesktopPlatformCapabilities.IsTrayLifecycleSupported);
+            XdgAutostartService? autostartService = XdgAutostartService.TryCreateDefault(
+                DesktopPlatformCapabilities.IsTrayLifecycleSupported);
+            return autostartService is null ? new UnsupportedAutostartService() : autostartService;
         }
 
         if (OperatingSystem.IsWindows())
