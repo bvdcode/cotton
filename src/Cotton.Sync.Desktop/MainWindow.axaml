@@ -505,12 +505,14 @@
                           <TextBlock Grid.Row="1"
                                      Grid.ColumnSpan="2"
                                      Text="{Binding LocalPath}"
+                                     ToolTip.Tip="{Binding LocalPath}"
                                      FontSize="12"
                                      TextTrimming="CharacterEllipsis"
                                      Opacity="0.74" />
                           <TextBlock Grid.Row="2"
                                      Grid.ColumnSpan="2"
                                      Text="{Binding RemotePath}"
+                                     ToolTip.Tip="{Binding RemotePath}"
                                      FontSize="12"
                                      TextTrimming="CharacterEllipsis"
                                      Opacity="0.74" />
@@ -673,6 +675,7 @@
                   </Border>
                   <TextBlock Grid.Column="1"
                              Text="{Binding LocalFolderPath}"
+                             ToolTip.Tip="{Binding LocalFolderPath}"
                              TextTrimming="CharacterEllipsis"
                              VerticalAlignment="Center" />
                   <Button Grid.Column="2"
@@ -689,7 +692,7 @@
                     <Grid ColumnDefinitions="Auto,*,Auto"
                           ColumnSpacing="6">
                       <Button Content="Up"
-                              Classes="icon"
+                              Classes="compact"
                               ToolTip.Tip="Go up"
                               Command="{Binding RemoteFolderUpCommand}" />
                       <TextBlock Grid.Column="1"
@@ -742,6 +745,7 @@
 
                     <TextBlock Grid.Row="2"
                                Text="{Binding RemoteFolderSelectionLabel}"
+                               ToolTip.Tip="{Binding RemoteFolderSelectionLabel}"
                                Classes="secondary"
                                FontSize="12"
                                TextTrimming="CharacterEllipsis" />
@@ -797,8 +801,9 @@
                 <Grid ColumnDefinitions="*,Auto"
                       ColumnSpacing="8">
                   <Button Grid.Column="1"
-                          Content="Sync folder"
+                          Content="Sync"
                           Classes="primary"
+                          ToolTip.Tip="Start syncing this folder"
                           Command="{Binding AddSyncPairCommand}" />
                 </Grid>
               </StackPanel>
@@ -968,6 +973,7 @@
                               <TextBlock Grid.Row="1"
                                          Grid.ColumnSpan="2"
                                          Text="{Binding LocalPath}"
+                                         ToolTip.Tip="{Binding LocalPath}"
                                          Classes="secondary"
                                          FontSize="11"
                                          TextTrimming="CharacterEllipsis" />
