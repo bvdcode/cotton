@@ -44,6 +44,24 @@ public sealed class DesktopActionRequiredMessageResolverTests
     }
 
     [Test]
+    public void FromStatus_ExplainsRawJsonParserHtmlStartMessage()
+    {
+        var status = new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(
+                Guid.NewGuid(),
+                "Error",
+                "'<' is an invalid start of a value. Path: $ | LineNumber: 0 | BytePositionInLine: 0."),
+        ]);
+
+        string message = DesktopActionRequiredMessageResolver.FromStatus(status);
+
+        Assert.That(
+            message,
+            Is.EqualTo("Cotton API returned a web page instead of JSON. Check the server URL or backend deployment and retry."));
+    }
+
+    [Test]
     public void FromStatus_ReturnsEmptyWhenNoPairHasError()
     {
         var status = new DesktopSyncStatusSnapshot(
@@ -92,6 +110,19 @@ public sealed class DesktopActionRequiredMessageResolverTests
             HttpStatusCode.OK,
             "<!doctype html><html>App</html>",
             "Cotton API request GET /api/v1/settings returned invalid JSON with content type 'text/html' and status 200 (OK).");
+
+        string message = DesktopActionRequiredMessageResolver.FromException(exception);
+
+        Assert.That(
+            message,
+            Is.EqualTo("Cotton API returned a web page instead of JSON. Check the server URL or backend deployment and retry."));
+    }
+
+    [Test]
+    public void FromException_ExplainsRawJsonParserHtmlStartMessage()
+    {
+        var exception = new InvalidOperationException(
+            "'<' is an invalid start of a value. Path: $ | LineNumber: 0 | BytePositionInLine: 0.");
 
         string message = DesktopActionRequiredMessageResolver.FromException(exception);
 

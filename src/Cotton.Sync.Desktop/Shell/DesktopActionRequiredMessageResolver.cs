@@ -167,10 +167,17 @@ internal static class DesktopActionRequiredMessageResolver
 
     private static bool LooksLikeHtmlInsteadOfJson(string message, string? responseBody)
     {
-        return message.Contains("invalid JSON", StringComparison.OrdinalIgnoreCase)
-            && (message.Contains("text/html", StringComparison.OrdinalIgnoreCase)
-                || LooksLikeHtml(responseBody)
-                || LooksLikeHtml(message));
+        return (message.Contains("invalid JSON", StringComparison.OrdinalIgnoreCase)
+                && (message.Contains("text/html", StringComparison.OrdinalIgnoreCase)
+                    || LooksLikeHtml(responseBody)
+                    || LooksLikeHtml(message)))
+            || LooksLikeJsonParserHtmlStartMessage(message);
+    }
+
+    private static bool LooksLikeJsonParserHtmlStartMessage(string message)
+    {
+        return message.Contains("'<' is an invalid start of a value", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("\"<\" is an invalid start of a value", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool LooksLikeHtml(string? value)
