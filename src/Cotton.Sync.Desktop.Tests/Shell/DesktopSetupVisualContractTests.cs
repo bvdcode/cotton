@@ -37,6 +37,23 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
+    public void EmptyFoldersState_HasSingleAddFolderCommand()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string emptyFoldersState = GetSlice(
+            mainWindowXaml,
+            "IsVisible=\"{Binding HasNoSyncPairs}\"",
+            "<Grid RowDefinitions=\"*,Auto\"");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(CountOccurrences(emptyFoldersState, "ShowAddSyncPairCommand"), Is.EqualTo(1));
+            Assert.That(CountOccurrences(emptyFoldersState, "Content=\"+\""), Is.EqualTo(1));
+            Assert.That(emptyFoldersState, Does.Not.Contain("<TextBlock Text=\"+\""));
+        });
+    }
+
+    [Test]
     public void SetupErrorArea_ReservesSpaceWithoutReflowingTheForm()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
@@ -107,5 +124,24 @@ public sealed class DesktopSetupVisualContractTests
         }
 
         return text[start..end];
+    }
+
+    private static int CountOccurrences(string text, string value)
+    {
+        int count = 0;
+        int currentIndex = 0;
+        while (currentIndex < text.Length)
+        {
+            int nextIndex = text.IndexOf(value, currentIndex, StringComparison.Ordinal);
+            if (nextIndex < 0)
+            {
+                return count;
+            }
+
+            count++;
+            currentIndex = nextIndex + value.Length;
+        }
+
+        return count;
     }
 }

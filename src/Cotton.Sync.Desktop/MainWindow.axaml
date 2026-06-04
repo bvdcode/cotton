@@ -417,20 +417,13 @@
                         BorderThickness="1"
                         VerticalAlignment="Top"
                         IsVisible="{Binding HasNoSyncPairs}">
-                  <Grid ColumnDefinitions="Auto,*,Auto"
+                  <Grid ColumnDefinitions="Auto,*"
                         ColumnSpacing="9">
-                    <Border Width="32"
-                            Height="32"
-                            CornerRadius="6"
-                            Background="{DynamicResource CottonPrimarySoftBrush}"
-                            VerticalAlignment="Center">
-                      <TextBlock Text="+"
-                                 FontSize="20"
-                                 FontWeight="SemiBold"
-                                 Foreground="{DynamicResource CottonPrimaryBrush}"
-                                 HorizontalAlignment="Center"
-                                 VerticalAlignment="Center" />
-                    </Border>
+                    <Button Content="+"
+                            Classes="icon primary"
+                            ToolTip.Tip="Add sync folder"
+                            Command="{Binding ShowAddSyncPairCommand}"
+                            VerticalAlignment="Center" />
                     <StackPanel Grid.Column="1"
                                 Spacing="1"
                                 VerticalAlignment="Center">
@@ -443,11 +436,6 @@
                                  FontSize="12"
                                  TextTrimming="CharacterEllipsis" />
                     </StackPanel>
-                    <Button Grid.Column="2"
-                            Content="+"
-                            Classes="icon primary"
-                            ToolTip.Tip="Add sync folder"
-                            Command="{Binding ShowAddSyncPairCommand}" />
                   </Grid>
                 </Border>
 
