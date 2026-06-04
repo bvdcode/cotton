@@ -476,6 +476,9 @@ jobs:
           New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
           & "src/Cotton.Sync.Desktop/Packaging/windows/verify-checksums.ps1" `
             -PublishDirectory "src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64"
+          & "src/Cotton.Sync.Desktop/Packaging/windows/verify-associated-icon.ps1" `
+            -AppExecutable "src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64/Cotton.Sync.Desktop.exe" `
+            -ExpectedIcon "src/Cotton.Sync.Desktop/Assets/app.ico"
           src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64/Cotton.Sync.Desktop.exe --self-test --data-dir "$dataDir"
 
       - name: Smoke desktop Windows zip archive
@@ -492,6 +495,9 @@ jobs:
           Expand-Archive cotton-sync-desktop-win-x64-smoke.zip -DestinationPath $extractDir -Force
           & "src/Cotton.Sync.Desktop/Packaging/windows/verify-checksums.ps1" `
             -PublishDirectory $extractDir
+          & "src/Cotton.Sync.Desktop/Packaging/windows/verify-associated-icon.ps1" `
+            -AppExecutable (Join-Path $extractDir "Cotton.Sync.Desktop.exe") `
+            -ExpectedIcon "src/Cotton.Sync.Desktop/Assets/app.ico"
           & (Join-Path $extractDir "Cotton.Sync.Desktop.exe") --self-test --data-dir "$dataDir"
           & "src/Cotton.Sync.Desktop/Packaging/windows/smoke-diagnostics-export.ps1" `
             -AppExecutable (Join-Path $extractDir "Cotton.Sync.Desktop.exe") `
@@ -553,6 +559,9 @@ jobs:
           & $installedExe --self-test --data-dir "$dataDir"
           & "src/Cotton.Sync.Desktop/Packaging/windows/verify-checksums.ps1" `
             -PublishDirectory $installDir
+          & "src/Cotton.Sync.Desktop/Packaging/windows/verify-associated-icon.ps1" `
+            -AppExecutable $installedExe `
+            -ExpectedIcon "src/Cotton.Sync.Desktop/Assets/app.ico"
           & "src/Cotton.Sync.Desktop/Packaging/windows/smoke-diagnostics-export.ps1" `
             -AppExecutable $installedExe `
             -DataDirectory $dataDir
@@ -631,6 +640,9 @@ jobs:
           & $installedExe --self-test --data-dir "$dataDir"
           & "src/Cotton.Sync.Desktop/Packaging/windows/verify-checksums.ps1" `
             -PublishDirectory $installDir
+          & "src/Cotton.Sync.Desktop/Packaging/windows/verify-associated-icon.ps1" `
+            -AppExecutable $installedExe `
+            -ExpectedIcon "src/Cotton.Sync.Desktop/Assets/app.ico"
           & "src/Cotton.Sync.Desktop/Packaging/windows/smoke-diagnostics-export.ps1" `
             -AppExecutable $installedExe `
             -DataDirectory $dataDir

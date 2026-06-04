@@ -370,8 +370,25 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("needs: build"));
             Assert.That(workflow, Does.Contain("/p:PublishProfile=win-x64"));
             Assert.That(workflow, Does.Contain("-p:Version='${{ needs.build.outputs.Version }}'"));
+            Assert.That(workflow, Does.Contain("Packaging/windows/verify-associated-icon.ps1"));
+            Assert.That(workflow, Does.Contain("-ExpectedIcon \"src/Cotton.Sync.Desktop/Assets/app.ico\""));
             Assert.That(workflow, Does.Contain("Cotton.Sync.Desktop.exe --self-test --data-dir"));
             Assert.That(workflow, Does.Contain("- desktop-windows-smoke"));
+        });
+    }
+
+    [Test]
+    public void WindowsAssociatedIconVerifier_ComparesPublishedExeWithAppIcon()
+    {
+        string iconScript = File.ReadAllText(GetDesktopFilePath("Packaging/windows/verify-associated-icon.ps1"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(iconScript, Does.Contain("[System.Drawing.Icon]::ExtractAssociatedIcon"));
+            Assert.That(iconScript, Does.Contain("[System.Drawing.Icon]::new($resolvedIcon, 32, 32)"));
+            Assert.That(iconScript, Does.Contain("[System.Security.Cryptography.SHA256]::HashData"));
+            Assert.That(iconScript, Does.Contain("Desktop executable associated icon does not match"));
+            Assert.That(iconScript, Does.Contain("Verified Windows associated icon"));
         });
     }
 
@@ -386,6 +403,7 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("Smoke desktop Windows zip archive"));
             Assert.That(workflow, Does.Contain("Packaging/windows/package-zip.py"));
             Assert.That(workflow, Does.Contain("Packaging/windows/verify-checksums.ps1"));
+            Assert.That(workflow, Does.Contain("Packaging/windows/verify-associated-icon.ps1"));
             Assert.That(workflow, Does.Contain("cotton-sync-desktop-win-x64-smoke.zip"));
             Assert.That(workflow, Does.Contain("Expand-Archive cotton-sync-desktop-win-x64-smoke.zip"));
             Assert.That(workflow, Does.Contain("Cotton.Sync.Desktop.exe\") --self-test --data-dir"));
@@ -475,8 +493,9 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("Cotton.Sync.Desktop.exe\""));
             Assert.That(workflow, Does.Contain("--self-test --data-dir"));
             Assert.That(workflow, Does.Contain("-PublishDirectory $installDir"));
-            Assert.That(workflow, Does.Contain("Packaging/windows/smoke-diagnostics-export.ps1"));
             Assert.That(workflow, Does.Contain("-AppExecutable $installedExe"));
+            Assert.That(workflow, Does.Contain("-ExpectedIcon \"src/Cotton.Sync.Desktop/Assets/app.ico\""));
+            Assert.That(workflow, Does.Contain("Packaging/windows/smoke-diagnostics-export.ps1"));
             Assert.That(workflow, Does.Contain("unins000.exe"));
             Assert.That(workflow, Does.Contain("Installed desktop executable remained after uninstall."));
         });
@@ -498,6 +517,7 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("Current Windows installer exited with code"));
             Assert.That(workflow, Does.Contain("& $installedExe --self-test --data-dir"));
             Assert.That(workflow, Does.Contain("-PublishDirectory $installDir"));
+            Assert.That(workflow, Does.Contain("-ExpectedIcon \"src/Cotton.Sync.Desktop/Assets/app.ico\""));
             Assert.That(workflow, Does.Contain("Packaging/windows/smoke-diagnostics-export.ps1"));
             Assert.That(workflow, Does.Contain("Windows uninstaller was not found after upgrade."));
             Assert.That(workflow, Does.Contain("Upgraded desktop executable remained after uninstall."));
