@@ -13,6 +13,7 @@ public sealed class FileSystemLocalSyncRootWatcher : ILocalSyncRootWatcher
 {
     private readonly Guid _syncPairId;
     private readonly string _localRootPath;
+    private readonly LocalSyncRootChangeFilter _changeFilter;
     private readonly ILogger<FileSystemLocalSyncRootWatcher> _logger;
     private FileSystemWatcher? _watcher;
 
@@ -27,6 +28,7 @@ public sealed class FileSystemLocalSyncRootWatcher : ILocalSyncRootWatcher
         ArgumentException.ThrowIfNullOrWhiteSpace(localRootPath);
         _syncPairId = syncPairId;
         _localRootPath = localRootPath;
+        _changeFilter = new LocalSyncRootChangeFilter(localRootPath);
         _logger = logger ?? NullLogger<FileSystemLocalSyncRootWatcher>.Instance;
     }
 
@@ -125,6 +127,15 @@ public sealed class FileSystemLocalSyncRootWatcher : ILocalSyncRootWatcher
 
     private void Publish(string fullPath, LocalSyncRootChangeKind kind)
     {
+        if (!_changeFilter.ShouldPublish(fullPath))
+        {
+            _logger.LogDebug(
+                "Ignoring local sync root watcher event for {SyncPairId} at {ChangedPath}.",
+                _syncPairId,
+                fullPath);
+            return;
+        }
+
         Changed?.Invoke(this, new LocalSyncRootChange(_syncPairId, fullPath, kind));
     }
 }
