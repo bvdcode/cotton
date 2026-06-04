@@ -93,6 +93,37 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_ReportsAggregateRunProgressFileCounts()
+    {
+        var scanner = new FakeLocalFileScanner(
+            LocalFile("Docs/a.txt", "a"),
+            LocalFile("Docs/b.txt", "b"));
+        var progress = new RecordingProgress<SyncRunProgress>();
+        SyncEngine engine = CreateEngine(scanner, EmptyRemoteTree(), new FakeRemoteFileSynchronizer(), out _);
+
+        await engine.RunOnceAsync(
+            Pair(),
+            new SyncRunOptions { RunProgress = progress });
+
+        IReadOnlyList<SyncRunProgress> fileProgress = progress.Values
+            .Where(item => item.Stage == SyncRunProgressStage.ReconcilingFiles)
+            .ToList();
+        Assert.Multiple(() =>
+        {
+            Assert.That(progress.Values[0].Stage, Is.EqualTo(SyncRunProgressStage.ScanningLocal));
+            Assert.That(progress.Values.Any(item => item.Stage == SyncRunProgressStage.ScanningRemote), Is.True);
+            Assert.That(progress.Values.Any(item => item.Stage == SyncRunProgressStage.ReconcilingDirectories), Is.True);
+            Assert.That(fileProgress.Select(item => item.FilesTotal).Distinct(), Is.EqualTo(new int?[] { 2 }));
+            Assert.That(fileProgress.Select(item => item.FilesCompleted).Distinct(), Is.EqualTo(new[] { 0, 1, 2 }));
+            Assert.That(fileProgress.Where(item => !string.IsNullOrWhiteSpace(item.CurrentPath)).Select(item => item.CurrentPath).Distinct(), Is.EqualTo(new[] { "Docs/a.txt", "Docs/b.txt" }));
+            Assert.That(progress.Values[^1].Stage, Is.EqualTo(SyncRunProgressStage.Completed));
+            Assert.That(progress.Values[^1].FilesCompleted, Is.EqualTo(2));
+            Assert.That(progress.Values[^1].FilesTotal, Is.EqualTo(2));
+            Assert.That(progress.Values[^1].IsCompleted, Is.True);
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_DownloadsRemoteOnlyFileAndStoresBaseline()
     {
         byte[] content = Encoding.UTF8.GetBytes("remote-content");
@@ -1633,6 +1664,16 @@ public sealed class SyncEngineTests
             Func<TState, Exception?, string> formatter)
         {
             Entries.Add((logLevel, formatter(state, exception)));
+        }
+    }
+
+    private sealed class RecordingProgress<T> : IProgress<T>
+    {
+        public List<T> Values { get; } = [];
+
+        public void Report(T value)
+        {
+            Values.Add(value);
         }
     }
 

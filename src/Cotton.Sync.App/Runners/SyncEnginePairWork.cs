@@ -10,6 +10,8 @@ using CoreSyncActivity = Cotton.Sync.SyncActivity;
 using CoreSyncActivityKind = Cotton.Sync.SyncActivityKind;
 using CoreSyncEngine = Cotton.Sync.ISyncEngine;
 using CoreSyncPair = Cotton.Sync.SyncPair;
+using CoreSyncRunProgress = Cotton.Sync.SyncRunProgress;
+using CoreSyncRunProgressStage = Cotton.Sync.SyncRunProgressStage;
 using CoreSyncRunOptions = Cotton.Sync.SyncRunOptions;
 using CoreSyncTransferDirection = Cotton.Sync.SyncTransferDirection;
 using CoreSyncTransferProgress = Cotton.Sync.SyncTransferProgress;
@@ -23,6 +25,7 @@ public sealed class SyncEnginePairWork : ISyncPairWork
 {
     private readonly IAppActivityPublisher? _activityPublisher;
     private readonly IAppTransferProgressPublisher? _progressPublisher;
+    private readonly IAppRunProgressPublisher? _runProgressPublisher;
     private readonly CoreSyncEngine _syncEngine;
 
     /// <summary>
@@ -31,23 +34,26 @@ public sealed class SyncEnginePairWork : ISyncPairWork
     public SyncEnginePairWork(
         CoreSyncEngine syncEngine,
         IAppActivityPublisher? activityPublisher = null,
-        IAppTransferProgressPublisher? progressPublisher = null)
+        IAppTransferProgressPublisher? progressPublisher = null,
+        IAppRunProgressPublisher? runProgressPublisher = null)
     {
         _syncEngine = syncEngine ?? throw new ArgumentNullException(nameof(syncEngine));
         _activityPublisher = activityPublisher;
         _progressPublisher = progressPublisher;
+        _runProgressPublisher = runProgressPublisher;
     }
 
     /// <inheritdoc />
     public async Task RunOnceAsync(SyncPairSettings syncPair, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(syncPair);
-        CoreSyncRunOptions? options = _activityPublisher is null && _progressPublisher is null
+        CoreSyncRunOptions? options = _activityPublisher is null && _progressPublisher is null && _runProgressPublisher is null
             ? null
             : new CoreSyncRunOptions
             {
                 ActivityProgress = _activityPublisher is null ? null : new AppActivityProgress(syncPair.Id, _activityPublisher),
                 TransferProgress = _progressPublisher is null ? null : new AppTransferProgressReporter(syncPair.Id, _progressPublisher),
+                RunProgress = _runProgressPublisher is null ? null : new AppRunProgressReporter(syncPair.Id, _runProgressPublisher),
             };
         _ = await _syncEngine
             .RunOnceAsync(ToCorePair(syncPair), options, cancellationToken)
@@ -93,6 +99,21 @@ public sealed class SyncEnginePairWork : ISyncPairWork
             progress.OccurredAtUtc);
     }
 
+    private static AppRunProgress ToAppRunProgress(
+        Guid syncPairId,
+        CoreSyncRunProgress progress)
+    {
+        return new AppRunProgress(
+            syncPairId,
+            ToAppRunProgressStage(progress.Stage),
+            progress.FilesCompleted,
+            progress.FilesTotal,
+            progress.CurrentPath,
+            progress.StartedAtUtc,
+            progress.IsCompleted,
+            progress.OccurredAtUtc);
+    }
+
     private static AppTransferDirection ToAppTransferDirection(CoreSyncTransferDirection direction)
     {
         return direction switch
@@ -100,6 +121,19 @@ public sealed class SyncEnginePairWork : ISyncPairWork
             CoreSyncTransferDirection.Upload => AppTransferDirection.Upload,
             CoreSyncTransferDirection.Download => AppTransferDirection.Download,
             _ => AppTransferDirection.Unknown,
+        };
+    }
+
+    private static AppRunProgressStage ToAppRunProgressStage(CoreSyncRunProgressStage stage)
+    {
+        return stage switch
+        {
+            CoreSyncRunProgressStage.ScanningLocal => AppRunProgressStage.ScanningLocal,
+            CoreSyncRunProgressStage.ScanningRemote => AppRunProgressStage.ScanningRemote,
+            CoreSyncRunProgressStage.ReconcilingDirectories => AppRunProgressStage.ReconcilingDirectories,
+            CoreSyncRunProgressStage.ReconcilingFiles => AppRunProgressStage.ReconcilingFiles,
+            CoreSyncRunProgressStage.Completed => AppRunProgressStage.Completed,
+            _ => AppRunProgressStage.Unknown,
         };
     }
 
@@ -169,6 +203,24 @@ public sealed class SyncEnginePairWork : ISyncPairWork
         {
             ArgumentNullException.ThrowIfNull(value);
             _publisher.Publish(ToAppProgress(_syncPairId, value));
+        }
+    }
+
+    private sealed class AppRunProgressReporter : IProgress<CoreSyncRunProgress>
+    {
+        private readonly IAppRunProgressPublisher _publisher;
+        private readonly Guid _syncPairId;
+
+        public AppRunProgressReporter(Guid syncPairId, IAppRunProgressPublisher publisher)
+        {
+            _syncPairId = syncPairId;
+            _publisher = publisher;
+        }
+
+        public void Report(CoreSyncRunProgress value)
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _publisher.Publish(ToAppRunProgress(_syncPairId, value));
         }
     }
 }

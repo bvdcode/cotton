@@ -367,6 +367,7 @@ public sealed class DesktopShellControllerHostLifecycleTests
                 StatusPublisher,
                 new InMemoryAppActivityPublisher(),
                 new InMemoryAppTransferProgressPublisher(),
+                new InMemoryAppRunProgressPublisher(),
                 new FakeCottonTokenStore(),
                 new FakeCottonNodeClient(),
                 new FakeCottonSyncClient(),

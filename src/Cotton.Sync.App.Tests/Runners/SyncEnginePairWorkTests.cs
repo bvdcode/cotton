@@ -7,11 +7,14 @@ using Cotton.Sync.App.Runners;
 using Cotton.Sync.App.SyncPairs;
 using Cotton.Sync.App.Tests.TestSupport;
 using AppSyncActivity = Cotton.Sync.App.Activities.SyncActivity;
+using AppSyncRunProgress = Cotton.Sync.App.Progress.AppRunProgress;
 using AppSyncTransferProgress = Cotton.Sync.App.Progress.AppTransferProgress;
 using CoreSyncActivity = Cotton.Sync.SyncActivity;
 using CoreSyncActivityKind = Cotton.Sync.SyncActivityKind;
 using CoreSyncEngine = Cotton.Sync.ISyncEngine;
 using CoreSyncPair = Cotton.Sync.SyncPair;
+using CoreSyncRunProgress = Cotton.Sync.SyncRunProgress;
+using CoreSyncRunProgressStage = Cotton.Sync.SyncRunProgressStage;
 using CoreSyncRunOptions = Cotton.Sync.SyncRunOptions;
 using CoreSyncRunResult = Cotton.Sync.SyncRunResult;
 using CoreSyncTransferDirection = Cotton.Sync.SyncTransferDirection;
@@ -115,6 +118,40 @@ public sealed class SyncEnginePairWorkTests
         });
     }
 
+    [Test]
+    public async Task RunOnceAsync_PublishesCoreRunProgress()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var engine = new FakeSyncEngine
+        {
+            RunProgressToReport = new CoreSyncRunProgress(
+                CoreSyncRunProgressStage.ReconcilingFiles,
+                filesCompleted: 3,
+                filesTotal: 10,
+                currentPath: "Documents/report.txt",
+                startedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc)),
+        };
+        var publisher = new InMemoryAppRunProgressPublisher();
+        var observer = new RecordingObserver<AppSyncRunProgress>();
+        using IDisposable subscription = publisher.Subscribe(observer);
+        var work = new SyncEnginePairWork(engine, runProgressPublisher: publisher);
+        SyncPairSettings syncPair = CreateSyncPair(syncPairId);
+
+        await work.RunOnceAsync(syncPair);
+
+        AppSyncRunProgress progress = observer.Values.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(engine.LastOptions?.RunProgress, Is.Not.Null);
+            Assert.That(progress.SyncPairId, Is.EqualTo(syncPairId));
+            Assert.That(progress.Stage, Is.EqualTo(AppRunProgressStage.ReconcilingFiles));
+            Assert.That(progress.FilesCompleted, Is.EqualTo(3));
+            Assert.That(progress.FilesTotal, Is.EqualTo(10));
+            Assert.That(progress.CurrentPath, Is.EqualTo("Documents/report.txt"));
+            Assert.That(progress.IsCompleted, Is.False);
+        });
+    }
+
     private static SyncPairSettings CreateSyncPair(Guid id)
     {
         return new SyncPairSettings
@@ -134,6 +171,8 @@ public sealed class SyncEnginePairWorkTests
         public CoreSyncActivity? ActivityToReport { get; set; }
 
         public CoreSyncTransferProgress? TransferProgressToReport { get; set; }
+
+        public CoreSyncRunProgress? RunProgressToReport { get; set; }
 
         public CoreSyncRunOptions? LastOptions { get; private set; }
 
@@ -157,6 +196,11 @@ public sealed class SyncEnginePairWorkTests
             if (TransferProgressToReport is not null)
             {
                 options?.TransferProgress?.Report(TransferProgressToReport);
+            }
+
+            if (RunProgressToReport is not null)
+            {
+                options?.RunProgress?.Report(RunProgressToReport);
             }
 
             return Task.FromResult(new CoreSyncRunResult());

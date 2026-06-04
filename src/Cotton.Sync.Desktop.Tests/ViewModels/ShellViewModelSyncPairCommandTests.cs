@@ -576,6 +576,70 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task RunProgressChanged_UpdatesCurrentRunProgressState()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            DesktopRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 3,
+            FilesTotal: 10,
+            CurrentPath: "Reports/report.txt",
+            StartedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 5, DateTimeKind.Utc)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasCurrentRunProgress, Is.True);
+            Assert.That(viewModel.IsCurrentRunProgressIndeterminate, Is.False);
+            Assert.That(viewModel.CurrentRunProgressValue, Is.EqualTo(30).Within(0.01));
+            Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Documents: Checking files"));
+            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("3 of 10 files · report.txt"));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Documents: Checking files 3 of 10"));
+        });
+    }
+
+    [Test]
+    public async Task StatusChanged_ClearsCurrentRunProgressWhenSyncBecomesIdle()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            DesktopRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 3,
+            FilesTotal: 10,
+            CurrentPath: "Reports/report.txt",
+            StartedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 5, DateTimeKind.Utc)));
+
+        controller.ReportStatus(new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(
+                syncPairId,
+                "Idle",
+                null,
+                LastSyncedAtUtc: new DateTime(2026, 6, 4, 9, 1, 0, DateTimeKind.Utc)),
+        ]));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasCurrentRunProgress, Is.False);
+            Assert.That(viewModel.CurrentRunProgressTitle, Is.Empty);
+            Assert.That(viewModel.CurrentRunProgressDetails, Is.Empty);
+            Assert.That(viewModel.CurrentRunProgressValue, Is.Zero);
+        });
+    }
+
+    [Test]
     public async Task StatusChanged_ClearsCurrentTransferWhenSyncBecomesIdle()
     {
         Guid syncPairId = Guid.NewGuid();
@@ -1405,6 +1469,8 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public event EventHandler<DesktopTransferProgressSnapshot>? TransferProgressChanged;
 
+        public event EventHandler<DesktopRunProgressSnapshot>? RunProgressChanged;
+
         public Guid? EnabledSyncPairId { get; private set; }
 
         public bool? EnabledSyncPairValue { get; private set; }
@@ -1462,6 +1528,11 @@ public sealed class ShellViewModelSyncPairCommandTests
         public void ReportTransferProgress(DesktopTransferProgressSnapshot progress)
         {
             TransferProgressChanged?.Invoke(this, progress);
+        }
+
+        public void ReportRunProgress(DesktopRunProgressSnapshot progress)
+        {
+            RunProgressChanged?.Invoke(this, progress);
         }
 
         public Task<DesktopShellSnapshot> LoadAsync(CancellationToken cancellationToken = default)

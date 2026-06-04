@@ -38,6 +38,12 @@ internal sealed class VisualSmokeShellController : IDesktopShellController
         remove { }
     }
 
+    public event EventHandler<DesktopRunProgressSnapshot>? RunProgressChanged
+    {
+        add { }
+        remove { }
+    }
+
     public static VisualSmokeShellController Create(DesktopVisualSmokeScenario scenario)
     {
         return new VisualSmokeShellController(scenario);

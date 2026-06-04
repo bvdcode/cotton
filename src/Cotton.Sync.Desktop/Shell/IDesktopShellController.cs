@@ -15,6 +15,8 @@ internal interface IDesktopShellController : IDisposable, IAsyncDisposable
 
     event EventHandler<DesktopTransferProgressSnapshot>? TransferProgressChanged;
 
+    event EventHandler<DesktopRunProgressSnapshot>? RunProgressChanged;
+
     Task<DesktopShellSnapshot> LoadAsync(CancellationToken cancellationToken = default);
 
     Task<DesktopServerProbeResult> ProbeServerAsync(string serverUrl, CancellationToken cancellationToken = default);

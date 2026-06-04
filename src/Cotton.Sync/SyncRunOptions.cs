@@ -34,4 +34,9 @@ public sealed class SyncRunOptions
     /// Gets or sets the optional live transfer-progress reporter used by UI clients.
     /// </summary>
     public IProgress<SyncTransferProgress>? TransferProgress { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional aggregate sync-pass progress reporter used by UI clients.
+    /// </summary>
+    public IProgress<SyncRunProgress>? RunProgress { get; set; }
 }

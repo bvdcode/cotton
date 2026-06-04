@@ -67,8 +67,9 @@ internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFac
             logger: _loggerFactory.CreateLogger<HeadlessSyncEngine>());
         var activityPublisher = new InMemoryAppActivityPublisher();
         var transferProgressPublisher = new InMemoryAppTransferProgressPublisher();
+        var runProgressPublisher = new InMemoryAppRunProgressPublisher();
         ISyncPairWork pairWork = new RemoteChangeAwareSyncPairWork(
-            new SyncEnginePairWork(syncEngine, activityPublisher, transferProgressPublisher),
+            new SyncEnginePairWork(syncEngine, activityPublisher, transferProgressPublisher, runProgressPublisher),
             remoteChangeFeed);
         var runnerFactory = new SyncPairRunnerFactory(pairWork, loggerFactory: _loggerFactory);
         var statusPublisher = new InMemoryAppStatusPublisher();
@@ -117,6 +118,7 @@ internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFac
             statusPublisher,
             activityPublisher,
             transferProgressPublisher,
+            runProgressPublisher,
             tokenStore,
             cottonClient.Nodes,
             cottonClient.Sync,

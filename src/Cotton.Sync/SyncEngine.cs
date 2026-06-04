@@ -62,9 +62,12 @@ public sealed class SyncEngine : ISyncEngine
 
         options ??= new SyncRunOptions();
         ValidateOptions(options);
+        DateTime startedAtUtc = DateTime.UtcNow;
+        ReportRunProgress(options, SyncRunProgressStage.ScanningLocal, 0, null, null, startedAtUtc);
         _logger.LogInformation("Starting sync pass for pair {SyncPairId}.", syncPair.SyncPairId);
         await _stateStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
         LocalTreeSnapshot localTree = await ScanLocalTreeAsync(syncPair.LocalRootPath, cancellationToken).ConfigureAwait(false);
+        ReportRunProgress(options, SyncRunProgressStage.ScanningRemote, 0, null, null, startedAtUtc);
         RemoteTreeSnapshot remoteTree = await _remoteCrawler.CrawlAsync(syncPair.RemoteRootNodeId, cancellationToken).ConfigureAwait(false);
         List<SyncStateEntry> stateEntries = (await _stateStore
             .LoadPairAsync(syncPair.SyncPairId, cancellationToken)
@@ -77,6 +80,13 @@ public sealed class SyncEngine : ISyncEngine
         Dictionary<string, SyncStateEntry> directoryStateByPath = ToDictionary(
             stateEntries.Where(entry => entry.Kind == SyncEntryKind.Directory),
             entry => entry.RelativePath);
+        Dictionary<string, LocalFileSnapshot> localByPath = ToDictionary(localTree.Files, file => file.RelativePath);
+        Dictionary<string, RemoteFileSnapshot> remoteByPath = ToDictionary(remoteTree.Files, file => file.RelativePath);
+        Dictionary<string, SyncStateEntry> stateByPath = ToDictionary(
+            stateEntries.Where(entry => entry.Kind == SyncEntryKind.File),
+            entry => entry.RelativePath);
+        List<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys);
+        ReportRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, 0, pathKeys.Count, null, startedAtUtc);
         await ReconcileDirectoriesWithoutBaselineAsync(
             syncPair,
             options,
@@ -87,12 +97,6 @@ public sealed class SyncEngine : ISyncEngine
             remoteTree.RootNode,
             cancellationToken).ConfigureAwait(false);
 
-        Dictionary<string, LocalFileSnapshot> localByPath = ToDictionary(localTree.Files, file => file.RelativePath);
-        Dictionary<string, RemoteFileSnapshot> remoteByPath = ToDictionary(remoteTree.Files, file => file.RelativePath);
-        Dictionary<string, SyncStateEntry> stateByPath = ToDictionary(
-            stateEntries.Where(entry => entry.Kind == SyncEntryKind.File),
-            entry => entry.RelativePath);
-        List<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys);
         SyncDeleteGuard deleteGuard = BuildDeleteGuard(
             options,
             pathKeys,
@@ -115,6 +119,8 @@ public sealed class SyncEngine : ISyncEngine
             remoteByPath,
             cancellationToken).ConfigureAwait(false);
 
+        int filesCompleted = 0;
+        ReportRunProgress(options, SyncRunProgressStage.ReconcilingFiles, filesCompleted, pathKeys.Count, null, startedAtUtc);
         foreach (string key in pathKeys)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -122,17 +128,23 @@ public sealed class SyncEngine : ISyncEngine
             remoteByPath.TryGetValue(key, out RemoteFileSnapshot? remote);
             stateByPath.TryGetValue(key, out SyncStateEntry? state);
             string relativePath = local?.RelativePath ?? remote?.RelativePath ?? state?.RelativePath ?? key;
+            ReportRunProgress(options, SyncRunProgressStage.ReconcilingFiles, filesCompleted, pathKeys.Count, relativePath, startedAtUtc);
 
             if (state is null)
             {
                 await ReconcileWithoutBaselineAsync(syncPair, options, result, relativePath, local, remote, cancellationToken).ConfigureAwait(false);
+                filesCompleted++;
+                ReportRunProgress(options, SyncRunProgressStage.ReconcilingFiles, filesCompleted, pathKeys.Count, relativePath, startedAtUtc);
                 continue;
             }
 
             await ReconcileWithBaselineAsync(syncPair, options, result, deleteGuard, state, relativePath, local, remote, cancellationToken)
                 .ConfigureAwait(false);
+            filesCompleted++;
+            ReportRunProgress(options, SyncRunProgressStage.ReconcilingFiles, filesCompleted, pathKeys.Count, relativePath, startedAtUtc);
         }
 
+        ReportRunProgress(options, SyncRunProgressStage.Completed, filesCompleted, pathKeys.Count, null, startedAtUtc, isCompleted: true);
         _logger.LogInformation(
             "Completed sync pass for pair {SyncPairId} with {ActivityCount} activities.",
             syncPair.SyncPairId,
@@ -1082,6 +1094,24 @@ public sealed class SyncEngine : ISyncEngine
             relativePath,
             transferredBytes,
             totalBytes,
+            isCompleted));
+    }
+
+    private static void ReportRunProgress(
+        SyncRunOptions options,
+        SyncRunProgressStage stage,
+        int filesCompleted,
+        int? filesTotal,
+        string? currentPath,
+        DateTime startedAtUtc,
+        bool isCompleted = false)
+    {
+        options.RunProgress?.Report(new SyncRunProgress(
+            stage,
+            filesCompleted,
+            filesTotal,
+            currentPath,
+            startedAtUtc,
             isCompleted));
     }
 

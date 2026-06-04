@@ -24,6 +24,7 @@ internal sealed class DesktopSyncApplicationHost : IDisposable, IAsyncDisposable
         IAppStatusPublisher statusPublisher,
         IAppActivityPublisher activityPublisher,
         IAppTransferProgressPublisher transferProgressPublisher,
+        IAppRunProgressPublisher runProgressPublisher,
         ICottonTokenStore tokenStore,
         ICottonNodeClient nodes,
         ICottonSyncClient sync,
@@ -36,6 +37,7 @@ internal sealed class DesktopSyncApplicationHost : IDisposable, IAsyncDisposable
         StatusPublisher = statusPublisher ?? throw new ArgumentNullException(nameof(statusPublisher));
         ActivityPublisher = activityPublisher ?? throw new ArgumentNullException(nameof(activityPublisher));
         TransferProgressPublisher = transferProgressPublisher ?? throw new ArgumentNullException(nameof(transferProgressPublisher));
+        RunProgressPublisher = runProgressPublisher ?? throw new ArgumentNullException(nameof(runProgressPublisher));
         TokenStore = tokenStore ?? throw new ArgumentNullException(nameof(tokenStore));
         Nodes = nodes ?? throw new ArgumentNullException(nameof(nodes));
         Sync = sync ?? throw new ArgumentNullException(nameof(sync));
@@ -53,6 +55,8 @@ internal sealed class DesktopSyncApplicationHost : IDisposable, IAsyncDisposable
     public IAppActivityPublisher ActivityPublisher { get; }
 
     public IAppTransferProgressPublisher TransferProgressPublisher { get; }
+
+    public IAppRunProgressPublisher RunProgressPublisher { get; }
 
     public ICottonTokenStore TokenStore { get; }
 
