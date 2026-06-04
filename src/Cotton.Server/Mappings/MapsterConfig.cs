@@ -50,6 +50,10 @@ namespace Cotton.Server.Mappings
                 .NewConfig()
                 .Map(dest => dest.AvatarHashEncryptedHex, src => src.GetAvatarHashEncryptedHex());
 
+            TypeAdapterConfig<SyncChange, SyncChangeDto>
+                .NewConfig()
+                .Map(dest => dest.Cursor, src => src.Revision);
+
             _isConfigured = true;
         }
     }
