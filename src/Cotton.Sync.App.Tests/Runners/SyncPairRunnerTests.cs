@@ -115,6 +115,98 @@ public sealed class SyncPairRunnerTests
     }
 
     [Test]
+    public async Task PauseAsync_ClearsQueuedSyncRequest()
+    {
+        var work = new BlockingFirstRunSyncPairWork();
+        SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true), work);
+
+        Task firstSync = runner.SyncNowAsync();
+        await work.WaitForRunAsync(TimeSpan.FromSeconds(2));
+        await runner.SyncNowAsync();
+        Task pause = runner.PauseAsync();
+        work.ReleaseRun();
+
+        await Task.WhenAll(firstSync, pause).WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(work.RunCount, Is.EqualTo(1));
+            Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Paused));
+        });
+    }
+
+    [Test]
+    public async Task StopAsync_ClearsQueuedSyncRequest()
+    {
+        var work = new BlockingFirstRunSyncPairWork();
+        SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true), work);
+
+        Task firstSync = runner.SyncNowAsync();
+        await work.WaitForRunAsync(TimeSpan.FromSeconds(2));
+        await runner.SyncNowAsync();
+        Task stop = runner.StopAsync();
+        work.ReleaseRun();
+
+        await Task.WhenAll(firstSync, stop).WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(work.RunCount, Is.EqualTo(1));
+            Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Disabled));
+        });
+    }
+
+    [Test]
+    public async Task PauseAsync_WhenCanceledBeforeStateChange_DoesNotBlockFutureSyncRequests()
+    {
+        var work = new BlockingFirstRunSyncPairWork();
+        SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true), work);
+        using var cancellation = new CancellationTokenSource();
+
+        Task firstSync = runner.SyncNowAsync();
+        await work.WaitForRunAsync(TimeSpan.FromSeconds(2));
+        await cancellation.CancelAsync();
+
+        OperationCanceledException? exception = Assert.CatchAsync<OperationCanceledException>(
+            async () => await runner.PauseAsync(cancellation.Token));
+        work.ReleaseRun();
+        await firstSync.WaitAsync(TimeSpan.FromSeconds(2));
+        await runner.SyncNowAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(work.RunCount, Is.EqualTo(2));
+            Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Idle));
+        });
+    }
+
+    [Test]
+    public async Task StopAsync_WhenCanceledBeforeStateChange_DoesNotBlockFutureSyncRequests()
+    {
+        var work = new BlockingFirstRunSyncPairWork();
+        SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true), work);
+        using var cancellation = new CancellationTokenSource();
+
+        Task firstSync = runner.SyncNowAsync();
+        await work.WaitForRunAsync(TimeSpan.FromSeconds(2));
+        await cancellation.CancelAsync();
+
+        OperationCanceledException? exception = Assert.CatchAsync<OperationCanceledException>(
+            async () => await runner.StopAsync(cancellation.Token));
+        work.ReleaseRun();
+        await firstSync.WaitAsync(TimeSpan.FromSeconds(2));
+        await runner.SyncNowAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(work.RunCount, Is.EqualTo(2));
+            Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Idle));
+        });
+    }
+
+    [Test]
     public void SyncNowAsync_SetsErrorAndRethrowsOnFailure()
     {
         var work = new FakeSyncPairWork
@@ -427,6 +519,39 @@ public sealed class SyncPairRunnerTests
                 _releaseLock();
                 throw;
             }
+        }
+    }
+
+    private sealed class BlockingFirstRunSyncPairWork : ISyncPairWork
+    {
+        private readonly TaskCompletionSource _runStarted = CreateCompletionSource();
+        private readonly TaskCompletionSource _releaseRun = CreateCompletionSource();
+
+        public int RunCount { get; private set; }
+
+        public async Task RunOnceAsync(SyncPairSettings syncPair, CancellationToken cancellationToken = default)
+        {
+            RunCount++;
+            _runStarted.TrySetResult();
+            if (RunCount == 1)
+            {
+                await _releaseRun.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        public void ReleaseRun()
+        {
+            _releaseRun.TrySetResult();
+        }
+
+        public Task WaitForRunAsync(TimeSpan timeout)
+        {
+            return _runStarted.Task.WaitAsync(timeout);
+        }
+
+        private static TaskCompletionSource CreateCompletionSource()
+        {
+            return new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         }
     }
 

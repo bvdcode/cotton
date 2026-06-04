@@ -25,6 +25,7 @@ public sealed class SyncPairRunner : ISyncPairRunner
     private readonly ISyncPairWork _work;
     private bool _isSyncInProgress;
     private bool _pendingSyncRequested;
+    private bool _syncRequestsBlocked;
     private DateTime? _lastSuccessfulSyncAtUtc;
     private SyncPairStatus _status;
 
@@ -41,6 +42,7 @@ public sealed class SyncPairRunner : ISyncPairRunner
         _work = work ?? throw new ArgumentNullException(nameof(work));
         _retryOptions = (retryOptions ?? SyncPairRunnerRetryOptions.Default).Normalize();
         _logger = logger ?? NullLogger<SyncPairRunner>.Instance;
+        _syncRequestsBlocked = !syncPair.IsEnabled;
         _status = CreateStatus(syncPair.IsEnabled ? SyncPairRunState.Idle : SyncPairRunState.Disabled);
     }
 
@@ -66,6 +68,7 @@ public sealed class SyncPairRunner : ISyncPairRunner
         try
         {
             SetState(_syncPair.IsEnabled ? SyncPairRunState.Idle : SyncPairRunState.Disabled);
+            SetSyncRequestsBlocked(!_syncPair.IsEnabled);
         }
         finally
         {
@@ -76,7 +79,17 @@ public sealed class SyncPairRunner : ISyncPairRunner
     /// <inheritdoc />
     public async Task PauseAsync(CancellationToken cancellationToken = default)
     {
-        await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        SetSyncRequestsBlocked(isBlocked: true);
+        try
+        {
+            await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            RestoreSyncRequestBlockFromStatus();
+            throw;
+        }
+
         try
         {
             if (Status.State != SyncPairRunState.Disabled)
@@ -97,6 +110,7 @@ public sealed class SyncPairRunner : ISyncPairRunner
         try
         {
             SetState(_syncPair.IsEnabled ? SyncPairRunState.Idle : SyncPairRunState.Disabled);
+            SetSyncRequestsBlocked(!_syncPair.IsEnabled);
         }
         finally
         {
@@ -177,6 +191,11 @@ public sealed class SyncPairRunner : ISyncPairRunner
     {
         lock (_syncRequestGate)
         {
+            if (_syncRequestsBlocked)
+            {
+                return false;
+            }
+
             if (_isSyncInProgress)
             {
                 _pendingSyncRequested = true;
@@ -246,7 +265,17 @@ public sealed class SyncPairRunner : ISyncPairRunner
     /// <inheritdoc />
     public async Task StopAsync(CancellationToken cancellationToken = default)
     {
-        await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        SetSyncRequestsBlocked(isBlocked: true);
+        try
+        {
+            await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            RestoreSyncRequestBlockFromStatus();
+            throw;
+        }
+
         try
         {
             SetState(SyncPairRunState.Disabled);
@@ -255,6 +284,24 @@ public sealed class SyncPairRunner : ISyncPairRunner
         {
             _operationGate.Release();
         }
+    }
+
+    private void SetSyncRequestsBlocked(bool isBlocked)
+    {
+        lock (_syncRequestGate)
+        {
+            _syncRequestsBlocked = isBlocked;
+            if (isBlocked)
+            {
+                _pendingSyncRequested = false;
+            }
+        }
+    }
+
+    private void RestoreSyncRequestBlockFromStatus()
+    {
+        SyncPairRunState state = Status.State;
+        SetSyncRequestsBlocked(!_syncPair.IsEnabled || state is SyncPairRunState.Disabled or SyncPairRunState.Paused);
     }
 
     private void SetState(
