@@ -15,7 +15,11 @@ internal sealed class DesktopTrayController : IDisposable
     private readonly IClassicDesktopStyleApplicationLifetime _lifetime;
     private readonly MainWindow _window;
     private readonly TrayIcon _trayIcon;
+    private NativeMenuItem? _openFolderMenuItem;
+    private NativeMenuItem? _openWebMenuItem;
     private NativeMenuItem? _pauseResumeMenuItem;
+    private NativeMenuItem? _settingsMenuItem;
+    private NativeMenuItem? _syncNowMenuItem;
     private Uri _currentIconUri = DesktopTrayIconAssetResolver.Resolve(DesktopTrayStatusKind.SignedOut);
     private ShellViewModel? _viewModel;
     private bool _disposed;
@@ -57,7 +61,11 @@ internal sealed class DesktopTrayController : IDisposable
 
     private TrayIcon CreateTrayIcon()
     {
+        _openFolderMenuItem = CreateMenuItem("Open selected folder", () => Execute(commandSource => commandSource.OpenFolderCommand));
+        _openWebMenuItem = CreateMenuItem("Open Cotton Cloud", () => Execute(commandSource => commandSource.OpenWebCommand));
+        _syncNowMenuItem = CreateMenuItem("Sync now", () => Execute(commandSource => commandSource.SyncNowCommand));
         _pauseResumeMenuItem = CreateMenuItem("Pause", () => Execute(commandSource => commandSource.PauseResumeCommand));
+        _settingsMenuItem = CreateMenuItem("Settings", ShowSettings);
         var trayIcon = new TrayIcon
         {
             Icon = LoadIcon(_currentIconUri),
@@ -68,11 +76,11 @@ internal sealed class DesktopTrayController : IDisposable
                 Items =
                 {
                     CreateMenuItem("Show", ShowWindow),
-                    CreateMenuItem("Open folder", () => Execute(commandSource => commandSource.OpenFolderCommand)),
-                    CreateMenuItem("Open web", () => Execute(commandSource => commandSource.OpenWebCommand)),
-                    CreateMenuItem("Sync now", () => Execute(commandSource => commandSource.SyncNowCommand)),
+                    _openFolderMenuItem,
+                    _openWebMenuItem,
+                    _syncNowMenuItem,
                     _pauseResumeMenuItem,
-                    CreateMenuItem("Settings", ShowSettings),
+                    _settingsMenuItem,
                     new NativeMenuItemSeparator(),
                     CreateMenuItem("Quit", Quit),
                 },
@@ -110,7 +118,16 @@ internal sealed class DesktopTrayController : IDisposable
         }
 
         if (e.PropertyName is nameof(ShellViewModel.PauseResumeTrayLabel)
+            or nameof(ShellViewModel.CanSyncNow)
             or nameof(ShellViewModel.CanTogglePauseResumeSync))
+        {
+            UpdateTrayActions();
+            return;
+        }
+
+        if (e.PropertyName is nameof(ShellViewModel.IsSignedIn)
+            or nameof(ShellViewModel.IsBusy)
+            or nameof(ShellViewModel.SelectedSyncPair))
         {
             UpdateTrayActions();
         }
@@ -138,13 +155,33 @@ internal sealed class DesktopTrayController : IDisposable
 
     private void UpdateTrayActions()
     {
-        if (_pauseResumeMenuItem is null)
+        if (_viewModel is null)
         {
+            SetMenuItemEnabled(_openFolderMenuItem, false);
+            SetMenuItemEnabled(_openWebMenuItem, false);
+            SetMenuItemEnabled(_syncNowMenuItem, false);
+            SetMenuItemEnabled(_pauseResumeMenuItem, false);
+            SetMenuItemEnabled(_settingsMenuItem, false);
             return;
         }
 
-        _pauseResumeMenuItem.Header = _viewModel?.PauseResumeTrayLabel ?? "Pause";
-        _pauseResumeMenuItem.IsEnabled = _viewModel?.CanTogglePauseResumeSync ?? false;
+        SetMenuItemEnabled(_openFolderMenuItem, _viewModel.OpenFolderCommand.CanExecute(null));
+        SetMenuItemEnabled(_openWebMenuItem, _viewModel.OpenWebCommand.CanExecute(null));
+        SetMenuItemEnabled(_syncNowMenuItem, _viewModel.SyncNowCommand.CanExecute(null));
+        SetMenuItemEnabled(_settingsMenuItem, _viewModel.ShowSettingsCommand.CanExecute(null));
+        if (_pauseResumeMenuItem is not null)
+        {
+            _pauseResumeMenuItem.Header = _viewModel.PauseResumeTrayLabel;
+            _pauseResumeMenuItem.IsEnabled = _viewModel.PauseResumeCommand.CanExecute(null);
+        }
+    }
+
+    private static void SetMenuItemEnabled(NativeMenuItem? menuItem, bool isEnabled)
+    {
+        if (menuItem is not null)
+        {
+            menuItem.IsEnabled = isEnabled;
+        }
     }
 
     private void Execute(Func<ShellViewModel, AsyncRelayCommand> selectCommand)
