@@ -143,12 +143,16 @@ public sealed class DesktopPackagingMetadataTests
     public void CiWorkflow_UploadsWindowsZipPortableArtifact()
     {
         string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+        string packageScript = File.ReadAllText(GetDesktopFilePath("Packaging/windows/package-zip.py"));
 
         Assert.Multiple(() =>
         {
             Assert.That(workflow, Does.Contain("Package desktop Windows x64 zip"));
+            Assert.That(workflow, Does.Contain("src/Cotton.Sync.Desktop/Packaging/windows/package-zip.py"));
             Assert.That(workflow, Does.Contain("cotton-sync-desktop-win-x64.zip"));
-            Assert.That(workflow, Does.Contain("from zipfile import ZIP_DEFLATED, ZipFile"));
+            Assert.That(packageScript, Does.Contain("Cotton.Sync.Desktop.exe"));
+            Assert.That(packageScript, Does.Contain("ZipFile(output_zip, \"w\", ZIP_DEFLATED)"));
+            Assert.That(packageScript, Does.Contain("path.relative_to(resolved_publish_dir).as_posix()"));
             Assert.That(
                 Regex.Matches(workflow, "cotton-sync-desktop-win-x64\\.zip").Count,
                 Is.GreaterThanOrEqualTo(2));

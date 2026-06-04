@@ -218,17 +218,10 @@ jobs:
         run: tar -czf cotton-sync-desktop-win-x64.tar.gz -C src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64 .
 
       - name: Package desktop Windows x64 zip
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          from zipfile import ZIP_DEFLATED, ZipFile
-
-          root = Path("src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64")
-          with ZipFile("cotton-sync-desktop-win-x64.zip", "w", ZIP_DEFLATED) as archive:
-              for path in sorted(root.rglob("*")):
-                  if path.is_file():
-                      archive.write(path, path.relative_to(root).as_posix())
-          PY
+        run: >
+          python3 src/Cotton.Sync.Desktop/Packaging/windows/package-zip.py
+          src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64
+          cotton-sync-desktop-win-x64.zip
 
       - name: Upload desktop Windows x64 artifact
         uses: actions/upload-artifact@v5
