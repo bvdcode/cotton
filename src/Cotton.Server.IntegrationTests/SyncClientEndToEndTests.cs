@@ -1181,6 +1181,59 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task RunOnceAsync_RecoversAfterServerHostRestartDuringUploadBeforeBaselineUpdate()
+    {
+        CottonCloudClient client = CreateClient();
+        await LoginAsync(client);
+        NodeDto remoteRoot = await new RemoteRootResolver(client.Nodes).EnsureAsync("sync-e2e-server-restart-during-upload");
+        string localRoot = Path.Combine(_tempDirectory, "client-server-restart-during-upload");
+        const string relativePath = "Restart/restarted-during-upload.txt";
+        WriteLocalFile(localRoot, relativePath, "uploaded before server restart");
+        SqliteSyncStateStore stateStore = CreateStateStore("client-server-restart-during-upload-state.sqlite");
+        var syncPair = new SyncPair
+        {
+            SyncPairId = "client-server-restart-during-upload",
+            LocalRootPath = localRoot,
+            RemoteRootNodeId = remoteRoot.Id,
+        };
+        var restartingRemoteFiles = new RestartAfterUploadRemoteFileSynchronizer(
+            new SdkRemoteFileSynchronizer(client, new SdkRemoteFileSynchronizerOptions { ChunkSizeBytes = SyncTestChunkSizeBytes }),
+            RestartServerHost);
+        SyncEngine interruptedEngine = CreateEngine(client, stateStore, restartingRemoteFiles);
+
+        HttpRequestException? restartException = Assert.ThrowsAsync<HttpRequestException>(() => interruptedEngine.RunOnceAsync(syncPair));
+
+        CottonCloudClient restartedClient = CreateClient();
+        await LoginAsync(restartedClient);
+        NodeFileManifestDto uploadedBeforeRecovery = await FindRemoteFileAsync(restartedClient, remoteRoot.Id, relativePath);
+        string uploadedContent = await DownloadTextAsync(restartedClient, uploadedBeforeRecovery.Id);
+        IReadOnlyList<SyncStateEntry> baselinesAfterInterruptedRun = await stateStore.LoadPairAsync(syncPair.SyncPairId);
+
+        SyncEngine recoveredEngine = CreateEngine(restartedClient, stateStore);
+        SyncRunResult recoveryResult = await recoveredEngine.RunOnceAsync(syncPair);
+
+        NodeFileManifestDto uploadedAfterRecovery = await FindRemoteFileAsync(restartedClient, remoteRoot.Id, relativePath);
+        NodeContentDto rootContent = await restartedClient.Nodes.GetChildrenAsync(remoteRoot.Id);
+        NodeDto restartDirectory = rootContent.Nodes.Single(node => string.Equals(node.Name, "Restart", StringComparison.Ordinal));
+        NodeContentDto restartDirectoryContent = await restartedClient.Nodes.GetChildrenAsync(restartDirectory.Id);
+        SyncStateEntry? baseline = await stateStore.GetAsync(syncPair.SyncPairId, relativePath);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(restartException, Is.Not.Null);
+            Assert.That(restartException!.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.ServiceUnavailable));
+            Assert.That(restartingRemoteFiles.UploadAttempts, Is.EqualTo(1));
+            Assert.That(uploadedContent, Is.EqualTo("uploaded before server restart"));
+            Assert.That(baselinesAfterInterruptedRun, Is.Empty);
+            Assert.That(recoveryResult.Activities, Is.Empty);
+            Assert.That(uploadedAfterRecovery.Id, Is.EqualTo(uploadedBeforeRecovery.Id));
+            Assert.That(restartDirectoryContent.Files.Select(file => file.Name), Is.EqualTo(new[] { "restarted-during-upload.txt" }));
+            Assert.That(baseline?.RemoteFileId, Is.EqualTo(uploadedAfterRecovery.Id));
+            Assert.That(baseline?.RemoteContentHash, Is.EqualTo(uploadedAfterRecovery.ContentHash));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_RecoversAfterRemoteUploadBeforeBaselineUpdateThroughSdkAndServer()
     {
         CottonCloudClient client = CreateClient();
@@ -1337,12 +1390,15 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
             existingFile.ETag);
     }
 
-    private static SyncEngine CreateEngine(CottonCloudClient client, ISyncStateStore stateStore)
+    private static SyncEngine CreateEngine(
+        CottonCloudClient client,
+        ISyncStateStore stateStore,
+        IRemoteFileSynchronizer? remoteFiles = null)
     {
         return new SyncEngine(
             new LocalFileScanner(),
             new RemoteTreeCrawler(client.Nodes),
-            new SdkRemoteFileSynchronizer(client, new SdkRemoteFileSynchronizerOptions { ChunkSizeBytes = SyncTestChunkSizeBytes }),
+            remoteFiles ?? new SdkRemoteFileSynchronizer(client, new SdkRemoteFileSynchronizerOptions { ChunkSizeBytes = SyncTestChunkSizeBytes }),
             stateStore);
     }
 
@@ -1666,6 +1722,52 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
             CancellationToken cancellationToken = default)
         {
             return _inner.ReplacePairAsync(syncPairId, entries, cancellationToken);
+        }
+    }
+
+    private sealed class RestartAfterUploadRemoteFileSynchronizer : IRemoteFileSynchronizer
+    {
+        private readonly IRemoteFileSynchronizer _inner;
+        private readonly Action _restartServerHost;
+
+        public RestartAfterUploadRemoteFileSynchronizer(IRemoteFileSynchronizer inner, Action restartServerHost)
+        {
+            _inner = inner;
+            _restartServerHost = restartServerHost;
+        }
+
+        public int UploadAttempts { get; private set; }
+
+        public async Task<NodeFileManifestDto> UploadFileAsync(
+            Guid rootNodeId,
+            string relativePath,
+            LocalFileSnapshot localFile,
+            NodeFileManifestDto? existingRemoteFile = null,
+            CancellationToken cancellationToken = default)
+        {
+            UploadAttempts++;
+            await _inner
+                .UploadFileAsync(rootNodeId, relativePath, localFile, existingRemoteFile, cancellationToken)
+                .ConfigureAwait(false);
+            _restartServerHost();
+            throw new HttpRequestException(
+                "server restarted after upload acknowledgement was lost",
+                null,
+                System.Net.HttpStatusCode.ServiceUnavailable);
+        }
+
+        public Task DownloadFileAsync(Guid nodeFileId, Stream destination, CancellationToken cancellationToken = default)
+        {
+            return _inner.DownloadFileAsync(nodeFileId, destination, cancellationToken);
+        }
+
+        public Task DeleteFileAsync(
+            Guid nodeFileId,
+            bool skipTrash = false,
+            string? expectedETag = null,
+            CancellationToken cancellationToken = default)
+        {
+            return _inner.DeleteFileAsync(nodeFileId, skipTrash, expectedETag, cancellationToken);
         }
     }
 
