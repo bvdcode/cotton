@@ -124,6 +124,21 @@ public sealed class DesktopPackagingMetadataTests
         });
     }
 
+    [Test]
+    public void CiWorkflow_RunsWindowsDesktopSmokeBeforeRelease()
+    {
+        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(workflow, Does.Contain("desktop-windows-smoke:"));
+            Assert.That(workflow, Does.Contain("runs-on: windows-latest"));
+            Assert.That(workflow, Does.Contain("/p:PublishProfile=win-x64 -p:GeneratePublishChecksums=false"));
+            Assert.That(workflow, Does.Contain("Cotton.Sync.Desktop.exe --self-test --data-dir"));
+            Assert.That(workflow, Does.Contain("- desktop-windows-smoke"));
+        });
+    }
+
     private static string? GetProperty(XElement propertyGroup, string name)
     {
         return propertyGroup.Element(name)?.Value;

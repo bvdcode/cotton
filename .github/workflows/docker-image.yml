@@ -317,10 +317,38 @@ jobs:
         if: github.ref == 'refs/heads/main' && steps.gitversion.outputs.CommitsSinceVersionSource > 0
         run: dotnet nuget push "nupkg/*.nupkg" --skip-duplicate --api-key ${{ secrets.NUGET_KEY }} --source https://api.nuget.org/v3/index.json
 
+  desktop-windows-smoke:
+    name: Desktop Windows Smoke
+    runs-on: windows-latest
+    needs: test
+    steps:
+      - name: check repository
+        uses: actions/checkout@v5
+        with:
+          lfs: "true"
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish desktop Windows x64
+        run: dotnet publish src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj /p:PublishProfile=win-x64 -p:GeneratePublishChecksums=false
+
+      - name: Smoke desktop Windows self-test
+        shell: pwsh
+        run: |
+          $dataDir = Join-Path $env:RUNNER_TEMP "cotton-sync-smoke"
+          New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
+          src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64/Cotton.Sync.Desktop.exe --self-test --data-dir "$dataDir"
+
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: build
+    needs:
+      - build
+      - desktop-windows-smoke
     if: github.ref == 'refs/heads/main' # only run job if on the master branch
     permissions:
       contents: write
