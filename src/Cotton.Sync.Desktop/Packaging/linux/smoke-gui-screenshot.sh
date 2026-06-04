@@ -63,6 +63,18 @@ ffmpeg \
   -frames:v 1 \
   "$output_png"
 
+if ! kill -0 "$app_pid" >/dev/null 2>&1; then
+  cat "$log_file" >&2 || true
+  echo "Desktop app exited during screenshot capture." >&2
+  exit 1
+fi
+
+if grep -Eiq "Unhandled exception|TypeLoadException|MissingMethodException|FileNotFoundException|Could not load file or assembly" "$log_file"; then
+  cat "$log_file" >&2 || true
+  echo "Desktop app log contains runtime exception signatures." >&2
+  exit 1
+fi
+
 if [ ! -s "$output_png" ]; then
   cat "$log_file" >&2 || true
   echo "GUI screenshot was not created: $output_png" >&2

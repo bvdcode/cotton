@@ -147,6 +147,9 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(smokeScript, Does.Contain("-draw_mouse 0"));
             Assert.That(smokeScript, Does.Contain("-video_size \"$capture_size\""));
             Assert.That(smokeScript, Does.Contain("-frames:v 1"));
+            Assert.That(smokeScript, Does.Contain("Desktop app exited during screenshot capture."));
+            Assert.That(smokeScript, Does.Contain("TypeLoadException"));
+            Assert.That(smokeScript, Does.Contain("Desktop app log contains runtime exception signatures."));
             Assert.That(smokeScript, Does.Contain("GUI screenshot was not created"));
             Assert.That(smokeScript, Does.Contain("ffprobe -v error"));
             Assert.That(smokeScript, Does.Contain("lavfi.signalstats.YMIN"));
