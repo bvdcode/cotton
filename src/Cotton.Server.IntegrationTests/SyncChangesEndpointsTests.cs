@@ -7,6 +7,7 @@ using Cotton.Database.Models.Enums;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Models.Requests;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
@@ -98,6 +99,32 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         });
     }
 
+    [Test]
+    public async Task RenameFolder_StagesFolderRenamedChangeWithParentNodeId()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "sync-before-rename");
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage renameResponse = await _client!.PatchAsJsonAsync(
+            $"{Routes.V1.Layouts}/nodes/{folder.Id}/rename",
+            new RenameNodeRequest { Name = "sync-after-rename" });
+        renameResponse.EnsureSuccessStatusCode();
+
+        SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
+        SyncChangeDto change = response.Changes.Single(x => x.ItemId == folder.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FolderRenamed));
+            Assert.That(change.LayoutId, Is.EqualTo(folder.LayoutId));
+            Assert.That(change.ParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(change.Name, Is.EqualTo("sync-after-rename"));
+        });
+    }
+
     private Dictionary<string, string?> CreateOverrides()
     {
         var csb = new NpgsqlConnectionStringBuilder
@@ -170,6 +197,25 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         });
 
         response.EnsureSuccessStatusCode();
+    }
+
+    private async Task<NodeDto> GetRootAsync()
+    {
+        NodeDto? root = await _client!.GetFromJsonAsync<NodeDto>($"{Routes.V1.Layouts}/resolver");
+        Assert.That(root, Is.Not.Null);
+        return root!;
+    }
+
+    private async Task<NodeDto> CreateFolderAsync(Guid parentId, string name)
+    {
+        using HttpResponseMessage response = await _client!.PutAsJsonAsync(
+            $"{Routes.V1.Layouts}/nodes",
+            new CreateNodeRequest { ParentId = parentId, Name = name });
+        response.EnsureSuccessStatusCode();
+
+        NodeDto? node = await response.Content.ReadFromJsonAsync<NodeDto>();
+        Assert.That(node, Is.Not.Null);
+        return node!;
     }
 
     private async Task<long> AddSyncChangeAsync(Guid ownerId, string name)
