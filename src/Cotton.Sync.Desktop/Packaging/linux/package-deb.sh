@@ -31,6 +31,7 @@ install -d "$package_root/usr/share/icons/hicolor/192x192/apps"
 
 cp -a "$publish_dir/." "$package_root/opt/cotton-sync/"
 chmod 755 "$package_root/opt/cotton-sync/Cotton.Sync.Desktop"
+rm -f "$package_root/opt/cotton-sync/cotton-sync.desktop"
 ln -s /opt/cotton-sync/Cotton.Sync.Desktop "$package_root/usr/bin/cotton-sync"
 install -m 644 "$publish_dir/Assets/icon-192.png" \
   "$package_root/usr/share/icons/hicolor/192x192/apps/cotton-sync.png"

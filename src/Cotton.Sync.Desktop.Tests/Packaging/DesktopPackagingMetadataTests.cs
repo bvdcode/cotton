@@ -100,6 +100,7 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(packageScript, Does.Contain("/usr/bin/cotton-sync"));
             Assert.That(packageScript, Does.Contain("/usr/share/applications/cotton-sync.desktop"));
             Assert.That(packageScript, Does.Contain("/usr/share/icons/hicolor/192x192/apps/cotton-sync.png"));
+            Assert.That(packageScript, Does.Contain("rm -f \"$package_root/opt/cotton-sync/cotton-sync.desktop\""));
             Assert.That(packageScript, Does.Contain("Package: cotton-sync-desktop"));
             Assert.That(packageScript, Does.Contain("Architecture: amd64"));
             Assert.That(packageScript, Does.Contain("Depends: libsecret-tools"));
