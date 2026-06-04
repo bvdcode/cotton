@@ -299,6 +299,74 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_DoesNotCascadeLocalDirectoryDeletesInsideOneRun()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "Projects", "Archive"));
+        RemoteDirectorySnapshot parent = RemoteDirectory("Projects");
+        RemoteDirectorySnapshot child = RemoteDirectory("Projects/Archive", parent.Node.Id);
+        var scanner = new FakeLocalFileScanner
+        {
+            Directories =
+            {
+                LocalDirectory("Projects"),
+                LocalDirectory("Projects/Archive"),
+            },
+        };
+        SyncEngine engine = CreateEngine(scanner, EmptyRemoteTree(), new FakeRemoteFileSynchronizer(), out SqliteSyncStateStore stateStore);
+        await InsertDirectoryBaselineAsync(stateStore, "Projects", parent.Node);
+        await InsertDirectoryBaselineAsync(stateStore, "Projects/Archive", child.Node);
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair(), new SyncRunOptions { MaximumLocalDeletesPerRun = 1 });
+
+        IReadOnlyList<SyncStateEntry> state = await stateStore.LoadPairAsync("pair-a");
+        Assert.Multiple(() =>
+        {
+            Assert.That(Directory.Exists(Path.Combine(_root, "Projects")), Is.True);
+            Assert.That(Directory.Exists(Path.Combine(_root, "Projects", "Archive")), Is.False);
+            Assert.That(state.Select(entry => entry.RelativePath), Is.EqualTo(new[] { "Projects" }));
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.DeletedLocal, SyncActivityKind.Skipped }));
+            Assert.That(result.Activities[1].Details, Does.Contain("not empty"));
+        });
+    }
+
+    [Test]
+    public async Task RunOnceAsync_PreservesLocalFolderWhenRemoteFileInsideIsDeleted()
+    {
+        const string directoryPath = "Projects";
+        const string filePath = "Projects/deleted-remotely.txt";
+        WriteFile(filePath, "baseline-content");
+        LocalFileSnapshot local = LocalFile(filePath, "baseline-content");
+        RemoteDirectorySnapshot remoteDirectory = RemoteDirectory(directoryPath);
+        RemoteTreeSnapshot remoteTree = EmptyRemoteTree();
+        remoteTree.Directories.Add(remoteDirectory);
+        var scanner = new FakeLocalFileScanner(local)
+        {
+            Directories =
+            {
+                LocalDirectory(directoryPath),
+            },
+        };
+        SyncEngine engine = CreateEngine(scanner, remoteTree, new FakeRemoteFileSynchronizer(), out SqliteSyncStateStore stateStore);
+        await InsertDirectoryBaselineAsync(stateStore, directoryPath, remoteDirectory.Node);
+        await InsertBaselineAsync(
+            stateStore,
+            filePath,
+            local.ContentHash,
+            RemoteFile(filePath, local.ContentHash));
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+        IReadOnlyList<SyncStateEntry> state = await stateStore.LoadPairAsync("pair-a");
+        Assert.Multiple(() =>
+        {
+            Assert.That(Directory.Exists(Path.Combine(_root, directoryPath)), Is.True);
+            Assert.That(File.Exists(Path.Combine(_root, "Projects", "deleted-remotely.txt")), Is.False);
+            Assert.That(state.Select(entry => entry.RelativePath), Is.EqualTo(new[] { directoryPath }));
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.DeletedLocal }));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_UploadsUnicodeNamedLocalFileAndStoresBaseline()
     {
         const string relativePath = "Документы/設計-notes.txt";

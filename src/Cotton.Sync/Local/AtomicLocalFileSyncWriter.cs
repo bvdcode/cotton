@@ -89,7 +89,6 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
             }
 
             File.Move(targetPath, preservedPath, overwrite: false);
-            DeleteEmptyParents(fullRoot, Path.GetDirectoryName(targetPath));
         }
 
         return Task.CompletedTask;
@@ -117,7 +116,6 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
         if (Directory.Exists(targetPath))
         {
             Directory.Delete(targetPath);
-            DeleteEmptyParents(fullRoot, Path.GetDirectoryName(targetPath));
         }
 
         return Task.CompletedTask;
@@ -164,25 +162,4 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
             normalizedPath.Replace('/', Path.DirectorySeparatorChar));
     }
 
-    private static void DeleteEmptyParents(string fullRoot, string? currentDirectory)
-    {
-        string root = Path.GetFullPath(fullRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        while (!string.IsNullOrEmpty(currentDirectory))
-        {
-            string current = Path.GetFullPath(currentDirectory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            if (string.Equals(current, root, StringComparison.OrdinalIgnoreCase)
-                || current.EndsWith(Path.DirectorySeparatorChar + MetadataDirectoryName, StringComparison.OrdinalIgnoreCase))
-            {
-                break;
-            }
-
-            if (Directory.EnumerateFileSystemEntries(current).Any())
-            {
-                break;
-            }
-
-            Directory.Delete(current);
-            currentDirectory = Path.GetDirectoryName(current);
-        }
-    }
 }

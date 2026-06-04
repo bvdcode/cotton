@@ -57,7 +57,7 @@ public sealed class AtomicLocalFileSyncWriterTests
     }
 
     [Test]
-    public async Task DeleteFileAsync_MovesFileToDeletedQuarantine()
+    public async Task DeleteFileAsync_MovesFileToDeletedQuarantineAndPreservesParentDirectory()
     {
         string relativePath = "Docs/file.txt";
         WriteFile(relativePath, "deleted-content");
@@ -74,7 +74,7 @@ public sealed class AtomicLocalFileSyncWriterTests
             Assert.That(File.Exists(FullPath(relativePath)), Is.False);
             Assert.That(deletedFiles, Has.Length.EqualTo(1));
             Assert.That(File.ReadAllText(deletedFiles[0]), Is.EqualTo("deleted-content"));
-            Assert.That(Directory.Exists(Path.Combine(_root, "Docs")), Is.False);
+            Assert.That(Directory.Exists(Path.Combine(_root, "Docs")), Is.True);
         });
     }
 
@@ -89,7 +89,7 @@ public sealed class AtomicLocalFileSyncWriterTests
     }
 
     [Test]
-    public async Task DeleteDirectoryAsync_RemovesOnlyEmptyDirectoryAndParents()
+    public async Task DeleteDirectoryAsync_RemovesOnlyTargetEmptyDirectory()
     {
         Directory.CreateDirectory(FullPath("Docs/Empty"));
         var writer = new AtomicLocalFileSyncWriter();
@@ -99,7 +99,7 @@ public sealed class AtomicLocalFileSyncWriterTests
         Assert.Multiple(() =>
         {
             Assert.That(Directory.Exists(FullPath("Docs/Empty")), Is.False);
-            Assert.That(Directory.Exists(FullPath("Docs")), Is.False);
+            Assert.That(Directory.Exists(FullPath("Docs")), Is.True);
         });
     }
 
