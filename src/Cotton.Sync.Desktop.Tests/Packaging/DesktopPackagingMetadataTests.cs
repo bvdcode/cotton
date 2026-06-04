@@ -145,6 +145,24 @@ public sealed class DesktopPackagingMetadataTests
     }
 
     [Test]
+    public void CiWorkflow_SmokesLinuxDebInstallAndUninstall()
+    {
+        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(workflow, Does.Contain("Smoke desktop Linux deb install"));
+            Assert.That(workflow, Does.Contain("sudo dpkg -i cotton-sync-desktop-linux-x64.deb"));
+            Assert.That(workflow, Does.Contain("sudo dpkg -r cotton-sync-desktop"));
+            Assert.That(workflow, Does.Contain("test -x /opt/cotton-sync/Cotton.Sync.Desktop"));
+            Assert.That(workflow, Does.Contain("test -L /usr/bin/cotton-sync"));
+            Assert.That(workflow, Does.Contain("/opt/cotton-sync/Cotton.Sync.Desktop --self-test --data-dir"));
+            Assert.That(workflow, Does.Contain("test ! -e /opt/cotton-sync/Cotton.Sync.Desktop"));
+            Assert.That(workflow, Does.Contain("test ! -e /usr/bin/cotton-sync"));
+        });
+    }
+
+    [Test]
     public void CiWorkflow_RunsWindowsDesktopSmokeBeforeRelease()
     {
         string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));

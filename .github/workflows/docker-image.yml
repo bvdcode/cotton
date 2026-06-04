@@ -232,6 +232,29 @@ jobs:
           "$extract_dir/opt/cotton-sync/Cotton.Sync.Desktop" --self-test --data-dir "$data_dir"
           EOF
 
+      - name: Smoke desktop Linux deb install
+        run: |
+          sudo dpkg -i cotton-sync-desktop-linux-x64.deb
+          cleanup() {
+            sudo dpkg -r cotton-sync-desktop >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          test -x /opt/cotton-sync/Cotton.Sync.Desktop
+          test -L /usr/bin/cotton-sync
+
+          dbus-run-session -- bash -euo pipefail <<'EOF'
+          temp_dir="$(mktemp -d)"
+          trap 'rm -rf "$temp_dir"' EXIT
+          eval "$(gnome-keyring-daemon --start --components=secrets)"
+          /opt/cotton-sync/Cotton.Sync.Desktop --self-test --data-dir "$temp_dir"
+          EOF
+
+          sudo dpkg -r cotton-sync-desktop
+          trap - EXIT
+          test ! -e /opt/cotton-sync/Cotton.Sync.Desktop
+          test ! -e /usr/bin/cotton-sync
+
       - name: Upload desktop Linux x64 artifact
         uses: actions/upload-artifact@v5
         with:
