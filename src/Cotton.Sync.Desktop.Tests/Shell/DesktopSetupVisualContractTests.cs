@@ -107,6 +107,49 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
+    public void DashboardActionRows_UseIconButtonsForNarrowActions()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string actionRequiredRow = GetSlice(
+            mainWindowXaml,
+            "<TextBlock Text=\"Action required\"",
+            "<Border Grid.Row=\"2\"");
+        string conflictsHeader = GetSlice(
+            mainWindowXaml,
+            "<TextBlock Text=\"Conflicts\"",
+            "<ScrollViewer Grid.Row=\"1\"");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(actionRequiredRow, Does.Contain("Content=\"↻\""));
+            Assert.That(actionRequiredRow, Does.Contain("Content=\"✓\""));
+            Assert.That(actionRequiredRow, Does.Not.Contain("Content=\"Retry\""));
+            Assert.That(actionRequiredRow, Does.Not.Contain("Content=\"Check\""));
+            Assert.That(conflictsHeader, Does.Contain("Content=\"↻\""));
+            Assert.That(conflictsHeader, Does.Contain("Content=\"↗\""));
+            Assert.That(conflictsHeader, Does.Not.Contain("Content=\"Retry\""));
+            Assert.That(conflictsHeader, Does.Not.Contain("Content=\"Open\""));
+        });
+    }
+
+    [Test]
+    public void SettingsDiagnostics_UsesCompactExportAction()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string diagnosticsSection = GetSlice(
+            mainWindowXaml,
+            "<TextBlock Text=\"Diagnostics\"",
+            "<TextBlock Text=\"Cotton Sync Desktop\"");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(diagnosticsSection, Does.Contain("Content=\"Export\""));
+            Assert.That(diagnosticsSection, Does.Not.Contain("Content=\"Export diagnostics\""));
+            Assert.That(diagnosticsSection, Does.Contain("ToolTip.Tip=\"Export diagnostics bundle\""));
+        });
+    }
+
+    [Test]
     public void AddFolderWizard_StretchesWithinDashboardWindow()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));

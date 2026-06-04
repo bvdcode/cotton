@@ -279,13 +279,13 @@
                         Orientation="Horizontal"
                         Spacing="6"
                         VerticalAlignment="Center">
-              <Button Content="Retry"
-                      Classes="compact"
+              <Button Content="↻"
+                      Classes="icon"
                       ToolTip.Tip="Run synchronization again"
                       IsVisible="{Binding CanRetryActionRequired}"
                       Command="{Binding SyncNowCommand}" />
-              <Button Content="Check"
-                      Classes="compact"
+              <Button Content="✓"
+                      Classes="icon"
                       ToolTip.Tip="Run desktop self-test"
                       Command="{Binding SelfTestCommand}" />
             </StackPanel>
@@ -345,13 +345,13 @@
                            FontSize="12" />
               </StackPanel>
               <Button Grid.Column="1"
-                      Content="Retry"
-                      Classes="compact"
+                      Content="↻"
+                      Classes="icon"
                       ToolTip.Tip="Run synchronization again"
                       Command="{Binding SyncNowCommand}" />
               <Button Grid.Column="2"
-                      Content="Open"
-                      Classes="compact"
+                      Content="↗"
+                      Classes="icon"
                       ToolTip.Tip="Open selected conflict location"
                       Command="{Binding OpenSelectedConflictCommand}" />
             </Grid>
@@ -919,7 +919,7 @@
                             Classes="compact"
                             ToolTip.Tip="Run desktop self-test"
                             Command="{Binding SelfTestCommand}" />
-                    <Button Content="Export diagnostics"
+                    <Button Content="Export"
                             Classes="compact"
                             ToolTip.Tip="Export diagnostics bundle"
                             Command="{Binding ExportDiagnosticsCommand}" />
