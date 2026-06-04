@@ -72,7 +72,7 @@ namespace Cotton.Server.Controllers
             // Don't forget - if hash mismatches I can't just delete the chunk from storage
             // it may be owned by other users or it might be hacked together from other chunks
 
-            if (file == null || file.Length == 0)
+            if (file == null)
             {
                 return CottonResult.BadRequest("No file uploaded.");
             }
@@ -121,7 +121,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> UploadRawChunk([FromQuery] string hash)
         {
             long? contentLength = Request.ContentLength;
-            if (!contentLength.HasValue || contentLength.Value <= 0)
+            if (!contentLength.HasValue)
             {
                 return CottonResult.BadRequest("No file uploaded.");
             }
