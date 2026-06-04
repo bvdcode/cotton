@@ -795,9 +795,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private Task CancelAddSyncPairAsync()
     {
         LocalFolderPath = string.Empty;
-        RemoteFolderPath = string.Empty;
+        ResetRemoteFolderSelection();
         IsAddSyncPairWizardVisible = false;
-        RemoteFolders.Clear();
         return Task.CompletedTask;
     }
 
@@ -1131,6 +1130,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         if (!HasLocalFolderSelection)
         {
             await BrowseLocalFolderAsync().ConfigureAwait(true);
+            if (!HasLocalFolderSelection)
+            {
+                ResetRemoteFolderSelection();
+                return;
+            }
         }
 
         await LoadRemoteFoldersAsync("/").ConfigureAwait(true);
@@ -1315,6 +1319,14 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         {
             IsBusy = false;
         }
+    }
+
+    private void ResetRemoteFolderSelection()
+    {
+        RemoteBrowserPath = "/";
+        RemoteFolderPath = string.Empty;
+        SelectedRemoteFolder = null;
+        RemoteFolders.Clear();
     }
 
     private void OnStatusChanged(object? sender, DesktopSyncStatusSnapshot status)

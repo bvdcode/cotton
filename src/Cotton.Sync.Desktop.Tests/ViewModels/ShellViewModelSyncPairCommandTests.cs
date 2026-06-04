@@ -274,6 +274,7 @@ public sealed class ShellViewModelSyncPairCommandTests
     [Test]
     public async Task ShowAddSyncPairCommand_LoadsRemoteRootFolders()
     {
+        var localFolderPicker = new FakeLocalFolderPicker("/home/user/Cotton");
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot());
         controller.RemoteFoldersByPath["/"] = new DesktopRemoteFolderListSnapshot(
             "/",
@@ -281,7 +282,7 @@ public sealed class ShellViewModelSyncPairCommandTests
                 new DesktopRemoteFolderSnapshot(Guid.NewGuid(), "Documents", "/Documents"),
                 new DesktopRemoteFolderSnapshot(Guid.NewGuid(), "Pictures", "/Pictures"),
             ]);
-        using ShellViewModel viewModel = CreateViewModel(controller);
+        using ShellViewModel viewModel = CreateViewModel(controller, localFolderPicker: localFolderPicker);
         await viewModel.InitializeAsync();
 
         await ExecuteAsync(viewModel.ShowAddSyncPairCommand);
@@ -293,6 +294,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.RemoteFolderPath, Is.EqualTo("/"));
             Assert.That(viewModel.RemoteFolders.Select(static folder => folder.Name), Is.EqualTo(new[] { "Documents", "Pictures" }));
             Assert.That(viewModel.SelectedRemoteFolder?.Path, Is.EqualTo("/Documents"));
+            Assert.That(controller.ListRemoteFolderPaths, Is.EqualTo(new[] { "/" }));
         });
     }
 
@@ -343,7 +345,9 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.IsAddSyncPairLocalStepVisible, Is.True);
             Assert.That(viewModel.IsAddSyncPairCloudStepVisible, Is.False);
             Assert.That(viewModel.RemoteBrowserPath, Is.EqualTo("/"));
-            Assert.That(viewModel.RemoteFolderPath, Is.EqualTo("/"));
+            Assert.That(viewModel.RemoteFolderPath, Is.Empty);
+            Assert.That(viewModel.RemoteFolders, Is.Empty);
+            Assert.That(controller.ListRemoteFolderPaths, Is.Empty);
         });
     }
 
@@ -351,6 +355,7 @@ public sealed class ShellViewModelSyncPairCommandTests
     public async Task OpenRemoteFolderCommand_NavigatesToSelectedCloudFolder()
     {
         Guid archiveId = Guid.NewGuid();
+        var localFolderPicker = new FakeLocalFolderPicker("/home/user/Cotton");
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot());
         controller.RemoteFoldersByPath["/"] = new DesktopRemoteFolderListSnapshot(
             "/",
@@ -362,7 +367,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             [
                 new DesktopRemoteFolderSnapshot(archiveId, "Archive", "/Documents/Archive"),
             ]);
-        using ShellViewModel viewModel = CreateViewModel(controller);
+        using ShellViewModel viewModel = CreateViewModel(controller, localFolderPicker: localFolderPicker);
         await viewModel.InitializeAsync();
         await ExecuteAsync(viewModel.ShowAddSyncPairCommand);
 
@@ -489,8 +494,9 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.IsAddSyncPairWizardVisible, Is.True);
             Assert.That(viewModel.IsAddSyncPairLocalStepVisible, Is.True);
             Assert.That(viewModel.RemoteBrowserPath, Is.EqualTo("/"));
-            Assert.That(viewModel.RemoteFolderPath, Is.EqualTo("/"));
-            Assert.That(viewModel.RemoteFolders.Single().Name, Is.EqualTo("Documents"));
+            Assert.That(viewModel.RemoteFolderPath, Is.Empty);
+            Assert.That(viewModel.RemoteFolders, Is.Empty);
+            Assert.That(controller.ListRemoteFolderPaths, Is.Empty);
             Assert.That(controller.SignInRequest?.ServerUrl, Is.EqualTo("https://app.cottoncloud.dev/"));
         });
     }
@@ -650,6 +656,8 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public Dictionary<string, DesktopRemoteFolderListSnapshot> RemoteFoldersByPath { get; } = [];
 
+        public List<string> ListRemoteFolderPaths { get; } = [];
+
         public List<string> ProbedServerUrls { get; } = [];
 
         public int SyncAllCalls { get; private set; }
@@ -728,6 +736,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            ListRemoteFolderPaths.Add(remotePath);
             return Task.FromResult(RemoteFoldersByPath.GetValueOrDefault(
                 remotePath,
                 new DesktopRemoteFolderListSnapshot(remotePath, [])));
