@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Sync.State;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Sync.Tests.State;
 
@@ -85,6 +86,25 @@ public sealed class SqliteSyncStateStoreTests
         SyncChangeCursor cursor = await second.GetChangeCursorAsync("pair-a");
 
         Assert.That(cursor.LastCursor, Is.EqualTo(9));
+    }
+
+    [Test]
+    public async Task InitializeAsync_MigratesInitialStateDatabaseToChangeCursors()
+    {
+        string databasePath = DatabasePath();
+        await CreateInitialStateDatabaseAsync(databasePath);
+        var store = new SqliteSyncStateStore(databasePath);
+
+        await store.InitializeAsync();
+        await store.SaveChangeCursorAsync(new SyncChangeCursor
+        {
+            SyncPairId = "pair-a",
+            LastCursor = 5,
+        });
+
+        SyncChangeCursor cursor = await store.GetChangeCursorAsync("pair-a");
+
+        Assert.That(cursor.LastCursor, Is.EqualTo(5));
     }
 
     [Test]
@@ -411,5 +431,19 @@ public sealed class SqliteSyncStateStoreTests
     private string DatabasePath()
     {
         return Path.Combine(_tempDirectory, "sync-state.sqlite");
+    }
+
+    private static async Task CreateInitialStateDatabaseAsync(string databasePath)
+    {
+        var connectionString = new System.Data.Common.DbConnectionStringBuilder
+        {
+            ["Data Source"] = databasePath,
+            ["Pooling"] = false,
+        }.ToString();
+        DbContextOptions<SyncStateDbContext> options = new DbContextOptionsBuilder<SyncStateDbContext>()
+            .UseSqlite(connectionString)
+            .Options;
+        await using var context = new SyncStateDbContext(options);
+        await context.Database.MigrateAsync("20260602175534_InitialSyncState");
     }
 }
