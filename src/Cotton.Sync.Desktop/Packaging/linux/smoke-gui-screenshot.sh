@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -ne 2 ]; then
-  echo "Usage: smoke-gui-screenshot.sh <app-executable> <output-png>" >&2
+if [ "$#" -lt 2 ]; then
+  echo "Usage: smoke-gui-screenshot.sh <app-executable> <output-png> [app-args...]" >&2
   exit 2
 fi
 
 app_executable="$(realpath "$1")"
 output_png="$(realpath -m "$2")"
+shift 2
 capture_size="${COTTON_SYNC_SCREENSHOT_SIZE:-1024x768}"
 
 if [ ! -x "$app_executable" ]; then
@@ -41,7 +42,7 @@ cleanup() {
 
 trap cleanup EXIT
 
-"$app_executable" --data-dir "$data_dir" >"$log_file" 2>&1 &
+"$app_executable" --data-dir "$data_dir" "$@" >"$log_file" 2>&1 &
 app_pid="$!"
 
 sleep "${COTTON_SYNC_SCREENSHOT_DELAY_SECONDS:-5}"

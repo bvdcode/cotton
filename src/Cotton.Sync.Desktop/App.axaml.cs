@@ -43,10 +43,14 @@ public sealed partial class App : Application
                 desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
             }
 
+            IDesktopShellController controller = StartupOptions.VisualSmokeScenario is { } scenario
+                ? VisualSmokeShellController.Create(scenario)
+                : DesktopShellController.CreateDefault(paths, StartupOptions);
             var window = new MainWindow(
-                DesktopShellController.CreateDefault(paths, StartupOptions),
+                controller,
                 StartupOptions.StartMinimizedToTray,
-                useTrayLifecycle);
+                useTrayLifecycle,
+                StartupOptions.VisualSmokeScenario);
             desktop.MainWindow = window;
             if (useTrayLifecycle)
             {

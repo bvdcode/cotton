@@ -9,6 +9,7 @@ using Cotton.Sync.App.Preferences;
 using Cotton.Sync.App.SyncPairs;
 using Cotton.Sync.Desktop.Platform;
 using Cotton.Sync.Desktop.Shell;
+using Cotton.Sync.Desktop.Startup;
 using Cotton.Sync.Desktop.ViewModels;
 
 namespace Cotton.Sync.Desktop.Tests.ViewModels;
@@ -191,6 +192,54 @@ public sealed class ShellViewModelSyncPairCommandTests
                 viewModel.ActionRequiredMessage,
                 Is.EqualTo("This Cotton server does not expose the desktop sync changes API yet. Deploy the latest Cotton backend and retry sync."));
             Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Fix the issue below to continue syncing."));
+        });
+    }
+
+    [Test]
+    public async Task ApplyVisualSmokeScenarioAsync_ShowsSettings()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Idle")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        await viewModel.ApplyVisualSmokeScenarioAsync(DesktopVisualSmokeScenario.Settings);
+
+        Assert.That(viewModel.IsSettingsVisible, Is.True);
+    }
+
+    [Test]
+    public async Task ApplyVisualSmokeScenarioAsync_ShowsActionRequiredError()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Idle")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        await viewModel.ApplyVisualSmokeScenarioAsync(DesktopVisualSmokeScenario.Error);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Action required"));
+            Assert.That(viewModel.StatusCardTitle, Is.EqualTo("Sync needs attention"));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Fix the issue below to continue syncing."));
+            Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo("Sync API unavailable."));
+        });
+    }
+
+    [Test]
+    public async Task ApplyVisualSmokeScenarioAsync_ShowsConflictList()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Idle")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        await viewModel.ApplyVisualSmokeScenarioAsync(DesktopVisualSmokeScenario.Conflict);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasConflicts, Is.True);
+            Assert.That(viewModel.ConflictCountLabel, Is.EqualTo("1 conflict"));
+            Assert.That(viewModel.SelectedConflict?.Path, Is.EqualTo("Reports/budget.xlsx"));
+            Assert.That(viewModel.Activities.First().Kind, Is.EqualTo("Conflict"));
         });
     }
 

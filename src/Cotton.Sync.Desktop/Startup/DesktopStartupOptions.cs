@@ -11,7 +11,8 @@ internal sealed class DesktopStartupOptions
         string? dataDirectory,
         bool startMinimizedToTray,
         bool runSelfTest,
-        bool exportDiagnostics)
+        bool exportDiagnostics,
+        DesktopVisualSmokeScenario? visualSmokeScenario)
     {
         ServerUrl = serverUrl;
         Username = username;
@@ -19,9 +20,10 @@ internal sealed class DesktopStartupOptions
         StartMinimizedToTray = startMinimizedToTray;
         RunSelfTest = runSelfTest;
         ExportDiagnostics = exportDiagnostics;
+        VisualSmokeScenario = visualSmokeScenario;
     }
 
-    public static DesktopStartupOptions Empty { get; } = new(null, null, null, false, false, false);
+    public static DesktopStartupOptions Empty { get; } = new(null, null, null, false, false, false, null);
 
     public Uri? ServerUrl { get; }
 
@@ -35,12 +37,15 @@ internal sealed class DesktopStartupOptions
 
     public bool ExportDiagnostics { get; }
 
+    public DesktopVisualSmokeScenario? VisualSmokeScenario { get; }
+
     public static DesktopStartupOptions Parse(IReadOnlyList<string> args)
     {
         ArgumentNullException.ThrowIfNull(args);
         string? serverUrl = ReadOption(args, "--server-url") ?? ReadOption(args, "--server");
         string? username = ReadOption(args, "--username") ?? ReadOption(args, "--user");
         string? dataDirectory = ReadOption(args, "--data-dir") ?? ReadOption(args, "--data-directory");
+        string? visualSmokeScenario = ReadOption(args, "--visual-smoke") ?? ReadOption(args, "--screenshot-state");
         bool startMinimizedToTray = HasFlag(args, "--start-minimized")
             || HasFlag(args, "--minimized")
             || HasFlag(args, "--tray");
@@ -54,7 +59,8 @@ internal sealed class DesktopStartupOptions
             NormalizeOptional(dataDirectory),
             startMinimizedToTray,
             runSelfTest,
-            exportDiagnostics);
+            exportDiagnostics,
+            ParseVisualSmokeScenario(visualSmokeScenario));
     }
 
     private static bool HasFlag(IReadOnlyList<string> args, string name)
@@ -91,5 +97,18 @@ internal sealed class DesktopStartupOptions
     {
         string? normalized = value?.Trim();
         return string.IsNullOrEmpty(normalized) ? null : normalized;
+    }
+
+    private static DesktopVisualSmokeScenario? ParseVisualSmokeScenario(string? value)
+    {
+        string? normalized = NormalizeOptional(value);
+        if (normalized is null)
+        {
+            return null;
+        }
+
+        return Enum.TryParse(normalized, ignoreCase: true, out DesktopVisualSmokeScenario scenario)
+            ? scenario
+            : null;
     }
 }

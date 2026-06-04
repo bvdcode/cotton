@@ -99,7 +99,7 @@ public sealed class DesktopSetupVisualContractTests
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
         string diagnosticsSection = GetSlice(
             mainWindowXaml,
-            "<TabItem Header=\"Diagnostics\">",
+            "<TabItem Header=\"Diag\"",
             "</TabItem>");
 
         Assert.Multiple(() =>
@@ -125,10 +125,30 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(settingsOverlay, Does.Contain("HorizontalAlignment=\"Stretch\""));
             Assert.That(settingsOverlay, Does.Contain("VerticalAlignment=\"Stretch\""));
             Assert.That(settingsOverlay, Does.Contain("RowDefinitions=\"Auto,*\""));
-            Assert.That(settingsOverlay, Does.Contain("<TabControl Grid.Row=\"1\">"));
+            Assert.That(settingsOverlay, Does.Contain("<TabControl Grid.Row=\"1\""));
+            Assert.That(settingsOverlay, Does.Contain("Classes=\"settingsTabs\""));
             Assert.That(settingsOverlay, Does.Not.Contain("<Border Width=\"372\""));
             Assert.That(settingsOverlay, Does.Not.Contain("MaxHeight=\"432\""));
             Assert.That(settingsOverlay, Does.Not.Contain("<ScrollViewer Grid.Row=\"1\""));
+        });
+    }
+
+    [Test]
+    public void DashboardContent_ScrollsInsteadOfOverlappingDenseStates()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string dashboardView = GetSlice(
+            mainWindowXaml,
+            "IsVisible=\"{Binding IsDashboardVisible}\">",
+            "IsVisible=\"{Binding IsAddSyncPairWizardVisible}\">");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dashboardView, Does.Contain("<ScrollViewer Margin=\"10\""));
+            Assert.That(dashboardView, Does.Contain("VerticalScrollBarVisibility=\"Auto\""));
+            Assert.That(dashboardView, Does.Contain("<StackPanel Spacing=\"8\">"));
+            Assert.That(dashboardView, Does.Contain("MaxHeight=\"250\""));
+            Assert.That(dashboardView, Does.Not.Contain("RowDefinitions=\"Auto,Auto,Auto,Auto,*\""));
         });
     }
 
@@ -144,9 +164,11 @@ public sealed class DesktopSetupVisualContractTests
         Assert.Multiple(() =>
         {
             Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Account\">"));
-            Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Startup\">"));
+            Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Start\""));
             Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Prefs\">"));
-            Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Diagnostics\">"));
+            Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Diag\""));
+            Assert.That(settingsOverlay, Does.Contain("ToolTip.Tip=\"Startup\""));
+            Assert.That(settingsOverlay, Does.Contain("ToolTip.Tip=\"Diagnostics\""));
         });
     }
 
@@ -161,7 +183,7 @@ public sealed class DesktopSetupVisualContractTests
         string accountTab = GetSlice(
             settingsOverlay,
             "<TabItem Header=\"Account\">",
-            "<TabItem Header=\"Startup\">");
+            "<TabItem Header=\"Start\"");
 
         Assert.Multiple(() =>
         {
@@ -182,7 +204,7 @@ public sealed class DesktopSetupVisualContractTests
         string actionRequiredRow = GetSlice(
             mainWindowXaml,
             "<TextBlock Text=\"Action required\"",
-            "<Border Grid.Row=\"2\"");
+            "<Border MaxHeight=\"94\"");
         string conflictsHeader = GetSlice(
             mainWindowXaml,
             "<TextBlock Text=\"Conflicts\"",
@@ -210,7 +232,7 @@ public sealed class DesktopSetupVisualContractTests
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
         string diagnosticsSection = GetSlice(
             mainWindowXaml,
-            "<TabItem Header=\"Diagnostics\">",
+            "<TabItem Header=\"Diag\"",
             "</TabItem>");
 
         Assert.Multiple(() =>

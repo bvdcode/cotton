@@ -218,41 +218,40 @@
 
     <Grid Grid.Row="2"
           IsVisible="{Binding IsDashboardVisible}">
-      <Grid RowDefinitions="Auto,Auto,Auto,Auto,*"
-            Margin="10"
-            RowSpacing="8">
-        <Border Padding="10"
-                CornerRadius="6"
-                Classes="statusCard"
-                Classes.actionRequired="{Binding HasActionRequired}">
-          <Grid ColumnDefinitions="Auto,*"
-                ColumnSpacing="9">
-            <Border Width="12"
-                    Height="12"
-                    CornerRadius="6"
-                    Classes="statusDot"
-                    Classes.actionRequired="{Binding HasActionRequired}"
-                    VerticalAlignment="Center" />
-            <StackPanel Grid.Column="1"
-                        Spacing="1">
-              <TextBlock Text="{Binding StatusCardTitle}"
-                         FontSize="15"
-                         FontWeight="SemiBold"
-                         TextTrimming="CharacterEllipsis" />
-              <TextBlock Text="{Binding AccountName}"
-                         Classes="secondary"
-                         FontSize="12"
-                         TextTrimming="CharacterEllipsis" />
-              <TextBlock Text="{Binding CurrentProgressText}"
-                         Classes="secondary"
-                         FontSize="12"
-                         TextTrimming="CharacterEllipsis" />
-            </StackPanel>
-          </Grid>
-        </Border>
+      <ScrollViewer Margin="10"
+                    VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="8">
+          <Border Padding="10"
+                  CornerRadius="6"
+                  Classes="statusCard"
+                  Classes.actionRequired="{Binding HasActionRequired}">
+            <Grid ColumnDefinitions="Auto,*"
+                  ColumnSpacing="9">
+              <Border Width="12"
+                      Height="12"
+                      CornerRadius="6"
+                      Classes="statusDot"
+                      Classes.actionRequired="{Binding HasActionRequired}"
+                      VerticalAlignment="Center" />
+              <StackPanel Grid.Column="1"
+                          Spacing="1">
+                <TextBlock Text="{Binding StatusCardTitle}"
+                           FontSize="15"
+                           FontWeight="SemiBold"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding AccountName}"
+                           Classes="secondary"
+                           FontSize="12"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding CurrentProgressText}"
+                           Classes="secondary"
+                           FontSize="12"
+                           TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+            </Grid>
+          </Border>
 
-        <Border Grid.Row="1"
-                Padding="10"
+        <Border Padding="10"
                 CornerRadius="6"
                 Background="{DynamicResource CottonErrorSoftBrush}"
                 BorderBrush="{DynamicResource CottonErrorBrush}"
@@ -292,8 +291,7 @@
           </Grid>
         </Border>
 
-        <Border Grid.Row="2"
-                MaxHeight="94"
+        <Border MaxHeight="94"
                 IsVisible="{Binding HasNotifications}">
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding Notifications}">
@@ -324,8 +322,7 @@
           </ScrollViewer>
         </Border>
 
-        <Border Grid.Row="3"
-                Padding="10"
+        <Border Padding="10"
                 MaxHeight="116"
                 CornerRadius="6"
                 Background="{DynamicResource CottonErrorSoftBrush}"
@@ -390,10 +387,10 @@
           </Grid>
         </Border>
 
-        <Grid Grid.Row="4"
-              RowDefinitions="*,148"
+        <Grid RowDefinitions="Auto,132"
               RowSpacing="8">
           <Border Padding="10"
+                  MaxHeight="250"
                   CornerRadius="6"
                   Background="{DynamicResource CottonSurfaceBrush}"
                   BorderBrush="{DynamicResource CottonBorderBrush}"
@@ -635,8 +632,8 @@
             </Grid>
           </Border>
         </Grid>
-
-      </Grid>
+        </StackPanel>
+      </ScrollViewer>
 
       <Border Background="{DynamicResource CottonOverlayBrush}"
               IsVisible="{Binding IsAddSyncPairWizardVisible}">
@@ -901,7 +898,9 @@
                       Command="{Binding CloseSettingsCommand}" />
             </Grid>
 
-            <TabControl Grid.Row="1">
+            <TabControl Grid.Row="1"
+                        Classes="settingsTabs"
+                        FontSize="13">
               <TabItem Header="Account">
                 <StackPanel Margin="0,10,0,0"
                             Spacing="14">
@@ -950,7 +949,8 @@
                 </StackPanel>
               </TabItem>
 
-              <TabItem Header="Startup">
+              <TabItem Header="Start"
+                       ToolTip.Tip="Startup">
                 <StackPanel Margin="0,10,0,0"
                             Spacing="7">
                   <CheckBox Content="Launch on startup"
@@ -998,7 +998,8 @@
                 </StackPanel>
               </TabItem>
 
-              <TabItem Header="Diagnostics">
+              <TabItem Header="Diag"
+                       ToolTip.Tip="Diagnostics">
                 <StackPanel Margin="0,10,0,0"
                             Spacing="8">
                   <Border BorderBrush="{DynamicResource CottonBorderBrush}"

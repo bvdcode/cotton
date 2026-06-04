@@ -137,10 +137,12 @@ public sealed class DesktopPackagingMetadataTests
 
         Assert.Multiple(() =>
         {
+            Assert.That(smokeScript, Does.Contain("[app-args...]"));
+            Assert.That(smokeScript, Does.Contain("shift 2"));
             Assert.That(smokeScript, Does.Contain("DISPLAY is required"));
             Assert.That(smokeScript, Does.Contain("command -v ffmpeg"));
             Assert.That(smokeScript, Does.Contain("command -v ffprobe"));
-            Assert.That(smokeScript, Does.Contain("\"$app_executable\" --data-dir \"$data_dir\""));
+            Assert.That(smokeScript, Does.Contain("\"$app_executable\" --data-dir \"$data_dir\" \"$@\""));
             Assert.That(smokeScript, Does.Contain("-f x11grab"));
             Assert.That(smokeScript, Does.Contain("-draw_mouse 0"));
             Assert.That(smokeScript, Does.Contain("-video_size \"$capture_size\""));
@@ -213,9 +215,12 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("xvfb-run -a -s \"-screen 0 1024x768x24\""));
             Assert.That(workflow, Does.Contain("Packaging/linux/smoke-gui-screenshot.sh"));
             Assert.That(workflow, Does.Contain("cotton-sync-desktop-linux-gui.png"));
+            Assert.That(workflow, Does.Contain("for scenario in dashboard settings error conflict; do"));
+            Assert.That(workflow, Does.Contain("--visual-smoke \"$scenario\""));
             Assert.That(workflow, Does.Contain("Upload desktop Linux GUI screenshot"));
             Assert.That(workflow, Does.Contain("name: desktop-linux-gui-screenshot"));
-            Assert.That(workflow, Does.Contain("cotton-sync-desktop-linux-gui.png.log"));
+            Assert.That(workflow, Does.Contain("cotton-sync-desktop-linux-*.png"));
+            Assert.That(workflow, Does.Contain("cotton-sync-desktop-linux-*.png.log"));
         });
     }
 

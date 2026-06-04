@@ -91,6 +91,41 @@ public sealed class DesktopStartupOptionsTests
     }
 
     [Test]
+    public void Parse_LoadsVisualSmokeScenario()
+    {
+        DesktopStartupOptions options = DesktopStartupOptions.Parse(
+            [
+                "--visual-smoke",
+                "settings",
+            ]);
+
+        Assert.That(options.VisualSmokeScenario, Is.EqualTo(DesktopVisualSmokeScenario.Settings));
+    }
+
+    [Test]
+    public void Parse_LoadsScreenshotStateAlias()
+    {
+        DesktopStartupOptions options = DesktopStartupOptions.Parse(
+            [
+                "--screenshot-state=conflict",
+            ]);
+
+        Assert.That(options.VisualSmokeScenario, Is.EqualTo(DesktopVisualSmokeScenario.Conflict));
+    }
+
+    [Test]
+    public void Parse_IgnoresUnsupportedVisualSmokeScenario()
+    {
+        DesktopStartupOptions options = DesktopStartupOptions.Parse(
+            [
+                "--visual-smoke",
+                "production",
+            ]);
+
+        Assert.That(options.VisualSmokeScenario, Is.Null);
+    }
+
+    [Test]
     public void Parse_LoadsDataDirectory()
     {
         DesktopStartupOptions options = DesktopStartupOptions.Parse(

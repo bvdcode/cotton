@@ -10,6 +10,7 @@ using Cotton.Sync.App.Preferences;
 using Cotton.Sync.App.SyncPairs;
 using Cotton.Sync.Desktop.Platform;
 using Cotton.Sync.Desktop.Shell;
+using Cotton.Sync.Desktop.Startup;
 
 namespace Cotton.Sync.Desktop.ViewModels;
 
@@ -752,6 +753,42 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             _isLoadingSnapshot = false;
             IsBusy = false;
         }
+    }
+
+    internal async Task ApplyVisualSmokeScenarioAsync(DesktopVisualSmokeScenario? scenario)
+    {
+        if (scenario is null)
+        {
+            return;
+        }
+
+        switch (scenario)
+        {
+            case DesktopVisualSmokeScenario.Settings:
+                await ShowSettingsAsync().ConfigureAwait(true);
+                break;
+            case DesktopVisualSmokeScenario.Error:
+                GlobalStatus = "Action required";
+                ActionRequiredMessage = "Sync API unavailable.";
+                AddActivity("Error", SelectedSyncPair?.LocalPath ?? string.Empty, ActionRequiredMessage);
+                break;
+            case DesktopVisualSmokeScenario.Conflict:
+                AddActivity("Conflict", "Reports/budget.xlsx", "Local and cloud versions changed at the same time.");
+                AddConflict(
+                    SelectedSyncPair?.Id,
+                    "Reports/budget.xlsx",
+                    "Local and cloud versions changed at the same time.",
+                    DateTimeOffset.Now);
+                break;
+            case DesktopVisualSmokeScenario.Dashboard:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(scenario), scenario, null);
+        }
+
+        RefreshCurrentProgressText();
+        RefreshDiagnosticsItems();
+        RaiseCommandStates();
     }
 
     private async Task ApplyStartWithOperatingSystemAsync(bool enabled)

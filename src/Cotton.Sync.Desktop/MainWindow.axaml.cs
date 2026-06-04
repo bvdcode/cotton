@@ -8,6 +8,7 @@ using Avalonia.Input;
 using Avalonia.Platform;
 using Cotton.Sync.Desktop.Platform;
 using Cotton.Sync.Desktop.Shell;
+using Cotton.Sync.Desktop.Startup;
 using Cotton.Sync.Desktop.ViewModels;
 
 namespace Cotton.Sync.Desktop;
@@ -29,6 +30,7 @@ public sealed partial class MainWindow : Window
     private const double SetupWidth = 336;
 
     private readonly DesktopWindowLifecyclePolicy _lifecyclePolicy;
+    private readonly DesktopVisualSmokeScenario? _visualSmokeScenario;
     private bool _hasOpened;
     private WindowProfile? _windowProfile;
 
@@ -43,10 +45,12 @@ public sealed partial class MainWindow : Window
     internal MainWindow(
         IDesktopShellController controller,
         bool hideAfterSessionRestore = false,
-        bool canHideToTray = false)
+        bool canHideToTray = false,
+        DesktopVisualSmokeScenario? visualSmokeScenario = null)
     {
         ArgumentNullException.ThrowIfNull(controller);
         _lifecyclePolicy = new DesktopWindowLifecyclePolicy(hideAfterSessionRestore, canHideToTray);
+        _visualSmokeScenario = visualSmokeScenario;
         InitializeComponent();
         var viewModel = new ShellViewModel(
             controller,
@@ -61,6 +65,7 @@ public sealed partial class MainWindow : Window
             _hasOpened = true;
             CenterOnCurrentScreen();
             await viewModel.InitializeAsync().ConfigureAwait(true);
+            await viewModel.ApplyVisualSmokeScenarioAsync(_visualSmokeScenario).ConfigureAwait(true);
             if (_lifecyclePolicy.ShouldHideAfterSessionRestore(viewModel.IsDashboardVisible))
             {
                 Hide();
