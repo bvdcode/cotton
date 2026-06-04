@@ -255,6 +255,37 @@ jobs:
           test ! -e /opt/cotton-sync/Cotton.Sync.Desktop
           test ! -e /usr/bin/cotton-sync
 
+      - name: Smoke desktop Linux deb upgrade
+        run: |
+          old_deb="$RUNNER_TEMP/cotton-sync-desktop-linux-x64-old.deb"
+          src/Cotton.Sync.Desktop/Packaging/linux/package-deb.sh \
+            src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64 \
+            "$old_deb" \
+            0.0.1-ci-upgrade
+
+          sudo dpkg -i "$old_deb"
+          cleanup() {
+            sudo dpkg -r cotton-sync-desktop >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          sudo dpkg -i cotton-sync-desktop-linux-x64.deb
+          installed_version="$(dpkg-query -W -f='${Version}' cotton-sync-desktop)"
+          if [ "$installed_version" != "${{ steps.gitversion.outputs.SemVer }}" ]; then
+            echo "Expected upgraded package version ${{ steps.gitversion.outputs.SemVer }}, got $installed_version." >&2
+            exit 1
+          fi
+
+          dbus-run-session -- bash -euo pipefail <<'EOF'
+          temp_dir="$(mktemp -d)"
+          trap 'rm -rf "$temp_dir"' EXIT
+          eval "$(gnome-keyring-daemon --start --components=secrets)"
+          /opt/cotton-sync/Cotton.Sync.Desktop --self-test --data-dir "$temp_dir"
+          EOF
+
+          sudo dpkg -r cotton-sync-desktop
+          trap - EXIT
+
       - name: Upload desktop Linux x64 artifact
         uses: actions/upload-artifact@v5
         with:
