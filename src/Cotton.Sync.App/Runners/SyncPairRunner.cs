@@ -25,6 +25,7 @@ public sealed class SyncPairRunner : ISyncPairRunner
     private readonly ISyncPairWork _work;
     private bool _isSyncInProgress;
     private bool _pendingSyncRequested;
+    private DateTime? _lastSuccessfulSyncAtUtc;
     private SyncPairStatus _status;
 
     /// <summary>
@@ -143,7 +144,7 @@ public sealed class SyncPairRunner : ISyncPairRunner
             try
             {
                 await RunWorkWithRetryAsync(cancellationToken).ConfigureAwait(false);
-                SetState(SyncPairRunState.Idle);
+                SetState(SyncPairRunState.Idle, lastSuccessfulSyncAtUtc: DateTime.UtcNow);
             }
             catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
             {
@@ -256,10 +257,18 @@ public sealed class SyncPairRunner : ISyncPairRunner
         }
     }
 
-    private void SetState(SyncPairRunState state, string? lastError = null)
+    private void SetState(
+        SyncPairRunState state,
+        string? lastError = null,
+        DateTime? lastSuccessfulSyncAtUtc = null)
     {
         lock (_statusGate)
         {
+            if (lastSuccessfulSyncAtUtc.HasValue)
+            {
+                _lastSuccessfulSyncAtUtc = lastSuccessfulSyncAtUtc.Value;
+            }
+
             _status = CreateStatus(state, lastError);
         }
     }
@@ -272,7 +281,8 @@ public sealed class SyncPairRunner : ISyncPairRunner
             state,
             CreateCurrentOperation(state, lastError),
             lastError,
-            DateTime.UtcNow);
+            DateTime.UtcNow,
+            _lastSuccessfulSyncAtUtc);
     }
 
     private static string? CreateCurrentOperation(SyncPairRunState state, string? lastError)

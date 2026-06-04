@@ -1441,6 +1441,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             row.IsEnabled = !string.Equals(pairStatus.Status, "Disabled", StringComparison.Ordinal);
             row.LastError = pairStatus.LastError;
             row.CurrentOperation = pairStatus.CurrentOperation ?? string.Empty;
+            if (pairStatus.LastSyncedAtUtc.HasValue)
+            {
+                row.LastSyncedAtUtc = pairStatus.LastSyncedAtUtc;
+            }
+
             if (!string.IsNullOrWhiteSpace(pairStatus.LastError))
             {
                 AddActivity("Error", row.LocalPath, pairStatus.LastError);

@@ -66,6 +66,23 @@ public sealed class InMemoryAppStatusPublisherTests
         Assert.That(status.UpdatedAtUtc.Kind, Is.EqualTo(DateTimeKind.Utc));
     }
 
+    [Test]
+    public void SyncPairStatus_NormalizesLastSuccessfulSyncAtToUtc()
+    {
+        DateTime localTime = new DateTime(2026, 6, 3, 12, 0, 0, DateTimeKind.Local);
+
+        var status = new SyncPairStatus(
+            Guid.NewGuid(),
+            "Documents",
+            SyncPairRunState.Idle,
+            null,
+            null,
+            DateTime.UtcNow,
+            localTime);
+
+        Assert.That(status.LastSuccessfulSyncAtUtc?.Kind, Is.EqualTo(DateTimeKind.Utc));
+    }
+
     private static SyncAppStatus CreateStatus(bool isAuthenticated)
     {
         return new SyncAppStatus(

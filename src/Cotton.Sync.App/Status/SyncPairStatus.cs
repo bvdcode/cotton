@@ -19,7 +19,8 @@ public sealed class SyncPairStatus
         SyncPairRunState state,
         string? currentOperation,
         string? lastError,
-        DateTime updatedAtUtc)
+        DateTime updatedAtUtc,
+        DateTime? lastSuccessfulSyncAtUtc = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
         SyncPairId = syncPairId;
@@ -28,6 +29,9 @@ public sealed class SyncPairStatus
         CurrentOperation = currentOperation;
         LastError = lastError;
         UpdatedAtUtc = UtcDateTime.Normalize(updatedAtUtc);
+        LastSuccessfulSyncAtUtc = lastSuccessfulSyncAtUtc.HasValue
+            ? UtcDateTime.Normalize(lastSuccessfulSyncAtUtc.Value)
+            : null;
     }
 
     /// <summary>
@@ -59,4 +63,9 @@ public sealed class SyncPairStatus
     /// Gets the UTC timestamp when this status was updated.
     /// </summary>
     public DateTime UpdatedAtUtc { get; }
+
+    /// <summary>
+    /// Gets the UTC timestamp of the latest successful sync pass, if any.
+    /// </summary>
+    public DateTime? LastSuccessfulSyncAtUtc { get; }
 }

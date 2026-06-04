@@ -156,6 +156,48 @@ public sealed class DesktopShellControllerHostLifecycleTests
         });
     }
 
+    [Test]
+    public async Task StatusChanged_ForwardsLastSuccessfulSyncTimestamp()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        Uri serverUrl = new("https://cotton.example.test/");
+        var preferencesStore = new SqliteAppPreferencesStore(paths.AppDatabasePath);
+        await preferencesStore.InitializeAsync();
+        await preferencesStore.SaveAsync(new AppPreferences
+        {
+            RememberedServerUrl = serverUrl,
+        });
+        FakeDesktopApplicationHost host = FakeDesktopApplicationHost.Create(serverUrl);
+        var factory = new QueueingDesktopSyncApplicationFactory(host.Host);
+        using DesktopShellController controller = CreateController(paths, factory);
+        var statusEvents = new List<DesktopSyncStatusSnapshot>();
+        controller.StatusChanged += (_, status) => statusEvents.Add(status);
+        Guid syncPairId = Guid.NewGuid();
+        DateTime completedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
+
+        await controller.LoadAsync();
+        host.StatusPublisher.Publish(new SyncAppStatus(
+            isAuthenticated: true,
+            [
+                new SyncPairStatus(
+                    syncPairId,
+                    "Documents",
+                    SyncPairRunState.Idle,
+                    null,
+                    null,
+                    DateTime.UtcNow,
+                    completedAtUtc),
+            ],
+            DateTime.UtcNow));
+
+        DesktopSyncPairStatusSnapshot pairStatus = statusEvents.Last().SyncPairs.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(pairStatus.Id, Is.EqualTo(syncPairId));
+            Assert.That(pairStatus.LastSyncedAtUtc, Is.EqualTo(completedAtUtc));
+        });
+    }
+
     private static DesktopShellController CreateController(
         DesktopAppPaths paths,
         IDesktopSyncApplicationFactory factory,
@@ -211,10 +253,11 @@ public sealed class DesktopShellControllerHostLifecycleTests
         {
             App = new FakeSyncApplicationService();
             AsyncResource = new FakeAsyncResource();
+            StatusPublisher = new InMemoryAppStatusPublisher();
             Host = new DesktopSyncApplicationHost(
                 App,
                 new FakeRemoteRootResolver(),
-                new InMemoryAppStatusPublisher(),
+                StatusPublisher,
                 new InMemoryAppActivityPublisher(),
                 new FakeCottonTokenStore(),
                 new FakeCottonNodeClient(),
@@ -225,6 +268,8 @@ public sealed class DesktopShellControllerHostLifecycleTests
         }
 
         public FakeSyncApplicationService App { get; }
+
+        public InMemoryAppStatusPublisher StatusPublisher { get; }
 
         public FakeAsyncResource AsyncResource { get; }
 

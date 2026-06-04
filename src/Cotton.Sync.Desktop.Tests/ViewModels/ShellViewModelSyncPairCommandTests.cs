@@ -260,6 +260,30 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task StatusChanged_UpdatesBaselineAndShowsUpToDateAfterSuccessfulSync()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Idle")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportStatus(new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(
+                syncPairId,
+                "Idle",
+                null,
+                LastSyncedAtUtc: new DateTime(2026, 6, 4, 8, 0, 0, DateTimeKind.Utc)),
+        ]));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.SyncPairs.Single().LastSyncedAtUtc, Is.EqualTo(new DateTime(2026, 6, 4, 8, 0, 0, DateTimeKind.Utc)));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("All folders are up to date."));
+        });
+    }
+
+    [Test]
     public async Task Initialize_AsksToEnableFolderWhenAllPairsAreDisabled()
     {
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Disabled")));

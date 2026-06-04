@@ -962,7 +962,8 @@ internal sealed class DesktopShellController : IDesktopShellController
                     syncPair.SyncPairId,
                     ToStatusText(syncPair),
                     syncPair.LastError,
-                    syncPair.CurrentOperation))
+                    syncPair.CurrentOperation,
+                    syncPair.LastSuccessfulSyncAtUtc))
                 .ToList());
     }
 

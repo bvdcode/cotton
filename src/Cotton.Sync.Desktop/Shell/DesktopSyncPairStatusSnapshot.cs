@@ -7,4 +7,5 @@ internal sealed record DesktopSyncPairStatusSnapshot(
     Guid Id,
     string Status,
     string? LastError,
-    string? CurrentOperation = null);
+    string? CurrentOperation = null,
+    DateTime? LastSyncedAtUtc = null);

@@ -62,7 +62,18 @@ public sealed class SyncPairRunnerTests
             Assert.That(work.RunCount, Is.EqualTo(1));
             Assert.That(work.LastSyncPair, Is.SameAs(syncPair));
             Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Idle));
+            Assert.That(runner.Status.LastSuccessfulSyncAtUtc, Is.Not.Null);
         });
+    }
+
+    [Test]
+    public async Task StartAsync_DoesNotMarkPairAsSuccessfullySynced()
+    {
+        SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true));
+
+        await runner.StartAsync();
+
+        Assert.That(runner.Status.LastSuccessfulSyncAtUtc, Is.Null);
     }
 
     [Test]
