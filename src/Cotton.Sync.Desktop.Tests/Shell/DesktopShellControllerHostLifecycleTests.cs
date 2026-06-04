@@ -157,6 +157,53 @@ public sealed class DesktopShellControllerHostLifecycleTests
     }
 
     [Test]
+    public async Task LoadAsync_DoesNotApplyDefaultAutostartBeforeSessionExists()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        var factory = new QueueingDesktopSyncApplicationFactory();
+        var autostartService = new FakeAutostartService();
+        using DesktopShellController controller = CreateController(
+            paths,
+            factory,
+            autostartService: autostartService);
+
+        DesktopShellSnapshot snapshot = await controller.LoadAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.StartWithOperatingSystem, Is.True);
+            Assert.That(autostartService.IsEnabledCalls, Is.EqualTo(1));
+            Assert.That(autostartService.SetEnabledCalls, Is.Zero);
+        });
+    }
+
+    [Test]
+    public async Task SignInAsync_AppliesDefaultAutostartAfterAuthentication()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        Uri serverUrl = new("https://cotton.example.test/");
+        FakeDesktopApplicationHost host = FakeDesktopApplicationHost.Create(serverUrl);
+        var factory = new QueueingDesktopSyncApplicationFactory(host.Host);
+        var autostartService = new FakeAutostartService();
+        using DesktopShellController controller = CreateController(
+            paths,
+            factory,
+            autostartService: autostartService);
+
+        await controller.SignInAsync(new DesktopSignInRequest(
+            serverUrl.AbsoluteUri,
+            "desktop@example.test",
+            "password",
+            null));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(autostartService.SetEnabledCalls, Is.EqualTo(1));
+            Assert.That(autostartService.LastSetEnabled, Is.True);
+        });
+    }
+
+    [Test]
     public async Task StatusChanged_ForwardsLastSuccessfulSyncTimestamp()
     {
         DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
@@ -201,7 +248,8 @@ public sealed class DesktopShellControllerHostLifecycleTests
     private static DesktopShellController CreateController(
         DesktopAppPaths paths,
         IDesktopSyncApplicationFactory factory,
-        Func<DesktopTokenStorageCapabilitySnapshot>? tokenStorageCapabilities = null)
+        Func<DesktopTokenStorageCapabilitySnapshot>? tokenStorageCapabilities = null,
+        IAutostartService? autostartService = null)
     {
         return new DesktopShellController(
             paths,
@@ -209,7 +257,7 @@ public sealed class DesktopShellControllerHostLifecycleTests
             new SqliteAppPreferencesStore(paths.AppDatabasePath),
             new SqliteSyncPairSettingsStore(paths.AppDatabasePath),
             new FakePlatformCommandService(),
-            new FakeAutostartService(),
+            autostartService ?? new FakeAutostartService(),
             tokenStorageCapabilities: tokenStorageCapabilities ?? CreateSecureTokenStorage);
     }
 
@@ -523,13 +571,22 @@ public sealed class DesktopShellControllerHostLifecycleTests
     {
         public bool IsSupported => true;
 
+        public int IsEnabledCalls { get; private set; }
+
+        public int SetEnabledCalls { get; private set; }
+
+        public bool? LastSetEnabled { get; private set; }
+
         public Task<bool> IsEnabledAsync(CancellationToken cancellationToken = default)
         {
+            IsEnabledCalls++;
             return Task.FromResult(false);
         }
 
         public Task SetEnabledAsync(bool enabled, CancellationToken cancellationToken = default)
         {
+            SetEnabledCalls++;
+            LastSetEnabled = enabled;
             return Task.CompletedTask;
         }
     }

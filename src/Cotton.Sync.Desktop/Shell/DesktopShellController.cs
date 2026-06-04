@@ -83,6 +83,16 @@ internal sealed class DesktopShellController : IDesktopShellController
         AuthSession? session = serverUrl is null
             ? null
             : await TryRestoreSessionAsync(serverUrl, cancellationToken).ConfigureAwait(false);
+        if (session is not null)
+        {
+            bool applied = await TryApplyPreferredAutostartAsync(preferences, cancellationToken).ConfigureAwait(false);
+            if (applied)
+            {
+                startWithOperatingSystem = true;
+                await _preferencesStore.SaveAsync(preferences, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
         DesktopPlatformCapabilitySnapshot platformCapabilities = DesktopPlatformCapabilities.CreateSnapshot();
         IReadOnlyList<DesktopSyncPairSnapshot> syncPairSnapshots = await BuildSyncPairSnapshotsAsync(
             syncPairs,
@@ -139,6 +149,7 @@ internal sealed class DesktopShellController : IDesktopShellController
                     TrustDevice = true,
                 },
                 cancellationToken).ConfigureAwait(false);
+            await _preferencesStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
             AppPreferences preferences = await _preferencesStore.GetAsync(cancellationToken).ConfigureAwait(false);
             preferences.RememberedServerUrl = serverUrl;
             preferences.RememberedUsername = request.Username.Trim();
@@ -415,19 +426,12 @@ internal sealed class DesktopShellController : IDesktopShellController
         CancellationToken cancellationToken)
     {
         bool isEnabled = await TryReadStartWithOperatingSystemAsync(cancellationToken).ConfigureAwait(false);
-        if (isEnabled || !preferences.StartWithOperatingSystem || !_autostartService.IsSupported)
+        if (isEnabled)
         {
-            return isEnabled;
+            return true;
         }
 
-        bool applied = await TryApplyPreferredAutostartAsync(preferences, cancellationToken).ConfigureAwait(false);
-        if (!applied)
-        {
-            return isEnabled;
-        }
-
-        await _preferencesStore.SaveAsync(preferences, cancellationToken).ConfigureAwait(false);
-        return true;
+        return preferences.StartWithOperatingSystem && _autostartService.IsSupported;
     }
 
     private async Task<bool> TryReadStartWithOperatingSystemAsync(CancellationToken cancellationToken)
