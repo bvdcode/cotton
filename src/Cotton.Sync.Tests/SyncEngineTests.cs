@@ -725,6 +725,50 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_RecoversAfterRemoteDownloadBeforeBaselineUpdate()
+    {
+        string relativePath = "downloaded-before-baseline.txt";
+        byte[] remoteContent = Encoding.UTF8.GetBytes("remote-new");
+        NodeFileManifestDto remote = RemoteFile(relativePath, Hash(remoteContent));
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        remoteFiles.Downloads[remote.Id] = remoteContent;
+        var durableStore = new SqliteSyncStateStore(_databasePath);
+        var failingStore = new FailingUpsertStateStore(durableStore);
+        SyncEngine firstRun = new(
+            new FakeLocalFileScanner(),
+            new FakeRemoteTreeCrawler(RemoteTree(remote)),
+            remoteFiles,
+            failingStore);
+
+        InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await firstRun.RunOnceAsync(Pair()));
+
+        IReadOnlyList<SyncStateEntry> entriesAfterCrash = await durableStore.LoadPairAsync("pair-a");
+        LocalFileSnapshot downloadedLocal = LocalFile(relativePath, "remote-new");
+        SyncEngine secondRun = new(
+            new FakeLocalFileScanner(downloadedLocal),
+            new FakeRemoteTreeCrawler(RemoteTree(remote)),
+            remoteFiles,
+            durableStore);
+
+        SyncRunResult result = await secondRun.RunOnceAsync(Pair());
+
+        SyncStateEntry? entry = await durableStore.GetAsync("pair-a", relativePath);
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(File.ReadAllText(Path.Combine(_root, relativePath)), Is.EqualTo("remote-new"));
+            Assert.That(entriesAfterCrash, Is.Empty);
+            Assert.That(result.Activities, Is.Empty);
+            Assert.That(remoteFiles.Uploads, Is.Empty);
+            Assert.That(entry, Is.Not.Null);
+            Assert.That(entry!.LocalContentHash, Is.EqualTo(remote.ContentHash));
+            Assert.That(entry.RemoteContentHash, Is.EqualTo(remote.ContentHash));
+            Assert.That(entry.RemoteFileId, Is.EqualTo(remote.Id));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_DeletesRemoteOnlyWhenBaselineKnowsLocalDelete()
     {
         NodeFileManifestDto remote = RemoteFile("delete-remote.txt", HashText("old"));
