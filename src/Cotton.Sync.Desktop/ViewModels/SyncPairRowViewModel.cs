@@ -14,7 +14,10 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
     private string _editableDisplayName = string.Empty;
     private long? _changeCursor;
     private string _currentOperation = string.Empty;
+    private double _currentProgressValue;
+    private bool _hasCurrentProgress;
     private bool _isEnabled = true;
+    private bool _isCurrentProgressIndeterminate;
     private DateTime? _lastSyncedAtUtc;
     private string? _lastError;
     private string _localPath = string.Empty;
@@ -68,6 +71,24 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
     }
 
     public bool HasCurrentOperation => !string.IsNullOrWhiteSpace(CurrentOperation);
+
+    public bool HasCurrentProgress
+    {
+        get => _hasCurrentProgress;
+        set => SetProperty(ref _hasCurrentProgress, value);
+    }
+
+    public double CurrentProgressValue
+    {
+        get => _currentProgressValue;
+        set => SetProperty(ref _currentProgressValue, value);
+    }
+
+    public bool IsCurrentProgressIndeterminate
+    {
+        get => _isCurrentProgressIndeterminate;
+        set => SetProperty(ref _isCurrentProgressIndeterminate, value);
+    }
 
     public string EditableDisplayName
     {

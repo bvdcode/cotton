@@ -96,6 +96,9 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Contain("SelectedSyncPair.ModeLabel"));
             Assert.That(foldersSection, Does.Contain("Text=\"{Binding CurrentOperation}\""));
             Assert.That(foldersSection, Does.Contain("IsVisible=\"{Binding HasCurrentOperation}\""));
+            Assert.That(foldersSection, Does.Contain("Value=\"{Binding CurrentProgressValue}\""));
+            Assert.That(foldersSection, Does.Contain("IsIndeterminate=\"{Binding IsCurrentProgressIndeterminate}\""));
+            Assert.That(foldersSection, Does.Contain("IsVisible=\"{Binding HasCurrentProgress}\""));
         });
     }
 

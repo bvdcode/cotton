@@ -2171,6 +2171,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         CurrentTransferTitle = CreateTransferTitle(progress, syncPair.DisplayName);
         CurrentTransferDetails = CreateTransferDetails(progress);
         syncPair.CurrentOperation = CreateTransferOperation(progress);
+        syncPair.HasCurrentProgress = true;
+        syncPair.IsCurrentProgressIndeterminate = IsCurrentTransferIndeterminate;
+        syncPair.CurrentProgressValue = CurrentTransferProgressValue;
         RaiseCurrentWorkProgressProperties();
         RefreshCurrentProgressText();
     }
@@ -2191,6 +2194,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         if (!HasCurrentTransfer || _transferSyncPairId != progress.SyncPairId)
         {
             syncPair.CurrentOperation = CreateRunProgressOperation(progress);
+            syncPair.HasCurrentProgress = true;
+            syncPair.IsCurrentProgressIndeterminate = IsCurrentRunProgressIndeterminate;
+            syncPair.CurrentProgressValue = CurrentRunProgressValue;
         }
 
         RaiseCurrentWorkProgressProperties();
@@ -2211,6 +2217,15 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             row.IsEnabled = !string.Equals(pairStatus.Status, "Disabled", StringComparison.Ordinal);
             row.LastError = pairStatus.LastError;
             row.CurrentOperation = pairStatus.CurrentOperation ?? string.Empty;
+            if (IsActiveSyncStatus(pairStatus))
+            {
+                EnsureSyncPairProgress(row);
+            }
+            else
+            {
+                ClearSyncPairProgress(row);
+            }
+
             if (pairStatus.LastSyncedAtUtc.HasValue)
             {
                 row.LastSyncedAtUtc = pairStatus.LastSyncedAtUtc;
@@ -2224,7 +2239,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
         GlobalStatus = ResolveGlobalStatus(status);
         ActionRequiredMessage = DesktopActionRequiredMessageResolver.FromStatus(status);
-        if (!status.SyncPairs.Any(IsActiveTransferStatus))
+        if (!status.SyncPairs.Any(IsActiveSyncStatus))
         {
             ClearTransferProgress();
             ClearRunProgress();
@@ -2234,6 +2249,25 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         RefreshCurrentProgressText();
         AddNotifications(_notificationTracker.Apply(status, SyncPairs.ToDictionary(static pair => pair.Id, static pair => pair.DisplayName)));
         RefreshDiagnosticsItems();
+    }
+
+    private static void EnsureSyncPairProgress(SyncPairRowViewModel row)
+    {
+        if (row.HasCurrentProgress)
+        {
+            return;
+        }
+
+        row.HasCurrentProgress = true;
+        row.IsCurrentProgressIndeterminate = true;
+        row.CurrentProgressValue = 0;
+    }
+
+    private static void ClearSyncPairProgress(SyncPairRowViewModel row)
+    {
+        row.HasCurrentProgress = false;
+        row.IsCurrentProgressIndeterminate = false;
+        row.CurrentProgressValue = 0;
     }
 
     private void AddNotifications(IReadOnlyList<DesktopNotificationRequest> requests)
@@ -2531,7 +2565,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OnPropertyChanged(nameof(IsCurrentWorkProgressIndeterminate));
     }
 
-    private static bool IsActiveTransferStatus(DesktopSyncPairStatusSnapshot status)
+    private static bool IsActiveSyncStatus(DesktopSyncPairStatusSnapshot status)
     {
         return string.Equals(status.Status, "Syncing", StringComparison.Ordinal)
             || string.Equals(status.Status, "Scanning", StringComparison.Ordinal);
