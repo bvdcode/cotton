@@ -365,6 +365,29 @@ public sealed class SyncApplicationServiceTests
     }
 
     [Test]
+    public async Task SaveSyncPairAsync_UpdatesExistingPairWithoutSelfOverlap()
+    {
+        var store = new InMemorySyncPairSettingsStore();
+        SyncApplicationService service = CreateService(store);
+        SyncPairSettings existing = CreatePair("/home/user/Cotton");
+        await service.SaveSyncPairAsync(existing);
+        existing.DisplayName = "Cotton Documents";
+        existing.LocalRootPath = "/home/user/Cotton/";
+
+        SyncPairSaveResult result = await service.SaveSyncPairAsync(existing);
+
+        SyncPairSettings? saved = await store.GetAsync(existing.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsSaved, Is.True);
+            Assert.That(result.Validation.IsValid, Is.True);
+            Assert.That(saved, Is.Not.Null);
+            Assert.That(saved!.DisplayName, Is.EqualTo("Cotton Documents"));
+            Assert.That(saved.LocalRootPath, Is.EqualTo("/home/user/Cotton/"));
+        });
+    }
+
+    [Test]
     public async Task SaveSyncPairAsync_RejectsPrerequisiteFailureWithoutPersisting()
     {
         var store = new InMemorySyncPairSettingsStore();
