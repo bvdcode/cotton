@@ -43,7 +43,7 @@ public sealed class DesktopSetupVisualContractTests
         string emptyFoldersState = GetSlice(
             mainWindowXaml,
             "IsVisible=\"{Binding HasNoSyncPairs}\"",
-            "<Grid RowDefinitions=\"*,Auto,Auto\"");
+            "<Grid RowDefinitions=\"*,Auto,Auto,Auto\"");
 
         Assert.Multiple(() =>
         {
@@ -68,6 +68,9 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Contain("SaveSelectedSyncPairNameCommand"));
             Assert.That(foldersSection, Does.Contain("ToggleSelectedSyncPairEnabledCommand"));
             Assert.That(foldersSection, Does.Contain("RemoveSelectedSyncPairCommand"));
+            Assert.That(foldersSection, Does.Contain("IsRemoveSyncPairConfirmationVisible"));
+            Assert.That(foldersSection, Does.Contain("CancelRemoveSyncPairCommand"));
+            Assert.That(foldersSection, Does.Contain("ConfirmRemoveSelectedSyncPairCommand"));
             Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"Open selected local folder\""));
             Assert.That(foldersSection, Does.Contain("SelectedSyncPair.ToggleEnabledIcon"));
             Assert.That(foldersSection, Does.Contain("SelectedSyncPair.ModeLabel"));

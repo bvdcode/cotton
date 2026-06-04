@@ -439,7 +439,7 @@
                   </Grid>
                 </Border>
 
-                <Grid RowDefinitions="*,Auto,Auto"
+                <Grid RowDefinitions="*,Auto,Auto,Auto"
                       RowSpacing="7"
                       IsVisible="{Binding HasSyncPairs}">
                   <ListBox ItemsSource="{Binding SyncPairs}"
@@ -535,7 +535,40 @@
                     </Grid>
                   </Border>
 
-                  <Button Grid.Row="2"
+                  <Border Grid.Row="2"
+                          Padding="8"
+                          CornerRadius="6"
+                          Background="{DynamicResource CottonErrorSoftBrush}"
+                          BorderBrush="{DynamicResource CottonErrorBrush}"
+                          BorderThickness="1"
+                          IsVisible="{Binding IsRemoveSyncPairConfirmationVisible}">
+                    <Grid ColumnDefinitions="*,Auto,Auto"
+                          RowDefinitions="Auto,Auto"
+                          ColumnSpacing="6"
+                          RowSpacing="2">
+                      <TextBlock Text="{Binding RemoveSyncPairConfirmationTitle}"
+                                 FontSize="12"
+                                 FontWeight="SemiBold"
+                                 TextTrimming="CharacterEllipsis" />
+                      <Button Grid.Column="1"
+                              Content="Cancel"
+                              Classes="compact"
+                              Command="{Binding CancelRemoveSyncPairCommand}" />
+                      <Button Grid.Column="2"
+                              Content="Remove"
+                              Classes="compact"
+                              Command="{Binding ConfirmRemoveSelectedSyncPairCommand}" />
+                      <TextBlock Grid.Row="1"
+                                 Grid.ColumnSpan="3"
+                                 Text="{Binding RemoveSyncPairConfirmationPath}"
+                                 ToolTip.Tip="{Binding RemoveSyncPairConfirmationPath}"
+                                 Classes="secondary"
+                                 FontSize="11"
+                                 TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                  </Border>
+
+                  <Button Grid.Row="3"
                           Content="+"
                           Classes="icon primary"
                           ToolTip.Tip="Add another sync folder"

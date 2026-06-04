@@ -59,6 +59,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private ConflictRowViewModel? _selectedConflict;
     private RemoteFolderRowViewModel? _selectedRemoteFolder;
     private SyncPairRowViewModel? _selectedSyncPair;
+    private SyncPairRowViewModel? _pendingRemoveSyncPair;
     private string _totpCode = string.Empty;
     private string _username = string.Empty;
 
@@ -116,8 +117,16 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             () => IsSignedIn && SelectedSyncPair is not null && !IsBusy,
             HandleCommandError);
         RemoveSelectedSyncPairCommand = new AsyncRelayCommand(
-            RemoveSelectedSyncPairAsync,
-            () => IsSignedIn && SelectedSyncPair is not null && !IsBusy,
+            RequestRemoveSelectedSyncPairAsync,
+            () => IsSignedIn && SelectedSyncPair is not null && !IsBusy && !IsRemoveSyncPairConfirmationVisible,
+            HandleCommandError);
+        ConfirmRemoveSelectedSyncPairCommand = new AsyncRelayCommand(
+            ConfirmRemoveSelectedSyncPairAsync,
+            () => IsSignedIn && _pendingRemoveSyncPair is not null && !IsBusy,
+            HandleCommandError);
+        CancelRemoveSyncPairCommand = new AsyncRelayCommand(
+            CancelRemoveSyncPairAsync,
+            () => _pendingRemoveSyncPair is not null && !IsBusy,
             HandleCommandError);
         OpenWebCommand = new AsyncRelayCommand(OpenWebAsync, () => IsSignedIn, HandleCommandError);
         SelfTestCommand = new AsyncRelayCommand(SelfTestAsync, () => !IsBusy, HandleCommandError);
@@ -144,9 +153,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public AsyncRelayCommand CancelAddSyncPairCommand { get; }
 
+    public AsyncRelayCommand CancelRemoveSyncPairCommand { get; }
+
     public AsyncRelayCommand ChangeServerCommand { get; }
 
     public AsyncRelayCommand CloseSettingsCommand { get; }
+
+    public AsyncRelayCommand ConfirmRemoveSelectedSyncPairCommand { get; }
 
     public AsyncRelayCommand OpenFolderCommand { get; }
 
@@ -611,13 +624,28 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             {
                 OnPropertyChanged(nameof(SelectedSyncPairEditableDisplayName));
                 OnPropertyChanged(nameof(SelectedSyncPairToggleEnabledLabel));
+                if (_pendingRemoveSyncPair is not null && !ReferenceEquals(_pendingRemoveSyncPair, value))
+                {
+                    ClearRemoveSyncPairConfirmation();
+                }
+
                 OpenFolderCommand.RaiseCanExecuteChanged();
                 ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
                 SaveSelectedSyncPairNameCommand.RaiseCanExecuteChanged();
                 RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
+                ConfirmRemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
+                CancelRemoveSyncPairCommand.RaiseCanExecuteChanged();
             }
         }
     }
+
+    public bool IsRemoveSyncPairConfirmationVisible => _pendingRemoveSyncPair is not null;
+
+    public string RemoveSyncPairConfirmationTitle => _pendingRemoveSyncPair is null
+        ? "Remove sync folder?"
+        : "Remove " + _pendingRemoveSyncPair.DisplayName + "?";
+
+    public string RemoveSyncPairConfirmationPath => _pendingRemoveSyncPair?.LocalPath ?? string.Empty;
 
     public string SelectedSyncPairEditableDisplayName
     {
@@ -984,9 +1012,26 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
     }
 
-    private async Task RemoveSelectedSyncPairAsync()
+    private Task RequestRemoveSelectedSyncPairAsync()
     {
         SyncPairRowViewModel? selected = SelectedSyncPair;
+        if (selected is not null)
+        {
+            SetPendingRemoveSyncPair(selected);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task CancelRemoveSyncPairAsync()
+    {
+        ClearRemoveSyncPairConfirmation();
+        return Task.CompletedTask;
+    }
+
+    private async Task ConfirmRemoveSelectedSyncPairAsync()
+    {
+        SyncPairRowViewModel? selected = _pendingRemoveSyncPair;
         if (selected is null)
         {
             return;
@@ -998,6 +1043,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             await _controller.RemoveSyncPairAsync(selected.Id).ConfigureAwait(true);
             int removedIndex = SyncPairs.IndexOf(selected);
             SyncPairs.Remove(selected);
+            ClearRemoveSyncPairConfirmation();
             SelectedSyncPair = SyncPairs.Count == 0
                 ? null
                 : SyncPairs[Math.Clamp(removedIndex, 0, SyncPairs.Count - 1)];
@@ -1011,6 +1057,27 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         {
             IsBusy = false;
         }
+    }
+
+    private void SetPendingRemoveSyncPair(SyncPairRowViewModel? syncPair)
+    {
+        if (ReferenceEquals(_pendingRemoveSyncPair, syncPair))
+        {
+            return;
+        }
+
+        _pendingRemoveSyncPair = syncPair;
+        OnPropertyChanged(nameof(IsRemoveSyncPairConfirmationVisible));
+        OnPropertyChanged(nameof(RemoveSyncPairConfirmationTitle));
+        OnPropertyChanged(nameof(RemoveSyncPairConfirmationPath));
+        RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
+        ConfirmRemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
+        CancelRemoveSyncPairCommand.RaiseCanExecuteChanged();
+    }
+
+    private void ClearRemoveSyncPairConfirmation()
+    {
+        SetPendingRemoveSyncPair(null);
     }
 
     private async Task PauseAsync()
@@ -1564,6 +1631,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         AddSyncPairCommand.RaiseCanExecuteChanged();
         BrowseLocalFolderCommand.RaiseCanExecuteChanged();
         CancelAddSyncPairCommand.RaiseCanExecuteChanged();
+        CancelRemoveSyncPairCommand.RaiseCanExecuteChanged();
         ChangeServerCommand.RaiseCanExecuteChanged();
         OpenRemoteFolderCommand.RaiseCanExecuteChanged();
         RemoteFolderUpCommand.RaiseCanExecuteChanged();
@@ -1576,6 +1644,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
         SaveSelectedSyncPairNameCommand.RaiseCanExecuteChanged();
         RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
+        ConfirmRemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
         OpenWebCommand.RaiseCanExecuteChanged();
         ShowAddSyncPairCommand.RaiseCanExecuteChanged();
         ShowSettingsCommand.RaiseCanExecuteChanged();

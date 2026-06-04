@@ -40,7 +40,7 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
-    public async Task RemoveSelectedSyncPairCommand_RemovesPairAndSelectsNextPair()
+    public async Task RemoveSelectedSyncPairCommand_RequiresConfirmationBeforeRemovingPair()
     {
         Guid firstSyncPairId = Guid.NewGuid();
         Guid secondSyncPairId = Guid.NewGuid();
@@ -55,10 +55,33 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         Assert.Multiple(() =>
         {
+            Assert.That(controller.RemovedSyncPairId, Is.Null);
+            Assert.That(viewModel.IsRemoveSyncPairConfirmationVisible, Is.True);
+            Assert.That(viewModel.RemoveSyncPairConfirmationTitle, Is.EqualTo("Remove Documents?"));
+            Assert.That(viewModel.RemoveSyncPairConfirmationPath, Does.EndWith("Documents"));
+            Assert.That(viewModel.ConfirmRemoveSelectedSyncPairCommand.CanExecute(null), Is.True);
+            Assert.That(viewModel.RemoveSelectedSyncPairCommand.CanExecute(null), Is.False);
+        });
+
+        await ExecuteAsync(viewModel.CancelRemoveSyncPairCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(controller.RemovedSyncPairId, Is.Null);
+            Assert.That(viewModel.IsRemoveSyncPairConfirmationVisible, Is.False);
+            Assert.That(viewModel.RemoveSelectedSyncPairCommand.CanExecute(null), Is.True);
+        });
+
+        await ExecuteAsync(viewModel.RemoveSelectedSyncPairCommand);
+        await ExecuteAsync(viewModel.ConfirmRemoveSelectedSyncPairCommand);
+
+        Assert.Multiple(() =>
+        {
             Assert.That(controller.RemovedSyncPairId, Is.EqualTo(firstSyncPairId));
             Assert.That(viewModel.SyncPairs, Has.Count.EqualTo(1));
             Assert.That(viewModel.SyncPairs.Single().Id, Is.EqualTo(secondSyncPairId));
             Assert.That(viewModel.SelectedSyncPair?.Id, Is.EqualTo(secondSyncPairId));
+            Assert.That(viewModel.IsRemoveSyncPairConfirmationVisible, Is.False);
             Assert.That(viewModel.GlobalStatus, Is.EqualTo("Ready"));
         });
     }
