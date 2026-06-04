@@ -9,8 +9,6 @@ namespace Cotton.Sync.Desktop.Platform;
 
 internal sealed class WindowsToastNotificationService : IDesktopNotificationService
 {
-    private const string AppUserModelId = "Cotton.Sync.Desktop";
-
     private readonly string _powerShellPath;
 
     public WindowsToastNotificationService(string powerShellPath)
@@ -78,7 +76,7 @@ internal sealed class WindowsToastNotificationService : IDesktopNotificationServ
             $"$null = $textNodes.Item(0).AppendChild($xml.CreateTextNode({titleLiteral}))",
             $"$null = $textNodes.Item(1).AppendChild($xml.CreateTextNode({messageLiteral}))",
             "$toast = [Windows.UI.Notifications.ToastNotification]::new($xml)",
-            $"[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{AppUserModelId}').Show($toast)");
+            $"[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{DesktopAppIdentity.AppUserModelId}').Show($toast)");
     }
 
     private static string EncodePowerShellCommand(string command)

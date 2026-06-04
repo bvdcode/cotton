@@ -31,6 +31,7 @@ internal static class Program
                 .GetResult();
         }
 
+        DesktopAppIdentity.ApplyToCurrentProcess();
         using DesktopSingleInstanceGuard? singleInstance = DesktopSingleInstanceGuard
             .TryAcquire(paths.SingleInstanceLockPath);
         if (singleInstance is null)
