@@ -53,6 +53,11 @@ public sealed class RemoteTreeCrawler : IRemoteTreeCrawler
                 foreach (NodeDto childNode in children.Nodes)
                 {
                     string relativePath = Combine(parentPath, childNode.Name);
+                    if (SyncPathIgnoreRules.ShouldIgnore(relativePath))
+                    {
+                        continue;
+                    }
+
                     snapshot.Directories.Add(new RemoteDirectorySnapshot
                     {
                         RelativePath = relativePath,
@@ -63,9 +68,15 @@ public sealed class RemoteTreeCrawler : IRemoteTreeCrawler
 
                 foreach (NodeFileManifestDto file in children.Files)
                 {
+                    string relativePath = Combine(parentPath, file.Name);
+                    if (SyncPathIgnoreRules.ShouldIgnore(relativePath))
+                    {
+                        continue;
+                    }
+
                     snapshot.Files.Add(new RemoteFileSnapshot
                     {
-                        RelativePath = Combine(parentPath, file.Name),
+                        RelativePath = relativePath,
                         File = file,
                     });
                 }

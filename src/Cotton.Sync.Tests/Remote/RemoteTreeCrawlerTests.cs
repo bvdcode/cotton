@@ -65,6 +65,44 @@ public sealed class RemoteTreeCrawlerTests
         });
     }
 
+    [Test]
+    public async Task CrawlAsync_SkipsIgnoredRemoteItems()
+    {
+        Guid rootId = Guid.NewGuid();
+        Guid metadataId = Guid.NewGuid();
+        Guid docsId = Guid.NewGuid();
+        var client = new FakeNodeClient();
+        client.Nodes[rootId] = Node(rootId, null, "root");
+        client.Nodes[metadataId] = Node(metadataId, rootId, ".cotton-sync");
+        client.Nodes[docsId] = Node(docsId, rootId, "Docs");
+        client.Children[(rootId, 1)] = new NodeContentDto
+        {
+            TotalCount = 4,
+            Nodes = [client.Nodes[metadataId], client.Nodes[docsId]],
+            Files = [File(rootId, "scratch.tmp"), File(rootId, "keep.txt")],
+        };
+        client.Children[(metadataId, 1)] = new NodeContentDto
+        {
+            TotalCount = 1,
+            Files = [File(metadataId, "state.sqlite")],
+        };
+        client.Children[(docsId, 1)] = new NodeContentDto
+        {
+            TotalCount = 1,
+            Files = [File(docsId, "report.txt")],
+        };
+        var crawler = new RemoteTreeCrawler(client);
+
+        RemoteTreeSnapshot snapshot = await crawler.CrawlAsync(rootId);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.Directories.Select(directory => directory.RelativePath), Is.EqualTo(new[] { "Docs" }));
+            Assert.That(snapshot.Files.Select(file => file.RelativePath), Is.EqualTo(new[] { "Docs/report.txt", "keep.txt" }));
+            Assert.That(client.GetChildrenCalls, Does.Not.Contain((metadataId, 1)));
+        });
+    }
+
     private static NodeDto Node(Guid id, Guid? parentId, string name)
     {
         return new NodeDto
