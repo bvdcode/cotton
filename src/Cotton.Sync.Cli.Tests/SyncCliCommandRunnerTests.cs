@@ -427,6 +427,10 @@ public sealed class SyncCliCommandRunnerTests
             Assert.That(error.ToString(), Is.Empty);
             Assert.That(text, Does.Contain("Cotton Sync soak run"));
             Assert.That(text, Does.Contain("Iteration 1: activities=1, stateEntries=1"));
+            Assert.That(text, Does.Contain("Elapsed seconds:"));
+            Assert.That(text, Does.Contain("CPU seconds:"));
+            Assert.That(text, Does.Contain("Peak working set bytes:"));
+            Assert.That(text, Does.Contain("Peak managed memory bytes:"));
             Assert.That(text, Does.Contain("Iterations completed: 1"));
             Assert.That(text, Does.Contain("Failures: 0"));
             Assert.That(entry, Is.Not.Null);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Diagnostics;
 using Cotton.Contracts.Auth;
 using Cotton.Sdk;
 using Cotton.Sdk.Auth;
@@ -183,12 +184,16 @@ public static class SyncCliCommandRunner
         using HttpClient? ownedHttpClient = injectedHttpClient is null ? new HttpClient() : null;
         HttpClient httpClient = injectedHttpClient ?? ownedHttpClient!;
         SyncCliRuntime runtime = await CreateRuntimeAsync(options, httpClient, cancellationToken).ConfigureAwait(false);
+        using Process process = Process.GetCurrentProcess();
         DateTime startedAtUtc = DateTime.UtcNow;
+        TimeSpan startedCpu = process.TotalProcessorTime;
         DateTime? stopAtUtc = durationSeconds.HasValue
             ? startedAtUtc.AddSeconds(durationSeconds.Value)
             : null;
         int completedIterations = 0;
         int totalActivities = 0;
+        long peakWorkingSetBytes = GetWorkingSetBytes(process);
+        long peakManagedMemoryBytes = GC.GetTotalMemory(forceFullCollection: false);
         await output.WriteLineAsync("Cotton Sync soak run").ConfigureAwait(false);
         await output.WriteLineAsync("Sync pair: " + options.SyncPairId).ConfigureAwait(false);
         await output.WriteLineAsync("Started UTC: " + FormatUtc(startedAtUtc)).ConfigureAwait(false);
@@ -205,11 +210,15 @@ public static class SyncCliCommandRunner
             SyncCliPassResult pass = await RunSingleSyncPassAsync(runtime, cancellationToken).ConfigureAwait(false);
             completedIterations++;
             totalActivities += pass.Result.Activities.Count;
+            peakWorkingSetBytes = Math.Max(peakWorkingSetBytes, GetWorkingSetBytes(process));
+            peakManagedMemoryBytes = Math.Max(peakManagedMemoryBytes, GC.GetTotalMemory(forceFullCollection: false));
             await output
                 .WriteLineAsync(
                     "Iteration " + iteration.ToStringInvariant()
                     + ": activities=" + pass.Result.Activities.Count.ToStringInvariant()
-                    + ", stateEntries=" + pass.StateEntries.Count.ToStringInvariant())
+                    + ", stateEntries=" + pass.StateEntries.Count.ToStringInvariant()
+                    + ", workingSetBytes=" + GetWorkingSetBytes(process).ToStringInvariant()
+                    + ", managedMemoryBytes=" + GC.GetTotalMemory(forceFullCollection: false).ToStringInvariant())
                 .ConfigureAwait(false);
 
             if (!ShouldRunNextSoakIteration(completedIterations, iterations, stopAtUtc))
@@ -223,7 +232,13 @@ public static class SyncCliCommandRunner
         }
 
         DateTime completedAtUtc = DateTime.UtcNow;
+        TimeSpan elapsed = completedAtUtc - startedAtUtc;
+        TimeSpan cpu = GetTotalProcessorTime(process) - startedCpu;
         await output.WriteLineAsync("Completed UTC: " + FormatUtc(completedAtUtc)).ConfigureAwait(false);
+        await output.WriteLineAsync("Elapsed seconds: " + elapsed.TotalSeconds.ToStringInvariant()).ConfigureAwait(false);
+        await output.WriteLineAsync("CPU seconds: " + cpu.TotalSeconds.ToStringInvariant()).ConfigureAwait(false);
+        await output.WriteLineAsync("Peak working set bytes: " + peakWorkingSetBytes.ToStringInvariant()).ConfigureAwait(false);
+        await output.WriteLineAsync("Peak managed memory bytes: " + peakManagedMemoryBytes.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Iterations completed: " + completedIterations.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Total activities: " + totalActivities.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Failures: 0").ConfigureAwait(false);
@@ -363,6 +378,18 @@ public static class SyncCliCommandRunner
         }
 
         return remaining >= interval ? interval : remaining;
+    }
+
+    private static long GetWorkingSetBytes(Process process)
+    {
+        process.Refresh();
+        return process.WorkingSet64;
+    }
+
+    private static TimeSpan GetTotalProcessorTime(Process process)
+    {
+        process.Refresh();
+        return process.TotalProcessorTime;
     }
 
     private static async Task WriteProbeFileAsync(
@@ -525,6 +552,11 @@ public static class SyncCliCommandRunner
     private static string ToStringInvariant(this long value)
     {
         return value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private static string ToStringInvariant(this double value)
+    {
+        return value.ToString("F3", System.Globalization.CultureInfo.InvariantCulture);
     }
 
     private sealed record SyncCliConnectionOptions(
