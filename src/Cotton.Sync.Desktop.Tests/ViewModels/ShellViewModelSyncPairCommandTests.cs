@@ -292,6 +292,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.IsAddSyncPairWizardVisible, Is.True);
             Assert.That(viewModel.RemoteBrowserPath, Is.EqualTo("/"));
             Assert.That(viewModel.RemoteFolderPath, Is.EqualTo("/"));
+            Assert.That(viewModel.RemoteFolderSelectionLabel, Is.EqualTo("Cloud folder: /"));
             Assert.That(viewModel.RemoteFolders.Select(static folder => folder.Name), Is.EqualTo(new[] { "Documents", "Pictures" }));
             Assert.That(viewModel.SelectedRemoteFolder?.Path, Is.EqualTo("/Documents"));
             Assert.That(controller.ListRemoteFolderPaths, Is.EqualTo(new[] { "/" }));
@@ -407,6 +408,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             Assert.That(viewModel.RemoteBrowserPath, Is.EqualTo("/Documents"));
             Assert.That(viewModel.RemoteFolderPath, Is.EqualTo("/Documents"));
+            Assert.That(viewModel.RemoteFolderSelectionLabel, Is.EqualTo("Cloud folder: /Documents"));
             Assert.That(viewModel.RemoteFolders.Single().Id, Is.EqualTo(archiveId));
             Assert.That(viewModel.SelectedRemoteFolder?.Path, Is.EqualTo("/Documents/Archive"));
             Assert.That(viewModel.RemoteFolderUpCommand.CanExecute(null), Is.True);
