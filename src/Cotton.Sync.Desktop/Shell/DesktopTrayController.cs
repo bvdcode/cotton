@@ -109,10 +109,9 @@ internal sealed class DesktopTrayController : IDisposable
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(ShellViewModel.GlobalStatus)
+        if (e.PropertyName is nameof(ShellViewModel.HeaderStatusText)
             or nameof(ShellViewModel.IsSignedIn)
-            or nameof(ShellViewModel.ActionRequiredMessage)
-            or nameof(ShellViewModel.HasActionRequired))
+            or nameof(ShellViewModel.HasStatusAttention))
         {
             UpdateTrayStatus();
         }
@@ -143,8 +142,8 @@ internal sealed class DesktopTrayController : IDisposable
 
         DesktopTrayStatus status = DesktopTrayStatusResolver.FromShellState(
             _viewModel.IsSignedIn,
-            _viewModel.GlobalStatus,
-            _viewModel.HasActionRequired);
+            _viewModel.HeaderStatusText,
+            _viewModel.HasStatusAttention);
         _trayIcon.ToolTipText = status.ToolTipText;
         if (_currentIconUri != status.IconUri)
         {

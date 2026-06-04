@@ -12,8 +12,8 @@ public sealed class DesktopTrayStatusResolverTests
     {
         DesktopTrayStatus status = DesktopTrayStatusResolver.FromShellState(
             isSignedIn: false,
-            globalStatus: "Connected",
-            hasActionRequired: false);
+            statusText: "Connected",
+            hasStatusAttention: false);
 
         Assert.Multiple(() =>
         {
@@ -28,8 +28,8 @@ public sealed class DesktopTrayStatusResolverTests
     {
         DesktopTrayStatus status = DesktopTrayStatusResolver.FromShellState(
             isSignedIn: true,
-            globalStatus: "Connected",
-            hasActionRequired: true);
+            statusText: "Connected",
+            hasStatusAttention: true);
 
         Assert.Multiple(() =>
         {
@@ -40,12 +40,28 @@ public sealed class DesktopTrayStatusResolverTests
     }
 
     [Test]
+    public void FromShellState_ReturnsErrorWhenConflictsNeedReview()
+    {
+        DesktopTrayStatus status = DesktopTrayStatusResolver.FromShellState(
+            isSignedIn: true,
+            statusText: "Conflicts need review",
+            hasStatusAttention: true);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(status.Kind, Is.EqualTo(DesktopTrayStatusKind.Error));
+            Assert.That(status.ToolTipText, Is.EqualTo("Cotton Sync - Conflicts need review"));
+            Assert.That(status.IconUri.ToString(), Does.EndWith("/Assets/tray-error.png"));
+        });
+    }
+
+    [Test]
     public void FromShellState_ReturnsOfflineWhenGlobalStatusIsOffline()
     {
         DesktopTrayStatus status = DesktopTrayStatusResolver.FromShellState(
             isSignedIn: true,
-            globalStatus: "Offline",
-            hasActionRequired: false);
+            statusText: "Offline",
+            hasStatusAttention: false);
 
         Assert.That(status.Kind, Is.EqualTo(DesktopTrayStatusKind.Offline));
     }
@@ -55,8 +71,8 @@ public sealed class DesktopTrayStatusResolverTests
     {
         DesktopTrayStatus status = DesktopTrayStatusResolver.FromShellState(
             isSignedIn: true,
-            globalStatus: "Paused",
-            hasActionRequired: false);
+            statusText: "Paused",
+            hasStatusAttention: false);
 
         Assert.That(status.Kind, Is.EqualTo(DesktopTrayStatusKind.Paused));
     }
@@ -66,8 +82,8 @@ public sealed class DesktopTrayStatusResolverTests
     {
         DesktopTrayStatus status = DesktopTrayStatusResolver.FromShellState(
             isSignedIn: true,
-            globalStatus: "Sync requested",
-            hasActionRequired: false);
+            statusText: "Sync requested",
+            hasStatusAttention: false);
 
         Assert.That(status.Kind, Is.EqualTo(DesktopTrayStatusKind.Syncing));
     }
@@ -77,8 +93,8 @@ public sealed class DesktopTrayStatusResolverTests
     {
         DesktopTrayStatus status = DesktopTrayStatusResolver.FromShellState(
             isSignedIn: true,
-            globalStatus: "Connected",
-            hasActionRequired: false);
+            statusText: "Connected",
+            hasStatusAttention: false);
 
         Assert.Multiple(() =>
         {

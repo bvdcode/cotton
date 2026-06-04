@@ -9,30 +9,32 @@ internal static class DesktopTrayStatusResolver
 
     public static DesktopTrayStatus FromShellState(
         bool isSignedIn,
-        string globalStatus,
-        bool hasActionRequired)
+        string statusText,
+        bool hasStatusAttention)
     {
         if (!isSignedIn)
         {
             return Create(DesktopTrayStatusKind.SignedOut, "Signed out");
         }
 
-        if (hasActionRequired || Contains(globalStatus, "action") || Contains(globalStatus, "failed"))
+        if (hasStatusAttention || Contains(statusText, "action") || Contains(statusText, "failed"))
         {
-            return Create(DesktopTrayStatusKind.Error, "Action required");
+            return Create(
+                DesktopTrayStatusKind.Error,
+                Contains(statusText, "conflict") ? "Conflicts need review" : "Action required");
         }
 
-        if (Contains(globalStatus, "offline"))
+        if (Contains(statusText, "offline"))
         {
             return Create(DesktopTrayStatusKind.Offline, "Offline");
         }
 
-        if (Contains(globalStatus, "paused"))
+        if (Contains(statusText, "paused"))
         {
             return Create(DesktopTrayStatusKind.Paused, "Paused");
         }
 
-        if (Contains(globalStatus, "sync"))
+        if (Contains(statusText, "sync"))
         {
             return Create(DesktopTrayStatusKind.Syncing, "Syncing");
         }

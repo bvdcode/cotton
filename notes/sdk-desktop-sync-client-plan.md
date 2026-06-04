@@ -456,6 +456,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Required states: idle, syncing, paused, offline, error.
   Partial 2026-06-03: added a tested tray status model/resolver for signed-out, idle, syncing, paused, offline, and error states, and wired it to the tray tooltip.
   Verification 2026-06-03: added dedicated tray status icon assets for signed-out, idle, syncing, paused, offline, and error states, plus `DesktopTrayIconAssetResolver`; `DesktopTrayController` now updates the tray icon when status changes. Focused tray tests passed 7/7, full `Cotton.Sync.Desktop.Tests` passed 89/89, and full solution Release build passed with the known NU1903 warning. Manual Windows tray verification remains open below.
+  Verification 2026-06-04: tray status now follows the shell attention summary instead of raw action-required errors only, so conflict-only states use the attention/error tray icon and tooltip `Cotton Sync - Conflicts need review` instead of falling back to `Connected`. Focused tray resolver tests passed 8/8, full `Cotton.Sync.Desktop.Tests` passed 256/256, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with 0 warnings.
 - [x] Add tray menu.
   Required commands: show app, open folder, open web, sync now, pause/resume, settings, quit.
   Partial 2026-06-03: commit `Expand desktop tray menu commands`; Windows tray menu now wires show app, open selected local folder, open Cotton Cloud in browser, sync now, pause, resume, settings overlay, and quit.
