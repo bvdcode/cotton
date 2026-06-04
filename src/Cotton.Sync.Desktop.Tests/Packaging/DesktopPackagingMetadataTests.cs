@@ -162,6 +162,27 @@ public sealed class DesktopPackagingMetadataTests
     }
 
     [Test]
+    public void WindowsInstallerScript_DefinesReleaseInstallLayout()
+    {
+        string installerScript = File.ReadAllText(GetDesktopFilePath("Packaging/windows/cotton-sync.iss"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(installerScript, Does.Contain("AppName=Cotton Sync"));
+            Assert.That(installerScript, Does.Contain("DefaultDirName={autopf}\\Cotton Sync"));
+            Assert.That(installerScript, Does.Contain("PrivilegesRequired=lowest"));
+            Assert.That(installerScript, Does.Contain("ArchitecturesAllowed=x64compatible"));
+            Assert.That(installerScript, Does.Contain("OutputBaseFilename=cotton-sync-desktop-win-x64-setup"));
+            Assert.That(installerScript, Does.Contain("SetupIconFile={#SourceDir}\\Assets\\app.ico"));
+            Assert.That(installerScript, Does.Contain("Source: \"{#SourceDir}\\*\""));
+            Assert.That(installerScript, Does.Contain("recursesubdirs createallsubdirs"));
+            Assert.That(installerScript, Does.Contain("Cotton.Sync.Desktop.exe"));
+            Assert.That(installerScript, Does.Contain("Create a desktop shortcut"));
+            Assert.That(installerScript, Does.Contain("Flags: nowait postinstall skipifsilent"));
+        });
+    }
+
+    [Test]
     public void CiWorkflow_AttachesDesktopArtifactChecksumsToRelease()
     {
         string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
