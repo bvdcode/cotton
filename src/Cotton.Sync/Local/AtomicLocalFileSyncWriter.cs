@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Diagnostics;
 using System.Globalization;
 using Cotton.Sync.State;
 
@@ -176,11 +177,13 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
             {
                 File.Delete(temporaryFile);
             }
-            catch (IOException)
+            catch (IOException exception)
             {
+                Trace.TraceWarning("Failed to delete stale sync download temp file '{0}': {1}", temporaryFile, exception.Message);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException exception)
             {
+                Trace.TraceWarning("Failed to delete stale sync download temp file '{0}': {1}", temporaryFile, exception.Message);
             }
         }
     }
