@@ -223,13 +223,15 @@
             RowSpacing="8">
         <Border Padding="10"
                 CornerRadius="6"
-                Background="{DynamicResource CottonPrimarySoftBrush}">
+                Classes="statusCard"
+                Classes.actionRequired="{Binding HasActionRequired}">
           <Grid ColumnDefinitions="Auto,*"
                 ColumnSpacing="9">
             <Border Width="12"
                     Height="12"
                     CornerRadius="6"
-                    Background="{DynamicResource CottonSuccessBrush}"
+                    Classes="statusDot"
+                    Classes.actionRequired="{Binding HasActionRequired}"
                     VerticalAlignment="Center" />
             <StackPanel Grid.Column="1"
                         Spacing="1">
@@ -897,139 +899,29 @@
                         Background="{DynamicResource CottonBorderBrush}" />
 
                 <StackPanel Spacing="7">
-                  <Grid ColumnDefinitions="*,Auto"
-                        ColumnSpacing="8">
-                    <TextBlock Text="Sync folders"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center" />
-                    <Button Grid.Column="1"
-                            Content="+"
-                            Classes="icon"
-                            ToolTip.Tip="Add sync folder"
-                            Command="{Binding ShowAddSyncPairCommand}" />
-                  </Grid>
-                  <Border Padding="9"
-                          CornerRadius="6"
-                          Background="{DynamicResource CottonSurfaceMutedBrush}"
-                          BorderBrush="{DynamicResource CottonBorderBrush}"
-                          BorderThickness="1"
-                          IsVisible="{Binding HasNoSyncPairs}">
-                    <Grid ColumnDefinitions="*,Auto"
-                          ColumnSpacing="8">
-                      <StackPanel Spacing="2">
-                        <TextBlock Text="No folders configured"
-                                   FontSize="12"
-                                   FontWeight="SemiBold" />
-                        <TextBlock Text="Add a local folder and match it to Cotton Cloud."
-                                   Classes="secondary"
-                                   FontSize="11"
-                                   TextWrapping="Wrap" />
-                      </StackPanel>
-                      <Button Grid.Column="1"
-                              Content="+"
-                              Classes="icon primary"
-                              ToolTip.Tip="Add sync folder"
-                              Command="{Binding ShowAddSyncPairCommand}" />
-                    </Grid>
-                  </Border>
-                  <Border MaxHeight="128"
-                          BorderBrush="{DynamicResource CottonBorderBrush}"
-                          BorderThickness="1"
-                          CornerRadius="6"
-                          IsVisible="{Binding HasSyncPairs}">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                      <ListBox ItemsSource="{Binding SyncPairs}"
-                               SelectedItem="{Binding SelectedSyncPair}"
-                               BorderThickness="0"
-                               Background="Transparent">
-                        <ListBox.ItemTemplate>
-                          <DataTemplate>
-                            <Grid RowDefinitions="Auto,Auto"
-                                  ColumnDefinitions="*,Auto"
-                                  ColumnSpacing="8"
-                                  Margin="8,6">
-                              <TextBlock Text="{Binding DisplayName}"
-                                         FontSize="12"
-                                         FontWeight="SemiBold"
-                                         TextTrimming="CharacterEllipsis" />
-                              <TextBlock Grid.Column="1"
-                                         Text="{Binding Status}"
-                                         Classes="secondary"
-                                         FontSize="12" />
-                              <TextBlock Grid.Row="1"
-                                         Grid.ColumnSpan="2"
-                                         Text="{Binding LocalPath}"
-                                         ToolTip.Tip="{Binding LocalPath}"
-                                         Classes="secondary"
-                                         FontSize="11"
-                                         TextTrimming="CharacterEllipsis" />
-                            </Grid>
-                          </DataTemplate>
-                        </ListBox.ItemTemplate>
-                      </ListBox>
-                    </ScrollViewer>
-                  </Border>
-                  <Grid ColumnDefinitions="48,*,Auto"
-                        ColumnSpacing="6"
-                        IsVisible="{Binding HasSyncPairs}">
-                    <TextBlock Text="Name"
-                               Classes="secondary"
-                               FontSize="12"
-                               VerticalAlignment="Center" />
-                    <TextBox Grid.Column="1"
-                             Text="{Binding SelectedSyncPairEditableDisplayName}"
-                             PlaceholderText="Sync folder"
-                             MinHeight="30" />
-                    <Button Grid.Column="2"
-                            Content="Save"
-                            Classes="compact"
-                            Command="{Binding SaveSelectedSyncPairNameCommand}" />
-                  </Grid>
-                  <StackPanel Orientation="Horizontal"
-                              Spacing="6"
-                              IsVisible="{Binding HasSyncPairs}">
-                    <Button Content="Open"
-                            Classes="compact"
-                            Command="{Binding OpenFolderCommand}" />
-                    <Button Content="{Binding SelectedSyncPairToggleEnabledLabel}"
-                            Classes="compact"
-                            Command="{Binding ToggleSelectedSyncPairEnabledCommand}" />
-                    <Button Content="Remove"
-                            Classes="compact"
-                            Command="{Binding RemoveSelectedSyncPairCommand}" />
-                  </StackPanel>
-                </StackPanel>
-
-                <Border Height="1"
-                        Background="{DynamicResource CottonBorderBrush}" />
-
-                <StackPanel Spacing="7">
                   <TextBlock Text="Diagnostics"
                              FontWeight="SemiBold" />
-                  <Border MaxHeight="112"
-                          BorderBrush="{DynamicResource CottonBorderBrush}"
+                  <Border BorderBrush="{DynamicResource CottonBorderBrush}"
                           BorderThickness="1"
                           CornerRadius="6">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                      <ItemsControl ItemsSource="{Binding DiagnosticsItems}">
-                        <ItemsControl.ItemTemplate>
-                          <DataTemplate>
-                            <Grid ColumnDefinitions="108,*"
-                                  ColumnSpacing="8"
-                                  Margin="8,5">
-                              <TextBlock Text="{Binding Label}"
-                                         Classes="secondary"
-                                         FontSize="11"
-                                         TextTrimming="CharacterEllipsis" />
-                              <TextBlock Grid.Column="1"
-                                         Text="{Binding Value}"
-                                         FontSize="11"
-                                         TextTrimming="CharacterEllipsis" />
-                            </Grid>
-                          </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                      </ItemsControl>
-                    </ScrollViewer>
+                    <ItemsControl ItemsSource="{Binding DiagnosticsItems}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Grid ColumnDefinitions="108,*"
+                                ColumnSpacing="8"
+                                Margin="8,5">
+                            <TextBlock Text="{Binding Label}"
+                                       Classes="secondary"
+                                       FontSize="11"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Value}"
+                                       FontSize="11"
+                                       TextTrimming="CharacterEllipsis" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                   </Border>
                   <StackPanel Orientation="Horizontal"
                               Spacing="6">
@@ -1037,7 +929,7 @@
                             Classes="compact"
                             ToolTip.Tip="Run desktop self-test"
                             Command="{Binding SelfTestCommand}" />
-                    <Button Content="Export"
+                    <Button Content="Export diagnostics"
                             Classes="compact"
                             ToolTip.Tip="Export diagnostics bundle"
                             Command="{Binding ExportDiagnosticsCommand}" />

@@ -2,12 +2,15 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Data.Common;
+using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Sync.App.State;
 
 internal sealed class SqliteSyncAppDbContextFactory
 {
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> MigrationGates = new(StringComparer.OrdinalIgnoreCase);
+
     private readonly string _databasePath;
 
     public SqliteSyncAppDbContextFactory(string databasePath)
@@ -35,6 +38,24 @@ internal sealed class SqliteSyncAppDbContextFactory
         if (!string.IsNullOrEmpty(directory))
         {
             Directory.CreateDirectory(directory);
+        }
+    }
+
+    public async Task MigrateAsync(CancellationToken cancellationToken)
+    {
+        EnsureDirectoryExists();
+        SemaphoreSlim gate = MigrationGates.GetOrAdd(
+            Path.GetFullPath(_databasePath),
+            static _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await using SyncAppDbContext context = Create();
+            await context.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            gate.Release();
         }
     }
 }

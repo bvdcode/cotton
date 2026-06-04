@@ -53,7 +53,7 @@ internal sealed class CottonHttpTransport
             authorize,
             headers,
             cancellationToken).ConfigureAwait(false);
-        return await ReadRequiredJsonAsync<T>(response, cancellationToken).ConfigureAwait(false);
+        return await ReadRequiredJsonAsync<T>(response, method, path, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task SendNoContentAsync(
@@ -71,7 +71,7 @@ internal sealed class CottonHttpTransport
             authorize,
             headers,
             cancellationToken).ConfigureAwait(false);
-        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, method, path, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<HttpResponseMessage> SendAsync(
@@ -124,7 +124,7 @@ internal sealed class CottonHttpTransport
             cancellationToken).ConfigureAwait(false);
         if (response.StatusCode != HttpStatusCode.Unauthorized || !authorize || !_options.RefreshOnUnauthorized || !content.CanSeek)
         {
-            await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+            await EnsureSuccessAsync(response, HttpMethod.Post, path, cancellationToken).ConfigureAwait(false);
             return;
         }
 
@@ -137,7 +137,7 @@ internal sealed class CottonHttpTransport
             contentType,
             authorize,
             cancellationToken).ConfigureAwait(false);
-        await EnsureSuccessAsync(retry, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(retry, HttpMethod.Post, path, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<HttpResponseMessage> SendRawUploadOnceAsync(
@@ -187,7 +187,7 @@ internal sealed class CottonHttpTransport
             authorize: authorize,
             headers: null,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, HttpMethod.Get, path, cancellationToken).ConfigureAwait(false);
         await using Stream source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         byte[] buffer = new byte[64 * 1024];
         long total = 0;
@@ -207,6 +207,15 @@ internal sealed class CottonHttpTransport
 
     public static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
+        await EnsureSuccessAsync(response, method: null, path: null, cancellationToken).ConfigureAwait(false);
+    }
+
+    public static async Task EnsureSuccessAsync(
+        HttpResponseMessage response,
+        HttpMethod? method,
+        string? path,
+        CancellationToken cancellationToken)
+    {
         if (response.IsSuccessStatusCode)
         {
             return;
@@ -215,7 +224,10 @@ internal sealed class CottonHttpTransport
         string? body = response.Content is null
             ? null
             : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        string message = $"Cotton API request failed with status {(int)response.StatusCode} ({response.StatusCode}).";
+        string requestLabel = FormatRequestLabel(method, path);
+        string message = requestLabel.Length == 0
+            ? $"Cotton API request failed with status {(int)response.StatusCode} ({response.StatusCode})."
+            : $"Cotton API request {requestLabel} failed with status {(int)response.StatusCode} ({response.StatusCode}).";
         if (!string.IsNullOrWhiteSpace(body))
         {
             message += " Response: " + CreateResponsePreview(body);
@@ -262,13 +274,20 @@ internal sealed class CottonHttpTransport
         return request;
     }
 
-    private async Task<T> ReadRequiredJsonAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken)
+    private async Task<T> ReadRequiredJsonAsync<T>(
+        HttpResponseMessage response,
+        HttpMethod method,
+        string path,
+        CancellationToken cancellationToken)
     {
-        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, method, path, cancellationToken).ConfigureAwait(false);
         string body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(body))
         {
-            throw new CottonApiException(response.StatusCode, null, "Cotton API returned an empty JSON response.");
+            throw new CottonApiException(
+                response.StatusCode,
+                null,
+                $"Cotton API request {FormatRequestLabel(method, path)} returned an empty JSON response.");
         }
 
         T? result;
@@ -282,14 +301,17 @@ internal sealed class CottonHttpTransport
             throw new CottonApiException(
                 response.StatusCode,
                 body,
-                "Cotton API returned invalid JSON"
+                $"Cotton API request {FormatRequestLabel(method, path)} returned invalid JSON"
                 + $" with content type '{contentType}' and status {(int)response.StatusCode} ({response.StatusCode})."
                 + " Response: "
                 + CreateResponsePreview(body),
                 exception);
         }
 
-        return result ?? throw new CottonApiException(response.StatusCode, null, "Cotton API returned an empty JSON response.");
+        return result ?? throw new CottonApiException(
+            response.StatusCode,
+            null,
+            $"Cotton API request {FormatRequestLabel(method, path)} returned an empty JSON response.");
     }
 
     private static string CreateResponsePreview(string responseBody)
@@ -331,7 +353,11 @@ internal sealed class CottonHttpTransport
                 return false;
             }
 
-            TokenPairDto refreshed = await ReadRequiredJsonAsync<TokenPairDto>(response, cancellationToken).ConfigureAwait(false);
+            TokenPairDto refreshed = await ReadRequiredJsonAsync<TokenPairDto>(
+                response,
+                HttpMethod.Post,
+                path,
+                cancellationToken).ConfigureAwait(false);
             await _tokenStore.SaveAsync(refreshed, cancellationToken).ConfigureAwait(false);
             return true;
         }
@@ -459,6 +485,16 @@ internal sealed class CottonHttpTransport
         }
 
         return route + "?" + string.Join("&", parts);
+    }
+
+    private static string FormatRequestLabel(HttpMethod? method, string? path)
+    {
+        if (method is null || string.IsNullOrWhiteSpace(path))
+        {
+            return string.Empty;
+        }
+
+        return method.Method + " " + RedactPath(path);
     }
 
     private static bool IsSensitiveQueryKey(string key)

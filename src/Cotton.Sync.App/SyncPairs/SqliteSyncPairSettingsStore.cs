@@ -24,9 +24,7 @@ public sealed class SqliteSyncPairSettingsStore : ISyncPairSettingsStore
     /// <inheritdoc />
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        _contextFactory.EnsureDirectoryExists();
-        await using SyncAppDbContext context = _contextFactory.Create();
-        await context.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
+        await _contextFactory.MigrateAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -75,10 +73,16 @@ public sealed class SqliteSyncPairSettingsStore : ISyncPairSettingsStore
     public async Task DeleteAsync(Guid syncPairId, CancellationToken cancellationToken = default)
     {
         await using SyncAppDbContext context = _contextFactory.Create();
-        await context.SyncPairSettings
-            .Where(item => item.Id == syncPairId)
-            .ExecuteDeleteAsync(cancellationToken)
+        SyncPairSettingsEntity? entity = await context.SyncPairSettings
+            .SingleOrDefaultAsync(item => item.Id == syncPairId, cancellationToken)
             .ConfigureAwait(false);
+        if (entity is null)
+        {
+            return;
+        }
+
+        context.SyncPairSettings.Remove(entity);
+        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private static void UpdateEntity(SyncPairSettingsEntity entity, SyncPairSettings syncPair)

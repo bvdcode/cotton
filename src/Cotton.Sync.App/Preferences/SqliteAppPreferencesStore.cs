@@ -26,9 +26,7 @@ public sealed class SqliteAppPreferencesStore : IAppPreferencesStore
     /// <inheritdoc />
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        _contextFactory.EnsureDirectoryExists();
-        await using SyncAppDbContext context = _contextFactory.Create();
-        await context.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
+        await _contextFactory.MigrateAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

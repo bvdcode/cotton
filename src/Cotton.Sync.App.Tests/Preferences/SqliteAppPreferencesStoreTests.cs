@@ -128,6 +128,36 @@ public sealed class SqliteAppPreferencesStoreTests
     }
 
     [Test]
+    public async Task InitializeAsync_SerializesConcurrentStoresSharingDatabase()
+    {
+        string databasePath = DatabasePath();
+        Task[] migrations = Enumerable.Range(0, 12)
+            .Select(index => index % 2 == 0
+                ? new SqliteAppPreferencesStore(databasePath).InitializeAsync()
+                : new SqliteSyncPairSettingsStore(databasePath).InitializeAsync())
+            .ToArray();
+
+        await Task.WhenAll(migrations);
+
+        var syncPairStore = new SqliteSyncPairSettingsStore(databasePath);
+        var preferencesStore = new SqliteAppPreferencesStore(databasePath);
+        SyncPairSettings syncPair = CreatePair("/home/user/Cotton");
+        await syncPairStore.UpsertAsync(syncPair);
+        await preferencesStore.SaveAsync(new AppPreferences
+        {
+            RememberedServerUrl = new Uri("https://cotton.example.test/"),
+        });
+
+        SyncPairSettings? persistedSyncPair = await syncPairStore.GetAsync(syncPair.Id);
+        AppPreferences persistedPreferences = await preferencesStore.GetAsync();
+        Assert.Multiple(() =>
+        {
+            Assert.That(persistedSyncPair, Is.Not.Null);
+            Assert.That(persistedPreferences.RememberedServerUrl, Is.EqualTo(new Uri("https://cotton.example.test/")));
+        });
+    }
+
+    [Test]
     public async Task SaveAsync_TrimsRememberedUsername()
     {
         SqliteAppPreferencesStore store = CreateStore();

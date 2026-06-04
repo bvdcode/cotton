@@ -137,6 +137,7 @@ public sealed class CottonHttpTransportTests
         {
             Assert.That(exception, Is.Not.Null);
             Assert.That(exception!.Message, Does.Contain("invalid JSON"));
+            Assert.That(exception.Message, Does.Contain("GET /api/v1/settings"));
             Assert.That(exception.Message, Does.Contain("text/html"));
             Assert.That(exception.Message, Does.Contain("<!doctype html>"));
             Assert.That(exception.ResponseBody, Does.Contain("Not the API"));
@@ -159,6 +160,7 @@ public sealed class CottonHttpTransportTests
         Assert.Multiple(() =>
         {
             Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.Message, Does.Contain("DELETE /api/v1/layouts/nodes/"));
             Assert.That(exception!.Message, Does.Contain("400"));
             Assert.That(exception.Message, Does.Contain("Validation failed for remote folder."));
             Assert.That(exception.ResponseBody, Is.EqualTo("Validation failed for remote folder."));

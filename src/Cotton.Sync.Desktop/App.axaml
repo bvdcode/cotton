@@ -48,6 +48,21 @@
     <Style Selector="TextBlock.secondary">
       <Setter Property="Foreground" Value="{DynamicResource CottonTextSecondaryBrush}" />
     </Style>
+    <Style Selector="Border.statusCard">
+      <Setter Property="Background" Value="{DynamicResource CottonPrimarySoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource CottonPrimarySoftBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Border.statusCard.actionRequired">
+      <Setter Property="Background" Value="{DynamicResource CottonErrorSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource CottonErrorBrush}" />
+    </Style>
+    <Style Selector="Border.statusDot">
+      <Setter Property="Background" Value="{DynamicResource CottonSuccessBrush}" />
+    </Style>
+    <Style Selector="Border.statusDot.actionRequired">
+      <Setter Property="Background" Value="{DynamicResource CottonErrorBrush}" />
+    </Style>
     <Style Selector="Button.primary">
       <Setter Property="Background" Value="{DynamicResource CottonPrimaryBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource CottonPrimaryBrush}" />

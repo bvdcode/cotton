@@ -23,11 +23,12 @@ public sealed class CottonChunkClient : ICottonChunkClient
     public async Task<bool> ExistsAsync(string hash, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(hash);
+        string path = "/api/v1/chunks/" + Uri.EscapeDataString(hash) + "/exists";
         using HttpResponseMessage response = await _transport.SendAsync(
             HttpMethod.Get,
-            "/api/v1/chunks/" + Uri.EscapeDataString(hash) + "/exists",
+            path,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        await CottonHttpTransport.EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        await CottonHttpTransport.EnsureSuccessAsync(response, HttpMethod.Get, path, cancellationToken).ConfigureAwait(false);
         string body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         return bool.TryParse(body, out bool exists) && exists;
     }
