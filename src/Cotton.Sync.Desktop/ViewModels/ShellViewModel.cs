@@ -487,6 +487,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public bool IsStatusCardVisible => HasConflicts || (HasSyncPairs && !HasActionRequired);
 
+    public bool IsDashboardChromeVisible => !IsAddSyncPairWizardVisible && !IsSettingsVisible;
+
     public double ActionRequiredOpacity => HasActionRequired ? 1 : 0;
 
     public bool CanRetryActionRequired => HasActionRequired && IsSignedIn;
@@ -683,6 +685,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             if (SetProperty(ref _isAddSyncPairWizardVisible, value))
             {
                 RaiseWizardStateProperties();
+                OnPropertyChanged(nameof(IsDashboardChromeVisible));
             }
         }
     }
@@ -709,7 +712,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public bool IsSettingsVisible
     {
         get => _isSettingsVisible;
-        private set => SetProperty(ref _isSettingsVisible, value);
+        private set
+        {
+            if (SetProperty(ref _isSettingsVisible, value))
+            {
+                OnPropertyChanged(nameof(IsDashboardChromeVisible));
+            }
+        }
     }
 
     public int SelectedSettingsTabIndex

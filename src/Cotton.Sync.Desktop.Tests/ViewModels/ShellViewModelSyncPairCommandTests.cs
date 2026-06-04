@@ -241,6 +241,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.IsSettingsVisible, Is.True);
+            Assert.That(viewModel.IsDashboardChromeVisible, Is.False);
             Assert.That(viewModel.SelectedSettingsTabIndex, Is.EqualTo(0));
         });
     }
@@ -343,6 +344,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.IsSettingsVisible, Is.True);
+            Assert.That(viewModel.IsDashboardChromeVisible, Is.False);
             Assert.That(viewModel.SelectedSettingsTabIndex, Is.EqualTo(3));
             Assert.That(viewModel.GlobalStatus, Is.EqualTo("Self-test passed"));
             Assert.That(viewModel.HasSelfTestItems, Is.True);
@@ -975,6 +977,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(localFolderPicker.PickFolderCalls, Is.Zero);
             Assert.That(viewModel.LocalFolderPath, Is.Empty);
             Assert.That(viewModel.IsAddSyncPairWizardVisible, Is.True);
+            Assert.That(viewModel.IsDashboardChromeVisible, Is.False);
             Assert.That(viewModel.IsAddSyncPairLocalStepVisible, Is.True);
             Assert.That(viewModel.IsAddSyncPairCloudStepVisible, Is.False);
             Assert.That(viewModel.RemoteBrowserPath, Is.EqualTo("/"));
@@ -1132,6 +1135,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.IsAddSyncPairWizardVisible, Is.False);
+            Assert.That(viewModel.IsDashboardChromeVisible, Is.True);
             Assert.That(viewModel.LocalFolderPath, Is.Empty);
             Assert.That(viewModel.HasActionRequired, Is.False);
             Assert.That(viewModel.GlobalStatus, Is.EqualTo("Connected"));
@@ -1466,6 +1470,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.Password, Is.Empty);
             Assert.That(viewModel.TotpCode, Is.Empty);
             Assert.That(viewModel.IsSettingsVisible, Is.False);
+            Assert.That(viewModel.IsDashboardChromeVisible, Is.True);
             Assert.That(viewModel.SignOutCommand.CanExecute(null), Is.False);
         });
     }
