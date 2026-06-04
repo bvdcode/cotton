@@ -29,7 +29,7 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
-    public void FoldersHeader_DoesNotDuplicateAddFolderCommand()
+    public void FoldersHeader_HasCompactAddFolderCommandForExistingFolders()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
         string foldersHeader = GetSlice(
@@ -40,8 +40,10 @@ public sealed class DesktopSetupVisualContractTests
         Assert.Multiple(() =>
         {
             Assert.That(foldersHeader, Does.Not.Contain("Sync roots"));
-            Assert.That(foldersHeader, Does.Not.Contain("ShowAddSyncPairCommand"));
-            Assert.That(mainWindowXaml, Does.Contain("ToolTip.Tip=\"Add another sync folder\""));
+            Assert.That(foldersHeader, Does.Contain("ShowAddSyncPairCommand"));
+            Assert.That(foldersHeader, Does.Contain("ToolTip.Tip=\"Add sync folder\""));
+            Assert.That(foldersHeader, Does.Contain("IsVisible=\"{Binding HasSyncPairs}\""));
+            Assert.That(foldersHeader, Does.Contain("Classes=\"icon primary\""));
         });
     }
 
@@ -52,7 +54,7 @@ public sealed class DesktopSetupVisualContractTests
         string emptyFoldersState = GetSlice(
             mainWindowXaml,
             "IsVisible=\"{Binding HasNoSyncPairs}\"",
-            "<Grid RowDefinitions=\"Auto,Auto,Auto,Auto\"");
+            "<Grid RowDefinitions=\"Auto,Auto,Auto\"");
 
         Assert.Multiple(() =>
         {
