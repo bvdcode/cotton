@@ -8,22 +8,12 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 /// <summary>
 /// Describes immutable file-content metadata that must match the chunks served to a reader.
 /// </summary>
-public sealed class FileManifestIntegrityDescriptor :
-    DatabaseIntegrityDescriptor<FileManifest>,
-    IDatabaseIntegrityLegacyDescriptorProvider
+public sealed class FileManifestIntegrityDescriptor : DatabaseIntegrityDescriptor<FileManifest>
 {
-    private static readonly IReadOnlyCollection<IDatabaseIntegrityDescriptor> LegacyDescriptorSet =
-    [
-        new V1WithOperationalPreviewStateDescriptor(),
-        new V1WithoutOperationalPreviewStateDescriptor()
-    ];
-
     /// <inheritdoc />
     public override string EntityName => "file_manifests";
     /// <inheritdoc />
-    public override int SchemaVersion => 2;
-    /// <inheritdoc />
-    public IReadOnlyCollection<IDatabaseIntegrityDescriptor> LegacyDescriptors => LegacyDescriptorSet;
+    public override int SchemaVersion => 1;
 
     /// <inheritdoc />
     public override string GetEntityKey(FileManifest entity)
@@ -49,39 +39,5 @@ public sealed class FileManifestIntegrityDescriptor :
         writer.WriteBytesField(nameof(entity.SmallFilePreviewHashEncrypted), entity.SmallFilePreviewHashEncrypted);
         writer.WriteBytesField(nameof(entity.SmallFilePreviewHash), entity.SmallFilePreviewHash);
         writer.WriteBytesField(nameof(entity.LargeFilePreviewHash), entity.LargeFilePreviewHash);
-    }
-
-    private sealed class V1WithoutOperationalPreviewStateDescriptor : DatabaseIntegrityDescriptor<FileManifest>
-    {
-        public override string EntityName => "file_manifests";
-        public override int SchemaVersion => 1;
-
-        public override string GetEntityKey(FileManifest entity)
-        {
-            return entity.Id.ToString("D");
-        }
-
-        public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, FileManifest entity)
-        {
-            WriteContentIdentityFields(writer, entity);
-        }
-    }
-
-    private sealed class V1WithOperationalPreviewStateDescriptor : DatabaseIntegrityDescriptor<FileManifest>
-    {
-        public override string EntityName => "file_manifests";
-        public override int SchemaVersion => 1;
-
-        public override string GetEntityKey(FileManifest entity)
-        {
-            return entity.Id.ToString("D");
-        }
-
-        public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, FileManifest entity)
-        {
-            WriteContentIdentityFields(writer, entity);
-            writer.WriteStringField(nameof(entity.PreviewGenerationError), entity.PreviewGenerationError);
-            writer.WriteInt32Field(nameof(entity.PreviewGeneratorVersion), entity.PreviewGeneratorVersion);
-        }
     }
 }
