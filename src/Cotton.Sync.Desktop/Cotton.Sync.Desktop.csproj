@@ -18,6 +18,7 @@
     <InformationalVersion>0.1.0-dev</InformationalVersion>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <UseAppHost>true</UseAppHost>
+    <RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
     <ApplicationIcon>Assets/app.ico</ApplicationIcon>
     <Win32Icon>Assets/app.ico</Win32Icon>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
