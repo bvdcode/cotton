@@ -53,7 +53,7 @@ internal static class DesktopActionRequiredMessageResolver
                 ?? "Cotton API request failed. Check diagnostics and retry.";
         }
 
-        return Normalize(exception.Message) ?? "Action failed. Check diagnostics and retry.";
+        return Normalize(exception.Message) ?? "Operation could not be completed. Check diagnostics and retry.";
     }
 
     private static string? NormalizeApiException(CottonApiException exception)

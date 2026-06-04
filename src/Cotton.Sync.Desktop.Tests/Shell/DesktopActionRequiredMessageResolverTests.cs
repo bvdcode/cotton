@@ -210,4 +210,14 @@ public sealed class DesktopActionRequiredMessageResolverTests
 
         Assert.That(message, Is.EqualTo("Too many invalid 2FA attempts. Try again later or sign in from the web app."));
     }
+
+    [Test]
+    public void FromException_UsesReadableFallbackWhenExceptionHasNoMessage()
+    {
+        var exception = new InvalidOperationException(string.Empty);
+
+        string message = DesktopActionRequiredMessageResolver.FromException(exception);
+
+        Assert.That(message, Is.EqualTo("Operation could not be completed. Check diagnostics and retry."));
+    }
 }
