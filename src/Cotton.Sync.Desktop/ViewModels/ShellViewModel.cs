@@ -1088,6 +1088,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 SelectedSettingsTabIndex = 3;
                 await ShowSettingsAsync().ConfigureAwait(true);
                 await SelfTestAsync().ConfigureAwait(true);
+                await ExportDiagnosticsAsync().ConfigureAwait(true);
                 break;
             case DesktopVisualSmokeScenario.Error:
                 GlobalStatus = "Action required";

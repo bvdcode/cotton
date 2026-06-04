@@ -352,9 +352,11 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.IsSettingsVisible, Is.True);
             Assert.That(viewModel.IsDashboardChromeVisible, Is.False);
             Assert.That(viewModel.SelectedSettingsTabIndex, Is.EqualTo(3));
-            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Self-test passed"));
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Diagnostics exported"));
             Assert.That(viewModel.HasSelfTestItems, Is.True);
             Assert.That(viewModel.SelfTestItems, Has.Count.EqualTo(2));
+            Assert.That(viewModel.HasLastDiagnosticsBundlePath, Is.True);
+            Assert.That(viewModel.LastDiagnosticsBundlePath, Is.EqualTo(controller.ExportDiagnosticsPath));
         });
     }
 
