@@ -200,6 +200,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             if (SetProperty(ref _actionRequiredMessage, value))
             {
                 OnPropertyChanged(nameof(HasActionRequired));
+                OnPropertyChanged(nameof(ActionRequiredOpacity));
                 OnPropertyChanged(nameof(CanRetryActionRequired));
                 OnPropertyChanged(nameof(StatusCardTitle));
             }
@@ -266,6 +267,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public string ConflictCountLabel => Conflicts.Count == 1 ? "1 conflict" : Conflicts.Count + " conflicts";
 
     public bool HasActionRequired => !string.IsNullOrWhiteSpace(ActionRequiredMessage);
+
+    public double ActionRequiredOpacity => HasActionRequired ? 1 : 0;
 
     public bool CanRetryActionRequired => HasActionRequired && IsSignedIn;
 

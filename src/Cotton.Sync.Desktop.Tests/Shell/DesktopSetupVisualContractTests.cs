@@ -36,6 +36,22 @@ public sealed class DesktopSetupVisualContractTests
         });
     }
 
+    [Test]
+    public void SetupErrorArea_ReservesSpaceWithoutReflowingTheForm()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string setupErrorArea = GetSlice(
+            mainWindowXaml,
+            "ToolTip.Tip=\"{Binding ActionRequiredMessage}\"",
+            "<StackPanel Spacing=\"8\"");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(setupErrorArea, Does.Contain("Opacity=\"{Binding ActionRequiredOpacity}\""));
+            Assert.That(setupErrorArea, Does.Not.Contain("IsVisible=\"{Binding HasActionRequired}\""));
+        });
+    }
+
     private static string GetDesktopFilePath(string fileName)
     {
         string directory = TestContext.CurrentContext.TestDirectory;

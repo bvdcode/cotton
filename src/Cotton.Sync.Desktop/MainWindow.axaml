@@ -4,9 +4,9 @@
         Title="Cotton Sync"
         Icon="/Assets/app.ico"
         Width="336"
-        Height="272"
+        Height="288"
         MinWidth="316"
-        MinHeight="264"
+        MinHeight="280"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource CottonAppBackgroundBrush}">
   <Grid RowDefinitions="3,Auto,*"
@@ -119,7 +119,8 @@
                 MinHeight="34"
                 MaxHeight="38"
                 ToolTip.Tip="{Binding ActionRequiredMessage}"
-                IsVisible="{Binding HasActionRequired}">
+                Opacity="{Binding ActionRequiredOpacity}"
+                IsHitTestVisible="{Binding HasActionRequired}">
           <TextBlock Text="{Binding ActionRequiredMessage}"
                      FontSize="12"
                      TextWrapping="NoWrap"
