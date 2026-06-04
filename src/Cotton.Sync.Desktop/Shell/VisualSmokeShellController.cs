@@ -267,7 +267,7 @@ internal sealed class VisualSmokeShellController : IDesktopShellController
                 syncedAt,
                 1842,
                 _scenario == DesktopVisualSmokeScenario.Error
-                    ? "Sync API unavailable."
+                    ? DesktopActionRequiredMessageResolver.MissingDesktopSyncChangesApiMessage
                     : null),
             new DesktopSyncPairSnapshot(
                 PhotosPairId,

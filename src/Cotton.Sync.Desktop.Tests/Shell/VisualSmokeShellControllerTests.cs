@@ -36,7 +36,9 @@ public sealed class VisualSmokeShellControllerTests
         Assert.Multiple(() =>
         {
             Assert.That(snapshot.SyncPairs[0].Status, Is.EqualTo("Error"));
-            Assert.That(snapshot.SyncPairs[0].LastError, Is.EqualTo("Sync API unavailable."));
+            Assert.That(
+                snapshot.SyncPairs[0].LastError,
+                Is.EqualTo(DesktopActionRequiredMessageResolver.MissingDesktopSyncChangesApiMessage));
         });
     }
 
