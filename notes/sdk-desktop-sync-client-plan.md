@@ -626,6 +626,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Test upgrade over previous build.
   Partial 2026-06-04: Linux CI now builds a lower-version `cotton-sync-desktop-linux-x64-old.deb`, installs it, installs the current `.deb` over it, verifies `dpkg-query` reports the current GitVersion SemVer, runs the upgraded apphost self-test inside a Secret Service session, and removes the package. Windows installer upgrade and real clean-machine upgrade behavior remain open.
   Partial 2026-06-04: Windows CI now builds a lower-version Inno Setup installer, installs it silently into a temp directory, installs the current setup over it using the same `AppId` and install path, runs installed apphost self-test, and uninstalls. Real clean-machine upgrade behavior remains open.
+  Partial 2026-06-04: Windows installer upgrade smoke now verifies the upgraded Start Menu launch and uninstall shortcuts exist after installing the current setup over an older setup, then fails if either shortcut remains after the upgraded app is uninstalled. Local verification parsed `.github/workflows/docker-image.yml`, focused `DesktopPackagingMetadataTests.CiWorkflow_SmokesWindowsInstallerUpgrade` passed 1/1, full `Cotton.Sync.Desktop.Tests` passed 287/287, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with 0 warnings.
 
 ## Phase 12 - End-To-End Test Matrix
 

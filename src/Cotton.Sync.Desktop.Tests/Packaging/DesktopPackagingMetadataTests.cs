@@ -552,12 +552,18 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("-FilePath $oldInstaller"));
             Assert.That(workflow, Does.Contain("-FilePath \".\\cotton-sync-desktop-win-x64-setup.exe\""));
             Assert.That(workflow, Does.Contain("Current Windows installer exited with code"));
+            Assert.That(workflow, Does.Contain("Cotton Sync\\Cotton Sync.lnk"));
+            Assert.That(workflow, Does.Contain("Cotton Sync\\Uninstall Cotton Sync.lnk"));
+            Assert.That(workflow, Does.Contain("Upgraded Start Menu shortcut was not found."));
+            Assert.That(workflow, Does.Contain("Upgraded Start Menu uninstall shortcut was not found."));
             Assert.That(workflow, Does.Contain("& $installedExe --self-test --data-dir"));
             Assert.That(workflow, Does.Contain("-PublishDirectory $installDir"));
             Assert.That(workflow, Does.Contain("-ExpectedIcon \"src/Cotton.Sync.Desktop/Assets/app.ico\""));
             Assert.That(workflow, Does.Contain("Packaging/windows/smoke-diagnostics-export.ps1"));
             Assert.That(workflow, Does.Contain("Windows uninstaller was not found after upgrade."));
             Assert.That(workflow, Does.Contain("Upgraded desktop executable remained after uninstall."));
+            Assert.That(workflow, Does.Contain("Upgraded Start Menu shortcut remained after uninstall."));
+            Assert.That(workflow, Does.Contain("Upgraded Start Menu uninstall shortcut remained after uninstall."));
         });
     }
 

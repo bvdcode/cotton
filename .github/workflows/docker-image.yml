@@ -671,6 +671,15 @@ jobs:
             throw "Current Windows installer exited with code $($currentInstall.ExitCode)."
           }
 
+          $startMenuShortcut = Join-Path ([Environment]::GetFolderPath("Programs")) "Cotton Sync\Cotton Sync.lnk"
+          $startMenuUninstallShortcut = Join-Path ([Environment]::GetFolderPath("Programs")) "Cotton Sync\Uninstall Cotton Sync.lnk"
+          if (-not (Test-Path $startMenuShortcut)) {
+            throw "Upgraded Start Menu shortcut was not found."
+          }
+          if (-not (Test-Path $startMenuUninstallShortcut)) {
+            throw "Upgraded Start Menu uninstall shortcut was not found."
+          }
+
           & $installedExe --self-test --data-dir "$dataDir"
           & "src/Cotton.Sync.Desktop/Packaging/windows/verify-checksums.ps1" `
             -PublishDirectory $installDir
@@ -699,6 +708,12 @@ jobs:
           if (Test-Path $installedExe) {
             Get-ChildItem $installDir -Recurse -ErrorAction SilentlyContinue
             throw "Upgraded desktop executable remained after uninstall."
+          }
+          if (Test-Path $startMenuShortcut) {
+            throw "Upgraded Start Menu shortcut remained after uninstall."
+          }
+          if (Test-Path $startMenuUninstallShortcut) {
+            throw "Upgraded Start Menu uninstall shortcut remained after uninstall."
           }
 
       - name: Upload desktop Windows installer artifact

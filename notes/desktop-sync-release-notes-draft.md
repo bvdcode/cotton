@@ -21,7 +21,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 - Tray lifecycle is implemented for Windows. Linux currently uses normal window lifecycle because tray support varies by desktop environment.
 - Single-instance startup now raises the existing desktop window when the app is launched again.
 - Windows installer/uninstaller detection now uses an Inno Setup `AppMutex` backed by a Windows-only runtime mutex held by the desktop app, so install/uninstall can detect that Cotton Sync is still running before replacing or removing installed files.
-- Windows installer Start Menu group includes both launch and uninstall shortcuts.
+- Windows installer Start Menu group includes both launch and uninstall shortcuts; CI verifies they exist after install and upgrade, and are removed after uninstall.
 - Linux `.deb` uninstall now removes stale Cotton Sync XDG autostart entries that point at the packaged `/opt/cotton-sync/Cotton.Sync.Desktop` executable.
 
 ## Artifacts
@@ -37,7 +37,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 ## Verification Already Exercised
 
 - Full local `dotnet test src/Cotton.sln --configuration Release --no-restore` has passed after current `develop` integration, including desktop 254/254 and server integration 365/365.
-- Desktop tests have passed locally, most recently `Cotton.Sync.Desktop.Tests` 286/286.
+- Desktop tests have passed locally, most recently `Cotton.Sync.Desktop.Tests` 287/287.
 - Server integration tests have passed locally, most recently `Cotton.Server.IntegrationTests` 373/373.
 - CLI one-shot sync has been smoke-tested against the integration-test server and covered in CLI tests with fake Cotton HTTP responses, verifying SDK file/folder upload requests and SQLite baseline creation.
 - Desktop packaging metadata tests cover publish profiles, clean publish-directory behavior, app icon metadata, Linux `.desktop` metadata, `.deb` packaging script, reusable Linux/Windows diagnostics export smoke scripts, Linux package smoke wiring, reusable Linux GUI screenshot matrix smoke with deterministic sign-in-error/add-folder/dashboard/settings/settings-diagnostics/error/conflict visual-smoke states, Linux archive/installed diagnostics export smoke wiring, Linux `.deb` install/upgrade smoke wiring, Windows CI smoke, Windows `.zip` artifact upload/self-test/diagnostics smoke, Windows installer script/install/diagnostics/upgrade smoke wiring, running-app install/uninstall detection metadata, and release artifact checksum generation.
