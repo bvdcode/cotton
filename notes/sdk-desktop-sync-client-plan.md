@@ -619,6 +619,7 @@ Release can be considered only when every item in this section is checked.
 - [ ] No known broken-login bugs remain open.
 - [ ] No known package-install failure remains open.
 - [ ] Release notes are written.
+  Partial 2026-06-04: created `notes/desktop-sync-release-notes-draft.md` with the current release story, artifact matrix, verified evidence, open release gates, and explicit non-goals. Keep unchecked until clean Windows/Linux VM smoke, screenshot review, soak tests, final artifact checksums, and final release diff review are complete.
 - [ ] Checksums are generated.
 - [ ] Final release branch diff is reviewed.
 
