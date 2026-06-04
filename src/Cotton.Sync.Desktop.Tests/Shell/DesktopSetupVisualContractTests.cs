@@ -75,8 +75,8 @@ public sealed class DesktopSetupVisualContractTests
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
         string diagnosticsSection = GetSlice(
             mainWindowXaml,
-            "<TextBlock Text=\"Diagnostics\"",
-            "<TextBlock Text=\"Cotton Sync Desktop\"");
+            "<TabItem Header=\"Diagnostics\">",
+            "</TabItem>");
 
         Assert.Multiple(() =>
         {
@@ -101,8 +101,28 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(settingsOverlay, Does.Contain("HorizontalAlignment=\"Stretch\""));
             Assert.That(settingsOverlay, Does.Contain("VerticalAlignment=\"Stretch\""));
             Assert.That(settingsOverlay, Does.Contain("RowDefinitions=\"Auto,*\""));
+            Assert.That(settingsOverlay, Does.Contain("<TabControl Grid.Row=\"1\">"));
             Assert.That(settingsOverlay, Does.Not.Contain("<Border Width=\"372\""));
             Assert.That(settingsOverlay, Does.Not.Contain("MaxHeight=\"432\""));
+            Assert.That(settingsOverlay, Does.Not.Contain("<ScrollViewer Grid.Row=\"1\""));
+        });
+    }
+
+    [Test]
+    public void SettingsOverlay_UsesTabbedSections()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string settingsOverlay = GetSlice(
+            mainWindowXaml,
+            "IsVisible=\"{Binding IsSettingsVisible}\"",
+            "</Window>");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Account\">"));
+            Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Startup\">"));
+            Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Prefs\">"));
+            Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Diagnostics\">"));
         });
     }
 
@@ -138,8 +158,8 @@ public sealed class DesktopSetupVisualContractTests
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
         string diagnosticsSection = GetSlice(
             mainWindowXaml,
-            "<TextBlock Text=\"Diagnostics\"",
-            "<TextBlock Text=\"Cotton Sync Desktop\"");
+            "<TabItem Header=\"Diagnostics\">",
+            "</TabItem>");
 
         Assert.Multiple(() =>
         {

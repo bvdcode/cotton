@@ -822,27 +822,42 @@
                       Command="{Binding CloseSettingsCommand}" />
             </Grid>
 
-            <ScrollViewer Grid.Row="1"
-                          VerticalScrollBarVisibility="Auto">
-              <StackPanel Spacing="12">
-                <StackPanel Spacing="3">
-                  <TextBlock Text="Account"
-                             FontWeight="SemiBold" />
-                  <TextBlock Text="{Binding AccountName}"
-                             FontSize="12"
-                             TextTrimming="CharacterEllipsis" />
-                  <TextBlock Text="{Binding ServerUrl}"
-                             Classes="secondary"
-                             FontSize="12"
-                             TextTrimming="CharacterEllipsis" />
+            <TabControl Grid.Row="1">
+              <TabItem Header="Account">
+                <StackPanel Margin="0,10,0,0"
+                            Spacing="14">
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="Signed in as"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding AccountName}"
+                               FontSize="12"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding ServerUrl}"
+                               Classes="secondary"
+                               FontSize="12"
+                               TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+
+                  <Grid ColumnDefinitions="*,Auto"
+                        ColumnSpacing="8">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Cotton Sync Desktop"
+                                 FontWeight="SemiBold" />
+                      <TextBlock Text="Full mirror sync"
+                                 Classes="secondary"
+                                 FontSize="12" />
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Content="Sign out"
+                            Classes="compact"
+                            Command="{Binding SignOutCommand}" />
+                  </Grid>
                 </StackPanel>
+              </TabItem>
 
-                <Border Height="1"
-                        Background="{DynamicResource CottonBorderBrush}" />
-
-                <StackPanel Spacing="6">
-                  <TextBlock Text="Startup"
-                             FontWeight="SemiBold" />
+              <TabItem Header="Startup">
+                <StackPanel Margin="0,10,0,0"
+                            Spacing="7">
                   <CheckBox Content="Launch on startup"
                             IsEnabled="{Binding IsStartWithOperatingSystemSupported}"
                             IsChecked="{Binding StartWithOperatingSystem}" />
@@ -856,41 +871,41 @@
                              TextWrapping="Wrap"
                              IsVisible="{Binding IsTrayLifecycleUnsupported}" />
                 </StackPanel>
+              </TabItem>
 
-                <Border Height="1"
-                        Background="{DynamicResource CottonBorderBrush}" />
+              <TabItem Header="Prefs">
+                <StackPanel Margin="0,10,0,0"
+                            Spacing="14">
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="Appearance"
+                               FontWeight="SemiBold" />
+                    <ComboBox SelectedIndex="{Binding ThemeModeIndex}"
+                              HorizontalAlignment="Stretch">
+                      <ComboBoxItem Content="System" />
+                      <ComboBoxItem Content="Light" />
+                      <ComboBoxItem Content="Dark" />
+                    </ComboBox>
+                  </StackPanel>
 
-                <StackPanel Spacing="6">
-                  <TextBlock Text="Appearance"
-                             FontWeight="SemiBold" />
-                  <ComboBox SelectedIndex="{Binding ThemeModeIndex}"
-                            HorizontalAlignment="Stretch">
-                    <ComboBoxItem Content="System" />
-                    <ComboBoxItem Content="Light" />
-                    <ComboBoxItem Content="Dark" />
-                  </ComboBox>
+                  <Border Height="1"
+                          Background="{DynamicResource CottonBorderBrush}" />
+
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="Notifications"
+                               FontWeight="SemiBold" />
+                    <CheckBox Content="Show notifications"
+                              IsChecked="{Binding EnableNotifications}" />
+                    <TextBlock Text="Initial sync, conflicts, and action-required errors."
+                               Classes="secondary"
+                               FontSize="12"
+                               TextWrapping="Wrap" />
+                  </StackPanel>
                 </StackPanel>
+              </TabItem>
 
-                <Border Height="1"
-                        Background="{DynamicResource CottonBorderBrush}" />
-
-                <StackPanel Spacing="6">
-                  <TextBlock Text="Notifications"
-                             FontWeight="SemiBold" />
-                  <CheckBox Content="Show notifications"
-                            IsChecked="{Binding EnableNotifications}" />
-                  <TextBlock Text="Initial sync, conflicts, and action-required errors."
-                             Classes="secondary"
-                             FontSize="12"
-                             TextWrapping="Wrap" />
-                </StackPanel>
-
-                <Border Height="1"
-                        Background="{DynamicResource CottonBorderBrush}" />
-
-                <StackPanel Spacing="7">
-                  <TextBlock Text="Diagnostics"
-                             FontWeight="SemiBold" />
+              <TabItem Header="Diagnostics">
+                <StackPanel Margin="0,10,0,0"
+                            Spacing="8">
                   <Border BorderBrush="{DynamicResource CottonBorderBrush}"
                           BorderThickness="1"
                           CornerRadius="6">
@@ -960,26 +975,8 @@
                     </ItemsControl>
                   </Border>
                 </StackPanel>
-
-                <Border Height="1"
-                        Background="{DynamicResource CottonBorderBrush}" />
-
-                <Grid ColumnDefinitions="*,Auto"
-                      ColumnSpacing="8">
-                  <StackPanel Spacing="2">
-                    <TextBlock Text="Cotton Sync Desktop"
-                               FontWeight="SemiBold" />
-                    <TextBlock Text="Full mirror sync"
-                               Classes="secondary"
-                               FontSize="12" />
-                  </StackPanel>
-                  <Button Grid.Column="1"
-                          Content="Sign out"
-                          Classes="compact"
-                          Command="{Binding SignOutCommand}" />
-                </Grid>
-              </StackPanel>
-            </ScrollViewer>
+              </TabItem>
+            </TabControl>
           </Grid>
         </Border>
       </Border>
