@@ -144,7 +144,7 @@ internal sealed class DesktopShellController : IDesktopShellController
         }
         catch
         {
-            host.Dispose();
+            await host.DisposeAsync().ConfigureAwait(false);
             throw;
         }
     }
@@ -347,7 +347,7 @@ internal sealed class DesktopShellController : IDesktopShellController
                 _statusSubscription = null;
             }
 
-            host.Dispose();
+            await host.DisposeAsync().ConfigureAwait(false);
         }
     }
 
@@ -857,7 +857,7 @@ internal sealed class DesktopShellController : IDesktopShellController
         }
         finally
         {
-            host.Dispose();
+            await host.DisposeAsync().ConfigureAwait(false);
         }
     }
 
@@ -918,7 +918,7 @@ internal sealed class DesktopShellController : IDesktopShellController
         {
             if (await host.TokenStore.GetAsync(cancellationToken).ConfigureAwait(false) is null)
             {
-                host.Dispose();
+                await host.DisposeAsync().ConfigureAwait(false);
                 return null;
             }
 
@@ -930,13 +930,13 @@ internal sealed class DesktopShellController : IDesktopShellController
         {
             Trace.TraceWarning("Failed to restore desktop session: {0}", exception);
             await host.TokenStore.ClearAsync(cancellationToken).ConfigureAwait(false);
-            host.Dispose();
+            await host.DisposeAsync().ConfigureAwait(false);
             return null;
         }
         catch (HttpRequestException)
         {
             Trace.TraceWarning("Failed to restore desktop session because the server is unreachable: {0}", serverUrl);
-            host.Dispose();
+            await host.DisposeAsync().ConfigureAwait(false);
             return null;
         }
     }

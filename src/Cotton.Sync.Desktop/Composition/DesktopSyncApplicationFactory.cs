@@ -113,6 +113,7 @@ internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFac
             tokenStore,
             cottonClient.Nodes,
             httpClient,
-            serverUrl);
+            serverUrl,
+            cottonClient.Realtime);
     }
 }

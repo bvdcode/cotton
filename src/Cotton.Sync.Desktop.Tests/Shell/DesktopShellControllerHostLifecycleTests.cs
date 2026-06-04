@@ -68,8 +68,10 @@ public sealed class DesktopShellControllerHostLifecycleTests
             Assert.That(factory.CreatedServerUrls, Is.EqualTo(new[] { serverUrl, serverUrl }));
             Assert.That(firstHost.App.RestoreSessionCalls, Is.EqualTo(1));
             Assert.That(firstHost.App.StopSyncCalls, Is.EqualTo(1));
+            Assert.That(firstHost.AsyncResource.DisposeAsyncCalls, Is.EqualTo(1));
             Assert.That(secondHost.App.RestoreSessionCalls, Is.EqualTo(1));
             Assert.That(secondHost.App.StopSyncCalls, Is.Zero);
+            Assert.That(secondHost.AsyncResource.DisposeAsyncCalls, Is.Zero);
         });
     }
 
@@ -95,6 +97,7 @@ public sealed class DesktopShellControllerHostLifecycleTests
         {
             Assert.That(host.App.RestoreSessionCalls, Is.EqualTo(1));
             Assert.That(host.App.StopSyncCalls, Is.EqualTo(1));
+            Assert.That(host.AsyncResource.DisposeAsyncCalls, Is.EqualTo(1));
         });
     }
 
@@ -138,6 +141,7 @@ public sealed class DesktopShellControllerHostLifecycleTests
         private FakeDesktopApplicationHost(Uri serverUrl)
         {
             App = new FakeSyncApplicationService();
+            AsyncResource = new FakeAsyncResource();
             Host = new DesktopSyncApplicationHost(
                 App,
                 new FakeRemoteRootResolver(),
@@ -146,16 +150,30 @@ public sealed class DesktopShellControllerHostLifecycleTests
                 new FakeCottonTokenStore(),
                 new FakeCottonNodeClient(),
                 new HttpClient(),
-                serverUrl);
+                serverUrl,
+                AsyncResource);
         }
 
         public FakeSyncApplicationService App { get; }
+
+        public FakeAsyncResource AsyncResource { get; }
 
         public DesktopSyncApplicationHost Host { get; }
 
         public static FakeDesktopApplicationHost Create(Uri serverUrl)
         {
             return new FakeDesktopApplicationHost(serverUrl);
+        }
+    }
+
+    private sealed class FakeAsyncResource : IAsyncDisposable
+    {
+        public int DisposeAsyncCalls { get; private set; }
+
+        public ValueTask DisposeAsync()
+        {
+            DisposeAsyncCalls++;
+            return ValueTask.CompletedTask;
         }
     }
 

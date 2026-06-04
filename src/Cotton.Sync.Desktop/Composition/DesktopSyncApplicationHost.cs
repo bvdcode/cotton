@@ -10,9 +10,10 @@ using Cotton.Sdk.Nodes;
 
 namespace Cotton.Sync.Desktop.Composition;
 
-internal sealed class DesktopSyncApplicationHost : IDisposable
+internal sealed class DesktopSyncApplicationHost : IDisposable, IAsyncDisposable
 {
     private readonly HttpClient _httpClient;
+    private readonly IAsyncDisposable? _asyncResource;
     private bool _disposed;
 
     public DesktopSyncApplicationHost(
@@ -23,7 +24,8 @@ internal sealed class DesktopSyncApplicationHost : IDisposable
         ICottonTokenStore tokenStore,
         ICottonNodeClient nodes,
         HttpClient httpClient,
-        Uri serverUrl)
+        Uri serverUrl,
+        IAsyncDisposable? asyncResource = null)
     {
         App = app ?? throw new ArgumentNullException(nameof(app));
         RemoteRootResolver = remoteRootResolver ?? throw new ArgumentNullException(nameof(remoteRootResolver));
@@ -32,6 +34,7 @@ internal sealed class DesktopSyncApplicationHost : IDisposable
         TokenStore = tokenStore ?? throw new ArgumentNullException(nameof(tokenStore));
         Nodes = nodes ?? throw new ArgumentNullException(nameof(nodes));
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        _asyncResource = asyncResource;
         ServerUrl = serverUrl ?? throw new ArgumentNullException(nameof(serverUrl));
     }
 
@@ -54,6 +57,22 @@ internal sealed class DesktopSyncApplicationHost : IDisposable
         if (_disposed)
         {
             return;
+        }
+
+        _httpClient.Dispose();
+        _disposed = true;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (_asyncResource is not null)
+        {
+            await _asyncResource.DisposeAsync().ConfigureAwait(false);
         }
 
         _httpClient.Dispose();
