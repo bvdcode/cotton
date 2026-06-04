@@ -285,6 +285,9 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(dashboardHeader, Does.Not.Contain("Content=\"Sync\""));
             Assert.That(actionRequiredRow, Does.Contain("Content=\"↻\""));
             Assert.That(actionRequiredRow, Does.Contain("Content=\"✓\""));
+            Assert.That(actionRequiredRow, Does.Contain("MaxLines=\"3\""));
+            Assert.That(actionRequiredRow, Does.Contain("TextWrapping=\"Wrap\""));
+            Assert.That(actionRequiredRow, Does.Contain("ToolTip.Tip=\"{Binding ActionRequiredMessage}\""));
             Assert.That(actionRequiredRow, Does.Not.Contain("Content=\"Retry\""));
             Assert.That(actionRequiredRow, Does.Not.Contain("Content=\"Check\""));
             Assert.That(conflictsHeader, Does.Contain("Content=\"↻\""));

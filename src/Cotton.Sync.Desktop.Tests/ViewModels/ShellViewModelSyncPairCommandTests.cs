@@ -221,7 +221,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.GlobalStatus, Is.EqualTo("Action required"));
-            Assert.That(viewModel.StatusCardTitle, Is.EqualTo("Sync needs attention"));
+            Assert.That(viewModel.IsStatusCardVisible, Is.False);
             Assert.That(
                 viewModel.ActionRequiredMessage,
                 Is.EqualTo("This Cotton server does not expose the desktop sync changes API yet. Deploy the latest Cotton backend and retry sync."));
@@ -362,7 +362,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.GlobalStatus, Is.EqualTo("Action required"));
-            Assert.That(viewModel.StatusCardTitle, Is.EqualTo("Sync needs attention"));
+            Assert.That(viewModel.IsStatusCardVisible, Is.False);
             Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Fix the issue below to continue syncing."));
             Assert.That(
                 viewModel.ActionRequiredMessage,

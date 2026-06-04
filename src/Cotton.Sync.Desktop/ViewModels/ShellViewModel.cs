@@ -485,7 +485,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public bool HasStatusAttention => HasActionRequired || HasConflicts;
 
-    public bool IsStatusCardVisible => HasStatusAttention || HasSyncPairs;
+    public bool IsStatusCardVisible => HasConflicts || (HasSyncPairs && !HasActionRequired);
 
     public double ActionRequiredOpacity => HasActionRequired ? 1 : 0;
 

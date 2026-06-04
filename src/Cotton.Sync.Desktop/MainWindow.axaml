@@ -305,6 +305,9 @@
               <TextBlock Text="{Binding ActionRequiredMessage}"
                          Classes="secondary"
                          FontSize="12"
+                         MaxLines="3"
+                         TextWrapping="Wrap"
+                         ToolTip.Tip="{Binding ActionRequiredMessage}"
                          TextTrimming="CharacterEllipsis" />
             </StackPanel>
             <StackPanel Grid.Column="2"
