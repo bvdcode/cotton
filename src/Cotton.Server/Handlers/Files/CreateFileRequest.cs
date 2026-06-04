@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
@@ -73,6 +74,7 @@ namespace Cotton.Server.Handlers.Files
         ILayoutService _layouts,
         SettingsProvider _settingsProvider,
         FileManifestService _fileManifestService,
+        ISyncChangeRecorder _syncChanges,
         UserStorageQuotaService _quota) : IRequestHandler<CreateFileRequest, NodeFileManifestDto>
     {
         /// <summary>
@@ -230,8 +232,10 @@ namespace Cotton.Server.Handlers.Files
             NodeFile newNodeFile = new()
             {
                 Node = node,
+                NodeId = node.Id,
                 OwnerId = request.UserId,
                 FileManifest = fileManifest,
+                FileManifestId = fileManifest.Id,
                 Metadata = CopyMetadata(request.Metadata),
             };
             newNodeFile.SetName(request.Name);
@@ -247,6 +251,7 @@ namespace Cotton.Server.Handlers.Files
                 newNodeFile.OriginalNodeFileId = request.OriginalNodeFileId.Value;
             }
 
+            _syncChanges.StageFileChange(SyncChangeKind.FileCreated, newNodeFile, node.LayoutId);
             await _dbContext.SaveChangesAsync(ct);
             return newNodeFile;
         }

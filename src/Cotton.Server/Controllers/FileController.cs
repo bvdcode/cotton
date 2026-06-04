@@ -319,6 +319,7 @@ namespace Cotton.Server.Controllers
             }
 
             nodeFile.Metadata = metadata;
+            _syncChanges.StageFileChange(SyncChangeKind.FileContentUpdated, nodeFile, nodeFile.Node.LayoutId);
             await _dbContext.SaveChangesAsync();
 
             var mapped = nodeFile.Adapt<NodeFileManifestDto>();
@@ -537,6 +538,7 @@ namespace Cotton.Server.Controllers
                 request.Metadata,
                 userId);
 
+            _syncChanges.StageFileChange(SyncChangeKind.FileContentUpdated, nodeFile, layoutId.Value);
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
             _quota.RecordLogicalBytesAdded(userId, addedBytes);

@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using Cotton.Topology.Abstractions;
@@ -48,6 +49,7 @@ namespace Cotton.Server.Handlers.Files
         CottonDbContext _dbContext,
         ILayoutService _layouts,
         TrashRestoreCoordinator _restore,
+        ISyncChangeRecorder _syncChanges,
         ILogger<RestoreFileQueryHandler> _logger)
         : IRequestHandler<RestoreFileQuery, RestoreOutcomeDto>
     {
@@ -145,6 +147,7 @@ namespace Cotton.Server.Handlers.Files
 
             nodeFile.NodeId = targetParent.Id;
             nodeFile.Metadata = TrashRestoreCoordinator.RemoveOriginalParentPath(nodeFile.Metadata);
+            _syncChanges.StageFileChange(SyncChangeKind.FileRestored, nodeFile, targetParent.LayoutId);
             await _dbContext.SaveChangesAsync(ct);
 
             await _restore.DeleteWrapperIfEmptyAsync(request.UserId, wrapper, ct);
