@@ -112,7 +112,8 @@ export const GcTimelineChart = ({ timeline, bucket }: GcTimelineChartProps) => {
           </Typography>
         </Stack>
 
-        <Box sx={{ overflowX: "auto", pb: 1 }}>
+        {timeline.buckets.length > 0 && (
+          <Box sx={{ overflowX: "auto", pb: 1 }}>
           <Box
             sx={{
               minWidth: `${points.length * 84}px`,
@@ -183,7 +184,8 @@ export const GcTimelineChart = ({ timeline, bucket }: GcTimelineChartProps) => {
               })}
             </Box>
           </Box>
-        </Box>
+          </Box>
+        )}
 
         {timeline.buckets.length === 0 && (
           <Alert severity="info">

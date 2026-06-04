@@ -4,12 +4,17 @@ import {
   Chip,
   Divider,
   LinearProgress,
+  Paper,
   Skeleton,
   Stack,
   Typography,
   type AlertColor,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
+import BuildOutlinedIcon from "@mui/icons-material/BuildOutlined";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import SecurityIcon from "@mui/icons-material/Security";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import { useTranslation } from "react-i18next";
@@ -45,6 +50,9 @@ const knownThreatVectorCodes = new Set([
   "mandatory-access-control-unconfined",
   "core-dumps-enabled",
 ]);
+
+// Warnings whose remediation is not an operator action (managed by Cotton itself).
+const noUserFixCodes = new Set(["db-integrity-bridge-mode"]);
 
 interface SecurityLevel {
   title: string;
@@ -98,19 +106,19 @@ const getSecurityLevel = (
   };
 };
 
-const getSeverityColor = (
-  warning: SecurityDiagnosticWarningDto,
-): AlertColor => {
-  if (warning.severity === "critical") {
-    return "error";
-  }
+const paletteKeyFor = (
+  severity: SecurityDiagnosticWarningDto["severity"],
+): "error" | "warning" | "info" =>
+  severity === "critical"
+    ? "error"
+    : severity === "warning"
+      ? "warning"
+      : "info";
 
-  if (warning.severity === "warning") {
-    return "warning";
-  }
-
-  return "info";
-};
+const severityRank = (
+  severity: SecurityDiagnosticWarningDto["severity"],
+): number =>
+  severity === "critical" ? 0 : severity === "warning" ? 1 : 2;
 
 const getSeverityLabel = (
   severity: SecurityDiagnosticWarningDto["severity"],
@@ -133,6 +141,14 @@ const getThreatVector = (
 ): string | null =>
   knownThreatVectorCodes.has(warning.code)
     ? t(`securityDiagnostics.threatVectors.${warning.code}`)
+    : null;
+
+const getFixText = (
+  warning: SecurityDiagnosticWarningDto,
+  t: TFunction<"admin">,
+): string | null =>
+  knownThreatVectorCodes.has(warning.code)
+    ? t(`securityDiagnostics.fixes.${warning.code}`)
     : null;
 
 const formatNullable = (
@@ -228,6 +244,7 @@ const SecurityDiagnosticsContent = ({
   <Stack spacing={3} divider={<Divider flexItem />}>
     <SecurityScoreSummary diagnostics={diagnostics} t={t} />
     <SecurityRiskSection warnings={diagnostics.warnings} t={t} />
+    <SecurityPassedSection diagnostics={diagnostics} t={t} />
     <InstanceDiagnosticsSection diagnostics={diagnostics} t={t} />
     <MasterKeyDiagnosticsSection diagnostics={diagnostics} t={t} />
     <MemoryDiagnosticsSection diagnostics={diagnostics} t={t} />
@@ -263,13 +280,20 @@ const SecurityScoreSummary = ({
         </Typography>
         <Typography variant="body2">{level.summary}</Typography>
       </Alert>
-      <Box>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
         <LinearProgress
           variant="determinate"
           value={Math.max(0, Math.min(100, scorePercent))}
           color={level.color}
-          sx={{ height: 8, borderRadius: 1 }}
+          sx={{ flex: 1, height: 8, borderRadius: 1, bgcolor: "action.hover" }}
         />
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}
+        >
+          {diagnostics.securityScore} / {diagnostics.maxSecurityScore}
+        </Typography>
       </Box>
       <SecuritySummaryChips diagnostics={diagnostics} t={t} />
     </Stack>
@@ -326,43 +350,315 @@ type SecurityRiskSectionProps = {
   t: TFunction<"admin">;
 };
 
-const SecurityRiskSection = ({ warnings, t }: SecurityRiskSectionProps) => (
-  <DiagnosticsSection title={t("securityDiagnostics.sections.risks")}>
-    {warnings.length > 0 ? (
-      warnings.map((warning) => (
-        <SecurityRiskAlert key={warning.code} warning={warning} t={t} />
-      ))
-    ) : (
-      <Alert severity="success">{t("securityDiagnostics.risks.empty")}</Alert>
-    )}
-  </DiagnosticsSection>
-);
+const SecurityRiskSection = ({ warnings, t }: SecurityRiskSectionProps) => {
+  const sorted = [...warnings].sort(
+    (a, b) => severityRank(a.severity) - severityRank(b.severity),
+  );
 
-type SecurityRiskAlertProps = {
+  return (
+    <DiagnosticsSection title={t("securityDiagnostics.sections.risks")}>
+      {sorted.length > 0 ? (
+        <Box
+          sx={{
+            display: "grid",
+            gap: 1.5,
+            gridTemplateColumns: {
+              xs: "1fr",
+              lg: "repeat(2, minmax(0, 1fr))",
+            },
+          }}
+        >
+          {sorted.map((warning) => (
+            <SecurityRiskCard key={warning.code} warning={warning} t={t} />
+          ))}
+        </Box>
+      ) : (
+        <Alert severity="success">{t("securityDiagnostics.risks.empty")}</Alert>
+      )}
+    </DiagnosticsSection>
+  );
+};
+
+type SecurityRiskCardProps = {
   warning: SecurityDiagnosticWarningDto;
   t: TFunction<"admin">;
 };
 
-const SecurityRiskAlert = ({ warning, t }: SecurityRiskAlertProps) => {
+const SeverityIcon = ({
+  severity,
+}: {
+  severity: SecurityDiagnosticWarningDto["severity"];
+}) => {
+  if (severity === "critical") {
+    return <ErrorOutlineIcon fontSize="small" />;
+  }
+
+  if (severity === "warning") {
+    return <WarningAmberIcon fontSize="small" />;
+  }
+
+  return <InfoOutlinedIcon fontSize="small" />;
+};
+
+const RiskLabeledBlock = ({ label, text }: { label: string; text: string }) => (
+  <Box>
+    <Typography
+      variant="caption"
+      color="text.secondary"
+      fontWeight={700}
+      sx={{ display: "block", textTransform: "uppercase", letterSpacing: 0.4 }}
+    >
+      {label}
+    </Typography>
+    <Typography variant="body2">{text}</Typography>
+  </Box>
+);
+
+const SecurityRiskCard = ({ warning, t }: SecurityRiskCardProps) => {
+  const paletteKey = paletteKeyFor(warning.severity);
   const threatVector = getThreatVector(warning, t);
+  const fix = getFixText(warning, t);
 
   return (
-    <Alert severity={getSeverityColor(warning)} icon={<WarningAmberIcon />}>
-      <Stack spacing={0.5}>
-        <Stack direction="row" spacing={1} alignItems="center" useFlexGap sx={{ flexWrap: "wrap" }}>
-          <Typography variant="subtitle2" fontWeight={700}>
-            {getSeverityLabel(warning.severity, t)}
-          </Typography>
-          <Chip size="small" variant="outlined" label={warning.code} />
-        </Stack>
-        <Typography variant="body2">{warning.message}</Typography>
+    <Paper
+      variant="outlined"
+      sx={(theme) => ({
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        borderLeft: `4px solid ${theme.palette[paletteKey].main}`,
+      })}
+    >
+      <Box
+        sx={(theme) => ({
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          px: 2,
+          py: 1,
+          color: theme.palette[paletteKey].main,
+          bgcolor: alpha(theme.palette[paletteKey].main, 0.1),
+        })}
+      >
+        <SeverityIcon severity={warning.severity} />
+        <Typography variant="subtitle2" fontWeight={700} color="inherit">
+          {getSeverityLabel(warning.severity, t)}
+        </Typography>
+        <Chip
+          size="small"
+          variant="outlined"
+          label={warning.code}
+          sx={{ ml: "auto" }}
+        />
+      </Box>
+      <Stack spacing={1.25} sx={{ px: 2, py: 1.5 }}>
+        <RiskLabeledBlock
+          label={t("securityDiagnostics.labels.whatItMeans")}
+          text={warning.message}
+        />
         {threatVector && (
-          <Typography variant="body2" color="text.secondary">
-            {threatVector}
-          </Typography>
+          <RiskLabeledBlock
+            label={t("securityDiagnostics.labels.impact")}
+            text={threatVector}
+          />
+        )}
+        {fix && (
+          <Box
+            sx={{
+              display: "flex",
+              gap: 1,
+              p: 1.25,
+              borderRadius: 1,
+              bgcolor: "action.hover",
+            }}
+          >
+            {noUserFixCodes.has(warning.code) ? (
+              <InfoOutlinedIcon
+                fontSize="small"
+                sx={{ color: "text.secondary", mt: 0.25, flexShrink: 0 }}
+              />
+            ) : (
+              <BuildOutlinedIcon
+                fontSize="small"
+                sx={{ color: "text.secondary", mt: 0.25, flexShrink: 0 }}
+              />
+            )}
+            <RiskLabeledBlock
+              label={t(
+                noUserFixCodes.has(warning.code)
+                  ? "securityDiagnostics.labels.note"
+                  : "securityDiagnostics.labels.howToFix",
+              )}
+              text={fix}
+            />
+          </Box>
         )}
       </Stack>
-    </Alert>
+    </Paper>
+  );
+};
+
+const getPassedCheckCodes = (d: SecurityDiagnosticsDto): string[] => {
+  const lp = d.linuxProcess;
+  const lc = d.linuxContainer;
+  const checks: ReadonlyArray<readonly [string, boolean]> = [
+    ["public-instance", d.isPublicInstance === false],
+    [
+      "master-key-from-environment",
+      d.masterKeyEnvironmentVariableWasConfigured === false,
+    ],
+    [
+      "admins-without-2fa",
+      d.adminTotp.adminCount > 0 && d.adminTotp.adminsWithoutTotp === 0,
+    ],
+    ["dotnet-diagnostics-enabled", d.dotNetDiagnostics.disabled === true],
+    ["process-hardening-failed", lp.hardeningApplied === true],
+    ["process-dumpable", lp.dumpable === 0],
+    ["sys-ptrace-capability", lp.hasSysPtraceCapability === false],
+    ["new-privileges-allowed", lp.noNewPrivileges === 1],
+    ["seccomp-disabled", lp.seccompMode != null && lp.seccompMode !== 0],
+    ["running-as-root", lp.runningAsRoot === false],
+    ["root-filesystem-writable", lc.rootFilesystemReadOnly === true],
+    ["docker-socket-mounted", lc.dockerSocketMounted === false],
+    ["host-pid-namespace", lc.hostPidNamespaceLikely === false],
+    ["core-dumps-enabled", lc.coreDumpSoftLimitDisabled === true],
+    [
+      "mandatory-access-control-unconfined",
+      (lc.appArmorProfile != null &&
+        !isUnconfinedAppArmorProfile(lc.appArmorProfile)) ||
+        lc.selinuxEnforcing === true,
+    ],
+  ];
+
+  return checks.filter(([, ok]) => ok).map(([code]) => code);
+};
+
+type PositiveCardProps = {
+  title: string;
+  code?: string;
+  children?: ReactNode;
+};
+
+const PositiveCard = ({ title, code, children }: PositiveCardProps) => (
+  <Paper
+    variant="outlined"
+    sx={(theme) => ({
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column",
+      borderLeft: `4px solid ${theme.palette.success.main}`,
+    })}
+  >
+    <Box
+      sx={(theme) => ({
+        display: "flex",
+        alignItems: "center",
+        gap: 1,
+        px: 2,
+        py: 1,
+        color: theme.palette.success.main,
+        bgcolor: alpha(theme.palette.success.main, 0.1),
+      })}
+    >
+      <CheckCircleIcon fontSize="small" />
+      <Typography variant="subtitle2" fontWeight={700} color="inherit">
+        {title}
+      </Typography>
+      {code && (
+        <Chip size="small" variant="outlined" label={code} sx={{ ml: "auto" }} />
+      )}
+    </Box>
+    {children && (
+      <Stack spacing={1.25} sx={{ px: 2, py: 1.5 }}>
+        {children}
+      </Stack>
+    )}
+  </Paper>
+);
+
+type SecurityPassedCardProps = {
+  code: string;
+  t: TFunction<"admin">;
+};
+
+const SecurityPassedCard = ({ code, t }: SecurityPassedCardProps) => {
+  const guardsAgainst = knownThreatVectorCodes.has(code)
+    ? t(`securityDiagnostics.threatVectors.${code}`)
+    : null;
+
+  return (
+    <PositiveCard title={t(`securityDiagnostics.passed.${code}`)} code={code}>
+      {guardsAgainst && (
+        <RiskLabeledBlock
+          label={t("securityDiagnostics.labels.guardsAgainst")}
+          text={guardsAgainst}
+        />
+      )}
+    </PositiveCard>
+  );
+};
+
+const SecurityPassedSection = ({
+  diagnostics,
+  t,
+}: DiagnosticsContentSectionProps) => {
+  const warningCodes = new Set(diagnostics.warnings.map((w) => w.code));
+  const codes = getPassedCheckCodes(diagnostics).filter(
+    (code) => !warningCodes.has(code),
+  );
+  const cpu = diagnostics.cpuFeatures;
+  const showAesAcceleration = cpu?.aesGcmHardwareAccelerationLikely === true;
+  const cpuDescriptor = cpu
+    ? [
+        cpu.vendorId?.trim(),
+        cpu.architecture?.trim(),
+        cpu.logicalProcessorCount
+          ? `${cpu.logicalProcessorCount}×`
+          : undefined,
+      ]
+        .filter((part): part is string => Boolean(part))
+        .join(" · ")
+    : "";
+
+  if (codes.length === 0 && !showAesAcceleration) {
+    return null;
+  }
+
+  return (
+    <DiagnosticsSection title={t("securityDiagnostics.sections.passed")}>
+      <Box
+        sx={{
+          display: "grid",
+          gap: 1.5,
+          gridTemplateColumns: {
+            xs: "1fr",
+            lg: "repeat(2, minmax(0, 1fr))",
+          },
+        }}
+      >
+        {codes.map((code) => (
+          <SecurityPassedCard key={code} code={code} t={t} />
+        ))}
+        {showAesAcceleration && (
+          <PositiveCard
+            title={t("securityDiagnostics.capabilities.aesAcceleration.title")}
+          >
+            <Typography variant="body2">
+              {t("securityDiagnostics.capabilities.aesAcceleration.body")}
+            </Typography>
+            {cpuDescriptor && (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ fontVariantNumeric: "tabular-nums" }}
+              >
+                {cpuDescriptor}
+              </Typography>
+            )}
+          </PositiveCard>
+        )}
+      </Box>
+    </DiagnosticsSection>
   );
 };
 

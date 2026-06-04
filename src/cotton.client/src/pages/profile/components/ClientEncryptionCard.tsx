@@ -127,60 +127,57 @@ export const ClientEncryptionCard = ({
               </Button>
             </Box>
           ) : status !== "invalid" ? (
-            <Stack spacing={2}>
+            <Stack spacing={1.5}>
               <Stack
                 direction={{ xs: "column", sm: "row" }}
                 spacing={2}
-                alignItems={{ xs: "stretch", sm: "center" }}
+                alignItems={{ xs: "flex-start", sm: "center" }}
                 justifyContent="space-between"
-                sx={{
-                  p: 2,
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 1,
-                  bgcolor: "background.default",
-                }}
               >
-                <Stack spacing={1} minWidth={0}>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  alignItems="center"
+                  flexWrap="wrap"
+                  useFlexGap
+                  minWidth={0}
+                >
                   {statusChip}
-                  {statusHint && (
-                    <Typography variant="body2" color="text.secondary">
-                      {statusHint}
-                    </Typography>
-                  )}
-                </Stack>
-                <Box sx={{ flexShrink: 0 }}>
-                  {status === "locked" && envelope && (
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      onClick={() => setUnlockOpen(true)}
-                      sx={{ minWidth: 128 }}
-                    >
-                      {t("clientEncryption.actions.unlock")}
-                    </Button>
-                  )}
-                  {status === "unlocked" && (
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      onClick={lockVault}
-                      sx={{ minWidth: 128 }}
-                    >
-                      {t("clientEncryption.actions.lock")}
-                    </Button>
-                  )}
-                </Box>
-              </Stack>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={lockOnRefresh}
-                    onChange={handleLockOnRefreshChange}
+                  <FormControlLabel
+                    sx={{ m: 0 }}
+                    control={
+                      <Switch
+                        checked={lockOnRefresh}
+                        onChange={handleLockOnRefreshChange}
+                      />
+                    }
+                    label={t("clientEncryption.actions.lockOnRefresh")}
                   />
-                }
-                label={t("clientEncryption.actions.lockOnRefresh")}
-              />
+                </Stack>
+                {status === "locked" && envelope && (
+                  <Button
+                    variant="contained"
+                    onClick={() => setUnlockOpen(true)}
+                    sx={{ flexShrink: 0, minWidth: 128 }}
+                  >
+                    {t("clientEncryption.actions.unlock")}
+                  </Button>
+                )}
+                {status === "unlocked" && (
+                  <Button
+                    variant="outlined"
+                    onClick={lockVault}
+                    sx={{ flexShrink: 0, minWidth: 128 }}
+                  >
+                    {t("clientEncryption.actions.lock")}
+                  </Button>
+                )}
+              </Stack>
+              {statusHint && (
+                <Typography variant="body2" color="text.secondary">
+                  {statusHint}
+                </Typography>
+              )}
             </Stack>
           ) : null}
         </Stack>

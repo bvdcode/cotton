@@ -58,6 +58,8 @@ namespace Cotton.Database
         public DbSet<ExtendedRefreshToken> RefreshTokens => Set<ExtendedRefreshToken>();
         /// <summary>Server-wide Cotton settings rows.</summary>
         public DbSet<CottonServerSettings> ServerSettings => Set<CottonServerSettings>();
+        /// <summary>Durable ordered sync-change feed rows.</summary>
+        public DbSet<SyncChange> SyncChanges => Set<SyncChange>();
 
         /// <summary>Signs pending protected rows before saving changes.</summary>
         public override int SaveChanges(bool acceptAllChangesOnSuccess)

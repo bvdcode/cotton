@@ -6,6 +6,7 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Previews;
 using Cotton.Previews.Http;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Hubs;
@@ -43,6 +44,7 @@ namespace Cotton.Server.Controllers
         IMediator _mediator,
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
+        ISyncChangeRecorder _syncChanges,
         ISchedulerFactory _scheduler,
         IHubContext<EventHub> _hubContext,
         FileManifestService _fileManifestService,
@@ -262,6 +264,7 @@ namespace Cotton.Server.Controllers
             }
 
             nodeFile.SetName(request.Name);
+            _syncChanges.StageFileChange(SyncChangeKind.FileRenamed, nodeFile, nodeFile.Node.LayoutId);
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
             var mapped = nodeFile.Adapt<NodeFileManifestDto>();
@@ -316,6 +319,7 @@ namespace Cotton.Server.Controllers
             }
 
             nodeFile.Metadata = metadata;
+            _syncChanges.StageFileChange(SyncChangeKind.FileContentUpdated, nodeFile, nodeFile.Node.LayoutId);
             await _dbContext.SaveChangesAsync();
 
             var mapped = nodeFile.Adapt<NodeFileManifestDto>();
@@ -455,6 +459,34 @@ namespace Cotton.Server.Controllers
         }
 
         /// <summary>
+        /// Downloads an owned file through normal bearer-token authentication.
+        /// </summary>
+        [Authorize]
+        [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/content")]
+        public async Task<IActionResult> DownloadOwnedFileContent(
+            [FromRoute] Guid nodeFileId,
+            [FromQuery] bool download = false)
+        {
+            Guid userId = User.GetUserId();
+            NodeFile? nodeFile = await _dbContext.NodeFiles
+                .Include(x => x.Node)
+                .Include(x => x.FileManifest)
+                .ThenInclude(x => x.FileManifestChunks)
+                .ThenInclude(x => x.Chunk)
+                .SingleOrDefaultAsync(x =>
+                    x.Id == nodeFileId &&
+                    x.OwnerId == userId &&
+                    x.Node.Type == NodeType.Default);
+            if (nodeFile is null)
+            {
+                return CottonResult.NotFound("Node file not found");
+            }
+
+            _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "file.content");
+            return ServeFileDownload(nodeFile, download);
+        }
+
+        /// <summary>
         /// Updates file content.
         /// </summary>
         [Authorize]
@@ -506,6 +538,7 @@ namespace Cotton.Server.Controllers
                 request.Metadata,
                 userId);
 
+            _syncChanges.StageFileChange(SyncChangeKind.FileContentUpdated, nodeFile, layoutId.Value);
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
             _quota.RecordLogicalBytesAdded(userId, addedBytes);
@@ -729,6 +762,12 @@ namespace Cotton.Server.Controllers
             DownloadToken downloadToken,
             bool download)
         {
+            RegisterDeleteAfterUse(downloadToken);
+            return ServeFileDownload(nodeFile, download);
+        }
+
+        private IActionResult ServeFileDownload(NodeFile nodeFile, bool download)
+        {
             string[] uids = nodeFile.FileManifest.FileManifestChunks.GetChunkHashes();
             PipelineContext context = new()
             {
@@ -740,8 +779,6 @@ namespace Cotton.Server.Controllers
             Response.Headers.CacheControl = "private, no-store, no-transform";
             EntityTagHeaderValue entityTag = EntityTagHeaderValue.Parse(
                 $"\"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}\"");
-
-            RegisterDeleteAfterUse(downloadToken);
 
             return File(
                 stream,

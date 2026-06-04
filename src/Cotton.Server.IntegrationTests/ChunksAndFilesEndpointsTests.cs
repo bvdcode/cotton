@@ -177,6 +177,139 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Upload_Empty_Raw_Chunk_And_Create_Empty_File_Works()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        byte[] content = [];
+        string contentHash = Hasher.ToHexStringHash(Hasher.HashData(content));
+        using var body = new ByteArrayContent(content)
+        {
+            Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
+        };
+
+        var uploadResponse = await _client.PostAsync($"/api/v1/chunks/raw?hash={contentHash}", body);
+        uploadResponse.EnsureSuccessStatusCode();
+
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", new CreateFileRequest
+        {
+            ChunkHashes = [contentHash],
+            Name = "empty-raw.txt",
+            ContentType = "text/plain",
+            Hash = contentHash,
+            NodeId = root!.Id,
+            Validate = true,
+        });
+        createResponse.EnsureSuccessStatusCode();
+
+        var created = await createResponse.Content.ReadFromJsonAsync<NodeFileManifestDto>();
+        Assert.That(created, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(created!.Name, Is.EqualTo("empty-raw.txt"));
+            Assert.That(created.SizeBytes, Is.Zero);
+            Assert.That(created.ContentHash, Is.EqualTo(contentHash));
+        });
+
+        byte[] downloaded = await _client.GetByteArrayAsync($"/api/v1/files/{created!.Id}/content");
+        Assert.That(downloaded, Is.Empty);
+    }
+
+    [Test]
+    public async Task Create_File_Returns_Sync_Metadata_In_Create_Response_And_Children_List()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        byte[] content = Encoding.UTF8.GetBytes("sync metadata");
+        string contentHash = Hasher.ToHexStringHash(Hasher.HashData(content));
+        var uploadResponse = await UploadRawChunkAsync(content, contentHash);
+        uploadResponse.EnsureSuccessStatusCode();
+
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", new CreateFileRequest
+        {
+            ChunkHashes = [contentHash],
+            Name = "sync-metadata.txt",
+            ContentType = "text/plain",
+            Hash = contentHash,
+            NodeId = root!.Id,
+            Validate = true,
+        });
+        createResponse.EnsureSuccessStatusCode();
+
+        var created = await createResponse.Content.ReadFromJsonAsync<NodeFileManifestDto>();
+        Assert.That(created, Is.Not.Null);
+        AssertSyncMetadata(created!, root.Id, contentHash);
+        Assert.That(created!.OriginalNodeFileId, Is.EqualTo(created.Id));
+
+        var list = await _client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{root.Id}/children");
+        Assert.That(list, Is.Not.Null);
+        var listed = list!.Files.SingleOrDefault(x => x.Id == created.Id);
+        Assert.That(listed, Is.Not.Null);
+        AssertSyncMetadata(listed!, root.Id, contentHash);
+        Assert.That(listed!.FileManifestId, Is.EqualTo(created.FileManifestId));
+        Assert.That(listed.OriginalNodeFileId, Is.EqualTo(created.OriginalNodeFileId));
+    }
+
+    [Test]
+    public async Task Download_Owned_File_Content_Works_With_Range_And_ETag()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var file = await UploadTextFileAsync(root!, "owned-content.txt", "0123456789abcdef");
+
+        var download = await _client.GetAsync($"/api/v1/files/{file.Id}/content");
+        download.EnsureSuccessStatusCode();
+        Assert.That(download.Headers.ETag?.Tag, Is.EqualTo($"\"{file.ETag}\""));
+        byte[] bytes = await download.Content.ReadAsByteArrayAsync();
+        Assert.That(Encoding.UTF8.GetString(bytes), Is.EqualTo("0123456789abcdef"));
+
+        using var rangeRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/files/{file.Id}/content");
+        rangeRequest.Headers.Range = new RangeHeaderValue(4, 7);
+        var range = await _client.SendAsync(rangeRequest);
+        Assert.That(range.StatusCode, Is.EqualTo(HttpStatusCode.PartialContent));
+        byte[] rangeBytes = await range.Content.ReadAsByteArrayAsync();
+        Assert.That(Encoding.UTF8.GetString(rangeBytes), Is.EqualTo("4567"));
+    }
+
+    [Test]
+    public async Task Download_Owned_File_Content_Rejects_Another_User()
+    {
+        var ownerToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ownerToken);
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+        var file = await UploadTextFileAsync(root!, "private-content.txt", "private");
+
+        var createUserResponse = await _client.PostAsJsonAsync("/api/v1/users", new
+        {
+            username = "synccontentuser",
+            password = "synccontentpass",
+            role = UserRole.User,
+        });
+        createUserResponse.EnsureSuccessStatusCode();
+
+        _client.DefaultRequestHeaders.Authorization = null;
+        var otherToken = await LoginAsync("synccontentuser", "synccontentpass");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", otherToken);
+
+        var response = await _client.GetAsync($"/api/v1/files/{file.Id}/content");
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+    }
+
+    [Test]
     public async Task Upload_Same_Chunk_In_Parallel_Deduplicates_Metadata()
     {
         var token = await LoginAsync();
@@ -837,6 +970,19 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         {
             Assert.That(lineageExists, Is.False);
             Assert.That(wrapperExists, Is.False);
+        });
+    }
+
+    private static void AssertSyncMetadata(NodeFileManifestDto file, Guid expectedNodeId, string expectedContentHash)
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(file.Id, Is.Not.EqualTo(Guid.Empty));
+            Assert.That(file.NodeId, Is.EqualTo(expectedNodeId));
+            Assert.That(file.FileManifestId, Is.Not.EqualTo(Guid.Empty));
+            Assert.That(file.OriginalNodeFileId, Is.Not.EqualTo(Guid.Empty));
+            Assert.That(file.ContentHash, Is.EqualTo(expectedContentHash));
+            Assert.That(file.ETag, Is.EqualTo("sha256-" + expectedContentHash));
         });
     }
 

@@ -5,6 +5,8 @@ import H5AudioPlayer from "react-h5-audio-player";
 import "react-h5-audio-player/lib/styles.css";
 import { filesApi } from "../api/filesApi";
 import type { AudioPlaylistItem } from "../types/audio";
+import { useAudioMediaSession } from "../hooks/useAudioMediaSession";
+import { buildAudioMediaSessionTrack } from "../utils/mediaSessionTrack";
 
 interface AudioPlayerProps {
   currentFileId: string;
@@ -47,6 +49,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 }) => {
   const playerRef = React.useRef<React.ElementRef<typeof H5AudioPlayer>>(null);
   const urlCacheRef = React.useRef<Map<string, string>>(new Map());
+  const [audioElement, setAudioElement] =
+    React.useState<HTMLAudioElement | null>(null);
 
   const shuffleOrderRef = React.useRef<ReadonlyArray<number> | null>(null);
   const shufflePosRef = React.useRef<number>(0);
@@ -144,6 +148,13 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       window.clearInterval(timerId);
     };
   }, [onListen, listenIntervalMs]);
+
+  React.useEffect(() => {
+    type PlayerWithAudioRef = { audio: React.RefObject<HTMLAudioElement> };
+    const element =
+      (playerRef.current as PlayerWithAudioRef | null)?.audio.current ?? null;
+    setAudioElement(element);
+  }, [src]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -276,6 +287,18 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       onTrackChange?.(nextItem);
     }
   }, [effectivePlaylist, onTrackChange, safeIndex, shuffleEnabled]);
+
+  const mediaSessionTrack = React.useMemo(
+    () => buildAudioMediaSessionTrack(currentItem),
+    [currentItem],
+  );
+
+  useAudioMediaSession({
+    audioElement,
+    track: mediaSessionTrack,
+    onPreviousTrack: hasPlaylist ? handlePrevious : undefined,
+    onNextTrack: hasPlaylist ? handleNext : undefined,
+  });
 
   return (
     <Box

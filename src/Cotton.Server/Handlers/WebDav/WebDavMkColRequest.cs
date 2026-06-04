@@ -3,6 +3,8 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Database.Models.Enums;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
 using Cotton.Validators;
@@ -57,6 +59,7 @@ public class WebDavMkColRequestHandler(
     CottonDbContext _dbContext,
     IWebDavPathResolver _pathResolver,
     IEventNotificationService _eventNotification,
+    ISyncChangeRecorder _syncChanges,
     ILogger<WebDavMkColRequestHandler> _logger)
     : IRequestHandler<WebDavMkColRequest, WebDavMkColResult>
 {
@@ -141,6 +144,7 @@ public class WebDavMkColRequestHandler(
 
         Node newNode = BuildNode(request.UserId, parentResult);
         await _dbContext.Nodes.AddAsync(newNode, ct);
+        _syncChanges.StageFolderChange(SyncChangeKind.FolderCreated, newNode, parentResult.ParentNode.Id);
         await _dbContext.SaveChangesAsync(ct);
 
         _logger.LogInformation("WebDAV MKCOL: Created directory {Path} for user {UserId}", request.Path, request.UserId);

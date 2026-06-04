@@ -29,6 +29,9 @@ import type {
 import { HLS_VIDEO_SLIDE_TYPE } from "@shared/types/mediaLightbox";
 import { useMediaLightboxUrls } from "./useMediaLightboxUrls";
 import { stopLightboxMediaPlayback } from "./mediaLightboxPlayback";
+import { useMediaSessionSource } from "../../hooks/useMediaSessionSource";
+import { MEDIA_SESSION_SOURCE_PRIORITY } from "../../utils/mediaSessionCoordinator";
+import { buildVideoMediaSessionTrack } from "../../utils/mediaSessionTrack";
 import { shareLinks } from "../../utils/shareLinks";
 import {
   selectGalleryPreferPreview,
@@ -58,6 +61,12 @@ type IndexOrUpdater = number | ((current: number) => number);
 type DeleteProgressState = {
   itemId: string | null;
   inProgress: boolean;
+};
+
+type ActiveVideoState = {
+  key: string;
+  fileId: string;
+  element: HTMLVideoElement;
 };
 
 const buildLightboxIndexKey = (
@@ -118,6 +127,52 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     [index, items, open],
   );
   const currentItem = open ? items[index] : undefined;
+  const currentIsVideo = currentItem?.kind === "video";
+  const [activeVideoState, setActiveVideoState] =
+    React.useState<ActiveVideoState | null>(null);
+  const activeVideoElement =
+    activeVideoState?.key === indexKey && activeVideoState.fileId === currentItemId
+      ? activeVideoState.element
+      : null;
+
+  const setActiveVideoElementForFile = React.useCallback(
+    (fileId: string, element: HTMLVideoElement | null) => {
+      setActiveVideoState((current) => {
+        if (!element) {
+          return current?.key === indexKey && current.fileId === fileId
+            ? null
+            : current;
+        }
+        return { key: indexKey, fileId, element };
+      });
+    },
+    [indexKey],
+  );
+
+  const videoMediaSessionTrack = React.useMemo(
+    () =>
+      currentItem?.kind === "video"
+        ? buildVideoMediaSessionTrack(currentItem)
+        : null,
+    [currentItem],
+  );
+
+  const hasMultipleItems = items.length > 1;
+  const handlePreviousMedia = React.useCallback(() => {
+    setLightboxIndex((current) => Math.max(0, current - 1));
+  }, [setLightboxIndex]);
+  const handleNextMedia = React.useCallback(() => {
+    setLightboxIndex((current) => Math.min(items.length - 1, current + 1));
+  }, [items.length, setLightboxIndex]);
+
+  useMediaSessionSource({
+    mediaElement: open && currentIsVideo ? activeVideoElement : null,
+    track: videoMediaSessionTrack,
+    priority: MEDIA_SESSION_SOURCE_PRIORITY.video,
+    onPreviousTrack: hasMultipleItems ? handlePreviousMedia : undefined,
+    onNextTrack: hasMultipleItems ? handleNextMedia : undefined,
+  });
+
   const isTouchDevice = React.useMemo(() => {
     if (typeof window === "undefined") return false;
     return window.matchMedia?.("(hover: none)")?.matches ?? false;
@@ -166,6 +221,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const handleClose = React.useCallback(() => {
     setClosingState({ open, closing: true });
     stopLightboxMediaPlayback();
+    setActiveVideoState(null);
     setTouchControlsVisible(true);
     onClose();
   }, [onClose, open]);
@@ -401,6 +457,9 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
               width={hlsSlide.width}
               height={hlsSlide.height}
               active={offset === 0 && hlsSlide.fileId === currentItemId}
+              onVideoElementChange={(element) =>
+                setActiveVideoElementForFile(hlsSlide.fileId, element)
+              }
               noticeText={hlsNoticeText}
               errorText={hlsErrorText}
             />
@@ -446,6 +505,11 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         children?: React.ReactNode;
         slide: Slide;
       }) => {
+        const lightboxSlide = slide as Partial<SlideWithTitle>;
+        const fileId =
+          typeof lightboxSlide.fileId === "string"
+            ? lightboxSlide.fileId
+            : null;
         const previewUrl =
           slide.type === "image"
             ? (slide as { thumbnail?: string }).thumbnail
@@ -454,6 +518,17 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         return (
           <div
             className="media-lightbox__tap-area"
+            data-cotton-media-lightbox-file-id={fileId ?? undefined}
+            onPlayCapture={(event) => {
+              const target = event.target;
+              if (
+                fileId &&
+                fileId === currentItemId &&
+                target instanceof HTMLVideoElement
+              ) {
+                setActiveVideoElementForFile(fileId, target);
+              }
+            }}
             onErrorCapture={() => {
               void handleSlideImageError(slide);
             }}
@@ -472,7 +547,13 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         );
       },
     }),
-    [currentItemId, handleSlideImageError, hlsErrorText, hlsNoticeText],
+    [
+      currentItemId,
+      handleSlideImageError,
+      hlsErrorText,
+      hlsNoticeText,
+      setActiveVideoElementForFile,
+    ],
   );
 
   const lightboxDownload = React.useMemo(

@@ -150,8 +150,16 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
               <SearchIcon />
             </IconButton>
           </Tooltip>
-          <NotificationsMenu />
-          <UserMenu />
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: { xs: 0.75, sm: 1 },
+            }}
+          >
+            <NotificationsMenu />
+            <UserMenu />
+          </Box>
         </Toolbar>
       </AppBar>
 

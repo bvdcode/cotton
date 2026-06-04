@@ -81,7 +81,11 @@ export const ProfileAccordionCard = ({
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
               {icon}
-              <Typography variant="h6" fontWeight={600} noWrap>
+              <Typography
+                variant="h6"
+                fontWeight={600}
+                sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}
+              >
                 {title}
               </Typography>
             </Box>

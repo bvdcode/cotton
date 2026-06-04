@@ -1,8 +1,11 @@
 import * as React from "react";
 import {
   Alert,
+  Avatar,
   Box,
+  Button,
   CircularProgress,
+  Paper,
   Typography,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
@@ -270,7 +273,21 @@ export const SharePage: React.FC = () => {
           justifyContent="center"
           p={2}
         >
-          <Alert severity="error">{viewState.message}</Alert>
+          <Paper
+            sx={{ p: 4, maxWidth: 420, width: "100%", textAlign: "center" }}
+          >
+            <Avatar
+              src="/assets/icons/icon.svg"
+              alt=""
+              sx={{ width: 56, height: 56, mx: "auto", mb: 2 }}
+            />
+            <Alert severity="error" sx={{ mb: 3, textAlign: "left" }}>
+              {viewState.message}
+            </Alert>
+            <Button variant="contained" href="/" fullWidth>
+              {t("backButton", { ns: "notFound" })}
+            </Button>
+          </Paper>
         </Box>
       )}
 

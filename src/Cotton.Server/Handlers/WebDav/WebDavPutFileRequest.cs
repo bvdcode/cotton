@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Database.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models;
@@ -93,6 +94,7 @@ public class WebDavPutFileRequestHandler(
     FileManifestService _fileManifestService,
     UserStorageQuotaService _quota,
     IEventNotificationService _eventNotification,
+    ISyncChangeRecorder _syncChanges,
     ILogger<WebDavPutFileRequestHandler> _logger)
     : IRequestHandler<WebDavPutFileRequest, WebDavPutFileResult>
 {
@@ -167,6 +169,10 @@ public class WebDavPutFileRequestHandler(
         }
 
         var (resultNodeFile, capture) = await UpsertNodeFileAsync(request, finalTarget, fileManifest.Id, ct);
+        _syncChanges.StageFileChange(
+            finalTarget.Created ? SyncChangeKind.FileCreated : SyncChangeKind.FileContentUpdated,
+            resultNodeFile,
+            finalTarget.Parent.ParentNode.LayoutId);
         await _dbContext.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         _quota.RecordLogicalBytesAdded(request.UserId, addedBytes);

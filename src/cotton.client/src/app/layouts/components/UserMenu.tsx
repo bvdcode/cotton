@@ -48,7 +48,8 @@ const getStorageQuotaPercent = (
   quotaBytes: number | null,
 ): number | null => {
   if (!quotaBytes || quotaBytes <= 0) {
-    return 100;
+    // No quota configured (unlimited): hide the bar rather than render it full.
+    return null;
   }
 
   return Math.min(100, Math.max(0, (usedBytes / quotaBytes) * 100));
@@ -208,7 +209,9 @@ export const UserMenu = () => {
           sx={{
             width: 40,
             height: 40,
-            bgcolor: "primary.main",
+            bgcolor: "background.paper",
+            color: "primary.main",
+            fontWeight: 600,
           }}
         >
           {!user?.pictureUrl && avatarInitials}

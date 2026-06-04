@@ -461,8 +461,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       <Box
         sx={{
           display: "flex",
-          flexDirection: "row",
-          alignItems: "center",
+          flexDirection: { xs: "column", md: "row" },
+          alignItems: { xs: "stretch", md: "center" },
           gap: 1,
           minWidth: 0,
         }}
@@ -474,6 +474,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             flexShrink: 0,
             minWidth: 0,
             gap: 0.5,
+            order: { xs: 2, md: 1 },
+            width: { xs: "100%", md: "auto" },
           }}
         >
           <Box
@@ -578,6 +580,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             flex: 1,
             gap: 1,
             minWidth: 0,
+            order: { xs: 1, md: 2 },
           }}
         >
           <FileBreadcrumbs

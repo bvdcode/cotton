@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Layouts;
 using Cotton.Server.Handlers.Nodes;
@@ -41,6 +42,7 @@ namespace Cotton.Server.Controllers
         IMediator _mediator,
         CottonDbContext _dbContext,
         ILayoutService _layouts,
+        ISyncChangeRecorder _syncChanges,
         IHubContext<EventHub> _hubContext,
         ILogger<LayoutController> _logger,
         ILayoutNavigator _navigator,
@@ -212,6 +214,10 @@ namespace Cotton.Server.Controllers
             }
 
             node.SetName(request.Name);
+            if (node.ParentId.HasValue)
+            {
+                _syncChanges.StageFolderChange(SyncChangeKind.FolderRenamed, node, node.ParentId.Value);
+            }
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
             var mapped = node.Adapt<NodeDto>();
@@ -435,6 +441,7 @@ namespace Cotton.Server.Controllers
             newNode.SetParent(parentNode);
             newNode.SetName(request.Name);
             await _dbContext.Nodes.AddAsync(newNode);
+            _syncChanges.StageFolderChange(SyncChangeKind.FolderCreated, newNode, parentNode.Id);
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
             var mapped = newNode.Adapt<NodeDto>();

@@ -167,14 +167,14 @@ export const useFileUpload = (
       const contentForCheck =
         content ?? (await nodesApi.getChildren(nodeId)).content;
 
-      const confirmRename = async (
-        newName: string,
+      const confirmConflict = async (
+        prompt: Parameters<typeof showConflictDialog>[0],
       ): Promise<ConflictAction> => {
         if (skipAllConflictsRef.current) {
           return ConflictAction.SkipAll;
         }
 
-        const action = await showConflictDialog(newName);
+        const action = await showConflictDialog(prompt);
         if (action === ConflictAction.SkipAll) {
           skipAllConflictsRef.current = true;
         }
@@ -184,7 +184,7 @@ export const useFileUpload = (
       const result = await resolveUploadConflicts(
         list,
         contentForCheck,
-        confirmRename,
+        confirmConflict,
       );
 
       if (result.cancelled) return;
@@ -228,14 +228,14 @@ export const useFileUpload = (
 
       let totalEnqueued = 0;
 
-      const confirmRename = async (
-        newName: string,
+      const confirmConflict = async (
+        prompt: Parameters<typeof showConflictDialog>[0],
       ): Promise<ConflictAction> => {
         if (skipAllConflictsRef.current) {
           return ConflictAction.SkipAll;
         }
 
-        const action = await showConflictDialog(newName);
+        const action = await showConflictDialog(prompt);
         if (action === ConflictAction.SkipAll) {
           skipAllConflictsRef.current = true;
         }
@@ -428,7 +428,7 @@ export const useFileUpload = (
         const result = await resolveUploadConflicts(
           bucket.files,
           contentForCheck,
-          confirmRename,
+          confirmConflict,
         );
         if (result.cancelled) return;
         if (result.files.length === 0) continue;

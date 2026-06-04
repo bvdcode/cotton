@@ -54,6 +54,11 @@ namespace Cotton
             public const string Layouts = Base + "/layouts";
 
             /// <summary>
+            /// Sync endpoint path.
+            /// </summary>
+            public const string Sync = Base + "/sync";
+
+            /// <summary>
             /// Settings endpoint path.
             /// </summary>
             public const string Settings = Base + "/settings";

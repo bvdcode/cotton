@@ -63,7 +63,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("app_versions", (string)null);
+                    b.ToTable("app_versions");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.Benchmark", b =>
@@ -105,7 +105,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("benchmarks", (string)null);
+                    b.ToTable("benchmarks");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.Chunk", b =>
@@ -142,7 +142,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasIndex("GCScheduledAfter");
 
-                    b.ToTable("chunks", (string)null);
+                    b.ToTable("chunks");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.ChunkOwnership", b =>
@@ -176,7 +176,7 @@ namespace Cotton.Database.Migrations
                     b.HasIndex("OwnerId", "ChunkHash")
                         .IsUnique();
 
-                    b.ToTable("chunk_ownerships", (string)null);
+                    b.ToTable("chunk_ownerships");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.CottonServerSettings", b =>
@@ -351,7 +351,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("server_settings", (string)null);
+                    b.ToTable("server_settings");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.DownloadToken", b =>
@@ -412,7 +412,7 @@ namespace Cotton.Database.Migrations
                     b.HasIndex("Token")
                         .IsUnique();
 
-                    b.ToTable("download_tokens", (string)null);
+                    b.ToTable("download_tokens");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.FileManifest", b =>
@@ -490,7 +490,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasIndex("SmallFilePreviewHash");
 
-                    b.ToTable("file_manifests", (string)null);
+                    b.ToTable("file_manifests");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.FileManifestChunk", b =>
@@ -536,7 +536,7 @@ namespace Cotton.Database.Migrations
                     b.HasIndex("FileManifestId", "ChunkOrder")
                         .IsUnique();
 
-                    b.ToTable("file_manifest_chunks", (string)null);
+                    b.ToTable("file_manifest_chunks");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.Layout", b =>
@@ -566,7 +566,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasIndex("OwnerId");
 
-                    b.ToTable("layouts", (string)null);
+                    b.ToTable("layouts");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.Node", b =>
@@ -631,7 +631,7 @@ namespace Cotton.Database.Migrations
                     b.HasIndex("LayoutId", "ParentId", "Type", "NameKey")
                         .IsUnique();
 
-                    b.ToTable("nodes", (string)null);
+                    b.ToTable("nodes");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.NodeFile", b =>
@@ -695,7 +695,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasIndex("NodeId", "NameKey");
 
-                    b.ToTable("node_files", (string)null);
+                    b.ToTable("node_files");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.NodeShareToken", b =>
@@ -752,7 +752,7 @@ namespace Cotton.Database.Migrations
                     b.HasIndex("Token")
                         .IsUnique();
 
-                    b.ToTable("node_share_tokens", (string)null);
+                    b.ToTable("node_share_tokens");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.Notification", b =>
@@ -799,7 +799,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("notifications", (string)null);
+                    b.ToTable("notifications");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.OidcLoginState", b =>
@@ -872,7 +872,7 @@ namespace Cotton.Database.Migrations
                     b.HasIndex("StateHash")
                         .IsUnique();
 
-                    b.ToTable("oidc_login_states", (string)null);
+                    b.ToTable("oidc_login_states");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.OidcProvider", b =>
@@ -965,7 +965,64 @@ namespace Cotton.Database.Migrations
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("oidc_providers", (string)null);
+                    b.ToTable("oidc_providers");
+                });
+
+            modelBuilder.Entity("Cotton.Database.Models.SyncChange", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("FileManifestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_manifest_id");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_id");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid>("LayoutId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("layout_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_id");
+
+                    b.Property<Guid>("ParentNodeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("parent_node_id");
+
+                    b.Property<Guid?>("PreviousParentNodeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("previous_parent_node_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "Id");
+
+                    b.ToTable("sync_changes");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.User", b =>
@@ -1081,7 +1138,7 @@ namespace Cotton.Database.Migrations
                     b.HasIndex("Username")
                         .IsUnique();
 
-                    b.ToTable("users", (string)null);
+                    b.ToTable("users");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.UserExternalIdentity", b =>
@@ -1158,7 +1215,7 @@ namespace Cotton.Database.Migrations
                     b.HasIndex("UserId", "ProviderId")
                         .IsUnique();
 
-                    b.ToTable("user_external_identities", (string)null);
+                    b.ToTable("user_external_identities");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.UserPasskeyCredential", b =>
@@ -1246,7 +1303,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("user_passkey_credentials", (string)null);
+                    b.ToTable("user_passkey_credentials");
                 });
 
             modelBuilder.Entity("EasyExtensions.EntityFrameworkCore.Database.ExtendedRefreshToken", b =>
@@ -1328,7 +1385,7 @@ namespace Cotton.Database.Migrations
                     b.HasIndex("Token")
                         .IsUnique();
 
-                    b.ToTable("refresh_tokens", (string)null);
+                    b.ToTable("refresh_tokens");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.ChunkOwnership", b =>
@@ -1342,7 +1399,7 @@ namespace Cotton.Database.Migrations
                     b.HasOne("Cotton.Database.Models.User", "Owner")
                         .WithMany("ChunkOwnerships")
                         .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Chunk");
@@ -1393,7 +1450,7 @@ namespace Cotton.Database.Migrations
                     b.HasOne("Cotton.Database.Models.User", "Owner")
                         .WithMany()
                         .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Owner");
@@ -1410,7 +1467,7 @@ namespace Cotton.Database.Migrations
                     b.HasOne("Cotton.Database.Models.User", "Owner")
                         .WithMany()
                         .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Cotton.Database.Models.Node", "Parent")
@@ -1442,7 +1499,7 @@ namespace Cotton.Database.Migrations
                     b.HasOne("Cotton.Database.Models.User", "Owner")
                         .WithMany("NodeFiles")
                         .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("FileManifest");
@@ -1491,6 +1548,17 @@ namespace Cotton.Database.Migrations
                         .IsRequired();
 
                     b.Navigation("Provider");
+                });
+
+            modelBuilder.Entity("Cotton.Database.Models.SyncChange", b =>
+                {
+                    b.HasOne("Cotton.Database.Models.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.UserExternalIdentity", b =>

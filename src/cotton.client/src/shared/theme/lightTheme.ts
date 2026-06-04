@@ -15,12 +15,25 @@ export const lightTheme = createTheme({
     },
     divider: "rgba(0,0,0,.08)",
     text: {
-      primary: "#646464",
-      secondary: "#323232",
+      primary: "#323232",
+      secondary: "#646464",
     },
   },
   shape: { borderRadius: 12 },
   components: {
+    MuiToggleButton: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          "&.Mui-selected": {
+            color: theme.palette.primary.contrastText,
+            backgroundColor: theme.palette.primary.main,
+            "&:hover": {
+              backgroundColor: theme.palette.primary.dark,
+            },
+          },
+        }),
+      },
+    },
     MuiDialogActions: {
       styleOverrides: {
         root: {

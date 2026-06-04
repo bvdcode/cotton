@@ -211,7 +211,7 @@ export const AdminStorageStatisticsPage = () => {
             alignItems={{ xs: "stretch", md: "center" }}
           >
             <Stack spacing={0.5}>
-              <Typography variant="h6" fontWeight={700}>
+              <Typography variant="h5" fontWeight={700}>
                 {t("storageStatistics.title")}
               </Typography>
               <Typography variant="body2" color="text.secondary">

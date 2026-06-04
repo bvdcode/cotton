@@ -15,12 +15,14 @@ import { uploadBlobToChunks } from "./uploadBlobToChunks";
 import { uploadFileToNode } from "./uploadFileToNode";
 
 const createFromChunksMock = vi.mocked(filesApi.createFromChunks);
+const updateFileContentMock = vi.mocked(filesApi.updateFileContent);
 const uploadBlobToChunksMock = vi.mocked(uploadBlobToChunks);
 const originalRandomUUID = globalThis.crypto.randomUUID;
 
 vi.mock("../api/filesApi", () => ({
   filesApi: {
     createFromChunks: vi.fn(),
+    updateFileContent: vi.fn(),
   },
 }));
 
@@ -32,6 +34,7 @@ describe("uploadFileToNode", () => {
   beforeEach(() => {
     useVault.getState().lock();
     createFromChunksMock.mockReset();
+    updateFileContentMock.mockReset();
     uploadBlobToChunksMock.mockReset();
     uploadBlobToChunksMock.mockResolvedValue({
       chunkHashes: ["chunk-a"],
@@ -68,6 +71,29 @@ describe("uploadFileToNode", () => {
       }),
     );
     expect(createFromChunksMock).toHaveBeenCalledWith({
+      nodeId: "node-1",
+      chunkHashes: ["chunk-a"],
+      name: "plain.txt",
+      contentType: "text/plain",
+      hash: "file-hash",
+      originalNodeFileId: null,
+      metadata: undefined,
+    });
+    expect(updateFileContentMock).not.toHaveBeenCalled();
+  });
+
+  it("updates an existing file when a replacement target is provided", async () => {
+    const file = new File(["hello"], "plain.txt", { type: "text/plain" });
+
+    await uploadFileToNode({
+      file,
+      nodeId: "node-1",
+      replaceNodeFileId: "file-1",
+      server: { maxChunkSizeBytes: 1024, supportedHashAlgorithm: "sha256" },
+    });
+
+    expect(createFromChunksMock).not.toHaveBeenCalled();
+    expect(updateFileContentMock).toHaveBeenCalledWith("file-1", {
       nodeId: "node-1",
       chunkHashes: ["chunk-a"],
       name: "plain.txt",

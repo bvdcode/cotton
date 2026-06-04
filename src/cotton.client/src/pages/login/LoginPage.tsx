@@ -208,7 +208,7 @@ const LoginActions = ({ form, isFirstRunMode }: LoginActionsProps) => (
   <Box
     sx={{
       display: "flex",
-      gap: 1,
+      gap: 1.5,
       justifyContent: "center",
       alignItems: "center",
     }}

@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Exceptions;
@@ -39,6 +40,7 @@ namespace Cotton.Server.Handlers.Nodes
     /// </summary>
     public class MoveNodeCommandHandler(
         CottonDbContext _dbContext,
+        ISyncChangeRecorder _syncChanges,
         IEventNotificationService _eventNotification,
         ILogger<MoveNodeCommandHandler> _logger)
         : IRequestHandler<MoveNodeCommand, NodeDto>
@@ -65,7 +67,7 @@ namespace Cotton.Server.Handlers.Nodes
             await ValidateTargetParentAsync(request, node, targetParent, cancellationToken);
 
             Guid oldParentId = node.ParentId!.Value;
-            await MoveNodeAsync(node, targetParent, cancellationToken);
+            await MoveNodeAsync(node, targetParent, oldParentId, cancellationToken);
             await tx.CommitAsync(cancellationToken);
 
             await NotifyMoveAsync(node.Id, oldParentId, cancellationToken);
@@ -152,9 +154,10 @@ namespace Cotton.Server.Handlers.Nodes
             }
         }
 
-        private async Task MoveNodeAsync(Node node, Node targetParent, CancellationToken ct)
+        private async Task MoveNodeAsync(Node node, Node targetParent, Guid oldParentId, CancellationToken ct)
         {
             node.SetParent(targetParent);
+            _syncChanges.StageFolderChange(SyncChangeKind.FolderMoved, node, targetParent.Id, oldParentId);
             try
             {
                 await _dbContext.SaveChangesAsync(ct);

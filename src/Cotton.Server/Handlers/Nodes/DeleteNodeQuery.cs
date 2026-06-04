@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Services;
 using Cotton.Topology.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
@@ -43,6 +44,7 @@ namespace Cotton.Server.Handlers.Nodes
         NodeSubtreeService _subtree,
         ILogger<DeleteNodeQueryHandler> _logger,
         UserStorageQuotaService _quota,
+        ISyncChangeRecorder _syncChanges,
         FileVersionService _versions)
             : IRequestHandler<DeleteNodeQuery>
     {
@@ -100,6 +102,7 @@ namespace Cotton.Server.Handlers.Nodes
             }
 
             Node trashItem = await _layouts.CreateTrashItemAsync(command.UserId);
+            _syncChanges.StageFolderChange(SyncChangeKind.FolderDeleted, node, node.ParentId.Value);
             node.SetParent(trashItem, NodeType.Trash);
 
             // Ensure the whole subtree is considered trash for browsing/search/filtering.
@@ -173,6 +176,10 @@ namespace Cotton.Server.Handlers.Nodes
             // A simple leaves-first order: nodes with non-null ParentId first.
             nodesToDelete.Sort((a, b) => (a.ParentId is null).CompareTo(b.ParentId is null));
 
+            if (node.Type == NodeType.Default && node.ParentId.HasValue)
+            {
+                _syncChanges.StageFolderChange(SyncChangeKind.FolderDeleted, node, node.ParentId.Value);
+            }
             _dbContext.Nodes.RemoveRange(nodesToDelete);
             await _dbContext.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);

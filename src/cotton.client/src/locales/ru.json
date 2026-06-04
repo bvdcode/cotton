@@ -2549,6 +2549,9 @@
     "conflicts": {
       "title": "Файл уже существует",
       "description": "В этой папке уже есть файл с таким именем. Загрузить как {{newName}}?",
+      "overwriteDescription": "В этой папке уже есть файл с таким именем. Заменить его или загрузить как {{newName}}?",
+      "rename": "Загрузить как {{newName}}",
+      "overwrite": "Заменить",
       "skip": "Пропустить",
       "skipAll": "Пропустить все"
     },
@@ -3080,7 +3083,9 @@
         "masterKey": "Мастер-ключ",
         "memory": "Доступ к памяти процесса",
         "runtime": "Факты о runtime",
-        "containerBoundary": "Граница контейнера"
+        "containerBoundary": "Граница контейнера",
+        "passed": "Protections in place",
+        "capabilities": "Hardware"
       },
       "risks": {
         "empty": "Текущие серверные проверки не нашли предупреждений."
@@ -3137,6 +3142,55 @@
         "host-pid-namespace": "Общий host PID namespace открывает host-процессы через procfs и упрощает атаки на память процессов.",
         "mandatory-access-control-unconfined": "Без enforcing AppArmor или SELinux профиля у container escape или kernel-facing бага меньше политик, которые нужно обойти.",
         "core-dumps-enabled": "Core dump — это снимок памяти. Если Cotton упадёт, пока секреты находятся в памяти, dump может сохранить master key или расшифрованную конфигурацию."
+      },
+      "labels": {
+        "whatItMeans": "What it means",
+        "impact": "Impact",
+        "howToFix": "How to fix",
+        "guardsAgainst": "What this guards against",
+        "note": "Note"
+      },
+      "fixes": {
+        "public-instance": "If this instance is not meant to be public, disable public/demo mode (unset COTTON_PUBLIC_INSTANCE) and restart.",
+        "master-key-from-environment": "Prefer unlocking via the /unlock page instead of COTTON_MASTER_KEY, or make sure the variable is not retained in deployment metadata or exposed to exec sessions.",
+        "admins-without-2fa": "Enable two-factor authentication (TOTP) for every admin account from Profile → Security.",
+        "dotnet-diagnostics-enabled": "Set DOTNET_EnableDiagnostics=0 (and COMPlus_EnableDiagnostics=0) in the container environment and restart.",
+        "process-dumpable": "Set COTTON_PROCESS_HARDENING=true (or use the official image defaults) so the process requests PR_SET_DUMPABLE=0 at startup.",
+        "sys-ptrace-capability": "Drop the CAP_SYS_PTRACE capability from the container (for example cap_drop: [ALL]).",
+        "new-privileges-allowed": "Run the container with no-new-privileges:true so the process cannot gain privileges through setuid binaries.",
+        "seccomp-disabled": "Run with a seccomp profile enabled (avoid seccomp=unconfined) to restrict the syscalls available to the process.",
+        "running-as-root": "Run the container as a non-root user; the official image runs as the unprivileged app user by default.",
+        "process-hardening-failed": "Process hardening was requested but could not be applied — check the container capabilities/permissions and the startup logs.",
+        "db-integrity-unsigned-rows": "Let the database-integrity bridge backfill finish signing legacy rows (keep the instance running), then disable bridge mode.",
+        "db-integrity-bridge-mode": "Bridge mode is a transitional database-integrity migration state managed by Cotton itself. It is finalized by upgrading to the Cotton release that completes the integrity migration — there is no operator action to take.",
+        "root-filesystem-writable": "Run the container with a read-only root filesystem (read_only: true) and mount only the storage volume as writable.",
+        "docker-socket-mounted": "Do not mount the Docker socket (/var/run/docker.sock) into the container.",
+        "host-pid-namespace": "Do not share the host PID namespace (avoid pid: host) so the process cannot observe other host processes.",
+        "mandatory-access-control-unconfined": "Apply an AppArmor or SELinux profile to confine the process instead of running unconfined.",
+        "core-dumps-enabled": "Disable core dumps for the container (ulimits: core: 0) so secrets cannot leak into dump files."
+      },
+      "passed": {
+        "public-instance": "Public account creation disabled",
+        "master-key-from-environment": "Master key not exposed via the environment",
+        "admins-without-2fa": "All admins have two-factor enabled",
+        "dotnet-diagnostics-enabled": ".NET diagnostics disabled",
+        "process-hardening-failed": "Process hardening applied",
+        "process-dumpable": "Process is not dumpable",
+        "sys-ptrace-capability": "CAP_SYS_PTRACE not held",
+        "new-privileges-allowed": "no-new-privileges enforced",
+        "seccomp-disabled": "seccomp filtering enabled",
+        "running-as-root": "Running as a non-root user",
+        "root-filesystem-writable": "Read-only root filesystem",
+        "docker-socket-mounted": "Docker socket not mounted",
+        "host-pid-namespace": "Isolated PID namespace",
+        "core-dumps-enabled": "Core dumps disabled",
+        "mandatory-access-control-unconfined": "AppArmor/SELinux confinement active"
+      },
+      "capabilities": {
+        "aesAcceleration": {
+          "title": "Hardware-accelerated encryption",
+          "body": "This processor exposes AES-NI / PCLMULQDQ instructions, so AES-GCM runs on dedicated hardware paths — encryption stays fast and adds little CPU overhead."
+        }
       }
     },
     "groups": {
