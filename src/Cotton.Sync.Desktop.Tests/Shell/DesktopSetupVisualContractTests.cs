@@ -197,11 +197,29 @@ public sealed class DesktopSetupVisualContractTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(cloudFolderPicker, Does.Contain("Content=\"^\""));
-            Assert.That(cloudFolderPicker, Does.Contain("Content=\">\""));
+            Assert.That(cloudFolderPicker, Does.Contain("Content=\"←\""));
+            Assert.That(cloudFolderPicker, Does.Contain("Content=\"→\""));
             Assert.That(CountOccurrences(cloudFolderPicker, "Classes=\"icon\""), Is.EqualTo(2));
+            Assert.That(cloudFolderPicker, Does.Not.Contain("Content=\"^\""));
+            Assert.That(cloudFolderPicker, Does.Not.Contain("Content=\">\""));
             Assert.That(cloudFolderPicker, Does.Not.Contain("Content=\"Up\""));
             Assert.That(cloudFolderPicker, Does.Not.Contain("Content=\"Open\""));
+        });
+    }
+
+    [Test]
+    public void AddFolderWizard_UsesFolderSelectionPrimaryAction()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string addFolderWizard = GetSlice(
+            mainWindowXaml,
+            "IsVisible=\"{Binding IsAddSyncPairWizardVisible}\"",
+            "IsVisible=\"{Binding IsSettingsVisible}\"");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(addFolderWizard, Does.Contain("Content=\"Use this folder\""));
+            Assert.That(addFolderWizard, Does.Not.Contain("Content=\"Sync\""));
         });
     }
 

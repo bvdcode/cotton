@@ -667,7 +667,7 @@
                         RowSpacing="8">
                     <Grid ColumnDefinitions="Auto,*,Auto"
                           ColumnSpacing="6">
-                      <Button Content="^"
+                      <Button Content="←"
                               Classes="icon"
                               ToolTip.Tip="Go to parent folder"
                               Command="{Binding RemoteFolderUpCommand}" />
@@ -676,7 +676,7 @@
                                  TextTrimming="CharacterEllipsis"
                                  VerticalAlignment="Center" />
                       <Button Grid.Column="2"
-                              Content=">"
+                              Content="→"
                               Classes="icon"
                               ToolTip.Tip="Open selected cloud folder"
                               Command="{Binding OpenRemoteFolderCommand}" />
@@ -708,7 +708,7 @@
                             <Grid ColumnDefinitions="Auto,*"
                                   ColumnSpacing="8"
                                   Margin="0,5">
-                              <TextBlock Text=">"
+                              <TextBlock Text="›"
                                          Classes="secondary"
                                          VerticalAlignment="Center" />
                               <TextBlock Grid.Column="1"
@@ -779,7 +779,7 @@
                 <Grid ColumnDefinitions="*,Auto"
                       ColumnSpacing="8">
                   <Button Grid.Column="1"
-                          Content="Sync"
+                          Content="Use this folder"
                           Classes="primary"
                           ToolTip.Tip="Start syncing with the current cloud folder"
                           Command="{Binding AddSyncPairCommand}" />
