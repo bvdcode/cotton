@@ -143,6 +143,22 @@ public sealed class DesktopPackagingMetadataTests
     }
 
     [Test]
+    public void CiWorkflow_SmokesWindowsZipArchiveOnWindows()
+    {
+        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(workflow, Does.Contain("Setup Python"));
+            Assert.That(workflow, Does.Contain("Smoke desktop Windows zip archive"));
+            Assert.That(workflow, Does.Contain("Packaging/windows/package-zip.py"));
+            Assert.That(workflow, Does.Contain("cotton-sync-desktop-win-x64-smoke.zip"));
+            Assert.That(workflow, Does.Contain("Expand-Archive cotton-sync-desktop-win-x64-smoke.zip"));
+            Assert.That(workflow, Does.Contain("Cotton.Sync.Desktop.exe\") --self-test --data-dir"));
+        });
+    }
+
+    [Test]
     public void CiWorkflow_UploadsWindowsZipPortableArtifact()
     {
         string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));

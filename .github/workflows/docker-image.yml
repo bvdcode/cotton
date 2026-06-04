@@ -341,6 +341,11 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+
       - name: Publish desktop Windows x64
         run: dotnet publish src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj /p:PublishProfile=win-x64 -p:Version='${{ needs.build.outputs.Version }}' -p:InformationalVersion='${{ needs.build.outputs.Version }}'
 
@@ -350,6 +355,20 @@ jobs:
           $dataDir = Join-Path $env:RUNNER_TEMP "cotton-sync-smoke"
           New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
           src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64/Cotton.Sync.Desktop.exe --self-test --data-dir "$dataDir"
+
+      - name: Smoke desktop Windows zip archive
+        shell: pwsh
+        run: |
+          python src/Cotton.Sync.Desktop/Packaging/windows/package-zip.py `
+            src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64 `
+            cotton-sync-desktop-win-x64-smoke.zip
+
+          $extractDir = Join-Path $env:RUNNER_TEMP "cotton-sync-win-zip"
+          $dataDir = Join-Path $env:RUNNER_TEMP "cotton-sync-win-zip-data"
+          New-Item -ItemType Directory -Path $extractDir -Force | Out-Null
+          New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
+          Expand-Archive cotton-sync-desktop-win-x64-smoke.zip -DestinationPath $extractDir -Force
+          & (Join-Path $extractDir "Cotton.Sync.Desktop.exe") --self-test --data-dir "$dataDir"
 
       - name: Install Inno Setup
         shell: pwsh
