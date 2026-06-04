@@ -299,14 +299,6 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public bool IsSignInStepVisible => IsSetupVisible && IsServerVerified;
 
-    public bool IsServerStepActive => IsSetupVisible && !IsServerVerified;
-
-    public bool IsServerStepComplete => IsSetupVisible && IsServerVerified;
-
-    public bool IsAccountStepActive => IsSetupVisible && IsServerVerified;
-
-    public bool IsAccountStepInactive => IsSetupVisible && !IsServerVerified;
-
     public string SetupTitle => IsServerVerified ? "Sign in" : "Connect Cotton Sync";
 
     public string SetupSubtitle => IsServerVerified
@@ -1585,10 +1577,6 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         OnPropertyChanged(nameof(IsServerStepVisible));
         OnPropertyChanged(nameof(IsSignInStepVisible));
-        OnPropertyChanged(nameof(IsServerStepActive));
-        OnPropertyChanged(nameof(IsServerStepComplete));
-        OnPropertyChanged(nameof(IsAccountStepActive));
-        OnPropertyChanged(nameof(IsAccountStepInactive));
         OnPropertyChanged(nameof(SetupTitle));
         OnPropertyChanged(nameof(SetupSubtitle));
     }
