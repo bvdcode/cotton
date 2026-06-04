@@ -147,6 +147,7 @@ namespace Cotton.Server.Handlers.Files
 
             nodeFile.NodeId = targetParent.Id;
             nodeFile.Metadata = TrashRestoreCoordinator.RemoveOriginalParentPath(nodeFile.Metadata);
+            StageCreatedParents(parentOutcome.CreatedParents);
             _syncChanges.StageFileChange(SyncChangeKind.FileRestored, nodeFile, targetParent.LayoutId);
             await _dbContext.SaveChangesAsync(ct);
 
@@ -181,16 +182,33 @@ namespace Cotton.Server.Handlers.Files
             if (resolution.InvalidPathReason is not null)
             {
                 await tx.RollbackAsync(ct);
-                return new RestoreParentOutcome(null, NotRestorable(resolution.InvalidPathReason, originalParentPath));
+                return new RestoreParentOutcome(
+                    null,
+                    [],
+                    NotRestorable(resolution.InvalidPathReason, originalParentPath));
             }
 
             if (resolution.Parent is null)
             {
                 await tx.RollbackAsync(ct);
-                return new RestoreParentOutcome(null, ParentMissingOutcome(originalParentPath));
+                return new RestoreParentOutcome(null, [], ParentMissingOutcome(originalParentPath));
             }
 
-            return new RestoreParentOutcome(resolution.Parent, null);
+            return new RestoreParentOutcome(resolution.Parent, resolution.CreatedParents, null);
+        }
+
+        private void StageCreatedParents(IReadOnlyList<Node> createdParents)
+        {
+            foreach (Node createdParent in createdParents)
+            {
+                if (createdParent.ParentId.HasValue)
+                {
+                    _syncChanges.StageFolderChange(
+                        SyncChangeKind.FolderCreated,
+                        createdParent,
+                        createdParent.ParentId.Value);
+                }
+            }
         }
 
         private async Task<RestoreOutcomeDto?> ResolveConflictAsync(
@@ -235,7 +253,10 @@ namespace Cotton.Server.Handlers.Files
             ConflictName = conflictName,
         };
 
-        private sealed record RestoreParentOutcome(Node? Parent, RestoreOutcomeDto? Failure);
+        private sealed record RestoreParentOutcome(
+            Node? Parent,
+            IReadOnlyList<Node> CreatedParents,
+            RestoreOutcomeDto? Failure);
 
         private static RestoreOutcomeDto NotRestorable(string reason, string? originalParentPath = null) => new()
         {

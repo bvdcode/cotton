@@ -35,7 +35,11 @@ public class TrashRestoreCoordinator(
     /// </summary>
     /// <param name="Parent">The resolved parent node, or null when it is missing or invalid.</param>
     /// <param name="InvalidPathReason">A human-readable reason for invalid stored metadata.</param>
-    public readonly record struct ParentResolution(Node? Parent, string? InvalidPathReason);
+    /// <param name="CreatedParents">Parent folders created while resolving the original parent path.</param>
+    public readonly record struct ParentResolution(
+        Node? Parent,
+        string? InvalidPathReason,
+        IReadOnlyList<Node> CreatedParents);
 
     /// <summary>
     /// Resolves the original parent path and optionally recreates missing folders.
@@ -53,12 +57,12 @@ public class TrashRestoreCoordinator(
         }
         catch (ArgumentException ex)
         {
-            return new ParentResolution(null, $"Stored original parent path is invalid: {ex.Message}");
+            return new ParentResolution(null, $"Stored original parent path is invalid: {ex.Message}", []);
         }
 
         if (parent is not null || !createMissingParents)
         {
-            return new ParentResolution(parent, null);
+            return new ParentResolution(parent, null, []);
         }
 
         return await CreateMissingParentsAsync(userId, originalParentPath, ct);
@@ -172,7 +176,7 @@ public class TrashRestoreCoordinator(
 
         if (string.IsNullOrWhiteSpace(originalParentPath))
         {
-            return new ParentResolution(current, null);
+            return new ParentResolution(current, null, []);
         }
 
         var parts = originalParentPath
@@ -180,13 +184,15 @@ public class TrashRestoreCoordinator(
             .Trim(Constants.DefaultPathSeparator)
             .Split(Constants.DefaultPathSeparator, StringSplitOptions.RemoveEmptyEntries);
 
+        var createdParents = new List<Node>();
         foreach (string part in parts)
         {
             if (!NameValidator.TryNormalizeAndValidate(part, out string normalized, out _))
             {
                 return new ParentResolution(
                     null,
-                    $"Stored original parent path contains an invalid segment '{part}'.");
+                    $"Stored original parent path contains an invalid segment '{part}'.",
+                    []);
             }
 
             string nameKey = NameValidator.GetNameKey(normalized);
@@ -214,9 +220,10 @@ public class TrashRestoreCoordinator(
             created.SetName(normalized);
             await _dbContext.Nodes.AddAsync(created, ct);
             await _dbContext.SaveChangesAsync(ct);
+            createdParents.Add(created);
             current = created;
         }
 
-        return new ParentResolution(current, null);
+        return new ParentResolution(current, null, createdParents);
     }
 }

@@ -27,6 +27,11 @@ namespace Cotton.Server.Controllers
             [FromQuery] int limit = 500,
             CancellationToken cancellationToken = default)
         {
+            if (since < 0)
+            {
+                return BadRequest("Cursor must be greater than or equal to zero.");
+            }
+
             Guid userId = User.GetUserId();
             SyncChangesResponseDto response = await _mediator.Send(
                 new GetSyncChangesQuery(userId, since, limit),
