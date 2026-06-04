@@ -116,6 +116,7 @@ internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFac
             activityPublisher,
             tokenStore,
             cottonClient.Nodes,
+            cottonClient.Sync,
             httpClient,
             serverUrl,
             cottonClient.Realtime);

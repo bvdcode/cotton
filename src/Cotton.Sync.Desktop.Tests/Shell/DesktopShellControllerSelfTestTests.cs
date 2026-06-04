@@ -54,6 +54,7 @@ public sealed class DesktopShellControllerSelfTestTests
             Assert.That(names, Does.Contain("Notification adapter"));
             Assert.That(names, Does.Contain("File watcher"));
             Assert.That(names, Does.Contain("Server identity"));
+            Assert.That(names, Does.Contain("Desktop sync change feed"));
         });
     }
 

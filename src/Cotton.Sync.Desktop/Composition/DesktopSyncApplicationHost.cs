@@ -7,6 +7,7 @@ using Cotton.Sync.App.Status;
 using Cotton.Sync.Remote;
 using Cotton.Sdk.Auth;
 using Cotton.Sdk.Nodes;
+using Cotton.Sdk.Sync;
 
 namespace Cotton.Sync.Desktop.Composition;
 
@@ -23,6 +24,7 @@ internal sealed class DesktopSyncApplicationHost : IDisposable, IAsyncDisposable
         IAppActivityPublisher activityPublisher,
         ICottonTokenStore tokenStore,
         ICottonNodeClient nodes,
+        ICottonSyncClient sync,
         HttpClient httpClient,
         Uri serverUrl,
         IAsyncDisposable? asyncResource = null)
@@ -33,6 +35,7 @@ internal sealed class DesktopSyncApplicationHost : IDisposable, IAsyncDisposable
         ActivityPublisher = activityPublisher ?? throw new ArgumentNullException(nameof(activityPublisher));
         TokenStore = tokenStore ?? throw new ArgumentNullException(nameof(tokenStore));
         Nodes = nodes ?? throw new ArgumentNullException(nameof(nodes));
+        Sync = sync ?? throw new ArgumentNullException(nameof(sync));
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _asyncResource = asyncResource;
         ServerUrl = serverUrl ?? throw new ArgumentNullException(nameof(serverUrl));
@@ -49,6 +52,8 @@ internal sealed class DesktopSyncApplicationHost : IDisposable, IAsyncDisposable
     public ICottonTokenStore TokenStore { get; }
 
     public ICottonNodeClient Nodes { get; }
+
+    public ICottonSyncClient Sync { get; }
 
     public Uri ServerUrl { get; }
 

@@ -4,8 +4,10 @@
 using Cotton.Contracts.Auth;
 using Cotton.Contracts.Files;
 using Cotton.Contracts.Nodes;
+using Cotton.Contracts.Sync;
 using Cotton.Sdk.Auth;
 using Cotton.Sdk.Nodes;
+using Cotton.Sdk.Sync;
 using Cotton.Sync.App.Activities;
 using Cotton.Sync.App.Auth;
 using Cotton.Sync.App.Platform;
@@ -216,6 +218,7 @@ public sealed class DesktopShellControllerHostLifecycleTests
                 new InMemoryAppActivityPublisher(),
                 new FakeCottonTokenStore(),
                 new FakeCottonNodeClient(),
+                new FakeCottonSyncClient(),
                 new HttpClient(),
                 serverUrl,
                 AsyncResource);
@@ -452,6 +455,22 @@ public sealed class DesktopShellControllerHostLifecycleTests
         public Task<List<NodeDto>> GetAncestorsAsync(Guid nodeId, CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
+        }
+    }
+
+    private sealed class FakeCottonSyncClient : ICottonSyncClient
+    {
+        public Task<SyncChangesResponseDto> GetChangesAsync(
+            long sinceCursor = 0,
+            int limit = 500,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new SyncChangesResponseDto
+            {
+                SinceCursor = sinceCursor,
+                NextCursor = sinceCursor,
+                HasMore = false,
+            });
         }
     }
 

@@ -540,6 +540,23 @@ internal sealed class DesktopShellController : IDesktopShellController
                 }).ConfigureAwait(false);
         }
 
+        DesktopSyncApplicationHost? activeHost = _host;
+        if (serverUrl is null)
+        {
+            items.Add(new DesktopSelfTestItemSnapshot("Desktop sync change feed", true, "Not configured"));
+        }
+        else if (activeHost is null)
+        {
+            items.Add(new DesktopSelfTestItemSnapshot("Desktop sync change feed", true, "Sign in to verify"));
+        }
+        else
+        {
+            await AddSelfTestCheckAsync(
+                items,
+                "Desktop sync change feed",
+                () => CheckSyncChangeFeedAsync(activeHost, cancellationToken)).ConfigureAwait(false);
+        }
+
         foreach (SyncPairSettings syncPair in syncPairs)
         {
             await AddSelfTestCheckAsync(
@@ -682,6 +699,15 @@ internal sealed class DesktopShellController : IDesktopShellController
         }
 
         return Task.FromResult(iconPath);
+    }
+
+    private static async Task<string> CheckSyncChangeFeedAsync(
+        DesktopSyncApplicationHost host,
+        CancellationToken cancellationToken)
+    {
+        var response = await host.Sync.GetChangesAsync(sinceCursor: 0, limit: 1, cancellationToken)
+            .ConfigureAwait(false);
+        return "Ready; next cursor " + response.NextCursor.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
 
     private static async Task<string> CheckRemoteRootAsync(
