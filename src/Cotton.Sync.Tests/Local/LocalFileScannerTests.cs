@@ -46,6 +46,30 @@ public sealed class LocalFileScannerTests
     }
 
     [Test]
+    public async Task ScanTreeAsync_ReturnsDirectoriesAndFiles()
+    {
+        Directory.CreateDirectory(FullPath("empty"));
+        Directory.CreateDirectory(FullPath(Path.Combine("nested", "child")));
+        WriteFile(Path.Combine("nested", "child", "file.txt"), "content");
+        var scanner = new LocalFileScanner();
+
+        LocalTreeSnapshot tree = await scanner.ScanTreeAsync(_root);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                tree.Directories.Select(static directory => directory.RelativePath),
+                Is.EqualTo(new[] { "empty", "nested", "nested/child" }));
+            Assert.That(
+                tree.Directories.Single(static directory => directory.RelativePath == "empty").FullPath,
+                Is.EqualTo(FullPath("empty")));
+            Assert.That(
+                tree.Files.Select(static file => file.RelativePath),
+                Is.EqualTo(new[] { "nested/child/file.txt" }));
+        });
+    }
+
+    [Test]
     public async Task ScanAsync_IgnoresTempFilesAndCottonWorkingFolder()
     {
         WriteFile("keep.txt", "keep");
@@ -71,6 +95,29 @@ public sealed class LocalFileScannerTests
         IReadOnlyList<LocalFileSnapshot> files = await scanner.ScanAsync(_root);
 
         Assert.That(files.Select(x => x.RelativePath), Is.EqualTo(new[] { "keep.txt" }));
+    }
+
+    [Test]
+    public async Task ScanTreeAsync_IgnoresTemporaryAndCottonWorkingDirectories()
+    {
+        Directory.CreateDirectory(FullPath("keep"));
+        WriteFile(Path.Combine("keep", "file.txt"), "keep");
+        WriteFile(Path.Combine(".cotton-sync", "state.db"), "state");
+        WriteFile(Path.Combine("partial.tmp", "ignored.txt"), "ignored");
+        WriteFile(Path.Combine("download.partial", "ignored.txt"), "ignored");
+        var scanner = new LocalFileScanner();
+
+        LocalTreeSnapshot tree = await scanner.ScanTreeAsync(_root);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                tree.Directories.Select(static directory => directory.RelativePath),
+                Is.EqualTo(new[] { "keep" }));
+            Assert.That(
+                tree.Files.Select(static file => file.RelativePath),
+                Is.EqualTo(new[] { "keep/file.txt" }));
+        });
     }
 
     [Test]

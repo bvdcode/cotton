@@ -9,7 +9,7 @@ namespace Cotton.Sync.Local;
 /// <summary>
 /// Scans a local folder and hashes files for synchronization.
 /// </summary>
-public sealed class LocalFileScanner : ILocalFileScanner
+public sealed class LocalFileScanner : ILocalFileScanner, ILocalTreeScanner
 {
     private static readonly StringComparer PathComparer = StringComparer.OrdinalIgnoreCase;
     private static readonly EnumerationOptions FileEnumerationOptions = new()
@@ -25,6 +25,15 @@ public sealed class LocalFileScanner : ILocalFileScanner
         string rootPath,
         CancellationToken cancellationToken = default)
     {
+        LocalTreeSnapshot tree = await ScanTreeAsync(rootPath, cancellationToken).ConfigureAwait(false);
+        return tree.Files;
+    }
+
+    /// <inheritdoc />
+    public async Task<LocalTreeSnapshot> ScanTreeAsync(
+        string rootPath,
+        CancellationToken cancellationToken = default)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
         string fullRoot = Path.GetFullPath(rootPath);
         if (!Directory.Exists(fullRoot))
@@ -32,7 +41,29 @@ public sealed class LocalFileScanner : ILocalFileScanner
             throw new DirectoryNotFoundException($"Local sync root was not found: {fullRoot}");
         }
 
-        var snapshots = new List<LocalFileSnapshot>();
+        var tree = new LocalTreeSnapshot();
+        foreach (string directoryPath in Directory.EnumerateDirectories(fullRoot, "*", FileEnumerationOptions))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string relativePath = ToRelativePath(fullRoot, directoryPath);
+            if (LocalFileIgnoreRules.ShouldIgnore(relativePath))
+            {
+                continue;
+            }
+
+            DirectoryInfo directory = new(directoryPath);
+            if ((directory.Attributes & FileAttributes.ReparsePoint) != 0)
+            {
+                continue;
+            }
+
+            tree.Directories.Add(new LocalDirectorySnapshot
+            {
+                RelativePath = relativePath,
+                FullPath = directory.FullName,
+            });
+        }
+
         foreach (string filePath in Directory.EnumerateFiles(fullRoot, "*", FileEnumerationOptions))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -48,12 +79,13 @@ public sealed class LocalFileScanner : ILocalFileScanner
                 continue;
             }
 
-            LocalFileSnapshot snapshot = await CreateSnapshotAsync(file, relativePath, cancellationToken).ConfigureAwait(false);
-            snapshots.Add(snapshot);
+            LocalFileSnapshot fileSnapshot = await CreateSnapshotAsync(file, relativePath, cancellationToken).ConfigureAwait(false);
+            tree.Files.Add(fileSnapshot);
         }
 
-        snapshots.Sort((left, right) => PathComparer.Compare(left.RelativePath, right.RelativePath));
-        return snapshots;
+        tree.Directories.Sort((left, right) => PathComparer.Compare(left.RelativePath, right.RelativePath));
+        tree.Files.Sort((left, right) => PathComparer.Compare(left.RelativePath, right.RelativePath));
+        return tree;
     }
 
     private static string ToRelativePath(string rootPath, string filePath)

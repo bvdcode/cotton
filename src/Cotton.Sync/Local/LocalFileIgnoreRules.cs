@@ -50,14 +50,14 @@ public static class LocalFileIgnoreRules
         }
 
         string[] segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        if (segments.Any(static segment => string.Equals(segment, MetadataDirectoryName, StringComparison.OrdinalIgnoreCase)))
-        {
-            return true;
-        }
+        return segments.Any(ShouldIgnoreSegment);
+    }
 
-        string fileName = segments[^1];
-        return IgnoredFileNames.Contains(fileName)
-            || TemporaryFilePrefixes.Any(prefix => fileName.StartsWith(prefix, StringComparison.Ordinal))
-            || TemporaryFileSuffixes.Any(suffix => fileName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase));
+    private static bool ShouldIgnoreSegment(string segment)
+    {
+        return string.Equals(segment, MetadataDirectoryName, StringComparison.OrdinalIgnoreCase)
+            || IgnoredFileNames.Contains(segment)
+            || TemporaryFilePrefixes.Any(prefix => segment.StartsWith(prefix, StringComparison.Ordinal))
+            || TemporaryFileSuffixes.Any(suffix => segment.EndsWith(suffix, StringComparison.OrdinalIgnoreCase));
     }
 }
