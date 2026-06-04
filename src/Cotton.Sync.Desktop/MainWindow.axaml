@@ -460,26 +460,46 @@
               </Grid>
 
               <Grid Grid.Row="1">
-                <StackPanel HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Spacing="10"
-                            Width="260"
-                            IsVisible="{Binding HasNoSyncPairs}">
-                  <Button Content="+"
-                          Classes="emptyIcon primary"
-                          HorizontalAlignment="Center"
-                          ToolTip.Tip="Add sync folder"
-                          Command="{Binding ShowAddSyncPairCommand}" />
-                  <TextBlock Text="Add a folder"
-                             FontSize="17"
-                             FontWeight="SemiBold"
-                             HorizontalAlignment="Center" />
-                  <TextBlock Text="Choose a local folder and a Cotton Cloud folder."
-                             TextAlignment="Center"
-                             TextWrapping="Wrap"
-                             Classes="secondary"
-                             FontSize="12" />
-                </StackPanel>
+                <Border Padding="9"
+                        CornerRadius="6"
+                        Background="{DynamicResource CottonSurfaceMutedBrush}"
+                        BorderBrush="{DynamicResource CottonBorderBrush}"
+                        BorderThickness="1"
+                        VerticalAlignment="Top"
+                        IsVisible="{Binding HasNoSyncPairs}">
+                  <Grid ColumnDefinitions="Auto,*,Auto"
+                        ColumnSpacing="9">
+                    <Border Width="32"
+                            Height="32"
+                            CornerRadius="6"
+                            Background="{DynamicResource CottonPrimarySoftBrush}"
+                            VerticalAlignment="Center">
+                      <TextBlock Text="+"
+                                 FontSize="20"
+                                 FontWeight="SemiBold"
+                                 Foreground="{DynamicResource CottonPrimaryTextBrush}"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Grid.Column="1"
+                                Spacing="1"
+                                VerticalAlignment="Center">
+                      <TextBlock Text="Add a folder"
+                                 FontSize="14"
+                                 FontWeight="SemiBold"
+                                 TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="Choose local and Cotton Cloud folders."
+                                 Classes="secondary"
+                                 FontSize="12"
+                                 TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <Button Grid.Column="2"
+                            Content="+"
+                            Classes="icon primary"
+                            ToolTip.Tip="Add sync folder"
+                            Command="{Binding ShowAddSyncPairCommand}" />
+                  </Grid>
+                </Border>
 
                 <ListBox ItemsSource="{Binding SyncPairs}"
                          SelectedItem="{Binding SelectedSyncPair}"
