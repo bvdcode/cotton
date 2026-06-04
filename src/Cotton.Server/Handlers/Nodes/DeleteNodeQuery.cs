@@ -176,7 +176,10 @@ namespace Cotton.Server.Handlers.Nodes
             // A simple leaves-first order: nodes with non-null ParentId first.
             nodesToDelete.Sort((a, b) => (a.ParentId is null).CompareTo(b.ParentId is null));
 
-            _syncChanges.StageFolderChange(SyncChangeKind.FolderDeleted, node, node.ParentId!.Value);
+            if (node.Type == NodeType.Default && node.ParentId.HasValue)
+            {
+                _syncChanges.StageFolderChange(SyncChangeKind.FolderDeleted, node, node.ParentId.Value);
+            }
             _dbContext.Nodes.RemoveRange(nodesToDelete);
             await _dbContext.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
