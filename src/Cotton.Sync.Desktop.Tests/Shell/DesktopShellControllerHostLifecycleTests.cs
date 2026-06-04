@@ -230,6 +230,38 @@ public sealed class DesktopShellControllerHostLifecycleTests
     }
 
     [Test]
+    public async Task AddSyncPairAsync_RollsBackSavedPairWhenInitialSyncFails()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        Uri serverUrl = new("https://cotton.example.test/");
+        FakeDesktopApplicationHost host = FakeDesktopApplicationHost.Create(serverUrl);
+        host.App.SyncNowException = new InvalidOperationException("Sync changes API is unavailable.");
+        var factory = new QueueingDesktopSyncApplicationFactory(host.Host);
+        using DesktopShellController controller = CreateController(paths, factory);
+        string localPath = Path.Combine(_tempDirectory, "Downloads");
+        Directory.CreateDirectory(localPath);
+
+        await controller.SignInAsync(new DesktopSignInRequest(
+            serverUrl.AbsoluteUri,
+            "desktop@example.test",
+            "password",
+            null));
+        InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await controller.AddSyncPairAsync(new DesktopSyncPairRequest(localPath, "/Downloads")));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception?.Message, Is.EqualTo("Sync changes API is unavailable."));
+            Assert.That(host.App.SaveSyncPairCalls, Is.EqualTo(1));
+            Assert.That(host.App.SyncNowCalls, Is.EqualTo(1));
+            Assert.That(host.App.StopSyncCalls, Is.EqualTo(1));
+            Assert.That(host.App.DeleteSyncPairCalls, Is.EqualTo(1));
+            Assert.That(host.App.DeletedSyncPairId, Is.EqualTo(host.App.SavedSyncPair?.Id));
+            Assert.That(host.App.StartSyncCalls, Is.EqualTo(3));
+        });
+    }
+
+    [Test]
     public async Task StatusChanged_ForwardsLastSuccessfulSyncTimestamp()
     {
         DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
@@ -372,6 +404,20 @@ public sealed class DesktopShellControllerHostLifecycleTests
 
         public int StopSyncCalls { get; private set; }
 
+        public int StartSyncCalls { get; private set; }
+
+        public int SaveSyncPairCalls { get; private set; }
+
+        public int DeleteSyncPairCalls { get; private set; }
+
+        public int SyncNowCalls { get; private set; }
+
+        public SyncPairSettings? SavedSyncPair { get; private set; }
+
+        public Guid? DeletedSyncPairId { get; private set; }
+
+        public Exception? SyncNowException { get; set; }
+
         public Task<AuthSession> SignInAsync(
             PasswordSignInRequest request,
             CancellationToken cancellationToken = default)
@@ -414,16 +460,21 @@ public sealed class DesktopShellControllerHostLifecycleTests
             SyncPairSettings syncPair,
             CancellationToken cancellationToken = default)
         {
+            SaveSyncPairCalls++;
+            SavedSyncPair = syncPair;
             return Task.FromResult(SyncPairSaveResult.Saved(new SyncPairValidationResult([])));
         }
 
         public Task DeleteSyncPairAsync(Guid syncPairId, CancellationToken cancellationToken = default)
         {
+            DeleteSyncPairCalls++;
+            DeletedSyncPairId = syncPairId;
             return Task.CompletedTask;
         }
 
         public Task StartSyncAsync(CancellationToken cancellationToken = default)
         {
+            StartSyncCalls++;
             return Task.CompletedTask;
         }
 
@@ -434,6 +485,12 @@ public sealed class DesktopShellControllerHostLifecycleTests
 
         public Task SyncNowAsync(Guid syncPairId, CancellationToken cancellationToken = default)
         {
+            SyncNowCalls++;
+            if (SyncNowException is not null)
+            {
+                throw SyncNowException;
+            }
+
             return Task.CompletedTask;
         }
 
@@ -509,7 +566,15 @@ public sealed class DesktopShellControllerHostLifecycleTests
     {
         public Task<NodeDto> EnsureAsync(string? remotePath = null, CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException();
+            return Task.FromResult(new NodeDto
+            {
+                Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+                LayoutId = Guid.Parse("22222222-2222-2222-2222-222222222222"),
+                ParentId = Guid.Parse("33333333-3333-3333-3333-333333333333"),
+                Name = string.IsNullOrWhiteSpace(remotePath)
+                    ? "Cloud"
+                    : remotePath.Trim('/'),
+            });
         }
     }
 

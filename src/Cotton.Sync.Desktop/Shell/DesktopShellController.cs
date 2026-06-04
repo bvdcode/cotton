@@ -243,9 +243,17 @@ internal sealed class DesktopShellController : IDesktopShellController
             throw new SyncPairValidationException(result.Validation.Errors);
         }
 
-        await host.App.StartSyncAsync(cancellationToken).ConfigureAwait(false);
-        await host.App.SyncNowAsync(syncPair.Id, cancellationToken).ConfigureAwait(false);
-        return syncPair;
+        try
+        {
+            await host.App.StartSyncAsync(cancellationToken).ConfigureAwait(false);
+            await host.App.SyncNowAsync(syncPair.Id, cancellationToken).ConfigureAwait(false);
+            return syncPair;
+        }
+        catch (Exception)
+        {
+            await RollBackAddedSyncPairAsync(host, syncPair.Id, cancellationToken).ConfigureAwait(false);
+            throw;
+        }
     }
 
     public async Task SetSyncPairEnabledAsync(
@@ -825,6 +833,23 @@ internal sealed class DesktopShellController : IDesktopShellController
         {
             Trace.TraceWarning("Desktop self-test check failed for {0}: {1}", name, exception);
             items.Add(new DesktopSelfTestItemSnapshot(name, false, exception.Message));
+        }
+    }
+
+    private static async Task RollBackAddedSyncPairAsync(
+        DesktopSyncApplicationHost host,
+        Guid syncPairId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await host.App.StopSyncAsync(cancellationToken).ConfigureAwait(false);
+            await host.App.DeleteSyncPairAsync(syncPairId, cancellationToken).ConfigureAwait(false);
+            await host.App.StartSyncAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            Trace.TraceWarning("Failed to roll back newly added Cotton Sync folder {0}: {1}", syncPairId, exception);
         }
     }
 
