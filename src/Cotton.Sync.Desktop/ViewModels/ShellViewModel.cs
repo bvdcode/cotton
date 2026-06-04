@@ -1375,7 +1375,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private void HandleCommandError(Exception exception)
     {
         Trace.TraceError(exception.ToString());
-        GlobalStatus = "Action failed";
+        GlobalStatus = IsSignedIn ? "Action required" : "Sign-in failed";
         string actionRequiredMessage = DesktopActionRequiredMessageResolver.FromException(exception);
         ActionRequiredMessage = actionRequiredMessage;
         AddActivity("Error", string.Empty, actionRequiredMessage);

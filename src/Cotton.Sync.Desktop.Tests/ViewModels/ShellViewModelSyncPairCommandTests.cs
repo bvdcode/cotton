@@ -186,7 +186,7 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Action failed"));
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Action required"));
             Assert.That(viewModel.StatusCardTitle, Is.EqualTo("Sync needs attention"));
             Assert.That(
                 viewModel.ActionRequiredMessage,
@@ -972,6 +972,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             Assert.That(viewModel.IsSignInStepVisible, Is.True);
             Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo("Enter the 2FA code for this account."));
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Sign-in failed"));
             Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Sign in to continue."));
         });
     }
@@ -1006,6 +1007,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.IsSignInStepVisible, Is.True);
             Assert.That(viewModel.IsSignedIn, Is.False);
             Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo("Invalid username or password."));
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Sign-in failed"));
             Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Sign in to continue."));
         });
     }
