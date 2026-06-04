@@ -571,6 +571,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         {
             if (SetProperty(ref _selectedSyncPair, value))
             {
+                OnPropertyChanged(nameof(SelectedSyncPairEditableDisplayName));
+                OnPropertyChanged(nameof(SelectedSyncPairToggleEnabledLabel));
                 OpenFolderCommand.RaiseCanExecuteChanged();
                 ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
                 SaveSelectedSyncPairNameCommand.RaiseCanExecuteChanged();
@@ -578,6 +580,21 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             }
         }
     }
+
+    public string SelectedSyncPairEditableDisplayName
+    {
+        get => SelectedSyncPair?.EditableDisplayName ?? string.Empty;
+        set
+        {
+            if (SelectedSyncPair is { } selected)
+            {
+                selected.EditableDisplayName = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public string SelectedSyncPairToggleEnabledLabel => SelectedSyncPair?.ToggleEnabledLabel ?? "Enable";
 
     public string TotpCode
     {
@@ -874,6 +891,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         {
             await _controller.SetSyncPairEnabledAsync(selected.Id, enabled).ConfigureAwait(true);
             selected.IsEnabled = enabled;
+            OnPropertyChanged(nameof(SelectedSyncPairToggleEnabledLabel));
             selected.Status = enabled ? "Idle" : "Disabled";
             selected.CurrentOperation = string.Empty;
             GlobalStatus = enabled ? "Ready" : "Folder disabled";
@@ -911,6 +929,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             await _controller.RenameSyncPairAsync(selected.Id, displayName).ConfigureAwait(true);
             selected.DisplayName = displayName;
             selected.EditableDisplayName = displayName;
+            OnPropertyChanged(nameof(SelectedSyncPairEditableDisplayName));
             GlobalStatus = "Folder renamed";
             ActionRequiredMessage = string.Empty;
             AddActivity("Pair", selected.LocalPath, "Sync folder renamed to " + displayName);
