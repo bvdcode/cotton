@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Net;
+using System.Text;
 using Cotton.Contracts.Auth;
 using Cotton.Sdk.Auth;
 using Cotton.Sdk.Tests.Fakes;
@@ -113,6 +114,54 @@ public sealed class CottonHttpTransportTests
             Assert.That(handler.Requests[0].AuthorizationParameter, Is.EqualTo("old-access"));
             Assert.That(handler.Requests[1].AuthorizationParameter, Is.Null);
             Assert.That(handler.Requests[2].AuthorizationParameter, Is.EqualTo("new-access"));
+        });
+    }
+
+    [Test]
+    public void SendJsonAsync_ReportsInvalidJsonResponseWithContentPreview()
+    {
+        var handler = new QueuedHttpMessageHandler();
+        handler.Enqueue(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("<!doctype html><html>Not the API</html>", Encoding.UTF8, "text/html"),
+        });
+        var client = new CottonCloudClient(new HttpClient(handler), new InMemoryCottonTokenStore(), new CottonSdkOptions
+        {
+            BaseAddress = new Uri("https://cotton.test"),
+        });
+
+        CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(
+            async () => await client.Settings.GetAsync());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.Message, Does.Contain("invalid JSON"));
+            Assert.That(exception.Message, Does.Contain("text/html"));
+            Assert.That(exception.Message, Does.Contain("<!doctype html>"));
+            Assert.That(exception.ResponseBody, Does.Contain("Not the API"));
+        });
+    }
+
+    [Test]
+    public void SendNoContentAsync_IncludesFailureResponsePreview()
+    {
+        var handler = new QueuedHttpMessageHandler();
+        handler.Enqueue(HttpStatusCode.BadRequest, "Validation failed for remote folder.");
+        var client = new CottonCloudClient(new HttpClient(handler), new InMemoryCottonTokenStore(), new CottonSdkOptions
+        {
+            BaseAddress = new Uri("https://cotton.test"),
+        });
+
+        CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(
+            async () => await client.Nodes.DeleteAsync(Guid.NewGuid()));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.Message, Does.Contain("400"));
+            Assert.That(exception.Message, Does.Contain("Validation failed for remote folder."));
+            Assert.That(exception.ResponseBody, Is.EqualTo("Validation failed for remote folder."));
         });
     }
 }

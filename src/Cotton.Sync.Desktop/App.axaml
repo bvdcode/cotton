@@ -60,7 +60,7 @@
       <Setter Property="BorderBrush" Value="{DynamicResource CottonPrimaryHoverBrush}" />
     </Style>
     <Style Selector="Button.compact">
-      <Setter Property="MinHeight" Value="30" />
+      <Setter Property="MinHeight" Value="32" />
       <Setter Property="Padding" Value="10,4" />
       <Setter Property="FontSize" Value="12" />
     </Style>

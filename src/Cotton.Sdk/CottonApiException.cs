@@ -14,7 +14,15 @@ public sealed class CottonApiException : HttpRequestException
     /// Initializes a new instance of the <see cref="CottonApiException" /> class.
     /// </summary>
     public CottonApiException(HttpStatusCode statusCode, string? responseBody, string message)
-        : base(message, null, statusCode)
+        : this(statusCode, responseBody, message, null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CottonApiException" /> class.
+    /// </summary>
+    public CottonApiException(HttpStatusCode statusCode, string? responseBody, string message, Exception? innerException)
+        : base(message, innerException, statusCode)
     {
         ResponseBody = responseBody;
     }

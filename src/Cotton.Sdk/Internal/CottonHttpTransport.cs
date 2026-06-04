@@ -17,6 +17,7 @@ namespace Cotton.Sdk.Internal;
 internal sealed class CottonHttpTransport
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private const int ResponsePreviewLength = 180;
 
     private readonly HttpClient _httpClient;
     private readonly ICottonTokenStore _tokenStore;
@@ -214,10 +215,16 @@ internal sealed class CottonHttpTransport
         string? body = response.Content is null
             ? null
             : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        string message = $"Cotton API request failed with status {(int)response.StatusCode} ({response.StatusCode}).";
+        if (!string.IsNullOrWhiteSpace(body))
+        {
+            message += " Response: " + CreateResponsePreview(body);
+        }
+
         throw new CottonApiException(
             response.StatusCode,
             body,
-            $"Cotton API request failed with status {(int)response.StatusCode} ({response.StatusCode}).");
+            message);
     }
 
     private async Task<HttpRequestMessage> CreateRequestAsync(
@@ -258,8 +265,42 @@ internal sealed class CottonHttpTransport
     private async Task<T> ReadRequiredJsonAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken)
     {
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
-        T? result = await response.Content.ReadFromJsonAsync<T>(JsonOptions, cancellationToken).ConfigureAwait(false);
+        string body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            throw new CottonApiException(response.StatusCode, null, "Cotton API returned an empty JSON response.");
+        }
+
+        T? result;
+        try
+        {
+            result = JsonSerializer.Deserialize<T>(body, JsonOptions);
+        }
+        catch (JsonException exception)
+        {
+            string contentType = response.Content.Headers.ContentType?.MediaType ?? "unknown";
+            throw new CottonApiException(
+                response.StatusCode,
+                body,
+                "Cotton API returned invalid JSON"
+                + $" with content type '{contentType}' and status {(int)response.StatusCode} ({response.StatusCode})."
+                + " Response: "
+                + CreateResponsePreview(body),
+                exception);
+        }
+
         return result ?? throw new CottonApiException(response.StatusCode, null, "Cotton API returned an empty JSON response.");
+    }
+
+    private static string CreateResponsePreview(string responseBody)
+    {
+        string preview = responseBody
+            .Replace("\r", " ", StringComparison.Ordinal)
+            .Replace("\n", " ", StringComparison.Ordinal)
+            .Trim();
+        return preview.Length <= ResponsePreviewLength
+            ? preview
+            : preview[..ResponsePreviewLength] + "...";
     }
 
     private async Task<bool> TryRefreshAsync(CancellationToken cancellationToken)

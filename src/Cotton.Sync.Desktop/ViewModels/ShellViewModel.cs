@@ -94,11 +94,14 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         ShowAddSyncPairCommand = new AsyncRelayCommand(ShowAddSyncPairAsync, () => IsSignedIn && !IsBusy, HandleCommandError);
         ShowSettingsCommand = new AsyncRelayCommand(ShowSettingsAsync, () => IsSignedIn && !IsBusy, HandleCommandError);
         CloseSettingsCommand = new AsyncRelayCommand(CloseSettingsAsync, () => !IsBusy, HandleCommandError);
-        SyncNowCommand = new AsyncRelayCommand(SyncNowAsync, () => IsSignedIn && !IsBusy, HandleCommandError);
-        PauseCommand = new AsyncRelayCommand(PauseAsync, () => IsSignedIn, HandleCommandError);
-        ResumeCommand = new AsyncRelayCommand(ResumeAsync, () => IsSignedIn, HandleCommandError);
+        SyncNowCommand = new AsyncRelayCommand(SyncNowAsync, () => CanSyncNow, HandleCommandError);
+        PauseCommand = new AsyncRelayCommand(PauseAsync, () => CanPauseSync, HandleCommandError);
+        ResumeCommand = new AsyncRelayCommand(ResumeAsync, () => CanResumeSync, HandleCommandError);
         SignOutCommand = new AsyncRelayCommand(SignOutAsync, () => IsSignedIn, HandleCommandError);
-        OpenFolderCommand = new AsyncRelayCommand(OpenFolderAsync, () => SelectedSyncPair is not null, HandleCommandError);
+        OpenFolderCommand = new AsyncRelayCommand(
+            OpenFolderAsync,
+            parameter => ResolveOpenFolderTarget(parameter) is not null,
+            HandleCommandError);
         OpenSelectedConflictCommand = new AsyncRelayCommand(
             OpenSelectedConflictAsync,
             () => SelectedConflict is not null && !IsBusy,
@@ -265,6 +268,19 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public bool HasNotifications => Notifications.Count > 0;
 
     public bool HasSyncPairs => SyncPairs.Count > 0;
+
+    public bool CanSyncNow => IsSignedIn && !IsBusy && HasEnabledSyncPairs && !IsSyncPaused;
+
+    public bool CanPauseSync => IsSignedIn && !IsBusy && HasEnabledSyncPairs && !IsSyncPaused;
+
+    public bool CanResumeSync => IsSignedIn && !IsBusy && IsSyncPaused;
+
+    public bool IsSyncPaused => HasEnabledSyncPairs
+        && SyncPairs
+            .Where(static syncPair => syncPair.IsEnabled)
+            .All(static syncPair => string.Equals(syncPair.Status, "Paused", StringComparison.Ordinal));
+
+    private bool HasEnabledSyncPairs => SyncPairs.Any(static syncPair => syncPair.IsEnabled);
 
     public bool IsDashboardVisible => IsSignedIn;
 
@@ -836,9 +852,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         return !IsBusy && IsAddSyncPairWizardVisible && RemoteBrowserPath != "/";
     }
 
-    private async Task OpenFolderAsync()
+    private async Task OpenFolderAsync(object? parameter)
     {
-        SyncPairRowViewModel? selected = SelectedSyncPair;
+        SyncPairRowViewModel? selected = ResolveOpenFolderTarget(parameter);
         if (selected is null)
         {
             return;
@@ -846,6 +862,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
         await _controller.OpenFolderAsync(selected.LocalPath).ConfigureAwait(true);
         AddActivity("Open", selected.LocalPath, "Folder opened");
+    }
+
+    private SyncPairRowViewModel? ResolveOpenFolderTarget(object? parameter)
+    {
+        return parameter as SyncPairRowViewModel ?? SelectedSyncPair;
     }
 
     private async Task OpenSelectedConflictAsync()
@@ -1189,6 +1210,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         GlobalStatus = "Action failed";
         ActionRequiredMessage = exception.Message;
         AddActivity("Error", string.Empty, exception.Message);
+        RefreshCurrentProgressText();
         IsBusy = false;
     }
 
@@ -1279,6 +1301,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         OnPropertyChanged(nameof(HasNoSyncPairs));
         OnPropertyChanged(nameof(HasSyncPairs));
+        RaiseSyncStateProperties();
         OpenFolderCommand.RaiseCanExecuteChanged();
         ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
         SaveSelectedSyncPairNameCommand.RaiseCanExecuteChanged();
@@ -1408,6 +1431,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
         GlobalStatus = ResolveGlobalStatus(status);
         ActionRequiredMessage = DesktopActionRequiredMessageResolver.FromStatus(status);
+        RaiseSyncStateProperties();
         RefreshCurrentProgressText();
         AddNotifications(_notificationTracker.Apply(status, SyncPairs.ToDictionary(static pair => pair.Id, static pair => pair.DisplayName)));
         RefreshDiagnosticsItems();
@@ -1501,6 +1525,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private void RaiseCommandStates()
     {
+        RaiseSyncStateProperties();
         SignInCommand.RaiseCanExecuteChanged();
         SignOutCommand.RaiseCanExecuteChanged();
         AddSyncPairCommand.RaiseCanExecuteChanged();
@@ -1523,6 +1548,14 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         CloseSettingsCommand.RaiseCanExecuteChanged();
         SelfTestCommand.RaiseCanExecuteChanged();
         ExportDiagnosticsCommand.RaiseCanExecuteChanged();
+    }
+
+    private void RaiseSyncStateProperties()
+    {
+        OnPropertyChanged(nameof(CanSyncNow));
+        OnPropertyChanged(nameof(CanPauseSync));
+        OnPropertyChanged(nameof(CanResumeSync));
+        OnPropertyChanged(nameof(IsSyncPaused));
     }
 
     private void RaiseSetupStateProperties()
@@ -1549,6 +1582,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             syncPair.Status = status;
             syncPair.CurrentOperation = currentOperation ?? string.Empty;
         }
+
+        RaiseSyncStateProperties();
+        SyncNowCommand.RaiseCanExecuteChanged();
+        PauseCommand.RaiseCanExecuteChanged();
+        ResumeCommand.RaiseCanExecuteChanged();
     }
 
     private void RefreshCurrentProgressText()
@@ -1562,6 +1600,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         if (SyncPairs.Count == 0)
         {
             CurrentProgressText = "Add a folder to start syncing.";
+            return;
+        }
+
+        if (HasActionRequired)
+        {
+            CurrentProgressText = "Fix the issue below to continue syncing.";
             return;
         }
 

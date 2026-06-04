@@ -137,6 +137,78 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task CommandFailure_UpdatesProgressTextInsteadOfReportingUpToDate()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Idle")))
+        {
+            SyncAllException = new InvalidOperationException("Cotton API returned HTML instead of JSON."),
+        };
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        viewModel.SyncNowCommand.Execute(null);
+        await WaitForAsync(() => viewModel.HasActionRequired);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Action failed"));
+            Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo("Cotton API returned HTML instead of JSON."));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Fix the issue below to continue syncing."));
+        });
+    }
+
+    [Test]
+    public async Task PauseResumeCommands_AreMutuallyAvailable()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Idle")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.CanPauseSync, Is.True);
+            Assert.That(viewModel.CanResumeSync, Is.False);
+            Assert.That(viewModel.SyncNowCommand.CanExecute(null), Is.True);
+        });
+
+        await ExecuteAsync(viewModel.PauseCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(controller.PauseAllCalls, Is.EqualTo(1));
+            Assert.That(viewModel.CanPauseSync, Is.False);
+            Assert.That(viewModel.CanResumeSync, Is.True);
+            Assert.That(viewModel.SyncNowCommand.CanExecute(null), Is.False);
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Sync is paused."));
+        });
+
+        await ExecuteAsync(viewModel.ResumeCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(controller.ResumeAllCalls, Is.EqualTo(1));
+            Assert.That(viewModel.CanPauseSync, Is.True);
+            Assert.That(viewModel.CanResumeSync, Is.False);
+            Assert.That(viewModel.SyncNowCommand.CanExecute(null), Is.True);
+        });
+    }
+
+    [Test]
+    public async Task OpenFolderCommand_UsesRowParameterWhenProvided()
+    {
+        var controller = new FakeDesktopShellController(
+            CreateSignedInSnapshot(
+                CreatePair(Guid.NewGuid(), "Documents", "Idle"),
+                CreatePair(Guid.NewGuid(), "Pictures", "Idle")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        await ExecuteAsync(viewModel.OpenFolderCommand, viewModel.SyncPairs[1]);
+
+        Assert.That(controller.OpenedFolderPath, Is.EqualTo("/home/vadim/Pictures"));
+    }
+
+    [Test]
     public async Task StatusChanged_UpdatesCurrentProgressText()
     {
         Guid syncPairId = Guid.NewGuid();
@@ -558,6 +630,37 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task SignInCommand_ShowsSetupErrorWhenAuthenticationFails()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedOutSnapshot())
+        {
+            ServerProbeResult = new DesktopServerProbeResult(
+                new Uri("https://app.cottoncloud.dev/"),
+                true,
+                "Cotton Cloud",
+                "instance-hash"),
+            SignInException = new InvalidOperationException("Invalid username, password, or two-factor code."),
+        };
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        viewModel.ServerUrl = "app.cottoncloud.dev";
+        viewModel.Username = "desktop@example.test";
+        viewModel.Password = "wrong-password";
+        await WaitForAsync(() => viewModel.IsSignInStepVisible);
+
+        viewModel.SignInCommand.Execute(null);
+        await WaitForAsync(() => viewModel.HasActionRequired);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsSetupVisible, Is.True);
+            Assert.That(viewModel.IsSignInStepVisible, Is.True);
+            Assert.That(viewModel.IsSignedIn, Is.False);
+            Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo("Invalid username, password, or two-factor code."));
+        });
+    }
+
+    [Test]
     public async Task SignOutCommand_ClearsSensitiveSetupState()
     {
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Idle")));
@@ -601,10 +704,10 @@ public sealed class ShellViewModelSyncPairCommandTests
         });
     }
 
-    private static async Task ExecuteAsync(AsyncRelayCommand command)
+    private static async Task ExecuteAsync(AsyncRelayCommand command, object? parameter = null)
     {
-        Assert.That(command.CanExecute(null), Is.True);
-        command.Execute(null);
+        Assert.That(command.CanExecute(parameter), Is.True);
+        command.Execute(parameter);
         for (int attempt = 0; attempt < 50 && command.IsRunning; attempt++)
         {
             await Task.Delay(10);
@@ -718,11 +821,19 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public int SyncAllCalls { get; private set; }
 
+        public int PauseAllCalls { get; private set; }
+
+        public int ResumeAllCalls { get; private set; }
+
+        public Exception? SyncAllException { get; set; }
+
         public int ExportDiagnosticsCalls { get; private set; }
 
         public string ExportDiagnosticsPath { get; set; } = "/tmp/cotton-sync-diagnostics.zip";
 
         public string? OpenedFolderPath { get; private set; }
+
+        public Exception? SignInException { get; set; }
 
         public void ReportActivity(DesktopActivitySnapshot activity)
         {
@@ -784,6 +895,11 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             SignInRequest = request;
+            if (SignInException is not null)
+            {
+                throw SignInException;
+            }
+
             return Task.FromResult(new AuthSession(
                 Guid.NewGuid(),
                 request.Username,
@@ -819,18 +935,27 @@ public sealed class ShellViewModelSyncPairCommandTests
         public Task SyncAllAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (SyncAllException is not null)
+            {
+                throw SyncAllException;
+            }
+
             SyncAllCalls++;
             return Task.CompletedTask;
         }
 
         public Task PauseAllAsync(CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException();
+            cancellationToken.ThrowIfCancellationRequested();
+            PauseAllCalls++;
+            return Task.CompletedTask;
         }
 
         public Task ResumeAllAsync(CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException();
+            cancellationToken.ThrowIfCancellationRequested();
+            ResumeAllCalls++;
+            return Task.CompletedTask;
         }
 
         public Task OpenFolderAsync(string localPath, CancellationToken cancellationToken = default)

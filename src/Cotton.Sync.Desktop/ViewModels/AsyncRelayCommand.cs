@@ -11,8 +11,8 @@ namespace Cotton.Sync.Desktop.ViewModels;
 /// </summary>
 internal sealed class AsyncRelayCommand : ICommand
 {
-    private readonly Func<Task> _execute;
-    private readonly Func<bool>? _canExecute;
+    private readonly Func<object?, Task> _execute;
+    private readonly Func<object?, bool>? _canExecute;
     private readonly Action<Exception>? _onError;
     private bool _isRunning;
 
@@ -22,6 +22,17 @@ internal sealed class AsyncRelayCommand : ICommand
     public AsyncRelayCommand(
         Func<Task> execute,
         Func<bool>? canExecute = null,
+        Action<Exception>? onError = null)
+        : this(
+            _ => execute(),
+            canExecute is null ? null : _ => canExecute(),
+            onError)
+    {
+    }
+
+    public AsyncRelayCommand(
+        Func<object?, Task> execute,
+        Func<object?, bool>? canExecute = null,
         Action<Exception>? onError = null)
     {
         _execute = execute ?? throw new ArgumentNullException(nameof(execute));
@@ -40,7 +51,7 @@ internal sealed class AsyncRelayCommand : ICommand
     /// <inheritdoc />
     public bool CanExecute(object? parameter)
     {
-        return !_isRunning && (_canExecute?.Invoke() ?? true);
+        return !_isRunning && (_canExecute?.Invoke(parameter) ?? true);
     }
 
     /// <inheritdoc />
@@ -55,7 +66,7 @@ internal sealed class AsyncRelayCommand : ICommand
         RaiseCanExecuteChanged();
         try
         {
-            await _execute().ConfigureAwait(true);
+            await _execute(parameter).ConfigureAwait(true);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
