@@ -8,12 +8,22 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 /// <summary>
 /// Describes immutable file-content metadata that must match the chunks served to a reader.
 /// </summary>
-public sealed class FileManifestIntegrityDescriptor : DatabaseIntegrityDescriptor<FileManifest>
+public sealed class FileManifestIntegrityDescriptor :
+    DatabaseIntegrityDescriptor<FileManifest>,
+    IDatabaseIntegrityLegacyDescriptorProvider
 {
+    private static readonly IReadOnlyCollection<IDatabaseIntegrityDescriptor> LegacyDescriptorSet =
+    [
+        new V1WithOperationalPreviewStateDescriptor(),
+        new V1WithoutOperationalPreviewStateDescriptor()
+    ];
+
     /// <inheritdoc />
     public override string EntityName => "file_manifests";
     /// <inheritdoc />
-    public override int SchemaVersion => 1;
+    public override int SchemaVersion => 2;
+    /// <inheritdoc />
+    public IReadOnlyCollection<IDatabaseIntegrityDescriptor> LegacyDescriptors => LegacyDescriptorSet;
 
     /// <inheritdoc />
     public override string GetEntityKey(FileManifest entity)
@@ -24,6 +34,13 @@ public sealed class FileManifestIntegrityDescriptor : DatabaseIntegrityDescripto
     /// <inheritdoc />
     public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, FileManifest entity)
     {
+        WriteContentIdentityFields(writer, entity);
+        // PreviewGenerationError and PreviewGeneratorVersion are retry/scheduling state, not file-content identity.
+        // Keep them outside the MAC so operators can safely clear preview failures and generator bumps can reschedule work.
+    }
+
+    private static void WriteContentIdentityFields(DatabaseIntegrityCanonicalWriter writer, FileManifest entity)
+    {
         writer.WriteGuidField(nameof(entity.Id), entity.Id);
         writer.WriteBytesField(nameof(entity.ComputedContentHash), entity.ComputedContentHash);
         writer.WriteBytesField(nameof(entity.ProposedContentHash), entity.ProposedContentHash);
@@ -32,7 +49,39 @@ public sealed class FileManifestIntegrityDescriptor : DatabaseIntegrityDescripto
         writer.WriteBytesField(nameof(entity.SmallFilePreviewHashEncrypted), entity.SmallFilePreviewHashEncrypted);
         writer.WriteBytesField(nameof(entity.SmallFilePreviewHash), entity.SmallFilePreviewHash);
         writer.WriteBytesField(nameof(entity.LargeFilePreviewHash), entity.LargeFilePreviewHash);
-        // PreviewGenerationError and PreviewGeneratorVersion are retry/scheduling state, not file-content identity.
-        // Keep them outside the MAC so operators can safely clear preview failures and generator bumps can reschedule work.
+    }
+
+    private sealed class V1WithoutOperationalPreviewStateDescriptor : DatabaseIntegrityDescriptor<FileManifest>
+    {
+        public override string EntityName => "file_manifests";
+        public override int SchemaVersion => 1;
+
+        public override string GetEntityKey(FileManifest entity)
+        {
+            return entity.Id.ToString("D");
+        }
+
+        public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, FileManifest entity)
+        {
+            WriteContentIdentityFields(writer, entity);
+        }
+    }
+
+    private sealed class V1WithOperationalPreviewStateDescriptor : DatabaseIntegrityDescriptor<FileManifest>
+    {
+        public override string EntityName => "file_manifests";
+        public override int SchemaVersion => 1;
+
+        public override string GetEntityKey(FileManifest entity)
+        {
+            return entity.Id.ToString("D");
+        }
+
+        public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, FileManifest entity)
+        {
+            WriteContentIdentityFields(writer, entity);
+            writer.WriteStringField(nameof(entity.PreviewGenerationError), entity.PreviewGenerationError);
+            writer.WriteInt32Field(nameof(entity.PreviewGeneratorVersion), entity.PreviewGeneratorVersion);
+        }
     }
 }

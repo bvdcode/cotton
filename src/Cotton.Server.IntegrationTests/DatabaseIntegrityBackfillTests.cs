@@ -214,11 +214,124 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
         }
     }
 
-    private byte[]? ReadMac(User user)
+    [Test]
+    public async Task BridgeBackfill_UpgradesFileManifestLegacyV1_WithOperationalPreviewState()
     {
-        return (byte[]?)DbContext.Entry(user)
+        FileManifest manifest = await AddUnsignedManifestAsync(
+            previewGenerationError: "codec failed before upgrade",
+            previewGeneratorVersion: 7);
+        var legacyDescriptor = new LegacyFileManifestV1WithOperationalPreviewStateDescriptor();
+        byte[] legacyMac = CreateProtector().Sign(manifest, legacyDescriptor);
+        await WriteIntegrityMetadataAsync(manifest, legacyDescriptor.SchemaVersion, legacyMac);
+        DbContext.ChangeTracker.Clear();
+
+        int signed = await CreateBackfillService().BackfillUnsignedPhaseOneRowsAsync(CancellationToken.None);
+
+        DbContext.ChangeTracker.Clear();
+        FileManifest upgraded = await DbContext.FileManifests.SingleAsync(x => x.Id == manifest.Id);
+        byte[]? mac = ReadMac(upgraded);
+        int? version = ReadVersion(upgraded);
+        var currentDescriptor = new FileManifestIntegrityDescriptor();
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(signed, Is.EqualTo(1));
+            Assert.That(version, Is.EqualTo(currentDescriptor.SchemaVersion));
+            Assert.That(mac, Has.Length.EqualTo(32));
+            Assert.That(CreateProtector().Verify(upgraded, currentDescriptor, mac!), Is.True);
+        }
+    }
+
+    [Test]
+    public async Task BridgeBackfill_UpgradesFileManifestLegacyV1_WithoutOperationalPreviewState()
+    {
+        FileManifest manifest = await AddUnsignedManifestAsync(
+            previewGenerationError: null,
+            previewGeneratorVersion: 8);
+        var legacyDescriptor = new LegacyFileManifestV1WithoutOperationalPreviewStateDescriptor();
+        byte[] legacyMac = CreateProtector().Sign(manifest, legacyDescriptor);
+        await WriteIntegrityMetadataAsync(manifest, legacyDescriptor.SchemaVersion, legacyMac);
+        DbContext.ChangeTracker.Clear();
+
+        int signed = await CreateBackfillService().BackfillUnsignedPhaseOneRowsAsync(CancellationToken.None);
+
+        DbContext.ChangeTracker.Clear();
+        FileManifest upgraded = await DbContext.FileManifests.SingleAsync(x => x.Id == manifest.Id);
+        byte[]? mac = ReadMac(upgraded);
+        int? version = ReadVersion(upgraded);
+        var currentDescriptor = new FileManifestIntegrityDescriptor();
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(signed, Is.EqualTo(1));
+            Assert.That(version, Is.EqualTo(currentDescriptor.SchemaVersion));
+            Assert.That(mac, Has.Length.EqualTo(32));
+            Assert.That(CreateProtector().Verify(upgraded, currentDescriptor, mac!), Is.True);
+        }
+    }
+
+    [Test]
+    public async Task BridgeBackfill_RejectsTamperedFileManifestLegacyV1()
+    {
+        FileManifest manifest = await AddUnsignedManifestAsync(
+            previewGenerationError: "old error",
+            previewGeneratorVersion: 7);
+        var legacyDescriptor = new LegacyFileManifestV1WithOperationalPreviewStateDescriptor();
+        byte[] legacyMac = CreateProtector().Sign(manifest, legacyDescriptor);
+        await WriteIntegrityMetadataAsync(manifest, legacyDescriptor.SchemaVersion, legacyMac);
+        await DbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"UPDATE file_manifests SET size_bytes = 999 WHERE id = {manifest.Id}");
+        DbContext.ChangeTracker.Clear();
+
+        Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await CreateBackfillService().BackfillUnsignedPhaseOneRowsAsync(CancellationToken.None));
+    }
+
+    private byte[]? ReadMac(object entity)
+    {
+        return (byte[]?)DbContext.Entry(entity)
             .Property(DatabaseIntegrityColumns.MacProperty)
             .CurrentValue;
+    }
+
+    private int? ReadVersion(object entity)
+    {
+        return (int?)DbContext.Entry(entity)
+            .Property(DatabaseIntegrityColumns.VersionProperty)
+            .CurrentValue;
+    }
+
+    private async Task<FileManifest> AddUnsignedManifestAsync(
+        string? previewGenerationError,
+        int previewGeneratorVersion)
+    {
+        var manifest = new FileManifest
+        {
+            ProposedContentHash = [1, 2, 3],
+            ComputedContentHash = [1, 2, 3],
+            ContentType = "image/heic",
+            SizeBytes = 3,
+            SmallFilePreviewHashEncrypted = [4, 5, 6],
+            SmallFilePreviewHash = [7, 8, 9],
+            LargeFilePreviewHash = [10, 11, 12],
+            PreviewGenerationError = previewGenerationError,
+            PreviewGeneratorVersion = previewGeneratorVersion
+        };
+
+        await DbContext.FileManifests.AddAsync(manifest);
+        await DbContext.SaveChangesAsync();
+        return manifest;
+    }
+
+    private async Task WriteIntegrityMetadataAsync(object entity, int version, byte[] mac)
+    {
+        DbContext.Entry(entity)
+            .Property(DatabaseIntegrityColumns.VersionProperty)
+            .CurrentValue = version;
+        DbContext.Entry(entity)
+            .Property(DatabaseIntegrityColumns.MacProperty)
+            .CurrentValue = mac;
+        await DbContext.SaveChangesAsync();
     }
 
     private CottonDbContext CreateSigningDbContext(IDatabaseIntegrityFailureReporter? reporter = null)
@@ -284,5 +397,55 @@ public sealed class DatabaseIntegrityBackfillTests : IntegrationTestBase
             new FileManifestChunkIntegrityDescriptor(),
             new ChunkIntegrityDescriptor()
         ];
+    }
+
+    private static void WriteFileManifestContentIdentityFields(
+        DatabaseIntegrityCanonicalWriter writer,
+        FileManifest entity)
+    {
+        writer.WriteGuidField(nameof(entity.Id), entity.Id);
+        writer.WriteBytesField(nameof(entity.ComputedContentHash), entity.ComputedContentHash);
+        writer.WriteBytesField(nameof(entity.ProposedContentHash), entity.ProposedContentHash);
+        writer.WriteStringField(nameof(entity.ContentType), entity.ContentType);
+        writer.WriteInt64Field(nameof(entity.SizeBytes), entity.SizeBytes);
+        writer.WriteBytesField(nameof(entity.SmallFilePreviewHashEncrypted), entity.SmallFilePreviewHashEncrypted);
+        writer.WriteBytesField(nameof(entity.SmallFilePreviewHash), entity.SmallFilePreviewHash);
+        writer.WriteBytesField(nameof(entity.LargeFilePreviewHash), entity.LargeFilePreviewHash);
+    }
+
+    private sealed class LegacyFileManifestV1WithoutOperationalPreviewStateDescriptor :
+        DatabaseIntegrityDescriptor<FileManifest>
+    {
+        public override string EntityName => "file_manifests";
+        public override int SchemaVersion => 1;
+
+        public override string GetEntityKey(FileManifest entity)
+        {
+            return entity.Id.ToString("D");
+        }
+
+        public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, FileManifest entity)
+        {
+            WriteFileManifestContentIdentityFields(writer, entity);
+        }
+    }
+
+    private sealed class LegacyFileManifestV1WithOperationalPreviewStateDescriptor :
+        DatabaseIntegrityDescriptor<FileManifest>
+    {
+        public override string EntityName => "file_manifests";
+        public override int SchemaVersion => 1;
+
+        public override string GetEntityKey(FileManifest entity)
+        {
+            return entity.Id.ToString("D");
+        }
+
+        public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, FileManifest entity)
+        {
+            WriteFileManifestContentIdentityFields(writer, entity);
+            writer.WriteStringField(nameof(entity.PreviewGenerationError), entity.PreviewGenerationError);
+            writer.WriteInt32Field(nameof(entity.PreviewGeneratorVersion), entity.PreviewGeneratorVersion);
+        }
     }
 }
