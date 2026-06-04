@@ -771,6 +771,18 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
         switch (scenario)
         {
+            case DesktopVisualSmokeScenario.SignInError:
+                ServerUrl = "https://app.cottoncloud.dev/";
+                IsServerProbeChecking = false;
+                IsServerProbeFailed = false;
+                IsServerVerified = true;
+                ServerProbeStatus = "Cotton Cloud verified";
+                Username = string.IsNullOrWhiteSpace(Username) ? "qa@cottoncloud.dev" : Username;
+                Password = "wrong-password";
+                TotpCode = "000000";
+                GlobalStatus = "Sign-in failed";
+                ActionRequiredMessage = "Invalid username or password.";
+                break;
             case DesktopVisualSmokeScenario.AddFolder:
                 LocalFolderPath = CreateVisualSmokeLocalRootPath();
                 IsAddSyncPairWizardVisible = true;

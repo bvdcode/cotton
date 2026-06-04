@@ -41,19 +41,18 @@ internal sealed class VisualSmokeShellController : IDesktopShellController
     {
         cancellationToken.ThrowIfCancellationRequested();
         DateTime syncedAt = DateTime.UtcNow.AddMinutes(-7);
-        IReadOnlyList<DesktopSyncPairSnapshot> pairs = _scenario == DesktopVisualSmokeScenario.AddFolder
-            ? []
-            : CreateDashboardPairs(syncedAt);
+        bool isSignedIn = _scenario != DesktopVisualSmokeScenario.SignInError;
+        IReadOnlyList<DesktopSyncPairSnapshot> pairs = CreatePairs(syncedAt);
 
         var snapshot = new DesktopShellSnapshot(
             new Uri("https://app.cottoncloud.dev/"),
-            "qa@cottoncloud.dev",
+            isSignedIn ? "qa@cottoncloud.dev" : "Signed out",
             "qa@cottoncloud.dev",
             true,
             true,
             AppThemeMode.Dark,
             DesktopPlatformCapabilities.CreateSnapshot(),
-            true,
+            isSignedIn,
             pairs);
         return Task.FromResult(snapshot);
     }
@@ -217,6 +216,13 @@ internal sealed class VisualSmokeShellController : IDesktopShellController
             ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Cotton")
             : "/home/qa/Cotton";
         return segments.Aggregate(root, Path.Combine);
+    }
+
+    private IReadOnlyList<DesktopSyncPairSnapshot> CreatePairs(DateTime syncedAt)
+    {
+        return _scenario is DesktopVisualSmokeScenario.SignInError or DesktopVisualSmokeScenario.AddFolder
+            ? []
+            : CreateDashboardPairs(syncedAt);
     }
 
     private IReadOnlyList<DesktopSyncPairSnapshot> CreateDashboardPairs(DateTime syncedAt)

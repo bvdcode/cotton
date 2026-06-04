@@ -212,6 +212,31 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task ApplyVisualSmokeScenarioAsync_ShowsSignInError()
+    {
+        using ShellViewModel viewModel = CreateViewModel(new FakeDesktopShellController(CreateSignedOutSnapshot()));
+        await viewModel.InitializeAsync();
+
+        await viewModel.ApplyVisualSmokeScenarioAsync(DesktopVisualSmokeScenario.SignInError);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsSetupVisible, Is.True);
+            Assert.That(viewModel.IsSignInStepVisible, Is.True);
+            Assert.That(viewModel.IsSignedIn, Is.False);
+            Assert.That(viewModel.ServerUrl, Is.EqualTo("https://app.cottoncloud.dev/"));
+            Assert.That(viewModel.Username, Is.EqualTo("qa@cottoncloud.dev"));
+            Assert.That(viewModel.Password, Is.Not.Empty);
+            Assert.That(viewModel.TotpCode, Is.EqualTo("000000"));
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Sign-in failed"));
+            Assert.That(viewModel.HasActionRequired, Is.True);
+            Assert.That(viewModel.CanRetryActionRequired, Is.False);
+            Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo("Invalid username or password."));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Sign in to continue."));
+        });
+    }
+
+    [Test]
     public async Task ApplyVisualSmokeScenarioAsync_ShowsAddFolderWizard()
     {
         var localFolderPicker = new FakeLocalFolderPicker();

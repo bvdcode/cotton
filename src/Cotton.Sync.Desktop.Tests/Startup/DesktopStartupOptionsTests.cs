@@ -115,6 +115,18 @@ public sealed class DesktopStartupOptionsTests
     }
 
     [Test]
+    public void Parse_LoadsSignInErrorVisualSmokeScenario()
+    {
+        DesktopStartupOptions options = DesktopStartupOptions.Parse(
+            [
+                "--visual-smoke",
+                "sign-in-error",
+            ]);
+
+        Assert.That(options.VisualSmokeScenario, Is.EqualTo(DesktopVisualSmokeScenario.SignInError));
+    }
+
+    [Test]
     public void Parse_LoadsMultiWordVisualSmokeScenario()
     {
         DesktopStartupOptions options = DesktopStartupOptions.Parse(

@@ -54,4 +54,20 @@ public sealed class VisualSmokeShellControllerTests
             Assert.That(snapshot.AccountName, Is.EqualTo("qa@cottoncloud.dev"));
         });
     }
+
+    [Test]
+    public async Task LoadAsync_ReturnsSignedOutSetupSnapshotForSignInErrorScenario()
+    {
+        using VisualSmokeShellController controller = VisualSmokeShellController.Create(DesktopVisualSmokeScenario.SignInError);
+
+        DesktopShellSnapshot snapshot = await controller.LoadAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.IsSignedIn, Is.False);
+            Assert.That(snapshot.SyncPairs, Is.Empty);
+            Assert.That(snapshot.ServerUrl, Is.EqualTo(new Uri("https://app.cottoncloud.dev/")));
+            Assert.That(snapshot.RememberedUsername, Is.EqualTo("qa@cottoncloud.dev"));
+        });
+    }
 }
