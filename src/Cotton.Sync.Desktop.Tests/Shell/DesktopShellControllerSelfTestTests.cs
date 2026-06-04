@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.IO.Compression;
+using System.Text.Json;
 using Cotton.Sync.App.Platform;
 using Cotton.Sync.App.Preferences;
 using Cotton.Sync.App.SyncPairs;
@@ -372,6 +374,19 @@ public sealed class DesktopShellControllerSelfTestTests
         });
     }
 
+    [Test]
+    public async Task ExportDiagnosticsAsync_UsesInformationalAppVersion()
+    {
+        using DesktopShellController controller = CreateController();
+
+        string archivePath = await controller.ExportDiagnosticsAsync();
+
+        using ZipArchive archive = ZipFile.OpenRead(archivePath);
+        string diagnosticsJson = ReadEntry(archive, "diagnostics.json");
+        using JsonDocument document = JsonDocument.Parse(diagnosticsJson);
+        Assert.That(document.RootElement.GetProperty("appVersion").GetString(), Is.EqualTo(DesktopAppVersion.Current));
+    }
+
     private DesktopShellController CreateController(
         Func<DesktopTokenStorageCapabilitySnapshot>? tokenStorageCapabilities = null)
     {
@@ -412,6 +427,14 @@ public sealed class DesktopShellControllerSelfTestTests
             CreatedAtUtc = DateTime.UtcNow.AddMinutes(-2),
             UpdatedAtUtc = DateTime.UtcNow.AddMinutes(-1),
         };
+    }
+
+    private static string ReadEntry(ZipArchive archive, string name)
+    {
+        ZipArchiveEntry entry = archive.GetEntry(name) ?? throw new InvalidOperationException(name + " was not found.");
+        using Stream stream = entry.Open();
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
     }
 
     private sealed class FakeAutostartService : IAutostartService

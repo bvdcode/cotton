@@ -657,7 +657,7 @@ internal sealed class DesktopShellController : IDesktopShellController
         DesktopSelfTestSnapshot selfTest = await RunSelfTestAsync(cancellationToken).ConfigureAwait(false);
         var bundle = new DesktopDiagnosticsBundle(
             DateTimeOffset.UtcNow,
-            typeof(App).Assembly.GetName().Version?.ToString() ?? "unknown",
+            DesktopAppVersion.Current,
             (_startupOptions.ServerUrl ?? preferences.RememberedServerUrl)?.AbsoluteUri,
             _host is null ? "Signed out" : preferences.RememberedUsername ?? "Signed in",
             await BuildSyncPairSnapshotsAsync(syncPairs, cancellationToken).ConfigureAwait(false),
