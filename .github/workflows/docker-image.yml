@@ -161,11 +161,14 @@ jobs:
       - name: Install desktop Linux smoke dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends dbus-x11 ffmpeg gnome-keyring libsecret-tools xauth xvfb
+          sudo apt-get install -y --no-install-recommends dbus-x11 ffmpeg gnome-keyring libsecret-tools x11-utils xauth xvfb
           command -v dbus-run-session
           command -v ffmpeg
           command -v gnome-keyring-daemon
           command -v secret-tool
+          command -v xprop
+          command -v xwd
+          command -v xwininfo
           command -v xvfb-run
 
       - name: Restore NuGet package project

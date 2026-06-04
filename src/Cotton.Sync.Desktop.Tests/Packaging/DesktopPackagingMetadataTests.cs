@@ -164,19 +164,24 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(smokeScript, Does.Contain("DISPLAY is required"));
             Assert.That(smokeScript, Does.Contain("command -v ffmpeg"));
             Assert.That(smokeScript, Does.Contain("command -v ffprobe"));
-            Assert.That(smokeScript, Does.Contain("capture_size=\"${COTTON_SYNC_SCREENSHOT_SIZE:-}\""));
-            Assert.That(smokeScript, Does.Contain("ffprobe -v error -f x11grab"));
-            Assert.That(smokeScript, Does.Contain("Could not detect GUI screenshot size from DISPLAY."));
+            Assert.That(smokeScript, Does.Contain("command -v xprop"));
+            Assert.That(smokeScript, Does.Contain("command -v xwd"));
+            Assert.That(smokeScript, Does.Contain("command -v xwininfo"));
             Assert.That(smokeScript, Does.Contain("\"$app_executable\" --data-dir \"$data_dir\" \"$@\""));
-            Assert.That(smokeScript, Does.Contain("-f x11grab"));
-            Assert.That(smokeScript, Does.Contain("-draw_mouse 0"));
-            Assert.That(smokeScript, Does.Contain("-video_size \"$capture_size\""));
-            Assert.That(smokeScript, Does.Contain("-frames:v 1"));
+            Assert.That(smokeScript, Does.Contain("xprop -id \"$window_id\" _NET_WM_PID"));
+            Assert.That(smokeScript, Does.Contain("xwininfo -root -tree"));
+            Assert.That(smokeScript, Does.Contain("Desktop app window was not found for process"));
+            Assert.That(smokeScript, Does.Contain("get_window_size()"));
+            Assert.That(smokeScript, Does.Contain("Could not detect desktop app window size."));
+            Assert.That(smokeScript, Does.Contain("wmctrl -ia \"$app_window_id\""));
+            Assert.That(smokeScript, Does.Contain("xwd -silent -id \"$app_window_id\" -out \"$xwd_file\""));
+            Assert.That(smokeScript, Does.Contain("-i \"$xwd_file\""));
             Assert.That(smokeScript, Does.Contain("Desktop app exited during screenshot capture."));
             Assert.That(smokeScript, Does.Contain("TypeLoadException"));
             Assert.That(smokeScript, Does.Contain("Desktop app log contains runtime exception signatures."));
             Assert.That(smokeScript, Does.Contain("GUI screenshot was not created"));
             Assert.That(smokeScript, Does.Contain("ffprobe -v error"));
+            Assert.That(smokeScript, Does.Contain("expected app window $capture_size"));
             Assert.That(smokeScript, Does.Contain("lavfi.signalstats.YMIN"));
             Assert.That(smokeScript, Does.Contain("GUI screenshot appears to be a single-color frame."));
             Assert.That(smokeScript, Does.Contain("Captured desktop GUI screenshot"));
@@ -284,7 +289,10 @@ public sealed class DesktopPackagingMetadataTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(workflow, Does.Contain("ffmpeg gnome-keyring libsecret-tools xauth xvfb"));
+            Assert.That(workflow, Does.Contain("ffmpeg gnome-keyring libsecret-tools x11-utils xauth xvfb"));
+            Assert.That(workflow, Does.Contain("command -v xprop"));
+            Assert.That(workflow, Does.Contain("command -v xwd"));
+            Assert.That(workflow, Does.Contain("command -v xwininfo"));
             Assert.That(workflow, Does.Contain("Smoke desktop Linux GUI screenshot"));
             Assert.That(workflow, Does.Contain("xvfb-run -a -s \"-screen 0 1024x768x24\""));
             Assert.That(workflow, Does.Contain("Packaging/linux/smoke-gui-screenshot-matrix.sh"));
