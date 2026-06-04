@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Sync.Desktop.Composition;
+using Cotton.Sync.Desktop.Auth;
 using Cotton.Sync.Desktop.Startup;
 
 namespace Cotton.Sync.Desktop.Tests.Startup;
@@ -27,20 +28,22 @@ public sealed class DesktopCommandLineRunnerTests
     }
 
     [Test]
-    public async Task RunSelfTestAsync_PrintsReportAndReturnsSuccessWhenChecksPass()
+    public async Task RunSelfTestAsync_PrintsReportAndReturnsPlatformSecurityResult()
     {
         DesktopStartupOptions options = DesktopStartupOptions.Parse(["--data-dir", _tempDirectory]);
         using var output = new StringWriter();
+        bool tokenStorageIsReleaseSecure = DesktopTokenStorageCapabilities.CreateSnapshot().IsReleaseSecure;
 
         int exitCode = await DesktopCommandLineRunner.RunSelfTestAsync(options, output);
 
         string report = output.ToString();
         Assert.Multiple(() =>
         {
-            Assert.That(exitCode, Is.EqualTo(0));
             Assert.That(report, Does.Contain("Cotton Sync Desktop self-test"));
             Assert.That(report, Does.Contain("[OK] Preferences database"));
-            Assert.That(report, Does.Contain("Result: passed"));
+            Assert.That(report, Does.Contain(tokenStorageIsReleaseSecure ? "[OK] Token storage" : "[FAIL] Token storage"));
+            Assert.That(exitCode, Is.EqualTo(tokenStorageIsReleaseSecure ? 0 : 1));
+            Assert.That(report, Does.Contain(tokenStorageIsReleaseSecure ? "Result: passed" : "Result: failed"));
         });
     }
 

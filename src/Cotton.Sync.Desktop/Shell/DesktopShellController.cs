@@ -32,6 +32,7 @@ internal sealed class DesktopShellController : IDesktopShellController
     private readonly IPlatformCommandService _platformCommands;
     private readonly IAutostartService _autostartService;
     private readonly DesktopDiagnosticsExporter _diagnosticsExporter;
+    private readonly Func<DesktopTokenStorageCapabilitySnapshot> _tokenStorageCapabilities;
     private readonly DesktopAppPaths _paths;
     private readonly SqliteAppPreferencesStore _preferencesStore;
     private readonly DesktopStartupOptions _startupOptions;
@@ -47,7 +48,8 @@ internal sealed class DesktopShellController : IDesktopShellController
         SqliteSyncPairSettingsStore syncPairStore,
         IPlatformCommandService platformCommands,
         IAutostartService autostartService,
-        DesktopStartupOptions? startupOptions = null)
+        DesktopStartupOptions? startupOptions = null,
+        Func<DesktopTokenStorageCapabilitySnapshot>? tokenStorageCapabilities = null)
     {
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         _factory = factory ?? throw new ArgumentNullException(nameof(factory));
@@ -57,6 +59,7 @@ internal sealed class DesktopShellController : IDesktopShellController
         _autostartService = autostartService ?? throw new ArgumentNullException(nameof(autostartService));
         _diagnosticsExporter = new DesktopDiagnosticsExporter();
         _startupOptions = startupOptions ?? DesktopStartupOptions.Empty;
+        _tokenStorageCapabilities = tokenStorageCapabilities ?? DesktopTokenStorageCapabilities.CreateSnapshot;
     }
 
     public event EventHandler<DesktopSyncStatusSnapshot>? StatusChanged;
@@ -456,10 +459,10 @@ internal sealed class DesktopShellController : IDesktopShellController
             "Authentication state",
             () => CheckAuthenticationStateAsync(cancellationToken)).ConfigureAwait(false);
 
-        DesktopTokenStorageCapabilitySnapshot tokenStorage = DesktopTokenStorageCapabilities.CreateSnapshot();
+        DesktopTokenStorageCapabilitySnapshot tokenStorage = _tokenStorageCapabilities();
         items.Add(new DesktopSelfTestItemSnapshot(
             "Token storage",
-            true,
+            tokenStorage.IsReleaseSecure,
             tokenStorage.IsReleaseSecure
                 ? tokenStorage.Details
                 : tokenStorage.Details + " (not release secure)"));

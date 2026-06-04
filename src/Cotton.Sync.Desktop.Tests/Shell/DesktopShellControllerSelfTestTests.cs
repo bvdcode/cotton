@@ -4,6 +4,7 @@
 using Cotton.Sync.App.Platform;
 using Cotton.Sync.App.Preferences;
 using Cotton.Sync.App.SyncPairs;
+using Cotton.Sync.Desktop.Auth;
 using Cotton.Sync.Desktop.Composition;
 using Cotton.Sync.Desktop.Diagnostics;
 using Cotton.Sync.Desktop.Platform;
@@ -53,6 +54,45 @@ public sealed class DesktopShellControllerSelfTestTests
             Assert.That(names, Does.Contain("Notification adapter"));
             Assert.That(names, Does.Contain("File watcher"));
             Assert.That(names, Does.Contain("Server identity"));
+        });
+    }
+
+    [Test]
+    public async Task RunSelfTestAsync_FailsTokenStorageWhenProtectorIsNotReleaseSecure()
+    {
+        var tokenStorage = new DesktopTokenStorageCapabilitySnapshot(
+            "restricted-file-v1",
+            IsReleaseSecure: false,
+            "Development fallback");
+        using DesktopShellController controller = CreateController(tokenStorageCapabilities: () => tokenStorage);
+
+        DesktopSelfTestSnapshot result = await controller.RunSelfTestAsync();
+
+        DesktopSelfTestItemSnapshot item = result.Items.Single(static selfTestItem => selfTestItem.Name == "Token storage");
+        Assert.Multiple(() =>
+        {
+            Assert.That(item.Passed, Is.False);
+            Assert.That(item.Details, Does.Contain("not release secure"));
+            Assert.That(result.Passed, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task RunSelfTestAsync_PassesTokenStorageWhenProtectorIsReleaseSecure()
+    {
+        var tokenStorage = new DesktopTokenStorageCapabilitySnapshot(
+            "linux-secret-service-v1",
+            IsReleaseSecure: true,
+            "Linux Secret Service through secret-tool");
+        using DesktopShellController controller = CreateController(tokenStorageCapabilities: () => tokenStorage);
+
+        DesktopSelfTestSnapshot result = await controller.RunSelfTestAsync();
+
+        DesktopSelfTestItemSnapshot item = result.Items.Single(static selfTestItem => selfTestItem.Name == "Token storage");
+        Assert.Multiple(() =>
+        {
+            Assert.That(item.Passed, Is.True);
+            Assert.That(item.Details, Is.EqualTo("Linux Secret Service through secret-tool"));
         });
     }
 
@@ -310,15 +350,20 @@ public sealed class DesktopShellControllerSelfTestTests
         Assert.That(persisted, Is.Null);
     }
 
-    private DesktopShellController CreateController()
+    private DesktopShellController CreateController(
+        Func<DesktopTokenStorageCapabilitySnapshot>? tokenStorageCapabilities = null)
     {
         DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
-        return CreateController(paths, new SqliteSyncPairSettingsStore(paths.AppDatabasePath));
+        return CreateController(
+            paths,
+            new SqliteSyncPairSettingsStore(paths.AppDatabasePath),
+            tokenStorageCapabilities);
     }
 
     private static DesktopShellController CreateController(
         DesktopAppPaths paths,
-        SqliteSyncPairSettingsStore syncPairStore)
+        SqliteSyncPairSettingsStore syncPairStore,
+        Func<DesktopTokenStorageCapabilitySnapshot>? tokenStorageCapabilities = null)
     {
         var loggerFactory = new DesktopTraceLoggerFactory();
         return new DesktopShellController(
@@ -327,7 +372,8 @@ public sealed class DesktopShellControllerSelfTestTests
             new SqliteAppPreferencesStore(paths.AppDatabasePath),
             syncPairStore,
             new FakePlatformCommandService(),
-            new FakeAutostartService());
+            new FakeAutostartService(),
+            tokenStorageCapabilities: tokenStorageCapabilities);
     }
 
     private SyncPairSettings CreateSyncPair(bool isEnabled)
