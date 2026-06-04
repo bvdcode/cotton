@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -8,6 +9,8 @@ using System.Text.Json;
 using Cotton.Contracts;
 using Cotton.Contracts.Auth;
 using Cotton.Sdk.Auth;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Sdk.Internal;
 
@@ -18,13 +21,19 @@ internal sealed class CottonHttpTransport
     private readonly HttpClient _httpClient;
     private readonly ICottonTokenStore _tokenStore;
     private readonly CottonSdkOptions _options;
+    private readonly ILogger<CottonHttpTransport> _logger;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
 
-    public CottonHttpTransport(HttpClient httpClient, ICottonTokenStore tokenStore, CottonSdkOptions options)
+    public CottonHttpTransport(
+        HttpClient httpClient,
+        ICottonTokenStore tokenStore,
+        CottonSdkOptions options,
+        ILogger<CottonHttpTransport>? logger = null)
     {
         _httpClient = httpClient;
         _tokenStore = tokenStore;
         _options = options;
+        _logger = logger ?? NullLogger<CottonHttpTransport>.Instance;
         _httpClient.BaseAddress = options.BaseAddress;
     }
 
@@ -79,17 +88,14 @@ internal sealed class CottonHttpTransport
             authorize,
             headers,
             cancellationToken).ConfigureAwait(false);
-        HttpResponseMessage response = await _httpClient.SendAsync(
-            request,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken).ConfigureAwait(false);
+        HttpResponseMessage response = await SendHttpAsync(request, method, path, cancellationToken).ConfigureAwait(false);
         if (response.StatusCode != HttpStatusCode.Unauthorized || !authorize || !_options.RefreshOnUnauthorized)
         {
             return response;
         }
 
         response.Dispose();
-        _ = await TryRefreshAsync(cancellationToken).ConfigureAwait(false);
+        await RefreshAndLogRetryAsync(method, path, cancellationToken).ConfigureAwait(false);
 
         using HttpRequestMessage retry = await CreateRequestAsync(
             method,
@@ -98,10 +104,7 @@ internal sealed class CottonHttpTransport
             authorize,
             headers,
             cancellationToken).ConfigureAwait(false);
-        return await _httpClient.SendAsync(
-            retry,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken).ConfigureAwait(false);
+        return await SendHttpAsync(retry, method, path, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task UploadRawAsync(
@@ -125,7 +128,7 @@ internal sealed class CottonHttpTransport
         }
 
         response.Dispose();
-        _ = await TryRefreshAsync(cancellationToken).ConfigureAwait(false);
+        await RefreshAndLogRetryAsync(HttpMethod.Post, path, cancellationToken).ConfigureAwait(false);
         content.Position = 0;
         using HttpResponseMessage retry = await SendRawUploadOnceAsync(
             path,
@@ -154,9 +157,10 @@ internal sealed class CottonHttpTransport
         {
             request.Content = new StreamContent(content);
             request.Content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
-            HttpResponseMessage response = await _httpClient.SendAsync(
+            HttpResponseMessage response = await SendHttpAsync(
                 request,
-                HttpCompletionOption.ResponseHeadersRead,
+                HttpMethod.Post,
+                path,
                 cancellationToken).ConfigureAwait(false);
             request.Content = null;
             return response;
@@ -272,12 +276,16 @@ internal sealed class CottonHttpTransport
             string path = "/api/v1/auth/refresh?refreshToken=" + Uri.EscapeDataString(tokens.RefreshToken);
             using HttpRequestMessage request = new(HttpMethod.Post, path);
             ApplyDefaultHeaders(request);
-            using HttpResponseMessage response = await _httpClient.SendAsync(
+            using HttpResponseMessage response = await SendHttpAsync(
                 request,
-                HttpCompletionOption.ResponseHeadersRead,
+                HttpMethod.Post,
+                path,
                 cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
+                _logger.LogWarning(
+                    "Cotton API token refresh failed with status {StatusCode}; clearing stored tokens.",
+                    (int)response.StatusCode);
                 await _tokenStore.ClearAsync(cancellationToken).ConfigureAwait(false);
                 return false;
             }
@@ -290,6 +298,74 @@ internal sealed class CottonHttpTransport
         {
             _refreshGate.Release();
         }
+    }
+
+    private async Task RefreshAndLogRetryAsync(
+        HttpMethod method,
+        string path,
+        CancellationToken cancellationToken)
+    {
+        bool refreshed = await TryRefreshAsync(cancellationToken).ConfigureAwait(false);
+        _logger.LogWarning(
+            "Cotton API request {Method} {Path} returned unauthorized; token refresh {RefreshResult}, retrying request.",
+            method.Method,
+            RedactPath(path),
+            refreshed ? "succeeded" : "failed");
+    }
+
+    private async Task<HttpResponseMessage> SendHttpAsync(
+        HttpRequestMessage request,
+        HttpMethod method,
+        string path,
+        CancellationToken cancellationToken)
+    {
+        string redactedPath = RedactPath(path);
+        long started = Stopwatch.GetTimestamp();
+        _logger.LogDebug("Sending Cotton API request {Method} {Path}.", method.Method, redactedPath);
+        try
+        {
+            HttpResponseMessage response = await _httpClient.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken).ConfigureAwait(false);
+            TimeSpan elapsed = Stopwatch.GetElapsedTime(started);
+            LogCompletedRequest(method, redactedPath, response.StatusCode, elapsed);
+            return response;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logger.LogWarning(
+                exception,
+                "Cotton API request {Method} {Path} failed before receiving a response.",
+                method.Method,
+                redactedPath);
+            throw;
+        }
+    }
+
+    private void LogCompletedRequest(
+        HttpMethod method,
+        string redactedPath,
+        HttpStatusCode statusCode,
+        TimeSpan elapsed)
+    {
+        if ((int)statusCode >= 400)
+        {
+            _logger.LogWarning(
+                "Cotton API request {Method} {Path} completed with status {StatusCode} in {ElapsedMilliseconds} ms.",
+                method.Method,
+                redactedPath,
+                (int)statusCode,
+                elapsed.TotalMilliseconds);
+            return;
+        }
+
+        _logger.LogDebug(
+            "Cotton API request {Method} {Path} completed with status {StatusCode} in {ElapsedMilliseconds} ms.",
+            method.Method,
+            redactedPath,
+            (int)statusCode,
+            elapsed.TotalMilliseconds);
     }
 
     private void ApplyDefaultHeaders(HttpRequestMessage request)
@@ -317,5 +393,37 @@ internal sealed class CottonHttpTransport
         return normalized.Length <= CottonClientHeaders.DeviceNameMaxLength
             ? normalized
             : normalized[..CottonClientHeaders.DeviceNameMaxLength];
+    }
+
+    private static string RedactPath(string path)
+    {
+        int queryIndex = path.IndexOf('?', StringComparison.Ordinal);
+        if (queryIndex < 0 || queryIndex == path.Length - 1)
+        {
+            return path;
+        }
+
+        string route = path[..queryIndex];
+        string query = path[(queryIndex + 1)..];
+        string[] parts = query.Split('&');
+        for (int index = 0; index < parts.Length; index++)
+        {
+            string part = parts[index];
+            int equalsIndex = part.IndexOf('=', StringComparison.Ordinal);
+            string key = equalsIndex < 0 ? part : part[..equalsIndex];
+            if (IsSensitiveQueryKey(key))
+            {
+                parts[index] = key + "=***";
+            }
+        }
+
+        return route + "?" + string.Join("&", parts);
+    }
+
+    private static bool IsSensitiveQueryKey(string key)
+    {
+        return key.Contains("token", StringComparison.OrdinalIgnoreCase)
+            || key.Contains("secret", StringComparison.OrdinalIgnoreCase)
+            || key.Contains("password", StringComparison.OrdinalIgnoreCase);
     }
 }

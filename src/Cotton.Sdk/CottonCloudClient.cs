@@ -9,6 +9,8 @@ using Cotton.Sdk.Nodes;
 using Cotton.Sdk.Realtime;
 using Cotton.Sdk.Settings;
 using Cotton.Sdk.Sync;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Sdk;
 
@@ -20,12 +22,21 @@ public sealed class CottonCloudClient : ICottonCloudClient
     /// <summary>
     /// Initializes a new instance of the <see cref="CottonCloudClient" /> class.
     /// </summary>
-    public CottonCloudClient(HttpClient httpClient, ICottonTokenStore tokenStore, CottonSdkOptions? options = null)
+    public CottonCloudClient(
+        HttpClient httpClient,
+        ICottonTokenStore tokenStore,
+        CottonSdkOptions? options = null,
+        ILoggerFactory? loggerFactory = null)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentNullException.ThrowIfNull(tokenStore);
         CottonSdkOptions resolvedOptions = options ?? new CottonSdkOptions();
-        var transport = new CottonHttpTransport(httpClient, tokenStore, resolvedOptions);
+        ILoggerFactory resolvedLoggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+        var transport = new CottonHttpTransport(
+            httpClient,
+            tokenStore,
+            resolvedOptions,
+            resolvedLoggerFactory.CreateLogger<CottonHttpTransport>());
         Auth = new CottonAuthClient(transport, tokenStore);
         Settings = new CottonSettingsClient(transport);
         Chunks = new CottonChunkClient(transport);

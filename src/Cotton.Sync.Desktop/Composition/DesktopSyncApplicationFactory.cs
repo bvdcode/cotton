@@ -47,7 +47,7 @@ internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFac
             UserAgent = DesktopDeviceIdentity.CreateUserAgent(),
             DeviceName = DesktopDeviceIdentity.CreateDeviceName(),
         };
-        var cottonClient = new CottonCloudClient(httpClient, tokenStore, sdkOptions);
+        var cottonClient = new CottonCloudClient(httpClient, tokenStore, sdkOptions, _loggerFactory);
 
         var syncPairStore = new SqliteSyncPairSettingsStore(_paths.AppDatabasePath);
         var preferencesStore = new SqliteAppPreferencesStore(_paths.AppDatabasePath);
