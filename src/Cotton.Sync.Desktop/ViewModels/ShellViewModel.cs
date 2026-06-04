@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
+using System.Reflection;
 using Cotton.Sync.App.Auth;
 using Cotton.Sync.App.Preferences;
 using Cotton.Sync.App.SyncPairs;
@@ -190,7 +191,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         private set => SetProperty(ref _accountName, value);
     }
 
-    public string AppVersion => typeof(ShellViewModel).Assembly.GetName().Version?.ToString() ?? "unknown";
+    public string AppVersion => ResolveAppVersion();
 
     public string ActionRequiredMessage
     {
@@ -1751,6 +1752,15 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         return path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar)
             ? path
             : path + Path.DirectorySeparatorChar;
+    }
+
+    private static string ResolveAppVersion()
+    {
+        Assembly assembly = typeof(ShellViewModel).Assembly;
+        string? informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        return string.IsNullOrWhiteSpace(informationalVersion)
+            ? assembly.GetName().Version?.ToString() ?? "unknown"
+            : informationalVersion;
     }
 
     private static SyncPairRowViewModel ToRow(SyncPairSettings syncPair)

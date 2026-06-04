@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Net;
+using System.Reflection;
 using Cotton.Sdk;
 using Cotton.Sync.App.Auth;
 using Cotton.Sync.App.Preferences;
@@ -892,6 +893,18 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(visibleViewModel.IsFutureSyncModesVisible, Is.True);
             Assert.That(visibleViewModel.SelectedSyncModeLabel, Is.EqualTo("Full mirror"));
         });
+    }
+
+    [Test]
+    public void AppVersion_UsesInformationalVersion()
+    {
+        using ShellViewModel viewModel = CreateViewModel(new FakeDesktopShellController(CreateSignedOutSnapshot()));
+        string informationalVersion = typeof(ShellViewModel)
+            .Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()!
+            .InformationalVersion;
+
+        Assert.That(viewModel.AppVersion, Is.EqualTo(informationalVersion));
     }
 
     private static async Task ExecuteAsync(AsyncRelayCommand command, object? parameter = null)
