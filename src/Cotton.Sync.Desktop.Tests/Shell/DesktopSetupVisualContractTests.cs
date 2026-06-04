@@ -29,7 +29,7 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
-    public void FoldersHeader_HasCompactAddFolderCommandForExistingFolders()
+    public void FoldersHeader_HasSingleCompactAddFolderCommand()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
         string foldersHeader = GetSlice(
@@ -42,13 +42,13 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersHeader, Does.Not.Contain("Sync roots"));
             Assert.That(foldersHeader, Does.Contain("ShowAddSyncPairCommand"));
             Assert.That(foldersHeader, Does.Contain("ToolTip.Tip=\"Add sync folder\""));
-            Assert.That(foldersHeader, Does.Contain("IsVisible=\"{Binding HasSyncPairs}\""));
+            Assert.That(foldersHeader, Does.Not.Contain("IsVisible=\"{Binding HasSyncPairs}\""));
             Assert.That(foldersHeader, Does.Contain("Classes=\"icon primary\""));
         });
     }
 
     [Test]
-    public void EmptyFoldersState_HasSingleAddFolderCommand()
+    public void EmptyFoldersState_DoesNotDuplicateAddFolderCommand()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
         string emptyFoldersState = GetSlice(
@@ -58,8 +58,9 @@ public sealed class DesktopSetupVisualContractTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(CountOccurrences(emptyFoldersState, "ShowAddSyncPairCommand"), Is.EqualTo(1));
-            Assert.That(CountOccurrences(emptyFoldersState, "Content=\"+\""), Is.EqualTo(1));
+            Assert.That(CountOccurrences(emptyFoldersState, "ShowAddSyncPairCommand"), Is.Zero);
+            Assert.That(CountOccurrences(emptyFoldersState, "Content=\"+\""), Is.Zero);
+            Assert.That(emptyFoldersState, Does.Contain("Text=\"No folders yet\""));
             Assert.That(emptyFoldersState, Does.Not.Contain("<TextBlock Text=\"+\""));
         });
     }
@@ -177,6 +178,24 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(dashboardView, Does.Not.Contain("<ScrollViewer Margin=\"10\""));
             Assert.That(dashboardView, Does.Not.Contain("RowDefinitions=\"Auto,Auto,Auto,Auto,*\""));
             Assert.That(dashboardView, Does.Not.Contain("RowDefinitions=\"Auto,132\""));
+        });
+    }
+
+    [Test]
+    public void FoldersPanel_UsesSingleHeaderAddAction()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string foldersPanel = GetSlice(
+            mainWindowXaml,
+            "<TextBlock Text=\"Folders\"",
+            "<TextBlock Text=\"Activity\"");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(CountOccurrences(foldersPanel, "Command=\"{Binding ShowAddSyncPairCommand}\""), Is.EqualTo(1));
+            Assert.That(foldersPanel, Does.Contain("ToolTip.Tip=\"Add sync folder\""));
+            Assert.That(foldersPanel, Does.Contain("Text=\"No folders yet\""));
+            Assert.That(foldersPanel, Does.Not.Contain("Text=\"Add a folder\""));
         });
     }
 

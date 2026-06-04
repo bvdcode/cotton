@@ -438,8 +438,7 @@
                         Classes="icon primary"
                         ToolTip.Tip="Add sync folder"
                         Command="{Binding ShowAddSyncPairCommand}"
-                        VerticalAlignment="Center"
-                        IsVisible="{Binding HasSyncPairs}" />
+                        VerticalAlignment="Center" />
               </Grid>
 
               <Grid Grid.Row="1">
@@ -450,26 +449,17 @@
                         BorderThickness="1"
                         VerticalAlignment="Top"
                         IsVisible="{Binding HasNoSyncPairs}">
-                  <Grid ColumnDefinitions="Auto,*"
-                        ColumnSpacing="9">
-                    <Button Content="+"
-                            Classes="icon primary"
-                            ToolTip.Tip="Add sync folder"
-                            Command="{Binding ShowAddSyncPairCommand}"
-                            VerticalAlignment="Center" />
-                    <StackPanel Grid.Column="1"
-                                Spacing="1"
-                                VerticalAlignment="Center">
-                      <TextBlock Text="Add a folder"
-                                 FontSize="14"
-                                 FontWeight="SemiBold"
-                                 TextTrimming="CharacterEllipsis" />
-                      <TextBlock Text="Choose local and Cotton Cloud folders."
-                                 Classes="secondary"
-                                 FontSize="12"
-                                 TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
-                  </Grid>
+                  <StackPanel Spacing="1"
+                              VerticalAlignment="Center">
+                    <TextBlock Text="No folders yet"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="Choose local and Cotton Cloud folders."
+                               Classes="secondary"
+                               FontSize="12"
+                               TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
                 </Border>
 
                 <Grid RowDefinitions="Auto,Auto,Auto"
