@@ -73,6 +73,7 @@ namespace Cotton.Server.Extensions
             services.AddSingleton<IDatabaseIntegrityFailureReporter>(sp =>
                 sp.GetRequiredService<DatabaseIntegrityFailureReporter>());
             services.AddHostedService(sp => sp.GetRequiredService<DatabaseIntegrityFailureReporter>());
+            services.AddHostedService<DatabaseIntegrityBridgeBackfillHostedService>();
 
             services.AddSingleton<IDatabaseIntegrityDescriptor, UserIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, UserPasskeyCredentialIntegrityDescriptor>();
