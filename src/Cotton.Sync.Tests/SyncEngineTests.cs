@@ -1079,6 +1079,11 @@ public sealed class SyncEngineTests
             return _inner.DeleteAsync(syncPairId, relativePath, cancellationToken);
         }
 
+        public Task DeletePairAsync(string syncPairId, CancellationToken cancellationToken = default)
+        {
+            return _inner.DeletePairAsync(syncPairId, cancellationToken);
+        }
+
         public Task ReplacePairAsync(string syncPairId, IReadOnlyCollection<SyncStateEntry> entries, CancellationToken cancellationToken = default)
         {
             return _inner.ReplacePairAsync(syncPairId, entries, cancellationToken);

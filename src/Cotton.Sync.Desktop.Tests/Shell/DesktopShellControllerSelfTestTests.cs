@@ -342,12 +342,33 @@ public sealed class DesktopShellControllerSelfTestTests
         await syncPairStore.InitializeAsync();
         SyncPairSettings syncPair = CreateSyncPair(isEnabled: true);
         await syncPairStore.UpsertAsync(syncPair);
+        var stateStore = new SqliteSyncStateStore(paths.SyncStateDatabasePath);
+        await stateStore.InitializeAsync();
+        await stateStore.UpsertAsync(new SyncStateEntry
+        {
+            SyncPairId = syncPair.Id.ToString(),
+            RelativePath = "synced.txt",
+            Kind = SyncEntryKind.File,
+        });
+        await stateStore.SaveChangeCursorAsync(new SyncChangeCursor
+        {
+            SyncPairId = syncPair.Id.ToString(),
+            LastCursor = 42,
+        });
         using DesktopShellController controller = CreateController(paths, syncPairStore);
 
         await controller.RemoveSyncPairAsync(syncPair.Id);
 
         SyncPairSettings? persisted = await syncPairStore.GetAsync(syncPair.Id);
-        Assert.That(persisted, Is.Null);
+        IReadOnlyList<SyncStateEntry> entries = await stateStore.LoadPairAsync(syncPair.Id.ToString());
+        SyncChangeCursor cursor = await stateStore.GetChangeCursorAsync(syncPair.Id.ToString());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(persisted, Is.Null);
+            Assert.That(entries, Is.Empty);
+            Assert.That(cursor.LastCursor, Is.Zero);
+        });
     }
 
     private DesktopShellController CreateController(

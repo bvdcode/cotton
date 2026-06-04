@@ -1622,6 +1622,11 @@ public sealed class SyncClientEndToEndTests : IntegrationTestBase
             return _inner.DeleteAsync(syncPairId, relativePath, cancellationToken);
         }
 
+        public Task DeletePairAsync(string syncPairId, CancellationToken cancellationToken = default)
+        {
+            return _inner.DeletePairAsync(syncPairId, cancellationToken);
+        }
+
         public Task ReplacePairAsync(
             string syncPairId,
             IReadOnlyCollection<SyncStateEntry> entries,

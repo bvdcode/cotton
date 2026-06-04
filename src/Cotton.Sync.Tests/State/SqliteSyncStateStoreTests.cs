@@ -252,6 +252,50 @@ public sealed class SqliteSyncStateStoreTests
         Assert.That(entries.Select(x => x.RelativePath), Is.EqualTo(new[] { "keep.txt" }));
     }
 
+    [Test]
+    public async Task DeletePairAsync_RemovesEntriesAndCursorForRequestedPairOnly()
+    {
+        var store = CreateStore();
+        await store.InitializeAsync();
+        await store.UpsertAsync(new SyncStateEntry
+        {
+            SyncPairId = "pair-a",
+            RelativePath = "delete.txt",
+            Kind = SyncEntryKind.File,
+        });
+        await store.UpsertAsync(new SyncStateEntry
+        {
+            SyncPairId = "pair-b",
+            RelativePath = "keep.txt",
+            Kind = SyncEntryKind.File,
+        });
+        await store.SaveChangeCursorAsync(new SyncChangeCursor
+        {
+            SyncPairId = "pair-a",
+            LastCursor = 10,
+        });
+        await store.SaveChangeCursorAsync(new SyncChangeCursor
+        {
+            SyncPairId = "pair-b",
+            LastCursor = 20,
+        });
+
+        await store.DeletePairAsync("pair-a");
+
+        IReadOnlyList<SyncStateEntry> pairA = await store.LoadPairAsync("pair-a");
+        IReadOnlyList<SyncStateEntry> pairB = await store.LoadPairAsync("pair-b");
+        SyncChangeCursor pairACursor = await store.GetChangeCursorAsync("pair-a");
+        SyncChangeCursor pairBCursor = await store.GetChangeCursorAsync("pair-b");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pairA, Is.Empty);
+            Assert.That(pairB.Select(x => x.RelativePath), Is.EqualTo(new[] { "keep.txt" }));
+            Assert.That(pairACursor.LastCursor, Is.Zero);
+            Assert.That(pairBCursor.LastCursor, Is.EqualTo(20));
+        });
+    }
+
     private SqliteSyncStateStore CreateStore()
     {
         return new SqliteSyncStateStore(DatabasePath());

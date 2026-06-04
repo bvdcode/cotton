@@ -44,6 +44,11 @@ public interface ISyncStateStore
     Task DeleteAsync(string syncPairId, string relativePath, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Deletes all persisted state for a sync pair.
+    /// </summary>
+    Task DeletePairAsync(string syncPairId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Replaces every entry for a sync pair with a new snapshot.
     /// </summary>
     Task ReplacePairAsync(string syncPairId, IReadOnlyCollection<SyncStateEntry> entries, CancellationToken cancellationToken = default);

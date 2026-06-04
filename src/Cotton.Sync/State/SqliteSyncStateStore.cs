@@ -144,6 +144,23 @@ public sealed class SqliteSyncStateStore : ISyncStateStore
     }
 
     /// <inheritdoc />
+    public async Task DeletePairAsync(string syncPairId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(syncPairId);
+        await using SyncStateDbContext context = CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        await context.SyncEntries
+            .Where(entry => entry.SyncPairId == syncPairId)
+            .ExecuteDeleteAsync(cancellationToken)
+            .ConfigureAwait(false);
+        await context.SyncChangeCursors
+            .Where(cursor => cursor.SyncPairId == syncPairId)
+            .ExecuteDeleteAsync(cancellationToken)
+            .ConfigureAwait(false);
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task ReplacePairAsync(
         string syncPairId,
         IReadOnlyCollection<SyncStateEntry> entries,

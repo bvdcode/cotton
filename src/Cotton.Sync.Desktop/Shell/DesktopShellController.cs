@@ -311,6 +311,9 @@ internal sealed class DesktopShellController : IDesktopShellController
         {
             await _syncPairStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
             await _syncPairStore.DeleteAsync(syncPairId, cancellationToken).ConfigureAwait(false);
+            var stateStore = new SqliteSyncStateStore(_paths.SyncStateDatabasePath);
+            await stateStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+            await stateStore.DeletePairAsync(syncPairId.ToString(), cancellationToken).ConfigureAwait(false);
         }
         finally
         {
