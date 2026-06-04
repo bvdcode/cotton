@@ -39,6 +39,7 @@ public sealed class DesktopSetupVisualContractTests
 
         Assert.Multiple(() =>
         {
+            Assert.That(foldersHeader, Does.Not.Contain("Sync roots"));
             Assert.That(foldersHeader, Does.Not.Contain("ShowAddSyncPairCommand"));
             Assert.That(mainWindowXaml, Does.Contain("ToolTip.Tip=\"Add another sync folder\""));
         });

@@ -399,9 +399,6 @@
                 <TextBlock Text="Folders"
                            FontSize="16"
                            FontWeight="SemiBold" />
-                <TextBlock Text="Sync roots"
-                           Classes="secondary"
-                           FontSize="12" />
               </StackPanel>
 
               <Grid Grid.Row="1">
