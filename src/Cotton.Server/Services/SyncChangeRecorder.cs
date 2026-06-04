@@ -5,8 +5,6 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Abstractions;
-using Cotton.Server.Models;
-using Mapster;
 
 namespace Cotton.Server.Services
 {
@@ -14,10 +12,10 @@ namespace Cotton.Server.Services
     public class SyncChangeRecorder(CottonDbContext _dbContext) : ISyncChangeRecorder
     {
         /// <inheritdoc />
-        public void Stage(SyncChangeRecord change)
+        public void Stage(SyncChange change)
         {
             ArgumentOutOfRangeException.ThrowIfEqual(change.Kind, SyncChangeKind.Unknown);
-            _dbContext.SyncChanges.Add(change.Adapt<SyncChange>());
+            _dbContext.SyncChanges.Add(change);
         }
     }
 }

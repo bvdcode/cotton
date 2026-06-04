@@ -1,7 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Server.Models;
+using Cotton.Database.Models;
 
 namespace Cotton.Server.Abstractions
 {
@@ -9,6 +9,6 @@ namespace Cotton.Server.Abstractions
     public interface ISyncChangeRecorder
     {
         /// <summary>Stages a sync feed row for the caller's next database save.</summary>
-        void Stage(SyncChangeRecord change);
+        void Stage(SyncChange change);
     }
 }
