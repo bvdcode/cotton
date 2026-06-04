@@ -85,7 +85,10 @@ namespace Cotton.Server.Handlers.Files
                 .Where(t => t.CreatedByUserId == command.UserId && t.NodeFileId == nodeFile.Id)
                 .ExecuteDeleteAsync(ct);
             long removedBytes = nodeFile.FileManifest.SizeBytes + removedVersionBytes;
-            _syncChanges.StageFileChange(SyncChangeKind.FileDeleted, nodeFile, nodeFile.Node.LayoutId);
+            if (nodeFile.Node.Type == NodeType.Default)
+            {
+                _syncChanges.StageFileChange(SyncChangeKind.FileDeleted, nodeFile, nodeFile.Node.LayoutId);
+            }
             _dbContext.NodeFiles.Remove(nodeFile);
             await _dbContext.SaveChangesAsync(ct);
             if (tx is not null)

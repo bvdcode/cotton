@@ -24,9 +24,7 @@ namespace Cotton.Server.Jobs
         public async Task Execute(IJobExecutionContext context)
         {
             DateTime cutoff = DateTime.UtcNow - RetentionPeriod;
-            int deletedCount = await _dbContext.SyncChanges
-                .Where(x => x.CreatedAt < cutoff)
-                .ExecuteDeleteAsync(context.CancellationToken);
+            int deletedCount = await DeleteExpiredChangesAsync(cutoff, context.CancellationToken);
 
             if (deletedCount > 0)
             {
@@ -35,6 +33,17 @@ namespace Cotton.Server.Jobs
                     deletedCount,
                     cutoff);
             }
+        }
+
+        internal Task<int> DeleteExpiredChangesAsync(DateTime cutoff, CancellationToken cancellationToken)
+        {
+            return _dbContext.SyncChanges
+                .Where(x => x.CreatedAt < cutoff)
+                .Where(x => _dbContext.SyncChanges.Any(newerExpired =>
+                    newerExpired.OwnerId == x.OwnerId
+                    && newerExpired.CreatedAt < cutoff
+                    && newerExpired.Id > x.Id))
+                .ExecuteDeleteAsync(cancellationToken);
         }
     }
 }

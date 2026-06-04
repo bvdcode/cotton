@@ -7,6 +7,7 @@ using Cotton.Database.Models.Enums;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
+using Cotton.Server.Jobs;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Providers;
@@ -18,6 +19,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using NUnit.Framework;
 using System.Net;
@@ -129,6 +131,33 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
             Assert.That(response.SinceCursor, Is.EqualTo(0));
             Assert.That(response.NextCursor, Is.EqualTo(0));
             Assert.That(response.EarliestAvailableCursor, Is.EqualTo(retainedId - 1));
+            Assert.That(response.Changes, Is.Empty);
+        });
+    }
+
+    [Test]
+    public async Task RetentionJob_KeepsNewestExpiredChangeAsCursorMarker()
+    {
+        await SignInAsync();
+        Guid ownerId = await GetUserIdAsync(Username);
+
+        DateTime cutoff = DateTime.UtcNow.AddDays(-365);
+        long oldestExpiredId = await AddSyncChangeAsync(ownerId, "oldest-expired");
+        long markerId = await AddSyncChangeAsync(ownerId, "cursor-marker");
+        await SetSyncChangeCreatedAtAsync(oldestExpiredId, cutoff.AddDays(-2));
+        await SetSyncChangeCreatedAtAsync(markerId, cutoff.AddDays(-1));
+
+        int deletedCount = await RunSyncRetentionAsync(cutoff);
+
+        List<long> remainingIds = await GetSyncChangeIdsAsync(ownerId);
+        SyncChangesResponseDto response = await GetChangesAsync(since: 0, limit: 10);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(deletedCount, Is.EqualTo(1));
+            Assert.That(remainingIds, Is.EqualTo(new[] { markerId }));
+            Assert.That(response.CursorExpired, Is.True);
+            Assert.That(response.EarliestAvailableCursor, Is.EqualTo(markerId - 1));
             Assert.That(response.Changes, Is.Empty);
         });
     }
@@ -308,6 +337,27 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task PermanentDeleteFileFromTrash_DoesNotStageSecondFileDeletedChange()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeFileManifestDto file = await CreateFileAsync(root.Id, "trash-cleanup-file.txt", "deleted-body");
+
+        using HttpResponseMessage trashResponse = await _client!.DeleteAsync($"{Routes.V1.Files}/{file.Id}");
+        trashResponse.EnsureSuccessStatusCode();
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage permanentDeleteResponse = await _client.DeleteAsync(
+            $"{Routes.V1.Files}/{file.Id}?skipTrash=true");
+        permanentDeleteResponse.EnsureSuccessStatusCode();
+
+        SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
+
+        Assert.That(response.Changes.Select(x => x.ItemId), Does.Not.Contain(file.Id));
+    }
+
+    [Test]
     public async Task DeleteFolder_StagesFolderDeletedChangeWithOriginalParentNodeId()
     {
         await SignInAsync();
@@ -327,6 +377,27 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
             Assert.That(change.ParentNodeId, Is.EqualTo(root.Id));
             Assert.That(change.Name, Is.EqualTo("sync-deleted-folder"));
         });
+    }
+
+    [Test]
+    public async Task PermanentDeleteFolderFromTrash_DoesNotStageSecondFolderDeletedChange()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "trash-cleanup-folder");
+
+        using HttpResponseMessage trashResponse = await _client!.DeleteAsync($"{Routes.V1.Layouts}/nodes/{folder.Id}");
+        trashResponse.EnsureSuccessStatusCode();
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage permanentDeleteResponse = await _client.DeleteAsync(
+            $"{Routes.V1.Layouts}/nodes/{folder.Id}?skipTrash=true");
+        permanentDeleteResponse.EnsureSuccessStatusCode();
+
+        SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
+
+        Assert.That(response.Changes.Select(x => x.ItemId), Does.Not.Contain(folder.Id));
     }
 
     [Test]
@@ -842,6 +913,42 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         await dbContext.SyncChanges
             .Where(x => x.Id == id)
             .ExecuteDeleteAsync();
+    }
+
+    private async Task SetSyncChangeCreatedAtAsync(long id, DateTime createdAt)
+    {
+        using IServiceScope scope = _factory!.Services.CreateScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+
+        await dbContext.SyncChanges
+            .Where(x => x.Id == id)
+            .ExecuteUpdateAsync(x => x
+                .SetProperty(change => change.CreatedAt, createdAt)
+                .SetProperty(change => change.UpdatedAt, createdAt));
+    }
+
+    private async Task<int> RunSyncRetentionAsync(DateTime cutoff)
+    {
+        using IServiceScope scope = _factory!.Services.CreateScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        var job = new SyncChangeRetentionJob(
+            dbContext,
+            NullLogger<SyncChangeRetentionJob>.Instance);
+
+        return await job.DeleteExpiredChangesAsync(cutoff, CancellationToken.None);
+    }
+
+    private async Task<List<long>> GetSyncChangeIdsAsync(Guid ownerId)
+    {
+        using IServiceScope scope = _factory!.Services.CreateScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+
+        return await dbContext.SyncChanges
+            .AsNoTracking()
+            .Where(x => x.OwnerId == ownerId)
+            .OrderBy(x => x.Id)
+            .Select(x => x.Id)
+            .ToListAsync();
     }
 
     private async Task<SyncChangesResponseDto> GetChangesAsync(long since, int limit)
