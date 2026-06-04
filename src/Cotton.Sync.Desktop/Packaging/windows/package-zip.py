@@ -30,6 +30,10 @@ def build_zip(publish_dir: Path, output_zip: Path) -> None:
     if not executable_path.is_file():
         raise FileNotFoundError(f"Windows executable was not found: {executable_path}")
 
+    checksums_path = resolved_publish_dir / "checksums.sha256"
+    if not checksums_path.is_file():
+        raise FileNotFoundError(f"Publish checksums were not found: {checksums_path}")
+
     output_zip.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(output_zip, "w", ZIP_DEFLATED) as archive:
         for path in sorted(resolved_publish_dir.rglob("*")):

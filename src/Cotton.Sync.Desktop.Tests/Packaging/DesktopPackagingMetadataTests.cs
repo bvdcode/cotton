@@ -101,6 +101,7 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(packageScript, Does.Contain("/usr/share/applications/cotton-sync.desktop"));
             Assert.That(packageScript, Does.Contain("/usr/share/icons/hicolor/192x192/apps/cotton-sync.png"));
             Assert.That(packageScript, Does.Contain("rm -f \"$package_root/opt/cotton-sync/cotton-sync.desktop\""));
+            Assert.That(packageScript, Does.Contain("checksums.sha256"));
             Assert.That(packageScript, Does.Contain("Package: cotton-sync-desktop"));
             Assert.That(packageScript, Does.Contain("Architecture: amd64"));
             Assert.That(packageScript, Does.Contain("Depends: libsecret-tools"));
@@ -151,6 +152,7 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("src/Cotton.Sync.Desktop/Packaging/windows/package-zip.py"));
             Assert.That(workflow, Does.Contain("cotton-sync-desktop-win-x64.zip"));
             Assert.That(packageScript, Does.Contain("Cotton.Sync.Desktop.exe"));
+            Assert.That(packageScript, Does.Contain("checksums.sha256"));
             Assert.That(packageScript, Does.Contain("ZipFile(output_zip, \"w\", ZIP_DEFLATED)"));
             Assert.That(packageScript, Does.Contain("path.relative_to(resolved_publish_dir).as_posix()"));
             Assert.That(

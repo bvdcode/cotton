@@ -20,6 +20,11 @@ if [ ! -f "$publish_dir/Assets/icon-192.png" ]; then
   exit 1
 fi
 
+if [ ! -f "$publish_dir/checksums.sha256" ]; then
+  echo "Linux publish directory must contain checksums.sha256." >&2
+  exit 1
+fi
+
 package_root="$(mktemp -d)"
 trap 'rm -rf "$package_root"' EXIT
 
