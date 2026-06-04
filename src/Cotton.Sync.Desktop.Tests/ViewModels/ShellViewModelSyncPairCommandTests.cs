@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Net;
+using Cotton.Sdk;
 using Cotton.Sync.App.Auth;
 using Cotton.Sync.App.Preferences;
 using Cotton.Sync.App.SyncPairs;
@@ -658,6 +660,39 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.IsSignInStepVisible, Is.True);
             Assert.That(viewModel.IsSignedIn, Is.False);
             Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo("Invalid username, password, or two-factor code."));
+        });
+    }
+
+    [Test]
+    public async Task SignInCommand_ShowsHumanTotpRequiredMessage()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedOutSnapshot())
+        {
+            ServerProbeResult = new DesktopServerProbeResult(
+                new Uri("https://app.cottoncloud.dev/"),
+                true,
+                "Cotton Cloud",
+                "instance-hash"),
+            SignInException = new CottonApiException(
+                HttpStatusCode.Forbidden,
+                "{\"success\":false,\"message\":\"Two-factor authentication code is required\"}",
+                "Cotton API request POST /api/v1/auth/login failed with status 403 (Forbidden)."),
+        };
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        viewModel.ServerUrl = "app.cottoncloud.dev";
+        viewModel.Username = "desktop@example.test";
+        viewModel.Password = "password";
+        await WaitForAsync(() => viewModel.IsSignInStepVisible);
+
+        viewModel.SignInCommand.Execute(null);
+        await WaitForAsync(() => viewModel.HasActionRequired);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsSignInStepVisible, Is.True);
+            Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo("Enter the 2FA code for this account."));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Sign in to continue."));
         });
     }
 

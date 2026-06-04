@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Net;
+using System.Text.Json;
 using Cotton.Sdk;
 
 namespace Cotton.Sync.Desktop.Shell;
@@ -38,11 +40,24 @@ internal static class DesktopActionRequiredMessageResolver
         ArgumentNullException.ThrowIfNull(exception);
         if (exception is CottonApiException apiException)
         {
-            return Normalize(apiException.Message, apiException.ResponseBody)
+            return NormalizeApiException(apiException)
                 ?? "Cotton API request failed. Check diagnostics and retry.";
         }
 
         return Normalize(exception.Message) ?? "Action failed. Check diagnostics and retry.";
+    }
+
+    private static string? NormalizeApiException(CottonApiException exception)
+    {
+        string? responseMessage = ExtractResponseMessage(exception.ResponseBody);
+        string? authMessage = NormalizeAuthMessage(responseMessage, exception.StatusCode);
+        if (authMessage is not null)
+        {
+            return authMessage;
+        }
+
+        return Normalize(responseMessage)
+            ?? Normalize(exception.Message, exception.ResponseBody);
     }
 
     private static string? Normalize(string? message, string? responseBody = null)
@@ -63,6 +78,85 @@ internal static class DesktopActionRequiredMessageResolver
         }
 
         return message;
+    }
+
+    private static string? NormalizeAuthMessage(string? message, HttpStatusCode? statusCode)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return null;
+        }
+
+        string normalized = message.Trim();
+        if (string.Equals(normalized, "Two-factor authentication code is required", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Enter the 2FA code for this account.";
+        }
+
+        if (string.Equals(normalized, "Invalid two-factor authentication code", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Invalid 2FA code.";
+        }
+
+        if (string.Equals(normalized, "Maximum number of TOTP verification attempts exceeded", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Too many invalid 2FA attempts. Try again later or sign in from the web app.";
+        }
+
+        if (statusCode == HttpStatusCode.Unauthorized
+            && (string.Equals(normalized, "User not found", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(normalized, "Invalid password", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(normalized, "Invalid username or password", StringComparison.OrdinalIgnoreCase)))
+        {
+            return "Invalid username or password.";
+        }
+
+        return normalized;
+    }
+
+    private static string? ExtractResponseMessage(string? responseBody)
+    {
+        if (string.IsNullOrWhiteSpace(responseBody) || LooksLikeHtml(responseBody))
+        {
+            return null;
+        }
+
+        string trimmed = responseBody.Trim();
+        if (!trimmed.StartsWith('{'))
+        {
+            return trimmed;
+        }
+
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(trimmed);
+            JsonElement root = document.RootElement;
+            if (TryGetStringProperty(root, "message", out string? message)
+                || TryGetStringProperty(root, "detail", out message)
+                || TryGetStringProperty(root, "title", out message))
+            {
+                return message;
+            }
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+
+        return null;
+    }
+
+    private static bool TryGetStringProperty(JsonElement element, string propertyName, out string? value)
+    {
+        value = null;
+        if (!element.TryGetProperty(propertyName, out JsonElement property)
+            || property.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        value = property.GetString();
+        return !string.IsNullOrWhiteSpace(value);
     }
 
     private static bool LooksLikeMissingDesktopSyncChangesApi(string message, string? responseBody)

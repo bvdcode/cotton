@@ -17,6 +17,7 @@
     <FileVersion>0.1.0.0</FileVersion>
     <InformationalVersion>0.1.0-dev</InformationalVersion>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <UseAppHost>true</UseAppHost>
     <ApplicationIcon>Assets/app.ico</ApplicationIcon>
     <Win32Icon>Assets/app.ico</Win32Icon>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>

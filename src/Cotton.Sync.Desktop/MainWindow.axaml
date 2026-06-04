@@ -157,10 +157,15 @@
                 Background="{DynamicResource CottonErrorSoftBrush}"
                 BorderBrush="{DynamicResource CottonErrorBrush}"
                 BorderThickness="1"
+                MinHeight="34"
+                MaxHeight="38"
+                ToolTip.Tip="{Binding ActionRequiredMessage}"
                 IsVisible="{Binding HasActionRequired}">
           <TextBlock Text="{Binding ActionRequiredMessage}"
                      FontSize="12"
-                     TextWrapping="Wrap" />
+                     TextWrapping="NoWrap"
+                     TextTrimming="CharacterEllipsis"
+                     VerticalAlignment="Center" />
         </Border>
 
         <StackPanel Spacing="8"

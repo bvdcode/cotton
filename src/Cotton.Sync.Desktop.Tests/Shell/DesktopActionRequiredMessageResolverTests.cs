@@ -99,4 +99,30 @@ public sealed class DesktopActionRequiredMessageResolverTests
             message,
             Is.EqualTo("Cotton API returned a web page instead of JSON. Check the server URL or backend deployment and retry."));
     }
+
+    [Test]
+    public void FromException_UsesHumanTotpRequiredMessage()
+    {
+        var exception = new CottonApiException(
+            HttpStatusCode.Forbidden,
+            "{\"success\":false,\"message\":\"Two-factor authentication code is required\"}",
+            "Cotton API request POST /api/v1/auth/login failed with status 403 (Forbidden).");
+
+        string message = DesktopActionRequiredMessageResolver.FromException(exception);
+
+        Assert.That(message, Is.EqualTo("Enter the 2FA code for this account."));
+    }
+
+    [Test]
+    public void FromException_UsesHumanInvalidCredentialsMessage()
+    {
+        var exception = new CottonApiException(
+            HttpStatusCode.Unauthorized,
+            "{\"success\":false,\"message\":\"User not found\"}",
+            "Cotton API request POST /api/v1/auth/login failed with status 401 (Unauthorized).");
+
+        string message = DesktopActionRequiredMessageResolver.FromException(exception);
+
+        Assert.That(message, Is.EqualTo("Invalid username or password."));
+    }
 }

@@ -1613,6 +1613,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private void RefreshCurrentProgressText()
     {
+        if (HasActionRequired && !IsSignedIn)
+        {
+            CurrentProgressText = "Sign in to continue.";
+            return;
+        }
+
         if (!IsSignedIn)
         {
             CurrentProgressText = "Sign in to start sync.";
