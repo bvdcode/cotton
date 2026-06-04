@@ -23,6 +23,7 @@ public sealed class SyncPairRunner : ISyncPairRunner
     private readonly SyncPairRunnerRetryOptions _retryOptions;
     private readonly SyncPairSettings _syncPair;
     private readonly ISyncPairWork _work;
+    private CancellationTokenSource? _activeSyncCancellation;
     private bool _isSyncInProgress;
     private bool _pendingSyncRequested;
     private bool _syncRequestsBlocked;
@@ -149,18 +150,25 @@ public sealed class SyncPairRunner : ISyncPairRunner
         try
         {
             SyncPairRunState currentState = Status.State;
-            if (!_syncPair.IsEnabled || currentState is SyncPairRunState.Disabled or SyncPairRunState.Paused)
+            if (IsSyncRequestsBlocked()
+                || !_syncPair.IsEnabled
+                || currentState is SyncPairRunState.Disabled or SyncPairRunState.Paused)
             {
                 return;
             }
 
-            SetState(SyncPairRunState.Syncing);
+            using var activeSyncCancellation = new CancellationTokenSource();
+            using var syncCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken,
+                activeSyncCancellation.Token);
+            SetActiveSyncCancellation(activeSyncCancellation);
             try
             {
-                await RunWorkWithRetryAsync(cancellationToken).ConfigureAwait(false);
+                SetState(SyncPairRunState.Syncing);
+                await RunWorkWithRetryAsync(syncCancellation.Token).ConfigureAwait(false);
                 SetState(SyncPairRunState.Idle, lastSuccessfulSyncAtUtc: DateTime.UtcNow);
             }
-            catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException exception) when (syncCancellation.Token.IsCancellationRequested)
             {
                 SetState(SyncPairRunState.Idle);
                 _logger.LogDebug(
@@ -179,6 +187,10 @@ public sealed class SyncPairRunner : ISyncPairRunner
                     "Sync pair runner failed for {SyncPairId}.",
                     _syncPair.Id);
                 throw;
+            }
+            finally
+            {
+                ClearActiveSyncCancellation(activeSyncCancellation);
             }
         }
         finally
@@ -265,7 +277,9 @@ public sealed class SyncPairRunner : ISyncPairRunner
     /// <inheritdoc />
     public async Task StopAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         SetSyncRequestsBlocked(isBlocked: true);
+        CancelActiveSync();
         try
         {
             await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -283,6 +297,41 @@ public sealed class SyncPairRunner : ISyncPairRunner
         finally
         {
             _operationGate.Release();
+        }
+    }
+
+    private void CancelActiveSync()
+    {
+        lock (_syncRequestGate)
+        {
+            _activeSyncCancellation?.Cancel();
+        }
+    }
+
+    private void ClearActiveSyncCancellation(CancellationTokenSource activeSyncCancellation)
+    {
+        lock (_syncRequestGate)
+        {
+            if (ReferenceEquals(_activeSyncCancellation, activeSyncCancellation))
+            {
+                _activeSyncCancellation = null;
+            }
+        }
+    }
+
+    private bool IsSyncRequestsBlocked()
+    {
+        lock (_syncRequestGate)
+        {
+            return _syncRequestsBlocked;
+        }
+    }
+
+    private void SetActiveSyncCancellation(CancellationTokenSource activeSyncCancellation)
+    {
+        lock (_syncRequestGate)
+        {
+            _activeSyncCancellation = activeSyncCancellation;
         }
     }
 
