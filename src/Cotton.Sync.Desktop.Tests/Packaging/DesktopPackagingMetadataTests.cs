@@ -46,6 +46,48 @@ public sealed class DesktopPackagingMetadataTests
         });
     }
 
+    [Test]
+    public void DesktopProject_CopiesLinuxDesktopEntryOnlyForLinuxPublish()
+    {
+        XDocument project = XDocument.Load(GetDesktopProjectPath());
+        XElement content = project.Root!
+            .Elements("ItemGroup")
+            .Single(static itemGroup => string.Equals(
+                itemGroup.Attribute("Condition")?.Value,
+                "'$(RuntimeIdentifier)' == 'linux-x64'",
+                StringComparison.Ordinal))
+            .Elements("Content")
+            .Single();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                content.Attribute("Include")?.Value,
+                Is.EqualTo("Packaging/linux/cotton-sync.desktop"));
+            Assert.That(content.Attribute("Link")?.Value, Is.EqualTo("cotton-sync.desktop"));
+            Assert.That(content.Attribute("CopyToPublishDirectory")?.Value, Is.EqualTo("PreserveNewest"));
+        });
+    }
+
+    [Test]
+    public void LinuxDesktopEntry_DefinesLauncherMetadata()
+    {
+        string desktopEntry = File.ReadAllText(GetDesktopFilePath("Packaging/linux/cotton-sync.desktop"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(desktopEntry, Does.Contain("[Desktop Entry]"));
+            Assert.That(desktopEntry, Does.Contain("Type=Application"));
+            Assert.That(desktopEntry, Does.Contain("Name=Cotton Sync"));
+            Assert.That(desktopEntry, Does.Contain("Exec=Cotton.Sync.Desktop"));
+            Assert.That(desktopEntry, Does.Contain("TryExec=Cotton.Sync.Desktop"));
+            Assert.That(desktopEntry, Does.Contain("Icon=cotton-sync"));
+            Assert.That(desktopEntry, Does.Contain("Terminal=false"));
+            Assert.That(desktopEntry, Does.Contain("Categories=Network;FileTransfer;"));
+            Assert.That(desktopEntry, Does.Contain("StartupWMClass=Cotton.Sync.Desktop"));
+        });
+    }
+
     private static string? GetProperty(XElement propertyGroup, string name)
     {
         return propertyGroup.Element(name)?.Value;

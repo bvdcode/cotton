@@ -44,6 +44,12 @@
              CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64'">
+    <Content Include="Packaging/linux/cotton-sync.desktop"
+             Link="cotton-sync.desktop"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="../Cotton.Shared/Cotton.csproj" />
     <ProjectReference Include="../Cotton.Sdk/Cotton.Sdk.csproj" />

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Cotton Sync
+GenericName=Cloud folder synchronization
+Comment=Synchronize Cotton Cloud folders
+Exec=Cotton.Sync.Desktop
+TryExec=Cotton.Sync.Desktop
+Icon=cotton-sync
+Terminal=false
+Categories=Network;FileTransfer;
+StartupNotify=true
+StartupWMClass=Cotton.Sync.Desktop
