@@ -9,7 +9,7 @@ fi
 app_executable="$(realpath "$1")"
 output_png="$(realpath -m "$2")"
 shift 2
-capture_size="${COTTON_SYNC_SCREENSHOT_SIZE:-1024x768}"
+capture_size="${COTTON_SYNC_SCREENSHOT_SIZE:-}"
 
 if [ ! -x "$app_executable" ]; then
   echo "Desktop app executable was not found or is not executable: $app_executable" >&2
@@ -23,6 +23,14 @@ fi
 
 command -v ffmpeg >/dev/null
 command -v ffprobe >/dev/null
+
+if [ -z "$capture_size" ]; then
+  capture_size="$(ffprobe -v error -f x11grab -show_entries stream=width,height -of csv=s=x:p=0 -i "$DISPLAY")"
+  if [ -z "$capture_size" ]; then
+    echo "Could not detect GUI screenshot size from DISPLAY." >&2
+    exit 1
+  fi
+fi
 
 output_dir="$(dirname "$output_png")"
 mkdir -p "$output_dir"

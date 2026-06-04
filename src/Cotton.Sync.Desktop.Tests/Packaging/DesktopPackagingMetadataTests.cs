@@ -164,6 +164,9 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(smokeScript, Does.Contain("DISPLAY is required"));
             Assert.That(smokeScript, Does.Contain("command -v ffmpeg"));
             Assert.That(smokeScript, Does.Contain("command -v ffprobe"));
+            Assert.That(smokeScript, Does.Contain("capture_size=\"${COTTON_SYNC_SCREENSHOT_SIZE:-}\""));
+            Assert.That(smokeScript, Does.Contain("ffprobe -v error -f x11grab"));
+            Assert.That(smokeScript, Does.Contain("Could not detect GUI screenshot size from DISPLAY."));
             Assert.That(smokeScript, Does.Contain("\"$app_executable\" --data-dir \"$data_dir\" \"$@\""));
             Assert.That(smokeScript, Does.Contain("-f x11grab"));
             Assert.That(smokeScript, Does.Contain("-draw_mouse 0"));
