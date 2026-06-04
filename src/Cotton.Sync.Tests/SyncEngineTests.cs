@@ -124,6 +124,46 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_ReportsRunTransferAndActivityProgressForUpload()
+    {
+        LocalFileSnapshot local = LocalFile("Docs/local.txt", "local-content");
+        var eventLog = new List<string>();
+        var runProgress = new RecordingProgress<SyncRunProgress>(
+            item => eventLog.Add($"run:{item.Stage}:{item.FilesCompleted}:{item.CurrentPath}:{item.IsCompleted}"));
+        var transferProgress = new RecordingProgress<SyncTransferProgress>(
+            item => eventLog.Add($"transfer:{item.Direction}:{item.RelativePath}:{item.TransferredBytes}:{item.TotalBytes}:{item.IsCompleted}"));
+        var activityProgress = new RecordingProgress<SyncActivity>(
+            item => eventLog.Add($"activity:{item.Kind}:{item.RelativePath}"));
+        SyncEngine engine = CreateEngine(new FakeLocalFileScanner(local), EmptyRemoteTree(), new FakeRemoteFileSynchronizer(), out _);
+
+        await engine.RunOnceAsync(
+            Pair(),
+            new SyncRunOptions
+            {
+                ActivityProgress = activityProgress,
+                TransferProgress = transferProgress,
+                RunProgress = runProgress,
+            });
+
+        int fileStartedIndex = eventLog.FindIndex(item => item.StartsWith("run:ReconcilingFiles:0:Docs/local.txt:", StringComparison.Ordinal));
+        int transferStartedIndex = eventLog.FindIndex(item => item == $"transfer:Upload:Docs/local.txt:0:{local.SizeBytes}:False");
+        int transferCompletedIndex = eventLog.FindIndex(item => item == $"transfer:Upload:Docs/local.txt:{local.SizeBytes}:{local.SizeBytes}:True");
+        int activityIndex = eventLog.FindIndex(item => item == "activity:Uploaded:Docs/local.txt");
+        int runCompletedIndex = eventLog.FindIndex(item => item == "run:Completed:1::True");
+        Assert.Multiple(() =>
+        {
+            Assert.That(runProgress.Values.Select(item => item.Stage), Does.Contain(SyncRunProgressStage.Completed));
+            Assert.That(transferProgress.Values.Select(item => item.IsCompleted), Is.EqualTo(new[] { false, true }));
+            Assert.That(activityProgress.Values.Select(item => item.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
+            Assert.That(fileStartedIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(transferStartedIndex, Is.GreaterThan(fileStartedIndex));
+            Assert.That(transferCompletedIndex, Is.GreaterThan(transferStartedIndex));
+            Assert.That(activityIndex, Is.GreaterThan(transferCompletedIndex));
+            Assert.That(runCompletedIndex, Is.GreaterThan(activityIndex));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_DownloadsRemoteOnlyFileAndStoresBaseline()
     {
         byte[] content = Encoding.UTF8.GetBytes("remote-content");
@@ -1669,11 +1709,19 @@ public sealed class SyncEngineTests
 
     private sealed class RecordingProgress<T> : IProgress<T>
     {
+        private readonly Action<T>? _onReport;
+
+        public RecordingProgress(Action<T>? onReport = null)
+        {
+            _onReport = onReport;
+        }
+
         public List<T> Values { get; } = [];
 
         public void Report(T value)
         {
             Values.Add(value);
+            _onReport?.Invoke(value);
         }
     }
 
