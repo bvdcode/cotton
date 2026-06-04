@@ -18,7 +18,7 @@ namespace Cotton.Server.Services
             Guid layoutId,
             Guid? previousParentNodeId = null)
         {
-            EnsureKnownKind(kind);
+            ArgumentOutOfRangeException.ThrowIfEqual(kind, SyncChangeKind.Unknown);
 
             _dbContext.SyncChanges.Add(new SyncChange
             {
@@ -37,9 +37,10 @@ namespace Cotton.Server.Services
         public void StageFolderChange(
             SyncChangeKind kind,
             Node node,
+            Guid parentNodeId,
             Guid? previousParentNodeId = null)
         {
-            EnsureKnownKind(kind);
+            ArgumentOutOfRangeException.ThrowIfEqual(kind, SyncChangeKind.Unknown);
 
             _dbContext.SyncChanges.Add(new SyncChange
             {
@@ -47,8 +48,7 @@ namespace Cotton.Server.Services
                 Kind = kind,
                 LayoutId = node.LayoutId,
                 ItemId = node.Id,
-                ParentNodeId = node.ParentId
-                    ?? throw new InvalidOperationException("Root nodes cannot be recorded as sync folder changes."),
+                ParentNodeId = parentNodeId,
                 PreviousParentNodeId = previousParentNodeId,
                 Name = node.Name,
             });

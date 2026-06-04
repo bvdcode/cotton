@@ -20,6 +20,7 @@ namespace Cotton.Server.Abstractions
         void StageFolderChange(
             SyncChangeKind kind,
             Node node,
+            Guid parentNodeId,
             Guid? previousParentNodeId = null);
     }
 }
