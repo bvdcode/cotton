@@ -234,6 +234,43 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task Initialize_ShowsFirstSyncPendingUntilPairHasBaseline()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Idle")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+
+        await viewModel.InitializeAsync();
+
+        Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Waiting for first sync."));
+    }
+
+    [Test]
+    public async Task Initialize_ShowsUpToDateAfterPairHasBaseline()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(
+            Guid.NewGuid(),
+            "Documents",
+            "Idle",
+            new DateTime(2026, 6, 4, 7, 30, 0, DateTimeKind.Utc))));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+
+        await viewModel.InitializeAsync();
+
+        Assert.That(viewModel.CurrentProgressText, Is.EqualTo("All folders are up to date."));
+    }
+
+    [Test]
+    public async Task Initialize_AsksToEnableFolderWhenAllPairsAreDisabled()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Disabled")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+
+        await viewModel.InitializeAsync();
+
+        Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Enable a folder to start syncing."));
+    }
+
+    [Test]
     public async Task ActivityReported_AddsRecentActivityRow()
     {
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot());
@@ -807,7 +844,11 @@ public sealed class ShellViewModelSyncPairCommandTests
             syncPairs);
     }
 
-    private static DesktopSyncPairSnapshot CreatePair(Guid id, string displayName, string status)
+    private static DesktopSyncPairSnapshot CreatePair(
+        Guid id,
+        string displayName,
+        string status,
+        DateTime? lastSyncedAtUtc = null)
     {
         return new DesktopSyncPairSnapshot(
             id,
@@ -815,7 +856,8 @@ public sealed class ShellViewModelSyncPairCommandTests
             "/home/vadim/" + displayName,
             "/" + displayName,
             status,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            lastSyncedAtUtc);
     }
 
     private sealed class FakeDesktopShellController : IDesktopShellController

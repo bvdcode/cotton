@@ -1637,6 +1637,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             return;
         }
 
+        if (!HasEnabledSyncPairs)
+        {
+            CurrentProgressText = "Enable a folder to start syncing.";
+            return;
+        }
+
         SyncPairRowViewModel? activePair = SyncPairs.FirstOrDefault(IsActiveProgressPair);
         if (activePair is not null)
         {
@@ -1650,6 +1656,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         if (SyncPairs.Any(static pair => string.Equals(pair.Status, "Paused", StringComparison.Ordinal)))
         {
             CurrentProgressText = "Sync is paused.";
+            return;
+        }
+
+        if (SyncPairs.Any(static pair => pair.IsEnabled && pair.LastSyncedAtUtc is null))
+        {
+            CurrentProgressText = "Waiting for first sync.";
             return;
         }
 
