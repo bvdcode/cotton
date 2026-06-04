@@ -1150,11 +1150,25 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable
     private void ApplyServerProbeResult(DesktopServerProbeResult result)
     {
         IsServerProbeChecking = false;
+        if (result.IsCottonServer)
+        {
+            ApplyNormalizedServerUrl(result.ServerUrl);
+        }
+
         IsServerVerified = result.IsCottonServer;
         IsServerProbeFailed = !result.IsCottonServer;
         ServerProbeStatus = result.IsCottonServer
             ? "Cotton Cloud"
             : "Cotton server not found";
+    }
+
+    private void ApplyNormalizedServerUrl(Uri serverUrl)
+    {
+        if (SetProperty(ref _serverUrl, serverUrl.AbsoluteUri, nameof(ServerUrl)))
+        {
+            SignInCommand.RaiseCanExecuteChanged();
+            RefreshDiagnosticsItems();
+        }
     }
 
     private void ResetServerProbe()

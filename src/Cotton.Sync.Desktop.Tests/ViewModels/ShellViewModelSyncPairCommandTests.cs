@@ -328,6 +328,36 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task ServerProbe_NormalizesVerifiedBareHostAndEnablesSignIn()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedOutSnapshot())
+        {
+            ServerProbeResult = new DesktopServerProbeResult(
+                new Uri("https://app.cottoncloud.dev/"),
+                true,
+                "Cotton Cloud",
+                "instance-hash"),
+        };
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        viewModel.ServerUrl = "app.cottoncloud.dev";
+        viewModel.Username = "desktop@example.test";
+        viewModel.Password = "password";
+
+        await WaitForAsync(() => viewModel.IsServerVerified);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(controller.ProbedServerUrls, Is.EqualTo(new[] { "app.cottoncloud.dev" }));
+            Assert.That(viewModel.ServerUrl, Is.EqualTo("https://app.cottoncloud.dev/"));
+            Assert.That(viewModel.IsServerProbeFailed, Is.False);
+            Assert.That(viewModel.ServerProbeStatus, Is.EqualTo("Cotton Cloud"));
+            Assert.That(viewModel.SignInCommand.CanExecute(null), Is.True);
+        });
+    }
+
+    [Test]
     public void FutureSyncModesVisibility_UsesFeatureFlag()
     {
         using ShellViewModel hiddenViewModel = CreateViewModel(
@@ -355,6 +385,41 @@ public sealed class ShellViewModelSyncPairCommandTests
         }
 
         Assert.That(command.IsRunning, Is.False);
+    }
+
+    private static async Task WaitForAsync(Func<bool> condition)
+    {
+        for (int attempt = 0; attempt < 100; attempt++)
+        {
+            if (condition())
+            {
+                return;
+            }
+
+            await Task.Delay(20);
+        }
+
+        Assert.Fail("Condition was not met before timeout.");
+    }
+
+    private static DesktopShellSnapshot CreateSignedOutSnapshot()
+    {
+        return new DesktopShellSnapshot(
+            null,
+            null,
+            null,
+            false,
+            true,
+            AppThemeMode.System,
+            new DesktopPlatformCapabilitySnapshot(
+                "Linux",
+                "test",
+                "test",
+                true,
+                false,
+                "Tray lifecycle is not supported in this test."),
+            false,
+            []);
     }
 
     private static DesktopShellSnapshot CreateSignedInSnapshot(params DesktopSyncPairSnapshot[] syncPairs)
@@ -413,7 +478,11 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public DesktopSelfTestSnapshot SelfTestSnapshot { get; set; } = new([]);
 
+        public DesktopServerProbeResult? ServerProbeResult { get; set; }
+
         public Dictionary<string, DesktopRemoteFolderListSnapshot> RemoteFoldersByPath { get; } = [];
+
+        public List<string> ProbedServerUrls { get; } = [];
 
         public int SyncAllCalls { get; private set; }
 
@@ -468,7 +537,9 @@ public sealed class ShellViewModelSyncPairCommandTests
             string serverUrl,
             CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException();
+            cancellationToken.ThrowIfCancellationRequested();
+            ProbedServerUrls.Add(serverUrl);
+            return Task.FromResult(ServerProbeResult ?? throw new NotSupportedException());
         }
 
         public Task<AuthSession> SignInAsync(
