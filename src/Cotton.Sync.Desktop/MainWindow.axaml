@@ -56,6 +56,7 @@
                   Command="{Binding ShowAddSyncPairCommand}" />
           <Button Content="Sync"
                   Classes="compact"
+                  ToolTip.Tip="Sync now"
                   Command="{Binding SyncNowCommand}" />
           <Button Content="..."
                   Classes="icon"
@@ -249,7 +250,7 @@
                   Classes="primary"
                   HorizontalAlignment="Stretch"
                   Command="{Binding SignInCommand}" />
-          <CheckBox Content="Start with this computer"
+          <CheckBox Content="Start at login"
                     IsEnabled="{Binding IsStartWithOperatingSystemSupported}"
                     IsChecked="{Binding StartWithOperatingSystem}" />
         </StackPanel>
@@ -477,7 +478,7 @@
                       <TextBlock Text="+"
                                  FontSize="20"
                                  FontWeight="SemiBold"
-                                 Foreground="{DynamicResource CottonPrimaryTextBrush}"
+                                 Foreground="{DynamicResource CottonPrimaryBrush}"
                                  HorizontalAlignment="Center"
                                  VerticalAlignment="Center" />
                     </Border>
@@ -711,7 +712,7 @@
                         RowSpacing="8">
                     <Grid ColumnDefinitions="Auto,*,Auto"
                           ColumnSpacing="6">
-                      <Button Content="Back"
+                      <Button Content="Up"
                               Classes="compact"
                               ToolTip.Tip="Go up"
                               Command="{Binding RemoteFolderUpCommand}" />
@@ -823,7 +824,7 @@
                 <Grid ColumnDefinitions="*,Auto"
                       ColumnSpacing="8">
                   <Button Grid.Column="1"
-                          Content="Use this folder"
+                          Content="Sync"
                           Classes="primary"
                           ToolTip.Tip="Start syncing with the current cloud folder"
                           Command="{Binding AddSyncPairCommand}" />
@@ -887,7 +888,7 @@
                 <StackPanel Spacing="6">
                   <TextBlock Text="Startup"
                              FontWeight="SemiBold" />
-                  <CheckBox Content="Start with this computer"
+                  <CheckBox Content="Start at login"
                             IsEnabled="{Binding IsStartWithOperatingSystemSupported}"
                             IsChecked="{Binding StartWithOperatingSystem}" />
                   <TextBlock Text="{Binding AutostartStatusText}"
@@ -921,7 +922,7 @@
                 <StackPanel Spacing="6">
                   <TextBlock Text="Notifications"
                              FontWeight="SemiBold" />
-                  <CheckBox Content="Show desktop notifications"
+                  <CheckBox Content="Show notifications"
                             IsChecked="{Binding EnableNotifications}" />
                   <TextBlock Text="Initial sync, conflicts, and action-required errors."
                              Classes="secondary"
@@ -1069,15 +1070,16 @@
                   </Border>
                   <StackPanel Orientation="Horizontal"
                               Spacing="6">
-                    <Button Content="Run self-test"
+                    <Button Content="Check"
                             Classes="compact"
+                            ToolTip.Tip="Run desktop self-test"
                             Command="{Binding SelfTestCommand}" />
                     <Button Content="Export"
                             Classes="compact"
                             ToolTip.Tip="Export diagnostics bundle"
                             Command="{Binding ExportDiagnosticsCommand}" />
                   </StackPanel>
-                  <TextBlock Text="Run self-test to check this computer."
+                  <TextBlock Text="Run checks to verify this computer."
                              Classes="secondary"
                              FontSize="12"
                              TextWrapping="Wrap"
@@ -1125,7 +1127,7 @@
                   <StackPanel Spacing="2">
                     <TextBlock Text="Cotton Sync Desktop"
                                FontWeight="SemiBold" />
-                    <TextBlock Text="Full mirror sync client"
+                    <TextBlock Text="Full mirror sync"
                                Classes="secondary"
                                FontSize="12" />
                   </StackPanel>
