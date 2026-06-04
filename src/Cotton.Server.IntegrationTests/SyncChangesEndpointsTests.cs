@@ -376,6 +376,137 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         });
     }
 
+    [Test]
+    public async Task WebDavPutFile_StagesFileCreatedChange()
+    {
+        string accessToken = await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        UseWebDavBasicAuth();
+        using HttpResponseMessage putResponse = await SendWebDavPutAsync(
+            "/api/v1/webdav/webdav-created-file.txt",
+            "webdav-created-body");
+        putResponse.EnsureSuccessStatusCode();
+
+        UseBearerAuth(accessToken);
+        SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
+        SyncChangeDto change = response.Changes.Single(x => x.Name == "webdav-created-file.txt");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FileCreated));
+            Assert.That(change.ParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(change.FileManifestId, Is.Not.Null);
+        });
+    }
+
+    [Test]
+    public async Task WebDavMkCol_StagesFolderCreatedChange()
+    {
+        string accessToken = await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        UseWebDavBasicAuth();
+        using HttpResponseMessage mkColResponse = await SendWebDavMkColAsync("/api/v1/webdav/webdav-created-folder");
+        mkColResponse.EnsureSuccessStatusCode();
+
+        UseBearerAuth(accessToken);
+        SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
+        SyncChangeDto change = response.Changes.Single(x => x.Name == "webdav-created-folder");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FolderCreated));
+            Assert.That(change.ParentNodeId, Is.EqualTo(root.Id));
+        });
+    }
+
+    [Test]
+    public async Task WebDavMoveFile_StagesFileMovedChange()
+    {
+        string accessToken = await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeFileManifestDto file = await CreateFileAsync(root.Id, "webdav-move-source.txt", "webdav-move-body");
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        UseWebDavBasicAuth();
+        using HttpResponseMessage moveResponse = await SendWebDavMoveAsync(
+            "/api/v1/webdav/webdav-move-source.txt",
+            "/api/v1/webdav/webdav-move-target.txt");
+        moveResponse.EnsureSuccessStatusCode();
+
+        UseBearerAuth(accessToken);
+        SyncChangeDto change = await GetSingleChangeAsync(cursor, file.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FileMoved));
+            Assert.That(change.ParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(change.PreviousParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(change.Name, Is.EqualTo("webdav-move-target.txt"));
+        });
+    }
+
+    [Test]
+    public async Task WebDavCopyFile_StagesFileCreatedChange()
+    {
+        string accessToken = await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeFileManifestDto file = await CreateFileAsync(root.Id, "webdav-copy-source.txt", "webdav-copy-body");
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        UseWebDavBasicAuth();
+        using HttpResponseMessage copyResponse = await SendWebDavCopyAsync(
+            "/api/v1/webdav/webdav-copy-source.txt",
+            "/api/v1/webdav/webdav-copy-target.txt");
+        copyResponse.EnsureSuccessStatusCode();
+
+        UseBearerAuth(accessToken);
+        SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
+        SyncChangeDto change = response.Changes.Single(x => x.Name == "webdav-copy-target.txt");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FileCreated));
+            Assert.That(change.ParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(change.FileManifestId, Is.EqualTo(file.FileManifestId));
+        });
+    }
+
+    [Test]
+    public async Task RestoreFileVersion_StagesFileContentUpdatedChange()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeFileManifestDto file = await CreateFileAsync(root.Id, "versioned-file.txt", "version-one");
+        await UpdateFileContentAsync(file.Id, root.Id, "versioned-file.txt", "version-two");
+        List<FileVersionDto> versions = await GetFileVersionsAsync(file.Id);
+        FileVersionDto historicalVersion = versions.Single(x => !x.IsCurrent);
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage restoreResponse = await _client!.PostAsync(
+            $"{Routes.V1.Files}/{file.Id}/versions/{historicalVersion.Id}/restore",
+            null);
+        restoreResponse.EnsureSuccessStatusCode();
+
+        SyncChangeDto change = await GetSingleChangeAsync(cursor, file.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FileContentUpdated));
+            Assert.That(change.ParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(change.FileManifestId, Is.EqualTo(historicalVersion.FileManifestId));
+            Assert.That(change.Name, Is.EqualTo("versioned-file.txt"));
+        });
+    }
+
     private Dictionary<string, string?> CreateOverrides()
     {
         var csb = new NpgsqlConnectionStringBuilder
@@ -403,7 +534,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         };
     }
 
-    private async Task SignInAsync(string username = Username, string password = Password)
+    private async Task<string> SignInAsync(string username = Username, string password = Password)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, $"{Routes.V1.Auth}/login")
         {
@@ -421,9 +552,8 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         TokenPairResponseDto? login = await response.Content.ReadFromJsonAsync<TokenPairResponseDto>();
         Assert.That(login, Is.Not.Null);
 
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Bearer",
-            login!.AccessToken);
+        UseBearerAuth(login!.AccessToken);
+        return login.AccessToken;
     }
 
     private async Task<Guid> GetUserIdAsync(string username)
@@ -489,6 +619,35 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         return file!;
     }
 
+    private async Task<NodeFileManifestDto> UpdateFileContentAsync(Guid nodeFileId, Guid nodeId, string name, string body)
+    {
+        string hash = await UploadChunkAsync(body);
+        using HttpResponseMessage response = await _client!.PatchAsJsonAsync(
+            $"{Routes.V1.Files}/{nodeFileId}/update-content",
+            new CreateFileRequest
+            {
+                ChunkHashes = [hash],
+                Name = name,
+                ContentType = "application/octet-stream",
+                Hash = hash,
+                NodeId = nodeId,
+            });
+        response.EnsureSuccessStatusCode();
+
+        NodeFileManifestDto? file = await response.Content.ReadFromJsonAsync<NodeFileManifestDto>();
+        Assert.That(file, Is.Not.Null);
+        return file!;
+    }
+
+    private async Task<List<FileVersionDto>> GetFileVersionsAsync(Guid nodeFileId)
+    {
+        List<FileVersionDto>? versions = await _client!.GetFromJsonAsync<List<FileVersionDto>>(
+            $"{Routes.V1.Files}/{nodeFileId}/versions");
+
+        Assert.That(versions, Is.Not.Null);
+        return versions!;
+    }
+
     private async Task<string> UploadChunkAsync(string body)
     {
         byte[] content = Encoding.UTF8.GetBytes(body);
@@ -509,6 +668,51 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         using HttpResponseMessage response = await _client!.PostAsync(Routes.V1.Chunks, form);
         response.EnsureSuccessStatusCode();
         return hash;
+    }
+
+    private void UseBearerAuth(string accessToken)
+    {
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+    }
+
+    private void UseWebDavBasicAuth()
+    {
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Basic",
+            Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Username}:{Password}")));
+    }
+
+    private async Task<HttpResponseMessage> SendWebDavPutAsync(string path, string body)
+    {
+        using var content = new StringContent(body, Encoding.UTF8, "text/plain");
+        using var request = new HttpRequestMessage(HttpMethod.Put, path)
+        {
+            Content = content,
+        };
+
+        return await _client!.SendAsync(request);
+    }
+
+    private async Task<HttpResponseMessage> SendWebDavMkColAsync(string path)
+    {
+        using var request = new HttpRequestMessage(new HttpMethod("MKCOL"), path);
+        return await _client!.SendAsync(request);
+    }
+
+    private async Task<HttpResponseMessage> SendWebDavMoveAsync(string sourcePath, string destinationPath)
+    {
+        using var request = new HttpRequestMessage(new HttpMethod("MOVE"), sourcePath);
+        request.Headers.Add("Destination", destinationPath);
+        request.Headers.Add("Overwrite", "F");
+        return await _client!.SendAsync(request);
+    }
+
+    private async Task<HttpResponseMessage> SendWebDavCopyAsync(string sourcePath, string destinationPath)
+    {
+        using var request = new HttpRequestMessage(new HttpMethod("COPY"), sourcePath);
+        request.Headers.Add("Destination", destinationPath);
+        request.Headers.Add("Overwrite", "F");
+        return await _client!.SendAsync(request);
     }
 
     private async Task<long> AddSyncChangeAsync(Guid ownerId, string name)
