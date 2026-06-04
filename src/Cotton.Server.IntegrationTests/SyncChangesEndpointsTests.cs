@@ -20,6 +20,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using NUnit.Framework;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Reflection;
@@ -98,6 +99,16 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
             Assert.That(response.Changes[0].Name, Is.EqualTo("included"));
             Assert.That(response.Changes[0].Kind, Is.EqualTo(SyncChangeKind.FileCreated));
         });
+    }
+
+    [Test]
+    public async Task GetChanges_WhenCursorIsNegative_ReturnsBadRequest()
+    {
+        await SignInAsync();
+
+        using HttpResponseMessage response = await _client!.GetAsync($"{Routes.V1.Sync}/changes?since=-1&limit=10");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -347,6 +358,72 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
             Assert.That(change.Kind, Is.EqualTo(SyncChangeKind.FolderRestored));
             Assert.That(change.ParentNodeId, Is.EqualTo(root.Id));
             Assert.That(change.Name, Is.EqualTo("sync-restored-folder"));
+        });
+    }
+
+    [Test]
+    public async Task RestoreFile_WithMissingParentCreation_StagesParentFolderCreatedBeforeFileRestored()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto parent = await CreateFolderAsync(root.Id, "file-restore-created-parent");
+        NodeFileManifestDto file = await CreateFileAsync(parent.Id, "sync-restored-with-parent.txt", "restore-created-parent-body");
+        using HttpResponseMessage deleteFileResponse = await _client!.DeleteAsync($"{Routes.V1.Files}/{file.Id}");
+        deleteFileResponse.EnsureSuccessStatusCode();
+        using HttpResponseMessage deleteParentResponse = await _client.DeleteAsync($"{Routes.V1.Layouts}/nodes/{parent.Id}");
+        deleteParentResponse.EnsureSuccessStatusCode();
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage restoreResponse = await _client.PostAsJsonAsync(
+            $"{Routes.V1.Files}/{file.Id}/restore",
+            new RestoreItemRequest { CreateMissingParents = true });
+        restoreResponse.EnsureSuccessStatusCode();
+
+        SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
+        SyncChangeDto parentCreated = response.Changes.Single(x =>
+            x.Kind == SyncChangeKind.FolderCreated && x.Name == "file-restore-created-parent");
+        SyncChangeDto fileRestored = response.Changes.Single(x => x.ItemId == file.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(parentCreated.ParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(fileRestored.Kind, Is.EqualTo(SyncChangeKind.FileRestored));
+            Assert.That(fileRestored.ParentNodeId, Is.EqualTo(parentCreated.ItemId));
+            Assert.That(fileRestored.Name, Is.EqualTo("sync-restored-with-parent.txt"));
+        });
+    }
+
+    [Test]
+    public async Task RestoreFolder_WithMissingParentCreation_StagesParentFolderCreatedBeforeFolderRestored()
+    {
+        await SignInAsync();
+
+        NodeDto root = await GetRootAsync();
+        NodeDto parent = await CreateFolderAsync(root.Id, "folder-restore-created-parent");
+        NodeDto folder = await CreateFolderAsync(parent.Id, "sync-restored-folder-with-parent");
+        using HttpResponseMessage deleteFolderResponse = await _client!.DeleteAsync($"{Routes.V1.Layouts}/nodes/{folder.Id}");
+        deleteFolderResponse.EnsureSuccessStatusCode();
+        using HttpResponseMessage deleteParentResponse = await _client.DeleteAsync($"{Routes.V1.Layouts}/nodes/{parent.Id}");
+        deleteParentResponse.EnsureSuccessStatusCode();
+        long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
+
+        using HttpResponseMessage restoreResponse = await _client.PostAsJsonAsync(
+            $"{Routes.V1.Layouts}/nodes/{folder.Id}/restore",
+            new RestoreItemRequest { CreateMissingParents = true });
+        restoreResponse.EnsureSuccessStatusCode();
+
+        SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
+        SyncChangeDto parentCreated = response.Changes.Single(x =>
+            x.Kind == SyncChangeKind.FolderCreated && x.Name == "folder-restore-created-parent");
+        SyncChangeDto folderRestored = response.Changes.Single(x => x.ItemId == folder.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(parentCreated.ParentNodeId, Is.EqualTo(root.Id));
+            Assert.That(folderRestored.Kind, Is.EqualTo(SyncChangeKind.FolderRestored));
+            Assert.That(folderRestored.ParentNodeId, Is.EqualTo(parentCreated.ItemId));
+            Assert.That(folderRestored.Name, Is.EqualTo("sync-restored-folder-with-parent"));
         });
     }
 
