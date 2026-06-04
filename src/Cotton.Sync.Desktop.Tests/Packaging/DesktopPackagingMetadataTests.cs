@@ -161,6 +161,24 @@ public sealed class DesktopPackagingMetadataTests
         });
     }
 
+    [Test]
+    public void CiWorkflow_AttachesDesktopArtifactChecksumsToRelease()
+    {
+        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(workflow, Does.Contain("Generate desktop artifact checksums"));
+            Assert.That(workflow, Does.Contain("desktop-artifact-checksums.sha256"));
+            Assert.That(workflow, Does.Contain("cotton-sync-desktop-linux-x64.tar.gz"));
+            Assert.That(workflow, Does.Contain("cotton-sync-desktop-linux-x64.deb"));
+            Assert.That(workflow, Does.Contain("cotton-sync-desktop-win-x64.tar.gz"));
+            Assert.That(workflow, Does.Contain("cotton-sync-desktop-win-x64.zip"));
+            Assert.That(workflow, Does.Contain("name: desktop-artifact-checksums"));
+            Assert.That(workflow, Does.Contain("Download desktop artifact checksums"));
+        });
+    }
+
     private static string? GetProperty(XElement propertyGroup, string name)
     {
         return propertyGroup.Element(name)?.Value;
