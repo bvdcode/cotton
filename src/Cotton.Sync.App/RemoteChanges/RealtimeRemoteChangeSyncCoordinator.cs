@@ -158,7 +158,7 @@ public sealed class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoord
             return;
         }
 
-        CancelPendingSyncRequest();
+        CancelPendingSyncRequests();
         _ = HandleSessionRevokedAsync(change.MethodName, lifetime.Token);
     }
 
@@ -239,16 +239,19 @@ public sealed class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoord
         }
     }
 
-    private void CancelPendingSyncRequest()
+    private void CancelPendingSyncRequests()
     {
-        PendingRemoteSyncRequest? pendingSync;
+        List<PendingRemoteSyncRequest> pendingSyncs;
         lock (_pendingGate)
         {
-            pendingSync = _pendingSync;
             _pendingSync = null;
+            pendingSyncs = _pendingRequests.ToList();
         }
 
-        pendingSync?.Cancellation.Cancel();
+        foreach (PendingRemoteSyncRequest pendingSync in pendingSyncs)
+        {
+            pendingSync.Cancellation.Cancel();
+        }
     }
 
     private static async Task WaitForPendingSyncsAsync(

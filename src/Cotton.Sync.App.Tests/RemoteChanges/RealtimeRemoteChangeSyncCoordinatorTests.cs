@@ -56,7 +56,7 @@ public sealed class RealtimeRemoteChangeSyncCoordinatorTests
     }
 
     [Test]
-    public async Task StopAsync_WaitsForRunningSyncRequest()
+    public async Task StopAsync_CancelsAndWaitsForRunningSyncRequest()
     {
         var realtime = new FakeCottonRealtimeClient();
         var supervisor = new FakeSyncSupervisor
@@ -72,18 +72,16 @@ public sealed class RealtimeRemoteChangeSyncCoordinatorTests
         realtime.RaiseRemoteFileTreeChanged("FileCreated");
         bool observed = await supervisor.WaitForSyncAsync(TimeSpan.FromSeconds(2));
         Task stopTask = coordinator.StopAsync();
-        await Task.Delay(TimeSpan.FromMilliseconds(75));
+        bool canceled = await supervisor.WaitForSyncCancellationAsync(TimeSpan.FromSeconds(2));
+        await stopTask.WaitAsync(TimeSpan.FromSeconds(2));
 
         Assert.Multiple(() =>
         {
             Assert.That(observed, Is.True);
-            Assert.That(stopTask.IsCompleted, Is.False);
+            Assert.That(canceled, Is.True);
+            Assert.That(stopTask.IsCompleted, Is.True);
+            Assert.That(supervisor.SyncAllCallCount, Is.EqualTo(1));
         });
-
-        supervisor.ReleaseSyncAll();
-        await stopTask.WaitAsync(TimeSpan.FromSeconds(2));
-
-        Assert.That(supervisor.SyncAllCallCount, Is.EqualTo(1));
     }
 
     [Test]
@@ -198,6 +196,45 @@ public sealed class RealtimeRemoteChangeSyncCoordinatorTests
         });
     }
 
+    [Test]
+    public async Task SessionRevoked_CancelsRunningRemoteSyncRequestBeforeHandlerCompletes()
+    {
+        var realtime = new FakeCottonRealtimeClient();
+        var supervisor = new FakeSyncSupervisor
+        {
+            BlockSyncAll = true,
+        };
+        var sessionRevocationHandler = new FakeSessionRevocationHandler
+        {
+            BlockHandler = true,
+        };
+        var coordinator = new RealtimeRemoteChangeSyncCoordinator(
+            realtime,
+            supervisor,
+            TimeSpan.Zero,
+            sessionRevocationHandler);
+        await coordinator.StartAsync();
+
+        realtime.RaiseRemoteFileTreeChanged("FileUpdated");
+        bool observed = await supervisor.WaitForSyncAsync(TimeSpan.FromSeconds(2));
+        realtime.RaiseSessionRevoked();
+        bool handled = await sessionRevocationHandler.WaitForCallAsync(TimeSpan.FromSeconds(2));
+        bool canceled = await supervisor.WaitForSyncCancellationAsync(TimeSpan.FromSeconds(2));
+
+        sessionRevocationHandler.ReleaseHandler();
+        bool stopped = await realtime.WaitForStopAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(observed, Is.True);
+            Assert.That(handled, Is.True);
+            Assert.That(canceled, Is.True);
+            Assert.That(stopped, Is.True);
+            Assert.That(supervisor.SyncAllCallCount, Is.EqualTo(1));
+            Assert.That(sessionRevocationHandler.CallCount, Is.EqualTo(1));
+        });
+    }
+
     private sealed class FakeCottonRealtimeClient : ICottonRealtimeClient
     {
         public event EventHandler<CottonRealtimeEvent>? RemoteFileTreeChanged;
@@ -267,6 +304,7 @@ public sealed class RealtimeRemoteChangeSyncCoordinatorTests
     {
         private readonly TaskCompletionSource _syncRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource _releaseSyncAll = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _syncCanceled = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public IReadOnlyList<SyncPairStatus> CurrentStatuses => [];
 
@@ -310,7 +348,7 @@ public sealed class RealtimeRemoteChangeSyncCoordinatorTests
             SyncAllCallCount++;
             _syncRequested.TrySetResult();
             return BlockSyncAll
-                ? _releaseSyncAll.Task
+                ? WaitForBlockedSyncAllAsync(cancellationToken)
                 : Task.CompletedTask;
         }
 
@@ -329,26 +367,56 @@ public sealed class RealtimeRemoteChangeSyncCoordinatorTests
         {
             _releaseSyncAll.TrySetResult();
         }
+
+        public async Task<bool> WaitForSyncCancellationAsync(TimeSpan timeout)
+        {
+            Task completed = await Task.WhenAny(_syncCanceled.Task, Task.Delay(timeout)).ConfigureAwait(false);
+            return completed == _syncCanceled.Task;
+        }
+
+        private async Task WaitForBlockedSyncAllAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                await _releaseSyncAll.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                _syncCanceled.TrySetResult();
+                throw;
+            }
+        }
     }
 
     private sealed class FakeSessionRevocationHandler : ISessionRevocationHandler
     {
         private readonly TaskCompletionSource _called = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _releaseHandler = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public int CallCount { get; private set; }
 
-        public Task HandleSessionRevokedAsync(CancellationToken cancellationToken = default)
+        public bool BlockHandler { get; set; }
+
+        public async Task HandleSessionRevokedAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             CallCount++;
             _called.TrySetResult();
-            return Task.CompletedTask;
+            if (BlockHandler)
+            {
+                await _releaseHandler.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
         }
 
         public async Task<bool> WaitForCallAsync(TimeSpan timeout)
         {
             Task completed = await Task.WhenAny(_called.Task, Task.Delay(timeout)).ConfigureAwait(false);
             return completed == _called.Task;
+        }
+
+        public void ReleaseHandler()
+        {
+            _releaseHandler.TrySetResult();
         }
     }
 }
