@@ -1,0 +1,42 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
+
+using System.Diagnostics;
+using Cotton.Sync.Desktop.Platform;
+
+namespace Cotton.Sync.Desktop.Tests.Platform;
+
+public sealed class WindowsToastNotificationServiceTests
+{
+    [Test]
+    public void CreateStartInfo_UsesEncodedPowerShellCommandWithoutShell()
+    {
+        ProcessStartInfo startInfo = WindowsToastNotificationService.CreateStartInfo(
+            @"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe",
+            "Action required",
+            "Bob's folder needs attention");
+
+        string encodedCommand = startInfo.ArgumentList.Last();
+        string command = WindowsToastNotificationService.DecodePowerShellCommand(encodedCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(startInfo.FileName, Is.EqualTo(@"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"));
+            Assert.That(startInfo.UseShellExecute, Is.False);
+            Assert.That(startInfo.CreateNoWindow, Is.True);
+            Assert.That(startInfo.ArgumentList, Is.EqualTo(new[]
+            {
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-EncodedCommand",
+                encodedCommand,
+            }));
+            Assert.That(command, Does.Contain("ToastNotificationManager"));
+            Assert.That(command, Does.Contain("CreateToastNotifier('Cotton.Sync.Desktop')"));
+            Assert.That(command, Does.Contain("$xml.CreateTextNode('Action required')"));
+            Assert.That(command, Does.Contain("$xml.CreateTextNode('Bob''s folder needs attention')"));
+        });
+    }
+}

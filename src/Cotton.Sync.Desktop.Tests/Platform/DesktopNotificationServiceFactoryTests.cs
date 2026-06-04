@@ -43,4 +43,40 @@ public sealed class DesktopNotificationServiceFactoryTests
 
         Assert.That(result, Is.Null);
     }
+
+    [Test]
+    public void CreateForPlatform_ReturnsLinuxNotifySendAdapterWhenNotifySendExists()
+    {
+        string commandPath = Path.Combine(_tempDirectory, "notify-send");
+        File.WriteAllText(commandPath, string.Empty);
+
+        IDesktopNotificationService service = DesktopNotificationServiceFactory.CreateForPlatform(
+            DesktopNotificationPlatform.Linux,
+            _tempDirectory);
+
+        Assert.That(service, Is.TypeOf<NotifySendNotificationService>());
+    }
+
+    [Test]
+    public void CreateForPlatform_ReturnsWindowsToastAdapterWhenPowerShellExists()
+    {
+        string commandPath = Path.Combine(_tempDirectory, "powershell.exe");
+        File.WriteAllText(commandPath, string.Empty);
+
+        IDesktopNotificationService service = DesktopNotificationServiceFactory.CreateForPlatform(
+            DesktopNotificationPlatform.Windows,
+            _tempDirectory);
+
+        Assert.That(service, Is.TypeOf<WindowsToastNotificationService>());
+    }
+
+    [Test]
+    public void CreateForPlatform_ReturnsUnsupportedWhenPlatformExecutableIsMissing()
+    {
+        IDesktopNotificationService service = DesktopNotificationServiceFactory.CreateForPlatform(
+            DesktopNotificationPlatform.Windows,
+            _tempDirectory);
+
+        Assert.That(service, Is.TypeOf<UnsupportedDesktopNotificationService>());
+    }
 }
