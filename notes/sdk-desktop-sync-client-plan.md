@@ -520,6 +520,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Test Windows installer on a clean VM.
 - [ ] Test Windows portable archive on a clean VM.
 - [ ] Test Linux package/archive on a clean VM.
+  Partial 2026-06-04: locally extracted `/tmp/cotton-sync-desktop-linux-x64.deb` with `dpkg-deb -x` and ran `/opt/cotton-sync/Cotton.Sync.Desktop --self-test --data-dir <temp>` from the extracted package layout. The packaged apphost started, found the packaged desktop icon, opened SQLite state, detected Linux/XFCE platform capabilities, and reported notification/file-watcher checks. The self-test correctly failed only at `Token storage` because this local environment lacks `secret-tool`, so this does not replace the required clean Linux VM smoke with Secret Service available.
 - [ ] Test uninstall behavior.
 - [ ] Test upgrade over previous build.
 
