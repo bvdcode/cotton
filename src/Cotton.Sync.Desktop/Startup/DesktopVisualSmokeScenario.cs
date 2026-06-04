@@ -9,6 +9,7 @@ internal enum DesktopVisualSmokeScenario
     AddFolder,
     EmptyDashboard,
     Dashboard,
+    Progress,
     Settings,
     SettingsDiagnostics,
     Error,

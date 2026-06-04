@@ -262,7 +262,7 @@ internal sealed class VisualSmokeShellController : IDesktopShellController
                 "Documents",
                 CreateLocalPath("Documents"),
                 "/Documents",
-                _scenario == DesktopVisualSmokeScenario.Error ? "Error" : "Idle",
+                CreateDocumentsStatus(),
                 Guid.Parse("29f81b10-b9a8-4f1d-88b0-9bdc6861b4e6"),
                 syncedAt,
                 1842,
@@ -279,5 +279,15 @@ internal sealed class VisualSmokeShellController : IDesktopShellController
                 syncedAt.AddMinutes(-3),
                 1859),
         ];
+    }
+
+    private string CreateDocumentsStatus()
+    {
+        return _scenario switch
+        {
+            DesktopVisualSmokeScenario.Error => "Error",
+            DesktopVisualSmokeScenario.Progress => "Syncing",
+            _ => "Idle",
+        };
     }
 }

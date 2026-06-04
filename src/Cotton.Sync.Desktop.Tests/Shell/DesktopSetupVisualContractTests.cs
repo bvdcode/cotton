@@ -281,6 +281,29 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
+    public void DashboardProgressCards_ExposeRunAndTransferProgress()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string dashboardView = GetSlice(
+            mainWindowXaml,
+            "IsVisible=\"{Binding IsDashboardVisible}\">",
+            "<TextBlock Text=\"Action required\"");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding HasCurrentWorkProgress}\""));
+            Assert.That(dashboardView, Does.Contain("Text=\"{Binding CurrentWorkProgressTitle}\""));
+            Assert.That(dashboardView, Does.Contain("Text=\"{Binding CurrentWorkProgressDetails}\""));
+            Assert.That(dashboardView, Does.Contain("Text=\"{Binding CurrentWorkProgressSecondaryDetails}\""));
+            Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding HasCurrentWorkProgressSecondaryDetails}\""));
+            Assert.That(dashboardView, Does.Contain("Value=\"{Binding CurrentWorkProgressValue}\""));
+            Assert.That(dashboardView, Does.Contain("IsIndeterminate=\"{Binding IsCurrentWorkProgressIndeterminate}\""));
+            Assert.That(dashboardView, Does.Not.Contain("IsVisible=\"{Binding HasCurrentRunProgress}\""));
+            Assert.That(dashboardView, Does.Not.Contain("IsVisible=\"{Binding HasCurrentTransfer}\""));
+        });
+    }
+
+    [Test]
     public void SettingsDiagnostics_UsesClearDiagnosticsActions()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));

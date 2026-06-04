@@ -192,7 +192,7 @@ public sealed class DesktopPackagingMetadataTests
         {
             Assert.That(smokeScript, Does.Contain("Usage: smoke-gui-screenshot-matrix.sh <app-executable> <output-dir> [scenario...]"));
             Assert.That(smokeScript, Does.Contain("DISPLAY is required"));
-            Assert.That(smokeScript, Does.Contain("set -- sign-in-error empty-dashboard add-folder dashboard settings settings-diagnostics error conflict"));
+            Assert.That(smokeScript, Does.Contain("set -- sign-in-error empty-dashboard add-folder dashboard progress settings settings-diagnostics error conflict"));
             Assert.That(smokeScript, Does.Contain("smoke-gui-screenshot.sh"));
             Assert.That(smokeScript, Does.Contain("cotton-sync-desktop-linux-gui.png"));
             Assert.That(smokeScript, Does.Contain("cotton-sync-desktop-linux-${scenario}.png"));

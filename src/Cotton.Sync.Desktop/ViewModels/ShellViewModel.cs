@@ -422,6 +422,24 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public bool IsCurrentRunProgressDeterminate => HasCurrentRunProgress && !IsCurrentRunProgressIndeterminate;
 
+    public bool HasCurrentWorkProgress => HasCurrentTransfer || HasCurrentRunProgress;
+
+    public string CurrentWorkProgressTitle => HasCurrentTransfer ? CurrentTransferTitle : CurrentRunProgressTitle;
+
+    public string CurrentWorkProgressDetails => HasCurrentTransfer ? CurrentTransferDetails : CurrentRunProgressDetails;
+
+    public string CurrentWorkProgressSecondaryDetails => HasCurrentTransfer && HasCurrentRunProgress
+        ? CurrentRunProgressDetails
+        : string.Empty;
+
+    public bool HasCurrentWorkProgressSecondaryDetails => !string.IsNullOrWhiteSpace(CurrentWorkProgressSecondaryDetails);
+
+    public double CurrentWorkProgressValue => HasCurrentTransfer ? CurrentTransferProgressValue : CurrentRunProgressValue;
+
+    public bool IsCurrentWorkProgressIndeterminate => HasCurrentTransfer
+        ? IsCurrentTransferIndeterminate
+        : IsCurrentRunProgressIndeterminate;
+
     public bool IsBusy
     {
         get => _isBusy;
@@ -1051,6 +1069,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 ActionRequiredMessage = "Sync API unavailable.";
                 AddActivity("Error", SelectedSyncPair?.LocalPath ?? string.Empty, ActionRequiredMessage);
                 break;
+            case DesktopVisualSmokeScenario.Progress:
+                ApplyVisualSmokeProgressScenario();
+                break;
             case DesktopVisualSmokeScenario.Conflict:
                 AddActivity("Conflict", "Reports/budget.xlsx", "Local and cloud versions changed at the same time.");
                 AddConflict(
@@ -1075,6 +1096,45 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         return OperatingSystem.IsWindows()
             ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Cotton")
             : "/home/qa/Cotton";
+    }
+
+    private void ApplyVisualSmokeProgressScenario()
+    {
+        SyncPairRowViewModel? syncPair = SyncPairs.FirstOrDefault();
+        if (syncPair is null)
+        {
+            return;
+        }
+
+        DateTime startedAtUtc = new(2026, 6, 4, 9, 15, 0, DateTimeKind.Utc);
+        GlobalStatus = "Syncing";
+        syncPair.Status = "Syncing";
+        ApplyRunProgress(new DesktopRunProgressSnapshot(
+            syncPair.Id,
+            DesktopRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 8,
+            FilesTotal: 31,
+            CurrentPath: "Reports/quarterly-budget.xlsx",
+            startedAtUtc,
+            IsCompleted: false,
+            startedAtUtc.AddSeconds(2)));
+        ApplyTransferProgress(new DesktopTransferProgressSnapshot(
+            syncPair.Id,
+            DesktopTransferDirection.Upload,
+            "Reports/quarterly-budget.xlsx",
+            TransferredBytes: 0,
+            TotalBytes: 25_165_824,
+            IsCompleted: false,
+            startedAtUtc));
+        ApplyTransferProgress(new DesktopTransferProgressSnapshot(
+            syncPair.Id,
+            DesktopTransferDirection.Upload,
+            "Reports/quarterly-budget.xlsx",
+            TransferredBytes: 6_291_456,
+            TotalBytes: 25_165_824,
+            IsCompleted: false,
+            startedAtUtc.AddSeconds(2)));
+        AddActivity("Upload", "Reports/quarterly-budget.xlsx", "Uploading quarterly-budget.xlsx");
     }
 
     private async Task ApplyStartWithOperatingSystemAsync(bool enabled)
@@ -2002,6 +2062,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         CurrentTransferTitle = CreateTransferTitle(progress, syncPair.DisplayName);
         CurrentTransferDetails = CreateTransferDetails(progress, occurredAtUtc);
         syncPair.CurrentOperation = CreateTransferOperation(progress);
+        RaiseCurrentWorkProgressProperties();
         RefreshCurrentProgressText();
     }
 
@@ -2023,6 +2084,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             syncPair.CurrentOperation = CreateRunProgressOperation(progress);
         }
 
+        RaiseCurrentWorkProgressProperties();
         RefreshCurrentProgressText();
     }
 
@@ -2326,6 +2388,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         _transferSyncPairId = null;
         _transferDirection = DesktopTransferDirection.Unknown;
         _transferRelativePath = string.Empty;
+        RaiseCurrentWorkProgressProperties();
     }
 
     private void ClearRunProgress()
@@ -2335,6 +2398,18 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         CurrentRunProgressValue = 0;
         CurrentRunProgressTitle = string.Empty;
         CurrentRunProgressDetails = string.Empty;
+        RaiseCurrentWorkProgressProperties();
+    }
+
+    private void RaiseCurrentWorkProgressProperties()
+    {
+        OnPropertyChanged(nameof(HasCurrentWorkProgress));
+        OnPropertyChanged(nameof(CurrentWorkProgressTitle));
+        OnPropertyChanged(nameof(CurrentWorkProgressDetails));
+        OnPropertyChanged(nameof(CurrentWorkProgressSecondaryDetails));
+        OnPropertyChanged(nameof(HasCurrentWorkProgressSecondaryDetails));
+        OnPropertyChanged(nameof(CurrentWorkProgressValue));
+        OnPropertyChanged(nameof(IsCurrentWorkProgressIndeterminate));
     }
 
     private static bool IsActiveTransferStatus(DesktopSyncPairStatusSnapshot status)

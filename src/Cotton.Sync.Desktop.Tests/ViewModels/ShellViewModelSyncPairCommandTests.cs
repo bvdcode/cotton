@@ -369,6 +369,31 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task ApplyVisualSmokeScenarioAsync_ShowsProgressCards()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        await viewModel.ApplyVisualSmokeScenarioAsync(DesktopVisualSmokeScenario.Progress);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Syncing"));
+            Assert.That(viewModel.HasCurrentRunProgress, Is.True);
+            Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Documents: Checking files"));
+            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("8 of 31 files · quarterly-budget.xlsx"));
+            Assert.That(viewModel.HasCurrentTransfer, Is.True);
+            Assert.That(viewModel.CurrentTransferTitle, Is.EqualTo("Documents: Uploading quarterly-budget.xlsx"));
+            Assert.That(viewModel.CurrentTransferDetails, Does.Contain("/s"));
+            Assert.That(viewModel.CurrentTransferDetails, Does.Contain("left"));
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents: Uploading quarterly-budget.xlsx"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Does.Contain("/s"));
+            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("8 of 31 files · quarterly-budget.xlsx"));
+        });
+    }
+
+    [Test]
     public async Task ApplyVisualSmokeScenarioAsync_ShowsConflictList()
     {
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Idle")));
@@ -600,6 +625,9 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentRunProgressValue, Is.EqualTo(30).Within(0.01));
             Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Documents: Checking files"));
             Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("3 of 10 files · report.txt"));
+            Assert.That(viewModel.HasCurrentWorkProgress, Is.True);
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents: Checking files"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("3 of 10 files · report.txt"));
             Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Documents: Checking files 3 of 10"));
         });
     }

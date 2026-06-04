@@ -256,50 +256,30 @@
                   Background="{DynamicResource CottonSurfaceBrush}"
                   BorderBrush="{DynamicResource CottonBorderBrush}"
                   BorderThickness="1"
-                  IsVisible="{Binding HasCurrentRunProgress}">
-            <Grid RowDefinitions="Auto,Auto,Auto"
+                  IsVisible="{Binding HasCurrentWorkProgress}">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto"
                   RowSpacing="6">
-              <TextBlock Text="{Binding CurrentRunProgressTitle}"
+              <TextBlock Text="{Binding CurrentWorkProgressTitle}"
                          FontSize="13"
                          FontWeight="SemiBold"
                          TextTrimming="CharacterEllipsis" />
               <TextBlock Grid.Row="1"
-                         Text="{Binding CurrentRunProgressDetails}"
+                         Text="{Binding CurrentWorkProgressDetails}"
                          Classes="secondary"
                          FontSize="12"
                          TextTrimming="CharacterEllipsis" />
-              <ProgressBar Grid.Row="2"
-                           Height="4"
-                           Minimum="0"
-                           Maximum="100"
-                           Value="{Binding CurrentRunProgressValue}"
-                           IsIndeterminate="{Binding IsCurrentRunProgressIndeterminate}" />
-            </Grid>
-          </Border>
-
-          <Border Padding="10"
-                  CornerRadius="6"
-                  Background="{DynamicResource CottonSurfaceBrush}"
-                  BorderBrush="{DynamicResource CottonBorderBrush}"
-                  BorderThickness="1"
-                  IsVisible="{Binding HasCurrentTransfer}">
-            <Grid RowDefinitions="Auto,Auto,Auto"
-                  RowSpacing="6">
-              <TextBlock Text="{Binding CurrentTransferTitle}"
-                         FontSize="13"
-                         FontWeight="SemiBold"
-                         TextTrimming="CharacterEllipsis" />
-              <TextBlock Grid.Row="1"
-                         Text="{Binding CurrentTransferDetails}"
+              <TextBlock Grid.Row="2"
+                         Text="{Binding CurrentWorkProgressSecondaryDetails}"
                          Classes="secondary"
                          FontSize="12"
-                         TextTrimming="CharacterEllipsis" />
-              <ProgressBar Grid.Row="2"
+                         TextTrimming="CharacterEllipsis"
+                         IsVisible="{Binding HasCurrentWorkProgressSecondaryDetails}" />
+              <ProgressBar Grid.Row="3"
                            Height="4"
                            Minimum="0"
                            Maximum="100"
-                           Value="{Binding CurrentTransferProgressValue}"
-                           IsIndeterminate="{Binding IsCurrentTransferIndeterminate}" />
+                           Value="{Binding CurrentWorkProgressValue}"
+                           IsIndeterminate="{Binding IsCurrentWorkProgressIndeterminate}" />
             </Grid>
           </Border>
 

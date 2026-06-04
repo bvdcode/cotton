@@ -41,6 +41,22 @@ public sealed class VisualSmokeShellControllerTests
     }
 
     [Test]
+    public async Task LoadAsync_ReturnsSyncingPairForProgressScenario()
+    {
+        using VisualSmokeShellController controller = VisualSmokeShellController.Create(DesktopVisualSmokeScenario.Progress);
+
+        DesktopShellSnapshot snapshot = await controller.LoadAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.IsSignedIn, Is.True);
+            Assert.That(snapshot.SyncPairs, Has.Count.EqualTo(2));
+            Assert.That(snapshot.SyncPairs[0].Status, Is.EqualTo("Syncing"));
+            Assert.That(snapshot.SyncPairs[0].LastError, Is.Null);
+        });
+    }
+
+    [Test]
     public async Task LoadAsync_ReturnsSignedInEmptyDashboardForAddFolderScenario()
     {
         using VisualSmokeShellController controller = VisualSmokeShellController.Create(DesktopVisualSmokeScenario.AddFolder);

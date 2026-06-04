@@ -103,6 +103,18 @@ public sealed class DesktopStartupOptionsTests
     }
 
     [Test]
+    public void Parse_LoadsProgressVisualSmokeScenario()
+    {
+        DesktopStartupOptions options = DesktopStartupOptions.Parse(
+            [
+                "--visual-smoke",
+                "progress",
+            ]);
+
+        Assert.That(options.VisualSmokeScenario, Is.EqualTo(DesktopVisualSmokeScenario.Progress));
+    }
+
+    [Test]
     public void Parse_LoadsHyphenatedVisualSmokeScenario()
     {
         DesktopStartupOptions options = DesktopStartupOptions.Parse(
