@@ -218,6 +218,7 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("test -x /opt/cotton-sync/Cotton.Sync.Desktop"));
             Assert.That(workflow, Does.Contain("test -L /usr/bin/cotton-sync"));
             Assert.That(workflow, Does.Contain("/opt/cotton-sync/Cotton.Sync.Desktop --self-test --data-dir"));
+            Assert.That(workflow, Does.Contain("/opt/cotton-sync/Cotton.Sync.Desktop --export-diagnostics --data-dir"));
             Assert.That(workflow, Does.Contain("test ! -e /opt/cotton-sync/Cotton.Sync.Desktop"));
             Assert.That(workflow, Does.Contain("test ! -e /usr/bin/cotton-sync"));
         });
@@ -358,8 +359,10 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("/DIR=$installDir"));
             Assert.That(workflow, Does.Contain("Cotton.Sync.Desktop.exe\""));
             Assert.That(workflow, Does.Contain("--self-test --data-dir"));
+            Assert.That(workflow, Does.Contain("& $installedExe --export-diagnostics --data-dir"));
             Assert.That(workflow, Does.Contain("unins000.exe"));
             Assert.That(workflow, Does.Contain("Installed desktop executable remained after uninstall."));
+            Assert.That(workflow, Does.Contain("Installed Windows diagnostics export exited with code"));
         });
     }
 

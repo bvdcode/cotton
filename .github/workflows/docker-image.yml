@@ -278,6 +278,14 @@ jobs:
           trap 'rm -rf "$temp_dir"' EXIT
           eval "$(gnome-keyring-daemon --start --components=secrets)"
           /opt/cotton-sync/Cotton.Sync.Desktop --self-test --data-dir "$temp_dir"
+          diagnostics_output="$(/opt/cotton-sync/Cotton.Sync.Desktop --export-diagnostics --data-dir "$temp_dir")"
+          printf '%s\n' "$diagnostics_output"
+          bundle_path="$(printf '%s\n' "$diagnostics_output" | sed -n 's/^Bundle: //p' | head -n 1)"
+          if [ -z "$bundle_path" ]; then
+            echo "Diagnostics bundle path was not reported." >&2
+            exit 1
+          fi
+          test -s "$bundle_path"
           EOF
 
           sudo dpkg -r cotton-sync-desktop
@@ -552,6 +560,21 @@ jobs:
           }
 
           & $installedExe --self-test --data-dir "$dataDir"
+          $diagnosticsOutput = & $installedExe --export-diagnostics --data-dir "$dataDir"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Installed Windows diagnostics export exited with code $LASTEXITCODE."
+          }
+
+          $diagnosticsOutput | ForEach-Object { Write-Host $_ }
+          $bundleLine = $diagnosticsOutput | Where-Object { $_.StartsWith("Bundle: ") } | Select-Object -First 1
+          if ([string]::IsNullOrWhiteSpace($bundleLine)) {
+            throw "Diagnostics bundle path was not reported."
+          }
+
+          $bundlePath = $bundleLine.Substring("Bundle: ".Length)
+          if (-not (Test-Path $bundlePath)) {
+            throw "Diagnostics bundle was not created at $bundlePath."
+          }
 
           $uninstaller = Join-Path $installDir "unins000.exe"
           if (-not (Test-Path $uninstaller)) {
