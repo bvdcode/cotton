@@ -428,6 +428,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Verification 2026-06-03: `DesktopSecretRedactorTests` cover bearer, JSON, and query-string secret patterns; `DesktopDiagnosticsExporterTests` cover archive exclusion of token/database files and redaction of secrets in exported logs.
 - [ ] Add manual diagnostics export verification.
   Partial 2026-06-03: added command-line diagnostics export with `--export-diagnostics` / `--diagnostics`, using the existing diagnostics exporter without launching Avalonia. The command prints the generated zip path and is covered by startup CLI tests that assert the archive is created under the isolated data directory. Focused startup tests passed 8/8, full `Cotton.Sync.Desktop.Tests` passed 117/117, and full solution Release build passed with the known NU1903 warning. Keep unchecked until the GUI export path is manually verified on a desktop session.
+  Partial 2026-06-04: `ShellViewModel.ExportDiagnosticsCommand` is now covered at the GUI command boundary; it calls the shell controller export path, sets `Diagnostics exported`, clears action-required state, and adds a recent activity row with the bundle path. Focused ViewModel export test passed 1/1, full `Cotton.Sync.Desktop.Tests` passed 146/146, and `dotnet build src/Cotton.sln --configuration Release` passed with 0 warnings. Keep unchecked until the archive is manually exported from a real desktop session.
 
 ## Phase 11 - Packaging And Installers
 

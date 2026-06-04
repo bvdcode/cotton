@@ -181,6 +181,30 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task ExportDiagnosticsCommand_AddsStatusAndRecentActivity()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot())
+        {
+            ExportDiagnosticsPath = "/home/vadim/.local/share/Cotton Sync/diagnostics/cotton-sync-diagnostics.zip",
+        };
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        await ExecuteAsync(viewModel.ExportDiagnosticsCommand);
+
+        ActivityRowViewModel activity = viewModel.Activities.First();
+        Assert.Multiple(() =>
+        {
+            Assert.That(controller.ExportDiagnosticsCalls, Is.EqualTo(1));
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Diagnostics exported"));
+            Assert.That(viewModel.HasActionRequired, Is.False);
+            Assert.That(activity.Kind, Is.EqualTo("Diagnostics"));
+            Assert.That(activity.Path, Is.EqualTo(controller.ExportDiagnosticsPath));
+            Assert.That(activity.Details, Is.EqualTo("Diagnostics bundle exported"));
+        });
+    }
+
+    [Test]
     public async Task ConflictActivity_AddsConflictRow()
     {
         Guid syncPairId = Guid.NewGuid();
@@ -694,6 +718,10 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public int SyncAllCalls { get; private set; }
 
+        public int ExportDiagnosticsCalls { get; private set; }
+
+        public string ExportDiagnosticsPath { get; set; } = "/tmp/cotton-sync-diagnostics.zip";
+
         public string? OpenedFolderPath { get; private set; }
 
         public void ReportActivity(DesktopActivitySnapshot activity)
@@ -840,7 +868,9 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public Task<string> ExportDiagnosticsAsync(CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException();
+            cancellationToken.ThrowIfCancellationRequested();
+            ExportDiagnosticsCalls++;
+            return Task.FromResult(ExportDiagnosticsPath);
         }
 
         public void Dispose()
