@@ -2291,7 +2291,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
             if (!string.IsNullOrWhiteSpace(pairStatus.LastError))
             {
-                AddActivity("Error", row.LocalPath, pairStatus.LastError);
+                string activityMessage = DesktopActionRequiredMessageResolver.FromSyncPairStatus(pairStatus);
+                AddActivity(
+                    "Error",
+                    row.LocalPath,
+                    string.IsNullOrWhiteSpace(activityMessage) ? pairStatus.LastError : activityMessage);
             }
         }
 

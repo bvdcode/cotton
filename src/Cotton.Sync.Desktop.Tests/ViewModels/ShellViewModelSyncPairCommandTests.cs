@@ -641,6 +641,35 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task StatusChanged_AddsHumanErrorActivityMessage()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        const string rawError = "'<' is an invalid start of a value. Path: $ | LineNumber: 0 | BytePositionInLine: 0.";
+        const string expectedMessage =
+            "Cotton API returned a web page instead of JSON. Check the server URL or backend deployment and retry.";
+        var controller = new FakeDesktopShellController(
+            CreateSignedInSnapshotWithNotifications(
+                enableNotifications: false,
+                CreatePair(syncPairId, "Documents", "Idle")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportStatus(new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(syncPairId, "Error", rawError),
+        ]));
+
+        ActivityRowViewModel errorActivity = viewModel.Activities.First(activity => activity.Kind == "Error");
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.SyncPairs.Single().LastError, Is.EqualTo(rawError));
+            Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo(expectedMessage));
+            Assert.That(errorActivity.Path, Does.EndWith("Documents"));
+            Assert.That(errorActivity.Details, Is.EqualTo(expectedMessage));
+        });
+    }
+
+    [Test]
     public async Task TransferProgressChanged_UpdatesCurrentTransferState()
     {
         Guid syncPairId = Guid.NewGuid();
