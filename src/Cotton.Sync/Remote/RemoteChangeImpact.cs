@@ -101,6 +101,23 @@ public sealed class RemoteChangeImpact
             throw new ArgumentOutOfRangeException(nameof(change), change.Id, "Change cursor must be positive.");
         }
 
+        if (change.LayoutId == Guid.Empty)
+        {
+            throw new ArgumentException("Change layout id is required.", nameof(change));
+        }
+
+        if (change.ItemId == Guid.Empty)
+        {
+            throw new ArgumentException("Changed item id is required.", nameof(change));
+        }
+
+        if (change.ParentNodeId == Guid.Empty)
+        {
+            throw new ArgumentException("Changed item parent node id is required.", nameof(change));
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(change.Name);
+
         (RemoteChangeTargetKind targetKind, RemoteChangeAction action) = MapKind(change.Kind);
         return new RemoteChangeImpact(change, targetKind, action);
     }

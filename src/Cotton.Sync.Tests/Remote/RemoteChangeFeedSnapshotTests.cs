@@ -77,15 +77,7 @@ public sealed class RemoteChangeFeedSnapshotTests
         RemoteChangeTargetKind targetKind,
         RemoteChangeAction action)
     {
-        var change = new SyncChangeDto
-        {
-            Id = 1,
-            Kind = kind,
-            LayoutId = Guid.NewGuid(),
-            ItemId = Guid.NewGuid(),
-            ParentNodeId = Guid.NewGuid(),
-            CreatedAt = DateTime.UtcNow,
-        };
+        SyncChangeDto change = CreateValidFileChange(kind);
 
         RemoteChangeImpact impact = RemoteChangeImpact.FromDto(change);
 
@@ -128,13 +120,32 @@ public sealed class RemoteChangeFeedSnapshotTests
     [Test]
     public void FromDto_RejectsUnknownWireKind()
     {
-        var change = new SyncChangeDto
-        {
-            Id = 1,
-            Kind = SyncChangeKind.Unknown,
-        };
+        SyncChangeDto change = CreateValidFileChange(SyncChangeKind.Unknown);
 
         Assert.Throws<ArgumentOutOfRangeException>(() => RemoteChangeImpact.FromDto(change));
+    }
+
+    [Test]
+    public void FromDto_RejectsMissingRequiredFields()
+    {
+        Assert.Multiple(() =>
+        {
+            SyncChangeDto missingLayout = CreateValidFileChange();
+            missingLayout.LayoutId = Guid.Empty;
+            Assert.Throws<ArgumentException>(() => RemoteChangeImpact.FromDto(missingLayout));
+
+            SyncChangeDto missingItem = CreateValidFileChange();
+            missingItem.ItemId = Guid.Empty;
+            Assert.Throws<ArgumentException>(() => RemoteChangeImpact.FromDto(missingItem));
+
+            SyncChangeDto missingParent = CreateValidFileChange();
+            missingParent.ParentNodeId = Guid.Empty;
+            Assert.Throws<ArgumentException>(() => RemoteChangeImpact.FromDto(missingParent));
+
+            SyncChangeDto missingName = CreateValidFileChange();
+            missingName.Name = string.Empty;
+            Assert.Throws<ArgumentException>(() => RemoteChangeImpact.FromDto(missingName));
+        });
     }
 
     [Test]
@@ -150,5 +161,19 @@ public sealed class RemoteChangeFeedSnapshotTests
             Assert.That(snapshot.AffectedNodeIds, Is.Empty);
             Assert.That(snapshot.AffectedNodeFileIds, Is.Empty);
         });
+    }
+
+    private static SyncChangeDto CreateValidFileChange(SyncChangeKind kind = SyncChangeKind.FileCreated)
+    {
+        return new SyncChangeDto
+        {
+            Id = 1,
+            Kind = kind,
+            LayoutId = Guid.NewGuid(),
+            ItemId = Guid.NewGuid(),
+            ParentNodeId = Guid.NewGuid(),
+            Name = "report.txt",
+            CreatedAt = DateTime.UtcNow,
+        };
     }
 }
