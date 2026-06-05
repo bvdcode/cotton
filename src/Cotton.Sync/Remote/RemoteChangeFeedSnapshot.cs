@@ -13,6 +13,7 @@ public sealed class RemoteChangeFeedSnapshot
     private RemoteChangeFeedSnapshot(IReadOnlyCollection<RemoteChangeImpact> changes)
     {
         Changes = changes.ToArray();
+        EnsureStrictlyIncreasingCursors(Changes);
         IsEmpty = Changes.Count == 0;
         FirstCursor = IsEmpty ? null : Changes[0].Cursor;
         LastCursor = IsEmpty ? null : Changes[^1].Cursor;
@@ -116,5 +117,25 @@ public sealed class RemoteChangeFeedSnapshot
         }
 
         return new RemoteChangeFeedSnapshot(changes.Select(RemoteChangeImpact.FromDto).ToArray());
+    }
+
+    private static void EnsureStrictlyIncreasingCursors(IReadOnlyList<RemoteChangeImpact> changes)
+    {
+        if (changes.Count < 2)
+        {
+            return;
+        }
+
+        long previousCursor = changes[0].Cursor;
+        for (int index = 1; index < changes.Count; index++)
+        {
+            long cursor = changes[index].Cursor;
+            if (cursor <= previousCursor)
+            {
+                throw new ArgumentException("Remote change cursors must be strictly increasing.", nameof(changes));
+            }
+
+            previousCursor = cursor;
+        }
     }
 }

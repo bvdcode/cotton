@@ -34,6 +34,14 @@ public sealed class RemoteChangeFeedBatch
             throw new ArgumentOutOfRangeException(nameof(nextCursor), nextCursor, "Cursor cannot be negative.");
         }
 
+        if (nextCursor < sinceCursor)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(nextCursor),
+                nextCursor,
+                "Next cursor cannot be before the requested cursor.");
+        }
+
         if (earliestAvailableCursor < 0)
         {
             throw new ArgumentOutOfRangeException(
@@ -50,6 +58,7 @@ public sealed class RemoteChangeFeedBatch
         EarliestAvailableCursor = earliestAvailableCursor;
         Changes = changes.ToArray();
         Snapshot = RemoteChangeFeedSnapshot.FromChanges(Changes);
+        ValidateSnapshotCursorRange(Snapshot, sinceCursor, nextCursor);
     }
 
     /// <summary>
@@ -91,4 +100,28 @@ public sealed class RemoteChangeFeedBatch
     /// Gets a normalized summary of the changes in this page.
     /// </summary>
     public RemoteChangeFeedSnapshot Snapshot { get; }
+
+    private static void ValidateSnapshotCursorRange(
+        RemoteChangeFeedSnapshot snapshot,
+        long sinceCursor,
+        long nextCursor)
+    {
+        if (snapshot.IsEmpty)
+        {
+            return;
+        }
+
+        if (snapshot.FirstCursor <= sinceCursor)
+        {
+            throw new ArgumentException("Remote change cursors must be after the requested cursor.", nameof(snapshot));
+        }
+
+        if (snapshot.LastCursor > nextCursor)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(nextCursor),
+                nextCursor,
+                "Next cursor cannot be before the last returned change cursor.");
+        }
+    }
 }

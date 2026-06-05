@@ -118,6 +118,27 @@ public sealed class RemoteChangeFeedSnapshotTests
     }
 
     [Test]
+    public void FromChanges_RejectsNonIncreasingCursors()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.Throws<ArgumentException>(
+                () => RemoteChangeFeedSnapshot.FromChanges(
+                [
+                    CreateValidFileChange(id: 12),
+                    CreateValidFileChange(id: 11),
+                ]));
+
+            Assert.Throws<ArgumentException>(
+                () => RemoteChangeFeedSnapshot.FromChanges(
+                [
+                    CreateValidFileChange(id: 12),
+                    CreateValidFileChange(id: 12),
+                ]));
+        });
+    }
+
+    [Test]
     public void FromDto_RejectsUnknownWireKind()
     {
         SyncChangeDto change = CreateValidFileChange(SyncChangeKind.Unknown);
@@ -163,11 +184,11 @@ public sealed class RemoteChangeFeedSnapshotTests
         });
     }
 
-    private static SyncChangeDto CreateValidFileChange(SyncChangeKind kind = SyncChangeKind.FileCreated)
+    private static SyncChangeDto CreateValidFileChange(SyncChangeKind kind = SyncChangeKind.FileCreated, long id = 1)
     {
         return new SyncChangeDto
         {
-            Id = 1,
+            Id = id,
             Kind = kind,
             LayoutId = Guid.NewGuid(),
             ItemId = Guid.NewGuid(),
