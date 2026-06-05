@@ -2,9 +2,12 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Collections.Concurrent;
+using System.Runtime.ExceptionServices;
 using Cotton.Sync.App.Runners;
 using Cotton.Sync.App.Status;
 using Cotton.Sync.App.SyncPairs;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Sync.App.Supervision;
 
@@ -15,6 +18,7 @@ public sealed class SyncSupervisor : ISyncSupervisor
 {
     private readonly SemaphoreSlim _operationGate = new(1, 1);
     private readonly ConcurrentDictionary<Guid, ISyncPairRunner> _runners = [];
+    private readonly ILogger<SyncSupervisor> _logger;
     private readonly ISyncPairRunnerFactory _runnerFactory;
     private readonly IAppStatusPublisher _statusPublisher;
     private readonly ISyncPairSettingsStore _syncPairs;
@@ -25,11 +29,13 @@ public sealed class SyncSupervisor : ISyncSupervisor
     public SyncSupervisor(
         ISyncPairSettingsStore syncPairs,
         ISyncPairRunnerFactory runnerFactory,
-        IAppStatusPublisher statusPublisher)
+        IAppStatusPublisher statusPublisher,
+        ILogger<SyncSupervisor>? logger = null)
     {
         _syncPairs = syncPairs ?? throw new ArgumentNullException(nameof(syncPairs));
         _runnerFactory = runnerFactory ?? throw new ArgumentNullException(nameof(runnerFactory));
         _statusPublisher = statusPublisher ?? throw new ArgumentNullException(nameof(statusPublisher));
+        _logger = logger ?? NullLogger<SyncSupervisor>.Instance;
     }
 
     /// <inheritdoc />
@@ -86,12 +92,11 @@ public sealed class SyncSupervisor : ISyncSupervisor
             _operationGate.Release();
         }
 
-        foreach (ISyncPairRunner runner in runners)
-        {
-            await runner.SyncNowAsync(cancellationToken).ConfigureAwait(false);
-        }
+        IReadOnlyList<Exception> failures = await SyncRunnersAndCollectFailuresAsync(runners, cancellationToken)
+            .ConfigureAwait(false);
 
         _statusPublisher.Publish(CreateAppStatusSnapshot());
+        ThrowIfAnySyncFailures(failures);
     }
 
     /// <inheritdoc />
@@ -236,15 +241,58 @@ public sealed class SyncSupervisor : ISyncSupervisor
         IReadOnlyList<ISyncPairRunner> runners,
         CancellationToken cancellationToken)
     {
-        foreach (ISyncPairRunner runner in runners)
-        {
-            await runner.SyncNowAsync(cancellationToken).ConfigureAwait(false);
-        }
+        IReadOnlyList<Exception> failures = await SyncRunnersAndCollectFailuresAsync(runners, cancellationToken)
+            .ConfigureAwait(false);
 
         if (runners.Count > 0)
         {
             _statusPublisher.Publish(CreateAppStatusSnapshot());
         }
+
+        ThrowIfAnySyncFailures(failures);
+    }
+
+    private async Task<IReadOnlyList<Exception>> SyncRunnersAndCollectFailuresAsync(
+        IReadOnlyList<ISyncPairRunner> runners,
+        CancellationToken cancellationToken)
+    {
+        List<Exception>? failures = null;
+        foreach (ISyncPairRunner runner in runners)
+        {
+            try
+            {
+                await runner.SyncNowAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Sync runner failed for {SyncPairId}.",
+                    runner.SyncPairId);
+                (failures ??= []).Add(exception);
+            }
+        }
+
+        return failures is null ? Array.Empty<Exception>() : failures;
+    }
+
+    private static void ThrowIfAnySyncFailures(IReadOnlyList<Exception> failures)
+    {
+        if (failures.Count == 0)
+        {
+            return;
+        }
+
+        if (failures.Count == 1)
+        {
+            ExceptionDispatchInfo.Capture(failures[0]).Throw();
+        }
+
+        throw new AggregateException("One or more sync folders failed.", failures);
     }
 
     private ISyncPairRunner GetRunner(Guid syncPairId)

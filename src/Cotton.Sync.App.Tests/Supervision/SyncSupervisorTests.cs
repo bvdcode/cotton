@@ -189,6 +189,35 @@ public sealed class SyncSupervisorTests
     }
 
     [Test]
+    public async Task SyncAllAsync_ContinuesOtherRunnersAndPublishesStatusWhenRunnerFails()
+    {
+        SyncPairSettings documents = CreatePair("Documents", isEnabled: true);
+        SyncPairSettings pictures = CreatePair("Pictures", isEnabled: true);
+        var factory = new FakeSyncPairRunnerFactory();
+        var publisher = new InMemoryAppStatusPublisher();
+        var supervisor = new SyncSupervisor(
+            new FakeSyncPairSettingsStore([documents, pictures]),
+            factory,
+            publisher);
+        await supervisor.StartAsync();
+        factory.CreatedRunners[documents.Id].SyncNowException = new InvalidOperationException("Documents failed.");
+
+        InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await supervisor.SyncAllAsync());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.Message, Is.EqualTo("Documents failed."));
+            Assert.That(factory.CreatedRunners[documents.Id].SyncNowCallCount, Is.EqualTo(1));
+            Assert.That(factory.CreatedRunners[pictures.Id].SyncNowCallCount, Is.EqualTo(1));
+            Assert.That(
+                publisher.Current.SyncPairs.Select(status => status.State),
+                Is.EqualTo(new[] { SyncPairRunState.Error, SyncPairRunState.Idle }));
+        });
+    }
+
+    [Test]
     public async Task StopAsync_StopsEveryRunnerAndPublishesDisabledStatuses()
     {
         SyncPairSettings documents = CreatePair("Documents", isEnabled: true);
@@ -343,6 +372,8 @@ public sealed class SyncSupervisorTests
 
         public Exception? StartException { get; set; }
 
+        public Exception? SyncNowException { get; set; }
+
         public Guid SyncPairId => _syncPair.Id;
 
         public SyncPairStatus Status => new(
@@ -383,6 +414,12 @@ public sealed class SyncSupervisorTests
         {
             SyncNowCallCount++;
             _syncNowStarted.TrySetResult();
+            if (SyncNowException is not null)
+            {
+                _state = SyncPairRunState.Error;
+                throw SyncNowException;
+            }
+
             if (BlockSyncNow)
             {
                 await _syncNowRelease.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
