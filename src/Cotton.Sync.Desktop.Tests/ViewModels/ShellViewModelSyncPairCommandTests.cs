@@ -714,7 +714,7 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
             syncPairId,
-            DesktopTransferDirection.Upload,
+            SyncTransferDirection.Upload,
             "Reports/report.txt",
             TransferredBytes: 512,
             TotalBytes: 1024,
@@ -749,7 +749,7 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
             syncPairId,
-            DesktopTransferDirection.Download,
+            SyncTransferDirection.Download,
             "Reports/report.txt",
             TransferredBytes: 2 * 1024 * 1024,
             TotalBytes: 10 * 1024 * 1024,
@@ -778,7 +778,7 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         controller.ReportRunProgress(new DesktopRunProgressSnapshot(
             syncPairId,
-            DesktopRunProgressStage.ReconcilingFiles,
+            SyncRunProgressStage.ReconcilingFiles,
             FilesCompleted: 3,
             FilesTotal: 10,
             CurrentPath: "Reports/report.txt",
@@ -816,7 +816,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         await viewModel.InitializeAsync();
         controller.ReportRunProgress(new DesktopRunProgressSnapshot(
             syncPairId,
-            DesktopRunProgressStage.ReconcilingFiles,
+            SyncRunProgressStage.ReconcilingFiles,
             FilesCompleted: 3,
             FilesTotal: 10,
             CurrentPath: "Reports/report.txt",
@@ -857,7 +857,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         await viewModel.InitializeAsync();
         controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
             syncPairId,
-            DesktopTransferDirection.Download,
+            SyncTransferDirection.Download,
             "Reports/report.txt",
             TransferredBytes: 1024,
             TotalBytes: 1024,

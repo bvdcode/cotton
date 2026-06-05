@@ -15,7 +15,7 @@ public sealed class AppRunProgress
     /// </summary>
     public AppRunProgress(
         Guid syncPairId,
-        AppRunProgressStage stage,
+        SyncRunProgressStage stage,
         int filesCompleted,
         int? filesTotal,
         string currentPath,
@@ -23,7 +23,7 @@ public sealed class AppRunProgress
         bool isCompleted,
         DateTime occurredAtUtc)
     {
-        if (stage == AppRunProgressStage.Unknown)
+        if (stage == SyncRunProgressStage.Unknown)
         {
             throw new ArgumentOutOfRangeException(nameof(stage), "Sync progress stage must be known.");
         }
@@ -56,7 +56,7 @@ public sealed class AppRunProgress
     /// <summary>
     /// Gets the current synchronization stage.
     /// </summary>
-    public AppRunProgressStage Stage { get; }
+    public SyncRunProgressStage Stage { get; }
 
     /// <summary>
     /// Gets the number of file entries already reconciled in this pass.

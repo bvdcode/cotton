@@ -11,21 +11,21 @@ public sealed class AppTransferProgressEstimator
     private static readonly TimeSpan RollingWindow = TimeSpan.FromSeconds(5);
     private const int MaximumSamples = 8;
     private readonly Queue<TransferSample> _samples = new();
-    private AppTransferDirection _direction = AppTransferDirection.Unknown;
+    private SyncTransferDirection _direction = SyncTransferDirection.Unknown;
     private string _relativePath = string.Empty;
 
     /// <summary>
     /// Adds one transfer-progress sample and returns the current rolling estimate.
     /// </summary>
     public AppTransferProgressEstimate AddSample(
-        AppTransferDirection direction,
+        SyncTransferDirection direction,
         string relativePath,
         long transferredBytes,
         long? totalBytes,
         bool isCompleted,
         DateTime occurredAtUtc)
     {
-        if (direction == AppTransferDirection.Unknown)
+        if (direction == SyncTransferDirection.Unknown)
         {
             throw new ArgumentOutOfRangeException(nameof(direction), "Transfer direction must be known.");
         }
@@ -56,7 +56,7 @@ public sealed class AppTransferProgressEstimator
         return estimate;
     }
 
-    private void Reset(AppTransferDirection direction, string relativePath)
+    private void Reset(SyncTransferDirection direction, string relativePath)
     {
         _samples.Clear();
         _direction = direction;

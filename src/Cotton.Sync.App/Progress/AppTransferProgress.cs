@@ -15,7 +15,7 @@ public sealed class AppTransferProgress
     /// </summary>
     public AppTransferProgress(
         Guid syncPairId,
-        AppTransferDirection direction,
+        SyncTransferDirection direction,
         string relativePath,
         long transferredBytes,
         long? totalBytes,
@@ -24,7 +24,7 @@ public sealed class AppTransferProgress
         double? speedBytesPerSecond = null,
         TimeSpan? estimatedTimeRemaining = null)
     {
-        if (direction == AppTransferDirection.Unknown)
+        if (direction == SyncTransferDirection.Unknown)
         {
             throw new ArgumentOutOfRangeException(nameof(direction), "Transfer direction must be known.");
         }
@@ -69,7 +69,7 @@ public sealed class AppTransferProgress
     /// <summary>
     /// Gets the transfer direction.
     /// </summary>
-    public AppTransferDirection Direction { get; }
+    public SyncTransferDirection Direction { get; }
 
     /// <summary>
     /// Gets the relative item path.

@@ -85,7 +85,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private SyncPairRowViewModel? _selectedSyncPair;
     private SyncPairRowViewModel? _pendingRemoveSyncPair;
     private string _totpCode = string.Empty;
-    private DesktopTransferDirection _transferDirection = DesktopTransferDirection.Unknown;
+    private SyncTransferDirection _transferDirection = SyncTransferDirection.Unknown;
     private Guid? _transferSyncPairId;
     private string _transferRelativePath = string.Empty;
     private string _username = string.Empty;
@@ -1186,7 +1186,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         syncPair.Status = "Syncing";
         ApplyRunProgress(new DesktopRunProgressSnapshot(
             syncPair.Id,
-            DesktopRunProgressStage.ReconcilingFiles,
+            SyncRunProgressStage.ReconcilingFiles,
             FilesCompleted: 8,
             FilesTotal: 31,
             CurrentPath: "Reports/quarterly-budget.xlsx",
@@ -1195,7 +1195,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             startedAtUtc.AddSeconds(2)));
         ApplyTransferProgress(new DesktopTransferProgressSnapshot(
             syncPair.Id,
-            DesktopTransferDirection.Upload,
+            SyncTransferDirection.Upload,
             "Reports/quarterly-budget.xlsx",
             TransferredBytes: 0,
             TotalBytes: 25_165_824,
@@ -1203,7 +1203,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             startedAtUtc));
         ApplyTransferProgress(new DesktopTransferProgressSnapshot(
             syncPair.Id,
-            DesktopTransferDirection.Upload,
+            SyncTransferDirection.Upload,
             "Reports/quarterly-budget.xlsx",
             TransferredBytes: 6_291_456,
             TotalBytes: 25_165_824,
@@ -2259,7 +2259,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private void ApplyTransferProgress(DesktopTransferProgressSnapshot progress)
     {
         SyncPairRowViewModel? syncPair = SyncPairs.FirstOrDefault(pair => pair.Id == progress.SyncPairId);
-        if (syncPair is null || progress.Direction == DesktopTransferDirection.Unknown)
+        if (syncPair is null || progress.Direction == SyncTransferDirection.Unknown)
         {
             return;
         }
@@ -2290,7 +2290,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private void ApplyRunProgress(DesktopRunProgressSnapshot progress)
     {
         SyncPairRowViewModel? syncPair = SyncPairs.FirstOrDefault(pair => pair.Id == progress.SyncPairId);
-        if (syncPair is null || progress.Stage == DesktopRunProgressStage.Unknown)
+        if (syncPair is null || progress.Stage == SyncRunProgressStage.Unknown)
         {
             return;
         }
@@ -2672,7 +2672,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         CurrentTransferTitle = string.Empty;
         CurrentTransferDetails = string.Empty;
         _transferSyncPairId = null;
-        _transferDirection = DesktopTransferDirection.Unknown;
+        _transferDirection = SyncTransferDirection.Unknown;
         _transferRelativePath = string.Empty;
         RaiseCurrentWorkProgressProperties();
     }
@@ -2733,7 +2733,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private static string CreateRunProgressOperation(DesktopRunProgressSnapshot progress)
     {
         string label = GetRunStageLabel(progress.Stage);
-        if (progress.FilesTotal.HasValue && progress.Stage == DesktopRunProgressStage.ReconcilingFiles)
+        if (progress.FilesTotal.HasValue && progress.Stage == SyncRunProgressStage.ReconcilingFiles)
         {
             return label + " " + progress.FilesCompleted.ToString(CultureInfo.CurrentCulture)
                 + " of " + progress.FilesTotal.Value.ToString(CultureInfo.CurrentCulture);
@@ -2760,23 +2760,23 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
         return progress.Stage switch
         {
-            DesktopRunProgressStage.ScanningLocal => "Looking for local changes.",
-            DesktopRunProgressStage.ScanningRemote => "Checking Cotton Cloud.",
-            DesktopRunProgressStage.ReconcilingDirectories => "Preparing folders.",
-            DesktopRunProgressStage.Completed => "Sync pass completed.",
+            SyncRunProgressStage.ScanningLocal => "Looking for local changes.",
+            SyncRunProgressStage.ScanningRemote => "Checking Cotton Cloud.",
+            SyncRunProgressStage.ReconcilingDirectories => "Preparing folders.",
+            SyncRunProgressStage.Completed => "Sync pass completed.",
             _ => "Preparing sync.",
         };
     }
 
-    private static string GetRunStageLabel(DesktopRunProgressStage stage)
+    private static string GetRunStageLabel(SyncRunProgressStage stage)
     {
         return stage switch
         {
-            DesktopRunProgressStage.ScanningLocal => "Scanning local files",
-            DesktopRunProgressStage.ScanningRemote => "Scanning Cotton Cloud",
-            DesktopRunProgressStage.ReconcilingDirectories => "Preparing folders",
-            DesktopRunProgressStage.ReconcilingFiles => "Checking files",
-            DesktopRunProgressStage.Completed => "Finishing sync",
+            SyncRunProgressStage.ScanningLocal => "Scanning local files",
+            SyncRunProgressStage.ScanningRemote => "Scanning Cotton Cloud",
+            SyncRunProgressStage.ReconcilingDirectories => "Preparing folders",
+            SyncRunProgressStage.ReconcilingFiles => "Checking files",
+            SyncRunProgressStage.Completed => "Finishing sync",
             _ => "Syncing",
         };
     }
@@ -2784,14 +2784,14 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private static string CreateTransferTitle(DesktopTransferProgressSnapshot progress, string syncPairName)
     {
         string action = progress.IsCompleted
-            ? progress.Direction == DesktopTransferDirection.Upload ? "Uploaded" : "Downloaded"
-            : progress.Direction == DesktopTransferDirection.Upload ? "Uploading" : "Downloading";
+            ? progress.Direction == SyncTransferDirection.Upload ? "Uploaded" : "Downloaded"
+            : progress.Direction == SyncTransferDirection.Upload ? "Uploading" : "Downloading";
         return syncPairName + ": " + action + " " + GetDisplayFileName(progress.RelativePath);
     }
 
     private static string CreateTransferOperation(DesktopTransferProgressSnapshot progress)
     {
-        string action = progress.Direction == DesktopTransferDirection.Upload ? "Uploading" : "Downloading";
+        string action = progress.Direction == SyncTransferDirection.Upload ? "Uploading" : "Downloading";
         return action + " " + GetDisplayFileName(progress.RelativePath);
     }
 

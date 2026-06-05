@@ -14,14 +14,14 @@ public sealed class AppTransferProgressEstimatorTests
         DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
 
         AppTransferProgressEstimate first = estimator.AddSample(
-            AppTransferDirection.Upload,
+            SyncTransferDirection.Upload,
             "Reports/file.bin",
             transferredBytes: 0,
             totalBytes: 10_000,
             isCompleted: false,
             startedAtUtc);
         AppTransferProgressEstimate second = estimator.AddSample(
-            AppTransferDirection.Upload,
+            SyncTransferDirection.Upload,
             "Reports/file.bin",
             transferredBytes: 2_000,
             totalBytes: 10_000,
@@ -44,21 +44,21 @@ public sealed class AppTransferProgressEstimatorTests
         DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
 
         _ = estimator.AddSample(
-            AppTransferDirection.Download,
+            SyncTransferDirection.Download,
             "Reports/file.bin",
             transferredBytes: 0,
             totalBytes: 100_000,
             isCompleted: false,
             startedAtUtc);
         _ = estimator.AddSample(
-            AppTransferDirection.Download,
+            SyncTransferDirection.Download,
             "Reports/file.bin",
             transferredBytes: 1_000,
             totalBytes: 100_000,
             isCompleted: false,
             startedAtUtc.AddSeconds(6));
         AppTransferProgressEstimate latest = estimator.AddSample(
-            AppTransferDirection.Download,
+            SyncTransferDirection.Download,
             "Reports/file.bin",
             transferredBytes: 7_000,
             totalBytes: 100_000,
@@ -79,21 +79,21 @@ public sealed class AppTransferProgressEstimatorTests
         DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
 
         _ = estimator.AddSample(
-            AppTransferDirection.Upload,
+            SyncTransferDirection.Upload,
             "Reports/first.bin",
             transferredBytes: 0,
             totalBytes: 10_000,
             isCompleted: false,
             startedAtUtc);
         _ = estimator.AddSample(
-            AppTransferDirection.Upload,
+            SyncTransferDirection.Upload,
             "Reports/first.bin",
             transferredBytes: 5_000,
             totalBytes: 10_000,
             isCompleted: false,
             startedAtUtc.AddSeconds(1));
         AppTransferProgressEstimate nextTransfer = estimator.AddSample(
-            AppTransferDirection.Upload,
+            SyncTransferDirection.Upload,
             "Reports/second.bin",
             transferredBytes: 2_000,
             totalBytes: 10_000,
@@ -114,14 +114,14 @@ public sealed class AppTransferProgressEstimatorTests
         DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
 
         _ = estimator.AddSample(
-            AppTransferDirection.Upload,
+            SyncTransferDirection.Upload,
             "Reports/file.bin",
             transferredBytes: 0,
             totalBytes: 10_000,
             isCompleted: false,
             startedAtUtc);
         AppTransferProgressEstimate completed = estimator.AddSample(
-            AppTransferDirection.Upload,
+            SyncTransferDirection.Upload,
             "Reports/file.bin",
             transferredBytes: 10_000,
             totalBytes: 10_000,

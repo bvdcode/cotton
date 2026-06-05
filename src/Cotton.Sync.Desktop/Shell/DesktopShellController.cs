@@ -22,7 +22,6 @@ using Cotton.Sync.Desktop.Startup;
 using Cotton.Sync.State;
 using Microsoft.Extensions.Logging;
 using AppRunProgress = Cotton.Sync.App.Progress.AppRunProgress;
-using AppRunProgressStage = Cotton.Sync.App.Progress.AppRunProgressStage;
 using AppSyncActivity = Cotton.Sync.App.Activities.SyncActivity;
 using AppTransferProgress = Cotton.Sync.App.Progress.AppTransferProgress;
 
@@ -1092,7 +1091,7 @@ internal sealed class DesktopShellController : IDesktopShellController
     {
         return new DesktopTransferProgressSnapshot(
             progress.SyncPairId,
-            ToDesktopTransferDirection(progress.Direction),
+            progress.Direction,
             progress.RelativePath,
             progress.TransferredBytes,
             progress.TotalBytes,
@@ -1106,36 +1105,13 @@ internal sealed class DesktopShellController : IDesktopShellController
     {
         return new DesktopRunProgressSnapshot(
             progress.SyncPairId,
-            ToDesktopRunProgressStage(progress.Stage),
+            progress.Stage,
             progress.FilesCompleted,
             progress.FilesTotal,
             progress.CurrentPath,
             progress.StartedAtUtc,
             progress.IsCompleted,
             progress.OccurredAtUtc);
-    }
-
-    private static DesktopTransferDirection ToDesktopTransferDirection(AppTransferDirection direction)
-    {
-        return direction switch
-        {
-            AppTransferDirection.Upload => DesktopTransferDirection.Upload,
-            AppTransferDirection.Download => DesktopTransferDirection.Download,
-            _ => DesktopTransferDirection.Unknown,
-        };
-    }
-
-    private static DesktopRunProgressStage ToDesktopRunProgressStage(AppRunProgressStage stage)
-    {
-        return stage switch
-        {
-            AppRunProgressStage.ScanningLocal => DesktopRunProgressStage.ScanningLocal,
-            AppRunProgressStage.ScanningRemote => DesktopRunProgressStage.ScanningRemote,
-            AppRunProgressStage.ReconcilingDirectories => DesktopRunProgressStage.ReconcilingDirectories,
-            AppRunProgressStage.ReconcilingFiles => DesktopRunProgressStage.ReconcilingFiles,
-            AppRunProgressStage.Completed => DesktopRunProgressStage.Completed,
-            _ => DesktopRunProgressStage.Unknown,
-        };
     }
 
     private async Task<AuthSession?> TryRestoreSessionAsync(

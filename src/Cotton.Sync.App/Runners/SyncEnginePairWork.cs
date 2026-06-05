@@ -11,10 +11,8 @@ using CoreSyncActivityKind = Cotton.Sync.SyncActivityKind;
 using CoreSyncEngine = Cotton.Sync.ISyncEngine;
 using CoreSyncPair = Cotton.Sync.SyncPair;
 using CoreSyncRunProgress = Cotton.Sync.SyncRunProgress;
-using CoreSyncRunProgressStage = Cotton.Sync.SyncRunProgressStage;
 using CoreSyncRunOptions = Cotton.Sync.SyncRunOptions;
 using CoreSyncRunResult = Cotton.Sync.SyncRunResult;
-using CoreSyncTransferDirection = Cotton.Sync.SyncTransferDirection;
 using CoreSyncTransferProgress = Cotton.Sync.SyncTransferProgress;
 
 namespace Cotton.Sync.App.Runners;
@@ -97,7 +95,7 @@ public sealed class SyncEnginePairWork : ISyncPairWork
     {
         return new AppTransferProgress(
             syncPairId,
-            ToAppTransferDirection(progress.Direction),
+            progress.Direction,
             progress.RelativePath,
             progress.TransferredBytes,
             progress.TotalBytes,
@@ -113,36 +111,13 @@ public sealed class SyncEnginePairWork : ISyncPairWork
     {
         return new AppRunProgress(
             syncPairId,
-            ToAppRunProgressStage(progress.Stage),
+            progress.Stage,
             progress.FilesCompleted,
             progress.FilesTotal,
             progress.CurrentPath,
             progress.StartedAtUtc,
             progress.IsCompleted,
             progress.OccurredAtUtc);
-    }
-
-    private static AppTransferDirection ToAppTransferDirection(CoreSyncTransferDirection direction)
-    {
-        return direction switch
-        {
-            CoreSyncTransferDirection.Upload => AppTransferDirection.Upload,
-            CoreSyncTransferDirection.Download => AppTransferDirection.Download,
-            _ => AppTransferDirection.Unknown,
-        };
-    }
-
-    private static AppRunProgressStage ToAppRunProgressStage(CoreSyncRunProgressStage stage)
-    {
-        return stage switch
-        {
-            CoreSyncRunProgressStage.ScanningLocal => AppRunProgressStage.ScanningLocal,
-            CoreSyncRunProgressStage.ScanningRemote => AppRunProgressStage.ScanningRemote,
-            CoreSyncRunProgressStage.ReconcilingDirectories => AppRunProgressStage.ReconcilingDirectories,
-            CoreSyncRunProgressStage.ReconcilingFiles => AppRunProgressStage.ReconcilingFiles,
-            CoreSyncRunProgressStage.Completed => AppRunProgressStage.Completed,
-            _ => AppRunProgressStage.Unknown,
-        };
     }
 
     private static AppSyncActivityType ToAppActivityType(CoreSyncActivityKind kind)
@@ -218,9 +193,8 @@ public sealed class SyncEnginePairWork : ISyncPairWork
         public void Report(CoreSyncTransferProgress value)
         {
             ArgumentNullException.ThrowIfNull(value);
-            AppTransferDirection direction = ToAppTransferDirection(value.Direction);
             AppTransferProgressEstimate estimate = _estimator.AddSample(
-                direction,
+                value.Direction,
                 value.RelativePath,
                 value.TransferredBytes,
                 value.TotalBytes,

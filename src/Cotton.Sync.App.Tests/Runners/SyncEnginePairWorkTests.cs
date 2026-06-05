@@ -111,7 +111,7 @@ public sealed class SyncEnginePairWorkTests
         {
             Assert.That(engine.LastOptions?.TransferProgress, Is.Not.Null);
             Assert.That(progress.SyncPairId, Is.EqualTo(syncPairId));
-            Assert.That(progress.Direction, Is.EqualTo(AppTransferDirection.Upload));
+            Assert.That(progress.Direction, Is.EqualTo(SyncTransferDirection.Upload));
             Assert.That(progress.RelativePath, Is.EqualTo("Documents/report.txt"));
             Assert.That(progress.TransferredBytes, Is.EqualTo(512));
             Assert.That(progress.TotalBytes, Is.EqualTo(1024));
@@ -145,7 +145,7 @@ public sealed class SyncEnginePairWorkTests
         {
             Assert.That(engine.LastOptions?.RunProgress, Is.Not.Null);
             Assert.That(progress.SyncPairId, Is.EqualTo(syncPairId));
-            Assert.That(progress.Stage, Is.EqualTo(AppRunProgressStage.ReconcilingFiles));
+            Assert.That(progress.Stage, Is.EqualTo(SyncRunProgressStage.ReconcilingFiles));
             Assert.That(progress.FilesCompleted, Is.EqualTo(3));
             Assert.That(progress.FilesTotal, Is.EqualTo(10));
             Assert.That(progress.CurrentPath, Is.EqualTo("Documents/report.txt"));
