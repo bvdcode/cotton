@@ -303,7 +303,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.RemoteBrowserPath, Is.EqualTo("/"));
             Assert.That(viewModel.RemoteFolderPath, Is.EqualTo("/"));
             Assert.That(viewModel.RemoteFolders.Select(static folder => folder.Name), Is.EqualTo(new[] { "Documents", "Photos" }));
-            Assert.That(viewModel.SelectedRemoteFolder?.Path, Is.EqualTo("/Documents"));
+            Assert.That(viewModel.SelectedRemoteFolder, Is.Null);
             Assert.That(controller.ListRemoteFolderPaths, Is.EqualTo(new[] { "/" }));
         });
     }
@@ -1140,7 +1140,8 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.RemoteFolderPath, Is.EqualTo("/"));
             Assert.That(viewModel.RemoteFolderSelectionLabel, Is.EqualTo("Cloud folder: /"));
             Assert.That(viewModel.RemoteFolders.Select(static folder => folder.Name), Is.EqualTo(new[] { "Documents", "Pictures" }));
-            Assert.That(viewModel.SelectedRemoteFolder?.Path, Is.EqualTo("/Documents"));
+            Assert.That(viewModel.SelectedRemoteFolder, Is.Null);
+            Assert.That(viewModel.OpenRemoteFolderCommand.CanExecute(null), Is.False);
             Assert.That(controller.ListRemoteFolderPaths, Is.EqualTo(new[] { "/" }));
         });
     }
@@ -1536,6 +1537,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         await viewModel.InitializeAsync();
         await ExecuteAsync(viewModel.ShowAddSyncPairCommand);
         await ExecuteAsync(viewModel.BrowseLocalFolderCommand);
+        viewModel.SelectedRemoteFolder = viewModel.RemoteFolders.Single();
 
         await ExecuteAsync(viewModel.OpenRemoteFolderCommand);
 
@@ -1545,7 +1547,8 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.RemoteFolderPath, Is.EqualTo("/Documents"));
             Assert.That(viewModel.RemoteFolderSelectionLabel, Is.EqualTo("Cloud folder: /Documents"));
             Assert.That(viewModel.RemoteFolders.Single().Id, Is.EqualTo(archiveId));
-            Assert.That(viewModel.SelectedRemoteFolder?.Path, Is.EqualTo("/Documents/Archive"));
+            Assert.That(viewModel.SelectedRemoteFolder, Is.Null);
+            Assert.That(viewModel.OpenRemoteFolderCommand.CanExecute(null), Is.False);
             Assert.That(viewModel.RemoteFolderUpCommand.CanExecute(null), Is.True);
         });
     }

@@ -2135,7 +2135,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 });
             }
 
-            SelectedRemoteFolder = RemoteFolders.FirstOrDefault();
+            SelectedRemoteFolder = null;
         }
         finally
         {
