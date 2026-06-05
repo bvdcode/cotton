@@ -1376,6 +1376,24 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public void RunOnceAsync_RejectsLocalFileDirectoryCaseInsensitivePathCollision()
+    {
+        var scanner = new FakeLocalFileScanner(LocalFile("Project", "file"));
+        scanner.Directories.Add(LocalDirectory("project"));
+        SyncEngine engine = CreateEngine(scanner, EmptyRemoteTree(), new FakeRemoteFileSynchronizer(), out _);
+
+        SyncPathCollisionException? exception = Assert.ThrowsAsync<SyncPathCollisionException>(() => engine.RunOnceAsync(Pair()));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.FirstPath, Is.EqualTo("project"));
+            Assert.That(exception.SecondPath, Is.EqualTo("Project"));
+            Assert.That(exception.Message, Does.Contain("Case-insensitive path collision"));
+        });
+    }
+
+    [Test]
     public void RunOnceAsync_RejectsRemoteCaseInsensitivePathCollision()
     {
         RemoteTreeSnapshot remoteTree = RemoteTree(
@@ -1393,6 +1411,24 @@ public sealed class SyncEngineTests
             Assert.That(exception.Message, Does.Contain("Case-insensitive path collision"));
             Assert.That(exception.Message, Does.Contain("Remote.txt"));
             Assert.That(exception.Message, Does.Contain("remote.txt"));
+        });
+    }
+
+    [Test]
+    public void RunOnceAsync_RejectsRemoteFileDirectoryCaseInsensitivePathCollision()
+    {
+        RemoteTreeSnapshot remoteTree = RemoteTree(RemoteFile("Remote", HashText("file")));
+        remoteTree.Directories.Add(RemoteDirectory("remote"));
+        SyncEngine engine = CreateEngine(new FakeLocalFileScanner(), remoteTree, new FakeRemoteFileSynchronizer(), out _);
+
+        SyncPathCollisionException? exception = Assert.ThrowsAsync<SyncPathCollisionException>(() => engine.RunOnceAsync(Pair()));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.FirstPath, Is.EqualTo("remote"));
+            Assert.That(exception.SecondPath, Is.EqualTo("Remote"));
+            Assert.That(exception.Message, Does.Contain("Case-insensitive path collision"));
         });
     }
 

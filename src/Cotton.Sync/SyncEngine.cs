@@ -85,6 +85,16 @@ public sealed class SyncEngine : ISyncEngine
         Dictionary<string, SyncStateEntry> stateByPath = ToDictionary(
             stateEntries.Where(entry => entry.Kind == SyncEntryKind.File),
             entry => entry.RelativePath);
+        ThrowIfPathKindCollisions(
+            localDirectoriesByPath,
+            localByPath,
+            directory => directory.RelativePath,
+            file => file.RelativePath);
+        ThrowIfPathKindCollisions(
+            remoteDirectoriesByPath,
+            remoteByPath,
+            directory => directory.RelativePath,
+            file => file.RelativePath);
         List<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys);
         ReportRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, 0, pathKeys.Count, null, startedAtUtc);
         await ReconcileDirectoriesWithoutBaselineAsync(
@@ -1061,6 +1071,21 @@ public sealed class SyncEngine : ISyncEngine
         }
 
         return result;
+    }
+
+    private static void ThrowIfPathKindCollisions<TLeft, TRight>(
+        IReadOnlyDictionary<string, TLeft> left,
+        IReadOnlyDictionary<string, TRight> right,
+        Func<TLeft, string> leftPathSelector,
+        Func<TRight, string> rightPathSelector)
+    {
+        foreach (KeyValuePair<string, TLeft> item in left)
+        {
+            if (right.TryGetValue(item.Key, out TRight? colliding))
+            {
+                throw new SyncPathCollisionException(leftPathSelector(item.Value), rightPathSelector(colliding));
+            }
+        }
     }
 
     private static List<string> BuildPathKeys(params IEnumerable<string>[] keySets)
