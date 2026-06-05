@@ -187,6 +187,24 @@ internal static class SyncCliSoakCommandRunner
             return null;
         }
 
+        if (IsSameOrNestedPath(firstClientOptions.LocalRoot, localRoot))
+        {
+            error.WriteLine("Two-client sync-soak local roots must be different and non-nested.");
+            return null;
+        }
+
+        if (string.Equals(firstClientOptions.SyncPairId, syncPairId.Trim(), StringComparison.Ordinal))
+        {
+            error.WriteLine("Two-client sync-soak sync pair ids must be different.");
+            return null;
+        }
+
+        if (IsSamePath(firstClientOptions.DatabasePath, databasePath))
+        {
+            error.WriteLine("Two-client sync-soak databases must be different.");
+            return null;
+        }
+
         return firstClientOptions with
         {
             LocalRoot = localRoot,
@@ -200,6 +218,45 @@ internal static class SyncCliSoakCommandRunner
         return SyncCliOptionsReader.ReadOption(args, "--second-local-root") is not null
             || SyncCliOptionsReader.ReadOption(args, "--second-sync-pair") is not null
             || SyncCliOptionsReader.ReadOption(args, "--second-database") is not null;
+    }
+
+    private static bool IsSameOrNestedPath(string firstPath, string secondPath)
+    {
+        string first = NormalizeFullPath(firstPath);
+        string second = NormalizeFullPath(secondPath);
+        StringComparison comparison = GetPathComparison();
+        return string.Equals(first, second, comparison)
+            || second.StartsWith(EnsureTrailingSeparator(first), comparison)
+            || first.StartsWith(EnsureTrailingSeparator(second), comparison);
+    }
+
+    private static bool IsSamePath(string firstPath, string secondPath)
+    {
+        return string.Equals(NormalizeFullPath(firstPath), NormalizeFullPath(secondPath), GetPathComparison());
+    }
+
+    private static string NormalizeFullPath(string path)
+    {
+        string fullPath = Path.GetFullPath(path);
+        string? root = Path.GetPathRoot(fullPath);
+        if (!string.IsNullOrEmpty(root) && string.Equals(fullPath, root, GetPathComparison()))
+        {
+            return root;
+        }
+
+        return fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+    }
+
+    private static string EnsureTrailingSeparator(string path)
+    {
+        return path.EndsWith(Path.DirectorySeparatorChar)
+            ? path
+            : path + Path.DirectorySeparatorChar;
+    }
+
+    private static StringComparison GetPathComparison()
+    {
+        return OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
     }
 
     private static bool ShouldRunNextSoakIteration(

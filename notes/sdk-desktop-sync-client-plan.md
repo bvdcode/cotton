@@ -734,6 +734,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Run 24-hour soak test with one client.
 - [ ] Run 24-hour soak test with two clients.
   Partial 2026-06-05: extended `Cotton.Sync.Cli sync-soak` with optional second-client arguments: `--second-local-root`, `--second-sync-pair`, and `--second-database`. In two-client mode the harness runs client A, then client B, aggregates activity/state-entry totals, and requires a final convergence pass across both clients before returning success. Verification: focused `sync-soak` tests passed 6/6, full `Cotton.Sync.Cli.Tests` passed 18/18, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with 0 warnings. Keep unchecked until the actual 24-hour two-client soak run completes and records memory, CPU, failures, and final convergence.
+  Partial 2026-06-05: two-client `sync-soak` now rejects shared or nested local roots, duplicate sync-pair ids, and duplicate sync-state databases before sign-in, preventing the soak harness from producing false convergence by accidentally reusing one client's state. Verification: focused soak tests passed 7/7.
 - [ ] Record memory growth, CPU usage, sync errors, and final convergence.
 
 ## Phase 14 - Release Readiness Gate

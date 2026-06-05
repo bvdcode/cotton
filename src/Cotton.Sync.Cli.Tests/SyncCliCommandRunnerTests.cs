@@ -200,6 +200,89 @@ public sealed class SyncCliCommandRunnerTests
     }
 
     [Test]
+    public async Task RunAsync_ReturnsErrorForUnsafeSyncSoakSecondClientInputs()
+    {
+        string firstLocalRoot = Path.Combine(_tempDirectory, "client-a");
+        string secondLocalRoot = Path.Combine(_tempDirectory, "client-b");
+        string nestedSecondLocalRoot = Path.Combine(firstLocalRoot, "nested");
+        string firstDatabasePath = Path.Combine(_tempDirectory, "client-a.db");
+        string secondDatabasePath = Path.Combine(_tempDirectory, "client-b.db");
+        var cases = new[]
+        {
+            new
+            {
+                SecondLocalRoot = firstLocalRoot,
+                SecondSyncPairId = "pair-b",
+                SecondDatabasePath = secondDatabasePath,
+                ExpectedMessage = "local roots",
+            },
+            new
+            {
+                SecondLocalRoot = nestedSecondLocalRoot,
+                SecondSyncPairId = "pair-b",
+                SecondDatabasePath = secondDatabasePath,
+                ExpectedMessage = "local roots",
+            },
+            new
+            {
+                SecondLocalRoot = secondLocalRoot,
+                SecondSyncPairId = "pair-a",
+                SecondDatabasePath = secondDatabasePath,
+                ExpectedMessage = "sync pair ids",
+            },
+            new
+            {
+                SecondLocalRoot = secondLocalRoot,
+                SecondSyncPairId = "pair-b",
+                SecondDatabasePath = firstDatabasePath,
+                ExpectedMessage = "databases",
+            },
+        };
+
+        foreach (var testCase in cases)
+        {
+            using var output = new StringWriter();
+            using var error = new StringWriter();
+
+            int exitCode = await SyncCliCommandRunner.RunAsync(
+                [
+                    "sync-soak",
+                    "--server",
+                    "https://cloud.example.test/",
+                    "--username",
+                    "testuser",
+                    "--password",
+                    "testpassword",
+                    "--local-root",
+                    firstLocalRoot,
+                    "--remote-root",
+                    Guid.NewGuid().ToString("D"),
+                    "--sync-pair",
+                    "pair-a",
+                    "--database",
+                    firstDatabasePath,
+                    "--iterations",
+                    "1",
+                    "--second-local-root",
+                    testCase.SecondLocalRoot,
+                    "--second-sync-pair",
+                    testCase.SecondSyncPairId,
+                    "--second-database",
+                    testCase.SecondDatabasePath,
+                ],
+                output,
+                error);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(2));
+                Assert.That(output.ToString(), Is.Empty);
+                Assert.That(error.ToString(), Does.Contain(testCase.ExpectedMessage));
+            });
+        }
+    }
+
+    [Test]
     public async Task RunAsync_ReturnsErrorForInvalidSyncOnceRemoteRoot()
     {
         using var output = new StringWriter();
