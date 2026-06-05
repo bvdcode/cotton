@@ -9,6 +9,11 @@ namespace Cotton.Sync.State;
 public enum SyncEntryKind
 {
     /// <summary>
+    /// No sync entry kind was supplied.
+    /// </summary>
+    Unknown = 0,
+
+    /// <summary>
     /// Represents a file entry.
     /// </summary>
     File = 1,
