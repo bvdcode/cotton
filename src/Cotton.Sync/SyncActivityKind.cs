@@ -9,6 +9,11 @@ namespace Cotton.Sync;
 public enum SyncActivityKind
 {
     /// <summary>
+    /// No activity kind was supplied.
+    /// </summary>
+    Unknown = 0,
+
+    /// <summary>
     /// A local file was uploaded to the remote folder.
     /// </summary>
     Uploaded = 1,

@@ -11,6 +11,18 @@ namespace Cotton.Sync.App.Tests.Activities;
 public sealed class SyncActivityTests
 {
     [Test]
+    public void Constructor_RejectsUnknownType()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new AppSyncActivity(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            AppSyncActivityKind.Unknown,
+            "report.txt",
+            "Processed report.txt",
+            DateTime.UtcNow));
+    }
+
+    [Test]
     public void Constructor_NormalizesOccurredAtToUtc()
     {
         DateTime unspecifiedTime = new DateTime(2026, 6, 3, 10, 0, 0, DateTimeKind.Unspecified);

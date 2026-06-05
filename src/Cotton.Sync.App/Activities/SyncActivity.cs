@@ -22,6 +22,11 @@ public sealed class SyncActivity
         DateTime occurredAtUtc)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(message);
+        if (type == SyncActivityKind.Unknown)
+        {
+            throw new ArgumentOutOfRangeException(nameof(type), "Activity type must be known.");
+        }
+
         Id = id;
         SyncPairId = syncPairId;
         Type = type;
