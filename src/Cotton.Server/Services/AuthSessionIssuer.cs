@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Contracts;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
@@ -181,8 +180,6 @@ public sealed class AuthSessionIssuer(
             return null;
         }
 
-        return normalized.Length <= CottonClientHeaders.DeviceNameMaxLength
-            ? normalized
-            : normalized[..CottonClientHeaders.DeviceNameMaxLength];
+        return normalized;
     }
 }

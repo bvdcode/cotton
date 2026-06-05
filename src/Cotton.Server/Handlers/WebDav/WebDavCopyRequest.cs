@@ -10,6 +10,7 @@ using Cotton.Server.Handlers.Nodes;
 using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
 using Cotton.Validators;
+using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
@@ -211,7 +212,7 @@ public class WebDavCopyRequestHandler(
                 ct);
             return CopyOperationOutcome.Success(nodeId, nodeFileId, addedBytes);
         }
-        catch (StorageQuotaExceededException)
+        catch (StorageQuotaExceededException<User>)
         {
             return CopyOperationOutcome.Failed(Fail(WebDavCopyError.QuotaExceeded));
         }

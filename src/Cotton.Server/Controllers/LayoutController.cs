@@ -44,7 +44,6 @@ namespace Cotton.Server.Controllers
         ILayoutService _layouts,
         ISyncChangeRecorder _syncChanges,
         IHubContext<EventHub> _hubContext,
-        IEventNotificationService _eventNotification,
         ILogger<LayoutController> _logger,
         ILayoutNavigator _navigator,
         IStoragePipeline _storage,
@@ -222,7 +221,7 @@ namespace Cotton.Server.Controllers
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
             var mapped = node.Adapt<NodeDto>();
-            await _eventNotification.NotifyNodeRenamedAsync(nodeId);
+            await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeRenamed", mapped);
             return Ok(mapped);
         }
 
@@ -326,7 +325,9 @@ namespace Cotton.Server.Controllers
                 .SingleOrDefaultAsync();
             DeleteNodeQuery query = new(userId, nodeId, skipTrash);
             await _mediator.Send(query);
-            await _eventNotification.NotifyNodeDeletedAsync(userId, nodeId, parentNodeId);
+            await _hubContext.Clients.User(userId.ToString()).SendAsync(
+                "NodeDeleted",
+                new NodeDeletedEventDto(nodeId, parentNodeId));
             return Ok();
         }
 
@@ -350,7 +351,12 @@ namespace Cotton.Server.Controllers
 
             if (outcome.Status == RestoreStatus.Restored)
             {
-                await _eventNotification.NotifyNodeRestoredAsync(nodeId);
+                object restoredNodePayload = outcome.RestoredNode is not null
+                    ? outcome.RestoredNode
+                    : new { id = nodeId };
+                await _hubContext.Clients.User(userId.ToString()).SendAsync(
+                    "NodeRestored",
+                    restoredNodePayload);
             }
 
             return Ok(outcome);
@@ -439,7 +445,7 @@ namespace Cotton.Server.Controllers
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
             var mapped = newNode.Adapt<NodeDto>();
-            await _eventNotification.NotifyNodeCreatedAsync(newNode.Id);
+            await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeCreated", mapped);
             return Ok(mapped);
         }
 
@@ -882,7 +888,7 @@ namespace Cotton.Server.Controllers
             Stream stream = _storage.GetBlobStream(uids, context);
             Response.Headers.ContentEncoding = "identity";
             Response.Headers.CacheControl = "private, no-store, no-transform";
-            var entityTag = EntityTagHeaderValue.Parse($"\"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}\"");
+            var entityTag = FileETags.CreateContentEntityTag(nodeFile);
 
             var lastModified = new DateTimeOffset(nodeFile.CreatedAt);
             return File(

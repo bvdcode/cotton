@@ -285,6 +285,39 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task WebDav_File_ETag_Uses_Same_Content_ETag_As_File_Api()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var file = await UploadTextFileAsync(root!, "webdav-etag.txt", "webdav content");
+        string quotedETag = $"\"{file.ETag}\"";
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Basic",
+            Convert.ToBase64String(Encoding.UTF8.GetBytes("testuser:testpassword")));
+
+        var getResponse = await _client.GetAsync("/api/v1/webdav/webdav-etag.txt");
+        using var headRequest = new HttpRequestMessage(HttpMethod.Head, "/api/v1/webdav/webdav-etag.txt");
+        var headResponse = await _client.SendAsync(headRequest);
+        using var propFindRequest = new HttpRequestMessage(new HttpMethod("PROPFIND"), "/api/v1/webdav/webdav-etag.txt");
+        propFindRequest.Headers.Add("Depth", "0");
+        var propFindResponse = await _client.SendAsync(propFindRequest);
+        string propFindXml = await propFindResponse.Content.ReadAsStringAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(getResponse.Headers.ETag?.Tag, Is.EqualTo(quotedETag));
+            Assert.That(headResponse.Headers.ETag?.Tag, Is.EqualTo(quotedETag));
+            Assert.That(propFindResponse.StatusCode, Is.EqualTo(HttpStatusCode.MultiStatus));
+            Assert.That(propFindXml, Does.Contain(quotedETag));
+        });
+    }
+
+    [Test]
     public async Task Download_Owned_File_Content_Rejects_Another_User()
     {
         var ownerToken = await LoginAsync();

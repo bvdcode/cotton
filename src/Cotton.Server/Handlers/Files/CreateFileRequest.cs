@@ -17,6 +17,7 @@ using Cotton.Validators;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
+using Mapster;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Files
@@ -109,7 +110,7 @@ namespace Cotton.Server.Handlers.Files
             var nodeFile = await CreateNodeFileAsync(node, fileManifest, request, cancellationToken);
             await tx.CommitAsync(cancellationToken);
             _quota.RecordLogicalBytesAdded(request.UserId, addedBytes);
-            return MapToDto(nodeFile, fileManifest);
+            return nodeFile.Adapt<NodeFileManifestDto>();
         }
 
         private async Task<Node> GetTargetNodeAsync(CreateFileRequest request, Guid layoutId, bool tracking, CancellationToken ct)
@@ -254,33 +255,6 @@ namespace Cotton.Server.Handlers.Files
             _syncChanges.StageFileChange(SyncChangeKind.FileCreated, newNodeFile, node.LayoutId);
             await _dbContext.SaveChangesAsync(ct);
             return newNodeFile;
-        }
-
-        private static NodeFileManifestDto MapToDto(NodeFile nodeFile, FileManifest fileManifest)
-        {
-            return new NodeFileManifestDto()
-            {
-                ContentType = fileManifest.ContentType,
-                CreatedAt = nodeFile.CreatedAt,
-                Id = nodeFile.Id,
-                NodeId = nodeFile.NodeId,
-                FileManifestId = fileManifest.Id,
-                OriginalNodeFileId = nodeFile.OriginalNodeFileId,
-                Name = nodeFile.Name,
-                OwnerId = nodeFile.OwnerId,
-                PreviewHashEncryptedHex = fileManifest.GetPreviewHashEncryptedHex(),
-                ContentHash = Hasher.ToHexStringHash(fileManifest.ProposedContentHash),
-                ETag = "sha256-" + Hasher.ToHexStringHash(fileManifest.ProposedContentHash),
-                RequiresVideoTranscoding = fileManifest.SmallFilePreviewHash != null
-                    && fileManifest.ContentType.StartsWith("video/")
-                    && fileManifest.ContentType != "video/mp4"
-                    && fileManifest.ContentType != "video/webm"
-                    && fileManifest.ContentType != "video/ogg"
-                    && fileManifest.ContentType != "video/quicktime",
-                SizeBytes = fileManifest.SizeBytes,
-                UpdatedAt = nodeFile.UpdatedAt,
-                Metadata = nodeFile.Metadata ?? [],
-            };
         }
 
         private static Dictionary<string, string> CopyMetadata(Dictionary<string, string>? metadata)

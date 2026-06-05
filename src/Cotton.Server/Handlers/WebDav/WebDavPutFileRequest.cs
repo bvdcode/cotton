@@ -11,6 +11,7 @@ using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
 using Cotton.Validators;
+using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using EasyExtensions.Quartz.Extensions;
@@ -394,7 +395,7 @@ public class WebDavPutFileRequestHandler(
 
             return null;
         }
-        catch (StorageQuotaExceededException)
+        catch (StorageQuotaExceededException<User>)
         {
             return Fail(WebDavPutFileError.QuotaExceeded);
         }
@@ -413,7 +414,7 @@ public class WebDavPutFileRequestHandler(
             long addedBytes = await _quota.EnsureCanAddFileReferenceAsync(request.UserId, fileManifestId, ct);
             return (null, addedBytes);
         }
-        catch (StorageQuotaExceededException)
+        catch (StorageQuotaExceededException<User>)
         {
             return (Fail(WebDavPutFileError.QuotaExceeded), 0);
         }

@@ -1,11 +1,11 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Contracts;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Helpers;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Services;
 using ServerChangePasswordRequestDto = Cotton.Server.Models.Requests.ChangePasswordRequestDto;
 using Cotton.Storage.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
@@ -151,6 +151,7 @@ public class AuthSmokeTests : IntegrationTestBase
             "8.8.4.4",
             "Cotton Sync Desktop (CI workstation)");
         login.EnsureSuccessStatusCode();
+
         TokenPairResponseDto? payload = await login.Content.ReadFromJsonAsync<TokenPairResponseDto>();
         Assert.That(payload, Is.Not.Null);
 

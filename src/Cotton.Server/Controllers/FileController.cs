@@ -9,6 +9,7 @@ using Cotton.Previews.Http;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Files;
+using Cotton.Server.Hubs;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
@@ -20,6 +21,7 @@ using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
 using Cotton.Validators;
 using EasyExtensions;
+using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Helpers;
 using EasyExtensions.Mediator;
@@ -27,6 +29,7 @@ using EasyExtensions.Quartz.Extensions;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Net.Http.Headers;
@@ -44,7 +47,7 @@ namespace Cotton.Server.Controllers
         CottonDbContext _dbContext,
         ISyncChangeRecorder _syncChanges,
         ISchedulerFactory _scheduler,
-        IEventNotificationService _eventNotification,
+        IHubContext<EventHub> _hubContext,
         FileManifestService _fileManifestService,
         FileVersionService _versions,
         UserStorageQuotaService _quota,
@@ -137,22 +140,12 @@ namespace Cotton.Server.Controllers
                 .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
                 .Select(x => (Guid?)x.NodeId)
                 .SingleOrDefaultAsync();
-            DeleteFileQuery query = new(userId, nodeFileId, skipTrash, FileETagConcurrency.ReadIfMatch(Request));
-            try
-            {
-                await _mediator.Send(query);
-            }
-            catch (FilePreconditionFailedException ex)
-            {
-                _logger.LogWarning(
-                    ex,
-                    "File delete precondition failed for user {UserId} and file {NodeFileId}.",
-                    userId,
-                    nodeFileId);
-                return CottonResult.PreconditionFailed(ex.Message);
-            }
+            DeleteFileQuery query = new(userId, nodeFileId, skipTrash, FileETags.ReadIfMatch(Request));
+            await _mediator.Send(query);
 
-            await _eventNotification.NotifyFileDeletedAsync(userId, nodeFileId, parentNodeId);
+            await _hubContext.Clients.User(userId.ToString()).SendAsync(
+                "FileDeleted",
+                new NodeFileDeletedEventDto(nodeFileId, parentNodeId));
             return NoContent();
         }
 
@@ -176,7 +169,12 @@ namespace Cotton.Server.Controllers
 
             if (outcome.Status == RestoreStatus.Restored)
             {
-                await _eventNotification.NotifyFileRestoredAsync(nodeFileId);
+                object restoredFilePayload = outcome.RestoredFile is not null
+                    ? outcome.RestoredFile
+                    : new { id = nodeFileId };
+                await _hubContext.Clients.User(userId.ToString()).SendAsync(
+                    "FileRestored",
+                    restoredFilePayload);
             }
 
             return Ok(outcome);
@@ -196,23 +194,9 @@ namespace Cotton.Server.Controllers
                 NodeFileId = nodeFileId,
                 ParentId = request.ParentId,
                 UserId = User.GetUserId(),
-                ExpectedETag = FileETagConcurrency.ReadIfMatch(Request),
+                ExpectedETag = FileETags.ReadIfMatch(Request),
             };
-            NodeFileManifestDto dto;
-            try
-            {
-                dto = await _mediator.Send(command);
-            }
-            catch (FilePreconditionFailedException ex)
-            {
-                _logger.LogWarning(
-                    ex,
-                    "File move precondition failed for user {UserId} and file {NodeFileId}.",
-                    command.UserId,
-                    nodeFileId);
-                return CottonResult.PreconditionFailed(ex.Message);
-            }
-
+            NodeFileManifestDto dto = await _mediator.Send(command);
             return Ok(dto);
         }
 
@@ -259,9 +243,9 @@ namespace Cotton.Server.Controllers
                 return CottonResult.NotFound("File not found.");
             }
 
-            if (!FileETagConcurrency.MatchesIfMatchHeader(FileETagConcurrency.ReadIfMatch(Request), nodeFile))
+            if (!FileETags.MatchesIfMatchHeader(FileETags.ReadIfMatch(Request), nodeFile))
             {
-                return CottonResult.PreconditionFailed("File content changed before rename.");
+                throw new FilePreconditionFailedException<NodeFile>("File content changed before rename.");
             }
 
             string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
@@ -292,7 +276,7 @@ namespace Cotton.Server.Controllers
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
             var mapped = nodeFile.Adapt<NodeFileManifestDto>();
-            await _eventNotification.NotifyFileRenamedAsync(nodeFileId);
+            await _hubContext.Clients.User(userId.ToString()).SendAsync("FileRenamed", mapped);
             return Ok(mapped);
         }
 
@@ -347,7 +331,18 @@ namespace Cotton.Server.Controllers
             await _dbContext.SaveChangesAsync();
 
             var mapped = nodeFile.Adapt<NodeFileManifestDto>();
-            await _eventNotification.NotifyFileUpdatedAsync(nodeFileId);
+            try
+            {
+                await _hubContext.Clients.User(userId.ToString()).SendAsync("FileUpdated", mapped);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Failed to send file metadata update notification for file {NodeFileId}",
+                    nodeFileId);
+            }
+
             return Ok(mapped);
         }
 
@@ -377,7 +372,7 @@ namespace Cotton.Server.Controllers
         {
             Guid userId = User.GetUserId();
             NodeFileManifestDto restored = await _versions.RestoreVersionAsync(userId, nodeFileId, versionId, cancellationToken);
-            await _eventNotification.NotifyFileUpdatedAsync(restored.Id, cancellationToken);
+            await _hubContext.Clients.User(userId.ToString()).SendAsync("FileUpdated", restored, cancellationToken);
             return Ok(restored);
         }
 
@@ -535,9 +530,9 @@ namespace Cotton.Server.Controllers
                 return this.ApiNotFound("Node file not found.");
             }
 
-            if (!FileETagConcurrency.MatchesIfMatchHeader(FileETagConcurrency.ReadIfMatch(Request), nodeFile))
+            if (!FileETags.MatchesIfMatchHeader(FileETags.ReadIfMatch(Request), nodeFile))
             {
-                return CottonResult.PreconditionFailed("File content changed before update.");
+                throw new FilePreconditionFailedException<NodeFile>("File content changed before update.");
             }
 
             string nameKey = NameValidator.NormalizeAndGetNameKey(normalizedName);
@@ -569,7 +564,7 @@ namespace Cotton.Server.Controllers
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
 
             var mapped = nodeFile.Adapt<NodeFileManifestDto>();
-            await _eventNotification.NotifyFileUpdatedAsync(nodeFileId);
+            await _hubContext.Clients.User(userId.ToString()).SendAsync("FileUpdated", mapped);
             return Ok(mapped);
         }
 
@@ -795,8 +790,7 @@ namespace Cotton.Server.Controllers
             Stream stream = _storage.GetBlobStream(uids, context);
             Response.Headers.ContentEncoding = "identity";
             Response.Headers.CacheControl = "private, no-store, no-transform";
-            EntityTagHeaderValue entityTag = EntityTagHeaderValue.Parse(
-                $"\"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}\"");
+            EntityTagHeaderValue entityTag = FileETags.CreateContentEntityTag(nodeFile);
 
             return File(
                 stream,
@@ -1122,7 +1116,7 @@ namespace Cotton.Server.Controllers
             NodeFileManifestDto manifest = await _mediator.Send(request);
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
-            await _eventNotification.NotifyFileCreatedAsync(manifest.Id);
+            await _hubContext.Clients.User(userId.ToString()).SendAsync("FileCreated", manifest);
             return Ok(manifest);
         }
     }

@@ -125,7 +125,6 @@ namespace Cotton.Server
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("Cotton/1.0");
             });
             builder.Services
-                .AddExceptionHandler<StorageQuotaExceededExceptionHandler>()
                 .AddExceptionHandler()
                 .AddOptions<CottonEncryptionSettings>()
                 .Bind(builder.Configuration);
@@ -145,9 +144,6 @@ namespace Cotton.Server
             builder.Services
                 .AddOptions<StoragePressureOptions>()
                 .Bind(builder.Configuration.GetSection("StoragePressure"));
-            builder.Services
-                .AddOptions<SyncChangeRetentionOptions>()
-                .Bind(builder.Configuration.GetSection(SyncChangeRetentionOptions.SectionName));
             builder.Services
                 .AddMediator()
                 .AddQuartzJobs()

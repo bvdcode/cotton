@@ -86,9 +86,9 @@ namespace Cotton.Server.Handlers.Files
                 throw new EntityNotFoundException<NodeFile>();
             }
 
-            if (!FileETagConcurrency.MatchesIfMatchHeader(request.ExpectedETag, nodeFile))
+            if (!FileETags.MatchesIfMatchHeader(request.ExpectedETag, nodeFile))
             {
-                throw new FilePreconditionFailedException("File content changed before move.");
+                throw new FilePreconditionFailedException<NodeFile>("File content changed before move.");
             }
 
             if (nodeFile.NodeId == request.ParentId)
@@ -164,13 +164,10 @@ namespace Cotton.Server.Handlers.Files
 
         private async Task NotifyMoveAsync(Guid nodeFileId, Guid oldParentId, CancellationToken ct)
         {
+            // Best-effort: a notification failure must not turn an already-committed move into a failed response.
             try
             {
                 await _eventNotification.NotifyFileMovedAsync(nodeFileId, oldParentId, ct);
-            }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
-            {
-                throw;
             }
             catch (Exception ex)
             {

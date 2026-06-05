@@ -233,13 +233,10 @@ namespace Cotton.Server.Handlers.Nodes
 
         private async Task NotifyMoveAsync(Guid nodeId, Guid oldParentId, CancellationToken ct)
         {
+            // Best-effort: a notification failure must not turn an already-committed move into a failed response.
             try
             {
                 await _eventNotification.NotifyNodeMovedAsync(nodeId, oldParentId, ct);
-            }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
-            {
-                throw;
             }
             catch (Exception ex)
             {

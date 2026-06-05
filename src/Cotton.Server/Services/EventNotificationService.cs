@@ -28,10 +28,6 @@ public interface IEventNotificationService
     /// </summary>
     Task NotifyFileDeletedAsync(Guid userId, Guid nodeFileId, Guid? parentNodeId, CancellationToken ct = default);
     /// <summary>
-    /// Notifies connected clients that file restored occurred.
-    /// </summary>
-    Task NotifyFileRestoredAsync(Guid nodeFileId, CancellationToken ct = default);
-    /// <summary>
     /// Notifies connected clients that file moved occurred.
     /// </summary>
     Task NotifyFileMovedAsync(Guid nodeFileId, Guid oldParentId, CancellationToken ct = default);
@@ -48,10 +44,6 @@ public interface IEventNotificationService
     /// </summary>
     Task NotifyNodeDeletedAsync(Guid userId, Guid nodeId, Guid? parentNodeId, CancellationToken ct = default);
     /// <summary>
-    /// Notifies connected clients that node restored occurred.
-    /// </summary>
-    Task NotifyNodeRestoredAsync(Guid nodeId, CancellationToken ct = default);
-    /// <summary>
     /// Notifies connected clients that node moved occurred.
     /// </summary>
     Task NotifyNodeMovedAsync(Guid nodeId, Guid oldParentId, CancellationToken ct = default);
@@ -66,8 +58,7 @@ public interface IEventNotificationService
 /// </summary>
 public class EventNotificationService(
     IHubContext<EventHub> _hubContext,
-    CottonDbContext _dbContext,
-    ILogger<EventNotificationService> _logger) : IEventNotificationService
+    CottonDbContext _dbContext) : IEventNotificationService
 {
     /// <summary>
     /// Notifies connected clients that file created occurred.
@@ -82,7 +73,7 @@ public class EventNotificationService(
         if (nodeFile is not null)
         {
             var dto = nodeFile.Adapt<NodeFileManifestDto>();
-            await SendUserEventAsync(nodeFile.OwnerId, "FileCreated", dto, ct);
+            await _hubContext.Clients.User(nodeFile.OwnerId.ToString()).SendAsync("FileCreated", dto, ct);
         }
     }
 
@@ -99,7 +90,7 @@ public class EventNotificationService(
         if (nodeFile is not null)
         {
             var dto = nodeFile.Adapt<NodeFileManifestDto>();
-            await SendUserEventAsync(nodeFile.OwnerId, "FileUpdated", dto, ct);
+            await _hubContext.Clients.User(nodeFile.OwnerId.ToString()).SendAsync("FileUpdated", dto, ct);
         }
     }
 
@@ -113,24 +104,7 @@ public class EventNotificationService(
         CancellationToken ct = default)
     {
         var payload = new NodeFileDeletedEventDto(nodeFileId, parentNodeId);
-        await SendUserEventAsync(userId, "FileDeleted", payload, ct);
-    }
-
-    /// <summary>
-    /// Notifies connected clients that file restored occurred.
-    /// </summary>
-    public async Task NotifyFileRestoredAsync(Guid nodeFileId, CancellationToken ct = default)
-    {
-        var nodeFile = await _dbContext.NodeFiles
-            .Include(x => x.FileManifest)
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == nodeFileId, ct);
-
-        if (nodeFile is not null)
-        {
-            var dto = nodeFile.Adapt<NodeFileManifestDto>();
-            await SendUserEventAsync(nodeFile.OwnerId, "FileRestored", dto, ct);
-        }
+        await _hubContext.Clients.User(userId.ToString()).SendAsync("FileDeleted", payload, ct);
     }
 
     /// <summary>
@@ -147,7 +121,7 @@ public class EventNotificationService(
         {
             var dto = nodeFile.Adapt<NodeFileManifestDto>();
             var payload = new NodeFileMovedEventDto(dto, oldParentId, nodeFile.NodeId);
-            await SendUserEventAsync(nodeFile.OwnerId, "FileMoved", payload, ct);
+            await _hubContext.Clients.User(nodeFile.OwnerId.ToString()).SendAsync("FileMoved", payload, ct);
         }
     }
 
@@ -164,7 +138,7 @@ public class EventNotificationService(
         if (nodeFile is not null)
         {
             var dto = nodeFile.Adapt<NodeFileManifestDto>();
-            await SendUserEventAsync(nodeFile.OwnerId, "FileRenamed", dto, ct);
+            await _hubContext.Clients.User(nodeFile.OwnerId.ToString()).SendAsync("FileRenamed", dto, ct);
         }
     }
 
@@ -180,7 +154,7 @@ public class EventNotificationService(
         if (node is not null)
         {
             var dto = node.Adapt<NodeDto>();
-            await SendUserEventAsync(node.OwnerId, "NodeCreated", dto, ct);
+            await _hubContext.Clients.User(node.OwnerId.ToString()).SendAsync("NodeCreated", dto, ct);
         }
     }
 
@@ -194,23 +168,7 @@ public class EventNotificationService(
         CancellationToken ct = default)
     {
         var payload = new NodeDeletedEventDto(nodeId, parentNodeId);
-        await SendUserEventAsync(userId, "NodeDeleted", payload, ct);
-    }
-
-    /// <summary>
-    /// Notifies connected clients that node restored occurred.
-    /// </summary>
-    public async Task NotifyNodeRestoredAsync(Guid nodeId, CancellationToken ct = default)
-    {
-        var node = await _dbContext.Nodes
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == nodeId, ct);
-
-        if (node is not null)
-        {
-            var dto = node.Adapt<NodeDto>();
-            await SendUserEventAsync(node.OwnerId, "NodeRestored", dto, ct);
-        }
+        await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeDeleted", payload, ct);
     }
 
     /// <summary>
@@ -226,7 +184,7 @@ public class EventNotificationService(
         {
             var dto = node.Adapt<NodeDto>();
             var payload = new NodeMovedEventDto(dto, oldParentId, node.ParentId.Value);
-            await SendUserEventAsync(node.OwnerId, "NodeMoved", payload, ct);
+            await _hubContext.Clients.User(node.OwnerId.ToString()).SendAsync("NodeMoved", payload, ct);
         }
     }
 
@@ -242,27 +200,7 @@ public class EventNotificationService(
         if (node is not null)
         {
             var dto = node.Adapt<NodeDto>();
-            await SendUserEventAsync(node.OwnerId, "NodeRenamed", dto, ct);
-        }
-    }
-
-    private async Task SendUserEventAsync(Guid userId, string eventName, object payload, CancellationToken ct)
-    {
-        try
-        {
-            await _hubContext.Clients.User(userId.ToString()).SendAsync(eventName, payload, ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(
-                ex,
-                "Failed to send realtime event {EventName} to user {UserId}.",
-                eventName,
-                userId);
+            await _hubContext.Clients.User(node.OwnerId.ToString()).SendAsync("NodeRenamed", dto, ct);
         }
     }
 }

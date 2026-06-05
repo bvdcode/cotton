@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -66,7 +67,7 @@ public class WebDavHeadQueryHandler(
                 ContentType: manifest.ContentType,
                 ContentLength: manifest.SizeBytes,
                 LastModified: resolveResult.NodeFile.UpdatedAt,
-                ETag: $"\"{resolveResult.NodeFile.Id}:{resolveResult.NodeFile.FileManifestId}\"");
+                ETag: FileETags.GetQuotedContentETag(manifest));
         }
 
         return new WebDavHeadResult(false, false);
