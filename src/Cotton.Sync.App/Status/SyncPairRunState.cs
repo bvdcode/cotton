@@ -9,42 +9,47 @@ namespace Cotton.Sync.App.Status;
 public enum SyncPairRunState
 {
     /// <summary>
+    /// No runtime state was supplied.
+    /// </summary>
+    Unknown = 0,
+
+    /// <summary>
     /// The sync pair is disabled.
     /// </summary>
-    Disabled,
+    Disabled = 1,
 
     /// <summary>
     /// The sync pair is enabled and waiting for work.
     /// </summary>
-    Idle,
+    Idle = 2,
 
     /// <summary>
     /// The sync pair is scanning local or remote state.
     /// </summary>
-    Scanning,
+    Scanning = 3,
 
     /// <summary>
     /// The sync pair is applying changes.
     /// </summary>
-    Syncing,
+    Syncing = 4,
 
     /// <summary>
     /// The sync pair is paused by the user.
     /// </summary>
-    Paused,
+    Paused = 5,
 
     /// <summary>
     /// The sync pair cannot currently reach the server.
     /// </summary>
-    Offline,
+    Offline = 6,
 
     /// <summary>
     /// The sync pair has conflicts that need attention.
     /// </summary>
-    Conflict,
+    Conflict = 7,
 
     /// <summary>
     /// The sync pair has an action-required error.
     /// </summary>
-    Error,
+    Error = 8,
 }

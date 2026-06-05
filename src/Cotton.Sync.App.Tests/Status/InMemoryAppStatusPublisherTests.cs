@@ -67,6 +67,19 @@ public sealed class InMemoryAppStatusPublisherTests
     }
 
     [Test]
+    public void SyncPairStatus_RejectsUnknownRunState()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => new SyncPairStatus(
+                Guid.NewGuid(),
+                "Documents",
+                SyncPairRunState.Unknown,
+                null,
+                null,
+                DateTime.UtcNow));
+    }
+
+    [Test]
     public void SyncPairStatus_NormalizesLastSuccessfulSyncAtToUtc()
     {
         DateTime localTime = new DateTime(2026, 6, 3, 12, 0, 0, DateTimeKind.Local);

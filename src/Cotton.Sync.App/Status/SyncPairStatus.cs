@@ -23,6 +23,7 @@ public sealed class SyncPairStatus
         DateTime? lastSuccessfulSyncAtUtc = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+        ArgumentOutOfRangeException.ThrowIfEqual(state, SyncPairRunState.Unknown);
         SyncPairId = syncPairId;
         DisplayName = displayName;
         State = state;
