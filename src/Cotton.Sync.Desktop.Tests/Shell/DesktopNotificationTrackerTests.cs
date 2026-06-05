@@ -8,6 +8,16 @@ namespace Cotton.Sync.Desktop.Tests.Shell;
 public sealed class DesktopNotificationTrackerTests
 {
     [Test]
+    public void NotificationRequest_RejectsUnknownKind()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new DesktopNotificationRequest(
+            DesktopNotificationKind.Unknown,
+            Guid.NewGuid(),
+            "Title",
+            "Message"));
+    }
+
+    [Test]
     public void Apply_EmitsInitialSyncCompleteWhenPairBecomesIdleAfterSync()
     {
         Guid syncPairId = Guid.NewGuid();

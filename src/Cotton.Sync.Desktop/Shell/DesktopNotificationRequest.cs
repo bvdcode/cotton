@@ -3,8 +3,30 @@
 
 namespace Cotton.Sync.Desktop.Shell;
 
-internal sealed record DesktopNotificationRequest(
-    DesktopNotificationKind Kind,
-    Guid SyncPairId,
-    string Title,
-    string Message);
+internal sealed record DesktopNotificationRequest
+{
+    public DesktopNotificationRequest(
+        DesktopNotificationKind kind,
+        Guid syncPairId,
+        string title,
+        string message)
+    {
+        if (kind == DesktopNotificationKind.Unknown)
+        {
+            throw new ArgumentOutOfRangeException(nameof(kind), "Desktop notification kind must be known.");
+        }
+
+        Kind = kind;
+        SyncPairId = syncPairId;
+        Title = title;
+        Message = message;
+    }
+
+    public DesktopNotificationKind Kind { get; }
+
+    public Guid SyncPairId { get; }
+
+    public string Title { get; }
+
+    public string Message { get; }
+}

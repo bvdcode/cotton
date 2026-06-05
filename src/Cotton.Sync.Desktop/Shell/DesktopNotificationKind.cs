@@ -5,7 +5,8 @@ namespace Cotton.Sync.Desktop.Shell;
 
 internal enum DesktopNotificationKind
 {
-    InitialSyncComplete = 0,
-    Conflict = 1,
-    ActionRequiredError = 2,
+    Unknown = 0,
+    InitialSyncComplete = 1,
+    Conflict = 2,
+    ActionRequiredError = 3,
 }
