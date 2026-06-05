@@ -96,6 +96,24 @@ public sealed class DesktopActionRequiredMessageResolverTests
     }
 
     [Test]
+    public void FromStatus_ExplainsLocalFileUnavailableMessage()
+    {
+        var status = new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(
+                Guid.NewGuid(),
+                "Error",
+                "Local file 'Drafts/report.docx' could not be scanned safely."),
+        ]);
+
+        string message = DesktopActionRequiredMessageResolver.FromStatus(status);
+
+        Assert.That(
+            message,
+            Is.EqualTo("Cotton Sync cannot read 'Drafts/report.docx' yet. Close the app using it or wait for it to finish saving, then retry sync."));
+    }
+
+    [Test]
     public void FromStatus_ExplainsMissingSyncStateTable()
     {
         var status = new DesktopSyncStatusSnapshot(
@@ -223,6 +241,21 @@ public sealed class DesktopActionRequiredMessageResolverTests
         Assert.That(
             message,
             Is.EqualTo("This computer does not have enough free disk space for sync. Free space and retry."));
+    }
+
+    [Test]
+    public void FromException_ExplainsLocalFileUnavailableException()
+    {
+        var exception = new LocalFileUnavailableException(
+            "Drafts/report.docx",
+            "/home/qa/Cotton/Drafts/report.docx",
+            "the file changed during scanning.");
+
+        string message = DesktopActionRequiredMessageResolver.FromException(exception);
+
+        Assert.That(
+            message,
+            Is.EqualTo("Cotton Sync cannot read 'Drafts/report.docx' yet. Close the app using it or wait for it to finish saving, then retry sync."));
     }
 
     [Test]

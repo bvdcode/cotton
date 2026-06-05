@@ -32,6 +32,9 @@ internal static class DesktopActionRequiredMessageResolver
     private const string LocalPermissionDeniedMessage =
         "Cotton Sync cannot access one of the local files. Grant file permissions and retry sync.";
 
+    private const string LocalFileUnavailableMessage =
+        "Cotton Sync cannot read one of the local files yet. Close the app using it or wait for it to finish saving, then retry sync.";
+
     private const string LocalSyncStateDatabaseUnavailableMessage =
         "Local sync state database is unavailable. Run diagnostics and restart Cotton Sync.";
 
@@ -81,6 +84,11 @@ internal static class DesktopActionRequiredMessageResolver
         if (exception is LocalFilePermissionDeniedException permissionDeniedException)
         {
             return CreateLocalPermissionDeniedMessage(permissionDeniedException.RelativePath);
+        }
+
+        if (exception is LocalFileUnavailableException unavailableException)
+        {
+            return CreateLocalFileUnavailableMessage(unavailableException.RelativePath);
         }
 
         if (exception is IOException && LooksLikeDiskFull(exception.Message))
@@ -157,6 +165,11 @@ internal static class DesktopActionRequiredMessageResolver
             return CreateLocalPermissionDeniedMessage(ExtractSingleQuotedPath(message));
         }
 
+        if (LooksLikeLocalFileUnavailable(message))
+        {
+            return CreateLocalFileUnavailableMessage(ExtractSingleQuotedPath(message));
+        }
+
         if (LooksLikeLocalSyncStateDatabaseUnavailable(message))
         {
             return LocalSyncStateDatabaseUnavailableMessage;
@@ -170,6 +183,13 @@ internal static class DesktopActionRequiredMessageResolver
         return string.IsNullOrWhiteSpace(relativePath)
             ? LocalPermissionDeniedMessage
             : "Cotton Sync cannot access '" + relativePath + "'. Grant file permissions and retry sync.";
+    }
+
+    private static string CreateLocalFileUnavailableMessage(string? relativePath)
+    {
+        return string.IsNullOrWhiteSpace(relativePath)
+            ? LocalFileUnavailableMessage
+            : "Cotton Sync cannot read '" + relativePath + "' yet. Close the app using it or wait for it to finish saving, then retry sync.";
     }
 
     private static string? NormalizeAuthMessage(string? message)
@@ -285,6 +305,12 @@ internal static class DesktopActionRequiredMessageResolver
                 && message.Contains("permission was denied", StringComparison.OrdinalIgnoreCase))
             || (message.Contains("access to the path", StringComparison.OrdinalIgnoreCase)
                 && message.Contains("is denied", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool LooksLikeLocalFileUnavailable(string message)
+    {
+        return message.Contains("local file", StringComparison.OrdinalIgnoreCase)
+            && message.Contains("could not be scanned safely", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool LooksLikeLocalSyncStateDatabaseUnavailable(string message)
