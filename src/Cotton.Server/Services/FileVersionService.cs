@@ -1,7 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Contracts.Files;
+using Cotton.Files;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
@@ -14,7 +14,7 @@ using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Helpers;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
-using FileVersionDto = Cotton.Contracts.Files.FileVersionDto;
+using FileVersionDto = Cotton.Files.FileVersionDto;
 
 namespace Cotton.Server.Services;
 

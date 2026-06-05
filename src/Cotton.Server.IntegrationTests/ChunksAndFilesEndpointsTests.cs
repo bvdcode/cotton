@@ -1,8 +1,8 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Contracts.Files;
-using Cotton.Contracts.Nodes;
+using Cotton.Files;
+using Cotton.Nodes;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
@@ -25,7 +25,7 @@ using System.Net.Http.Json;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
-using FileVersionDto = Cotton.Contracts.Files.FileVersionDto;
+using FileVersionDto = Cotton.Files.FileVersionDto;
 
 namespace Cotton.Server.IntegrationTests;
 

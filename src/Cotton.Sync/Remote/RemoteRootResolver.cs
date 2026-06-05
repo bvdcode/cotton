@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-using Cotton.Contracts.Nodes;
+using Cotton.Nodes;
 using Cotton.Sdk.Nodes;
 
 namespace Cotton.Sync.Remote;

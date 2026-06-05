@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Contracts.Common
+namespace Cotton.Common
 {
     /// <summary>
     /// Represents the common API DTO fields returned by Cotton resources.

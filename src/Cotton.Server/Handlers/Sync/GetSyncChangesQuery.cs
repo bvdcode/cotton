@@ -3,7 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
-using Cotton.Contracts.Sync;
+using Cotton.Sync;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Mapster;

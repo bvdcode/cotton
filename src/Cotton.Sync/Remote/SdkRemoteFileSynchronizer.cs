@@ -3,9 +3,9 @@
 
 using System.Buffers;
 using System.Security.Cryptography;
-using Cotton.Contracts.Files;
-using Cotton.Contracts.Nodes;
-using Cotton.Contracts.Settings;
+using Cotton.Files;
+using Cotton.Nodes;
+using Cotton.Settings;
 using Cotton.Sdk;
 using Cotton.Sync.Local;
 using Cotton.Sync.State;

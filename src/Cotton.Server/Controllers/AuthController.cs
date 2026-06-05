@@ -1,7 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Contracts.Auth;
+using Cotton.Auth;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
@@ -37,7 +37,7 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
-using CottonLoginRequestDto = Cotton.Contracts.Auth.LoginRequestDto;
+using CottonLoginRequestDto = Cotton.Auth.LoginRequestDto;
 
 namespace Cotton.Server.Controllers
 {

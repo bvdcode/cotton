@@ -4,7 +4,7 @@
 using System.Diagnostics;
 using System.Net.Http.Json;
 using Cotton;
-using Cotton.Contracts.Nodes;
+using Cotton.Nodes;
 using Cotton.Models;
 using Cotton.Sync.App.Auth;
 using Cotton.Sync.App.Activities;

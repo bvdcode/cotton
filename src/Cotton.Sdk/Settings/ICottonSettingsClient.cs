@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-using Cotton.Contracts.Settings;
+using Cotton.Settings;
 
 namespace Cotton.Sdk.Settings;
 

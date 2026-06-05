@@ -1,7 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Contracts.Files;
+using Cotton.Files;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
@@ -36,7 +36,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Net.Http.Headers;
 using Quartz;
-using FileVersionDto = Cotton.Contracts.Files.FileVersionDto;
+using FileVersionDto = Cotton.Files.FileVersionDto;
 
 namespace Cotton.Server.Controllers
 {

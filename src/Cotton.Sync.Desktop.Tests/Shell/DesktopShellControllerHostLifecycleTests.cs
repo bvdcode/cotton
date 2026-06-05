@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-using Cotton.Contracts.Auth;
-using Cotton.Contracts.Files;
-using Cotton.Contracts.Nodes;
-using Cotton.Contracts.Sync;
+using Cotton.Auth;
+using Cotton.Files;
+using Cotton.Nodes;
+using Cotton.Sync;
 using Cotton.Sdk.Auth;
 using Cotton.Sdk.Nodes;
 using Cotton.Sdk.Sync;

@@ -3,7 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 
-namespace Cotton.Contracts.Auth
+namespace Cotton.Auth
 {
     /// <summary>
     /// Represents the username and password login request accepted by Cotton Cloud.

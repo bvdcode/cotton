@@ -4,8 +4,8 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
-using Cotton.Contracts.Files;
-using Cotton.Contracts.Nodes;
+using Cotton.Files;
+using Cotton.Nodes;
 using Cotton.Sync.Local;
 using Cotton.Sync.Remote;
 using Cotton.Sync.State;

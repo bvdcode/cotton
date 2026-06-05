@@ -4,8 +4,8 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using Cotton.Contracts.Auth;
-using Cotton.Contracts.Nodes;
+using Cotton.Auth;
+using Cotton.Nodes;
 
 namespace Cotton.Sync.Cli.Tests.TestSupport;
 
