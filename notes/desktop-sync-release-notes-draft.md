@@ -18,6 +18,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 - Folder management supports add, rename, enable/disable, open local folder, and remove with explicit confirmation.
 - Folder management controls expand inline inside the folder row instead of duplicating the selected folder as a second editor row.
 - Expanded folder controls keep enough room for the next configured folder in the compact dashboard instead of clipping the list immediately.
+- Settings uses readable compact tabs: Account, Startup, Options, and Diagnostics.
 - Continuous sync uses local filesystem watcher triggers, SignalR wake-up events, durable change-feed catch-up, and periodic reconciliation as a safety fallback.
 - Conflict handling preserves both versions and exposes conflict entries in the desktop UI.
 - Local sync state and desktop settings use EF Core SQLite. Normal app state does not use raw SQL commands.

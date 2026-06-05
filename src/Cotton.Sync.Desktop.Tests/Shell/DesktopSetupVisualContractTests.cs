@@ -145,7 +145,7 @@ public sealed class DesktopSetupVisualContractTests
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
         string diagnosticsSection = GetSlice(
             mainWindowXaml,
-            "<TabItem Header=\"Diag\"",
+            "<TabItem Header=\"Diagnostics\"",
             "</TabItem>");
         int selfTestIndex = diagnosticsSection.IndexOf(
             "ItemsSource=\"{Binding SelfTestItems}\"",
@@ -239,11 +239,12 @@ public sealed class DesktopSetupVisualContractTests
         Assert.Multiple(() =>
         {
             Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Account\">"));
-            Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Start\""));
-            Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Prefs\">"));
-            Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Diag\""));
-            Assert.That(settingsOverlay, Does.Contain("ToolTip.Tip=\"Startup\""));
-            Assert.That(settingsOverlay, Does.Contain("ToolTip.Tip=\"Diagnostics\""));
+            Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Startup\">"));
+            Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Options\">"));
+            Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Diagnostics\">"));
+            Assert.That(settingsOverlay, Does.Not.Contain("Header=\"Start\""));
+            Assert.That(settingsOverlay, Does.Not.Contain("Header=\"Prefs\""));
+            Assert.That(settingsOverlay, Does.Not.Contain("Header=\"Diag\""));
         });
     }
 
@@ -253,7 +254,7 @@ public sealed class DesktopSetupVisualContractTests
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
         string startSection = GetSlice(
             mainWindowXaml,
-            "<TabItem Header=\"Start\"",
+            "<TabItem Header=\"Startup\"",
             "</TabItem>");
 
         Assert.Multiple(() =>
@@ -276,7 +277,7 @@ public sealed class DesktopSetupVisualContractTests
         string accountTab = GetSlice(
             settingsOverlay,
             "<TabItem Header=\"Account\">",
-            "<TabItem Header=\"Start\"");
+            "<TabItem Header=\"Startup\">");
 
         Assert.Multiple(() =>
         {
@@ -396,7 +397,7 @@ public sealed class DesktopSetupVisualContractTests
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
         string diagnosticsSection = GetSlice(
             mainWindowXaml,
-            "<TabItem Header=\"Diag\"",
+            "<TabItem Header=\"Diagnostics\"",
             "</TabItem>");
 
         Assert.Multiple(() =>
