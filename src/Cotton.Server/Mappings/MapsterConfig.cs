@@ -36,7 +36,7 @@ namespace Cotton.Server.Mappings
                 .Map(dest => dest.SizeBytes, src => src.FileManifest.SizeBytes)
                 .Map(dest => dest.ContentType, src => src.FileManifest.ContentType)
                 .Map(dest => dest.ContentHash, src => Hasher.ToHexStringHash(src.FileManifest.ProposedContentHash))
-                .Map(dest => dest.ETag, src => "sha256-" + Hasher.ToHexStringHash(src.FileManifest.ProposedContentHash))
+                .Map(dest => dest.ETag, src => FileETags.GetContentETag(src.FileManifest))
                 .Map(dest => dest.RequiresVideoTranscoding, src =>
                     src.FileManifest.SmallFilePreviewHash != null
                     && src.FileManifest.ContentType.StartsWith("video/")
