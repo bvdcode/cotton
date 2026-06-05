@@ -208,6 +208,36 @@ public sealed class DesktopActionRequiredMessageResolverTests
     }
 
     [Test]
+    public void FromException_ExplainsRemoteQuotaExceeded()
+    {
+        var exception = new CottonApiException(
+            (HttpStatusCode)507,
+            null,
+            "Cotton API request failed with status 507.");
+
+        string message = DesktopActionRequiredMessageResolver.FromException(exception);
+
+        Assert.That(
+            message,
+            Is.EqualTo("Remote storage quota exceeded. Free space in Cotton Cloud or choose a smaller sync folder."));
+    }
+
+    [Test]
+    public void FromException_ExplainsRemoteUploadTooLarge()
+    {
+        var exception = new CottonApiException(
+            HttpStatusCode.RequestEntityTooLarge,
+            null,
+            "Cotton API request failed with status 413.");
+
+        string message = DesktopActionRequiredMessageResolver.FromException(exception);
+
+        Assert.That(
+            message,
+            Is.EqualTo("Remote upload was rejected because it is larger than the server limit."));
+    }
+
+    [Test]
     public void FromException_UsesHumanTotpRequiredMessage()
     {
         var exception = new CottonApiException(

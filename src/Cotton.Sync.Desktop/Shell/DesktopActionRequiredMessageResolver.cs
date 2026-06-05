@@ -18,8 +18,16 @@ internal static class DesktopActionRequiredMessageResolver
     private const string GenericSyncErrorMessage =
         "One or more sync folders reported an error. Check diagnostics and retry.";
 
+    private const int InsufficientStorageStatusCode = 507;
+
     private const string DiskFullMessage =
         "This computer does not have enough free disk space for sync. Free space and retry.";
+
+    private const string RemoteQuotaExceededMessage =
+        "Remote storage quota exceeded. Free space in Cotton Cloud or choose a smaller sync folder.";
+
+    private const string RemoteUploadTooLargeMessage =
+        "Remote upload was rejected because it is larger than the server limit.";
 
     private const string LocalPermissionDeniedMessage =
         "Cotton Sync cannot access one of the local files. Grant file permissions and retry sync.";
@@ -93,6 +101,16 @@ internal static class DesktopActionRequiredMessageResolver
 
     private static string? NormalizeApiException(CottonApiException exception)
     {
+        if (IsQuotaExceededStatus(exception.StatusCode))
+        {
+            return RemoteQuotaExceededMessage;
+        }
+
+        if (exception.StatusCode == System.Net.HttpStatusCode.RequestEntityTooLarge)
+        {
+            return RemoteUploadTooLargeMessage;
+        }
+
         string? responseMessage = ExtractResponseMessage(exception.ResponseBody);
         string? authMessage = NormalizeAuthMessage(responseMessage);
         if (authMessage is not null)
@@ -102,6 +120,11 @@ internal static class DesktopActionRequiredMessageResolver
 
         return Normalize(responseMessage)
             ?? Normalize(exception.Message, exception.ResponseBody);
+    }
+
+    private static bool IsQuotaExceededStatus(System.Net.HttpStatusCode? statusCode)
+    {
+        return statusCode.HasValue && (int)statusCode.Value == InsufficientStorageStatusCode;
     }
 
     private static string? Normalize(string? message, string? responseBody = null)
