@@ -96,9 +96,9 @@ public sealed class RemoteChangeImpact
     public static RemoteChangeImpact FromDto(SyncChangeDto change)
     {
         ArgumentNullException.ThrowIfNull(change);
-        if (change.Id < 0)
+        if (change.Id <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(change), change.Id, "Change cursor cannot be negative.");
+            throw new ArgumentOutOfRangeException(nameof(change), change.Id, "Change cursor must be positive.");
         }
 
         (RemoteChangeTargetKind targetKind, RemoteChangeAction action) = MapKind(change.Kind);

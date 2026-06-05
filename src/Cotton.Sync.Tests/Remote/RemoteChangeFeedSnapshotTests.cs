@@ -97,13 +97,27 @@ public sealed class RemoteChangeFeedSnapshotTests
     }
 
     [Test]
-    public void FromChanges_RejectsNegativeCursor()
+    public void FromChanges_RejectsNonPositiveCursor()
     {
         var changes = new[]
         {
             new SyncChangeDto
             {
                 Id = -1,
+                Kind = SyncChangeKind.FileCreated,
+            },
+        };
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => RemoteChangeFeedSnapshot.FromChanges(changes));
+    }
+
+    [Test]
+    public void FromChanges_RejectsDefaultCursor()
+    {
+        var changes = new[]
+        {
+            new SyncChangeDto
+            {
                 Kind = SyncChangeKind.FileCreated,
             },
         };
