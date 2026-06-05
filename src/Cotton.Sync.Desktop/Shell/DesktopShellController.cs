@@ -258,7 +258,6 @@ internal sealed class DesktopShellController : IDesktopShellController
 
         try
         {
-            await host.App.StartSyncAsync(cancellationToken).ConfigureAwait(false);
             await host.App.SyncNowAsync(syncPair.Id, cancellationToken).ConfigureAwait(false);
             return syncPair;
         }

@@ -326,7 +326,16 @@ public sealed class SyncApplicationServiceTests
     public async Task SaveSyncPairAsync_PersistsValidPair()
     {
         var store = new InMemorySyncPairSettingsStore();
-        SyncApplicationService service = CreateService(store);
+        var supervisor = new FakeSyncSupervisor();
+        var localChanges = new FakeLocalChangeSyncCoordinator();
+        var remoteChanges = new FakeRemoteChangeSyncCoordinator();
+        var periodicSync = new FakePeriodicSyncCoordinator();
+        SyncApplicationService service = CreateService(
+            store,
+            supervisor: supervisor,
+            localChanges: localChanges,
+            remoteChanges: remoteChanges,
+            periodicSync: periodicSync);
         SyncPairSettings syncPair = CreatePair("/home/user/Cotton");
 
         SyncPairSaveResult result = await service.SaveSyncPairAsync(syncPair);
@@ -338,6 +347,76 @@ public sealed class SyncApplicationServiceTests
             Assert.That(result.Validation.IsValid, Is.True);
             Assert.That(saved, Is.Not.Null);
             Assert.That(saved!.Id, Is.EqualTo(syncPair.Id));
+            Assert.That(supervisor.StartCallCount, Is.Zero);
+            Assert.That(localChanges.StartCallCount, Is.Zero);
+            Assert.That(remoteChanges.StartCallCount, Is.Zero);
+            Assert.That(periodicSync.StartCallCount, Is.Zero);
+        });
+    }
+
+    [Test]
+    public async Task SaveSyncPairAsync_RestartsSyncComponentsWhenSyncCoreIsRunning()
+    {
+        var store = new InMemorySyncPairSettingsStore();
+        var supervisor = new FakeSyncSupervisor();
+        var localChanges = new FakeLocalChangeSyncCoordinator();
+        var remoteChanges = new FakeRemoteChangeSyncCoordinator();
+        var periodicSync = new FakePeriodicSyncCoordinator();
+        SyncApplicationService service = CreateService(
+            store,
+            supervisor: supervisor,
+            localChanges: localChanges,
+            remoteChanges: remoteChanges,
+            periodicSync: periodicSync);
+        await service.StartSyncAsync();
+
+        SyncPairSaveResult result = await service.SaveSyncPairAsync(CreatePair("/home/user/Cotton"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsSaved, Is.True);
+            Assert.That(supervisor.StopCallCount, Is.EqualTo(1));
+            Assert.That(localChanges.StopCallCount, Is.EqualTo(1));
+            Assert.That(remoteChanges.StopCallCount, Is.EqualTo(1));
+            Assert.That(periodicSync.StopCallCount, Is.EqualTo(1));
+            Assert.That(supervisor.StartCallCount, Is.EqualTo(2));
+            Assert.That(localChanges.StartCallCount, Is.EqualTo(2));
+            Assert.That(remoteChanges.StartCallCount, Is.EqualTo(2));
+            Assert.That(periodicSync.StartCallCount, Is.EqualTo(2));
+        });
+    }
+
+    [Test]
+    public async Task SaveSyncPairAsync_DoesNotRestartSyncComponentsWhenValidationFails()
+    {
+        var store = new InMemorySyncPairSettingsStore();
+        var supervisor = new FakeSyncSupervisor();
+        var localChanges = new FakeLocalChangeSyncCoordinator();
+        var remoteChanges = new FakeRemoteChangeSyncCoordinator();
+        var periodicSync = new FakePeriodicSyncCoordinator();
+        SyncApplicationService service = CreateService(
+            store,
+            supervisor: supervisor,
+            localChanges: localChanges,
+            remoteChanges: remoteChanges,
+            periodicSync: periodicSync);
+        await service.StartSyncAsync();
+        SyncPairSettings syncPair = CreatePair("/home/user/Cotton");
+        syncPair.Mode = SyncPairMode.VirtualFilesPlaceholder;
+
+        SyncPairSaveResult result = await service.SaveSyncPairAsync(syncPair);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsSaved, Is.False);
+            Assert.That(supervisor.StopCallCount, Is.Zero);
+            Assert.That(localChanges.StopCallCount, Is.Zero);
+            Assert.That(remoteChanges.StopCallCount, Is.Zero);
+            Assert.That(periodicSync.StopCallCount, Is.Zero);
+            Assert.That(supervisor.StartCallCount, Is.EqualTo(1));
+            Assert.That(localChanges.StartCallCount, Is.EqualTo(1));
+            Assert.That(remoteChanges.StartCallCount, Is.EqualTo(1));
+            Assert.That(periodicSync.StartCallCount, Is.EqualTo(1));
         });
     }
 
@@ -442,6 +521,39 @@ public sealed class SyncApplicationServiceTests
 
         SyncPairSettings? deleted = await store.GetAsync(syncPair.Id);
         Assert.That(deleted, Is.Null);
+    }
+
+    [Test]
+    public async Task DeleteSyncPairAsync_RestartsSyncComponentsWhenSyncCoreIsRunning()
+    {
+        var store = new InMemorySyncPairSettingsStore();
+        var supervisor = new FakeSyncSupervisor();
+        var localChanges = new FakeLocalChangeSyncCoordinator();
+        var remoteChanges = new FakeRemoteChangeSyncCoordinator();
+        var periodicSync = new FakePeriodicSyncCoordinator();
+        SyncApplicationService service = CreateService(
+            store,
+            supervisor: supervisor,
+            localChanges: localChanges,
+            remoteChanges: remoteChanges,
+            periodicSync: periodicSync);
+        SyncPairSettings syncPair = CreatePair("/home/user/Cotton");
+        await service.SaveSyncPairAsync(syncPair);
+        await service.StartSyncAsync();
+
+        await service.DeleteSyncPairAsync(syncPair.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(supervisor.StopCallCount, Is.EqualTo(1));
+            Assert.That(localChanges.StopCallCount, Is.EqualTo(1));
+            Assert.That(remoteChanges.StopCallCount, Is.EqualTo(1));
+            Assert.That(periodicSync.StopCallCount, Is.EqualTo(1));
+            Assert.That(supervisor.StartCallCount, Is.EqualTo(2));
+            Assert.That(localChanges.StartCallCount, Is.EqualTo(2));
+            Assert.That(remoteChanges.StartCallCount, Is.EqualTo(2));
+            Assert.That(periodicSync.StartCallCount, Is.EqualTo(2));
+        });
     }
 
     [Test]

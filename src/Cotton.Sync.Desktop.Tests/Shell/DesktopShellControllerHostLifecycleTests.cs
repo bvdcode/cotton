@@ -258,7 +258,7 @@ public sealed class DesktopShellControllerHostLifecycleTests
             Assert.That(host.App.StopSyncCalls, Is.EqualTo(1));
             Assert.That(host.App.DeleteSyncPairCalls, Is.EqualTo(1));
             Assert.That(host.App.DeletedSyncPairId, Is.EqualTo(host.App.SavedSyncPair?.Id));
-            Assert.That(host.App.StartSyncCalls, Is.EqualTo(3));
+            Assert.That(host.App.StartSyncCalls, Is.EqualTo(2));
         });
     }
 

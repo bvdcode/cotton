@@ -19,6 +19,7 @@ namespace Cotton.Sync.App.SyncApplication;
 /// </summary>
 public sealed class SyncApplicationService : ISyncApplicationService
 {
+    private readonly SemaphoreSlim _syncCoreGate = new(1, 1);
     private readonly IAuthFlow _authFlow;
     private readonly ILocalChangeSyncCoordinator _localChanges;
     private readonly IPeriodicSyncCoordinator _periodicSync;
@@ -30,6 +31,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
     private readonly ISyncPairSettingsStore _syncPairs;
     private readonly SyncPairSettingsValidator _validator;
     private readonly ILogger<SyncApplicationService> _logger;
+    private bool _isSyncCoreStarted;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SyncApplicationService" /> class.
@@ -148,6 +150,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
         }
 
         await _syncPairs.UpsertAsync(syncPair, cancellationToken).ConfigureAwait(false);
+        await RestartSyncCoreIfStartedAsync(cancellationToken).ConfigureAwait(false);
         return SyncPairSaveResult.Saved(validation);
     }
 
@@ -156,6 +159,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
     {
         await _syncPairs.InitializeAsync(cancellationToken).ConfigureAwait(false);
         await _syncPairs.DeleteAsync(syncPairId, cancellationToken).ConfigureAwait(false);
+        await RestartSyncCoreIfStartedAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -220,6 +224,56 @@ public sealed class SyncApplicationService : ISyncApplicationService
 
     private async Task StartSyncCoreAsync(CancellationToken cancellationToken)
     {
+        await _syncCoreGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await StartSyncCoreUnlockedAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _syncCoreGate.Release();
+        }
+    }
+
+    private async Task StopSyncCoreAsync(CancellationToken cancellationToken)
+    {
+        await _syncCoreGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await StopSyncCoreUnlockedAsync(cancellationToken, force: true).ConfigureAwait(false);
+        }
+        finally
+        {
+            _syncCoreGate.Release();
+        }
+    }
+
+    private async Task RestartSyncCoreIfStartedAsync(CancellationToken cancellationToken)
+    {
+        await _syncCoreGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (!_isSyncCoreStarted)
+            {
+                return;
+            }
+
+            await StopSyncCoreUnlockedAsync(cancellationToken, force: false).ConfigureAwait(false);
+            await StartSyncCoreUnlockedAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _syncCoreGate.Release();
+        }
+    }
+
+    private async Task StartSyncCoreUnlockedAsync(CancellationToken cancellationToken)
+    {
+        if (_isSyncCoreStarted)
+        {
+            await StopSyncCoreUnlockedAsync(cancellationToken, force: false).ConfigureAwait(false);
+        }
+
         var startedComponents = new List<StartedSyncComponent>();
 
         try
@@ -243,21 +297,29 @@ public sealed class SyncApplicationService : ISyncApplicationService
             startedComponents.Add(new StartedSyncComponent(
                 "periodic sync coordinator",
                 token => _periodicSync.StopAsync(token)));
+            _isSyncCoreStarted = true;
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, "Failed to start sync background components.");
             await RollBackStartedComponentsAsync(startedComponents).ConfigureAwait(false);
+            _isSyncCoreStarted = false;
             throw;
         }
     }
 
-    private async Task StopSyncCoreAsync(CancellationToken cancellationToken)
+    private async Task StopSyncCoreUnlockedAsync(CancellationToken cancellationToken, bool force)
     {
+        if (!_isSyncCoreStarted && !force)
+        {
+            return;
+        }
+
         await _remoteChanges.StopAsync(cancellationToken).ConfigureAwait(false);
         await _periodicSync.StopAsync(cancellationToken).ConfigureAwait(false);
         await _localChanges.StopAsync(cancellationToken).ConfigureAwait(false);
         await _supervisor.StopAsync(cancellationToken).ConfigureAwait(false);
+        _isSyncCoreStarted = false;
     }
 
     private async Task RollBackStartedComponentsAsync(IReadOnlyList<StartedSyncComponent> startedComponents)
