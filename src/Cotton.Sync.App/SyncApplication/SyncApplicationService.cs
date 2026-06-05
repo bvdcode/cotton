@@ -141,12 +141,15 @@ public sealed class SyncApplicationService : ISyncApplicationService
             return SyncPairSaveResult.Rejected(validation);
         }
 
-        IReadOnlyList<SyncPairValidationError> prerequisiteErrors = await _prerequisites
-            .ValidateAsync(syncPair, cancellationToken)
-            .ConfigureAwait(false);
-        if (prerequisiteErrors.Count > 0)
+        if (syncPair.IsEnabled)
         {
-            return SyncPairSaveResult.Rejected(new SyncPairValidationResult(prerequisiteErrors));
+            IReadOnlyList<SyncPairValidationError> prerequisiteErrors = await _prerequisites
+                .ValidateAsync(syncPair, cancellationToken)
+                .ConfigureAwait(false);
+            if (prerequisiteErrors.Count > 0)
+            {
+                return SyncPairSaveResult.Rejected(new SyncPairValidationResult(prerequisiteErrors));
+            }
         }
 
         await _syncPairs.UpsertAsync(syncPair, cancellationToken).ConfigureAwait(false);

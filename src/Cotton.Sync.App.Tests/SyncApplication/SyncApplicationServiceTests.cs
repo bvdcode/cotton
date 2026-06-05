@@ -495,6 +495,33 @@ public sealed class SyncApplicationServiceTests
     }
 
     [Test]
+    public async Task SaveSyncPairAsync_SkipsPrerequisitesForDisabledPair()
+    {
+        var store = new InMemorySyncPairSettingsStore();
+        SyncPairSettings syncPair = CreatePair("/home/user/Cotton");
+        syncPair.IsEnabled = false;
+        var prerequisites = new FakeSyncPairPrerequisiteValidator([
+            new SyncPairValidationError(
+                SyncPairValidationIssue.LocalRootUnavailable,
+                syncPair.Id,
+                null,
+                "Local root unavailable."),
+        ]);
+        SyncApplicationService service = CreateService(store, prerequisites);
+
+        SyncPairSaveResult result = await service.SaveSyncPairAsync(syncPair);
+
+        SyncPairSettings? saved = await store.GetAsync(syncPair.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsSaved, Is.True);
+            Assert.That(prerequisites.CallCount, Is.Zero);
+            Assert.That(saved, Is.Not.Null);
+            Assert.That(saved!.IsEnabled, Is.False);
+        });
+    }
+
+    [Test]
     public async Task SaveSyncPairAsync_SkipsPrerequisitesWhenStructuralValidationFails()
     {
         var store = new InMemorySyncPairSettingsStore();
