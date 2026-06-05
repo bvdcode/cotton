@@ -18,6 +18,24 @@ public sealed class DesktopNotificationTrackerTests
     }
 
     [Test]
+    public void NotificationRequest_RejectsBlankTitleAndMessage()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.Throws<ArgumentException>(() => new DesktopNotificationRequest(
+                DesktopNotificationKind.Conflict,
+                Guid.NewGuid(),
+                string.Empty,
+                "Message"));
+            Assert.Throws<ArgumentException>(() => new DesktopNotificationRequest(
+                DesktopNotificationKind.Conflict,
+                Guid.NewGuid(),
+                "Title",
+                " "));
+        });
+    }
+
+    [Test]
     public void Apply_EmitsInitialSyncCompleteWhenPairBecomesIdleAfterSync()
     {
         Guid syncPairId = Guid.NewGuid();

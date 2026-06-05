@@ -16,6 +16,9 @@ internal sealed record DesktopNotificationRequest
             throw new ArgumentOutOfRangeException(nameof(kind), "Desktop notification kind must be known.");
         }
 
+        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+        ArgumentException.ThrowIfNullOrWhiteSpace(message);
+
         Kind = kind;
         SyncPairId = syncPairId;
         Title = title;
