@@ -15,6 +15,21 @@ public sealed class SyncPathTests
         Assert.That(normalized, Is.EqualTo("Docs/Reports/file.txt"));
     }
 
+    [TestCase("/etc/passwd")]
+    [TestCase(@"\Windows\System32")]
+    [TestCase(@"\\server\share\file.txt")]
+    public void Normalize_RejectsRootedPaths(string relativePath)
+    {
+        SyncPathValidationException? exception = Assert.Throws<SyncPathValidationException>(() => SyncPath.Normalize(relativePath));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.RelativePath, Is.EqualTo(relativePath));
+            Assert.That(exception.Reason, Does.Contain("rooted"));
+        });
+    }
+
     [Test]
     public void Normalize_UsesUnicodeFormC()
     {

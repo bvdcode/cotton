@@ -45,7 +45,16 @@ public static class SyncPath
     public static string Normalize(string relativePath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
-        string normalized = relativePath.Replace('\\', '/').Trim('/');
+        string slashNormalized = relativePath.Replace('\\', '/');
+        if (slashNormalized[0] == '/')
+        {
+            throw new SyncPathValidationException(
+                relativePath,
+                null,
+                "relative path cannot be rooted.");
+        }
+
+        string normalized = slashNormalized.Trim('/');
         if (string.IsNullOrWhiteSpace(normalized) || normalized.Split('/').Any(string.IsNullOrWhiteSpace))
         {
             throw new ArgumentException("Relative path must contain non-empty segments.", nameof(relativePath));
