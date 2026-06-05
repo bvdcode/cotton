@@ -38,6 +38,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private string _currentRunProgressTitle = string.Empty;
     private string _currentTransferDetails = string.Empty;
     private string _currentTransferTitle = string.Empty;
+    private string _dataDirectory = string.Empty;
+    private string _appDatabasePath = string.Empty;
+    private string _syncStateDatabasePath = string.Empty;
+    private string _tokenStorePath = string.Empty;
     private string _globalStatus = "Loading";
     private bool _hasCurrentRunProgress;
     private bool _hasCurrentTransfer;
@@ -803,6 +807,30 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public bool HasLastDiagnosticsBundlePath => !string.IsNullOrWhiteSpace(LastDiagnosticsBundlePath);
 
+    public string DataDirectory
+    {
+        get => _dataDirectory;
+        private set => SetProperty(ref _dataDirectory, value);
+    }
+
+    public string AppDatabasePath
+    {
+        get => _appDatabasePath;
+        private set => SetProperty(ref _appDatabasePath, value);
+    }
+
+    public string SyncStateDatabasePath
+    {
+        get => _syncStateDatabasePath;
+        private set => SetProperty(ref _syncStateDatabasePath, value);
+    }
+
+    public string TokenStorePath
+    {
+        get => _tokenStorePath;
+        private set => SetProperty(ref _tokenStorePath, value);
+    }
+
     public string NewRemoteFolderName
     {
         get => _newRemoteFolderName;
@@ -1014,6 +1042,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             StartWithOperatingSystem = snapshot.StartWithOperatingSystem;
             EnableNotifications = snapshot.EnableNotifications;
             ThemeModeIndex = (int)snapshot.ThemeMode;
+            DataDirectory = snapshot.DataPaths.DataDirectory;
+            AppDatabasePath = snapshot.DataPaths.AppDatabasePath;
+            SyncStateDatabasePath = snapshot.DataPaths.SyncStateDatabasePath;
+            TokenStorePath = snapshot.DataPaths.TokenStorePath;
             SyncPairs.Clear();
             foreach (DesktopSyncPairSnapshot syncPair in snapshot.SyncPairs)
             {
@@ -2936,6 +2968,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         AddDiagnosticItem("Server", string.IsNullOrWhiteSpace(ServerUrl) ? "Not configured" : ServerUrl);
         AddDiagnosticItem("Account", AccountName);
         AddDiagnosticItem("Theme", ThemeModeLabel);
+        AddDiagnosticItem("Data folder", string.IsNullOrWhiteSpace(DataDirectory) ? "Unknown" : DataDirectory);
+        AddDiagnosticItem("Preferences database", string.IsNullOrWhiteSpace(AppDatabasePath) ? "Unknown" : AppDatabasePath);
+        AddDiagnosticItem("Sync state database", string.IsNullOrWhiteSpace(SyncStateDatabasePath) ? "Unknown" : SyncStateDatabasePath);
+        AddDiagnosticItem("Token store", string.IsNullOrWhiteSpace(TokenStorePath) ? "Unknown" : TokenStorePath);
         AddDiagnosticItem("Sync pairs", SyncPairs.Count.ToString(CultureInfo.InvariantCulture));
         foreach (SyncPairRowViewModel syncPair in SyncPairs)
         {

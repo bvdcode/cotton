@@ -63,6 +63,11 @@ internal sealed class VisualSmokeShellController : IDesktopShellController
             true,
             true,
             AppThemeMode.Dark,
+            new DesktopDataPathSnapshot(
+                Path.Combine(Path.GetTempPath(), "cotton-sync-visual-smoke"),
+                Path.Combine(Path.GetTempPath(), "cotton-sync-visual-smoke", "sync-app.db"),
+                Path.Combine(Path.GetTempPath(), "cotton-sync-visual-smoke", "sync-state.db"),
+                Path.Combine(Path.GetTempPath(), "cotton-sync-visual-smoke", "tokens.json")),
             DesktopPlatformCapabilities.CreateSnapshot(),
             isSignedIn,
             pairs);

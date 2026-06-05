@@ -13,6 +13,7 @@ internal sealed record DesktopShellSnapshot(
     bool StartWithOperatingSystem,
     bool EnableNotifications,
     AppThemeMode ThemeMode,
+    DesktopDataPathSnapshot DataPaths,
     DesktopPlatformCapabilitySnapshot PlatformCapabilities,
     bool IsSignedIn,
     IReadOnlyList<DesktopSyncPairSnapshot> SyncPairs);

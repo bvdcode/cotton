@@ -257,6 +257,23 @@ public sealed class DesktopShellControllerSelfTestTests
     }
 
     [Test]
+    public async Task LoadAsync_IncludesDataPathsForDiagnostics()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        using DesktopShellController controller = CreateController(paths, new SqliteSyncPairSettingsStore(paths.AppDatabasePath));
+
+        DesktopShellSnapshot snapshot = await controller.LoadAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.DataPaths.DataDirectory, Is.EqualTo(paths.DataDirectory));
+            Assert.That(snapshot.DataPaths.AppDatabasePath, Is.EqualTo(paths.AppDatabasePath));
+            Assert.That(snapshot.DataPaths.SyncStateDatabasePath, Is.EqualTo(paths.SyncStateDatabasePath));
+            Assert.That(snapshot.DataPaths.TokenStorePath, Is.EqualTo(paths.TokenStorePath));
+        });
+    }
+
+    [Test]
     public async Task LoadAsync_ReturnsEmptySignInHintsForNewPreferences()
     {
         using DesktopShellController controller = CreateController();

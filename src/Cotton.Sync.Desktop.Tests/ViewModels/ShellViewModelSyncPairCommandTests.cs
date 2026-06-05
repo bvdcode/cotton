@@ -984,6 +984,26 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task InitializeAsync_AddsDataPathsToDiagnostics()
+    {
+        DesktopDataPathSnapshot dataPaths = CreateTestDataPathSnapshot();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot());
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        IReadOnlyDictionary<string, string> diagnostics = viewModel.DiagnosticsItems
+            .ToDictionary(static item => item.Label, static item => item.Value);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(diagnostics["Data folder"], Is.EqualTo(dataPaths.DataDirectory));
+            Assert.That(diagnostics["Preferences database"], Is.EqualTo(dataPaths.AppDatabasePath));
+            Assert.That(diagnostics["Sync state database"], Is.EqualTo(dataPaths.SyncStateDatabasePath));
+            Assert.That(diagnostics["Token store"], Is.EqualTo(dataPaths.TokenStorePath));
+        });
+    }
+
+    [Test]
     public async Task ExportDiagnosticsCommand_AddsStatusAndRecentActivity()
     {
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot())
@@ -1898,6 +1918,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             false,
             true,
             AppThemeMode.System,
+            CreateTestDataPathSnapshot(),
             new DesktopPlatformCapabilitySnapshot(
                 "Linux",
                 "test",
@@ -1925,6 +1946,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             false,
             enableNotifications,
             AppThemeMode.System,
+            CreateTestDataPathSnapshot(),
             new DesktopPlatformCapabilitySnapshot(
                 "Linux",
                 "test",
@@ -1934,6 +1956,16 @@ public sealed class ShellViewModelSyncPairCommandTests
                 "Tray lifecycle is not supported in this test."),
             true,
             syncPairs);
+    }
+
+    private static DesktopDataPathSnapshot CreateTestDataPathSnapshot()
+    {
+        string dataDirectory = Path.Combine(Path.GetTempPath(), "cotton-sync-test-data");
+        return new DesktopDataPathSnapshot(
+            dataDirectory,
+            Path.Combine(dataDirectory, "sync-app.db"),
+            Path.Combine(dataDirectory, "sync-state.db"),
+            Path.Combine(dataDirectory, "tokens.json"));
     }
 
     private static DesktopSyncPairSnapshot CreatePair(

@@ -116,6 +116,7 @@ internal sealed class DesktopShellController : IDesktopShellController
             startWithOperatingSystem,
             preferences.EnableNotifications,
             preferences.ThemeMode,
+            CreateDataPathSnapshot(),
             platformCapabilities with { IsAutostartSupported = _autostartService.IsSupported },
             session is not null,
             syncPairSnapshots);
@@ -765,6 +766,15 @@ internal sealed class DesktopShellController : IDesktopShellController
 
         _ = Directory.EnumerateFileSystemEntries(syncPair.LocalRootPath).Take(1).ToList();
         return Task.FromResult(syncPair.LocalRootPath);
+    }
+
+    private DesktopDataPathSnapshot CreateDataPathSnapshot()
+    {
+        return new DesktopDataPathSnapshot(
+            _paths.DataDirectory,
+            _paths.AppDatabasePath,
+            _paths.SyncStateDatabasePath,
+            _paths.TokenStorePath);
     }
 
     private async Task<string> CheckAuthenticationStateAsync(CancellationToken cancellationToken)
