@@ -106,6 +106,23 @@ public sealed class RemoteChangeFeedReaderTests
     }
 
     [Test]
+    public async Task ReadFromCursorAsync_RejectsMismatchedResponseCursor()
+    {
+        var stateStore = CreateStore();
+        await stateStore.InitializeAsync();
+        var syncClient = new FakeCottonSyncClient(new SyncChangesResponseDto
+        {
+            SinceCursor = 9,
+            NextCursor = 10,
+            HasMore = false,
+        });
+        var reader = new RemoteChangeFeedReader(syncClient, stateStore);
+
+        Assert.ThrowsAsync<InvalidOperationException>(
+            () => reader.ReadFromCursorAsync("pair-a", sinceCursor: 10, limit: 30));
+    }
+
+    [Test]
     public async Task AcknowledgeAsync_SavesNextCursorForProcessedBatch()
     {
         var stateStore = CreateStore();

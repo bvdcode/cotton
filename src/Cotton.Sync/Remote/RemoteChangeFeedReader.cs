@@ -61,6 +61,11 @@ public sealed class RemoteChangeFeedReader : IRemoteChangeFeedReader
         SyncChangesResponseDto response = await _syncClient
             .GetChangesAsync(sinceCursor, limit, cancellationToken)
             .ConfigureAwait(false);
+        if (response.SinceCursor != sinceCursor)
+        {
+            throw new InvalidOperationException("Remote change feed response cursor does not match the requested cursor.");
+        }
+
         return new RemoteChangeFeedBatch(
             syncPairId,
             response.SinceCursor,
