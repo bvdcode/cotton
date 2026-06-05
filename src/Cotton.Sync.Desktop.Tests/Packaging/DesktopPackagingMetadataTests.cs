@@ -212,7 +212,7 @@ public sealed class DesktopPackagingMetadataTests
     }
 
     [Test]
-    public void LinuxDiagnosticsExportSmokeScript_VerifiesBundlePath()
+    public void LinuxDiagnosticsExportSmokeScript_VerifiesBundleMetadata()
     {
         string smokeScript = File.ReadAllText(GetDesktopFilePath("Packaging/linux/smoke-diagnostics-export.sh"));
 
@@ -223,6 +223,13 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(smokeScript, Does.Contain("sed -n 's/^Bundle: //p'"));
             Assert.That(smokeScript, Does.Contain("Diagnostics bundle path was not reported."));
             Assert.That(smokeScript, Does.Contain("Diagnostics bundle was not created at $bundle_path."));
+            Assert.That(smokeScript, Does.Contain("command -v python3"));
+            Assert.That(smokeScript, Does.Contain("diagnostics.json"));
+            Assert.That(smokeScript, Does.Contain("\"dataPaths\""));
+            Assert.That(smokeScript, Does.Contain("\"sync-app.db\""));
+            Assert.That(smokeScript, Does.Contain("\"sync-state.db\""));
+            Assert.That(smokeScript, Does.Contain("\"tokens.json\""));
+            Assert.That(smokeScript, Does.Contain("Verified diagnostics bundle metadata:"));
             Assert.That(smokeScript, Does.Contain("Exported diagnostics bundle:"));
         });
     }
@@ -242,7 +249,7 @@ public sealed class DesktopPackagingMetadataTests
     }
 
     [Test]
-    public void WindowsDiagnosticsExportSmokeScript_VerifiesBundlePath()
+    public void WindowsDiagnosticsExportSmokeScript_VerifiesBundleMetadata()
     {
         string smokeScript = File.ReadAllText(GetDesktopFilePath("Packaging/windows/smoke-diagnostics-export.ps1"));
 
@@ -253,6 +260,14 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(smokeScript, Does.Contain("--export-diagnostics --data-dir"));
             Assert.That(smokeScript, Does.Contain("Diagnostics bundle path was not reported."));
             Assert.That(smokeScript, Does.Contain("Diagnostics bundle was not created at $bundlePath."));
+            Assert.That(smokeScript, Does.Contain("System.IO.Compression.ZipFile"));
+            Assert.That(smokeScript, Does.Contain("diagnostics.json"));
+            Assert.That(smokeScript, Does.Contain("ConvertFrom-Json"));
+            Assert.That(smokeScript, Does.Contain("dataPaths"));
+            Assert.That(smokeScript, Does.Contain("sync-app.db"));
+            Assert.That(smokeScript, Does.Contain("sync-state.db"));
+            Assert.That(smokeScript, Does.Contain("tokens.json"));
+            Assert.That(smokeScript, Does.Contain("Verified diagnostics bundle metadata:"));
             Assert.That(smokeScript, Does.Contain("Exported diagnostics bundle:"));
         });
     }
