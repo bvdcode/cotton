@@ -9,12 +9,17 @@ namespace Cotton.Sync.App.SyncPairs;
 public enum SyncPairMode
 {
     /// <summary>
+    /// No sync mode was supplied.
+    /// </summary>
+    Unknown = 0,
+
+    /// <summary>
     /// Keeps a complete local mirror of the configured remote folder.
     /// </summary>
-    FullMirror = 0,
+    FullMirror = 1,
 
     /// <summary>
     /// Reserves a future virtual-files mode backed by platform-specific placeholder APIs.
     /// </summary>
-    VirtualFilesPlaceholder = 1,
+    VirtualFilesPlaceholder = 2,
 }

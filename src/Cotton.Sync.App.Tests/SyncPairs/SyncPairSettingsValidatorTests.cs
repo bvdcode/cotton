@@ -62,6 +62,21 @@ public sealed class SyncPairSettingsValidatorTests
     }
 
     [Test]
+    public void Validate_RejectsUnknownMode()
+    {
+        SyncPairSettings syncPair = CreatePair("/home/user/Cotton");
+        syncPair.Mode = SyncPairMode.Unknown;
+
+        SyncPairValidationResult result = _validator.Validate([syncPair]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsValid, Is.False);
+            Assert.That(result.Errors.Single().Issue, Is.EqualTo(SyncPairValidationIssue.UnsupportedMode));
+        });
+    }
+
+    [Test]
     public void Validate_RejectsNestedWindowsRootsIgnoringCase()
     {
         SyncPairSettings first = CreatePair(@"C:\Users\Vadim\Cotton");
