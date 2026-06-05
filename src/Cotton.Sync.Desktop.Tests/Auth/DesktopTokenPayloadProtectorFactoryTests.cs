@@ -41,11 +41,15 @@ public sealed class DesktopTokenPayloadProtectorFactoryTests
     }
 
     [Test]
-    public void CreateLinuxDefault_ReturnsRestrictedFileProtectorWhenSecretToolIsMissing()
+    public void CreateLinuxDefault_ReturnsUnsupportedProtectorWhenSecretToolIsMissing()
     {
         ITokenPayloadProtector protector = DesktopTokenPayloadProtectorFactory.CreateLinuxDefault(_tempDirectory);
 
-        Assert.That(protector, Is.TypeOf<RestrictedFileTokenPayloadProtector>());
+        Assert.Multiple(() =>
+        {
+            Assert.That(protector, Is.TypeOf<UnsupportedTokenPayloadProtector>());
+            Assert.That(protector.Scheme, Is.EqualTo("linux-secret-service-unavailable-v1"));
+        });
     }
 
     [Test]

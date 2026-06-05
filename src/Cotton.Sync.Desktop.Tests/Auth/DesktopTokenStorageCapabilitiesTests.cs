@@ -38,6 +38,22 @@ public sealed class DesktopTokenStorageCapabilitiesTests
     }
 
     [Test]
+    public void CreateSnapshot_MarksUnsupportedProtectorAsUnavailable()
+    {
+        DesktopTokenStorageCapabilitySnapshot snapshot = DesktopTokenStorageCapabilities
+            .CreateSnapshot(new UnsupportedTokenPayloadProtector(
+                "test-unsupported-v1",
+                "Secure token storage is unavailable in this test session."));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.Scheme, Is.EqualTo("test-unsupported-v1"));
+            Assert.That(snapshot.IsReleaseSecure, Is.False);
+            Assert.That(snapshot.Details, Does.Contain("unavailable"));
+        });
+    }
+
+    [Test]
     public void CreateSnapshot_MarksWindowsDpapiProtectorAsReleaseSecure()
     {
         if (!OperatingSystem.IsWindows())

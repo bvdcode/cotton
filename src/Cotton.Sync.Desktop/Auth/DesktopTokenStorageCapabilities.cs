@@ -39,6 +39,10 @@ internal static class DesktopTokenStorageCapabilities
                 protector.Scheme,
                 IsReleaseSecure: false,
                 "Development fallback: restricted local file without cryptographic protection"),
+            UnsupportedTokenPayloadProtector unsupported => new DesktopTokenStorageCapabilitySnapshot(
+                unsupported.Scheme,
+                IsReleaseSecure: false,
+                unsupported.Details),
             _ => new DesktopTokenStorageCapabilitySnapshot(
                 protector.Scheme,
                 IsReleaseSecure: false,

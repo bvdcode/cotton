@@ -8,6 +8,8 @@ namespace Cotton.Sync.Desktop.Auth;
 internal static class DesktopTokenPayloadProtectorFactory
 {
     private const string SecretToolCommandName = "secret-tool";
+    private const string UnsupportedTokenStorageScheme = "unsupported-token-storage-v1";
+    private const string UnavailableLinuxSecretServiceScheme = "linux-secret-service-unavailable-v1";
 
     public static ITokenPayloadProtector CreateDefault()
     {
@@ -21,14 +23,18 @@ internal static class DesktopTokenPayloadProtectorFactory
             return CreateLinuxDefault(Environment.GetEnvironmentVariable("PATH"));
         }
 
-        return new RestrictedFileTokenPayloadProtector();
+        return new UnsupportedTokenPayloadProtector(
+            UnsupportedTokenStorageScheme,
+            "Secure token storage is not implemented for this operating system.");
     }
 
     internal static ITokenPayloadProtector CreateLinuxDefault(string? pathValue)
     {
         string? secretToolPath = ResolveExecutablePath(SecretToolCommandName, pathValue);
         return secretToolPath is null
-            ? new RestrictedFileTokenPayloadProtector()
+            ? new UnsupportedTokenPayloadProtector(
+                UnavailableLinuxSecretServiceScheme,
+                "Linux Secret Service is unavailable because secret-tool was not found in PATH.")
             : new LinuxSecretServiceTokenPayloadProtector(secretToolPath);
     }
 

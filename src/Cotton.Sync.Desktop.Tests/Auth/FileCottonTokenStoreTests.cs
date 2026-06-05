@@ -10,13 +10,15 @@ namespace Cotton.Sync.Desktop.Tests.Auth;
 
 public sealed class FileCottonTokenStoreTests
 {
+    private const string TestTokenPayloadScheme = "test-file-store-v1";
+
     [Test]
     public async Task GetAsync_ReturnsNullWhenFileIsMissing()
     {
         string directory = CreateTempDirectory();
         try
         {
-            var store = new FileCottonTokenStore(Path.Combine(directory, "tokens.json"));
+            var store = CreateStore(Path.Combine(directory, "tokens.json"));
 
             TokenPairDto? tokens = await store.GetAsync();
 
@@ -35,7 +37,7 @@ public sealed class FileCottonTokenStoreTests
         try
         {
             string path = Path.Combine(directory, "tokens.json");
-            var store = new FileCottonTokenStore(path);
+            var store = CreateStore(path);
             var tokens = new TokenPairDto
             {
                 AccessToken = "access-token",
@@ -45,7 +47,7 @@ public sealed class FileCottonTokenStoreTests
             await store.SaveAsync(tokens);
             tokens.AccessToken = "mutated";
             tokens.RefreshToken = "mutated";
-            TokenPairDto? loaded = await new FileCottonTokenStore(path).GetAsync();
+            TokenPairDto? loaded = await CreateStore(path).GetAsync();
 
             Assert.Multiple(() =>
             {
@@ -156,7 +158,7 @@ public sealed class FileCottonTokenStoreTests
         try
         {
             string path = Path.Combine(directory, "tokens.json");
-            var store = new FileCottonTokenStore(path);
+            var store = CreateStore(path);
             await store.SaveAsync(new TokenPairDto
             {
                 AccessToken = "access-token",
@@ -287,7 +289,7 @@ public sealed class FileCottonTokenStoreTests
         {
             string path = Path.Combine(directory, "tokens.json");
             File.WriteAllText(path, """{"accessToken":"access-token"}""");
-            var store = new FileCottonTokenStore(path);
+            var store = CreateStore(path);
 
             TokenPairDto? loaded = await store.GetAsync();
 
@@ -312,7 +314,7 @@ public sealed class FileCottonTokenStoreTests
         try
         {
             string path = Path.Combine(directory, "tokens.json");
-            var store = new FileCottonTokenStore(path);
+            var store = CreateStore(path);
 
             await store.SaveAsync(new TokenPairDto
             {
@@ -363,6 +365,11 @@ public sealed class FileCottonTokenStoreTests
         string directory = Path.Combine(Path.GetTempPath(), "cotton-desktop-token-store-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         return directory;
+    }
+
+    private static FileCottonTokenStore CreateStore(string path)
+    {
+        return new FileCottonTokenStore(path, new ReversingTokenPayloadProtector(TestTokenPayloadScheme));
     }
 
     private static void DeleteTempDirectory(string directory)
