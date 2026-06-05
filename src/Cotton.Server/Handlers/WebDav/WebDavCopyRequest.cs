@@ -212,7 +212,7 @@ public class WebDavCopyRequestHandler(
                 ct);
             return CopyOperationOutcome.Success(nodeId, nodeFileId, addedBytes);
         }
-        catch (BadRequestException<User>)
+        catch (StorageQuotaExceededException<User>)
         {
             return CopyOperationOutcome.Failed(Fail(WebDavCopyError.QuotaExceeded));
         }

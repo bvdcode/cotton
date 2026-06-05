@@ -176,8 +176,14 @@ public class UserStorageQuotaService(
         long usedBytes = await GetUsedBytesAsync(userId, ct);
         if (usedBytes > quotaBytes.Value - safeAdditionalBytes)
         {
-            throw new BadRequestException<User>(
-                $"Storage quota exceeded. Current usage is {usedBytes} bytes, quota is {quotaBytes.Value} bytes.");
+            throw new StorageQuotaExceededException<User>(
+                $"Storage quota exceeded. Current usage is {usedBytes} bytes, quota is {quotaBytes.Value} bytes, requested additional bytes is {safeAdditionalBytes}.",
+                new
+                {
+                    UsedBytes = usedBytes,
+                    QuotaBytes = quotaBytes.Value,
+                    AdditionalBytes = safeAdditionalBytes,
+                });
         }
 
         if (reserveInRequestCache)

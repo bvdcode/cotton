@@ -375,7 +375,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
             Hash = sixByteHash,
             NodeId = root.Id,
         });
-        Assert.That(createSecondResponse.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.BadRequest));
+        Assert.That(createSecondResponse.StatusCode, Is.EqualTo((HttpStatusCode)507));
 
         var updateResponse = await _client.PatchAsJsonAsync($"/api/v1/files/{created!.Id}/update-content", new CreateFileRequest
         {
@@ -385,7 +385,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
             Hash = sixByteHash,
             NodeId = root.Id,
         });
-        Assert.That(updateResponse.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.BadRequest));
+        Assert.That(updateResponse.StatusCode, Is.EqualTo((HttpStatusCode)507));
     }
 
     [Test]
@@ -842,7 +842,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         FileVersionDto original = versions.Single(x => x.IsOriginal);
 
         var restoreResponse = await _client.PostAsync($"/api/v1/files/{file.Id}/versions/{original.Id}/restore", null);
-        Assert.That(restoreResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(restoreResponse.StatusCode, Is.EqualTo((HttpStatusCode)507));
 
         var quota = await _client.GetFromJsonAsync<UserStorageQuotaDto>("/api/v1/users/me/storage-quota");
         Assert.That(quota, Is.Not.Null);
