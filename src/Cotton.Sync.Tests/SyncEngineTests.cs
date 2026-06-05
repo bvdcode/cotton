@@ -325,7 +325,9 @@ public sealed class SyncEngineTests
             Assert.That(Directory.Exists(Path.Combine(_root, "Projects")), Is.True);
             Assert.That(File.Exists(Path.Combine(_root, "Projects", "keep.txt")), Is.True);
             Assert.That(state, Is.Not.Null);
+            Assert.That(result.RequiresUserAction, Is.False);
             Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Skipped, SyncActivityKind.Uploaded }));
+            Assert.That(result.Activities[0].RequiresUserAction, Is.False);
             Assert.That(result.Activities[0].Details, Does.Contain("not empty"));
         });
     }
@@ -355,7 +357,9 @@ public sealed class SyncEngineTests
         {
             Assert.That(remoteDirectories.Deletes, Is.Empty);
             Assert.That(state.Select(entry => entry.RelativePath), Is.EqualTo(new[] { "One", "Two" }));
+            Assert.That(result.RequiresUserAction, Is.True);
             Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Skipped, SyncActivityKind.Skipped }));
+            Assert.That(result.Activities.Select(activity => activity.RequiresUserAction), Is.All.True);
             Assert.That(result.Activities[0].Details, Does.Contain("2 pending deletes exceed limit 1"));
             Assert.That(result.Activities[1].Details, Does.Contain("2 pending deletes exceed limit 1"));
         });
@@ -1035,11 +1039,13 @@ public sealed class SyncEngineTests
         Assert.Multiple(() =>
         {
             Assert.That(remoteFiles.Deletes, Is.Empty);
+            Assert.That(result.RequiresUserAction, Is.True);
             Assert.That(result.Activities.Select(x => x.Kind), Is.EqualTo(new[]
             {
                 SyncActivityKind.Skipped,
                 SyncActivityKind.Skipped,
             }));
+            Assert.That(result.Activities.Select(activity => activity.RequiresUserAction), Is.All.True);
             Assert.That(result.Activities[0].Details, Does.Contain("2 pending deletes exceed limit 1"));
             Assert.That(result.Activities[1].Details, Does.Contain("2 pending deletes exceed limit 1"));
             Assert.That(firstEntry, Is.Not.Null);
@@ -1112,11 +1118,13 @@ public sealed class SyncEngineTests
         {
             Assert.That(File.Exists(Path.Combine(_root, "a.txt")), Is.True);
             Assert.That(File.Exists(Path.Combine(_root, "b.txt")), Is.True);
+            Assert.That(result.RequiresUserAction, Is.True);
             Assert.That(result.Activities.Select(x => x.Kind), Is.EqualTo(new[]
             {
                 SyncActivityKind.Skipped,
                 SyncActivityKind.Skipped,
             }));
+            Assert.That(result.Activities.Select(activity => activity.RequiresUserAction), Is.All.True);
             Assert.That(result.Activities[0].Details, Does.Contain("2 pending deletes exceed limit 1"));
             Assert.That(result.Activities[1].Details, Does.Contain("2 pending deletes exceed limit 1"));
             Assert.That(firstEntry, Is.Not.Null);

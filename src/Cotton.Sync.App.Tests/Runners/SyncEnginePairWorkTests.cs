@@ -19,6 +19,7 @@ using CoreSyncRunOptions = Cotton.Sync.SyncRunOptions;
 using CoreSyncRunResult = Cotton.Sync.SyncRunResult;
 using CoreSyncTransferDirection = Cotton.Sync.SyncTransferDirection;
 using CoreSyncTransferProgress = Cotton.Sync.SyncTransferProgress;
+using CoreSyncActionRequiredException = Cotton.Sync.SyncActionRequiredException;
 
 namespace Cotton.Sync.App.Tests.Runners;
 
@@ -152,6 +153,35 @@ public sealed class SyncEnginePairWorkTests
         });
     }
 
+    [Test]
+    public void RunOnceAsync_ThrowsWhenCoreRunRequiresUserAction()
+    {
+        var engine = new FakeSyncEngine
+        {
+            ResultToReturn = new CoreSyncRunResult
+            {
+                Activities =
+                {
+                    new CoreSyncActivity
+                    {
+                        Kind = CoreSyncActivityKind.Skipped,
+                        RelativePath = "Documents",
+                        Details = "Remote delete blocked by mass-delete guard. 2 pending deletes exceed limit 1.",
+                        RequiresUserAction = true,
+                    },
+                },
+            },
+        };
+        var work = new SyncEnginePairWork(engine);
+
+        CoreSyncActionRequiredException? exception = Assert.ThrowsAsync<CoreSyncActionRequiredException>(
+            async () => await work.RunOnceAsync(CreateSyncPair(Guid.NewGuid())));
+
+        Assert.That(
+            exception?.Message,
+            Is.EqualTo("Remote delete blocked by mass-delete guard. 2 pending deletes exceed limit 1."));
+    }
+
     private static SyncPairSettings CreateSyncPair(Guid id)
     {
         return new SyncPairSettings
@@ -178,6 +208,8 @@ public sealed class SyncEnginePairWorkTests
 
         public CoreSyncPair? LastPair { get; private set; }
 
+        public CoreSyncRunResult ResultToReturn { get; set; } = new();
+
         public int RunOnceCallCount { get; private set; }
 
         public Task<CoreSyncRunResult> RunOnceAsync(
@@ -203,7 +235,7 @@ public sealed class SyncEnginePairWorkTests
                 options?.RunProgress?.Report(RunProgressToReport);
             }
 
-            return Task.FromResult(new CoreSyncRunResult());
+            return Task.FromResult(ResultToReturn);
         }
     }
 

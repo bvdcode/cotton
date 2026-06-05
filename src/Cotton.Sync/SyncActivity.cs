@@ -22,4 +22,9 @@ public sealed class SyncActivity
     /// Gets or sets optional user-displayable details.
     /// </summary>
     public string? Details { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the activity blocked sync until the user reviews it.
+    /// </summary>
+    public bool RequiresUserAction { get; set; }
 }

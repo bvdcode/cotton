@@ -511,7 +511,7 @@ public sealed class SyncEngine : ISyncEngine
     {
         if (!deleteGuard.CanDeleteRemote(out string? details))
         {
-            Report(result, options, SyncActivityKind.Skipped, relativePath, details);
+            Report(result, options, SyncActivityKind.Skipped, relativePath, details, requiresUserAction: true);
             return;
         }
 
@@ -551,7 +551,7 @@ public sealed class SyncEngine : ISyncEngine
     {
         if (!deleteGuard.CanDeleteLocal(out string? details))
         {
-            Report(result, options, SyncActivityKind.Skipped, relativePath, details);
+            Report(result, options, SyncActivityKind.Skipped, relativePath, details, requiresUserAction: true);
             return;
         }
 
@@ -585,7 +585,7 @@ public sealed class SyncEngine : ISyncEngine
 
         if (!deleteGuard.CanDeleteRemote(out string? details))
         {
-            Report(result, options, SyncActivityKind.Skipped, relativePath, details);
+            Report(result, options, SyncActivityKind.Skipped, relativePath, details, requiresUserAction: true);
             return;
         }
 
@@ -614,7 +614,7 @@ public sealed class SyncEngine : ISyncEngine
 
         if (!deleteGuard.CanDeleteLocal(out string? details))
         {
-            Report(result, options, SyncActivityKind.Skipped, relativePath, details);
+            Report(result, options, SyncActivityKind.Skipped, relativePath, details, requiresUserAction: true);
             return;
         }
 
@@ -1082,13 +1082,15 @@ public sealed class SyncEngine : ISyncEngine
         SyncRunOptions options,
         SyncActivityKind kind,
         string relativePath,
-        string? details)
+        string? details,
+        bool requiresUserAction = false)
     {
         var activity = new SyncActivity
         {
             Kind = kind,
             RelativePath = SyncPath.Normalize(relativePath),
             Details = details,
+            RequiresUserAction = requiresUserAction,
         };
         result.Activities.Add(activity);
         options.ActivityProgress?.Report(activity);

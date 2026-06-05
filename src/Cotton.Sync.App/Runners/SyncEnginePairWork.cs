@@ -13,6 +13,7 @@ using CoreSyncPair = Cotton.Sync.SyncPair;
 using CoreSyncRunProgress = Cotton.Sync.SyncRunProgress;
 using CoreSyncRunProgressStage = Cotton.Sync.SyncRunProgressStage;
 using CoreSyncRunOptions = Cotton.Sync.SyncRunOptions;
+using CoreSyncRunResult = Cotton.Sync.SyncRunResult;
 using CoreSyncTransferDirection = Cotton.Sync.SyncTransferDirection;
 using CoreSyncTransferProgress = Cotton.Sync.SyncTransferProgress;
 
@@ -55,9 +56,13 @@ public sealed class SyncEnginePairWork : ISyncPairWork
                 TransferProgress = _progressPublisher is null ? null : new AppTransferProgressReporter(syncPair.Id, _progressPublisher),
                 RunProgress = _runProgressPublisher is null ? null : new AppRunProgressReporter(syncPair.Id, _runProgressPublisher),
             };
-        _ = await _syncEngine
+        CoreSyncRunResult result = await _syncEngine
             .RunOnceAsync(ToCorePair(syncPair), options, cancellationToken)
             .ConfigureAwait(false);
+        if (result.RequiresUserAction)
+        {
+            throw new SyncActionRequiredException(CreateActionRequiredMessage(result));
+        }
     }
 
     private static CoreSyncPair ToCorePair(SyncPairSettings syncPair)
@@ -171,6 +176,13 @@ public sealed class SyncEnginePairWork : ISyncPairWork
         return string.IsNullOrWhiteSpace(details)
             ? message
             : message + ": " + details.Trim();
+    }
+
+    private static string CreateActionRequiredMessage(CoreSyncRunResult result)
+    {
+        return string.IsNullOrWhiteSpace(result.ActionRequiredMessage)
+            ? "Sync requires your attention before it can continue."
+            : result.ActionRequiredMessage.Trim();
     }
 
     private sealed class AppActivityProgress : IProgress<CoreSyncActivity>
