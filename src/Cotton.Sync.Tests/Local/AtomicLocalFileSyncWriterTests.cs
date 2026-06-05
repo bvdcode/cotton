@@ -203,6 +203,18 @@ public sealed class AtomicLocalFileSyncWriterTests
         });
     }
 
+    [Test]
+    public void CreateConflictRelativePath_SkipsExistingDirectoryWithCandidateName()
+    {
+        var writer = new AtomicLocalFileSyncWriter();
+        DateTime timestamp = new(2026, 6, 3, 12, 30, 0, DateTimeKind.Utc);
+        Directory.CreateDirectory(FullPath("Docs/file (Cotton conflict 20260603T123000Z).txt"));
+
+        string conflictPath = writer.CreateConflictRelativePath(_root, "Docs/file.txt", timestamp);
+
+        Assert.That(conflictPath, Is.EqualTo("Docs/file (Cotton conflict 20260603T123000Z-2).txt"));
+    }
+
     private string FullPath(string relativePath)
     {
         return Path.Combine(_root, relativePath.Replace('/', Path.DirectorySeparatorChar));

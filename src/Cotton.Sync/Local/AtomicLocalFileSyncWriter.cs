@@ -149,7 +149,7 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
             string candidateFullPath = Path.Combine(
                 Path.GetFullPath(rootPath),
                 candidateRelativePath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(candidateFullPath))
+            if (!File.Exists(candidateFullPath) && !Directory.Exists(candidateFullPath))
             {
                 return SyncPath.Normalize(candidateRelativePath);
             }
