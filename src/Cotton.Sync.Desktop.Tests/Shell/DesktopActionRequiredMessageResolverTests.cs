@@ -96,6 +96,24 @@ public sealed class DesktopActionRequiredMessageResolverTests
     }
 
     [Test]
+    public void FromStatus_ExplainsMissingSyncStateTable()
+    {
+        var status = new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(
+                Guid.NewGuid(),
+                "Error",
+                "SQLite Error 1: 'no such table: sync_change_cursors'."),
+        ]);
+
+        string message = DesktopActionRequiredMessageResolver.FromStatus(status);
+
+        Assert.That(
+            message,
+            Is.EqualTo("Local sync state database is unavailable. Run diagnostics and restart Cotton Sync."));
+    }
+
+    [Test]
     public void FromStatus_ReturnsEmptyWhenNoPairHasError()
     {
         var status = new DesktopSyncStatusSnapshot(
@@ -235,6 +253,18 @@ public sealed class DesktopActionRequiredMessageResolverTests
         Assert.That(
             message,
             Is.EqualTo("Remote upload was rejected because it is larger than the server limit."));
+    }
+
+    [Test]
+    public void FromException_ExplainsMissingSyncStateTable()
+    {
+        var exception = new InvalidOperationException("SQLite Error 1: 'no such table: sync_entries'.");
+
+        string message = DesktopActionRequiredMessageResolver.FromException(exception);
+
+        Assert.That(
+            message,
+            Is.EqualTo("Local sync state database is unavailable. Run diagnostics and restart Cotton Sync."));
     }
 
     [Test]

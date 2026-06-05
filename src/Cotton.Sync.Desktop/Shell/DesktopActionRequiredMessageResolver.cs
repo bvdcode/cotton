@@ -32,6 +32,9 @@ internal static class DesktopActionRequiredMessageResolver
     private const string LocalPermissionDeniedMessage =
         "Cotton Sync cannot access one of the local files. Grant file permissions and retry sync.";
 
+    private const string LocalSyncStateDatabaseUnavailableMessage =
+        "Local sync state database is unavailable. Run diagnostics and restart Cotton Sync.";
+
     public static string FromStatus(DesktopSyncStatusSnapshot status)
     {
         ArgumentNullException.ThrowIfNull(status);
@@ -152,6 +155,11 @@ internal static class DesktopActionRequiredMessageResolver
         if (LooksLikeLocalPermissionDenied(message))
         {
             return CreateLocalPermissionDeniedMessage(ExtractSingleQuotedPath(message));
+        }
+
+        if (LooksLikeLocalSyncStateDatabaseUnavailable(message))
+        {
+            return LocalSyncStateDatabaseUnavailableMessage;
         }
 
         return message;
@@ -277,6 +285,14 @@ internal static class DesktopActionRequiredMessageResolver
                 && message.Contains("permission was denied", StringComparison.OrdinalIgnoreCase))
             || (message.Contains("access to the path", StringComparison.OrdinalIgnoreCase)
                 && message.Contains("is denied", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool LooksLikeLocalSyncStateDatabaseUnavailable(string message)
+    {
+        return message.Contains("SQLite Error", StringComparison.OrdinalIgnoreCase)
+            && message.Contains("no such table", StringComparison.OrdinalIgnoreCase)
+            && (message.Contains("sync_change_cursors", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("sync_entries", StringComparison.OrdinalIgnoreCase));
     }
 
     private static string? ExtractSingleQuotedPath(string message)
