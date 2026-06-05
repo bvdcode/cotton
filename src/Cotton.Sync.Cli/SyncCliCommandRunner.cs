@@ -161,8 +161,11 @@ public static class SyncCliCommandRunner
                   --remote-root <node-id> --sync-pair <id> --database <path>
                   (--iterations <count> | --duration-seconds <seconds>)
                   [--interval-seconds <seconds>] [--probe-file <relative-path>]
+                  [--second-local-root <path> --second-sync-pair <id>
+                   --second-database <path>]
                   [--two-factor-code <code>]
-                  Repeats full-mirror sync passes for release soak validation.
+                  Repeats full-mirror sync passes for one-client or two-client
+                  release soak validation.
             """);
     }
 }

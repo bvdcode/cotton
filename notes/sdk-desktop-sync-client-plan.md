@@ -733,6 +733,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
   Verification 2026-06-04: `RemoteChangeFeedReaderTests.ReadAsync_CatchesUpFiveThousandRemoteChangesWithinSmokeTarget` replays 5,000 remote changes through 10 pages of 500 changes, acknowledges each page through `RemoteChangeFeedReader`, verifies saved SQLite cursor advances to 5,000, verifies page requests use the expected since-cursors and limits, and enforces a 10-second smoke ceiling. Focused cursor catch-up smoke passed 1/1, full `Cotton.Sync.Tests` passed 95/95, and full solution Release build passed with the known NU1903 warning.
 - [ ] Run 24-hour soak test with one client.
 - [ ] Run 24-hour soak test with two clients.
+  Partial 2026-06-05: extended `Cotton.Sync.Cli sync-soak` with optional second-client arguments: `--second-local-root`, `--second-sync-pair`, and `--second-database`. In two-client mode the harness runs client A, then client B, aggregates activity/state-entry totals, and requires a final convergence pass across both clients before returning success. Verification: focused `sync-soak` tests passed 6/6, full `Cotton.Sync.Cli.Tests` passed 18/18, and `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with 0 warnings. Keep unchecked until the actual 24-hour two-client soak run completes and records memory, CPU, failures, and final convergence.
 - [ ] Record memory growth, CPU usage, sync errors, and final convergence.
 
 ## Phase 14 - Release Readiness Gate

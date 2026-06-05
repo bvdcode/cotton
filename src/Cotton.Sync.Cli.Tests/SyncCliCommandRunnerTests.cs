@@ -159,6 +159,47 @@ public sealed class SyncCliCommandRunnerTests
     }
 
     [Test]
+    public async Task RunAsync_ReturnsErrorForIncompleteSyncSoakSecondClient()
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        int exitCode = await SyncCliCommandRunner.RunAsync(
+            [
+                "sync-soak",
+                "--server",
+                "https://cloud.example.test/",
+                "--username",
+                "testuser",
+                "--password",
+                "testpassword",
+                "--local-root",
+                _tempDirectory,
+                "--remote-root",
+                Guid.NewGuid().ToString("D"),
+                "--sync-pair",
+                "pair-a",
+                "--database",
+                Path.Combine(_tempDirectory, "sync-state-a.db"),
+                "--iterations",
+                "1",
+                "--second-local-root",
+                Path.Combine(_tempDirectory, "second"),
+            ],
+            output,
+            error);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exitCode, Is.EqualTo(2));
+            Assert.That(output.ToString(), Is.Empty);
+            Assert.That(error.ToString(), Does.Contain("--second-local-root"));
+            Assert.That(error.ToString(), Does.Contain("--second-sync-pair"));
+            Assert.That(error.ToString(), Does.Contain("--second-database"));
+        });
+    }
+
+    [Test]
     public async Task RunAsync_ReturnsErrorForInvalidSyncOnceRemoteRoot()
     {
         using var output = new StringWriter();
@@ -718,6 +759,90 @@ public sealed class SyncCliCommandRunnerTests
             Assert.That(text, Does.Contain("Final convergence activities: 1"));
             Assert.That(text, Does.Contain("Converged: no"));
             Assert.That(text, Does.Contain("Failures: 1"));
+        });
+    }
+
+    [Test]
+    public async Task SyncSoak_TwoClientModePropagatesClientAChangeToClientBAndConverges()
+    {
+        string firstLocalRoot = Path.Combine(_tempDirectory, "soak-two-client-a");
+        string secondLocalRoot = Path.Combine(_tempDirectory, "soak-two-client-b");
+        Directory.CreateDirectory(firstLocalRoot);
+        Directory.CreateDirectory(secondLocalRoot);
+        const string relativePath = "soak-two-client.txt";
+        byte[] content = Encoding.UTF8.GetBytes("hello from client A");
+        string firstLocalFilePath = Path.Combine(firstLocalRoot, relativePath);
+        File.WriteAllBytes(firstLocalFilePath, content);
+        File.SetLastWriteTimeUtc(firstLocalFilePath, new DateTime(2026, 6, 4, 12, 0, 0, DateTimeKind.Utc));
+        string contentHash = Convert.ToHexStringLower(SHA256.HashData(content));
+        string firstDatabasePath = Path.Combine(_tempDirectory, "sync-soak-two-client-a.db");
+        string secondDatabasePath = Path.Combine(_tempDirectory, "sync-soak-two-client-b.db");
+        string firstSyncPairId = Guid.NewGuid().ToString("D");
+        string secondSyncPairId = Guid.NewGuid().ToString("D");
+        Guid remoteRootId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var handler = new SyncOnceUploadServerHandler(remoteRootId, relativePath, contentHash, content);
+        using var httpClient = new HttpClient(handler);
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        int exitCode = await SyncCliCommandRunner.RunAsync(
+            [
+                "sync-soak",
+                "--server",
+                "cotton.test",
+                "--username",
+                "testuser",
+                "--password",
+                "testpassword",
+                "--local-root",
+                firstLocalRoot,
+                "--remote-root",
+                remoteRootId.ToString("D"),
+                "--sync-pair",
+                firstSyncPairId,
+                "--database",
+                firstDatabasePath,
+                "--iterations",
+                "1",
+                "--second-local-root",
+                secondLocalRoot,
+                "--second-sync-pair",
+                secondSyncPairId,
+                "--second-database",
+                secondDatabasePath,
+            ],
+            output,
+            error,
+            httpClient);
+
+        var firstStore = new SqliteSyncStateStore(firstDatabasePath);
+        var secondStore = new SqliteSyncStateStore(secondDatabasePath);
+        SyncStateEntry? firstEntry = await firstStore.GetAsync(firstSyncPairId, relativePath);
+        SyncStateEntry? secondEntry = await secondStore.GetAsync(secondSyncPairId, relativePath);
+        string secondLocalFilePath = Path.Combine(secondLocalRoot, relativePath);
+        string text = output.ToString();
+        Assert.Multiple(() =>
+        {
+            Assert.That(exitCode, Is.EqualTo(0));
+            Assert.That(error.ToString(), Is.Empty);
+            Assert.That(text, Does.Contain("Cotton Sync soak run"));
+            Assert.That(text, Does.Contain("Sync pair: " + firstSyncPairId));
+            Assert.That(text, Does.Contain("Second sync pair: " + secondSyncPairId));
+            Assert.That(
+                text,
+                Does.Contain("Iteration 1: clientAActivities=1, clientBActivities=1, clientAStateEntries=1, clientBStateEntries=1"));
+            Assert.That(text, Does.Contain("Total activities: 2"));
+            Assert.That(text, Does.Contain("Final convergence activities: 0"));
+            Assert.That(text, Does.Contain("Final state entries: 2"));
+            Assert.That(text, Does.Contain("Converged: yes"));
+            Assert.That(File.Exists(secondLocalFilePath), Is.True);
+            Assert.That(File.ReadAllBytes(secondLocalFilePath), Is.EqualTo(content));
+            Assert.That(firstEntry, Is.Not.Null);
+            Assert.That(secondEntry, Is.Not.Null);
+            Assert.That(firstEntry!.RemoteFileId, Is.EqualTo(handler.CreatedFileId));
+            Assert.That(secondEntry!.RemoteFileId, Is.EqualTo(handler.CreatedFileId));
+            Assert.That(firstEntry.RemoteContentHash, Is.EqualTo(contentHash));
+            Assert.That(secondEntry.RemoteContentHash, Is.EqualTo(contentHash));
         });
     }
 

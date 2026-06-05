@@ -144,6 +144,15 @@ internal sealed class SyncOnceUploadServerHandler : HttpMessageHandler
             return Json(HttpStatusCode.OK, CreateManifest());
         }
 
+        if (request.Method == HttpMethod.Get
+            && request.PathAndQuery == "/api/v1/files/" + CreatedFileId.ToString("D") + "/content?download=false")
+        {
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(_expectedContent),
+            };
+        }
+
         throw new InvalidOperationException("Unexpected request: " + request.Method + " " + request.PathAndQuery);
     }
 

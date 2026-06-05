@@ -46,13 +46,25 @@ internal static class SyncCliSoakCommandRunner
             return 2;
         }
 
+        SyncCliConnectionOptions? secondClientOptions = ReadSecondClientOptions(args, options, error);
+        if (HasSecondClientOption(args) && secondClientOptions is null)
+        {
+            return 2;
+        }
+
         using HttpClient? ownedHttpClient = injectedHttpClient is null ? new HttpClient() : null;
         HttpClient httpClient = injectedHttpClient ?? ownedHttpClient!;
         SyncCliRuntime runtime = await SyncCliRuntimeFactory.CreateAsync(options, httpClient, cancellationToken)
             .ConfigureAwait(false);
+        SyncCliRuntime? secondRuntime = secondClientOptions is null
+            ? null
+            : await SyncCliRuntimeFactory.CreateAsync(secondClientOptions, httpClient, cancellationToken)
+                .ConfigureAwait(false);
         return await RunLoopAsync(
             options,
             runtime,
+            secondClientOptions,
+            secondRuntime,
             output,
             iterations,
             durationSeconds,
@@ -64,6 +76,8 @@ internal static class SyncCliSoakCommandRunner
     private static async Task<int> RunLoopAsync(
         SyncCliConnectionOptions options,
         SyncCliRuntime runtime,
+        SyncCliConnectionOptions? secondClientOptions,
+        SyncCliRuntime? secondRuntime,
         TextWriter output,
         int? iterations,
         int? durationSeconds,
@@ -83,6 +97,11 @@ internal static class SyncCliSoakCommandRunner
         long peakManagedMemoryBytes = GC.GetTotalMemory(forceFullCollection: false);
         await output.WriteLineAsync("Cotton Sync soak run").ConfigureAwait(false);
         await output.WriteLineAsync("Sync pair: " + options.SyncPairId).ConfigureAwait(false);
+        if (secondClientOptions is not null)
+        {
+            await output.WriteLineAsync("Second sync pair: " + secondClientOptions.SyncPairId).ConfigureAwait(false);
+        }
+
         await output.WriteLineAsync("Started UTC: " + SyncCliFormat.FormatUtc(startedAtUtc)).ConfigureAwait(false);
 
         while (ShouldRunNextSoakIteration(completedIterations, iterations, stopAtUtc))
@@ -98,18 +117,16 @@ internal static class SyncCliSoakCommandRunner
             SyncCliPassResult pass = await SyncCliRuntimeFactory
                 .RunSinglePassAsync(runtime, cancellationToken)
                 .ConfigureAwait(false);
+            SyncCliPassResult? secondPass = secondRuntime is null
+                ? null
+                : await SyncCliRuntimeFactory
+                    .RunSinglePassAsync(secondRuntime, cancellationToken)
+                    .ConfigureAwait(false);
             completedIterations++;
-            totalActivities += pass.Result.Activities.Count;
+            totalActivities += pass.Result.Activities.Count + (secondPass?.Result.Activities.Count ?? 0);
             peakWorkingSetBytes = Math.Max(peakWorkingSetBytes, GetWorkingSetBytes(process));
             peakManagedMemoryBytes = Math.Max(peakManagedMemoryBytes, GC.GetTotalMemory(forceFullCollection: false));
-            await output
-                .WriteLineAsync(
-                    "Iteration " + iteration.ToStringInvariant()
-                    + ": activities=" + pass.Result.Activities.Count.ToStringInvariant()
-                    + ", stateEntries=" + pass.StateEntries.Count.ToStringInvariant()
-                    + ", workingSetBytes=" + GetWorkingSetBytes(process).ToStringInvariant()
-                    + ", managedMemoryBytes=" + GC.GetTotalMemory(forceFullCollection: false).ToStringInvariant())
-                .ConfigureAwait(false);
+            await WriteIterationAsync(output, iteration, pass, secondPass, process).ConfigureAwait(false);
 
             if (!ShouldRunNextSoakIteration(completedIterations, iterations, stopAtUtc))
             {
@@ -122,9 +139,16 @@ internal static class SyncCliSoakCommandRunner
         SyncCliPassResult convergencePass = await SyncCliRuntimeFactory
             .RunSinglePassAsync(runtime, cancellationToken)
             .ConfigureAwait(false);
+        SyncCliPassResult? secondConvergencePass = secondRuntime is null
+            ? null
+            : await SyncCliRuntimeFactory
+                .RunSinglePassAsync(secondRuntime, cancellationToken)
+                .ConfigureAwait(false);
         peakWorkingSetBytes = Math.Max(peakWorkingSetBytes, GetWorkingSetBytes(process));
         peakManagedMemoryBytes = Math.Max(peakManagedMemoryBytes, GC.GetTotalMemory(forceFullCollection: false));
-        int finalConvergenceActivities = convergencePass.Result.Activities.Count;
+        int finalConvergenceActivities = convergencePass.Result.Activities.Count
+            + (secondConvergencePass?.Result.Activities.Count ?? 0);
+        int finalStateEntries = convergencePass.StateEntries.Count + (secondConvergencePass?.StateEntries.Count ?? 0);
         await WriteSummaryAsync(
             output,
             startedAtUtc,
@@ -135,8 +159,47 @@ internal static class SyncCliSoakCommandRunner
             completedIterations,
             totalActivities,
             finalConvergenceActivities,
-            convergencePass.StateEntries.Count).ConfigureAwait(false);
+            finalStateEntries).ConfigureAwait(false);
         return finalConvergenceActivities == 0 ? 0 : 1;
+    }
+
+    private static SyncCliConnectionOptions? ReadSecondClientOptions(
+        IReadOnlyList<string> args,
+        SyncCliConnectionOptions firstClientOptions,
+        TextWriter error)
+    {
+        string? localRoot = SyncCliOptionsReader.ReadOption(args, "--second-local-root");
+        string? syncPairId = SyncCliOptionsReader.ReadOption(args, "--second-sync-pair");
+        string? databasePath = SyncCliOptionsReader.ReadOption(args, "--second-database");
+        if (string.IsNullOrWhiteSpace(localRoot)
+            && string.IsNullOrWhiteSpace(syncPairId)
+            && string.IsNullOrWhiteSpace(databasePath))
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(localRoot)
+            || string.IsNullOrWhiteSpace(syncPairId)
+            || string.IsNullOrWhiteSpace(databasePath))
+        {
+            error.WriteLine(
+                "Two-client sync-soak requires --second-local-root, --second-sync-pair, and --second-database together.");
+            return null;
+        }
+
+        return firstClientOptions with
+        {
+            LocalRoot = localRoot,
+            SyncPairId = syncPairId.Trim(),
+            DatabasePath = databasePath,
+        };
+    }
+
+    private static bool HasSecondClientOption(IReadOnlyList<string> args)
+    {
+        return SyncCliOptionsReader.ReadOption(args, "--second-local-root") is not null
+            || SyncCliOptionsReader.ReadOption(args, "--second-sync-pair") is not null
+            || SyncCliOptionsReader.ReadOption(args, "--second-database") is not null;
     }
 
     private static bool ShouldRunNextSoakIteration(
@@ -173,6 +236,38 @@ internal static class SyncCliSoakCommandRunner
     {
         process.Refresh();
         return process.WorkingSet64;
+    }
+
+    private static async Task WriteIterationAsync(
+        TextWriter output,
+        int iteration,
+        SyncCliPassResult pass,
+        SyncCliPassResult? secondPass,
+        Process process)
+    {
+        string metrics = ", workingSetBytes=" + GetWorkingSetBytes(process).ToStringInvariant()
+            + ", managedMemoryBytes=" + GC.GetTotalMemory(forceFullCollection: false).ToStringInvariant();
+        if (secondPass is null)
+        {
+            await output
+                .WriteLineAsync(
+                    "Iteration " + iteration.ToStringInvariant()
+                    + ": activities=" + pass.Result.Activities.Count.ToStringInvariant()
+                    + ", stateEntries=" + pass.StateEntries.Count.ToStringInvariant()
+                    + metrics)
+                .ConfigureAwait(false);
+            return;
+        }
+
+        await output
+            .WriteLineAsync(
+                "Iteration " + iteration.ToStringInvariant()
+                + ": clientAActivities=" + pass.Result.Activities.Count.ToStringInvariant()
+                + ", clientBActivities=" + secondPass.Result.Activities.Count.ToStringInvariant()
+                + ", clientAStateEntries=" + pass.StateEntries.Count.ToStringInvariant()
+                + ", clientBStateEntries=" + secondPass.StateEntries.Count.ToStringInvariant()
+                + metrics)
+            .ConfigureAwait(false);
     }
 
     private static TimeSpan GetTotalProcessorTime(Process process)
