@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
