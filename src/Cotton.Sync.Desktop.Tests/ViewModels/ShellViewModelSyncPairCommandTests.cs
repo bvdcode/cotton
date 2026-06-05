@@ -725,6 +725,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             SyncPairRowViewModel row = viewModel.SyncPairs.Single();
             Assert.That(viewModel.HasCurrentTransfer, Is.True);
+            Assert.That(viewModel.IsStatusCardVisible, Is.False);
             Assert.That(viewModel.IsCurrentTransferIndeterminate, Is.False);
             Assert.That(viewModel.CurrentTransferProgressValue, Is.EqualTo(50).Within(0.01));
             Assert.That(viewModel.CurrentTransferTitle, Is.EqualTo("Documents: Uploading report.txt"));
@@ -789,6 +790,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             SyncPairRowViewModel row = viewModel.SyncPairs.Single();
             Assert.That(viewModel.HasCurrentRunProgress, Is.True);
+            Assert.That(viewModel.IsStatusCardVisible, Is.False);
             Assert.That(viewModel.IsCurrentRunProgressIndeterminate, Is.False);
             Assert.That(viewModel.CurrentRunProgressValue, Is.EqualTo(30).Within(0.01));
             Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Documents: Checking files"));

@@ -493,7 +493,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public bool HasStatusAttention => HasActionRequired || HasConflicts;
 
-    public bool IsStatusCardVisible => HasConflicts || (HasSyncPairs && !HasActionRequired);
+    public bool IsStatusCardVisible => HasConflicts || (HasSyncPairs && !HasActionRequired && !HasCurrentWorkProgress);
 
     public bool IsDashboardChromeVisible => !IsAddSyncPairWizardVisible && !IsSettingsVisible;
 
@@ -2639,6 +2639,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private void RaiseCurrentWorkProgressProperties()
     {
         OnPropertyChanged(nameof(HasCurrentWorkProgress));
+        OnPropertyChanged(nameof(IsStatusCardVisible));
         OnPropertyChanged(nameof(CurrentWorkProgressTitle));
         OnPropertyChanged(nameof(CurrentWorkProgressDetails));
         OnPropertyChanged(nameof(CurrentWorkProgressSecondaryDetails));
