@@ -2442,8 +2442,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             return "Syncing";
         }
 
-        if (status.SyncPairs.Count > 0
-            && status.SyncPairs.All(static pair => string.Equals(pair.Status, "Paused", StringComparison.Ordinal)))
+        IEnumerable<DesktopSyncPairStatusSnapshot> enabledPairs = status.SyncPairs
+            .Where(static pair => !string.Equals(pair.Status, "Disabled", StringComparison.Ordinal));
+        if (enabledPairs.Any()
+            && enabledPairs.All(static pair => string.Equals(pair.Status, "Paused", StringComparison.Ordinal)))
         {
             return "Paused";
         }

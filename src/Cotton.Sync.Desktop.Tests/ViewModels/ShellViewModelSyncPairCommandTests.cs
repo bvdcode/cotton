@@ -615,6 +615,34 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task StatusChanged_TreatsDisabledPairsAsOutOfScopeForPausedGlobalStatus()
+    {
+        Guid enabledPairId = Guid.NewGuid();
+        Guid disabledPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(
+            CreateSignedInSnapshot(
+                CreatePair(enabledPairId, "Documents", "Idle"),
+                CreatePair(disabledPairId, "Archive", "Disabled")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportStatus(new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(enabledPairId, "Paused", null),
+            new DesktopSyncPairStatusSnapshot(disabledPairId, "Disabled", null),
+        ]));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Paused"));
+            Assert.That(viewModel.HeaderStatusText, Is.EqualTo("Paused"));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Sync is paused."));
+            Assert.That(viewModel.CanResumeSync, Is.True);
+            Assert.That(viewModel.CanPauseSync, Is.False);
+        });
+    }
+
+    [Test]
     public async Task StatusChanged_UsesHumanDiskFullActionRequiredMessage()
     {
         Guid syncPairId = Guid.NewGuid();
