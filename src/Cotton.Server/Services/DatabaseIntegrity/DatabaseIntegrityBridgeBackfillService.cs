@@ -6,6 +6,7 @@ using Cotton.Database.Integrity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage;
+using System.Diagnostics;
 
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
@@ -23,7 +24,9 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
     ILogger<DatabaseIntegrityBridgeBackfillService> _logger) : IDatabaseIntegrityBridgeBackfillService
 {
     private const int BatchSize = 250;
+    private const int ProgressLogRowInterval = 10_000;
     private static readonly TimeSpan InterBatchDelay = TimeSpan.FromMilliseconds(50);
+    private static readonly TimeSpan ProgressLogInterval = TimeSpan.FromSeconds(15);
     private static readonly System.Reflection.MethodInfo BackfillEntitySetCoreMethod = typeof(DatabaseIntegrityBridgeBackfillService)
         .GetMethod(
             nameof(BackfillEntitySetCoreAsync),
@@ -37,21 +40,26 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
     /// <inheritdoc />
     public async Task<int> BackfillUnsignedPhaseOneRowsAsync(CancellationToken cancellationToken)
     {
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        _logger.LogInformation(
+            "Database integrity bridge full backfill started; entity sets {EntitySetCount}, batch size {BatchSize}, inter-batch delay {InterBatchDelay}.",
+            _descriptorsToBackfill.Count,
+            BatchSize,
+            InterBatchDelay);
+
         int total = 0;
         foreach (IDatabaseIntegrityDescriptor descriptor in _descriptorsToBackfill)
         {
             int count = await BackfillEntitySetAsync(descriptor, cancellationToken);
-            if (count == 0)
-            {
-                continue;
-            }
-
             total += count;
-            _logger.LogWarning(
-                "Database integrity bridge re-signed {Count} existing {EntityName} rows from current database state.",
-                count,
-                descriptor.EntityName);
         }
+
+        stopwatch.Stop();
+        _logger.LogInformation(
+            "Database integrity bridge full backfill finished; signed {SignedRows} rows across {EntitySetCount} entity sets in {Elapsed}.",
+            total,
+            _descriptorsToBackfill.Count,
+            stopwatch.Elapsed);
 
         return total;
     }
@@ -155,8 +163,19 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
         StoreObjectIdentifier storeObject = GetStoreObject(entityType, descriptor);
         IProperty keyProperty = primaryKey.Properties[0];
         string keyColumn = GetColumnName(keyProperty, storeObject);
+        string table = QuoteQualifiedTable(storeObject);
+
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        _logger.LogInformation(
+            "Database integrity bridge backfill started for {EntityName} table {Table}; key column {KeyColumn}, schema version {SchemaVersion}.",
+            descriptor.EntityName,
+            table,
+            keyColumn,
+            descriptor.SchemaVersion);
 
         int signed = 0;
+        int nextProgressRowCount = ProgressLogRowInterval;
+        TimeSpan lastProgressLogAt = TimeSpan.Zero;
         object? lastKey = null;
         while (true)
         {
@@ -167,6 +186,13 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
                 cancellationToken);
             if (rows.Count == 0)
             {
+                stopwatch.Stop();
+                _logger.LogInformation(
+                    "Database integrity bridge backfill finished for {EntityName} table {Table}; signed {SignedRows} rows in {Elapsed}.",
+                    descriptor.EntityName,
+                    table,
+                    signed,
+                    stopwatch.Elapsed);
                 return signed;
             }
 
@@ -184,8 +210,45 @@ public sealed class DatabaseIntegrityBridgeBackfillService(
                 ?? throw new InvalidOperationException($"Protected entity type {descriptor.EntityName} has a null primary key value.");
             signed += rows.Count;
             _dbContext.ChangeTracker.Clear();
+
+            if (ShouldLogProgress(signed, stopwatch.Elapsed, ref nextProgressRowCount, ref lastProgressLogAt))
+            {
+                _logger.LogInformation(
+                    "Database integrity bridge backfill progress for {EntityName} table {Table}; signed {SignedRows} rows so far in {Elapsed}.",
+                    descriptor.EntityName,
+                    table,
+                    signed,
+                    stopwatch.Elapsed);
+            }
+
             await Task.Delay(InterBatchDelay, cancellationToken);
         }
+    }
+
+    private static bool ShouldLogProgress(
+        int signed,
+        TimeSpan elapsed,
+        ref int nextProgressRowCount,
+        ref TimeSpan lastProgressLogAt)
+    {
+        if (signed >= nextProgressRowCount)
+        {
+            while (nextProgressRowCount <= signed)
+            {
+                nextProgressRowCount += ProgressLogRowInterval;
+            }
+
+            lastProgressLogAt = elapsed;
+            return true;
+        }
+
+        if (elapsed - lastProgressLogAt < ProgressLogInterval)
+        {
+            return false;
+        }
+
+        lastProgressLogAt = elapsed;
+        return true;
     }
 
     private async Task<List<TEntity>> LoadNextBatchAsync<TEntity>(

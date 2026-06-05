@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Diagnostics;
+
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
 /// <summary>
@@ -27,19 +29,30 @@ public sealed class DatabaseIntegrityBridgeBackfillHostedService(
                 "DatabaseIntegrity:BridgeBackfill:StartupDelaySeconds",
                 (int)DefaultStartupDelay.TotalSeconds)));
 
+        _logger.LogInformation(
+            "Database integrity bridge background backfill scheduled; startup delay {StartupDelay}.",
+            startupDelay);
+
         try
         {
             await Task.Delay(startupDelay, stoppingToken);
 
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            _logger.LogInformation("Database integrity bridge background backfill starting.");
+
             using IServiceScope scope = _serviceProvider.CreateScope();
             var backfill = scope.ServiceProvider.GetRequiredService<IDatabaseIntegrityBridgeBackfillService>();
             int signed = await backfill.BackfillUnsignedPhaseOneRowsAsync(stoppingToken);
+            stopwatch.Stop();
+
             _logger.LogInformation(
-                "Database integrity bridge background backfill completed; signed {SignedRows} rows.",
-                signed);
+                "Database integrity bridge background backfill completed; signed {SignedRows} rows in {Elapsed}.",
+                signed,
+                stopwatch.Elapsed);
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
+            _logger.LogInformation("Database integrity bridge background backfill canceled.");
         }
         catch (Exception ex)
         {
