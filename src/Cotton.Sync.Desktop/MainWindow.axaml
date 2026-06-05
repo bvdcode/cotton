@@ -986,7 +986,7 @@
                            FontSize="18"
                            FontWeight="SemiBold"
                            TextTrimming="CharacterEllipsis" />
-                <TextBlock Text="Account, startup, options, diagnostics"
+                <TextBlock Text="Account, startup, preferences, diagnostics"
                            Classes="secondary"
                            FontSize="12"
                            TextWrapping="Wrap" />
@@ -1068,7 +1068,7 @@
                 </StackPanel>
               </TabItem>
 
-              <TabItem Header="Options">
+              <TabItem Header="Preferences">
                 <StackPanel Margin="0,10,0,0"
                             Spacing="14">
                   <StackPanel Spacing="6">
