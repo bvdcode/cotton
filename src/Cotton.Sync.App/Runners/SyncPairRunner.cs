@@ -80,7 +80,9 @@ public sealed class SyncPairRunner : ISyncPairRunner
     /// <inheritdoc />
     public async Task PauseAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         SetSyncRequestsBlocked(isBlocked: true);
+        CancelActiveSync();
         try
         {
             await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);

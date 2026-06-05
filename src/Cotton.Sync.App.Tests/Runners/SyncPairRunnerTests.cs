@@ -124,12 +124,37 @@ public sealed class SyncPairRunnerTests
         await work.WaitForRunAsync(TimeSpan.FromSeconds(2));
         await runner.SyncNowAsync();
         Task pause = runner.PauseAsync();
-        work.ReleaseRun();
 
-        await Task.WhenAll(firstSync, pause).WaitAsync(TimeSpan.FromSeconds(2));
+        OperationCanceledException? exception = Assert.CatchAsync<OperationCanceledException>(
+            async () => await firstSync);
+        await pause.WaitAsync(TimeSpan.FromSeconds(2));
 
         Assert.Multiple(() =>
         {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(work.RunCount, Is.EqualTo(1));
+            Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Paused));
+        });
+    }
+
+    [Test]
+    public async Task PauseAsync_CancelsRunningSyncWorkAndPausesRunner()
+    {
+        var work = new CancellationObservingSyncPairWork();
+        SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true), work);
+
+        Task sync = runner.SyncNowAsync();
+        await work.WaitForRunAsync(TimeSpan.FromSeconds(2));
+        Task pause = runner.PauseAsync();
+        bool cancellationObserved = await work.WaitForCancellationAsync(TimeSpan.FromSeconds(2));
+        OperationCanceledException? exception = Assert.CatchAsync<OperationCanceledException>(
+            async () => await sync);
+        await pause.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(cancellationObserved, Is.True);
+            Assert.That(exception, Is.Not.Null);
             Assert.That(work.RunCount, Is.EqualTo(1));
             Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Paused));
         });
