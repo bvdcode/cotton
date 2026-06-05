@@ -59,4 +59,23 @@ public sealed class FileSystemLocalSyncRootWatcherTests
             Assert.That(localChange.Kind, Is.AnyOf(LocalSyncRootChangeKind.Created, LocalSyncRootChangeKind.Changed));
         });
     }
+
+    [Test]
+    public async Task StartAsync_IgnoresCottonTemporaryDownloadEvents()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var watcher = new FileSystemLocalSyncRootWatcher(syncPairId, _root);
+        var observed = new TaskCompletionSource<LocalSyncRootChange>(TaskCreationOptions.RunContinuationsAsynchronously);
+        watcher.Changed += (_, change) => observed.TrySetResult(change);
+
+        await watcher.StartAsync();
+        string temporaryDirectory = Path.Combine(_root, ".cotton-sync", "tmp");
+        Directory.CreateDirectory(temporaryDirectory);
+        File.WriteAllText(Path.Combine(temporaryDirectory, "download.download"), "partial");
+
+        await Task.Delay(TimeSpan.FromMilliseconds(350));
+        await watcher.DisposeAsync();
+
+        Assert.That(observed.Task.IsCompleted, Is.False);
+    }
 }
