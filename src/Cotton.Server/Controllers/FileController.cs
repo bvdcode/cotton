@@ -35,6 +35,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Net.Http.Headers;
 using Quartz;
+using FileVersionDto = Cotton.Contracts.Files.FileVersionDto;
 
 namespace Cotton.Server.Controllers
 {

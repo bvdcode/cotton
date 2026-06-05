@@ -23,6 +23,7 @@ using System.Net.Http.Json;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using FileVersionDto = Cotton.Contracts.Files.FileVersionDto;
 
 namespace Cotton.Server.IntegrationTests;
 

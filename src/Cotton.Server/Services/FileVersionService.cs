@@ -13,6 +13,7 @@ using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Helpers;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
+using FileVersionDto = Cotton.Contracts.Files.FileVersionDto;
 
 namespace Cotton.Server.Services;
 

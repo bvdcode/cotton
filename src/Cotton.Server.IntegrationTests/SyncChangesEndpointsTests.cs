@@ -28,6 +28,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Reflection;
 using System.Text;
+using FileVersionDto = Cotton.Contracts.Files.FileVersionDto;
 
 namespace Cotton.Server.IntegrationTests;
 
