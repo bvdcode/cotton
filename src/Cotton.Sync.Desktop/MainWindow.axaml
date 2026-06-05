@@ -659,21 +659,31 @@
                   <ListBox.ItemTemplate>
                     <DataTemplate>
                       <Grid ColumnDefinitions="42,*"
-                            RowDefinitions="Auto,Auto"
+                            RowDefinitions="Auto,Auto,Auto"
                             ColumnSpacing="8"
                             Margin="0,4">
                         <TextBlock Text="{Binding Time}"
                                    FontSize="12"
                                    Opacity="0.68" />
                         <TextBlock Grid.Column="1"
-                                   Text="{Binding Details}"
+                                   Text="{Binding Kind}"
                                    FontSize="12"
+                                   FontWeight="SemiBold"
                                    TextTrimming="CharacterEllipsis" />
                         <TextBlock Grid.Row="1"
+                                   Grid.Column="1"
+                                   Text="{Binding Details}"
+                                   FontSize="11"
+                                   TextWrapping="Wrap"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxLines="2"
+                                   Opacity="0.78" />
+                        <TextBlock Grid.Row="2"
                                    Grid.Column="1"
                                    Text="{Binding Path}"
                                    FontSize="11"
                                    TextTrimming="CharacterEllipsis"
+                                   IsVisible="{Binding HasPath}"
                                    Opacity="0.68" />
                       </Grid>
                     </DataTemplate>

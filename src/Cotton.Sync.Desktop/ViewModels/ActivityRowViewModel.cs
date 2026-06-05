@@ -15,4 +15,6 @@ internal sealed class ActivityRowViewModel
     public string Path { get; init; } = string.Empty;
 
     public string Details { get; init; } = string.Empty;
+
+    public bool HasPath => !string.IsNullOrWhiteSpace(Path);
 }

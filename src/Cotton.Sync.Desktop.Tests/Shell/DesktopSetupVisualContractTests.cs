@@ -210,6 +210,27 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
+    public void ActivityRows_UseShortEventKindAsTitle()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string activitySection = GetSlice(
+            mainWindowXaml,
+            "<TextBlock Text=\"Activity\"",
+            "IsVisible=\"{Binding IsAddSyncPairWizardVisible}\">");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(activitySection, Does.Contain("Text=\"{Binding Kind}\""));
+            Assert.That(activitySection, Does.Contain("FontWeight=\"SemiBold\""));
+            Assert.That(activitySection, Does.Contain("Text=\"{Binding Details}\""));
+            Assert.That(activitySection, Does.Contain("TextWrapping=\"Wrap\""));
+            Assert.That(activitySection, Does.Contain("MaxLines=\"2\""));
+            Assert.That(activitySection, Does.Contain("Text=\"{Binding Path}\""));
+            Assert.That(activitySection, Does.Contain("IsVisible=\"{Binding HasPath}\""));
+        });
+    }
+
+    [Test]
     public void FoldersPanel_UsesSingleHeaderAddAction()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
