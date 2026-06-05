@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-using Cotton.Shared.Contracts.Common;
+using Cotton.Contracts.Common;
 
-namespace Cotton.Shared.Contracts.Files;
+namespace Cotton.Contracts.Files;
 
 /// <summary>
 /// Represents a visible Cotton file entry and its immutable content manifest metadata.

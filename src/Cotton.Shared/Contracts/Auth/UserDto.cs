@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-using Cotton.Shared.Contracts.Common;
+using Cotton.Contracts.Common;
 
-namespace Cotton.Shared.Contracts.Auth;
+namespace Cotton.Contracts.Auth;
 
 /// <summary>
 /// Represents the current authenticated Cotton user.

@@ -2,8 +2,8 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Diagnostics;
-using Cotton.Shared.Contracts.Sync;
-using Cotton.Shared.Models.Enums;
+using Cotton.Contracts.Sync;
+using Cotton.Models.Enums;
 using Cotton.Sdk.Sync;
 using Cotton.Sync.Remote;
 using Cotton.Sync.State;

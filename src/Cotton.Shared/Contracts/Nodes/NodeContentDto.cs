@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-using Cotton.Shared.Contracts.Common;
-using Cotton.Shared.Contracts.Files;
+using Cotton.Contracts.Common;
+using Cotton.Contracts.Files;
 
-namespace Cotton.Shared.Contracts.Nodes;
+namespace Cotton.Contracts.Nodes;
 
 /// <summary>
 /// Represents one page of child nodes and files under a Cotton node.

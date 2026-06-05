@@ -4,7 +4,7 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
-using Cotton.Shared.Contracts.Auth;
+using Cotton.Contracts.Auth;
 using Cotton.Sdk.Auth;
 
 namespace Cotton.Sync.Desktop.Auth;

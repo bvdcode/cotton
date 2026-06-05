@@ -2,8 +2,8 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Net;
-using Cotton.Shared.Contracts;
-using Cotton.Shared.Contracts.Auth;
+using Cotton.Contracts;
+using Cotton.Contracts.Auth;
 using Cotton.Sdk.Auth;
 using Cotton.Sdk.Tests.Fakes;
 

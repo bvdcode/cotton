@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Shared.Contracts.Files;
+namespace Cotton.Contracts.Files;
 
 /// <summary>
 /// Represents one file version entry in a Cotton file lineage.

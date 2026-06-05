@@ -2,8 +2,8 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Net;
-using Cotton.Shared.Contracts.Files;
-using Cotton.Shared.Contracts.Nodes;
+using Cotton.Contracts.Files;
+using Cotton.Contracts.Nodes;
 using Cotton.Sync.Local;
 using Cotton.Sync.Remote;
 using Cotton.Sync.State;

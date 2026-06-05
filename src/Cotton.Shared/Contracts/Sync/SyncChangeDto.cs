@@ -1,10 +1,10 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-using Cotton.Shared.Contracts.Common;
-using Cotton.Shared.Models.Enums;
+using Cotton.Contracts.Common;
+using Cotton.Models.Enums;
 
-namespace Cotton.Shared.Contracts.Sync;
+namespace Cotton.Contracts.Sync;
 
 /// <summary>
 /// Represents one durable ordered file-tree mutation.

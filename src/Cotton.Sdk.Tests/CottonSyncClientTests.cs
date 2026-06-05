@@ -3,9 +3,9 @@
 
 using System.Net;
 using System.Text;
-using Cotton.Shared.Contracts.Auth;
-using Cotton.Shared.Contracts.Sync;
-using Cotton.Shared.Models.Enums;
+using Cotton.Contracts.Auth;
+using Cotton.Contracts.Sync;
+using Cotton.Models.Enums;
 using Cotton.Sdk.Auth;
 using Cotton.Sdk.Tests.Fakes;
 

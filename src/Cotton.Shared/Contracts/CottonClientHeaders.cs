@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Shared.Contracts;
+namespace Cotton.Contracts;
 
 /// <summary>
 /// Defines Cotton client metadata headers.
