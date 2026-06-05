@@ -888,7 +888,7 @@ namespace Cotton.Server.Controllers
             Stream stream = _storage.GetBlobStream(uids, context);
             Response.Headers.ContentEncoding = "identity";
             Response.Headers.CacheControl = "private, no-store, no-transform";
-            var entityTag = EntityTagHeaderValue.Parse($"\"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}\"");
+            var entityTag = FileETags.CreateContentEntityTag(nodeFile);
 
             var lastModified = new DateTimeOffset(nodeFile.CreatedAt);
             return File(

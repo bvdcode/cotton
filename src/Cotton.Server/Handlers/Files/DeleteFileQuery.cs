@@ -165,7 +165,7 @@ namespace Cotton.Server.Handlers.Files
 
         private static void EnsureETagPrecondition(DeleteFileQuery request, NodeFile nodeFile)
         {
-            if (!FileETagConcurrency.MatchesIfMatchHeader(request.ExpectedETag, nodeFile))
+            if (!FileETags.MatchesIfMatchHeader(request.ExpectedETag, nodeFile))
             {
                 throw new FilePreconditionFailedException<NodeFile>("File content changed before delete.");
             }

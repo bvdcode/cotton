@@ -140,7 +140,7 @@ namespace Cotton.Server.Controllers
                 .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
                 .Select(x => (Guid?)x.NodeId)
                 .SingleOrDefaultAsync();
-            DeleteFileQuery query = new(userId, nodeFileId, skipTrash, FileETagConcurrency.ReadIfMatch(Request));
+            DeleteFileQuery query = new(userId, nodeFileId, skipTrash, FileETags.ReadIfMatch(Request));
             await _mediator.Send(query);
 
             await _hubContext.Clients.User(userId.ToString()).SendAsync(
@@ -194,7 +194,7 @@ namespace Cotton.Server.Controllers
                 NodeFileId = nodeFileId,
                 ParentId = request.ParentId,
                 UserId = User.GetUserId(),
-                ExpectedETag = FileETagConcurrency.ReadIfMatch(Request),
+                ExpectedETag = FileETags.ReadIfMatch(Request),
             };
             NodeFileManifestDto dto = await _mediator.Send(command);
             return Ok(dto);
@@ -243,7 +243,7 @@ namespace Cotton.Server.Controllers
                 return CottonResult.NotFound("File not found.");
             }
 
-            if (!FileETagConcurrency.MatchesIfMatchHeader(FileETagConcurrency.ReadIfMatch(Request), nodeFile))
+            if (!FileETags.MatchesIfMatchHeader(FileETags.ReadIfMatch(Request), nodeFile))
             {
                 throw new FilePreconditionFailedException<NodeFile>("File content changed before rename.");
             }
@@ -530,7 +530,7 @@ namespace Cotton.Server.Controllers
                 return this.ApiNotFound("Node file not found.");
             }
 
-            if (!FileETagConcurrency.MatchesIfMatchHeader(FileETagConcurrency.ReadIfMatch(Request), nodeFile))
+            if (!FileETags.MatchesIfMatchHeader(FileETags.ReadIfMatch(Request), nodeFile))
             {
                 throw new FilePreconditionFailedException<NodeFile>("File content changed before update.");
             }
@@ -790,8 +790,7 @@ namespace Cotton.Server.Controllers
             Stream stream = _storage.GetBlobStream(uids, context);
             Response.Headers.ContentEncoding = "identity";
             Response.Headers.CacheControl = "private, no-store, no-transform";
-            EntityTagHeaderValue entityTag = EntityTagHeaderValue.Parse(
-                $"\"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}\"");
+            EntityTagHeaderValue entityTag = FileETags.CreateContentEntityTag(nodeFile);
 
             return File(
                 stream,

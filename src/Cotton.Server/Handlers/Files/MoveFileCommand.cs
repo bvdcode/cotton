@@ -86,7 +86,7 @@ namespace Cotton.Server.Handlers.Files
                 throw new EntityNotFoundException<NodeFile>();
             }
 
-            if (!FileETagConcurrency.MatchesIfMatchHeader(request.ExpectedETag, nodeFile))
+            if (!FileETags.MatchesIfMatchHeader(request.ExpectedETag, nodeFile))
             {
                 throw new FilePreconditionFailedException<NodeFile>("File content changed before move.");
             }
