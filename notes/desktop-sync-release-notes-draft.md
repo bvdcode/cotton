@@ -24,7 +24,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 - Stale partial download cleanup leaves trace warnings when locked or permission-denied `.download` files cannot be removed, keeping diagnostics useful after crash recovery.
 - Token storage is abstracted and release-gated: Windows DPAPI and Linux Secret Service are treated as release-secure; restricted-file storage fails self-test.
 - Diagnostics include structured logging, log rotation, self-test, sync-state cursor-store verification with the concrete database path, support bundle export, and secret redaction.
-- Notifications and recent activity use the same user-readable action-required error messages as the dashboard instead of leaking raw backend/JSON parser failures.
+- Notifications and recent activity use the same user-readable action-required error messages as the dashboard instead of leaking raw backend/JSON parser failures, and repeated unchanged status errors are deduplicated in Activity.
 - CLI recovery support includes state summary and one-shot sync commands for headless validation, including shared server URL normalization for absolute URLs and bare Cotton hosts.
 - Tray lifecycle is implemented for Windows. Linux currently uses normal window lifecycle because tray support varies by desktop environment.
 - Single-instance startup now raises the existing desktop window when the app is launched again.
@@ -45,7 +45,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 ## Verification Already Exercised
 
 - Full local `dotnet test src/Cotton.sln --configuration Release --no-restore` has passed after the current desktop packaging and UI hardening, including desktop 290/290 and server integration 373/373.
-- Desktop tests have passed locally, most recently `Cotton.Sync.Desktop.Tests` 308/308.
+- Desktop tests have passed locally, most recently `Cotton.Sync.Desktop.Tests` 309/309.
 - Sync core tests have passed locally, most recently `Cotton.Sync.Tests` 134/134.
 - Full solution Release build has passed locally with 0 warnings after the latest desktop action-required activity cleanup.
 - Server integration tests have passed locally, most recently `Cotton.Server.IntegrationTests` 373/373.

@@ -670,6 +670,41 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task StatusChanged_DeduplicatesUnchangedErrorActivityMessage()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        const string rawError = "There is not enough space on the disk.";
+        var controller = new FakeDesktopShellController(
+            CreateSignedInSnapshotWithNotifications(
+                enableNotifications: false,
+                CreatePair(syncPairId, "Documents", "Idle")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportStatus(new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(syncPairId, "Error", rawError),
+        ]));
+        controller.ReportStatus(new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(syncPairId, "Error", rawError),
+        ]));
+
+        Assert.That(viewModel.Activities.Count(static activity => activity.Kind == "Error"), Is.EqualTo(1));
+
+        controller.ReportStatus(new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(syncPairId, "Idle", null),
+        ]));
+        controller.ReportStatus(new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(syncPairId, "Error", rawError),
+        ]));
+
+        Assert.That(viewModel.Activities.Count(static activity => activity.Kind == "Error"), Is.EqualTo(2));
+    }
+
+    [Test]
     public async Task TransferProgressChanged_UpdatesCurrentTransferState()
     {
         Guid syncPairId = Guid.NewGuid();

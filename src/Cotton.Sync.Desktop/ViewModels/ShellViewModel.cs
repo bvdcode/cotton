@@ -30,6 +30,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private readonly IDesktopUiDispatcher _uiDispatcher;
     private readonly DesktopNotificationTracker _notificationTracker = new();
     private readonly SyncPairSettingsValidator _syncPairSettingsValidator = new();
+    private readonly Dictionary<Guid, string> _lastStatusErrorActivityMessages = [];
     private string _accountName = "Signed out";
     private string _actionRequiredMessage = string.Empty;
     private string _currentProgressText = "Sign in to start sync.";
@@ -2289,13 +2290,14 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 row.LastSyncedAtUtc = pairStatus.LastSyncedAtUtc;
             }
 
-            if (!string.IsNullOrWhiteSpace(pairStatus.LastError))
+            if (ShouldAddStatusErrorActivity(pairStatus))
             {
+                string rawError = pairStatus.LastError ?? string.Empty;
                 string activityMessage = DesktopActionRequiredMessageResolver.FromSyncPairStatus(pairStatus);
                 AddActivity(
                     "Error",
                     row.LocalPath,
-                    string.IsNullOrWhiteSpace(activityMessage) ? pairStatus.LastError : activityMessage);
+                    string.IsNullOrWhiteSpace(activityMessage) ? rawError : activityMessage);
             }
         }
 
@@ -2311,6 +2313,24 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         RefreshCurrentProgressText();
         AddNotifications(_notificationTracker.Apply(status, SyncPairs.ToDictionary(static pair => pair.Id, static pair => pair.DisplayName)));
         RefreshDiagnosticsItems();
+    }
+
+    private bool ShouldAddStatusErrorActivity(DesktopSyncPairStatusSnapshot pairStatus)
+    {
+        if (string.IsNullOrWhiteSpace(pairStatus.LastError))
+        {
+            _lastStatusErrorActivityMessages.Remove(pairStatus.Id);
+            return false;
+        }
+
+        if (_lastStatusErrorActivityMessages.TryGetValue(pairStatus.Id, out string? lastError)
+            && string.Equals(lastError, pairStatus.LastError, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        _lastStatusErrorActivityMessages[pairStatus.Id] = pairStatus.LastError;
+        return true;
     }
 
     private static void EnsureSyncPairProgress(SyncPairRowViewModel row)
