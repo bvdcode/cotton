@@ -321,11 +321,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 return "Sync needs attention";
             }
 
-            return HasConflicts ? "Conflicts need review" : CurrentProgressText;
+            return CurrentProgressText;
         }
     }
 
-    public string StatusCardDetailText => HasActionRequired || HasConflicts ? CurrentProgressText : string.Empty;
+    public string StatusCardDetailText => HasActionRequired ? CurrentProgressText : string.Empty;
 
     public bool HasStatusCardDetail => !string.IsNullOrWhiteSpace(StatusCardDetailText);
 
@@ -493,7 +493,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public bool HasStatusAttention => HasActionRequired || HasConflicts;
 
-    public bool IsStatusCardVisible => HasConflicts || (HasSyncPairs && !HasActionRequired && !HasCurrentWorkProgress);
+    public bool IsStatusCardVisible => HasSyncPairs && !HasActionRequired && !HasConflicts && !HasCurrentWorkProgress;
 
     public bool IsDashboardChromeVisible => !IsAddSyncPairWizardVisible && !IsSettingsVisible;
 

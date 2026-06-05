@@ -1042,7 +1042,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.HasStatusAttention, Is.True);
             Assert.That(viewModel.ConflictCountLabel, Is.EqualTo("1 conflict"));
             Assert.That(viewModel.HeaderStatusText, Is.EqualTo("Conflicts need review"));
-            Assert.That(viewModel.StatusCardTitle, Is.EqualTo("Conflicts need review"));
+            Assert.That(viewModel.IsStatusCardVisible, Is.False);
             Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Review conflicts below to continue syncing."));
             Assert.That(viewModel.SelectedConflict, Is.SameAs(conflict));
             Assert.That(conflict.SyncPairId, Is.EqualTo(syncPairId));

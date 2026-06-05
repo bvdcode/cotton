@@ -372,7 +372,7 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
-    public void StatusCard_UsesAttentionStateForActionRequiredAndConflicts()
+    public void StatusCard_UsesAttentionStateForActionRequired()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
         string statusCard = GetSlice(
