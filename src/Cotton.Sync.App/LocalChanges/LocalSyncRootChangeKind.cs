@@ -9,27 +9,32 @@ namespace Cotton.Sync.App.LocalChanges;
 public enum LocalSyncRootChangeKind
 {
     /// <summary>
+    /// No local change kind was supplied.
+    /// </summary>
+    Unknown = 0,
+
+    /// <summary>
     /// A local item was created.
     /// </summary>
-    Created,
+    Created = 1,
 
     /// <summary>
     /// A local item was modified.
     /// </summary>
-    Changed,
+    Changed = 2,
 
     /// <summary>
     /// A local item was deleted.
     /// </summary>
-    Deleted,
+    Deleted = 3,
 
     /// <summary>
     /// A local item was renamed.
     /// </summary>
-    Renamed,
+    Renamed = 4,
 
     /// <summary>
     /// The watcher encountered an error and the sync pair should be reconciled.
     /// </summary>
-    Error,
+    Error = 5,
 }
