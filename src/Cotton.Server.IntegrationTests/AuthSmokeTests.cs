@@ -4,6 +4,7 @@
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Helpers;
+using Cotton.Contracts;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using ServerChangePasswordRequestDto = Cotton.Server.Models.Requests.ChangePasswordRequestDto;

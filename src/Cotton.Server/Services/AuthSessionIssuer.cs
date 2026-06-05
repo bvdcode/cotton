@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Contracts;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Controllers;
 using Cotton.Server.Extensions;
