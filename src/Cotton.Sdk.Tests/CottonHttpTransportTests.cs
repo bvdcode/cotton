@@ -3,7 +3,7 @@
 
 using System.Net;
 using System.Text;
-using Cotton.Contracts.Auth;
+using Cotton.Shared.Contracts.Auth;
 using Cotton.Sdk.Auth;
 using Cotton.Sdk.Tests.Fakes;
 using Microsoft.Extensions.Logging;

@@ -54,7 +54,7 @@ namespace Cotton.Email
         public static string Render(EmailTemplate template, string languageCode, Dictionary<string, string> variables)
         {
             string key = BuildKey(template, languageCode);
-            if (!Templates.TryGetValue(key, out string html))
+            if (!Templates.TryGetValue(key, out string? html))
             {
                 key = BuildKey(template, "en");
                 if (!Templates.TryGetValue(key, out html))
@@ -82,7 +82,7 @@ namespace Cotton.Email
         /// <returns>The localized subject line.</returns>
         public static string GetSubject(EmailTemplate template, string languageCode)
         {
-            if (Subjects.TryGetValue(BuildKey(template, languageCode), out string subject))
+            if (Subjects.TryGetValue(BuildKey(template, languageCode), out string? subject))
             {
                 return subject;
             }

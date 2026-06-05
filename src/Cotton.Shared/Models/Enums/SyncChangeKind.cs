@@ -1,7 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Database.Models.Enums
+namespace Cotton.Shared.Models.Enums
 {
     /// <summary>Describes durable file-tree mutations visible to synchronization clients.</summary>
     public enum SyncChangeKind

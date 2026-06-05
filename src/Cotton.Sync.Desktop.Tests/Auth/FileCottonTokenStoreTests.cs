@@ -3,7 +3,7 @@
 
 using System.Security.Cryptography;
 using System.Text;
-using Cotton.Contracts.Auth;
+using Cotton.Shared.Contracts.Auth;
 using Cotton.Sync.Desktop.Auth;
 
 namespace Cotton.Sync.Desktop.Tests.Auth;

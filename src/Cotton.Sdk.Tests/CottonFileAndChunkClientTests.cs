@@ -3,8 +3,8 @@
 
 using System.Net;
 using System.Text;
-using Cotton.Contracts.Auth;
-using Cotton.Contracts.Files;
+using Cotton.Shared.Contracts.Auth;
+using Cotton.Shared.Contracts.Files;
 using Cotton.Sdk.Auth;
 using Cotton.Sdk.Tests.Fakes;
 

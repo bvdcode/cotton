@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Contracts.Nodes;
+namespace Cotton.Shared.Contracts.Nodes;
 
 /// <summary>
 /// Represents a create-node request.

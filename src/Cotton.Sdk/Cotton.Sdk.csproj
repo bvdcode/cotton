@@ -21,7 +21,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.8" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.8" />
-    <ProjectReference Include="../Cotton.Contracts/Cotton.Contracts.csproj" />
     <ProjectReference Include="../Cotton.Shared/Cotton.csproj" />
   </ItemGroup>
 

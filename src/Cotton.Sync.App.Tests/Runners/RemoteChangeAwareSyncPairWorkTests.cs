@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-using Cotton.Contracts.Sync;
+using Cotton.Shared.Contracts.Sync;
+using Cotton.Shared.Models.Enums;
 using Cotton.Sync.App.Runners;
 using Cotton.Sync.App.SyncPairs;
 using Cotton.Sync.Remote;
@@ -52,8 +53,11 @@ public sealed class RemoteChangeAwareSyncPairWorkTests
             [
                 new SyncChangeDto
                 {
-                    Cursor = 11,
-                    Kind = SyncChangeKindDto.FileCreated,
+                    Id = 11,
+                    Kind = SyncChangeKind.FileCreated,
+                    LayoutId = Guid.NewGuid(),
+                    ItemId = Guid.NewGuid(),
+                    ParentNodeId = Guid.NewGuid(),
                     Name = "report.txt",
                 },
             ]);
@@ -68,8 +72,11 @@ public sealed class RemoteChangeAwareSyncPairWorkTests
             [
                 new SyncChangeDto
                 {
-                    Cursor = 13,
-                    Kind = SyncChangeKindDto.FolderRenamed,
+                    Id = 13,
+                    Kind = SyncChangeKind.FolderRenamed,
+                    LayoutId = Guid.NewGuid(),
+                    ItemId = Guid.NewGuid(),
+                    ParentNodeId = Guid.NewGuid(),
                     Name = "Archive",
                 },
             ]);

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Contracts.Files;
+namespace Cotton.Shared.Contracts.Files;
 
 /// <summary>
 /// Represents a create-file or update-file-content request based on already uploaded chunks.

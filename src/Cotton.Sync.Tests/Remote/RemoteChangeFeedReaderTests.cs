@@ -2,7 +2,8 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Diagnostics;
-using Cotton.Contracts.Sync;
+using Cotton.Shared.Contracts.Sync;
+using Cotton.Shared.Models.Enums;
 using Cotton.Sdk.Sync;
 using Cotton.Sync.Remote;
 using Cotton.Sync.State;
@@ -48,8 +49,11 @@ public sealed class RemoteChangeFeedReaderTests
             [
                 new SyncChangeDto
                 {
-                    Cursor = 11,
-                    Kind = SyncChangeKindDto.FileCreated,
+                    Id = 11,
+                    Kind = SyncChangeKind.FileCreated,
+                    LayoutId = Guid.NewGuid(),
+                    ItemId = Guid.NewGuid(),
+                    ParentNodeId = Guid.NewGuid(),
                     Name = "report.txt",
                 },
             ],
@@ -253,11 +257,12 @@ public sealed class RemoteChangeFeedReaderTests
                 Changes = Enumerable.Range(1, pageSize)
                     .Select(offset => new SyncChangeDto
                     {
-                        Cursor = sinceCursor + offset,
-                        Kind = SyncChangeKindDto.FileContentUpdated,
-                        NodeFileId = Guid.NewGuid(),
+                        Id = sinceCursor + offset,
+                        Kind = SyncChangeKind.FileContentUpdated,
+                        LayoutId = Guid.NewGuid(),
+                        ItemId = Guid.NewGuid(),
+                        ParentNodeId = Guid.NewGuid(),
                         Name = "file-" + (sinceCursor + offset).ToString("D5", System.Globalization.CultureInfo.InvariantCulture) + ".txt",
-                        ContentHash = "hash-" + (sinceCursor + offset).ToString("D5", System.Globalization.CultureInfo.InvariantCulture),
                         CreatedAt = new DateTime(2026, 6, 4, 12, 0, 0, DateTimeKind.Utc),
                     })
                     .ToList(),

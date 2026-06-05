@@ -4,10 +4,10 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using Cotton.Contracts.Auth;
-using Cotton.Contracts.Files;
-using Cotton.Contracts.Nodes;
-using Cotton.Contracts.Settings;
+using Cotton.Shared.Contracts.Auth;
+using Cotton.Shared.Contracts.Files;
+using Cotton.Shared.Contracts.Nodes;
+using Cotton.Shared.Contracts.Settings;
 
 namespace Cotton.Sync.Cli.Tests.TestSupport;
 

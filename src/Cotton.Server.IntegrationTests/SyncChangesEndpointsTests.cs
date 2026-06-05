@@ -4,6 +4,8 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Shared.Contracts.Sync;
+using Cotton.Shared.Models.Enums;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;

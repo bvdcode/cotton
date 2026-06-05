@@ -3,8 +3,9 @@
 
 using System.Net;
 using System.Text;
-using Cotton.Contracts.Auth;
-using Cotton.Contracts.Sync;
+using Cotton.Shared.Contracts.Auth;
+using Cotton.Shared.Contracts.Sync;
+using Cotton.Shared.Models.Enums;
 using Cotton.Sdk.Auth;
 using Cotton.Sdk.Tests.Fakes;
 
@@ -28,20 +29,16 @@ public sealed class CottonSyncClientTests
             {
                 new
                 {
-                    cursor = 42,
-                    kind = 0,
-                    layoutId = (Guid?)null,
-                    nodeId = Guid.NewGuid(),
-                    nodeFileId,
+                    id = 42,
+                    kind = 1,
+                    layoutId = Guid.NewGuid(),
+                    itemId = nodeFileId,
                     parentNodeId = Guid.NewGuid(),
                     previousParentNodeId = (Guid?)null,
                     fileManifestId = Guid.NewGuid(),
-                    originalNodeFileId = nodeFileId,
                     name = "hello.txt",
-                    contentHash = "abc",
-                    eTag = "sha256-abc",
-                    sizeBytes = 5,
                     createdAt = DateTime.UtcNow,
+                    updatedAt = DateTime.UtcNow,
                 }
             }
         });
@@ -56,8 +53,8 @@ public sealed class CottonSyncClientTests
             Assert.That(page.NextCursor, Is.EqualTo(42));
             Assert.That(page.EarliestAvailableCursor, Is.EqualTo(40));
             Assert.That(page.CursorExpired, Is.False);
-            Assert.That(page.Changes.Single().Kind, Is.EqualTo(SyncChangeKindDto.FileCreated));
-            Assert.That(page.Changes.Single().NodeFileId, Is.EqualTo(nodeFileId));
+            Assert.That(page.Changes.Single().Kind, Is.EqualTo(SyncChangeKind.FileCreated));
+            Assert.That(page.Changes.Single().ItemId, Is.EqualTo(nodeFileId));
         });
     }
 

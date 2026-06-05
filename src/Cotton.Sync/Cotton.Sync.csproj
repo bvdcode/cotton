@@ -25,7 +25,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.8" />
-    <ProjectReference Include="../Cotton.Contracts/Cotton.Contracts.csproj" />
+    <ProjectReference Include="../Cotton.Shared/Cotton.csproj" />
     <ProjectReference Include="../Cotton.Sdk/Cotton.Sdk.csproj" />
   </ItemGroup>
 

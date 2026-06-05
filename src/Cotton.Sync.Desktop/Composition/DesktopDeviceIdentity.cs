@@ -3,7 +3,7 @@
 
 using System.Reflection;
 using System.Runtime.InteropServices;
-using Cotton.Contracts;
+using Cotton.Shared.Contracts;
 
 namespace Cotton.Sync.Desktop.Composition;
 

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-using Cotton.Contracts.Sync;
+using Cotton.Shared.Contracts.Sync;
+using Cotton.Shared.Models.Enums;
 
 namespace Cotton.Sync.Remote;
 
@@ -15,21 +16,17 @@ public sealed class RemoteChangeImpact
         RemoteChangeTargetKind targetKind,
         RemoteChangeAction action)
     {
-        Cursor = change.Cursor;
+        Cursor = change.Id;
         Kind = change.Kind;
         TargetKind = targetKind;
         Action = action;
         LayoutId = change.LayoutId;
-        NodeId = change.NodeId;
-        NodeFileId = change.NodeFileId;
+        NodeId = targetKind == RemoteChangeTargetKind.Folder ? change.ItemId : change.ParentNodeId;
+        NodeFileId = targetKind == RemoteChangeTargetKind.File ? change.ItemId : null;
         ParentNodeId = change.ParentNodeId;
         PreviousParentNodeId = change.PreviousParentNodeId;
         FileManifestId = change.FileManifestId;
-        OriginalNodeFileId = change.OriginalNodeFileId;
         Name = change.Name;
-        ContentHash = change.ContentHash;
-        ETag = change.ETag;
-        SizeBytes = change.SizeBytes;
         CreatedAtUtc = DateTime.SpecifyKind(change.CreatedAt, DateTimeKind.Utc);
     }
 
@@ -41,7 +38,7 @@ public sealed class RemoteChangeImpact
     /// <summary>
     /// Gets the original wire kind.
     /// </summary>
-    public SyncChangeKindDto Kind { get; }
+    public SyncChangeKind Kind { get; }
 
     /// <summary>
     /// Gets the normalized target kind.
@@ -84,29 +81,9 @@ public sealed class RemoteChangeImpact
     public Guid? FileManifestId { get; }
 
     /// <summary>
-    /// Gets the original file lineage identifier for file mutations when supplied by the server.
+    /// Gets the current display name captured by the server.
     /// </summary>
-    public Guid? OriginalNodeFileId { get; }
-
-    /// <summary>
-    /// Gets the current display name when supplied by the server.
-    /// </summary>
-    public string? Name { get; }
-
-    /// <summary>
-    /// Gets the current lowercase hexadecimal full-content hash for file mutations when supplied by the server.
-    /// </summary>
-    public string? ContentHash { get; }
-
-    /// <summary>
-    /// Gets the current strong content ETag for file mutations when supplied by the server.
-    /// </summary>
-    public string? ETag { get; }
-
-    /// <summary>
-    /// Gets the current content size in bytes for file mutations when supplied by the server.
-    /// </summary>
-    public long? SizeBytes { get; }
+    public string Name { get; }
 
     /// <summary>
     /// Gets the UTC creation timestamp for the remote mutation.
@@ -119,14 +96,9 @@ public sealed class RemoteChangeImpact
     public static RemoteChangeImpact FromDto(SyncChangeDto change)
     {
         ArgumentNullException.ThrowIfNull(change);
-        if (change.Cursor < 0)
+        if (change.Id < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(change), change.Cursor, "Change cursor cannot be negative.");
-        }
-
-        if (change.SizeBytes < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(change), change.SizeBytes, "Change size cannot be negative.");
+            throw new ArgumentOutOfRangeException(nameof(change), change.Id, "Change cursor cannot be negative.");
         }
 
         (RemoteChangeTargetKind targetKind, RemoteChangeAction action) = MapKind(change.Kind);
@@ -158,27 +130,23 @@ public sealed class RemoteChangeImpact
             yield return NodeFileId.Value;
         }
 
-        if (OriginalNodeFileId.HasValue)
-        {
-            yield return OriginalNodeFileId.Value;
-        }
     }
 
-    private static (RemoteChangeTargetKind TargetKind, RemoteChangeAction Action) MapKind(SyncChangeKindDto kind)
+    private static (RemoteChangeTargetKind TargetKind, RemoteChangeAction Action) MapKind(SyncChangeKind kind)
     {
         return kind switch
         {
-            SyncChangeKindDto.FileCreated => (RemoteChangeTargetKind.File, RemoteChangeAction.Created),
-            SyncChangeKindDto.FileContentUpdated => (RemoteChangeTargetKind.File, RemoteChangeAction.ContentUpdated),
-            SyncChangeKindDto.FileRenamed => (RemoteChangeTargetKind.File, RemoteChangeAction.Renamed),
-            SyncChangeKindDto.FileMoved => (RemoteChangeTargetKind.File, RemoteChangeAction.Moved),
-            SyncChangeKindDto.FileDeleted => (RemoteChangeTargetKind.File, RemoteChangeAction.Deleted),
-            SyncChangeKindDto.FileRestored => (RemoteChangeTargetKind.File, RemoteChangeAction.Restored),
-            SyncChangeKindDto.FolderCreated => (RemoteChangeTargetKind.Folder, RemoteChangeAction.Created),
-            SyncChangeKindDto.FolderRenamed => (RemoteChangeTargetKind.Folder, RemoteChangeAction.Renamed),
-            SyncChangeKindDto.FolderMoved => (RemoteChangeTargetKind.Folder, RemoteChangeAction.Moved),
-            SyncChangeKindDto.FolderDeleted => (RemoteChangeTargetKind.Folder, RemoteChangeAction.Deleted),
-            SyncChangeKindDto.FolderRestored => (RemoteChangeTargetKind.Folder, RemoteChangeAction.Restored),
+            SyncChangeKind.FileCreated => (RemoteChangeTargetKind.File, RemoteChangeAction.Created),
+            SyncChangeKind.FileContentUpdated => (RemoteChangeTargetKind.File, RemoteChangeAction.ContentUpdated),
+            SyncChangeKind.FileRenamed => (RemoteChangeTargetKind.File, RemoteChangeAction.Renamed),
+            SyncChangeKind.FileMoved => (RemoteChangeTargetKind.File, RemoteChangeAction.Moved),
+            SyncChangeKind.FileDeleted => (RemoteChangeTargetKind.File, RemoteChangeAction.Deleted),
+            SyncChangeKind.FileRestored => (RemoteChangeTargetKind.File, RemoteChangeAction.Restored),
+            SyncChangeKind.FolderCreated => (RemoteChangeTargetKind.Folder, RemoteChangeAction.Created),
+            SyncChangeKind.FolderRenamed => (RemoteChangeTargetKind.Folder, RemoteChangeAction.Renamed),
+            SyncChangeKind.FolderMoved => (RemoteChangeTargetKind.Folder, RemoteChangeAction.Moved),
+            SyncChangeKind.FolderDeleted => (RemoteChangeTargetKind.Folder, RemoteChangeAction.Deleted),
+            SyncChangeKind.FolderRestored => (RemoteChangeTargetKind.Folder, RemoteChangeAction.Restored),
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unsupported remote change kind."),
         };
     }

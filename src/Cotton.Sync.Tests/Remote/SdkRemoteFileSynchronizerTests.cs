@@ -3,10 +3,10 @@
 
 using System.Security.Cryptography;
 using System.Text;
-using Cotton.Contracts.Auth;
-using Cotton.Contracts.Files;
-using Cotton.Contracts.Nodes;
-using Cotton.Contracts.Settings;
+using Cotton.Shared.Contracts.Auth;
+using Cotton.Shared.Contracts.Files;
+using Cotton.Shared.Contracts.Nodes;
+using Cotton.Shared.Contracts.Settings;
 using Cotton.Sdk;
 using Cotton.Sdk.Auth;
 using Cotton.Sdk.Chunks;
