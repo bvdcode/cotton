@@ -24,10 +24,8 @@ public sealed class CottonSyncClient : ICottonSyncClient
         int limit = 500,
         CancellationToken cancellationToken = default)
     {
-        if (sinceCursor < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(sinceCursor), sinceCursor, "Cursor must be non-negative.");
-        }
+        ArgumentOutOfRangeException.ThrowIfNegative(sinceCursor);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(limit);
 
         string path = $"/api/v1/sync/changes?since={sinceCursor}&limit={limit}";
         return _transport.SendJsonAsync<SyncChangesResponseDto>(

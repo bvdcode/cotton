@@ -67,6 +67,16 @@ public sealed class CottonSyncClientTests
         Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => client.Sync.GetChangesAsync(-1));
     }
 
+    [TestCase(0)]
+    [TestCase(-1)]
+    public async Task GetChangesAsync_RejectsNonPositiveLimit(int limit)
+    {
+        var handler = new QueuedHttpMessageHandler();
+        var client = await CreateAuthorizedClientAsync(handler);
+
+        Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => client.Sync.GetChangesAsync(0, limit));
+    }
+
     [Test]
     public async Task GetChangesAsync_ReportsHtmlSpaFallbackAsApiException()
     {
