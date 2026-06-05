@@ -10,5 +10,6 @@ internal sealed record DesktopDiagnosticsBundle(
     string AppVersion,
     string? ServerUrl,
     string AccountName,
+    DesktopDataPathSnapshot DataPaths,
     IReadOnlyList<DesktopSyncPairSnapshot> SyncPairs,
     IReadOnlyList<DesktopSelfTestItemSnapshot> SelfTestItems);

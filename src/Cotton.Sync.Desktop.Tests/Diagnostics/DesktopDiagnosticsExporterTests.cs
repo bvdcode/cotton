@@ -36,7 +36,7 @@ public sealed class DesktopDiagnosticsExporterTests
         File.WriteAllText(paths.LogFilePath, "sync log");
         var exporter = new DesktopDiagnosticsExporter();
 
-        string archivePath = await exporter.ExportAsync(paths, CreateBundle());
+        string archivePath = await exporter.ExportAsync(paths, CreateBundle(paths));
 
         using ZipArchive archive = ZipFile.OpenRead(archivePath);
         Assert.Multiple(() =>
@@ -55,7 +55,7 @@ public sealed class DesktopDiagnosticsExporterTests
         File.WriteAllText(paths.SyncStateDatabasePath, "sync-db");
         var exporter = new DesktopDiagnosticsExporter();
 
-        string archivePath = await exporter.ExportAsync(paths, CreateBundle());
+        string archivePath = await exporter.ExportAsync(paths, CreateBundle(paths));
 
         using ZipArchive archive = ZipFile.OpenRead(archivePath);
         string[] entryNames = archive.Entries.Select(static entry => entry.FullName).ToArray();
@@ -76,7 +76,7 @@ public sealed class DesktopDiagnosticsExporterTests
             """Authorization: Bearer access-token {"password":"secret","refreshToken":"refresh-token"}""");
         var exporter = new DesktopDiagnosticsExporter();
 
-        string archivePath = await exporter.ExportAsync(paths, CreateBundle());
+        string archivePath = await exporter.ExportAsync(paths, CreateBundle(paths));
 
         using ZipArchive archive = ZipFile.OpenRead(archivePath);
         string logContent = ReadEntry(archive, "logs/cotton-sync.log");
@@ -97,7 +97,7 @@ public sealed class DesktopDiagnosticsExporterTests
         DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
         var exporter = new DesktopDiagnosticsExporter();
 
-        string archivePath = await exporter.ExportAsync(paths, CreateBundle());
+        string archivePath = await exporter.ExportAsync(paths, CreateBundle(paths));
 
         using ZipArchive archive = ZipFile.OpenRead(archivePath);
         string diagnosticsJson = ReadEntry(archive, "diagnostics.json");
@@ -110,13 +110,40 @@ public sealed class DesktopDiagnosticsExporterTests
         Assert.That(mode, Is.EqualTo("fullMirror"));
     }
 
-    private static DesktopDiagnosticsBundle CreateBundle()
+    [Test]
+    public async Task ExportAsync_SerializesDataPathMetadata()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        var exporter = new DesktopDiagnosticsExporter();
+
+        string archivePath = await exporter.ExportAsync(paths, CreateBundle(paths));
+
+        using ZipArchive archive = ZipFile.OpenRead(archivePath);
+        string diagnosticsJson = ReadEntry(archive, "diagnostics.json");
+        using JsonDocument document = JsonDocument.Parse(diagnosticsJson);
+        JsonElement dataPaths = document.RootElement.GetProperty("dataPaths");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dataPaths.GetProperty("dataDirectory").GetString(), Is.EqualTo(paths.DataDirectory));
+            Assert.That(dataPaths.GetProperty("appDatabasePath").GetString(), Is.EqualTo(paths.AppDatabasePath));
+            Assert.That(dataPaths.GetProperty("syncStateDatabasePath").GetString(), Is.EqualTo(paths.SyncStateDatabasePath));
+            Assert.That(dataPaths.GetProperty("tokenStorePath").GetString(), Is.EqualTo(paths.TokenStorePath));
+        });
+    }
+
+    private static DesktopDiagnosticsBundle CreateBundle(DesktopAppPaths paths)
     {
         return new DesktopDiagnosticsBundle(
             DateTimeOffset.Parse("2026-06-03T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture),
             "1.0.0",
             "https://app.cottoncloud.dev/",
             "user@example.test",
+            new DesktopDataPathSnapshot(
+                paths.DataDirectory,
+                paths.AppDatabasePath,
+                paths.SyncStateDatabasePath,
+                paths.TokenStorePath),
             [
                 new DesktopSyncPairSnapshot(
                     Guid.NewGuid(),

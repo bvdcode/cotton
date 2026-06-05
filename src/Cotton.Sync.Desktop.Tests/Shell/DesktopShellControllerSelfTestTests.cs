@@ -448,6 +448,28 @@ public sealed class DesktopShellControllerSelfTestTests
         Assert.That(document.RootElement.GetProperty("appVersion").GetString(), Is.EqualTo(DesktopAppVersion.Current));
     }
 
+    [Test]
+    public async Task ExportDiagnosticsAsync_IncludesDataPathMetadata()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        using DesktopShellController controller = CreateController(paths, new SqliteSyncPairSettingsStore(paths.AppDatabasePath));
+
+        string archivePath = await controller.ExportDiagnosticsAsync();
+
+        using ZipArchive archive = ZipFile.OpenRead(archivePath);
+        string diagnosticsJson = ReadEntry(archive, "diagnostics.json");
+        using JsonDocument document = JsonDocument.Parse(diagnosticsJson);
+        JsonElement dataPaths = document.RootElement.GetProperty("dataPaths");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dataPaths.GetProperty("dataDirectory").GetString(), Is.EqualTo(paths.DataDirectory));
+            Assert.That(dataPaths.GetProperty("appDatabasePath").GetString(), Is.EqualTo(paths.AppDatabasePath));
+            Assert.That(dataPaths.GetProperty("syncStateDatabasePath").GetString(), Is.EqualTo(paths.SyncStateDatabasePath));
+            Assert.That(dataPaths.GetProperty("tokenStorePath").GetString(), Is.EqualTo(paths.TokenStorePath));
+        });
+    }
+
     private DesktopShellController CreateController(
         Func<DesktopTokenStorageCapabilitySnapshot>? tokenStorageCapabilities = null)
     {

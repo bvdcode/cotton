@@ -710,6 +710,7 @@ internal sealed class DesktopShellController : IDesktopShellController
             DesktopAppVersion.Current,
             (_startupOptions.ServerUrl ?? preferences.RememberedServerUrl)?.AbsoluteUri,
             _host is null ? "Signed out" : preferences.RememberedUsername ?? "Signed in",
+            CreateDataPathSnapshot(),
             await BuildSyncPairSnapshotsAsync(syncPairs, cancellationToken).ConfigureAwait(false),
             selfTest.Items);
         return await _diagnosticsExporter.ExportAsync(_paths, bundle, cancellationToken).ConfigureAwait(false);
