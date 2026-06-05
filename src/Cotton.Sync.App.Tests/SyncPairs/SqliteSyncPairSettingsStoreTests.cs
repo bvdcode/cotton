@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Sync.App.SyncPairs;
+using Cotton.Sync.App.State;
 
 namespace Cotton.Sync.App.Tests.SyncPairs;
 
@@ -74,6 +75,47 @@ public sealed class SqliteSyncPairSettingsStoreTests
             Assert.That(actual.CreatedAtUtc.Kind, Is.EqualTo(DateTimeKind.Utc));
             Assert.That(actual.UpdatedAtUtc.Kind, Is.EqualTo(DateTimeKind.Utc));
         });
+    }
+
+    [Test]
+    public async Task GetAsync_NormalizesLegacyFullMirrorModeZero()
+    {
+        string databasePath = DatabasePath();
+        Guid syncPairId = Guid.NewGuid();
+        var contextFactory = new SqliteSyncAppDbContextFactory(databasePath);
+        await contextFactory.MigrateAsync(CancellationToken.None);
+        await using (SyncAppDbContext context = contextFactory.Create())
+        {
+            context.SyncPairSettings.Add(new SyncPairSettingsEntity
+            {
+                Id = syncPairId,
+                DisplayName = "Documents",
+                LocalRootPath = "/home/user/Documents",
+                RemoteRootNodeId = Guid.NewGuid(),
+                RemoteDisplayPath = "/Documents",
+                IsEnabled = true,
+                Mode = SyncPairMode.Unknown,
+                CreatedAtUtc = new DateTime(2026, 6, 3, 10, 0, 0, DateTimeKind.Utc),
+                UpdatedAtUtc = new DateTime(2026, 6, 3, 10, 0, 0, DateTimeKind.Utc),
+            });
+            await context.SaveChangesAsync();
+        }
+
+        var store = new SqliteSyncPairSettingsStore(databasePath);
+        SyncPairSettings? actual = await store.GetAsync(syncPairId);
+
+        Assert.That(actual?.Mode, Is.EqualTo(SyncPairMode.FullMirror));
+    }
+
+    [Test]
+    public async Task UpsertAsync_RejectsUnknownMode()
+    {
+        SqliteSyncPairSettingsStore store = CreateStore();
+        await store.InitializeAsync();
+        SyncPairSettings syncPair = CreatePair("Documents", "/home/user/Documents", "/Documents");
+        syncPair.Mode = SyncPairMode.Unknown;
+
+        Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => store.UpsertAsync(syncPair));
     }
 
     [Test]

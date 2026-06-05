@@ -87,6 +87,7 @@ public sealed class SqliteSyncPairSettingsStore : ISyncPairSettingsStore
 
     private static void UpdateEntity(SyncPairSettingsEntity entity, SyncPairSettings syncPair)
     {
+        ArgumentOutOfRangeException.ThrowIfEqual(syncPair.Mode, SyncPairMode.Unknown);
         DateTime now = DateTime.UtcNow;
         entity.DisplayName = syncPair.DisplayName.Trim();
         entity.LocalRootPath = syncPair.LocalRootPath.Trim();
@@ -108,9 +109,14 @@ public sealed class SqliteSyncPairSettingsStore : ISyncPairSettingsStore
             RemoteRootNodeId = entity.RemoteRootNodeId,
             RemoteDisplayPath = entity.RemoteDisplayPath,
             IsEnabled = entity.IsEnabled,
-            Mode = entity.Mode,
+            Mode = NormalizeStoredMode(entity.Mode),
             CreatedAtUtc = UtcDateTime.Normalize(entity.CreatedAtUtc),
             UpdatedAtUtc = UtcDateTime.Normalize(entity.UpdatedAtUtc),
         };
+    }
+
+    private static SyncPairMode NormalizeStoredMode(SyncPairMode mode)
+    {
+        return mode == SyncPairMode.Unknown ? SyncPairMode.FullMirror : mode;
     }
 }
