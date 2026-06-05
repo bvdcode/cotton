@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Contracts.Files;
+using Cotton.Contracts.Nodes;
 using Cotton.Contracts.Sync;
 using Cotton.Database;
 using Cotton.Database.Models;

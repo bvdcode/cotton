@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Contracts.Files;
+using Cotton.Contracts.Nodes;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
@@ -90,7 +91,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         // resolve root node
-        var root = await _client!.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client!.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         // upload chunk
@@ -133,7 +134,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         Assert.That(created.NodeId, Is.EqualTo(root!.Id));
         Assert.That(created.Name, Is.EqualTo("hello.txt"));
 
-        var list = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.NodeContentDto>($"/api/v1/layouts/nodes/{root!.Id}/children");
+        var list = await _client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{root!.Id}/children");
         Assert.That(list, Is.Not.Null);
         var file = list!.Files.SingleOrDefault(x => x.Name == "hello.txt");
         Assert.That(file, Is.Not.Null);
@@ -150,7 +151,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client!.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client!.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         var content = Encoding.UTF8.GetBytes("hello raw world");
@@ -185,7 +186,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         byte[] content = [];
@@ -228,7 +229,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         byte[] content = Encoding.UTF8.GetBytes("sync metadata");
@@ -267,7 +268,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         var file = await UploadTextFileAsync(root!, "owned-content.txt", "0123456789abcdef");
@@ -292,7 +293,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         var file = await UploadTextFileAsync(root!, "webdav-etag.txt", "webdav content");
@@ -325,7 +326,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var ownerToken = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ownerToken);
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
         var file = await UploadTextFileAsync(root!, "private-content.txt", "private");
 
@@ -386,7 +387,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
             5L);
         quotaResponse.EnsureSuccessStatusCode();
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         string fiveByteHash = await UploadChunkAndGetHashAsync("12345");
@@ -441,7 +442,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         Assert.That(initialQuota!.UsedBytes, Is.EqualTo(0));
         Assert.That(initialQuota.AvailableBytes, Is.EqualTo(100));
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         var file = await UploadTextFileAsync(root!, "quota-cache.txt", "12345");
@@ -467,9 +468,9 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
-        Models.Dto.NodeDto rootNode = root!;
+        NodeDto rootNode = root!;
 
         var file = await UploadTextFileAsync(rootNode, "etag-update.txt", "first");
         string staleETag = file.ETag;
@@ -500,9 +501,9 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
-        Models.Dto.NodeDto rootNode = root!;
+        NodeDto rootNode = root!;
 
         var file = await UploadTextFileAsync(rootNode, "etag-delete.txt", "first");
         string staleETag = file.ETag;
@@ -512,7 +513,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         request.Headers.TryAddWithoutValidation("If-Match", staleETag);
 
         var response = await _client.SendAsync(request);
-        var list = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.NodeContentDto>($"/api/v1/layouts/nodes/{rootNode.Id}/children");
+        var list = await _client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{rootNode.Id}/children");
 
         Assert.Multiple(() =>
         {
@@ -528,9 +529,9 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
-        Models.Dto.NodeDto rootNode = root!;
+        NodeDto rootNode = root!;
 
         var file = await UploadTextFileAsync(rootNode, "etag-rename.txt", "first");
         string staleETag = file.ETag;
@@ -543,7 +544,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         request.Headers.TryAddWithoutValidation("If-Match", staleETag);
 
         var response = await _client.SendAsync(request);
-        var list = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.NodeContentDto>($"/api/v1/layouts/nodes/{rootNode.Id}/children");
+        var list = await _client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{rootNode.Id}/children");
 
         Assert.Multiple(() =>
         {
@@ -559,9 +560,9 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
-        Models.Dto.NodeDto rootNode = root!;
+        NodeDto rootNode = root!;
         var destination = await CreateFolderAsync(rootNode.Id, "etag-move-destination");
 
         var file = await UploadTextFileAsync(rootNode, "etag-move.txt", "first");
@@ -575,8 +576,8 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         request.Headers.TryAddWithoutValidation("If-Match", staleETag);
 
         var response = await _client.SendAsync(request);
-        var rootList = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.NodeContentDto>($"/api/v1/layouts/nodes/{rootNode.Id}/children");
-        var destinationList = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.NodeContentDto>($"/api/v1/layouts/nodes/{destination.Id}/children");
+        var rootList = await _client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{rootNode.Id}/children");
+        var destinationList = await _client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{destination.Id}/children");
 
         Assert.Multiple(() =>
         {
@@ -594,7 +595,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
         await UploadTextFileAsync(root!, "welcome.txt", "hello from the template");
 
@@ -615,10 +616,10 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var seededToken = await LoginAsync("seededuser", "seededpass");
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", seededToken);
 
-        var seededRoot = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var seededRoot = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(seededRoot, Is.Not.Null);
 
-        var list = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.NodeContentDto>($"/api/v1/layouts/nodes/{seededRoot!.Id}/children");
+        var list = await _client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{seededRoot!.Id}/children");
         Assert.That(list, Is.Not.Null);
         var seededFile = list!.Files.SingleOrDefault(x => x.Name == "welcome.txt");
         Assert.That(seededFile, Is.Not.Null);
@@ -643,7 +644,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var otherToken = await LoginAsync("templateowner", "templatepass");
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", otherToken);
 
-        var otherRoot = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var otherRoot = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(otherRoot, Is.Not.Null);
 
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
@@ -661,7 +662,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         // resolve root node
-        var root = await _client!.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client!.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         // upload chunk
@@ -699,7 +700,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         createFileRes.EnsureSuccessStatusCode();
 
         // list children to get NodeFileId
-        var list = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.NodeContentDto>($"/api/v1/layouts/nodes/{root!.Id}/children");
+        var list = await _client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{root!.Id}/children");
         Assert.That(list, Is.Not.Null);
         var nodeFile = list!.Files.FirstOrDefault(f => f.Name == "download.txt");
         Assert.That(nodeFile, Is.Not.Null);
@@ -722,7 +723,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         var cyrillicFile = await UploadTextFileAsync(root!, "долги.txt", "рубли");
@@ -758,7 +759,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         var folder = await CreateFolderAsync(root!.Id, "Папка");
@@ -795,7 +796,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var adminToken = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
         var file = await UploadTextFileAsync(root!, "private.txt", "secret");
 
@@ -826,7 +827,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         var file = await UploadTextFileAsync(
@@ -859,7 +860,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         var content = Encoding.UTF8.GetBytes("auto detect me");
@@ -890,7 +891,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var createFileRes = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
         createFileRes.EnsureSuccessStatusCode();
 
-        var list = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.NodeContentDto>($"/api/v1/layouts/nodes/{root!.Id}/children");
+        var list = await _client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{root!.Id}/children");
         Assert.That(list, Is.Not.Null);
         var file = list!.Files.FirstOrDefault(x => x.Name == "auto-detect.txt");
         Assert.That(file, Is.Not.Null);
@@ -903,7 +904,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var authToken = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         var file = await UploadTextFileAsync(root!, "range-probe.txt", "0123456789abcdef");
@@ -937,7 +938,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         var file = await UploadTextFileAsync(root!, "versioned.txt", "first", new Dictionary<string, string>
@@ -995,7 +996,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
             10L);
         quotaResponse.EnsureSuccessStatusCode();
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         var file = await UploadTextFileAsync(root!, "restore-quota.txt", "123456");
@@ -1018,7 +1019,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         var file = await UploadTextFileAsync(root!, "retention.txt", "v0");
@@ -1048,7 +1049,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         var file = await UploadTextFileAsync(root!, "retained.txt", "one");
@@ -1065,7 +1066,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
             .Select(x => x.NodeId)
             .ToArrayAsync();
 
-        var trashRoot = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver?nodeType=Trash");
+        var trashRoot = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver?nodeType=Trash");
         Assert.That(trashRoot, Is.Not.Null);
         var directTrashContent = await _client.GetFromJsonAsync<NodeContentDto>(
             $"/api/v1/layouts/nodes/{trashRoot!.Id}/children?nodeType=Trash");
@@ -1104,7 +1105,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
         var folder = await CreateFolderAsync(root!.Id, "versioned-folder");
         var file = await UploadTextFileAsync(folder, "versioned-in-folder.txt", "one");
@@ -1210,7 +1211,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
 
     private async Task<NodeFileManifestDto> UpdateTextFileAsync(
         NodeFileManifestDto file,
-        Models.Dto.NodeDto root,
+        NodeDto root,
         string text)
     {
         string hash = await UploadChunkAndGetHashAsync(text);
@@ -1228,13 +1229,13 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         return updated!;
     }
 
-    private async Task<Models.Dto.NodeDto> CreateFolderAsync(Guid parentId, string name)
+    private async Task<NodeDto> CreateFolderAsync(Guid parentId, string name)
     {
         var response = await _client!.PutAsJsonAsync(
             "/api/v1/layouts/nodes",
             new Cotton.Server.Models.Requests.CreateNodeRequest { ParentId = parentId, Name = name });
         response.EnsureSuccessStatusCode();
-        var node = await response.Content.ReadFromJsonAsync<Models.Dto.NodeDto>();
+        var node = await response.Content.ReadFromJsonAsync<NodeDto>();
         Assert.That(node, Is.Not.Null);
         return node!;
     }
@@ -1249,7 +1250,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     private async Task<NodeFileManifestDto> UploadTextFileAsync(
-        Models.Dto.NodeDto root,
+        NodeDto root,
         string name,
         string text,
         Dictionary<string, string>? metadata = null)
@@ -1283,7 +1284,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var createFileRes = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
         createFileRes.EnsureSuccessStatusCode();
 
-        var list = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.NodeContentDto>($"/api/v1/layouts/nodes/{root.Id}/children");
+        var list = await _client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{root.Id}/children");
         Assert.That(list, Is.Not.Null);
         var file = list!.Files.SingleOrDefault(x => x.Name == name);
         Assert.That(file, Is.Not.Null);
