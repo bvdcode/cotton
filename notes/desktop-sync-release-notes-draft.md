@@ -13,6 +13,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 - Direct desktop command failures from Cotton API quota and upload-limit responses are normalized into action-required messages instead of raw HTTP failure text.
 - Self-test detects missing desktop sync API capability even when another failed check is shown first.
 - Diagnostics export no longer hides an existing action-required server capability error or re-enables add-folder actions against an unsupported backend.
+- Diagnostics self-test failure rows use normalized user-readable details instead of raw local database/exception text, while trace logs keep the technical exception.
 - Disk-full and local file-permission sync failures are normalized into readable dashboard and notification messages instead of raw OS exception text.
 - Local sync-state SQLite table failures are normalized into a readable diagnostics/restart prompt instead of showing raw `no such table` errors in setup or dashboard flows.
 - Folder management supports add, rename, enable/disable, open local folder, and remove with explicit confirmation.
@@ -47,7 +48,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 ## Verification Already Exercised
 
 - Full local `dotnet test src/Cotton.sln --configuration Release --no-restore` has passed after the current desktop packaging and UI hardening, including desktop 290/290 and server integration 373/373.
-- Desktop tests have passed locally, most recently `Cotton.Sync.Desktop.Tests` 311/311.
+- Desktop tests have passed locally, most recently `Cotton.Sync.Desktop.Tests` 312/312.
 - Sync core tests have passed locally, most recently `Cotton.Sync.Tests` 134/134.
 - Full solution Release build has passed locally with 0 warnings after the latest desktop action-required activity cleanup.
 - Server integration tests have passed locally, most recently `Cotton.Server.IntegrationTests` 373/373.

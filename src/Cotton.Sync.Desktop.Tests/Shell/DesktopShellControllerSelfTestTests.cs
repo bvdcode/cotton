@@ -136,6 +136,29 @@ public sealed class DesktopShellControllerSelfTestTests
     }
 
     [Test]
+    public async Task RunSelfTestAsync_UsesReadableFailureDetails()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        using DesktopShellController controller = CreateController(
+            paths,
+            new SqliteSyncPairSettingsStore(paths.AppDatabasePath),
+            autostartService: new ThrowingAutostartService(
+                new InvalidOperationException("SQLite Error 1: 'no such table: sync_change_cursors'.")));
+
+        DesktopSelfTestSnapshot result = await controller.RunSelfTestAsync();
+
+        DesktopSelfTestItemSnapshot item = result.Items.Single(static selfTestItem => selfTestItem.Name == "Autostart adapter");
+        Assert.Multiple(() =>
+        {
+            Assert.That(item.Passed, Is.False);
+            Assert.That(
+                item.Details,
+                Is.EqualTo("Local sync state database is unavailable. Run diagnostics and restart Cotton Sync."));
+            Assert.That(item.Details, Does.Not.Contain("sync_change_cursors"));
+        });
+    }
+
+    [Test]
     public async Task RunSelfTestAsync_IncludesLocalAndRemoteRootChecksForSyncPairs()
     {
         DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
@@ -421,7 +444,8 @@ public sealed class DesktopShellControllerSelfTestTests
     private static DesktopShellController CreateController(
         DesktopAppPaths paths,
         SqliteSyncPairSettingsStore syncPairStore,
-        Func<DesktopTokenStorageCapabilitySnapshot>? tokenStorageCapabilities = null)
+        Func<DesktopTokenStorageCapabilitySnapshot>? tokenStorageCapabilities = null,
+        IAutostartService? autostartService = null)
     {
         var loggerFactory = new DesktopTraceLoggerFactory();
         return new DesktopShellController(
@@ -430,7 +454,7 @@ public sealed class DesktopShellControllerSelfTestTests
             new SqliteAppPreferencesStore(paths.AppDatabasePath),
             syncPairStore,
             new FakePlatformCommandService(),
-            new FakeAutostartService(),
+            autostartService ?? new FakeAutostartService(),
             tokenStorageCapabilities: tokenStorageCapabilities);
     }
 
@@ -470,6 +494,28 @@ public sealed class DesktopShellControllerSelfTestTests
         public Task SetEnabledAsync(bool enabled, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class ThrowingAutostartService : IAutostartService
+    {
+        private readonly Exception _exception;
+
+        public ThrowingAutostartService(Exception exception)
+        {
+            _exception = exception;
+        }
+
+        public bool IsSupported => true;
+
+        public Task<bool> IsEnabledAsync(CancellationToken cancellationToken = default)
+        {
+            throw _exception;
+        }
+
+        public Task SetEnabledAsync(bool enabled, CancellationToken cancellationToken = default)
+        {
+            throw _exception;
         }
     }
 

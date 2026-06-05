@@ -849,7 +849,10 @@ internal sealed class DesktopShellController : IDesktopShellController
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             Trace.TraceWarning("Desktop self-test check failed for {0}: {1}", name, exception);
-            items.Add(new DesktopSelfTestItemSnapshot(name, false, exception.Message));
+            items.Add(new DesktopSelfTestItemSnapshot(
+                name,
+                false,
+                DesktopActionRequiredMessageResolver.FromException(exception)));
         }
     }
 
