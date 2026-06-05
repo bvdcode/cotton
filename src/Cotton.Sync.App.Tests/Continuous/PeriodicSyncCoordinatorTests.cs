@@ -10,10 +10,30 @@ namespace Cotton.Sync.App.Tests.Continuous;
 public sealed class PeriodicSyncCoordinatorTests
 {
     [Test]
+    public async Task StartAsync_RequestsImmediateSyncAllByDefault()
+    {
+        var supervisor = new FakeSyncSupervisor();
+        var coordinator = new PeriodicSyncCoordinator(supervisor, TimeSpan.FromMinutes(1));
+
+        await coordinator.StartAsync();
+        bool observed = await supervisor.WaitForSyncAsync(TimeSpan.FromSeconds(2));
+        await coordinator.StopAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(observed, Is.True);
+            Assert.That(supervisor.SyncAllCallCount, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
     public async Task PeriodicTick_RequestsSyncAll()
     {
         var supervisor = new FakeSyncSupervisor();
-        var coordinator = new PeriodicSyncCoordinator(supervisor, TimeSpan.FromMilliseconds(25));
+        var coordinator = new PeriodicSyncCoordinator(
+            supervisor,
+            TimeSpan.FromMilliseconds(25),
+            runImmediately: false);
 
         await coordinator.StartAsync();
         bool observed = await supervisor.WaitForSyncAsync(TimeSpan.FromSeconds(2));
@@ -30,7 +50,10 @@ public sealed class PeriodicSyncCoordinatorTests
     public async Task StopAsync_CancelsPeriodicRequests()
     {
         var supervisor = new FakeSyncSupervisor();
-        var coordinator = new PeriodicSyncCoordinator(supervisor, TimeSpan.FromMilliseconds(100));
+        var coordinator = new PeriodicSyncCoordinator(
+            supervisor,
+            TimeSpan.FromMilliseconds(100),
+            runImmediately: false);
 
         await coordinator.StartAsync();
         await coordinator.StopAsync();

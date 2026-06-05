@@ -20,6 +20,7 @@ public sealed class PeriodicSyncCoordinator : IPeriodicSyncCoordinator
     private readonly SemaphoreSlim _lifecycleGate = new(1, 1);
     private readonly TimeSpan _interval;
     private readonly ILogger<PeriodicSyncCoordinator> _logger;
+    private readonly bool _runImmediately;
     private readonly ISyncSupervisor _supervisor;
     private CancellationTokenSource? _lifetime;
     private Task? _runner;
@@ -30,6 +31,7 @@ public sealed class PeriodicSyncCoordinator : IPeriodicSyncCoordinator
     public PeriodicSyncCoordinator(
         ISyncSupervisor supervisor,
         TimeSpan? interval = null,
+        bool runImmediately = true,
         ILogger<PeriodicSyncCoordinator>? logger = null)
     {
         _supervisor = supervisor ?? throw new ArgumentNullException(nameof(supervisor));
@@ -39,6 +41,7 @@ public sealed class PeriodicSyncCoordinator : IPeriodicSyncCoordinator
             throw new ArgumentOutOfRangeException(nameof(interval), "Periodic sync interval must be positive.");
         }
 
+        _runImmediately = runImmediately;
         _logger = logger ?? NullLogger<PeriodicSyncCoordinator>.Instance;
     }
 
@@ -108,6 +111,11 @@ public sealed class PeriodicSyncCoordinator : IPeriodicSyncCoordinator
         using var timer = new PeriodicTimer(_interval);
         try
         {
+            if (_runImmediately)
+            {
+                await RunSyncAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
             {
                 await RunSyncAsync(cancellationToken).ConfigureAwait(false);
