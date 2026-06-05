@@ -3,30 +3,31 @@
 
 using Cotton.Contracts.Common;
 
-namespace Cotton.Contracts.Nodes;
-
-/// <summary>
-/// Represents a folder-like node inside a Cotton layout.
-/// </summary>
-public sealed class NodeDto : BaseApiDto
+namespace Cotton.Contracts.Nodes
 {
     /// <summary>
-    /// Gets or sets the layout identifier.
+    /// Represents a folder-like node inside a Cotton layout.
     /// </summary>
-    public Guid LayoutId { get; set; }
+    public class NodeDto : BaseApiDto
+    {
+        /// <summary>
+        /// Gets or sets the layout identifier.
+        /// </summary>
+        public Guid LayoutId { get; set; }
 
-    /// <summary>
-    /// Gets or sets the parent node identifier, or null for the root node.
-    /// </summary>
-    public Guid? ParentId { get; set; }
+        /// <summary>
+        /// Gets or sets the parent node identifier, or null for the root node.
+        /// </summary>
+        public Guid? ParentId { get; set; }
 
-    /// <summary>
-    /// Gets or sets the display name.
-    /// </summary>
-    public string Name { get; set; } = string.Empty;
+        /// <summary>
+        /// Gets or sets the display name.
+        /// </summary>
+        public string Name { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets or sets structured metadata attached to the node.
-    /// </summary>
-    public Dictionary<string, string> Metadata { get; set; } = [];
+        /// <summary>
+        /// Gets or sets structured metadata attached to the node.
+        /// </summary>
+        public Dictionary<string, string> Metadata { get; set; } = [];
+    }
 }
