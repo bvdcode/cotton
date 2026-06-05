@@ -425,7 +425,7 @@
         </Border>
 
         <Border Padding="10"
-                MaxHeight="320"
+                MaxHeight="300"
                 CornerRadius="6"
                 Background="{DynamicResource CottonSurfaceBrush}"
                 BorderBrush="{DynamicResource CottonBorderBrush}"
@@ -470,7 +470,7 @@
                 <Grid RowDefinitions="Auto,Auto"
                       RowSpacing="7"
                       IsVisible="{Binding HasSyncPairs}">
-                  <ScrollViewer MaxHeight="236"
+                  <ScrollViewer MaxHeight="216"
                                 VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{Binding SyncPairs}">
                       <ItemsControl.ItemTemplate>
