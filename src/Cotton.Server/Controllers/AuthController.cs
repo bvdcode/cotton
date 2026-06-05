@@ -36,6 +36,7 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
+using CottonLoginRequestDto = Cotton.Contracts.Auth.LoginRequestDto;
 
 namespace Cotton.Server.Controllers
 {
@@ -384,7 +385,7 @@ namespace Cotton.Server.Controllers
         /// </summary>
         [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
         [HttpPost("login")]
-        public async Task<IActionResult> Login(LoginRequest request)
+        public async Task<IActionResult> Login(CottonLoginRequestDto request)
         {
             var user = await GetUserOrTryGetNewAsync(request);
             if (user == null)
@@ -407,7 +408,7 @@ namespace Cotton.Server.Controllers
             return Ok(await CreateSignedInResponseAsync(user, request.TrustDevice, AuthType.Credentials));
         }
 
-        private async Task<User?> GetUserOrTryGetNewAsync(LoginRequest request)
+        private async Task<User?> GetUserOrTryGetNewAsync(CottonLoginRequestDto request)
         {
             if (string.IsNullOrWhiteSpace(request.Username))
             {
@@ -426,7 +427,7 @@ namespace Cotton.Server.Controllers
             return await TryGetNewUserAsync(request);
         }
 
-        private async Task<bool> VerifyPasswordOrNotifyAsync(User user, LoginRequest request)
+        private async Task<bool> VerifyPasswordOrNotifyAsync(User user, CottonLoginRequestDto request)
         {
             if (string.IsNullOrEmpty(user.PasswordPhc) || !_hasher.Verify(request.Password, user.PasswordPhc))
             {
@@ -442,7 +443,7 @@ namespace Cotton.Server.Controllers
             return true;
         }
 
-        private async Task<IActionResult?> ValidateTotpOrGetFailureAsync(User user, LoginRequest request)
+        private async Task<IActionResult?> ValidateTotpOrGetFailureAsync(User user, CottonLoginRequestDto request)
         {
             if (!user.IsTotpEnabled)
             {
@@ -627,7 +628,7 @@ namespace Cotton.Server.Controllers
                 : Request.GetRemoteIPAddress();
         }
 
-        private async Task<User?> TryGetNewUserAsync(LoginRequest request)
+        private async Task<User?> TryGetNewUserAsync(CottonLoginRequestDto request)
         {
             string login = request.Username.Trim();
             string? email = null;

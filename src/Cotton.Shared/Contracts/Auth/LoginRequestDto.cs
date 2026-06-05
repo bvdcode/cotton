@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.ComponentModel.DataAnnotations;
+
 namespace Cotton.Contracts.Auth
 {
     /// <summary>
@@ -11,11 +13,13 @@ namespace Cotton.Contracts.Auth
         /// <summary>
         /// Gets or sets the username or email address used for authentication.
         /// </summary>
+        [Required]
         public string Username { get; set; } = string.Empty;
 
         /// <summary>
         /// Gets or sets the password used for authentication.
         /// </summary>
+        [Required]
         public string Password { get; set; } = string.Empty;
 
         /// <summary>
