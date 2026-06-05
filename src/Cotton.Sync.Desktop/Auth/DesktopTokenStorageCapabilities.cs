@@ -93,7 +93,7 @@ internal static class DesktopTokenStorageCapabilities
             return snapshot with
             {
                 IsReleaseSecure = false,
-                Details = snapshot.Details + " is unavailable: " + exception.Message,
+                Details = snapshot.Details + " could not be verified on this desktop session",
             };
         }
         finally

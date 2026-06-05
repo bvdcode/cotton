@@ -87,8 +87,8 @@ public sealed class DesktopTokenStorageCapabilitiesTests
         Assert.Multiple(() =>
         {
             Assert.That(snapshot.IsReleaseSecure, Is.False);
-            Assert.That(snapshot.Details, Does.Contain("unavailable"));
-            Assert.That(snapshot.Details, Does.Contain("Secret Service unavailable"));
+            Assert.That(snapshot.Details, Does.Contain("could not be verified"));
+            Assert.That(snapshot.Details, Does.Not.Contain("Secret Service unavailable"));
         });
     }
 
