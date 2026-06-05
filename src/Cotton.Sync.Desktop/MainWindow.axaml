@@ -222,9 +222,11 @@
           RowDefinitions="Auto,*"
           RowSpacing="8"
           IsVisible="{Binding IsDashboardVisible}">
-      <StackPanel Grid.Row="0"
-                  Spacing="8"
-                  IsVisible="{Binding IsDashboardChromeVisible}">
+      <ScrollViewer Grid.Row="0"
+                    MaxHeight="332"
+                    VerticalScrollBarVisibility="Auto"
+                    IsVisible="{Binding IsDashboardChromeVisible}">
+        <StackPanel Spacing="8">
           <Border Padding="10"
                   CornerRadius="6"
                   Classes="statusCard"
@@ -625,7 +627,8 @@
               </Grid>
             </Grid>
         </Border>
-      </StackPanel>
+        </StackPanel>
+      </ScrollViewer>
 
       <Border Grid.Row="1"
               Padding="10"
