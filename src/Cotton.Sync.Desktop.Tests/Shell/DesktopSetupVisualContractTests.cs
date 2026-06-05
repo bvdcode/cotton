@@ -238,6 +238,8 @@ public sealed class DesktopSetupVisualContractTests
 
         Assert.Multiple(() =>
         {
+            Assert.That(settingsOverlay, Does.Contain("Text=\"Account, startup, options, diagnostics\""));
+            Assert.That(settingsOverlay, Does.Not.Contain("Text=\"Account, startup, and diagnostics\""));
             Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Account\">"));
             Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Startup\">"));
             Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Options\">"));

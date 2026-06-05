@@ -973,7 +973,7 @@
                            FontSize="18"
                            FontWeight="SemiBold"
                            TextTrimming="CharacterEllipsis" />
-                <TextBlock Text="Account, startup, and diagnostics"
+                <TextBlock Text="Account, startup, options, diagnostics"
                            Classes="secondary"
                            FontSize="12"
                            TextWrapping="Wrap" />
