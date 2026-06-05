@@ -126,6 +126,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
         await _syncPairs.InitializeAsync(cancellationToken).ConfigureAwait(false);
         List<SyncPairSettings> current = (await _syncPairs.ListAsync(cancellationToken).ConfigureAwait(false)).ToList();
         int existingIndex = current.FindIndex(item => item.Id == syncPair.Id);
+        SyncPairSettings? existingSyncPair = existingIndex >= 0 ? current[existingIndex] : null;
         if (existingIndex >= 0)
         {
             current[existingIndex] = syncPair;
@@ -141,7 +142,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
             return SyncPairSaveResult.Rejected(validation);
         }
 
-        if (syncPair.IsEnabled)
+        if (RequiresPrerequisiteValidation(existingSyncPair, syncPair))
         {
             IReadOnlyList<SyncPairValidationError> prerequisiteErrors = await _prerequisites
                 .ValidateAsync(syncPair, cancellationToken)
@@ -155,6 +156,25 @@ public sealed class SyncApplicationService : ISyncApplicationService
         await _syncPairs.UpsertAsync(syncPair, cancellationToken).ConfigureAwait(false);
         await RestartSyncCoreIfStartedAsync(cancellationToken).ConfigureAwait(false);
         return SyncPairSaveResult.Saved(validation);
+    }
+
+    private static bool RequiresPrerequisiteValidation(
+        SyncPairSettings? existingSyncPair,
+        SyncPairSettings syncPair)
+    {
+        if (!syncPair.IsEnabled)
+        {
+            return false;
+        }
+
+        if (existingSyncPair is null || !existingSyncPair.IsEnabled)
+        {
+            return true;
+        }
+
+        return !string.Equals(existingSyncPair.LocalRootPath, syncPair.LocalRootPath, StringComparison.Ordinal)
+            || existingSyncPair.RemoteRootNodeId != syncPair.RemoteRootNodeId
+            || syncPair.Mode != existingSyncPair.Mode;
     }
 
     /// <inheritdoc />

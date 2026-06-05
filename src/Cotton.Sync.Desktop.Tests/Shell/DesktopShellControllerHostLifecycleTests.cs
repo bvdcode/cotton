@@ -263,6 +263,68 @@ public sealed class DesktopShellControllerHostLifecycleTests
     }
 
     [Test]
+    public async Task SetSyncPairEnabledAsync_UsesActiveHostAppWithoutManualRestart()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        Uri serverUrl = new("https://cotton.example.test/");
+        var syncPairStore = new SqliteSyncPairSettingsStore(paths.AppDatabasePath);
+        await syncPairStore.InitializeAsync();
+        SyncPairSettings syncPair = CreateSyncPair(isEnabled: true);
+        await syncPairStore.UpsertAsync(syncPair);
+        FakeDesktopApplicationHost host = FakeDesktopApplicationHost.Create(serverUrl);
+        var factory = new QueueingDesktopSyncApplicationFactory(host.Host);
+        using DesktopShellController controller = CreateController(paths, factory, syncPairStore: syncPairStore);
+        await controller.SignInAsync(new DesktopSignInRequest(
+            serverUrl.AbsoluteUri,
+            "desktop@example.test",
+            "password",
+            null));
+
+        await controller.SetSyncPairEnabledAsync(syncPair.Id, enabled: false);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(host.App.SaveSyncPairCalls, Is.EqualTo(1));
+            Assert.That(host.App.SavedSyncPair, Is.Not.Null);
+            Assert.That(host.App.SavedSyncPair!.Id, Is.EqualTo(syncPair.Id));
+            Assert.That(host.App.SavedSyncPair.IsEnabled, Is.False);
+            Assert.That(host.App.StopSyncCalls, Is.Zero);
+            Assert.That(host.App.StartSyncCalls, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task RenameSyncPairAsync_UsesActiveHostAppWithoutManualRestart()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        Uri serverUrl = new("https://cotton.example.test/");
+        var syncPairStore = new SqliteSyncPairSettingsStore(paths.AppDatabasePath);
+        await syncPairStore.InitializeAsync();
+        SyncPairSettings syncPair = CreateSyncPair(isEnabled: true);
+        await syncPairStore.UpsertAsync(syncPair);
+        FakeDesktopApplicationHost host = FakeDesktopApplicationHost.Create(serverUrl);
+        var factory = new QueueingDesktopSyncApplicationFactory(host.Host);
+        using DesktopShellController controller = CreateController(paths, factory, syncPairStore: syncPairStore);
+        await controller.SignInAsync(new DesktopSignInRequest(
+            serverUrl.AbsoluteUri,
+            "desktop@example.test",
+            "password",
+            null));
+
+        await controller.RenameSyncPairAsync(syncPair.Id, "  Work documents  ");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(host.App.SaveSyncPairCalls, Is.EqualTo(1));
+            Assert.That(host.App.SavedSyncPair, Is.Not.Null);
+            Assert.That(host.App.SavedSyncPair!.Id, Is.EqualTo(syncPair.Id));
+            Assert.That(host.App.SavedSyncPair.DisplayName, Is.EqualTo("Work documents"));
+            Assert.That(host.App.StopSyncCalls, Is.Zero);
+            Assert.That(host.App.StartSyncCalls, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
     public async Task StatusChanged_ForwardsLastSuccessfulSyncTimestamp()
     {
         DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
@@ -361,16 +423,33 @@ public sealed class DesktopShellControllerHostLifecycleTests
         DesktopAppPaths paths,
         IDesktopSyncApplicationFactory factory,
         Func<DesktopTokenStorageCapabilitySnapshot>? tokenStorageCapabilities = null,
-        IAutostartService? autostartService = null)
+        IAutostartService? autostartService = null,
+        SqliteSyncPairSettingsStore? syncPairStore = null)
     {
         return new DesktopShellController(
             paths,
             factory,
             new SqliteAppPreferencesStore(paths.AppDatabasePath),
-            new SqliteSyncPairSettingsStore(paths.AppDatabasePath),
+            syncPairStore ?? new SqliteSyncPairSettingsStore(paths.AppDatabasePath),
             new FakePlatformCommandService(),
             autostartService ?? new FakeAutostartService(),
             tokenStorageCapabilities: tokenStorageCapabilities ?? CreateSecureTokenStorage);
+    }
+
+    private static SyncPairSettings CreateSyncPair(bool isEnabled)
+    {
+        return new SyncPairSettings
+        {
+            Id = Guid.NewGuid(),
+            DisplayName = "Documents",
+            LocalRootPath = "/home/user/Cotton",
+            RemoteRootNodeId = Guid.NewGuid(),
+            RemoteDisplayPath = "/Documents",
+            IsEnabled = isEnabled,
+            Mode = SyncPairMode.FullMirror,
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow,
+        };
     }
 
     private static DesktopTokenStorageCapabilitySnapshot CreateSecureTokenStorage()

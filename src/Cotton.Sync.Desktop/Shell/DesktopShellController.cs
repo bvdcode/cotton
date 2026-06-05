@@ -290,25 +290,9 @@ internal sealed class DesktopShellController : IDesktopShellController
             return;
         }
 
-        DesktopSyncApplicationHost? host = _host;
-        if (host is not null)
-        {
-            await host.App.StopSyncAsync(cancellationToken).ConfigureAwait(false);
-        }
-
-        try
-        {
-            syncPair.IsEnabled = enabled;
-            syncPair.UpdatedAtUtc = DateTime.UtcNow;
-            await _syncPairStore.UpsertAsync(syncPair, cancellationToken).ConfigureAwait(false);
-        }
-        finally
-        {
-            if (host is not null)
-            {
-                await host.App.StartSyncAsync(cancellationToken).ConfigureAwait(false);
-            }
-        }
+        syncPair.IsEnabled = enabled;
+        syncPair.UpdatedAtUtc = DateTime.UtcNow;
+        await SaveSyncPairSettingsAsync(syncPair, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task RenameSyncPairAsync(
@@ -334,25 +318,9 @@ internal sealed class DesktopShellController : IDesktopShellController
             return;
         }
 
-        DesktopSyncApplicationHost? host = _host;
-        if (host is not null)
-        {
-            await host.App.StopSyncAsync(cancellationToken).ConfigureAwait(false);
-        }
-
-        try
-        {
-            syncPair.DisplayName = normalizedDisplayName;
-            syncPair.UpdatedAtUtc = DateTime.UtcNow;
-            await _syncPairStore.UpsertAsync(syncPair, cancellationToken).ConfigureAwait(false);
-        }
-        finally
-        {
-            if (host is not null)
-            {
-                await host.App.StartSyncAsync(cancellationToken).ConfigureAwait(false);
-            }
-        }
+        syncPair.DisplayName = normalizedDisplayName;
+        syncPair.UpdatedAtUtc = DateTime.UtcNow;
+        await SaveSyncPairSettingsAsync(syncPair, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task RemoveSyncPairAsync(Guid syncPairId, CancellationToken cancellationToken = default)
@@ -880,6 +848,26 @@ internal sealed class DesktopShellController : IDesktopShellController
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             Trace.TraceWarning("Failed to roll back newly added Cotton Sync folder {0}: {1}", syncPairId, exception);
+        }
+    }
+
+    private async Task SaveSyncPairSettingsAsync(
+        SyncPairSettings syncPair,
+        CancellationToken cancellationToken)
+    {
+        DesktopSyncApplicationHost? host = _host;
+        if (host is null)
+        {
+            await _syncPairStore.UpsertAsync(syncPair, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        SyncPairSaveResult result = await host.App
+            .SaveSyncPairAsync(syncPair, cancellationToken)
+            .ConfigureAwait(false);
+        if (!result.IsSaved)
+        {
+            throw new SyncPairValidationException(result.Validation.Errors);
         }
     }
 

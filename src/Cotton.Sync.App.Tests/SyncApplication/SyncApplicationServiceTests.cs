@@ -522,6 +522,66 @@ public sealed class SyncApplicationServiceTests
     }
 
     [Test]
+    public async Task SaveSyncPairAsync_SkipsPrerequisitesWhenOnlyDisplayNameChanges()
+    {
+        var store = new InMemorySyncPairSettingsStore();
+        SyncPairSettings syncPair = CreatePair("/home/user/Cotton");
+        await store.UpsertAsync(syncPair);
+        var prerequisites = new FakeSyncPairPrerequisiteValidator([
+            new SyncPairValidationError(
+                SyncPairValidationIssue.LocalRootUnavailable,
+                syncPair.Id,
+                null,
+                "Local root unavailable."),
+        ]);
+        SyncApplicationService service = CreateService(store, prerequisites);
+        SyncPairSettings renamed = CopySyncPair(syncPair);
+        renamed.DisplayName = "Renamed documents";
+        renamed.UpdatedAtUtc = DateTime.UtcNow;
+
+        SyncPairSaveResult result = await service.SaveSyncPairAsync(renamed);
+
+        SyncPairSettings? saved = await store.GetAsync(syncPair.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsSaved, Is.True);
+            Assert.That(prerequisites.CallCount, Is.Zero);
+            Assert.That(saved, Is.Not.Null);
+            Assert.That(saved!.DisplayName, Is.EqualTo("Renamed documents"));
+        });
+    }
+
+    [Test]
+    public async Task SaveSyncPairAsync_ValidatesPrerequisitesWhenDisabledPairIsEnabled()
+    {
+        var store = new InMemorySyncPairSettingsStore();
+        SyncPairSettings syncPair = CreatePair("/home/user/Cotton");
+        syncPair.IsEnabled = false;
+        await store.UpsertAsync(syncPair);
+        var prerequisites = new FakeSyncPairPrerequisiteValidator([
+            new SyncPairValidationError(
+                SyncPairValidationIssue.LocalRootUnavailable,
+                syncPair.Id,
+                null,
+                "Local root unavailable."),
+        ]);
+        SyncApplicationService service = CreateService(store, prerequisites);
+        SyncPairSettings enabled = CopySyncPair(syncPair);
+        enabled.IsEnabled = true;
+
+        SyncPairSaveResult result = await service.SaveSyncPairAsync(enabled);
+
+        SyncPairSettings? saved = await store.GetAsync(syncPair.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsSaved, Is.False);
+            Assert.That(prerequisites.CallCount, Is.EqualTo(1));
+            Assert.That(saved, Is.Not.Null);
+            Assert.That(saved!.IsEnabled, Is.False);
+        });
+    }
+
+    [Test]
     public async Task SaveSyncPairAsync_SkipsPrerequisitesWhenStructuralValidationFails()
     {
         var store = new InMemorySyncPairSettingsStore();
@@ -630,6 +690,22 @@ public sealed class SyncApplicationServiceTests
             Mode = SyncPairMode.FullMirror,
             CreatedAtUtc = new DateTime(2026, 6, 3, 10, 0, 0, DateTimeKind.Utc),
             UpdatedAtUtc = new DateTime(2026, 6, 3, 10, 0, 0, DateTimeKind.Utc),
+        };
+    }
+
+    private static SyncPairSettings CopySyncPair(SyncPairSettings source)
+    {
+        return new SyncPairSettings
+        {
+            Id = source.Id,
+            DisplayName = source.DisplayName,
+            LocalRootPath = source.LocalRootPath,
+            RemoteRootNodeId = source.RemoteRootNodeId,
+            RemoteDisplayPath = source.RemoteDisplayPath,
+            IsEnabled = source.IsEnabled,
+            Mode = source.Mode,
+            CreatedAtUtc = source.CreatedAtUtc,
+            UpdatedAtUtc = source.UpdatedAtUtc,
         };
     }
 
