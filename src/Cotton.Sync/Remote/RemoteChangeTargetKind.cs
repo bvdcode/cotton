@@ -8,9 +8,12 @@ namespace Cotton.Sync.Remote;
 /// </summary>
 public enum RemoteChangeTargetKind
 {
+    /// <summary>No remote target kind was supplied.</summary>
+    Unknown = 0,
+
     /// <summary>The change targets a file entry.</summary>
-    File = 0,
+    File = 1,
 
     /// <summary>The change targets a folder node.</summary>
-    Folder = 1,
+    Folder = 2,
 }

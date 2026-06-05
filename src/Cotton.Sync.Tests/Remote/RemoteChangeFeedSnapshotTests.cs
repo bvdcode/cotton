@@ -112,6 +112,18 @@ public sealed class RemoteChangeFeedSnapshotTests
     }
 
     [Test]
+    public void FromDto_RejectsUnknownWireKind()
+    {
+        var change = new SyncChangeDto
+        {
+            Id = 1,
+            Kind = SyncChangeKind.Unknown,
+        };
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => RemoteChangeImpact.FromDto(change));
+    }
+
+    [Test]
     public void Empty_ReturnsReusableEmptySnapshot()
     {
         RemoteChangeFeedSnapshot snapshot = RemoteChangeFeedSnapshot.FromChanges(Array.Empty<SyncChangeDto>());

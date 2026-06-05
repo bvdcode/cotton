@@ -8,21 +8,24 @@ namespace Cotton.Sync.Remote;
 /// </summary>
 public enum RemoteChangeAction
 {
+    /// <summary>No remote change action was supplied.</summary>
+    Unknown = 0,
+
     /// <summary>A remote item was created.</summary>
-    Created = 0,
+    Created = 1,
 
     /// <summary>A remote file content payload was updated.</summary>
-    ContentUpdated = 1,
+    ContentUpdated = 2,
 
     /// <summary>A remote item was renamed.</summary>
-    Renamed = 2,
+    Renamed = 3,
 
     /// <summary>A remote item was moved to another parent.</summary>
-    Moved = 3,
+    Moved = 4,
 
     /// <summary>A remote item was deleted or moved to trash.</summary>
-    Deleted = 4,
+    Deleted = 5,
 
     /// <summary>A remote item was restored from trash.</summary>
-    Restored = 5,
+    Restored = 6,
 }
