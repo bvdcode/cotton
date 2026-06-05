@@ -3,17 +3,15 @@
 
 using Cotton.Database;
 using Cotton.Database.Integrity;
-using Microsoft.EntityFrameworkCore;
-using System.Diagnostics.CodeAnalysis;
 
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
 /// <summary>
-/// Verifies protected tracked entities when they cross a security-sensitive read boundary.
+/// Bypasses protected-entity verification during the bridge repair window.
 /// </summary>
 /// <remarks>
-/// Save-time signing prevents Cotton from writing unsigned changes. Read-time verification prevents direct database
-/// edits from being trusted when authentication, token consumption, or other protected flows use the row.
+/// This release treats the current database state as canonical and lets the background bridge repair re-sign every
+/// protected row. The next strict release must restore hard read-time verification.
 /// </remarks>
 public sealed class DatabaseIntegrityVerifier(
     IDatabaseIntegrityProtector _protector,
@@ -31,69 +29,16 @@ public sealed class DatabaseIntegrityVerifier(
         ArgumentNullException.ThrowIfNull(dbContext);
         ArgumentNullException.ThrowIfNull(entity);
         ArgumentException.ThrowIfNullOrWhiteSpace(boundary);
+        _ = _protector;
+        _ = _failures;
 
-        if (!_descriptors.TryGet(entity.GetType(), out IDatabaseIntegrityDescriptor descriptor))
+        if (_descriptors.TryGet(entity.GetType(), out IDatabaseIntegrityDescriptor descriptor))
         {
-            return;
-        }
-
-        var entry = dbContext.Entry(entity);
-        if (entry.State == EntityState.Detached)
-        {
-            throw new InvalidOperationException(
-                $"Database integrity verification requires a tracked {descriptor.EntityName} entity.");
-        }
-
-        // Integrity metadata is mapped as EF shadow properties. The verifier therefore requires the tracked entry
-        // instead of accepting detached DTO-like objects that no longer carry the database MAC/version.
-        byte[]? mac = (byte[]?)entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue;
-        int? version = (int?)entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue;
-        // Existing databases enter this release without row MACs. The startup bridge backfills them before
-        // normal traffic, but this read-side allowance keeps older rows from bricking the transition window.
-        if (mac is null || version is null)
-        {
-            _logger.LogDebug(
-                "Database integrity metadata is missing for {EntityName} {EntityKey} at {Boundary}; allowing legacy row during the integrity rollout window.",
+            _logger.LogTrace(
+                "Database integrity verification is disabled for bridge repair; allowing {EntityName} {EntityKey} at {Boundary}.",
                 descriptor.EntityName,
                 descriptor.GetEntityKey(entity),
                 boundary);
-            return;
         }
-
-        if (version != descriptor.SchemaVersion)
-        {
-            _logger.LogError(
-                "Database integrity metadata has unsupported schema version {Version} for {EntityName} {EntityKey} at {Boundary}.",
-                version,
-                descriptor.EntityName,
-                descriptor.GetEntityKey(entity),
-                boundary);
-            Fail(descriptor, entity, boundary);
-        }
-
-        if (!_protector.Verify(entity, descriptor, mac))
-        {
-            _logger.LogError(
-                "Database integrity verification failed for {EntityName} {EntityKey} at {Boundary}.",
-                descriptor.EntityName,
-                descriptor.GetEntityKey(entity),
-                boundary);
-            Fail(descriptor, entity, boundary);
-        }
-    }
-
-    [DoesNotReturn]
-    private void Fail(
-        IDatabaseIntegrityDescriptor descriptor,
-        object entity,
-        string boundary)
-    {
-        string entityKey = descriptor.GetEntityKey(entity);
-        _failures.Report(new DatabaseIntegrityFailure(
-            descriptor.EntityName,
-            entityKey,
-            boundary,
-            DateTime.UtcNow));
-        throw new DatabaseIntegrityException(descriptor.EntityName, entityKey);
     }
 }
