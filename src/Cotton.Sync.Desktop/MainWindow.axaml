@@ -1114,6 +1114,11 @@
                               Classes="compact"
                               ToolTip.Tip="Export diagnostics bundle"
                               Command="{Binding ExportDiagnosticsCommand}" />
+                      <Button Content="Open data"
+                              Classes="compact"
+                              ToolTip.Tip="Open app data folder"
+                              Command="{Binding OpenDataFolderCommand}"
+                              IsVisible="{Binding HasDataDirectory}" />
                     </StackPanel>
                     <Border Padding="8"
                             CornerRadius="6"

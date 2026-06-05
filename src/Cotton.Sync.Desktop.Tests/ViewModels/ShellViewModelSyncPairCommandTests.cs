@@ -1004,6 +1004,28 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task OpenDataFolderCommand_OpensDiagnosticsDataDirectory()
+    {
+        DesktopDataPathSnapshot dataPaths = CreateTestDataPathSnapshot();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot());
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        Assert.That(viewModel.OpenDataFolderCommand.CanExecute(null), Is.True);
+
+        await ExecuteAsync(viewModel.OpenDataFolderCommand);
+
+        ActivityRowViewModel activity = viewModel.Activities.First();
+        Assert.Multiple(() =>
+        {
+            Assert.That(controller.OpenedFolderPath, Is.EqualTo(dataPaths.DataDirectory));
+            Assert.That(activity.Kind, Is.EqualTo("Open"));
+            Assert.That(activity.Path, Is.EqualTo(dataPaths.DataDirectory));
+            Assert.That(activity.Details, Is.EqualTo("Data folder opened"));
+        });
+    }
+
+    [Test]
     public async Task ExportDiagnosticsCommand_AddsStatusAndRecentActivity()
     {
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot())

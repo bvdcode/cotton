@@ -439,8 +439,12 @@ public sealed class DesktopSetupVisualContractTests
         {
             Assert.That(diagnosticsSection, Does.Contain("Content=\"Run checks\""));
             Assert.That(diagnosticsSection, Does.Contain("Content=\"Export bundle\""));
+            Assert.That(diagnosticsSection, Does.Contain("Content=\"Open data\""));
             Assert.That(diagnosticsSection, Does.Not.Contain("Content=\"Export diagnostics\""));
             Assert.That(diagnosticsSection, Does.Contain("ToolTip.Tip=\"Export diagnostics bundle\""));
+            Assert.That(diagnosticsSection, Does.Contain("ToolTip.Tip=\"Open app data folder\""));
+            Assert.That(diagnosticsSection, Does.Contain("IsVisible=\"{Binding HasDataDirectory}\""));
+            Assert.That(diagnosticsSection, Does.Contain("OpenDataFolderCommand"));
             Assert.That(diagnosticsSection, Does.Contain("LastDiagnosticsBundlePath"));
             Assert.That(diagnosticsSection, Does.Contain("OpenDiagnosticsBundleFolderCommand"));
         });

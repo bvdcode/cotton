@@ -175,6 +175,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OpenWebCommand = new AsyncRelayCommand(OpenWebAsync, () => IsSignedIn, HandleCommandError);
         SelfTestCommand = new AsyncRelayCommand(SelfTestAsync, () => !IsBusy, HandleCommandError);
         ExportDiagnosticsCommand = new AsyncRelayCommand(ExportDiagnosticsAsync, () => !IsBusy, HandleCommandError);
+        OpenDataFolderCommand = new AsyncRelayCommand(
+            OpenDataFolderAsync,
+            () => HasDataDirectory && !IsBusy,
+            HandleCommandError);
         OpenDiagnosticsBundleFolderCommand = new AsyncRelayCommand(
             OpenDiagnosticsBundleFolderAsync,
             () => HasLastDiagnosticsBundlePath && !IsBusy,
@@ -216,6 +220,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public AsyncRelayCommand CreateRemoteFolderCommand { get; }
 
     public AsyncRelayCommand OpenDiagnosticsBundleFolderCommand { get; }
+
+    public AsyncRelayCommand OpenDataFolderCommand { get; }
 
     public AsyncRelayCommand OpenFolderCommand { get; }
 
@@ -810,8 +816,17 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public string DataDirectory
     {
         get => _dataDirectory;
-        private set => SetProperty(ref _dataDirectory, value);
+        private set
+        {
+            if (SetProperty(ref _dataDirectory, value))
+            {
+                OnPropertyChanged(nameof(HasDataDirectory));
+                OpenDataFolderCommand.RaiseCanExecuteChanged();
+            }
+        }
     }
+
+    public bool HasDataDirectory => !string.IsNullOrWhiteSpace(DataDirectory);
 
     public string AppDatabasePath
     {
@@ -1755,6 +1770,17 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
     }
 
+    private async Task OpenDataFolderAsync()
+    {
+        if (string.IsNullOrWhiteSpace(DataDirectory))
+        {
+            return;
+        }
+
+        await _controller.OpenFolderAsync(DataDirectory).ConfigureAwait(true);
+        AddActivity("Open", DataDirectory, "Data folder opened");
+    }
+
     private async Task OpenDiagnosticsBundleFolderAsync()
     {
         if (string.IsNullOrWhiteSpace(LastDiagnosticsBundlePath))
@@ -2496,6 +2522,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         CloseSettingsCommand.RaiseCanExecuteChanged();
         SelfTestCommand.RaiseCanExecuteChanged();
         ExportDiagnosticsCommand.RaiseCanExecuteChanged();
+        OpenDataFolderCommand.RaiseCanExecuteChanged();
         OpenDiagnosticsBundleFolderCommand.RaiseCanExecuteChanged();
         RaiseTrayOpenFolderProperties();
     }
