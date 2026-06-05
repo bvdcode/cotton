@@ -99,7 +99,7 @@ public class WebDavPropFindQueryHandler(
                 IsCollection: false,
                 ContentLength: nodeFile.FileManifest.SizeBytes,
                 LastModified: nodeFile.UpdatedAt,
-                ETag: $"\"{nodeFile.Id}:{nodeFile.FileManifestId}\"",
+                ETag: FileETags.GetQuotedContentETag(nodeFile.FileManifest),
                 ContentType: nodeFile.FileManifest.ContentType,
                 Quota: quota));
         }
@@ -175,7 +175,7 @@ public class WebDavPropFindQueryHandler(
                 IsCollection: false,
                 ContentLength: childFile.FileManifest.SizeBytes,
                 LastModified: childFile.UpdatedAt,
-                ETag: $"\"{childFile.Id}:{childFile.FileManifestId}\"",
+                ETag: FileETags.GetQuotedContentETag(childFile.FileManifest),
                 ContentType: childFile.FileManifest.ContentType));
         }
     }

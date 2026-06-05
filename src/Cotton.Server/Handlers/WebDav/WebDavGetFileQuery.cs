@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Server.Extensions;
+using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Server.Services.WebDav;
 using Cotton.Storage.Abstractions;
@@ -89,6 +90,6 @@ public class WebDavGetFileQueryHandler(
             ContentLength: manifest.SizeBytes,
             FileName: nodeFile.Name,
             LastModified: nodeFile.UpdatedAt,
-            ETag: $"\"{nodeFile.Id}:{nodeFile.FileManifestId}\"");
+            ETag: FileETags.GetQuotedContentETag(manifest));
     }
 }
