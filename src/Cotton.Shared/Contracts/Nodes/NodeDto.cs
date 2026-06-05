@@ -25,9 +25,15 @@ namespace Cotton.Contracts.Nodes
         /// </summary>
         public string Name { get; set; } = string.Empty;
 
+        private Dictionary<string, string> _metadata = [];
+
         /// <summary>
         /// Gets or sets structured metadata attached to the node.
         /// </summary>
-        public Dictionary<string, string> Metadata { get; set; } = [];
+        public Dictionary<string, string> Metadata
+        {
+            get => _metadata;
+            set => _metadata = value ?? [];
+        }
     }
 }

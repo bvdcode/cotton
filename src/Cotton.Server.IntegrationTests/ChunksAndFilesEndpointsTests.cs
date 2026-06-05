@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Contracts.Files;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
@@ -126,7 +127,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         };
         var createFileRes = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
         createFileRes.EnsureSuccessStatusCode();
-        var created = await createFileRes.Content.ReadFromJsonAsync<Cotton.Server.Models.Dto.NodeFileManifestDto>();
+        var created = await createFileRes.Content.ReadFromJsonAsync<NodeFileManifestDto>();
         Assert.That(created, Is.Not.Null);
         Assert.That(created!.Id, Is.Not.EqualTo(Guid.Empty));
         Assert.That(created.NodeId, Is.EqualTo(root!.Id));
@@ -173,7 +174,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var createFileRes = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
         createFileRes.EnsureSuccessStatusCode();
 
-        var created = await createFileRes.Content.ReadFromJsonAsync<Cotton.Server.Models.Dto.NodeFileManifestDto>();
+        var created = await createFileRes.Content.ReadFromJsonAsync<NodeFileManifestDto>();
         Assert.That(created, Is.Not.Null);
         Assert.That(created!.Name, Is.EqualTo("hello-raw.txt"));
     }
@@ -398,7 +399,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
             NodeId = root!.Id,
         });
         createFirstResponse.EnsureSuccessStatusCode();
-        var created = await createFirstResponse.Content.ReadFromJsonAsync<Cotton.Server.Models.Dto.NodeFileManifestDto>();
+        var created = await createFirstResponse.Content.ReadFromJsonAsync<NodeFileManifestDto>();
         Assert.That(created, Is.Not.Null);
 
         string sixByteHash = await UploadChunkAndGetHashAsync("abcdef");
@@ -845,7 +846,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var updateRes = await _client.PatchAsJsonAsync($"/api/v1/files/{file.Id}/metadata", patch);
         updateRes.EnsureSuccessStatusCode();
 
-        var updated = await updateRes.Content.ReadFromJsonAsync<Cotton.Server.Models.Dto.NodeFileManifestDto>();
+        var updated = await updateRes.Content.ReadFromJsonAsync<NodeFileManifestDto>();
         Assert.That(updated, Is.Not.Null);
         Assert.That(updated!.Metadata["isClientEncrypted"], Is.EqualTo("true"));
         Assert.That(updated.Metadata["originalContentType"], Is.EqualTo("text/plain"));
@@ -1207,8 +1208,8 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         return Encoding.UTF8.GetString(await download.Content.ReadAsByteArrayAsync());
     }
 
-    private async Task<Cotton.Server.Models.Dto.NodeFileManifestDto> UpdateTextFileAsync(
-        Cotton.Server.Models.Dto.NodeFileManifestDto file,
+    private async Task<NodeFileManifestDto> UpdateTextFileAsync(
+        NodeFileManifestDto file,
         Models.Dto.NodeDto root,
         string text)
     {
@@ -1222,7 +1223,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
             NodeId = root.Id,
         });
         updateResponse.EnsureSuccessStatusCode();
-        var updated = await updateResponse.Content.ReadFromJsonAsync<Cotton.Server.Models.Dto.NodeFileManifestDto>();
+        var updated = await updateResponse.Content.ReadFromJsonAsync<NodeFileManifestDto>();
         Assert.That(updated, Is.Not.Null);
         return updated!;
     }
@@ -1247,7 +1248,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         Assert.That(reader.ReadToEnd(), Is.EqualTo(expectedText));
     }
 
-    private async Task<Cotton.Server.Models.Dto.NodeFileManifestDto> UploadTextFileAsync(
+    private async Task<NodeFileManifestDto> UploadTextFileAsync(
         Models.Dto.NodeDto root,
         string name,
         string text,
