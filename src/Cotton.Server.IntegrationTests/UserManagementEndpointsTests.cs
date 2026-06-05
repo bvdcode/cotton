@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Contracts.Auth;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Dto;
@@ -16,6 +17,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
+using CottonLoginRequestDto = Cotton.Contracts.Auth.LoginRequestDto;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -94,7 +96,7 @@ public class UserManagementEndpointsTests : IntegrationTestBase
         {
             Assert.That(created!.Username, Is.EqualTo("new.user-1"));
             Assert.That(created.Email, Is.EqualTo("new.user@example.com"));
-            Assert.That(created.Role, Is.EqualTo(UserRole.User));
+            Assert.That(created.Role, Is.EqualTo((int)UserRole.User));
         });
     }
 
@@ -366,7 +368,7 @@ public class UserManagementEndpointsTests : IntegrationTestBase
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
         {
-            Content = JsonContent.Create(new LoginRequestDto
+            Content = JsonContent.Create(new CottonLoginRequestDto
             {
                 Username = "testuser",
                 Password = "testpassword"
