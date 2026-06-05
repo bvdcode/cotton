@@ -106,7 +106,64 @@ public sealed class SyncSupervisorTests
             Assert.That(pausedState, Is.EqualTo(SyncPairRunState.Paused));
             Assert.That(factory.CreatedRunners[documents.Id].Status.State, Is.EqualTo(SyncPairRunState.Idle));
             Assert.That(factory.CreatedRunners[pictures.Id].Status.State, Is.EqualTo(SyncPairRunState.Idle));
+            Assert.That(factory.CreatedRunners[documents.Id].SyncNowCallCount, Is.Zero);
+            Assert.That(factory.CreatedRunners[pictures.Id].SyncNowCallCount, Is.EqualTo(1));
             Assert.That(publisher.Current.SyncPairs.Select(status => status.State), Is.All.EqualTo(SyncPairRunState.Idle));
+        });
+    }
+
+    [Test]
+    public async Task ResumeAllAsync_RequestsSyncForEnabledRunnersOnly()
+    {
+        SyncPairSettings documents = CreatePair("Documents", isEnabled: true);
+        SyncPairSettings pictures = CreatePair("Pictures", isEnabled: false);
+        var factory = new FakeSyncPairRunnerFactory();
+        var supervisor = new SyncSupervisor(
+            new FakeSyncPairSettingsStore([documents, pictures]),
+            factory,
+            new InMemoryAppStatusPublisher());
+        await supervisor.StartAsync();
+        await supervisor.PauseAllAsync();
+
+        await supervisor.ResumeAllAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(factory.CreatedRunners[documents.Id].ResumeCallCount, Is.EqualTo(1));
+            Assert.That(factory.CreatedRunners[pictures.Id].ResumeCallCount, Is.EqualTo(1));
+            Assert.That(factory.CreatedRunners[documents.Id].SyncNowCallCount, Is.EqualTo(1));
+            Assert.That(factory.CreatedRunners[pictures.Id].SyncNowCallCount, Is.Zero);
+        });
+    }
+
+    [Test]
+    public async Task ResumeAsync_DoesNotBlockStopWhileResumeSyncIsRunning()
+    {
+        SyncPairSettings documents = CreatePair("Documents", isEnabled: true);
+        var factory = new FakeSyncPairRunnerFactory();
+        var supervisor = new SyncSupervisor(
+            new FakeSyncPairSettingsStore([documents]),
+            factory,
+            new InMemoryAppStatusPublisher());
+        await supervisor.StartAsync();
+        await supervisor.PauseAsync(documents.Id);
+        FakeSyncPairRunner runner = factory.CreatedRunners[documents.Id];
+        runner.BlockSyncNow = true;
+
+        Task resume = supervisor.ResumeAsync(documents.Id);
+        await runner.WaitForSyncNowAsync(TimeSpan.FromSeconds(2));
+        Task stop = supervisor.StopAsync();
+        bool stopReachedRunner = await runner.WaitForStopAsync(TimeSpan.FromMilliseconds(250));
+
+        runner.ReleaseSyncNow();
+        await Task.WhenAll(resume, stop).WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(stopReachedRunner, Is.True);
+            Assert.That(runner.ResumeCallCount, Is.EqualTo(1));
+            Assert.That(runner.SyncNowCallCount, Is.EqualTo(1));
+            Assert.That(runner.StopCallCount, Is.EqualTo(1));
         });
     }
 

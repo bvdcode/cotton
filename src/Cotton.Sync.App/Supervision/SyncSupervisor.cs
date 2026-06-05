@@ -157,6 +157,7 @@ public sealed class SyncSupervisor : ISyncSupervisor
     public async Task ResumeAllAsync(CancellationToken cancellationToken = default)
     {
         SyncAppStatus status;
+        IReadOnlyList<ISyncPairRunner> resumedRunners;
         await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -165,6 +166,9 @@ public sealed class SyncSupervisor : ISyncSupervisor
                 await runner.ResumeAsync(cancellationToken).ConfigureAwait(false);
             }
 
+            resumedRunners = _runners.Values
+                .Where(static runner => runner.Status.State != SyncPairRunState.Disabled)
+                .ToList();
             status = CreateAppStatusSnapshot();
         }
         finally
@@ -173,16 +177,20 @@ public sealed class SyncSupervisor : ISyncSupervisor
         }
 
         _statusPublisher.Publish(status);
+        await SyncRunnersAsync(resumedRunners, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public async Task ResumeAsync(Guid syncPairId, CancellationToken cancellationToken = default)
     {
         SyncAppStatus status;
+        ISyncPairRunner? resumedRunner;
         await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            await GetRunner(syncPairId).ResumeAsync(cancellationToken).ConfigureAwait(false);
+            ISyncPairRunner runner = GetRunner(syncPairId);
+            await runner.ResumeAsync(cancellationToken).ConfigureAwait(false);
+            resumedRunner = runner.Status.State == SyncPairRunState.Disabled ? null : runner;
             status = CreateAppStatusSnapshot();
         }
         finally
@@ -191,6 +199,11 @@ public sealed class SyncSupervisor : ISyncSupervisor
         }
 
         _statusPublisher.Publish(status);
+        if (resumedRunner is not null)
+        {
+            await resumedRunner.SyncNowAsync(cancellationToken).ConfigureAwait(false);
+            _statusPublisher.Publish(CreateAppStatusSnapshot());
+        }
     }
 
     /// <inheritdoc />
@@ -216,6 +229,21 @@ public sealed class SyncSupervisor : ISyncSupervisor
         foreach (ISyncPairRunner runner in _runners.Values)
         {
             await runner.StopAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task SyncRunnersAsync(
+        IReadOnlyList<ISyncPairRunner> runners,
+        CancellationToken cancellationToken)
+    {
+        foreach (ISyncPairRunner runner in runners)
+        {
+            await runner.SyncNowAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        if (runners.Count > 0)
+        {
+            _statusPublisher.Publish(CreateAppStatusSnapshot());
         }
     }
 
