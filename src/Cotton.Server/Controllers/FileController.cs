@@ -4,7 +4,6 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
-using Cotton.Shared.Models.Enums;
 using Cotton.Previews;
 using Cotton.Previews.Http;
 using Cotton.Server.Abstractions;

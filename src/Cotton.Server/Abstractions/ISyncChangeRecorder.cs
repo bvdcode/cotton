@@ -3,7 +3,6 @@
 
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
-using Cotton.Shared.Models.Enums;
 
 namespace Cotton.Server.Abstractions
 {

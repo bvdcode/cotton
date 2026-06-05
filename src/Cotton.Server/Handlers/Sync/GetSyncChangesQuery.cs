@@ -3,7 +3,6 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
-using Cotton.Shared.Contracts.Sync;
 using Cotton.Server.Models.Dto;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
