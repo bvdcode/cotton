@@ -325,6 +325,35 @@ public sealed class DesktopShellControllerHostLifecycleTests
     }
 
     [Test]
+    public async Task RemoveSyncPairAsync_UsesActiveHostAppWithoutManualRestart()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        Uri serverUrl = new("https://cotton.example.test/");
+        var syncPairStore = new SqliteSyncPairSettingsStore(paths.AppDatabasePath);
+        await syncPairStore.InitializeAsync();
+        SyncPairSettings syncPair = CreateSyncPair(isEnabled: true);
+        await syncPairStore.UpsertAsync(syncPair);
+        FakeDesktopApplicationHost host = FakeDesktopApplicationHost.Create(serverUrl);
+        var factory = new QueueingDesktopSyncApplicationFactory(host.Host);
+        using DesktopShellController controller = CreateController(paths, factory, syncPairStore: syncPairStore);
+        await controller.SignInAsync(new DesktopSignInRequest(
+            serverUrl.AbsoluteUri,
+            "desktop@example.test",
+            "password",
+            null));
+
+        await controller.RemoveSyncPairAsync(syncPair.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(host.App.DeleteSyncPairCalls, Is.EqualTo(1));
+            Assert.That(host.App.DeletedSyncPairId, Is.EqualTo(syncPair.Id));
+            Assert.That(host.App.StopSyncCalls, Is.Zero);
+            Assert.That(host.App.StartSyncCalls, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
     public async Task StatusChanged_ForwardsLastSuccessfulSyncTimestamp()
     {
         DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);

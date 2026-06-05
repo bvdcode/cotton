@@ -11,6 +11,7 @@ using Cotton.Sync.App.SyncApplication;
 using Cotton.Sync.App.SyncPairs;
 using Cotton.Sync.App.Status;
 using Cotton.Sync.App.Supervision;
+using Cotton.Sync.State;
 
 namespace Cotton.Sync.App.Tests.SyncApplication;
 
@@ -644,6 +645,24 @@ public sealed class SyncApplicationServiceTests
     }
 
     [Test]
+    public async Task DeleteSyncPairAsync_DeletesPersistedSyncState()
+    {
+        var store = new InMemorySyncPairSettingsStore();
+        var syncStateStore = new FakeSyncStateStore();
+        SyncApplicationService service = CreateService(store, syncStateStore: syncStateStore);
+        SyncPairSettings syncPair = CreatePair("/home/user/Cotton");
+        await service.SaveSyncPairAsync(syncPair);
+
+        await service.DeleteSyncPairAsync(syncPair.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(syncStateStore.InitializeCallCount, Is.EqualTo(1));
+            Assert.That(syncStateStore.DeletedSyncPairIds, Is.EqualTo(new[] { syncPair.Id.ToString() }));
+        });
+    }
+
+    [Test]
     public async Task ListSyncPairsAsync_InitializesStore()
     {
         var store = new InMemorySyncPairSettingsStore();
@@ -663,7 +682,8 @@ public sealed class SyncApplicationServiceTests
         IPlatformCommandService? platformCommands = null,
         ILocalChangeSyncCoordinator? localChanges = null,
         IRemoteChangeSyncCoordinator? remoteChanges = null,
-        IPeriodicSyncCoordinator? periodicSync = null)
+        IPeriodicSyncCoordinator? periodicSync = null,
+        ISyncStateStore? syncStateStore = null)
     {
         return new SyncApplicationService(
             store,
@@ -674,7 +694,8 @@ public sealed class SyncApplicationServiceTests
             platformCommands ?? new FakePlatformCommandService(),
             localChanges,
             remoteChanges,
-            periodicSync);
+            periodicSync,
+            syncStateStore);
     }
 
     private static SyncPairSettings CreatePair(string localRootPath)
@@ -744,6 +765,73 @@ public sealed class SyncApplicationServiceTests
         public Task DeleteAsync(Guid syncPairId, CancellationToken cancellationToken = default)
         {
             _syncPairs.Remove(syncPairId);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeSyncStateStore : ISyncStateStore
+    {
+        public int InitializeCallCount { get; private set; }
+
+        public List<string> DeletedSyncPairIds { get; } = [];
+
+        public Task InitializeAsync(CancellationToken cancellationToken = default)
+        {
+            InitializeCallCount++;
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyList<SyncStateEntry>> LoadPairAsync(
+            string syncPairId,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<SyncStateEntry>>([]);
+        }
+
+        public Task<SyncChangeCursor> GetChangeCursorAsync(
+            string syncPairId,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new SyncChangeCursor { SyncPairId = syncPairId });
+        }
+
+        public Task<SyncStateEntry?> GetAsync(
+            string syncPairId,
+            string relativePath,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<SyncStateEntry?>(null);
+        }
+
+        public Task UpsertAsync(SyncStateEntry entry, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task SaveChangeCursorAsync(SyncChangeCursor cursor, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task DeleteAsync(
+            string syncPairId,
+            string relativePath,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task DeletePairAsync(string syncPairId, CancellationToken cancellationToken = default)
+        {
+            DeletedSyncPairIds.Add(syncPairId);
+            return Task.CompletedTask;
+        }
+
+        public Task ReplacePairAsync(
+            string syncPairId,
+            IReadOnlyCollection<SyncStateEntry> entries,
+            CancellationToken cancellationToken = default)
+        {
             return Task.CompletedTask;
         }
     }

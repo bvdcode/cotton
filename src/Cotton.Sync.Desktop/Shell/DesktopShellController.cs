@@ -331,26 +331,17 @@ internal sealed class DesktopShellController : IDesktopShellController
         }
 
         DesktopSyncApplicationHost? host = _host;
-        if (host is not null)
-        {
-            await host.App.StopSyncAsync(cancellationToken).ConfigureAwait(false);
-        }
-
-        try
+        if (host is null)
         {
             await _syncPairStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
             await _syncPairStore.DeleteAsync(syncPairId, cancellationToken).ConfigureAwait(false);
             var stateStore = new SqliteSyncStateStore(_paths.SyncStateDatabasePath);
             await stateStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
             await stateStore.DeletePairAsync(syncPairId.ToString(), cancellationToken).ConfigureAwait(false);
+            return;
         }
-        finally
-        {
-            if (host is not null)
-            {
-                await host.App.StartSyncAsync(cancellationToken).ConfigureAwait(false);
-            }
-        }
+
+        await host.App.DeleteSyncPairAsync(syncPairId, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task SignOutAsync(CancellationToken cancellationToken = default)

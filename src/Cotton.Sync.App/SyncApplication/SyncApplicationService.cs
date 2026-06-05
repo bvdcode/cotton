@@ -9,6 +9,7 @@ using Cotton.Sync.App.Preferences;
 using Cotton.Sync.App.RemoteChanges;
 using Cotton.Sync.App.Supervision;
 using Cotton.Sync.App.SyncPairs;
+using Cotton.Sync.State;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -27,6 +28,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
     private readonly IAppPreferencesStore _preferences;
     private readonly ISyncPairPrerequisiteValidator _prerequisites;
     private readonly IRemoteChangeSyncCoordinator _remoteChanges;
+    private readonly ISyncStateStore? _syncStateStore;
     private readonly ISyncSupervisor _supervisor;
     private readonly ISyncPairSettingsStore _syncPairs;
     private readonly SyncPairSettingsValidator _validator;
@@ -46,6 +48,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
         ILocalChangeSyncCoordinator? localChanges = null,
         IRemoteChangeSyncCoordinator? remoteChanges = null,
         IPeriodicSyncCoordinator? periodicSync = null,
+        ISyncStateStore? syncStateStore = null,
         SyncPairSettingsValidator? validator = null,
         ILogger<SyncApplicationService>? logger = null)
     {
@@ -58,6 +61,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
         _localChanges = localChanges ?? NullLocalChangeSyncCoordinator.Instance;
         _remoteChanges = remoteChanges ?? NullRemoteChangeSyncCoordinator.Instance;
         _periodicSync = periodicSync ?? NullPeriodicSyncCoordinator.Instance;
+        _syncStateStore = syncStateStore;
         _validator = validator ?? new SyncPairSettingsValidator();
         _logger = logger ?? NullLogger<SyncApplicationService>.Instance;
     }
@@ -182,6 +186,12 @@ public sealed class SyncApplicationService : ISyncApplicationService
     {
         await _syncPairs.InitializeAsync(cancellationToken).ConfigureAwait(false);
         await _syncPairs.DeleteAsync(syncPairId, cancellationToken).ConfigureAwait(false);
+        if (_syncStateStore is not null)
+        {
+            await _syncStateStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+            await _syncStateStore.DeletePairAsync(syncPairId.ToString(), cancellationToken).ConfigureAwait(false);
+        }
+
         await RestartSyncCoreIfStartedAsync(cancellationToken).ConfigureAwait(false);
     }
 

@@ -109,6 +109,7 @@ internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFac
             localChanges,
             remoteChanges,
             periodicSync,
+            stateStore,
             logger: _loggerFactory.CreateLogger<SyncApplicationService>());
         var remoteRootResolver = new RemoteRootResolver(cottonClient.Nodes);
 
