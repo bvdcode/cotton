@@ -16,7 +16,7 @@ public sealed class SyncActivity
     public SyncActivity(
         Guid id,
         Guid syncPairId,
-        SyncActivityType type,
+        SyncActivityKind type,
         string? itemPath,
         string message,
         DateTime occurredAtUtc)
@@ -43,7 +43,7 @@ public sealed class SyncActivity
     /// <summary>
     /// Gets the activity type.
     /// </summary>
-    public SyncActivityType Type { get; }
+    public SyncActivityKind Type { get; }
 
     /// <summary>
     /// Gets the optional local or remote item path.

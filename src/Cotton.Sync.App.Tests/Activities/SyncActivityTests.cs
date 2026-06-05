@@ -3,7 +3,7 @@
 
 using Cotton.Sync.App.Activities;
 using AppSyncActivity = Cotton.Sync.App.Activities.SyncActivity;
-using AppSyncActivityType = Cotton.Sync.App.Activities.SyncActivityType;
+using AppSyncActivityKind = Cotton.Sync.SyncActivityKind;
 using Cotton.Sync.App.Tests.TestSupport;
 
 namespace Cotton.Sync.App.Tests.Activities;
@@ -18,7 +18,7 @@ public sealed class SyncActivityTests
         var activity = new AppSyncActivity(
             Guid.NewGuid(),
             Guid.NewGuid(),
-            AppSyncActivityType.Uploaded,
+            AppSyncActivityKind.Uploaded,
             "/Documents/report.txt",
             "Uploaded report.txt",
             unspecifiedTime);
@@ -34,7 +34,7 @@ public sealed class SyncActivityTests
         var activity = new AppSyncActivity(
             Guid.NewGuid(),
             Guid.NewGuid(),
-            AppSyncActivityType.Downloaded,
+            AppSyncActivityKind.Downloaded,
             "report.txt",
             "Downloaded report.txt",
             DateTime.UtcNow);
@@ -53,7 +53,7 @@ public sealed class SyncActivityTests
         var activity = new AppSyncActivity(
             Guid.NewGuid(),
             Guid.NewGuid(),
-            AppSyncActivityType.Uploaded,
+            AppSyncActivityKind.Uploaded,
             "report.txt",
             "Uploaded report.txt",
             DateTime.UtcNow);

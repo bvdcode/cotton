@@ -79,7 +79,7 @@ public sealed class SyncEnginePairWorkTests
         {
             Assert.That(engine.LastOptions?.ActivityProgress, Is.Not.Null);
             Assert.That(activity.SyncPairId, Is.EqualTo(syncPairId));
-            Assert.That(activity.Type, Is.EqualTo(SyncActivityType.Conflict));
+            Assert.That(activity.Type, Is.EqualTo(SyncActivityKind.Conflict));
             Assert.That(activity.ItemPath, Is.EqualTo("Documents/report.txt"));
             Assert.That(activity.Message, Does.Contain("Created conflict copy Documents/report.txt"));
             Assert.That(activity.Message, Does.Contain("Remote version saved as report conflict.txt"));

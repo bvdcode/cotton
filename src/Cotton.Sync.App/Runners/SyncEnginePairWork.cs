@@ -5,7 +5,6 @@ using Cotton.Sync.App.Activities;
 using Cotton.Sync.App.Progress;
 using Cotton.Sync.App.SyncPairs;
 using AppSyncActivity = Cotton.Sync.App.Activities.SyncActivity;
-using AppSyncActivityType = Cotton.Sync.App.Activities.SyncActivityType;
 using CoreSyncActivity = Cotton.Sync.SyncActivity;
 using CoreSyncActivityKind = Cotton.Sync.SyncActivityKind;
 using CoreSyncEngine = Cotton.Sync.ISyncEngine;
@@ -82,7 +81,7 @@ public sealed class SyncEnginePairWork : ISyncPairWork
         return new AppSyncActivity(
             Guid.NewGuid(),
             syncPairId,
-            ToAppActivityType(activity.Kind),
+            activity.Kind,
             string.IsNullOrWhiteSpace(relativePath) ? null : relativePath,
             message,
             DateTime.UtcNow);
@@ -118,20 +117,6 @@ public sealed class SyncEnginePairWork : ISyncPairWork
             progress.StartedAtUtc,
             progress.IsCompleted,
             progress.OccurredAtUtc);
-    }
-
-    private static AppSyncActivityType ToAppActivityType(CoreSyncActivityKind kind)
-    {
-        return kind switch
-        {
-            CoreSyncActivityKind.Uploaded => AppSyncActivityType.Uploaded,
-            CoreSyncActivityKind.Downloaded => AppSyncActivityType.Downloaded,
-            CoreSyncActivityKind.DeletedLocal => AppSyncActivityType.DeletedLocal,
-            CoreSyncActivityKind.DeletedRemote => AppSyncActivityType.DeletedRemote,
-            CoreSyncActivityKind.Conflict => AppSyncActivityType.Conflict,
-            CoreSyncActivityKind.Skipped => AppSyncActivityType.Skipped,
-            _ => AppSyncActivityType.Warning,
-        };
     }
 
     private static string CreateMessage(CoreSyncActivityKind kind, string relativePath, string? details)
