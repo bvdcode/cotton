@@ -21,6 +21,7 @@ using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
 using Cotton.Validators;
 using EasyExtensions;
+using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Helpers;
 using EasyExtensions.Mediator;
@@ -139,8 +140,9 @@ namespace Cotton.Server.Controllers
                 .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
                 .Select(x => (Guid?)x.NodeId)
                 .SingleOrDefaultAsync();
-            DeleteFileQuery query = new(userId, nodeFileId, skipTrash);
+            DeleteFileQuery query = new(userId, nodeFileId, skipTrash, FileETagConcurrency.ReadIfMatch(Request));
             await _mediator.Send(query);
+
             await _hubContext.Clients.User(userId.ToString()).SendAsync(
                 "FileDeleted",
                 new NodeFileDeletedEventDto(nodeFileId, parentNodeId));
@@ -192,8 +194,9 @@ namespace Cotton.Server.Controllers
                 NodeFileId = nodeFileId,
                 ParentId = request.ParentId,
                 UserId = User.GetUserId(),
+                ExpectedETag = FileETagConcurrency.ReadIfMatch(Request),
             };
-            var dto = await _mediator.Send(command);
+            NodeFileManifestDto dto = await _mediator.Send(command);
             return Ok(dto);
         }
 
@@ -238,6 +241,11 @@ namespace Cotton.Server.Controllers
             if (nodeFile == null || nodeFile.Node.Type != NodeType.Default)
             {
                 return CottonResult.NotFound("File not found.");
+            }
+
+            if (!FileETagConcurrency.MatchesIfMatchHeader(FileETagConcurrency.ReadIfMatch(Request), nodeFile))
+            {
+                throw new FilePreconditionFailedException<NodeFile>("File content changed before rename.");
             }
 
             string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
@@ -520,6 +528,11 @@ namespace Cotton.Server.Controllers
             if (nodeFile is null)
             {
                 return this.ApiNotFound("Node file not found.");
+            }
+
+            if (!FileETagConcurrency.MatchesIfMatchHeader(FileETagConcurrency.ReadIfMatch(Request), nodeFile))
+            {
+                throw new FilePreconditionFailedException<NodeFile>("File content changed before update.");
             }
 
             string nameKey = NameValidator.NormalizeAndGetNameKey(normalizedName);

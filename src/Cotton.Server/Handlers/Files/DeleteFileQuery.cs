@@ -18,7 +18,7 @@ namespace Cotton.Server.Handlers.Files
     /// <summary>
     /// Represents a delete file query sent through the mediator pipeline.
     /// </summary>
-    public class DeleteFileQuery(Guid userId, Guid nodeFileId, bool skipTrash) : IRequest
+    public class DeleteFileQuery(Guid userId, Guid nodeFileId, bool skipTrash, string? expectedETag = null) : IRequest
     {
         /// <summary>
         /// Gets the owning user identifier.
@@ -32,6 +32,10 @@ namespace Cotton.Server.Handlers.Files
         /// Gets whether deletion bypasses trash and permanently removes the resource.
         /// </summary>
         public bool SkipTrash { get; } = skipTrash;
+        /// <summary>
+        /// Gets the optional expected file content ETag.
+        /// </summary>
+        public string? ExpectedETag { get; } = expectedETag;
     }
 
     /// <summary>
@@ -58,6 +62,8 @@ namespace Cotton.Server.Handlers.Files
                 .FirstOrDefaultAsync(x => x.Id == request.NodeFileId
                     && x.OwnerId == request.UserId, cancellationToken: ct)
                     ?? throw new EntityNotFoundException(nameof(FileManifest));
+            EnsureETagPrecondition(request, nodeFile);
+
             if (request.SkipTrash)
             {
                 if (FileVersionService.IsHistoricalVersion(nodeFile))
@@ -111,6 +117,7 @@ namespace Cotton.Server.Handlers.Files
 
             nodeFile = await _dbContext.NodeFiles
                     .Include(x => x.Node)
+                    .Include(x => x.FileManifest)
                     .Include(x => x.DownloadTokens)
                     .Where(x => x.Id == command.NodeFileId && x.OwnerId == command.UserId)
                     .SingleOrDefaultAsync(ct)
@@ -120,6 +127,8 @@ namespace Cotton.Server.Handlers.Files
             {
                 throw new EntityNotFoundException(nameof(FileManifest));
             }
+
+            EnsureETagPrecondition(command, nodeFile);
 
             string? originalParentPath = await _navigator.GetNodePathFromRootAsync(
                 command.UserId,
@@ -152,6 +161,14 @@ namespace Cotton.Server.Handlers.Files
 
             _logger.LogInformation("User {UserId} deleted file {NodeFileId} to trash.",
                 command.UserId, command.NodeFileId);
+        }
+
+        private static void EnsureETagPrecondition(DeleteFileQuery request, NodeFile nodeFile)
+        {
+            if (!FileETagConcurrency.MatchesIfMatchHeader(request.ExpectedETag, nodeFile))
+            {
+                throw new FilePreconditionFailedException<NodeFile>("File content changed before delete.");
+            }
         }
     }
 }
