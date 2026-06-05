@@ -739,6 +739,35 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task TransferProgressChanged_ShowsTransferSpeedAndRemainingTime()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            syncPairId,
+            DesktopTransferDirection.Download,
+            "Reports/report.txt",
+            TransferredBytes: 2 * 1024 * 1024,
+            TotalBytes: 10 * 1024 * 1024,
+            IsCompleted: false,
+            new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
+            SpeedBytesPerSecond: 1024 * 1024,
+            EstimatedTimeRemaining: TimeSpan.FromSeconds(8)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasCurrentWorkProgress, Is.True);
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents: Downloading report.txt"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("2.0 MB / 10 MB · 1.0 MB/s · 8s left"));
+            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(20).Within(0.01));
+            Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.False);
+        });
+    }
+
+    [Test]
     public async Task RunProgressChanged_UpdatesCurrentRunProgressState()
     {
         Guid syncPairId = Guid.NewGuid();

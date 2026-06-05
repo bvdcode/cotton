@@ -2792,12 +2792,24 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private static string FormatDuration(TimeSpan duration)
     {
-        if (duration.TotalHours >= 1)
+        if (duration.TotalSeconds < 60)
         {
-            return duration.ToString(@"h\:mm", CultureInfo.InvariantCulture);
+            int seconds = Math.Max(1, (int)Math.Ceiling(duration.TotalSeconds));
+            return seconds.ToString(CultureInfo.CurrentCulture) + "s";
         }
 
-        return duration.ToString(@"m\:ss", CultureInfo.InvariantCulture);
+        if (duration.TotalMinutes < 60)
+        {
+            return ((int)duration.TotalMinutes).ToString(CultureInfo.CurrentCulture)
+                + "m "
+                + duration.Seconds.ToString("00", CultureInfo.CurrentCulture)
+                + "s";
+        }
+
+        return ((int)duration.TotalHours).ToString(CultureInfo.CurrentCulture)
+            + "h "
+            + duration.Minutes.ToString("00", CultureInfo.CurrentCulture)
+            + "m";
     }
 
     private static bool IsActiveProgressPair(SyncPairRowViewModel syncPair)
