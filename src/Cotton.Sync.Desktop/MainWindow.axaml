@@ -370,7 +370,7 @@
                 IsVisible="{Binding HasConflicts}">
           <Grid RowDefinitions="Auto,*"
                 RowSpacing="7">
-            <Grid ColumnDefinitions="*,Auto,Auto"
+            <Grid ColumnDefinitions="*,Auto"
                   ColumnSpacing="6">
               <StackPanel Spacing="1">
                 <TextBlock Text="Conflicts"
@@ -385,11 +385,6 @@
                       Classes="icon"
                       ToolTip.Tip="Run synchronization again"
                       Command="{Binding SyncNowCommand}" />
-              <Button Grid.Column="2"
-                      Content="↗"
-                      Classes="icon"
-                      ToolTip.Tip="Open selected conflict location"
-                      Command="{Binding OpenSelectedConflictCommand}" />
             </Grid>
 
             <ScrollViewer Grid.Row="1"
@@ -400,7 +395,7 @@
                        Background="Transparent">
                 <ListBox.ItemTemplate>
                   <DataTemplate>
-                    <Grid ColumnDefinitions="42,*"
+                    <Grid ColumnDefinitions="42,*,Auto"
                           RowDefinitions="Auto,Auto"
                           ColumnSpacing="8"
                           Margin="0,3">
@@ -418,6 +413,13 @@
                                  Classes="secondary"
                                  FontSize="11"
                                  TextTrimming="CharacterEllipsis" />
+                      <Button Grid.Column="2"
+                              Grid.RowSpan="2"
+                              Content="↗"
+                              Classes="icon"
+                              ToolTip.Tip="Open conflict location"
+                              Command="{Binding $parent[Window].DataContext.OpenConflictCommand}"
+                              CommandParameter="{Binding}" />
                     </Grid>
                   </DataTemplate>
                 </ListBox.ItemTemplate>

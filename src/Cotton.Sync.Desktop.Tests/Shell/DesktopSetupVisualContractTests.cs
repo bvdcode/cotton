@@ -330,6 +330,10 @@ public sealed class DesktopSetupVisualContractTests
             mainWindowXaml,
             "<TextBlock Text=\"Conflicts\"",
             "<ScrollViewer Grid.Row=\"1\"");
+        string conflictsSection = GetSlice(
+            mainWindowXaml,
+            "<TextBlock Text=\"Conflicts\"",
+            "<Border Padding=\"10\"\n                MaxHeight=\"300\"");
 
         Assert.Multiple(() =>
         {
@@ -347,7 +351,11 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(actionRequiredRow, Does.Not.Contain("Content=\"Retry\""));
             Assert.That(actionRequiredRow, Does.Not.Contain("Content=\"Check\""));
             Assert.That(conflictsHeader, Does.Contain("Content=\"↻\""));
-            Assert.That(conflictsHeader, Does.Contain("Content=\"↗\""));
+            Assert.That(conflictsHeader, Does.Not.Contain("OpenConflictCommand"));
+            Assert.That(conflictsHeader, Does.Not.Contain("Open selected conflict location"));
+            Assert.That(conflictsSection, Does.Contain("OpenConflictCommand"));
+            Assert.That(conflictsSection, Does.Contain("CommandParameter=\"{Binding}\""));
+            Assert.That(conflictsSection, Does.Contain("ToolTip.Tip=\"Open conflict location\""));
             Assert.That(conflictsHeader, Does.Not.Contain("Content=\"Retry\""));
             Assert.That(conflictsHeader, Does.Not.Contain("Content=\"Open\""));
         });

@@ -136,9 +136,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             OpenTrayFolderAsync,
             () => CanOpenTrayFolder,
             HandleCommandError);
-        OpenSelectedConflictCommand = new AsyncRelayCommand(
-            OpenSelectedConflictAsync,
-            () => SelectedConflict is not null && !IsBusy,
+        OpenConflictCommand = new AsyncRelayCommand(
+            OpenConflictAsync,
+            parameter => parameter is ConflictRowViewModel && !IsBusy,
             HandleCommandError);
         ToggleSelectedSyncPairEnabledCommand = new AsyncRelayCommand(
             ToggleSelectedSyncPairEnabledAsync,
@@ -215,7 +215,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public AsyncRelayCommand OpenFolderCommand { get; }
 
-    public AsyncRelayCommand OpenSelectedConflictCommand { get; }
+    public AsyncRelayCommand OpenConflictCommand { get; }
 
     public AsyncRelayCommand OpenTrayFolderCommand { get; }
 
@@ -894,13 +894,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public ConflictRowViewModel? SelectedConflict
     {
         get => _selectedConflict;
-        set
-        {
-            if (SetProperty(ref _selectedConflict, value))
-            {
-                OpenSelectedConflictCommand.RaiseCanExecuteChanged();
-            }
-        }
+        set => SetProperty(ref _selectedConflict, value);
     }
 
     public SyncPairRowViewModel? SelectedSyncPair
@@ -1376,10 +1370,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         return parameter as SyncPairRowViewModel ?? SelectedSyncPair;
     }
 
-    private async Task OpenSelectedConflictAsync()
+    private async Task OpenConflictAsync(object? parameter)
     {
-        ConflictRowViewModel? conflict = SelectedConflict;
-        if (conflict is null)
+        if (parameter is not ConflictRowViewModel conflict)
         {
             return;
         }
@@ -2091,7 +2084,6 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OnPropertyChanged(nameof(StatusCardDetailText));
         OnPropertyChanged(nameof(HasStatusCardDetail));
         RefreshCurrentProgressText();
-        OpenSelectedConflictCommand.RaiseCanExecuteChanged();
     }
 
     private void OnRemoteFoldersChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -2458,7 +2450,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         PauseResumeCommand.RaiseCanExecuteChanged();
         OpenFolderCommand.RaiseCanExecuteChanged();
         OpenTrayFolderCommand.RaiseCanExecuteChanged();
-        OpenSelectedConflictCommand.RaiseCanExecuteChanged();
+        OpenConflictCommand.RaiseCanExecuteChanged();
         ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
         SaveSelectedSyncPairNameCommand.RaiseCanExecuteChanged();
         RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();

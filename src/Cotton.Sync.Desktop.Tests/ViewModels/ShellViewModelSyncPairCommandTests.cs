@@ -1053,7 +1053,7 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
-    public async Task OpenSelectedConflictCommand_OpensConflictParentFolder()
+    public async Task OpenConflictCommand_OpensRequestedConflictParentFolder()
     {
         Guid syncPairId = Guid.NewGuid();
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Idle")));
@@ -1065,14 +1065,22 @@ public sealed class ShellViewModelSyncPairCommandTests
             "Created conflict copy Reports/q1.txt",
             new DateTime(2026, 6, 3, 10, 15, 0, DateTimeKind.Utc),
             syncPairId));
+        controller.ReportActivity(new DesktopActivitySnapshot(
+            "Conflict",
+            "Finance/q2.txt",
+            "Created conflict copy Finance/q2.txt",
+            new DateTime(2026, 6, 3, 10, 16, 0, DateTimeKind.Utc),
+            syncPairId));
 
-        await ExecuteAsync(viewModel.OpenSelectedConflictCommand);
+        ConflictRowViewModel requestedConflict = viewModel.Conflicts.Single(conflict => conflict.Path == "Finance/q2.txt");
+        Assert.That(viewModel.SelectedConflict?.Path, Is.EqualTo("Reports/q1.txt"));
+        await ExecuteAsync(viewModel.OpenConflictCommand, requestedConflict);
 
-        Assert.That(controller.OpenedFolderPath, Is.EqualTo("/home/vadim/Documents/Reports"));
+        Assert.That(controller.OpenedFolderPath, Is.EqualTo("/home/vadim/Documents/Finance"));
     }
 
     [Test]
-    public async Task OpenSelectedConflictCommand_RejectsConflictPathOutsideSyncRoot()
+    public async Task OpenConflictCommand_RejectsConflictPathOutsideSyncRoot()
     {
         Guid syncPairId = Guid.NewGuid();
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Idle")));
@@ -1085,7 +1093,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             new DateTime(2026, 6, 3, 10, 15, 0, DateTimeKind.Utc),
             syncPairId));
 
-        await ExecuteAsync(viewModel.OpenSelectedConflictCommand);
+        await ExecuteAsync(viewModel.OpenConflictCommand, viewModel.Conflicts.Single());
 
         Assert.That(controller.OpenedFolderPath, Is.EqualTo("/home/vadim/Documents"));
     }
