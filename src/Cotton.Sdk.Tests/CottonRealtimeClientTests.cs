@@ -35,4 +35,12 @@ public sealed class CottonRealtimeClientTests
                 "NodeRestored",
             }));
     }
+
+    [Test]
+    public void CottonRealtimeEvent_RejectsUnknownKind()
+    {
+        Assert.That(
+            () => new CottonRealtimeEvent(CottonRealtimeEventKind.Unknown, "FileCreated", DateTime.UtcNow),
+            Throws.TypeOf<ArgumentOutOfRangeException>());
+    }
 }

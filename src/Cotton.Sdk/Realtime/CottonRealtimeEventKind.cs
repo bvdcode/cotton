@@ -9,12 +9,17 @@ namespace Cotton.Sdk.Realtime;
 public enum CottonRealtimeEventKind
 {
     /// <summary>
+    /// The event kind is not known.
+    /// </summary>
+    Unknown = 0,
+
+    /// <summary>
     /// A file or folder tree mutation occurred.
     /// </summary>
-    RemoteFileTreeChanged = 0,
+    RemoteFileTreeChanged = 1,
 
     /// <summary>
     /// The current auth session was revoked by the server.
     /// </summary>
-    SessionRevoked = 1,
+    SessionRevoked = 2,
 }

@@ -13,6 +13,11 @@ public sealed class CottonRealtimeEvent
     /// </summary>
     public CottonRealtimeEvent(CottonRealtimeEventKind kind, string methodName, DateTime receivedAtUtc)
     {
+        if (kind == CottonRealtimeEventKind.Unknown)
+        {
+            throw new ArgumentOutOfRangeException(nameof(kind), "Realtime event kind must be known.");
+        }
+
         ArgumentException.ThrowIfNullOrWhiteSpace(methodName);
         Kind = kind;
         MethodName = methodName;
