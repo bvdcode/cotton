@@ -51,6 +51,32 @@ public sealed class LocalSyncRootChangeFilterTests
         Assert.That(shouldPublish, Is.False);
     }
 
+    [Test]
+    public void ShouldPublishRename_AllowsNormalFileRenamedToIgnoredTemporaryFile()
+    {
+        string root = CreateRootPath();
+        var filter = new LocalSyncRootChangeFilter(root);
+
+        bool shouldPublish = filter.ShouldPublishRename(
+            Path.Combine(root, "Documents", "report.txt"),
+            Path.Combine(root, "Documents", "report.tmp"));
+
+        Assert.That(shouldPublish, Is.True);
+    }
+
+    [Test]
+    public void ShouldPublishRename_IgnoresTemporaryFileRenamedInsideTemporarySet()
+    {
+        string root = CreateRootPath();
+        var filter = new LocalSyncRootChangeFilter(root);
+
+        bool shouldPublish = filter.ShouldPublishRename(
+            Path.Combine(root, "Documents", "report.tmp"),
+            Path.Combine(root, "Documents", "report.part"));
+
+        Assert.That(shouldPublish, Is.False);
+    }
+
     private static string CreateRootPath()
     {
         return Path.Combine(Path.GetTempPath(), "cotton-sync-root", Guid.NewGuid().ToString("N"));

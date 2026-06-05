@@ -37,6 +37,14 @@ public sealed class LocalSyncRootChangeFilter
             || !LocalFileIgnoreRules.ShouldIgnore(relativePath);
     }
 
+    /// <summary>
+    /// Returns whether a rename event should request a sync pass.
+    /// </summary>
+    public bool ShouldPublishRename(string oldFullPath, string newFullPath)
+    {
+        return ShouldPublish(oldFullPath) || ShouldPublish(newFullPath);
+    }
+
     private static bool IsOutsideRoot(string relativePath)
     {
         return Path.IsPathRooted(relativePath)

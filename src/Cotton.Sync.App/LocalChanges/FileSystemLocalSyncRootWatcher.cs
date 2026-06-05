@@ -112,7 +112,7 @@ public sealed class FileSystemLocalSyncRootWatcher : ILocalSyncRootWatcher
 
     private void OnRenamed(object sender, RenamedEventArgs e)
     {
-        Publish(e.FullPath, LocalSyncRootChangeKind.Renamed);
+        PublishRename(e.OldFullPath, e.FullPath);
     }
 
     private void OnError(object sender, ErrorEventArgs e)
@@ -137,5 +137,20 @@ public sealed class FileSystemLocalSyncRootWatcher : ILocalSyncRootWatcher
         }
 
         Changed?.Invoke(this, new LocalSyncRootChange(_syncPairId, fullPath, kind));
+    }
+
+    private void PublishRename(string oldFullPath, string newFullPath)
+    {
+        if (!_changeFilter.ShouldPublishRename(oldFullPath, newFullPath))
+        {
+            _logger.LogDebug(
+                "Ignoring local sync root rename watcher event for {SyncPairId} from {OldPath} to {ChangedPath}.",
+                _syncPairId,
+                oldFullPath,
+                newFullPath);
+            return;
+        }
+
+        Changed?.Invoke(this, new LocalSyncRootChange(_syncPairId, newFullPath, LocalSyncRootChangeKind.Renamed));
     }
 }
