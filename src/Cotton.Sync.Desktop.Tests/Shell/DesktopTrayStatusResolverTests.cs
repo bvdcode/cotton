@@ -108,12 +108,12 @@ public sealed class DesktopTrayStatusResolverTests
     {
         (DesktopTrayStatusKind Kind, string AssetName)[] cases =
         [
+            (DesktopTrayStatusKind.SignedOut, "tray-signed-out.png"),
             (DesktopTrayStatusKind.Idle, "tray-idle.png"),
             (DesktopTrayStatusKind.Syncing, "tray-syncing.png"),
             (DesktopTrayStatusKind.Paused, "tray-paused.png"),
             (DesktopTrayStatusKind.Offline, "tray-offline.png"),
             (DesktopTrayStatusKind.Error, "tray-error.png"),
-            (DesktopTrayStatusKind.SignedOut, "tray-signed-out.png"),
         ];
 
         foreach ((DesktopTrayStatusKind kind, string assetName) in cases)
@@ -122,5 +122,12 @@ public sealed class DesktopTrayStatusResolverTests
 
             Assert.That(iconUri.ToString(), Does.EndWith("/Assets/" + assetName));
         }
+    }
+
+    [Test]
+    public void Resolve_RejectsUnknownState()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => DesktopTrayIconAssetResolver.Resolve(DesktopTrayStatusKind.Unknown));
     }
 }

@@ -14,7 +14,8 @@ internal static class DesktopTrayIconAssetResolver
             DesktopTrayStatusKind.Paused => Create("tray-paused.png"),
             DesktopTrayStatusKind.Offline => Create("tray-offline.png"),
             DesktopTrayStatusKind.Error => Create("tray-error.png"),
-            _ => Create("tray-signed-out.png"),
+            DesktopTrayStatusKind.SignedOut => Create("tray-signed-out.png"),
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown tray status cannot be resolved."),
         };
     }
 

@@ -5,10 +5,11 @@ namespace Cotton.Sync.Desktop.Shell;
 
 internal enum DesktopTrayStatusKind
 {
-    SignedOut = 0,
-    Idle = 1,
-    Syncing = 2,
-    Paused = 3,
-    Offline = 4,
-    Error = 5,
+    Unknown = 0,
+    SignedOut = 1,
+    Idle = 2,
+    Syncing = 3,
+    Paused = 4,
+    Offline = 5,
+    Error = 6,
 }
