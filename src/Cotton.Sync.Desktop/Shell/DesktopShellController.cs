@@ -920,7 +920,8 @@ internal sealed class DesktopShellController : IDesktopShellController
         SyncChangeCursor? cursor = null,
         SyncPairStatus? status = null)
     {
-        DateTime? lastSyncedAtUtc = entries is { Count: > 0 }
+        DateTime? lastSyncedAtUtc = status?.LastSuccessfulSyncAtUtc;
+        lastSyncedAtUtc ??= entries is { Count: > 0 }
             ? entries.Max(static entry => entry.SyncedAtUtc)
             : null;
         return new DesktopSyncPairSnapshot(

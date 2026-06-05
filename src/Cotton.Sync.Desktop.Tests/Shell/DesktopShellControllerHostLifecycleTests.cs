@@ -304,6 +304,59 @@ public sealed class DesktopShellControllerHostLifecycleTests
         });
     }
 
+    [Test]
+    public async Task LoadAsync_UsesRuntimeLastSuccessfulSyncWhenBaselineIsEmpty()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        Uri serverUrl = new("https://cotton.example.test/");
+        var preferencesStore = new SqliteAppPreferencesStore(paths.AppDatabasePath);
+        await preferencesStore.InitializeAsync();
+        await preferencesStore.SaveAsync(new AppPreferences
+        {
+            RememberedServerUrl = serverUrl,
+        });
+        Guid syncPairId = Guid.NewGuid();
+        var syncPairStore = new SqliteSyncPairSettingsStore(paths.AppDatabasePath);
+        await syncPairStore.InitializeAsync();
+        await syncPairStore.UpsertAsync(new SyncPairSettings
+        {
+            Id = syncPairId,
+            DisplayName = "Empty folder",
+            LocalRootPath = Path.Combine(_tempDirectory, "Empty folder"),
+            RemoteRootNodeId = Guid.NewGuid(),
+            RemoteDisplayPath = "/Empty folder",
+            IsEnabled = true,
+            Mode = SyncPairMode.FullMirror,
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow,
+        });
+        FakeDesktopApplicationHost host = FakeDesktopApplicationHost.Create(serverUrl);
+        DateTime completedAtUtc = new(2026, 6, 4, 9, 30, 0, DateTimeKind.Utc);
+        host.StatusPublisher.Publish(new SyncAppStatus(
+            isAuthenticated: true,
+            [
+                new SyncPairStatus(
+                    syncPairId,
+                    "Empty folder",
+                    SyncPairRunState.Idle,
+                    null,
+                    null,
+                    DateTime.UtcNow,
+                    completedAtUtc),
+            ],
+            DateTime.UtcNow));
+        var factory = new QueueingDesktopSyncApplicationFactory(host.Host);
+        using DesktopShellController controller = CreateController(paths, factory);
+
+        DesktopShellSnapshot snapshot = await controller.LoadAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.SyncPairs.Single().LastSyncedAtUtc, Is.EqualTo(completedAtUtc));
+            Assert.That(File.Exists(paths.SyncStateDatabasePath), Is.True);
+        });
+    }
+
     private static DesktopShellController CreateController(
         DesktopAppPaths paths,
         IDesktopSyncApplicationFactory factory,
