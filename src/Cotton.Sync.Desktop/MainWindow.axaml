@@ -234,7 +234,7 @@
           IsVisible="{Binding IsDashboardVisible}">
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto" />
-        <RowDefinition Height="2*" MinHeight="112" />
+        <RowDefinition Height="Auto" MaxHeight="236" />
         <RowDefinition Height="*" MinHeight="112" />
       </Grid.RowDefinitions>
       <StackPanel Grid.Row="0"

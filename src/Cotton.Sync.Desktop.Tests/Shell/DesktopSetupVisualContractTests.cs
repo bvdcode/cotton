@@ -288,7 +288,7 @@ public sealed class DesktopSetupVisualContractTests
         Assert.Multiple(() =>
         {
             Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"Auto\" />"));
-            Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"2*\" MinHeight=\"112\" />"));
+            Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"Auto\" MaxHeight=\"236\" />"));
             Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"*\" MinHeight=\"112\" />"));
             Assert.That(dashboardView, Does.Contain("<StackPanel Grid.Row=\"0\""));
             Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding IsDashboardChromeVisible}\""));
@@ -304,6 +304,7 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(dashboardView, Does.Not.Contain("RowDefinitions=\"Auto,*,*\""));
             Assert.That(dashboardView, Does.Not.Contain("RowDefinitions=\"Auto,Auto,Auto,Auto,*\""));
             Assert.That(dashboardView, Does.Not.Contain("RowDefinitions=\"Auto,132\""));
+            Assert.That(dashboardView, Does.Not.Contain("Height=\"2*\""));
         });
     }
 
@@ -589,9 +590,9 @@ public sealed class DesktopSetupVisualContractTests
         Assert.Multiple(() =>
         {
             Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"Auto\" />"));
-            Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"2*\" MinHeight=\"112\" />"));
+            Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"Auto\" MaxHeight=\"236\" />"));
             Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"*\" MinHeight=\"112\" />"));
-            Assert.That(dashboardView, Does.Not.Contain("RowDefinitions=\"Auto,Auto,*\""));
+            Assert.That(dashboardView, Does.Not.Contain("Height=\"2*\""));
         });
     }
 
