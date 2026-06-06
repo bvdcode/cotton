@@ -81,11 +81,11 @@ internal sealed class WindowsToastNotificationService : IDesktopNotificationServ
             "Add-Type -AssemblyName System.Runtime.WindowsRuntime",
             "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null",
             "[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] > $null",
-            "$template = [Windows.UI.Notifications.ToastTemplateType]::ToastText02",
-            "$xml = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent($template)",
-            "$textNodes = $xml.GetElementsByTagName('text')",
-            $"$null = $textNodes.Item(0).AppendChild($xml.CreateTextNode({titleLiteral}))",
-            $"$null = $textNodes.Item(1).AppendChild($xml.CreateTextNode({messageLiteral}))"
+            "$xml = [Windows.Data.Xml.Dom.XmlDocument]::new()",
+            "$toastNode = $xml.CreateElement('toast')",
+            "$visualNode = $xml.CreateElement('visual')",
+            "$bindingNode = $xml.CreateElement('binding')",
+            "$bindingNode.SetAttribute('template', 'ToastGeneric')"
         ];
         if (!string.IsNullOrWhiteSpace(iconUri))
         {
@@ -102,6 +102,15 @@ internal sealed class WindowsToastNotificationService : IDesktopNotificationServ
 
         lines.AddRange(
         [
+            "$titleNode = $xml.CreateElement('text')",
+            $"$null = $titleNode.AppendChild($xml.CreateTextNode({titleLiteral}))",
+            "$messageNode = $xml.CreateElement('text')",
+            $"$null = $messageNode.AppendChild($xml.CreateTextNode({messageLiteral}))",
+            "$null = $bindingNode.AppendChild($titleNode)",
+            "$null = $bindingNode.AppendChild($messageNode)",
+            "$null = $visualNode.AppendChild($bindingNode)",
+            "$null = $toastNode.AppendChild($visualNode)",
+            "$null = $xml.AppendChild($toastNode)",
             "$toast = [Windows.UI.Notifications.ToastNotification]::new($xml)",
             $"[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{DesktopAppIdentity.AppUserModelId}').Show($toast)"
         ]);

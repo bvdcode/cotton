@@ -35,8 +35,10 @@ public sealed class WindowsToastNotificationServiceTests
             }));
             Assert.That(command, Does.Contain("ToastNotificationManager"));
             Assert.That(command, Does.Contain("CreateToastNotifier('Cotton.Sync.Desktop')"));
-            Assert.That(command, Does.Contain("$xml.CreateTextNode('Action required')"));
-            Assert.That(command, Does.Contain("$xml.CreateTextNode('Bob''s folder needs attention')"));
+            Assert.That(command, Does.Contain("$bindingNode.SetAttribute('template', 'ToastGeneric')"));
+            Assert.That(command, Does.Not.Contain("ToastText02"));
+            Assert.That(command, Does.Contain("$null = $titleNode.AppendChild($xml.CreateTextNode('Action required'))"));
+            Assert.That(command, Does.Contain("$null = $messageNode.AppendChild($xml.CreateTextNode('Bob''s folder needs attention'))"));
             Assert.That(command, Does.Not.Contain("appLogoOverride"));
         });
     }
@@ -59,6 +61,8 @@ public sealed class WindowsToastNotificationServiceTests
             Assert.That(command, Does.Contain("$imageNode.SetAttribute('placement', 'appLogoOverride')"));
             Assert.That(command, Does.Contain("$imageNode.SetAttribute('src', '" + expectedIconUri + "')"));
             Assert.That(command, Does.Contain("$null = $bindingNode.AppendChild($imageNode)"));
+            Assert.That(command, Does.Contain("$null = $bindingNode.AppendChild($titleNode)"));
+            Assert.That(command, Does.Contain("$null = $bindingNode.AppendChild($messageNode)"));
         });
     }
 }
