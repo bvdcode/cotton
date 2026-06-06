@@ -116,6 +116,17 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CancelSelectedSyncPairEditorCommand.CanExecute(null), Is.True);
         });
 
+        await ExecuteAsync(viewModel.ShowSelectedSyncPairEditorCommand, secondPair);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.SelectedSyncPair?.Id, Is.EqualTo(secondSyncPairId));
+            Assert.That(viewModel.IsSelectedSyncPairEditorVisible, Is.False);
+            Assert.That(secondPair.IsEditorVisible, Is.False);
+            Assert.That(viewModel.CancelSelectedSyncPairEditorCommand.CanExecute(null), Is.False);
+        });
+
+        await ExecuteAsync(viewModel.ShowSelectedSyncPairEditorCommand, secondPair);
         await ExecuteAsync(viewModel.CancelSelectedSyncPairEditorCommand);
 
         Assert.Multiple(() =>

@@ -12,7 +12,7 @@ public sealed class SyncPairRowViewModelTests
     {
         var row = new SyncPairRowViewModel
         {
-            Status = "Idle",
+            Status = " idle ",
         };
 
         Assert.Multiple(() =>
@@ -22,7 +22,7 @@ public sealed class SyncPairRowViewModelTests
             Assert.That(row.IsHeaderStatusVisible, Is.False);
         });
 
-        row.Status = "Syncing";
+        row.Status = " Syncing ";
 
         Assert.Multiple(() =>
         {

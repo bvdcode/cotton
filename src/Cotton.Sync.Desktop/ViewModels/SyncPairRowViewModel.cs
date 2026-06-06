@@ -78,7 +78,14 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
 
     public bool HasCurrentOperation => !string.IsNullOrWhiteSpace(CurrentOperation);
 
-    public string DisplayStatus => IsDecorativeIdleStatus(Status) ? string.Empty : Status;
+    public string DisplayStatus
+    {
+        get
+        {
+            string status = Status.Trim();
+            return IsDecorativeIdleStatus(status) ? string.Empty : status;
+        }
+    }
 
     public bool HasDisplayStatus => !string.IsNullOrWhiteSpace(DisplayStatus);
 
@@ -169,6 +176,6 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
 
     private static bool IsDecorativeIdleStatus(string status)
     {
-        return string.Equals(status, "Idle", StringComparison.Ordinal);
+        return string.Equals(status, "Idle", StringComparison.OrdinalIgnoreCase);
     }
 }
