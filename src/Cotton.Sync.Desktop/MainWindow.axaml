@@ -490,9 +490,10 @@
                                        FontWeight="SemiBold"
                                        TextTrimming="CharacterEllipsis" />
                             <TextBlock Grid.Column="1"
-                                       Text="{Binding Status}"
+                                       Text="{Binding DisplayStatus}"
                                        FontSize="12"
-                                       Opacity="0.74" />
+                                       Opacity="0.74"
+                                       IsVisible="{Binding HasDisplayStatus}" />
                             <TextBlock Grid.Row="1"
                                        Grid.ColumnSpan="2"
                                        Text="{Binding CurrentOperation}"

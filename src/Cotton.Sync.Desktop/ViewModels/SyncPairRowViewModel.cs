@@ -72,6 +72,10 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
 
     public bool HasCurrentOperation => !string.IsNullOrWhiteSpace(CurrentOperation);
 
+    public string DisplayStatus => IsDecorativeIdleStatus(Status) ? string.Empty : Status;
+
+    public bool HasDisplayStatus => !string.IsNullOrWhiteSpace(DisplayStatus);
+
     public bool HasCurrentProgress
     {
         get => _hasCurrentProgress;
@@ -141,6 +145,18 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
     public string Status
     {
         get => _status;
-        set => SetProperty(ref _status, value);
+        set
+        {
+            if (SetProperty(ref _status, value))
+            {
+                OnPropertyChanged(nameof(DisplayStatus));
+                OnPropertyChanged(nameof(HasDisplayStatus));
+            }
+        }
+    }
+
+    private static bool IsDecorativeIdleStatus(string status)
+    {
+        return string.Equals(status, "Idle", StringComparison.Ordinal);
     }
 }
