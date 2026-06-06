@@ -181,6 +181,10 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(smokeScript, Does.Contain("Desktop app window was not found for process"));
             Assert.That(smokeScript, Does.Contain("get_window_size()"));
             Assert.That(smokeScript, Does.Contain("Could not detect desktop app window size."));
+            Assert.That(smokeScript, Does.Contain("resize_app_window_if_requested()"));
+            Assert.That(smokeScript, Does.Contain("COTTON_SYNC_SCREENSHOT_WINDOW_SIZE"));
+            Assert.That(smokeScript, Does.Contain("must use WIDTHxHEIGHT"));
+            Assert.That(smokeScript, Does.Contain("wmctrl -ir \"$app_window_id\" -e"));
             Assert.That(smokeScript, Does.Contain("wmctrl -ia \"$app_window_id\""));
             Assert.That(smokeScript, Does.Contain("xwd -silent -id \"$app_window_id\" -out \"$xwd_file\""));
             Assert.That(smokeScript, Does.Contain("-i \"$xwd_file\""));

@@ -86,6 +86,24 @@ get_window_size() {
     }'
 }
 
+resize_app_window_if_requested() {
+  local requested_size="${COTTON_SYNC_SCREENSHOT_WINDOW_SIZE:-}"
+  if [ -z "$requested_size" ]; then
+    return 0
+  fi
+
+  if ! printf '%s\n' "$requested_size" | grep -Eq '^[0-9]+x[0-9]+$'; then
+    echo "COTTON_SYNC_SCREENSHOT_WINDOW_SIZE must use WIDTHxHEIGHT, got: $requested_size" >&2
+    exit 1
+  fi
+
+  command -v wmctrl >/dev/null
+  local requested_width="${requested_size%x*}"
+  local requested_height="${requested_size#*x}"
+  wmctrl -ir "$app_window_id" -e "0,-1,-1,$requested_width,$requested_height" >/dev/null
+  sleep 0.5
+}
+
 "$app_executable" --data-dir "$data_dir" "$@" >"$log_file" 2>&1 &
 app_pid="$!"
 
@@ -100,6 +118,7 @@ if command -v wmctrl >/dev/null; then
   wmctrl -ia "$app_window_id" >/dev/null 2>&1 || true
   sleep 0.25
 fi
+resize_app_window_if_requested
 capture_size="$(get_window_size "$app_window_id")"
 if [ -z "$capture_size" ]; then
   cat "$log_file" >&2 || true
