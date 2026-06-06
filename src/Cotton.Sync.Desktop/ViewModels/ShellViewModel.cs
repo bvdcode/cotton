@@ -1896,6 +1896,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             GlobalStatus = "Connected";
             ActionRequiredMessage = string.Empty;
             AddActivity("Account", AccountName, "Signed in");
+            ShowNativeNotification("Signed in", AccountName);
             RefreshDiagnosticsItems();
         }
         finally
@@ -1927,6 +1928,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             SetAllPairStatuses("Idle");
             RefreshCurrentProgressText();
             AddActivity("Account", string.Empty, "Signed out");
+            ShowNativeNotification("Signed out", "Cotton Sync is signed out.");
             RefreshDiagnosticsItems();
         }
         finally
@@ -2701,7 +2703,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 Message = request.Message,
             });
             AddActivity("Notification", string.Empty, request.Message);
-            if (EnableNotifications)
+            if (EnableNotifications && _notificationService.IsSupported)
             {
                 _notificationService.Show(request.Title, request.Message);
             }
@@ -2710,6 +2712,14 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         while (Notifications.Count > 3)
         {
             Notifications.RemoveAt(Notifications.Count - 1);
+        }
+    }
+
+    private void ShowNativeNotification(string title, string message)
+    {
+        if (EnableNotifications && _notificationService.IsSupported)
+        {
+            _notificationService.Show(title, message);
         }
     }
 

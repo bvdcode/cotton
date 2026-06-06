@@ -2250,6 +2250,59 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task SignInCommand_ShowsNativeNotificationWhenSupported()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedOutSnapshot())
+        {
+            ServerProbeResult = new DesktopServerProbeResult(
+                new Uri("https://app.cottoncloud.dev/"),
+                true,
+                "Cotton Cloud",
+                "instance-hash"),
+        };
+        var notificationService = new CollectingDesktopNotificationService();
+        using ShellViewModel viewModel = CreateViewModel(controller, notificationService: notificationService);
+        await viewModel.InitializeAsync();
+        viewModel.ServerUrl = "app.cottoncloud.dev";
+        viewModel.Username = "desktop@example.test";
+        viewModel.Password = "password";
+        await WaitForAsync(() => viewModel.IsSignInStepVisible);
+
+        await ExecuteAsync(viewModel.SignInCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(notificationService.Notifications, Has.Count.EqualTo(1));
+            Assert.That(notificationService.Notifications[0].Title, Is.EqualTo("Signed in"));
+            Assert.That(notificationService.Notifications[0].Message, Is.EqualTo("desktop@example.test"));
+        });
+    }
+
+    [Test]
+    public async Task SignInCommand_DoesNotShowNativeNotificationWhenDisabled()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedOutSnapshot(enableNotifications: false))
+        {
+            ServerProbeResult = new DesktopServerProbeResult(
+                new Uri("https://app.cottoncloud.dev/"),
+                true,
+                "Cotton Cloud",
+                "instance-hash"),
+        };
+        var notificationService = new CollectingDesktopNotificationService();
+        using ShellViewModel viewModel = CreateViewModel(controller, notificationService: notificationService);
+        await viewModel.InitializeAsync();
+        viewModel.ServerUrl = "app.cottoncloud.dev";
+        viewModel.Username = "desktop@example.test";
+        viewModel.Password = "password";
+        await WaitForAsync(() => viewModel.IsSignInStepVisible);
+
+        await ExecuteAsync(viewModel.SignInCommand);
+
+        Assert.That(notificationService.Notifications, Is.Empty);
+    }
+
+    [Test]
     public async Task SignInCommand_ShowsSetupErrorWhenAuthenticationFails()
     {
         var controller = new FakeDesktopShellController(CreateSignedOutSnapshot())
@@ -2377,6 +2430,24 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task SignOutCommand_ShowsNativeNotificationWhenSupported()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Idle")));
+        var notificationService = new CollectingDesktopNotificationService();
+        using ShellViewModel viewModel = CreateViewModel(controller, notificationService: notificationService);
+        await viewModel.InitializeAsync();
+
+        await ExecuteAsync(viewModel.SignOutCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(notificationService.Notifications, Has.Count.EqualTo(1));
+            Assert.That(notificationService.Notifications[0].Title, Is.EqualTo("Signed out"));
+            Assert.That(notificationService.Notifications[0].Message, Is.EqualTo("Cotton Sync is signed out."));
+        });
+    }
+
+    [Test]
     public void FutureSyncModesVisibility_UsesFeatureFlag()
     {
         using ShellViewModel hiddenViewModel = CreateViewModel(
@@ -2433,14 +2504,14 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Fail("Condition was not met before timeout.");
     }
 
-    private static DesktopShellSnapshot CreateSignedOutSnapshot()
+    private static DesktopShellSnapshot CreateSignedOutSnapshot(bool enableNotifications = true)
     {
         return new DesktopShellSnapshot(
             null,
             null,
             null,
             false,
-            true,
+            enableNotifications,
             AppThemeMode.System,
             CreateTestDataPathSnapshot(),
             new DesktopPlatformCapabilitySnapshot(
@@ -2836,12 +2907,13 @@ public sealed class ShellViewModelSyncPairCommandTests
     private static ShellViewModel CreateViewModel(
         FakeDesktopShellController controller,
         DesktopFeatureFlags? featureFlags = null,
-        FakeLocalFolderPicker? localFolderPicker = null)
+        FakeLocalFolderPicker? localFolderPicker = null,
+        IDesktopNotificationService? notificationService = null)
     {
         return new ShellViewModel(
             controller,
             localFolderPicker ?? new FakeLocalFolderPicker(),
-            new FakeDesktopNotificationService(),
+            notificationService ?? new FakeDesktopNotificationService(),
             new FakeDesktopThemeService(),
             new InlineDesktopUiDispatcher(),
             featureFlags);
@@ -2873,6 +2945,18 @@ public sealed class ShellViewModelSyncPairCommandTests
         public void Show(string title, string message)
         {
             throw new NotSupportedException();
+        }
+    }
+
+    private sealed class CollectingDesktopNotificationService : IDesktopNotificationService
+    {
+        public bool IsSupported => true;
+
+        public List<(string Title, string Message)> Notifications { get; } = [];
+
+        public void Show(string title, string message)
+        {
+            Notifications.Add((title, message));
         }
     }
 
