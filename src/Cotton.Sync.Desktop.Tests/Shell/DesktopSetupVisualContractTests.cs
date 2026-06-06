@@ -287,7 +287,7 @@ public sealed class DesktopSetupVisualContractTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(dashboardView, Does.Contain("RowDefinitions=\"Auto,*,*\""));
+            Assert.That(dashboardView, Does.Contain("RowDefinitions=\"Auto,Auto,*\""));
             Assert.That(dashboardView, Does.Contain("<StackPanel Grid.Row=\"0\""));
             Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding IsDashboardChromeVisible}\""));
             Assert.That(dashboardView, Does.Contain("<Border Grid.Row=\"1\""));
@@ -299,6 +299,7 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(dashboardView, Does.Not.Contain("MaxHeight=\"320\""));
             Assert.That(dashboardView, Does.Not.Contain("<ScrollViewer MaxHeight=\"216\""));
             Assert.That(dashboardView, Does.Not.Contain("<ScrollViewer Margin=\"10\""));
+            Assert.That(dashboardView, Does.Not.Contain("RowDefinitions=\"Auto,*,*\""));
             Assert.That(dashboardView, Does.Not.Contain("RowDefinitions=\"Auto,Auto,Auto,Auto,*\""));
             Assert.That(dashboardView, Does.Not.Contain("RowDefinitions=\"Auto,132\""));
         });

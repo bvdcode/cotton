@@ -230,7 +230,7 @@
 
     <Grid Grid.Row="2"
           Margin="10"
-          RowDefinitions="Auto,*,*"
+          RowDefinitions="Auto,Auto,*"
           RowSpacing="8"
           IsVisible="{Binding IsDashboardVisible}">
       <StackPanel Grid.Row="0"
