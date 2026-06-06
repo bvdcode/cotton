@@ -471,7 +471,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentTransferDetails, Does.Contain("/s"));
             Assert.That(viewModel.CurrentTransferDetails, Does.Contain("left"));
             Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Syncing 2 folders"));
-            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("7.0 MB / 27 MB · 4.0 MB/s · 5s left"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("7.0 MB / 27 MB · 4.0 MB/s · 6s left"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("10 of 40 files across 2 folders"));
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("2 files transferring"));
         });
@@ -1228,6 +1228,40 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("2 files transferring"));
             Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(26.666).Within(0.01));
         });
+    }
+
+    [Test]
+    public async Task TransferProgressChanged_UsesLongestSmoothedTransferEstimateForAggregateHeader()
+    {
+        Guid documentsPairId = Guid.NewGuid();
+        Guid videosPairId = Guid.NewGuid();
+        FakeDesktopShellController controller = CreateTwoFolderSyncingController(documentsPairId, videosPairId);
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        ReportTwoFolderCheckingProgress(controller, documentsPairId, videosPairId);
+
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            documentsPairId,
+            SyncTransferDirection.Upload,
+            "Reports/report.txt",
+            TransferredBytes: 512,
+            TotalBytes: 1024,
+            IsCompleted: false,
+            new DateTime(2026, 6, 4, 9, 0, 7, DateTimeKind.Utc),
+            SpeedBytesPerSecond: 256,
+            EstimatedTimeRemaining: TimeSpan.FromSeconds(2)));
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            videosPairId,
+            SyncTransferDirection.Download,
+            "Videos/clip.mp4",
+            TransferredBytes: 1536,
+            TotalBytes: 3072,
+            IsCompleted: false,
+            new DateTime(2026, 6, 4, 9, 0, 8, DateTimeKind.Utc),
+            SpeedBytesPerSecond: 512,
+            EstimatedTimeRemaining: TimeSpan.FromSeconds(20)));
+
+        Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("2.0 KB / 4.0 KB · 768 B/s · 20s left"));
     }
 
     [Test]

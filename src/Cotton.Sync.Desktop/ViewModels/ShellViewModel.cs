@@ -3570,6 +3570,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         long totalBytes = 0;
         bool hasTotalBytes = true;
         double speedBytesPerSecond = 0;
+        TimeSpan? longestEstimatedTimeRemaining = null;
         foreach (DesktopTransferProgressSnapshot progress in progressValues)
         {
             transferredBytes += progress.TransferredBytes;
@@ -3585,6 +3586,15 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             if (progress.SpeedBytesPerSecond is > 0)
             {
                 speedBytesPerSecond += progress.SpeedBytesPerSecond.Value;
+                if (progress.TotalBytes is > 0 && progress.TotalBytes.Value > progress.TransferredBytes)
+                {
+                    TimeSpan transferRemaining = progress.EstimatedTimeRemaining
+                        ?? TimeSpan.FromSeconds((progress.TotalBytes.Value - progress.TransferredBytes) / progress.SpeedBytesPerSecond.Value);
+                    if (!longestEstimatedTimeRemaining.HasValue || transferRemaining > longestEstimatedTimeRemaining.Value)
+                    {
+                        longestEstimatedTimeRemaining = transferRemaining;
+                    }
+                }
             }
         }
 
@@ -3597,10 +3607,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
 
         details += " · " + FormatBytes(speedBytesPerSecond) + "/s";
-        if (hasTotalBytes && totalBytes > transferredBytes)
+        if (longestEstimatedTimeRemaining.HasValue)
         {
-            TimeSpan remaining = TimeSpan.FromSeconds((totalBytes - transferredBytes) / speedBytesPerSecond);
-            details += " · " + FormatDuration(remaining) + " left";
+            details += " · " + FormatDuration(longestEstimatedTimeRemaining.Value) + " left";
         }
 
         return details;
