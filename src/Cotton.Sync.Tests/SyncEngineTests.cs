@@ -307,6 +307,42 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_ReportsDirectoryReconcileProgressWithFolderCounts()
+    {
+        var scanner = new FakeLocalFileScanner
+        {
+            Directories =
+            {
+                LocalDirectory("Projects"),
+                LocalDirectory("Projects/Archive"),
+            },
+        };
+        var progress = new RecordingProgress<SyncRunProgress>();
+        SyncEngine engine = CreateEngine(
+            scanner,
+            EmptyRemoteTree(),
+            new FakeRemoteFileSynchronizer(),
+            out _,
+            new FakeRemoteDirectorySynchronizer());
+
+        await engine.RunOnceAsync(
+            Pair(),
+            new SyncRunOptions { RunProgress = progress });
+
+        IReadOnlyList<SyncRunProgress> directoryProgress = progress.Values
+            .Where(item => item.Stage == SyncRunProgressStage.ReconcilingDirectories)
+            .ToList();
+        Assert.Multiple(() =>
+        {
+            Assert.That(directoryProgress.Select(item => item.FilesTotal).Distinct(), Is.EqualTo(new int?[] { 2 }));
+            Assert.That(directoryProgress.Select(item => item.FilesCompleted).Distinct(), Is.EqualTo(new[] { 0, 1, 2 }));
+            Assert.That(
+                directoryProgress.Where(item => !string.IsNullOrWhiteSpace(item.CurrentPath)).Select(item => item.CurrentPath).Distinct(),
+                Is.EqualTo(new[] { "Projects", "Projects/Archive" }));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_ReportsRunTransferAndActivityProgressForUpload()
     {
         LocalFileSnapshot local = LocalFile("Docs/local.txt", "local-content");

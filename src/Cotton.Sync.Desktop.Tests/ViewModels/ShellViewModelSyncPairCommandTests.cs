@@ -948,6 +948,41 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task RunProgressChanged_UpdatesDirectoryRunProgressState()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingDirectories,
+            FilesCompleted: 3,
+            FilesTotal: 10,
+            CurrentPath: "Reports",
+            StartedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 5, DateTimeKind.Utc)));
+
+        Assert.Multiple(() =>
+        {
+            SyncPairRowViewModel row = viewModel.SyncPairs.Single();
+            Assert.That(viewModel.HasCurrentRunProgress, Is.True);
+            Assert.That(viewModel.IsCurrentRunProgressIndeterminate, Is.False);
+            Assert.That(viewModel.CurrentRunProgressValue, Is.EqualTo(30).Within(0.01));
+            Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Documents: Preparing folders"));
+            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("3 of 10 folders · Reports"));
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents: Preparing folders"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("3 of 10 folders · Reports"));
+            Assert.That(row.CurrentOperation, Is.EqualTo("Preparing folders 3 of 10"));
+            Assert.That(row.IsCurrentProgressIndeterminate, Is.False);
+            Assert.That(row.CurrentProgressValue, Is.EqualTo(30).Within(0.01));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Documents: Preparing folders 3 of 10"));
+        });
+    }
+
+    [Test]
     public async Task RunProgressChanged_CoalescesBurstBeforeUiQueue()
     {
         Guid syncPairId = Guid.NewGuid();

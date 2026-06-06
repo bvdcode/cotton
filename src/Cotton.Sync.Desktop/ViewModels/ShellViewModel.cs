@@ -3496,7 +3496,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private static string CreateRunProgressOperation(DesktopRunProgressSnapshot progress)
     {
         string label = GetRunStageLabel(progress.Stage);
-        if (progress.FilesTotal.HasValue && progress.Stage == SyncRunProgressStage.ReconcilingFiles)
+        if (progress.FilesTotal.HasValue && IsCountedRunStage(progress.Stage))
         {
             return label + " " + progress.FilesCompleted.ToString(CultureInfo.CurrentCulture)
                 + " of " + progress.FilesTotal.Value.ToString(CultureInfo.CurrentCulture);
@@ -3509,10 +3509,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         if (progress.FilesTotal.HasValue)
         {
+            string unitName = GetRunProgressUnitName(progress.Stage, progress.FilesCompleted, progress.FilesTotal.Value);
             string details = progress.FilesCompleted.ToString(CultureInfo.CurrentCulture)
                 + " of "
                 + progress.FilesTotal.Value.ToString(CultureInfo.CurrentCulture)
-                + " files";
+                + " "
+                + unitName;
             if (!string.IsNullOrWhiteSpace(progress.CurrentPath))
             {
                 details += " · " + GetDisplayFileName(progress.CurrentPath);
@@ -3551,6 +3553,23 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
 
         return details;
+    }
+
+    private static bool IsCountedRunStage(SyncRunProgressStage stage)
+    {
+        return stage == SyncRunProgressStage.ReconcilingDirectories
+            || stage == SyncRunProgressStage.ReconcilingFiles;
+    }
+
+    private static string GetRunProgressUnitName(SyncRunProgressStage stage, int completed, int total)
+    {
+        bool singular = completed == 1 && total == 1;
+        if (stage == SyncRunProgressStage.ReconcilingDirectories)
+        {
+            return singular ? "folder" : "folders";
+        }
+
+        return singular ? "file" : "files";
     }
 
     private static string CreateRemoteScanProgressDetails(DesktopRunProgressSnapshot progress)

@@ -82,6 +82,10 @@ public sealed class SyncEngine : ISyncEngine
         Dictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath = ToDictionary(remoteTree.Directories, directory => directory.RelativePath);
         Dictionary<string, LocalFileSnapshot> localByPath = ToDictionary(localTree.Files, file => file.RelativePath);
         Dictionary<string, RemoteFileSnapshot> remoteByPath = ToDictionary(remoteTree.Files, file => file.RelativePath);
+        IReadOnlyList<string> directoryPathKeys = BuildDirectoryPathKeys(
+            localDirectoriesByPath.Keys,
+            remoteDirectoriesByPath.Keys,
+            directoryStateByPath.Keys);
         ThrowIfPathKindCollisions(
             localDirectoriesByPath,
             localByPath,
@@ -93,15 +97,17 @@ public sealed class SyncEngine : ISyncEngine
             directory => directory.RelativePath,
             file => file.RelativePath);
         IReadOnlyCollection<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys);
-        ReportRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, 0, pathKeys.Count, null, startedAtUtc);
+        ReportRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, 0, directoryPathKeys.Count, null, startedAtUtc);
         await ReconcileDirectoriesWithoutBaselineAsync(
             syncPair,
             options,
             result,
+            directoryPathKeys,
             localDirectoriesByPath,
             remoteDirectoriesByPath,
             directoryStateByPath,
             remoteTree.RootNode,
+            startedAtUtc,
             cancellationToken).ConfigureAwait(false);
 
         await EnsureLocalContentHashesForStateFilesAsync(pathKeys, localByPath, stateByPath, cancellationToken)
@@ -267,10 +273,12 @@ public sealed class SyncEngine : ISyncEngine
         SyncPair syncPair,
         SyncRunOptions options,
         SyncRunResult result,
+        IReadOnlyList<string> pathKeys,
         IReadOnlyDictionary<string, LocalDirectorySnapshot> localByPath,
         IDictionary<string, RemoteDirectorySnapshot> remoteByPath,
         IReadOnlyDictionary<string, SyncStateEntry> stateByPath,
         NodeDto remoteRootNode,
+        DateTime startedAtUtc,
         CancellationToken cancellationToken)
     {
         Dictionary<string, Guid> remoteNodeIdsByPath = remoteByPath.ToDictionary(
@@ -279,26 +287,30 @@ public sealed class SyncEngine : ISyncEngine
             PathComparer);
         remoteNodeIdsByPath[string.Empty] = remoteRootNode.Id;
 
-        IEnumerable<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys)
-            .OrderBy(static key => GetPathDepth(key))
-            .ThenBy(static key => key, StringComparer.OrdinalIgnoreCase);
+        int foldersCompleted = 0;
         foreach (string key in pathKeys)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (stateByPath.ContainsKey(key))
+            localByPath.TryGetValue(key, out LocalDirectorySnapshot? local);
+            remoteByPath.TryGetValue(key, out RemoteDirectorySnapshot? remote);
+            stateByPath.TryGetValue(key, out SyncStateEntry? state);
+            string relativePath = local?.RelativePath ?? remote?.RelativePath ?? state?.RelativePath ?? key;
+            ReportRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
+            if (state is not null)
             {
+                foldersCompleted++;
+                ReportRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
                 continue;
             }
 
-            localByPath.TryGetValue(key, out LocalDirectorySnapshot? local);
-            remoteByPath.TryGetValue(key, out RemoteDirectorySnapshot? remote);
-            string relativePath = local?.RelativePath ?? remote?.RelativePath ?? key;
             if (local is null && remote is not null)
             {
                 await _localWriter.CreateDirectoryAsync(syncPair.LocalRootPath, relativePath, cancellationToken).ConfigureAwait(false);
                 await _stateStore.UpsertAsync(BuildDirectoryBaseline(syncPair, relativePath, remote.Node), cancellationToken)
                     .ConfigureAwait(false);
                 Report(result, options, SyncActivityKind.Downloaded, relativePath, "Created local folder.");
+                foldersCompleted++;
+                ReportRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
                 continue;
             }
 
@@ -308,6 +320,8 @@ public sealed class SyncEngine : ISyncEngine
                 string parentKey = string.IsNullOrEmpty(parentPath) ? string.Empty : SyncPath.ToKey(parentPath);
                 if (!remoteNodeIdsByPath.TryGetValue(parentKey, out Guid parentNodeId))
                 {
+                    foldersCompleted++;
+                    ReportRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
                     continue;
                 }
 
@@ -324,6 +338,8 @@ public sealed class SyncEngine : ISyncEngine
                 await _stateStore.UpsertAsync(BuildDirectoryBaseline(syncPair, relativePath, created), cancellationToken)
                     .ConfigureAwait(false);
                 Report(result, options, SyncActivityKind.Uploaded, relativePath, "Created remote folder.");
+                foldersCompleted++;
+                ReportRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
                 continue;
             }
 
@@ -332,6 +348,9 @@ public sealed class SyncEngine : ISyncEngine
                 await _stateStore.UpsertAsync(BuildDirectoryBaseline(syncPair, relativePath, remote.Node), cancellationToken)
                     .ConfigureAwait(false);
             }
+
+            foldersCompleted++;
+            ReportRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
         }
     }
 
@@ -1188,6 +1207,14 @@ public sealed class SyncEngine : ISyncEngine
         }
 
         return keys;
+    }
+
+    private static IReadOnlyList<string> BuildDirectoryPathKeys(params IEnumerable<string>[] keySets)
+    {
+        return BuildPathKeys(keySets)
+            .OrderBy(static key => GetPathDepth(key))
+            .ThenBy(static key => key, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private static void Report(
