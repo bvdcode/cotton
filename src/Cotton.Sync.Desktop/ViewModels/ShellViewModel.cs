@@ -29,6 +29,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private readonly IDesktopNotificationService _notificationService;
     private readonly IDesktopThemeService _themeService;
     private readonly IDesktopUiDispatcher _uiDispatcher;
+    private readonly object _activityDispatchGate = new();
     private readonly DesktopNotificationTracker _notificationTracker = new();
     private readonly Dictionary<Guid, DesktopRunProgressSnapshot> _runProgressByPair = [];
     private readonly SyncPairSettingsValidator _syncPairSettingsValidator = new();
@@ -95,6 +96,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private string _username = string.Empty;
     private DateTimeOffset? _lastCoalescedActivityAt;
     private Guid? _lastCoalescedActivitySyncPairId;
+    private DesktopActivitySnapshot? _pendingCoalescedActivity;
+    private bool _isCoalescedActivityDispatchScheduled;
 
     internal ShellViewModel(
         IDesktopShellController controller,
@@ -2507,7 +2510,72 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             return;
         }
 
+        if (TryPostCoalescedActivity(activity))
+        {
+            return;
+        }
+
         _uiDispatcher.Post(() => ApplyActivity(activity));
+    }
+
+    private bool TryPostCoalescedActivity(DesktopActivitySnapshot activity)
+    {
+        if (!IsHighVolumeTransferActivity(activity.Kind))
+        {
+            return false;
+        }
+
+        lock (_activityDispatchGate)
+        {
+            if (_pendingCoalescedActivity is not null
+                && CanReplacePendingActivity(_pendingCoalescedActivity, activity))
+            {
+                _pendingCoalescedActivity = activity;
+                return true;
+            }
+
+            if (_isCoalescedActivityDispatchScheduled)
+            {
+                return false;
+            }
+
+            _pendingCoalescedActivity = activity;
+            _isCoalescedActivityDispatchScheduled = true;
+        }
+
+        _uiDispatcher.Post(ApplyPendingCoalescedActivity);
+        return true;
+    }
+
+    private void ApplyPendingCoalescedActivity()
+    {
+        DesktopActivitySnapshot? activity;
+        lock (_activityDispatchGate)
+        {
+            activity = _pendingCoalescedActivity;
+            _pendingCoalescedActivity = null;
+            _isCoalescedActivityDispatchScheduled = false;
+        }
+
+        if (activity is not null)
+        {
+            ApplyActivity(activity);
+        }
+    }
+
+    private static bool CanReplacePendingActivity(
+        DesktopActivitySnapshot pending,
+        DesktopActivitySnapshot next)
+    {
+        if (!IsHighVolumeTransferActivity(next.Kind)
+            || !string.Equals(pending.Kind, next.Kind, StringComparison.Ordinal)
+            || !Equals(pending.SyncPairId, next.SyncPairId)
+            || next.OccurredAtUtc < pending.OccurredAtUtc)
+        {
+            return false;
+        }
+
+        return next.OccurredAtUtc - pending.OccurredAtUtc <= TransferActivityCoalescingWindow;
     }
 
     private void OnSessionRevoked(object? sender, DesktopSessionRevocationSnapshot sessionRevocation)
