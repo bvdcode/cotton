@@ -29,6 +29,12 @@ internal static class DesktopActionRequiredMessageResolver
     private const string RemoteUploadTooLargeMessage =
         "Remote upload was rejected because it is larger than the server limit.";
 
+    private const string RemoteUploadRejectedMessage =
+        "Remote upload was rejected by Cotton Cloud. Check diagnostics and retry.";
+
+    private const string CottonApiRejectedRequestMessage =
+        "Cotton API rejected the request. Check diagnostics and retry.";
+
     private const string LocalPermissionDeniedMessage =
         "Cotton Sync cannot access one of the local files. Grant file permissions and retry sync.";
 
@@ -175,6 +181,12 @@ internal static class DesktopActionRequiredMessageResolver
             return LocalSyncStateDatabaseUnavailableMessage;
         }
 
+        string? apiFailureMessage = NormalizeEmbeddedApiFailureMessage(message);
+        if (apiFailureMessage is not null)
+        {
+            return apiFailureMessage;
+        }
+
         return message;
     }
 
@@ -255,6 +267,64 @@ internal static class DesktopActionRequiredMessageResolver
         }
 
         return null;
+    }
+
+    private static string? NormalizeEmbeddedApiFailureMessage(string message)
+    {
+        if (!message.Contains("Cotton API request", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        if (LooksLikeCreateFileFromChunksBadRequest(message))
+        {
+            return RemoteUploadRejectedMessage;
+        }
+
+        string? responseMessage = ExtractResponseMessage(ExtractEmbeddedResponseBody(message));
+        string? authMessage = NormalizeAuthMessage(responseMessage);
+        if (authMessage is not null)
+        {
+            return authMessage;
+        }
+
+        if (IsGenericBadRequestMessage(responseMessage))
+        {
+            return CottonApiRejectedRequestMessage;
+        }
+
+        return responseMessage;
+    }
+
+    private static string? ExtractEmbeddedResponseBody(string message)
+    {
+        const string marker = "Response:";
+        int markerIndex = message.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (markerIndex < 0)
+        {
+            return null;
+        }
+
+        string responseBody = message[(markerIndex + marker.Length)..].Trim();
+        if (!responseBody.StartsWith('{'))
+        {
+            return responseBody;
+        }
+
+        int endIndex = responseBody.LastIndexOf('}');
+        return endIndex >= 0 ? responseBody[..(endIndex + 1)] : responseBody;
+    }
+
+    private static bool LooksLikeCreateFileFromChunksBadRequest(string message)
+    {
+        return message.Contains("POST /api/v1/files/from-chunks", StringComparison.OrdinalIgnoreCase)
+            && message.Contains("status 400", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsGenericBadRequestMessage(string? message)
+    {
+        return !string.IsNullOrWhiteSpace(message)
+            && string.Equals(message.Trim(), "Bad request", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryGetStringProperty(JsonElement element, string propertyName, out string? value)

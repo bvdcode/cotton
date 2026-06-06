@@ -143,6 +143,33 @@ public sealed class DesktopNotificationTrackerTests
     }
 
     [Test]
+    public void Apply_NormalizesEmbeddedProblemDetailsActionRequiredNotification()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var tracker = new DesktopNotificationTracker();
+        const string rawError =
+            "Cotton API request POST /api/v1/files/from-chunks failed with status 400 (BadRequest). "
+            + "Response: {\"type\":\"https://tools.ietf.org/html/rfc7231#section-6.5.1\","
+            + "\"title\":\"Bad Request\",\"status\":400,\"detail\":\"Bad request\","
+            + "\"instance\":\"/api/v1/files/from-chunks\",\"traceId\":\"00-test\"}";
+
+        IReadOnlyList<DesktopNotificationRequest> notifications = tracker.Apply(
+            CreateStatus(syncPairId, "Error", rawError),
+            DisplayNames(syncPairId));
+
+        DesktopNotificationRequest notification = notifications.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(notification.Kind, Is.EqualTo(DesktopNotificationKind.ActionRequiredError));
+            Assert.That(
+                notification.Message,
+                Is.EqualTo("Documents: Remote upload was rejected by Cotton Cloud. Check diagnostics and retry."));
+            Assert.That(notification.Message, Does.Not.Contain("Response:"));
+            Assert.That(notification.Message, Does.Not.Contain("traceId"));
+        });
+    }
+
+    [Test]
     public void Apply_EmitsGenericActionRequiredErrorNotificationWhenDetailsAreMissing()
     {
         Guid syncPairId = Guid.NewGuid();

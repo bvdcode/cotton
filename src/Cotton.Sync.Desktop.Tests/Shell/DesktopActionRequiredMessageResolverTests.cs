@@ -132,6 +132,27 @@ public sealed class DesktopActionRequiredMessageResolverTests
     }
 
     [Test]
+    public void FromStatus_NormalizesEmbeddedUploadBadRequestProblemDetails()
+    {
+        var status = new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(
+                Guid.NewGuid(),
+                "Error",
+                "Cotton API request POST /api/v1/files/from-chunks failed with status 400 (BadRequest). "
+                + "Response: {\"type\":\"https://tools.ietf.org/html/rfc7231#section-6.5.1\","
+                + "\"title\":\"Bad Request\",\"status\":400,\"detail\":\"Bad request\","
+                + "\"instance\":\"/api/v1/files/from-chunks\",\"traceId\":\"00-test\"}"),
+        ]);
+
+        string message = DesktopActionRequiredMessageResolver.FromStatus(status);
+
+        Assert.That(
+            message,
+            Is.EqualTo("Remote upload was rejected by Cotton Cloud. Check diagnostics and retry."));
+    }
+
+    [Test]
     public void FromStatus_ReturnsEmptyWhenNoPairHasError()
     {
         var status = new DesktopSyncStatusSnapshot(
