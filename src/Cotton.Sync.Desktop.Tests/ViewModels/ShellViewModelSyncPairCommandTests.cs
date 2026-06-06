@@ -1066,6 +1066,48 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task RunProgressChanged_AggregatesMultipleLocalScanCounts()
+    {
+        Guid documentsPairId = Guid.NewGuid();
+        Guid videosPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(
+            CreateSignedInSnapshot(
+                CreatePair(documentsPairId, "Documents", "Syncing"),
+                CreatePair(videosPairId, "Videos", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            documentsPairId,
+            SyncRunProgressStage.ScanningLocal,
+            FilesCompleted: 123,
+            FilesTotal: null,
+            CurrentPath: "Reports/report.txt",
+            StartedAtUtc: new DateTime(2026, 6, 6, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 6, 9, 0, 5, DateTimeKind.Utc)));
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            videosPairId,
+            SyncRunProgressStage.ScanningLocal,
+            FilesCompleted: 456,
+            FilesTotal: null,
+            CurrentPath: "Videos/clip.mp4",
+            StartedAtUtc: new DateTime(2026, 6, 6, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 6, 9, 0, 6, DateTimeKind.Utc)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasCurrentRunProgress, Is.True);
+            Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Syncing 2 folders"));
+            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("579 files found across 2 folders"));
+            Assert.That(viewModel.IsCurrentRunProgressIndeterminate, Is.True);
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("579 files found across 2 folders"));
+            Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.True);
+        });
+    }
+
+    [Test]
     public async Task RunProgressChanged_ClearsCompletedRunProgressBeforeIdleStatusArrives()
     {
         Guid syncPairId = Guid.NewGuid();

@@ -3445,15 +3445,31 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         int completedFiles = 0;
         int totalFiles = 0;
+        bool hasUnknownTotals = false;
         foreach (DesktopRunProgressSnapshot progress in progressValues)
         {
             if (!progress.FilesTotal.HasValue)
             {
-                return progressValues.Count.ToString(CultureInfo.CurrentCulture) + " folders are syncing.";
+                hasUnknownTotals = true;
+                completedFiles += progress.FilesCompleted;
+                continue;
             }
 
             completedFiles += progress.FilesCompleted;
             totalFiles += progress.FilesTotal.Value;
+        }
+
+        if (hasUnknownTotals)
+        {
+            if (completedFiles > 0 && progressValues.All(static progress => progress.Stage == SyncRunProgressStage.ScanningLocal))
+            {
+                return completedFiles.ToString(CultureInfo.CurrentCulture)
+                    + (completedFiles == 1 ? " file found across " : " files found across ")
+                    + progressValues.Count.ToString(CultureInfo.CurrentCulture)
+                    + " folders";
+            }
+
+            return progressValues.Count.ToString(CultureInfo.CurrentCulture) + " folders are syncing.";
         }
 
         return completedFiles.ToString(CultureInfo.CurrentCulture)
