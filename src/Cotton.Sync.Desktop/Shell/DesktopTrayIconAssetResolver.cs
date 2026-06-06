@@ -9,7 +9,7 @@ internal static class DesktopTrayIconAssetResolver
     {
         return kind switch
         {
-            DesktopTrayStatusKind.Idle => Create("tray-idle.png"),
+            DesktopTrayStatusKind.Idle => Create("icon-192.png"),
             DesktopTrayStatusKind.Syncing => Create("tray-syncing.png"),
             DesktopTrayStatusKind.Paused => Create("tray-paused.png"),
             DesktopTrayStatusKind.Offline => Create("tray-offline.png"),

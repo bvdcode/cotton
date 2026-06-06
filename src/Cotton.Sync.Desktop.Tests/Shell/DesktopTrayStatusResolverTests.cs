@@ -88,7 +88,7 @@ public sealed class DesktopTrayStatusResolverTests
         Assert.Multiple(() =>
         {
             Assert.That(status.Kind, Is.EqualTo(DesktopTrayStatusKind.Idle));
-            Assert.That(status.IconUri.ToString(), Does.EndWith("/Assets/tray-idle.png"));
+            Assert.That(status.IconUri.ToString(), Does.EndWith("/Assets/icon-192.png"));
         });
     }
 
@@ -125,12 +125,19 @@ public sealed class DesktopTrayStatusResolverTests
     }
 
     [Test]
-    public void Resolve_ReturnsDedicatedIconForTrayStates()
+    public void Resolve_ReturnsPlainCottonIconForIdleState()
+    {
+        Uri iconUri = DesktopTrayIconAssetResolver.Resolve(DesktopTrayStatusKind.Idle);
+
+        Assert.That(iconUri.ToString(), Does.EndWith("/Assets/icon-192.png"));
+    }
+
+    [Test]
+    public void Resolve_ReturnsDedicatedIconForNonIdleTrayStates()
     {
         (DesktopTrayStatusKind Kind, string AssetName)[] cases =
         [
             (DesktopTrayStatusKind.SignedOut, "tray-signed-out.png"),
-            (DesktopTrayStatusKind.Idle, "tray-idle.png"),
             (DesktopTrayStatusKind.Syncing, "tray-syncing.png"),
             (DesktopTrayStatusKind.Paused, "tray-paused.png"),
             (DesktopTrayStatusKind.Offline, "tray-offline.png"),
