@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Auth;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Providers;
@@ -19,6 +20,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using CottonLoginRequestDto = Cotton.Auth.LoginRequestDto;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -164,7 +166,7 @@ public class ServerEndpointsTests : IntegrationTestBase
     {
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        var me = await _client.GetFromJsonAsync<Models.Dto.UserDto>("/api/v1/users/me");
+        var me = await _client.GetFromJsonAsync<UserDto>("/api/v1/users/me");
         Assert.That(me, Is.Not.Null);
         Assert.That(me!.Username, Is.EqualTo("testuser"));
     }
@@ -249,7 +251,7 @@ public class ServerEndpointsTests : IntegrationTestBase
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
         {
-            Content = JsonContent.Create(new LoginRequestDto()
+            Content = JsonContent.Create(new CottonLoginRequestDto()
             {
                 Username = "testuser",
                 Password = "testpassword"

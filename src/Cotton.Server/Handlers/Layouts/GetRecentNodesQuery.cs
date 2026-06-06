@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Files;
 using Cotton.Database;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Dto;

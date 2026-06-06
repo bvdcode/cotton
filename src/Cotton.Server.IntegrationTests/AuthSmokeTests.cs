@@ -1,9 +1,11 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Auth;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Helpers;
+using Cotton;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using ServerChangePasswordRequestDto = Cotton.Server.Models.Requests.ChangePasswordRequestDto;
@@ -22,6 +24,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
+using CottonLoginRequestDto = Cotton.Auth.LoginRequestDto;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -228,7 +231,7 @@ public class AuthSmokeTests : IntegrationTestBase
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
         {
-            Content = JsonContent.Create(new LoginRequestDto
+            Content = JsonContent.Create(new CottonLoginRequestDto
             {
                 Username = username,
                 Password = password
