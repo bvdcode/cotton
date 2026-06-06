@@ -12,7 +12,6 @@ using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models.Dto;
-using Cotton.Server.Models.Requests;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
@@ -177,7 +176,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
 
         using HttpResponseMessage renameResponse = await _client!.PatchAsJsonAsync(
             $"{Routes.V1.Layouts}/nodes/{folder.Id}/rename",
-            new RenameNodeRequest { Name = "sync-after-rename" });
+            new RenameNodeRequestDto { Name = "sync-after-rename" });
         renameResponse.EnsureSuccessStatusCode();
 
         SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
@@ -247,7 +246,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
 
         using HttpResponseMessage renameResponse = await _client!.PatchAsJsonAsync(
             $"{Routes.V1.Files}/{file.Id}/rename",
-            new RenameFileRequest { Name = "sync-after-rename.txt" });
+            new RenameFileRequestDto { Name = "sync-after-rename.txt" });
         renameResponse.EnsureSuccessStatusCode();
 
         SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
@@ -275,7 +274,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
 
         using HttpResponseMessage moveResponse = await _client!.PatchAsJsonAsync(
             $"{Routes.V1.Files}/{file.Id}/move",
-            new MoveFileRequest { ParentId = target.Id });
+            new MoveFileRequestDto { ParentId = target.Id });
         moveResponse.EnsureSuccessStatusCode();
 
         SyncChangeDto change = await GetSingleChangeAsync(cursor, file.Id);
@@ -302,7 +301,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
 
         using HttpResponseMessage moveResponse = await _client!.PatchAsJsonAsync(
             $"{Routes.V1.Layouts}/nodes/{folder.Id}/move",
-            new MoveNodeRequest { ParentId = target.Id });
+            new MoveNodeRequestDto { ParentId = target.Id });
         moveResponse.EnsureSuccessStatusCode();
 
         SyncChangeDto change = await GetSingleChangeAsync(cursor, folder.Id);
@@ -418,7 +417,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
 
         using HttpResponseMessage restoreResponse = await _client!.PostAsJsonAsync(
             $"{Routes.V1.Files}/{file.Id}/restore",
-            new RestoreItemRequest());
+            new RestoreItemRequestDto());
         restoreResponse.EnsureSuccessStatusCode();
 
         SyncChangeDto change = await GetSingleChangeAsync(cursor, file.Id);
@@ -445,7 +444,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
 
         using HttpResponseMessage restoreResponse = await _client!.PostAsJsonAsync(
             $"{Routes.V1.Layouts}/nodes/{folder.Id}/restore",
-            new RestoreItemRequest());
+            new RestoreItemRequestDto());
         restoreResponse.EnsureSuccessStatusCode();
 
         SyncChangeDto change = await GetSingleChangeAsync(cursor, folder.Id);
@@ -474,7 +473,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
 
         using HttpResponseMessage restoreResponse = await _client.PostAsJsonAsync(
             $"{Routes.V1.Files}/{file.Id}/restore",
-            new RestoreItemRequest { CreateMissingParents = true });
+            new RestoreItemRequestDto { CreateMissingParents = true });
         restoreResponse.EnsureSuccessStatusCode();
 
         SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
@@ -507,7 +506,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
 
         using HttpResponseMessage restoreResponse = await _client.PostAsJsonAsync(
             $"{Routes.V1.Layouts}/nodes/{folder.Id}/restore",
-            new RestoreItemRequest { CreateMissingParents = true });
+            new RestoreItemRequestDto { CreateMissingParents = true });
         restoreResponse.EnsureSuccessStatusCode();
 
         SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
@@ -765,7 +764,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
     {
         using HttpResponseMessage response = await _client!.PutAsJsonAsync(
             $"{Routes.V1.Layouts}/nodes",
-            new CreateNodeRequest { ParentId = parentId, Name = name });
+            new CreateNodeRequestDto { ParentId = parentId, Name = name });
         response.EnsureSuccessStatusCode();
 
         NodeDto? node = await response.Content.ReadFromJsonAsync<NodeDto>();

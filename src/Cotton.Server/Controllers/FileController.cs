@@ -15,7 +15,6 @@ using Cotton.Server.Hubs;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
-using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Abstractions;
@@ -159,10 +158,10 @@ namespace Cotton.Server.Controllers
         [HttpPost(Routes.V1.Files + "/{nodeFileId:guid}/restore")]
         public async Task<IActionResult> RestoreFile(
             [FromRoute] Guid nodeFileId,
-            [FromBody] RestoreItemRequest? request)
+            [FromBody] RestoreItemRequestDto? request)
         {
             Guid userId = User.GetUserId();
-            request ??= new RestoreItemRequest();
+            request ??= new RestoreItemRequestDto();
 
             var outcome = await _mediator.Send(new RestoreFileQuery(
                 userId,
@@ -190,7 +189,7 @@ namespace Cotton.Server.Controllers
         [HttpPatch(Routes.V1.Files + "/{nodeFileId:guid}/move")]
         public async Task<IActionResult> MoveFile(
             [FromRoute] Guid nodeFileId,
-            [FromBody] MoveFileRequest request)
+            [FromBody] MoveFileRequestDto request)
         {
             MoveFileCommand command = new()
             {
@@ -210,7 +209,7 @@ namespace Cotton.Server.Controllers
         [HttpPatch(Routes.V1.Files + "/{nodeFileId:guid}/rename")]
         public async Task<IActionResult> RenameFile(
             [FromRoute] Guid nodeFileId,
-            [FromBody] RenameFileRequest request)
+            [FromBody] RenameFileRequestDto request)
         {
             bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
                 out string normalizedName,

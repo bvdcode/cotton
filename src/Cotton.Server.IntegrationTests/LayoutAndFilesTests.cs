@@ -8,7 +8,6 @@ using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Dto;
-using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -106,7 +105,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
 
         // Create a new child node under root
         var nodeName = "test";
-        var createNodeReq = new CreateNodeRequest { ParentId = root!.Id, Name = nodeName };
+        var createNodeReq = new CreateNodeRequestDto { ParentId = root!.Id, Name = nodeName };
         var createNodeRes = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", createNodeReq);
         createNodeRes.EnsureSuccessStatusCode();
         var child = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
@@ -244,7 +243,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
         var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
-        var createNodeReq = new CreateNodeRequest { ParentId = root!.Id, Name = "shared-folder" };
+        var createNodeReq = new CreateNodeRequestDto { ParentId = root!.Id, Name = "shared-folder" };
         var createNodeRes = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", createNodeReq);
         createNodeRes.EnsureSuccessStatusCode();
 
@@ -273,7 +272,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
     {
         var response = await _client!.PutAsJsonAsync(
             "/api/v1/layouts/nodes",
-            new CreateNodeRequest { ParentId = parentId, Name = name });
+            new CreateNodeRequestDto { ParentId = parentId, Name = name });
         response.EnsureSuccessStatusCode();
         var node = await response.Content.ReadFromJsonAsync<NodeDto>();
         Assert.That(node, Is.Not.Null);
@@ -353,7 +352,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
 
         var createNodeRes = await _client.PutAsJsonAsync(
             "/api/v1/layouts/nodes",
-            new CreateNodeRequest { ParentId = root!.Id, Name = "null-meta" });
+            new CreateNodeRequestDto { ParentId = root!.Id, Name = "null-meta" });
         createNodeRes.EnsureSuccessStatusCode();
         var folder = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
         Assert.That(folder, Is.Not.Null);
@@ -417,7 +416,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
         Assert.That(root, Is.Not.Null);
 
         var name = "dup";
-        var req = new CreateNodeRequest { ParentId = root!.Id, Name = name };
+        var req = new CreateNodeRequestDto { ParentId = root!.Id, Name = name };
         // First create should succeed
         var r1 = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", req);
         r1.EnsureSuccessStatusCode();

@@ -7,7 +7,6 @@ using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Dto;
-using Cotton.Server.Models.Requests;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
@@ -539,7 +538,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
 
         using var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/v1/files/{file.Id}/rename")
         {
-            Content = JsonContent.Create(new RenameFileRequest { Name = "renamed.txt" })
+            Content = JsonContent.Create(new RenameFileRequestDto { Name = "renamed.txt" })
         };
         request.Headers.TryAddWithoutValidation("If-Match", staleETag);
 
@@ -571,7 +570,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
 
         using var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/v1/files/{file.Id}/move")
         {
-            Content = JsonContent.Create(new MoveFileRequest { ParentId = destination.Id })
+            Content = JsonContent.Create(new MoveFileRequestDto { ParentId = destination.Id })
         };
         request.Headers.TryAddWithoutValidation("If-Match", staleETag);
 
@@ -1233,7 +1232,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     {
         var response = await _client!.PutAsJsonAsync(
             "/api/v1/layouts/nodes",
-            new Cotton.Server.Models.Requests.CreateNodeRequest { ParentId = parentId, Name = name });
+            new CreateNodeRequestDto { ParentId = parentId, Name = name });
         response.EnsureSuccessStatusCode();
         var node = await response.Content.ReadFromJsonAsync<NodeDto>();
         Assert.That(node, Is.Not.Null);
