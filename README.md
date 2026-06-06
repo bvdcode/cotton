@@ -1,4 +1,3 @@
-![Status](https://img.shields.io/badge/status-beta-yellow)
 [![License](https://badgen.net/github/license/bvdcode/cotton)](LICENSE)
 [![CI](https://github.com/bvdcode/cotton/actions/workflows/docker-image.yml/badge.svg)](https://github.com/bvdcode/cotton/actions)
 [![CodeFactor](https://www.codefactor.io/repository/github/bvdcode/cotton/badge)](https://www.codefactor.io/repository/github/bvdcode/cotton)
