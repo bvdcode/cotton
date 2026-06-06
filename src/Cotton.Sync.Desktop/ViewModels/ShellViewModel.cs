@@ -2553,6 +2553,19 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             return;
         }
 
+        if (progress.IsCompleted)
+        {
+            _runProgressByPair.Remove(progress.SyncPairId);
+            if (!HasCurrentTransfer || _transferSyncPairId != progress.SyncPairId)
+            {
+                ClearSyncPairProgress(syncPair);
+            }
+
+            RefreshRunProgressSummary();
+            RefreshCurrentProgressText();
+            return;
+        }
+
         _runProgressByPair[progress.SyncPairId] = progress;
         if (!HasCurrentTransfer || _transferSyncPairId != progress.SyncPairId)
         {
@@ -2672,6 +2685,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private static void ClearSyncPairProgress(SyncPairRowViewModel row)
     {
+        row.CurrentOperation = string.Empty;
         row.HasCurrentProgress = false;
         row.IsCurrentProgressIndeterminate = false;
         row.CurrentProgressValue = 0;

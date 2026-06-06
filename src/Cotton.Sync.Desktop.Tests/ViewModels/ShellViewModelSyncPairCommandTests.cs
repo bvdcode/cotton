@@ -940,6 +940,101 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task RunProgressChanged_ClearsCompletedRunProgressBeforeIdleStatusArrives()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 3,
+            FilesTotal: 10,
+            CurrentPath: "Reports/report.txt",
+            StartedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 5, DateTimeKind.Utc)));
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.Completed,
+            FilesCompleted: 10,
+            FilesTotal: 10,
+            CurrentPath: string.Empty,
+            StartedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: true,
+            OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 15, DateTimeKind.Utc)));
+
+        Assert.Multiple(() =>
+        {
+            SyncPairRowViewModel row = viewModel.SyncPairs.Single();
+            Assert.That(viewModel.HasCurrentRunProgress, Is.False);
+            Assert.That(viewModel.CurrentRunProgressTitle, Is.Empty);
+            Assert.That(viewModel.CurrentRunProgressDetails, Is.Empty);
+            Assert.That(row.CurrentOperation, Is.Empty);
+            Assert.That(row.HasCurrentOperation, Is.False);
+            Assert.That(row.HasCurrentProgress, Is.False);
+            Assert.That(row.IsCurrentProgressIndeterminate, Is.False);
+            Assert.That(row.CurrentProgressValue, Is.Zero);
+        });
+    }
+
+    [Test]
+    public async Task RunProgressChanged_RemovesCompletedFolderFromAggregateProgress()
+    {
+        Guid documentsPairId = Guid.NewGuid();
+        Guid videosPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(
+            CreateSignedInSnapshot(
+                CreatePair(documentsPairId, "Documents", "Syncing"),
+                CreatePair(videosPairId, "Videos", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            documentsPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 3,
+            FilesTotal: 10,
+            CurrentPath: "Reports/report.txt",
+            StartedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 5, DateTimeKind.Utc)));
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            videosPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 5,
+            FilesTotal: 20,
+            CurrentPath: "Videos/clip.mp4",
+            StartedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 6, DateTimeKind.Utc)));
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            documentsPairId,
+            SyncRunProgressStage.Completed,
+            FilesCompleted: 10,
+            FilesTotal: 10,
+            CurrentPath: string.Empty,
+            StartedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: true,
+            OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 15, DateTimeKind.Utc)));
+
+        Assert.Multiple(() =>
+        {
+            SyncPairRowViewModel documentsRow = viewModel.SyncPairs.Single(pair => pair.Id == documentsPairId);
+            SyncPairRowViewModel videosRow = viewModel.SyncPairs.Single(pair => pair.Id == videosPairId);
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Videos: Checking files"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("5 of 20 files · clip.mp4"));
+            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(25).Within(0.01));
+            Assert.That(documentsRow.HasCurrentProgress, Is.False);
+            Assert.That(documentsRow.CurrentOperation, Is.Empty);
+            Assert.That(videosRow.HasCurrentProgress, Is.True);
+            Assert.That(videosRow.CurrentOperation, Is.EqualTo("Checking files 5 of 20"));
+        });
+    }
+
+    [Test]
     public async Task TransferProgressChanged_KeepsAggregateRunProgressPrimaryForMultipleFolders()
     {
         Guid documentsPairId = Guid.NewGuid();
