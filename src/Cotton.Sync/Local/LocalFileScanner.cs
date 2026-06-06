@@ -258,7 +258,13 @@ public sealed class LocalFileScanner :
     {
         try
         {
-            await using FileStream stream = File.OpenRead(filePath);
+            await using FileStream stream = new(
+                filePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                bufferSize: 1024 * 128,
+                FileOptions.Asynchronous | FileOptions.SequentialScan);
             byte[] hash = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
             return Convert.ToHexStringLower(hash);
         }
