@@ -3,6 +3,7 @@
 
 using Avalonia;
 using Cotton.Sync.Desktop.Composition;
+using Cotton.Sync.Desktop.Diagnostics;
 using Cotton.Sync.Desktop.Platform;
 using Cotton.Sync.Desktop.Startup;
 
@@ -15,6 +16,8 @@ internal static class Program
     {
         DesktopStartupOptions startupOptions = DesktopStartupOptions.Parse(args);
         DesktopAppPaths paths = DesktopStartupPathResolver.Resolve(startupOptions);
+        DesktopTraceLogging.Install(paths);
+        DesktopUnhandledExceptionReporter.Install();
         if (startupOptions.RunSelfTest)
         {
             return DesktopCommandLineRunner

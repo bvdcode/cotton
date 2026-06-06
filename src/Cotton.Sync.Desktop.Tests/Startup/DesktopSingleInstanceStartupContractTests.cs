@@ -34,6 +34,24 @@ public sealed class DesktopSingleInstanceStartupContractTests
     }
 
     [Test]
+    public void Program_InstallsTraceAndCrashLoggingBeforeCommandLineModes()
+    {
+        string program = File.ReadAllText(GetDesktopFilePath("Program.cs"));
+        int traceLoggingIndex = program.IndexOf("DesktopTraceLogging.Install(paths)", StringComparison.Ordinal);
+        int crashReporterIndex = program.IndexOf("DesktopUnhandledExceptionReporter.Install()", StringComparison.Ordinal);
+        int selfTestIndex = program.IndexOf("startupOptions.RunSelfTest", StringComparison.Ordinal);
+        int exportIndex = program.IndexOf("startupOptions.ExportDiagnostics", StringComparison.Ordinal);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(traceLoggingIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(crashReporterIndex, Is.GreaterThan(traceLoggingIndex));
+            Assert.That(selfTestIndex, Is.GreaterThan(crashReporterIndex));
+            Assert.That(exportIndex, Is.GreaterThan(crashReporterIndex));
+        });
+    }
+
+    [Test]
     public void App_StartsActivationServerForRunningInstance()
     {
         string app = File.ReadAllText(GetDesktopFilePath("App.axaml.cs"));
