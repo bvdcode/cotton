@@ -272,7 +272,7 @@
                   IsVisible="{Binding HasCurrentWorkProgress}">
             <Grid RowDefinitions="Auto,Auto,Auto,Auto"
                   RowSpacing="6">
-              <Grid ColumnDefinitions="Auto,*"
+              <Grid ColumnDefinitions="*,Auto"
                     ColumnSpacing="8">
                 <TextBlock Text="{Binding CurrentWorkProgressTitle}"
                            FontSize="13"

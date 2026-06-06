@@ -543,6 +543,7 @@ public sealed class DesktopSetupVisualContractTests
         Assert.Multiple(() =>
         {
             Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding HasCurrentWorkProgress}\""));
+            Assert.That(dashboardView, Does.Contain("ColumnDefinitions=\"*,Auto\""));
             Assert.That(dashboardView, Does.Contain("Text=\"{Binding CurrentWorkProgressTitle}\""));
             Assert.That(dashboardView, Does.Contain("Text=\"{Binding CurrentWorkProgressHeaderDetails}\""));
             Assert.That(dashboardView, Does.Contain("HorizontalAlignment=\"Right\""));
