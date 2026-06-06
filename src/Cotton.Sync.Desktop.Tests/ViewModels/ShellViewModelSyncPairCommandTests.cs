@@ -1034,6 +1034,97 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task StatusChanged_KeepsCompletionNotificationOutOfDashboardWhileStatusCardIsVisible()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(
+            CreateSignedInSnapshotWithNotifications(
+                enableNotifications: false,
+                CreatePair(syncPairId, "Documents", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportStatus(new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(syncPairId, "Syncing", null),
+        ]));
+        controller.ReportStatus(new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(
+                syncPairId,
+                "Idle",
+                null,
+                LastSyncedAtUtc: new DateTime(2026, 6, 4, 8, 0, 0, DateTimeKind.Utc)),
+        ]));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasNotifications, Is.True);
+            Assert.That(viewModel.HasDashboardNotifications, Is.True);
+        });
+
+        controller.ReportStatus(new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(syncPairId, "Paused", null),
+        ]));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasNotifications, Is.True);
+            Assert.That(viewModel.HasDashboardNotifications, Is.False);
+            Assert.That(viewModel.IsStatusCardVisible, Is.True);
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Sync is paused."));
+        });
+    }
+
+    [Test]
+    public async Task RunProgressChanged_HidesCompletionNotificationWhileAnotherFolderIsActive()
+    {
+        Guid completedPairId = Guid.NewGuid();
+        Guid activePairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(
+            CreateSignedInSnapshotWithNotifications(
+                enableNotifications: false,
+                CreatePair(completedPairId, "Documents", "Syncing"),
+                CreatePair(activePairId, "Videos", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportStatus(new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(completedPairId, "Syncing", null),
+            new DesktopSyncPairStatusSnapshot(activePairId, "Syncing", null),
+        ]));
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            activePairId,
+            SyncRunProgressStage.ScanningLocal,
+            FilesCompleted: 0,
+            FilesTotal: null,
+            CurrentPath: string.Empty,
+            StartedAtUtc: new DateTime(2026, 6, 4, 8, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 4, 8, 0, 1, DateTimeKind.Utc)));
+
+        controller.ReportStatus(new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(
+                completedPairId,
+                "Idle",
+                null,
+                LastSyncedAtUtc: new DateTime(2026, 6, 4, 8, 1, 0, DateTimeKind.Utc)),
+            new DesktopSyncPairStatusSnapshot(activePairId, "Syncing", null),
+        ]));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasNotifications, Is.True);
+            Assert.That(viewModel.HasCurrentWorkProgress, Is.True);
+            Assert.That(viewModel.HasDashboardNotifications, Is.False);
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Videos: Scanning local files"));
+        });
+    }
+
+    [Test]
     public async Task Initialize_AsksToEnableFolderWhenAllPairsAreDisabled()
     {
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Disabled")));

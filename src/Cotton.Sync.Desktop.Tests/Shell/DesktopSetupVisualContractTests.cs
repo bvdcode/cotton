@@ -487,6 +487,18 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
+    public void DashboardNotifications_UseDashboardVisibilityGate()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(mainWindowXaml, Does.Contain("IsVisible=\"{Binding HasDashboardNotifications}\""));
+            Assert.That(mainWindowXaml, Does.Not.Contain("IsVisible=\"{Binding HasNotifications}\""));
+        });
+    }
+
+    [Test]
     public void SettingsDiagnostics_UsesClearDiagnosticsActions()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));

@@ -315,6 +315,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 OnPropertyChanged(nameof(StatusCardTitle));
                 OnPropertyChanged(nameof(StatusCardDetailText));
                 OnPropertyChanged(nameof(HasStatusCardDetail));
+                OnPropertyChanged(nameof(HasDashboardNotifications));
                 RaiseAddSyncPairFlowCommandStates();
                 RefreshCurrentProgressText();
             }
@@ -541,6 +542,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public bool HasSelfTestItems => SelfTestItems.Count > 0;
 
     public bool HasNotifications => Notifications.Count > 0;
+
+    public bool HasDashboardNotifications =>
+        HasNotifications
+        && !HasStatusAttention
+        && !IsStatusCardVisible
+        && !HasCurrentWorkProgress;
 
     public bool HasSyncPairs => SyncPairs.Count > 0;
 
@@ -2325,6 +2332,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OnPropertyChanged(nameof(HasNoSyncPairs));
         OnPropertyChanged(nameof(HasSyncPairs));
         OnPropertyChanged(nameof(IsStatusCardVisible));
+        OnPropertyChanged(nameof(HasDashboardNotifications));
         RaiseSyncStateProperties();
         OpenFolderCommand.RaiseCanExecuteChanged();
         RaiseTrayOpenFolderState();
@@ -2349,6 +2357,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OnPropertyChanged(nameof(HasConflicts));
         OnPropertyChanged(nameof(HasStatusAttention));
         OnPropertyChanged(nameof(IsStatusCardVisible));
+        OnPropertyChanged(nameof(HasDashboardNotifications));
         OnPropertyChanged(nameof(ConflictCountLabel));
         OnPropertyChanged(nameof(HeaderStatusText));
         OnPropertyChanged(nameof(StatusCardTitle));
@@ -2373,6 +2382,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private void OnNotificationsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         OnPropertyChanged(nameof(HasNotifications));
+        OnPropertyChanged(nameof(HasDashboardNotifications));
     }
 
     private async Task LoadRemoteFoldersAsync(string remotePath)
@@ -2567,6 +2577,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         GlobalStatus = ResolveGlobalStatus(status);
         ActionRequiredMessage = DesktopActionRequiredMessageResolver.FromStatus(status);
         OnPropertyChanged(nameof(IsStatusCardVisible));
+        OnPropertyChanged(nameof(HasDashboardNotifications));
         if (!status.SyncPairs.Any(IsActiveSyncStatus))
         {
             ClearTransferProgress();
@@ -2755,6 +2766,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OnPropertyChanged(nameof(PauseResumeSyncLabel));
         OnPropertyChanged(nameof(PauseResumeTrayLabel));
         OnPropertyChanged(nameof(IsSyncPaused));
+        OnPropertyChanged(nameof(HasDashboardNotifications));
     }
 
     private void RaiseTrayOpenFolderState()
@@ -2916,6 +2928,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         OnPropertyChanged(nameof(HasCurrentWorkProgress));
         OnPropertyChanged(nameof(IsStatusCardVisible));
+        OnPropertyChanged(nameof(HasDashboardNotifications));
         OnPropertyChanged(nameof(CurrentWorkProgressTitle));
         OnPropertyChanged(nameof(CurrentWorkProgressDetails));
         OnPropertyChanged(nameof(CurrentWorkProgressSecondaryDetails));

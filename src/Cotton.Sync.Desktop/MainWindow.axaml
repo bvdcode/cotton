@@ -350,7 +350,7 @@
         </Border>
 
         <Border MaxHeight="94"
-                IsVisible="{Binding HasNotifications}">
+                IsVisible="{Binding HasDashboardNotifications}">
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding Notifications}">
               <ItemsControl.ItemTemplate>
