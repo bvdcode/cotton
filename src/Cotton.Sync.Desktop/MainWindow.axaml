@@ -230,9 +230,13 @@
 
     <Grid Grid.Row="2"
           Margin="10"
-          RowDefinitions="Auto,Auto,*"
           RowSpacing="8"
           IsVisible="{Binding IsDashboardVisible}">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="2*" MinHeight="112" />
+        <RowDefinition Height="*" MinHeight="112" />
+      </Grid.RowDefinitions>
       <StackPanel Grid.Row="0"
                   Spacing="8"
                   IsVisible="{Binding IsDashboardChromeVisible}">

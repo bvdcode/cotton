@@ -576,6 +576,24 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
+    public void DashboardLayout_BoundsFoldersAndActivityBelowStableStatusChrome()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string dashboardView = GetSlice(
+            mainWindowXaml,
+            "IsVisible=\"{Binding IsDashboardVisible}\">",
+            "IsVisible=\"{Binding IsAddSyncPairWizardVisible}\">");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"Auto\" />"));
+            Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"2*\" MinHeight=\"112\" />"));
+            Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"*\" MinHeight=\"112\" />"));
+            Assert.That(dashboardView, Does.Not.Contain("RowDefinitions=\"Auto,Auto,*\""));
+        });
+    }
+
+    [Test]
     public void SettingsDiagnostics_UsesClearDiagnosticsActions()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
