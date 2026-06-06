@@ -8,13 +8,18 @@ internal static class DesktopNotificationServiceFactory
     private const string NotifySendCommandName = "notify-send";
     private const string WindowsPowerShellCommandName = "powershell.exe";
     private const string PowerShellCoreCommandName = "pwsh.exe";
+    private const string LinuxNotificationDetails =
+        "requires DBus session bus; sender name, icon rendering, timeout, and actions depend on the desktop notification daemon; actions are not used";
+    private const string WindowsNotificationDetails =
+        "installed sender identity depends on a registered Start Menu AppUserModelID shortcut; debug launches can show the raw process identity";
 
     public static IDesktopNotificationService CreateDefault()
     {
         return CreateForPlatform(
             ResolvePlatform(),
             Environment.GetEnvironmentVariable("PATH"),
-            AppContext.BaseDirectory);
+            AppContext.BaseDirectory,
+            Environment.GetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS"));
     }
 
     public static DesktopNotificationCapabilitySnapshot CreateCapabilitySnapshot()
@@ -22,21 +27,24 @@ internal static class DesktopNotificationServiceFactory
         return CreateCapabilitySnapshot(
             ResolvePlatform(),
             Environment.GetEnvironmentVariable("PATH"),
-            AppContext.BaseDirectory);
+            AppContext.BaseDirectory,
+            Environment.GetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS"));
     }
 
     internal static IDesktopNotificationService CreateForPlatform(
         DesktopNotificationPlatform platform,
         string? pathValue,
-        string? appBaseDirectory = null)
+        string? appBaseDirectory = null,
+        string? dbusSessionBusAddress = null)
     {
         DesktopNotificationCapabilitySnapshot capabilities = CreateCapabilitySnapshot(
             platform,
             pathValue,
-            appBaseDirectory);
+            appBaseDirectory,
+            dbusSessionBusAddress);
         if (capabilities.Platform == DesktopNotificationPlatform.Linux)
         {
-            return capabilities.ExecutablePath is null
+            return !capabilities.IsSupported || capabilities.ExecutablePath is null
                 ? new UnsupportedDesktopNotificationService()
                 : new NotifySendNotificationService(capabilities.ExecutablePath, capabilities.IconPath);
         }
@@ -54,7 +62,8 @@ internal static class DesktopNotificationServiceFactory
     internal static DesktopNotificationCapabilitySnapshot CreateCapabilitySnapshot(
         DesktopNotificationPlatform platform,
         string? pathValue,
-        string? appBaseDirectory = null)
+        string? appBaseDirectory = null,
+        string? dbusSessionBusAddress = null)
     {
         string? iconPath = ResolveNotificationIconPath(appBaseDirectory ?? AppContext.BaseDirectory);
         if (platform == DesktopNotificationPlatform.Linux)
@@ -62,14 +71,16 @@ internal static class DesktopNotificationServiceFactory
             string? notifySendPath = ResolveExecutablePath(
                 NotifySendCommandName,
                 pathValue);
+            bool hasSessionBus = !string.IsNullOrWhiteSpace(dbusSessionBusAddress);
             return new DesktopNotificationCapabilitySnapshot(
                 Platform: platform,
                 AdapterName: NotifySendCommandName,
-                IsSupported: notifySendPath is not null,
+                IsSupported: notifySendPath is not null && hasSessionBus,
                 AppName: DesktopNotificationIdentity.AppName,
                 AppUserModelId: null,
                 ExecutablePath: notifySendPath,
-                IconPath: iconPath);
+                IconPath: iconPath,
+                PlatformDetails: "session bus: " + (hasSessionBus ? "available" : "missing") + "; " + LinuxNotificationDetails);
         }
 
         if (platform == DesktopNotificationPlatform.Windows)
@@ -84,7 +95,8 @@ internal static class DesktopNotificationServiceFactory
                 AppName: DesktopNotificationIdentity.AppName,
                 AppUserModelId: DesktopAppIdentity.AppUserModelId,
                 ExecutablePath: powerShellPath,
-                IconPath: iconPath);
+                IconPath: iconPath,
+                PlatformDetails: WindowsNotificationDetails);
         }
 
         return new DesktopNotificationCapabilitySnapshot(

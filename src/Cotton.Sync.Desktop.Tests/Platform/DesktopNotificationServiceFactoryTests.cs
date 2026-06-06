@@ -73,7 +73,8 @@ public sealed class DesktopNotificationServiceFactoryTests
 
         IDesktopNotificationService service = DesktopNotificationServiceFactory.CreateForPlatform(
             DesktopNotificationPlatform.Linux,
-            _tempDirectory);
+            _tempDirectory,
+            dbusSessionBusAddress: "unix:path=/tmp/cotton-test-bus");
 
         Assert.That(service, Is.TypeOf<NotifySendNotificationService>());
     }
@@ -88,7 +89,8 @@ public sealed class DesktopNotificationServiceFactoryTests
         DesktopNotificationCapabilitySnapshot snapshot = DesktopNotificationServiceFactory.CreateCapabilitySnapshot(
             DesktopNotificationPlatform.Linux,
             _tempDirectory,
-            _tempDirectory);
+            _tempDirectory,
+            dbusSessionBusAddress: "unix:path=/tmp/cotton-test-bus");
 
         Assert.Multiple(() =>
         {
@@ -102,6 +104,35 @@ public sealed class DesktopNotificationServiceFactoryTests
             Assert.That(snapshot.Details, Does.Contain("adapter: notify-send"));
             Assert.That(snapshot.Details, Does.Contain("app name: Cotton Sync"));
             Assert.That(snapshot.Details, Does.Contain("icon: " + iconPath));
+            Assert.That(snapshot.Details, Does.Contain("session bus: available"));
+            Assert.That(snapshot.Details, Does.Contain("sender name, icon rendering, timeout, and actions depend on the desktop notification daemon"));
+            Assert.That(snapshot.Details, Does.Contain("actions are not used"));
+        });
+    }
+
+    [Test]
+    public void CreateCapabilitySnapshot_ReportsLinuxNotifySendUnavailableWithoutSessionBus()
+    {
+        string commandPath = Path.Combine(_tempDirectory, "notify-send");
+        File.WriteAllText(commandPath, string.Empty);
+
+        DesktopNotificationCapabilitySnapshot snapshot = DesktopNotificationServiceFactory.CreateCapabilitySnapshot(
+            DesktopNotificationPlatform.Linux,
+            _tempDirectory,
+            _tempDirectory,
+            dbusSessionBusAddress: null);
+        IDesktopNotificationService service = DesktopNotificationServiceFactory.CreateForPlatform(
+            DesktopNotificationPlatform.Linux,
+            _tempDirectory,
+            dbusSessionBusAddress: null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.IsSupported, Is.False);
+            Assert.That(snapshot.ExecutablePath, Is.EqualTo(commandPath));
+            Assert.That(snapshot.Details, Does.StartWith("Not available on this platform"));
+            Assert.That(snapshot.Details, Does.Contain("session bus: missing"));
+            Assert.That(service, Is.TypeOf<UnsupportedDesktopNotificationService>());
         });
     }
 
@@ -142,6 +173,7 @@ public sealed class DesktopNotificationServiceFactoryTests
             Assert.That(snapshot.Details, Does.Contain("adapter: Windows toast"));
             Assert.That(snapshot.Details, Does.Contain("AppUserModelID: " + DesktopAppIdentity.AppUserModelId));
             Assert.That(snapshot.Details, Does.Contain("icon: " + iconPath));
+            Assert.That(snapshot.Details, Does.Contain("registered Start Menu AppUserModelID shortcut"));
         });
     }
 

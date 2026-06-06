@@ -10,7 +10,8 @@ internal sealed record DesktopNotificationCapabilitySnapshot(
     string AppName,
     string? AppUserModelId,
     string? ExecutablePath,
-    string? IconPath)
+    string? IconPath,
+    string? PlatformDetails = null)
 {
     public string Details
     {
@@ -33,6 +34,11 @@ internal sealed record DesktopNotificationCapabilitySnapshot(
             }
 
             parts.Add(IconPath is null ? "icon: missing" : "icon: " + IconPath);
+            if (!string.IsNullOrWhiteSpace(PlatformDetails))
+            {
+                parts.Add(PlatformDetails);
+            }
+
             return string.Join("; ", parts);
         }
     }
