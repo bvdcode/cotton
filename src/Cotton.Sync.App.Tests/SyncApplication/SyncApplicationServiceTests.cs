@@ -553,6 +553,79 @@ public sealed class SyncApplicationServiceTests
     }
 
     [Test]
+    public async Task SaveSyncPairAsync_DoesNotDeletePersistedSyncStateWhenOnlyDisplayNameChanges()
+    {
+        var store = new InMemorySyncPairSettingsStore();
+        var syncStateStore = new FakeSyncStateStore();
+        SyncPairSettings syncPair = CreatePair("/home/user/Cotton");
+        await store.UpsertAsync(syncPair);
+        SyncApplicationService service = CreateService(store, syncStateStore: syncStateStore);
+        SyncPairSettings renamed = CopySyncPair(syncPair);
+        renamed.DisplayName = "Renamed documents";
+        renamed.UpdatedAtUtc = DateTime.UtcNow;
+
+        SyncPairSaveResult result = await service.SaveSyncPairAsync(renamed);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsSaved, Is.True);
+            Assert.That(syncStateStore.InitializeCallCount, Is.Zero);
+            Assert.That(syncStateStore.DeletedSyncPairIds, Is.Empty);
+        });
+    }
+
+    [Test]
+    public async Task SaveSyncPairAsync_DeletesPersistedSyncStateWhenSyncRootChanges()
+    {
+        var store = new InMemorySyncPairSettingsStore();
+        var syncStateStore = new FakeSyncStateStore();
+        SyncPairSettings syncPair = CreatePair("/home/user/Cotton");
+        await store.UpsertAsync(syncPair);
+        SyncApplicationService service = CreateService(store, syncStateStore: syncStateStore);
+        SyncPairSettings moved = CopySyncPair(syncPair);
+        moved.LocalRootPath = "/home/user/Cotton Documents";
+        moved.UpdatedAtUtc = DateTime.UtcNow;
+
+        SyncPairSaveResult result = await service.SaveSyncPairAsync(moved);
+
+        SyncPairSettings? saved = await store.GetAsync(syncPair.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsSaved, Is.True);
+            Assert.That(saved, Is.Not.Null);
+            Assert.That(saved!.LocalRootPath, Is.EqualTo("/home/user/Cotton Documents"));
+            Assert.That(syncStateStore.InitializeCallCount, Is.EqualTo(1));
+            Assert.That(syncStateStore.DeletedSyncPairIds, Is.EqualTo(new[] { syncPair.Id.ToString() }));
+        });
+    }
+
+    [Test]
+    public async Task SaveSyncPairAsync_DeletesPersistedSyncStateWhenRemoteRootChanges()
+    {
+        var store = new InMemorySyncPairSettingsStore();
+        var syncStateStore = new FakeSyncStateStore();
+        SyncPairSettings syncPair = CreatePair("/home/user/Cotton");
+        await store.UpsertAsync(syncPair);
+        SyncApplicationService service = CreateService(store, syncStateStore: syncStateStore);
+        SyncPairSettings moved = CopySyncPair(syncPair);
+        moved.RemoteRootNodeId = Guid.NewGuid();
+        moved.RemoteDisplayPath = "/Documents Archive";
+        moved.UpdatedAtUtc = DateTime.UtcNow;
+
+        SyncPairSaveResult result = await service.SaveSyncPairAsync(moved);
+
+        SyncPairSettings? saved = await store.GetAsync(syncPair.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsSaved, Is.True);
+            Assert.That(saved, Is.Not.Null);
+            Assert.That(saved!.RemoteDisplayPath, Is.EqualTo("/Documents Archive"));
+            Assert.That(syncStateStore.InitializeCallCount, Is.EqualTo(1));
+            Assert.That(syncStateStore.DeletedSyncPairIds, Is.EqualTo(new[] { syncPair.Id.ToString() }));
+        });
+    }
+
+    [Test]
     public async Task SaveSyncPairAsync_ValidatesPrerequisitesWhenDisabledPairIsEnabled()
     {
         var store = new InMemorySyncPairSettingsStore();

@@ -157,9 +157,29 @@ public sealed class SyncApplicationService : ISyncApplicationService
             }
         }
 
+        if (RequiresSyncStateReset(existingSyncPair, syncPair) && _syncStateStore is not null)
+        {
+            await _syncStateStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+            await _syncStateStore.DeletePairAsync(syncPair.Id.ToString(), cancellationToken).ConfigureAwait(false);
+        }
+
         await _syncPairs.UpsertAsync(syncPair, cancellationToken).ConfigureAwait(false);
         await RestartSyncCoreIfStartedAsync(cancellationToken).ConfigureAwait(false);
         return SyncPairSaveResult.Saved(validation);
+    }
+
+    private static bool RequiresSyncStateReset(
+        SyncPairSettings? existingSyncPair,
+        SyncPairSettings syncPair)
+    {
+        if (existingSyncPair is null)
+        {
+            return false;
+        }
+
+        return !string.Equals(existingSyncPair.LocalRootPath, syncPair.LocalRootPath, StringComparison.Ordinal)
+            || existingSyncPair.RemoteRootNodeId != syncPair.RemoteRootNodeId
+            || syncPair.Mode != existingSyncPair.Mode;
     }
 
     private static bool RequiresPrerequisiteValidation(
