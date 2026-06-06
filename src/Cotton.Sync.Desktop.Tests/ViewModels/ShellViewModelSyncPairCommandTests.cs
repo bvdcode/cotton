@@ -2672,6 +2672,57 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task InitializeAsync_ShowsSessionRestoredNotificationWhenVisibleLaunchAllowsIt()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot());
+        var notificationService = new CollectingDesktopNotificationService();
+        using ShellViewModel viewModel = CreateViewModel(
+            controller,
+            notificationService: notificationService,
+            notifyOnSessionRestore: true);
+
+        await viewModel.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(notificationService.Notifications, Has.Count.EqualTo(1));
+            Assert.That(notificationService.Notifications[0].Title, Is.EqualTo("Session restored"));
+            Assert.That(notificationService.Notifications[0].Message, Is.EqualTo("vadim@example.com"));
+        });
+    }
+
+    [Test]
+    public async Task InitializeAsync_DoesNotShowSessionRestoredNotificationWhenStartupNoiseSuppressed()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot());
+        var notificationService = new CollectingDesktopNotificationService();
+        using ShellViewModel viewModel = CreateViewModel(
+            controller,
+            notificationService: notificationService,
+            notifyOnSessionRestore: false);
+
+        await viewModel.InitializeAsync();
+
+        Assert.That(notificationService.Notifications, Is.Empty);
+    }
+
+    [Test]
+    public async Task InitializeAsync_DoesNotShowSessionRestoredNotificationWhenNotificationsDisabled()
+    {
+        var controller = new FakeDesktopShellController(
+            CreateSignedInSnapshotWithNotifications(enableNotifications: false));
+        var notificationService = new CollectingDesktopNotificationService();
+        using ShellViewModel viewModel = CreateViewModel(
+            controller,
+            notificationService: notificationService,
+            notifyOnSessionRestore: true);
+
+        await viewModel.InitializeAsync();
+
+        Assert.That(notificationService.Notifications, Is.Empty);
+    }
+
+    [Test]
     public async Task SignInCommand_ShowsSetupErrorWhenAuthenticationFails()
     {
         var controller = new FakeDesktopShellController(CreateSignedOutSnapshot())
@@ -3351,7 +3402,8 @@ public sealed class ShellViewModelSyncPairCommandTests
         DesktopFeatureFlags? featureFlags = null,
         FakeLocalFolderPicker? localFolderPicker = null,
         IDesktopNotificationService? notificationService = null,
-        IDesktopUiDispatcher? uiDispatcher = null)
+        IDesktopUiDispatcher? uiDispatcher = null,
+        bool notifyOnSessionRestore = false)
     {
         return new ShellViewModel(
             controller,
@@ -3359,7 +3411,8 @@ public sealed class ShellViewModelSyncPairCommandTests
             notificationService ?? new FakeDesktopNotificationService(),
             new FakeDesktopThemeService(),
             uiDispatcher ?? new InlineDesktopUiDispatcher(),
-            featureFlags);
+            featureFlags,
+            notifyOnSessionRestore);
     }
 
     private sealed class FakeLocalFolderPicker : ILocalFolderPicker

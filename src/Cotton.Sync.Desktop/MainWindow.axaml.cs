@@ -52,11 +52,13 @@ public sealed partial class MainWindow : Window
         _lifecyclePolicy = new DesktopWindowLifecyclePolicy(hideAfterSessionRestore, canHideToTray);
         _visualSmokeScenario = visualSmokeScenario;
         InitializeComponent();
+        bool notifyOnSessionRestore = !hideAfterSessionRestore && visualSmokeScenario is null;
         var viewModel = new ShellViewModel(
             controller,
             new WindowLocalFolderPicker(this),
             DesktopNotificationServiceFactory.CreateDefault(),
-            new AvaloniaDesktopThemeService());
+            new AvaloniaDesktopThemeService(),
+            notifyOnSessionRestore: notifyOnSessionRestore);
         DataContext = viewModel;
         ApplyWindowMode(viewModel);
         viewModel.PropertyChanged += OnViewModelPropertyChanged;

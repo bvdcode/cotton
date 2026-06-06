@@ -27,6 +27,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private readonly DesktopFeatureFlags _featureFlags;
     private readonly ILocalFolderPicker _folderPicker;
     private readonly IDesktopNotificationService _notificationService;
+    private readonly bool _notifyOnSessionRestore;
     private readonly IDesktopThemeService _themeService;
     private readonly IDesktopUiDispatcher _uiDispatcher;
     private readonly object _activityDispatchGate = new();
@@ -111,12 +112,14 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         IDesktopNotificationService notificationService,
         IDesktopThemeService themeService,
         IDesktopUiDispatcher? uiDispatcher = null,
-        DesktopFeatureFlags? featureFlags = null)
+        DesktopFeatureFlags? featureFlags = null,
+        bool notifyOnSessionRestore = false)
     {
         _controller = controller ?? throw new ArgumentNullException(nameof(controller));
         _featureFlags = featureFlags ?? DesktopFeatureFlags.Default;
         _folderPicker = folderPicker ?? throw new ArgumentNullException(nameof(folderPicker));
         _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+        _notifyOnSessionRestore = notifyOnSessionRestore;
         _themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
         _uiDispatcher = uiDispatcher ?? new AvaloniaDesktopUiDispatcher();
         Activities.CollectionChanged += OnActivitiesChanged;
@@ -1229,6 +1232,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             if (snapshot.IsSignedIn)
             {
                 AddActivity("Account", AccountName, "Session restored");
+                if (_notifyOnSessionRestore)
+                {
+                    ShowNativeNotification("Session restored", AccountName);
+                }
             }
 
             RefreshDiagnosticsItems();
