@@ -223,6 +223,8 @@ public sealed class DesktopSetupVisualContractTests
         Assert.Multiple(() =>
         {
             Assert.That(CountOccurrences(signInStep, "KeyDown=\"SignInInput_KeyDown\""), Is.EqualTo(3));
+            Assert.That(signInStep, Does.Contain("Kind=\"Check\""));
+            Assert.That(signInStep, Does.Not.Contain("Text=\"✓\""));
             Assert.That(mainWindowCode, Does.Contain("e.Key != Key.Enter && e.Key != Key.Return"));
             Assert.That(mainWindowCode, Does.Contain("viewModel.SignInCommand.Execute(null);"));
         });
@@ -653,7 +655,7 @@ public sealed class DesktopSetupVisualContractTests
         string cloudFolderPicker = GetSlice(
             mainWindowXaml,
             "IsVisible=\"{Binding IsAddSyncPairCloudStepVisible}\"",
-            "IsVisible=\"{Binding HasNoRemoteFolders}\"");
+            "Text=\"Sync mode\"");
 
         Assert.Multiple(() =>
         {
@@ -665,7 +667,9 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(cloudFolderPicker, Does.Contain("Kind=\"ArrowRightCircleOutline\""));
             Assert.That(cloudFolderPicker, Does.Contain("Kind=\"CheckCircleOutline\""));
             Assert.That(cloudFolderPicker, Does.Contain("Kind=\"CloseCircleOutline\""));
+            Assert.That(cloudFolderPicker, Does.Contain("Kind=\"ChevronRight\""));
             Assert.That(CountOccurrences(cloudFolderPicker, "Classes=\"icon\""), Is.EqualTo(4));
+            Assert.That(cloudFolderPicker, Does.Not.Contain("Text=\"›\""));
             Assert.That(cloudFolderPicker, Does.Not.Contain("Content=\"←\""));
             Assert.That(cloudFolderPicker, Does.Not.Contain("Content=\"→\""));
             Assert.That(cloudFolderPicker, Does.Not.Contain("Content=\"^\""));

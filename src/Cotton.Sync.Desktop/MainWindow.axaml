@@ -191,11 +191,12 @@
                       CornerRadius="9"
                       Background="{DynamicResource CottonSuccessBrush}"
                       VerticalAlignment="Center">
-                <TextBlock Text="✓"
-                           FontSize="12"
-                           FontWeight="Bold"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center" />
+                <materialIcons:MaterialIcon Kind="Check"
+                                            Width="13"
+                                            Height="13"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Foreground="{DynamicResource CottonPrimaryTextBrush}" />
               </Border>
               <TextBlock Grid.Column="1"
                          Text="{Binding ServerUrl}"
@@ -969,9 +970,11 @@
                             <Grid ColumnDefinitions="Auto,*"
                                   ColumnSpacing="8"
                                   Margin="0,5">
-                              <TextBlock Text="›"
-                                         Classes="secondary"
-                                         VerticalAlignment="Center" />
+                              <materialIcons:MaterialIcon Kind="ChevronRight"
+                                                          Width="16"
+                                                          Height="16"
+                                                          VerticalAlignment="Center"
+                                                          Foreground="{DynamicResource CottonTextSecondaryBrush}" />
                               <TextBlock Grid.Column="1"
                                          Text="{Binding Name}"
                                          TextTrimming="CharacterEllipsis"
