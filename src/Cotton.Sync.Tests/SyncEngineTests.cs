@@ -154,6 +154,52 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_ReusesBaselineHashWhenMetadataIsUnchanged()
+    {
+        const string baselineHash = "existing-content-hash";
+        var local = new LocalFileSnapshot
+        {
+            RelativePath = "Docs/existing.bin",
+            FullPath = Path.Combine(_root, "Docs", "existing.bin"),
+            ContentHash = string.Empty,
+            SizeBytes = 1024,
+            LastWriteUtc = new DateTime(2026, 6, 6, 8, 0, 0, DateTimeKind.Utc),
+        };
+        var scanner = new MetadataOnlyLocalFileScanner(local);
+        NodeFileManifestDto remote = RemoteFile("Docs/existing.bin", baselineHash, sizeBytes: local.SizeBytes);
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        SyncEngine engine = CreateEngine(scanner, RemoteTree(remote), remoteFiles, out SqliteSyncStateStore stateStore);
+        await stateStore.InitializeAsync();
+        await stateStore.UpsertAsync(new SyncStateEntry
+        {
+            SyncPairId = "pair-a",
+            RelativePath = local.RelativePath,
+            Kind = SyncEntryKind.File,
+            LocalContentHash = baselineHash,
+            LocalLastWriteUtc = local.LastWriteUtc,
+            LocalSizeBytes = local.SizeBytes,
+            RemoteNodeId = remote.NodeId,
+            RemoteFileId = remote.Id,
+            RemoteContentHash = remote.ContentHash,
+            RemoteETag = remote.ETag,
+            SyncedAtUtc = new DateTime(2026, 6, 6, 8, 1, 0, DateTimeKind.Utc),
+        });
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+        SyncStateEntry? entry = await stateStore.GetAsync("pair-a", local.RelativePath);
+        Assert.Multiple(() =>
+        {
+            Assert.That(scanner.ContentHashCalls, Is.Zero);
+            Assert.That(remoteFiles.Uploads, Is.Empty);
+            Assert.That(result.Activities, Is.Empty);
+            Assert.That(local.ContentHash, Is.EqualTo(baselineHash));
+            Assert.That(entry, Is.Not.Null);
+            Assert.That(entry!.LocalSizeBytes, Is.EqualTo(local.SizeBytes));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_ReportsAggregateRunProgressFileCounts()
     {
         var scanner = new FakeLocalFileScanner(

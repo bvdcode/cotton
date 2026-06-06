@@ -238,12 +238,18 @@ public sealed class SqliteSyncStateStore : ISyncStateStore
 
     private static void UpdateEntity(SyncStateEntity entity, SyncStateEntry entry, string key)
     {
+        if (entry.LocalSizeBytes.HasValue)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(entry.LocalSizeBytes.Value);
+        }
+
         entity.SyncPairId = entry.SyncPairId;
         entity.RelativePathKey = key;
         entity.RelativePath = SyncPath.Normalize(entry.RelativePath);
         entity.Kind = entry.Kind;
         entity.LocalContentHash = NormalizeNullable(entry.LocalContentHash);
         entity.LocalLastWriteUtc = ToUtc(entry.LocalLastWriteUtc);
+        entity.LocalSizeBytes = entry.LocalSizeBytes;
         entity.RemoteNodeId = entry.RemoteNodeId;
         entity.RemoteFileId = entry.RemoteFileId;
         entity.RemoteContentHash = NormalizeNullable(entry.RemoteContentHash);
@@ -260,6 +266,7 @@ public sealed class SqliteSyncStateStore : ISyncStateStore
             Kind = entity.Kind,
             LocalContentHash = entity.LocalContentHash,
             LocalLastWriteUtc = ToUtc(entity.LocalLastWriteUtc),
+            LocalSizeBytes = entity.LocalSizeBytes,
             RemoteNodeId = entity.RemoteNodeId,
             RemoteFileId = entity.RemoteFileId,
             RemoteContentHash = entity.RemoteContentHash,

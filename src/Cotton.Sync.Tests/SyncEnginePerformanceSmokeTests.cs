@@ -239,6 +239,7 @@ public sealed class SyncEnginePerformanceSmokeTests
                 Kind = SyncEntryKind.File,
                 LocalContentHash = hash,
                 LocalLastWriteUtc = File.GetLastWriteTimeUtc(FullPath(relativePath)),
+                LocalSizeBytes = content.Length,
                 RemoteNodeId = remoteFile.NodeId,
                 RemoteFileId = remoteFile.Id,
                 RemoteContentHash = remoteFile.ContentHash,

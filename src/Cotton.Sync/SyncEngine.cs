@@ -208,9 +208,9 @@ public sealed class SyncEngine : ISyncEngine
     {
         foreach (string key in pathKeys)
         {
-            if (stateByPath.ContainsKey(key) && localByPath.TryGetValue(key, out LocalFileSnapshot? local))
+            if (stateByPath.TryGetValue(key, out SyncStateEntry? state) && localByPath.TryGetValue(key, out LocalFileSnapshot? local))
             {
-                await EnsureLocalContentHashAsync(local, cancellationToken).ConfigureAwait(false);
+                await EnsureLocalContentHashForBaselineComparisonAsync(local, state, cancellationToken).ConfigureAwait(false);
             }
         }
     }
@@ -406,7 +406,7 @@ public sealed class SyncEngine : ISyncEngine
             await EnsureLocalContentHashAsync(local, cancellationToken).ConfigureAwait(false);
             if (ContentMatches(local.ContentHash, remote.File.ContentHash))
             {
-                await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, remote.File), cancellationToken)
+                await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, local.SizeBytes, remote.File), cancellationToken)
                     .ConfigureAwait(false);
                 return;
             }
@@ -428,7 +428,7 @@ public sealed class SyncEngine : ISyncEngine
     {
         if (local is not null)
         {
-            await EnsureLocalContentHashAsync(local, cancellationToken).ConfigureAwait(false);
+            await EnsureLocalContentHashForBaselineComparisonAsync(local, state, cancellationToken).ConfigureAwait(false);
         }
 
         bool localDeleted = local is null && !string.IsNullOrWhiteSpace(state.LocalContentHash);
@@ -445,7 +445,7 @@ public sealed class SyncEngine : ISyncEngine
 
         if (local is not null && remote is not null && ContentMatches(local.ContentHash, remote.File.ContentHash))
         {
-            await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, remote.File), cancellationToken)
+            await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, local.SizeBytes, remote.File), cancellationToken)
                 .ConfigureAwait(false);
             return;
         }
@@ -547,7 +547,7 @@ public sealed class SyncEngine : ISyncEngine
 
         string localContentHash = ResolveUploadedLocalContentHash(local, uploaded);
         local.ContentHash = localContentHash;
-        await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, localContentHash, local.LastWriteUtc, uploaded), cancellationToken)
+        await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, localContentHash, local.LastWriteUtc, local.SizeBytes, uploaded), cancellationToken)
             .ConfigureAwait(false);
         Report(result, options, SyncActivityKind.Uploaded, relativePath, null);
     }
@@ -566,7 +566,7 @@ public sealed class SyncEngine : ISyncEngine
             (stream, token) => DownloadAndVerifyFileAsync(remoteFile, relativePath, options, stream, token),
             remoteFile.UpdatedAt == default ? null : remoteFile.UpdatedAt,
             cancellationToken).ConfigureAwait(false);
-        await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, remoteFile.ContentHash, remoteFile.UpdatedAt, remoteFile), cancellationToken)
+        await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, remoteFile.ContentHash, remoteFile.UpdatedAt, remoteFile.SizeBytes, remoteFile), cancellationToken)
             .ConfigureAwait(false);
         Report(result, options, SyncActivityKind.Downloaded, relativePath, null);
     }
@@ -715,7 +715,7 @@ public sealed class SyncEngine : ISyncEngine
                 remoteFile.UpdatedAt == default ? null : remoteFile.UpdatedAt,
                 cancellationToken).ConfigureAwait(false);
             details = "Remote version saved as " + conflictPath;
-            await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, remoteFile), cancellationToken)
+            await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, local.SizeBytes, remoteFile), cancellationToken)
                 .ConfigureAwait(false);
         }
         else if (local is not null)
@@ -730,7 +730,7 @@ public sealed class SyncEngine : ISyncEngine
             details = "Remote deletion conflicted with local change; local version was uploaded again.";
             string localContentHash = ResolveUploadedLocalContentHash(local, uploaded);
             local.ContentHash = localContentHash;
-            await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, localContentHash, local.LastWriteUtc, uploaded), cancellationToken)
+            await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, localContentHash, local.LastWriteUtc, local.SizeBytes, uploaded), cancellationToken)
                 .ConfigureAwait(false);
         }
         else if (remoteFile is not null)
@@ -742,7 +742,7 @@ public sealed class SyncEngine : ISyncEngine
                 remoteFile.UpdatedAt == default ? null : remoteFile.UpdatedAt,
                 cancellationToken).ConfigureAwait(false);
             details = "Local deletion conflicted with remote change; remote version was restored locally.";
-            await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, remoteFile.ContentHash, remoteFile.UpdatedAt, remoteFile), cancellationToken)
+            await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, remoteFile.ContentHash, remoteFile.UpdatedAt, remoteFile.SizeBytes, remoteFile), cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -853,6 +853,7 @@ public sealed class SyncEngine : ISyncEngine
         string relativePath,
         string? localContentHash,
         DateTime? localLastWriteUtc,
+        long? localSizeBytes,
         NodeFileManifestDto? remoteFile)
     {
         return new SyncStateEntry
@@ -862,6 +863,7 @@ public sealed class SyncEngine : ISyncEngine
             Kind = SyncEntryKind.File,
             LocalContentHash = localContentHash,
             LocalLastWriteUtc = localLastWriteUtc?.ToUniversalTime(),
+            LocalSizeBytes = localSizeBytes,
             RemoteFileId = remoteFile?.Id,
             RemoteNodeId = remoteFile?.NodeId,
             RemoteContentHash = remoteFile?.ContentHash,
@@ -1221,6 +1223,34 @@ public sealed class SyncEngine : ISyncEngine
         }
 
         local.ContentHash = await _localContentHasher.ComputeContentHashAsync(local, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task EnsureLocalContentHashForBaselineComparisonAsync(
+        LocalFileSnapshot local,
+        SyncStateEntry state,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(local.ContentHash))
+        {
+            return;
+        }
+
+        if (CanReuseBaselineLocalContentHash(local, state))
+        {
+            local.ContentHash = state.LocalContentHash!;
+            return;
+        }
+
+        await EnsureLocalContentHashAsync(local, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static bool CanReuseBaselineLocalContentHash(LocalFileSnapshot local, SyncStateEntry state)
+    {
+        return !string.IsNullOrWhiteSpace(state.LocalContentHash)
+            && state.LocalSizeBytes.HasValue
+            && state.LocalSizeBytes.Value == local.SizeBytes
+            && state.LocalLastWriteUtc.HasValue
+            && state.LocalLastWriteUtc.Value.ToUniversalTime() == local.LastWriteUtc.ToUniversalTime();
     }
 
     private static string ResolveUploadedLocalContentHash(LocalFileSnapshot local, NodeFileManifestDto uploaded)

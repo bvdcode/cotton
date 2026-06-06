@@ -67,6 +67,12 @@ public sealed class SyncStateEntity
     public DateTime? LocalLastWriteUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the last synced local file size.
+    /// </summary>
+    [Column("local_size_bytes")]
+    public long? LocalSizeBytes { get; set; }
+
+    /// <summary>
     /// Gets or sets the remote folder identifier for directory entries.
     /// </summary>
     [Column("remote_node_id")]

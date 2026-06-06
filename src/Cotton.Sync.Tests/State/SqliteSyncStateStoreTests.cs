@@ -205,6 +205,7 @@ public sealed class SqliteSyncStateStoreTests
             Kind = SyncEntryKind.File,
             LocalContentHash = "local-hash",
             LocalLastWriteUtc = new DateTime(2026, 6, 2, 12, 0, 0, DateTimeKind.Utc),
+            LocalSizeBytes = 4096,
             RemoteNodeId = nodeId,
             RemoteFileId = fileId,
             RemoteContentHash = "remote-hash",
@@ -223,6 +224,7 @@ public sealed class SqliteSyncStateStoreTests
             Assert.That(entry.Kind, Is.EqualTo(SyncEntryKind.File));
             Assert.That(entry.LocalContentHash, Is.EqualTo("local-hash"));
             Assert.That(entry.LocalLastWriteUtc, Is.EqualTo(new DateTime(2026, 6, 2, 12, 0, 0, DateTimeKind.Utc)));
+            Assert.That(entry.LocalSizeBytes, Is.EqualTo(4096));
             Assert.That(entry.RemoteNodeId, Is.EqualTo(nodeId));
             Assert.That(entry.RemoteFileId, Is.EqualTo(fileId));
             Assert.That(entry.RemoteETag, Is.EqualTo("sha256-remote-hash"));
