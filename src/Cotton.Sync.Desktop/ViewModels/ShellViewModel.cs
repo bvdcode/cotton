@@ -1720,6 +1720,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             return Task.CompletedTask;
         }
 
+        if (ReferenceEquals(SelectedSyncPair, target) && IsSelectedSyncPairEditorVisible)
+        {
+            ClearRemoveSyncPairConfirmation();
+            IsSelectedSyncPairEditorVisible = false;
+            return Task.CompletedTask;
+        }
+
         SelectedSyncPair = target;
         ClearRemoveSyncPairConfirmation();
         IsSelectedSyncPairEditorVisible = true;
@@ -1892,11 +1899,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         try
         {
             await _controller.SyncAllAsync().ConfigureAwait(true);
-            GlobalStatus = "Sync requested";
+            GlobalStatus = "Checked for changes";
             ActionRequiredMessage = string.Empty;
-            SetAllPairStatuses("Sync requested", "Waiting to sync changes", enabledOnly: true);
             RefreshCurrentProgressText();
-            AddActivity("Sync", string.Empty, "Manual sync requested");
+            AddActivity("Sync", string.Empty, "Manual sync completed");
         }
         finally
         {

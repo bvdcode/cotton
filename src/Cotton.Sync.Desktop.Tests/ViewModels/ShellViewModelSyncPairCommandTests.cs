@@ -32,7 +32,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(controller.EnabledSyncPairId, Is.EqualTo(syncPairId));
             Assert.That(controller.EnabledSyncPairValue, Is.False);
             Assert.That(selected.IsEnabled, Is.False);
-            Assert.That(selected.ToggleEnabledLabel, Is.EqualTo("Enable"));
+            Assert.That(selected.ToggleEnabledLabel, Is.EqualTo("Enable sync folder"));
             Assert.That(selected.ToggleEnabledIcon, Is.EqualTo("▶"));
             Assert.That(selected.Status, Is.EqualTo("Disabled"));
             Assert.That(viewModel.GlobalStatus, Is.EqualTo("Folder disabled"));
@@ -259,7 +259,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.HasActionRequired, Is.False);
             Assert.That(viewModel.CanRetryActionRequired, Is.False);
             Assert.That(viewModel.ActionRequiredMessage, Is.Empty);
-            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Sync requested"));
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Checked for changes"));
         });
     }
 
@@ -568,8 +568,8 @@ public sealed class ShellViewModelSyncPairCommandTests
         SyncPairRowViewModel disabledPair = viewModel.SyncPairs.Single(pair => pair.Id == disabledPairId);
         Assert.Multiple(() =>
         {
-            Assert.That(enabledPair.Status, Is.EqualTo("Sync requested"));
-            Assert.That(enabledPair.CurrentOperation, Is.EqualTo("Waiting to sync changes"));
+            Assert.That(enabledPair.Status, Is.EqualTo("Idle"));
+            Assert.That(enabledPair.CurrentOperation, Is.Empty);
             Assert.That(disabledPair.Status, Is.EqualTo("Disabled"));
             Assert.That(disabledPair.CurrentOperation, Is.Empty);
         });
@@ -617,7 +617,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.CanOpenTrayFolder, Is.True);
-            Assert.That(viewModel.TrayOpenFolderLabel, Is.EqualTo("Open Documents"));
+            Assert.That(viewModel.TrayOpenFolderLabel, Is.EqualTo("Open local folder"));
             Assert.That(viewModel.OpenTrayFolderCommand.CanExecute(null), Is.True);
         });
 
@@ -639,7 +639,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.CanOpenTrayFolder, Is.False);
-            Assert.That(viewModel.TrayOpenFolderLabel, Is.EqualTo("Open folder"));
+            Assert.That(viewModel.TrayOpenFolderLabel, Is.EqualTo("Open local folder"));
             Assert.That(viewModel.OpenTrayFolderCommand.CanExecute(null), Is.False);
         });
     }

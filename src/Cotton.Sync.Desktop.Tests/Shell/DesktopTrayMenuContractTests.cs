@@ -12,11 +12,12 @@ public sealed class DesktopTrayMenuContractTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(trayController, Does.Contain("\"Open folder\""));
+            Assert.That(trayController, Does.Contain("\"Open local folder\""));
             Assert.That(trayController, Does.Contain("\"Open Cotton Cloud\""));
             Assert.That(trayController, Does.Contain("TrayOpenFolderLabel"));
             Assert.That(trayController, Does.Contain("OpenTrayFolderCommand"));
             Assert.That(trayController, Does.Not.Contain("\"Open selected folder\""));
+            Assert.That(trayController, Does.Not.Contain("\"Open folder\""));
             Assert.That(trayController, Does.Not.Contain("\"Open web\""));
         });
     }

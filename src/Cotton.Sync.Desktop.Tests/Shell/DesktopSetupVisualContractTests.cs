@@ -86,18 +86,18 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Not.Contain("SelectedSyncPairEditableDisplayName"));
             Assert.That(foldersSection, Does.Contain("SaveSelectedSyncPairNameCommand"));
             Assert.That(foldersSection, Does.Contain("ToggleSelectedSyncPairEnabledCommand"));
-            Assert.That(foldersSection, Does.Contain("ChangeSelectedSyncPairLocalFolderCommand"));
-            Assert.That(foldersSection, Does.Contain("ChangeSelectedSyncPairRemoteFolderCommand"));
+            Assert.That(foldersSection, Does.Not.Contain("ChangeSelectedSyncPairLocalFolderCommand"));
+            Assert.That(foldersSection, Does.Not.Contain("ChangeSelectedSyncPairRemoteFolderCommand"));
             Assert.That(foldersSection, Does.Contain("RemoveSelectedSyncPairCommand"));
             Assert.That(foldersSection, Does.Contain("CancelSelectedSyncPairEditorCommand"));
             Assert.That(foldersSection, Does.Contain("IsRemoveSyncPairConfirmationVisible"));
             Assert.That(foldersSection, Does.Contain("CancelRemoveSyncPairCommand"));
             Assert.That(foldersSection, Does.Contain("ConfirmRemoveSelectedSyncPairCommand"));
-            Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"Manage sync folder\""));
+            Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"Rename, enable, or remove\""));
             Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"Open local folder\""));
-            Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"Change local folder\""));
-            Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"Change cloud folder\""));
-            Assert.That(CountOccurrences(foldersSection, "Classes=\"inlineChange\""), Is.EqualTo(2));
+            Assert.That(foldersSection, Does.Not.Contain("ToolTip.Tip=\"Change local folder\""));
+            Assert.That(foldersSection, Does.Not.Contain("ToolTip.Tip=\"Change cloud folder\""));
+            Assert.That(CountOccurrences(foldersSection, "Classes=\"inlineChange\""), Is.Zero);
             Assert.That(CountOccurrences(foldersSection, "ToolTip.Tip=\"Open local folder\""), Is.EqualTo(1));
             Assert.That(foldersSection, Does.Not.Contain("ToolTip.Tip=\"Open selected local folder\""));
             Assert.That(foldersSection, Does.Contain("ToggleEnabledIcon"));
@@ -472,11 +472,13 @@ public sealed class DesktopSetupVisualContractTests
         Assert.Multiple(() =>
         {
             Assert.That(diagnosticsSection, Does.Contain("Content=\"Run checks\""));
-            Assert.That(diagnosticsSection, Does.Contain("Content=\"Export bundle\""));
+            Assert.That(diagnosticsSection, Does.Contain("Content=\"Export logs\""));
             Assert.That(diagnosticsSection, Does.Contain("Content=\"Open data\""));
             Assert.That(diagnosticsSection, Does.Not.Contain("Content=\"Export diagnostics\""));
-            Assert.That(diagnosticsSection, Does.Contain("ToolTip.Tip=\"Export diagnostics bundle\""));
+            Assert.That(diagnosticsSection, Does.Not.Contain("Content=\"Export bundle\""));
+            Assert.That(diagnosticsSection, Does.Contain("ToolTip.Tip=\"Export logs and diagnostic state\""));
             Assert.That(diagnosticsSection, Does.Contain("ToolTip.Tip=\"Open app data folder\""));
+            Assert.That(diagnosticsSection, Does.Contain("Text=\"Logs exported to\""));
             Assert.That(diagnosticsSection, Does.Contain("IsVisible=\"{Binding HasDataDirectory}\""));
             Assert.That(diagnosticsSection, Does.Contain("OpenDataFolderCommand"));
             Assert.That(diagnosticsSection, Does.Contain("LastDiagnosticsBundlePath"));

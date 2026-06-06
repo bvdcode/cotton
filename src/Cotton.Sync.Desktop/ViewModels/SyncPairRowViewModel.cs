@@ -42,7 +42,7 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
         }
     }
 
-    public string ToggleEnabledLabel => IsEnabled ? "Disable" : "Enable";
+    public string ToggleEnabledLabel => IsEnabled ? "Disable sync folder" : "Enable sync folder";
 
     public string ToggleEnabledIcon => IsEnabled ? "⏸" : "▶";
 
