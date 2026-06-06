@@ -503,7 +503,7 @@ namespace Cotton.Server.Controllers
         [HttpPatch(Routes.V1.Files + "/{nodeFileId:guid}/update-content")]
         public async Task<IActionResult> UpdateFileContent(
             [FromRoute] Guid nodeFileId,
-            [FromBody] CreateFileRequest request)
+            [FromBody] CreateFileFromChunksRequestDto request)
         {
             bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
                 out string normalizedName,
@@ -580,11 +580,11 @@ namespace Cotton.Server.Controllers
         }
 
         private async Task<FileManifest> ResolveUpdateManifestAsync(
-            CreateFileRequest request,
+            CreateFileFromChunksRequestDto request,
             byte[] proposedHash,
             Guid userId)
         {
-            List<Chunk> chunks = await _fileManifestService.GetChunksAsync(request.ChunkHashes, userId);
+            List<Chunk> chunks = await _fileManifestService.GetChunksAsync([.. request.ChunkHashes], userId);
             return await _dbContext.FileManifests
                 .FirstOrDefaultAsync(x => x.ComputedContentHash == proposedHash || x.ProposedContentHash == proposedHash)
                 ?? await _fileManifestService.CreateNewFileManifestAsync(
@@ -1111,15 +1111,30 @@ namespace Cotton.Server.Controllers
         /// </summary>
         [Authorize]
         [HttpPost(Routes.V1.Files + "/from-chunks")]
-        public async Task<IActionResult> CreateFileFromChunks([FromBody] CreateFileRequest request)
+        public async Task<IActionResult> CreateFileFromChunks([FromBody] CreateFileFromChunksRequestDto request)
         {
             Guid userId = User.GetUserId();
-            request.UserId = userId;
-            NodeFileManifestDto manifest = await _mediator.Send(request);
+            NodeFileManifestDto manifest = await _mediator.Send(ToCreateFileRequest(request, userId));
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
             await _hubContext.Clients.User(userId.ToString()).SendAsync("FileCreated", manifest);
             return Ok(manifest);
+        }
+
+        private static CreateFileRequest ToCreateFileRequest(CreateFileFromChunksRequestDto request, Guid userId)
+        {
+            return new CreateFileRequest
+            {
+                NodeId = request.NodeId,
+                ChunkHashes = [.. request.ChunkHashes],
+                Name = request.Name,
+                ContentType = request.ContentType,
+                Hash = request.Hash,
+                OriginalNodeFileId = request.OriginalNodeFileId,
+                Metadata = request.Metadata,
+                Validate = request.Validate,
+                UserId = userId,
+            };
         }
     }
 }

@@ -5,7 +5,6 @@ using Cotton.Files;
 using Cotton.Nodes;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
-using Cotton.Server.Handlers.Files;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
@@ -283,7 +282,7 @@ public class LayoutEndpointsTests : IntegrationTestBase
     private async Task<NodeFileManifestDto> CreateFileAsync(Guid nodeId, string name, string body)
     {
         string hash = await UploadChunkAsync(body);
-        var fileReq = new CreateFileRequest
+        var fileReq = new CreateFileFromChunksRequestDto
         {
             ChunkHashes = [hash],
             Name = name,

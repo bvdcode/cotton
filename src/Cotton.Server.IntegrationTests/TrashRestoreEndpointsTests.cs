@@ -5,7 +5,6 @@ using Cotton.Files;
 using Cotton.Nodes;
 using Cotton.Database;
 using Cotton.Database.Models.Enums;
-using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Dto;
@@ -291,7 +290,7 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
     private async Task<NodeFileManifestDto> CreateFileAsync(Guid nodeId, string name, string body)
     {
         string hash = await UploadChunkAsync(body);
-        var fileReq = new CreateFileRequest
+        var fileReq = new CreateFileFromChunksRequestDto
         {
             ChunkHashes = [hash],
             Name = name,

@@ -4,7 +4,6 @@
 using Cotton.Files;
 using Cotton.Nodes;
 using Cotton.Database.Models.Enums;
-using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Dto;
@@ -136,7 +135,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
 
             // Create file (server validates and maps hex → byte[] itself)
             var fileName = $"file{i}.txt";
-            var fileReq = new CreateFileRequest
+            var fileReq = new CreateFileFromChunksRequestDto
             {
                 ChunkHashes = [chunkHashLower],
                 Name = fileName,
@@ -299,7 +298,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
         var uploadResponse = await _client!.PostAsync("/api/v1/chunks", form);
         uploadResponse.EnsureSuccessStatusCode();
 
-        var fileReq = new CreateFileRequest
+        var fileReq = new CreateFileFromChunksRequestDto
         {
             ChunkHashes = [hash],
             Name = name,
@@ -374,7 +373,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
         var uploadRes = await _client.PostAsync("/api/v1/chunks", form);
         uploadRes.EnsureSuccessStatusCode();
 
-        var fileReq = new CreateFileRequest
+        var fileReq = new CreateFileFromChunksRequestDto
         {
             ChunkHashes = [hash],
             Name = "legacy.txt",

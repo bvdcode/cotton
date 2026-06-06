@@ -6,7 +6,6 @@ using Cotton.Nodes;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Previews;
-using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Jobs;
@@ -488,7 +487,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         HttpResponseMessage uploadResponse = await _client!.PostAsync("/api/v1/chunks", uploadForm);
         uploadResponse.EnsureSuccessStatusCode();
 
-        var createFileRequest = new CreateFileRequest
+        var createFileRequest = new CreateFileFromChunksRequestDto
         {
             ChunkHashes = [chunkHashLower],
             Name = fileName,

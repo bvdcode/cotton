@@ -4,7 +4,6 @@
 using Cotton.Files;
 using Cotton.Nodes;
 using Cotton.Database;
-using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Dto;
@@ -385,7 +384,7 @@ public class MoveEndpointsTests : IntegrationTestBase
 
         var createFile = _client!.PostAsJsonAsync(
             "/api/v1/files/from-chunks",
-            new CreateFileRequest
+            new CreateFileFromChunksRequestDto
             {
                 ChunkHashes = [hash],
                 Name = "thing",
@@ -799,7 +798,7 @@ public class MoveEndpointsTests : IntegrationTestBase
     {
         var hash = await UploadChunkViaClientAsync(client, body);
 
-        var fileReq = new CreateFileRequest
+        var fileReq = new CreateFileFromChunksRequestDto
         {
             ChunkHashes = [hash],
             Name = name,

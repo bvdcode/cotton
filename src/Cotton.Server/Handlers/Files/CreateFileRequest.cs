@@ -25,7 +25,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Cotton.Server.Handlers.Files
 {
     /// <summary>
-    /// Represents the create file request request payload accepted by the API.
+    /// Represents a create-file command in the mediator pipeline.
     /// </summary>
     public class CreateFileRequest : IRequest<NodeFileManifestDto>
     {

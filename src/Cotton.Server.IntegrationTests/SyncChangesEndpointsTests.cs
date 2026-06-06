@@ -7,7 +7,6 @@ using Cotton.Sync;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Models.Enums;
-using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Jobs;
@@ -777,7 +776,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         string hash = await UploadChunkAsync(body);
         using HttpResponseMessage response = await _client!.PostAsJsonAsync(
             $"{Routes.V1.Files}/from-chunks",
-            new CreateFileRequest
+            new CreateFileFromChunksRequestDto
             {
                 ChunkHashes = [hash],
                 Name = name,
@@ -797,7 +796,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         string hash = await UploadChunkAsync(body);
         using HttpResponseMessage response = await _client!.PatchAsJsonAsync(
             $"{Routes.V1.Files}/{nodeFileId}/update-content",
-            new CreateFileRequest
+            new CreateFileFromChunksRequestDto
             {
                 ChunkHashes = [hash],
                 Name = name,

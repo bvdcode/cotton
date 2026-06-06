@@ -3,7 +3,6 @@
 
 using Cotton.Files;
 using Cotton.Nodes;
-using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Dto;
@@ -112,7 +111,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         upRes.EnsureSuccessStatusCode();
 
         // create file from chunk
-        var fileReq = new CreateFileRequest
+        var fileReq = new CreateFileFromChunksRequestDto
         {
             ChunkHashes = [chunkHashLower],
             Name = "hello.txt",
@@ -163,7 +162,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var upRes = await _client.PostAsync($"/api/v1/chunks/raw?hash={chunkHashLower}", body);
         upRes.EnsureSuccessStatusCode();
 
-        var fileReq = new CreateFileRequest
+        var fileReq = new CreateFileFromChunksRequestDto
         {
             ChunkHashes = [chunkHashLower],
             Name = "hello-raw.txt",
@@ -198,7 +197,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var uploadResponse = await _client.PostAsync($"/api/v1/chunks/raw?hash={contentHash}", body);
         uploadResponse.EnsureSuccessStatusCode();
 
-        var createResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", new CreateFileRequest
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", new CreateFileFromChunksRequestDto
         {
             ChunkHashes = [contentHash],
             Name = "empty-raw.txt",
@@ -236,7 +235,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var uploadResponse = await UploadRawChunkAsync(content, contentHash);
         uploadResponse.EnsureSuccessStatusCode();
 
-        var createResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", new CreateFileRequest
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", new CreateFileFromChunksRequestDto
         {
             ChunkHashes = [contentHash],
             Name = "sync-metadata.txt",
@@ -390,7 +389,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         Assert.That(root, Is.Not.Null);
 
         string fiveByteHash = await UploadChunkAndGetHashAsync("12345");
-        var createFirstResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", new CreateFileRequest
+        var createFirstResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", new CreateFileFromChunksRequestDto
         {
             ChunkHashes = [fiveByteHash],
             Name = "five.txt",
@@ -403,7 +402,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         Assert.That(created, Is.Not.Null);
 
         string sixByteHash = await UploadChunkAndGetHashAsync("abcdef");
-        var createSecondResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", new CreateFileRequest
+        var createSecondResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", new CreateFileFromChunksRequestDto
         {
             ChunkHashes = [sixByteHash],
             Name = "six.txt",
@@ -413,7 +412,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         });
         Assert.That(createSecondResponse.StatusCode, Is.EqualTo((HttpStatusCode)507));
 
-        var updateResponse = await _client.PatchAsJsonAsync($"/api/v1/files/{created!.Id}/update-content", new CreateFileRequest
+        var updateResponse = await _client.PatchAsJsonAsync($"/api/v1/files/{created!.Id}/update-content", new CreateFileFromChunksRequestDto
         {
             ChunkHashes = [sixByteHash],
             Name = "five.txt",
@@ -478,7 +477,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
 
         using var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/v1/files/{file.Id}/update-content")
         {
-            Content = JsonContent.Create(new CreateFileRequest
+            Content = JsonContent.Create(new CreateFileFromChunksRequestDto
             {
                 ChunkHashes = [rejectedHash],
                 Name = file.Name,
@@ -687,7 +686,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         upRes.EnsureSuccessStatusCode();
 
         // create file from chunk
-        var fileReq = new CreateFileRequest
+        var fileReq = new CreateFileFromChunksRequestDto
         {
             ChunkHashes = [chunkHashLower],
             Name = "download.txt",
@@ -879,7 +878,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var upRes = await _client.PostAsync("/api/v1/chunks", form);
         upRes.EnsureSuccessStatusCode();
 
-        var fileReq = new CreateFileRequest
+        var fileReq = new CreateFileFromChunksRequestDto
         {
             ChunkHashes = [chunkHashLower],
             Name = "auto-detect.txt",
@@ -1214,7 +1213,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         string text)
     {
         string hash = await UploadChunkAndGetHashAsync(text);
-        var updateResponse = await _client!.PatchAsJsonAsync($"/api/v1/files/{file.Id}/update-content", new CreateFileRequest
+        var updateResponse = await _client!.PatchAsJsonAsync($"/api/v1/files/{file.Id}/update-content", new CreateFileFromChunksRequestDto
         {
             ChunkHashes = [hash],
             Name = file.Name,
@@ -1271,7 +1270,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var upRes = await _client!.PostAsync("/api/v1/chunks", form);
         upRes.EnsureSuccessStatusCode();
 
-        var fileReq = new CreateFileRequest
+        var fileReq = new CreateFileFromChunksRequestDto
         {
             ChunkHashes = [chunkHashLower],
             Name = name,
