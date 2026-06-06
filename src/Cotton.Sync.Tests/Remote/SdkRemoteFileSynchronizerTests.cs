@@ -65,7 +65,7 @@ public sealed class SdkRemoteFileSynchronizerTests
             Assert.That(client.FilesClient.CreateRequests[0].Name, Is.EqualTo("file.txt"));
             Assert.That(client.FilesClient.CreateRequests[0].ContentType, Is.EqualTo("text/plain"));
             Assert.That(client.FilesClient.CreateRequests[0].Hash, Is.EqualTo(local.ContentHash));
-            Assert.That(client.FilesClient.CreateRequests[0].Validate, Is.True);
+            Assert.That(client.FilesClient.CreateRequests[0].Validate, Is.False);
             Assert.That(created.ContentHash, Is.EqualTo(local.ContentHash));
         });
     }

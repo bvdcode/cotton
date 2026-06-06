@@ -86,7 +86,6 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynch
             ContentType = ResolveContentType(normalizedPath),
             Hash = localFile.ContentHash,
             OriginalNodeFileId = existingRemoteFile?.OriginalNodeFileId == Guid.Empty ? existingRemoteFile.Id : existingRemoteFile?.OriginalNodeFileId,
-            Validate = true,
         };
 
         NodeFileManifestDto uploaded = existingRemoteFile is null
