@@ -175,6 +175,56 @@ describe("UploadManager task facade", () => {
       }),
     );
   });
+
+  it("notifies listeners when a file upload is committed", async () => {
+    const taskManager = createManager();
+    const onFileUploaded = vi.fn();
+    const uploadedFile = { id: "file-1", name: "report.txt" };
+    mocks.uploadFileToNode.mockResolvedValue(uploadedFile);
+
+    taskManager.enqueue(
+      [new File(["replacement"], "report.txt")],
+      "node-1",
+      "Library",
+      { onFileUploaded },
+    );
+
+    await waitFor(() => onFileUploaded.mock.calls.length > 0);
+
+    expect(onFileUploaded).toHaveBeenCalledWith(uploadedFile);
+  });
+
+  it("keeps committed uploads completed when completion listeners fail", async () => {
+    const taskManager = createManager();
+    const error = new Error("listener failed");
+    const onFileUploaded = vi.fn(() => {
+      throw error;
+    });
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    mocks.uploadFileToNode.mockResolvedValue({
+      id: "file-1",
+      name: "report.txt",
+    });
+
+    taskManager.enqueue(
+      [new File(["replacement"], "report.txt")],
+      "node-1",
+      "Library",
+      { onFileUploaded },
+    );
+
+    await waitFor(() => taskManager.getSnapshot().tasks[0]?.status === "completed");
+
+    expect(onFileUploaded).toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith(
+      "Upload completion listener failed:",
+      error,
+    );
+
+    consoleError.mockRestore();
+  });
 });
 
 const waitFor = async (predicate: () => boolean): Promise<void> => {

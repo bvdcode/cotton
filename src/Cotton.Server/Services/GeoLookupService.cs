@@ -59,13 +59,19 @@ namespace Cotton.Server.Services
         /// <summary>
         /// Executes test custom lookup.
         /// </summary>
-        public async Task<string?> TestCustomLookupAsync(string serverBaseUrl, CancellationToken cancellationToken = default)
+        public async Task<CustomGeoLookupTestResult> TestCustomLookupAsync(
+            string serverBaseUrl,
+            CancellationToken cancellationToken = default)
         {
             var settings = _settings.GetServerSettings();
             string? lookupUrl = settings.CustomGeoIpLookupUrl;
             if (string.IsNullOrWhiteSpace(lookupUrl))
             {
-                return "Custom GeoIP lookup URL must be configured before testing.";
+                return new CustomGeoLookupTestResult(
+                    Error: "Custom GeoIP lookup URL must be configured before testing.",
+                    InputLabel: null,
+                    InputValue: null,
+                    Result: null);
             }
 
             var attempts = new[]
@@ -84,15 +90,23 @@ namespace Cotton.Server.Services
                     cancellationToken);
                 if (attempt.Result is not null)
                 {
-                    return null;
+                    return new CustomGeoLookupTestResult(
+                        Error: null,
+                        InputLabel: attemptInput.Label,
+                        InputValue: attemptInput.Value,
+                        Result: attempt.Result);
                 }
 
                 failureDetails.Add(
                     $"{attemptInput.Label}: {attempt.Error ?? "no geo fields in response"}");
             }
 
-            return "Custom IP resolver test failed. Tried instance URL, Google DNS IP, and empty IP. "
-                + string.Join("; ", failureDetails);
+            return new CustomGeoLookupTestResult(
+                Error: "Custom IP resolver test failed. Tried instance URL, Google DNS IP, and empty IP. "
+                    + string.Join("; ", failureDetails),
+                InputLabel: null,
+                InputValue: null,
+                Result: null);
         }
 
         private static async Task<CustomLookupAttemptResult> TryLookupWithCustomHttpAsync(

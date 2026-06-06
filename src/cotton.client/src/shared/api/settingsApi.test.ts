@@ -366,9 +366,21 @@ describe("settingsApi setters", () => {
     const patch = vi.spyOn(httpClient, "patch").mockResolvedValue({
       data: undefined,
     });
-    const post = vi.spyOn(httpClient, "post").mockResolvedValue({
-      data: undefined,
-    });
+    const geoIpTestResult = {
+      inputLabel: "Google DNS IP",
+      inputValue: "8.8.8.8",
+      country: "United States",
+      region: null,
+      city: null,
+    };
+    const post = vi
+      .spyOn(httpClient, "post")
+      .mockResolvedValueOnce({
+        data: undefined,
+      })
+      .mockResolvedValueOnce({
+        data: geoIpTestResult,
+      });
     const s3Config = {
       endpoint: "https://s3.example",
       region: "eu",
@@ -389,7 +401,9 @@ describe("settingsApi setters", () => {
     await settingsApi.setEmailConfig(emailConfig);
     await settingsApi.testEmailConfig();
     await settingsApi.setCustomGeoIpLookupUrl("https://geo.example");
-    await settingsApi.testCustomGeoIpLookupUrl();
+    await expect(settingsApi.testCustomGeoIpLookupUrl()).resolves.toEqual(
+      geoIpTestResult,
+    );
 
     expect(patch).toHaveBeenNthCalledWith(
       1,
@@ -558,9 +572,20 @@ describe("settingsApi.saveSetupStep", () => {
     const patch = vi.spyOn(httpClient, "patch").mockResolvedValue({
       data: undefined,
     });
-    const post = vi.spyOn(httpClient, "post").mockResolvedValue({
-      data: undefined,
-    });
+    const post = vi
+      .spyOn(httpClient, "post")
+      .mockResolvedValueOnce({
+        data: undefined,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          inputLabel: "Google DNS IP",
+          inputValue: "8.8.8.8",
+          country: "United States",
+          region: null,
+          city: null,
+        },
+      });
 
     await settingsApi.saveSetupStep("s3Config", {
       s3Config: {

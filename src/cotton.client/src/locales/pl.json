@@ -2936,7 +2936,8 @@
           "testGeoIpProvider": "Testuj dostawcę"
         },
         "state": {
-          "geoIpTestPassed": "Test własnego resolvera zakończony pomyślnie."
+          "geoIpTestPassed": "Test własnego resolvera zakończony pomyślnie.",
+          "geoIpTestPassedWithResult": "Test własnego resolvera zakończony pomyślnie: {{input}} rozpoznano jako {{location}}."
         },
         "openSetupWizard": {
           "title": "Otwórz kreator konfiguracji",

@@ -2893,7 +2893,8 @@
           "testGeoIpProvider": "Provider testen"
         },
         "state": {
-          "geoIpTestPassed": "Test van eigen resolver geslaagd."
+          "geoIpTestPassed": "Test van eigen resolver geslaagd.",
+          "geoIpTestPassedWithResult": "Test van eigen resolver geslaagd: {{input}} is opgelost naar {{location}}."
         },
         "openSetupWizard": {
           "title": "Installatiewizard openen",

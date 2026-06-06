@@ -41,7 +41,7 @@ import {
 const LIGHTBOX_ANIMATION_MS = 200;
 const LIGHTBOX_PREFETCH_OFFSETS: ReadonlyArray<number> = [-1, 0, 1];
 const TOUCH_CONTROLS_AUTOHIDE_MS = 2500;
-const LIGHTBOX_TITLE_SEPARATOR = "\u00e2\u20ac\u00a2";
+const LIGHTBOX_TITLE_SEPARATOR = "\u2022";
 const HlsVideoSlide = React.lazy(async () => {
   const module = await import("./HlsVideoSlide");
   return { default: module.HlsVideoSlide };
@@ -251,16 +251,17 @@ const useMediaLightboxRender = ({
       iconDownload: () => <DownloadIcon />,
       iconSlideshowPause: () => <PauseIcon />,
       iconSlideshowPlay: () => <SlideshowIcon />,
-      slide: ({ slide, offset }: { slide: Slide; offset: number }) => (
-        <HlsVideoLightboxSlide
-          currentItemId={currentItemId}
-          errorText={hlsErrorText}
-          noticeText={hlsNoticeText}
-          offset={offset}
-          setActiveVideoElementForFile={setActiveVideoElementForFile}
-          slide={slide}
-        />
-      ),
+      slide: ({ slide, offset }: { slide: Slide; offset: number }) =>
+        slide.type === HLS_VIDEO_SLIDE_TYPE ? (
+          <HlsVideoLightboxSlide
+            currentItemId={currentItemId}
+            errorText={hlsErrorText}
+            noticeText={hlsNoticeText}
+            offset={offset}
+            setActiveVideoElementForFile={setActiveVideoElementForFile}
+            slide={slide}
+          />
+        ) : undefined,
       slideHeader: ({ slide }: { slide: Slide }) => (
         <MediaLightboxSlideHeader slide={slide} />
       ),

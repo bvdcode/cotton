@@ -2892,7 +2892,8 @@
           "testGeoIpProvider": "Tester le fournisseur"
         },
         "state": {
-          "geoIpTestPassed": "Test du résolveur personnalisé réussi."
+          "geoIpTestPassed": "Test du résolveur personnalisé réussi.",
+          "geoIpTestPassedWithResult": "Test du résolveur personnalisé réussi : {{input}} résolu en {{location}}."
         },
         "openSetupWizard": {
           "title": "Ouvrir l'assistant de configuration",

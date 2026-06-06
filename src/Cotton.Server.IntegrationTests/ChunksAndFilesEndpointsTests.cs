@@ -1017,6 +1017,16 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
             Assert.That(versionsAfterRestore[0].VersionNumber, Is.EqualTo(4));
             Assert.That(versionsAfterRestore.Single(x => x.IsOriginal).Id, Is.EqualTo(original.Id));
         });
+
+        file = await UpdateTextFileAsync(file, root!, "fourth");
+
+        var versionsAfterRestoreAndUpdate = await GetVersionsAsync(file.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(versionsAfterRestoreAndUpdate, Has.Count.EqualTo(5));
+            Assert.That(versionsAfterRestoreAndUpdate[0].IsCurrent, Is.True);
+            Assert.That(versionsAfterRestoreAndUpdate[0].VersionNumber, Is.EqualTo(5));
+        });
     }
 
     [Test]

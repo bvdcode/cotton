@@ -328,9 +328,16 @@ namespace Cotton.Server.Controllers
         {
             await EnsureSettingsAsync(cancellationToken);
             ThrowIfInvalid(_settings.ValidateCustomGeoIpLookupUrl(_settings.GetServerSettings().CustomGeoIpLookupUrl));
-            string? testError = await _geoLookup.TestCustomLookupAsync(GetFallbackPublicBaseUrl(), cancellationToken);
-            ThrowIfInvalid(testError);
-            return NoContent();
+            var testResult = await _geoLookup.TestCustomLookupAsync(GetFallbackPublicBaseUrl(), cancellationToken);
+            ThrowIfInvalid(testResult.Error);
+            return Ok(new CustomGeoLookupTestResultDto
+            {
+                InputLabel = testResult.InputLabel ?? string.Empty,
+                InputValue = testResult.InputValue ?? string.Empty,
+                Country = testResult.Result?.Country,
+                Region = testResult.Result?.Region,
+                City = testResult.Result?.City,
+            });
         }
 
         /// <summary>

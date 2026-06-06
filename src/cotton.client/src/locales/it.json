@@ -2894,7 +2894,8 @@
           "testGeoIpProvider": "Verifica provider"
         },
         "state": {
-          "geoIpTestPassed": "Verifica del risolutore personalizzato superata."
+          "geoIpTestPassed": "Verifica del risolutore personalizzato superata.",
+          "geoIpTestPassedWithResult": "Verifica del risolutore personalizzato superata: {{input}} risolto in {{location}}."
         },
         "openSetupWizard": {
           "title": "Apri procedura guidata di configurazione",

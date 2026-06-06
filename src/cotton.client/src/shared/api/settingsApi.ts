@@ -6,6 +6,7 @@ import {
   chunkSizeResponseSchema,
   chunkSizeSettingsResponseSchema,
   computionModeResponseSchema,
+  customGeoIpLookupTestResultSchema,
   customGeoIpLookupUrlSchema,
   defaultUserStorageQuotaBytesSchema,
   defaultUserTemplateNodeIdSchema,
@@ -25,6 +26,7 @@ import {
   timezoneSchema,
   type ChunkSizeSettings,
   type ComputionMode,
+  type CustomGeoIpLookupTestResult,
   type EmailConfig,
   type EmailMode,
   type GeoIpLookupMode,
@@ -40,6 +42,7 @@ import {
 export type {
   ChunkSizeSettings,
   ComputionMode,
+  CustomGeoIpLookupTestResult,
   EmailConfig,
   EmailMode,
   GeoIpLookupMode,
@@ -415,8 +418,10 @@ export const settingsApi = {
     await httpClient.patch("server/settings/custom-geoip-lookup-url", url);
   },
 
-  testCustomGeoIpLookupUrl: async (): Promise<void> => {
-    await httpClient.post("server/settings/custom-geoip-lookup-url/test");
+  testCustomGeoIpLookupUrl: async (): Promise<CustomGeoIpLookupTestResult> => {
+    const url = "server/settings/custom-geoip-lookup-url/test";
+    const response = await httpClient.post<unknown>(url);
+    return parseValidated(url, response.data, customGeoIpLookupTestResultSchema);
   },
 
   saveSetupStep: async (

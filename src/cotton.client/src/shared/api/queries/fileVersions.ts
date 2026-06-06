@@ -29,6 +29,13 @@ export const invalidateFileVersions = (
     queryKey: queryKeys.fileVersions.list(fileId),
   });
 
+export const invalidateAllFileVersions = (
+  queryClient: QueryClient,
+): Promise<void> =>
+  queryClient.invalidateQueries({
+    queryKey: queryKeys.fileVersions.all(),
+  });
+
 export const useFileVersionsQuery = (
   fileId: string | null | undefined,
   enabled: boolean,
@@ -37,6 +44,8 @@ export const useFileVersionsQuery = (
     queryKey: queryKeys.fileVersions.list(fileId ?? ""),
     queryFn: () => filesApi.listVersions(requireFileId(fileId)),
     enabled: enabled && !!fileId,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
 export const useRestoreFileVersionMutation = () => {
