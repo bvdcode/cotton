@@ -14,6 +14,23 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
+    public void Application_UsesCottonAccentPaletteForFluentControls()
+    {
+        string appXaml = File.ReadAllText(GetDesktopFilePath("App.axaml"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(appXaml, Does.Contain("<FluentTheme>"));
+            Assert.That(appXaml, Does.Contain("<FluentTheme.Palettes>"));
+            Assert.That(appXaml, Does.Contain("ColorPaletteResources x:Key=\"Light\""));
+            Assert.That(appXaml, Does.Contain("ColorPaletteResources x:Key=\"Dark\""));
+            Assert.That(CountOccurrences(appXaml, "Accent=\"#96BE02\""), Is.EqualTo(2));
+            Assert.That(appXaml, Does.Not.Contain("SystemAccentColor"));
+            Assert.That(appXaml, Does.Not.Contain("#8B5CF6"));
+        });
+    }
+
+    [Test]
     public void Application_RegistersDesktopIconLibrary()
     {
         string appXaml = File.ReadAllText(GetDesktopFilePath("App.axaml"));

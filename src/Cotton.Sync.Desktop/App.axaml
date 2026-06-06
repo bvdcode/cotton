@@ -45,7 +45,14 @@
   </Application.Resources>
 
   <Application.Styles>
-    <FluentTheme />
+    <FluentTheme>
+      <FluentTheme.Palettes>
+        <ColorPaletteResources x:Key="Light"
+                               Accent="#96BE02" />
+        <ColorPaletteResources x:Key="Dark"
+                               Accent="#96BE02" />
+      </FluentTheme.Palettes>
+    </FluentTheme>
     <materialIcons:MaterialIconStyles />
     <Style Selector="TextBlock.secondary">
       <Setter Property="Foreground" Value="{DynamicResource CottonTextSecondaryBrush}" />
