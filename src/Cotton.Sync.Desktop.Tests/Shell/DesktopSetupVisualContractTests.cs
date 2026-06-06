@@ -252,6 +252,18 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
+    public void MoreIconButtons_UseStandardEllipsisGlyph()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(mainWindowXaml, Does.Not.Contain("Content=\"...\""));
+            Assert.That(CountOccurrences(mainWindowXaml, "Content=\"…\""), Is.EqualTo(2));
+        });
+    }
+
+    [Test]
     public void FoldersPanel_UsesSingleHeaderAddAction()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));

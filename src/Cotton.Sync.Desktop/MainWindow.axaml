@@ -55,7 +55,7 @@
                   ToolTip.Tip="Sync now"
                   IsVisible="{Binding CanSyncNow}"
                   Command="{Binding SyncNowCommand}" />
-          <Button Content="..."
+          <Button Content="…"
                   Classes="icon"
                   ToolTip.Tip="More actions">
             <Button.Flyout>
@@ -529,7 +529,7 @@
                                     VerticalAlignment="Center" />
                             <Button Grid.Column="3"
                                     Grid.RowSpan="5"
-                                    Content="..."
+                                    Content="…"
                                     Classes="icon"
                                     ToolTip.Tip="Manage sync folder"
                                     Command="{Binding $parent[Window].DataContext.ShowSelectedSyncPairEditorCommand}"
