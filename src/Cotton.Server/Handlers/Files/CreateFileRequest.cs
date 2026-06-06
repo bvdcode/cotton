@@ -174,7 +174,13 @@ namespace Cotton.Server.Handlers.Files
             byte[] proposedHash,
             CancellationToken ct)
         {
-            var fileManifest = await _dbContext.FileManifests
+            var query = _dbContext.FileManifests.AsQueryable();
+            if (request.Validate)
+            {
+                query = query.Include(x => x.FileManifestChunks);
+            }
+
+            var fileManifest = await query
                 .FirstOrDefaultAsync(x => x.ComputedContentHash == proposedHash || x.ProposedContentHash == proposedHash, ct);
             if (fileManifest is not null)
             {
