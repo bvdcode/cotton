@@ -18,6 +18,8 @@ public sealed class DesktopPackagingMetadataTests
         Assert.Multiple(() =>
         {
             Assert.That(GetProperty(propertyGroup, "UseAppHost"), Is.EqualTo("true"));
+            Assert.That(GetProperty(propertyGroup, "Title"), Is.EqualTo("Cotton Sync"));
+            Assert.That(GetProperty(propertyGroup, "Product"), Is.EqualTo("Cotton Sync"));
             Assert.That(GetProperty(propertyGroup, "ApplicationIcon"), Is.EqualTo("Assets/app.ico"));
             Assert.That(GetProperty(propertyGroup, "Win32Icon"), Is.EqualTo("Assets/app.ico"));
             Assert.That(
