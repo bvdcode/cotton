@@ -523,7 +523,7 @@
                                        Text="{Binding DisplayStatus}"
                                        FontSize="12"
                                        Opacity="0.74"
-                                       IsVisible="{Binding HasDisplayStatus}" />
+                                       IsVisible="{Binding IsHeaderStatusVisible}" />
                             <TextBlock Grid.Row="1"
                                        Grid.ColumnSpan="2"
                                        Text="{Binding CurrentOperation}"

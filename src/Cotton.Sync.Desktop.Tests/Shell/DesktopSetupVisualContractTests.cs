@@ -94,6 +94,7 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Not.Contain("SelectedItem=\"{Binding SelectedSyncPair}\""));
             Assert.That(foldersSection, Does.Contain("IsVisible=\"{Binding IsEditorVisible}\""));
             Assert.That(foldersSection, Does.Not.Contain("IsVisible=\"{Binding IsSelectedSyncPairEditorVisible}\""));
+            Assert.That(foldersSection, Does.Contain("IsVisible=\"{Binding IsHeaderStatusVisible}\""));
             Assert.That(foldersSection, Does.Contain("Text=\"{Binding EditableDisplayName}\""));
             Assert.That(foldersSection, Does.Not.Contain("SelectedSyncPairEditableDisplayName"));
             Assert.That(foldersSection, Does.Contain("SaveSelectedSyncPairNameCommand"));

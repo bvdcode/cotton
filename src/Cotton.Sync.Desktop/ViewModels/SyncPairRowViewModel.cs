@@ -49,7 +49,13 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
     public bool IsEditorVisible
     {
         get => _isEditorVisible;
-        set => SetProperty(ref _isEditorVisible, value);
+        set
+        {
+            if (SetProperty(ref _isEditorVisible, value))
+            {
+                OnPropertyChanged(nameof(IsHeaderStatusVisible));
+            }
+        }
     }
 
     public string DisplayName
@@ -75,6 +81,8 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
     public string DisplayStatus => IsDecorativeIdleStatus(Status) ? string.Empty : Status;
 
     public bool HasDisplayStatus => !string.IsNullOrWhiteSpace(DisplayStatus);
+
+    public bool IsHeaderStatusVisible => HasDisplayStatus && !IsEditorVisible;
 
     public bool HasCurrentProgress
     {
@@ -151,6 +159,7 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
             {
                 OnPropertyChanged(nameof(DisplayStatus));
                 OnPropertyChanged(nameof(HasDisplayStatus));
+                OnPropertyChanged(nameof(IsHeaderStatusVisible));
             }
         }
     }
