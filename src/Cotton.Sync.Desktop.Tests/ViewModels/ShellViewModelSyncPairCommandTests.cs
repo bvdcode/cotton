@@ -1227,7 +1227,7 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
-    public async Task StatusChanged_KeepsCompletionNotificationOutOfDashboardWhileStatusCardIsVisible()
+    public async Task StatusChanged_RecordsCompletionNotificationWithoutDashboardCard()
     {
         Guid syncPairId = Guid.NewGuid();
         var controller = new FakeDesktopShellController(
@@ -1253,7 +1253,8 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.HasNotifications, Is.True);
-            Assert.That(viewModel.HasDashboardNotifications, Is.True);
+            Assert.That(viewModel.Notifications.Single().Title, Is.EqualTo("Initial sync complete"));
+            Assert.That(viewModel.HasDashboardNotifications, Is.False);
         });
 
         controller.ReportStatus(new DesktopSyncStatusSnapshot(

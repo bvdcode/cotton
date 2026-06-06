@@ -505,10 +505,15 @@ public sealed class DesktopSetupVisualContractTests
     public void DashboardNotifications_UseDashboardVisibilityGate()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string notificationsView = GetSlice(
+            mainWindowXaml,
+            "IsVisible=\"{Binding HasDashboardNotifications}\"",
+            "<Border Padding=\"10\"\n                MaxHeight=\"116\"");
 
         Assert.Multiple(() =>
         {
             Assert.That(mainWindowXaml, Does.Contain("IsVisible=\"{Binding HasDashboardNotifications}\""));
+            Assert.That(notificationsView, Does.Contain("IsVisible=\"{Binding IsDashboardVisible}\""));
             Assert.That(mainWindowXaml, Does.Not.Contain("IsVisible=\"{Binding HasNotifications}\""));
         });
     }

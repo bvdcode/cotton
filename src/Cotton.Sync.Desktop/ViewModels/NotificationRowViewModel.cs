@@ -5,6 +5,7 @@ namespace Cotton.Sync.Desktop.ViewModels;
 
 internal sealed class NotificationRowViewModel : ViewModelBase
 {
+    private bool _isDashboardVisible = true;
     private string _message = string.Empty;
     private string _title = string.Empty;
 
@@ -18,5 +19,11 @@ internal sealed class NotificationRowViewModel : ViewModelBase
     {
         get => _message;
         set => SetProperty(ref _message, value);
+    }
+
+    public bool IsDashboardVisible
+    {
+        get => _isDashboardVisible;
+        set => SetProperty(ref _isDashboardVisible, value);
     }
 }

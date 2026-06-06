@@ -564,7 +564,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public bool HasNotifications => Notifications.Count > 0;
 
     public bool HasDashboardNotifications =>
-        HasNotifications
+        Notifications.Any(static notification => notification.IsDashboardVisible)
         && !HasStatusAttention
         && !IsStatusCardVisible
         && !HasCurrentWorkProgress;
@@ -2701,6 +2701,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             {
                 Title = request.Title,
                 Message = request.Message,
+                IsDashboardVisible = IsDashboardNotificationKind(request.Kind),
             });
             AddActivity("Notification", string.Empty, request.Message);
             if (EnableNotifications && _notificationService.IsSupported)
@@ -2713,6 +2714,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         {
             Notifications.RemoveAt(Notifications.Count - 1);
         }
+    }
+
+    private static bool IsDashboardNotificationKind(DesktopNotificationKind kind)
+    {
+        return kind != DesktopNotificationKind.InitialSyncComplete;
     }
 
     private void ShowNativeNotification(string title, string message)

@@ -358,7 +358,8 @@
                           CornerRadius="6"
                           Background="{DynamicResource CottonSurfaceMutedBrush}"
                           BorderBrush="{DynamicResource CottonBorderBrush}"
-                          BorderThickness="1">
+                          BorderThickness="1"
+                          IsVisible="{Binding IsDashboardVisible}">
                     <Grid RowDefinitions="Auto,Auto"
                           RowSpacing="1">
                       <TextBlock Text="{Binding Title}"
