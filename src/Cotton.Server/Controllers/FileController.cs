@@ -1,9 +1,11 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Files;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Models.Enums;
 using Cotton.Previews;
 using Cotton.Previews.Http;
 using Cotton.Server.Abstractions;
@@ -13,7 +15,6 @@ using Cotton.Server.Hubs;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
-using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Abstractions;
@@ -34,6 +35,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Net.Http.Headers;
 using Quartz;
+using FileVersionDto = Cotton.Files.FileVersionDto;
 
 namespace Cotton.Server.Controllers
 {
@@ -156,10 +158,10 @@ namespace Cotton.Server.Controllers
         [HttpPost(Routes.V1.Files + "/{nodeFileId:guid}/restore")]
         public async Task<IActionResult> RestoreFile(
             [FromRoute] Guid nodeFileId,
-            [FromBody] RestoreItemRequest? request)
+            [FromBody] RestoreItemRequestDto? request)
         {
             Guid userId = User.GetUserId();
-            request ??= new RestoreItemRequest();
+            request ??= new RestoreItemRequestDto();
 
             var outcome = await _mediator.Send(new RestoreFileQuery(
                 userId,
@@ -187,7 +189,7 @@ namespace Cotton.Server.Controllers
         [HttpPatch(Routes.V1.Files + "/{nodeFileId:guid}/move")]
         public async Task<IActionResult> MoveFile(
             [FromRoute] Guid nodeFileId,
-            [FromBody] MoveFileRequest request)
+            [FromBody] MoveFileRequestDto request)
         {
             MoveFileCommand command = new()
             {
@@ -207,7 +209,7 @@ namespace Cotton.Server.Controllers
         [HttpPatch(Routes.V1.Files + "/{nodeFileId:guid}/rename")]
         public async Task<IActionResult> RenameFile(
             [FromRoute] Guid nodeFileId,
-            [FromBody] RenameFileRequest request)
+            [FromBody] RenameFileRequestDto request)
         {
             bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
                 out string normalizedName,
@@ -501,7 +503,7 @@ namespace Cotton.Server.Controllers
         [HttpPatch(Routes.V1.Files + "/{nodeFileId:guid}/update-content")]
         public async Task<IActionResult> UpdateFileContent(
             [FromRoute] Guid nodeFileId,
-            [FromBody] CreateFileRequest request)
+            [FromBody] CreateFileFromChunksRequestDto request)
         {
             bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
                 out string normalizedName,
@@ -578,11 +580,11 @@ namespace Cotton.Server.Controllers
         }
 
         private async Task<FileManifest> ResolveUpdateManifestAsync(
-            CreateFileRequest request,
+            CreateFileFromChunksRequestDto request,
             byte[] proposedHash,
             Guid userId)
         {
-            List<Chunk> chunks = await _fileManifestService.GetChunksAsync(request.ChunkHashes, userId);
+            List<Chunk> chunks = await _fileManifestService.GetChunksAsync([.. request.ChunkHashes], userId);
             return await _dbContext.FileManifests
                 .FirstOrDefaultAsync(x => x.ComputedContentHash == proposedHash || x.ProposedContentHash == proposedHash)
                 ?? await _fileManifestService.CreateNewFileManifestAsync(
@@ -1109,15 +1111,30 @@ namespace Cotton.Server.Controllers
         /// </summary>
         [Authorize]
         [HttpPost(Routes.V1.Files + "/from-chunks")]
-        public async Task<IActionResult> CreateFileFromChunks([FromBody] CreateFileRequest request)
+        public async Task<IActionResult> CreateFileFromChunks([FromBody] CreateFileFromChunksRequestDto request)
         {
             Guid userId = User.GetUserId();
-            request.UserId = userId;
-            NodeFileManifestDto manifest = await _mediator.Send(request);
+            NodeFileManifestDto manifest = await _mediator.Send(ToCreateFileRequest(request, userId));
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
             await _hubContext.Clients.User(userId.ToString()).SendAsync("FileCreated", manifest);
             return Ok(manifest);
+        }
+
+        private static CreateFileRequest ToCreateFileRequest(CreateFileFromChunksRequestDto request, Guid userId)
+        {
+            return new CreateFileRequest
+            {
+                NodeId = request.NodeId,
+                ChunkHashes = [.. request.ChunkHashes],
+                Name = request.Name,
+                ContentType = request.ContentType,
+                Hash = request.Hash,
+                OriginalNodeFileId = request.OriginalNodeFileId,
+                Metadata = request.Metadata,
+                Validate = request.Validate,
+                UserId = userId,
+            };
         }
     }
 }

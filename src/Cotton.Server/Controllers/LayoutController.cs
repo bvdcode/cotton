@@ -1,9 +1,12 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Files;
+using Cotton.Nodes;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Layouts;
@@ -131,7 +134,7 @@ namespace Cotton.Server.Controllers
         [HttpPatch("nodes/{nodeId:guid}/move")]
         public async Task<IActionResult> MoveLayoutNode(
             [FromRoute] Guid nodeId,
-            [FromBody] MoveNodeRequest request)
+            [FromBody] MoveNodeRequestDto request)
         {
             MoveNodeCommand command = new()
             {
@@ -150,7 +153,7 @@ namespace Cotton.Server.Controllers
         [HttpPatch("nodes/{nodeId:guid}/rename")]
         public async Task<IActionResult> RenameLayoutNode(
             [FromRoute] Guid nodeId,
-            [FromBody] RenameNodeRequest request)
+            [FromBody] RenameNodeRequestDto request)
         {
             bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
                 out string normalizedName,
@@ -338,10 +341,10 @@ namespace Cotton.Server.Controllers
         [HttpPost("nodes/{nodeId:guid}/restore")]
         public async Task<IActionResult> RestoreLayoutNode(
             [FromRoute] Guid nodeId,
-            [FromBody] RestoreItemRequest? request)
+            [FromBody] RestoreItemRequestDto? request)
         {
             Guid userId = User.GetUserId();
-            request ??= new RestoreItemRequest();
+            request ??= new RestoreItemRequestDto();
 
             var outcome = await _mediator.Send(new RestoreNodeQuery(
                 userId,
@@ -367,7 +370,7 @@ namespace Cotton.Server.Controllers
         /// </summary>
         [Authorize]
         [HttpPut("nodes")]
-        public async Task<IActionResult> CreateLayoutNode([FromBody] CreateNodeRequest request)
+        public async Task<IActionResult> CreateLayoutNode([FromBody] CreateNodeRequestDto request)
         {
             bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
                 out string normalizedName,
