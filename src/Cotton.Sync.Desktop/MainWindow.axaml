@@ -20,13 +20,13 @@
             BorderBrush="{DynamicResource CottonBorderBrush}"
             BorderThickness="0,0,0,1"
             Padding="12,9"
-            IsVisible="{Binding IsDashboardVisible}">
+            IsVisible="{Binding IsDashboardChromeVisible}">
       <Grid ColumnDefinitions="Auto,*,Auto"
             ColumnSpacing="10">
         <Border Width="34"
                 Height="34"
                 CornerRadius="8"
-                Background="{DynamicResource CottonPrimarySoftBrush}"
+                Background="{DynamicResource CottonPrimaryTextBrush}"
                 VerticalAlignment="Center">
           <Image Source="avares://Cotton.Sync.Desktop/Assets/icon-192.png"
                  Width="24"
@@ -97,7 +97,7 @@
           <Border Width="50"
                   Height="50"
                   CornerRadius="10"
-                  Background="{DynamicResource CottonPrimaryBrush}"
+                  Background="{DynamicResource CottonPrimaryTextBrush}"
                   HorizontalAlignment="Center"
                   BorderBrush="{DynamicResource CottonSecondaryBrush}"
                   BorderThickness="1">
@@ -1043,7 +1043,7 @@
       <Border Grid.RowSpan="3"
               Background="Transparent"
               IsVisible="{Binding IsSettingsVisible}">
-        <Border Margin="10"
+        <Border Margin="0"
                 Padding="12"
                 CornerRadius="7"
                 Background="{DynamicResource CottonSurfaceBrush}"
