@@ -861,6 +861,13 @@ public sealed class SyncApplicationServiceTests
             return Task.FromResult<IReadOnlyList<SyncStateEntry>>([]);
         }
 
+        public IAsyncEnumerable<SyncStateEntry> LoadPairEntriesAsync(
+            string syncPairId,
+            CancellationToken cancellationToken = default)
+        {
+            return EmptyEntries();
+        }
+
         public Task<SyncChangeCursor> GetChangeCursorAsync(
             string syncPairId,
             CancellationToken cancellationToken = default)
@@ -906,6 +913,12 @@ public sealed class SyncApplicationServiceTests
             CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
+        }
+
+        private static async IAsyncEnumerable<SyncStateEntry> EmptyEntries()
+        {
+            await Task.CompletedTask.ConfigureAwait(false);
+            yield break;
         }
     }
 

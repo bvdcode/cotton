@@ -74,22 +74,14 @@ public sealed class SyncEngine : ISyncEngine
             .ConfigureAwait(false);
         ReportRunProgress(options, SyncRunProgressStage.ScanningRemote, 0, null, null, startedAtUtc);
         RemoteTreeSnapshot remoteTree = await _remoteCrawler.CrawlAsync(syncPair.RemoteRootNodeId, cancellationToken).ConfigureAwait(false);
-        IReadOnlyList<SyncStateEntry> stateEntries = await _stateStore
-            .LoadPairAsync(syncPair.SyncPairId, cancellationToken)
-            .ConfigureAwait(false);
-        stateEntries = await RemoveIgnoredStateEntriesAsync(syncPair.SyncPairId, stateEntries, cancellationToken).ConfigureAwait(false);
+        (Dictionary<string, SyncStateEntry> directoryStateByPath, Dictionary<string, SyncStateEntry> stateByPath) =
+            await LoadStateByPathAsync(syncPair.SyncPairId, cancellationToken).ConfigureAwait(false);
         var result = new SyncRunResult();
 
         Dictionary<string, LocalDirectorySnapshot> localDirectoriesByPath = ToDictionary(localTree.Directories, directory => directory.RelativePath);
         Dictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath = ToDictionary(remoteTree.Directories, directory => directory.RelativePath);
-        Dictionary<string, SyncStateEntry> directoryStateByPath = ToDictionary(
-            stateEntries.Where(entry => entry.Kind == SyncEntryKind.Directory),
-            entry => entry.RelativePath);
         Dictionary<string, LocalFileSnapshot> localByPath = ToDictionary(localTree.Files, file => file.RelativePath);
         Dictionary<string, RemoteFileSnapshot> remoteByPath = ToDictionary(remoteTree.Files, file => file.RelativePath);
-        Dictionary<string, SyncStateEntry> stateByPath = ToDictionary(
-            stateEntries.Where(entry => entry.Kind == SyncEntryKind.File),
-            entry => entry.RelativePath);
         ThrowIfPathKindCollisions(
             localDirectoriesByPath,
             localByPath,
@@ -170,34 +162,37 @@ public sealed class SyncEngine : ISyncEngine
         return result;
     }
 
-    private async Task<IReadOnlyList<SyncStateEntry>> RemoveIgnoredStateEntriesAsync(
+    private async Task<(Dictionary<string, SyncStateEntry> DirectoryStateByPath, Dictionary<string, SyncStateEntry> FileStateByPath)> LoadStateByPathAsync(
         string syncPairId,
-        IReadOnlyList<SyncStateEntry> stateEntries,
         CancellationToken cancellationToken)
     {
-        List<SyncStateEntry>? filteredEntries = null;
-        for (int index = 0; index < stateEntries.Count; index++)
+        var directoryStateByPath = new Dictionary<string, SyncStateEntry>(PathComparer);
+        var fileStateByPath = new Dictionary<string, SyncStateEntry>(PathComparer);
+        await foreach (SyncStateEntry entry in _stateStore.LoadPairEntriesAsync(syncPairId, cancellationToken)
+                           .WithCancellation(cancellationToken)
+                           .ConfigureAwait(false))
         {
-            SyncStateEntry entry = stateEntries[index];
-            if (!SyncPathIgnoreRules.ShouldIgnore(entry.RelativePath))
+            if (SyncPathIgnoreRules.ShouldIgnore(entry.RelativePath))
             {
-                filteredEntries?.Add(entry);
+                await _stateStore.DeleteAsync(syncPairId, entry.RelativePath, cancellationToken).ConfigureAwait(false);
                 continue;
             }
 
-            if (filteredEntries is null)
+            string key = SyncPath.ToKey(entry.RelativePath);
+            switch (entry.Kind)
             {
-                filteredEntries = new List<SyncStateEntry>(stateEntries.Count - 1);
-                for (int previousIndex = 0; previousIndex < index; previousIndex++)
-                {
-                    filteredEntries.Add(stateEntries[previousIndex]);
-                }
+                case SyncEntryKind.Directory:
+                    directoryStateByPath.Add(key, entry);
+                    break;
+                case SyncEntryKind.File:
+                    fileStateByPath.Add(key, entry);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(entry), entry.Kind, "Unknown sync state entry kind.");
             }
-
-            await _stateStore.DeleteAsync(syncPairId, entry.RelativePath, cancellationToken).ConfigureAwait(false);
         }
 
-        return filteredEntries ?? stateEntries;
+        return (directoryStateByPath, fileStateByPath);
     }
 
     private async Task EnsureLocalContentHashesForStateFilesAsync(

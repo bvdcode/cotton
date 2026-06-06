@@ -47,6 +47,21 @@ public sealed class SyncEngineTests
         });
     }
 
+    [Test]
+    public async Task RunOnceAsync_LoadsBaselineThroughStreamingStateApi()
+    {
+        var stateStore = new StreamingOnlyStateStore(new SqliteSyncStateStore(_databasePath));
+        SyncEngine engine = new(
+            new FakeLocalFileScanner(),
+            new FakeRemoteTreeCrawler(EmptyRemoteTree()),
+            new FakeRemoteFileSynchronizer(),
+            stateStore);
+
+        await engine.RunOnceAsync(Pair());
+
+        Assert.That(stateStore.LoadPairEntriesCallCount, Is.EqualTo(1));
+    }
+
     [SetUp]
     public void SetUp()
     {
@@ -2176,6 +2191,13 @@ public sealed class SyncEngineTests
             return _inner.LoadPairAsync(syncPairId, cancellationToken);
         }
 
+        public virtual IAsyncEnumerable<SyncStateEntry> LoadPairEntriesAsync(
+            string syncPairId,
+            CancellationToken cancellationToken = default)
+        {
+            return _inner.LoadPairEntriesAsync(syncPairId, cancellationToken);
+        }
+
         public virtual Task<SyncChangeCursor> GetChangeCursorAsync(string syncPairId, CancellationToken cancellationToken = default)
         {
             return _inner.GetChangeCursorAsync(syncPairId, cancellationToken);
@@ -2235,6 +2257,31 @@ public sealed class SyncEngineTests
         public override Task DeleteAsync(string syncPairId, string relativePath, CancellationToken cancellationToken = default)
         {
             throw new InvalidOperationException("State delete failed.");
+        }
+    }
+
+    private sealed class StreamingOnlyStateStore : DelegatingStateStore
+    {
+        public StreamingOnlyStateStore(ISyncStateStore inner)
+            : base(inner)
+        {
+        }
+
+        public int LoadPairEntriesCallCount { get; private set; }
+
+        public override Task<IReadOnlyList<SyncStateEntry>> LoadPairAsync(
+            string syncPairId,
+            CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("SyncEngine should use streamed state loading.");
+        }
+
+        public override IAsyncEnumerable<SyncStateEntry> LoadPairEntriesAsync(
+            string syncPairId,
+            CancellationToken cancellationToken = default)
+        {
+            LoadPairEntriesCallCount++;
+            return base.LoadPairEntriesAsync(syncPairId, cancellationToken);
         }
     }
 }

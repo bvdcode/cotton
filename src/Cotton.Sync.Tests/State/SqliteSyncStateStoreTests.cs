@@ -38,6 +38,39 @@ public sealed class SqliteSyncStateStoreTests
     }
 
     [Test]
+    public async Task LoadPairEntriesAsync_StreamsEntriesInPathOrder()
+    {
+        var store = CreateStore();
+        await store.InitializeAsync();
+        await store.UpsertAsync(new SyncStateEntry
+        {
+            SyncPairId = "pair-a",
+            RelativePath = "z-last.txt",
+            Kind = SyncEntryKind.File,
+        });
+        await store.UpsertAsync(new SyncStateEntry
+        {
+            SyncPairId = "pair-a",
+            RelativePath = "a-first.txt",
+            Kind = SyncEntryKind.File,
+        });
+        await store.UpsertAsync(new SyncStateEntry
+        {
+            SyncPairId = "pair-b",
+            RelativePath = "ignored.txt",
+            Kind = SyncEntryKind.File,
+        });
+
+        var entries = new List<SyncStateEntry>();
+        await foreach (SyncStateEntry entry in store.LoadPairEntriesAsync("pair-a"))
+        {
+            entries.Add(entry);
+        }
+
+        Assert.That(entries.Select(entry => entry.RelativePath), Is.EqualTo(new[] { "a-first.txt", "z-last.txt" }));
+    }
+
+    [Test]
     public async Task GetChangeCursorAsync_ReturnsDefaultCursorForNewPair()
     {
         var store = CreateStore();

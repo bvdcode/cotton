@@ -19,6 +19,13 @@ public interface ISyncStateStore
     Task<IReadOnlyList<SyncStateEntry>> LoadPairAsync(string syncPairId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Streams all entries for a sync pair.
+    /// </summary>
+    IAsyncEnumerable<SyncStateEntry> LoadPairEntriesAsync(
+        string syncPairId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Loads the remote change-feed checkpoint for a sync pair.
     /// </summary>
     Task<SyncChangeCursor> GetChangeCursorAsync(string syncPairId, CancellationToken cancellationToken = default);

@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Data.Common;
+using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Sync.State;
@@ -35,6 +36,22 @@ public sealed class SqliteSyncStateStore : ISyncStateStore
     /// <inheritdoc />
     public async Task<IReadOnlyList<SyncStateEntry>> LoadPairAsync(string syncPairId, CancellationToken cancellationToken = default)
     {
+        var entries = new List<SyncStateEntry>();
+        await foreach (SyncStateEntry entry in LoadPairEntriesAsync(syncPairId, cancellationToken)
+                           .WithCancellation(cancellationToken)
+                           .ConfigureAwait(false))
+        {
+            entries.Add(entry);
+        }
+
+        return entries;
+    }
+
+    /// <inheritdoc />
+    public async IAsyncEnumerable<SyncStateEntry> LoadPairEntriesAsync(
+        string syncPairId,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(syncPairId);
         await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
         await using SyncStateDbContext context = CreateContext();
@@ -43,13 +60,10 @@ public sealed class SqliteSyncStateStore : ISyncStateStore
             .Where(entry => entry.SyncPairId == syncPairId)
             .OrderBy(entry => entry.RelativePathKey)
             .AsAsyncEnumerable();
-        var entries = new List<SyncStateEntry>();
         await foreach (SyncStateEntity entity in entities.WithCancellation(cancellationToken).ConfigureAwait(false))
         {
-            entries.Add(ToModel(entity));
+            yield return ToModel(entity);
         }
-
-        return entries;
     }
 
     /// <inheritdoc />
