@@ -52,13 +52,6 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
         set => SetProperty(ref _isEditorVisible, value);
     }
 
-    public string ModeLabel => Mode switch
-    {
-        SyncPairMode.FullMirror => "Full mirror",
-        SyncPairMode.VirtualFilesPlaceholder => "Virtual files",
-        _ => "Unknown",
-    };
-
     public string DisplayName
     {
         get => _displayName;
@@ -112,13 +105,7 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
     public SyncPairMode Mode
     {
         get => _mode;
-        set
-        {
-            if (SetProperty(ref _mode, value))
-            {
-                OnPropertyChanged(nameof(ModeLabel));
-            }
-        }
+        set => SetProperty(ref _mode, value);
     }
 
     public DateTime? LastSyncedAtUtc
