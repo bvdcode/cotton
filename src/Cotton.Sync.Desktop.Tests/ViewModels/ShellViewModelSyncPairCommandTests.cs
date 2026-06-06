@@ -467,15 +467,13 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Syncing 2 folders"));
             Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("10 of 40 files across 2 folders"));
             Assert.That(viewModel.HasCurrentTransfer, Is.True);
-            Assert.That(viewModel.CurrentTransferTitle, Is.EqualTo("Documents: Uploading quarterly-budget.xlsx"));
+            Assert.That(viewModel.CurrentTransferTitle, Is.EqualTo("Camera uploads: Downloading 07.7z"));
             Assert.That(viewModel.CurrentTransferDetails, Does.Contain("/s"));
             Assert.That(viewModel.CurrentTransferDetails, Does.Contain("left"));
             Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Syncing 2 folders"));
-            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Does.StartWith("6.0 MB / 24 MB"));
-            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Does.Contain("/s"));
-            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Does.Contain("left"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("7.0 MB / 27 MB · 4.0 MB/s · 5s left"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("10 of 40 files across 2 folders"));
-            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Documents: Uploading quarterly-budget.xlsx"));
+            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("2 files transferring"));
         });
     }
 
@@ -1167,30 +1165,10 @@ public sealed class ShellViewModelSyncPairCommandTests
     {
         Guid documentsPairId = Guid.NewGuid();
         Guid videosPairId = Guid.NewGuid();
-        var controller = new FakeDesktopShellController(
-            CreateSignedInSnapshot(
-                CreatePair(documentsPairId, "Documents", "Syncing"),
-                CreatePair(videosPairId, "Videos", "Syncing")));
+        FakeDesktopShellController controller = CreateTwoFolderSyncingController(documentsPairId, videosPairId);
         using ShellViewModel viewModel = CreateViewModel(controller);
         await viewModel.InitializeAsync();
-        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
-            documentsPairId,
-            SyncRunProgressStage.ReconcilingFiles,
-            FilesCompleted: 3,
-            FilesTotal: 10,
-            CurrentPath: "Reports/report.txt",
-            StartedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
-            IsCompleted: false,
-            OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 5, DateTimeKind.Utc)));
-        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
-            videosPairId,
-            SyncRunProgressStage.ReconcilingFiles,
-            FilesCompleted: 5,
-            FilesTotal: 20,
-            CurrentPath: "Videos/clip.mp4",
-            StartedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
-            IsCompleted: false,
-            OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 6, DateTimeKind.Utc)));
+        ReportTwoFolderCheckingProgress(controller, documentsPairId, videosPairId);
 
         controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
             documentsPairId,
@@ -1210,6 +1188,73 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Documents: Uploading report.txt"));
             Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(26.666).Within(0.01));
             Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task TransferProgressChanged_AggregatesHeaderMetricsForMultipleActiveTransfers()
+    {
+        Guid documentsPairId = Guid.NewGuid();
+        Guid videosPairId = Guid.NewGuid();
+        FakeDesktopShellController controller = CreateTwoFolderSyncingController(documentsPairId, videosPairId);
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        ReportTwoFolderCheckingProgress(controller, documentsPairId, videosPairId);
+
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            documentsPairId,
+            SyncTransferDirection.Upload,
+            "Reports/report.txt",
+            TransferredBytes: 512,
+            TotalBytes: 1024,
+            IsCompleted: false,
+            new DateTime(2026, 6, 4, 9, 0, 7, DateTimeKind.Utc),
+            SpeedBytesPerSecond: 256));
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            videosPairId,
+            SyncTransferDirection.Download,
+            "Videos/clip.mp4",
+            TransferredBytes: 1536,
+            TotalBytes: 3072,
+            IsCompleted: false,
+            new DateTime(2026, 6, 4, 9, 0, 8, DateTimeKind.Utc),
+            SpeedBytesPerSecond: 512));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Syncing 2 folders"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("2.0 KB / 4.0 KB · 768 B/s · 3s left"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("8 of 30 files across 2 folders"));
+            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("2 files transferring"));
+            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(26.666).Within(0.01));
+        });
+    }
+
+    [Test]
+    public async Task TransferProgressChanged_DoesNotDuplicateAggregateRunDetailsAfterTransferCompletes()
+    {
+        Guid documentsPairId = Guid.NewGuid();
+        Guid videosPairId = Guid.NewGuid();
+        FakeDesktopShellController controller = CreateTwoFolderSyncingController(documentsPairId, videosPairId);
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        ReportTwoFolderCheckingProgress(controller, documentsPairId, videosPairId);
+
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            documentsPairId,
+            SyncTransferDirection.Upload,
+            "Reports/report.txt",
+            TransferredBytes: 1024,
+            TotalBytes: 1024,
+            IsCompleted: true,
+            new DateTime(2026, 6, 4, 9, 0, 7, DateTimeKind.Utc)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Syncing 2 folders"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.Empty);
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("8 of 30 files across 2 folders"));
+            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.Empty);
         });
     }
 
@@ -2902,6 +2947,39 @@ public sealed class ShellViewModelSyncPairCommandTests
             status,
             Guid.NewGuid(),
             lastSyncedAtUtc);
+    }
+
+    private static FakeDesktopShellController CreateTwoFolderSyncingController(Guid documentsPairId, Guid videosPairId)
+    {
+        return new FakeDesktopShellController(
+            CreateSignedInSnapshot(
+                CreatePair(documentsPairId, "Documents", "Syncing"),
+                CreatePair(videosPairId, "Videos", "Syncing")));
+    }
+
+    private static void ReportTwoFolderCheckingProgress(
+        FakeDesktopShellController controller,
+        Guid documentsPairId,
+        Guid videosPairId)
+    {
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            documentsPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 3,
+            FilesTotal: 10,
+            CurrentPath: "Reports/report.txt",
+            StartedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 5, DateTimeKind.Utc)));
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            videosPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 5,
+            FilesTotal: 20,
+            CurrentPath: "Videos/clip.mp4",
+            StartedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 6, DateTimeKind.Utc)));
     }
 
     private sealed class FakeDesktopShellController : IDesktopShellController

@@ -33,6 +33,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private readonly object _progressDispatchGate = new();
     private readonly DesktopNotificationTracker _notificationTracker = new();
     private readonly Dictionary<Guid, DesktopRunProgressSnapshot> _runProgressByPair = [];
+    private readonly Dictionary<Guid, DesktopTransferProgressSnapshot> _transferProgressByPair = [];
     private readonly SyncPairSettingsValidator _syncPairSettingsValidator = new();
     private readonly Dictionary<Guid, string> _lastStatusErrorActivityMessages = [];
     private string _accountName = "Signed out";
@@ -484,8 +485,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         ? CurrentRunProgressTitle
         : HasCurrentTransfer ? CurrentTransferTitle : CurrentRunProgressTitle;
 
-    public string CurrentWorkProgressHeaderDetails => IsAggregateRunProgressPrimary && HasCurrentTransfer
-        ? CurrentTransferDetails
+    public string CurrentWorkProgressHeaderDetails => IsAggregateRunProgressPrimary && HasActiveAggregateTransferProgress
+        ? CreateAggregateTransferDetails(_transferProgressByPair.Values)
         : string.Empty;
 
     public bool HasCurrentWorkProgressHeaderDetails => !string.IsNullOrWhiteSpace(CurrentWorkProgressHeaderDetails);
@@ -498,9 +499,16 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         get
         {
-            if (IsAggregateRunProgressPrimary && HasCurrentTransfer)
+            if (IsAggregateRunProgressPrimary)
             {
-                return CurrentTransferTitle;
+                if (HasActiveAggregateTransferProgress)
+                {
+                    return _transferProgressByPair.Count > 1
+                        ? _transferProgressByPair.Count.ToString(CultureInfo.CurrentCulture) + " files transferring"
+                        : CurrentTransferTitle;
+                }
+
+                return string.Empty;
             }
 
             return HasCurrentTransfer && HasCurrentRunProgress
@@ -520,6 +528,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         : HasCurrentTransfer ? IsCurrentTransferIndeterminate : IsCurrentRunProgressIndeterminate;
 
     private bool IsAggregateRunProgressPrimary => _runProgressByPair.Count > 1;
+
+    private bool HasActiveAggregateTransferProgress => _transferProgressByPair.Count > 0;
 
     public bool IsBusy
     {
@@ -1367,6 +1377,20 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             startedAtUtc.AddSeconds(2),
             SpeedBytesPerSecond: 3_145_728,
             EstimatedTimeRemaining: TimeSpan.FromSeconds(6)));
+        if (secondSyncPair is not null)
+        {
+            ApplyTransferProgress(new DesktopTransferProgressSnapshot(
+                secondSyncPair.Id,
+                SyncTransferDirection.Download,
+                "Blink/2024/07.7z",
+                TransferredBytes: 1_048_576,
+                TotalBytes: 3_145_728,
+                IsCompleted: false,
+                startedAtUtc.AddSeconds(2),
+                SpeedBytesPerSecond: 1_048_576,
+                EstimatedTimeRemaining: TimeSpan.FromSeconds(2)));
+        }
+
         AddActivity("Upload", "Reports/quarterly-budget.xlsx", "Uploading quarterly-budget.xlsx");
     }
 
@@ -2778,6 +2802,15 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         CurrentTransferProgressValue = CalculateProgressValue(progress);
         CurrentTransferTitle = CreateTransferTitle(progress, syncPair.DisplayName);
         CurrentTransferDetails = CreateTransferDetails(progress);
+        if (progress.IsCompleted)
+        {
+            _transferProgressByPair.Remove(progress.SyncPairId);
+        }
+        else
+        {
+            _transferProgressByPair[progress.SyncPairId] = progress;
+        }
+
         syncPair.CurrentOperation = CreateTransferOperation(progress);
         syncPair.HasCurrentProgress = true;
         syncPair.IsCurrentProgressIndeterminate = IsCurrentTransferIndeterminate;
@@ -2847,6 +2880,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             {
                 ClearSyncPairProgress(row);
                 runProgressChanged |= _runProgressByPair.Remove(pairStatus.Id);
+                _transferProgressByPair.Remove(pairStatus.Id);
                 shouldClearCurrentTransfer |= _transferSyncPairId == pairStatus.Id;
             }
 
@@ -3278,6 +3312,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         CurrentTransferProgressValue = 0;
         CurrentTransferTitle = string.Empty;
         CurrentTransferDetails = string.Empty;
+        _transferProgressByPair.Clear();
         _transferSyncPairId = null;
         _transferDirection = SyncTransferDirection.Unknown;
         _transferRelativePath = string.Empty;
@@ -3524,6 +3559,48 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         if (progress.EstimatedTimeRemaining.HasValue)
         {
             details += " · " + FormatDuration(progress.EstimatedTimeRemaining.Value) + " left";
+        }
+
+        return details;
+    }
+
+    private static string CreateAggregateTransferDetails(IEnumerable<DesktopTransferProgressSnapshot> progressValues)
+    {
+        long transferredBytes = 0;
+        long totalBytes = 0;
+        bool hasTotalBytes = true;
+        double speedBytesPerSecond = 0;
+        foreach (DesktopTransferProgressSnapshot progress in progressValues)
+        {
+            transferredBytes += progress.TransferredBytes;
+            if (progress.TotalBytes.HasValue)
+            {
+                totalBytes += progress.TotalBytes.Value;
+            }
+            else
+            {
+                hasTotalBytes = false;
+            }
+
+            if (progress.SpeedBytesPerSecond is > 0)
+            {
+                speedBytesPerSecond += progress.SpeedBytesPerSecond.Value;
+            }
+        }
+
+        string details = hasTotalBytes
+            ? FormatBytes(transferredBytes) + " / " + FormatBytes(totalBytes)
+            : FormatBytes(transferredBytes);
+        if (speedBytesPerSecond <= 0)
+        {
+            return details;
+        }
+
+        details += " · " + FormatBytes(speedBytesPerSecond) + "/s";
+        if (hasTotalBytes && totalBytes > transferredBytes)
+        {
+            TimeSpan remaining = TimeSpan.FromSeconds((totalBytes - transferredBytes) / speedBytesPerSecond);
+            details += " · " + FormatDuration(remaining) + " left";
         }
 
         return details;
