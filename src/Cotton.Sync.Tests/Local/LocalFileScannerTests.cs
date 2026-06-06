@@ -160,6 +160,41 @@ public sealed class LocalFileScannerTests
     }
 
     [Test]
+    public async Task ScanTreeAsync_PrunesIgnoredDirectoriesBeforeEnumeratingChildren()
+    {
+        string blockedDirectory = FullPath(Path.Combine(".cotton-sync", "blocked"));
+        Directory.CreateDirectory(blockedDirectory);
+        WriteFile(Path.Combine(".cotton-sync", "blocked", "state.db"), "state");
+        WriteFile("keep.txt", "keep");
+        UnixFileMode? originalMode = null;
+        if (!OperatingSystem.IsWindows())
+        {
+            originalMode = File.GetUnixFileMode(blockedDirectory);
+            File.SetUnixFileMode(blockedDirectory, UnixFileMode.None);
+        }
+
+        try
+        {
+            var scanner = new LocalFileScanner();
+
+            LocalTreeSnapshot tree = await scanner.ScanTreeAsync(_root);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(tree.Directories, Is.Empty);
+                Assert.That(tree.Files.Select(static file => file.RelativePath), Is.EqualTo(new[] { "keep.txt" }));
+            });
+        }
+        finally
+        {
+            if (!OperatingSystem.IsWindows() && originalMode.HasValue)
+            {
+                File.SetUnixFileMode(blockedDirectory, originalMode.Value);
+            }
+        }
+    }
+
+    [Test]
     public async Task ScanAsync_IgnoresSymlinkFilesAndDoesNotTraverseSymlinkDirectories()
     {
         WriteFile("target.txt", "target");
