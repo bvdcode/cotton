@@ -55,7 +55,7 @@
                   ToolTip.Tip="Sync now"
                   IsVisible="{Binding CanSyncNow}"
                   Command="{Binding SyncNowCommand}">
-            <materialIcons:MaterialIcon Kind="RefreshCircle"
+            <materialIcons:MaterialIcon Kind="Refresh"
                                         Width="16"
                                         Height="16"
                                         Foreground="{DynamicResource CottonTextPrimaryBrush}" />
@@ -330,7 +330,7 @@
                       ToolTip.Tip="Run synchronization again"
                       IsVisible="{Binding CanRetryActionRequired}"
                       Command="{Binding SyncNowCommand}">
-                <materialIcons:MaterialIcon Kind="RefreshCircle"
+                <materialIcons:MaterialIcon Kind="Refresh"
                                             Width="16"
                                             Height="16"
                                             Foreground="{DynamicResource CottonTextPrimaryBrush}" />
@@ -401,7 +401,7 @@
                       Classes="icon"
                       ToolTip.Tip="Run synchronization again"
                       Command="{Binding SyncNowCommand}">
-                <materialIcons:MaterialIcon Kind="RefreshCircle"
+                <materialIcons:MaterialIcon Kind="Refresh"
                                             Width="16"
                                             Height="16"
                                             Foreground="{DynamicResource CottonTextPrimaryBrush}" />

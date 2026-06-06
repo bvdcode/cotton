@@ -26,6 +26,18 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
+    public void RefreshActions_UseUncircledIcon()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(mainWindowXaml, Does.Not.Contain("Kind=\"RefreshCircle\""));
+            Assert.That(CountOccurrences(mainWindowXaml, "Kind=\"Refresh\""), Is.EqualTo(3));
+        });
+    }
+
+    [Test]
     public void SetupView_DoesNotRenderNumberedStepper()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
@@ -402,17 +414,17 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(dashboardHeader, Does.Contain("Text=\"{Binding HeaderTitleText}\""));
             Assert.That(dashboardHeader, Does.Not.Contain("<TextBlock Text=\"Cotton Sync\""));
             Assert.That(dashboardHeader, Does.Contain("ToolTip.Tip=\"Sync now\""));
-            Assert.That(dashboardHeader, Does.Contain("Kind=\"RefreshCircle\""));
+            Assert.That(dashboardHeader, Does.Contain("Kind=\"Refresh\""));
             Assert.That(dashboardHeader, Does.Contain("IsVisible=\"{Binding CanSyncNow}\""));
             Assert.That(dashboardHeader, Does.Not.Contain("Content=\"Sync\""));
-            Assert.That(actionRequiredRow, Does.Contain("Kind=\"RefreshCircle\""));
+            Assert.That(actionRequiredRow, Does.Contain("Kind=\"Refresh\""));
             Assert.That(actionRequiredRow, Does.Contain("Kind=\"CheckCircleOutline\""));
             Assert.That(actionRequiredRow, Does.Contain("MaxLines=\"3\""));
             Assert.That(actionRequiredRow, Does.Contain("TextWrapping=\"Wrap\""));
             Assert.That(actionRequiredRow, Does.Contain("ToolTip.Tip=\"{Binding ActionRequiredMessage}\""));
             Assert.That(actionRequiredRow, Does.Not.Contain("Content=\"Retry\""));
             Assert.That(actionRequiredRow, Does.Not.Contain("Content=\"Check\""));
-            Assert.That(conflictsHeader, Does.Contain("Kind=\"RefreshCircle\""));
+            Assert.That(conflictsHeader, Does.Contain("Kind=\"Refresh\""));
             Assert.That(conflictsHeader, Does.Not.Contain("OpenConflictCommand"));
             Assert.That(conflictsHeader, Does.Not.Contain("Open selected conflict location"));
             Assert.That(conflictsSection, Does.Contain("OpenConflictCommand"));
