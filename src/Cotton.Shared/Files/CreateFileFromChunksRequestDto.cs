@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System;
+using System.Collections.Generic;
+
 namespace Cotton.Files
 {
     /// <summary>
@@ -47,43 +50,5 @@ namespace Cotton.Files
         /// Gets or sets a value indicating whether the server should validate reconstructed content hash.
         /// </summary>
         public bool Validate { get; set; }
-    }
-
-    /// <summary>
-    /// Represents a move-file request.
-    /// </summary>
-    public class MoveFileRequestDto
-    {
-        /// <summary>
-        /// Gets or sets the target parent node identifier.
-        /// </summary>
-        public Guid ParentId { get; set; }
-    }
-
-    /// <summary>
-    /// Represents a rename-file request.
-    /// </summary>
-    public class RenameFileRequestDto
-    {
-        /// <summary>
-        /// Gets or sets the new display name.
-        /// </summary>
-        public string Name { get; set; } = string.Empty;
-    }
-
-    /// <summary>
-    /// Represents a restore request for a trashed node or file.
-    /// </summary>
-    public class RestoreItemRequestDto
-    {
-        /// <summary>
-        /// Gets or sets a value indicating whether missing parent folders should be recreated.
-        /// </summary>
-        public bool CreateMissingParents { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether existing target entries can be overwritten.
-        /// </summary>
-        public bool Overwrite { get; set; }
     }
 }

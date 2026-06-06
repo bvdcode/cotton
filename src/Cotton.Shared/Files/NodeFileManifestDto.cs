@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-using Cotton.Common;
+using EasyExtensions.Models.Dto;
+using System;
+using System.Collections.Generic;
 
 namespace Cotton.Files
 {
     /// <summary>
     /// Represents a visible Cotton file entry and its immutable content manifest metadata.
     /// </summary>
-    public class NodeFileManifestDto : BaseApiDto
+    public class NodeFileManifestDto : BaseDto<Guid>
     {
         /// <summary>
         /// Gets or sets the parent node identifier.
@@ -55,16 +57,10 @@ namespace Cotton.Files
         /// </summary>
         public string ETag { get; set; } = string.Empty;
 
-        private Dictionary<string, string> _metadata = [];
-
         /// <summary>
         /// Gets or sets structured metadata attached to the file entry.
         /// </summary>
-        public Dictionary<string, string> Metadata
-        {
-            get => _metadata;
-            set => _metadata = value ?? [];
-        }
+        public Dictionary<string, string> Metadata { get; set; } = [];
 
         /// <summary>
         /// Gets or sets a value indicating whether server-side video transcoding is required for playback.

@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-using Cotton.Common;
+using EasyExtensions.Models.Dto;
+using System;
+using System.Collections.Generic;
 
 namespace Cotton.Auth
 {
     /// <summary>
     /// Represents the current authenticated Cotton user.
     /// </summary>
-    public class UserDto : BaseApiDto
+    public class UserDto : BaseDto<Guid>
     {
         /// <summary>
         /// Gets or sets the normalized username.

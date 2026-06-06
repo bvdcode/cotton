@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-using Cotton.Common;
 using Cotton.Files;
+using EasyExtensions.Models.Dto;
+using System;
+using System.Collections.Generic;
 
 namespace Cotton.Nodes
 {
     /// <summary>
     /// Represents one page of child nodes and files under a Cotton node.
     /// </summary>
-    public class NodeContentDto : BaseApiDto
+    public class NodeContentDto : BaseDto<Guid>
     {
         /// <summary>
         /// Gets or sets the total number of child entries matching the request.

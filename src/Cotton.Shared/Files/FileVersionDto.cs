@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using EasyExtensions.Models.Dto;
+using System;
+
 namespace Cotton.Files
 {
     /// <summary>
     /// Represents one file version entry in a Cotton file lineage.
     /// </summary>
-    public class FileVersionDto
+    public class FileVersionDto : BaseDto<Guid>
     {
-        /// <summary>
-        /// Gets or sets the version row identifier.
-        /// </summary>
-        public Guid Id { get; set; }
-
         /// <summary>
         /// Gets or sets the current visible node file identifier.
         /// </summary>
@@ -37,11 +35,6 @@ namespace Cotton.Files
         /// Gets or sets the content size in bytes.
         /// </summary>
         public long SizeBytes { get; set; }
-
-        /// <summary>
-        /// Gets or sets the UTC creation timestamp.
-        /// </summary>
-        public DateTime CreatedAt { get; set; }
 
         /// <summary>
         /// Gets or sets the one-based version number.
