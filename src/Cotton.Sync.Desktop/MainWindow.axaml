@@ -564,7 +564,7 @@
                                         ToolTip.Tip="Remove sync folder"
                                         Command="{Binding $parent[Window].DataContext.RemoveSelectedSyncPairCommand}" />
                                 <Button Grid.Column="4"
-                                        Content="x"
+                                        Content="×"
                                         Classes="icon"
                                         ToolTip.Tip="Close folder controls"
                                         Command="{Binding $parent[Window].DataContext.CancelSelectedSyncPairEditorCommand}" />
@@ -710,7 +710,7 @@
                            TextWrapping="Wrap" />
               </StackPanel>
               <Button Grid.Column="1"
-                      Content="x"
+                      Content="×"
                       Classes="icon"
                       ToolTip.Tip="Cancel"
                       Command="{Binding CancelAddSyncPairCommand}" />
@@ -840,7 +840,7 @@
                               ToolTip.Tip="Create folder"
                               Command="{Binding CreateRemoteFolderCommand}" />
                       <Button Grid.Column="2"
-                              Content="x"
+                              Content="×"
                               Classes="icon"
                               ToolTip.Tip="Cancel"
                               Command="{Binding CancelCreateRemoteFolderCommand}" />
@@ -980,7 +980,7 @@
                            TextWrapping="Wrap" />
               </StackPanel>
               <Button Grid.Column="1"
-                      Content="x"
+                      Content="×"
                       Classes="icon"
                       ToolTip.Tip="Close"
                       Command="{Binding CloseSettingsCommand}" />
