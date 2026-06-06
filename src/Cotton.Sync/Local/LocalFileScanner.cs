@@ -9,7 +9,7 @@ namespace Cotton.Sync.Local;
 /// <summary>
 /// Scans a local folder and hashes files for synchronization.
 /// </summary>
-public sealed class LocalFileScanner : ILocalFileScanner, ILocalTreeScanner
+public sealed class LocalFileScanner : ILocalFileScanner, ILocalTreeScanner, ILocalFileMetadataTreeScanner, ILocalFileContentHasher
 {
     private static readonly StringComparer PathComparer = StringComparer.OrdinalIgnoreCase;
     private static readonly EnumerationOptions FileEnumerationOptions = new()
@@ -33,6 +33,33 @@ public sealed class LocalFileScanner : ILocalFileScanner, ILocalTreeScanner
     public async Task<LocalTreeSnapshot> ScanTreeAsync(
         string rootPath,
         CancellationToken cancellationToken = default)
+    {
+        return await ScanTreeCoreAsync(rootPath, computeHashes: true, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<LocalTreeSnapshot> ScanTreeMetadataAsync(
+        string rootPath,
+        CancellationToken cancellationToken = default)
+    {
+        return await ScanTreeCoreAsync(rootPath, computeHashes: false, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<string> ComputeContentHashAsync(
+        LocalFileSnapshot localFile,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(localFile);
+        ArgumentException.ThrowIfNullOrWhiteSpace(localFile.FullPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(localFile.RelativePath);
+        return await ComputeHashAsync(localFile.FullPath, localFile.RelativePath, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<LocalTreeSnapshot> ScanTreeCoreAsync(
+        string rootPath,
+        bool computeHashes,
+        CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
         string fullRoot = Path.GetFullPath(rootPath);
@@ -79,7 +106,8 @@ public sealed class LocalFileScanner : ILocalFileScanner, ILocalTreeScanner
                 continue;
             }
 
-            LocalFileSnapshot fileSnapshot = await CreateSnapshotAsync(file, relativePath, cancellationToken).ConfigureAwait(false);
+            LocalFileSnapshot fileSnapshot = await CreateSnapshotAsync(file, relativePath, computeHashes, cancellationToken)
+                .ConfigureAwait(false);
             tree.Files.Add(fileSnapshot);
         }
 
@@ -97,11 +125,14 @@ public sealed class LocalFileScanner : ILocalFileScanner, ILocalTreeScanner
     private static async Task<LocalFileSnapshot> CreateSnapshotAsync(
         FileInfo file,
         string relativePath,
+        bool computeHash,
         CancellationToken cancellationToken)
     {
         ValidatePlatformPermissions(file, relativePath);
         LocalFileMetadata before = ReadMetadata(file, relativePath);
-        string contentHash = await ComputeHashAsync(file.FullName, relativePath, cancellationToken).ConfigureAwait(false);
+        string contentHash = computeHash
+            ? await ComputeHashAsync(file.FullName, relativePath, cancellationToken).ConfigureAwait(false)
+            : string.Empty;
         LocalFileMetadata after = ReadMetadata(file, relativePath);
         if (before.Length != after.Length || before.LastWriteUtc != after.LastWriteUtc)
         {

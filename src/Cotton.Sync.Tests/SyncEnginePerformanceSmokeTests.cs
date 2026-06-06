@@ -326,7 +326,7 @@ public sealed class SyncEnginePerformanceSmokeTests
 
         public int DeleteCalls { get; private set; }
 
-        public Task<NodeFileManifestDto> UploadFileAsync(
+        public async Task<NodeFileManifestDto> UploadFileAsync(
             Guid rootNodeId,
             string relativePath,
             LocalFileSnapshot localFile,
@@ -334,12 +334,22 @@ public sealed class SyncEnginePerformanceSmokeTests
             CancellationToken cancellationToken = default)
         {
             UploadCalls++;
-            NodeFileManifestDto uploaded = RemoteFile(relativePath, localFile.ContentHash, localFile.SizeBytes);
+            string contentHash = string.IsNullOrWhiteSpace(localFile.ContentHash)
+                ? await HashFileAsync(localFile.FullPath, cancellationToken).ConfigureAwait(false)
+                : localFile.ContentHash;
+            NodeFileManifestDto uploaded = RemoteFile(relativePath, contentHash, localFile.SizeBytes);
             uploaded.Id = existingRemoteFile?.Id ?? uploaded.Id;
             uploaded.NodeId = existingRemoteFile?.NodeId ?? rootNodeId;
             uploaded.UpdatedAt = localFile.LastWriteUtc;
             Uploads.Add(new UploadCall(rootNodeId, relativePath, localFile, existingRemoteFile, uploaded));
-            return Task.FromResult(uploaded);
+            return uploaded;
+        }
+
+        private static async Task<string> HashFileAsync(string path, CancellationToken cancellationToken)
+        {
+            await using FileStream stream = File.OpenRead(path);
+            byte[] hash = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
+            return Convert.ToHexStringLower(hash);
         }
 
         public Task DownloadFileAsync(Guid nodeFileId, Stream destination, CancellationToken cancellationToken = default)

@@ -93,6 +93,67 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_UploadsLocalOnlyMetadataSnapshotWithoutPreHashing()
+    {
+        const string uploadedHash = "uploaded-content-hash";
+        var local = new LocalFileSnapshot
+        {
+            RelativePath = "Docs/large.bin",
+            FullPath = Path.Combine(_root, "Docs", "large.bin"),
+            ContentHash = string.Empty,
+            SizeBytes = 1024,
+            LastWriteUtc = new DateTime(2026, 6, 6, 8, 0, 0, DateTimeKind.Utc),
+        };
+        var scanner = new MetadataOnlyLocalFileScanner(local);
+        var remoteFiles = new FakeRemoteFileSynchronizer
+        {
+            EmptyLocalHashUploadContentHash = uploadedHash,
+        };
+        SyncEngine engine = CreateEngine(scanner, EmptyRemoteTree(), remoteFiles, out SqliteSyncStateStore stateStore);
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+        SyncStateEntry? entry = await stateStore.GetAsync("pair-a", "docs/large.bin");
+        Assert.Multiple(() =>
+        {
+            Assert.That(scanner.ContentHashCalls, Is.Zero);
+            Assert.That(remoteFiles.UploadInputContentHashes, Is.EqualTo(new[] { string.Empty }));
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
+            Assert.That(entry, Is.Not.Null);
+            Assert.That(entry!.LocalContentHash, Is.EqualTo(uploadedHash));
+            Assert.That(entry.RemoteContentHash, Is.EqualTo(uploadedHash));
+        });
+    }
+
+    [Test]
+    public async Task RunOnceAsync_HashesMetadataSnapshotWhenBaselineNeedsComparison()
+    {
+        const string baselineHash = "precomputed-content-hash";
+        var local = new LocalFileSnapshot
+        {
+            RelativePath = "Docs/existing.bin",
+            FullPath = Path.Combine(_root, "Docs", "existing.bin"),
+            ContentHash = string.Empty,
+            SizeBytes = 1024,
+            LastWriteUtc = new DateTime(2026, 6, 6, 8, 0, 0, DateTimeKind.Utc),
+        };
+        var scanner = new MetadataOnlyLocalFileScanner(local);
+        NodeFileManifestDto remote = RemoteFile("Docs/existing.bin", baselineHash, sizeBytes: local.SizeBytes);
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        SyncEngine engine = CreateEngine(scanner, RemoteTree(remote), remoteFiles, out SqliteSyncStateStore stateStore);
+        await InsertBaselineAsync(stateStore, "Docs/existing.bin", baselineHash, remote);
+
+        SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(scanner.ContentHashCalls, Is.EqualTo(1));
+            Assert.That(remoteFiles.Uploads, Is.Empty);
+            Assert.That(result.Activities, Is.Empty);
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_ReportsAggregateRunProgressFileCounts()
     {
         var scanner = new FakeLocalFileScanner(
@@ -1461,7 +1522,7 @@ public sealed class SyncEngineTests
     }
 
     private SyncEngine CreateEngine(
-        FakeLocalFileScanner scanner,
+        ILocalFileScanner scanner,
         RemoteTreeSnapshot remoteTree,
         FakeRemoteFileSynchronizer remoteFiles,
         out SqliteSyncStateStore stateStore,
@@ -1471,7 +1532,7 @@ public sealed class SyncEngineTests
     }
 
     private SyncEngine CreateEngine(
-        FakeLocalFileScanner scanner,
+        ILocalFileScanner scanner,
         FakeRemoteFileSynchronizer remoteFiles,
         out SqliteSyncStateStore stateStore,
         params RemoteTreeSnapshot[] remoteTrees)
@@ -1480,7 +1541,7 @@ public sealed class SyncEngineTests
     }
 
     private SyncEngine CreateEngineWithLogger(
-        FakeLocalFileScanner scanner,
+        ILocalFileScanner scanner,
         FakeRemoteFileSynchronizer remoteFiles,
         out SqliteSyncStateStore stateStore,
         ILogger<SyncEngine>? logger,
@@ -1491,7 +1552,7 @@ public sealed class SyncEngineTests
     }
 
     private SyncEngine CreateEngine(
-        FakeLocalFileScanner scanner,
+        ILocalFileScanner scanner,
         RemoteTreeSnapshot remoteTree,
         FakeRemoteFileSynchronizer remoteFiles,
         out SqliteSyncStateStore stateStore,
@@ -1733,6 +1794,45 @@ public sealed class SyncEngineTests
         }
     }
 
+    private sealed class MetadataOnlyLocalFileScanner : ILocalFileScanner, ILocalTreeScanner, ILocalFileMetadataTreeScanner, ILocalFileContentHasher
+    {
+        public MetadataOnlyLocalFileScanner(params LocalFileSnapshot[] files)
+        {
+            Files = files.ToList();
+        }
+
+        public List<LocalFileSnapshot> Files { get; }
+
+        public int ContentHashCalls { get; private set; }
+
+        public Task<IReadOnlyList<LocalFileSnapshot>> ScanAsync(string rootPath, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<LocalFileSnapshot>>(Files);
+        }
+
+        public Task<LocalTreeSnapshot> ScanTreeAsync(string rootPath, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new LocalTreeSnapshot
+            {
+                Files = Files,
+            });
+        }
+
+        public Task<LocalTreeSnapshot> ScanTreeMetadataAsync(string rootPath, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new LocalTreeSnapshot
+            {
+                Files = Files,
+            });
+        }
+
+        public Task<string> ComputeContentHashAsync(LocalFileSnapshot localFile, CancellationToken cancellationToken = default)
+        {
+            ContentHashCalls++;
+            return Task.FromResult("precomputed-content-hash");
+        }
+    }
+
     private sealed class FakeRemoteTreeCrawler : IRemoteTreeCrawler
     {
         private readonly Queue<RemoteTreeSnapshot> _snapshots;
@@ -1817,6 +1917,8 @@ public sealed class SyncEngineTests
     {
         public List<UploadCall> Uploads { get; } = [];
 
+        public List<string> UploadInputContentHashes { get; } = [];
+
         public List<(Guid NodeFileId, bool SkipTrash, string? ExpectedETag)> Deletes { get; } = [];
 
         public Dictionary<Guid, byte[]> Downloads { get; } = [];
@@ -1830,6 +1932,8 @@ public sealed class SyncEngineTests
         public HashSet<Guid> PreconditionFailedUploadIds { get; } = [];
 
         public HashSet<Guid> PreconditionFailedDeleteIds { get; } = [];
+
+        public string? EmptyLocalHashUploadContentHash { get; set; }
 
         public Task<NodeFileManifestDto> UploadFileAsync(
             Guid rootNodeId,
@@ -1851,6 +1955,10 @@ public sealed class SyncEngineTests
                 throw new InvalidOperationException("Remote upload failed.");
             }
 
+            UploadInputContentHashes.Add(localFile.ContentHash);
+            string uploadedContentHash = string.IsNullOrWhiteSpace(localFile.ContentHash)
+                ? EmptyLocalHashUploadContentHash ?? localFile.ContentHash
+                : localFile.ContentHash;
             var returned = new NodeFileManifestDto
             {
                 Id = existingRemoteFile?.Id ?? Guid.NewGuid(),
@@ -1863,8 +1971,8 @@ public sealed class SyncEngineTests
                 Name = relativePath.Split('/')[^1],
                 ContentType = "application/octet-stream",
                 SizeBytes = localFile.SizeBytes,
-                ContentHash = localFile.ContentHash,
-                ETag = "sha256-" + localFile.ContentHash,
+                ContentHash = uploadedContentHash,
+                ETag = "sha256-" + uploadedContentHash,
                 CreatedAt = new DateTime(2026, 6, 2, 14, 0, 0, DateTimeKind.Utc),
                 UpdatedAt = new DateTime(2026, 6, 2, 14, 0, 0, DateTimeKind.Utc),
                 Metadata = new Dictionary<string, string> { ["relativePath"] = relativePath.Replace('\\', '/') },

@@ -19,6 +19,8 @@ public sealed class SyncEngine : ISyncEngine
 {
     private static readonly StringComparer PathComparer = StringComparer.OrdinalIgnoreCase;
     private readonly ILocalFileScanner _localScanner;
+    private readonly ILocalFileContentHasher? _localContentHasher;
+    private readonly ILocalFileMetadataTreeScanner? _localMetadataTreeScanner;
     private readonly ILocalTreeScanner? _localTreeScanner;
     private readonly IRemoteDirectorySynchronizer? _remoteDirectories;
     private readonly IRemoteTreeCrawler _remoteCrawler;
@@ -40,6 +42,8 @@ public sealed class SyncEngine : ISyncEngine
         ILogger<SyncEngine>? logger = null)
     {
         _localScanner = localScanner ?? throw new ArgumentNullException(nameof(localScanner));
+        _localContentHasher = localScanner as ILocalFileContentHasher;
+        _localMetadataTreeScanner = localScanner as ILocalFileMetadataTreeScanner;
         _localTreeScanner = localScanner as ILocalTreeScanner;
         _remoteCrawler = remoteCrawler ?? throw new ArgumentNullException(nameof(remoteCrawler));
         _remoteFiles = remoteFiles ?? throw new ArgumentNullException(nameof(remoteFiles));
@@ -106,6 +110,9 @@ public sealed class SyncEngine : ISyncEngine
             directoryStateByPath,
             remoteTree.RootNode,
             cancellationToken).ConfigureAwait(false);
+
+        await EnsureLocalContentHashesForStateFilesAsync(pathKeys, localByPath, stateByPath, cancellationToken)
+            .ConfigureAwait(false);
 
         SyncDeleteGuard deleteGuard = BuildDeleteGuard(
             options,
@@ -180,8 +187,28 @@ public sealed class SyncEngine : ISyncEngine
         }
     }
 
+    private async Task EnsureLocalContentHashesForStateFilesAsync(
+        IReadOnlyList<string> pathKeys,
+        IReadOnlyDictionary<string, LocalFileSnapshot> localByPath,
+        IReadOnlyDictionary<string, SyncStateEntry> stateByPath,
+        CancellationToken cancellationToken)
+    {
+        foreach (string key in pathKeys)
+        {
+            if (stateByPath.ContainsKey(key) && localByPath.TryGetValue(key, out LocalFileSnapshot? local))
+            {
+                await EnsureLocalContentHashAsync(local, cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
     private async Task<LocalTreeSnapshot> ScanLocalTreeAsync(string localRootPath, CancellationToken cancellationToken)
     {
+        if (_localMetadataTreeScanner is not null && _localContentHasher is not null)
+        {
+            return await _localMetadataTreeScanner.ScanTreeMetadataAsync(localRootPath, cancellationToken).ConfigureAwait(false);
+        }
+
         if (_localTreeScanner is not null)
         {
             return await _localTreeScanner.ScanTreeAsync(localRootPath, cancellationToken).ConfigureAwait(false);
@@ -350,6 +377,7 @@ public sealed class SyncEngine : ISyncEngine
 
         if (local is not null && remote is not null)
         {
+            await EnsureLocalContentHashAsync(local, cancellationToken).ConfigureAwait(false);
             if (ContentMatches(local.ContentHash, remote.File.ContentHash))
             {
                 await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, remote.File), cancellationToken)
@@ -372,6 +400,11 @@ public sealed class SyncEngine : ISyncEngine
         RemoteFileSnapshot? remote,
         CancellationToken cancellationToken)
     {
+        if (local is not null)
+        {
+            await EnsureLocalContentHashAsync(local, cancellationToken).ConfigureAwait(false);
+        }
+
         bool localDeleted = local is null && !string.IsNullOrWhiteSpace(state.LocalContentHash);
         bool remoteDeleted = remote is null && state.RemoteFileId.HasValue;
         bool localChanged = local is not null && !ContentMatches(local.ContentHash, state.LocalContentHash);
@@ -486,7 +519,9 @@ public sealed class SyncEngine : ISyncEngine
             return;
         }
 
-        await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, uploaded), cancellationToken)
+        string localContentHash = ResolveUploadedLocalContentHash(local, uploaded);
+        local.ContentHash = localContentHash;
+        await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, localContentHash, local.LastWriteUtc, uploaded), cancellationToken)
             .ConfigureAwait(false);
         Report(result, options, SyncActivityKind.Uploaded, relativePath, null);
     }
@@ -645,6 +680,7 @@ public sealed class SyncEngine : ISyncEngine
         string? details = null;
         if (local is not null && remoteFile is not null)
         {
+            await EnsureLocalContentHashAsync(local, cancellationToken).ConfigureAwait(false);
             string conflictPath = _localWriter.CreateConflictRelativePath(syncPair.LocalRootPath, relativePath, DateTime.UtcNow);
             await _localWriter.WriteFileAsync(
                 syncPair.LocalRootPath,
@@ -666,7 +702,9 @@ public sealed class SyncEngine : ISyncEngine
                 options,
                 cancellationToken).ConfigureAwait(false);
             details = "Remote deletion conflicted with local change; local version was uploaded again.";
-            await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, uploaded), cancellationToken)
+            string localContentHash = ResolveUploadedLocalContentHash(local, uploaded);
+            local.ContentHash = localContentHash;
+            await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, localContentHash, local.LastWriteUtc, uploaded), cancellationToken)
                 .ConfigureAwait(false);
         }
         else if (remoteFile is not null)
@@ -1135,6 +1173,36 @@ public sealed class SyncEngine : ISyncEngine
             transferredBytes,
             totalBytes,
             isCompleted));
+    }
+
+    private async Task EnsureLocalContentHashAsync(LocalFileSnapshot local, CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(local.ContentHash))
+        {
+            return;
+        }
+
+        if (_localContentHasher is null)
+        {
+            throw new InvalidOperationException("Local file snapshot does not include a content hash and no local content hasher is available.");
+        }
+
+        local.ContentHash = await _localContentHasher.ComputeContentHashAsync(local, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static string ResolveUploadedLocalContentHash(LocalFileSnapshot local, NodeFileManifestDto uploaded)
+    {
+        if (!string.IsNullOrWhiteSpace(local.ContentHash))
+        {
+            return local.ContentHash;
+        }
+
+        if (!string.IsNullOrWhiteSpace(uploaded.ContentHash))
+        {
+            return uploaded.ContentHash;
+        }
+
+        throw new InvalidOperationException("Uploaded file manifest does not include a content hash.");
     }
 
     private static void ReportRunProgress(

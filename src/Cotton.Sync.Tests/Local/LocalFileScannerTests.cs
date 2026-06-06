@@ -70,6 +70,24 @@ public sealed class LocalFileScannerTests
     }
 
     [Test]
+    public async Task ScanTreeMetadataAsync_ReturnsFilesWithoutContentHashes()
+    {
+        WriteFile("alpha.txt", "alpha");
+        var scanner = new LocalFileScanner();
+
+        LocalTreeSnapshot tree = await scanner.ScanTreeMetadataAsync(_root);
+        string contentHash = await scanner.ComputeContentHashAsync(tree.Files.Single());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tree.Files.Single().RelativePath, Is.EqualTo("alpha.txt"));
+            Assert.That(tree.Files.Single().ContentHash, Is.Empty);
+            Assert.That(tree.Files.Single().SizeBytes, Is.EqualTo(5));
+            Assert.That(contentHash, Is.EqualTo(Hash("alpha")));
+        });
+    }
+
+    [Test]
     public async Task ScanAsync_IgnoresTempFilesAndCottonWorkingFolder()
     {
         WriteFile("keep.txt", "keep");

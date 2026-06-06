@@ -72,19 +72,28 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynch
             normalizedPath,
             transferredBytes: 0,
             totalBytes: localFile.SizeBytes);
-        IReadOnlyList<string> chunkHashes = await UploadChunksAsync(
+        UploadedChunks uploadedChunks = await UploadChunksAsync(
             normalizedPath,
             localFile.FullPath,
             localFile.SizeBytes,
             transferProgress,
             cancellationToken).ConfigureAwait(false);
+        if (!string.IsNullOrWhiteSpace(localFile.ContentHash)
+            && !string.Equals(localFile.ContentHash, uploadedChunks.ContentHash, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new LocalFileUnavailableException(
+                normalizedPath,
+                localFile.FullPath,
+                "the file changed during upload.");
+        }
+
         var request = new CreateFileFromChunksRequestDto
         {
             NodeId = parentNodeId,
-            ChunkHashes = chunkHashes.ToList(),
+            ChunkHashes = uploadedChunks.ChunkHashes.ToList(),
             Name = Path.GetFileName(normalizedPath),
             ContentType = ResolveContentType(normalizedPath),
-            Hash = localFile.ContentHash,
+            Hash = uploadedChunks.ContentHash,
             OriginalNodeFileId = existingRemoteFile?.OriginalNodeFileId == Guid.Empty ? existingRemoteFile.Id : existingRemoteFile?.OriginalNodeFileId,
         };
 
@@ -155,7 +164,7 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynch
         return _client.Files.DeleteAsync(nodeFileId, skipTrash, expectedETag, cancellationToken);
     }
 
-    private async Task<IReadOnlyList<string>> UploadChunksAsync(
+    private async Task<UploadedChunks> UploadChunksAsync(
         string relativePath,
         string filePath,
         long totalBytes,
@@ -167,6 +176,7 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynch
         byte[] buffer = ArrayPool<byte>.Shared.Rent(chunkSize);
         var chunkHashes = new List<string>();
         long transferredBytes = 0;
+        using IncrementalHash contentHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         try
         {
             await using FileStream stream = new(
@@ -185,6 +195,7 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynch
                 }
 
                 string hash = Convert.ToHexStringLower(SHA256.HashData(buffer.AsSpan(0, read)));
+                contentHash.AppendData(buffer, 0, read);
                 await UploadChunkIfMissingAsync(hash, buffer, read, cancellationToken).ConfigureAwait(false);
                 transferredBytes += read;
                 ReportTransfer(
@@ -214,7 +225,8 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynch
             chunkHashes.Add(emptyHash);
         }
 
-        return chunkHashes;
+        string fullContentHash = Convert.ToHexStringLower(contentHash.GetHashAndReset());
+        return new UploadedChunks(chunkHashes, fullContentHash);
     }
 
     private static void ReportTransfer(
@@ -416,4 +428,6 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynch
 
         return total;
     }
+
+    private sealed record UploadedChunks(IReadOnlyList<string> ChunkHashes, string ContentHash);
 }

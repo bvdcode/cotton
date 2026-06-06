@@ -71,6 +71,26 @@ public sealed class SdkRemoteFileSynchronizerTests
     }
 
     [Test]
+    public async Task UploadFileAsync_ComputesContentHashFromChunkStreamWhenSnapshotHasNoHash()
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes("abcdefghij");
+        LocalFileSnapshot local = WriteLocalFile("Docs/file.txt", bytes);
+        local.ContentHash = string.Empty;
+        var client = new FakeCottonCloudClient(chunkSizeBytes: 4);
+        var synchronizer = new SdkRemoteFileSynchronizer(client);
+
+        NodeFileManifestDto created = await synchronizer.UploadFileAsync(_rootNodeId, local.RelativePath, local);
+
+        string expectedHash = Hash(bytes);
+        Assert.Multiple(() =>
+        {
+            Assert.That(client.FilesClient.CreateRequests, Has.Count.EqualTo(1));
+            Assert.That(client.FilesClient.CreateRequests[0].Hash, Is.EqualTo(expectedHash));
+            Assert.That(created.ContentHash, Is.EqualTo(expectedHash));
+        });
+    }
+
+    [Test]
     public async Task UploadFileAsync_ReusesExistingFolderAndUpdatesExistingFile()
     {
         Guid docsId = Guid.NewGuid();
