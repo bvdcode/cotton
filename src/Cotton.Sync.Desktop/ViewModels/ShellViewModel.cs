@@ -320,7 +320,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public string HeaderStatusText => HasConflicts ? "Conflicts need review" : GlobalStatus;
 
-    public string HeaderTitleText => IsSignedIn ? AccountName : "Cotton Sync";
+    public string HeaderTitleText => IsSignedIn ? ResolveAccountDisplayName(AccountName, null) : "Cotton Sync";
 
     public string StatusCardTitle
     {
@@ -1069,7 +1069,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
             SelectedSyncPair = SyncPairs.FirstOrDefault();
             IsSignedIn = snapshot.IsSignedIn;
-            AccountName = snapshot.AccountName ?? "Signed out";
+            AccountName = snapshot.IsSignedIn
+                ? ResolveAccountDisplayName(snapshot.AccountName, snapshot.RememberedUsername)
+                : "Signed out";
             GlobalStatus = snapshot.IsSignedIn
                 ? "Connected"
                 : SyncPairs.Count == 0 ? "Ready to connect" : "Ready";
@@ -1658,7 +1660,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             AuthSession session = await _controller.SignInAsync(
                 new DesktopSignInRequest(ServerUrl, Username, Password, TotpCode)).ConfigureAwait(true);
             IsSignedIn = true;
-            AccountName = session.Email ?? session.Username;
+            AccountName = ResolveAccountDisplayName(session.Email, session.Username);
             Password = string.Empty;
             GlobalStatus = "Connected";
             ActionRequiredMessage = string.Empty;
@@ -2988,6 +2990,21 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         AppThemeMode themeMode = (AppThemeMode)index;
         return Enum.IsDefined(themeMode) ? themeMode : AppThemeMode.System;
+    }
+
+    private static string ResolveAccountDisplayName(string? primary, string? fallback)
+    {
+        if (!string.IsNullOrWhiteSpace(primary))
+        {
+            return primary.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(fallback))
+        {
+            return fallback.Trim();
+        }
+
+        return "Cotton Sync";
     }
 
     private void RefreshDiagnosticsItems()

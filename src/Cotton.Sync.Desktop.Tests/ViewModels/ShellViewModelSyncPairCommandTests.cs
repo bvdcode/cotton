@@ -990,6 +990,30 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task InitializeAsync_UsesRememberedUsernameWhenRestoredAccountNameIsBlank()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot() with
+        {
+            AccountName = "   ",
+            RememberedUsername = "  desktop@example.test  ",
+        });
+        using ShellViewModel viewModel = CreateViewModel(controller);
+
+        await viewModel.InitializeAsync();
+
+        ActivityRowViewModel sessionActivity = viewModel.Activities.First(static activity => activity.Kind == "Account");
+        IReadOnlyDictionary<string, string> diagnostics = viewModel.DiagnosticsItems
+            .ToDictionary(static item => item.Label, static item => item.Value);
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.AccountName, Is.EqualTo("desktop@example.test"));
+            Assert.That(viewModel.HeaderTitleText, Is.EqualTo("desktop@example.test"));
+            Assert.That(sessionActivity.Path, Is.EqualTo("desktop@example.test"));
+            Assert.That(diagnostics["Account"], Is.EqualTo("desktop@example.test"));
+        });
+    }
+
+    [Test]
     public async Task ActivityReported_AddsRecentActivityRow()
     {
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot());
