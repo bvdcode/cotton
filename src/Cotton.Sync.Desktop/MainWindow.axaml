@@ -602,12 +602,12 @@
                                         ToolTip.Tip="{Binding ToggleEnabledLabel}"
                                         Command="{Binding $parent[Window].DataContext.ToggleSelectedSyncPairEnabledCommand}">
                                   <Grid>
-                                    <materialIcons:MaterialIcon Kind="PauseCircleOutline"
+                                    <materialIcons:MaterialIcon Kind="FolderOffOutline"
                                                                 Width="16"
                                                                 Height="16"
                                                                 Foreground="{DynamicResource CottonTextPrimaryBrush}"
                                                                 IsVisible="{Binding IsEnabled}" />
-                                    <materialIcons:MaterialIcon Kind="PlayCircleOutline"
+                                    <materialIcons:MaterialIcon Kind="FolderCheckOutline"
                                                                 Width="16"
                                                                 Height="16"
                                                                 Foreground="{DynamicResource CottonTextPrimaryBrush}"

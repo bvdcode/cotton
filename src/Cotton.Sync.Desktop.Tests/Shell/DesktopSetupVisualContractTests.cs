@@ -116,8 +116,10 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Not.Contain("SelectedSyncPair.ModeLabel"));
             Assert.That(foldersSection, Does.Contain("materialIcons:MaterialIcon"));
             Assert.That(foldersSection, Does.Contain("Kind=\"ContentSaveOutline\""));
-            Assert.That(foldersSection, Does.Contain("Kind=\"PauseCircleOutline\""));
-            Assert.That(foldersSection, Does.Contain("Kind=\"PlayCircleOutline\""));
+            Assert.That(foldersSection, Does.Contain("Kind=\"FolderOffOutline\""));
+            Assert.That(foldersSection, Does.Contain("Kind=\"FolderCheckOutline\""));
+            Assert.That(foldersSection, Does.Not.Contain("Kind=\"PauseCircleOutline\""));
+            Assert.That(foldersSection, Does.Not.Contain("Kind=\"PlayCircleOutline\""));
             Assert.That(foldersSection, Does.Contain("Kind=\"TrashCanOutline\""));
             Assert.That(foldersSection, Does.Not.Contain("<Path Data="));
             Assert.That(foldersSection, Does.Not.Contain("Content=\"{Binding ToggleEnabledIcon}\""));
