@@ -40,71 +40,23 @@ public sealed class SyncEnginePerformanceSmokeTests
     {
         const int fileCount = 1_000;
         TimeSpan smokeTarget = TimeSpan.FromSeconds(20);
-        SqliteSyncStateStore stateStore = new(_databasePath);
-        await stateStore.InitializeAsync();
-        List<RemoteFileSnapshot> remoteFiles = [];
-        List<SyncStateEntry> baselineEntries = [];
 
-        for (int index = 0; index < fileCount; index++)
-        {
-            string relativePath = $"Docs/{index / 100:D2}/file-{index:D4}.txt";
-            byte[] content = Encoding.UTF8.GetBytes("content-" + index.ToString("D4", System.Globalization.CultureInfo.InvariantCulture));
-            string hash = Hash(content);
-            WriteFile(relativePath, content);
-            NodeFileManifestDto remoteFile = RemoteFile(relativePath, hash, content.Length);
-            remoteFiles.Add(new RemoteFileSnapshot
-            {
-                RelativePath = relativePath,
-                File = remoteFile,
-            });
-            baselineEntries.Add(new SyncStateEntry
-            {
-                SyncPairId = "performance-noop",
-                RelativePath = relativePath,
-                Kind = SyncEntryKind.File,
-                LocalContentHash = hash,
-                LocalLastWriteUtc = File.GetLastWriteTimeUtc(FullPath(relativePath)),
-                RemoteNodeId = remoteFile.NodeId,
-                RemoteFileId = remoteFile.Id,
-                RemoteContentHash = remoteFile.ContentHash,
-                RemoteETag = remoteFile.ETag,
-                SyncedAtUtc = DateTime.UtcNow,
-            });
-        }
-
-        await stateStore.ReplacePairAsync("performance-noop", baselineEntries);
-
-        var remoteFilesClient = new GuardedRemoteFileSynchronizer();
-        var engine = new SyncEngine(
-            new LocalFileScanner(),
-            new StaticRemoteTreeCrawler(remoteFiles),
-            remoteFilesClient,
-            stateStore);
-
-        Stopwatch stopwatch = Stopwatch.StartNew();
-        SyncRunResult result = await engine.RunOnceAsync(new SyncPair
-        {
-            SyncPairId = "performance-noop",
-            LocalRootPath = _root,
-            RemoteRootNodeId = RemoteRootNodeId,
-        });
-        stopwatch.Stop();
-
-        IReadOnlyList<SyncStateEntry> baselines = await stateStore.LoadPairAsync("performance-noop");
-        TestContext.WriteLine(
-            "No-op sync smoke for {0} files completed in {1:N0} ms.",
+        await VerifyNoOpFileSetCompletesWithinSmokeTargetAsync(
+            "performance-noop-1k",
             fileCount,
-            stopwatch.Elapsed.TotalMilliseconds);
+            smokeTarget);
+    }
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Activities, Is.Empty);
-            Assert.That(remoteFilesClient.UploadCalls, Is.Zero);
-            Assert.That(remoteFilesClient.DownloadCalls, Is.Zero);
-            Assert.That(remoteFilesClient.DeleteCalls, Is.Zero);
-            Assert.That(baselines, Has.Count.EqualTo(fileCount));
-            Assert.That(stopwatch.Elapsed, Is.LessThan(smokeTarget));
-        });
+    [Test]
+    public async Task RunOnceAsync_NoOpForThreeThousandFilesCompletesWithinSmokeTarget()
+    {
+        const int fileCount = 3_000;
+        TimeSpan smokeTarget = TimeSpan.FromSeconds(35);
+
+        await VerifyNoOpFileSetCompletesWithinSmokeTargetAsync(
+            "performance-noop-3k",
+            fileCount,
+            smokeTarget);
     }
 
     [Test]
@@ -231,6 +183,78 @@ public sealed class SyncEnginePerformanceSmokeTests
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         File.WriteAllBytes(fullPath, content);
         File.SetLastWriteTimeUtc(fullPath, new DateTime(2026, 6, 3, 12, 0, 0, DateTimeKind.Utc));
+    }
+
+    private async Task VerifyNoOpFileSetCompletesWithinSmokeTargetAsync(
+        string syncPairId,
+        int fileCount,
+        TimeSpan smokeTarget)
+    {
+        SqliteSyncStateStore stateStore = new(_databasePath);
+        await stateStore.InitializeAsync();
+        List<RemoteFileSnapshot> remoteFiles = [];
+        List<SyncStateEntry> baselineEntries = [];
+
+        for (int index = 0; index < fileCount; index++)
+        {
+            string relativePath = $"Docs/{index / 100:D2}/file-{index:D5}.txt";
+            byte[] content = Encoding.UTF8.GetBytes("content-" + index.ToString("D5", System.Globalization.CultureInfo.InvariantCulture));
+            string hash = Hash(content);
+            WriteFile(relativePath, content);
+            NodeFileManifestDto remoteFile = RemoteFile(relativePath, hash, content.Length);
+            remoteFiles.Add(new RemoteFileSnapshot
+            {
+                RelativePath = relativePath,
+                File = remoteFile,
+            });
+            baselineEntries.Add(new SyncStateEntry
+            {
+                SyncPairId = syncPairId,
+                RelativePath = relativePath,
+                Kind = SyncEntryKind.File,
+                LocalContentHash = hash,
+                LocalLastWriteUtc = File.GetLastWriteTimeUtc(FullPath(relativePath)),
+                RemoteNodeId = remoteFile.NodeId,
+                RemoteFileId = remoteFile.Id,
+                RemoteContentHash = remoteFile.ContentHash,
+                RemoteETag = remoteFile.ETag,
+                SyncedAtUtc = DateTime.UtcNow,
+            });
+        }
+
+        await stateStore.ReplacePairAsync(syncPairId, baselineEntries);
+
+        var remoteFilesClient = new GuardedRemoteFileSynchronizer();
+        var engine = new SyncEngine(
+            new LocalFileScanner(),
+            new StaticRemoteTreeCrawler(remoteFiles),
+            remoteFilesClient,
+            stateStore);
+
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        SyncRunResult result = await engine.RunOnceAsync(new SyncPair
+        {
+            SyncPairId = syncPairId,
+            LocalRootPath = _root,
+            RemoteRootNodeId = RemoteRootNodeId,
+        });
+        stopwatch.Stop();
+
+        IReadOnlyList<SyncStateEntry> baselines = await stateStore.LoadPairAsync(syncPairId);
+        TestContext.WriteLine(
+            "No-op sync smoke for {0} files completed in {1:N0} ms.",
+            fileCount,
+            stopwatch.Elapsed.TotalMilliseconds);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Activities, Is.Empty);
+            Assert.That(remoteFilesClient.UploadCalls, Is.Zero);
+            Assert.That(remoteFilesClient.DownloadCalls, Is.Zero);
+            Assert.That(remoteFilesClient.DeleteCalls, Is.Zero);
+            Assert.That(baselines, Has.Count.EqualTo(fileCount));
+            Assert.That(stopwatch.Elapsed, Is.LessThan(smokeTarget));
+        });
     }
 
     private static string Hash(byte[] bytes)
