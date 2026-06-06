@@ -544,9 +544,7 @@
                                     BorderBrush="{DynamicResource CottonBorderBrush}"
                                     BorderThickness="1"
                                     IsVisible="{Binding IsEditorVisible}">
-                              <Grid RowDefinitions="Auto,Auto"
-                                    ColumnDefinitions="*,Auto,Auto,Auto,Auto"
-                                    RowSpacing="6"
+                              <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto"
                                     ColumnSpacing="6">
                                 <TextBox Text="{Binding EditableDisplayName}"
                                          PlaceholderText="Folder name" />
@@ -570,16 +568,6 @@
                                         Classes="icon"
                                         ToolTip.Tip="Close folder controls"
                                         Command="{Binding $parent[Window].DataContext.CancelSelectedSyncPairEditorCommand}" />
-                                <TextBlock Grid.Row="1"
-                                           Grid.ColumnSpan="5"
-                                           ToolTip.Tip="{Binding LocalPath}"
-                                           Classes="secondary"
-                                           FontSize="11"
-                                           TextTrimming="CharacterEllipsis">
-                                  <Run Text="{Binding ModeLabel}" />
-                                  <Run Text=" · " />
-                                  <Run Text="{Binding LocalPath}" />
-                                </TextBlock>
                               </Grid>
                             </Border>
                           </Grid>
@@ -674,14 +662,16 @@
                         <TextBlock Grid.Row="1"
                                    Grid.Column="1"
                                    Text="{Binding Details}"
+                                   ToolTip.Tip="{Binding Details}"
                                    FontSize="11"
-                                   TextWrapping="Wrap"
+                                   TextWrapping="NoWrap"
                                    TextTrimming="CharacterEllipsis"
-                                   MaxLines="2"
+                                   MaxLines="1"
                                    Opacity="0.78" />
                         <TextBlock Grid.Row="2"
                                    Grid.Column="1"
                                    Text="{Binding Path}"
+                                   ToolTip.Tip="{Binding Path}"
                                    FontSize="11"
                                    TextTrimming="CharacterEllipsis"
                                    IsVisible="{Binding HasPath}"

@@ -96,7 +96,7 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(CountOccurrences(foldersSection, "ToolTip.Tip=\"Open local folder\""), Is.EqualTo(1));
             Assert.That(foldersSection, Does.Not.Contain("ToolTip.Tip=\"Open selected local folder\""));
             Assert.That(foldersSection, Does.Contain("ToggleEnabledIcon"));
-            Assert.That(foldersSection, Does.Contain("ModeLabel"));
+            Assert.That(foldersSection, Does.Not.Contain("ModeLabel"));
             Assert.That(foldersSection, Does.Not.Contain("SelectedSyncPair.ToggleEnabledIcon"));
             Assert.That(foldersSection, Does.Not.Contain("SelectedSyncPair.ModeLabel"));
             Assert.That(foldersSection, Does.Contain("Text=\"{Binding CurrentOperation}\""));
@@ -230,9 +230,11 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(activitySection, Does.Contain("Text=\"{Binding Kind}\""));
             Assert.That(activitySection, Does.Contain("FontWeight=\"SemiBold\""));
             Assert.That(activitySection, Does.Contain("Text=\"{Binding Details}\""));
-            Assert.That(activitySection, Does.Contain("TextWrapping=\"Wrap\""));
-            Assert.That(activitySection, Does.Contain("MaxLines=\"2\""));
+            Assert.That(activitySection, Does.Contain("ToolTip.Tip=\"{Binding Details}\""));
+            Assert.That(activitySection, Does.Contain("TextWrapping=\"NoWrap\""));
+            Assert.That(activitySection, Does.Contain("MaxLines=\"1\""));
             Assert.That(activitySection, Does.Contain("Text=\"{Binding Path}\""));
+            Assert.That(activitySection, Does.Contain("ToolTip.Tip=\"{Binding Path}\""));
             Assert.That(activitySection, Does.Contain("IsVisible=\"{Binding HasPath}\""));
         });
     }
