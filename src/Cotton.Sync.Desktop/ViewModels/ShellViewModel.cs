@@ -21,6 +21,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 {
     private const int MaxActivityRows = 30;
     private const int MaxConflictRows = 20;
+    private static readonly TimeSpan TransferActivityCoalescingWindow = TimeSpan.FromMilliseconds(750);
 
     private readonly IDesktopShellController _controller;
     private readonly DesktopFeatureFlags _featureFlags;
@@ -92,6 +93,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private Guid? _transferSyncPairId;
     private string _transferRelativePath = string.Empty;
     private string _username = string.Empty;
+    private DateTimeOffset? _lastCoalescedActivityAt;
+    private Guid? _lastCoalescedActivitySyncPairId;
 
     internal ShellViewModel(
         IDesktopShellController controller,
@@ -2562,7 +2565,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             activity.Kind,
             activity.Path,
             activity.Details,
-            occurredAt);
+            occurredAt,
+            activity.SyncPairId);
         if (string.Equals(activity.Kind, "Conflict", StringComparison.Ordinal))
         {
             AddConflict(activity.SyncPairId, activity.Path, activity.Details, occurredAt);
@@ -2816,19 +2820,70 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         AddActivity(kind, path, details, DateTimeOffset.Now);
     }
 
-    private void AddActivity(string kind, string path, string details, DateTimeOffset occurredAt)
+    private void AddActivity(string kind, string path, string details, DateTimeOffset occurredAt, Guid? syncPairId = null)
     {
-        Activities.Insert(0, new ActivityRowViewModel
+        ActivityRowViewModel row = CreateActivityRow(kind, path, details, occurredAt);
+        if (ShouldCoalesceActivity(kind, syncPairId, occurredAt))
+        {
+            Activities[0] = row;
+            _lastCoalescedActivityAt = occurredAt;
+            return;
+        }
+
+        Activities.Insert(0, row);
+        TrackCoalescibleActivity(kind, syncPairId, occurredAt);
+        while (Activities.Count > MaxActivityRows)
+        {
+            Activities.RemoveAt(Activities.Count - 1);
+        }
+    }
+
+    private static ActivityRowViewModel CreateActivityRow(string kind, string path, string details, DateTimeOffset occurredAt)
+    {
+        return new ActivityRowViewModel
         {
             Time = occurredAt.ToString("HH:mm", CultureInfo.CurrentCulture),
             Kind = kind,
             Path = path,
             Details = details,
-        });
-        while (Activities.Count > MaxActivityRows)
+        };
+    }
+
+    private bool ShouldCoalesceActivity(string kind, Guid? syncPairId, DateTimeOffset occurredAt)
+    {
+        if (!IsHighVolumeTransferActivity(kind)
+            || Activities.Count == 0
+            || !_lastCoalescedActivityAt.HasValue
+            || !Equals(_lastCoalescedActivitySyncPairId, syncPairId))
         {
-            Activities.RemoveAt(Activities.Count - 1);
+            return false;
         }
+
+        ActivityRowViewModel latest = Activities[0];
+        return string.Equals(latest.Kind, kind, StringComparison.Ordinal)
+            && occurredAt >= _lastCoalescedActivityAt.Value
+            && occurredAt - _lastCoalescedActivityAt.Value <= TransferActivityCoalescingWindow;
+    }
+
+    private void TrackCoalescibleActivity(string kind, Guid? syncPairId, DateTimeOffset occurredAt)
+    {
+        if (!IsHighVolumeTransferActivity(kind))
+        {
+            _lastCoalescedActivityAt = null;
+            _lastCoalescedActivitySyncPairId = null;
+            return;
+        }
+
+        _lastCoalescedActivityAt = occurredAt;
+        _lastCoalescedActivitySyncPairId = syncPairId;
+    }
+
+    private static bool IsHighVolumeTransferActivity(string kind)
+    {
+        return string.Equals(kind, "Uploaded", StringComparison.Ordinal)
+            || string.Equals(kind, "Downloaded", StringComparison.Ordinal)
+            || string.Equals(kind, "Deleted local copy", StringComparison.Ordinal)
+            || string.Equals(kind, "Deleted remote copy", StringComparison.Ordinal);
     }
 
     private void AddConflict(Guid? syncPairId, string path, string details, DateTimeOffset occurredAt)

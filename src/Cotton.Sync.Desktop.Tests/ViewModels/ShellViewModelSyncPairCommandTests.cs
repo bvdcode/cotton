@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Globalization;
 using System.Net;
 using System.Reflection;
 using Cotton.Sdk;
@@ -1436,6 +1437,72 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(activity.Kind, Is.EqualTo("Uploaded"));
             Assert.That(activity.Path, Is.EqualTo("Documents/report.txt"));
             Assert.That(activity.Details, Is.EqualTo("Uploaded Documents/report.txt"));
+        });
+    }
+
+    [Test]
+    public async Task ActivityReported_CoalescesHighVolumeTransferBurst()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        int initialActivityCount = viewModel.Activities.Count;
+        DateTime startedAtUtc = new(2026, 6, 6, 10, 0, 0, DateTimeKind.Utc);
+
+        for (int index = 0; index < 100; index++)
+        {
+            string path = "Documents/file-" + index.ToString("000", CultureInfo.InvariantCulture) + ".txt";
+            controller.ReportActivity(new DesktopActivitySnapshot(
+                "Uploaded",
+                path,
+                "Uploaded " + path,
+                startedAtUtc.AddMilliseconds(index * 5),
+                syncPairId));
+        }
+
+        ActivityRowViewModel activity = viewModel.Activities.First();
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.Activities, Has.Count.EqualTo(initialActivityCount + 1));
+            Assert.That(activity.Kind, Is.EqualTo("Uploaded"));
+            Assert.That(activity.Path, Is.EqualTo("Documents/file-099.txt"));
+            Assert.That(activity.Details, Is.EqualTo("Uploaded Documents/file-099.txt"));
+        });
+    }
+
+    [Test]
+    public async Task ActivityReported_DoesNotCoalesceDifferentSyncPairTransferRows()
+    {
+        Guid documentsPairId = Guid.NewGuid();
+        Guid videosPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(
+            CreateSignedInSnapshot(
+                CreatePair(documentsPairId, "Documents", "Syncing"),
+                CreatePair(videosPairId, "Videos", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        int initialActivityCount = viewModel.Activities.Count;
+        DateTime occurredAtUtc = new(2026, 6, 6, 10, 0, 0, DateTimeKind.Utc);
+
+        controller.ReportActivity(new DesktopActivitySnapshot(
+            "Uploaded",
+            "Documents/report.txt",
+            "Uploaded Documents/report.txt",
+            occurredAtUtc,
+            documentsPairId));
+        controller.ReportActivity(new DesktopActivitySnapshot(
+            "Uploaded",
+            "Videos/clip.mp4",
+            "Uploaded Videos/clip.mp4",
+            occurredAtUtc.AddMilliseconds(10),
+            videosPairId));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.Activities, Has.Count.EqualTo(initialActivityCount + 2));
+            Assert.That(viewModel.Activities[0].Path, Is.EqualTo("Videos/clip.mp4"));
+            Assert.That(viewModel.Activities[1].Path, Is.EqualTo("Documents/report.txt"));
         });
     }
 
