@@ -171,6 +171,7 @@ public sealed class SyncEnginePerformanceSmokeTests
         WriteFile(relativePath, content);
         SqliteSyncStateStore stateStore = new(_databasePath);
         var remoteFilesClient = new RecordingRemoteFileSynchronizer();
+        var runProgress = new RecordingProgress<SyncRunProgress>();
         var engine = new SyncEngine(
             new LocalFileScanner(),
             new StaticRemoteTreeCrawler([]),
@@ -178,19 +179,28 @@ public sealed class SyncEnginePerformanceSmokeTests
             stateStore);
 
         Stopwatch stopwatch = Stopwatch.StartNew();
-        SyncRunResult result = await engine.RunOnceAsync(new SyncPair
-        {
-            SyncPairId = "performance-upload-large",
-            LocalRootPath = _root,
-            RemoteRootNodeId = RemoteRootNodeId,
-        });
+        remoteFilesClient.MeasurementStopwatch = stopwatch;
+        SyncRunResult result = await engine.RunOnceAsync(
+            new SyncPair
+            {
+                SyncPairId = "performance-upload-large",
+                LocalRootPath = _root,
+                RemoteRootNodeId = RemoteRootNodeId,
+            },
+            new SyncRunOptions { RunProgress = runProgress });
         stopwatch.Stop();
 
         SyncStateEntry? baseline = await stateStore.GetAsync("performance-upload-large", relativePath);
+        TimeSpan localScanElapsed = CalculateStageElapsed(
+            runProgress.Values,
+            SyncRunProgressStage.ScanningLocal,
+            SyncRunProgressStage.ScanningRemote);
         TestContext.WriteLine(
-            "Initial upload smoke for one {0:N0}-byte file completed in {1:N0} ms.",
+            "Initial upload smoke for one {0:N0}-byte file completed in {1:N0} ms; local metadata scan {2:N0} ms; first upload started after {3:N0} ms.",
             fileSizeBytes,
-            stopwatch.Elapsed.TotalMilliseconds);
+            stopwatch.Elapsed.TotalMilliseconds,
+            localScanElapsed.TotalMilliseconds,
+            remoteFilesClient.UploadStartedAt.Single().TotalMilliseconds);
 
         Assert.Multiple(() =>
         {
@@ -198,8 +208,10 @@ public sealed class SyncEnginePerformanceSmokeTests
             Assert.That(remoteFilesClient.DownloadCalls, Is.Zero);
             Assert.That(remoteFilesClient.DeleteCalls, Is.Zero);
             Assert.That(remoteFilesClient.Uploads.Single().RelativePath, Is.EqualTo(relativePath));
+            Assert.That(remoteFilesClient.UploadInputContentHashes.Single(), Is.Empty);
             Assert.That(remoteFilesClient.Uploads.Single().LocalFile.SizeBytes, Is.EqualTo(fileSizeBytes));
             Assert.That(remoteFilesClient.Uploads.Single().LocalFile.ContentHash, Is.EqualTo(expectedHash));
+            Assert.That(localScanElapsed, Is.GreaterThanOrEqualTo(TimeSpan.Zero));
             Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
             Assert.That(baseline, Is.Not.Null);
             Assert.That(baseline!.LocalContentHash, Is.EqualTo(expectedHash));
@@ -224,6 +236,17 @@ public sealed class SyncEnginePerformanceSmokeTests
     private static string Hash(byte[] bytes)
     {
         return Convert.ToHexStringLower(SHA256.HashData(bytes));
+    }
+
+    private static TimeSpan CalculateStageElapsed(
+        IReadOnlyList<SyncRunProgress> progress,
+        SyncRunProgressStage startStage,
+        SyncRunProgressStage nextStage)
+    {
+        SyncRunProgress start = progress.First(item => item.Stage == startStage);
+        SyncRunProgress next = progress.First(item => item.Stage == nextStage);
+        TimeSpan elapsed = next.OccurredAtUtc - start.OccurredAtUtc;
+        return elapsed < TimeSpan.Zero ? TimeSpan.Zero : elapsed;
     }
 
     private static byte[] CreateDeterministicBytes(int length)
@@ -320,6 +343,12 @@ public sealed class SyncEnginePerformanceSmokeTests
     {
         public List<UploadCall> Uploads { get; } = [];
 
+        public List<string> UploadInputContentHashes { get; } = [];
+
+        public List<TimeSpan> UploadStartedAt { get; } = [];
+
+        public Stopwatch? MeasurementStopwatch { get; set; }
+
         public int UploadCalls { get; private set; }
 
         public int DownloadCalls { get; private set; }
@@ -334,6 +363,8 @@ public sealed class SyncEnginePerformanceSmokeTests
             CancellationToken cancellationToken = default)
         {
             UploadCalls++;
+            UploadInputContentHashes.Add(localFile.ContentHash);
+            UploadStartedAt.Add(MeasurementStopwatch?.Elapsed ?? TimeSpan.Zero);
             string contentHash = string.IsNullOrWhiteSpace(localFile.ContentHash)
                 ? await HashFileAsync(localFile.FullPath, cancellationToken).ConfigureAwait(false)
                 : localFile.ContentHash;
@@ -375,4 +406,14 @@ public sealed class SyncEnginePerformanceSmokeTests
         LocalFileSnapshot LocalFile,
         NodeFileManifestDto? ExistingRemoteFile,
         NodeFileManifestDto ReturnedFile);
+
+    private sealed class RecordingProgress<T> : IProgress<T>
+    {
+        public List<T> Values { get; } = [];
+
+        public void Report(T value)
+        {
+            Values.Add(value);
+        }
+    }
 }
