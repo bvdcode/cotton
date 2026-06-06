@@ -166,7 +166,7 @@ public sealed class SyncEngine : ISyncEngine
         _logger.LogInformation(
             "Completed sync pass for pair {SyncPairId} with {ActivityCount} activities.",
             syncPair.SyncPairId,
-            result.Activities.Count);
+            result.TotalActivityCount);
         return result;
     }
 
@@ -950,6 +950,13 @@ public sealed class SyncEngine : ISyncEngine
                 nameof(options),
                 "Maximum remote deletes per run cannot be negative.");
         }
+
+        if (options.MaximumStoredResultActivities < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(options),
+                "Maximum stored result activities cannot be negative.");
+        }
     }
 
     private static SyncDeleteGuard BuildDeleteGuard(
@@ -1170,7 +1177,7 @@ public sealed class SyncEngine : ISyncEngine
             Details = details,
             RequiresUserAction = requiresUserAction,
         };
-        result.Activities.Add(activity);
+        result.RecordActivity(activity, options.MaximumStoredResultActivities);
         options.ActivityProgress?.Report(activity);
     }
 

@@ -14,6 +14,7 @@ namespace Cotton.Sync.Tests;
 
 public sealed class SyncEnginePerformanceSmokeTests
 {
+    private const long MiB = 1024L * 1024L;
     private static readonly Guid RemoteRootNodeId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private string _root = string.Empty;
     private string _databasePath = string.Empty;
@@ -44,7 +45,8 @@ public sealed class SyncEnginePerformanceSmokeTests
         await VerifyNoOpFileSetCompletesWithinSmokeTargetAsync(
             "performance-noop-1k",
             fileCount,
-            smokeTarget);
+            smokeTarget,
+            managedHeapDeltaTargetBytes: 128L * MiB);
     }
 
     [Test]
@@ -56,7 +58,8 @@ public sealed class SyncEnginePerformanceSmokeTests
         await VerifyNoOpFileSetCompletesWithinSmokeTargetAsync(
             "performance-noop-3k",
             fileCount,
-            smokeTarget);
+            smokeTarget,
+            managedHeapDeltaTargetBytes: 160L * MiB);
     }
 
     [Test]
@@ -69,60 +72,68 @@ public sealed class SyncEnginePerformanceSmokeTests
         await VerifyNoOpFileSetCompletesWithinSmokeTargetAsync(
             "performance-noop-10k",
             fileCount,
-            smokeTarget);
+            smokeTarget,
+            managedHeapDeltaTargetBytes: 256L * MiB);
+    }
+
+    [Test]
+    [Explicit("Release-scale smoke; run manually before release or on dedicated Windows performance verification.")]
+    public async Task RunOnceAsync_NoOpForThirtyThousandFilesCompletesWithinManualSmokeTarget()
+    {
+        const int fileCount = 30_000;
+        TimeSpan smokeTarget = TimeSpan.FromMinutes(8);
+
+        await VerifyNoOpFileSetCompletesWithinSmokeTargetAsync(
+            "performance-noop-30k",
+            fileCount,
+            smokeTarget,
+            managedHeapDeltaTargetBytes: 512L * MiB);
+    }
+
+    [Test]
+    [Explicit("Release-scale smoke; run manually before release or on dedicated Windows performance verification.")]
+    public async Task RunOnceAsync_NoOpForFiftyThousandFilesCompletesWithinManualSmokeTarget()
+    {
+        const int fileCount = 50_000;
+        TimeSpan smokeTarget = TimeSpan.FromMinutes(12);
+
+        await VerifyNoOpFileSetCompletesWithinSmokeTargetAsync(
+            "performance-noop-50k",
+            fileCount,
+            smokeTarget,
+            managedHeapDeltaTargetBytes: 768L * MiB);
     }
 
     [Test]
     public async Task RunOnceAsync_UploadsOneThousandSmallFilesWithinSmokeTarget()
     {
-        const int fileCount = 1_000;
-        TimeSpan smokeTarget = TimeSpan.FromSeconds(30);
-        for (int index = 0; index < fileCount; index++)
-        {
-            string relativePath = $"Upload/{index / 100:D2}/small-{index:D4}.txt";
-            byte[] content = Encoding.UTF8.GetBytes("small-upload-" + index.ToString("D4", System.Globalization.CultureInfo.InvariantCulture));
-            WriteFile(relativePath, content);
-        }
+        await VerifyInitialUploadFileSetCompletesWithinSmokeTargetAsync(
+            "performance-upload-small",
+            fileCount: 1_000,
+            smokeTarget: TimeSpan.FromSeconds(30),
+            managedHeapDeltaTargetBytes: 160L * MiB);
+    }
 
-        SqliteSyncStateStore stateStore = new(_databasePath);
-        var remoteFilesClient = new RecordingRemoteFileSynchronizer();
-        var engine = new SyncEngine(
-            new LocalFileScanner(),
-            new StaticRemoteTreeCrawler([]),
-            remoteFilesClient,
-            stateStore);
+    [Test]
+    [Explicit("Release-scale smoke; run manually before release or on dedicated Windows performance verification.")]
+    public async Task RunOnceAsync_UploadsTenThousandSmallFilesWithinManualSmokeTarget()
+    {
+        await VerifyInitialUploadFileSetCompletesWithinSmokeTargetAsync(
+            "performance-upload-small-10k",
+            fileCount: 10_000,
+            smokeTarget: TimeSpan.FromMinutes(5),
+            managedHeapDeltaTargetBytes: 512L * MiB);
+    }
 
-        Stopwatch stopwatch = Stopwatch.StartNew();
-        SyncRunResult result = await engine.RunOnceAsync(new SyncPair
-        {
-            SyncPairId = "performance-upload-small",
-            LocalRootPath = _root,
-            RemoteRootNodeId = RemoteRootNodeId,
-        });
-        stopwatch.Stop();
-
-        IReadOnlyList<SyncStateEntry> baselines = await stateStore.LoadPairAsync("performance-upload-small");
-        int distinctRemoteFileIds = baselines
-            .Select(entry => entry.RemoteFileId)
-            .Where(id => id.HasValue)
-            .Distinct()
-            .Count();
-        TestContext.WriteLine(
-            "Initial upload smoke for {0} small files completed in {1:N0} ms.",
-            fileCount,
-            stopwatch.Elapsed.TotalMilliseconds);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(remoteFilesClient.UploadCalls, Is.EqualTo(fileCount));
-            Assert.That(remoteFilesClient.DownloadCalls, Is.Zero);
-            Assert.That(remoteFilesClient.DeleteCalls, Is.Zero);
-            Assert.That(result.Activities, Has.Count.EqualTo(fileCount));
-            Assert.That(result.Activities.Select(activity => activity.Kind), Is.All.EqualTo(SyncActivityKind.Uploaded));
-            Assert.That(baselines, Has.Count.EqualTo(fileCount));
-            Assert.That(distinctRemoteFileIds, Is.EqualTo(fileCount));
-            Assert.That(stopwatch.Elapsed, Is.LessThan(smokeTarget));
-        });
+    [Test]
+    [Explicit("Release-scale smoke; run manually before release or on dedicated Windows performance verification.")]
+    public async Task RunOnceAsync_UploadsThirtyThousandSmallFilesWithinManualSmokeTarget()
+    {
+        await VerifyInitialUploadFileSetCompletesWithinSmokeTargetAsync(
+            "performance-upload-small-30k",
+            fileCount: 30_000,
+            smokeTarget: TimeSpan.FromMinutes(12),
+            managedHeapDeltaTargetBytes: 1_024L * MiB);
     }
 
     [Test]
@@ -201,7 +212,8 @@ public sealed class SyncEnginePerformanceSmokeTests
     private async Task VerifyNoOpFileSetCompletesWithinSmokeTargetAsync(
         string syncPairId,
         int fileCount,
-        TimeSpan smokeTarget)
+        TimeSpan smokeTarget,
+        long managedHeapDeltaTargetBytes)
     {
         SqliteSyncStateStore stateStore = new(_databasePath);
         await stateStore.InitializeAsync();
@@ -244,6 +256,7 @@ public sealed class SyncEnginePerformanceSmokeTests
             remoteFilesClient,
             stateStore);
 
+        MemorySample beforeRunMemory = CaptureMemorySample();
         Stopwatch stopwatch = Stopwatch.StartNew();
         SyncRunResult result = await engine.RunOnceAsync(new SyncPair
         {
@@ -252,12 +265,15 @@ public sealed class SyncEnginePerformanceSmokeTests
             RemoteRootNodeId = RemoteRootNodeId,
         });
         stopwatch.Stop();
+        MemorySample afterRunMemory = CaptureMemorySample();
 
         IReadOnlyList<SyncStateEntry> baselines = await stateStore.LoadPairAsync(syncPairId);
         TestContext.WriteLine(
-            "No-op sync smoke for {0} files completed in {1:N0} ms.",
+            "No-op sync smoke for {0} files completed in {1:N0} ms; managed heap delta {2:N1} MiB; working set delta {3:N1} MiB.",
             fileCount,
-            stopwatch.Elapsed.TotalMilliseconds);
+            stopwatch.Elapsed.TotalMilliseconds,
+            ToMiB(afterRunMemory.ManagedHeapBytes - beforeRunMemory.ManagedHeapBytes),
+            ToMiB(afterRunMemory.WorkingSetBytes - beforeRunMemory.WorkingSetBytes));
 
         Assert.Multiple(() =>
         {
@@ -267,6 +283,81 @@ public sealed class SyncEnginePerformanceSmokeTests
             Assert.That(remoteFilesClient.DeleteCalls, Is.Zero);
             Assert.That(baselines, Has.Count.EqualTo(fileCount));
             Assert.That(stopwatch.Elapsed, Is.LessThan(smokeTarget));
+            Assert.That(
+                afterRunMemory.ManagedHeapBytes - beforeRunMemory.ManagedHeapBytes,
+                Is.LessThan(managedHeapDeltaTargetBytes));
+        });
+    }
+
+    private async Task VerifyInitialUploadFileSetCompletesWithinSmokeTargetAsync(
+        string syncPairId,
+        int fileCount,
+        TimeSpan smokeTarget,
+        long managedHeapDeltaTargetBytes)
+    {
+        for (int index = 0; index < fileCount; index++)
+        {
+            string relativePath = $"Upload/{index / 100:D2}/small-{index:D5}.txt";
+            byte[] content = Encoding.UTF8.GetBytes("small-upload-" + index.ToString("D5", System.Globalization.CultureInfo.InvariantCulture));
+            WriteFile(relativePath, content);
+        }
+
+        SqliteSyncStateStore stateStore = new(_databasePath);
+        var remoteFilesClient = new RecordingRemoteFileSynchronizer();
+        var activityProgress = new RecordingProgress<SyncActivity>();
+        const int retainedActivityLimit = 1_000;
+        var engine = new SyncEngine(
+            new LocalFileScanner(),
+            new StaticRemoteTreeCrawler([]),
+            remoteFilesClient,
+            stateStore);
+
+        MemorySample beforeRunMemory = CaptureMemorySample();
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        SyncRunResult result = await engine.RunOnceAsync(
+            new SyncPair
+            {
+                SyncPairId = syncPairId,
+                LocalRootPath = _root,
+                RemoteRootNodeId = RemoteRootNodeId,
+            },
+            new SyncRunOptions
+            {
+                ActivityProgress = activityProgress,
+                MaximumStoredResultActivities = retainedActivityLimit,
+            });
+        stopwatch.Stop();
+        MemorySample afterRunMemory = CaptureMemorySample();
+
+        IReadOnlyList<SyncStateEntry> baselines = await stateStore.LoadPairAsync(syncPairId);
+        int distinctRemoteFileIds = baselines
+            .Select(entry => entry.RemoteFileId)
+            .Where(id => id.HasValue)
+            .Distinct()
+            .Count();
+        TestContext.WriteLine(
+            "Initial upload smoke for {0} small files completed in {1:N0} ms; managed heap delta {2:N1} MiB; working set delta {3:N1} MiB.",
+            fileCount,
+            stopwatch.Elapsed.TotalMilliseconds,
+            ToMiB(afterRunMemory.ManagedHeapBytes - beforeRunMemory.ManagedHeapBytes),
+            ToMiB(afterRunMemory.WorkingSetBytes - beforeRunMemory.WorkingSetBytes));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(remoteFilesClient.UploadCalls, Is.EqualTo(fileCount));
+            Assert.That(remoteFilesClient.DownloadCalls, Is.Zero);
+            Assert.That(remoteFilesClient.DeleteCalls, Is.Zero);
+            Assert.That(activityProgress.Values, Has.Count.EqualTo(fileCount));
+            Assert.That(result.TotalActivityCount, Is.EqualTo(fileCount));
+            Assert.That(result.Activities, Has.Count.EqualTo(Math.Min(fileCount, retainedActivityLimit)));
+            Assert.That(result.IsActivityListTruncated, Is.EqualTo(fileCount > retainedActivityLimit));
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.All.EqualTo(SyncActivityKind.Uploaded));
+            Assert.That(baselines, Has.Count.EqualTo(fileCount));
+            Assert.That(distinctRemoteFileIds, Is.EqualTo(fileCount));
+            Assert.That(stopwatch.Elapsed, Is.LessThan(smokeTarget));
+            Assert.That(
+                afterRunMemory.ManagedHeapBytes - beforeRunMemory.ManagedHeapBytes,
+                Is.LessThan(managedHeapDeltaTargetBytes));
         });
     }
 
@@ -295,6 +386,22 @@ public sealed class SyncEnginePerformanceSmokeTests
         }
 
         return bytes;
+    }
+
+    private static MemorySample CaptureMemorySample()
+    {
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        using Process process = Process.GetCurrentProcess();
+        process.Refresh();
+        return new MemorySample(GC.GetTotalMemory(forceFullCollection: false), process.WorkingSet64);
+    }
+
+    private static double ToMiB(long bytes)
+    {
+        return bytes / (double)MiB;
     }
 
     private static NodeFileManifestDto RemoteFile(string relativePath, string contentHash, long sizeBytes)
@@ -443,6 +550,8 @@ public sealed class SyncEnginePerformanceSmokeTests
         LocalFileSnapshot LocalFile,
         NodeFileManifestDto? ExistingRemoteFile,
         NodeFileManifestDto ReturnedFile);
+
+    private sealed record MemorySample(long ManagedHeapBytes, long WorkingSetBytes);
 
     private sealed class RecordingProgress<T> : IProgress<T>
     {

@@ -9,6 +9,7 @@ namespace Cotton.Sync;
 public sealed class SyncRunOptions
 {
     private const int DefaultMaximumDeletesPerRun = 100;
+    private const int DefaultMaximumStoredResultActivities = 1_000;
 
     /// <summary>
     /// Gets or sets a value indicating whether remote file deletes bypass trash.
@@ -24,6 +25,12 @@ public sealed class SyncRunOptions
     /// Gets or sets the maximum number of remote files that can be removed in one sync pass.
     /// </summary>
     public int MaximumRemoteDeletesPerRun { get; set; } = DefaultMaximumDeletesPerRun;
+
+    /// <summary>
+    /// Gets or sets the maximum number of activities retained in the returned result.
+    /// Live activity progress is still reported for every activity.
+    /// </summary>
+    public int MaximumStoredResultActivities { get; set; } = DefaultMaximumStoredResultActivities;
 
     /// <summary>
     /// Gets or sets the optional live activity reporter used by UI and CLI clients.
