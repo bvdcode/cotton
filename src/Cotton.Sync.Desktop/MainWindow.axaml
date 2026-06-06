@@ -583,7 +583,7 @@
                             <Button Grid.Column="3"
                                     Grid.RowSpan="5"
                                     Classes="icon"
-                                    ToolTip.Tip="Rename, enable, or remove"
+                                    ToolTip.Tip="Rename or manage sync folder"
                                     Command="{Binding $parent[Window].DataContext.ShowSelectedSyncPairEditorCommand}"
                                     CommandParameter="{Binding}"
                                     VerticalAlignment="Center">
@@ -601,7 +601,7 @@
                                     BorderBrush="{DynamicResource CottonBorderBrush}"
                                     BorderThickness="1"
                                     IsVisible="{Binding IsEditorVisible}">
-                              <Grid ColumnDefinitions="*,Auto,Auto,Auto"
+                              <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto"
                                     ColumnSpacing="6">
                                 <TextBox Text="{Binding EditableDisplayName}"
                                          PlaceholderText="Folder name" />
@@ -615,6 +615,24 @@
                                                               Foreground="{DynamicResource CottonTextPrimaryBrush}" />
                                 </Button>
                                 <Button Grid.Column="2"
+                                        Classes="icon"
+                                        ToolTip.Tip="Change local folder"
+                                        Command="{Binding $parent[Window].DataContext.ChangeSelectedSyncPairLocalFolderCommand}">
+                                  <materialIcons:MaterialIcon Kind="FolderSearchOutline"
+                                                              Width="16"
+                                                              Height="16"
+                                                              Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                                </Button>
+                                <Button Grid.Column="3"
+                                        Classes="icon"
+                                        ToolTip.Tip="Change cloud folder"
+                                        Command="{Binding $parent[Window].DataContext.ChangeSelectedSyncPairRemoteFolderCommand}">
+                                  <materialIcons:MaterialIcon Kind="CloudSearchOutline"
+                                                              Width="16"
+                                                              Height="16"
+                                                              Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                                </Button>
+                                <Button Grid.Column="4"
                                         Classes="icon"
                                         ToolTip.Tip="{Binding ToggleEnabledLabel}"
                                         Command="{Binding $parent[Window].DataContext.ToggleSelectedSyncPairEnabledCommand}">
@@ -631,7 +649,7 @@
                                                                 IsVisible="{Binding IsDisabled}" />
                                   </Grid>
                                 </Button>
-                                <Button Grid.Column="3"
+                                <Button Grid.Column="5"
                                         Classes="icon"
                                         ToolTip.Tip="Remove sync folder"
                                         Command="{Binding $parent[Window].DataContext.RemoveSelectedSyncPairCommand}">
