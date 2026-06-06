@@ -68,7 +68,7 @@
                                         Foreground="{DynamicResource CottonTextPrimaryBrush}" />
             <Button.Flyout>
               <MenuFlyout>
-                <MenuItem Header="Open Cotton Cloud"
+                <MenuItem Header="Open in Cotton Cloud"
                           Command="{Binding OpenWebCommand}" />
                 <MenuItem Header="{Binding PauseResumeSyncLabel}"
                           IsVisible="{Binding CanTogglePauseResumeSync}"
