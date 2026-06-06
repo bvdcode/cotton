@@ -2,7 +2,7 @@ import { Alert, Box, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { DataGrid, type GridColumnVisibilityModel } from "@mui/x-data-grid";
 import { useConfirm } from "material-ui-confirm";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { OidcProviderDto } from "@shared/api/oidcApi";
 import {
@@ -13,6 +13,21 @@ import { AdminPageSurface } from "../components/AdminPageSurface";
 import { OidcProviderFormDialog } from "./OidcProviderFormDialog";
 import { OidcProvidersGridToolbar } from "./OidcProvidersGridToolbar";
 import { useOidcProviderColumns } from "./useOidcProviderColumns";
+
+type ColumnVisibilityTarget = "desktop" | "mobile";
+
+const createInitialColumnVisibilityModels = (): Record<
+  ColumnVisibilityTarget,
+  GridColumnVisibilityModel
+> => ({
+  desktop: {},
+  mobile: {
+    issuer: false,
+    allowAccountCreation: false,
+    scopes: false,
+    allowedEmailDomains: false,
+  },
+});
 
 export const AdminIdentityProvidersPage = () => {
   const { t } = useTranslation(["admin", "common"]);
@@ -50,27 +65,20 @@ export const AdminIdentityProvidersPage = () => {
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const defaultColumnVisibilityModel = useMemo<GridColumnVisibilityModel>(() => {
-    if (!isMobile) {
-      const visibleColumns: GridColumnVisibilityModel = {};
-      return visibleColumns;
-    }
-
-    const mobileColumns: GridColumnVisibilityModel = {
-      issuer: false,
-      allowAccountCreation: false,
-      scopes: false,
-      allowedEmailDomains: false,
-    };
-    return mobileColumns;
-  }, [isMobile]);
-  const [columnVisibilityModel, setColumnVisibilityModel] = useState<GridColumnVisibilityModel>(
-    defaultColumnVisibilityModel,
+  const columnVisibilityTarget: ColumnVisibilityTarget = isMobile ? "mobile" : "desktop";
+  const [columnVisibilityModels, setColumnVisibilityModels] = useState(
+    createInitialColumnVisibilityModels,
   );
-
-  useEffect(() => {
-    setColumnVisibilityModel(defaultColumnVisibilityModel);
-  }, [defaultColumnVisibilityModel]);
+  const columnVisibilityModel = columnVisibilityModels[columnVisibilityTarget];
+  const handleColumnVisibilityModelChange = useCallback(
+    (model: GridColumnVisibilityModel) => {
+      setColumnVisibilityModels((current) => ({
+        ...current,
+        [columnVisibilityTarget]: model,
+      }));
+    },
+    [columnVisibilityTarget],
+  );
 
   const ToolbarSlot = useMemo(() => {
     const ProviderToolbar = () => (
@@ -110,7 +118,7 @@ export const AdminIdentityProvidersPage = () => {
             rows={providers}
             columns={columns}
             columnVisibilityModel={columnVisibilityModel}
-            onColumnVisibilityModelChange={setColumnVisibilityModel}
+            onColumnVisibilityModelChange={handleColumnVisibilityModelChange}
             getRowId={(row) => row.id}
             loading={providersQuery.isLoading}
             disableRowSelectionOnClick
