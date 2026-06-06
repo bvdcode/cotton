@@ -60,6 +60,19 @@ public sealed class SyncEnginePerformanceSmokeTests
     }
 
     [Test]
+    [Explicit("Release-scale smoke; run manually before release or on dedicated Windows performance verification.")]
+    public async Task RunOnceAsync_NoOpForTenThousandFilesCompletesWithinManualSmokeTarget()
+    {
+        const int fileCount = 10_000;
+        TimeSpan smokeTarget = TimeSpan.FromMinutes(3);
+
+        await VerifyNoOpFileSetCompletesWithinSmokeTargetAsync(
+            "performance-noop-10k",
+            fileCount,
+            smokeTarget);
+    }
+
+    [Test]
     public async Task RunOnceAsync_UploadsOneThousandSmallFilesWithinSmokeTarget()
     {
         const int fileCount = 1_000;
