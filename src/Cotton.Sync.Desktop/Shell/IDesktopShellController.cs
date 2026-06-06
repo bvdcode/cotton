@@ -41,6 +41,11 @@ internal interface IDesktopShellController : IDisposable, IAsyncDisposable
         string localFolderPath,
         CancellationToken cancellationToken = default);
 
+    Task<SyncPairSettings> SetSyncPairRemoteFolderAsync(
+        Guid syncPairId,
+        string remoteFolderPath,
+        CancellationToken cancellationToken = default);
+
     Task RenameSyncPairAsync(Guid syncPairId, string displayName, CancellationToken cancellationToken = default);
 
     Task RemoveSyncPairAsync(Guid syncPairId, CancellationToken cancellationToken = default);

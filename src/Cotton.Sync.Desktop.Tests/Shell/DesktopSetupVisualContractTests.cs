@@ -87,6 +87,7 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Contain("SaveSelectedSyncPairNameCommand"));
             Assert.That(foldersSection, Does.Contain("ToggleSelectedSyncPairEnabledCommand"));
             Assert.That(foldersSection, Does.Contain("ChangeSelectedSyncPairLocalFolderCommand"));
+            Assert.That(foldersSection, Does.Contain("ChangeSelectedSyncPairRemoteFolderCommand"));
             Assert.That(foldersSection, Does.Contain("RemoveSelectedSyncPairCommand"));
             Assert.That(foldersSection, Does.Contain("CancelSelectedSyncPairEditorCommand"));
             Assert.That(foldersSection, Does.Contain("IsRemoveSyncPairConfirmationVisible"));
@@ -95,6 +96,8 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"Manage sync folder\""));
             Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"Open local folder\""));
             Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"Change local folder\""));
+            Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"Change cloud folder\""));
+            Assert.That(CountOccurrences(foldersSection, "Classes=\"inlineChange\""), Is.EqualTo(2));
             Assert.That(CountOccurrences(foldersSection, "ToolTip.Tip=\"Open local folder\""), Is.EqualTo(1));
             Assert.That(foldersSection, Does.Not.Contain("ToolTip.Tip=\"Open selected local folder\""));
             Assert.That(foldersSection, Does.Contain("ToggleEnabledIcon"));
@@ -534,7 +537,11 @@ public sealed class DesktopSetupVisualContractTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(addFolderWizard, Does.Contain("Content=\"Use this folder\""));
+            Assert.That(addFolderWizard, Does.Contain("Content=\"{Binding RemoteFolderWizardPrimaryActionText}\""));
+            Assert.That(addFolderWizard, Does.Contain("ToolTip.Tip=\"{Binding RemoteFolderWizardPrimaryActionToolTip}\""));
+            Assert.That(addFolderWizard, Does.Contain("UseRemoteFolderCommand"));
+            Assert.That(addFolderWizard, Does.Contain("IsAddSyncPairLocalSummaryVisible"));
+            Assert.That(addFolderWizard, Does.Not.Contain("Command=\"{Binding AddSyncPairCommand}\""));
             Assert.That(addFolderWizard, Does.Not.Contain("Content=\"Sync\""));
         });
     }

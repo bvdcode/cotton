@@ -79,6 +79,11 @@
       <Setter Property="Padding" Value="10,4" />
       <Setter Property="FontSize" Value="12" />
     </Style>
+    <Style Selector="Button.inlineChange">
+      <Setter Property="MinHeight" Value="24" />
+      <Setter Property="Padding" Value="8,2" />
+      <Setter Property="FontSize" Value="11" />
+    </Style>
     <Style Selector="TextBox">
       <Setter Property="MinHeight" Value="32" />
       <Setter Property="Background" Value="{DynamicResource CottonSurfaceBrush}" />

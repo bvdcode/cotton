@@ -65,6 +65,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private bool _isAddSyncPairWizardVisible;
     private bool _isCreateRemoteFolderVisible;
     private bool _isDesktopSyncChangesApiUnavailable;
+    private bool _isEditingSelectedSyncPairRemoteFolder;
     private bool _isLocalFolderSelectionError;
     private bool _isSelectedSyncPairEditorVisible;
     private bool _isSettingsVisible;
@@ -148,6 +149,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             ChangeSelectedSyncPairLocalFolderAsync,
             () => IsSignedIn && SelectedSyncPair is not null && !IsBusy,
             HandleCommandError);
+        ChangeSelectedSyncPairRemoteFolderCommand = new AsyncRelayCommand(
+            ShowSelectedSyncPairRemoteFolderAsync,
+            () => IsSignedIn && SelectedSyncPair is not null && !IsBusy && CanUseAddSyncPairFlow,
+            HandleCommandError);
         ToggleSelectedSyncPairEnabledCommand = new AsyncRelayCommand(
             ToggleSelectedSyncPairEnabledAsync,
             () => IsSignedIn && SelectedSyncPair is not null && !IsBusy,
@@ -187,6 +192,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             OpenDiagnosticsBundleFolderAsync,
             () => HasLastDiagnosticsBundlePath && !IsBusy,
             HandleCommandError);
+        UseRemoteFolderCommand = new AsyncRelayCommand(UseRemoteFolderAsync, CanUseRemoteFolder, HandleCommandError);
     }
 
     public ObservableCollection<SyncPairRowViewModel> SyncPairs { get; } = [];
@@ -219,6 +225,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public AsyncRelayCommand ChangeSelectedSyncPairLocalFolderCommand { get; }
 
+    public AsyncRelayCommand ChangeSelectedSyncPairRemoteFolderCommand { get; }
+
     public AsyncRelayCommand CloseSettingsCommand { get; }
 
     public AsyncRelayCommand ConfirmRemoveSelectedSyncPairCommand { get; }
@@ -244,6 +252,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public AsyncRelayCommand SaveSelectedSyncPairNameCommand { get; }
 
     public AsyncRelayCommand ToggleSelectedSyncPairEnabledCommand { get; }
+
+    public AsyncRelayCommand UseRemoteFolderCommand { get; }
 
     public AsyncRelayCommand PauseCommand { get; }
 
@@ -746,9 +756,27 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public bool HasLocalFolderSelection => !string.IsNullOrWhiteSpace(LocalFolderPath);
 
-    public bool IsAddSyncPairLocalStepVisible => IsAddSyncPairWizardVisible && !HasLocalFolderSelection;
+    public bool IsAddSyncPairLocalStepVisible =>
+        IsAddSyncPairWizardVisible && !IsEditingSelectedSyncPairRemoteFolder && !HasLocalFolderSelection;
 
-    public bool IsAddSyncPairCloudStepVisible => IsAddSyncPairWizardVisible && HasLocalFolderSelection;
+    public bool IsAddSyncPairCloudStepVisible =>
+        IsAddSyncPairWizardVisible && (HasLocalFolderSelection || IsEditingSelectedSyncPairRemoteFolder);
+
+    public bool IsAddSyncPairLocalSummaryVisible =>
+        IsAddSyncPairCloudStepVisible && !IsEditingSelectedSyncPairRemoteFolder;
+
+    public bool IsEditingSelectedSyncPairRemoteFolder
+    {
+        get => _isEditingSelectedSyncPairRemoteFolder;
+        private set
+        {
+            if (SetProperty(ref _isEditingSelectedSyncPairRemoteFolder, value))
+            {
+                RaiseWizardStateProperties();
+                RaiseAddSyncPairFlowCommandStates();
+            }
+        }
+    }
 
     public bool IsCreateRemoteFolderVisible
     {
@@ -781,11 +809,23 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         set => SetProperty(ref _selectedSettingsTabIndex, value);
     }
 
-    public string AddSyncPairWizardTitle => HasLocalFolderSelection ? "Choose cloud folder" : "Choose local folder";
+    public string AddSyncPairWizardTitle => IsEditingSelectedSyncPairRemoteFolder
+        ? "Change cloud folder"
+        : HasLocalFolderSelection ? "Choose cloud folder" : "Choose local folder";
 
-    public string AddSyncPairWizardSubtitle => HasLocalFolderSelection
-        ? "Pick where this computer folder should sync in Cotton Cloud."
-        : "Start with the folder on this computer.";
+    public string AddSyncPairWizardSubtitle => IsEditingSelectedSyncPairRemoteFolder
+        ? $"Pick the Cotton Cloud folder for {SelectedSyncPair?.DisplayName ?? "this sync folder"}."
+        : HasLocalFolderSelection
+            ? "Pick where this computer folder should sync in Cotton Cloud."
+            : "Start with the folder on this computer.";
+
+    public string RemoteFolderWizardPrimaryActionText => IsEditingSelectedSyncPairRemoteFolder
+        ? "Update cloud folder"
+        : "Use this folder";
+
+    public string RemoteFolderWizardPrimaryActionToolTip => IsEditingSelectedSyncPairRemoteFolder
+        ? "Change the cloud folder for this sync folder"
+        : "Start syncing with the current cloud folder";
 
     public bool IsFutureSyncModesVisible => _featureFlags.ShowFutureSyncModes;
 
@@ -828,6 +868,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             if (SetProperty(ref _localFolderPath, value))
             {
                 AddSyncPairCommand.RaiseCanExecuteChanged();
+                UseRemoteFolderCommand.RaiseCanExecuteChanged();
                 RaiseWizardStateProperties();
             }
         }
@@ -913,6 +954,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             if (SetProperty(ref _remoteFolderPath, value))
             {
                 AddSyncPairCommand.RaiseCanExecuteChanged();
+                UseRemoteFolderCommand.RaiseCanExecuteChanged();
                 OnPropertyChanged(nameof(RemoteFolderSelectionLabel));
             }
         }
@@ -991,6 +1033,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 UpdateSelectedSyncPairEditorVisibility();
                 OnPropertyChanged(nameof(SelectedSyncPairEditableDisplayName));
                 OnPropertyChanged(nameof(SelectedSyncPairToggleEnabledLabel));
+                OnPropertyChanged(nameof(AddSyncPairWizardSubtitle));
                 if (_pendingRemoveSyncPair is not null && !ReferenceEquals(_pendingRemoveSyncPair, value))
                 {
                     ClearRemoveSyncPairConfirmation();
@@ -998,6 +1041,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
                 OpenFolderCommand.RaiseCanExecuteChanged();
                 ChangeSelectedSyncPairLocalFolderCommand.RaiseCanExecuteChanged();
+                ChangeSelectedSyncPairRemoteFolderCommand.RaiseCanExecuteChanged();
                 ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
                 SaveSelectedSyncPairNameCommand.RaiseCanExecuteChanged();
                 RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
@@ -1347,6 +1391,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             LocalFolderPath = string.Empty;
             RemoteFolderPath = string.Empty;
             IsAddSyncPairWizardVisible = false;
+            IsEditingSelectedSyncPairRemoteFolder = false;
             ActionRequiredMessage = string.Empty;
             RemoteFolders.Clear();
             IsSelectedSyncPairEditorVisible = false;
@@ -1400,6 +1445,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private Task CancelAddSyncPairAsync()
     {
         LocalFolderPath = string.Empty;
+        IsEditingSelectedSyncPairRemoteFolder = false;
         NewRemoteFolderName = string.Empty;
         IsCreateRemoteFolderVisible = false;
         ResetRemoteFolderSelection();
@@ -1546,6 +1592,65 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             GlobalStatus = "Folder updated";
             ActionRequiredMessage = string.Empty;
             AddActivity("Pair", normalizedSelectedPath, "Local folder changed");
+            RefreshCurrentProgressText();
+            RefreshDiagnosticsItems();
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task ShowSelectedSyncPairRemoteFolderAsync()
+    {
+        SyncPairRowViewModel? selected = SelectedSyncPair;
+        if (selected is null)
+        {
+            return;
+        }
+
+        ClearRemoveSyncPairConfirmation();
+        LocalFolderPath = selected.LocalPath;
+        RemoteFolderPath = string.Empty;
+        IsEditingSelectedSyncPairRemoteFolder = true;
+        IsAddSyncPairWizardVisible = true;
+        NewRemoteFolderName = string.Empty;
+        IsCreateRemoteFolderVisible = false;
+
+        string remotePath = string.IsNullOrWhiteSpace(selected.RemotePath) ? "/" : selected.RemotePath;
+        await LoadRemoteFoldersAsync(remotePath).ConfigureAwait(true);
+    }
+
+    private Task UseRemoteFolderAsync()
+    {
+        return IsEditingSelectedSyncPairRemoteFolder
+            ? ChangeSelectedSyncPairRemoteFolderAsync()
+            : AddSyncPairAsync();
+    }
+
+    private async Task ChangeSelectedSyncPairRemoteFolderAsync()
+    {
+        SyncPairRowViewModel? selected = SelectedSyncPair;
+        if (selected is null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            SyncPairSettings syncPair = await _controller
+                .SetSyncPairRemoteFolderAsync(selected.Id, RemoteFolderPath)
+                .ConfigureAwait(true);
+            selected.RemoteRootNodeId = syncPair.RemoteRootNodeId;
+            selected.RemotePath = syncPair.RemoteDisplayPath;
+            LocalFolderPath = string.Empty;
+            IsEditingSelectedSyncPairRemoteFolder = false;
+            IsAddSyncPairWizardVisible = false;
+            ActionRequiredMessage = string.Empty;
+            ResetRemoteFolderSelection();
+            GlobalStatus = "Cloud folder updated";
+            AddActivity("Pair", selected.LocalPath, "Cloud folder changed to " + selected.RemotePath);
             RefreshCurrentProgressText();
             RefreshDiagnosticsItems();
         }
@@ -1909,6 +2014,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private async Task ShowAddSyncPairAsync()
     {
+        IsEditingSelectedSyncPairRemoteFolder = false;
         IsAddSyncPairWizardVisible = true;
         NewRemoteFolderName = string.Empty;
         IsCreateRemoteFolderVisible = false;
@@ -1968,13 +2074,31 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         return !IsBusy
             && CanUseAddSyncPairFlow
             && IsSignedIn
+            && !IsEditingSelectedSyncPairRemoteFolder
             && !string.IsNullOrWhiteSpace(LocalFolderPath)
             && !string.IsNullOrWhiteSpace(RemoteFolderPath);
     }
 
     private bool CanBrowseLocalFolder()
     {
-        return !IsBusy && CanUseAddSyncPairFlow;
+        return !IsBusy && CanUseAddSyncPairFlow && !IsEditingSelectedSyncPairRemoteFolder;
+    }
+
+    private bool CanUseRemoteFolder()
+    {
+        return IsEditingSelectedSyncPairRemoteFolder
+            ? CanChangeSelectedSyncPairRemoteFolder()
+            : CanAddSyncPair();
+    }
+
+    private bool CanChangeSelectedSyncPairRemoteFolder()
+    {
+        return !IsBusy
+            && CanUseAddSyncPairFlow
+            && IsSignedIn
+            && SelectedSyncPair is not null
+            && IsAddSyncPairCloudStepVisible
+            && !string.IsNullOrWhiteSpace(RemoteFolderPath);
     }
 
     private bool CanOpenRemoteFolder()
@@ -2201,6 +2325,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OpenFolderCommand.RaiseCanExecuteChanged();
         RaiseTrayOpenFolderState();
         ChangeSelectedSyncPairLocalFolderCommand.RaiseCanExecuteChanged();
+        ChangeSelectedSyncPairRemoteFolderCommand.RaiseCanExecuteChanged();
         ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
         SaveSelectedSyncPairNameCommand.RaiseCanExecuteChanged();
         RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
@@ -2597,6 +2722,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OpenTrayFolderCommand.RaiseCanExecuteChanged();
         OpenConflictCommand.RaiseCanExecuteChanged();
         ChangeSelectedSyncPairLocalFolderCommand.RaiseCanExecuteChanged();
+        ChangeSelectedSyncPairRemoteFolderCommand.RaiseCanExecuteChanged();
         ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
         SaveSelectedSyncPairNameCommand.RaiseCanExecuteChanged();
         RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
@@ -2606,6 +2732,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OpenWebCommand.RaiseCanExecuteChanged();
         ShowAddSyncPairCommand.RaiseCanExecuteChanged();
         ShowCreateRemoteFolderCommand.RaiseCanExecuteChanged();
+        UseRemoteFolderCommand.RaiseCanExecuteChanged();
         ShowSettingsCommand.RaiseCanExecuteChanged();
         CloseSettingsCommand.RaiseCanExecuteChanged();
         SelfTestCommand.RaiseCanExecuteChanged();
@@ -2645,6 +2772,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         CreateRemoteFolderCommand.RaiseCanExecuteChanged();
         OpenRemoteFolderCommand.RaiseCanExecuteChanged();
         RemoteFolderUpCommand.RaiseCanExecuteChanged();
+        UseRemoteFolderCommand.RaiseCanExecuteChanged();
+        ChangeSelectedSyncPairRemoteFolderCommand.RaiseCanExecuteChanged();
         ShowAddSyncPairCommand.RaiseCanExecuteChanged();
         ShowCreateRemoteFolderCommand.RaiseCanExecuteChanged();
     }
@@ -2665,8 +2794,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OnPropertyChanged(nameof(IsCreateRemoteFolderVisible));
         OnPropertyChanged(nameof(AddSyncPairWizardTitle));
         OnPropertyChanged(nameof(AddSyncPairWizardSubtitle));
+        OnPropertyChanged(nameof(IsAddSyncPairLocalSummaryVisible));
+        OnPropertyChanged(nameof(RemoteFolderWizardPrimaryActionText));
+        OnPropertyChanged(nameof(RemoteFolderWizardPrimaryActionToolTip));
         ShowCreateRemoteFolderCommand.RaiseCanExecuteChanged();
         CreateRemoteFolderCommand.RaiseCanExecuteChanged();
+        UseRemoteFolderCommand.RaiseCanExecuteChanged();
     }
 
     private void SetAllPairStatuses(string status, string? currentOperation = null, bool enabledOnly = false)

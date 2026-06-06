@@ -537,15 +537,15 @@
                                     VerticalAlignment="Center" />
                             <Border Grid.Row="5"
                                     Grid.ColumnSpan="4"
-                                    Margin="0,8,0,0"
-                                    Padding="8"
+                                    Margin="0,6,0,0"
+                                    Padding="6"
                                     CornerRadius="6"
                                     Background="{DynamicResource CottonSurfaceBrush}"
                                     BorderBrush="{DynamicResource CottonBorderBrush}"
                                     BorderThickness="1"
                                     IsVisible="{Binding IsEditorVisible}">
-                              <Grid RowDefinitions="Auto,Auto"
-                                    RowSpacing="6">
+                              <Grid RowDefinitions="Auto,Auto,Auto"
+                                    RowSpacing="4">
                                 <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto"
                                       ColumnSpacing="6">
                                   <TextBox Text="{Binding EditableDisplayName}"
@@ -582,9 +582,24 @@
                                              VerticalAlignment="Center" />
                                   <Button Grid.Column="1"
                                           Content="Change"
-                                          Classes="compact"
+                                          Classes="inlineChange"
                                           ToolTip.Tip="Change local folder"
                                           Command="{Binding $parent[Window].DataContext.ChangeSelectedSyncPairLocalFolderCommand}" />
+                                </Grid>
+                                <Grid Grid.Row="2"
+                                      ColumnDefinitions="*,Auto"
+                                      ColumnSpacing="6">
+                                  <TextBlock Text="{Binding RemotePath}"
+                                             ToolTip.Tip="{Binding RemotePath}"
+                                             Classes="secondary"
+                                             FontSize="11"
+                                             TextTrimming="CharacterEllipsis"
+                                             VerticalAlignment="Center" />
+                                  <Button Grid.Column="1"
+                                          Content="Change"
+                                          Classes="inlineChange"
+                                          ToolTip.Tip="Change cloud folder"
+                                          Command="{Binding $parent[Window].DataContext.ChangeSelectedSyncPairRemoteFolderCommand}" />
                                 </Grid>
                               </Grid>
                             </Border>
@@ -798,7 +813,8 @@
               <StackPanel Spacing="12"
                           IsVisible="{Binding IsAddSyncPairCloudStepVisible}">
                 <Grid ColumnDefinitions="Auto,*,Auto"
-                      ColumnSpacing="8">
+                      ColumnSpacing="8"
+                      IsVisible="{Binding IsAddSyncPairLocalSummaryVisible}">
                   <Border Width="24"
                           Height="24"
                           CornerRadius="12"
@@ -961,10 +977,10 @@
                 <Grid ColumnDefinitions="*,Auto"
                       ColumnSpacing="8">
                   <Button Grid.Column="1"
-                          Content="Use this folder"
+                          Content="{Binding RemoteFolderWizardPrimaryActionText}"
                           Classes="primary"
-                          ToolTip.Tip="Start syncing with the current cloud folder"
-                          Command="{Binding AddSyncPairCommand}" />
+                          ToolTip.Tip="{Binding RemoteFolderWizardPrimaryActionToolTip}"
+                          Command="{Binding UseRemoteFolderCommand}" />
                 </Grid>
               </StackPanel>
             </Grid>
