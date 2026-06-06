@@ -459,11 +459,11 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentTransferDetails, Does.Contain("/s"));
             Assert.That(viewModel.CurrentTransferDetails, Does.Contain("left"));
             Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Syncing 2 folders"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Does.StartWith("6.0 MB / 24 MB"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Does.Contain("/s"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Does.Contain("left"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("10 of 40 files across 2 folders"));
-            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Does.StartWith("6.0 MB / 24 MB"));
-            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Does.Contain("/s"));
-            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Does.Contain("left"));
-            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Does.Contain("Documents: Uploading quarterly-budget.xlsx"));
+            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Documents: Uploading quarterly-budget.xlsx"));
         });
     }
 
@@ -1080,8 +1080,9 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             Assert.That(viewModel.HasCurrentTransfer, Is.True);
             Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Syncing 2 folders"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("512 B / 1.0 KB"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("8 of 30 files across 2 folders"));
-            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("512 B / 1.0 KB · Documents: Uploading report.txt"));
+            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Documents: Uploading report.txt"));
             Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(26.666).Within(0.01));
             Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.False);
         });

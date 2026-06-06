@@ -542,6 +542,9 @@ public sealed class DesktopSetupVisualContractTests
         {
             Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding HasCurrentWorkProgress}\""));
             Assert.That(dashboardView, Does.Contain("Text=\"{Binding CurrentWorkProgressTitle}\""));
+            Assert.That(dashboardView, Does.Contain("Text=\"{Binding CurrentWorkProgressHeaderDetails}\""));
+            Assert.That(dashboardView, Does.Contain("HorizontalAlignment=\"Right\""));
+            Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding HasCurrentWorkProgressHeaderDetails}\""));
             Assert.That(dashboardView, Does.Contain("Text=\"{Binding CurrentWorkProgressDetails}\""));
             Assert.That(dashboardView, Does.Contain("Text=\"{Binding CurrentWorkProgressSecondaryDetails}\""));
             Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding HasCurrentWorkProgressSecondaryDetails}\""));

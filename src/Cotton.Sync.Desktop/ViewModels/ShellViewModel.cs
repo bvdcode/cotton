@@ -472,6 +472,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         ? CurrentRunProgressTitle
         : HasCurrentTransfer ? CurrentTransferTitle : CurrentRunProgressTitle;
 
+    public string CurrentWorkProgressHeaderDetails => IsAggregateRunProgressPrimary && HasCurrentTransfer
+        ? CurrentTransferDetails
+        : string.Empty;
+
+    public bool HasCurrentWorkProgressHeaderDetails => !string.IsNullOrWhiteSpace(CurrentWorkProgressHeaderDetails);
+
     public string CurrentWorkProgressDetails => IsAggregateRunProgressPrimary
         ? CurrentRunProgressDetails
         : HasCurrentTransfer ? CurrentTransferDetails : CurrentRunProgressDetails;
@@ -482,9 +488,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         {
             if (IsAggregateRunProgressPrimary && HasCurrentTransfer)
             {
-                return string.IsNullOrWhiteSpace(CurrentTransferDetails)
-                    ? CurrentTransferTitle
-                    : CurrentTransferDetails + " · " + CurrentTransferTitle;
+                return CurrentTransferTitle;
             }
 
             return HasCurrentTransfer && HasCurrentRunProgress
@@ -3071,6 +3075,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OnPropertyChanged(nameof(IsStatusCardVisible));
         OnPropertyChanged(nameof(HasDashboardNotifications));
         OnPropertyChanged(nameof(CurrentWorkProgressTitle));
+        OnPropertyChanged(nameof(CurrentWorkProgressHeaderDetails));
+        OnPropertyChanged(nameof(HasCurrentWorkProgressHeaderDetails));
         OnPropertyChanged(nameof(CurrentWorkProgressDetails));
         OnPropertyChanged(nameof(CurrentWorkProgressSecondaryDetails));
         OnPropertyChanged(nameof(HasCurrentWorkProgressSecondaryDetails));

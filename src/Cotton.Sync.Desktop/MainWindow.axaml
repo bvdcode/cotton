@@ -272,10 +272,20 @@
                   IsVisible="{Binding HasCurrentWorkProgress}">
             <Grid RowDefinitions="Auto,Auto,Auto,Auto"
                   RowSpacing="6">
-              <TextBlock Text="{Binding CurrentWorkProgressTitle}"
-                         FontSize="13"
-                         FontWeight="SemiBold"
-                         TextTrimming="CharacterEllipsis" />
+              <Grid ColumnDefinitions="Auto,*"
+                    ColumnSpacing="8">
+                <TextBlock Text="{Binding CurrentWorkProgressTitle}"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="1"
+                           Text="{Binding CurrentWorkProgressHeaderDetails}"
+                           Classes="secondary"
+                           FontSize="12"
+                           HorizontalAlignment="Right"
+                           TextTrimming="CharacterEllipsis"
+                           IsVisible="{Binding HasCurrentWorkProgressHeaderDetails}" />
+              </Grid>
               <TextBlock Grid.Row="1"
                          Text="{Binding CurrentWorkProgressDetails}"
                          Classes="secondary"
