@@ -29,9 +29,12 @@ internal sealed class SelfTestItemRowViewModel : ViewModelBase
             if (SetProperty(ref _passed, value))
             {
                 OnPropertyChanged(nameof(ResultText));
+                OnPropertyChanged(nameof(IsFailed));
             }
         }
     }
 
     public string ResultText => Passed ? "OK" : "Issue";
+
+    public bool IsFailed => !Passed;
 }

@@ -84,6 +84,8 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
 
     public bool IsHeaderStatusVisible => HasDisplayStatus && !IsEditorVisible;
 
+    public bool IsErrorStatus => string.Equals(DisplayStatus, "Error", StringComparison.Ordinal);
+
     public bool HasCurrentProgress
     {
         get => _hasCurrentProgress;
@@ -160,6 +162,7 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
                 OnPropertyChanged(nameof(DisplayStatus));
                 OnPropertyChanged(nameof(HasDisplayStatus));
                 OnPropertyChanged(nameof(IsHeaderStatusVisible));
+                OnPropertyChanged(nameof(IsErrorStatus));
             }
         }
     }

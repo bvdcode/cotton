@@ -29,6 +29,15 @@ public sealed class SyncPairRowViewModelTests
             Assert.That(row.DisplayStatus, Is.EqualTo("Syncing"));
             Assert.That(row.HasDisplayStatus, Is.True);
             Assert.That(row.IsHeaderStatusVisible, Is.True);
+            Assert.That(row.IsErrorStatus, Is.False);
+        });
+
+        row.Status = "Error";
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(row.DisplayStatus, Is.EqualTo("Error"));
+            Assert.That(row.IsErrorStatus, Is.True);
         });
 
         row.IsEditorVisible = true;

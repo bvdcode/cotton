@@ -522,6 +522,8 @@
                                        TextTrimming="CharacterEllipsis" />
                             <TextBlock Grid.Column="1"
                                        Text="{Binding DisplayStatus}"
+                                       Classes="syncPairStatus"
+                                       Classes.errorStatus="{Binding IsErrorStatus}"
                                        FontSize="12"
                                        Opacity="0.74"
                                        IsVisible="{Binding IsHeaderStatusVisible}" />
@@ -1261,7 +1263,9 @@
                                          TextTrimming="CharacterEllipsis" />
                               <TextBlock Grid.Column="1"
                                          Text="{Binding ResultText}"
-                                         Classes="secondary"
+                                         Classes="selfTestResult"
+                                         Classes.passed="{Binding Passed}"
+                                         Classes.failed="{Binding IsFailed}"
                                          FontSize="12" />
                               <TextBlock Grid.Row="1"
                                          Grid.ColumnSpan="2"

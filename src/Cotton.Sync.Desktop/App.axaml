@@ -57,6 +57,15 @@
     <Style Selector="TextBlock.secondary">
       <Setter Property="Foreground" Value="{DynamicResource CottonTextSecondaryBrush}" />
     </Style>
+    <Style Selector="TextBlock.syncPairStatus.errorStatus">
+      <Setter Property="Foreground" Value="{DynamicResource CottonErrorBrush}" />
+    </Style>
+    <Style Selector="TextBlock.selfTestResult.passed">
+      <Setter Property="Foreground" Value="{DynamicResource CottonSuccessBrush}" />
+    </Style>
+    <Style Selector="TextBlock.selfTestResult.failed">
+      <Setter Property="Foreground" Value="{DynamicResource CottonErrorBrush}" />
+    </Style>
     <Style Selector="Border.statusCard">
       <Setter Property="Background" Value="{DynamicResource CottonPrimarySoftBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource CottonPrimarySoftBrush}" />

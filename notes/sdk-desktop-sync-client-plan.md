@@ -446,6 +446,7 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 - [ ] Color-code folder and self-test status.
   Required behavior: a per-folder `Error` row status should read in the error brush, not plain secondary text identical to `Idle`/`Syncing`; self-test pass results should read in the success brush instead of muted grey so an all-pass run looks healthy.
   Observation 2026-06-06 from Windows visual review: `Error` scenario shows the Documents row status as grey "Error"; `SettingsDiagnostics` shows all `OK` results in secondary grey. Evidence in `notes/desktop-visual-review-2026-06-06.md` (finding 2).
+  Partial 2026-06-06: sync-pair row statuses now expose an error-state class bound to `CottonErrorBrush`, and diagnostics self-test result labels expose passed/failed classes bound to the success/error brushes instead of using secondary grey. Focused row/view-model and visual-contract tests passed after this change.
 - [ ] Improve enlarged-window space usage on the dashboard.
   Required behavior: when the resizable dashboard window is stretched tall, Folders and Activity should not each be forced to half the height; size Folders to content with a bounded scroll and let Activity take the remainder, or cap window growth. Default/min size is already well tuned.
   Observation 2026-06-06 from Windows visual review: at `820x980` both Folders and Activity are mostly empty with 2 folders / 3 activity rows (`resize-large`); `resize-min` looks correct. Evidence in `notes/desktop-visual-review-2026-06-06.md` (finding 3).

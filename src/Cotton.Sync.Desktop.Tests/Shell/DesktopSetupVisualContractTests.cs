@@ -115,6 +115,7 @@ public sealed class DesktopSetupVisualContractTests
     public void DashboardFolders_ExposeSelectedPairManagementActions()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string appXaml = File.ReadAllText(GetDesktopFilePath("App.axaml"));
         string foldersSection = GetSlice(
             mainWindowXaml,
             "<TextBlock Text=\"Folders\"",
@@ -129,6 +130,10 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Contain("IsVisible=\"{Binding IsEditorVisible}\""));
             Assert.That(foldersSection, Does.Not.Contain("IsVisible=\"{Binding IsSelectedSyncPairEditorVisible}\""));
             Assert.That(foldersSection, Does.Contain("IsVisible=\"{Binding IsHeaderStatusVisible}\""));
+            Assert.That(foldersSection, Does.Contain("Classes=\"syncPairStatus\""));
+            Assert.That(foldersSection, Does.Contain("Classes.errorStatus=\"{Binding IsErrorStatus}\""));
+            Assert.That(appXaml, Does.Contain("TextBlock.syncPairStatus.errorStatus"));
+            Assert.That(appXaml, Does.Contain("Value=\"{DynamicResource CottonErrorBrush}\""));
             Assert.That(foldersSection, Does.Contain("Text=\"{Binding EditableDisplayName}\""));
             Assert.That(foldersSection, Does.Not.Contain("SelectedSyncPairEditableDisplayName"));
             Assert.That(foldersSection, Does.Contain("SaveSelectedSyncPairNameCommand"));
@@ -567,6 +572,7 @@ public sealed class DesktopSetupVisualContractTests
     public void SettingsDiagnostics_UsesClearDiagnosticsActions()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string appXaml = File.ReadAllText(GetDesktopFilePath("App.axaml"));
         string diagnosticsSection = GetSlice(
             mainWindowXaml,
             "<TabItem Header=\"Diagnostics\"",
@@ -583,6 +589,11 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(diagnosticsSection, Does.Contain("ToolTip.Tip=\"Open app data folder\""));
             Assert.That(diagnosticsSection, Does.Contain("Text=\"Logs exported to\""));
             Assert.That(diagnosticsSection, Does.Contain("IsVisible=\"{Binding HasDataDirectory}\""));
+            Assert.That(diagnosticsSection, Does.Contain("Classes=\"selfTestResult\""));
+            Assert.That(diagnosticsSection, Does.Contain("Classes.passed=\"{Binding Passed}\""));
+            Assert.That(diagnosticsSection, Does.Contain("Classes.failed=\"{Binding IsFailed}\""));
+            Assert.That(appXaml, Does.Contain("TextBlock.selfTestResult.passed"));
+            Assert.That(appXaml, Does.Contain("TextBlock.selfTestResult.failed"));
             Assert.That(diagnosticsSection, Does.Contain("OpenDataFolderCommand"));
             Assert.That(diagnosticsSection, Does.Contain("LastDiagnosticsBundlePath"));
             Assert.That(diagnosticsSection, Does.Contain("OpenDiagnosticsBundleFolderCommand"));
