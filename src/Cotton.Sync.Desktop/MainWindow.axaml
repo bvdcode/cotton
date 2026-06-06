@@ -20,7 +20,7 @@
             BorderBrush="{DynamicResource CottonBorderBrush}"
             BorderThickness="0,0,0,1"
             Padding="12,9"
-            IsVisible="{Binding IsDashboardChromeVisible}">
+            IsVisible="{Binding IsDashboardHeaderVisible}">
       <Grid ColumnDefinitions="Auto,*,Auto"
             ColumnSpacing="10">
         <Border Width="34"

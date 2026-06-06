@@ -523,6 +523,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             if (SetProperty(ref _isSignedIn, value))
             {
                 OnPropertyChanged(nameof(IsDashboardVisible));
+                OnPropertyChanged(nameof(IsDashboardHeaderVisible));
                 OnPropertyChanged(nameof(IsSetupVisible));
                 OnPropertyChanged(nameof(HeaderTitleText));
                 RaiseSetupStateProperties();
@@ -555,6 +556,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         && !HasHealthySyncedIdleState;
 
     public bool IsDashboardChromeVisible => !IsAddSyncPairWizardVisible && !IsSettingsVisible;
+
+    public bool IsDashboardHeaderVisible => IsDashboardVisible && !IsAddSyncPairWizardVisible && !IsSettingsVisible;
 
     public double ActionRequiredOpacity => HasActionRequired ? 1 : 0;
 
@@ -782,6 +785,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             {
                 RaiseWizardStateProperties();
                 OnPropertyChanged(nameof(IsDashboardChromeVisible));
+                OnPropertyChanged(nameof(IsDashboardHeaderVisible));
             }
         }
     }
@@ -831,6 +835,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             if (SetProperty(ref _isSettingsVisible, value))
             {
                 OnPropertyChanged(nameof(IsDashboardChromeVisible));
+                OnPropertyChanged(nameof(IsDashboardHeaderVisible));
             }
         }
     }
