@@ -18,6 +18,7 @@ namespace Cotton.Sync;
 public sealed class SyncEngine : ISyncEngine
 {
     private static readonly StringComparer PathComparer = StringComparer.OrdinalIgnoreCase;
+    private const int RunProgressReportItemInterval = 100;
     private readonly ILocalFileScanner _localScanner;
     private readonly ILocalFileContentHasher? _localContentHasher;
     private readonly ILocalFileMetadataTreeScanner? _localMetadataTreeScanner;
@@ -144,20 +145,20 @@ public sealed class SyncEngine : ISyncEngine
             remoteByPath.TryGetValue(key, out RemoteFileSnapshot? remote);
             stateByPath.TryGetValue(key, out SyncStateEntry? state);
             string relativePath = local?.RelativePath ?? remote?.RelativePath ?? state?.RelativePath ?? key;
-            ReportRunProgress(options, SyncRunProgressStage.ReconcilingFiles, filesCompleted, pathKeys.Count, relativePath, startedAtUtc);
+            ReportItemRunProgress(options, SyncRunProgressStage.ReconcilingFiles, filesCompleted, pathKeys.Count, relativePath, startedAtUtc);
 
             if (state is null)
             {
                 await ReconcileWithoutBaselineAsync(syncPair, options, result, relativePath, local, remote, cancellationToken).ConfigureAwait(false);
                 filesCompleted++;
-                ReportRunProgress(options, SyncRunProgressStage.ReconcilingFiles, filesCompleted, pathKeys.Count, relativePath, startedAtUtc);
+                ReportItemRunProgress(options, SyncRunProgressStage.ReconcilingFiles, filesCompleted, pathKeys.Count, relativePath, startedAtUtc);
                 continue;
             }
 
             await ReconcileWithBaselineAsync(syncPair, options, result, deleteGuard, state, relativePath, local, remote, cancellationToken)
                 .ConfigureAwait(false);
             filesCompleted++;
-            ReportRunProgress(options, SyncRunProgressStage.ReconcilingFiles, filesCompleted, pathKeys.Count, relativePath, startedAtUtc);
+            ReportItemRunProgress(options, SyncRunProgressStage.ReconcilingFiles, filesCompleted, pathKeys.Count, relativePath, startedAtUtc);
         }
 
         ReportRunProgress(options, SyncRunProgressStage.Completed, filesCompleted, pathKeys.Count, null, startedAtUtc, isCompleted: true);
@@ -295,11 +296,11 @@ public sealed class SyncEngine : ISyncEngine
             remoteByPath.TryGetValue(key, out RemoteDirectorySnapshot? remote);
             stateByPath.TryGetValue(key, out SyncStateEntry? state);
             string relativePath = local?.RelativePath ?? remote?.RelativePath ?? state?.RelativePath ?? key;
-            ReportRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
+            ReportItemRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
             if (state is not null)
             {
                 foldersCompleted++;
-                ReportRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
+                ReportItemRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
                 continue;
             }
 
@@ -310,7 +311,7 @@ public sealed class SyncEngine : ISyncEngine
                     .ConfigureAwait(false);
                 Report(result, options, SyncActivityKind.Downloaded, relativePath, "Created local folder.");
                 foldersCompleted++;
-                ReportRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
+                ReportItemRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
                 continue;
             }
 
@@ -321,7 +322,7 @@ public sealed class SyncEngine : ISyncEngine
                 if (!remoteNodeIdsByPath.TryGetValue(parentKey, out Guid parentNodeId))
                 {
                     foldersCompleted++;
-                    ReportRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
+                    ReportItemRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
                     continue;
                 }
 
@@ -339,7 +340,7 @@ public sealed class SyncEngine : ISyncEngine
                     .ConfigureAwait(false);
                 Report(result, options, SyncActivityKind.Uploaded, relativePath, "Created remote folder.");
                 foldersCompleted++;
-                ReportRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
+                ReportItemRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
                 continue;
             }
 
@@ -350,7 +351,7 @@ public sealed class SyncEngine : ISyncEngine
             }
 
             foldersCompleted++;
-            ReportRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
+            ReportItemRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
         }
     }
 
@@ -1326,6 +1327,30 @@ public sealed class SyncEngine : ISyncEngine
             currentPath,
             startedAtUtc,
             isCompleted));
+    }
+
+    private static void ReportItemRunProgress(
+        SyncRunOptions options,
+        SyncRunProgressStage stage,
+        int itemsCompleted,
+        int itemsTotal,
+        string? currentPath,
+        DateTime startedAtUtc)
+    {
+        if (!ShouldReportItemRunProgress(itemsCompleted, itemsTotal))
+        {
+            return;
+        }
+
+        ReportRunProgress(options, stage, itemsCompleted, itemsTotal, currentPath, startedAtUtc);
+    }
+
+    private static bool ShouldReportItemRunProgress(int itemsCompleted, int itemsTotal)
+    {
+        return itemsTotal <= RunProgressReportItemInterval
+            || itemsCompleted == 0
+            || itemsCompleted == itemsTotal
+            || itemsCompleted % RunProgressReportItemInterval == 0;
     }
 
     private enum SyncDeleteDirection

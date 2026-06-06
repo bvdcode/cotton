@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
@@ -339,6 +340,77 @@ public sealed class SyncEngineTests
             Assert.That(
                 directoryProgress.Where(item => !string.IsNullOrWhiteSpace(item.CurrentPath)).Select(item => item.CurrentPath).Distinct(),
                 Is.EqualTo(new[] { "Projects", "Projects/Archive" }));
+        });
+    }
+
+    [Test]
+    public async Task RunOnceAsync_ThrottlesLargeFileReconcileProgress()
+    {
+        const int fileCount = 250;
+        var locals = new List<LocalFileSnapshot>();
+        var remotes = new List<NodeFileManifestDto>();
+        for (int index = 0; index < fileCount; index++)
+        {
+            string path = "Docs/file-" + index.ToString("000", CultureInfo.InvariantCulture) + ".txt";
+            string content = "content-" + index.ToString(CultureInfo.InvariantCulture);
+            LocalFileSnapshot local = LocalFile(path, content);
+            NodeFileManifestDto remote = RemoteFile(path, local.ContentHash, sizeBytes: local.SizeBytes);
+            locals.Add(local);
+            remotes.Add(remote);
+        }
+
+        var progress = new RecordingProgress<SyncRunProgress>();
+        SyncEngine engine = CreateEngine(new FakeLocalFileScanner(locals.ToArray()), RemoteTree(remotes.ToArray()), new FakeRemoteFileSynchronizer(), out SqliteSyncStateStore stateStore);
+        for (int index = 0; index < fileCount; index++)
+        {
+            await InsertBaselineAsync(stateStore, locals[index].RelativePath, locals[index].ContentHash, remotes[index]);
+        }
+
+        await engine.RunOnceAsync(
+            Pair(),
+            new SyncRunOptions { RunProgress = progress });
+
+        IReadOnlyList<SyncRunProgress> fileProgress = progress.Values
+            .Where(item => item.Stage == SyncRunProgressStage.ReconcilingFiles)
+            .ToList();
+        Assert.Multiple(() =>
+        {
+            Assert.That(fileProgress, Has.Count.LessThan(20));
+            Assert.That(fileProgress.Select(item => item.FilesCompleted).Distinct(), Is.EqualTo(new[] { 0, 100, 200, 250 }));
+            Assert.That(fileProgress.Select(item => item.FilesCompleted), Does.Not.Contain(42));
+        });
+    }
+
+    [Test]
+    public async Task RunOnceAsync_ThrottlesLargeDirectoryReconcileProgress()
+    {
+        const int directoryCount = 250;
+        var scanner = new FakeLocalFileScanner();
+        for (int index = 0; index < directoryCount; index++)
+        {
+            scanner.Directories.Add(LocalDirectory("Folder-" + index.ToString("000", CultureInfo.InvariantCulture)));
+        }
+
+        var progress = new RecordingProgress<SyncRunProgress>();
+        SyncEngine engine = CreateEngine(
+            scanner,
+            EmptyRemoteTree(),
+            new FakeRemoteFileSynchronizer(),
+            out _,
+            new FakeRemoteDirectorySynchronizer());
+
+        await engine.RunOnceAsync(
+            Pair(),
+            new SyncRunOptions { RunProgress = progress });
+
+        IReadOnlyList<SyncRunProgress> directoryProgress = progress.Values
+            .Where(item => item.Stage == SyncRunProgressStage.ReconcilingDirectories)
+            .ToList();
+        Assert.Multiple(() =>
+        {
+            Assert.That(directoryProgress, Has.Count.LessThan(20));
+            Assert.That(directoryProgress.Select(item => item.FilesCompleted).Distinct(), Is.EqualTo(new[] { 0, 100, 200, 250 }));
+            Assert.That(directoryProgress.Select(item => item.FilesCompleted), Does.Not.Contain(42));
         });
     }
 
