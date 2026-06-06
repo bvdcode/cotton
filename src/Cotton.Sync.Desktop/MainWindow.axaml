@@ -470,12 +470,15 @@
 
       <Border Grid.Row="1"
               Padding="10"
-                CornerRadius="6"
-                Background="{DynamicResource CottonSurfaceBrush}"
-                BorderBrush="{DynamicResource CottonBorderBrush}"
-                BorderThickness="1">
+              CornerRadius="6"
+              Background="{DynamicResource CottonSurfaceBrush}"
+              BorderBrush="{DynamicResource CottonBorderBrush}"
+              BorderThickness="1"
+              ClipToBounds="True"
+              MinHeight="0">
             <Grid RowDefinitions="Auto,*"
-                  RowSpacing="10">
+                  RowSpacing="10"
+                  MinHeight="0">
               <Grid ColumnDefinitions="*,Auto"
                     ColumnSpacing="8">
                 <TextBlock Text="Folders"
@@ -494,7 +497,8 @@
                 </Button>
               </Grid>
 
-              <Grid Grid.Row="1">
+              <Grid Grid.Row="1"
+                    MinHeight="0">
                 <Border Padding="9"
                         CornerRadius="6"
                         Background="{DynamicResource CottonSurfaceMutedBrush}"
@@ -516,6 +520,8 @@
                 </Border>
 
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              ClipToBounds="True"
+                              MinHeight="0"
                               IsVisible="{Binding HasSyncPairs}">
                   <Grid RowDefinitions="Auto,Auto"
                         RowSpacing="7">
@@ -709,13 +715,17 @@
               CornerRadius="6"
               Background="{DynamicResource CottonSurfaceBrush}"
               BorderBrush="{DynamicResource CottonBorderBrush}"
-              BorderThickness="1">
+              BorderThickness="1"
+              ClipToBounds="True"
+              MinHeight="0">
             <Grid RowDefinitions="Auto,*"
-                  RowSpacing="8">
+                  RowSpacing="8"
+                  MinHeight="0">
               <TextBlock Text="Activity"
                          FontSize="16"
                          FontWeight="SemiBold" />
-              <Grid Grid.Row="1">
+              <Grid Grid.Row="1"
+                    MinHeight="0">
                 <StackPanel Spacing="3"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
@@ -730,6 +740,8 @@
                              HorizontalAlignment="Center" />
                 </StackPanel>
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              ClipToBounds="True"
+                              MinHeight="0"
                               IsVisible="{Binding HasActivities}">
                   <ItemsControl ItemsSource="{Binding Activities}">
                     <ItemsControl.ItemTemplate>

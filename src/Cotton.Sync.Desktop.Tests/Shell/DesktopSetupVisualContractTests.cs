@@ -98,7 +98,7 @@ public sealed class DesktopSetupVisualContractTests
         string foldersHeader = GetSlice(
             mainWindowXaml,
             "<TextBlock Text=\"Folders\"",
-            "<Grid Grid.Row=\"1\">");
+            "<Grid Grid.Row=\"1\"\n                    MinHeight=\"0\">");
 
         Assert.Multiple(() =>
         {
@@ -209,6 +209,8 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Not.Contain("<ScrollViewer MaxHeight=\"236\""));
             Assert.That(foldersSection, Does.Not.Contain("MaxHeight=\"300\""));
             Assert.That(foldersSection, Does.Contain("<ScrollViewer VerticalScrollBarVisibility=\"Auto\""));
+            Assert.That(foldersSection, Does.Contain("ClipToBounds=\"True\""));
+            Assert.That(foldersSection, Does.Contain("MinHeight=\"0\""));
             Assert.That(foldersSection, Does.Contain("<ItemsControl ItemsSource=\"{Binding SyncPairs}\">"));
         });
     }
