@@ -7,10 +7,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <AssemblyName>Cotton.Sync.Desktop</AssemblyName>
-    <Title>Cotton Sync Desktop</Title>
+    <Title>Cotton Sync</Title>
     <Authors>Vadim Belov</Authors>
     <Company>bvdcode</Company>
-    <Product>Cotton</Product>
+    <Product>Cotton Sync</Product>
     <Description>Cross-platform desktop synchronization client for Cotton Cloud.</Description>
     <VersionPrefix>0.1.0</VersionPrefix>
     <AssemblyVersion>0.1.0.0</AssemblyVersion>

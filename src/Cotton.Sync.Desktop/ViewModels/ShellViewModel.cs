@@ -40,6 +40,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private string _currentTransferDetails = string.Empty;
     private string _currentTransferTitle = string.Empty;
     private string _dataDirectory = string.Empty;
+    private string _deviceName = "Cotton Sync Desktop";
     private string _appDatabasePath = string.Empty;
     private string _syncStateDatabasePath = string.Empty;
     private string _tokenStorePath = string.Empty;
@@ -295,6 +296,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     }
 
     public string AppVersion => DesktopAppVersion.Current;
+
+    public string DeviceName
+    {
+        get => _deviceName;
+        private set => SetProperty(ref _deviceName, value);
+    }
 
     public string ActionRequiredMessage
     {
@@ -564,7 +571,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public bool HasNotifications => Notifications.Count > 0;
 
     public bool HasDashboardNotifications =>
-        HasNotifications
+        Notifications.Any(static notification => notification.IsDashboardVisible)
         && !HasStatusAttention
         && !IsStatusCardVisible
         && !HasCurrentWorkProgress;
@@ -1166,6 +1173,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             AppDatabasePath = snapshot.DataPaths.AppDatabasePath;
             SyncStateDatabasePath = snapshot.DataPaths.SyncStateDatabasePath;
             TokenStorePath = snapshot.DataPaths.TokenStorePath;
+            DeviceName = string.IsNullOrWhiteSpace(snapshot.DeviceName)
+                ? "Cotton Sync Desktop"
+                : snapshot.DeviceName.Trim();
             SyncPairs.Clear();
             foreach (DesktopSyncPairSnapshot syncPair in snapshot.SyncPairs)
             {
@@ -2701,6 +2711,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             {
                 Title = request.Title,
                 Message = request.Message,
+                IsDashboardVisible = IsDashboardNotificationKind(request.Kind),
             });
             AddActivity("Notification", string.Empty, request.Message);
             if (EnableNotifications && _notificationService.IsSupported)
@@ -2713,6 +2724,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         {
             Notifications.RemoveAt(Notifications.Count - 1);
         }
+    }
+
+    private static bool IsDashboardNotificationKind(DesktopNotificationKind kind)
+    {
+        return kind != DesktopNotificationKind.InitialSyncComplete;
     }
 
     private void ShowNativeNotification(string title, string message)

@@ -184,6 +184,24 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
+    public void SignInInputs_SubmitOnEnterAndReturnKeys()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string mainWindowCode = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml.cs"));
+        string signInStep = GetSlice(
+            mainWindowXaml,
+            "IsVisible=\"{Binding IsSignInStepVisible}\"",
+            "<Button Content=\"Sign in\"");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(CountOccurrences(signInStep, "KeyDown=\"SignInInput_KeyDown\""), Is.EqualTo(3));
+            Assert.That(mainWindowCode, Does.Contain("e.Key != Key.Enter && e.Key != Key.Return"));
+            Assert.That(mainWindowCode, Does.Contain("viewModel.SignInCommand.Execute(null);"));
+        });
+    }
+
+    [Test]
     public void SettingsDiagnostics_ScrollsWholeTabWithoutNestedSelfTestScrolling()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
@@ -384,6 +402,9 @@ public sealed class DesktopSetupVisualContractTests
         {
             Assert.That(accountTab, Does.Contain("Text=\"About\""));
             Assert.That(accountTab, Does.Contain("Text=\"{Binding AppVersion}\""));
+            Assert.That(accountTab, Does.Contain("Text=\"Device name\""));
+            Assert.That(accountTab, Does.Contain("Text=\"{Binding DeviceName}\""));
+            Assert.That(accountTab, Does.Not.Contain("Text=\"Cotton Sync Desktop\""));
             Assert.That(CountOccurrences(settingsOverlay, "<TabItem Header="), Is.EqualTo(4));
         });
     }
@@ -505,10 +526,15 @@ public sealed class DesktopSetupVisualContractTests
     public void DashboardNotifications_UseDashboardVisibilityGate()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string notificationsView = GetSlice(
+            mainWindowXaml,
+            "IsVisible=\"{Binding HasDashboardNotifications}\"",
+            "<Border Padding=\"10\"\n                MaxHeight=\"116\"");
 
         Assert.Multiple(() =>
         {
             Assert.That(mainWindowXaml, Does.Contain("IsVisible=\"{Binding HasDashboardNotifications}\""));
+            Assert.That(notificationsView, Does.Contain("IsVisible=\"{Binding IsDashboardVisible}\""));
             Assert.That(mainWindowXaml, Does.Not.Contain("IsVisible=\"{Binding HasNotifications}\""));
         });
     }

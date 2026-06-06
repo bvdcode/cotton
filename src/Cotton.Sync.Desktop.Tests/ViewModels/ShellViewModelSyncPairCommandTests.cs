@@ -1227,7 +1227,7 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
-    public async Task StatusChanged_KeepsCompletionNotificationOutOfDashboardWhileStatusCardIsVisible()
+    public async Task StatusChanged_RecordsCompletionNotificationWithoutDashboardCard()
     {
         Guid syncPairId = Guid.NewGuid();
         var controller = new FakeDesktopShellController(
@@ -1253,7 +1253,8 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.HasNotifications, Is.True);
-            Assert.That(viewModel.HasDashboardNotifications, Is.True);
+            Assert.That(viewModel.Notifications.Single().Title, Is.EqualTo("Initial sync complete"));
+            Assert.That(viewModel.HasDashboardNotifications, Is.False);
         });
 
         controller.ReportStatus(new DesktopSyncStatusSnapshot(
@@ -1354,6 +1355,20 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(sessionActivity.Path, Is.EqualTo("desktop@example.test"));
             Assert.That(diagnostics["Account"], Is.EqualTo("desktop@example.test"));
         });
+    }
+
+    [Test]
+    public async Task InitializeAsync_UsesSnapshotDeviceName()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot() with
+        {
+            DeviceName = "Cotton Sync Desktop (QA-WIN11)",
+        });
+        using ShellViewModel viewModel = CreateViewModel(controller);
+
+        await viewModel.InitializeAsync();
+
+        Assert.That(viewModel.DeviceName, Is.EqualTo("Cotton Sync Desktop (QA-WIN11)"));
     }
 
     [Test]
