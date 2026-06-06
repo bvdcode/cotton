@@ -32,8 +32,8 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(controller.EnabledSyncPairId, Is.EqualTo(syncPairId));
             Assert.That(controller.EnabledSyncPairValue, Is.False);
             Assert.That(selected.IsEnabled, Is.False);
+            Assert.That(selected.IsDisabled, Is.True);
             Assert.That(selected.ToggleEnabledLabel, Is.EqualTo("Enable sync folder"));
-            Assert.That(selected.ToggleEnabledIcon, Is.EqualTo("▶"));
             Assert.That(selected.Status, Is.EqualTo("Disabled"));
             Assert.That(viewModel.GlobalStatus, Is.EqualTo("Folder disabled"));
         });

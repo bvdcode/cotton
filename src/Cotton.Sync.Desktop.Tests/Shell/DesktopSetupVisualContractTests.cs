@@ -112,14 +112,15 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(CountOccurrences(foldersSection, "Classes=\"inlineChange\""), Is.Zero);
             Assert.That(CountOccurrences(foldersSection, "ToolTip.Tip=\"Open local folder\""), Is.EqualTo(1));
             Assert.That(foldersSection, Does.Not.Contain("ToolTip.Tip=\"Open selected local folder\""));
-            Assert.That(foldersSection, Does.Contain("ToggleEnabledIcon"));
             Assert.That(foldersSection, Does.Not.Contain("ModeLabel"));
-            Assert.That(foldersSection, Does.Not.Contain("SelectedSyncPair.ToggleEnabledIcon"));
             Assert.That(foldersSection, Does.Not.Contain("SelectedSyncPair.ModeLabel"));
             Assert.That(foldersSection, Does.Contain("materialIcons:MaterialIcon"));
             Assert.That(foldersSection, Does.Contain("Kind=\"ContentSaveOutline\""));
+            Assert.That(foldersSection, Does.Contain("Kind=\"PauseCircleOutline\""));
+            Assert.That(foldersSection, Does.Contain("Kind=\"PlayCircleOutline\""));
             Assert.That(foldersSection, Does.Contain("Kind=\"TrashCanOutline\""));
             Assert.That(foldersSection, Does.Not.Contain("<Path Data="));
+            Assert.That(foldersSection, Does.Not.Contain("Content=\"{Binding ToggleEnabledIcon}\""));
             Assert.That(foldersSection, Does.Not.Contain("Content=\"💾\""));
             Assert.That(foldersSection, Does.Not.Contain("Content=\"🗑\""));
             Assert.That(foldersSection, Does.Not.Contain("Content=\"-\""));
@@ -265,26 +266,28 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
-    public void CloseIconButtons_UseStandardCloseGlyph()
+    public void CloseIconButtons_UseMaterialCloseIcon()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
 
         Assert.Multiple(() =>
         {
             Assert.That(mainWindowXaml, Does.Not.Contain("Content=\"x\""));
-            Assert.That(CountOccurrences(mainWindowXaml, "Content=\"×\""), Is.EqualTo(3));
+            Assert.That(mainWindowXaml, Does.Not.Contain("Content=\"×\""));
+            Assert.That(CountOccurrences(mainWindowXaml, "Kind=\"CloseCircleOutline\""), Is.EqualTo(3));
         });
     }
 
     [Test]
-    public void MoreIconButtons_UseStandardEllipsisGlyph()
+    public void MoreIconButtons_UseMaterialMenuIcon()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
 
         Assert.Multiple(() =>
         {
             Assert.That(mainWindowXaml, Does.Not.Contain("Content=\"...\""));
-            Assert.That(CountOccurrences(mainWindowXaml, "Content=\"…\""), Is.EqualTo(2));
+            Assert.That(mainWindowXaml, Does.Not.Contain("Content=\"…\""));
+            Assert.That(CountOccurrences(mainWindowXaml, "Kind=\"DotsVertical\""), Is.EqualTo(2));
         });
     }
 
@@ -394,22 +397,23 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(dashboardHeader, Does.Contain("Text=\"{Binding HeaderTitleText}\""));
             Assert.That(dashboardHeader, Does.Not.Contain("<TextBlock Text=\"Cotton Sync\""));
             Assert.That(dashboardHeader, Does.Contain("ToolTip.Tip=\"Sync now\""));
-            Assert.That(dashboardHeader, Does.Contain("Content=\"↻\""));
+            Assert.That(dashboardHeader, Does.Contain("Kind=\"RefreshCircle\""));
             Assert.That(dashboardHeader, Does.Contain("IsVisible=\"{Binding CanSyncNow}\""));
             Assert.That(dashboardHeader, Does.Not.Contain("Content=\"Sync\""));
-            Assert.That(actionRequiredRow, Does.Contain("Content=\"↻\""));
-            Assert.That(actionRequiredRow, Does.Contain("Content=\"✓\""));
+            Assert.That(actionRequiredRow, Does.Contain("Kind=\"RefreshCircle\""));
+            Assert.That(actionRequiredRow, Does.Contain("Kind=\"CheckCircleOutline\""));
             Assert.That(actionRequiredRow, Does.Contain("MaxLines=\"3\""));
             Assert.That(actionRequiredRow, Does.Contain("TextWrapping=\"Wrap\""));
             Assert.That(actionRequiredRow, Does.Contain("ToolTip.Tip=\"{Binding ActionRequiredMessage}\""));
             Assert.That(actionRequiredRow, Does.Not.Contain("Content=\"Retry\""));
             Assert.That(actionRequiredRow, Does.Not.Contain("Content=\"Check\""));
-            Assert.That(conflictsHeader, Does.Contain("Content=\"↻\""));
+            Assert.That(conflictsHeader, Does.Contain("Kind=\"RefreshCircle\""));
             Assert.That(conflictsHeader, Does.Not.Contain("OpenConflictCommand"));
             Assert.That(conflictsHeader, Does.Not.Contain("Open selected conflict location"));
             Assert.That(conflictsSection, Does.Contain("OpenConflictCommand"));
             Assert.That(conflictsSection, Does.Contain("CommandParameter=\"{Binding}\""));
             Assert.That(conflictsSection, Does.Contain("ToolTip.Tip=\"Open conflict location\""));
+            Assert.That(conflictsSection, Does.Contain("Kind=\"ArrowTopRight\""));
             Assert.That(conflictsHeader, Does.Not.Contain("Content=\"Retry\""));
             Assert.That(conflictsHeader, Does.Not.Contain("Content=\"Open\""));
         });
@@ -535,12 +539,17 @@ public sealed class DesktopSetupVisualContractTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(cloudFolderPicker, Does.Contain("Content=\"←\""));
+            Assert.That(cloudFolderPicker, Does.Contain("Kind=\"ArrowLeftCircleOutline\""));
             Assert.That(cloudFolderPicker, Does.Contain("ToolTip.Tip=\"Create cloud folder\""));
             Assert.That(cloudFolderPicker, Does.Contain("ShowCreateRemoteFolderCommand"));
+            Assert.That(cloudFolderPicker, Does.Contain("Kind=\"FolderPlusOutline\""));
             Assert.That(cloudFolderPicker, Does.Contain("CreateRemoteFolderCommand"));
-            Assert.That(cloudFolderPicker, Does.Contain("Content=\"→\""));
+            Assert.That(cloudFolderPicker, Does.Contain("Kind=\"ArrowRightCircleOutline\""));
+            Assert.That(cloudFolderPicker, Does.Contain("Kind=\"CheckCircleOutline\""));
+            Assert.That(cloudFolderPicker, Does.Contain("Kind=\"CloseCircleOutline\""));
             Assert.That(CountOccurrences(cloudFolderPicker, "Classes=\"icon\""), Is.EqualTo(4));
+            Assert.That(cloudFolderPicker, Does.Not.Contain("Content=\"←\""));
+            Assert.That(cloudFolderPicker, Does.Not.Contain("Content=\"→\""));
             Assert.That(cloudFolderPicker, Does.Not.Contain("Content=\"^\""));
             Assert.That(cloudFolderPicker, Does.Not.Contain("Content=\">\""));
             Assert.That(cloudFolderPicker, Does.Not.Contain("Content=\"Up\""));

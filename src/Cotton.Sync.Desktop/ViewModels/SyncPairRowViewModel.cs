@@ -37,14 +37,14 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
             if (SetProperty(ref _isEnabled, value))
             {
                 OnPropertyChanged(nameof(ToggleEnabledLabel));
-                OnPropertyChanged(nameof(ToggleEnabledIcon));
+                OnPropertyChanged(nameof(IsDisabled));
             }
         }
     }
 
-    public string ToggleEnabledLabel => IsEnabled ? "Disable sync folder" : "Enable sync folder";
+    public bool IsDisabled => !IsEnabled;
 
-    public string ToggleEnabledIcon => IsEnabled ? "⏸" : "▶";
+    public string ToggleEnabledLabel => IsEnabled ? "Disable sync folder" : "Enable sync folder";
 
     public bool IsEditorVisible
     {

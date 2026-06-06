@@ -51,14 +51,21 @@
                     Spacing="5"
                     VerticalAlignment="Center"
                     IsVisible="{Binding IsDashboardVisible}">
-          <Button Content="↻"
-                  Classes="icon"
+          <Button Classes="icon"
                   ToolTip.Tip="Sync now"
                   IsVisible="{Binding CanSyncNow}"
-                  Command="{Binding SyncNowCommand}" />
-          <Button Content="…"
-                  Classes="icon"
+                  Command="{Binding SyncNowCommand}">
+            <materialIcons:MaterialIcon Kind="RefreshCircle"
+                                        Width="16"
+                                        Height="16"
+                                        Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+          </Button>
+          <Button Classes="icon"
                   ToolTip.Tip="More actions">
+            <materialIcons:MaterialIcon Kind="DotsVertical"
+                                        Width="16"
+                                        Height="16"
+                                        Foreground="{DynamicResource CottonTextPrimaryBrush}" />
             <Button.Flyout>
               <MenuFlyout>
                 <MenuItem Header="Open Cotton Cloud"
@@ -321,15 +328,23 @@
                         Orientation="Horizontal"
                         Spacing="6"
                         VerticalAlignment="Center">
-              <Button Content="↻"
-                      Classes="icon"
+              <Button Classes="icon"
                       ToolTip.Tip="Run synchronization again"
                       IsVisible="{Binding CanRetryActionRequired}"
-                      Command="{Binding SyncNowCommand}" />
-              <Button Content="✓"
-                      Classes="icon"
+                      Command="{Binding SyncNowCommand}">
+                <materialIcons:MaterialIcon Kind="RefreshCircle"
+                                            Width="16"
+                                            Height="16"
+                                            Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+              </Button>
+              <Button Classes="icon"
                       ToolTip.Tip="Run desktop self-test"
-                      Command="{Binding SelfTestCommand}" />
+                      Command="{Binding SelfTestCommand}">
+                <materialIcons:MaterialIcon Kind="CheckCircleOutline"
+                                            Width="16"
+                                            Height="16"
+                                            Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+              </Button>
             </StackPanel>
           </Grid>
         </Border>
@@ -385,10 +400,14 @@
                            FontSize="12" />
               </StackPanel>
               <Button Grid.Column="1"
-                      Content="↻"
                       Classes="icon"
                       ToolTip.Tip="Run synchronization again"
-                      Command="{Binding SyncNowCommand}" />
+                      Command="{Binding SyncNowCommand}">
+                <materialIcons:MaterialIcon Kind="RefreshCircle"
+                                            Width="16"
+                                            Height="16"
+                                            Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+              </Button>
             </Grid>
 
             <ScrollViewer Grid.Row="1"
@@ -419,11 +438,15 @@
                                  TextTrimming="CharacterEllipsis" />
                       <Button Grid.Column="2"
                               Grid.RowSpan="2"
-                              Content="↗"
                               Classes="icon"
                               ToolTip.Tip="Open conflict location"
                               Command="{Binding $parent[Window].DataContext.OpenConflictCommand}"
-                              CommandParameter="{Binding}" />
+                              CommandParameter="{Binding}">
+                        <materialIcons:MaterialIcon Kind="ArrowTopRight"
+                                                    Width="16"
+                                                    Height="16"
+                                                    Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                      </Button>
                     </Grid>
                   </DataTemplate>
                 </ListBox.ItemTemplate>
@@ -446,11 +469,15 @@
                            FontWeight="SemiBold"
                            VerticalAlignment="Center" />
                 <Button Grid.Column="1"
-                        Content="+"
                         Classes="icon primary"
                         ToolTip.Tip="Add sync folder"
                         Command="{Binding ShowAddSyncPairCommand}"
-                        VerticalAlignment="Center" />
+                        VerticalAlignment="Center">
+                  <materialIcons:MaterialIcon Kind="FolderPlusOutline"
+                                              Width="16"
+                                              Height="16"
+                                              Foreground="{DynamicResource CottonPrimaryTextBrush}" />
+                </Button>
               </Grid>
 
               <Grid Grid.Row="1">
@@ -526,20 +553,28 @@
                                        Opacity="0.74" />
                             <Button Grid.Column="2"
                                     Grid.RowSpan="5"
-                                    Content="↗"
                                     Classes="icon"
                                     ToolTip.Tip="Open local folder"
                                     Command="{Binding $parent[Window].DataContext.OpenFolderCommand}"
                                     CommandParameter="{Binding}"
-                                    VerticalAlignment="Center" />
+                                    VerticalAlignment="Center">
+                              <materialIcons:MaterialIcon Kind="FolderOpenOutline"
+                                                          Width="16"
+                                                          Height="16"
+                                                          Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                            </Button>
                             <Button Grid.Column="3"
                                     Grid.RowSpan="5"
-                                    Content="…"
                                     Classes="icon"
                                     ToolTip.Tip="Rename, enable, or remove"
                                     Command="{Binding $parent[Window].DataContext.ShowSelectedSyncPairEditorCommand}"
                                     CommandParameter="{Binding}"
-                                    VerticalAlignment="Center" />
+                                    VerticalAlignment="Center">
+                              <materialIcons:MaterialIcon Kind="DotsVertical"
+                                                          Width="16"
+                                                          Height="16"
+                                                          Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                            </Button>
                             <Border Grid.Row="5"
                                     Grid.ColumnSpan="4"
                                     Margin="0,6,0,0"
@@ -563,10 +598,22 @@
                                                               Foreground="{DynamicResource CottonTextPrimaryBrush}" />
                                 </Button>
                                 <Button Grid.Column="2"
-                                        Content="{Binding ToggleEnabledIcon}"
                                         Classes="icon"
                                         ToolTip.Tip="{Binding ToggleEnabledLabel}"
-                                        Command="{Binding $parent[Window].DataContext.ToggleSelectedSyncPairEnabledCommand}" />
+                                        Command="{Binding $parent[Window].DataContext.ToggleSelectedSyncPairEnabledCommand}">
+                                  <Grid>
+                                    <materialIcons:MaterialIcon Kind="PauseCircleOutline"
+                                                                Width="16"
+                                                                Height="16"
+                                                                Foreground="{DynamicResource CottonTextPrimaryBrush}"
+                                                                IsVisible="{Binding IsEnabled}" />
+                                    <materialIcons:MaterialIcon Kind="PlayCircleOutline"
+                                                                Width="16"
+                                                                Height="16"
+                                                                Foreground="{DynamicResource CottonTextPrimaryBrush}"
+                                                                IsVisible="{Binding IsDisabled}" />
+                                  </Grid>
+                                </Button>
                                 <Button Grid.Column="3"
                                         Classes="icon"
                                         ToolTip.Tip="Remove sync folder"
@@ -719,10 +766,14 @@
                            TextWrapping="Wrap" />
               </StackPanel>
               <Button Grid.Column="1"
-                      Content="×"
                       Classes="icon"
                       ToolTip.Tip="Cancel"
-                      Command="{Binding CancelAddSyncPairCommand}" />
+                      Command="{Binding CancelAddSyncPairCommand}">
+                <materialIcons:MaterialIcon Kind="CloseCircleOutline"
+                                            Width="16"
+                                            Height="16"
+                                            Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+              </Button>
             </Grid>
 
             <Border Grid.Row="1"
@@ -773,10 +824,11 @@
                         Command="{Binding BrowseLocalFolderCommand}">
                   <Grid RowDefinitions="Auto,Auto"
                         RowSpacing="4">
-                    <TextBlock Text="+"
-                               FontSize="26"
-                               FontWeight="SemiBold"
-                               HorizontalAlignment="Center" />
+                    <materialIcons:MaterialIcon Kind="FolderPlusOutline"
+                                                Width="30"
+                                                Height="30"
+                                                HorizontalAlignment="Center"
+                                                Foreground="{DynamicResource CottonTextPrimaryBrush}" />
                     <TextBlock Grid.Row="1"
                                Text="Choose folder"
                                FontSize="16"
@@ -818,24 +870,36 @@
                         RowSpacing="8">
                     <Grid ColumnDefinitions="Auto,*,Auto,Auto"
                           ColumnSpacing="6">
-                      <Button Content="←"
-                              Classes="icon"
+                      <Button Classes="icon"
                               ToolTip.Tip="Go to parent folder"
-                              Command="{Binding RemoteFolderUpCommand}" />
+                              Command="{Binding RemoteFolderUpCommand}">
+                        <materialIcons:MaterialIcon Kind="ArrowLeftCircleOutline"
+                                                    Width="16"
+                                                    Height="16"
+                                                    Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                      </Button>
                       <TextBlock Grid.Column="1"
                                  Text="{Binding RemoteBrowserPath}"
                                  TextTrimming="CharacterEllipsis"
                                  VerticalAlignment="Center" />
                       <Button Grid.Column="2"
-                              Content="+"
                               Classes="icon primary"
                               ToolTip.Tip="Create cloud folder"
-                              Command="{Binding ShowCreateRemoteFolderCommand}" />
+                              Command="{Binding ShowCreateRemoteFolderCommand}">
+                        <materialIcons:MaterialIcon Kind="FolderPlusOutline"
+                                                    Width="16"
+                                                    Height="16"
+                                                    Foreground="{DynamicResource CottonPrimaryTextBrush}" />
+                      </Button>
                       <Button Grid.Column="3"
-                              Content="→"
                               Classes="icon"
                               ToolTip.Tip="Open selected cloud folder"
-                              Command="{Binding OpenRemoteFolderCommand}" />
+                              Command="{Binding OpenRemoteFolderCommand}">
+                        <materialIcons:MaterialIcon Kind="ArrowRightCircleOutline"
+                                                    Width="16"
+                                                    Height="16"
+                                                    Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                      </Button>
                     </Grid>
 
                     <Grid Grid.Row="1"
@@ -845,15 +909,23 @@
                       <TextBox Text="{Binding NewRemoteFolderName}"
                                PlaceholderText="New folder name" />
                       <Button Grid.Column="1"
-                              Content="✓"
                               Classes="icon"
                               ToolTip.Tip="Create folder"
-                              Command="{Binding CreateRemoteFolderCommand}" />
+                              Command="{Binding CreateRemoteFolderCommand}">
+                        <materialIcons:MaterialIcon Kind="CheckCircleOutline"
+                                                    Width="16"
+                                                    Height="16"
+                                                    Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                      </Button>
                       <Button Grid.Column="2"
-                              Content="×"
                               Classes="icon"
                               ToolTip.Tip="Cancel"
-                              Command="{Binding CancelCreateRemoteFolderCommand}" />
+                              Command="{Binding CancelCreateRemoteFolderCommand}">
+                        <materialIcons:MaterialIcon Kind="CloseCircleOutline"
+                                                    Width="16"
+                                                    Height="16"
+                                                    Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                      </Button>
                     </Grid>
 
                     <Grid Grid.Row="2">
@@ -990,10 +1062,14 @@
                            TextWrapping="Wrap" />
               </StackPanel>
               <Button Grid.Column="1"
-                      Content="×"
                       Classes="icon"
                       ToolTip.Tip="Close"
-                      Command="{Binding CloseSettingsCommand}" />
+                      Command="{Binding CloseSettingsCommand}">
+                <materialIcons:MaterialIcon Kind="CloseCircleOutline"
+                                            Width="16"
+                                            Height="16"
+                                            Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+              </Button>
             </Grid>
 
             <TabControl Grid.Row="1"
