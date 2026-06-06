@@ -482,7 +482,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         {
             if (IsAggregateRunProgressPrimary && HasCurrentTransfer)
             {
-                return CurrentTransferTitle + " · " + CurrentTransferDetails;
+                return string.IsNullOrWhiteSpace(CurrentTransferDetails)
+                    ? CurrentTransferTitle
+                    : CurrentTransferDetails + " · " + CurrentTransferTitle;
             }
 
             return HasCurrentTransfer && HasCurrentRunProgress
