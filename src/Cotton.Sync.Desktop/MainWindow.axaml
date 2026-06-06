@@ -421,11 +421,8 @@
 
             <ScrollViewer Grid.Row="1"
                           VerticalScrollBarVisibility="Auto">
-              <ListBox ItemsSource="{Binding Conflicts}"
-                       SelectedItem="{Binding SelectedConflict}"
-                       BorderThickness="0"
-                       Background="Transparent">
-                <ListBox.ItemTemplate>
+              <ItemsControl ItemsSource="{Binding Conflicts}">
+                <ItemsControl.ItemTemplate>
                   <DataTemplate>
                     <Grid ColumnDefinitions="42,*,Auto"
                           RowDefinitions="Auto,Auto"
@@ -458,8 +455,8 @@
                       </Button>
                     </Grid>
                   </DataTemplate>
-                </ListBox.ItemTemplate>
-              </ListBox>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
             </ScrollViewer>
           </Grid>
         </Border>

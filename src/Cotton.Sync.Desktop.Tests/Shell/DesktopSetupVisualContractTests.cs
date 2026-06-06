@@ -478,6 +478,8 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(conflictsHeader, Does.Contain("Kind=\"Refresh\""));
             Assert.That(conflictsHeader, Does.Not.Contain("OpenConflictCommand"));
             Assert.That(conflictsHeader, Does.Not.Contain("Open selected conflict location"));
+            Assert.That(conflictsSection, Does.Contain("<ItemsControl ItemsSource=\"{Binding Conflicts}\""));
+            Assert.That(conflictsSection, Does.Not.Contain("SelectedItem=\"{Binding SelectedConflict}\""));
             Assert.That(conflictsSection, Does.Contain("OpenConflictCommand"));
             Assert.That(conflictsSection, Does.Contain("CommandParameter=\"{Binding}\""));
             Assert.That(conflictsSection, Does.Contain("ToolTip.Tip=\"Open conflict location\""));
