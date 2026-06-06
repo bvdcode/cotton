@@ -56,26 +56,48 @@ namespace Cotton.Server.Handlers.Files
         /// </summary>
         public async Task<NodeFileManifestDto> Handle(MoveFileCommand request, CancellationToken cancellationToken)
         {
-            if (request.ParentId == Guid.Empty)
-            {
-                throw new BadRequestException<NodeFile>("Target parent id is required.");
-            }
+            ValidateRequest(request);
 
             // The cross-table namespace (file vs folder with the same NameKey under
             // the same parent) is NOT protected by a single unique index. Without a
             // serialization point, a concurrent file move + folder move can both
             // pass their pre-checks and commit a same-name cross-type duplicate.
             // We take the same per-layout advisory lock that MoveNodeCommand uses.
-            var sourceLayoutId = await _dbContext.NodeFiles
+            var sourceLayoutId = await GetSourceLayoutIdAsync(request, cancellationToken);
+
+            await using var tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            await LayoutLocks.AcquireForLayoutAsync(_dbContext, sourceLayoutId, cancellationToken);
+
+            var nodeFile = await GetMovableFileAsync(request, cancellationToken);
+            ValidateMovableFile(request, nodeFile);
+
+            Guid? oldParentId = await MoveFileToTargetParentAsync(request, nodeFile, sourceLayoutId, cancellationToken);
+            await tx.CommitAsync(cancellationToken);
+
+            await NotifyMoveIfNeededAsync(nodeFile.Id, oldParentId, cancellationToken);
+            return nodeFile.Adapt<NodeFileManifestDto>();
+        }
+
+        private static void ValidateRequest(MoveFileCommand request)
+        {
+            if (request.ParentId == Guid.Empty)
+            {
+                throw new BadRequestException<NodeFile>("Target parent id is required.");
+            }
+        }
+
+        private async Task<Guid> GetSourceLayoutIdAsync(MoveFileCommand request, CancellationToken cancellationToken)
+        {
+            return await _dbContext.NodeFiles
                 .AsNoTracking()
                 .Where(x => x.Id == request.NodeFileId && x.OwnerId == request.UserId)
                 .Select(x => (Guid?)x.Node.LayoutId)
                 .SingleOrDefaultAsync(cancellationToken)
                 ?? throw new EntityNotFoundException<NodeFile>();
+        }
 
-            await using var tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-            await LayoutLocks.AcquireForLayoutAsync(_dbContext, sourceLayoutId, cancellationToken);
-
+        private async Task<NodeFile> GetMovableFileAsync(MoveFileCommand request, CancellationToken cancellationToken)
+        {
             var nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.Node)
                 .Include(x => x.FileManifest)
@@ -83,6 +105,11 @@ namespace Cotton.Server.Handlers.Files
                 .SingleOrDefaultAsync(cancellationToken)
                 ?? throw new EntityNotFoundException<NodeFile>();
 
+            return nodeFile;
+        }
+
+        private static void ValidateMovableFile(MoveFileCommand request, NodeFile nodeFile)
+        {
             if (nodeFile.Node.Type != NodeType.Default)
             {
                 throw new EntityNotFoundException<NodeFile>();
@@ -92,30 +119,51 @@ namespace Cotton.Server.Handlers.Files
             {
                 throw new FilePreconditionFailedException<NodeFile>("File content changed before move.");
             }
+        }
 
+        private async Task<Guid?> MoveFileToTargetParentAsync(
+            MoveFileCommand request,
+            NodeFile nodeFile,
+            Guid sourceLayoutId,
+            CancellationToken cancellationToken)
+        {
             if (nodeFile.NodeId == request.ParentId)
             {
-                await tx.CommitAsync(cancellationToken);
-                return nodeFile.Adapt<NodeFileManifestDto>();
+                return null;
             }
 
-            var targetParent = await _dbContext.Nodes
-                .Where(x => x.Id == request.ParentId
-                    && x.OwnerId == request.UserId
-                    && x.Type == NodeType.Default)
-                .SingleOrDefaultAsync(cancellationToken)
-                ?? throw new EntityNotFoundException<Node>();
-
-            if (targetParent.LayoutId != nodeFile.Node.LayoutId)
-            {
-                throw new BadRequestException<Node>("Cannot move a file across layouts.");
-            }
+            var targetParent = await GetTargetParentAsync(request, cancellationToken);
+            ValidateTargetParent(nodeFile, targetParent);
 
             await EnsureNoSiblingCollisionAsync(targetParent.Id, request.UserId, nodeFile.NameKey, nodeFile.Id, cancellationToken);
 
             Guid oldParentId = nodeFile.NodeId;
             nodeFile.NodeId = targetParent.Id;
             _syncChanges.StageFileChange(SyncChangeKind.FileMoved, nodeFile, sourceLayoutId, oldParentId);
+            await SaveMovedFileAsync(nodeFile, cancellationToken);
+            return oldParentId;
+        }
+
+        private async Task<Node> GetTargetParentAsync(MoveFileCommand request, CancellationToken cancellationToken)
+        {
+            return await _dbContext.Nodes
+                .Where(x => x.Id == request.ParentId
+                    && x.OwnerId == request.UserId
+                    && x.Type == NodeType.Default)
+                .SingleOrDefaultAsync(cancellationToken)
+                ?? throw new EntityNotFoundException<Node>();
+        }
+
+        private static void ValidateTargetParent(NodeFile nodeFile, Node targetParent)
+        {
+            if (targetParent.LayoutId != nodeFile.Node.LayoutId)
+            {
+                throw new BadRequestException<Node>("Cannot move a file across layouts.");
+            }
+        }
+
+        private async Task SaveMovedFileAsync(NodeFile nodeFile, CancellationToken cancellationToken)
+        {
             try
             {
                 await _dbContext.SaveChangesAsync(cancellationToken);
@@ -125,11 +173,6 @@ namespace Cotton.Server.Handlers.Files
             {
                 throw new DuplicateException(nodeFile.NameKey);
             }
-
-            await tx.CommitAsync(cancellationToken);
-
-            await NotifyMoveAsync(nodeFile.Id, oldParentId, cancellationToken);
-            return nodeFile.Adapt<NodeFileManifestDto>();
         }
 
         private async Task EnsureNoSiblingCollisionAsync(
@@ -162,6 +205,16 @@ namespace Cotton.Server.Handlers.Files
             {
                 throw new DuplicateException(nameKey);
             }
+        }
+
+        private async Task NotifyMoveIfNeededAsync(Guid nodeFileId, Guid? oldParentId, CancellationToken ct)
+        {
+            if (!oldParentId.HasValue)
+            {
+                return;
+            }
+
+            await NotifyMoveAsync(nodeFileId, oldParentId.Value, ct);
         }
 
         private async Task NotifyMoveAsync(Guid nodeFileId, Guid oldParentId, CancellationToken ct)
