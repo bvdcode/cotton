@@ -90,6 +90,7 @@ public sealed class SyncPairSettingsValidatorTests
             Assert.That(result.Errors.Single().Issue, Is.EqualTo(SyncPairValidationIssue.OverlappingLocalRoots));
             Assert.That(result.Errors.Single().SyncPairId, Is.EqualTo(first.Id));
             Assert.That(result.Errors.Single().OtherSyncPairId, Is.EqualTo(second.Id));
+            Assert.That(result.Errors.Single().Message, Is.EqualTo("Sync folders cannot be inside each other."));
         });
     }
 
@@ -105,6 +106,7 @@ public sealed class SyncPairSettingsValidatorTests
         {
             Assert.That(result.IsValid, Is.False);
             Assert.That(result.Errors.Single().Issue, Is.EqualTo(SyncPairValidationIssue.OverlappingLocalRoots));
+            Assert.That(result.Errors.Single().Message, Is.EqualTo("This folder is already syncing."));
         });
     }
 

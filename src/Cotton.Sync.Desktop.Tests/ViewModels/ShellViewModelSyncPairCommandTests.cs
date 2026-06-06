@@ -1328,12 +1328,13 @@ public sealed class ShellViewModelSyncPairCommandTests
         });
     }
 
-    [TestCase("/home/user/Downloads", "/home/user/Downloads")]
-    [TestCase("/home/user/Downloads", "/home/user/Downloads/Work")]
-    [TestCase(@"C:\Users\Vadim\Downloads", @"c:\users\vadim\downloads\Work")]
+    [TestCase("/home/user/Downloads", "/home/user/Downloads", "This folder is already syncing.")]
+    [TestCase("/home/user/Downloads", "/home/user/Downloads/Work", "Sync folders cannot be inside each other.")]
+    [TestCase(@"C:\Users\Vadim\Downloads", @"c:\users\vadim\downloads\Work", "Sync folders cannot be inside each other.")]
     public async Task BrowseLocalFolderCommand_RejectsExistingOrNestedSyncRootBeforeCloudStep(
         string existingLocalPath,
-        string selectedLocalPath)
+        string selectedLocalPath,
+        string expectedMessage)
     {
         var localFolderPicker = new FakeLocalFolderPicker(selectedLocalPath);
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(
@@ -1363,7 +1364,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.RemoteFolders, Is.Empty);
             Assert.That(controller.ListRemoteFolderPaths, Is.Empty);
             Assert.That(viewModel.GlobalStatus, Is.EqualTo("Action required"));
-            Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo("Local sync roots must not be equal or nested."));
+            Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo(expectedMessage));
             Assert.That(viewModel.AddSyncPairCommand.CanExecute(null), Is.False);
         });
     }

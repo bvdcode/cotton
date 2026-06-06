@@ -86,7 +86,9 @@ public sealed partial class SyncPairSettingsValidator
                     SyncPairValidationIssue.OverlappingLocalRoots,
                     left.SyncPairId,
                     right.SyncPairId,
-                    "Local sync roots must not be equal or nested.");
+                    left.Path.IsSamePath(right.Path)
+                        ? "This folder is already syncing."
+                        : "Sync folders cannot be inside each other.");
             }
         }
     }
@@ -175,6 +177,12 @@ public sealed partial class SyncPairSettingsValidator
             return IsSamePath(other, comparison)
                 || IsParentOf(other, comparison)
                 || other.IsParentOf(this, comparison);
+        }
+
+        public bool IsSamePath(NormalizedPath other)
+        {
+            StringComparison comparison = WindowsStyle ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            return IsSamePath(other, comparison);
         }
 
         private bool IsSamePath(NormalizedPath other, StringComparison comparison)

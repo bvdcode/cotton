@@ -1334,7 +1334,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             return;
         }
 
-        if (IsLocalFolderOverlappingExistingSyncRoot(selectedPath))
+        string? overlapMessage = GetLocalFolderOverlapMessage(selectedPath);
+        if (overlapMessage is not null)
         {
             LocalFolderPath = string.Empty;
             NewRemoteFolderName = string.Empty;
@@ -1343,7 +1344,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             RemoteFolders.Clear();
             _isLocalFolderSelectionError = true;
             GlobalStatus = "Action required";
-            ActionRequiredMessage = "Local sync roots must not be equal or nested.";
+            ActionRequiredMessage = overlapMessage;
             AddActivity("Warning", selectedPath, ActionRequiredMessage);
             RefreshCurrentProgressText();
             return;
@@ -1919,11 +1920,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             && IsAddSyncPairCloudStepVisible;
     }
 
-    private bool IsLocalFolderOverlappingExistingSyncRoot(string localPath)
+    private string? GetLocalFolderOverlapMessage(string localPath)
     {
         if (SyncPairs.Count == 0)
         {
-            return false;
+            return null;
         }
 
         Guid candidateId = Guid.NewGuid();
@@ -1945,8 +1946,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         return _syncPairSettingsValidator
             .Validate(syncPairs)
             .Errors
-            .Any(error => error.Issue == SyncPairValidationIssue.OverlappingLocalRoots
-                && (error.SyncPairId == candidateId || error.OtherSyncPairId == candidateId));
+            .FirstOrDefault(error => error.Issue == SyncPairValidationIssue.OverlappingLocalRoots
+                && (error.SyncPairId == candidateId || error.OtherSyncPairId == candidateId))
+            ?.Message;
     }
 
     private void ClearLocalFolderSelectionError()
