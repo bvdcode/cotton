@@ -353,7 +353,8 @@ This phase is required for release-grade remote sync. SignalR alone is not enoug
 
 ## Phase 8 - Desktop UX And Visual Design
 
-- [ ] Replace prototype screen with release-grade app structure.
+- [x] Replace prototype screen with release-grade app structure.
+  Verification 2026-06-06: the desktop shell is no longer a prototype single screen. `MainWindow.axaml` separates setup, signed-in dashboard, add-folder wizard, settings overlay, action-required, conflict, progress, folders, and activity surfaces; `ShellViewModel` exposes deterministic visual-smoke states for first-run, sign-in-error, empty-dashboard, add-folder, dashboard, folder-controls, progress, settings, settings-diagnostics, error, and conflict; the refreshed compact screenshot matrix under `/tmp/cotton-sync-responsive-verify` was reviewed without overlap or primary-action clipping. Onboarding completion, manual walkthroughs, and clean-machine screenshot review remain tracked as separate release gates.
 - [ ] Add onboarding flow.
   Steps: welcome, sign in, optional autostart, add first sync pair, initial sync, finished state.
   Partial 2026-06-03: sign-in onboarding now keeps a fresh app database empty, remembers the saved server URL and username as sign-in hints after real user input, and skips session-restore network calls when the token store is empty. Focused `DesktopShellControllerSelfTestTests` passed 12/12, full `Cotton.Sync.Desktop.Tests` passed 119/119, and full solution Release build passed with the known NU1903 warning. Keep unchecked until the full onboarding flow, first-pair setup, initial sync, and screenshot QA are verified together.
