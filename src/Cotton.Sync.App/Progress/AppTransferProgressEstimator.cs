@@ -9,9 +9,12 @@ namespace Cotton.Sync.App.Progress;
 public sealed class AppTransferProgressEstimator
 {
     private static readonly TimeSpan RollingWindow = TimeSpan.FromSeconds(5);
+    private const double RemainingTimeSmoothingFactor = 0.35;
     private const int MaximumSamples = 8;
     private readonly Queue<TransferSample> _samples = new();
     private SyncTransferDirection _direction = SyncTransferDirection.Unknown;
+    private TimeSpan? _smoothedEstimatedTimeRemaining;
+    private DateTime? _lastEstimateOccurredAtUtc;
     private string _relativePath = string.Empty;
 
     /// <summary>
@@ -51,6 +54,8 @@ public sealed class AppTransferProgressEstimator
         if (isCompleted)
         {
             _samples.Clear();
+            _smoothedEstimatedTimeRemaining = null;
+            _lastEstimateOccurredAtUtc = null;
         }
 
         return estimate;
@@ -59,6 +64,8 @@ public sealed class AppTransferProgressEstimator
     private void Reset(SyncTransferDirection direction, string relativePath)
     {
         _samples.Clear();
+        _smoothedEstimatedTimeRemaining = null;
+        _lastEstimateOccurredAtUtc = null;
         _direction = direction;
         _relativePath = relativePath;
     }
@@ -98,10 +105,43 @@ public sealed class AppTransferProgressEstimator
         TimeSpan? estimatedTimeRemaining = null;
         if (totalBytes.HasValue && totalBytes.Value > currentSample.TransferredBytes)
         {
-            estimatedTimeRemaining = TimeSpan.FromSeconds((totalBytes.Value - currentSample.TransferredBytes) / speedBytesPerSecond);
+            estimatedTimeRemaining = SmoothEstimatedTimeRemaining(
+                TimeSpan.FromSeconds((totalBytes.Value - currentSample.TransferredBytes) / speedBytesPerSecond),
+                currentSample.OccurredAtUtc);
+        }
+        else
+        {
+            _smoothedEstimatedTimeRemaining = null;
+            _lastEstimateOccurredAtUtc = null;
         }
 
         return new AppTransferProgressEstimate(speedBytesPerSecond, estimatedTimeRemaining);
+    }
+
+    private TimeSpan SmoothEstimatedTimeRemaining(TimeSpan rawEstimate, DateTime occurredAtUtc)
+    {
+        if (!_smoothedEstimatedTimeRemaining.HasValue || !_lastEstimateOccurredAtUtc.HasValue)
+        {
+            _smoothedEstimatedTimeRemaining = rawEstimate;
+            _lastEstimateOccurredAtUtc = occurredAtUtc;
+            return rawEstimate;
+        }
+
+        TimeSpan elapsed = occurredAtUtc - _lastEstimateOccurredAtUtc.Value;
+        TimeSpan agedPreviousEstimate = elapsed > TimeSpan.Zero
+            ? _smoothedEstimatedTimeRemaining.Value - elapsed
+            : _smoothedEstimatedTimeRemaining.Value;
+        if (agedPreviousEstimate < TimeSpan.Zero)
+        {
+            agedPreviousEstimate = TimeSpan.Zero;
+        }
+
+        double smoothedSeconds = agedPreviousEstimate.TotalSeconds
+            + ((rawEstimate.TotalSeconds - agedPreviousEstimate.TotalSeconds) * RemainingTimeSmoothingFactor);
+        TimeSpan smoothedEstimate = TimeSpan.FromSeconds(Math.Max(0, smoothedSeconds));
+        _smoothedEstimatedTimeRemaining = smoothedEstimate;
+        _lastEstimateOccurredAtUtc = occurredAtUtc;
+        return smoothedEstimate;
     }
 
     private readonly record struct TransferSample(long TransferredBytes, DateTime OccurredAtUtc);

@@ -73,6 +73,43 @@ public sealed class AppTransferProgressEstimatorTests
     }
 
     [Test]
+    public void AddSample_SmoothsRemainingTimePrediction()
+    {
+        var estimator = new AppTransferProgressEstimator();
+        DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
+
+        _ = estimator.AddSample(
+            SyncTransferDirection.Upload,
+            "Reports/file.bin",
+            transferredBytes: 0,
+            totalBytes: 1_000,
+            isCompleted: false,
+            startedAtUtc);
+        AppTransferProgressEstimate stableEstimate = estimator.AddSample(
+            SyncTransferDirection.Upload,
+            "Reports/file.bin",
+            transferredBytes: 100,
+            totalBytes: 1_000,
+            isCompleted: false,
+            startedAtUtc.AddSeconds(1));
+        AppTransferProgressEstimate smoothedEstimate = estimator.AddSample(
+            SyncTransferDirection.Upload,
+            "Reports/file.bin",
+            transferredBytes: 150,
+            totalBytes: 1_000,
+            isCompleted: false,
+            startedAtUtc.AddSeconds(2));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(stableEstimate.EstimatedTimeRemaining, Is.EqualTo(TimeSpan.FromSeconds(9)));
+            Assert.That(smoothedEstimate.SpeedBytesPerSecond, Is.EqualTo(75).Within(0.01));
+            Assert.That(smoothedEstimate.EstimatedTimeRemaining?.TotalSeconds, Is.GreaterThan(8));
+            Assert.That(smoothedEstimate.EstimatedTimeRemaining?.TotalSeconds, Is.LessThan(11.3));
+        });
+    }
+
+    [Test]
     public void AddSample_ResetsWhenTransferChanges()
     {
         var estimator = new AppTransferProgressEstimator();
