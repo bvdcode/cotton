@@ -871,6 +871,46 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task TransferProgressChanged_CoalescesBurstBeforeUiQueue()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Syncing")));
+        var dispatcher = new QueuedDesktopUiDispatcher();
+        using ShellViewModel viewModel = CreateViewModel(controller, uiDispatcher: dispatcher);
+        await viewModel.InitializeAsync();
+        DateTime occurredAtUtc = new(2026, 6, 6, 10, 0, 0, DateTimeKind.Utc);
+
+        for (int index = 0; index < 100; index++)
+        {
+            controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+                syncPairId,
+                SyncTransferDirection.Upload,
+                "Reports/report.txt",
+                TransferredBytes: index * 1024,
+                TotalBytes: 100 * 1024,
+                IsCompleted: false,
+                occurredAtUtc.AddMilliseconds(index * 5)));
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dispatcher.PostedActionCount, Is.EqualTo(1));
+            Assert.That(dispatcher.PendingActionCount, Is.EqualTo(1));
+            Assert.That(viewModel.HasCurrentTransfer, Is.False);
+        });
+
+        dispatcher.DrainAll();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasCurrentTransfer, Is.True);
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents: Uploading report.txt"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("99 KB / 100 KB"));
+            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(99).Within(0.01));
+        });
+    }
+
+    [Test]
     public async Task RunProgressChanged_UpdatesCurrentRunProgressState()
     {
         Guid syncPairId = Guid.NewGuid();
@@ -906,6 +946,48 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(row.IsCurrentProgressIndeterminate, Is.False);
             Assert.That(row.CurrentProgressValue, Is.EqualTo(30).Within(0.01));
             Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Documents: Checking files 3 of 10"));
+        });
+    }
+
+    [Test]
+    public async Task RunProgressChanged_CoalescesBurstBeforeUiQueue()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Syncing")));
+        var dispatcher = new QueuedDesktopUiDispatcher();
+        using ShellViewModel viewModel = CreateViewModel(controller, uiDispatcher: dispatcher);
+        await viewModel.InitializeAsync();
+        DateTime occurredAtUtc = new(2026, 6, 6, 10, 0, 0, DateTimeKind.Utc);
+
+        for (int index = 0; index < 100; index++)
+        {
+            string path = "Reports/file-" + index.ToString("000", CultureInfo.InvariantCulture) + ".txt";
+            controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+                syncPairId,
+                SyncRunProgressStage.ReconcilingFiles,
+                FilesCompleted: index,
+                FilesTotal: 100,
+                CurrentPath: path,
+                StartedAtUtc: occurredAtUtc,
+                IsCompleted: false,
+                OccurredAtUtc: occurredAtUtc.AddMilliseconds(index * 5)));
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dispatcher.PostedActionCount, Is.EqualTo(1));
+            Assert.That(dispatcher.PendingActionCount, Is.EqualTo(1));
+            Assert.That(viewModel.HasCurrentRunProgress, Is.False);
+        });
+
+        dispatcher.DrainAll();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasCurrentRunProgress, Is.True);
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents: Checking files"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("99 of 100 files · file-099.txt"));
+            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(99).Within(0.01));
         });
     }
 

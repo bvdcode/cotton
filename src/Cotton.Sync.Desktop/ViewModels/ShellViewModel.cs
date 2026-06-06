@@ -30,6 +30,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private readonly IDesktopThemeService _themeService;
     private readonly IDesktopUiDispatcher _uiDispatcher;
     private readonly object _activityDispatchGate = new();
+    private readonly object _progressDispatchGate = new();
     private readonly DesktopNotificationTracker _notificationTracker = new();
     private readonly Dictionary<Guid, DesktopRunProgressSnapshot> _runProgressByPair = [];
     private readonly SyncPairSettingsValidator _syncPairSettingsValidator = new();
@@ -98,6 +99,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private Guid? _lastCoalescedActivitySyncPairId;
     private DesktopActivitySnapshot? _pendingCoalescedActivity;
     private bool _isCoalescedActivityDispatchScheduled;
+    private DesktopTransferProgressSnapshot? _pendingCoalescedTransferProgress;
+    private bool _isCoalescedTransferProgressDispatchScheduled;
+    private DesktopRunProgressSnapshot? _pendingCoalescedRunProgress;
+    private bool _isCoalescedRunProgressDispatchScheduled;
 
     internal ShellViewModel(
         IDesktopShellController controller,
@@ -2597,6 +2602,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             return;
         }
 
+        if (TryPostCoalescedTransferProgress(progress))
+        {
+            return;
+        }
+
         _uiDispatcher.Post(() => ApplyTransferProgress(progress));
     }
 
@@ -2608,7 +2618,111 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             return;
         }
 
+        if (TryPostCoalescedRunProgress(progress))
+        {
+            return;
+        }
+
         _uiDispatcher.Post(() => ApplyRunProgress(progress));
+    }
+
+    private bool TryPostCoalescedTransferProgress(DesktopTransferProgressSnapshot progress)
+    {
+        lock (_progressDispatchGate)
+        {
+            if (_pendingCoalescedTransferProgress is not null
+                && CanReplacePendingTransferProgress(_pendingCoalescedTransferProgress, progress))
+            {
+                _pendingCoalescedTransferProgress = progress;
+                return true;
+            }
+
+            if (_isCoalescedTransferProgressDispatchScheduled)
+            {
+                return false;
+            }
+
+            _pendingCoalescedTransferProgress = progress;
+            _isCoalescedTransferProgressDispatchScheduled = true;
+        }
+
+        _uiDispatcher.Post(ApplyPendingCoalescedTransferProgress);
+        return true;
+    }
+
+    private bool TryPostCoalescedRunProgress(DesktopRunProgressSnapshot progress)
+    {
+        lock (_progressDispatchGate)
+        {
+            if (_pendingCoalescedRunProgress is not null
+                && CanReplacePendingRunProgress(_pendingCoalescedRunProgress, progress))
+            {
+                _pendingCoalescedRunProgress = progress;
+                return true;
+            }
+
+            if (_isCoalescedRunProgressDispatchScheduled)
+            {
+                return false;
+            }
+
+            _pendingCoalescedRunProgress = progress;
+            _isCoalescedRunProgressDispatchScheduled = true;
+        }
+
+        _uiDispatcher.Post(ApplyPendingCoalescedRunProgress);
+        return true;
+    }
+
+    private void ApplyPendingCoalescedTransferProgress()
+    {
+        DesktopTransferProgressSnapshot? progress;
+        lock (_progressDispatchGate)
+        {
+            progress = _pendingCoalescedTransferProgress;
+            _pendingCoalescedTransferProgress = null;
+            _isCoalescedTransferProgressDispatchScheduled = false;
+        }
+
+        if (progress is not null)
+        {
+            ApplyTransferProgress(progress);
+        }
+    }
+
+    private void ApplyPendingCoalescedRunProgress()
+    {
+        DesktopRunProgressSnapshot? progress;
+        lock (_progressDispatchGate)
+        {
+            progress = _pendingCoalescedRunProgress;
+            _pendingCoalescedRunProgress = null;
+            _isCoalescedRunProgressDispatchScheduled = false;
+        }
+
+        if (progress is not null)
+        {
+            ApplyRunProgress(progress);
+        }
+    }
+
+    private static bool CanReplacePendingTransferProgress(
+        DesktopTransferProgressSnapshot pending,
+        DesktopTransferProgressSnapshot next)
+    {
+        return pending.SyncPairId == next.SyncPairId
+            && pending.Direction == next.Direction
+            && string.Equals(pending.RelativePath, next.RelativePath, StringComparison.Ordinal)
+            && next.OccurredAtUtc >= pending.OccurredAtUtc;
+    }
+
+    private static bool CanReplacePendingRunProgress(
+        DesktopRunProgressSnapshot pending,
+        DesktopRunProgressSnapshot next)
+    {
+        return pending.SyncPairId == next.SyncPairId
+            && pending.Stage == next.Stage
+            && next.OccurredAtUtc >= pending.OccurredAtUtc;
     }
 
     private void ApplySessionRevocation(DesktopSessionRevocationSnapshot sessionRevocation)
