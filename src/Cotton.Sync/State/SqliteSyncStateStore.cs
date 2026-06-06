@@ -38,13 +38,18 @@ public sealed class SqliteSyncStateStore : ISyncStateStore
         ArgumentException.ThrowIfNullOrWhiteSpace(syncPairId);
         await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
         await using SyncStateDbContext context = CreateContext();
-        List<SyncStateEntity> entities = await context.SyncEntries
+        IAsyncEnumerable<SyncStateEntity> entities = context.SyncEntries
             .AsNoTracking()
             .Where(entry => entry.SyncPairId == syncPairId)
             .OrderBy(entry => entry.RelativePathKey)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-        return entities.Select(ToModel).ToList();
+            .AsAsyncEnumerable();
+        var entries = new List<SyncStateEntry>();
+        await foreach (SyncStateEntity entity in entities.WithCancellation(cancellationToken).ConfigureAwait(false))
+        {
+            entries.Add(ToModel(entity));
+        }
+
+        return entries;
     }
 
     /// <inheritdoc />

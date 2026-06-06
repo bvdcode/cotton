@@ -74,10 +74,10 @@ public sealed class SyncEngine : ISyncEngine
             .ConfigureAwait(false);
         ReportRunProgress(options, SyncRunProgressStage.ScanningRemote, 0, null, null, startedAtUtc);
         RemoteTreeSnapshot remoteTree = await _remoteCrawler.CrawlAsync(syncPair.RemoteRootNodeId, cancellationToken).ConfigureAwait(false);
-        List<SyncStateEntry> stateEntries = (await _stateStore
+        IReadOnlyList<SyncStateEntry> stateEntries = await _stateStore
             .LoadPairAsync(syncPair.SyncPairId, cancellationToken)
-            .ConfigureAwait(false)).ToList();
-        await RemoveIgnoredStateEntriesAsync(syncPair.SyncPairId, stateEntries, cancellationToken).ConfigureAwait(false);
+            .ConfigureAwait(false);
+        stateEntries = await RemoveIgnoredStateEntriesAsync(syncPair.SyncPairId, stateEntries, cancellationToken).ConfigureAwait(false);
         var result = new SyncRunResult();
 
         Dictionary<string, LocalDirectorySnapshot> localDirectoriesByPath = ToDictionary(localTree.Directories, directory => directory.RelativePath);
@@ -170,22 +170,34 @@ public sealed class SyncEngine : ISyncEngine
         return result;
     }
 
-    private async Task RemoveIgnoredStateEntriesAsync(
+    private async Task<IReadOnlyList<SyncStateEntry>> RemoveIgnoredStateEntriesAsync(
         string syncPairId,
-        List<SyncStateEntry> stateEntries,
+        IReadOnlyList<SyncStateEntry> stateEntries,
         CancellationToken cancellationToken)
     {
-        for (int index = stateEntries.Count - 1; index >= 0; index--)
+        List<SyncStateEntry>? filteredEntries = null;
+        for (int index = 0; index < stateEntries.Count; index++)
         {
             SyncStateEntry entry = stateEntries[index];
             if (!SyncPathIgnoreRules.ShouldIgnore(entry.RelativePath))
             {
+                filteredEntries?.Add(entry);
                 continue;
             }
 
+            if (filteredEntries is null)
+            {
+                filteredEntries = new List<SyncStateEntry>(stateEntries.Count - 1);
+                for (int previousIndex = 0; previousIndex < index; previousIndex++)
+                {
+                    filteredEntries.Add(stateEntries[previousIndex]);
+                }
+            }
+
             await _stateStore.DeleteAsync(syncPairId, entry.RelativePath, cancellationToken).ConfigureAwait(false);
-            stateEntries.RemoveAt(index);
         }
+
+        return filteredEntries ?? stateEntries;
     }
 
     private async Task EnsureLocalContentHashesForStateFilesAsync(

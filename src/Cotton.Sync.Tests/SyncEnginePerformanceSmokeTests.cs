@@ -305,7 +305,7 @@ public sealed class SyncEnginePerformanceSmokeTests
         SqliteSyncStateStore stateStore = new(_databasePath);
         var remoteFilesClient = new RecordingRemoteFileSynchronizer();
         var activityProgress = new RecordingProgress<SyncActivity>();
-        const int retainedActivityLimit = 1_000;
+        const int retainedActivityLimit = 100;
         var engine = new SyncEngine(
             new LocalFileScanner(),
             new StaticRemoteTreeCrawler([]),
