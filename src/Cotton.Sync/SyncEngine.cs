@@ -71,32 +71,20 @@ public sealed class SyncEngine : ISyncEngine
         ReportRunProgress(options, SyncRunProgressStage.ScanningLocal, 0, null, null, startedAtUtc);
         _logger.LogInformation("Starting sync pass for pair {SyncPairId}.", syncPair.SyncPairId);
         await _stateStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
-        LocalTreeSnapshot localTree = await ScanLocalTreeAsync(syncPair.LocalRootPath, options, startedAtUtc, cancellationToken)
-            .ConfigureAwait(false);
-        RemoteTreeSnapshot remoteTree = await ScanRemoteTreeAsync(syncPair.RemoteRootNodeId, options, startedAtUtc, cancellationToken)
+        SyncTreeLookups treeLookups = await ScanTreesAndBuildLookupsAsync(syncPair, options, startedAtUtc, cancellationToken)
             .ConfigureAwait(false);
         (Dictionary<string, SyncStateEntry> directoryStateByPath, Dictionary<string, SyncStateEntry> stateByPath) =
             await LoadStateByPathAsync(syncPair.SyncPairId, cancellationToken).ConfigureAwait(false);
         var result = new SyncRunResult();
 
-        Dictionary<string, LocalDirectorySnapshot> localDirectoriesByPath = ToDictionary(localTree.Directories, directory => directory.RelativePath);
-        Dictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath = ToDictionary(remoteTree.Directories, directory => directory.RelativePath);
-        Dictionary<string, LocalFileSnapshot> localByPath = ToDictionary(localTree.Files, file => file.RelativePath);
-        Dictionary<string, RemoteFileSnapshot> remoteByPath = ToDictionary(remoteTree.Files, file => file.RelativePath);
+        Dictionary<string, LocalDirectorySnapshot> localDirectoriesByPath = treeLookups.LocalDirectoriesByPath;
+        Dictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath = treeLookups.RemoteDirectoriesByPath;
+        Dictionary<string, LocalFileSnapshot> localByPath = treeLookups.LocalFilesByPath;
+        Dictionary<string, RemoteFileSnapshot> remoteByPath = treeLookups.RemoteFilesByPath;
         IReadOnlyList<string> directoryPathKeys = BuildDirectoryPathKeys(
             localDirectoriesByPath.Keys,
             remoteDirectoriesByPath.Keys,
             directoryStateByPath.Keys);
-        ThrowIfPathKindCollisions(
-            localDirectoriesByPath,
-            localByPath,
-            directory => directory.RelativePath,
-            file => file.RelativePath);
-        ThrowIfPathKindCollisions(
-            remoteDirectoriesByPath,
-            remoteByPath,
-            directory => directory.RelativePath,
-            file => file.RelativePath);
         IReadOnlyCollection<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys);
         ReportRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, 0, directoryPathKeys.Count, null, startedAtUtc);
         await ReconcileDirectoriesWithoutBaselineAsync(
@@ -107,7 +95,7 @@ public sealed class SyncEngine : ISyncEngine
             localDirectoriesByPath,
             remoteDirectoriesByPath,
             directoryStateByPath,
-            remoteTree.RootNode,
+            treeLookups.RemoteRootNode,
             startedAtUtc,
             cancellationToken).ConfigureAwait(false);
 
@@ -167,6 +155,39 @@ public sealed class SyncEngine : ISyncEngine
             syncPair.SyncPairId,
             result.TotalActivityCount);
         return result;
+    }
+
+    private async Task<SyncTreeLookups> ScanTreesAndBuildLookupsAsync(
+        SyncPair syncPair,
+        SyncRunOptions options,
+        DateTime startedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        LocalTreeSnapshot localTree = await ScanLocalTreeAsync(syncPair.LocalRootPath, options, startedAtUtc, cancellationToken)
+            .ConfigureAwait(false);
+        RemoteTreeSnapshot remoteTree = await ScanRemoteTreeAsync(syncPair.RemoteRootNodeId, options, startedAtUtc, cancellationToken)
+            .ConfigureAwait(false);
+
+        Dictionary<string, LocalDirectorySnapshot> localDirectoriesByPath = ToDictionary(localTree.Directories, directory => directory.RelativePath);
+        Dictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath = ToDictionary(remoteTree.Directories, directory => directory.RelativePath);
+        Dictionary<string, LocalFileSnapshot> localByPath = ToDictionary(localTree.Files, file => file.RelativePath);
+        Dictionary<string, RemoteFileSnapshot> remoteByPath = ToDictionary(remoteTree.Files, file => file.RelativePath);
+        ThrowIfPathKindCollisions(
+            localDirectoriesByPath,
+            localByPath,
+            directory => directory.RelativePath,
+            file => file.RelativePath);
+        ThrowIfPathKindCollisions(
+            remoteDirectoriesByPath,
+            remoteByPath,
+            directory => directory.RelativePath,
+            file => file.RelativePath);
+        return new SyncTreeLookups(
+            localDirectoriesByPath,
+            remoteDirectoriesByPath,
+            localByPath,
+            remoteByPath,
+            remoteTree.RootNode);
     }
 
     private async Task<(Dictionary<string, SyncStateEntry> DirectoryStateByPath, Dictionary<string, SyncStateEntry> FileStateByPath)> LoadStateByPathAsync(
@@ -1406,6 +1427,33 @@ public sealed class SyncEngine : ISyncEngine
                 value.CurrentPath,
                 _startedAtUtc);
         }
+    }
+
+    private sealed class SyncTreeLookups
+    {
+        public SyncTreeLookups(
+            Dictionary<string, LocalDirectorySnapshot> localDirectoriesByPath,
+            Dictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath,
+            Dictionary<string, LocalFileSnapshot> localFilesByPath,
+            Dictionary<string, RemoteFileSnapshot> remoteFilesByPath,
+            NodeDto remoteRootNode)
+        {
+            LocalDirectoriesByPath = localDirectoriesByPath;
+            RemoteDirectoriesByPath = remoteDirectoriesByPath;
+            LocalFilesByPath = localFilesByPath;
+            RemoteFilesByPath = remoteFilesByPath;
+            RemoteRootNode = remoteRootNode;
+        }
+
+        public Dictionary<string, LocalDirectorySnapshot> LocalDirectoriesByPath { get; }
+
+        public Dictionary<string, RemoteDirectorySnapshot> RemoteDirectoriesByPath { get; }
+
+        public Dictionary<string, LocalFileSnapshot> LocalFilesByPath { get; }
+
+        public Dictionary<string, RemoteFileSnapshot> RemoteFilesByPath { get; }
+
+        public NodeDto RemoteRootNode { get; }
     }
 
     private sealed class SyncDeleteGuard
