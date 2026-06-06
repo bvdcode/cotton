@@ -1021,6 +1021,33 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task RunProgressChanged_ShowsLocalScanCurrentPathBeforeFilesAreFound()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ScanningLocal,
+            FilesCompleted: 0,
+            FilesTotal: null,
+            CurrentPath: "Reports",
+            StartedAtUtc: new DateTime(2026, 6, 6, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 6, 9, 0, 5, DateTimeKind.Utc)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasCurrentRunProgress, Is.True);
+            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("Looking for local changes · Reports"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("Looking for local changes · Reports"));
+            Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.True);
+        });
+    }
+
+    [Test]
     public async Task RunProgressChanged_ShowsRemoteScanDiscoveryCount()
     {
         Guid syncPairId = Guid.NewGuid();
@@ -1048,6 +1075,33 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.True);
             Assert.That(row.CurrentOperation, Is.EqualTo("Scanning Cotton Cloud"));
             Assert.That(row.IsCurrentProgressIndeterminate, Is.True);
+        });
+    }
+
+    [Test]
+    public async Task RunProgressChanged_ShowsRemoteScanCurrentPathBeforeFilesAreFound()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ScanningRemote,
+            FilesCompleted: 0,
+            FilesTotal: null,
+            CurrentPath: "Reports",
+            StartedAtUtc: new DateTime(2026, 6, 6, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 6, 9, 0, 5, DateTimeKind.Utc)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasCurrentRunProgress, Is.True);
+            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("Checking Cotton Cloud · Reports"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("Checking Cotton Cloud · Reports"));
+            Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.True);
         });
     }
 

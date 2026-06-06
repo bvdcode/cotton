@@ -3535,6 +3535,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         if (progress.FilesCompleted <= 0)
         {
+            if (!string.IsNullOrWhiteSpace(progress.CurrentPath))
+            {
+                return "Looking for local changes · " + GetDisplayFileName(progress.CurrentPath);
+            }
+
             return "Looking for local changes.";
         }
 
@@ -3552,6 +3557,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         if (progress.FilesCompleted <= 0)
         {
+            if (!string.IsNullOrWhiteSpace(progress.CurrentPath))
+            {
+                return "Checking Cotton Cloud · " + GetDisplayFileName(progress.CurrentPath);
+            }
+
             return "Checking Cotton Cloud.";
         }
 

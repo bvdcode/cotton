@@ -139,6 +139,36 @@ public sealed class RemoteTreeCrawlerTests
         });
     }
 
+    [Test]
+    public async Task CrawlAsync_ReportsScanProgressAsRemoteDirectoriesAreDiscovered()
+    {
+        Guid rootId = Guid.NewGuid();
+        Guid docsId = Guid.NewGuid();
+        Guid videosId = Guid.NewGuid();
+        var client = new FakeNodeClient();
+        client.Nodes[rootId] = Node(rootId, null, "root");
+        client.Nodes[docsId] = Node(docsId, rootId, "Docs");
+        client.Nodes[videosId] = Node(videosId, rootId, "Videos");
+        client.Children[(rootId, 1)] = new NodeContentDto
+        {
+            TotalCount = 2,
+            Nodes = [client.Nodes[docsId], client.Nodes[videosId]],
+        };
+        var crawler = new RemoteTreeCrawler(client);
+        var progress = new RecordingProgress<RemoteTreeScanProgress>();
+
+        await crawler.CrawlAsync(rootId, progress);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(progress.Values, Has.Count.GreaterThanOrEqualTo(3));
+            Assert.That(progress.Values.Any(item => item.FilesScanned == 0 && item.DirectoriesScanned == 1 && item.CurrentPath == "Docs"), Is.True);
+            Assert.That(progress.Values[^1].FilesScanned, Is.Zero);
+            Assert.That(progress.Values[^1].DirectoriesScanned, Is.EqualTo(2));
+            Assert.That(progress.Values[^1].CurrentPath, Is.Empty);
+        });
+    }
+
     private static NodeDto Node(Guid id, Guid? parentId, string name)
     {
         return new NodeDto

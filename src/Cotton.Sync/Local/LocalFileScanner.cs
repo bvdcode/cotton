@@ -17,7 +17,7 @@ public sealed class LocalFileScanner :
     ILocalFileContentHasher
 {
     private static readonly StringComparer PathComparer = StringComparer.OrdinalIgnoreCase;
-    private const int ProgressReportFileInterval = 100;
+    private const int ProgressReportItemInterval = 100;
     private static readonly EnumerationOptions ChildEnumerationOptions = new()
     {
         AttributesToSkip = FileAttributes.ReparsePoint,
@@ -115,6 +115,7 @@ public sealed class LocalFileScanner :
                     FullPath = directory.FullName,
                 });
                 directoriesScanned++;
+                ReportDirectoryScanProgress(progress, filesScanned, directoriesScanned, relativePath);
                 pendingDirectories.Push(directory.FullName);
             }
 
@@ -158,7 +159,24 @@ public sealed class LocalFileScanner :
             return;
         }
 
-        if (filesScanned == 1 || filesScanned % ProgressReportFileInterval == 0)
+        if (filesScanned == 1 || filesScanned % ProgressReportItemInterval == 0)
+        {
+            progress.Report(new LocalTreeScanProgress(filesScanned, directoriesScanned, currentPath));
+        }
+    }
+
+    private static void ReportDirectoryScanProgress(
+        IProgress<LocalTreeScanProgress>? progress,
+        int filesScanned,
+        int directoriesScanned,
+        string currentPath)
+    {
+        if (progress is null)
+        {
+            return;
+        }
+
+        if (directoriesScanned == 1 || directoriesScanned % ProgressReportItemInterval == 0)
         {
             progress.Report(new LocalTreeScanProgress(filesScanned, directoriesScanned, currentPath));
         }

@@ -14,7 +14,7 @@ namespace Cotton.Sync.Remote;
 public sealed class RemoteTreeCrawler : IRemoteTreeProgressCrawler
 {
     private const int DefaultPageSize = 100;
-    private const int ProgressReportFileInterval = 100;
+    private const int ProgressReportItemInterval = 100;
     private readonly ICottonNodeClient _nodes;
     private readonly int _pageSize;
 
@@ -77,6 +77,7 @@ public sealed class RemoteTreeCrawler : IRemoteTreeProgressCrawler
                         Node = childNode,
                     });
                     directoriesScanned++;
+                    ReportDirectoryScanProgress(progress, filesScanned, directoriesScanned, relativePath);
                     queue.Enqueue((childNode, relativePath));
                 }
 
@@ -125,7 +126,24 @@ public sealed class RemoteTreeCrawler : IRemoteTreeProgressCrawler
             return;
         }
 
-        if (filesScanned == 1 || filesScanned % ProgressReportFileInterval == 0)
+        if (filesScanned == 1 || filesScanned % ProgressReportItemInterval == 0)
+        {
+            progress.Report(new RemoteTreeScanProgress(filesScanned, directoriesScanned, currentPath));
+        }
+    }
+
+    private static void ReportDirectoryScanProgress(
+        IProgress<RemoteTreeScanProgress>? progress,
+        int filesScanned,
+        int directoriesScanned,
+        string currentPath)
+    {
+        if (progress is null)
+        {
+            return;
+        }
+
+        if (directoriesScanned == 1 || directoriesScanned % ProgressReportItemInterval == 0)
         {
             progress.Report(new RemoteTreeScanProgress(filesScanned, directoriesScanned, currentPath));
         }

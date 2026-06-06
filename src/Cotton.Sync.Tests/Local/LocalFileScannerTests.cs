@@ -109,6 +109,31 @@ public sealed class LocalFileScannerTests
     }
 
     [Test]
+    public async Task ScanTreeMetadataAsync_ReportsScanProgressAsDirectoriesAreDiscovered()
+    {
+        Directory.CreateDirectory(FullPath("Docs"));
+        Directory.CreateDirectory(FullPath(Path.Combine("Videos", "Clips")));
+        var scanner = new LocalFileScanner();
+        var progress = new RecordingProgress<LocalTreeScanProgress>();
+
+        await scanner.ScanTreeMetadataAsync(_root, progress);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(progress.Values, Has.Count.GreaterThanOrEqualTo(3));
+            Assert.That(
+                progress.Values.Any(item =>
+                    item.FilesScanned == 0
+                    && item.DirectoriesScanned == 1
+                    && (item.CurrentPath == "Docs" || item.CurrentPath == "Videos")),
+                Is.True);
+            Assert.That(progress.Values[^1].FilesScanned, Is.Zero);
+            Assert.That(progress.Values[^1].DirectoriesScanned, Is.EqualTo(3));
+            Assert.That(progress.Values[^1].CurrentPath, Is.Empty);
+        });
+    }
+
+    [Test]
     public async Task ScanAsync_IgnoresTempFilesAndCottonWorkingFolder()
     {
         WriteFile("keep.txt", "keep");
