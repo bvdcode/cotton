@@ -643,11 +643,12 @@ internal sealed class DesktopShellController : IDesktopShellController
             true,
             platformCapabilities.TrayLifecycleDetails));
 
-        IDesktopNotificationService notificationService = DesktopNotificationServiceFactory.CreateDefault();
+        DesktopNotificationCapabilitySnapshot notificationCapabilities =
+            DesktopNotificationServiceFactory.CreateCapabilitySnapshot();
         items.Add(new DesktopSelfTestItemSnapshot(
             "Notification adapter",
             true,
-            notificationService.IsSupported ? "Supported" : "Not available on this platform"));
+            notificationCapabilities.Details));
 
         await AddSelfTestCheckAsync(
             items,

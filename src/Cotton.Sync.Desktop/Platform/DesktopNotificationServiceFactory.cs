@@ -17,7 +17,41 @@ internal static class DesktopNotificationServiceFactory
             AppContext.BaseDirectory);
     }
 
+    public static DesktopNotificationCapabilitySnapshot CreateCapabilitySnapshot()
+    {
+        return CreateCapabilitySnapshot(
+            ResolvePlatform(),
+            Environment.GetEnvironmentVariable("PATH"),
+            AppContext.BaseDirectory);
+    }
+
     internal static IDesktopNotificationService CreateForPlatform(
+        DesktopNotificationPlatform platform,
+        string? pathValue,
+        string? appBaseDirectory = null)
+    {
+        DesktopNotificationCapabilitySnapshot capabilities = CreateCapabilitySnapshot(
+            platform,
+            pathValue,
+            appBaseDirectory);
+        if (capabilities.Platform == DesktopNotificationPlatform.Linux)
+        {
+            return capabilities.ExecutablePath is null
+                ? new UnsupportedDesktopNotificationService()
+                : new NotifySendNotificationService(capabilities.ExecutablePath, capabilities.IconPath);
+        }
+
+        if (capabilities.Platform == DesktopNotificationPlatform.Windows)
+        {
+            return capabilities.ExecutablePath is null
+                ? new UnsupportedDesktopNotificationService()
+                : new WindowsToastNotificationService(capabilities.ExecutablePath, capabilities.IconPath);
+        }
+
+        return new UnsupportedDesktopNotificationService();
+    }
+
+    internal static DesktopNotificationCapabilitySnapshot CreateCapabilitySnapshot(
         DesktopNotificationPlatform platform,
         string? pathValue,
         string? appBaseDirectory = null)
@@ -28,9 +62,14 @@ internal static class DesktopNotificationServiceFactory
             string? notifySendPath = ResolveExecutablePath(
                 NotifySendCommandName,
                 pathValue);
-            return notifySendPath is null
-                ? new UnsupportedDesktopNotificationService()
-                : new NotifySendNotificationService(notifySendPath, iconPath);
+            return new DesktopNotificationCapabilitySnapshot(
+                Platform: platform,
+                AdapterName: NotifySendCommandName,
+                IsSupported: notifySendPath is not null,
+                AppName: DesktopNotificationIdentity.AppName,
+                AppUserModelId: null,
+                ExecutablePath: notifySendPath,
+                IconPath: iconPath);
         }
 
         if (platform == DesktopNotificationPlatform.Windows)
@@ -38,12 +77,24 @@ internal static class DesktopNotificationServiceFactory
             string? powerShellPath = ResolveFirstExecutablePath(
                 [WindowsPowerShellCommandName, PowerShellCoreCommandName],
                 pathValue);
-            return powerShellPath is null
-                ? new UnsupportedDesktopNotificationService()
-                : new WindowsToastNotificationService(powerShellPath, iconPath);
+            return new DesktopNotificationCapabilitySnapshot(
+                Platform: platform,
+                AdapterName: "Windows toast",
+                IsSupported: powerShellPath is not null,
+                AppName: DesktopNotificationIdentity.AppName,
+                AppUserModelId: DesktopAppIdentity.AppUserModelId,
+                ExecutablePath: powerShellPath,
+                IconPath: iconPath);
         }
 
-        return new UnsupportedDesktopNotificationService();
+        return new DesktopNotificationCapabilitySnapshot(
+            Platform: DesktopNotificationPlatform.Unsupported,
+            AdapterName: "Unsupported",
+            IsSupported: false,
+            AppName: DesktopNotificationIdentity.AppName,
+            AppUserModelId: null,
+            ExecutablePath: null,
+            IconPath: iconPath);
     }
 
     internal static string? ResolveExecutablePath(string commandName, string? pathValue)

@@ -61,6 +61,23 @@ public sealed class DesktopShellControllerSelfTestTests
     }
 
     [Test]
+    public async Task RunSelfTestAsync_IncludesNotificationIdentityDetails()
+    {
+        using DesktopShellController controller = CreateController();
+
+        DesktopSelfTestSnapshot result = await controller.RunSelfTestAsync();
+
+        DesktopSelfTestItemSnapshot item = result.Items.Single(static selfTestItem => selfTestItem.Name == "Notification adapter");
+        Assert.Multiple(() =>
+        {
+            Assert.That(item.Passed, Is.True);
+            Assert.That(item.Details, Does.Contain("adapter: "));
+            Assert.That(item.Details, Does.Contain("app name: Cotton Sync"));
+            Assert.That(item.Details, Does.Contain("icon: "));
+        });
+    }
+
+    [Test]
     public async Task RunSelfTestAsync_FailsTokenStorageWhenProtectorIsNotReleaseSecure()
     {
         var tokenStorage = new DesktopTokenStorageCapabilitySnapshot(

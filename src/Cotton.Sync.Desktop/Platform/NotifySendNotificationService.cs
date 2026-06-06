@@ -8,8 +8,6 @@ namespace Cotton.Sync.Desktop.Platform;
 
 internal sealed class NotifySendNotificationService : IDesktopNotificationService
 {
-    private const string AppName = "Cotton Sync";
-
     private readonly string _executablePath;
     private readonly string? _iconPath;
 
@@ -58,7 +56,7 @@ internal sealed class NotifySendNotificationService : IDesktopNotificationServic
             CreateNoWindow = true,
         };
         startInfo.ArgumentList.Add("--app-name");
-        startInfo.ArgumentList.Add(AppName);
+        startInfo.ArgumentList.Add(DesktopNotificationIdentity.AppName);
         if (!string.IsNullOrWhiteSpace(iconPath))
         {
             startInfo.ArgumentList.Add("--icon");

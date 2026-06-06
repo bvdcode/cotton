@@ -79,6 +79,33 @@ public sealed class DesktopNotificationServiceFactoryTests
     }
 
     [Test]
+    public void CreateCapabilitySnapshot_DescribesLinuxNotifySendIdentity()
+    {
+        string commandPath = Path.Combine(_tempDirectory, "notify-send");
+        File.WriteAllText(commandPath, string.Empty);
+        string iconPath = CreatePackagedIcon();
+
+        DesktopNotificationCapabilitySnapshot snapshot = DesktopNotificationServiceFactory.CreateCapabilitySnapshot(
+            DesktopNotificationPlatform.Linux,
+            _tempDirectory,
+            _tempDirectory);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.Platform, Is.EqualTo(DesktopNotificationPlatform.Linux));
+            Assert.That(snapshot.IsSupported, Is.True);
+            Assert.That(snapshot.AdapterName, Is.EqualTo("notify-send"));
+            Assert.That(snapshot.AppName, Is.EqualTo("Cotton Sync"));
+            Assert.That(snapshot.AppUserModelId, Is.Null);
+            Assert.That(snapshot.ExecutablePath, Is.EqualTo(commandPath));
+            Assert.That(snapshot.IconPath, Is.EqualTo(iconPath));
+            Assert.That(snapshot.Details, Does.Contain("adapter: notify-send"));
+            Assert.That(snapshot.Details, Does.Contain("app name: Cotton Sync"));
+            Assert.That(snapshot.Details, Does.Contain("icon: " + iconPath));
+        });
+    }
+
+    [Test]
     public void CreateForPlatform_ReturnsWindowsToastAdapterWhenPowerShellExists()
     {
         string commandPath = Path.Combine(_tempDirectory, "powershell.exe");
@@ -92,6 +119,33 @@ public sealed class DesktopNotificationServiceFactoryTests
     }
 
     [Test]
+    public void CreateCapabilitySnapshot_DescribesWindowsToastIdentity()
+    {
+        string commandPath = Path.Combine(_tempDirectory, "powershell.exe");
+        File.WriteAllText(commandPath, string.Empty);
+        string iconPath = CreatePackagedIcon();
+
+        DesktopNotificationCapabilitySnapshot snapshot = DesktopNotificationServiceFactory.CreateCapabilitySnapshot(
+            DesktopNotificationPlatform.Windows,
+            _tempDirectory,
+            _tempDirectory);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.Platform, Is.EqualTo(DesktopNotificationPlatform.Windows));
+            Assert.That(snapshot.IsSupported, Is.True);
+            Assert.That(snapshot.AdapterName, Is.EqualTo("Windows toast"));
+            Assert.That(snapshot.AppName, Is.EqualTo("Cotton Sync"));
+            Assert.That(snapshot.AppUserModelId, Is.EqualTo(DesktopAppIdentity.AppUserModelId));
+            Assert.That(snapshot.ExecutablePath, Is.EqualTo(commandPath));
+            Assert.That(snapshot.IconPath, Is.EqualTo(iconPath));
+            Assert.That(snapshot.Details, Does.Contain("adapter: Windows toast"));
+            Assert.That(snapshot.Details, Does.Contain("AppUserModelID: " + DesktopAppIdentity.AppUserModelId));
+            Assert.That(snapshot.Details, Does.Contain("icon: " + iconPath));
+        });
+    }
+
+    [Test]
     public void CreateForPlatform_ReturnsUnsupportedWhenPlatformExecutableIsMissing()
     {
         IDesktopNotificationService service = DesktopNotificationServiceFactory.CreateForPlatform(
@@ -99,5 +153,32 @@ public sealed class DesktopNotificationServiceFactoryTests
             _tempDirectory);
 
         Assert.That(service, Is.TypeOf<UnsupportedDesktopNotificationService>());
+    }
+
+    [Test]
+    public void CreateCapabilitySnapshot_ReportsMissingPlatformExecutable()
+    {
+        DesktopNotificationCapabilitySnapshot snapshot = DesktopNotificationServiceFactory.CreateCapabilitySnapshot(
+            DesktopNotificationPlatform.Windows,
+            _tempDirectory,
+            _tempDirectory);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.IsSupported, Is.False);
+            Assert.That(snapshot.ExecutablePath, Is.Null);
+            Assert.That(snapshot.Details, Does.StartWith("Not available on this platform"));
+            Assert.That(snapshot.Details, Does.Contain("AppUserModelID: " + DesktopAppIdentity.AppUserModelId));
+            Assert.That(snapshot.Details, Does.Contain("icon: missing"));
+        });
+    }
+
+    private string CreatePackagedIcon()
+    {
+        string assetsDirectory = Path.Combine(_tempDirectory, "Assets");
+        Directory.CreateDirectory(assetsDirectory);
+        string iconPath = Path.Combine(assetsDirectory, "icon-192.png");
+        File.WriteAllBytes(iconPath, [1, 2, 3]);
+        return iconPath;
     }
 }
