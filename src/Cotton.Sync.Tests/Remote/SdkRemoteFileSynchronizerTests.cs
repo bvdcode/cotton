@@ -163,6 +163,70 @@ public sealed class SdkRemoteFileSynchronizerTests
     }
 
     [Test]
+    public async Task UploadFileAsync_UsesBoundedChunkUploadConcurrency()
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes("abcdefghijklmnop");
+        LocalFileSnapshot local = WriteLocalFile("Docs/file.txt", bytes);
+        var client = new FakeCottonCloudClient(chunkSizeBytes: 4);
+        client.ChunksClient.OperationDelay = TimeSpan.FromMilliseconds(25);
+        var synchronizer = new SdkRemoteFileSynchronizer(
+            client,
+            new SdkRemoteFileSynchronizerOptions { MaxConcurrentChunkUploads = 2 });
+        string[] expectedChunkHashes =
+        [
+            Hash(Encoding.UTF8.GetBytes("abcd")),
+            Hash(Encoding.UTF8.GetBytes("efgh")),
+            Hash(Encoding.UTF8.GetBytes("ijkl")),
+            Hash(Encoding.UTF8.GetBytes("mnop")),
+        ];
+
+        await synchronizer.UploadFileAsync(_rootNodeId, local.RelativePath, local);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(client.ChunksClient.UploadedChunks, Has.Count.EqualTo(4));
+            Assert.That(client.ChunksClient.MaxConcurrentOperations, Is.GreaterThan(1));
+            Assert.That(client.ChunksClient.MaxConcurrentOperations, Is.LessThanOrEqualTo(2));
+            Assert.That(client.FilesClient.CreateRequests.Single().ChunkHashes, Is.EqualTo(expectedChunkHashes));
+            Assert.That(client.ChunksClient.ExistsChecks, Is.EquivalentTo(expectedChunkHashes));
+        });
+    }
+
+    [Test]
+    public async Task UploadFileAsync_DeduplicatesChunkNetworkWorkWithinOneFile()
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes("abcdabcdabcd");
+        LocalFileSnapshot local = WriteLocalFile("Docs/repeated.bin", bytes);
+        var client = new FakeCottonCloudClient(chunkSizeBytes: 4);
+        var synchronizer = new SdkRemoteFileSynchronizer(
+            client,
+            new SdkRemoteFileSynchronizerOptions { MaxConcurrentChunkUploads = 3 });
+        string repeatedChunkHash = Hash(Encoding.UTF8.GetBytes("abcd"));
+
+        await synchronizer.UploadFileAsync(_rootNodeId, local.RelativePath, local);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(client.ChunksClient.ExistsChecks, Is.EqualTo(new[] { repeatedChunkHash }));
+            Assert.That(client.ChunksClient.UploadedChunks.Select(chunk => chunk.Hash), Is.EqualTo(new[] { repeatedChunkHash }));
+            Assert.That(
+                client.FilesClient.CreateRequests.Single().ChunkHashes,
+                Is.EqualTo(new[] { repeatedChunkHash, repeatedChunkHash, repeatedChunkHash }));
+        });
+    }
+
+    [Test]
+    public void Constructor_RejectsInvalidChunkUploadConcurrency()
+    {
+        var client = new FakeCottonCloudClient(chunkSizeBytes: 4);
+
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => new SdkRemoteFileSynchronizer(
+                client,
+                new SdkRemoteFileSynchronizerOptions { MaxConcurrentChunkUploads = 0 }));
+    }
+
+    [Test]
     public async Task DownloadFileAsync_And_DeleteFileAsync_DelegateToSdkFileClient()
     {
         Guid fileId = Guid.NewGuid();
@@ -325,16 +389,27 @@ public sealed class SdkRemoteFileSynchronizerTests
 
     private sealed class FakeChunkClient : ICottonChunkClient
     {
+        private readonly object _gate = new();
+        private int _activeOperations;
+
         public HashSet<string> ExistingHashes { get; } = new(StringComparer.OrdinalIgnoreCase);
 
         public List<string> ExistsChecks { get; } = [];
 
         public List<(string Hash, byte[] Bytes)> UploadedChunks { get; } = [];
 
-        public Task<bool> ExistsAsync(string hash, CancellationToken cancellationToken = default)
+        public TimeSpan OperationDelay { get; set; }
+
+        public int MaxConcurrentOperations { get; private set; }
+
+        public async Task<bool> ExistsAsync(string hash, CancellationToken cancellationToken = default)
         {
-            ExistsChecks.Add(hash);
-            return Task.FromResult(ExistingHashes.Contains(hash));
+            await TrackOperationAsync(cancellationToken).ConfigureAwait(false);
+            lock (_gate)
+            {
+                ExistsChecks.Add(hash);
+                return ExistingHashes.Contains(hash);
+            }
         }
 
         public async Task UploadRawAsync(
@@ -343,10 +418,57 @@ public sealed class SdkRemoteFileSynchronizerTests
             string contentType = "application/octet-stream",
             CancellationToken cancellationToken = default)
         {
-            await using var copy = new MemoryStream();
-            await content.CopyToAsync(copy, cancellationToken);
-            UploadedChunks.Add((hash, copy.ToArray()));
-            ExistingHashes.Add(hash);
+            BeginOperation();
+            try
+            {
+                await DelayOperationAsync(cancellationToken).ConfigureAwait(false);
+                await using var copy = new MemoryStream();
+                await content.CopyToAsync(copy, cancellationToken);
+                lock (_gate)
+                {
+                    UploadedChunks.Add((hash, copy.ToArray()));
+                    ExistingHashes.Add(hash);
+                }
+            }
+            finally
+            {
+                EndOperation();
+            }
+        }
+
+        private async Task TrackOperationAsync(CancellationToken cancellationToken)
+        {
+            BeginOperation();
+            try
+            {
+                await DelayOperationAsync(cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                EndOperation();
+            }
+        }
+
+        private void BeginOperation()
+        {
+            int activeOperations = Interlocked.Increment(ref _activeOperations);
+            lock (_gate)
+            {
+                MaxConcurrentOperations = Math.Max(MaxConcurrentOperations, activeOperations);
+            }
+        }
+
+        private async Task DelayOperationAsync(CancellationToken cancellationToken)
+        {
+            if (OperationDelay > TimeSpan.Zero)
+            {
+                await Task.Delay(OperationDelay, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        private void EndOperation()
+        {
+            Interlocked.Decrement(ref _activeOperations);
         }
     }
 

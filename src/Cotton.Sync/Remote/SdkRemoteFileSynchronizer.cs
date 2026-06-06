@@ -35,6 +35,8 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynch
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(_options.ChunkSizeBytes.Value);
         }
+
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(_options.MaxConcurrentChunkUploads);
     }
 
     /// <inheritdoc />
@@ -175,6 +177,8 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynch
         int chunkSize = await GetChunkSizeAsync(cancellationToken).ConfigureAwait(false);
         byte[] buffer = ArrayPool<byte>.Shared.Rent(chunkSize);
         var chunkHashes = new List<string>();
+        var knownChunkHashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var pendingUploads = new List<Task<int>>();
         long transferredBytes = 0;
         using IncrementalHash contentHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         try
@@ -196,16 +200,25 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynch
 
                 string hash = Convert.ToHexStringLower(SHA256.HashData(buffer.AsSpan(0, read)));
                 contentHash.AppendData(buffer, 0, read);
-                await UploadChunkIfMissingAsync(hash, buffer, read, cancellationToken).ConfigureAwait(false);
-                transferredBytes += read;
-                ReportTransfer(
-                    transferProgress,
-                    SyncTransferDirection.Upload,
-                    relativePath,
-                    transferredBytes,
-                    totalBytes);
                 chunkHashes.Add(hash);
+                pendingUploads.Add(CreateChunkUploadTask(hash, buffer, read, knownChunkHashes, cancellationToken));
+                if (pendingUploads.Count >= _options.MaxConcurrentChunkUploads)
+                {
+                    transferredBytes = await FlushPendingChunkUploadsAsync(
+                        pendingUploads,
+                        transferredBytes,
+                        relativePath,
+                        totalBytes,
+                        transferProgress).ConfigureAwait(false);
+                }
             }
+
+            transferredBytes = await FlushPendingChunkUploadsAsync(
+                pendingUploads,
+                transferredBytes,
+                relativePath,
+                totalBytes,
+                transferProgress).ConfigureAwait(false);
         }
         finally
         {
@@ -227,6 +240,51 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynch
 
         string fullContentHash = Convert.ToHexStringLower(contentHash.GetHashAndReset());
         return new UploadedChunks(chunkHashes, fullContentHash);
+    }
+
+    private Task<int> CreateChunkUploadTask(
+        string hash,
+        byte[] sourceBuffer,
+        int count,
+        HashSet<string> knownChunkHashes,
+        CancellationToken cancellationToken)
+    {
+        if (!knownChunkHashes.Add(hash))
+        {
+            return Task.FromResult(count);
+        }
+
+        byte[] chunkBuffer = ArrayPool<byte>.Shared.Rent(count);
+        sourceBuffer.AsSpan(0, count).CopyTo(chunkBuffer);
+        return UploadChunkIfMissingAsync(hash, chunkBuffer, count, cancellationToken);
+    }
+
+    private static async Task<long> FlushPendingChunkUploadsAsync(
+        List<Task<int>> pendingUploads,
+        long transferredBytes,
+        string relativePath,
+        long totalBytes,
+        IProgress<SyncTransferProgress>? transferProgress)
+    {
+        if (pendingUploads.Count == 0)
+        {
+            return transferredBytes;
+        }
+
+        int[] completedBytes = await Task.WhenAll(pendingUploads).ConfigureAwait(false);
+        pendingUploads.Clear();
+        foreach (int bytes in completedBytes)
+        {
+            transferredBytes += bytes;
+            ReportTransfer(
+                transferProgress,
+                SyncTransferDirection.Upload,
+                relativePath,
+                transferredBytes,
+                totalBytes);
+        }
+
+        return transferredBytes;
     }
 
     private static void ReportTransfer(
@@ -277,21 +335,6 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynch
 
     private async Task UploadChunkIfMissingAsync(
         string hash,
-        byte[] buffer,
-        int count,
-        CancellationToken cancellationToken)
-    {
-        if (await _client.Chunks.ExistsAsync(hash, cancellationToken).ConfigureAwait(false))
-        {
-            return;
-        }
-
-        await using var chunkStream = new MemoryStream(buffer, 0, count, writable: false);
-        await _client.Chunks.UploadRawAsync(hash, chunkStream, DefaultContentType, cancellationToken).ConfigureAwait(false);
-    }
-
-    private async Task UploadChunkIfMissingAsync(
-        string hash,
         ReadOnlyMemory<byte> content,
         CancellationToken cancellationToken)
     {
@@ -302,6 +345,29 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynch
 
         await using var chunkStream = new MemoryStream(content.ToArray(), writable: false);
         await _client.Chunks.UploadRawAsync(hash, chunkStream, DefaultContentType, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<int> UploadChunkIfMissingAsync(
+        string hash,
+        byte[] buffer,
+        int count,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (await _client.Chunks.ExistsAsync(hash, cancellationToken).ConfigureAwait(false))
+            {
+                return count;
+            }
+
+            await using var chunkStream = new MemoryStream(buffer, 0, count, writable: false);
+            await _client.Chunks.UploadRawAsync(hash, chunkStream, DefaultContentType, cancellationToken).ConfigureAwait(false);
+            return count;
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
     }
 
     private async Task<int> GetChunkSizeAsync(CancellationToken cancellationToken)

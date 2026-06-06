@@ -19,6 +19,12 @@ public sealed class SdkRemoteFileSynchronizerOptions
     public int DirectoryPageSize { get; set; } = 100;
 
     /// <summary>
+    /// Gets or sets the maximum number of chunk existence/upload requests running at the same time.
+    /// File reads stay sequential; this limit only controls network work already buffered in memory.
+    /// </summary>
+    public int MaxConcurrentChunkUploads { get; set; } = 3;
+
+    /// <summary>
     /// Gets or sets an optional content type resolver for uploaded files.
     /// </summary>
     public Func<string, string>? ContentTypeResolver { get; set; }
