@@ -572,9 +572,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public bool CanOpenTrayFolder => IsSignedIn && !IsBusy && SyncPairs.Count == 1;
 
-    public string TrayOpenFolderLabel => SyncPairs.Count == 1
-        ? "Open " + SyncPairs[0].DisplayName
-        : "Open folder";
+    public string TrayOpenFolderLabel => "Open local folder";
 
     public bool IsSyncPaused => HasEnabledSyncPairs
         && SyncPairs
@@ -728,7 +726,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         {
             if (!IsStartWithOperatingSystemSupported)
             {
-                return "Autostart is not available on this platform.";
+                return "Autostart is not available for this launch. Publish or install Cotton Sync to enable startup registration.";
             }
 
             return IsTrayLifecycleSupported

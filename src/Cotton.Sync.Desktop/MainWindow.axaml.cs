@@ -132,6 +132,19 @@ public sealed partial class MainWindow : Window
         viewModel.OpenRemoteFolderCommand.Execute(null);
     }
 
+    private void SignInInput_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter
+            || DataContext is not ShellViewModel viewModel
+            || !viewModel.SignInCommand.CanExecute(null))
+        {
+            return;
+        }
+
+        e.Handled = true;
+        viewModel.SignInCommand.Execute(null);
+    }
+
     private void ApplyWindowMode(ShellViewModel viewModel)
     {
         WindowProfile profile = ResolveWindowProfile(viewModel);
