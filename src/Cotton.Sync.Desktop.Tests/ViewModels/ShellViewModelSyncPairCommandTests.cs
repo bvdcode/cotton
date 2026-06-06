@@ -171,6 +171,63 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task ChangeSelectedSyncPairLocalFolderCommand_PersistsSelectedFolder()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var localFolderPicker = new FakeLocalFolderPicker("  /home/vadim/New Documents  ");
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(
+            syncPairId,
+            "Documents",
+            "Idle",
+            localPath: "/home/vadim/Documents")));
+        using ShellViewModel viewModel = CreateViewModel(controller, localFolderPicker: localFolderPicker);
+        await viewModel.InitializeAsync();
+
+        await ExecuteAsync(viewModel.ChangeSelectedSyncPairLocalFolderCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(localFolderPicker.PickFolderCalls, Is.EqualTo(1));
+            Assert.That(controller.LocalFolderSyncPairId, Is.EqualTo(syncPairId));
+            Assert.That(controller.LocalFolderPath, Is.EqualTo("/home/vadim/New Documents"));
+            Assert.That(viewModel.SelectedSyncPair!.LocalPath, Is.EqualTo("/home/vadim/New Documents"));
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Folder updated"));
+            Assert.That(viewModel.HasActionRequired, Is.False);
+            Assert.That(viewModel.Activities.First().Kind, Is.EqualTo("Pair"));
+            Assert.That(viewModel.Activities.First().Path, Is.EqualTo("/home/vadim/New Documents"));
+            Assert.That(viewModel.Activities.First().Details, Is.EqualTo("Local folder changed"));
+        });
+    }
+
+    [Test]
+    public async Task ChangeSelectedSyncPairLocalFolderCommand_RejectsOverlappingFolder()
+    {
+        Guid firstSyncPairId = Guid.NewGuid();
+        Guid secondSyncPairId = Guid.NewGuid();
+        var localFolderPicker = new FakeLocalFolderPicker("/home/vadim/Pictures/Raw");
+        var controller = new FakeDesktopShellController(
+            CreateSignedInSnapshot(
+                CreatePair(firstSyncPairId, "Documents", "Idle", localPath: "/home/vadim/Documents"),
+                CreatePair(secondSyncPairId, "Pictures", "Idle", localPath: "/home/vadim/Pictures")));
+        using ShellViewModel viewModel = CreateViewModel(controller, localFolderPicker: localFolderPicker);
+        await viewModel.InitializeAsync();
+
+        await ExecuteAsync(viewModel.ChangeSelectedSyncPairLocalFolderCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(localFolderPicker.PickFolderCalls, Is.EqualTo(1));
+            Assert.That(controller.LocalFolderSyncPairId, Is.Null);
+            Assert.That(controller.LocalFolderPath, Is.Null);
+            Assert.That(viewModel.SelectedSyncPair!.LocalPath, Is.EqualTo("/home/vadim/Documents"));
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Action required"));
+            Assert.That(viewModel.HasActionRequired, Is.True);
+            Assert.That(viewModel.ActionRequiredMessage, Is.EqualTo("Sync folders cannot be inside each other."));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Fix the issue below to continue syncing."));
+        });
+    }
+
+    [Test]
     public async Task SyncNowCommand_RetriesActionRequiredSyncAndClearsMessage()
     {
         Guid syncPairId = Guid.NewGuid();
@@ -2089,6 +2146,10 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public string? RenamedSyncPairDisplayName { get; private set; }
 
+        public Guid? LocalFolderSyncPairId { get; private set; }
+
+        public string? LocalFolderPath { get; private set; }
+
         public int SignOutCalls { get; private set; }
 
         public DesktopSelfTestSnapshot SelfTestSnapshot { get; set; } = new([]);
@@ -2162,6 +2223,17 @@ public sealed class ShellViewModelSyncPairCommandTests
             cancellationToken.ThrowIfCancellationRequested();
             EnabledSyncPairId = syncPairId;
             EnabledSyncPairValue = enabled;
+            return Task.CompletedTask;
+        }
+
+        public Task SetSyncPairLocalFolderAsync(
+            Guid syncPairId,
+            string localFolderPath,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            LocalFolderSyncPairId = syncPairId;
+            LocalFolderPath = localFolderPath;
             return Task.CompletedTask;
         }
 

@@ -86,6 +86,7 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Not.Contain("SelectedSyncPairEditableDisplayName"));
             Assert.That(foldersSection, Does.Contain("SaveSelectedSyncPairNameCommand"));
             Assert.That(foldersSection, Does.Contain("ToggleSelectedSyncPairEnabledCommand"));
+            Assert.That(foldersSection, Does.Contain("ChangeSelectedSyncPairLocalFolderCommand"));
             Assert.That(foldersSection, Does.Contain("RemoveSelectedSyncPairCommand"));
             Assert.That(foldersSection, Does.Contain("CancelSelectedSyncPairEditorCommand"));
             Assert.That(foldersSection, Does.Contain("IsRemoveSyncPairConfirmationVisible"));
@@ -93,6 +94,7 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Contain("ConfirmRemoveSelectedSyncPairCommand"));
             Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"Manage sync folder\""));
             Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"Open local folder\""));
+            Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"Change local folder\""));
             Assert.That(CountOccurrences(foldersSection, "ToolTip.Tip=\"Open local folder\""), Is.EqualTo(1));
             Assert.That(foldersSection, Does.Not.Contain("ToolTip.Tip=\"Open selected local folder\""));
             Assert.That(foldersSection, Does.Contain("ToggleEnabledIcon"));

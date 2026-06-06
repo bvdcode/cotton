@@ -144,6 +144,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             OpenConflictAsync,
             parameter => parameter is ConflictRowViewModel && !IsBusy,
             HandleCommandError);
+        ChangeSelectedSyncPairLocalFolderCommand = new AsyncRelayCommand(
+            ChangeSelectedSyncPairLocalFolderAsync,
+            () => IsSignedIn && SelectedSyncPair is not null && !IsBusy,
+            HandleCommandError);
         ToggleSelectedSyncPairEnabledCommand = new AsyncRelayCommand(
             ToggleSelectedSyncPairEnabledAsync,
             () => IsSignedIn && SelectedSyncPair is not null && !IsBusy,
@@ -212,6 +216,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public AsyncRelayCommand CancelSelectedSyncPairEditorCommand { get; }
 
     public AsyncRelayCommand ChangeServerCommand { get; }
+
+    public AsyncRelayCommand ChangeSelectedSyncPairLocalFolderCommand { get; }
 
     public AsyncRelayCommand CloseSettingsCommand { get; }
 
@@ -991,6 +997,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 }
 
                 OpenFolderCommand.RaiseCanExecuteChanged();
+                ChangeSelectedSyncPairLocalFolderCommand.RaiseCanExecuteChanged();
                 ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
                 SaveSelectedSyncPairNameCommand.RaiseCanExecuteChanged();
                 RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
@@ -1506,6 +1513,48 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
     }
 
+    private async Task ChangeSelectedSyncPairLocalFolderAsync()
+    {
+        SyncPairRowViewModel? selected = SelectedSyncPair;
+        if (selected is null)
+        {
+            return;
+        }
+
+        string? selectedPath = await _folderPicker.PickFolderAsync().ConfigureAwait(true);
+        if (string.IsNullOrWhiteSpace(selectedPath))
+        {
+            return;
+        }
+
+        string normalizedSelectedPath = selectedPath.Trim();
+        string? overlapMessage = GetLocalFolderOverlapMessage(normalizedSelectedPath, selected.Id);
+        if (overlapMessage is not null)
+        {
+            GlobalStatus = "Action required";
+            ActionRequiredMessage = overlapMessage;
+            AddActivity("Warning", normalizedSelectedPath, ActionRequiredMessage);
+            RefreshCurrentProgressText();
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            await _controller.SetSyncPairLocalFolderAsync(selected.Id, normalizedSelectedPath).ConfigureAwait(true);
+            selected.LocalPath = normalizedSelectedPath;
+            GlobalStatus = "Folder updated";
+            ActionRequiredMessage = string.Empty;
+            AddActivity("Pair", normalizedSelectedPath, "Local folder changed");
+            RefreshCurrentProgressText();
+            RefreshDiagnosticsItems();
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     private async Task SaveSelectedSyncPairNameAsync()
     {
         SyncPairRowViewModel? selected = SelectedSyncPair;
@@ -1949,15 +1998,16 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             && IsAddSyncPairCloudStepVisible;
     }
 
-    private string? GetLocalFolderOverlapMessage(string localPath)
+    private string? GetLocalFolderOverlapMessage(string localPath, Guid? existingSyncPairId = null)
     {
-        if (SyncPairs.Count == 0)
+        if (SyncPairs.Count == 0 && !existingSyncPairId.HasValue)
         {
             return null;
         }
 
-        Guid candidateId = Guid.NewGuid();
+        Guid candidateId = existingSyncPairId ?? Guid.NewGuid();
         List<SyncPairSettings> syncPairs = SyncPairs
+            .Where(pair => pair.Id != candidateId)
             .Select(ToSettingsForValidation)
             .Append(new SyncPairSettings
             {
@@ -2150,6 +2200,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         RaiseSyncStateProperties();
         OpenFolderCommand.RaiseCanExecuteChanged();
         RaiseTrayOpenFolderState();
+        ChangeSelectedSyncPairLocalFolderCommand.RaiseCanExecuteChanged();
         ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
         SaveSelectedSyncPairNameCommand.RaiseCanExecuteChanged();
         RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();
@@ -2545,6 +2596,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OpenFolderCommand.RaiseCanExecuteChanged();
         OpenTrayFolderCommand.RaiseCanExecuteChanged();
         OpenConflictCommand.RaiseCanExecuteChanged();
+        ChangeSelectedSyncPairLocalFolderCommand.RaiseCanExecuteChanged();
         ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
         SaveSelectedSyncPairNameCommand.RaiseCanExecuteChanged();
         RemoveSelectedSyncPairCommand.RaiseCanExecuteChanged();

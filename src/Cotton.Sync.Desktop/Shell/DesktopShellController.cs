@@ -322,6 +322,34 @@ internal sealed class DesktopShellController : IDesktopShellController
         await SaveSyncPairSettingsAsync(syncPair, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task SetSyncPairLocalFolderAsync(
+        Guid syncPairId,
+        string localFolderPath,
+        CancellationToken cancellationToken = default)
+    {
+        if (syncPairId == Guid.Empty)
+        {
+            throw new ArgumentException("Sync pair id is required.", nameof(syncPairId));
+        }
+
+        string normalizedLocalPath = NormalizeRequired(localFolderPath, nameof(localFolderPath));
+        await _syncPairStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        SyncPairSettings? syncPair = await _syncPairStore.GetAsync(syncPairId, cancellationToken).ConfigureAwait(false);
+        if (syncPair is null)
+        {
+            throw new InvalidOperationException("Sync pair was not found.");
+        }
+
+        if (string.Equals(syncPair.LocalRootPath, normalizedLocalPath, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        syncPair.LocalRootPath = normalizedLocalPath;
+        syncPair.UpdatedAtUtc = DateTime.UtcNow;
+        await SaveSyncPairSettingsAsync(syncPair, cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task RemoveSyncPairAsync(Guid syncPairId, CancellationToken cancellationToken = default)
     {
         if (syncPairId == Guid.Empty)

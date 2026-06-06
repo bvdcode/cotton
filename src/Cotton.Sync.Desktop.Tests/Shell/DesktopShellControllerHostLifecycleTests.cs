@@ -325,6 +325,37 @@ public sealed class DesktopShellControllerHostLifecycleTests
     }
 
     [Test]
+    public async Task SetSyncPairLocalFolderAsync_UsesActiveHostAppWithoutManualRestart()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        Uri serverUrl = new("https://cotton.example.test/");
+        var syncPairStore = new SqliteSyncPairSettingsStore(paths.AppDatabasePath);
+        await syncPairStore.InitializeAsync();
+        SyncPairSettings syncPair = CreateSyncPair(isEnabled: true);
+        await syncPairStore.UpsertAsync(syncPair);
+        FakeDesktopApplicationHost host = FakeDesktopApplicationHost.Create(serverUrl);
+        var factory = new QueueingDesktopSyncApplicationFactory(host.Host);
+        using DesktopShellController controller = CreateController(paths, factory, syncPairStore: syncPairStore);
+        await controller.SignInAsync(new DesktopSignInRequest(
+            serverUrl.AbsoluteUri,
+            "desktop@example.test",
+            "password",
+            null));
+
+        await controller.SetSyncPairLocalFolderAsync(syncPair.Id, "  /home/user/New Cotton  ");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(host.App.SaveSyncPairCalls, Is.EqualTo(1));
+            Assert.That(host.App.SavedSyncPair, Is.Not.Null);
+            Assert.That(host.App.SavedSyncPair!.Id, Is.EqualTo(syncPair.Id));
+            Assert.That(host.App.SavedSyncPair.LocalRootPath, Is.EqualTo("/home/user/New Cotton"));
+            Assert.That(host.App.StopSyncCalls, Is.Zero);
+            Assert.That(host.App.StartSyncCalls, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
     public async Task RemoveSyncPairAsync_UsesActiveHostAppWithoutManualRestart()
     {
         DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);

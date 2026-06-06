@@ -140,6 +140,15 @@ internal sealed class VisualSmokeShellController : IDesktopShellController
         return Task.CompletedTask;
     }
 
+    public Task SetSyncPairLocalFolderAsync(
+        Guid syncPairId,
+        string localFolderPath,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.CompletedTask;
+    }
+
     public Task RenameSyncPairAsync(Guid syncPairId, string displayName, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
