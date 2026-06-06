@@ -10,7 +10,8 @@ internal static class DesktopTrayStatusResolver
     public static DesktopTrayStatus FromShellState(
         bool isSignedIn,
         string statusText,
-        bool hasStatusAttention)
+        bool hasStatusAttention,
+        bool hasActiveSyncProgress = false)
     {
         if (!isSignedIn)
         {
@@ -34,7 +35,7 @@ internal static class DesktopTrayStatusResolver
             return Create(DesktopTrayStatusKind.Paused, "Paused");
         }
 
-        if (Contains(statusText, "sync"))
+        if (hasActiveSyncProgress)
         {
             return Create(DesktopTrayStatusKind.Syncing, "Syncing");
         }

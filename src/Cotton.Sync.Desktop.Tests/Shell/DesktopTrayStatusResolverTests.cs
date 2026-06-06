@@ -78,14 +78,35 @@ public sealed class DesktopTrayStatusResolverTests
     }
 
     [Test]
-    public void FromShellState_ReturnsSyncingWhenGlobalStatusIsSyncing()
+    public void FromShellState_ReturnsIdleWhenSyncTextHasNoActiveProgress()
     {
         DesktopTrayStatus status = DesktopTrayStatusResolver.FromShellState(
             isSignedIn: true,
             statusText: "Sync requested",
             hasStatusAttention: false);
 
-        Assert.That(status.Kind, Is.EqualTo(DesktopTrayStatusKind.Syncing));
+        Assert.Multiple(() =>
+        {
+            Assert.That(status.Kind, Is.EqualTo(DesktopTrayStatusKind.Idle));
+            Assert.That(status.IconUri.ToString(), Does.EndWith("/Assets/tray-idle.png"));
+        });
+    }
+
+    [Test]
+    public void FromShellState_ReturnsSyncingWhenWorkProgressIsActive()
+    {
+        DesktopTrayStatus status = DesktopTrayStatusResolver.FromShellState(
+            isSignedIn: true,
+            statusText: "Connected",
+            hasStatusAttention: false,
+            hasActiveSyncProgress: true);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(status.Kind, Is.EqualTo(DesktopTrayStatusKind.Syncing));
+            Assert.That(status.ToolTipText, Is.EqualTo("Cotton Sync - Syncing"));
+            Assert.That(status.IconUri.ToString(), Does.EndWith("/Assets/tray-syncing.png"));
+        });
     }
 
     [Test]

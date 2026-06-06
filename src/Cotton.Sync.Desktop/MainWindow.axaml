@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         x:Class="Cotton.Sync.Desktop.MainWindow"
         Title="Cotton Sync"
         Icon="/Assets/app.ico"
@@ -553,20 +554,28 @@
                                 <TextBox Text="{Binding EditableDisplayName}"
                                          PlaceholderText="Folder name" />
                                 <Button Grid.Column="1"
-                                        Content="💾"
                                         Classes="icon"
                                         ToolTip.Tip="Save folder name"
-                                        Command="{Binding $parent[Window].DataContext.SaveSelectedSyncPairNameCommand}" />
+                                        Command="{Binding $parent[Window].DataContext.SaveSelectedSyncPairNameCommand}">
+                                  <materialIcons:MaterialIcon Kind="ContentSaveOutline"
+                                                              Width="16"
+                                                              Height="16"
+                                                              Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                                </Button>
                                 <Button Grid.Column="2"
                                         Content="{Binding ToggleEnabledIcon}"
                                         Classes="icon"
                                         ToolTip.Tip="{Binding ToggleEnabledLabel}"
                                         Command="{Binding $parent[Window].DataContext.ToggleSelectedSyncPairEnabledCommand}" />
                                 <Button Grid.Column="3"
-                                        Content="🗑"
                                         Classes="icon"
                                         ToolTip.Tip="Remove sync folder"
-                                        Command="{Binding $parent[Window].DataContext.RemoveSelectedSyncPairCommand}" />
+                                        Command="{Binding $parent[Window].DataContext.RemoveSelectedSyncPairCommand}">
+                                  <materialIcons:MaterialIcon Kind="TrashCanOutline"
+                                                              Width="16"
+                                                              Height="16"
+                                                              Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                                </Button>
                               </Grid>
                             </Border>
                           </Grid>

@@ -14,6 +14,18 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
+    public void Application_RegistersDesktopIconLibrary()
+    {
+        string appXaml = File.ReadAllText(GetDesktopFilePath("App.axaml"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(appXaml, Does.Contain("Material.Icons.Avalonia"));
+            Assert.That(appXaml, Does.Contain("materialIcons:MaterialIconStyles"));
+        });
+    }
+
+    [Test]
     public void SetupView_DoesNotRenderNumberedStepper()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
@@ -104,8 +116,12 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Not.Contain("ModeLabel"));
             Assert.That(foldersSection, Does.Not.Contain("SelectedSyncPair.ToggleEnabledIcon"));
             Assert.That(foldersSection, Does.Not.Contain("SelectedSyncPair.ModeLabel"));
-            Assert.That(foldersSection, Does.Contain("Content=\"💾\""));
-            Assert.That(foldersSection, Does.Contain("Content=\"🗑\""));
+            Assert.That(foldersSection, Does.Contain("materialIcons:MaterialIcon"));
+            Assert.That(foldersSection, Does.Contain("Kind=\"ContentSaveOutline\""));
+            Assert.That(foldersSection, Does.Contain("Kind=\"TrashCanOutline\""));
+            Assert.That(foldersSection, Does.Not.Contain("<Path Data="));
+            Assert.That(foldersSection, Does.Not.Contain("Content=\"💾\""));
+            Assert.That(foldersSection, Does.Not.Contain("Content=\"🗑\""));
             Assert.That(foldersSection, Does.Not.Contain("Content=\"-\""));
             Assert.That(foldersSection, Does.Not.Contain("ToolTip.Tip=\"Close folder controls\""));
             Assert.That(foldersSection, Does.Contain("Text=\"{Binding CurrentOperation}\""));

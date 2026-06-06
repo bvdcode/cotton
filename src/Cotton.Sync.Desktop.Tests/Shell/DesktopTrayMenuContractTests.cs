@@ -42,6 +42,7 @@ public sealed class DesktopTrayMenuContractTests
             Assert.That(trayController, Does.Contain("menuItem.IsVisible = isAvailable"));
             Assert.That(trayController, Does.Contain("nameof(ShellViewModel.CanOpenTrayFolder)"));
             Assert.That(trayController, Does.Contain("nameof(ShellViewModel.TrayOpenFolderLabel)"));
+            Assert.That(trayController, Does.Contain("nameof(ShellViewModel.HasCurrentWorkProgress)"));
             Assert.That(trayController, Does.Not.Contain("SetMenuItemEnabled"));
             Assert.That(trayController, Does.Not.Contain("SetMenuItemEnabled(_openFolderMenuItem"));
             Assert.That(trayController, Does.Not.Contain("nameof(ShellViewModel.SelectedSyncPair)"));
