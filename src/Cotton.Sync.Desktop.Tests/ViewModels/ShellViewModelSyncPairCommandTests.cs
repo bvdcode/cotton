@@ -898,6 +898,37 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task RunProgressChanged_ShowsLocalScanDiscoveryCount()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ScanningLocal,
+            FilesCompleted: 123,
+            FilesTotal: null,
+            CurrentPath: "Reports/report.txt",
+            StartedAtUtc: new DateTime(2026, 6, 6, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 6, 9, 0, 5, DateTimeKind.Utc)));
+
+        Assert.Multiple(() =>
+        {
+            SyncPairRowViewModel row = viewModel.SyncPairs.Single();
+            Assert.That(viewModel.HasCurrentRunProgress, Is.True);
+            Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Documents: Scanning local files"));
+            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("123 files found · report.txt"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("123 files found · report.txt"));
+            Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.True);
+            Assert.That(row.CurrentOperation, Is.EqualTo("Scanning local files"));
+            Assert.That(row.IsCurrentProgressIndeterminate, Is.True);
+        });
+    }
+
+    [Test]
     public async Task RunProgressChanged_AggregatesMultipleFolderProgress()
     {
         Guid documentsPairId = Guid.NewGuid();

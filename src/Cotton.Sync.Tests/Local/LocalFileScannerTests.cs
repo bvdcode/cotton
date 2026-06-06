@@ -88,6 +88,27 @@ public sealed class LocalFileScannerTests
     }
 
     [Test]
+    public async Task ScanTreeMetadataAsync_ReportsScanProgressAsFilesAreDiscovered()
+    {
+        WriteFile("alpha.txt", "alpha");
+        WriteFile(Path.Combine("Docs", "Report.txt"), "report");
+        var scanner = new LocalFileScanner();
+        var progress = new RecordingProgress<LocalTreeScanProgress>();
+
+        await scanner.ScanTreeMetadataAsync(_root, progress);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(progress.Values, Has.Count.GreaterThanOrEqualTo(3));
+            Assert.That(progress.Values[0].FilesScanned, Is.Zero);
+            Assert.That(progress.Values[0].DirectoriesScanned, Is.Zero);
+            Assert.That(progress.Values.Any(item => item.FilesScanned == 1 && item.CurrentPath == "alpha.txt"), Is.True);
+            Assert.That(progress.Values[^1].FilesScanned, Is.EqualTo(2));
+            Assert.That(progress.Values[^1].CurrentPath, Is.Empty);
+        });
+    }
+
+    [Test]
     public async Task ScanAsync_IgnoresTempFilesAndCottonWorkingFolder()
     {
         WriteFile("keep.txt", "keep");
@@ -260,5 +281,15 @@ public sealed class LocalFileScannerTests
     private static string Hash(string text)
     {
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
+    }
+
+    private sealed class RecordingProgress<T> : IProgress<T>
+    {
+        public List<T> Values { get; } = [];
+
+        public void Report(T value)
+        {
+            Values.Add(value);
+        }
     }
 }

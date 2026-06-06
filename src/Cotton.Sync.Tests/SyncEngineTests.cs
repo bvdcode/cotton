@@ -185,6 +185,38 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_ReportsLocalScanFileDiscoveryProgress()
+    {
+        var scanner = new MetadataOnlyLocalFileScanner(
+            LocalFile("Docs/a.txt", "a"),
+            LocalFile("Docs/b.txt", "b"))
+        {
+            ReportMetadataScanProgress = true,
+        };
+        var progress = new RecordingProgress<SyncRunProgress>();
+        SyncEngine engine = CreateEngine(scanner, EmptyRemoteTree(), new FakeRemoteFileSynchronizer(), out _);
+
+        await engine.RunOnceAsync(
+            Pair(),
+            new SyncRunOptions { RunProgress = progress });
+
+        int remoteScanIndex = progress.Values
+            .Select((item, index) => (item, index))
+            .First(item => item.item.Stage == SyncRunProgressStage.ScanningRemote)
+            .index;
+        IReadOnlyList<SyncRunProgress> localScanProgress = progress.Values
+            .Take(remoteScanIndex)
+            .Where(item => item.Stage == SyncRunProgressStage.ScanningLocal)
+            .ToList();
+        Assert.Multiple(() =>
+        {
+            Assert.That(localScanProgress.Select(item => item.FilesCompleted), Does.Contain(1));
+            Assert.That(localScanProgress.Select(item => item.FilesCompleted), Does.Contain(2));
+            Assert.That(localScanProgress.Where(item => !string.IsNullOrWhiteSpace(item.CurrentPath)).Select(item => item.CurrentPath), Is.EqualTo(new[] { "Docs/a.txt", "Docs/b.txt" }));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_ReportsRunTransferAndActivityProgressForUpload()
     {
         LocalFileSnapshot local = LocalFile("Docs/local.txt", "local-content");
@@ -1794,7 +1826,12 @@ public sealed class SyncEngineTests
         }
     }
 
-    private sealed class MetadataOnlyLocalFileScanner : ILocalFileScanner, ILocalTreeScanner, ILocalFileMetadataTreeScanner, ILocalFileContentHasher
+    private sealed class MetadataOnlyLocalFileScanner :
+        ILocalFileScanner,
+        ILocalTreeScanner,
+        ILocalFileMetadataTreeScanner,
+        ILocalFileMetadataTreeProgressScanner,
+        ILocalFileContentHasher
     {
         public MetadataOnlyLocalFileScanner(params LocalFileSnapshot[] files)
         {
@@ -1804,6 +1841,8 @@ public sealed class SyncEngineTests
         public List<LocalFileSnapshot> Files { get; }
 
         public int ContentHashCalls { get; private set; }
+
+        public bool ReportMetadataScanProgress { get; init; }
 
         public Task<IReadOnlyList<LocalFileSnapshot>> ScanAsync(string rootPath, CancellationToken cancellationToken = default)
         {
@@ -1824,6 +1863,25 @@ public sealed class SyncEngineTests
             {
                 Files = Files,
             });
+        }
+
+        public Task<LocalTreeSnapshot> ScanTreeMetadataAsync(
+            string rootPath,
+            IProgress<LocalTreeScanProgress>? progress,
+            CancellationToken cancellationToken = default)
+        {
+            if (ReportMetadataScanProgress)
+            {
+                progress?.Report(new LocalTreeScanProgress(0, 0, currentPath: null));
+                for (int index = 0; index < Files.Count; index++)
+                {
+                    progress?.Report(new LocalTreeScanProgress(index + 1, 0, Files[index].RelativePath));
+                }
+
+                progress?.Report(new LocalTreeScanProgress(Files.Count, 0, currentPath: null));
+            }
+
+            return ScanTreeMetadataAsync(rootPath, cancellationToken);
         }
 
         public Task<string> ComputeContentHashAsync(LocalFileSnapshot localFile, CancellationToken cancellationToken = default)

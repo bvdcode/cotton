@@ -9,9 +9,15 @@ namespace Cotton.Sync.Local;
 /// <summary>
 /// Scans a local folder and hashes files for synchronization.
 /// </summary>
-public sealed class LocalFileScanner : ILocalFileScanner, ILocalTreeScanner, ILocalFileMetadataTreeScanner, ILocalFileContentHasher
+public sealed class LocalFileScanner :
+    ILocalFileScanner,
+    ILocalTreeScanner,
+    ILocalFileMetadataTreeScanner,
+    ILocalFileMetadataTreeProgressScanner,
+    ILocalFileContentHasher
 {
     private static readonly StringComparer PathComparer = StringComparer.OrdinalIgnoreCase;
+    private const int ProgressReportFileInterval = 100;
     private static readonly EnumerationOptions FileEnumerationOptions = new()
     {
         AttributesToSkip = FileAttributes.ReparsePoint,
@@ -34,7 +40,7 @@ public sealed class LocalFileScanner : ILocalFileScanner, ILocalTreeScanner, ILo
         string rootPath,
         CancellationToken cancellationToken = default)
     {
-        return await ScanTreeCoreAsync(rootPath, computeHashes: true, cancellationToken).ConfigureAwait(false);
+        return await ScanTreeCoreAsync(rootPath, computeHashes: true, progress: null, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -42,7 +48,16 @@ public sealed class LocalFileScanner : ILocalFileScanner, ILocalTreeScanner, ILo
         string rootPath,
         CancellationToken cancellationToken = default)
     {
-        return await ScanTreeCoreAsync(rootPath, computeHashes: false, cancellationToken).ConfigureAwait(false);
+        return await ScanTreeMetadataAsync(rootPath, progress: null, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<LocalTreeSnapshot> ScanTreeMetadataAsync(
+        string rootPath,
+        IProgress<LocalTreeScanProgress>? progress,
+        CancellationToken cancellationToken = default)
+    {
+        return await ScanTreeCoreAsync(rootPath, computeHashes: false, progress, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -59,6 +74,7 @@ public sealed class LocalFileScanner : ILocalFileScanner, ILocalTreeScanner, ILo
     private static async Task<LocalTreeSnapshot> ScanTreeCoreAsync(
         string rootPath,
         bool computeHashes,
+        IProgress<LocalTreeScanProgress>? progress,
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
@@ -69,6 +85,9 @@ public sealed class LocalFileScanner : ILocalFileScanner, ILocalTreeScanner, ILo
         }
 
         var tree = new LocalTreeSnapshot();
+        int directoriesScanned = 0;
+        int filesScanned = 0;
+        progress?.Report(new LocalTreeScanProgress(filesScanned, directoriesScanned, currentPath: null));
         foreach (string directoryPath in Directory.EnumerateDirectories(fullRoot, "*", FileEnumerationOptions))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -89,6 +108,7 @@ public sealed class LocalFileScanner : ILocalFileScanner, ILocalTreeScanner, ILo
                 RelativePath = relativePath,
                 FullPath = directory.FullName,
             });
+            directoriesScanned++;
         }
 
         foreach (string filePath in Directory.EnumerateFiles(fullRoot, "*", FileEnumerationOptions))
@@ -109,11 +129,31 @@ public sealed class LocalFileScanner : ILocalFileScanner, ILocalTreeScanner, ILo
             LocalFileSnapshot fileSnapshot = await CreateSnapshotAsync(file, relativePath, computeHashes, cancellationToken)
                 .ConfigureAwait(false);
             tree.Files.Add(fileSnapshot);
+            filesScanned++;
+            ReportScanProgress(progress, filesScanned, directoriesScanned, relativePath);
         }
 
         tree.Directories.Sort((left, right) => PathComparer.Compare(left.RelativePath, right.RelativePath));
         tree.Files.Sort((left, right) => PathComparer.Compare(left.RelativePath, right.RelativePath));
+        progress?.Report(new LocalTreeScanProgress(filesScanned, directoriesScanned, currentPath: null));
         return tree;
+    }
+
+    private static void ReportScanProgress(
+        IProgress<LocalTreeScanProgress>? progress,
+        int filesScanned,
+        int directoriesScanned,
+        string currentPath)
+    {
+        if (progress is null)
+        {
+            return;
+        }
+
+        if (filesScanned == 1 || filesScanned % ProgressReportFileInterval == 0)
+        {
+            progress.Report(new LocalTreeScanProgress(filesScanned, directoriesScanned, currentPath));
+        }
     }
 
     private static string ToRelativePath(string rootPath, string filePath)

@@ -70,7 +70,8 @@ public sealed class SyncEngine : ISyncEngine
         ReportRunProgress(options, SyncRunProgressStage.ScanningLocal, 0, null, null, startedAtUtc);
         _logger.LogInformation("Starting sync pass for pair {SyncPairId}.", syncPair.SyncPairId);
         await _stateStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
-        LocalTreeSnapshot localTree = await ScanLocalTreeAsync(syncPair.LocalRootPath, cancellationToken).ConfigureAwait(false);
+        LocalTreeSnapshot localTree = await ScanLocalTreeAsync(syncPair.LocalRootPath, options, startedAtUtc, cancellationToken)
+            .ConfigureAwait(false);
         ReportRunProgress(options, SyncRunProgressStage.ScanningRemote, 0, null, null, startedAtUtc);
         RemoteTreeSnapshot remoteTree = await _remoteCrawler.CrawlAsync(syncPair.RemoteRootNodeId, cancellationToken).ConfigureAwait(false);
         List<SyncStateEntry> stateEntries = (await _stateStore
@@ -202,8 +203,22 @@ public sealed class SyncEngine : ISyncEngine
         }
     }
 
-    private async Task<LocalTreeSnapshot> ScanLocalTreeAsync(string localRootPath, CancellationToken cancellationToken)
+    private async Task<LocalTreeSnapshot> ScanLocalTreeAsync(
+        string localRootPath,
+        SyncRunOptions options,
+        DateTime startedAtUtc,
+        CancellationToken cancellationToken)
     {
+        if (_localMetadataTreeScanner is ILocalFileMetadataTreeProgressScanner progressScanner && _localContentHasher is not null)
+        {
+            return await progressScanner
+                .ScanTreeMetadataAsync(
+                    localRootPath,
+                    new LocalTreeScanProgressReporter(options, startedAtUtc),
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
         if (_localMetadataTreeScanner is not null && _localContentHasher is not null)
         {
             return await _localMetadataTreeScanner.ScanTreeMetadataAsync(localRootPath, cancellationToken).ConfigureAwait(false);
@@ -1228,6 +1243,30 @@ public sealed class SyncEngine : ISyncEngine
         None,
         Local,
         Remote,
+    }
+
+    private sealed class LocalTreeScanProgressReporter : IProgress<LocalTreeScanProgress>
+    {
+        private readonly SyncRunOptions _options;
+        private readonly DateTime _startedAtUtc;
+
+        public LocalTreeScanProgressReporter(SyncRunOptions options, DateTime startedAtUtc)
+        {
+            _options = options;
+            _startedAtUtc = startedAtUtc;
+        }
+
+        public void Report(LocalTreeScanProgress value)
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            ReportRunProgress(
+                _options,
+                SyncRunProgressStage.ScanningLocal,
+                value.FilesScanned,
+                filesTotal: null,
+                value.CurrentPath,
+                _startedAtUtc);
+        }
     }
 
     private sealed class SyncDeleteGuard

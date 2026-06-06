@@ -3188,12 +3188,29 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
         return progress.Stage switch
         {
-            SyncRunProgressStage.ScanningLocal => "Looking for local changes.",
+            SyncRunProgressStage.ScanningLocal => CreateLocalScanProgressDetails(progress),
             SyncRunProgressStage.ScanningRemote => "Checking Cotton Cloud.",
             SyncRunProgressStage.ReconcilingDirectories => "Preparing folders.",
             SyncRunProgressStage.Completed => "Sync pass completed.",
             _ => "Preparing sync.",
         };
+    }
+
+    private static string CreateLocalScanProgressDetails(DesktopRunProgressSnapshot progress)
+    {
+        if (progress.FilesCompleted <= 0)
+        {
+            return "Looking for local changes.";
+        }
+
+        string details = progress.FilesCompleted.ToString(CultureInfo.CurrentCulture)
+            + (progress.FilesCompleted == 1 ? " file found" : " files found");
+        if (!string.IsNullOrWhiteSpace(progress.CurrentPath))
+        {
+            details += " · " + GetDisplayFileName(progress.CurrentPath);
+        }
+
+        return details;
     }
 
     private static string GetRunStageLabel(SyncRunProgressStage stage)
