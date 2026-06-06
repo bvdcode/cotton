@@ -12,7 +12,6 @@ namespace Cotton.Server.Jobs
     /// Backfills legacy null metadata dictionaries to empty dictionaries.
     /// </summary>
     [JobTrigger(days: 1)]
-    [DisallowConcurrentExecution]
     public class BackfillNullMetadataJob(
         CottonDbContext _dbContext,
         ILogger<BackfillNullMetadataJob> _logger) : IJob
@@ -34,13 +33,6 @@ namespace Cotton.Server.Jobs
                 "Backfilled null metadata values. Nodes: {UpdatedNodes}; node files: {UpdatedNodeFiles}.",
                 updatedNodes,
                 updatedNodeFiles);
-
-            bool deleted = await context.Scheduler.DeleteJob(context.JobDetail.Key, ct);
-            if (deleted)
-            {
-                _logger.LogInformation(
-                    "Temporary null metadata backfill job removed from the current Quartz scheduler.");
-            }
         }
 
         private async Task<int> BackfillNodesAsync(CancellationToken ct)
