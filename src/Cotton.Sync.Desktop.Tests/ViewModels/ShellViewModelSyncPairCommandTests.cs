@@ -2498,6 +2498,39 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task SessionRevoked_SignsOutAndShowsNativeNotificationWhenSupported()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Syncing")));
+        var notificationService = new CollectingDesktopNotificationService();
+        using ShellViewModel viewModel = CreateViewModel(controller, notificationService: notificationService);
+        await viewModel.InitializeAsync();
+        viewModel.Password = "password";
+        viewModel.TotpCode = "123456";
+        await ExecuteAsync(viewModel.ShowSettingsCommand);
+
+        controller.ReportSessionRevoked(new DesktopSessionRevocationSnapshot(DateTime.UtcNow));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsSignedIn, Is.False);
+            Assert.That(viewModel.IsSetupVisible, Is.True);
+            Assert.That(viewModel.AccountName, Is.EqualTo("Signed out"));
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Session expired"));
+            Assert.That(viewModel.Password, Is.Empty);
+            Assert.That(viewModel.TotpCode, Is.Empty);
+            Assert.That(viewModel.IsSettingsVisible, Is.False);
+            Assert.That(viewModel.SyncPairs.Single().Status, Is.EqualTo("Idle"));
+            Assert.That(viewModel.SignOutCommand.CanExecute(null), Is.False);
+            Assert.That(viewModel.Activities.First().Kind, Is.EqualTo("Account"));
+            Assert.That(viewModel.Activities.First().Details, Is.EqualTo("Session revoked by server"));
+            Assert.That(notificationService.Notifications, Has.Count.EqualTo(1));
+            Assert.That(notificationService.Notifications[0].Title, Is.EqualTo("Session expired"));
+            Assert.That(notificationService.Notifications[0].Message, Is.EqualTo("Sign in again to continue syncing."));
+        });
+    }
+
+    [Test]
     public void FutureSyncModesVisibility_UsesFeatureFlag()
     {
         using ShellViewModel hiddenViewModel = CreateViewModel(
@@ -2644,6 +2677,8 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public event EventHandler<DesktopActivitySnapshot>? ActivityReported;
 
+        public event EventHandler<DesktopSessionRevocationSnapshot>? SessionRevoked;
+
         public event EventHandler<DesktopTransferProgressSnapshot>? TransferProgressChanged;
 
         public event EventHandler<DesktopRunProgressSnapshot>? RunProgressChanged;
@@ -2707,6 +2742,11 @@ public sealed class ShellViewModelSyncPairCommandTests
         public void ReportActivity(DesktopActivitySnapshot activity)
         {
             ActivityReported?.Invoke(this, activity);
+        }
+
+        public void ReportSessionRevoked(DesktopSessionRevocationSnapshot sessionRevocation)
+        {
+            SessionRevoked?.Invoke(this, sessionRevocation);
         }
 
         public void ReportStatus(DesktopSyncStatusSnapshot status)

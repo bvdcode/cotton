@@ -460,6 +460,34 @@ public sealed class DesktopShellControllerHostLifecycleTests
     }
 
     [Test]
+    public async Task SessionRevoked_ForwardsSessionRevocationEvents()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        Uri serverUrl = new("https://cotton.example.test/");
+        var preferencesStore = new SqliteAppPreferencesStore(paths.AppDatabasePath);
+        await preferencesStore.InitializeAsync();
+        await preferencesStore.SaveAsync(new AppPreferences
+        {
+            RememberedServerUrl = serverUrl,
+        });
+        FakeDesktopApplicationHost host = FakeDesktopApplicationHost.Create(serverUrl);
+        var factory = new QueueingDesktopSyncApplicationFactory(host.Host);
+        using DesktopShellController controller = CreateController(paths, factory);
+        var sessionRevocations = new List<DesktopSessionRevocationSnapshot>();
+        DateTime occurredAtUtc = new(2026, 6, 6, 12, 0, 0, DateTimeKind.Utc);
+        controller.SessionRevoked += (_, sessionRevocation) => sessionRevocations.Add(sessionRevocation);
+
+        await controller.LoadAsync();
+        host.SessionRevocationPublisher.Publish(new SessionRevocationEvent(occurredAtUtc));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(sessionRevocations, Has.Count.EqualTo(1));
+            Assert.That(sessionRevocations[0].OccurredAtUtc, Is.EqualTo(occurredAtUtc));
+        });
+    }
+
+    [Test]
     public async Task LoadAsync_UsesRuntimeLastSuccessfulSyncWhenBaselineIsEmpty()
     {
         DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
@@ -586,11 +614,13 @@ public sealed class DesktopShellControllerHostLifecycleTests
             App = new FakeSyncApplicationService();
             AsyncResource = new FakeAsyncResource();
             StatusPublisher = new InMemoryAppStatusPublisher();
+            SessionRevocationPublisher = new InMemorySessionRevocationPublisher();
             Host = new DesktopSyncApplicationHost(
                 App,
                 new FakeRemoteRootResolver(),
                 StatusPublisher,
                 new InMemoryAppActivityPublisher(),
+                SessionRevocationPublisher,
                 new InMemoryAppTransferProgressPublisher(),
                 new InMemoryAppRunProgressPublisher(),
                 new FakeCottonTokenStore(),
@@ -604,6 +634,8 @@ public sealed class DesktopShellControllerHostLifecycleTests
         public FakeSyncApplicationService App { get; }
 
         public InMemoryAppStatusPublisher StatusPublisher { get; }
+
+        public InMemorySessionRevocationPublisher SessionRevocationPublisher { get; }
 
         public FakeAsyncResource AsyncResource { get; }
 

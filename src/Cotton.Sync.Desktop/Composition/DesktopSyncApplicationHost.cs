@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Sync.App.Activities;
+using Cotton.Sync.App.Auth;
 using Cotton.Sync.App.Progress;
 using Cotton.Sync.App.SyncApplication;
 using Cotton.Sync.App.Status;
@@ -23,6 +24,7 @@ internal sealed class DesktopSyncApplicationHost : IDisposable, IAsyncDisposable
         IRemoteRootResolver remoteRootResolver,
         IAppStatusPublisher statusPublisher,
         IAppActivityPublisher activityPublisher,
+        ISessionRevocationPublisher sessionRevocationPublisher,
         IAppTransferProgressPublisher transferProgressPublisher,
         IAppRunProgressPublisher runProgressPublisher,
         ICottonTokenStore tokenStore,
@@ -36,6 +38,7 @@ internal sealed class DesktopSyncApplicationHost : IDisposable, IAsyncDisposable
         RemoteRootResolver = remoteRootResolver ?? throw new ArgumentNullException(nameof(remoteRootResolver));
         StatusPublisher = statusPublisher ?? throw new ArgumentNullException(nameof(statusPublisher));
         ActivityPublisher = activityPublisher ?? throw new ArgumentNullException(nameof(activityPublisher));
+        SessionRevocationPublisher = sessionRevocationPublisher ?? throw new ArgumentNullException(nameof(sessionRevocationPublisher));
         TransferProgressPublisher = transferProgressPublisher ?? throw new ArgumentNullException(nameof(transferProgressPublisher));
         RunProgressPublisher = runProgressPublisher ?? throw new ArgumentNullException(nameof(runProgressPublisher));
         TokenStore = tokenStore ?? throw new ArgumentNullException(nameof(tokenStore));
@@ -53,6 +56,8 @@ internal sealed class DesktopSyncApplicationHost : IDisposable, IAsyncDisposable
     public IAppStatusPublisher StatusPublisher { get; }
 
     public IAppActivityPublisher ActivityPublisher { get; }
+
+    public ISessionRevocationPublisher SessionRevocationPublisher { get; }
 
     public IAppTransferProgressPublisher TransferProgressPublisher { get; }
 

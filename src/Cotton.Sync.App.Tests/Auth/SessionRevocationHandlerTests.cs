@@ -6,6 +6,7 @@ using Cotton.Sync.App.Continuous;
 using Cotton.Sync.App.LocalChanges;
 using Cotton.Sync.App.Status;
 using Cotton.Sync.App.Supervision;
+using Cotton.Sync.App.Tests.TestSupport;
 
 namespace Cotton.Sync.App.Tests.Auth;
 
@@ -51,6 +52,32 @@ public sealed class SessionRevocationHandlerTests
             Assert.That(localChanges.StopCallCount, Is.EqualTo(1));
             Assert.That(authFlow.SignOutCallCount, Is.EqualTo(1));
             Assert.That(supervisor.StopCallCount, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task HandleSessionRevokedAsync_PublishesSessionRevocationEvent()
+    {
+        var authFlow = new FakeAuthFlow();
+        var localChanges = new FakeLocalChangeSyncCoordinator();
+        var periodicSync = new FakePeriodicSyncCoordinator();
+        var supervisor = new FakeSyncSupervisor();
+        var publisher = new InMemorySessionRevocationPublisher();
+        var observer = new RecordingObserver<SessionRevocationEvent>();
+        using IDisposable subscription = publisher.Subscribe(observer);
+        var handler = new SessionRevocationHandler(
+            authFlow,
+            localChanges,
+            periodicSync,
+            supervisor,
+            publisher);
+
+        await handler.HandleSessionRevokedAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(observer.Values, Has.Count.EqualTo(1));
+            Assert.That(observer.Values[0].OccurredAtUtc.Kind, Is.EqualTo(DateTimeKind.Utc));
         });
     }
 

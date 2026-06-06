@@ -13,6 +13,8 @@ internal interface IDesktopShellController : IDisposable, IAsyncDisposable
 
     event EventHandler<DesktopActivitySnapshot>? ActivityReported;
 
+    event EventHandler<DesktopSessionRevocationSnapshot>? SessionRevoked;
+
     event EventHandler<DesktopTransferProgressSnapshot>? TransferProgressChanged;
 
     event EventHandler<DesktopRunProgressSnapshot>? RunProgressChanged;

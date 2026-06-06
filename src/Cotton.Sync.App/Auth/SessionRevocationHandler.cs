@@ -18,6 +18,7 @@ public sealed class SessionRevocationHandler : ISessionRevocationHandler
     private readonly ILocalChangeSyncCoordinator _localChanges;
     private readonly ILogger<SessionRevocationHandler> _logger;
     private readonly IPeriodicSyncCoordinator _periodicSync;
+    private readonly ISessionRevocationPublisher? _sessionRevocations;
     private readonly ISyncSupervisor _supervisor;
 
     /// <summary>
@@ -28,12 +29,14 @@ public sealed class SessionRevocationHandler : ISessionRevocationHandler
         ILocalChangeSyncCoordinator localChanges,
         IPeriodicSyncCoordinator periodicSync,
         ISyncSupervisor supervisor,
+        ISessionRevocationPublisher? sessionRevocations = null,
         ILogger<SessionRevocationHandler>? logger = null)
     {
         _authFlow = authFlow ?? throw new ArgumentNullException(nameof(authFlow));
         _localChanges = localChanges ?? throw new ArgumentNullException(nameof(localChanges));
         _periodicSync = periodicSync ?? throw new ArgumentNullException(nameof(periodicSync));
         _supervisor = supervisor ?? throw new ArgumentNullException(nameof(supervisor));
+        _sessionRevocations = sessionRevocations;
         _logger = logger ?? NullLogger<SessionRevocationHandler>.Instance;
     }
 
@@ -57,6 +60,7 @@ public sealed class SessionRevocationHandler : ISessionRevocationHandler
             "sync supervisor",
             token => _supervisor.StopAsync(token),
             cancellationToken).ConfigureAwait(false);
+        _sessionRevocations?.Publish(new SessionRevocationEvent(DateTime.UtcNow));
     }
 
     private async Task ExecuteStepAsync(

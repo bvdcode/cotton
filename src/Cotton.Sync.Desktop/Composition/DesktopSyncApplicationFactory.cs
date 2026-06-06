@@ -66,6 +66,7 @@ internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFac
             remoteDirectories: remoteDirectorySynchronizer,
             logger: _loggerFactory.CreateLogger<HeadlessSyncEngine>());
         var activityPublisher = new InMemoryAppActivityPublisher();
+        var sessionRevocationPublisher = new InMemorySessionRevocationPublisher();
         var transferProgressPublisher = new InMemoryAppTransferProgressPublisher();
         var runProgressPublisher = new InMemoryAppRunProgressPublisher();
         ISyncPairWork pairWork = new RemoteChangeAwareSyncPairWork(
@@ -88,6 +89,7 @@ internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFac
             localChanges,
             periodicSync,
             supervisor,
+            sessionRevocationPublisher,
             _loggerFactory.CreateLogger<SessionRevocationHandler>());
         var remoteChanges = new RealtimeRemoteChangeSyncCoordinator(
             cottonClient.Realtime,
@@ -118,6 +120,7 @@ internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFac
             remoteRootResolver,
             statusPublisher,
             activityPublisher,
+            sessionRevocationPublisher,
             transferProgressPublisher,
             runProgressPublisher,
             tokenStore,

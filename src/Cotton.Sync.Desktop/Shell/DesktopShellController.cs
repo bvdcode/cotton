@@ -44,6 +44,7 @@ internal sealed class DesktopShellController : IDesktopShellController
     private IDisposable? _activitySubscription;
     private DesktopSyncApplicationHost? _host;
     private IDisposable? _runProgressSubscription;
+    private IDisposable? _sessionRevocationSubscription;
     private IDisposable? _statusSubscription;
     private IDisposable? _transferProgressSubscription;
 
@@ -75,6 +76,8 @@ internal sealed class DesktopShellController : IDesktopShellController
     public event EventHandler<DesktopSyncStatusSnapshot>? StatusChanged;
 
     public event EventHandler<DesktopActivitySnapshot>? ActivityReported;
+
+    public event EventHandler<DesktopSessionRevocationSnapshot>? SessionRevoked;
 
     public event EventHandler<DesktopTransferProgressSnapshot>? TransferProgressChanged;
 
@@ -1053,6 +1056,8 @@ internal sealed class DesktopShellController : IDesktopShellController
         _host = null;
         _activitySubscription?.Dispose();
         _activitySubscription = null;
+        _sessionRevocationSubscription?.Dispose();
+        _sessionRevocationSubscription = null;
         _statusSubscription?.Dispose();
         _statusSubscription = null;
         _transferProgressSubscription?.Dispose();
@@ -1068,11 +1073,13 @@ internal sealed class DesktopShellController : IDesktopShellController
         DesktopSyncApplicationHost? previous = _host;
         _host = host;
         _activitySubscription?.Dispose();
+        _sessionRevocationSubscription?.Dispose();
         _statusSubscription?.Dispose();
         _transferProgressSubscription?.Dispose();
         _runProgressSubscription?.Dispose();
         _statusSubscription = host.StatusPublisher.Subscribe(new StatusObserver(this));
         _activitySubscription = host.ActivityPublisher.Subscribe(new ActivityObserver(this));
+        _sessionRevocationSubscription = host.SessionRevocationPublisher.Subscribe(new SessionRevocationObserver(this));
         _transferProgressSubscription = host.TransferProgressPublisher.Subscribe(new TransferProgressObserver(this));
         _runProgressSubscription = host.RunProgressPublisher.Subscribe(new RunProgressObserver(this));
         if (previous is not null)
@@ -1134,6 +1141,11 @@ internal sealed class DesktopShellController : IDesktopShellController
     private void OnActivityReported(AppSyncActivity activity)
     {
         ActivityReported?.Invoke(this, ToActivitySnapshot(activity));
+    }
+
+    private void OnSessionRevoked(SessionRevocationEvent sessionRevocation)
+    {
+        SessionRevoked?.Invoke(this, new DesktopSessionRevocationSnapshot(sessionRevocation.OccurredAtUtc));
     }
 
     private void OnTransferProgressChanged(AppTransferProgress progress)
@@ -1299,6 +1311,30 @@ internal sealed class DesktopShellController : IDesktopShellController
         public void OnNext(AppSyncActivity value)
         {
             _controller.OnActivityReported(value);
+        }
+    }
+
+    private sealed class SessionRevocationObserver : IObserver<SessionRevocationEvent>
+    {
+        private readonly DesktopShellController _controller;
+
+        public SessionRevocationObserver(DesktopShellController controller)
+        {
+            _controller = controller;
+        }
+
+        public void OnCompleted()
+        {
+        }
+
+        public void OnError(Exception error)
+        {
+            Trace.TraceError(error.ToString());
+        }
+
+        public void OnNext(SessionRevocationEvent value)
+        {
+            _controller.OnSessionRevoked(value);
         }
     }
 

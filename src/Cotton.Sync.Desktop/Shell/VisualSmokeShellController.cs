@@ -32,6 +32,12 @@ internal sealed class VisualSmokeShellController : IDesktopShellController
         remove { }
     }
 
+    public event EventHandler<DesktopSessionRevocationSnapshot>? SessionRevoked
+    {
+        add { }
+        remove { }
+    }
+
     public event EventHandler<DesktopTransferProgressSnapshot>? TransferProgressChanged
     {
         add { }

@@ -114,6 +114,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         SelfTestItems.CollectionChanged += OnSelfTestItemsChanged;
         Notifications.CollectionChanged += OnNotificationsChanged;
         _controller.ActivityReported += OnActivityReported;
+        _controller.SessionRevoked += OnSessionRevoked;
         _controller.TransferProgressChanged += OnTransferProgressChanged;
         _controller.RunProgressChanged += OnRunProgressChanged;
         _controller.StatusChanged += OnStatusChanged;
@@ -1153,6 +1154,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         _controller.StatusChanged -= OnStatusChanged;
         _controller.ActivityReported -= OnActivityReported;
+        _controller.SessionRevoked -= OnSessionRevoked;
         _controller.TransferProgressChanged -= OnTransferProgressChanged;
         _controller.RunProgressChanged -= OnRunProgressChanged;
         Activities.CollectionChanged -= OnActivitiesChanged;
@@ -1932,30 +1934,35 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         try
         {
             await _controller.SignOutAsync().ConfigureAwait(true);
-            IsSignedIn = false;
-            AccountName = "Signed out";
-            GlobalStatus = "Signed out";
-            Password = string.Empty;
-            TotpCode = string.Empty;
-            IsAddSyncPairWizardVisible = false;
-            IsSettingsVisible = false;
-            IsSelectedSyncPairEditorVisible = false;
-            ActionRequiredMessage = string.Empty;
-            Notifications.Clear();
-            _notificationTracker.Reset();
-            RemoteFolders.Clear();
-            ClearRunProgress();
-            ClearTransferProgress();
-            SetAllPairStatuses("Idle");
-            RefreshCurrentProgressText();
+            ApplySignedOutState("Signed out");
             AddActivity("Account", string.Empty, "Signed out");
             ShowNativeNotification("Signed out", "Cotton Sync is signed out.");
-            RefreshDiagnosticsItems();
         }
         finally
         {
             IsBusy = false;
         }
+    }
+
+    private void ApplySignedOutState(string globalStatus)
+    {
+        IsSignedIn = false;
+        AccountName = "Signed out";
+        GlobalStatus = globalStatus;
+        Password = string.Empty;
+        TotpCode = string.Empty;
+        IsAddSyncPairWizardVisible = false;
+        IsSettingsVisible = false;
+        IsSelectedSyncPairEditorVisible = false;
+        ActionRequiredMessage = string.Empty;
+        Notifications.Clear();
+        _notificationTracker.Reset();
+        RemoteFolders.Clear();
+        ClearRunProgress();
+        ClearTransferProgress();
+        SetAllPairStatuses("Idle");
+        RefreshCurrentProgressText();
+        RefreshDiagnosticsItems();
     }
 
     private async Task SyncNowAsync()
@@ -2500,6 +2507,17 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         _uiDispatcher.Post(() => ApplyActivity(activity));
     }
 
+    private void OnSessionRevoked(object? sender, DesktopSessionRevocationSnapshot sessionRevocation)
+    {
+        if (_uiDispatcher.CheckAccess())
+        {
+            ApplySessionRevocation(sessionRevocation);
+            return;
+        }
+
+        _uiDispatcher.Post(() => ApplySessionRevocation(sessionRevocation));
+    }
+
     private void OnTransferProgressChanged(object? sender, DesktopTransferProgressSnapshot progress)
     {
         if (_uiDispatcher.CheckAccess())
@@ -2520,6 +2538,20 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
 
         _uiDispatcher.Post(() => ApplyRunProgress(progress));
+    }
+
+    private void ApplySessionRevocation(DesktopSessionRevocationSnapshot sessionRevocation)
+    {
+        if (!IsSignedIn)
+        {
+            return;
+        }
+
+        DateTimeOffset occurredAt = new DateTimeOffset(DateTime.SpecifyKind(sessionRevocation.OccurredAtUtc, DateTimeKind.Utc))
+            .ToLocalTime();
+        ApplySignedOutState("Session expired");
+        AddActivity("Account", string.Empty, "Session revoked by server", occurredAt);
+        ShowNativeNotification("Session expired", "Sign in again to continue syncing.");
     }
 
     private void ApplyActivity(DesktopActivitySnapshot activity)
