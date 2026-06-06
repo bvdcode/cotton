@@ -89,7 +89,7 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Not.Contain("ChangeSelectedSyncPairLocalFolderCommand"));
             Assert.That(foldersSection, Does.Not.Contain("ChangeSelectedSyncPairRemoteFolderCommand"));
             Assert.That(foldersSection, Does.Contain("RemoveSelectedSyncPairCommand"));
-            Assert.That(foldersSection, Does.Contain("CancelSelectedSyncPairEditorCommand"));
+            Assert.That(foldersSection, Does.Not.Contain("CancelSelectedSyncPairEditorCommand"));
             Assert.That(foldersSection, Does.Contain("IsRemoveSyncPairConfirmationVisible"));
             Assert.That(foldersSection, Does.Contain("CancelRemoveSyncPairCommand"));
             Assert.That(foldersSection, Does.Contain("ConfirmRemoveSelectedSyncPairCommand"));
@@ -104,6 +104,10 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Not.Contain("ModeLabel"));
             Assert.That(foldersSection, Does.Not.Contain("SelectedSyncPair.ToggleEnabledIcon"));
             Assert.That(foldersSection, Does.Not.Contain("SelectedSyncPair.ModeLabel"));
+            Assert.That(foldersSection, Does.Contain("Content=\"💾\""));
+            Assert.That(foldersSection, Does.Contain("Content=\"🗑\""));
+            Assert.That(foldersSection, Does.Not.Contain("Content=\"-\""));
+            Assert.That(foldersSection, Does.Not.Contain("ToolTip.Tip=\"Close folder controls\""));
             Assert.That(foldersSection, Does.Contain("Text=\"{Binding CurrentOperation}\""));
             Assert.That(foldersSection, Does.Contain("IsVisible=\"{Binding HasCurrentOperation}\""));
             Assert.That(foldersSection, Does.Contain("Value=\"{Binding CurrentProgressValue}\""));
@@ -181,7 +185,7 @@ public sealed class DesktopSetupVisualContractTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(settingsOverlay, Does.Contain("MaxWidth=\"372\""));
+            Assert.That(settingsOverlay, Does.Not.Contain("MaxWidth=\"372\""));
             Assert.That(settingsOverlay, Does.Contain("HorizontalAlignment=\"Stretch\""));
             Assert.That(settingsOverlay, Does.Contain("VerticalAlignment=\"Stretch\""));
             Assert.That(settingsOverlay, Does.Contain("RowDefinitions=\"Auto,*\""));
@@ -252,7 +256,7 @@ public sealed class DesktopSetupVisualContractTests
         Assert.Multiple(() =>
         {
             Assert.That(mainWindowXaml, Does.Not.Contain("Content=\"x\""));
-            Assert.That(CountOccurrences(mainWindowXaml, "Content=\"×\""), Is.EqualTo(4));
+            Assert.That(CountOccurrences(mainWindowXaml, "Content=\"×\""), Is.EqualTo(3));
         });
     }
 

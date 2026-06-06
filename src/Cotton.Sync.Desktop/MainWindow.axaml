@@ -548,12 +548,12 @@
                                     BorderBrush="{DynamicResource CottonBorderBrush}"
                                     BorderThickness="1"
                                     IsVisible="{Binding IsEditorVisible}">
-                              <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+                              <Grid ColumnDefinitions="*,Auto,Auto,Auto"
                                     ColumnSpacing="6">
                                 <TextBox Text="{Binding EditableDisplayName}"
                                          PlaceholderText="Folder name" />
                                 <Button Grid.Column="1"
-                                        Content="✓"
+                                        Content="💾"
                                         Classes="icon"
                                         ToolTip.Tip="Save folder name"
                                         Command="{Binding $parent[Window].DataContext.SaveSelectedSyncPairNameCommand}" />
@@ -563,15 +563,10 @@
                                         ToolTip.Tip="{Binding ToggleEnabledLabel}"
                                         Command="{Binding $parent[Window].DataContext.ToggleSelectedSyncPairEnabledCommand}" />
                                 <Button Grid.Column="3"
-                                        Content="-"
+                                        Content="🗑"
                                         Classes="icon"
                                         ToolTip.Tip="Remove sync folder"
                                         Command="{Binding $parent[Window].DataContext.RemoveSelectedSyncPairCommand}" />
-                                <Button Grid.Column="4"
-                                        Content="×"
-                                        Classes="icon"
-                                        ToolTip.Tip="Close folder controls"
-                                        Command="{Binding $parent[Window].DataContext.CancelSelectedSyncPairEditorCommand}" />
                               </Grid>
                             </Border>
                           </Grid>
@@ -962,8 +957,7 @@
 
       <Border Background="Transparent"
               IsVisible="{Binding IsSettingsVisible}">
-        <Border MaxWidth="372"
-                Margin="10"
+        <Border Margin="10"
                 Padding="12"
                 CornerRadius="7"
                 Background="{DynamicResource CottonSurfaceBrush}"
