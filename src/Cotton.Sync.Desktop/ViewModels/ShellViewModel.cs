@@ -503,7 +503,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public bool HasStatusAttention => HasActionRequired || HasConflicts;
 
-    public bool IsStatusCardVisible => HasSyncPairs && !HasActionRequired && !HasConflicts && !HasCurrentWorkProgress;
+    public bool IsStatusCardVisible =>
+        HasSyncPairs
+        && !HasActionRequired
+        && !HasConflicts
+        && !HasCurrentWorkProgress
+        && !HasHealthySyncedIdleState;
 
     public bool IsDashboardChromeVisible => !IsAddSyncPairWizardVisible && !IsSettingsVisible;
 
@@ -561,6 +566,30 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             .All(static syncPair => string.Equals(syncPair.Status, "Paused", StringComparison.Ordinal));
 
     private bool HasEnabledSyncPairs => SyncPairs.Any(static syncPair => syncPair.IsEnabled);
+
+    private bool HasHealthySyncedIdleState
+    {
+        get
+        {
+            bool hasEnabledPair = false;
+            foreach (SyncPairRowViewModel syncPair in SyncPairs)
+            {
+                if (!syncPair.IsEnabled)
+                {
+                    continue;
+                }
+
+                hasEnabledPair = true;
+                if (!syncPair.LastSyncedAtUtc.HasValue
+                    || !string.Equals(syncPair.Status, "Idle", StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+
+            return hasEnabledPair;
+        }
+    }
 
     public bool IsDashboardVisible => IsSignedIn;
 
@@ -2357,6 +2386,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
         GlobalStatus = ResolveGlobalStatus(status);
         ActionRequiredMessage = DesktopActionRequiredMessageResolver.FromStatus(status);
+        OnPropertyChanged(nameof(IsStatusCardVisible));
         if (!status.SyncPairs.Any(IsActiveSyncStatus))
         {
             ClearTransferProgress();

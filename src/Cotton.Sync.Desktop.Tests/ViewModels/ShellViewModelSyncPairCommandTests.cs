@@ -947,10 +947,8 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(viewModel.IsStatusCardVisible, Is.True);
+            Assert.That(viewModel.IsStatusCardVisible, Is.False);
             Assert.That(viewModel.CurrentProgressText, Is.EqualTo("All folders are up to date."));
-            Assert.That(viewModel.StatusCardTitle, Is.EqualTo("All folders are up to date."));
-            Assert.That(viewModel.HasStatusCardDetail, Is.False);
         });
     }
 
@@ -974,6 +972,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.SyncPairs.Single().LastSyncedAtUtc, Is.EqualTo(new DateTime(2026, 6, 4, 8, 0, 0, DateTimeKind.Utc)));
+            Assert.That(viewModel.IsStatusCardVisible, Is.False);
             Assert.That(viewModel.CurrentProgressText, Is.EqualTo("All folders are up to date."));
         });
     }
@@ -986,7 +985,11 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         await viewModel.InitializeAsync();
 
-        Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Enable a folder to start syncing."));
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsStatusCardVisible, Is.True);
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Enable a folder to start syncing."));
+        });
     }
 
     [Test]
