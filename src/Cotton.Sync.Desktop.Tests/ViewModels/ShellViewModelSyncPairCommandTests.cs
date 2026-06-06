@@ -439,7 +439,10 @@ public sealed class ShellViewModelSyncPairCommandTests
     [Test]
     public async Task ApplyVisualSmokeScenarioAsync_ShowsProgressCards()
     {
-        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Syncing")));
+        var controller = new FakeDesktopShellController(
+            CreateSignedInSnapshot(
+                CreatePair(Guid.NewGuid(), "Documents", "Syncing"),
+                CreatePair(Guid.NewGuid(), "Camera uploads", "Syncing")));
         using ShellViewModel viewModel = CreateViewModel(controller);
         await viewModel.InitializeAsync();
 
@@ -449,15 +452,15 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             Assert.That(viewModel.GlobalStatus, Is.EqualTo("Syncing"));
             Assert.That(viewModel.HasCurrentRunProgress, Is.True);
-            Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Documents: Checking files"));
-            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("8 of 31 files · quarterly-budget.xlsx"));
+            Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Syncing 2 folders"));
+            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("10 of 40 files across 2 folders"));
             Assert.That(viewModel.HasCurrentTransfer, Is.True);
             Assert.That(viewModel.CurrentTransferTitle, Is.EqualTo("Documents: Uploading quarterly-budget.xlsx"));
             Assert.That(viewModel.CurrentTransferDetails, Does.Contain("/s"));
             Assert.That(viewModel.CurrentTransferDetails, Does.Contain("left"));
-            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents: Uploading quarterly-budget.xlsx"));
-            Assert.That(viewModel.CurrentWorkProgressDetails, Does.Contain("/s"));
-            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("8 of 31 files · quarterly-budget.xlsx"));
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Syncing 2 folders"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("10 of 40 files across 2 folders"));
+            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Does.StartWith("Documents: Uploading quarterly-budget.xlsx"));
         });
     }
 
@@ -888,6 +891,101 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(row.IsCurrentProgressIndeterminate, Is.False);
             Assert.That(row.CurrentProgressValue, Is.EqualTo(30).Within(0.01));
             Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Documents: Checking files 3 of 10"));
+        });
+    }
+
+    [Test]
+    public async Task RunProgressChanged_AggregatesMultipleFolderProgress()
+    {
+        Guid documentsPairId = Guid.NewGuid();
+        Guid videosPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(
+            CreateSignedInSnapshot(
+                CreatePair(documentsPairId, "Documents", "Syncing"),
+                CreatePair(videosPairId, "Videos", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            documentsPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 3,
+            FilesTotal: 10,
+            CurrentPath: "Reports/report.txt",
+            StartedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 5, DateTimeKind.Utc)));
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            videosPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 5,
+            FilesTotal: 20,
+            CurrentPath: "Videos/clip.mp4",
+            StartedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 6, DateTimeKind.Utc)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasCurrentRunProgress, Is.True);
+            Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Syncing 2 folders"));
+            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("8 of 30 files across 2 folders"));
+            Assert.That(viewModel.CurrentRunProgressValue, Is.EqualTo(26.666).Within(0.01));
+            Assert.That(viewModel.IsCurrentRunProgressIndeterminate, Is.False);
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Syncing 2 folders"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("8 of 30 files across 2 folders"));
+            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(26.666).Within(0.01));
+            Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task TransferProgressChanged_KeepsAggregateRunProgressPrimaryForMultipleFolders()
+    {
+        Guid documentsPairId = Guid.NewGuid();
+        Guid videosPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(
+            CreateSignedInSnapshot(
+                CreatePair(documentsPairId, "Documents", "Syncing"),
+                CreatePair(videosPairId, "Videos", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            documentsPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 3,
+            FilesTotal: 10,
+            CurrentPath: "Reports/report.txt",
+            StartedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 5, DateTimeKind.Utc)));
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            videosPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 5,
+            FilesTotal: 20,
+            CurrentPath: "Videos/clip.mp4",
+            StartedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 6, DateTimeKind.Utc)));
+
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            documentsPairId,
+            SyncTransferDirection.Upload,
+            "Reports/report.txt",
+            TransferredBytes: 512,
+            TotalBytes: 1024,
+            IsCompleted: false,
+            new DateTime(2026, 6, 4, 9, 0, 7, DateTimeKind.Utc)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasCurrentTransfer, Is.True);
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Syncing 2 folders"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("8 of 30 files across 2 folders"));
+            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Documents: Uploading report.txt · 512 B / 1.0 KB"));
+            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(26.666).Within(0.01));
+            Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.False);
         });
     }
 

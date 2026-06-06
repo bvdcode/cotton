@@ -308,7 +308,7 @@ internal sealed class VisualSmokeShellController : IDesktopShellController
                 "Camera uploads",
                 CreateLocalPath("Pictures", "Camera Uploads"),
                 "/Photos/Camera Uploads",
-                "Idle",
+                CreateCameraUploadsStatus(),
                 Guid.Parse("c88c7b48-66a3-49dc-aee3-dd7b28614f96"),
                 syncedAt.AddMinutes(-3),
                 1859),
@@ -323,5 +323,12 @@ internal sealed class VisualSmokeShellController : IDesktopShellController
             DesktopVisualSmokeScenario.Progress => "Syncing",
             _ => "Idle",
         };
+    }
+
+    private string CreateCameraUploadsStatus()
+    {
+        return _scenario == DesktopVisualSmokeScenario.Progress
+            ? "Syncing"
+            : "Idle";
     }
 }

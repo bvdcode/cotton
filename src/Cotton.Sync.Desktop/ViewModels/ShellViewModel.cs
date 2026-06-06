@@ -29,6 +29,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private readonly IDesktopThemeService _themeService;
     private readonly IDesktopUiDispatcher _uiDispatcher;
     private readonly DesktopNotificationTracker _notificationTracker = new();
+    private readonly Dictionary<Guid, DesktopRunProgressSnapshot> _runProgressByPair = [];
     private readonly SyncPairSettingsValidator _syncPairSettingsValidator = new();
     private readonly Dictionary<Guid, string> _lastStatusErrorActivityMessages = [];
     private string _accountName = "Signed out";
@@ -460,21 +461,40 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public bool HasCurrentWorkProgress => HasCurrentTransfer || HasCurrentRunProgress;
 
-    public string CurrentWorkProgressTitle => HasCurrentTransfer ? CurrentTransferTitle : CurrentRunProgressTitle;
+    public string CurrentWorkProgressTitle => IsAggregateRunProgressPrimary
+        ? CurrentRunProgressTitle
+        : HasCurrentTransfer ? CurrentTransferTitle : CurrentRunProgressTitle;
 
-    public string CurrentWorkProgressDetails => HasCurrentTransfer ? CurrentTransferDetails : CurrentRunProgressDetails;
-
-    public string CurrentWorkProgressSecondaryDetails => HasCurrentTransfer && HasCurrentRunProgress
+    public string CurrentWorkProgressDetails => IsAggregateRunProgressPrimary
         ? CurrentRunProgressDetails
-        : string.Empty;
+        : HasCurrentTransfer ? CurrentTransferDetails : CurrentRunProgressDetails;
+
+    public string CurrentWorkProgressSecondaryDetails
+    {
+        get
+        {
+            if (IsAggregateRunProgressPrimary && HasCurrentTransfer)
+            {
+                return CurrentTransferTitle + " · " + CurrentTransferDetails;
+            }
+
+            return HasCurrentTransfer && HasCurrentRunProgress
+                ? CurrentRunProgressDetails
+                : string.Empty;
+        }
+    }
 
     public bool HasCurrentWorkProgressSecondaryDetails => !string.IsNullOrWhiteSpace(CurrentWorkProgressSecondaryDetails);
 
-    public double CurrentWorkProgressValue => HasCurrentTransfer ? CurrentTransferProgressValue : CurrentRunProgressValue;
+    public double CurrentWorkProgressValue => IsAggregateRunProgressPrimary
+        ? CurrentRunProgressValue
+        : HasCurrentTransfer ? CurrentTransferProgressValue : CurrentRunProgressValue;
 
-    public bool IsCurrentWorkProgressIndeterminate => HasCurrentTransfer
-        ? IsCurrentTransferIndeterminate
-        : IsCurrentRunProgressIndeterminate;
+    public bool IsCurrentWorkProgressIndeterminate => IsAggregateRunProgressPrimary
+        ? IsCurrentRunProgressIndeterminate
+        : HasCurrentTransfer ? IsCurrentTransferIndeterminate : IsCurrentRunProgressIndeterminate;
+
+    private bool IsAggregateRunProgressPrimary => _runProgressByPair.Count > 1;
 
     public bool IsBusy
     {
@@ -1268,6 +1288,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             return;
         }
 
+        SyncPairRowViewModel? secondSyncPair = SyncPairs.Skip(1).FirstOrDefault();
         DateTime startedAtUtc = new(2026, 6, 4, 9, 15, 0, DateTimeKind.Utc);
         GlobalStatus = "Syncing";
         syncPair.Status = "Syncing";
@@ -1280,6 +1301,20 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             startedAtUtc,
             IsCompleted: false,
             startedAtUtc.AddSeconds(2)));
+        if (secondSyncPair is not null)
+        {
+            secondSyncPair.Status = "Syncing";
+            ApplyRunProgress(new DesktopRunProgressSnapshot(
+                secondSyncPair.Id,
+                SyncRunProgressStage.ReconcilingFiles,
+                FilesCompleted: 2,
+                FilesTotal: 9,
+                CurrentPath: "Blink/2024/07.7z",
+                startedAtUtc,
+                IsCompleted: false,
+                startedAtUtc.AddSeconds(2)));
+        }
+
         ApplyTransferProgress(new DesktopTransferProgressSnapshot(
             syncPair.Id,
             SyncTransferDirection.Upload,
@@ -2518,25 +2553,24 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             return;
         }
 
-        HasCurrentRunProgress = true;
-        IsCurrentRunProgressIndeterminate = !progress.FilesTotal.HasValue && !progress.IsCompleted;
-        CurrentRunProgressValue = CalculateRunProgressValue(progress);
-        CurrentRunProgressTitle = CreateRunProgressTitle(progress, syncPair.DisplayName);
-        CurrentRunProgressDetails = CreateRunProgressDetails(progress);
+        _runProgressByPair[progress.SyncPairId] = progress;
         if (!HasCurrentTransfer || _transferSyncPairId != progress.SyncPairId)
         {
             syncPair.CurrentOperation = CreateRunProgressOperation(progress);
             syncPair.HasCurrentProgress = true;
-            syncPair.IsCurrentProgressIndeterminate = IsCurrentRunProgressIndeterminate;
-            syncPair.CurrentProgressValue = CurrentRunProgressValue;
+            syncPair.IsCurrentProgressIndeterminate = !progress.FilesTotal.HasValue && !progress.IsCompleted;
+            syncPair.CurrentProgressValue = CalculateRunProgressValue(progress);
         }
 
-        RaiseCurrentWorkProgressProperties();
+        RefreshRunProgressSummary();
         RefreshCurrentProgressText();
     }
 
     private void ApplyStatus(DesktopSyncStatusSnapshot status)
     {
+        bool hasActiveSyncStatus = false;
+        bool runProgressChanged = false;
+        bool shouldClearCurrentTransfer = false;
         foreach (DesktopSyncPairStatusSnapshot pairStatus in status.SyncPairs)
         {
             SyncPairRowViewModel? row = SyncPairs.FirstOrDefault(syncPair => syncPair.Id == pairStatus.Id);
@@ -2549,13 +2583,17 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             row.IsEnabled = !string.Equals(pairStatus.Status, "Disabled", StringComparison.Ordinal);
             row.LastError = pairStatus.LastError;
             row.CurrentOperation = pairStatus.CurrentOperation ?? string.Empty;
-            if (IsActiveSyncStatus(pairStatus))
+            bool isActiveStatus = IsActiveSyncStatus(pairStatus);
+            hasActiveSyncStatus |= isActiveStatus;
+            if (isActiveStatus)
             {
                 EnsureSyncPairProgress(row);
             }
             else
             {
                 ClearSyncPairProgress(row);
+                runProgressChanged |= _runProgressByPair.Remove(pairStatus.Id);
+                shouldClearCurrentTransfer |= _transferSyncPairId == pairStatus.Id;
             }
 
             if (pairStatus.LastSyncedAtUtc.HasValue)
@@ -2578,10 +2616,22 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         ActionRequiredMessage = DesktopActionRequiredMessageResolver.FromStatus(status);
         OnPropertyChanged(nameof(IsStatusCardVisible));
         OnPropertyChanged(nameof(HasDashboardNotifications));
-        if (!status.SyncPairs.Any(IsActiveSyncStatus))
+        if (!hasActiveSyncStatus)
         {
             ClearTransferProgress();
             ClearRunProgress();
+        }
+        else
+        {
+            if (shouldClearCurrentTransfer)
+            {
+                ClearTransferProgress();
+            }
+
+            if (runProgressChanged)
+            {
+                RefreshRunProgressSummary();
+            }
         }
 
         RaiseSyncStateProperties();
@@ -2916,12 +2966,56 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private void ClearRunProgress()
     {
+        _runProgressByPair.Clear();
         HasCurrentRunProgress = false;
         IsCurrentRunProgressIndeterminate = false;
         CurrentRunProgressValue = 0;
         CurrentRunProgressTitle = string.Empty;
         CurrentRunProgressDetails = string.Empty;
         RaiseCurrentWorkProgressProperties();
+    }
+
+    private void RefreshRunProgressSummary()
+    {
+        List<DesktopRunProgressSnapshot> progressValues = GetOrderedRunProgressSnapshots();
+        if (progressValues.Count == 0)
+        {
+            ClearRunProgress();
+            return;
+        }
+
+        HasCurrentRunProgress = true;
+        if (progressValues.Count == 1)
+        {
+            DesktopRunProgressSnapshot progress = progressValues[0];
+            SyncPairRowViewModel syncPair = SyncPairs.First(pair => pair.Id == progress.SyncPairId);
+            IsCurrentRunProgressIndeterminate = !progress.FilesTotal.HasValue && !progress.IsCompleted;
+            CurrentRunProgressValue = CalculateRunProgressValue(progress);
+            CurrentRunProgressTitle = CreateRunProgressTitle(progress, syncPair.DisplayName);
+            CurrentRunProgressDetails = CreateRunProgressDetails(progress);
+            RaiseCurrentWorkProgressProperties();
+            return;
+        }
+
+        IsCurrentRunProgressIndeterminate = progressValues.Any(static progress => !progress.FilesTotal.HasValue && !progress.IsCompleted);
+        CurrentRunProgressValue = CalculateAggregateRunProgressValue(progressValues);
+        CurrentRunProgressTitle = "Syncing " + progressValues.Count.ToString(CultureInfo.CurrentCulture) + " folders";
+        CurrentRunProgressDetails = CreateAggregateRunProgressDetails(progressValues);
+        RaiseCurrentWorkProgressProperties();
+    }
+
+    private List<DesktopRunProgressSnapshot> GetOrderedRunProgressSnapshots()
+    {
+        var progressValues = new List<DesktopRunProgressSnapshot>();
+        foreach (SyncPairRowViewModel syncPair in SyncPairs)
+        {
+            if (_runProgressByPair.TryGetValue(syncPair.Id, out DesktopRunProgressSnapshot? progress))
+            {
+                progressValues.Add(progress);
+            }
+        }
+
+        return progressValues;
     }
 
     private void RaiseCurrentWorkProgressProperties()
@@ -2961,6 +3055,49 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
 
         return progress.IsCompleted ? 100 : 0;
+    }
+
+    private static double CalculateAggregateRunProgressValue(IReadOnlyList<DesktopRunProgressSnapshot> progressValues)
+    {
+        int totalFiles = 0;
+        int completedFiles = 0;
+        foreach (DesktopRunProgressSnapshot progress in progressValues)
+        {
+            if (!progress.FilesTotal.HasValue)
+            {
+                return progressValues.All(static item => item.IsCompleted) ? 100 : 0;
+            }
+
+            totalFiles += progress.FilesTotal.Value;
+            completedFiles += progress.FilesCompleted;
+        }
+
+        return totalFiles > 0
+            ? Math.Clamp((double)completedFiles / totalFiles * 100, 0, 100)
+            : progressValues.All(static item => item.IsCompleted) ? 100 : 0;
+    }
+
+    private static string CreateAggregateRunProgressDetails(IReadOnlyList<DesktopRunProgressSnapshot> progressValues)
+    {
+        int completedFiles = 0;
+        int totalFiles = 0;
+        foreach (DesktopRunProgressSnapshot progress in progressValues)
+        {
+            if (!progress.FilesTotal.HasValue)
+            {
+                return progressValues.Count.ToString(CultureInfo.CurrentCulture) + " folders are syncing.";
+            }
+
+            completedFiles += progress.FilesCompleted;
+            totalFiles += progress.FilesTotal.Value;
+        }
+
+        return completedFiles.ToString(CultureInfo.CurrentCulture)
+            + " of "
+            + totalFiles.ToString(CultureInfo.CurrentCulture)
+            + " files across "
+            + progressValues.Count.ToString(CultureInfo.CurrentCulture)
+            + " folders";
     }
 
     private static string CreateRunProgressTitle(DesktopRunProgressSnapshot progress, string syncPairName)
