@@ -1,15 +1,16 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Files;
+using Cotton.Nodes;
+using Cotton.Sync;
 using Cotton.Database;
 using Cotton.Database.Models;
-using Cotton.Database.Models.Enums;
-using Cotton.Server.Handlers.Files;
+using Cotton.Models.Enums;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models.Dto;
-using Cotton.Server.Models.Requests;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
@@ -27,6 +28,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Reflection;
 using System.Text;
+using FileVersionDto = Cotton.Files.FileVersionDto;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -173,7 +175,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
 
         using HttpResponseMessage renameResponse = await _client!.PatchAsJsonAsync(
             $"{Routes.V1.Layouts}/nodes/{folder.Id}/rename",
-            new RenameNodeRequest { Name = "sync-after-rename" });
+            new RenameNodeRequestDto { Name = "sync-after-rename" });
         renameResponse.EnsureSuccessStatusCode();
 
         SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
@@ -243,7 +245,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
 
         using HttpResponseMessage renameResponse = await _client!.PatchAsJsonAsync(
             $"{Routes.V1.Files}/{file.Id}/rename",
-            new RenameFileRequest { Name = "sync-after-rename.txt" });
+            new RenameFileRequestDto { Name = "sync-after-rename.txt" });
         renameResponse.EnsureSuccessStatusCode();
 
         SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
@@ -271,7 +273,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
 
         using HttpResponseMessage moveResponse = await _client!.PatchAsJsonAsync(
             $"{Routes.V1.Files}/{file.Id}/move",
-            new MoveFileRequest { ParentId = target.Id });
+            new MoveFileRequestDto { ParentId = target.Id });
         moveResponse.EnsureSuccessStatusCode();
 
         SyncChangeDto change = await GetSingleChangeAsync(cursor, file.Id);
@@ -298,7 +300,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
 
         using HttpResponseMessage moveResponse = await _client!.PatchAsJsonAsync(
             $"{Routes.V1.Layouts}/nodes/{folder.Id}/move",
-            new MoveNodeRequest { ParentId = target.Id });
+            new MoveNodeRequestDto { ParentId = target.Id });
         moveResponse.EnsureSuccessStatusCode();
 
         SyncChangeDto change = await GetSingleChangeAsync(cursor, folder.Id);
@@ -414,7 +416,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
 
         using HttpResponseMessage restoreResponse = await _client!.PostAsJsonAsync(
             $"{Routes.V1.Files}/{file.Id}/restore",
-            new RestoreItemRequest());
+            new RestoreItemRequestDto());
         restoreResponse.EnsureSuccessStatusCode();
 
         SyncChangeDto change = await GetSingleChangeAsync(cursor, file.Id);
@@ -441,7 +443,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
 
         using HttpResponseMessage restoreResponse = await _client!.PostAsJsonAsync(
             $"{Routes.V1.Layouts}/nodes/{folder.Id}/restore",
-            new RestoreItemRequest());
+            new RestoreItemRequestDto());
         restoreResponse.EnsureSuccessStatusCode();
 
         SyncChangeDto change = await GetSingleChangeAsync(cursor, folder.Id);
@@ -470,7 +472,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
 
         using HttpResponseMessage restoreResponse = await _client.PostAsJsonAsync(
             $"{Routes.V1.Files}/{file.Id}/restore",
-            new RestoreItemRequest { CreateMissingParents = true });
+            new RestoreItemRequestDto { CreateMissingParents = true });
         restoreResponse.EnsureSuccessStatusCode();
 
         SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
@@ -503,7 +505,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
 
         using HttpResponseMessage restoreResponse = await _client.PostAsJsonAsync(
             $"{Routes.V1.Layouts}/nodes/{folder.Id}/restore",
-            new RestoreItemRequest { CreateMissingParents = true });
+            new RestoreItemRequestDto { CreateMissingParents = true });
         restoreResponse.EnsureSuccessStatusCode();
 
         SyncChangesResponseDto response = await GetChangesAsync(cursor, limit: 10);
@@ -761,7 +763,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
     {
         using HttpResponseMessage response = await _client!.PutAsJsonAsync(
             $"{Routes.V1.Layouts}/nodes",
-            new CreateNodeRequest { ParentId = parentId, Name = name });
+            new CreateNodeRequestDto { ParentId = parentId, Name = name });
         response.EnsureSuccessStatusCode();
 
         NodeDto? node = await response.Content.ReadFromJsonAsync<NodeDto>();
@@ -774,7 +776,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         string hash = await UploadChunkAsync(body);
         using HttpResponseMessage response = await _client!.PostAsJsonAsync(
             $"{Routes.V1.Files}/from-chunks",
-            new CreateFileRequest
+            new CreateFileFromChunksRequestDto
             {
                 ChunkHashes = [hash],
                 Name = name,
@@ -794,7 +796,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         string hash = await UploadChunkAsync(body);
         using HttpResponseMessage response = await _client!.PatchAsJsonAsync(
             $"{Routes.V1.Files}/{nodeFileId}/update-content",
-            new CreateFileRequest
+            new CreateFileFromChunksRequestDto
             {
                 ChunkHashes = [hash],
                 Name = name,

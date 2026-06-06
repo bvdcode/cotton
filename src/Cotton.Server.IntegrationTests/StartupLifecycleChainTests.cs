@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Auth;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Dto;
@@ -21,6 +22,7 @@ using System.Net.Http.Json;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using CottonLoginRequestDto = Cotton.Auth.LoginRequestDto;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -117,7 +119,7 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         UserDto? me = await _client!.GetFromJsonAsync<UserDto>("/api/v1/users/me");
         Assert.That(me, Is.Not.Null);
         Assert.That(me!.Username, Is.EqualTo("testuser"));
-        Assert.That(me.Role, Is.EqualTo(UserRole.Admin), "First user should be admin on non-public instance.");
+        Assert.That(me.Role, Is.EqualTo((int)UserRole.Admin), "First user should be admin on non-public instance.");
     }
 
     [Test]
@@ -316,7 +318,7 @@ public class StartupLifecycleChainTests : IntegrationTestBase
 
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
         {
-            Content = JsonContent.Create(new LoginRequestDto
+            Content = JsonContent.Create(new CottonLoginRequestDto
             {
                 Username = username,
                 Password = password

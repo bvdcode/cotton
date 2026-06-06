@@ -1,9 +1,10 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Files;
+using Cotton.Nodes;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
-using Cotton.Server.Handlers.Files;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
@@ -79,7 +80,7 @@ public class LayoutEndpointsTests : IntegrationTestBase
         Assert.That(root, Is.Not.Null);
 
         // create child
-        var createNodeRes = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", new Models.Requests.CreateNodeRequest { ParentId = root!.Id, Name = "child" });
+        var createNodeRes = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", new CreateNodeRequestDto { ParentId = root!.Id, Name = "child" });
         createNodeRes.EnsureSuccessStatusCode();
         var child = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
         Assert.That(child, Is.Not.Null);
@@ -111,7 +112,7 @@ public class LayoutEndpointsTests : IntegrationTestBase
 
         var createNodeRes = await _client.PutAsJsonAsync(
             "/api/v1/layouts/nodes",
-            new Models.Requests.CreateNodeRequest { ParentId = root!.Id, Name = "encrypted" });
+            new CreateNodeRequestDto { ParentId = root!.Id, Name = "encrypted" });
         createNodeRes.EnsureSuccessStatusCode();
         var child = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
         Assert.That(child, Is.Not.Null);
@@ -166,14 +167,14 @@ public class LayoutEndpointsTests : IntegrationTestBase
 
         var targetResponse = await _client.PutAsJsonAsync(
             "/api/v1/layouts/nodes",
-            new Models.Requests.CreateNodeRequest { ParentId = root!.Id, Name = "target" });
+            new CreateNodeRequestDto { ParentId = root!.Id, Name = "target" });
         targetResponse.EnsureSuccessStatusCode();
         var target = await targetResponse.Content.ReadFromJsonAsync<NodeDto>();
         Assert.That(target, Is.Not.Null);
 
         var textMatchResponse = await _client.PutAsJsonAsync(
             "/api/v1/layouts/nodes",
-            new Models.Requests.CreateNodeRequest { ParentId = root.Id, Name = "why-log" });
+            new CreateNodeRequestDto { ParentId = root.Id, Name = "why-log" });
         textMatchResponse.EnsureSuccessStatusCode();
 
         var exact = await SearchAsync(root.LayoutId, target!.Id.ToString());
@@ -273,7 +274,7 @@ public class LayoutEndpointsTests : IntegrationTestBase
     {
         var response = await _client!.PutAsJsonAsync(
             "/api/v1/layouts/nodes",
-            new Models.Requests.CreateNodeRequest { ParentId = parentId, Name = name });
+            new CreateNodeRequestDto { ParentId = parentId, Name = name });
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<NodeDto>())!;
     }
@@ -281,7 +282,7 @@ public class LayoutEndpointsTests : IntegrationTestBase
     private async Task<NodeFileManifestDto> CreateFileAsync(Guid nodeId, string name, string body)
     {
         string hash = await UploadChunkAsync(body);
-        var fileReq = new CreateFileRequest
+        var fileReq = new CreateFileFromChunksRequestDto
         {
             ChunkHashes = [hash],
             Name = name,
