@@ -1100,11 +1100,11 @@
                           ColumnDefinitions="92,*"
                           RowSpacing="4"
                           ColumnSpacing="8">
-                      <TextBlock Text="Device"
+                      <TextBlock Text="Device name"
                                  Classes="secondary"
                                  FontSize="12" />
                       <TextBlock Grid.Column="1"
-                                 Text="Cotton Sync Desktop"
+                                 Text="{Binding DeviceName}"
                                  FontSize="12"
                                  FontWeight="SemiBold"
                                  TextTrimming="CharacterEllipsis" />

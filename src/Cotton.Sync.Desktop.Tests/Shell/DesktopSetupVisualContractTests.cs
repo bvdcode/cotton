@@ -384,6 +384,9 @@ public sealed class DesktopSetupVisualContractTests
         {
             Assert.That(accountTab, Does.Contain("Text=\"About\""));
             Assert.That(accountTab, Does.Contain("Text=\"{Binding AppVersion}\""));
+            Assert.That(accountTab, Does.Contain("Text=\"Device name\""));
+            Assert.That(accountTab, Does.Contain("Text=\"{Binding DeviceName}\""));
+            Assert.That(accountTab, Does.Not.Contain("Text=\"Cotton Sync Desktop\""));
             Assert.That(CountOccurrences(settingsOverlay, "<TabItem Header="), Is.EqualTo(4));
         });
     }

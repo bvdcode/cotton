@@ -118,7 +118,8 @@ internal sealed class DesktopShellController : IDesktopShellController
             CreateDataPathSnapshot(),
             platformCapabilities with { IsAutostartSupported = _autostartService.IsSupported },
             session is not null,
-            syncPairSnapshots);
+            syncPairSnapshots,
+            DesktopDeviceIdentity.CreateDeviceName());
     }
 
     public async Task<DesktopServerProbeResult> ProbeServerAsync(

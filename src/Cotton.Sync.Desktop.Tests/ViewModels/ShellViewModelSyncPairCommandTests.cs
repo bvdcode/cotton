@@ -1358,6 +1358,20 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task InitializeAsync_UsesSnapshotDeviceName()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot() with
+        {
+            DeviceName = "Cotton Sync Desktop (QA-WIN11)",
+        });
+        using ShellViewModel viewModel = CreateViewModel(controller);
+
+        await viewModel.InitializeAsync();
+
+        Assert.That(viewModel.DeviceName, Is.EqualTo("Cotton Sync Desktop (QA-WIN11)"));
+    }
+
+    [Test]
     public async Task ActivityReported_AddsRecentActivityRow()
     {
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot());

@@ -40,6 +40,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private string _currentTransferDetails = string.Empty;
     private string _currentTransferTitle = string.Empty;
     private string _dataDirectory = string.Empty;
+    private string _deviceName = "Cotton Sync Desktop";
     private string _appDatabasePath = string.Empty;
     private string _syncStateDatabasePath = string.Empty;
     private string _tokenStorePath = string.Empty;
@@ -295,6 +296,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     }
 
     public string AppVersion => DesktopAppVersion.Current;
+
+    public string DeviceName
+    {
+        get => _deviceName;
+        private set => SetProperty(ref _deviceName, value);
+    }
 
     public string ActionRequiredMessage
     {
@@ -1166,6 +1173,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             AppDatabasePath = snapshot.DataPaths.AppDatabasePath;
             SyncStateDatabasePath = snapshot.DataPaths.SyncStateDatabasePath;
             TokenStorePath = snapshot.DataPaths.TokenStorePath;
+            DeviceName = string.IsNullOrWhiteSpace(snapshot.DeviceName)
+                ? "Cotton Sync Desktop"
+                : snapshot.DeviceName.Trim();
             SyncPairs.Clear();
             foreach (DesktopSyncPairSnapshot syncPair in snapshot.SyncPairs)
             {

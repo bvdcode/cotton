@@ -16,4 +16,5 @@ internal sealed record DesktopShellSnapshot(
     DesktopDataPathSnapshot DataPaths,
     DesktopPlatformCapabilitySnapshot PlatformCapabilities,
     bool IsSignedIn,
-    IReadOnlyList<DesktopSyncPairSnapshot> SyncPairs);
+    IReadOnlyList<DesktopSyncPairSnapshot> SyncPairs,
+    string DeviceName = "Cotton Sync Desktop");
