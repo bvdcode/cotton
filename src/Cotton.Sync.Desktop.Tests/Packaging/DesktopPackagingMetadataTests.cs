@@ -386,7 +386,12 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("Packaging/linux/verify-checksums.sh /opt/cotton-sync"));
             Assert.That(workflow, Does.Contain("/opt/cotton-sync/Cotton.Sync.Desktop --self-test --data-dir"));
             Assert.That(workflow, Does.Contain("Packaging/linux/smoke-diagnostics-export.sh"));
+            Assert.That(workflow, Does.Contain("$HOME/.config/autostart/cotton-sync.desktop"));
+            Assert.That(workflow, Does.Contain("Exec=/opt/cotton-sync/Cotton.Sync.Desktop"));
             Assert.That(workflow, Does.Contain("sudo dpkg -r cotton-sync-desktop"));
+            Assert.That(workflow, Does.Contain("test ! -e /opt/cotton-sync/Cotton.Sync.Desktop"));
+            Assert.That(workflow, Does.Contain("test ! -e /usr/bin/cotton-sync"));
+            Assert.That(workflow, Does.Contain("test ! -e \"$HOME/.config/autostart/cotton-sync.desktop\""));
         });
     }
 
