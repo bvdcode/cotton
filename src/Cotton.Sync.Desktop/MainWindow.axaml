@@ -87,9 +87,9 @@
     <Grid Grid.Row="2"
           Background="{DynamicResource CottonSurfaceBrush}"
           IsVisible="{Binding IsSetupVisible}">
-      <StackPanel Width="296"
-                  Spacing="9"
-                  HorizontalAlignment="Center"
+      <StackPanel Spacing="9"
+                  Margin="20,0"
+                  HorizontalAlignment="Stretch"
                   VerticalAlignment="Center">
         <StackPanel Spacing="4"
                     HorizontalAlignment="Center"

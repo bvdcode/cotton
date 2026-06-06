@@ -75,6 +75,23 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
+    public void SetupView_StretchesFormWithoutFixedContentWidth()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string setupView = GetSlice(
+            mainWindowXaml,
+            "IsVisible=\"{Binding IsSetupVisible}\"",
+            "IsVisible=\"{Binding IsDashboardVisible}\"");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(setupView, Does.Not.Contain("Width=\"296\""));
+            Assert.That(setupView, Does.Contain("HorizontalAlignment=\"Stretch\""));
+            Assert.That(setupView, Does.Contain("Margin=\"20,0\""));
+        });
+    }
+
+    [Test]
     public void FoldersHeader_HasSingleCompactAddFolderCommand()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
