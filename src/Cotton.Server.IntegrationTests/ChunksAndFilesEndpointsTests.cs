@@ -261,6 +261,42 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Create_File_With_Validation_Can_Reuse_Existing_Uncomputed_Manifest()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        byte[] content = Encoding.UTF8.GetBytes("desktop sync pdf bytes");
+        string contentHash = Hasher.ToHexStringHash(Hasher.HashData(content));
+        var uploadResponse = await UploadRawChunkAsync(content, contentHash);
+        uploadResponse.EnsureSuccessStatusCode();
+
+        var firstCreateResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", new CreateFileFromChunksRequestDto
+        {
+            ChunkHashes = [contentHash],
+            Name = "existing.pdf",
+            ContentType = "application/pdf",
+            Hash = contentHash,
+            NodeId = root!.Id,
+        });
+        firstCreateResponse.EnsureSuccessStatusCode();
+
+        var secondCreateResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", new CreateFileFromChunksRequestDto
+        {
+            ChunkHashes = [contentHash],
+            Name = "DOG LICENSE.pdf",
+            ContentType = "application/pdf",
+            Hash = contentHash,
+            NodeId = root.Id,
+            Validate = true,
+        });
+        secondCreateResponse.EnsureSuccessStatusCode();
+    }
+
+    [Test]
     public async Task Download_Owned_File_Content_Works_With_Range_And_ETag()
     {
         var token = await LoginAsync();
