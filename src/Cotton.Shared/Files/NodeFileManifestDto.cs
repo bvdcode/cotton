@@ -57,16 +57,10 @@ namespace Cotton.Files
         /// </summary>
         public string ETag { get; set; } = string.Empty;
 
-        private Dictionary<string, string> _metadata = [];
-
         /// <summary>
         /// Gets or sets structured metadata attached to the file entry.
         /// </summary>
-        public Dictionary<string, string> Metadata
-        {
-            get => _metadata;
-            set => _metadata = value ?? [];
-        }
+        public Dictionary<string, string> Metadata { get; set; } = [];
 
         /// <summary>
         /// Gets or sets a value indicating whether server-side video transcoding is required for playback.
