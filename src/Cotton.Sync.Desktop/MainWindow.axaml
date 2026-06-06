@@ -51,14 +51,14 @@
                     Spacing="5"
                     VerticalAlignment="Center"
                     IsVisible="{Binding IsDashboardVisible}">
-          <Button Classes="icon"
+          <Button Classes="icon flatIcon"
                   ToolTip.Tip="Sync now"
                   IsVisible="{Binding CanSyncNow}"
                   Command="{Binding SyncNowCommand}">
             <materialIcons:MaterialIcon Kind="Refresh"
                                         Width="16"
                                         Height="16"
-                                        Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                                        Foreground="{DynamicResource CottonPrimaryBrush}" />
           </Button>
           <Button Classes="icon"
                   ToolTip.Tip="More actions">
@@ -326,14 +326,14 @@
                         Orientation="Horizontal"
                         Spacing="6"
                         VerticalAlignment="Center">
-              <Button Classes="icon"
+              <Button Classes="icon flatIcon"
                       ToolTip.Tip="Run synchronization again"
                       IsVisible="{Binding CanRetryActionRequired}"
                       Command="{Binding SyncNowCommand}">
                 <materialIcons:MaterialIcon Kind="Refresh"
                                             Width="16"
                                             Height="16"
-                                            Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                                            Foreground="{DynamicResource CottonPrimaryBrush}" />
               </Button>
               <Button Classes="icon"
                       ToolTip.Tip="Run desktop self-test"
@@ -399,13 +399,13 @@
                            FontSize="12" />
               </StackPanel>
               <Button Grid.Column="1"
-                      Classes="icon"
+                      Classes="icon flatIcon"
                       ToolTip.Tip="Run synchronization again"
                       Command="{Binding SyncNowCommand}">
                 <materialIcons:MaterialIcon Kind="Refresh"
                                             Width="16"
                                             Height="16"
-                                            Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                                            Foreground="{DynamicResource CottonPrimaryBrush}" />
               </Button>
             </Grid>
 

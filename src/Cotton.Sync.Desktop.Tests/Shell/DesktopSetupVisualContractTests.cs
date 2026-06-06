@@ -29,11 +29,16 @@ public sealed class DesktopSetupVisualContractTests
     public void RefreshActions_UseUncircledIcon()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string appXaml = File.ReadAllText(GetDesktopFilePath("App.axaml"));
 
         Assert.Multiple(() =>
         {
             Assert.That(mainWindowXaml, Does.Not.Contain("Kind=\"RefreshCircle\""));
             Assert.That(CountOccurrences(mainWindowXaml, "Kind=\"Refresh\""), Is.EqualTo(3));
+            Assert.That(CountOccurrences(mainWindowXaml, "Classes=\"icon flatIcon\""), Is.EqualTo(3));
+            Assert.That(CountOccurrences(mainWindowXaml, "Foreground=\"{DynamicResource CottonPrimaryBrush}\""), Is.EqualTo(3));
+            Assert.That(appXaml, Does.Contain("Style Selector=\"Button.flatIcon\""));
+            Assert.That(appXaml, Does.Contain("Property=\"Background\" Value=\"Transparent\""));
         });
     }
 

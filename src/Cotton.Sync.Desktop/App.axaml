@@ -101,6 +101,18 @@
       <Setter Property="HorizontalContentAlignment" Value="Center" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
+    <Style Selector="Button.flatIcon">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.flatIcon:pointerover">
+      <Setter Property="Background" Value="{DynamicResource CottonSurfaceMutedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource CottonBorderBrush}" />
+    </Style>
+    <Style Selector="Button.flatIcon:pressed">
+      <Setter Property="Background" Value="{DynamicResource CottonSurfaceMutedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource CottonBorderBrush}" />
+    </Style>
     <Style Selector="Button.emptyIcon">
       <Setter Property="Width" Value="48" />
       <Setter Property="Height" Value="48" />
