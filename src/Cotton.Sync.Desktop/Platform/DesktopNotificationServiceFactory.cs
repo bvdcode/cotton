@@ -11,13 +11,18 @@ internal static class DesktopNotificationServiceFactory
 
     public static IDesktopNotificationService CreateDefault()
     {
-        return CreateForPlatform(ResolvePlatform(), Environment.GetEnvironmentVariable("PATH"));
+        return CreateForPlatform(
+            ResolvePlatform(),
+            Environment.GetEnvironmentVariable("PATH"),
+            AppContext.BaseDirectory);
     }
 
     internal static IDesktopNotificationService CreateForPlatform(
         DesktopNotificationPlatform platform,
-        string? pathValue)
+        string? pathValue,
+        string? appBaseDirectory = null)
     {
+        string? iconPath = ResolveNotificationIconPath(appBaseDirectory ?? AppContext.BaseDirectory);
         if (platform == DesktopNotificationPlatform.Linux)
         {
             string? notifySendPath = ResolveExecutablePath(
@@ -25,7 +30,7 @@ internal static class DesktopNotificationServiceFactory
                 pathValue);
             return notifySendPath is null
                 ? new UnsupportedDesktopNotificationService()
-                : new NotifySendNotificationService(notifySendPath);
+                : new NotifySendNotificationService(notifySendPath, iconPath);
         }
 
         if (platform == DesktopNotificationPlatform.Windows)
@@ -35,7 +40,7 @@ internal static class DesktopNotificationServiceFactory
                 pathValue);
             return powerShellPath is null
                 ? new UnsupportedDesktopNotificationService()
-                : new WindowsToastNotificationService(powerShellPath);
+                : new WindowsToastNotificationService(powerShellPath, iconPath);
         }
 
         return new UnsupportedDesktopNotificationService();
@@ -44,6 +49,13 @@ internal static class DesktopNotificationServiceFactory
     internal static string? ResolveExecutablePath(string commandName, string? pathValue)
     {
         return ExecutablePathResolver.Resolve(commandName, pathValue);
+    }
+
+    internal static string? ResolveNotificationIconPath(string appBaseDirectory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(appBaseDirectory);
+        string candidate = Path.Combine(appBaseDirectory, "Assets", "icon-192.png");
+        return File.Exists(candidate) ? candidate : null;
     }
 
     private static DesktopNotificationPlatform ResolvePlatform()

@@ -11,11 +11,13 @@ internal sealed class NotifySendNotificationService : IDesktopNotificationServic
     private const string AppName = "Cotton Sync";
 
     private readonly string _executablePath;
+    private readonly string? _iconPath;
 
-    public NotifySendNotificationService(string executablePath)
+    public NotifySendNotificationService(string executablePath, string? iconPath = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(executablePath);
         _executablePath = executablePath.Trim();
+        _iconPath = string.IsNullOrWhiteSpace(iconPath) ? null : iconPath.Trim();
     }
 
     public bool IsSupported => true;
@@ -26,7 +28,7 @@ internal sealed class NotifySendNotificationService : IDesktopNotificationServic
         ArgumentException.ThrowIfNullOrWhiteSpace(message);
         try
         {
-            Process? process = Process.Start(CreateStartInfo(_executablePath, title, message));
+            Process? process = Process.Start(CreateStartInfo(_executablePath, title, message, _iconPath));
             process?.Dispose();
         }
         catch (Exception exception) when (IsExpectedNotificationFailure(exception))
@@ -36,6 +38,15 @@ internal sealed class NotifySendNotificationService : IDesktopNotificationServic
     }
 
     internal static ProcessStartInfo CreateStartInfo(string executablePath, string title, string message)
+    {
+        return CreateStartInfo(executablePath, title, message, iconPath: null);
+    }
+
+    internal static ProcessStartInfo CreateStartInfo(
+        string executablePath,
+        string title,
+        string message,
+        string? iconPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(executablePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
@@ -48,6 +59,12 @@ internal sealed class NotifySendNotificationService : IDesktopNotificationServic
         };
         startInfo.ArgumentList.Add("--app-name");
         startInfo.ArgumentList.Add(AppName);
+        if (!string.IsNullOrWhiteSpace(iconPath))
+        {
+            startInfo.ArgumentList.Add("--icon");
+            startInfo.ArgumentList.Add(iconPath.Trim());
+        }
+
         startInfo.ArgumentList.Add(title);
         startInfo.ArgumentList.Add(message);
         return startInfo;

@@ -10,11 +10,13 @@ namespace Cotton.Sync.Desktop.Platform;
 internal sealed class WindowsToastNotificationService : IDesktopNotificationService
 {
     private readonly string _powerShellPath;
+    private readonly string? _iconPath;
 
-    public WindowsToastNotificationService(string powerShellPath)
+    public WindowsToastNotificationService(string powerShellPath, string? iconPath = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(powerShellPath);
         _powerShellPath = powerShellPath.Trim();
+        _iconPath = string.IsNullOrWhiteSpace(iconPath) ? null : iconPath.Trim();
     }
 
     public bool IsSupported => true;
@@ -25,7 +27,7 @@ internal sealed class WindowsToastNotificationService : IDesktopNotificationServ
         ArgumentException.ThrowIfNullOrWhiteSpace(message);
         try
         {
-            Process? process = Process.Start(CreateStartInfo(_powerShellPath, title, message));
+            Process? process = Process.Start(CreateStartInfo(_powerShellPath, title, message, _iconPath));
             process?.Dispose();
         }
         catch (Exception exception) when (IsExpectedNotificationFailure(exception))
@@ -35,6 +37,15 @@ internal sealed class WindowsToastNotificationService : IDesktopNotificationServ
     }
 
     internal static ProcessStartInfo CreateStartInfo(string powerShellPath, string title, string message)
+    {
+        return CreateStartInfo(powerShellPath, title, message, iconPath: null);
+    }
+
+    internal static ProcessStartInfo CreateStartInfo(
+        string powerShellPath,
+        string title,
+        string message,
+        string? iconPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(powerShellPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
@@ -50,7 +61,7 @@ internal sealed class WindowsToastNotificationService : IDesktopNotificationServ
         startInfo.ArgumentList.Add("-ExecutionPolicy");
         startInfo.ArgumentList.Add("Bypass");
         startInfo.ArgumentList.Add("-EncodedCommand");
-        startInfo.ArgumentList.Add(EncodePowerShellCommand(CreateToastCommand(title, message)));
+        startInfo.ArgumentList.Add(EncodePowerShellCommand(CreateToastCommand(title, message, ToFileUri(iconPath))));
         return startInfo;
     }
 
@@ -60,12 +71,12 @@ internal sealed class WindowsToastNotificationService : IDesktopNotificationServ
         return Encoding.Unicode.GetString(Convert.FromBase64String(encodedCommand));
     }
 
-    private static string CreateToastCommand(string title, string message)
+    private static string CreateToastCommand(string title, string message, string? iconUri)
     {
         string titleLiteral = ToPowerShellSingleQuotedLiteral(title);
         string messageLiteral = ToPowerShellSingleQuotedLiteral(message);
-        return string.Join(
-            Environment.NewLine,
+        List<string> lines =
+        [
             "$ErrorActionPreference = 'SilentlyContinue'",
             "Add-Type -AssemblyName System.Runtime.WindowsRuntime",
             "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null",
@@ -74,9 +85,27 @@ internal sealed class WindowsToastNotificationService : IDesktopNotificationServ
             "$xml = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent($template)",
             "$textNodes = $xml.GetElementsByTagName('text')",
             $"$null = $textNodes.Item(0).AppendChild($xml.CreateTextNode({titleLiteral}))",
-            $"$null = $textNodes.Item(1).AppendChild($xml.CreateTextNode({messageLiteral}))",
+            $"$null = $textNodes.Item(1).AppendChild($xml.CreateTextNode({messageLiteral}))"
+        ];
+        if (!string.IsNullOrWhiteSpace(iconUri))
+        {
+            string iconUriLiteral = ToPowerShellSingleQuotedLiteral(iconUri);
+            lines.AddRange(
+            [
+                "$bindingNode = $xml.GetElementsByTagName('binding').Item(0)",
+                "$imageNode = $xml.CreateElement('image')",
+                "$imageNode.SetAttribute('placement', 'appLogoOverride')",
+                $"$imageNode.SetAttribute('src', {iconUriLiteral})",
+                "$null = $bindingNode.AppendChild($imageNode)"
+            ]);
+        }
+
+        lines.AddRange(
+        [
             "$toast = [Windows.UI.Notifications.ToastNotification]::new($xml)",
-            $"[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{DesktopAppIdentity.AppUserModelId}').Show($toast)");
+            $"[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{DesktopAppIdentity.AppUserModelId}').Show($toast)"
+        ]);
+        return string.Join(Environment.NewLine, lines);
     }
 
     private static string EncodePowerShellCommand(string command)
@@ -87,6 +116,16 @@ internal sealed class WindowsToastNotificationService : IDesktopNotificationServ
     private static string ToPowerShellSingleQuotedLiteral(string value)
     {
         return "'" + value.Replace("'", "''", StringComparison.Ordinal) + "'";
+    }
+
+    private static string? ToFileUri(string? iconPath)
+    {
+        if (string.IsNullOrWhiteSpace(iconPath))
+        {
+            return null;
+        }
+
+        return new Uri(Path.GetFullPath(iconPath.Trim())).AbsoluteUri;
     }
 
     private static bool IsExpectedNotificationFailure(Exception exception)

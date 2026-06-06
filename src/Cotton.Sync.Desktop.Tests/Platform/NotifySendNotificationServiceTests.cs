@@ -30,4 +30,24 @@ public sealed class NotifySendNotificationServiceTests
             }));
         });
     }
+
+    [Test]
+    public void CreateStartInfo_WithIconPassesNotifySendIcon()
+    {
+        ProcessStartInfo startInfo = NotifySendNotificationService.CreateStartInfo(
+            "/usr/bin/notify-send",
+            "Initial sync complete",
+            "Documents is up to date.",
+            "/usr/share/icons/hicolor/192x192/apps/cotton-sync.png");
+
+        Assert.That(startInfo.ArgumentList, Is.EqualTo(new[]
+        {
+            "--app-name",
+            "Cotton Sync",
+            "--icon",
+            "/usr/share/icons/hicolor/192x192/apps/cotton-sync.png",
+            "Initial sync complete",
+            "Documents is up to date.",
+        }));
+    }
 }

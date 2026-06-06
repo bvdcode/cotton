@@ -45,6 +45,27 @@ public sealed class DesktopNotificationServiceFactoryTests
     }
 
     [Test]
+    public void ResolveNotificationIconPath_ReturnsPackagedIconWhenPresent()
+    {
+        string assetsDirectory = Path.Combine(_tempDirectory, "Assets");
+        Directory.CreateDirectory(assetsDirectory);
+        string iconPath = Path.Combine(assetsDirectory, "icon-192.png");
+        File.WriteAllBytes(iconPath, [1, 2, 3]);
+
+        string? result = DesktopNotificationServiceFactory.ResolveNotificationIconPath(_tempDirectory);
+
+        Assert.That(result, Is.EqualTo(iconPath));
+    }
+
+    [Test]
+    public void ResolveNotificationIconPath_ReturnsNullWhenPackagedIconIsMissing()
+    {
+        string? result = DesktopNotificationServiceFactory.ResolveNotificationIconPath(_tempDirectory);
+
+        Assert.That(result, Is.Null);
+    }
+
+    [Test]
     public void CreateForPlatform_ReturnsLinuxNotifySendAdapterWhenNotifySendExists()
     {
         string commandPath = Path.Combine(_tempDirectory, "notify-send");

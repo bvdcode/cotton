@@ -37,6 +37,28 @@ public sealed class WindowsToastNotificationServiceTests
             Assert.That(command, Does.Contain("CreateToastNotifier('Cotton.Sync.Desktop')"));
             Assert.That(command, Does.Contain("$xml.CreateTextNode('Action required')"));
             Assert.That(command, Does.Contain("$xml.CreateTextNode('Bob''s folder needs attention')"));
+            Assert.That(command, Does.Not.Contain("appLogoOverride"));
+        });
+    }
+
+    [Test]
+    public void CreateStartInfo_WithIconAddsToastAppLogoOverride()
+    {
+        string iconPath = Path.Combine(TestContext.CurrentContext.TestDirectory, "Assets", "icon-192.png");
+        ProcessStartInfo startInfo = WindowsToastNotificationService.CreateStartInfo(
+            @"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe",
+            "Signed in",
+            "desktop@example.test",
+            iconPath);
+
+        string command = WindowsToastNotificationService.DecodePowerShellCommand(startInfo.ArgumentList.Last());
+        string expectedIconUri = new Uri(Path.GetFullPath(iconPath)).AbsoluteUri;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(command, Does.Contain("$imageNode.SetAttribute('placement', 'appLogoOverride')"));
+            Assert.That(command, Does.Contain("$imageNode.SetAttribute('src', '" + expectedIconUri + "')"));
+            Assert.That(command, Does.Contain("$null = $bindingNode.AppendChild($imageNode)"));
         });
     }
 }
