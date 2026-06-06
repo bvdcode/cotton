@@ -600,9 +600,12 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("-ExpectedIcon \"src/Cotton.Sync.Desktop/Assets/app.ico\""));
             Assert.That(workflow, Does.Contain("Packaging/windows/smoke-diagnostics-export.ps1"));
             Assert.That(workflow, Does.Contain("Windows uninstaller was not found after upgrade."));
+            Assert.That(workflow, Does.Contain("HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"));
+            Assert.That(workflow, Does.Contain("Set-ItemProperty -Path $runKey -Name \"Cotton Sync\""));
             Assert.That(workflow, Does.Contain("Upgraded desktop executable remained after uninstall."));
             Assert.That(workflow, Does.Contain("Upgraded Start Menu shortcut remained after uninstall."));
             Assert.That(workflow, Does.Contain("Upgraded Start Menu uninstall shortcut remained after uninstall."));
+            Assert.That(workflow, Does.Contain("Upgraded autostart registry value remained after uninstall."));
         });
     }
 

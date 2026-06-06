@@ -701,6 +701,10 @@ jobs:
             throw "Windows uninstaller was not found after upgrade."
           }
 
+          $runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+          New-Item -Path $runKey -Force | Out-Null
+          Set-ItemProperty -Path $runKey -Name "Cotton Sync" -Value "`"$installedExe`" --start-minimized"
+
           $uninstall = Start-Process `
             -FilePath $uninstaller `
             -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/LOG=$uninstallLog") `
@@ -720,6 +724,10 @@ jobs:
           }
           if (Test-Path $startMenuUninstallShortcut) {
             throw "Upgraded Start Menu uninstall shortcut remained after uninstall."
+          }
+          $runValue = (Get-ItemProperty -Path $runKey -Name "Cotton Sync" -ErrorAction SilentlyContinue)."Cotton Sync"
+          if ($runValue) {
+            throw "Upgraded autostart registry value remained after uninstall."
           }
 
       - name: Upload desktop Windows installer artifact
