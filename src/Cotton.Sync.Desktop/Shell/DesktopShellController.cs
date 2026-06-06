@@ -85,6 +85,7 @@ internal sealed class DesktopShellController : IDesktopShellController
     {
         await _preferencesStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
         await _syncPairStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        await InitializeSyncStateStoreAsync(cancellationToken).ConfigureAwait(false);
         AppPreferences preferences = await _preferencesStore.GetAsync(cancellationToken).ConfigureAwait(false);
         bool startWithOperatingSystem = await ResolveStartWithOperatingSystemAsync(
             preferences,
@@ -710,6 +711,12 @@ internal sealed class DesktopShellController : IDesktopShellController
             new ProcessPlatformCommandService(loggerFactory.CreateLogger<ProcessPlatformCommandService>()),
             DesktopAutostartServiceFactory.CreateDefault(),
             startupOptions);
+    }
+
+    private async Task InitializeSyncStateStoreAsync(CancellationToken cancellationToken)
+    {
+        var stateStore = new SqliteSyncStateStore(_paths.SyncStateDatabasePath);
+        await stateStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private static Task<string> CheckLocalRootAsync(

@@ -274,6 +274,23 @@ public sealed class DesktopShellControllerSelfTestTests
     }
 
     [Test]
+    public async Task LoadAsync_InitializesSyncStateDatabaseForNewProfile()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        using DesktopShellController controller = CreateController(paths, new SqliteSyncPairSettingsStore(paths.AppDatabasePath));
+
+        await controller.LoadAsync();
+
+        var stateStore = new SqliteSyncStateStore(paths.SyncStateDatabasePath);
+        SyncChangeCursor cursor = await stateStore.GetChangeCursorAsync("new-profile");
+        Assert.Multiple(() =>
+        {
+            Assert.That(File.Exists(paths.SyncStateDatabasePath), Is.True);
+            Assert.That(cursor.LastCursor, Is.Zero);
+        });
+    }
+
+    [Test]
     public async Task LoadAsync_ReturnsEmptySignInHintsForNewPreferences()
     {
         using DesktopShellController controller = CreateController();
