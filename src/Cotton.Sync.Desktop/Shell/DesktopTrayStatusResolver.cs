@@ -11,7 +11,10 @@ internal static class DesktopTrayStatusResolver
         bool isSignedIn,
         string statusText,
         bool hasStatusAttention,
-        bool hasActiveSyncProgress = false)
+        bool hasActiveSyncProgress = false,
+        string? activeProgressTitle = null,
+        string? activeProgressDetails = null,
+        string? activeProgressHeaderDetails = null)
     {
         if (!isSignedIn)
         {
@@ -37,10 +40,24 @@ internal static class DesktopTrayStatusResolver
 
         if (hasActiveSyncProgress)
         {
-            return Create(DesktopTrayStatusKind.Syncing, "Syncing");
+            return Create(
+                DesktopTrayStatusKind.Syncing,
+                CreateActiveSyncLabel(activeProgressTitle, activeProgressHeaderDetails, activeProgressDetails));
         }
 
         return Create(DesktopTrayStatusKind.Idle, "Connected");
+    }
+
+    private static string CreateActiveSyncLabel(
+        string? activeProgressTitle,
+        string? activeProgressHeaderDetails,
+        string? activeProgressDetails)
+    {
+        string title = string.IsNullOrWhiteSpace(activeProgressTitle) ? "Syncing" : activeProgressTitle.Trim();
+        string details = !string.IsNullOrWhiteSpace(activeProgressHeaderDetails)
+            ? activeProgressHeaderDetails.Trim()
+            : string.IsNullOrWhiteSpace(activeProgressDetails) ? string.Empty : activeProgressDetails.Trim();
+        return string.IsNullOrWhiteSpace(details) ? title : title + " - " + details;
     }
 
     private static DesktopTrayStatus Create(DesktopTrayStatusKind kind, string label)

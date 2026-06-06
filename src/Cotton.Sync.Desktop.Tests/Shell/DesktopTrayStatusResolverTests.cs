@@ -110,6 +110,39 @@ public sealed class DesktopTrayStatusResolverTests
     }
 
     [Test]
+    public void FromShellState_AddsActiveProgressToSyncingTooltip()
+    {
+        DesktopTrayStatus status = DesktopTrayStatusResolver.FromShellState(
+            isSignedIn: true,
+            statusText: "Connected",
+            hasStatusAttention: false,
+            hasActiveSyncProgress: true,
+            activeProgressTitle: "Syncing 2 folders",
+            activeProgressDetails: "10 of 40 files across 2 folders",
+            activeProgressHeaderDetails: "6.0 MB / 24 MB · 3.0 MB/s · 6s left");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(status.Kind, Is.EqualTo(DesktopTrayStatusKind.Syncing));
+            Assert.That(status.ToolTipText, Is.EqualTo("Cotton Sync - Syncing 2 folders - 6.0 MB / 24 MB · 3.0 MB/s · 6s left"));
+        });
+    }
+
+    [Test]
+    public void FromShellState_UsesRunProgressDetailsInSyncingTooltipWhenHeaderDetailsAreMissing()
+    {
+        DesktopTrayStatus status = DesktopTrayStatusResolver.FromShellState(
+            isSignedIn: true,
+            statusText: "Connected",
+            hasStatusAttention: false,
+            hasActiveSyncProgress: true,
+            activeProgressTitle: "Documents: Scanning local files",
+            activeProgressDetails: "123 files found · report.txt");
+
+        Assert.That(status.ToolTipText, Is.EqualTo("Cotton Sync - Documents: Scanning local files - 123 files found · report.txt"));
+    }
+
+    [Test]
     public void FromShellState_ReturnsIdleWhenSignedInAndNoStatusMatches()
     {
         DesktopTrayStatus status = DesktopTrayStatusResolver.FromShellState(

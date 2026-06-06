@@ -112,7 +112,10 @@ internal sealed class DesktopTrayController : IDisposable
         if (e.PropertyName is nameof(ShellViewModel.HeaderStatusText)
             or nameof(ShellViewModel.IsSignedIn)
             or nameof(ShellViewModel.HasStatusAttention)
-            or nameof(ShellViewModel.HasCurrentWorkProgress))
+            or nameof(ShellViewModel.HasCurrentWorkProgress)
+            or nameof(ShellViewModel.CurrentWorkProgressTitle)
+            or nameof(ShellViewModel.CurrentWorkProgressDetails)
+            or nameof(ShellViewModel.CurrentWorkProgressHeaderDetails))
         {
             UpdateTrayStatus();
         }
@@ -146,7 +149,10 @@ internal sealed class DesktopTrayController : IDisposable
             _viewModel.IsSignedIn,
             _viewModel.HeaderStatusText,
             _viewModel.HasStatusAttention,
-            _viewModel.HasCurrentWorkProgress);
+            _viewModel.HasCurrentWorkProgress,
+            _viewModel.CurrentWorkProgressTitle,
+            _viewModel.CurrentWorkProgressDetails,
+            _viewModel.CurrentWorkProgressHeaderDetails);
         _trayIcon.ToolTipText = status.ToolTipText;
         if (_currentIconUri != status.IconUri)
         {
