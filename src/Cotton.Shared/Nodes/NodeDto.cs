@@ -12,6 +12,8 @@ namespace Cotton.Nodes
     /// </summary>
     public class NodeDto : BaseDto<Guid>
     {
+        private Dictionary<string, string>? _metadata;
+
         /// <summary>
         /// Gets or sets the layout identifier.
         /// </summary>
@@ -30,6 +32,10 @@ namespace Cotton.Nodes
         /// <summary>
         /// Gets or sets structured metadata attached to the node.
         /// </summary>
-        public Dictionary<string, string> Metadata { get; set; } = [];
+        public Dictionary<string, string> Metadata
+        {
+            get => _metadata ??= [];
+            set => _metadata = value;
+        }
     }
 }

@@ -12,6 +12,8 @@ namespace Cotton.Files
     /// </summary>
     public class NodeFileManifestDto : BaseDto<Guid>
     {
+        private Dictionary<string, string>? _metadata;
+
         /// <summary>
         /// Gets or sets the parent node identifier.
         /// </summary>
@@ -60,7 +62,11 @@ namespace Cotton.Files
         /// <summary>
         /// Gets or sets structured metadata attached to the file entry.
         /// </summary>
-        public Dictionary<string, string> Metadata { get; set; } = [];
+        public Dictionary<string, string> Metadata
+        {
+            get => _metadata ??= [];
+            set => _metadata = value;
+        }
 
         /// <summary>
         /// Gets or sets a value indicating whether server-side video transcoding is required for playback.
