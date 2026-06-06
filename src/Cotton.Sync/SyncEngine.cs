@@ -100,7 +100,7 @@ public sealed class SyncEngine : ISyncEngine
             remoteByPath,
             directory => directory.RelativePath,
             file => file.RelativePath);
-        List<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys);
+        IReadOnlyCollection<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys);
         ReportRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, 0, pathKeys.Count, null, startedAtUtc);
         await ReconcileDirectoriesWithoutBaselineAsync(
             syncPair,
@@ -201,7 +201,7 @@ public sealed class SyncEngine : ISyncEngine
     }
 
     private async Task EnsureLocalContentHashesForStateFilesAsync(
-        IReadOnlyList<string> pathKeys,
+        IEnumerable<string> pathKeys,
         IReadOnlyDictionary<string, LocalFileSnapshot> localByPath,
         IReadOnlyDictionary<string, SyncStateEntry> stateByPath,
         CancellationToken cancellationToken)
@@ -264,10 +264,9 @@ public sealed class SyncEngine : ISyncEngine
             PathComparer);
         remoteNodeIdsByPath[string.Empty] = remoteRootNode.Id;
 
-        List<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys)
+        IEnumerable<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys)
             .OrderBy(static key => GetPathDepth(key))
-            .ThenBy(static key => key, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+            .ThenBy(static key => key, StringComparer.OrdinalIgnoreCase);
         foreach (string key in pathKeys)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -1160,9 +1159,9 @@ public sealed class SyncEngine : ISyncEngine
         }
     }
 
-    private static List<string> BuildPathKeys(params IEnumerable<string>[] keySets)
+    private static IReadOnlyCollection<string> BuildPathKeys(params IEnumerable<string>[] keySets)
     {
-        var keys = new HashSet<string>(PathComparer);
+        var keys = new SortedSet<string>(PathComparer);
         foreach (IEnumerable<string> keySet in keySets)
         {
             foreach (string key in keySet)
@@ -1171,7 +1170,7 @@ public sealed class SyncEngine : ISyncEngine
             }
         }
 
-        return keys.OrderBy(static key => key, StringComparer.OrdinalIgnoreCase).ToList();
+        return keys;
     }
 
     private static void Report(
