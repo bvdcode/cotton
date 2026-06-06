@@ -6,10 +6,10 @@ namespace Cotton.Sync.App.Activities;
 /// <summary>
 /// Publishes live synchronization activity entries to UI and command surfaces.
 /// </summary>
-public interface IAppActivityPublisher : IObservable<SyncActivity>
+public interface IAppActivityPublisher : IObservable<AppSyncActivity>
 {
     /// <summary>
     /// Publishes one activity entry.
     /// </summary>
-    void Publish(SyncActivity activity);
+    void Publish(AppSyncActivity activity);
 }

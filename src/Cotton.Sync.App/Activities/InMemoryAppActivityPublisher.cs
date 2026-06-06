@@ -9,10 +9,10 @@ namespace Cotton.Sync.App.Activities;
 public sealed class InMemoryAppActivityPublisher : IAppActivityPublisher
 {
     private readonly object _gate = new();
-    private readonly List<IObserver<SyncActivity>> _observers = [];
+    private readonly List<IObserver<AppSyncActivity>> _observers = [];
 
     /// <inheritdoc />
-    public IDisposable Subscribe(IObserver<SyncActivity> observer)
+    public IDisposable Subscribe(IObserver<AppSyncActivity> observer)
     {
         ArgumentNullException.ThrowIfNull(observer);
         lock (_gate)
@@ -24,22 +24,22 @@ public sealed class InMemoryAppActivityPublisher : IAppActivityPublisher
     }
 
     /// <inheritdoc />
-    public void Publish(SyncActivity activity)
+    public void Publish(AppSyncActivity activity)
     {
         ArgumentNullException.ThrowIfNull(activity);
-        IObserver<SyncActivity>[] observers;
+        IObserver<AppSyncActivity>[] observers;
         lock (_gate)
         {
             observers = [.. _observers];
         }
 
-        foreach (IObserver<SyncActivity> observer in observers)
+        foreach (IObserver<AppSyncActivity> observer in observers)
         {
             observer.OnNext(activity);
         }
     }
 
-    private void Unsubscribe(IObserver<SyncActivity> observer)
+    private void Unsubscribe(IObserver<AppSyncActivity> observer)
     {
         lock (_gate)
         {
@@ -50,9 +50,9 @@ public sealed class InMemoryAppActivityPublisher : IAppActivityPublisher
     private sealed class Subscription : IDisposable
     {
         private readonly InMemoryAppActivityPublisher _publisher;
-        private IObserver<SyncActivity>? _observer;
+        private IObserver<AppSyncActivity>? _observer;
 
-        public Subscription(InMemoryAppActivityPublisher publisher, IObserver<SyncActivity> observer)
+        public Subscription(InMemoryAppActivityPublisher publisher, IObserver<AppSyncActivity> observer)
         {
             _publisher = publisher;
             _observer = observer;
@@ -60,7 +60,7 @@ public sealed class InMemoryAppActivityPublisher : IAppActivityPublisher
 
         public void Dispose()
         {
-            IObserver<SyncActivity>? observer = Interlocked.Exchange(ref _observer, null);
+            IObserver<AppSyncActivity>? observer = Interlocked.Exchange(ref _observer, null);
             if (observer is not null)
             {
                 _publisher.Unsubscribe(observer);

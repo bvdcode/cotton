@@ -6,7 +6,7 @@ using Cotton.Sync.App.Progress;
 using Cotton.Sync.App.Runners;
 using Cotton.Sync.App.SyncPairs;
 using Cotton.Sync.App.Tests.TestSupport;
-using AppSyncActivity = Cotton.Sync.App.Activities.SyncActivity;
+using AppSyncActivity = Cotton.Sync.App.Activities.AppSyncActivity;
 using AppSyncRunProgress = Cotton.Sync.App.Progress.AppRunProgress;
 using AppSyncTransferProgress = Cotton.Sync.App.Progress.AppTransferProgress;
 using CoreSyncActivity = Cotton.Sync.SyncActivity;

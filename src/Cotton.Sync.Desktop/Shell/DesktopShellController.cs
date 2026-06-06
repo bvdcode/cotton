@@ -22,7 +22,6 @@ using Cotton.Sync.Desktop.Startup;
 using Cotton.Sync.State;
 using Microsoft.Extensions.Logging;
 using AppRunProgress = Cotton.Sync.App.Progress.AppRunProgress;
-using AppSyncActivity = Cotton.Sync.App.Activities.SyncActivity;
 using AppTransferProgress = Cotton.Sync.App.Progress.AppTransferProgress;
 
 namespace Cotton.Sync.Desktop.Shell;

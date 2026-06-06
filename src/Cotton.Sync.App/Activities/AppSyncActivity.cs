@@ -8,12 +8,12 @@ namespace Cotton.Sync.App.Activities;
 /// <summary>
 /// Represents one recent sync activity entry.
 /// </summary>
-public sealed class SyncActivity
+public sealed class AppSyncActivity
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="SyncActivity" /> class.
+    /// Initializes a new instance of the <see cref="AppSyncActivity" /> class.
     /// </summary>
-    public SyncActivity(
+    public AppSyncActivity(
         Guid id,
         Guid syncPairId,
         SyncActivityKind type,

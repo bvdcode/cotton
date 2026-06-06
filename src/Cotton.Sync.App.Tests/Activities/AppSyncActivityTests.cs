@@ -2,13 +2,13 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Sync.App.Activities;
-using AppSyncActivity = Cotton.Sync.App.Activities.SyncActivity;
+using AppSyncActivity = Cotton.Sync.App.Activities.AppSyncActivity;
 using AppSyncActivityKind = Cotton.Sync.SyncActivityKind;
 using Cotton.Sync.App.Tests.TestSupport;
 
 namespace Cotton.Sync.App.Tests.Activities;
 
-public sealed class SyncActivityTests
+public sealed class AppSyncActivityTests
 {
     [Test]
     public void Constructor_RejectsUnknownType()

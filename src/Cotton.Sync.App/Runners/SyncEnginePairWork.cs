@@ -4,7 +4,6 @@
 using Cotton.Sync.App.Activities;
 using Cotton.Sync.App.Progress;
 using Cotton.Sync.App.SyncPairs;
-using AppSyncActivity = Cotton.Sync.App.Activities.SyncActivity;
 using CoreSyncActivity = Cotton.Sync.SyncActivity;
 using CoreSyncActivityKind = Cotton.Sync.SyncActivityKind;
 using CoreSyncEngine = Cotton.Sync.ISyncEngine;
