@@ -278,6 +278,35 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_ReportsRemoteScanFileDiscoveryProgress()
+    {
+        var progress = new RecordingProgress<SyncRunProgress>();
+        var remoteCrawler = new FakeRemoteTreeProgressCrawler(
+            EmptyRemoteTree(),
+            "Cloud/a.txt",
+            "Cloud/b.txt");
+        SyncEngine engine = new(
+            new FakeLocalFileScanner(),
+            remoteCrawler,
+            new FakeRemoteFileSynchronizer(),
+            new SqliteSyncStateStore(_databasePath));
+
+        await engine.RunOnceAsync(
+            Pair(),
+            new SyncRunOptions { RunProgress = progress });
+
+        IReadOnlyList<SyncRunProgress> remoteScanProgress = progress.Values
+            .Where(item => item.Stage == SyncRunProgressStage.ScanningRemote)
+            .ToList();
+        Assert.Multiple(() =>
+        {
+            Assert.That(remoteScanProgress.Select(item => item.FilesCompleted), Does.Contain(1));
+            Assert.That(remoteScanProgress.Select(item => item.FilesCompleted), Does.Contain(2));
+            Assert.That(remoteScanProgress.Where(item => !string.IsNullOrWhiteSpace(item.CurrentPath)).Select(item => item.CurrentPath), Is.EqualTo(new[] { "Cloud/a.txt", "Cloud/b.txt" }));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_ReportsRunTransferAndActivityProgressForUpload()
     {
         LocalFileSnapshot local = LocalFile("Docs/local.txt", "local-content");
@@ -1976,6 +2005,40 @@ public sealed class SyncEngineTests
             }
 
             return Task.FromResult(_lastSnapshot);
+        }
+    }
+
+    private sealed class FakeRemoteTreeProgressCrawler : IRemoteTreeProgressCrawler
+    {
+        private readonly RemoteTreeSnapshot _snapshot;
+        private readonly IReadOnlyList<string> _progressPaths;
+
+        public FakeRemoteTreeProgressCrawler(RemoteTreeSnapshot snapshot, params string[] progressPaths)
+        {
+            _snapshot = snapshot;
+            _progressPaths = progressPaths.Length == 0
+                ? snapshot.Files.Select(file => file.RelativePath).ToList()
+                : progressPaths.ToList();
+        }
+
+        public Task<RemoteTreeSnapshot> CrawlAsync(Guid rootNodeId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_snapshot);
+        }
+
+        public Task<RemoteTreeSnapshot> CrawlAsync(
+            Guid rootNodeId,
+            IProgress<RemoteTreeScanProgress>? progress,
+            CancellationToken cancellationToken = default)
+        {
+            progress?.Report(new RemoteTreeScanProgress(0, _snapshot.Directories.Count, currentPath: null));
+            for (int index = 0; index < _progressPaths.Count; index++)
+            {
+                progress?.Report(new RemoteTreeScanProgress(index + 1, _snapshot.Directories.Count, _progressPaths[index]));
+            }
+
+            progress?.Report(new RemoteTreeScanProgress(_progressPaths.Count, _snapshot.Directories.Count, currentPath: null));
+            return Task.FromResult(_snapshot);
         }
     }
 

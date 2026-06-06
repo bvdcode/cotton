@@ -1021,6 +1021,37 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task RunProgressChanged_ShowsRemoteScanDiscoveryCount()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ScanningRemote,
+            FilesCompleted: 123,
+            FilesTotal: null,
+            CurrentPath: "Reports/report.txt",
+            StartedAtUtc: new DateTime(2026, 6, 6, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 6, 9, 0, 5, DateTimeKind.Utc)));
+
+        Assert.Multiple(() =>
+        {
+            SyncPairRowViewModel row = viewModel.SyncPairs.Single();
+            Assert.That(viewModel.HasCurrentRunProgress, Is.True);
+            Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Documents: Scanning Cotton Cloud"));
+            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("123 cloud files found · report.txt"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("123 cloud files found · report.txt"));
+            Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.True);
+            Assert.That(row.CurrentOperation, Is.EqualTo("Scanning Cotton Cloud"));
+            Assert.That(row.IsCurrentProgressIndeterminate, Is.True);
+        });
+    }
+
+    [Test]
     public async Task RunProgressChanged_AggregatesMultipleFolderProgress()
     {
         Guid documentsPairId = Guid.NewGuid();
@@ -1103,6 +1134,48 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("579 files found across 2 folders"));
             Assert.That(viewModel.IsCurrentRunProgressIndeterminate, Is.True);
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("579 files found across 2 folders"));
+            Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.True);
+        });
+    }
+
+    [Test]
+    public async Task RunProgressChanged_AggregatesMultipleRemoteScanCounts()
+    {
+        Guid documentsPairId = Guid.NewGuid();
+        Guid videosPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(
+            CreateSignedInSnapshot(
+                CreatePair(documentsPairId, "Documents", "Syncing"),
+                CreatePair(videosPairId, "Videos", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            documentsPairId,
+            SyncRunProgressStage.ScanningRemote,
+            FilesCompleted: 123,
+            FilesTotal: null,
+            CurrentPath: "Reports/report.txt",
+            StartedAtUtc: new DateTime(2026, 6, 6, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 6, 9, 0, 5, DateTimeKind.Utc)));
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            videosPairId,
+            SyncRunProgressStage.ScanningRemote,
+            FilesCompleted: 456,
+            FilesTotal: null,
+            CurrentPath: "Videos/clip.mp4",
+            StartedAtUtc: new DateTime(2026, 6, 6, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 6, 9, 0, 6, DateTimeKind.Utc)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasCurrentRunProgress, Is.True);
+            Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Syncing 2 folders"));
+            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("579 cloud files found across 2 folders"));
+            Assert.That(viewModel.IsCurrentRunProgressIndeterminate, Is.True);
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("579 cloud files found across 2 folders"));
             Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.True);
         });
     }

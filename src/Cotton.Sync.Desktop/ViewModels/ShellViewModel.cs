@@ -3469,6 +3469,14 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                     + " folders";
             }
 
+            if (completedFiles > 0 && progressValues.All(static progress => progress.Stage == SyncRunProgressStage.ScanningRemote))
+            {
+                return completedFiles.ToString(CultureInfo.CurrentCulture)
+                    + (completedFiles == 1 ? " cloud file found across " : " cloud files found across ")
+                    + progressValues.Count.ToString(CultureInfo.CurrentCulture)
+                    + " folders";
+            }
+
             return progressValues.Count.ToString(CultureInfo.CurrentCulture) + " folders are syncing.";
         }
 
@@ -3516,7 +3524,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         return progress.Stage switch
         {
             SyncRunProgressStage.ScanningLocal => CreateLocalScanProgressDetails(progress),
-            SyncRunProgressStage.ScanningRemote => "Checking Cotton Cloud.",
+            SyncRunProgressStage.ScanningRemote => CreateRemoteScanProgressDetails(progress),
             SyncRunProgressStage.ReconcilingDirectories => "Preparing folders.",
             SyncRunProgressStage.Completed => "Sync pass completed.",
             _ => "Preparing sync.",
@@ -3532,6 +3540,23 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
         string details = progress.FilesCompleted.ToString(CultureInfo.CurrentCulture)
             + (progress.FilesCompleted == 1 ? " file found" : " files found");
+        if (!string.IsNullOrWhiteSpace(progress.CurrentPath))
+        {
+            details += " · " + GetDisplayFileName(progress.CurrentPath);
+        }
+
+        return details;
+    }
+
+    private static string CreateRemoteScanProgressDetails(DesktopRunProgressSnapshot progress)
+    {
+        if (progress.FilesCompleted <= 0)
+        {
+            return "Checking Cotton Cloud.";
+        }
+
+        string details = progress.FilesCompleted.ToString(CultureInfo.CurrentCulture)
+            + (progress.FilesCompleted == 1 ? " cloud file found" : " cloud files found");
         if (!string.IsNullOrWhiteSpace(progress.CurrentPath))
         {
             details += " · " + GetDisplayFileName(progress.CurrentPath);

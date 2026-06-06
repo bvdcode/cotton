@@ -103,6 +103,42 @@ public sealed class RemoteTreeCrawlerTests
         });
     }
 
+    [Test]
+    public async Task CrawlAsync_ReportsScanProgressAsRemoteFilesAreDiscovered()
+    {
+        Guid rootId = Guid.NewGuid();
+        Guid docsId = Guid.NewGuid();
+        var client = new FakeNodeClient();
+        client.Nodes[rootId] = Node(rootId, null, "root");
+        client.Nodes[docsId] = Node(docsId, rootId, "Docs");
+        client.Children[(rootId, 1)] = new NodeContentDto
+        {
+            TotalCount = 2,
+            Nodes = [client.Nodes[docsId]],
+            Files = [File(rootId, "root.txt")],
+        };
+        client.Children[(docsId, 1)] = new NodeContentDto
+        {
+            TotalCount = 2,
+            Files = [File(docsId, "a.txt"), File(docsId, "b.txt")],
+        };
+        var crawler = new RemoteTreeCrawler(client);
+        var progress = new RecordingProgress<RemoteTreeScanProgress>();
+
+        await crawler.CrawlAsync(rootId, progress);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(progress.Values, Has.Count.GreaterThanOrEqualTo(3));
+            Assert.That(progress.Values[0].FilesScanned, Is.Zero);
+            Assert.That(progress.Values[0].DirectoriesScanned, Is.Zero);
+            Assert.That(progress.Values.Any(item => item.FilesScanned == 1 && item.CurrentPath == "root.txt"), Is.True);
+            Assert.That(progress.Values[^1].FilesScanned, Is.EqualTo(3));
+            Assert.That(progress.Values[^1].DirectoriesScanned, Is.EqualTo(1));
+            Assert.That(progress.Values[^1].CurrentPath, Is.Empty);
+        });
+    }
+
     private static NodeDto Node(Guid id, Guid? parentId, string name)
     {
         return new NodeDto
@@ -196,6 +232,16 @@ public sealed class RemoteTreeCrawlerTests
         public Task<List<NodeDto>> GetAncestorsAsync(Guid nodeId, CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
+        }
+    }
+
+    private sealed class RecordingProgress<T> : IProgress<T>
+    {
+        public List<T> Values { get; } = [];
+
+        public void Report(T value)
+        {
+            Values.Add(value);
         }
     }
 }

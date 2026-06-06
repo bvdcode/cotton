@@ -72,8 +72,8 @@ public sealed class SyncEngine : ISyncEngine
         await _stateStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
         LocalTreeSnapshot localTree = await ScanLocalTreeAsync(syncPair.LocalRootPath, options, startedAtUtc, cancellationToken)
             .ConfigureAwait(false);
-        ReportRunProgress(options, SyncRunProgressStage.ScanningRemote, 0, null, null, startedAtUtc);
-        RemoteTreeSnapshot remoteTree = await _remoteCrawler.CrawlAsync(syncPair.RemoteRootNodeId, cancellationToken).ConfigureAwait(false);
+        RemoteTreeSnapshot remoteTree = await ScanRemoteTreeAsync(syncPair.RemoteRootNodeId, options, startedAtUtc, cancellationToken)
+            .ConfigureAwait(false);
         (Dictionary<string, SyncStateEntry> directoryStateByPath, Dictionary<string, SyncStateEntry> stateByPath) =
             await LoadStateByPathAsync(syncPair.SyncPairId, cancellationToken).ConfigureAwait(false);
         var result = new SyncRunResult();
@@ -241,6 +241,26 @@ public sealed class SyncEngine : ISyncEngine
         {
             Files = files.ToList(),
         };
+    }
+
+    private async Task<RemoteTreeSnapshot> ScanRemoteTreeAsync(
+        Guid remoteRootNodeId,
+        SyncRunOptions options,
+        DateTime startedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        ReportRunProgress(options, SyncRunProgressStage.ScanningRemote, 0, null, null, startedAtUtc);
+        if (_remoteCrawler is IRemoteTreeProgressCrawler progressCrawler)
+        {
+            return await progressCrawler
+                .CrawlAsync(
+                    remoteRootNodeId,
+                    new RemoteTreeScanProgressReporter(options, startedAtUtc),
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return await _remoteCrawler.CrawlAsync(remoteRootNodeId, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task ReconcileDirectoriesWithoutBaselineAsync(
@@ -1305,6 +1325,30 @@ public sealed class SyncEngine : ISyncEngine
             ReportRunProgress(
                 _options,
                 SyncRunProgressStage.ScanningLocal,
+                value.FilesScanned,
+                filesTotal: null,
+                value.CurrentPath,
+                _startedAtUtc);
+        }
+    }
+
+    private sealed class RemoteTreeScanProgressReporter : IProgress<RemoteTreeScanProgress>
+    {
+        private readonly SyncRunOptions _options;
+        private readonly DateTime _startedAtUtc;
+
+        public RemoteTreeScanProgressReporter(SyncRunOptions options, DateTime startedAtUtc)
+        {
+            _options = options;
+            _startedAtUtc = startedAtUtc;
+        }
+
+        public void Report(RemoteTreeScanProgress value)
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            ReportRunProgress(
+                _options,
+                SyncRunProgressStage.ScanningRemote,
                 value.FilesScanned,
                 filesTotal: null,
                 value.CurrentPath,

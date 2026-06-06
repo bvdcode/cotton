@@ -11,9 +11,10 @@ namespace Cotton.Sync.Remote;
 /// <summary>
 /// Crawls remote Cotton folders through the SDK node API.
 /// </summary>
-public sealed class RemoteTreeCrawler : IRemoteTreeCrawler
+public sealed class RemoteTreeCrawler : IRemoteTreeProgressCrawler
 {
     private const int DefaultPageSize = 100;
+    private const int ProgressReportFileInterval = 100;
     private readonly ICottonNodeClient _nodes;
     private readonly int _pageSize;
 
@@ -31,10 +32,22 @@ public sealed class RemoteTreeCrawler : IRemoteTreeCrawler
     /// <inheritdoc />
     public async Task<RemoteTreeSnapshot> CrawlAsync(Guid rootNodeId, CancellationToken cancellationToken = default)
     {
+        return await CrawlAsync(rootNodeId, progress: null, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<RemoteTreeSnapshot> CrawlAsync(
+        Guid rootNodeId,
+        IProgress<RemoteTreeScanProgress>? progress,
+        CancellationToken cancellationToken = default)
+    {
         NodeDto root = await _nodes.GetAsync(rootNodeId, cancellationToken).ConfigureAwait(false);
         var snapshot = new RemoteTreeSnapshot { RootNode = root };
         var queue = new Queue<(NodeDto Node, string RelativePath)>();
         queue.Enqueue((root, string.Empty));
+        int directoriesScanned = 0;
+        int filesScanned = 0;
+        progress?.Report(new RemoteTreeScanProgress(filesScanned, directoriesScanned, currentPath: null));
 
         while (queue.Count > 0)
         {
@@ -63,6 +76,7 @@ public sealed class RemoteTreeCrawler : IRemoteTreeCrawler
                         RelativePath = relativePath,
                         Node = childNode,
                     });
+                    directoriesScanned++;
                     queue.Enqueue((childNode, relativePath));
                 }
 
@@ -79,6 +93,8 @@ public sealed class RemoteTreeCrawler : IRemoteTreeCrawler
                         RelativePath = relativePath,
                         File = file,
                     });
+                    filesScanned++;
+                    ReportScanProgress(progress, filesScanned, directoriesScanned, relativePath);
                 }
 
                 int count = children.Nodes.Count + children.Files.Count;
@@ -94,7 +110,25 @@ public sealed class RemoteTreeCrawler : IRemoteTreeCrawler
 
         snapshot.Directories.Sort((left, right) => string.Compare(left.RelativePath, right.RelativePath, StringComparison.OrdinalIgnoreCase));
         snapshot.Files.Sort((left, right) => string.Compare(left.RelativePath, right.RelativePath, StringComparison.OrdinalIgnoreCase));
+        progress?.Report(new RemoteTreeScanProgress(filesScanned, directoriesScanned, currentPath: null));
         return snapshot;
+    }
+
+    private static void ReportScanProgress(
+        IProgress<RemoteTreeScanProgress>? progress,
+        int filesScanned,
+        int directoriesScanned,
+        string currentPath)
+    {
+        if (progress is null)
+        {
+            return;
+        }
+
+        if (filesScanned == 1 || filesScanned % ProgressReportFileInterval == 0)
+        {
+            progress.Report(new RemoteTreeScanProgress(filesScanned, directoriesScanned, currentPath));
+        }
     }
 
     private static string Combine(string parentPath, string name)
