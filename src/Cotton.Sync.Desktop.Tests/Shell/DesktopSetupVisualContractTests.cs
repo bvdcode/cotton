@@ -118,8 +118,10 @@ public sealed class DesktopSetupVisualContractTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(foldersSection, Does.Contain("<ScrollViewer MaxHeight=\"216\""));
+            Assert.That(foldersSection, Does.Not.Contain("<ScrollViewer MaxHeight=\"216\""));
             Assert.That(foldersSection, Does.Not.Contain("<ScrollViewer MaxHeight=\"236\""));
+            Assert.That(foldersSection, Does.Not.Contain("MaxHeight=\"300\""));
+            Assert.That(foldersSection, Does.Contain("<ItemsControl ItemsSource=\"{Binding SyncPairs}\">"));
         });
     }
 
@@ -205,8 +207,9 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding IsDashboardChromeVisible}\""));
             Assert.That(dashboardView, Does.Contain("<StackPanel Spacing=\"8\">"));
             Assert.That(dashboardView, Does.Contain("<Border Grid.Row=\"1\""));
-            Assert.That(dashboardView, Does.Contain("MaxHeight=\"300\""));
+            Assert.That(dashboardView, Does.Not.Contain("MaxHeight=\"300\""));
             Assert.That(dashboardView, Does.Not.Contain("MaxHeight=\"320\""));
+            Assert.That(dashboardView, Does.Not.Contain("<ScrollViewer MaxHeight=\"216\""));
             Assert.That(dashboardView, Does.Not.Contain("<ScrollViewer Margin=\"10\""));
             Assert.That(dashboardView, Does.Not.Contain("RowDefinitions=\"Auto,Auto,Auto,Auto,*\""));
             Assert.That(dashboardView, Does.Not.Contain("RowDefinitions=\"Auto,132\""));
@@ -333,7 +336,7 @@ public sealed class DesktopSetupVisualContractTests
         string conflictsSection = GetSlice(
             mainWindowXaml,
             "<TextBlock Text=\"Conflicts\"",
-            "<Border Padding=\"10\"\n                MaxHeight=\"300\"");
+            "<TextBlock Text=\"Folders\"");
 
         Assert.Multiple(() =>
         {
