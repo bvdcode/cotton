@@ -184,6 +184,24 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
+    public void SignInInputs_SubmitOnEnterAndReturnKeys()
+    {
+        string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+        string mainWindowCode = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml.cs"));
+        string signInStep = GetSlice(
+            mainWindowXaml,
+            "IsVisible=\"{Binding IsSignInStepVisible}\"",
+            "<Button Content=\"Sign in\"");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(CountOccurrences(signInStep, "KeyDown=\"SignInInput_KeyDown\""), Is.EqualTo(3));
+            Assert.That(mainWindowCode, Does.Contain("e.Key != Key.Enter && e.Key != Key.Return"));
+            Assert.That(mainWindowCode, Does.Contain("viewModel.SignInCommand.Execute(null);"));
+        });
+    }
+
+    [Test]
     public void SettingsDiagnostics_ScrollsWholeTabWithoutNestedSelfTestScrolling()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));

@@ -134,7 +134,7 @@ public sealed partial class MainWindow : Window
 
     private void SignInInput_KeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Enter
+        if ((e.Key != Key.Enter && e.Key != Key.Return)
             || DataContext is not ShellViewModel viewModel
             || !viewModel.SignInCommand.CanExecute(null))
         {
