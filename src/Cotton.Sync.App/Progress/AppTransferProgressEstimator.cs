@@ -9,7 +9,8 @@ namespace Cotton.Sync.App.Progress;
 public sealed class AppTransferProgressEstimator
 {
     private static readonly TimeSpan RollingWindow = TimeSpan.FromSeconds(5);
-    private const double RemainingTimeSmoothingFactor = 0.35;
+    private const double RemainingTimeIncreaseSmoothingFactor = 0.12;
+    private const double RemainingTimeDecreaseSmoothingFactor = 0.25;
     private const int MaximumSamples = 8;
     private readonly Queue<TransferSample> _samples = new();
     private SyncTransferDirection _direction = SyncTransferDirection.Unknown;
@@ -136,8 +137,11 @@ public sealed class AppTransferProgressEstimator
             agedPreviousEstimate = TimeSpan.Zero;
         }
 
+        double smoothingFactor = rawEstimate > agedPreviousEstimate
+            ? RemainingTimeIncreaseSmoothingFactor
+            : RemainingTimeDecreaseSmoothingFactor;
         double smoothedSeconds = agedPreviousEstimate.TotalSeconds
-            + ((rawEstimate.TotalSeconds - agedPreviousEstimate.TotalSeconds) * RemainingTimeSmoothingFactor);
+            + ((rawEstimate.TotalSeconds - agedPreviousEstimate.TotalSeconds) * smoothingFactor);
         TimeSpan smoothedEstimate = TimeSpan.FromSeconds(Math.Max(0, smoothedSeconds));
         _smoothedEstimatedTimeRemaining = smoothedEstimate;
         _lastEstimateOccurredAtUtc = occurredAtUtc;
