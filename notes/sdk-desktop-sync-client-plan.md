@@ -26,6 +26,7 @@ Mechanical audit 2026-06-07:
 - Command used: `for f in notes/sdk-desktop-sync-client-plan/*.md; do open=$(rg -c '^[-*] \[ \]' "$f" || true); done=$(rg -c '^[-*] \[[xX]\]' "$f" || true); printf '%s|open=%s|done=%s\n' "$f" "$open" "$done"; done`
 - Result: the `Plan Files` counts below match the actual sub-plan checkboxes.
 - Fully closed files are only the five `[x]` implementation phases below. Treat any other file as open until another mechanical audit proves it has zero open release or manual-gate checkboxes.
+- Revision pass 2026-06-07: rechecked the same ledger with `rg -c '^[-*] \[ \]'` and `rg -c '^[-*] \[[xX]\]'` across the main plan and every sub-plan. No new sub-plan qualifies for `[x]`.
 
 Latest audit result: no additional sub-plan can be marked fully complete after the current desktop pass. Phase 1 through Phase 5 remain the only fully closed implementation sub-plans. Every other unchecked file still has at least one open release gate, manual gate, reference guardrail, or future item.
 
@@ -40,6 +41,17 @@ Closed implementation sub-plans after this audit:
 - Phase 5 - Sync Core Hardening.
 
 These closed sub-plans are done. Do not reopen them during normal work unless a new concrete bug points directly back to one of them.
+
+## Closure Ledger Rules
+
+The `Plan Files` checklist is the closure ledger for the whole desktop plan.
+
+- Before opening a sub-plan, check its `Plan Files` row in this file.
+- If the row is `[x]`, treat that sub-plan as complete and do not inspect it during normal horizon checks.
+- If the row is `[ ]`, use its status text to decide whether it belongs to the active queue, the manual-gated queue, reference guardrails, or future work.
+- Mark a sub-plan `[x]` only when it has zero open release-work checkboxes and its required verification evidence is recorded in that sub-plan.
+- Do not mark manual-gated Windows, clean-machine, packaging, soak, diagnostics, or release-readiness sub-plans complete from Linux-only evidence.
+- When a sub-plan becomes complete, update the row in `Plan Files`, add it to the closed sub-plan list above, and refresh the counts in `Revision Result`.
 
 ## Sub-Plan Opening Rules
 
@@ -115,7 +127,7 @@ Revision date: 2026-06-07.
 
 Immediate next horizon:
 
-- Close `00-current-work-order.md` items only when their Windows/manual checks are complete or a concrete implementation bug is fixed.
+- Close `00-current-work-order.md` items only when their Windows/manual checks are complete or a concrete implementation bug is fixed. When all current-work-order items are closed or moved into their owning phase file, mark the work-order row `[x]`.
 - Use Linux only for code-side desktop checks, visual-smoke screenshots, and non-Windows logic. Do not start Windows-only implementation work from Linux.
 - Keep backend/server changes out of this desktop branch unless the user explicitly asks for a reviewed backend change.
 
