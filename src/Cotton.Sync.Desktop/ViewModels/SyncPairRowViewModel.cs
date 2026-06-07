@@ -61,7 +61,13 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
     public string DisplayName
     {
         get => _displayName;
-        set => SetProperty(ref _displayName, value);
+        set
+        {
+            if (SetProperty(ref _displayName, value))
+            {
+                OnPropertyChanged(nameof(HeaderText));
+            }
+        }
     }
 
     public string CurrentOperation
@@ -92,6 +98,8 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
     public bool IsHeaderStatusVisible => HasDisplayStatus && !IsEditorVisible;
 
     public bool IsErrorStatus => string.Equals(DisplayStatus, "Error", StringComparison.Ordinal);
+
+    public string HeaderText => HasDisplayStatus ? DisplayName + " · " + DisplayStatus : DisplayName;
 
     public bool HasCurrentProgress
     {
@@ -170,6 +178,7 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
                 OnPropertyChanged(nameof(HasDisplayStatus));
                 OnPropertyChanged(nameof(IsHeaderStatusVisible));
                 OnPropertyChanged(nameof(IsErrorStatus));
+                OnPropertyChanged(nameof(HeaderText));
             }
         }
     }

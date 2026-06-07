@@ -23,6 +23,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private const int MaxConflictRows = 20;
     private static readonly TimeSpan TransferActivityCoalescingWindow = TimeSpan.FromMilliseconds(750);
     private static readonly TimeSpan VisibleTransferProgressUpdateInterval = TimeSpan.FromMilliseconds(250);
+    private static readonly TimeSpan VisibleRunProgressUpdateInterval = TimeSpan.FromMilliseconds(250);
 
     private readonly IDesktopShellController _controller;
     private readonly DesktopFeatureFlags _featureFlags;
@@ -110,6 +111,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private Guid? _visibleTransferSyncPairId;
     private SyncTransferDirection _visibleTransferDirection = SyncTransferDirection.Unknown;
     private string _visibleTransferRelativePath = string.Empty;
+    private DateTime? _lastVisibleRunProgressAtUtc;
+    private Guid? _visibleRunProgressSyncPairId;
+    private SyncRunProgressStage _visibleRunProgressStage = SyncRunProgressStage.Unknown;
 
     internal ShellViewModel(
         IDesktopShellController controller,
@@ -515,6 +519,20 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         : string.Empty;
 
     public bool HasCurrentWorkProgressHeaderDetails => !string.IsNullOrWhiteSpace(CurrentWorkProgressHeaderDetails);
+
+    public string CurrentWorkProgressHeaderSizeDetails => IsRunProgressPrimary && HasActiveTransferProgress
+        ? CreateAggregateTransferMetricDetails(_transferProgressByPair.Values).Size
+        : string.Empty;
+
+    public bool HasCurrentWorkProgressHeaderSizeDetails =>
+        !string.IsNullOrWhiteSpace(CurrentWorkProgressHeaderSizeDetails);
+
+    public string CurrentWorkProgressHeaderRateDetails => IsRunProgressPrimary && HasActiveTransferProgress
+        ? CreateAggregateTransferMetricDetails(_transferProgressByPair.Values).Rate
+        : string.Empty;
+
+    public bool HasCurrentWorkProgressHeaderRateDetails =>
+        !string.IsNullOrWhiteSpace(CurrentWorkProgressHeaderRateDetails);
 
     public string CurrentWorkProgressDetails => IsRunProgressPrimary
         ? CurrentRunProgressDetails
@@ -2659,7 +2677,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         if (_uiDispatcher.CheckAccess())
         {
-            ApplyRunProgress(progress);
+            if (ShouldQueueVisibleRunProgress(progress))
+            {
+                ApplyRunProgress(progress);
+            }
+
             return;
         }
 
@@ -2668,7 +2690,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             return;
         }
 
-        _uiDispatcher.Post(() => ApplyRunProgress(progress));
+        if (ShouldQueueVisibleRunProgress(progress))
+        {
+            _uiDispatcher.Post(() => ApplyRunProgress(progress));
+        }
     }
 
     private bool TryPostCoalescedTransferProgress(DesktopTransferProgressSnapshot progress)
@@ -2709,12 +2734,18 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 && CanReplacePendingRunProgress(_pendingCoalescedRunProgress, progress))
             {
                 _pendingCoalescedRunProgress = progress;
+                TrackVisibleRunProgressUnsafe(progress);
                 return true;
             }
 
             if (_isCoalescedRunProgressDispatchScheduled)
             {
                 return false;
+            }
+
+            if (!ShouldQueueVisibleRunProgressUnsafe(progress))
+            {
+                return true;
             }
 
             _pendingCoalescedRunProgress = progress;
@@ -2810,6 +2841,40 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         return pending.SyncPairId == next.SyncPairId
             && pending.Stage == next.Stage
             && next.OccurredAtUtc >= pending.OccurredAtUtc;
+    }
+
+    private bool ShouldQueueVisibleRunProgress(DesktopRunProgressSnapshot progress)
+    {
+        lock (_progressDispatchGate)
+        {
+            return ShouldQueueVisibleRunProgressUnsafe(progress);
+        }
+    }
+
+    private bool ShouldQueueVisibleRunProgressUnsafe(DesktopRunProgressSnapshot progress)
+    {
+        DateTime occurredAtUtc = progress.OccurredAtUtc.ToUniversalTime();
+        bool isNewVisibleRunProgress = !_visibleRunProgressSyncPairId.HasValue
+            || _visibleRunProgressSyncPairId.Value != progress.SyncPairId
+            || _visibleRunProgressStage != progress.Stage;
+        if (isNewVisibleRunProgress
+            || progress.IsCompleted
+            || !_lastVisibleRunProgressAtUtc.HasValue
+            || occurredAtUtc < _lastVisibleRunProgressAtUtc.Value
+            || occurredAtUtc - _lastVisibleRunProgressAtUtc.Value >= VisibleRunProgressUpdateInterval)
+        {
+            TrackVisibleRunProgressUnsafe(progress);
+            return true;
+        }
+
+        return false;
+    }
+
+    private void TrackVisibleRunProgressUnsafe(DesktopRunProgressSnapshot progress)
+    {
+        _lastVisibleRunProgressAtUtc = progress.OccurredAtUtc.ToUniversalTime();
+        _visibleRunProgressSyncPairId = progress.SyncPairId;
+        _visibleRunProgressStage = progress.Stage;
     }
 
     private void ApplySessionRevocation(DesktopSessionRevocationSnapshot sessionRevocation)
@@ -3396,6 +3461,15 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private void ClearRunProgress()
     {
         _runProgressByPair.Clear();
+        lock (_progressDispatchGate)
+        {
+            _pendingCoalescedRunProgress = null;
+            _isCoalescedRunProgressDispatchScheduled = false;
+            _lastVisibleRunProgressAtUtc = null;
+            _visibleRunProgressSyncPairId = null;
+            _visibleRunProgressStage = SyncRunProgressStage.Unknown;
+        }
+
         HasCurrentRunProgress = false;
         IsCurrentRunProgressIndeterminate = false;
         CurrentRunProgressValue = 0;
@@ -3456,6 +3530,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OnPropertyChanged(nameof(CurrentWorkProgressTitle));
         OnPropertyChanged(nameof(CurrentWorkProgressHeaderDetails));
         OnPropertyChanged(nameof(HasCurrentWorkProgressHeaderDetails));
+        OnPropertyChanged(nameof(CurrentWorkProgressHeaderSizeDetails));
+        OnPropertyChanged(nameof(HasCurrentWorkProgressHeaderSizeDetails));
+        OnPropertyChanged(nameof(CurrentWorkProgressHeaderRateDetails));
+        OnPropertyChanged(nameof(HasCurrentWorkProgressHeaderRateDetails));
         OnPropertyChanged(nameof(CurrentWorkProgressDetails));
         OnPropertyChanged(nameof(CurrentWorkProgressSecondaryDetails));
         OnPropertyChanged(nameof(HasCurrentWorkProgressSecondaryDetails));
@@ -3711,6 +3789,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private static string CreateAggregateTransferDetails(IEnumerable<DesktopTransferProgressSnapshot> progressValues)
     {
+        TransferMetricDetails details = CreateAggregateTransferMetricDetails(progressValues);
+        return string.IsNullOrWhiteSpace(details.Rate) ? details.Size : details.Size + " · " + details.Rate;
+    }
+
+    private static TransferMetricDetails CreateAggregateTransferMetricDetails(
+        IEnumerable<DesktopTransferProgressSnapshot> progressValues)
+    {
         long transferredBytes = 0;
         long totalBytes = 0;
         bool hasTotalBytes = true;
@@ -3748,16 +3833,16 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             : FormatBytes(transferredBytes);
         if (speedBytesPerSecond <= 0)
         {
-            return details;
+            return new TransferMetricDetails(details, string.Empty);
         }
 
-        details += " · " + FormatBytes(speedBytesPerSecond) + "/s";
+        string rate = FormatBytes(speedBytesPerSecond) + "/s";
         if (longestEstimatedTimeRemaining.HasValue)
         {
-            details += " · " + FormatDuration(longestEstimatedTimeRemaining.Value) + " left";
+            rate += " · " + FormatDuration(longestEstimatedTimeRemaining.Value) + " left";
         }
 
-        return details;
+        return new TransferMetricDetails(details, rate);
     }
 
     private static string GetDisplayFileName(string relativePath)
@@ -3792,22 +3877,36 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         if (duration.TotalSeconds < 60)
         {
             int seconds = Math.Max(1, (int)Math.Ceiling(duration.TotalSeconds));
+            if (seconds >= 10)
+            {
+                seconds = RoundUp(seconds, 5);
+            }
+
             return seconds.ToString(CultureInfo.CurrentCulture) + "s";
         }
 
         if (duration.TotalMinutes < 60)
         {
-            return ((int)duration.TotalMinutes).ToString(CultureInfo.CurrentCulture)
+            int totalSeconds = RoundUp(Math.Max(60, (int)Math.Ceiling(duration.TotalSeconds)), 5);
+            return (totalSeconds / 60).ToString(CultureInfo.CurrentCulture)
                 + "m "
-                + duration.Seconds.ToString("00", CultureInfo.CurrentCulture)
+                + (totalSeconds % 60).ToString("00", CultureInfo.CurrentCulture)
                 + "s";
         }
 
-        return ((int)duration.TotalHours).ToString(CultureInfo.CurrentCulture)
+        int totalMinutes = RoundUp(Math.Max(60, (int)Math.Ceiling(duration.TotalMinutes)), 5);
+        return (totalMinutes / 60).ToString(CultureInfo.CurrentCulture)
             + "h "
-            + duration.Minutes.ToString("00", CultureInfo.CurrentCulture)
+            + (totalMinutes % 60).ToString("00", CultureInfo.CurrentCulture)
             + "m";
     }
+
+    private static int RoundUp(int value, int step)
+    {
+        return ((value + step - 1) / step) * step;
+    }
+
+    private readonly record struct TransferMetricDetails(string Size, string Rate);
 
     private static bool IsActiveProgressPair(SyncPairRowViewModel syncPair)
     {

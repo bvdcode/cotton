@@ -57,7 +57,7 @@
     <Style Selector="TextBlock.secondary">
       <Setter Property="Foreground" Value="{DynamicResource CottonTextSecondaryBrush}" />
     </Style>
-    <Style Selector="TextBlock.syncPairStatus.errorStatus">
+    <Style Selector="TextBlock.errorStatus">
       <Setter Property="Foreground" Value="{DynamicResource CottonErrorBrush}" />
     </Style>
     <Style Selector="TextBlock.selfTestResult.passed">

@@ -146,10 +146,9 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Not.Contain("SelectedItem=\"{Binding SelectedSyncPair}\""));
             Assert.That(foldersSection, Does.Contain("IsVisible=\"{Binding IsEditorVisible}\""));
             Assert.That(foldersSection, Does.Not.Contain("IsVisible=\"{Binding IsSelectedSyncPairEditorVisible}\""));
-            Assert.That(foldersSection, Does.Contain("IsVisible=\"{Binding IsHeaderStatusVisible}\""));
-            Assert.That(foldersSection, Does.Contain("Classes=\"syncPairStatus\""));
+            Assert.That(foldersSection, Does.Contain("Text=\"{Binding HeaderText}\""));
             Assert.That(foldersSection, Does.Contain("Classes.errorStatus=\"{Binding IsErrorStatus}\""));
-            Assert.That(appXaml, Does.Contain("TextBlock.syncPairStatus.errorStatus"));
+            Assert.That(appXaml, Does.Contain("TextBlock.errorStatus"));
             Assert.That(appXaml, Does.Contain("Value=\"{DynamicResource CottonErrorBrush}\""));
             Assert.That(foldersSection, Does.Contain("Text=\"{Binding EditableDisplayName}\""));
             Assert.That(foldersSection, Does.Not.Contain("SelectedSyncPairEditableDisplayName"));
@@ -571,9 +570,12 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding HasCurrentWorkProgress}\""));
             Assert.That(dashboardView, Does.Contain("ColumnDefinitions=\"*,Auto\""));
             Assert.That(dashboardView, Does.Contain("Text=\"{Binding CurrentWorkProgressTitle}\""));
-            Assert.That(dashboardView, Does.Contain("Text=\"{Binding CurrentWorkProgressHeaderDetails}\""));
+            Assert.That(dashboardView, Does.Not.Contain("Text=\"{Binding CurrentWorkProgressHeaderDetails}\""));
+            Assert.That(dashboardView, Does.Contain("Text=\"{Binding CurrentWorkProgressHeaderSizeDetails}\""));
+            Assert.That(dashboardView, Does.Contain("Text=\"{Binding CurrentWorkProgressHeaderRateDetails}\""));
             Assert.That(dashboardView, Does.Contain("HorizontalAlignment=\"Right\""));
-            Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding HasCurrentWorkProgressHeaderDetails}\""));
+            Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding HasCurrentWorkProgressHeaderSizeDetails}\""));
+            Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding HasCurrentWorkProgressHeaderRateDetails}\""));
             Assert.That(dashboardView, Does.Contain("Text=\"{Binding CurrentWorkProgressDetails}\""));
             Assert.That(dashboardView, Does.Contain("Text=\"{Binding CurrentWorkProgressSecondaryDetails}\""));
             Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding HasCurrentWorkProgressSecondaryDetails}\""));

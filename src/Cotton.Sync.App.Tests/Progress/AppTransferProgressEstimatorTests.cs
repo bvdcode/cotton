@@ -103,9 +103,9 @@ public sealed class AppTransferProgressEstimatorTests
         Assert.Multiple(() =>
         {
             Assert.That(stableEstimate.EstimatedTimeRemaining, Is.EqualTo(TimeSpan.FromSeconds(9)));
-            Assert.That(smoothedEstimate.SpeedBytesPerSecond, Is.EqualTo(75).Within(0.01));
+            Assert.That(smoothedEstimate.SpeedBytesPerSecond, Is.EqualTo(95).Within(0.01));
             Assert.That(smoothedEstimate.EstimatedTimeRemaining?.TotalSeconds, Is.GreaterThan(8));
-            Assert.That(smoothedEstimate.EstimatedTimeRemaining?.TotalSeconds, Is.LessThan(11.3));
+            Assert.That(smoothedEstimate.EstimatedTimeRemaining?.TotalSeconds, Is.LessThan(8.2));
         });
     }
 
@@ -140,7 +140,7 @@ public sealed class AppTransferProgressEstimatorTests
         Assert.Multiple(() =>
         {
             Assert.That(stableEstimate.EstimatedTimeRemaining, Is.EqualTo(TimeSpan.FromSeconds(9)));
-            Assert.That(slowEstimate.EstimatedTimeRemaining?.TotalSeconds, Is.GreaterThan(9));
+            Assert.That(slowEstimate.EstimatedTimeRemaining?.TotalSeconds, Is.GreaterThan(8));
             Assert.That(slowEstimate.EstimatedTimeRemaining?.TotalSeconds, Is.LessThan(10));
         });
     }

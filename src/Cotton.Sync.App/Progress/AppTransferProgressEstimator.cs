@@ -9,11 +9,13 @@ namespace Cotton.Sync.App.Progress;
 public sealed class AppTransferProgressEstimator
 {
     private static readonly TimeSpan RollingWindow = TimeSpan.FromSeconds(5);
+    private const double SpeedSmoothingFactor = 0.2;
     private const double RemainingTimeIncreaseSmoothingFactor = 0.12;
     private const double RemainingTimeDecreaseSmoothingFactor = 0.25;
     private const int MaximumSamples = 8;
     private readonly Queue<TransferSample> _samples = new();
     private SyncTransferDirection _direction = SyncTransferDirection.Unknown;
+    private double? _smoothedSpeedBytesPerSecond;
     private TimeSpan? _smoothedEstimatedTimeRemaining;
     private DateTime? _lastEstimateOccurredAtUtc;
     private string _relativePath = string.Empty;
@@ -55,6 +57,7 @@ public sealed class AppTransferProgressEstimator
         if (isCompleted)
         {
             _samples.Clear();
+            _smoothedSpeedBytesPerSecond = null;
             _smoothedEstimatedTimeRemaining = null;
             _lastEstimateOccurredAtUtc = null;
         }
@@ -65,6 +68,7 @@ public sealed class AppTransferProgressEstimator
     private void Reset(SyncTransferDirection direction, string relativePath)
     {
         _samples.Clear();
+        _smoothedSpeedBytesPerSecond = null;
         _smoothedEstimatedTimeRemaining = null;
         _lastEstimateOccurredAtUtc = null;
         _direction = direction;
@@ -102,7 +106,7 @@ public sealed class AppTransferProgressEstimator
             return new AppTransferProgressEstimate(null, null);
         }
 
-        double speedBytesPerSecond = bytesTransferred / seconds;
+        double speedBytesPerSecond = SmoothSpeed(bytesTransferred / seconds);
         TimeSpan? estimatedTimeRemaining = null;
         if (totalBytes.HasValue && totalBytes.Value > currentSample.TransferredBytes)
         {
@@ -117,6 +121,20 @@ public sealed class AppTransferProgressEstimator
         }
 
         return new AppTransferProgressEstimate(speedBytesPerSecond, estimatedTimeRemaining);
+    }
+
+    private double SmoothSpeed(double speedBytesPerSecond)
+    {
+        if (!_smoothedSpeedBytesPerSecond.HasValue)
+        {
+            _smoothedSpeedBytesPerSecond = speedBytesPerSecond;
+            return speedBytesPerSecond;
+        }
+
+        double smoothedSpeed = _smoothedSpeedBytesPerSecond.Value
+            + ((speedBytesPerSecond - _smoothedSpeedBytesPerSecond.Value) * SpeedSmoothingFactor);
+        _smoothedSpeedBytesPerSecond = Math.Max(0, smoothedSpeed);
+        return _smoothedSpeedBytesPerSecond.Value;
     }
 
     private TimeSpan SmoothEstimatedTimeRemaining(TimeSpan rawEstimate, DateTime occurredAtUtc)

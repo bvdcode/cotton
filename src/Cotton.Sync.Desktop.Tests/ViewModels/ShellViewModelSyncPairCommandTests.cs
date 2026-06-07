@@ -1096,6 +1096,57 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task RunProgressChanged_ThrottlesVisibleUpdates()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        DateTime startedAtUtc = new(2026, 6, 7, 10, 0, 0, DateTimeKind.Utc);
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 1,
+            FilesTotal: 100,
+            CurrentPath: "Reports/file-001.txt",
+            StartedAtUtc: startedAtUtc,
+            IsCompleted: false,
+            OccurredAtUtc: startedAtUtc));
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 50,
+            FilesTotal: 100,
+            CurrentPath: "Reports/file-050.txt",
+            StartedAtUtc: startedAtUtc,
+            IsCompleted: false,
+            OccurredAtUtc: startedAtUtc.AddMilliseconds(100)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.CurrentRunProgressValue, Is.EqualTo(1).Within(0.01));
+            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("1 of 100 files · file-001.txt"));
+        });
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 75,
+            FilesTotal: 100,
+            CurrentPath: "Reports/file-075.txt",
+            StartedAtUtc: startedAtUtc,
+            IsCompleted: false,
+            OccurredAtUtc: startedAtUtc.AddMilliseconds(250)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.CurrentRunProgressValue, Is.EqualTo(75).Within(0.01));
+            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("75 of 100 files · file-075.txt"));
+        });
+    }
+
+    [Test]
     public async Task RunProgressChanged_UpdatesDirectoryRunProgressState()
     {
         Guid syncPairId = Guid.NewGuid();
