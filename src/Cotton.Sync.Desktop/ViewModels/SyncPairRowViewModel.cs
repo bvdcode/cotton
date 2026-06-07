@@ -38,6 +38,9 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
             {
                 OnPropertyChanged(nameof(ToggleEnabledLabel));
                 OnPropertyChanged(nameof(IsDisabled));
+                OnPropertyChanged(nameof(IsStatusIndicatorVisible));
+                OnPropertyChanged(nameof(IsStatusActive));
+                OnPropertyChanged(nameof(StatusIndicatorToolTip));
             }
         }
     }
@@ -83,10 +86,13 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
 
     public bool HasDisplayStatus => !string.IsNullOrWhiteSpace(DisplayStatus);
 
-    public bool IsStatusIndicatorVisible => HasDisplayStatus;
+    public bool IsStatusIndicatorVisible => IsEnabled || HasDisplayStatus;
+
+    public string StatusIndicatorToolTip => HasDisplayStatus ? DisplayStatus : "Sync enabled";
 
     public bool IsStatusActive =>
-        string.Equals(DisplayStatus, "Scanning", StringComparison.Ordinal)
+        (IsEnabled && !HasDisplayStatus)
+        || string.Equals(DisplayStatus, "Scanning", StringComparison.Ordinal)
         || string.Equals(DisplayStatus, "Syncing", StringComparison.Ordinal)
         || string.Equals(DisplayStatus, "Sync requested", StringComparison.Ordinal);
 
@@ -175,6 +181,7 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
                 OnPropertyChanged(nameof(DisplayStatus));
                 OnPropertyChanged(nameof(HasDisplayStatus));
                 OnPropertyChanged(nameof(IsStatusIndicatorVisible));
+                OnPropertyChanged(nameof(StatusIndicatorToolTip));
                 OnPropertyChanged(nameof(IsStatusActive));
                 OnPropertyChanged(nameof(IsStatusPaused));
                 OnPropertyChanged(nameof(IsStatusAttention));

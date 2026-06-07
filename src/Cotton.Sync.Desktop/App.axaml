@@ -84,7 +84,7 @@
       <Setter Property="Background" Value="{DynamicResource CottonTextSecondaryBrush}" />
     </Style>
     <Style Selector="Border.syncPairStatusIndicator.active">
-      <Setter Property="Background" Value="{DynamicResource CottonSecondaryBrush}" />
+      <Setter Property="Background" Value="{DynamicResource CottonPrimaryBrush}" />
     </Style>
     <Style Selector="Border.syncPairStatusIndicator.paused">
       <Setter Property="Background" Value="{DynamicResource CottonWarningBrush}" />

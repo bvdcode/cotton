@@ -3193,6 +3193,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         foreach (DesktopNotificationRequest request in requests)
         {
+            if (Notifications.FirstOrDefault() is { } latest
+                && string.Equals(latest.Title, request.Title, StringComparison.Ordinal)
+                && string.Equals(latest.Message, request.Message, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
             Notifications.Insert(0, new NotificationRowViewModel
             {
                 Title = request.Title,
@@ -3214,7 +3221,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private static bool IsDashboardNotificationKind(DesktopNotificationKind kind)
     {
-        return kind != DesktopNotificationKind.InitialSyncComplete;
+        return kind != DesktopNotificationKind.InitialSyncComplete
+            && kind != DesktopNotificationKind.ActionRequiredError;
     }
 
     private void ShowNativeNotification(string title, string message)

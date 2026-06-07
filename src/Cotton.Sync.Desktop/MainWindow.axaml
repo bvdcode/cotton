@@ -566,7 +566,7 @@
                                       Classes.active="{Binding IsStatusActive}"
                                       Classes.paused="{Binding IsStatusPaused}"
                                       Classes.attention="{Binding IsStatusAttention}"
-                                      ToolTip.Tip="{Binding DisplayStatus}"
+                                      ToolTip.Tip="{Binding StatusIndicatorToolTip}"
                                       VerticalAlignment="Center"
                                       IsVisible="{Binding IsStatusIndicatorVisible}" />
                               <TextBlock Grid.Column="1"
