@@ -1243,11 +1243,11 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.IsStatusCardVisible, Is.False);
             Assert.That(viewModel.IsCurrentRunProgressIndeterminate, Is.False);
             Assert.That(viewModel.CurrentRunProgressValue, Is.EqualTo(30).Within(0.01));
-            Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Documents: Checking files"));
-            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("3 of 10 files"));
+            Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Documents"));
+            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("Checking files · 3 of 10 files"));
             Assert.That(viewModel.HasCurrentWorkProgress, Is.True);
-            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents: Checking files"));
-            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("3 of 10 files"));
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("Checking files · 3 of 10 files"));
             Assert.That(row.CurrentOperation, Is.EqualTo("Checking files 3 of 10"));
             Assert.That(row.HasCurrentOperation, Is.True);
             Assert.That(row.HasCurrentProgress, Is.True);
@@ -1284,7 +1284,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentRunProgressValue, Is.EqualTo(30).Within(0.01));
             Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(30).Within(0.01));
             Assert.That(viewModel.CurrentWorkProgressHeaderSizeDetails, Is.EqualTo("3.0 GB / 10 GB"));
-            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("200 of 29189 files"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("Checking files · 200 of 29189 files"));
         });
     }
 
@@ -1319,7 +1319,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.CurrentRunProgressValue, Is.EqualTo(1).Within(0.01));
-            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("1 of 100 files"));
+            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("Checking files · 1 of 100 files"));
         });
 
         controller.ReportRunProgress(new DesktopRunProgressSnapshot(
@@ -1335,7 +1335,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.CurrentRunProgressValue, Is.EqualTo(75).Within(0.01));
-            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("75 of 100 files"));
+            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("Checking files · 75 of 100 files"));
         });
     }
 
@@ -1363,10 +1363,10 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.HasCurrentRunProgress, Is.True);
             Assert.That(viewModel.IsCurrentRunProgressIndeterminate, Is.False);
             Assert.That(viewModel.CurrentRunProgressValue, Is.EqualTo(30).Within(0.01));
-            Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Documents: Preparing folders"));
-            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("3 of 10 folders"));
-            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents: Preparing folders"));
-            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("3 of 10 folders"));
+            Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Documents"));
+            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("Preparing folders · 3 of 10 folders"));
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("Preparing folders · 3 of 10 folders"));
             Assert.That(row.CurrentOperation, Is.EqualTo("Preparing folders 3 of 10"));
             Assert.That(row.IsCurrentProgressIndeterminate, Is.False);
             Assert.That(row.CurrentProgressValue, Is.EqualTo(30).Within(0.01));
@@ -1410,8 +1410,8 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.HasCurrentRunProgress, Is.True);
-            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents: Checking files"));
-            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("99 of 100 files"));
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("Checking files · 99 of 100 files"));
             Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(99).Within(0.01));
         });
     }
@@ -1438,9 +1438,9 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             SyncPairRowViewModel row = viewModel.SyncPairs.Single();
             Assert.That(viewModel.HasCurrentRunProgress, Is.True);
-            Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Documents: Scanning local files"));
-            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("123 files found · report.txt"));
-            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("123 files found · report.txt"));
+            Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Documents"));
+            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("Scanning local files · 123 files found · report.txt"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("Scanning local files · 123 files found · report.txt"));
             Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.True);
             Assert.That(row.CurrentOperation, Is.EqualTo("Scanning local files"));
             Assert.That(row.IsCurrentProgressIndeterminate, Is.True);
@@ -1496,9 +1496,9 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             SyncPairRowViewModel row = viewModel.SyncPairs.Single();
             Assert.That(viewModel.HasCurrentRunProgress, Is.True);
-            Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Documents: Scanning Cotton Cloud"));
-            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("123 cloud files found · report.txt"));
-            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("123 cloud files found · report.txt"));
+            Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Documents"));
+            Assert.That(viewModel.CurrentRunProgressDetails, Is.EqualTo("Scanning Cotton Cloud · 123 cloud files found · report.txt"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("Scanning Cotton Cloud · 123 cloud files found · report.txt"));
             Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.True);
             Assert.That(row.CurrentOperation, Is.EqualTo("Scanning Cotton Cloud"));
             Assert.That(row.IsCurrentProgressIndeterminate, Is.True);
@@ -1746,8 +1746,8 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             SyncPairRowViewModel documentsRow = viewModel.SyncPairs.Single(pair => pair.Id == documentsPairId);
             SyncPairRowViewModel videosRow = viewModel.SyncPairs.Single(pair => pair.Id == videosPairId);
-            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Videos: Checking files"));
-            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("5 of 20 files"));
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Videos"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("Checking files · 5 of 20 files"));
             Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(25).Within(0.01));
             Assert.That(documentsRow.HasCurrentProgress, Is.False);
             Assert.That(documentsRow.CurrentOperation, Is.Empty);
@@ -1817,9 +1817,9 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents: Checking files"));
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents"));
             Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("512 B · 256 B/s · 15s left"));
-            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("5 of 20 files"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("Checking files · 5 of 20 files"));
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Uploading report.txt"));
             Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(27.5).Within(0.01));
             Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.False);
@@ -1862,10 +1862,10 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Videos: Checking files"));
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Videos"));
             Assert.That(viewModel.CurrentWorkProgressHeaderSizeDetails, Is.EqualTo("3.5 GB / 10 GB"));
             Assert.That(viewModel.CurrentWorkProgressHeaderRateDetails, Is.EqualTo("64 MB/s · 1m 45s left"));
-            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("200 of 29189 files"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("Checking files · 200 of 29189 files"));
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Downloading clip.mp4"));
             Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(35).Within(0.01));
         });
@@ -2031,7 +2031,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentWorkProgressHeaderRateDetails, Does.Contain("512 B/s"));
             Assert.That(viewModel.CurrentWorkProgressHeaderRateDetails, Does.Not.Contain("left"));
             Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Does.Contain("2.0 KB · 512 B/s"));
-            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("2 of 100 files"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("Checking files · 2 of 100 files"));
         });
     }
 
@@ -2059,7 +2059,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentWorkProgressHeaderSizeDetails, Is.Empty);
             Assert.That(viewModel.CurrentWorkProgressHeaderRateDetails, Is.EqualTo("10 files/s · 1m 30s left"));
             Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("10 files/s · 1m 30s left"));
-            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("100 of 1000 files"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("Checking files · 100 of 1000 files"));
         });
     }
 
@@ -2328,7 +2328,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.HasNotifications, Is.True);
             Assert.That(viewModel.HasCurrentWorkProgress, Is.True);
             Assert.That(viewModel.HasDashboardNotifications, Is.False);
-            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Videos: Scanning local files"));
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Videos"));
         });
     }
 

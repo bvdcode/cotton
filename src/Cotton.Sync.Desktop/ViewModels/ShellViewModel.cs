@@ -62,6 +62,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private double? _runTransferSpeedBytesPerSecond;
     private double? _currentRunProgressFilesPerSecond;
     private TimeSpan? _currentRunProgressEstimatedTimeRemaining;
+    private DateTime? _lastRunTransferSpeedOccurredAtUtc;
     private DateTime? _lastRunProgressFileRateOccurredAtUtc;
     private DateTime? _lastRunProgressEstimateOccurredAtUtc;
     private string _dataDirectory = string.Empty;
@@ -3756,8 +3757,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             SyncPairRowViewModel syncPair = SyncPairs.First(pair => pair.Id == progress.SyncPairId);
             IsCurrentRunProgressIndeterminate = !progress.FilesTotal.HasValue && !progress.IsCompleted;
             CurrentRunProgressValue = CalculateRunProgressValue(progress);
-            CurrentRunProgressTitle = CreateRunProgressTitle(progress, syncPair.DisplayName);
-            CurrentRunProgressDetails = CreateRunProgressDetails(progress);
+            CurrentRunProgressTitle = syncPair.DisplayName;
+            CurrentRunProgressDetails = CreateSingleRunProgressDetails(progress);
             RaiseCurrentWorkProgressProperties();
             return;
         }
@@ -3877,6 +3878,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         _runTransferSamples.Clear();
         _runTransferredBytes = 0;
         _runTransferSpeedBytesPerSecond = null;
+        _lastRunTransferSpeedOccurredAtUtc = null;
         _currentRunProgressFilesPerSecond = null;
         _currentRunProgressEstimatedTimeRemaining = null;
         _lastRunProgressFileRateOccurredAtUtc = null;
@@ -3908,13 +3910,19 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
 
         long transferredDelta = effectiveTransferredBytes - previousTransferredBytes;
+        bool hasReportedSpeed = progress.SpeedBytesPerSecond is > 0;
+        if (hasReportedSpeed)
+        {
+            UpdateRunTransferSpeed(progress.SpeedBytesPerSecond!.Value, progress.OccurredAtUtc);
+        }
+
         if (transferredDelta <= 0)
         {
             return;
         }
 
         _runTransferredBytes += transferredDelta;
-        AddRunTransferSample(progress.OccurredAtUtc);
+        AddRunTransferSample(progress.OccurredAtUtc, updateSpeedFromSamples: !hasReportedSpeed);
     }
 
     private void TrackCompletedRunTransferBytes(RunTransferProgressKey key, long completedBytes)
@@ -3934,13 +3942,14 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
     }
 
-    private void AddRunTransferSample(DateTime occurredAtUtc)
+    private void AddRunTransferSample(DateTime occurredAtUtc, bool updateSpeedFromSamples)
     {
         if (_runTransferSamples.Count > 0
             && occurredAtUtc - _runTransferSamples.Last().OccurredAtUtc > RunTransferMetricsWindow)
         {
             _runTransferSamples.Clear();
             _runTransferSpeedBytesPerSecond = null;
+            _lastRunTransferSpeedOccurredAtUtc = null;
         }
 
         if (_runTransferSamples.Count == 0)
@@ -3951,7 +3960,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
         _runTransferSamples.Enqueue(new RunTransferProgressSample(_runTransferredBytes, occurredAtUtc));
         PruneRunTransferSamples(occurredAtUtc);
-        UpdateRunTransferSpeed();
+        if (updateSpeedFromSamples)
+        {
+            UpdateRunTransferSpeedFromSamples();
+        }
     }
 
     private void PruneRunTransferSamples(DateTime occurredAtUtc)
@@ -3963,7 +3975,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
     }
 
-    private void UpdateRunTransferSpeed()
+    private void UpdateRunTransferSpeedFromSamples()
     {
         if (_runTransferSamples.Count < 2)
         {
@@ -3979,7 +3991,28 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             return;
         }
 
-        _runTransferSpeedBytesPerSecond = transferredBytes / elapsed.TotalSeconds;
+        double observedBytesPerSecond = transferredBytes / elapsed.TotalSeconds;
+        UpdateRunTransferSpeed(observedBytesPerSecond, lastSample.OccurredAtUtc);
+    }
+
+    private void UpdateRunTransferSpeed(double observedBytesPerSecond, DateTime occurredAtUtc)
+    {
+        if (!_runTransferSpeedBytesPerSecond.HasValue
+            || !_lastRunTransferSpeedOccurredAtUtc.HasValue
+            || occurredAtUtc <= _lastRunTransferSpeedOccurredAtUtc.Value)
+        {
+            _runTransferSpeedBytesPerSecond = observedBytesPerSecond;
+            _lastRunTransferSpeedOccurredAtUtc = occurredAtUtc;
+            return;
+        }
+
+        TimeSpan sampleElapsed = occurredAtUtc - _lastRunTransferSpeedOccurredAtUtc.Value;
+        double smoothingFactor = CalculateExponentialSmoothingFactor(sampleElapsed, RunProgressEstimateSmoothingPeriod);
+        _runTransferSpeedBytesPerSecond = Math.Max(
+            0,
+            _runTransferSpeedBytesPerSecond.Value
+                + ((observedBytesPerSecond - _runTransferSpeedBytesPerSecond.Value) * smoothingFactor));
+        _lastRunTransferSpeedOccurredAtUtc = occurredAtUtc;
     }
 
     private void UpdateRunProgressEstimatedTimeRemaining(IReadOnlyList<DesktopRunProgressSnapshot> progressValues)
@@ -4264,18 +4297,6 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             return true;
         }
 
-        if (HasActiveTransferProgress)
-        {
-            double transferSpeed = _transferProgressByPair.Values
-                .Where(static progress => progress.SpeedBytesPerSecond is > 0)
-                .Sum(static progress => progress.SpeedBytesPerSecond!.Value);
-            if (transferSpeed > 0)
-            {
-                bytesPerSecond = transferSpeed;
-                return true;
-            }
-        }
-
         bytesPerSecond = 0;
         return false;
     }
@@ -4367,9 +4388,21 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             + " folders";
     }
 
-    private static string CreateRunProgressTitle(DesktopRunProgressSnapshot progress, string syncPairName)
+    private static string CreateSingleRunProgressDetails(DesktopRunProgressSnapshot progress)
     {
-        return syncPairName + ": " + GetRunStageLabel(progress.Stage);
+        string label = GetRunStageLabel(progress.Stage);
+        string details = CreateRunProgressDetails(progress);
+        if (string.IsNullOrWhiteSpace(details))
+        {
+            return label;
+        }
+
+        if (!progress.FilesTotal.HasValue && progress.FilesCompleted <= 0)
+        {
+            return details;
+        }
+
+        return label + " · " + details;
     }
 
     private static string CreateRunProgressOperation(DesktopRunProgressSnapshot progress)
