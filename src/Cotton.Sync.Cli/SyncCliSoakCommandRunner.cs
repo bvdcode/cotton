@@ -384,6 +384,7 @@ internal static class SyncCliSoakCommandRunner
         DateTime completedAtUtc = DateTime.UtcNow;
         TimeSpan elapsed = completedAtUtc - startedAtUtc;
         TimeSpan cpu = GetTotalProcessorTime(process) - startedCpu;
+        double cpuUtilizationPercent = CalculateCpuUtilizationPercent(cpu, elapsed);
         long completedWorkingSetBytes = GetWorkingSetBytes(process);
         long completedManagedMemoryBytes = GC.GetTotalMemory(forceFullCollection: false);
         peakWorkingSetBytes = Math.Max(peakWorkingSetBytes, completedWorkingSetBytes);
@@ -398,6 +399,7 @@ internal static class SyncCliSoakCommandRunner
         await output.WriteLineAsync("Completed UTC: " + SyncCliFormat.FormatUtc(completedAtUtc)).ConfigureAwait(false);
         await output.WriteLineAsync("Elapsed seconds: " + elapsed.TotalSeconds.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("CPU seconds: " + cpu.TotalSeconds.ToStringInvariant()).ConfigureAwait(false);
+        await output.WriteLineAsync("CPU utilization percent: " + cpuUtilizationPercent.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Start working set bytes: " + startedWorkingSetBytes.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("End working set bytes: " + completedWorkingSetBytes.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Working set growth bytes: " + (completedWorkingSetBytes - startedWorkingSetBytes).ToStringInvariant()).ConfigureAwait(false);
@@ -418,6 +420,13 @@ internal static class SyncCliSoakCommandRunner
     private static string FormatOptionalInt(int? value)
     {
         return value.HasValue ? value.Value.ToStringInvariant() : "not run";
+    }
+
+    private static double CalculateCpuUtilizationPercent(TimeSpan cpu, TimeSpan elapsed)
+    {
+        return elapsed.TotalSeconds > 0
+            ? cpu.TotalSeconds / elapsed.TotalSeconds * 100
+            : 0;
     }
 
     private static string FormatException(Exception exception)
