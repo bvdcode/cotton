@@ -14,6 +14,8 @@ namespace Cotton.Sync.State;
 public sealed class SqliteSyncStateStore : ISyncStateStore
 {
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> MigrationGates = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> WriteGates = new(StringComparer.OrdinalIgnoreCase);
+    private const int DefaultSqliteTimeoutSeconds = 30;
 
     private readonly string _databasePath;
     private bool _initialized;
@@ -125,24 +127,33 @@ public sealed class SqliteSyncStateStore : ISyncStateStore
 
         string key = SyncPath.ToKey(entry.RelativePath);
         await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
-        await using SyncStateDbContext context = CreateContext();
-        SyncStateEntity? entity = await context.SyncEntries
-            .SingleOrDefaultAsync(
-                existing => existing.SyncPairId == entry.SyncPairId && existing.RelativePathKey == key,
-                cancellationToken)
-            .ConfigureAwait(false);
-        if (entity is null)
+        SemaphoreSlim gate = GetWriteGate();
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            entity = new SyncStateEntity
+            await using SyncStateDbContext context = CreateContext();
+            SyncStateEntity? entity = await context.SyncEntries
+                .SingleOrDefaultAsync(
+                    existing => existing.SyncPairId == entry.SyncPairId && existing.RelativePathKey == key,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (entity is null)
             {
-                SyncPairId = entry.SyncPairId,
-                RelativePathKey = key,
-            };
-            context.SyncEntries.Add(entity);
-        }
+                entity = new SyncStateEntity
+                {
+                    SyncPairId = entry.SyncPairId,
+                    RelativePathKey = key,
+                };
+                context.SyncEntries.Add(entity);
+            }
 
-        UpdateEntity(entity, entry, key);
-        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            UpdateEntity(entity, entry, key);
+            await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     /// <inheritdoc />
@@ -153,23 +164,32 @@ public sealed class SqliteSyncStateStore : ISyncStateStore
         ValidateCursor(cursor);
 
         await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
-        await using SyncStateDbContext context = CreateContext();
-        SyncChangeCursorEntity? entity = await context.SyncChangeCursors
-            .SingleOrDefaultAsync(
-                existing => existing.SyncPairId == cursor.SyncPairId,
-                cancellationToken)
-            .ConfigureAwait(false);
-        if (entity is null)
+        SemaphoreSlim gate = GetWriteGate();
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            entity = new SyncChangeCursorEntity
+            await using SyncStateDbContext context = CreateContext();
+            SyncChangeCursorEntity? entity = await context.SyncChangeCursors
+                .SingleOrDefaultAsync(
+                    existing => existing.SyncPairId == cursor.SyncPairId,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (entity is null)
             {
-                SyncPairId = cursor.SyncPairId,
-            };
-            context.SyncChangeCursors.Add(entity);
-        }
+                entity = new SyncChangeCursorEntity
+                {
+                    SyncPairId = cursor.SyncPairId,
+                };
+                context.SyncChangeCursors.Add(entity);
+            }
 
-        UpdateEntity(entity, cursor);
-        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            UpdateEntity(entity, cursor);
+            await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     /// <inheritdoc />
@@ -178,11 +198,20 @@ public sealed class SqliteSyncStateStore : ISyncStateStore
         ArgumentException.ThrowIfNullOrWhiteSpace(syncPairId);
         string key = SyncPath.ToKey(relativePath);
         await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
-        await using SyncStateDbContext context = CreateContext();
-        await context.SyncEntries
-            .Where(entry => entry.SyncPairId == syncPairId && entry.RelativePathKey == key)
-            .ExecuteDeleteAsync(cancellationToken)
-            .ConfigureAwait(false);
+        SemaphoreSlim gate = GetWriteGate();
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await using SyncStateDbContext context = CreateContext();
+            await context.SyncEntries
+                .Where(entry => entry.SyncPairId == syncPairId && entry.RelativePathKey == key)
+                .ExecuteDeleteAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     /// <inheritdoc />
@@ -190,17 +219,26 @@ public sealed class SqliteSyncStateStore : ISyncStateStore
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(syncPairId);
         await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
-        await using SyncStateDbContext context = CreateContext();
-        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        await context.SyncEntries
-            .Where(entry => entry.SyncPairId == syncPairId)
-            .ExecuteDeleteAsync(cancellationToken)
-            .ConfigureAwait(false);
-        await context.SyncChangeCursors
-            .Where(cursor => cursor.SyncPairId == syncPairId)
-            .ExecuteDeleteAsync(cancellationToken)
-            .ConfigureAwait(false);
-        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        SemaphoreSlim gate = GetWriteGate();
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await using SyncStateDbContext context = CreateContext();
+            await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+            await context.SyncEntries
+                .Where(entry => entry.SyncPairId == syncPairId)
+                .ExecuteDeleteAsync(cancellationToken)
+                .ConfigureAwait(false);
+            await context.SyncChangeCursors
+                .Where(cursor => cursor.SyncPairId == syncPairId)
+                .ExecuteDeleteAsync(cancellationToken)
+                .ConfigureAwait(false);
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     /// <inheritdoc />
@@ -212,29 +250,38 @@ public sealed class SqliteSyncStateStore : ISyncStateStore
         ArgumentException.ThrowIfNullOrWhiteSpace(syncPairId);
         ArgumentNullException.ThrowIfNull(entries);
         await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
-        await using SyncStateDbContext context = CreateContext();
-        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        await context.SyncEntries
-            .Where(entry => entry.SyncPairId == syncPairId)
-            .ExecuteDeleteAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        foreach (SyncStateEntry entry in entries)
+        SemaphoreSlim gate = GetWriteGate();
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            entry.SyncPairId = syncPairId;
-            entry.RelativePath = SyncPath.Normalize(entry.RelativePath);
-            string key = SyncPath.ToKey(entry.RelativePath);
-            var entity = new SyncStateEntity
-            {
-                SyncPairId = syncPairId,
-                RelativePathKey = key,
-            };
-            UpdateEntity(entity, entry, key);
-            context.SyncEntries.Add(entity);
-        }
+            await using SyncStateDbContext context = CreateContext();
+            await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+            await context.SyncEntries
+                .Where(entry => entry.SyncPairId == syncPairId)
+                .ExecuteDeleteAsync(cancellationToken)
+                .ConfigureAwait(false);
 
-        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            foreach (SyncStateEntry entry in entries)
+            {
+                entry.SyncPairId = syncPairId;
+                entry.RelativePath = SyncPath.Normalize(entry.RelativePath);
+                string key = SyncPath.ToKey(entry.RelativePath);
+                var entity = new SyncStateEntity
+                {
+                    SyncPairId = syncPairId,
+                    RelativePathKey = key,
+                };
+                UpdateEntity(entity, entry, key);
+                context.SyncEntries.Add(entity);
+            }
+
+            await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     private async Task EnsureInitializedAsync(CancellationToken cancellationToken)
@@ -357,11 +404,19 @@ public sealed class SqliteSyncStateStore : ISyncStateStore
         {
             ["Data Source"] = _databasePath,
             ["Pooling"] = false,
+            ["Default Timeout"] = DefaultSqliteTimeoutSeconds,
         }.ToString();
         DbContextOptions<SyncStateDbContext> options = new DbContextOptionsBuilder<SyncStateDbContext>()
             .UseSqlite(connectionString)
             .Options;
         return new SyncStateDbContext(options);
+    }
+
+    private SemaphoreSlim GetWriteGate()
+    {
+        return WriteGates.GetOrAdd(
+            Path.GetFullPath(_databasePath),
+            static _ => new SemaphoreSlim(1, 1));
     }
 
     private void EnsureDirectoryExists()
