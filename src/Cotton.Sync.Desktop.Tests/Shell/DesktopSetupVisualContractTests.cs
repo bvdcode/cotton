@@ -146,10 +146,19 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Not.Contain("SelectedItem=\"{Binding SelectedSyncPair}\""));
             Assert.That(foldersSection, Does.Contain("IsVisible=\"{Binding IsEditorVisible}\""));
             Assert.That(foldersSection, Does.Not.Contain("IsVisible=\"{Binding IsSelectedSyncPairEditorVisible}\""));
-            Assert.That(foldersSection, Does.Contain("Text=\"{Binding HeaderText}\""));
-            Assert.That(foldersSection, Does.Contain("Classes.errorStatus=\"{Binding IsErrorStatus}\""));
-            Assert.That(appXaml, Does.Contain("TextBlock.errorStatus"));
-            Assert.That(appXaml, Does.Contain("Value=\"{DynamicResource CottonErrorBrush}\""));
+            Assert.That(foldersSection, Does.Contain("Text=\"{Binding DisplayName}\""));
+            Assert.That(foldersSection, Does.Contain("Classes=\"syncPairStatusIndicator\""));
+            Assert.That(foldersSection, Does.Contain("Classes.active=\"{Binding IsStatusActive}\""));
+            Assert.That(foldersSection, Does.Contain("Classes.paused=\"{Binding IsStatusPaused}\""));
+            Assert.That(foldersSection, Does.Contain("Classes.attention=\"{Binding IsStatusAttention}\""));
+            Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"{Binding DisplayStatus}\""));
+            Assert.That(foldersSection, Does.Contain("IsVisible=\"{Binding IsStatusIndicatorVisible}\""));
+            Assert.That(foldersSection, Does.Not.Contain("Text=\"{Binding HeaderText}\""));
+            Assert.That(foldersSection, Does.Not.Contain("Classes.errorStatus=\"{Binding IsErrorStatus}\""));
+            Assert.That(appXaml, Does.Contain("Border.syncPairStatusIndicator"));
+            Assert.That(appXaml, Does.Contain("Border.syncPairStatusIndicator.active"));
+            Assert.That(appXaml, Does.Contain("Border.syncPairStatusIndicator.paused"));
+            Assert.That(appXaml, Does.Contain("Border.syncPairStatusIndicator.attention"));
             Assert.That(foldersSection, Does.Contain("Text=\"{Binding EditableDisplayName}\""));
             Assert.That(foldersSection, Does.Not.Contain("SelectedSyncPairEditableDisplayName"));
             Assert.That(foldersSection, Does.Contain("SaveSelectedSyncPairNameCommand"));
@@ -299,7 +308,7 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
-    public void DashboardContent_StretchesActivityIntoRemainingSpace()
+    public void DashboardContent_SharesRemainingSpaceBetweenFoldersAndActivity()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
         string dashboardView = GetSlice(
@@ -310,7 +319,7 @@ public sealed class DesktopSetupVisualContractTests
         Assert.Multiple(() =>
         {
             Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"Auto\" />"));
-            Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"Auto\" MaxHeight=\"236\" />"));
+            Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"*\" MinHeight=\"132\" />"));
             Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"*\" MinHeight=\"112\" />"));
             Assert.That(dashboardView, Does.Contain("<StackPanel Grid.Row=\"0\""));
             Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding IsDashboardChromeVisible}\""));
@@ -326,6 +335,7 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(dashboardView, Does.Not.Contain("RowDefinitions=\"Auto,*,*\""));
             Assert.That(dashboardView, Does.Not.Contain("RowDefinitions=\"Auto,Auto,Auto,Auto,*\""));
             Assert.That(dashboardView, Does.Not.Contain("RowDefinitions=\"Auto,132\""));
+            Assert.That(dashboardView, Does.Not.Contain("Height=\"Auto\" MaxHeight=\"236\""));
             Assert.That(dashboardView, Does.Not.Contain("Height=\"2*\""));
         });
     }
@@ -615,8 +625,9 @@ public sealed class DesktopSetupVisualContractTests
         Assert.Multiple(() =>
         {
             Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"Auto\" />"));
-            Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"Auto\" MaxHeight=\"236\" />"));
+            Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"*\" MinHeight=\"132\" />"));
             Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"*\" MinHeight=\"112\" />"));
+            Assert.That(dashboardView, Does.Not.Contain("Height=\"Auto\" MaxHeight=\"236\""));
             Assert.That(dashboardView, Does.Not.Contain("Height=\"2*\""));
         });
     }

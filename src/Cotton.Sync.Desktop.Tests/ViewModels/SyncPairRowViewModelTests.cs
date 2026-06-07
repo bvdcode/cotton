@@ -8,7 +8,7 @@ namespace Cotton.Sync.Desktop.Tests.ViewModels;
 public sealed class SyncPairRowViewModelTests
 {
     [Test]
-    public void IsHeaderStatusVisible_HidesDecorativeIdleAndExpandedEditorStatus()
+    public void StatusIndicator_HidesDecorativeIdleAndClassifiesVisibleStates()
     {
         var row = new SyncPairRowViewModel
         {
@@ -20,8 +20,7 @@ public sealed class SyncPairRowViewModelTests
         {
             Assert.That(row.DisplayStatus, Is.Empty);
             Assert.That(row.HasDisplayStatus, Is.False);
-            Assert.That(row.IsHeaderStatusVisible, Is.False);
-            Assert.That(row.HeaderText, Is.EqualTo("Videos"));
+            Assert.That(row.IsStatusIndicatorVisible, Is.False);
         });
 
         row.Status = " Syncing ";
@@ -30,9 +29,20 @@ public sealed class SyncPairRowViewModelTests
         {
             Assert.That(row.DisplayStatus, Is.EqualTo("Syncing"));
             Assert.That(row.HasDisplayStatus, Is.True);
-            Assert.That(row.IsHeaderStatusVisible, Is.True);
-            Assert.That(row.IsErrorStatus, Is.False);
-            Assert.That(row.HeaderText, Is.EqualTo("Videos · Syncing"));
+            Assert.That(row.IsStatusIndicatorVisible, Is.True);
+            Assert.That(row.IsStatusActive, Is.True);
+            Assert.That(row.IsStatusPaused, Is.False);
+            Assert.That(row.IsStatusAttention, Is.False);
+        });
+
+        row.Status = "Paused";
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(row.DisplayStatus, Is.EqualTo("Paused"));
+            Assert.That(row.IsStatusActive, Is.False);
+            Assert.That(row.IsStatusPaused, Is.True);
+            Assert.That(row.IsStatusAttention, Is.False);
         });
 
         row.Status = "Error";
@@ -40,11 +50,7 @@ public sealed class SyncPairRowViewModelTests
         Assert.Multiple(() =>
         {
             Assert.That(row.DisplayStatus, Is.EqualTo("Error"));
-            Assert.That(row.IsErrorStatus, Is.True);
+            Assert.That(row.IsStatusAttention, Is.True);
         });
-
-        row.IsEditorVisible = true;
-
-        Assert.That(row.IsHeaderStatusVisible, Is.False);
     }
 }

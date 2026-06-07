@@ -49,25 +49,13 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
     public bool IsEditorVisible
     {
         get => _isEditorVisible;
-        set
-        {
-            if (SetProperty(ref _isEditorVisible, value))
-            {
-                OnPropertyChanged(nameof(IsHeaderStatusVisible));
-            }
-        }
+        set => SetProperty(ref _isEditorVisible, value);
     }
 
     public string DisplayName
     {
         get => _displayName;
-        set
-        {
-            if (SetProperty(ref _displayName, value))
-            {
-                OnPropertyChanged(nameof(HeaderText));
-            }
-        }
+        set => SetProperty(ref _displayName, value);
     }
 
     public string CurrentOperation
@@ -95,11 +83,19 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
 
     public bool HasDisplayStatus => !string.IsNullOrWhiteSpace(DisplayStatus);
 
-    public bool IsHeaderStatusVisible => HasDisplayStatus && !IsEditorVisible;
+    public bool IsStatusIndicatorVisible => HasDisplayStatus;
 
-    public bool IsErrorStatus => string.Equals(DisplayStatus, "Error", StringComparison.Ordinal);
+    public bool IsStatusActive =>
+        string.Equals(DisplayStatus, "Scanning", StringComparison.Ordinal)
+        || string.Equals(DisplayStatus, "Syncing", StringComparison.Ordinal)
+        || string.Equals(DisplayStatus, "Sync requested", StringComparison.Ordinal);
 
-    public string HeaderText => HasDisplayStatus ? DisplayName + " · " + DisplayStatus : DisplayName;
+    public bool IsStatusPaused => string.Equals(DisplayStatus, "Paused", StringComparison.Ordinal);
+
+    public bool IsStatusAttention =>
+        string.Equals(DisplayStatus, "Error", StringComparison.Ordinal)
+        || string.Equals(DisplayStatus, "Conflict", StringComparison.Ordinal)
+        || string.Equals(DisplayStatus, "Offline", StringComparison.Ordinal);
 
     public bool HasCurrentProgress
     {
@@ -176,9 +172,10 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
             {
                 OnPropertyChanged(nameof(DisplayStatus));
                 OnPropertyChanged(nameof(HasDisplayStatus));
-                OnPropertyChanged(nameof(IsHeaderStatusVisible));
-                OnPropertyChanged(nameof(IsErrorStatus));
-                OnPropertyChanged(nameof(HeaderText));
+                OnPropertyChanged(nameof(IsStatusIndicatorVisible));
+                OnPropertyChanged(nameof(IsStatusActive));
+                OnPropertyChanged(nameof(IsStatusPaused));
+                OnPropertyChanged(nameof(IsStatusAttention));
             }
         }
     }

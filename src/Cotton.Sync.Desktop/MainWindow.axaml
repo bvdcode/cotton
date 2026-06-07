@@ -235,7 +235,7 @@
           IsVisible="{Binding IsDashboardVisible}">
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto" />
-        <RowDefinition Height="Auto" MaxHeight="236" />
+        <RowDefinition Height="*" MinHeight="132" />
         <RowDefinition Height="*" MinHeight="112" />
       </Grid.RowDefinitions>
       <StackPanel Grid.Row="0"
@@ -547,10 +547,23 @@
                           <Grid ColumnDefinitions="*,Auto,Auto"
                                 RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
                                 ColumnSpacing="10">
-                            <TextBlock Text="{Binding HeaderText}"
-                                       FontWeight="SemiBold"
-                                       Classes.errorStatus="{Binding IsErrorStatus}"
-                                       TextTrimming="CharacterEllipsis" />
+                            <Grid ColumnDefinitions="Auto,*"
+                                  ColumnSpacing="7">
+                              <Border Width="9"
+                                      Height="9"
+                                      CornerRadius="5"
+                                      Classes="syncPairStatusIndicator"
+                                      Classes.active="{Binding IsStatusActive}"
+                                      Classes.paused="{Binding IsStatusPaused}"
+                                      Classes.attention="{Binding IsStatusAttention}"
+                                      ToolTip.Tip="{Binding DisplayStatus}"
+                                      VerticalAlignment="Center"
+                                      IsVisible="{Binding IsStatusIndicatorVisible}" />
+                              <TextBlock Grid.Column="1"
+                                         Text="{Binding DisplayName}"
+                                         FontWeight="SemiBold"
+                                         TextTrimming="CharacterEllipsis" />
+                            </Grid>
                             <TextBlock Grid.Row="1"
                                        Text="{Binding CurrentOperation}"
                                        FontSize="12"
