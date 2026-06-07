@@ -46,6 +46,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private readonly Dictionary<Guid, DateTime> _runProgressAppliedAtUtcByPair = [];
     private readonly Dictionary<Guid, DesktopTransferProgressSnapshot> _transferProgressByPair = [];
     private readonly Dictionary<Guid, long> _runCompletedTransferBytesByPair = [];
+    private readonly Dictionary<RunTransferProgressKey, long> _runCompletedTransferBytesByKey = [];
     private readonly Dictionary<RunTransferProgressKey, long> _runTransferBytesByKey = [];
     private readonly Queue<RunTransferProgressSample> _runTransferSamples = new();
     private readonly SyncPairSettingsValidator _syncPairSettingsValidator = new();
@@ -3867,6 +3868,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private void ClearRunTransferMetrics()
     {
         _runCompletedTransferBytesByPair.Clear();
+        _runCompletedTransferBytesByKey.Clear();
         _runTransferBytesByKey.Clear();
         _runTransferSamples.Clear();
         _runTransferredBytes = 0;
@@ -3894,6 +3896,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         if (progress.IsCompleted)
         {
             _runTransferBytesByKey.Remove(key);
+            TrackCompletedRunTransferBytes(key, effectiveTransferredBytes);
         }
         else
         {
@@ -3906,14 +3909,25 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             return;
         }
 
-        if (progress.IsCompleted)
-        {
-            _runCompletedTransferBytesByPair.TryGetValue(progress.SyncPairId, out long completedBytes);
-            _runCompletedTransferBytesByPair[progress.SyncPairId] = completedBytes + effectiveTransferredBytes;
-        }
-
         _runTransferredBytes += transferredDelta;
         AddRunTransferSample(progress.OccurredAtUtc);
+    }
+
+    private void TrackCompletedRunTransferBytes(RunTransferProgressKey key, long completedBytes)
+    {
+        if (completedBytes <= 0)
+        {
+            return;
+        }
+
+        _runCompletedTransferBytesByKey.TryGetValue(key, out long existingCompletedBytes);
+        if (completedBytes > existingCompletedBytes)
+        {
+            _runCompletedTransferBytesByKey[key] = completedBytes;
+            long completedBytesDelta = completedBytes - existingCompletedBytes;
+            _runCompletedTransferBytesByPair.TryGetValue(key.SyncPairId, out long pairCompletedBytes);
+            _runCompletedTransferBytesByPair[key.SyncPairId] = pairCompletedBytes + completedBytesDelta;
+        }
     }
 
     private void AddRunTransferSample(DateTime occurredAtUtc)
