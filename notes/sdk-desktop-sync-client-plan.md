@@ -29,6 +29,8 @@ Mechanical audit 2026-06-07:
 
 Latest audit result: no additional sub-plan can be marked fully complete after the current desktop pass. Phase 1 through Phase 5 remain the only fully closed implementation sub-plans. Every other unchecked file still has at least one open release gate, manual gate, reference guardrail, or future item.
 
+Revision 2026-06-07: re-ran the sub-plan checkbox audit for this pass. The `Plan Files` checklist remains the closure ledger: `[x]` files are closed and should stay out of the normal work horizon; `[ ]` files are either active, manual-gated, reference, or future scope and must not be treated as complete.
+
 Closed implementation sub-plans after this audit:
 
 - Phase 1 - Release-Grade App Model.

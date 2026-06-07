@@ -28,7 +28,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private static readonly TimeSpan ActiveStatusRunProgressStaleThreshold = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan RunTransferMetricsWindow = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan MinimumRunTransferSampleDuration = TimeSpan.FromSeconds(1);
-    private static readonly TimeSpan MinimumRunProgressEstimateDuration = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan MinimumRunProgressEstimateDuration = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan RunProgressEstimateSmoothingPeriod = TimeSpan.FromSeconds(10);
 
     private readonly IDesktopShellController _controller;

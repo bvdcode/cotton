@@ -2092,6 +2092,41 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task RunProgressChanged_ShowsGlobalFileRateAfterShortManyFileProgress()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Videos", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 0,
+            FilesTotal: 1000,
+            CurrentPath: "Videos/clip-0000.mp4",
+            StartedAtUtc: startedAtUtc,
+            IsCompleted: false,
+            OccurredAtUtc: startedAtUtc));
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 100,
+            FilesTotal: 1000,
+            CurrentPath: "Videos/clip-0100.mp4",
+            StartedAtUtc: startedAtUtc,
+            IsCompleted: false,
+            OccurredAtUtc: startedAtUtc.AddSeconds(2)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.CurrentWorkProgressHeaderRateDetails, Is.EqualTo("50 files/s · 20s left"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("Checking files · 100 of 1000 files"));
+        });
+    }
+
+    [Test]
     public async Task TransferProgressChanged_UsesGlobalFileRateWhenActiveTransferHasNoByteRate()
     {
         Guid syncPairId = Guid.NewGuid();
