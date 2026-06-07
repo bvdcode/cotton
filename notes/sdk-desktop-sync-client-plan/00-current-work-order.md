@@ -8,11 +8,11 @@ Use this section as the active checklist for the current desktop-client pass. Do
   Verification: focused command/state tests plus Windows manual check with two sync pairs.
 - [ ] Stabilize dashboard progress.
   Required behavior: the top progress card represents the whole active sync cycle, not only the current file; progress does not reset on every file; speed and ETA use smoothed global samples and do not flicker; many-small-file sync still shows useful global file-rate/ETA.
-  Current status: global file-rate smoothing is implemented; keep open for visual Windows verification and any remaining global-progress corrections.
+  Current status: global file-rate smoothing is implemented, and the refreshed Linux visual-smoke progress screen shows aggregate multi-folder progress; keep open for animated Windows verification and any remaining global-progress corrections.
   Verification: focused view-model tests plus Windows manual check with many small files and at least one large file.
 - [ ] Fix folder-list usability.
   Required behavior: folder rows use compact status dots/icons instead of dangling status text, expanded row actions remain reachable in a small window, the folder list scrolls independently, and Activity does not consume the primary folder-management area unless explicitly opened.
-  Current status: layout-side fixes are implemented; keep open for Windows visual verification with multiple sync pairs.
+  Current status: layout-side fixes are implemented, and the refreshed Linux visual-smoke folder-controls screen shows the expanded editor reachable with Activity hidden; keep open for Windows visual verification with multiple sync pairs.
   Verification: visual check on Linux for layout regressions and Windows manual check with two or more sync pairs.
 - [ ] Fix startup and authentication polish.
   Required behavior: saved sessions show a connecting/restoring state instead of the login form, login supports Enter, and auth errors stay human-readable without moving the whole form offscreen.
