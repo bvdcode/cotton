@@ -37,7 +37,7 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
             Directory.CreateDirectory(targetDirectory);
         }
 
-        string temporaryDirectory = Path.Combine(fullRoot, MetadataDirectoryName, TemporaryDirectoryName);
+        string temporaryDirectory = Path.Combine(EnsureMetadataDirectory(fullRoot), TemporaryDirectoryName);
         Directory.CreateDirectory(temporaryDirectory);
         CleanupTemporaryDownloads(temporaryDirectory);
         string temporaryPath = Path.Combine(temporaryDirectory, Guid.NewGuid().ToString("N") + ".download");
@@ -87,6 +87,7 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
             string? preservedDirectory = Path.GetDirectoryName(preservedPath);
             if (!string.IsNullOrWhiteSpace(preservedDirectory))
             {
+                EnsureMetadataDirectory(fullRoot);
                 Directory.CreateDirectory(preservedDirectory);
             }
 
@@ -121,6 +122,7 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
             string? preservedParentDirectory = Path.GetDirectoryName(preservedPath);
             if (!string.IsNullOrWhiteSpace(preservedParentDirectory))
             {
+                EnsureMetadataDirectory(fullRoot);
                 Directory.CreateDirectory(preservedParentDirectory);
             }
 
@@ -185,6 +187,39 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
             {
                 Trace.TraceWarning("Failed to delete stale sync download temp file '{0}': {1}", temporaryFile, exception.Message);
             }
+        }
+    }
+
+    private static string EnsureMetadataDirectory(string fullRoot)
+    {
+        string metadataDirectory = Path.Combine(fullRoot, MetadataDirectoryName);
+        Directory.CreateDirectory(metadataDirectory);
+        HideMetadataDirectoryIfSupported(metadataDirectory);
+        return metadataDirectory;
+    }
+
+    private static void HideMetadataDirectoryIfSupported(string metadataDirectory)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        try
+        {
+            FileAttributes attributes = File.GetAttributes(metadataDirectory);
+            if ((attributes & FileAttributes.Hidden) == 0)
+            {
+                File.SetAttributes(metadataDirectory, attributes | FileAttributes.Hidden);
+            }
+        }
+        catch (IOException exception)
+        {
+            Trace.TraceWarning("Failed to hide sync metadata directory '{0}': {1}", metadataDirectory, exception.Message);
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            Trace.TraceWarning("Failed to hide sync metadata directory '{0}': {1}", metadataDirectory, exception.Message);
         }
     }
 
