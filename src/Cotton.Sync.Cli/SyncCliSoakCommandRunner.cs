@@ -88,6 +88,8 @@ internal static class SyncCliSoakCommandRunner
         using Process process = Process.GetCurrentProcess();
         DateTime startedAtUtc = DateTime.UtcNow;
         TimeSpan startedCpu = process.TotalProcessorTime;
+        long startedWorkingSetBytes = GetWorkingSetBytes(process);
+        long startedManagedMemoryBytes = GC.GetTotalMemory(forceFullCollection: false);
         DateTime? stopAtUtc = durationSeconds.HasValue
             ? startedAtUtc.AddSeconds(durationSeconds.Value)
             : null;
@@ -96,8 +98,8 @@ internal static class SyncCliSoakCommandRunner
         int syncErrors = 0;
         int? finalConvergenceActivities = null;
         int? finalStateEntries = null;
-        long peakWorkingSetBytes = GetWorkingSetBytes(process);
-        long peakManagedMemoryBytes = GC.GetTotalMemory(forceFullCollection: false);
+        long peakWorkingSetBytes = startedWorkingSetBytes;
+        long peakManagedMemoryBytes = startedManagedMemoryBytes;
         await output.WriteLineAsync("Cotton Sync soak run").ConfigureAwait(false);
         await output.WriteLineAsync("Sync pair: " + options.SyncPairId).ConfigureAwait(false);
         if (secondClientOptions is not null)
@@ -168,6 +170,8 @@ internal static class SyncCliSoakCommandRunner
             startedAtUtc,
             startedCpu,
             process,
+            startedWorkingSetBytes,
+            startedManagedMemoryBytes,
             peakWorkingSetBytes,
             peakManagedMemoryBytes,
             completedIterations,
@@ -367,6 +371,8 @@ internal static class SyncCliSoakCommandRunner
         DateTime startedAtUtc,
         TimeSpan startedCpu,
         Process process,
+        long startedWorkingSetBytes,
+        long startedManagedMemoryBytes,
         long peakWorkingSetBytes,
         long peakManagedMemoryBytes,
         int completedIterations,
@@ -378,6 +384,10 @@ internal static class SyncCliSoakCommandRunner
         DateTime completedAtUtc = DateTime.UtcNow;
         TimeSpan elapsed = completedAtUtc - startedAtUtc;
         TimeSpan cpu = GetTotalProcessorTime(process) - startedCpu;
+        long completedWorkingSetBytes = GetWorkingSetBytes(process);
+        long completedManagedMemoryBytes = GC.GetTotalMemory(forceFullCollection: false);
+        peakWorkingSetBytes = Math.Max(peakWorkingSetBytes, completedWorkingSetBytes);
+        peakManagedMemoryBytes = Math.Max(peakManagedMemoryBytes, completedManagedMemoryBytes);
         bool converged = syncErrors == 0 && finalConvergenceActivities == 0;
         int failures = syncErrors;
         if (syncErrors == 0 && finalConvergenceActivities.GetValueOrDefault() > 0)
@@ -388,7 +398,13 @@ internal static class SyncCliSoakCommandRunner
         await output.WriteLineAsync("Completed UTC: " + SyncCliFormat.FormatUtc(completedAtUtc)).ConfigureAwait(false);
         await output.WriteLineAsync("Elapsed seconds: " + elapsed.TotalSeconds.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("CPU seconds: " + cpu.TotalSeconds.ToStringInvariant()).ConfigureAwait(false);
+        await output.WriteLineAsync("Start working set bytes: " + startedWorkingSetBytes.ToStringInvariant()).ConfigureAwait(false);
+        await output.WriteLineAsync("End working set bytes: " + completedWorkingSetBytes.ToStringInvariant()).ConfigureAwait(false);
+        await output.WriteLineAsync("Working set growth bytes: " + (completedWorkingSetBytes - startedWorkingSetBytes).ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Peak working set bytes: " + peakWorkingSetBytes.ToStringInvariant()).ConfigureAwait(false);
+        await output.WriteLineAsync("Start managed memory bytes: " + startedManagedMemoryBytes.ToStringInvariant()).ConfigureAwait(false);
+        await output.WriteLineAsync("End managed memory bytes: " + completedManagedMemoryBytes.ToStringInvariant()).ConfigureAwait(false);
+        await output.WriteLineAsync("Managed memory growth bytes: " + (completedManagedMemoryBytes - startedManagedMemoryBytes).ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Peak managed memory bytes: " + peakManagedMemoryBytes.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Iterations completed: " + completedIterations.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Total activities: " + totalActivities.ToStringInvariant()).ConfigureAwait(false);

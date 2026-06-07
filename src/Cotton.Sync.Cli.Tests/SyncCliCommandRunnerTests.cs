@@ -772,7 +772,13 @@ public sealed class SyncCliCommandRunnerTests
             Assert.That(text, Does.Contain("Iteration 1: activities=1, stateEntries=1"));
             Assert.That(text, Does.Contain("Elapsed seconds:"));
             Assert.That(text, Does.Contain("CPU seconds:"));
+            Assert.That(text, Does.Contain("Start working set bytes:"));
+            Assert.That(text, Does.Contain("End working set bytes:"));
+            Assert.That(text, Does.Contain("Working set growth bytes:"));
             Assert.That(text, Does.Contain("Peak working set bytes:"));
+            Assert.That(text, Does.Contain("Start managed memory bytes:"));
+            Assert.That(text, Does.Contain("End managed memory bytes:"));
+            Assert.That(text, Does.Contain("Managed memory growth bytes:"));
             Assert.That(text, Does.Contain("Peak managed memory bytes:"));
             Assert.That(text, Does.Contain("Iterations completed: 1"));
             Assert.That(text, Does.Contain("Final convergence activities: 0"));
@@ -840,7 +846,13 @@ public sealed class SyncCliCommandRunnerTests
             Assert.That(text, Does.Contain("Sync error: InvalidOperationException: Unexpected request:"));
             Assert.That(text, Does.Contain("Elapsed seconds:"));
             Assert.That(text, Does.Contain("CPU seconds:"));
+            Assert.That(text, Does.Contain("Start working set bytes:"));
+            Assert.That(text, Does.Contain("End working set bytes:"));
+            Assert.That(text, Does.Contain("Working set growth bytes:"));
             Assert.That(text, Does.Contain("Peak working set bytes:"));
+            Assert.That(text, Does.Contain("Start managed memory bytes:"));
+            Assert.That(text, Does.Contain("End managed memory bytes:"));
+            Assert.That(text, Does.Contain("Managed memory growth bytes:"));
             Assert.That(text, Does.Contain("Peak managed memory bytes:"));
             Assert.That(text, Does.Contain("Iterations completed: 0"));
             Assert.That(text, Does.Contain("Total activities: 0"));
