@@ -1324,8 +1324,14 @@ public sealed class SyncEngine : ISyncEngine
 
     private static List<string> BuildUniquePathKeyList(params IEnumerable<string>[] keySets)
     {
-        var seen = new HashSet<string>(PathComparer);
-        var keys = new List<string>();
+        if (TryBuildSingleSourcePathKeyList(keySets, out List<string> singleSourceKeys))
+        {
+            return singleSourceKeys;
+        }
+
+        int initialCapacity = EstimateUniquePathKeyCapacity(keySets);
+        var seen = new HashSet<string>(initialCapacity, PathComparer);
+        var keys = new List<string>(initialCapacity);
         foreach (IEnumerable<string> keySet in keySets)
         {
             foreach (string key in keySet)
@@ -1338,6 +1344,56 @@ public sealed class SyncEngine : ISyncEngine
         }
 
         return keys;
+    }
+
+    private static bool TryBuildSingleSourcePathKeyList(IEnumerable<string>[] keySets, out List<string> keys)
+    {
+        IEnumerable<string>? singleSource = null;
+        int singleSourceCount = 0;
+        foreach (IEnumerable<string> keySet in keySets)
+        {
+            if (!keySet.TryGetNonEnumeratedCount(out int count))
+            {
+                keys = [];
+                return false;
+            }
+
+            if (count == 0)
+            {
+                continue;
+            }
+
+            if (singleSource is not null)
+            {
+                keys = [];
+                return false;
+            }
+
+            singleSource = keySet;
+            singleSourceCount = count;
+        }
+
+        keys = singleSource is null ? [] : new List<string>(singleSourceCount);
+        if (singleSource is not null)
+        {
+            keys.AddRange(singleSource);
+        }
+
+        return true;
+    }
+
+    private static int EstimateUniquePathKeyCapacity(IEnumerable<string>[] keySets)
+    {
+        int capacity = 0;
+        foreach (IEnumerable<string> keySet in keySets)
+        {
+            if (keySet.TryGetNonEnumeratedCount(out int count) && count > capacity)
+            {
+                capacity = count;
+            }
+        }
+
+        return capacity;
     }
 
     private static IEnumerable<string> EnumerateDirectoryDeleteKeys(IReadOnlyList<string> pathKeys)
