@@ -1730,12 +1730,6 @@ public sealed class SyncEngine : ISyncEngine
             return SyncDeleteDirection.None;
         }
 
-        bool localDeleted = local is null && !string.IsNullOrWhiteSpace(state.LocalContentHash);
-        bool remoteDeleted = remote is null && state.RemoteFileId.HasValue;
-        bool localChanged = local is not null && !ContentMatches(local.ContentHash, state.LocalContentHash);
-        bool remoteChanged = remote is not null && !RemoteMatchesBaseline(remote.File, state);
-        bool baselineDiverged = !ContentMatches(state.LocalContentHash, state.RemoteContentHash);
-
         if (local is null && remote is null)
         {
             return SyncDeleteDirection.None;
@@ -1745,6 +1739,12 @@ public sealed class SyncEngine : ISyncEngine
         {
             return SyncDeleteDirection.None;
         }
+
+        bool localDeleted = local is null && !string.IsNullOrWhiteSpace(state.LocalContentHash);
+        bool remoteDeleted = remote is null && state.RemoteFileId.HasValue;
+        bool localChanged = local is not null && !ContentMatches(local.ContentHash, state.LocalContentHash);
+        bool remoteChanged = remote is not null && !RemoteMatchesBaseline(remote.File, state);
+        bool baselineDiverged = !ContentMatches(state.LocalContentHash, state.RemoteContentHash);
 
         if (baselineDiverged)
         {
