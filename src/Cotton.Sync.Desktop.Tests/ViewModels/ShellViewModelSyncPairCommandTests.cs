@@ -1589,7 +1589,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("512 B / 1.0 KB"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("8 of 30 files across 2 folders"));
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Documents: Uploading report.txt"));
-            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(26.666).Within(0.01));
+            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(50).Within(0.01));
             Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.False);
         });
     }
@@ -1624,11 +1624,11 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents: Checking files"));
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents: Uploading report.txt"));
             Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("512 B / 1.0 KB · 256 B/s · 2s left"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("5 of 20 files · report.txt"));
-            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Documents: Uploading report.txt"));
-            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(25).Within(0.01));
+            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.Empty);
+            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(50).Within(0.01));
             Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.False);
         });
     }
@@ -1668,7 +1668,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("2.0 KB / 4.0 KB · 768 B/s · 3s left"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("8 of 30 files across 2 folders"));
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("2 files transferring"));
-            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(26.666).Within(0.01));
+            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(50).Within(0.01));
         });
     }
 
@@ -2368,6 +2368,30 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             Assert.That(viewModel.HasNoActivities, Is.False);
             Assert.That(viewModel.HasActivities, Is.True);
+        });
+    }
+
+    [Test]
+    public async Task ToggleActivityCommand_TogglesDashboardActivityVisibility()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot());
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsActivityVisible, Is.False);
+            Assert.That(viewModel.IsActivityHidden, Is.True);
+            Assert.That(viewModel.ActivityToggleToolTip, Is.EqualTo("Show activity"));
+        });
+
+        await ExecuteAsync(viewModel.ToggleActivityCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsActivityVisible, Is.True);
+            Assert.That(viewModel.IsActivityHidden, Is.False);
+            Assert.That(viewModel.ActivityToggleToolTip, Is.EqualTo("Hide activity"));
         });
     }
 

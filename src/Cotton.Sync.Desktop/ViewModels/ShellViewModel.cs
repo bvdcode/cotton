@@ -78,6 +78,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private bool _isLocalFolderSelectionError;
     private bool _isSelectedSyncPairEditorVisible;
     private bool _isSettingsVisible;
+    private bool _isActivityVisible;
     private bool _isLoadingSnapshot;
     private bool _isStartWithOperatingSystemSupported = true;
     private bool _isTrayLifecycleSupported;
@@ -209,6 +210,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             () => _pendingRemoveSyncPair is not null && !IsBusy,
             HandleCommandError);
         OpenWebCommand = new AsyncRelayCommand(OpenWebAsync, () => IsSignedIn, HandleCommandError);
+        ToggleActivityCommand = new AsyncRelayCommand(ToggleActivityAsync, () => IsSignedIn, HandleCommandError);
         SelfTestCommand = new AsyncRelayCommand(SelfTestAsync, () => !IsBusy, HandleCommandError);
         ExportDiagnosticsCommand = new AsyncRelayCommand(ExportDiagnosticsAsync, () => !IsBusy, HandleCommandError);
         OpenDataFolderCommand = new AsyncRelayCommand(
@@ -271,6 +273,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public AsyncRelayCommand OpenTrayFolderCommand { get; }
 
     public AsyncRelayCommand OpenWebCommand { get; }
+
+    public AsyncRelayCommand ToggleActivityCommand { get; }
 
     public AsyncRelayCommand OpenRemoteFolderCommand { get; }
 
@@ -510,9 +514,22 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public bool HasCurrentWorkProgress => HasCurrentTransfer || HasCurrentRunProgress;
 
-    public string CurrentWorkProgressTitle => IsRunProgressPrimary
-        ? CurrentRunProgressTitle
-        : HasCurrentTransfer ? CurrentTransferTitle : CurrentRunProgressTitle;
+    public string CurrentWorkProgressTitle
+    {
+        get
+        {
+            if (HasActiveTransferProgress)
+            {
+                return _runProgressByPair.Count > 1
+                    ? "Syncing " + _runProgressByPair.Count.ToString(CultureInfo.CurrentCulture) + " folders"
+                    : CurrentTransferTitle;
+            }
+
+            return IsRunProgressPrimary
+                ? CurrentRunProgressTitle
+                : HasCurrentTransfer ? CurrentTransferTitle : CurrentRunProgressTitle;
+        }
+    }
 
     public string CurrentWorkProgressHeaderDetails => IsRunProgressPrimary && HasActiveTransferProgress
         ? CreateAggregateTransferDetails(_transferProgressByPair.Values)
@@ -546,9 +563,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             {
                 if (HasActiveTransferProgress)
                 {
-                    return _transferProgressByPair.Count > 1
-                        ? _transferProgressByPair.Count.ToString(CultureInfo.CurrentCulture) + " files transferring"
-                        : CurrentTransferTitle;
+                    if (_transferProgressByPair.Count > 1)
+                    {
+                        return _transferProgressByPair.Count.ToString(CultureInfo.CurrentCulture) + " files transferring";
+                    }
+
+                    return _runProgressByPair.Count > 1 ? CurrentTransferTitle : string.Empty;
                 }
 
                 return string.Empty;
@@ -562,13 +582,17 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public bool HasCurrentWorkProgressSecondaryDetails => !string.IsNullOrWhiteSpace(CurrentWorkProgressSecondaryDetails);
 
-    public double CurrentWorkProgressValue => IsRunProgressPrimary
-        ? CurrentRunProgressValue
-        : HasCurrentTransfer ? CurrentTransferProgressValue : CurrentRunProgressValue;
+    public double CurrentWorkProgressValue => TryCalculateAggregateTransferProgressValue(out double transferProgressValue)
+        ? transferProgressValue
+        : IsRunProgressPrimary
+            ? CurrentRunProgressValue
+            : HasCurrentTransfer ? CurrentTransferProgressValue : CurrentRunProgressValue;
 
-    public bool IsCurrentWorkProgressIndeterminate => IsRunProgressPrimary
-        ? IsCurrentRunProgressIndeterminate
-        : HasCurrentTransfer ? IsCurrentTransferIndeterminate : IsCurrentRunProgressIndeterminate;
+    public bool IsCurrentWorkProgressIndeterminate => HasActiveTransferProgress
+        ? !TryCalculateAggregateTransferProgressValue(out _)
+        : IsRunProgressPrimary
+            ? IsCurrentRunProgressIndeterminate
+            : HasCurrentTransfer ? IsCurrentTransferIndeterminate : IsCurrentRunProgressIndeterminate;
 
     private bool IsRunProgressPrimary => HasCurrentRunProgress;
 
@@ -610,6 +634,23 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public bool HasNoActivities => Activities.Count == 0;
 
     public bool HasActivities => Activities.Count > 0;
+
+    public bool IsActivityVisible
+    {
+        get => _isActivityVisible;
+        private set
+        {
+            if (SetProperty(ref _isActivityVisible, value))
+            {
+                OnPropertyChanged(nameof(IsActivityHidden));
+                OnPropertyChanged(nameof(ActivityToggleToolTip));
+            }
+        }
+    }
+
+    public bool IsActivityHidden => !IsActivityVisible;
+
+    public string ActivityToggleToolTip => IsActivityVisible ? "Hide activity" : "Show activity";
 
     public bool HasConflicts => Conflicts.Count > 0;
 
@@ -1674,6 +1715,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         await _controller.OpenWebAsync().ConfigureAwait(true);
         AddActivity("Open", string.Empty, "Cotton Cloud opened");
+    }
+
+    private Task ToggleActivityAsync()
+    {
+        IsActivityVisible = !IsActivityVisible;
+        return Task.CompletedTask;
     }
 
     private async Task ToggleSelectedSyncPairEnabledAsync()
@@ -3268,6 +3315,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OpenFolderCommand.RaiseCanExecuteChanged();
         OpenTrayFolderCommand.RaiseCanExecuteChanged();
         OpenConflictCommand.RaiseCanExecuteChanged();
+        ToggleActivityCommand.RaiseCanExecuteChanged();
         ChangeSelectedSyncPairLocalFolderCommand.RaiseCanExecuteChanged();
         ChangeSelectedSyncPairRemoteFolderCommand.RaiseCanExecuteChanged();
         ToggleSelectedSyncPairEnabledCommand.RaiseCanExecuteChanged();
@@ -3585,6 +3633,36 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         return totalFiles > 0
             ? Math.Clamp((double)completedFiles / totalFiles * 100, 0, 100)
             : progressValues.All(static item => item.IsCompleted) ? 100 : 0;
+    }
+
+    private bool TryCalculateAggregateTransferProgressValue(out double progressValue)
+    {
+        progressValue = 0;
+        if (_transferProgressByPair.Count == 0)
+        {
+            return false;
+        }
+
+        long transferredBytes = 0;
+        long totalBytes = 0;
+        foreach (DesktopTransferProgressSnapshot progress in _transferProgressByPair.Values)
+        {
+            if (progress.TotalBytes is not > 0)
+            {
+                return false;
+            }
+
+            totalBytes += progress.TotalBytes.Value;
+            transferredBytes += Math.Clamp(progress.TransferredBytes, 0, progress.TotalBytes.Value);
+        }
+
+        if (totalBytes <= 0)
+        {
+            return false;
+        }
+
+        progressValue = Math.Clamp((double)transferredBytes / totalBytes * 100, 0, 100);
+        return true;
     }
 
     private static string CreateAggregateRunProgressDetails(IReadOnlyList<DesktopRunProgressSnapshot> progressValues)

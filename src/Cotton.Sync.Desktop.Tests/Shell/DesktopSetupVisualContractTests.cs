@@ -103,6 +103,9 @@ public sealed class DesktopSetupVisualContractTests
         Assert.Multiple(() =>
         {
             Assert.That(foldersHeader, Does.Not.Contain("Sync roots"));
+            Assert.That(foldersHeader, Does.Contain("ToggleActivityCommand"));
+            Assert.That(foldersHeader, Does.Contain("ToolTip.Tip=\"{Binding ActivityToggleToolTip}\""));
+            Assert.That(foldersHeader, Does.Contain("Kind=\"History\""));
             Assert.That(foldersHeader, Does.Contain("ShowAddSyncPairCommand"));
             Assert.That(foldersHeader, Does.Contain("ToolTip.Tip=\"Add sync folder\""));
             Assert.That(foldersHeader, Does.Not.Contain("IsVisible=\"{Binding HasSyncPairs}\""));
@@ -308,7 +311,7 @@ public sealed class DesktopSetupVisualContractTests
     }
 
     [Test]
-    public void DashboardContent_SharesRemainingSpaceBetweenFoldersAndActivity()
+    public void DashboardContent_KeepsFoldersPrimaryAndActivityCollapsible()
     {
         string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
         string dashboardView = GetSlice(
@@ -320,11 +323,12 @@ public sealed class DesktopSetupVisualContractTests
         {
             Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"Auto\" />"));
             Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"*\" MinHeight=\"132\" />"));
-            Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"*\" MinHeight=\"112\" />"));
             Assert.That(dashboardView, Does.Contain("<StackPanel Grid.Row=\"0\""));
             Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding IsDashboardChromeVisible}\""));
             Assert.That(dashboardView, Does.Contain("<Border Grid.Row=\"1\""));
             Assert.That(dashboardView, Does.Contain("<Border Grid.Row=\"2\""));
+            Assert.That(dashboardView, Does.Contain("MaxHeight=\"190\""));
+            Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding IsActivityVisible}\""));
             Assert.That(dashboardView, Does.Contain("VerticalScrollBarVisibility=\"Auto\""));
             Assert.That(dashboardView, Does.Not.Contain("<ScrollViewer Grid.Row=\"0\""));
             Assert.That(dashboardView, Does.Not.Contain("MaxHeight=\"332\""));
@@ -337,6 +341,7 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(dashboardView, Does.Not.Contain("RowDefinitions=\"Auto,132\""));
             Assert.That(dashboardView, Does.Not.Contain("Height=\"Auto\" MaxHeight=\"236\""));
             Assert.That(dashboardView, Does.Not.Contain("Height=\"2*\""));
+            Assert.That(dashboardView, Does.Not.Contain("<RowDefinition Height=\"*\" MinHeight=\"112\" />"));
         });
     }
 
@@ -500,7 +505,8 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(dashboardHeader, Does.Contain("ToolTip.Tip=\"Sync now\""));
             Assert.That(dashboardHeader, Does.Contain("Kind=\"Refresh\""));
             Assert.That(dashboardHeader, Does.Contain("IsVisible=\"{Binding CanSyncNow}\""));
-            Assert.That(dashboardHeader, Does.Contain("Header=\"Web app\""));
+            Assert.That(dashboardHeader, Does.Contain("Header=\"Open in web\""));
+            Assert.That(dashboardHeader, Does.Not.Contain("Header=\"Web app\""));
             Assert.That(dashboardHeader, Does.Not.Contain("Header=\"Open in Cotton Cloud\""));
             Assert.That(dashboardHeader, Does.Not.Contain("Header=\"Open Cotton Cloud\""));
             Assert.That(dashboardHeader, Does.Not.Contain("Content=\"Sync\""));
@@ -627,9 +633,10 @@ public sealed class DesktopSetupVisualContractTests
         {
             Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"Auto\" />"));
             Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"*\" MinHeight=\"132\" />"));
-            Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"*\" MinHeight=\"112\" />"));
+            Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding IsActivityVisible}\""));
             Assert.That(dashboardView, Does.Not.Contain("Height=\"Auto\" MaxHeight=\"236\""));
             Assert.That(dashboardView, Does.Not.Contain("Height=\"2*\""));
+            Assert.That(dashboardView, Does.Not.Contain("<RowDefinition Height=\"*\" MinHeight=\"112\" />"));
         });
     }
 

@@ -68,7 +68,7 @@
                                         Foreground="{DynamicResource CottonTextPrimaryBrush}" />
             <Button.Flyout>
               <MenuFlyout>
-                <MenuItem Header="Web app"
+                <MenuItem Header="Open in web"
                           Command="{Binding OpenWebCommand}" />
                 <MenuItem Header="{Binding PauseResumeSyncLabel}"
                           IsVisible="{Binding CanTogglePauseResumeSync}"
@@ -236,7 +236,7 @@
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto" />
         <RowDefinition Height="*" MinHeight="132" />
-        <RowDefinition Height="*" MinHeight="112" />
+        <RowDefinition Height="Auto" />
       </Grid.RowDefinitions>
       <StackPanel Grid.Row="0"
                   Spacing="8"
@@ -491,13 +491,23 @@
             <Grid RowDefinitions="Auto,*"
                   RowSpacing="10"
                   MinHeight="0">
-              <Grid ColumnDefinitions="*,Auto"
+              <Grid ColumnDefinitions="*,Auto,Auto"
                     ColumnSpacing="8">
                 <TextBlock Text="Folders"
                            FontSize="16"
                            FontWeight="SemiBold"
                            VerticalAlignment="Center" />
                 <Button Grid.Column="1"
+                        Classes="icon"
+                        ToolTip.Tip="{Binding ActivityToggleToolTip}"
+                        Command="{Binding ToggleActivityCommand}"
+                        VerticalAlignment="Center">
+                  <materialIcons:MaterialIcon Kind="History"
+                                              Width="16"
+                                              Height="16"
+                                              Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                </Button>
+                <Button Grid.Column="2"
                         Classes="icon primary"
                         ToolTip.Tip="Add sync folder"
                         Command="{Binding ShowAddSyncPairCommand}"
@@ -732,7 +742,9 @@
               BorderBrush="{DynamicResource CottonBorderBrush}"
               BorderThickness="1"
               ClipToBounds="True"
-              MinHeight="0">
+              MaxHeight="190"
+              MinHeight="0"
+              IsVisible="{Binding IsActivityVisible}">
             <Grid RowDefinitions="Auto,*"
                   RowSpacing="8"
                   MinHeight="0">
