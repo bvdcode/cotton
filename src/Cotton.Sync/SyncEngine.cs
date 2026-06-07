@@ -89,7 +89,7 @@ public sealed class SyncEngine : ISyncEngine
             localDirectoriesByPath.Keys,
             remoteDirectoriesByPath.Keys,
             directoryStateByPath.Keys);
-        IReadOnlyCollection<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys);
+        IReadOnlyList<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys);
         ReportRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, 0, directoryPathKeys.Count, null, startedAtUtc);
         await ReconcileDirectoriesWithoutBaselineAsync(
             syncPair,
@@ -1285,26 +1285,42 @@ public sealed class SyncEngine : ISyncEngine
         }
     }
 
-    private static IReadOnlyCollection<string> BuildPathKeys(params IEnumerable<string>[] keySets)
+    private static IReadOnlyList<string> BuildPathKeys(params IEnumerable<string>[] keySets)
     {
-        var keys = new SortedSet<string>(PathComparer);
-        foreach (IEnumerable<string> keySet in keySets)
-        {
-            foreach (string key in keySet)
-            {
-                keys.Add(key);
-            }
-        }
-
+        List<string> keys = BuildUniquePathKeyList(keySets);
+        keys.Sort(PathComparer.Compare);
         return keys;
     }
 
     private static IReadOnlyList<string> BuildDirectoryPathKeys(params IEnumerable<string>[] keySets)
     {
-        return BuildPathKeys(keySets)
-            .OrderBy(static key => GetPathDepth(key))
-            .ThenBy(static key => key, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        List<string> keys = BuildUniquePathKeyList(keySets);
+        keys.Sort(static (left, right) =>
+        {
+            int depthComparison = GetPathDepth(left).CompareTo(GetPathDepth(right));
+            return depthComparison != 0
+                ? depthComparison
+                : StringComparer.OrdinalIgnoreCase.Compare(left, right);
+        });
+        return keys;
+    }
+
+    private static List<string> BuildUniquePathKeyList(params IEnumerable<string>[] keySets)
+    {
+        var seen = new HashSet<string>(PathComparer);
+        var keys = new List<string>();
+        foreach (IEnumerable<string> keySet in keySets)
+        {
+            foreach (string key in keySet)
+            {
+                if (seen.Add(key))
+                {
+                    keys.Add(key);
+                }
+            }
+        }
+
+        return keys;
     }
 
     private static void Report(
