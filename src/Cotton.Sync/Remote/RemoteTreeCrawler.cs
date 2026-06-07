@@ -4,6 +4,7 @@
 using Cotton.Files;
 using Cotton.Nodes;
 using Cotton.Sdk.Nodes;
+using Cotton.Sync;
 using Cotton.Sync.State;
 
 namespace Cotton.Sync.Remote;
@@ -11,7 +12,7 @@ namespace Cotton.Sync.Remote;
 /// <summary>
 /// Crawls remote Cotton folders through the SDK node API.
 /// </summary>
-public sealed class RemoteTreeCrawler : IRemoteTreeProgressCrawler
+public sealed class RemoteTreeCrawler : IRemoteTreeLookupCrawler
 {
     private const int DefaultPageSize = 100;
     private const int ProgressReportItemInterval = 100;
@@ -41,8 +42,46 @@ public sealed class RemoteTreeCrawler : IRemoteTreeProgressCrawler
         IProgress<RemoteTreeScanProgress>? progress,
         CancellationToken cancellationToken = default)
     {
+        var snapshot = new RemoteTreeSnapshot();
+        snapshot.RootNode = await CrawlCoreAsync(
+                rootNodeId,
+                progress,
+                snapshot.Directories.Add,
+                snapshot.Files.Add,
+                cancellationToken)
+            .ConfigureAwait(false);
+        snapshot.Directories.Sort((left, right) => string.Compare(left.RelativePath, right.RelativePath, StringComparison.OrdinalIgnoreCase));
+        snapshot.Files.Sort((left, right) => string.Compare(left.RelativePath, right.RelativePath, StringComparison.OrdinalIgnoreCase));
+        return snapshot;
+    }
+
+    /// <inheritdoc />
+    public async Task<RemoteTreeLookupSnapshot> CrawlLookupsAsync(
+        Guid rootNodeId,
+        IProgress<RemoteTreeScanProgress>? progress,
+        CancellationToken cancellationToken = default)
+    {
+        var snapshot = new RemoteTreeLookupSnapshot();
+        snapshot.RootNode = await CrawlCoreAsync(
+                rootNodeId,
+                progress,
+                directory => SyncPathLookup.Add(snapshot.DirectoriesByPath, directory, static item => item.RelativePath),
+                file => SyncPathLookup.Add(snapshot.FilesByPath, file, static item => item.RelativePath),
+                cancellationToken)
+            .ConfigureAwait(false);
+        return snapshot;
+    }
+
+    private async Task<NodeDto> CrawlCoreAsync(
+        Guid rootNodeId,
+        IProgress<RemoteTreeScanProgress>? progress,
+        Action<RemoteDirectorySnapshot> addDirectory,
+        Action<RemoteFileSnapshot> addFile,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(addDirectory);
+        ArgumentNullException.ThrowIfNull(addFile);
         NodeDto root = await _nodes.GetAsync(rootNodeId, cancellationToken).ConfigureAwait(false);
-        var snapshot = new RemoteTreeSnapshot { RootNode = root };
         var queue = new Queue<(NodeDto Node, string RelativePath)>();
         queue.Enqueue((root, string.Empty));
         int directoriesScanned = 0;
@@ -71,7 +110,7 @@ public sealed class RemoteTreeCrawler : IRemoteTreeProgressCrawler
                         continue;
                     }
 
-                    snapshot.Directories.Add(new RemoteDirectorySnapshot
+                    addDirectory(new RemoteDirectorySnapshot
                     {
                         RelativePath = relativePath,
                         Node = childNode,
@@ -89,7 +128,7 @@ public sealed class RemoteTreeCrawler : IRemoteTreeProgressCrawler
                         continue;
                     }
 
-                    snapshot.Files.Add(new RemoteFileSnapshot
+                    addFile(new RemoteFileSnapshot
                     {
                         RelativePath = relativePath,
                         File = file,
@@ -109,10 +148,8 @@ public sealed class RemoteTreeCrawler : IRemoteTreeProgressCrawler
             }
         }
 
-        snapshot.Directories.Sort((left, right) => string.Compare(left.RelativePath, right.RelativePath, StringComparison.OrdinalIgnoreCase));
-        snapshot.Files.Sort((left, right) => string.Compare(left.RelativePath, right.RelativePath, StringComparison.OrdinalIgnoreCase));
         progress?.Report(new RemoteTreeScanProgress(filesScanned, directoriesScanned, currentPath: null));
-        return snapshot;
+        return root;
     }
 
     private static void ReportScanProgress(
@@ -156,4 +193,5 @@ public sealed class RemoteTreeCrawler : IRemoteTreeProgressCrawler
             : parentPath + "/" + name;
         return SyncPath.Normalize(combined);
     }
+
 }

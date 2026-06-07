@@ -48,6 +48,44 @@ public sealed class RemoteTreeCrawlerTests
     }
 
     [Test]
+    public async Task CrawlLookupsAsync_ReturnsPathLookups()
+    {
+        Guid rootId = Guid.NewGuid();
+        Guid docsId = Guid.NewGuid();
+        var client = new FakeNodeClient();
+        client.Nodes[rootId] = Node(rootId, null, "root");
+        client.Nodes[docsId] = Node(docsId, rootId, "Docs");
+        client.Children[(rootId, 1)] = new NodeContentDto
+        {
+            TotalCount = 2,
+            Nodes = [client.Nodes[docsId]],
+            Files = [File(rootId, "root.txt")],
+        };
+        client.Children[(docsId, 1)] = new NodeContentDto
+        {
+            TotalCount = 1,
+            Files = [File(docsId, "report.txt")],
+        };
+        var crawler = new RemoteTreeCrawler(client);
+        var progress = new RecordingProgress<RemoteTreeScanProgress>();
+
+        RemoteTreeLookupSnapshot snapshot = await crawler.CrawlLookupsAsync(rootId, progress);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.RootNode.Id, Is.EqualTo(rootId));
+            Assert.That(snapshot.DirectoriesByPath.Keys, Is.EqualTo(new[] { "DOCS" }));
+            Assert.That(snapshot.DirectoriesByPath["DOCS"].RelativePath, Is.EqualTo("Docs"));
+            Assert.That(snapshot.FilesByPath.Keys, Is.EqualTo(new[] { "ROOT.TXT", "DOCS/REPORT.TXT" }));
+            Assert.That(snapshot.FilesByPath["ROOT.TXT"].RelativePath, Is.EqualTo("root.txt"));
+            Assert.That(snapshot.FilesByPath["DOCS/REPORT.TXT"].RelativePath, Is.EqualTo("Docs/report.txt"));
+            Assert.That(progress.Values, Has.Count.GreaterThanOrEqualTo(3));
+            Assert.That(progress.Values[^1].FilesScanned, Is.EqualTo(2));
+            Assert.That(progress.Values[^1].DirectoriesScanned, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
     public async Task CrawlAsync_ReturnsEmptySnapshotForEmptyRoot()
     {
         Guid rootId = Guid.NewGuid();

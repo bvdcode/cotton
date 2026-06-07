@@ -26,6 +26,7 @@ public sealed class SyncEngine : ISyncEngine
     private readonly ILocalTreeScanner? _localTreeScanner;
     private readonly IRemoteDirectorySynchronizer? _remoteDirectories;
     private readonly IRemoteTreeCrawler _remoteCrawler;
+    private readonly IRemoteTreeLookupCrawler? _remoteLookupCrawler;
     private readonly IRemoteFileSynchronizer _remoteFiles;
     private readonly ISyncStateStore _stateStore;
     private readonly ILocalFileSyncWriter _localWriter;
@@ -49,6 +50,7 @@ public sealed class SyncEngine : ISyncEngine
         _localMetadataTreeLookupScanner = localScanner as ILocalFileMetadataTreeLookupScanner;
         _localTreeScanner = localScanner as ILocalTreeScanner;
         _remoteCrawler = remoteCrawler ?? throw new ArgumentNullException(nameof(remoteCrawler));
+        _remoteLookupCrawler = remoteCrawler as IRemoteTreeLookupCrawler;
         _remoteFiles = remoteFiles ?? throw new ArgumentNullException(nameof(remoteFiles));
         _stateStore = stateStore ?? throw new ArgumentNullException(nameof(stateStore));
         _localWriter = localWriter ?? new AtomicLocalFileSyncWriter();
@@ -178,15 +180,27 @@ public sealed class SyncEngine : ISyncEngine
                 .ConfigureAwait(false);
         }
 
-        RemoteTreeSnapshot remoteTree = await ScanRemoteTreeAsync(syncPair.RemoteRootNodeId, options, startedAtUtc, cancellationToken)
+        RemoteTreeLookupSnapshot? remoteTreeLookups = await ScanRemoteTreeLookupsAsync(
+                syncPair.RemoteRootNodeId,
+                options,
+                startedAtUtc,
+                cancellationToken)
             .ConfigureAwait(false);
+        RemoteTreeSnapshot? remoteTree = null;
+        if (remoteTreeLookups is null)
+        {
+            remoteTree = await ScanRemoteTreeAsync(syncPair.RemoteRootNodeId, options, startedAtUtc, cancellationToken)
+                .ConfigureAwait(false);
+        }
 
         Dictionary<string, LocalDirectorySnapshot> localDirectoriesByPath = localTreeLookups?.DirectoriesByPath
             ?? ToDictionary(localTree!.Directories, directory => directory.RelativePath);
-        Dictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath = ToDictionary(remoteTree.Directories, directory => directory.RelativePath);
+        Dictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath = remoteTreeLookups?.DirectoriesByPath
+            ?? ToDictionary(remoteTree!.Directories, directory => directory.RelativePath);
         Dictionary<string, LocalFileSnapshot> localByPath = localTreeLookups?.FilesByPath
             ?? ToDictionary(localTree!.Files, file => file.RelativePath);
-        Dictionary<string, RemoteFileSnapshot> remoteByPath = ToDictionary(remoteTree.Files, file => file.RelativePath);
+        Dictionary<string, RemoteFileSnapshot> remoteByPath = remoteTreeLookups?.FilesByPath
+            ?? ToDictionary(remoteTree!.Files, file => file.RelativePath);
         ThrowIfPathKindCollisions(
             localDirectoriesByPath,
             localByPath,
@@ -202,7 +216,7 @@ public sealed class SyncEngine : ISyncEngine
             remoteDirectoriesByPath,
             localByPath,
             remoteByPath,
-            remoteTree.RootNode);
+            remoteTreeLookups?.RootNode ?? remoteTree!.RootNode);
     }
 
     private async Task<(Dictionary<string, SyncStateEntry> DirectoryStateByPath, Dictionary<string, SyncStateEntry> FileStateByPath)> LoadStateByPathAsync(
@@ -323,6 +337,26 @@ public sealed class SyncEngine : ISyncEngine
         }
 
         return await _remoteCrawler.CrawlAsync(remoteRootNodeId, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<RemoteTreeLookupSnapshot?> ScanRemoteTreeLookupsAsync(
+        Guid remoteRootNodeId,
+        SyncRunOptions options,
+        DateTime startedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        if (_remoteLookupCrawler is null)
+        {
+            return null;
+        }
+
+        ReportRunProgress(options, SyncRunProgressStage.ScanningRemote, 0, null, null, startedAtUtc);
+        return await _remoteLookupCrawler
+            .CrawlLookupsAsync(
+                remoteRootNodeId,
+                new RemoteTreeScanProgressReporter(options, startedAtUtc),
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private async Task ReconcileDirectoriesWithoutBaselineAsync(

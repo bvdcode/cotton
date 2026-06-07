@@ -93,8 +93,8 @@ public sealed class LocalFileScanner :
                 rootPath,
                 computeHashes: false,
                 progress,
-                directory => AddLookup(tree.DirectoriesByPath, directory, static item => item.RelativePath),
-                file => AddLookup(tree.FilesByPath, file, static item => item.RelativePath),
+                directory => SyncPathLookup.Add(tree.DirectoriesByPath, directory, static item => item.RelativePath),
+                file => SyncPathLookup.Add(tree.FilesByPath, file, static item => item.RelativePath),
                 cancellationToken)
             .ConfigureAwait(false);
         return tree;
@@ -192,21 +192,6 @@ public sealed class LocalFileScanner :
     {
         tree.Directories.Sort((left, right) => PathComparer.Compare(left.RelativePath, right.RelativePath));
         tree.Files.Sort((left, right) => PathComparer.Compare(left.RelativePath, right.RelativePath));
-    }
-
-    private static void AddLookup<T>(
-        Dictionary<string, T> entriesByPath,
-        T entry,
-        Func<T, string> pathSelector)
-    {
-        string relativePath = pathSelector(entry);
-        string key = SyncPath.ToKey(relativePath);
-        if (entriesByPath.TryGetValue(key, out T? existing))
-        {
-            throw new SyncPathCollisionException(pathSelector(existing), relativePath);
-        }
-
-        entriesByPath[key] = entry;
     }
 
     private static void ReportScanProgress(

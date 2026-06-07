@@ -176,6 +176,24 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_UsesRemoteLookupCrawlerWhenAvailable()
+    {
+        var scanner = new FakeLocalFileScanner();
+        var crawler = new LookupOnlyRemoteTreeCrawler(EmptyRemoteTree());
+        var stateStore = new SqliteSyncStateStore(_databasePath);
+        SyncEngine engine = new(scanner, crawler, new FakeRemoteFileSynchronizer(), stateStore);
+
+        await engine.RunOnceAsync(Pair());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(crawler.LookupCrawlCalls, Is.EqualTo(1));
+            Assert.That(crawler.ProgressCrawlCalls, Is.Zero);
+            Assert.That(crawler.SnapshotCrawlCalls, Is.Zero);
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_HashesMetadataSnapshotWhenBaselineNeedsComparison()
     {
         const string baselineHash = "precomputed-content-hash";
@@ -2244,6 +2262,60 @@ public sealed class SyncEngineTests
 
             progress?.Report(new RemoteTreeScanProgress(_progressPaths.Count, _snapshot.Directories.Count, currentPath: null));
             return Task.FromResult(_snapshot);
+        }
+    }
+
+    private sealed class LookupOnlyRemoteTreeCrawler : IRemoteTreeLookupCrawler
+    {
+        private readonly RemoteTreeSnapshot _snapshot;
+
+        public LookupOnlyRemoteTreeCrawler(RemoteTreeSnapshot snapshot)
+        {
+            _snapshot = snapshot;
+        }
+
+        public int LookupCrawlCalls { get; private set; }
+
+        public int ProgressCrawlCalls { get; private set; }
+
+        public int SnapshotCrawlCalls { get; private set; }
+
+        public Task<RemoteTreeSnapshot> CrawlAsync(Guid rootNodeId, CancellationToken cancellationToken = default)
+        {
+            SnapshotCrawlCalls++;
+            return Task.FromResult(_snapshot);
+        }
+
+        public Task<RemoteTreeSnapshot> CrawlAsync(
+            Guid rootNodeId,
+            IProgress<RemoteTreeScanProgress>? progress,
+            CancellationToken cancellationToken = default)
+        {
+            ProgressCrawlCalls++;
+            return Task.FromResult(_snapshot);
+        }
+
+        public Task<RemoteTreeLookupSnapshot> CrawlLookupsAsync(
+            Guid rootNodeId,
+            IProgress<RemoteTreeScanProgress>? progress,
+            CancellationToken cancellationToken = default)
+        {
+            LookupCrawlCalls++;
+            var snapshot = new RemoteTreeLookupSnapshot
+            {
+                RootNode = _snapshot.RootNode,
+            };
+            foreach (RemoteDirectorySnapshot directory in _snapshot.Directories)
+            {
+                snapshot.DirectoriesByPath.Add(SyncPath.ToKey(directory.RelativePath), directory);
+            }
+
+            foreach (RemoteFileSnapshot file in _snapshot.Files)
+            {
+                snapshot.FilesByPath.Add(SyncPath.ToKey(file.RelativePath), file);
+            }
+
+            return Task.FromResult(snapshot);
         }
     }
 
