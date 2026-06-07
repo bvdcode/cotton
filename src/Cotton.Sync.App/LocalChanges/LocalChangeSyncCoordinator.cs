@@ -27,6 +27,17 @@ public sealed class LocalChangeSyncCoordinator : ILocalChangeSyncCoordinator
     private readonly Dictionary<Guid, ILocalSyncRootWatcher> _watchers = [];
     private CancellationTokenSource? _lifetime;
 
+    internal int PendingRequestCount
+    {
+        get
+        {
+            lock (_pendingGate)
+            {
+                return _pendingRequests.Count;
+            }
+        }
+    }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="LocalChangeSyncCoordinator" /> class.
     /// </summary>
@@ -135,24 +146,38 @@ public sealed class LocalChangeSyncCoordinator : ILocalChangeSyncCoordinator
             return;
         }
 
-        var next = new PendingLocalSyncRequest(CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token));
-        PendingLocalSyncRequest? previous;
         lock (_pendingGate)
         {
-            _pendingSyncs.TryGetValue(change.SyncPairId, out previous);
-            _pendingSyncs[change.SyncPairId] = next;
-            _pendingRequests.Add(next);
-            next.Runner = RunDebouncedSyncAsync(change.SyncPairId, change.FullPath, next);
-        }
+            if (_pendingSyncs.TryGetValue(change.SyncPairId, out PendingLocalSyncRequest? pendingSync))
+            {
+                pendingSync.RecordChange(change.FullPath);
+                return;
+            }
 
-        previous?.Cancellation.Cancel();
+            var next = new PendingLocalSyncRequest(
+                CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token),
+                change.FullPath);
+            _pendingSyncs.Add(change.SyncPairId, next);
+            _pendingRequests.Add(next);
+            next.Runner = RunDebouncedSyncAsync(change.SyncPairId, next);
+        }
     }
 
-    private async Task RunDebouncedSyncAsync(Guid syncPairId, string changedPath, PendingLocalSyncRequest request)
+    private async Task RunDebouncedSyncAsync(Guid syncPairId, PendingLocalSyncRequest request)
     {
         try
         {
-            await Task.Delay(_debounceInterval, request.Cancellation.Token).ConfigureAwait(false);
+            string changedPath;
+            while (true)
+            {
+                int observedChangeVersion = GetChangeVersion(request);
+                await Task.Delay(_debounceInterval, request.Cancellation.Token).ConfigureAwait(false);
+                if (TryGetQuietChangedPath(syncPairId, request, observedChangeVersion, out changedPath))
+                {
+                    break;
+                }
+            }
+
             RemoveCurrentPendingSync(syncPairId, request);
             _logger.LogDebug(
                 "Requesting local-change sync for {SyncPairId} after change at {ChangedPath}.",
@@ -174,6 +199,29 @@ public sealed class LocalChangeSyncCoordinator : ILocalChangeSyncCoordinator
         {
             CompletePendingSync(syncPairId, request);
             request.Cancellation.Dispose();
+        }
+    }
+
+    private int GetChangeVersion(PendingLocalSyncRequest request)
+    {
+        lock (_pendingGate)
+        {
+            return request.ChangeVersion;
+        }
+    }
+
+    private bool TryGetQuietChangedPath(
+        Guid syncPairId,
+        PendingLocalSyncRequest request,
+        int observedChangeVersion,
+        out string changedPath)
+    {
+        lock (_pendingGate)
+        {
+            changedPath = request.ChangedPath;
+            return _pendingSyncs.TryGetValue(syncPairId, out PendingLocalSyncRequest? current)
+                && ReferenceEquals(current, request)
+                && request.ChangeVersion == observedChangeVersion;
         }
     }
 
@@ -221,13 +269,24 @@ public sealed class LocalChangeSyncCoordinator : ILocalChangeSyncCoordinator
 
     private sealed class PendingLocalSyncRequest
     {
-        public PendingLocalSyncRequest(CancellationTokenSource cancellation)
+        public PendingLocalSyncRequest(CancellationTokenSource cancellation, string changedPath)
         {
             Cancellation = cancellation;
+            ChangedPath = changedPath;
         }
 
         public CancellationTokenSource Cancellation { get; }
 
+        public string ChangedPath { get; private set; }
+
+        public int ChangeVersion { get; private set; }
+
         public Task? Runner { get; set; }
+
+        public void RecordChange(string changedPath)
+        {
+            ChangedPath = changedPath;
+            ChangeVersion++;
+        }
     }
 }

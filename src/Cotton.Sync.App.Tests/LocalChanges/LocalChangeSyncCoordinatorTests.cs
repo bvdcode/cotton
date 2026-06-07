@@ -41,6 +41,35 @@ public sealed class LocalChangeSyncCoordinatorTests
     }
 
     [Test]
+    public async Task LocalChangeStorm_KeepsOnePendingSyncRequestPerPair()
+    {
+        const int ChangeCount = 1_000;
+        SyncPairSettings syncPair = CreatePair(isEnabled: true);
+        var watcherFactory = new FakeWatcherFactory();
+        var supervisor = new FakeSyncSupervisor();
+        var coordinator = new LocalChangeSyncCoordinator(
+            new FakeSyncPairSettingsStore([syncPair]),
+            supervisor,
+            watcherFactory,
+            TimeSpan.FromSeconds(5));
+        await coordinator.StartAsync();
+
+        for (int index = 0; index < ChangeCount; index++)
+        {
+            watcherFactory.CreatedWatchers[syncPair.Id].Raise($"/home/user/Cotton/file-{index}.txt");
+        }
+
+        int pendingRequestCount = coordinator.PendingRequestCount;
+        await coordinator.StopAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pendingRequestCount, Is.EqualTo(1));
+            Assert.That(supervisor.SyncNowCallCount, Is.Zero);
+        });
+    }
+
+    [Test]
     public async Task StartAsync_DoesNotWatchDisabledPairs()
     {
         SyncPairSettings syncPair = CreatePair(isEnabled: false);

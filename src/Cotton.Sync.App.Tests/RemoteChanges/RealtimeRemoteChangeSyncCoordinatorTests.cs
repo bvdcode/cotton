@@ -38,6 +38,33 @@ public sealed class RealtimeRemoteChangeSyncCoordinatorTests
     }
 
     [Test]
+    public async Task RemoteChangeStorm_KeepsOnePendingSyncRequest()
+    {
+        const int ChangeCount = 1_000;
+        var realtime = new FakeCottonRealtimeClient();
+        var supervisor = new FakeSyncSupervisor();
+        var coordinator = new RealtimeRemoteChangeSyncCoordinator(
+            realtime,
+            supervisor,
+            TimeSpan.FromSeconds(5));
+        await coordinator.StartAsync();
+
+        for (int index = 0; index < ChangeCount; index++)
+        {
+            realtime.RaiseRemoteFileTreeChanged($"FileUpdated{index}");
+        }
+
+        int pendingRequestCount = coordinator.PendingRequestCount;
+        await coordinator.StopAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pendingRequestCount, Is.EqualTo(1));
+            Assert.That(supervisor.SyncAllCallCount, Is.Zero);
+        });
+    }
+
+    [Test]
     public async Task StopAsync_CancelsPendingSyncRequest()
     {
         var realtime = new FakeCottonRealtimeClient();

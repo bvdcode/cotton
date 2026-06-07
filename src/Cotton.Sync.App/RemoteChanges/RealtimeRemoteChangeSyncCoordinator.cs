@@ -29,6 +29,17 @@ public sealed class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoord
     private int _sessionRevocationRequested;
     private bool _isSubscribed;
 
+    internal int PendingRequestCount
+    {
+        get
+        {
+            lock (_pendingGate)
+            {
+                return _pendingRequests.Count;
+            }
+        }
+    }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="RealtimeRemoteChangeSyncCoordinator" /> class.
     /// </summary>
@@ -132,17 +143,21 @@ public sealed class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoord
             return;
         }
 
-        var next = new PendingRemoteSyncRequest(CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token));
-        PendingRemoteSyncRequest? previous;
         lock (_pendingGate)
         {
-            previous = _pendingSync;
+            if (_pendingSync is not null)
+            {
+                _pendingSync.RecordChange(change.MethodName);
+                return;
+            }
+
+            var next = new PendingRemoteSyncRequest(
+                CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token),
+                change.MethodName);
             _pendingSync = next;
             _pendingRequests.Add(next);
-            next.Runner = RunDebouncedSyncAsync(change.MethodName, next);
+            next.Runner = RunDebouncedSyncAsync(next);
         }
-
-        previous?.Cancellation.Cancel();
     }
 
     private void OnSessionRevoked(object? sender, CottonRealtimeEvent change)
@@ -187,11 +202,21 @@ public sealed class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoord
         }
     }
 
-    private async Task RunDebouncedSyncAsync(string methodName, PendingRemoteSyncRequest request)
+    private async Task RunDebouncedSyncAsync(PendingRemoteSyncRequest request)
     {
+        string methodName = request.MethodName;
         try
         {
-            await Task.Delay(_debounceInterval, request.Cancellation.Token).ConfigureAwait(false);
+            while (true)
+            {
+                int observedChangeVersion = GetChangeVersion(request);
+                await Task.Delay(_debounceInterval, request.Cancellation.Token).ConfigureAwait(false);
+                if (TryGetQuietMethodName(request, observedChangeVersion, out methodName))
+                {
+                    break;
+                }
+            }
+
             RemoveCurrentPendingSync(request);
             _logger.LogDebug(
                 "Requesting remote-change sync after realtime event {MethodName}.",
@@ -212,6 +237,27 @@ public sealed class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoord
         {
             CompletePendingSync(request);
             request.Cancellation.Dispose();
+        }
+    }
+
+    private int GetChangeVersion(PendingRemoteSyncRequest request)
+    {
+        lock (_pendingGate)
+        {
+            return request.ChangeVersion;
+        }
+    }
+
+    private bool TryGetQuietMethodName(
+        PendingRemoteSyncRequest request,
+        int observedChangeVersion,
+        out string methodName)
+    {
+        lock (_pendingGate)
+        {
+            methodName = request.MethodName;
+            return ReferenceEquals(_pendingSync, request)
+                && request.ChangeVersion == observedChangeVersion;
         }
     }
 
@@ -272,13 +318,24 @@ public sealed class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoord
 
     private sealed class PendingRemoteSyncRequest
     {
-        public PendingRemoteSyncRequest(CancellationTokenSource cancellation)
+        public PendingRemoteSyncRequest(CancellationTokenSource cancellation, string methodName)
         {
             Cancellation = cancellation;
+            MethodName = methodName;
         }
 
         public CancellationTokenSource Cancellation { get; }
 
+        public string MethodName { get; private set; }
+
+        public int ChangeVersion { get; private set; }
+
         public Task? Runner { get; set; }
+
+        public void RecordChange(string methodName)
+        {
+            MethodName = methodName;
+            ChangeVersion++;
+        }
     }
 }
