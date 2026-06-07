@@ -371,12 +371,6 @@ public sealed class SyncEngine : ISyncEngine
         DateTime startedAtUtc,
         CancellationToken cancellationToken)
     {
-        Dictionary<string, Guid> remoteNodeIdsByPath = remoteByPath.ToDictionary(
-            static item => item.Key,
-            static item => item.Value.Node.Id,
-            PathComparer);
-        remoteNodeIdsByPath[string.Empty] = remoteRootNode.Id;
-
         int foldersCompleted = 0;
         foreach (string key in pathKeys)
         {
@@ -408,7 +402,7 @@ public sealed class SyncEngine : ISyncEngine
             {
                 string parentPath = GetParentPath(relativePath);
                 string parentKey = string.IsNullOrEmpty(parentPath) ? string.Empty : SyncPath.ToKey(parentPath);
-                if (!remoteNodeIdsByPath.TryGetValue(parentKey, out Guid parentNodeId))
+                if (!TryGetRemoteDirectoryNodeId(remoteByPath, parentKey, remoteRootNode.Id, out Guid parentNodeId))
                 {
                     foldersCompleted++;
                     ReportItemRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
@@ -424,7 +418,6 @@ public sealed class SyncEngine : ISyncEngine
                     Node = created,
                 };
                 remoteByPath[SyncPath.ToKey(relativePath)] = createdSnapshot;
-                remoteNodeIdsByPath[SyncPath.ToKey(relativePath)] = created.Id;
                 await _stateStore.UpsertAsync(BuildDirectoryBaseline(syncPair, relativePath, created), cancellationToken)
                     .ConfigureAwait(false);
                 Report(result, options, SyncActivityKind.Uploaded, relativePath, "Created remote folder.");
@@ -442,6 +435,28 @@ public sealed class SyncEngine : ISyncEngine
             foldersCompleted++;
             ReportItemRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
         }
+    }
+
+    private static bool TryGetRemoteDirectoryNodeId(
+        IDictionary<string, RemoteDirectorySnapshot> remoteByPath,
+        string key,
+        Guid remoteRootNodeId,
+        out Guid nodeId)
+    {
+        if (string.IsNullOrEmpty(key))
+        {
+            nodeId = remoteRootNodeId;
+            return true;
+        }
+
+        if (remoteByPath.TryGetValue(key, out RemoteDirectorySnapshot? remote))
+        {
+            nodeId = remote.Node.Id;
+            return true;
+        }
+
+        nodeId = Guid.Empty;
+        return false;
     }
 
     private async Task ReconcileDirectoryDeletesAsync(
