@@ -21,12 +21,14 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 {
     private const int MaxActivityRows = 30;
     private const int MaxConflictRows = 20;
+    private const int MinimumRunProgressEstimateCompletedFiles = 5;
     private static readonly TimeSpan TransferActivityCoalescingWindow = TimeSpan.FromMilliseconds(750);
     private static readonly TimeSpan VisibleTransferProgressUpdateInterval = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan VisibleRunProgressUpdateInterval = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan ActiveStatusRunProgressStaleThreshold = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan RunTransferMetricsWindow = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan MinimumRunTransferSampleDuration = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan MinimumRunProgressEstimateDuration = TimeSpan.FromSeconds(3);
     private static readonly TimeSpan RunProgressEstimateSmoothingPeriod = TimeSpan.FromSeconds(10);
 
     private readonly IDesktopShellController _controller;
@@ -1459,7 +1461,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             CurrentPath: "Reports/quarterly-budget.xlsx",
             startedAtUtc,
             IsCompleted: false,
-            startedAtUtc.AddSeconds(2)));
+            startedAtUtc.AddSeconds(6)));
         if (secondSyncPair is not null)
         {
             secondSyncPair.Status = "Syncing";
@@ -1471,7 +1473,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 CurrentPath: "Blink/2024/07.7z",
                 startedAtUtc,
                 IsCompleted: false,
-                startedAtUtc.AddSeconds(2)));
+                startedAtUtc.AddSeconds(6)));
         }
 
         ApplyTransferProgress(new DesktopTransferProgressSnapshot(
@@ -3787,7 +3789,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             hasByteRate = true;
         }
 
-        if (!hasByteRate && !HasActiveTransferProgress && _currentRunProgressFilesPerSecond is > 0)
+        if (!hasByteRate && _currentRunProgressFilesPerSecond is > 0)
         {
             parts.Add(FormatFileRate(_currentRunProgressFilesPerSecond.Value));
         }
@@ -3984,13 +3986,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             }
         }
 
-        if (totalFiles <= 0 || completedFiles <= 0 || completedFiles >= totalFiles)
+        if (totalFiles <= 0 || completedFiles < MinimumRunProgressEstimateCompletedFiles || completedFiles >= totalFiles)
         {
             return false;
         }
 
         TimeSpan elapsed = occurredAtUtc - startedAtUtc;
-        if (elapsed < MinimumRunTransferSampleDuration)
+        if (elapsed < MinimumRunProgressEstimateDuration)
         {
             return false;
         }
