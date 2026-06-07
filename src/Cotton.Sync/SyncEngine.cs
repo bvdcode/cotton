@@ -89,7 +89,6 @@ public sealed class SyncEngine : ISyncEngine
             localDirectoriesByPath.Keys,
             remoteDirectoriesByPath.Keys,
             directoryStateByPath.Keys);
-        IReadOnlyList<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys);
         ReportRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, 0, directoryPathKeys.Count, null, startedAtUtc);
         await ReconcileDirectoriesWithoutBaselineAsync(
             syncPair,
@@ -137,6 +136,7 @@ public sealed class SyncEngine : ISyncEngine
             remoteDirectoryContentIndex,
             cancellationToken).ConfigureAwait(false);
 
+        IReadOnlyList<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys);
         int filesCompleted = 0;
         ReportRunProgress(options, SyncRunProgressStage.ReconcilingFiles, filesCompleted, pathKeys.Count, null, startedAtUtc);
         foreach (string key in pathKeys)
