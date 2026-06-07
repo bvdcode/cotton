@@ -21,8 +21,8 @@ internal sealed record DesktopNotificationRequest
 
         Kind = kind;
         SyncPairId = syncPairId;
-        Title = title;
-        Message = message;
+        Title = DesktopUserMessageFormatter.Compact(title, DesktopUserMessageFormatter.TitleMaxLength);
+        Message = DesktopUserMessageFormatter.Compact(message);
     }
 
     public DesktopNotificationKind Kind { get; }

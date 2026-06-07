@@ -3294,7 +3294,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         if (EnableNotifications && _notificationService.IsSupported)
         {
-            _notificationService.Show(title, message);
+            _notificationService.Show(
+                DesktopUserMessageFormatter.Compact(title, DesktopUserMessageFormatter.TitleMaxLength),
+                DesktopUserMessageFormatter.Compact(message));
         }
     }
 
@@ -3357,7 +3359,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             Time = occurredAt.ToString("HH:mm", CultureInfo.CurrentCulture),
             Kind = kind,
             Path = path,
-            Details = details,
+            Details = string.IsNullOrWhiteSpace(details)
+                ? string.Empty
+                : DesktopUserMessageFormatter.Compact(details),
         };
     }
 

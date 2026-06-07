@@ -187,21 +187,23 @@ internal static class DesktopActionRequiredMessageResolver
             return apiFailureMessage;
         }
 
-        return message;
+        return DesktopUserMessageFormatter.Compact(message);
     }
 
     private static string CreateLocalPermissionDeniedMessage(string? relativePath)
     {
-        return string.IsNullOrWhiteSpace(relativePath)
+        string message = string.IsNullOrWhiteSpace(relativePath)
             ? LocalPermissionDeniedMessage
             : "Cotton Sync cannot access '" + relativePath + "'. Grant file permissions and retry sync.";
+        return DesktopUserMessageFormatter.Compact(message);
     }
 
     private static string CreateLocalFileUnavailableMessage(string? relativePath)
     {
-        return string.IsNullOrWhiteSpace(relativePath)
+        string message = string.IsNullOrWhiteSpace(relativePath)
             ? LocalFileUnavailableMessage
             : "Cotton Sync cannot read '" + relativePath + "' yet. Close the app using it or wait for it to finish saving, then retry sync.";
+        return DesktopUserMessageFormatter.Compact(message);
     }
 
     private static string? NormalizeAuthMessage(string? message)
