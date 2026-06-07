@@ -990,7 +990,7 @@
                   <Border Padding="10"
                           CornerRadius="6"
                           Background="{DynamicResource CottonSurfaceMutedBrush}">
-                    <Grid RowDefinitions="Auto,Auto,160,Auto"
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto"
                           RowSpacing="8">
                       <Grid ColumnDefinitions="Auto,*,Auto,Auto"
                             ColumnSpacing="6">
@@ -1052,7 +1052,8 @@
                         </Button>
                       </Grid>
 
-                      <Grid Grid.Row="2">
+                      <Grid Grid.Row="2"
+                            MinHeight="160">
                         <StackPanel Spacing="3"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"

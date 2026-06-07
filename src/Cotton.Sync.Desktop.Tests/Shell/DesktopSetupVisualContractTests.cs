@@ -719,6 +719,8 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(cloudFolderPicker, Does.Contain("Kind=\"CloseCircleOutline\""));
             Assert.That(cloudFolderPicker, Does.Contain("Kind=\"ChevronRight\""));
             Assert.That(CountOccurrences(cloudFolderPicker, "Classes=\"icon\""), Is.EqualTo(4));
+            Assert.That(cloudFolderPicker, Does.Not.Contain("RowDefinitions=\"Auto,Auto,160,Auto\""));
+            Assert.That(cloudFolderPicker, Does.Contain("MinHeight=\"160\""));
             Assert.That(cloudFolderPicker, Does.Not.Contain("Text=\"›\""));
             Assert.That(cloudFolderPicker, Does.Not.Contain("Content=\"←\""));
             Assert.That(cloudFolderPicker, Does.Not.Contain("Content=\"→\""));
