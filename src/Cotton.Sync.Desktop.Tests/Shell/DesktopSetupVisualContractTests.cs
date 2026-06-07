@@ -687,7 +687,7 @@ public sealed class DesktopSetupVisualContractTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(addFolderWizard, Does.Contain("MaxWidth=\"372\""));
+            Assert.That(addFolderWizard, Does.Not.Contain("MaxWidth=\"372\""));
             Assert.That(addFolderWizard, Does.Contain("HorizontalAlignment=\"Stretch\""));
             Assert.That(addFolderWizard, Does.Contain("ToolTip.Tip=\"{Binding ActionRequiredMessage}\""));
             Assert.That(addFolderWizard, Does.Not.Contain("<Border Width=\"372\""));
