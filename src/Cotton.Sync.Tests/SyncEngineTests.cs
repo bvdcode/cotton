@@ -433,6 +433,7 @@ public sealed class SyncEngineTests
         {
             Assert.That(fileProgress, Has.Count.LessThan(fileCount));
             Assert.That(completedCounts[0], Is.EqualTo(0));
+            Assert.That(completedCounts, Does.Contain(25));
             Assert.That(completedCounts[^1], Is.EqualTo(fileCount));
         });
     }
@@ -470,6 +471,7 @@ public sealed class SyncEngineTests
         {
             Assert.That(directoryProgress, Has.Count.LessThan(directoryCount));
             Assert.That(completedCounts[0], Is.EqualTo(0));
+            Assert.That(completedCounts, Does.Contain(25));
             Assert.That(completedCounts[^1], Is.EqualTo(directoryCount));
         });
     }

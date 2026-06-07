@@ -17,7 +17,9 @@ namespace Cotton.Sync;
 /// </summary>
 public sealed class SyncEngine : ISyncEngine
 {
-    private const int RunProgressReportItemInterval = 100;
+    private const int RunProgressDetailedItemInterval = 25;
+    private const int RunProgressDetailedItemLimit = 50_000;
+    private const int RunProgressSparseItemInterval = 100;
     private static readonly TimeSpan RunProgressReportTimeInterval = TimeSpan.FromMilliseconds(250);
     private static readonly StringComparer PathComparer = StringComparer.OrdinalIgnoreCase;
     private readonly ILocalFileScanner _localScanner;
@@ -2089,12 +2091,20 @@ public sealed class SyncEngine : ISyncEngine
         DateTime? lastReportedAtUtc,
         DateTime occurredAtUtc)
     {
-        return itemsTotal <= RunProgressReportItemInterval
+        int itemInterval = GetRunProgressReportItemInterval(itemsTotal);
+        return itemsTotal <= itemInterval
             || itemsCompleted == 0
             || itemsCompleted == itemsTotal
-            || itemsCompleted % RunProgressReportItemInterval == 0
+            || itemsCompleted % itemInterval == 0
             || (lastReportedAtUtc.HasValue
                 && occurredAtUtc - lastReportedAtUtc.Value >= RunProgressReportTimeInterval);
+    }
+
+    private static int GetRunProgressReportItemInterval(int itemsTotal)
+    {
+        return itemsTotal <= RunProgressDetailedItemLimit
+            ? RunProgressDetailedItemInterval
+            : RunProgressSparseItemInterval;
     }
 
     private enum SyncDeleteDirection
