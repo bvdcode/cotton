@@ -519,19 +519,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public string CurrentWorkProgressTitle
     {
-        get
-        {
-            if (HasActiveTransferProgress)
-            {
-                return _runProgressByPair.Count > 1
-                    ? "Syncing " + _runProgressByPair.Count.ToString(CultureInfo.CurrentCulture) + " folders"
-                    : CurrentTransferTitle;
-            }
-
-            return IsRunProgressPrimary
-                ? CurrentRunProgressTitle
-                : HasCurrentTransfer ? CurrentTransferTitle : CurrentRunProgressTitle;
-        }
+        get => IsRunProgressPrimary
+            ? CurrentRunProgressTitle
+            : HasCurrentTransfer ? CurrentTransferTitle : CurrentRunProgressTitle;
     }
 
     public string CurrentWorkProgressHeaderDetails => IsRunProgressPrimary && HasActiveTransferProgress
@@ -571,7 +561,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                         return _transferProgressByPair.Count.ToString(CultureInfo.CurrentCulture) + " files transferring";
                     }
 
-                    return _runProgressByPair.Count > 1 ? CurrentTransferTitle : string.Empty;
+                    return CreateActiveTransferDetails();
                 }
 
                 return string.Empty;
@@ -585,16 +575,16 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public bool HasCurrentWorkProgressSecondaryDetails => !string.IsNullOrWhiteSpace(CurrentWorkProgressSecondaryDetails);
 
-    public double CurrentWorkProgressValue => TryCalculateAggregateTransferProgressValue(out double transferProgressValue)
-        ? transferProgressValue
-        : IsRunProgressPrimary
-            ? CurrentRunProgressValue
+    public double CurrentWorkProgressValue => IsRunProgressPrimary
+        ? CurrentRunProgressValue
+        : TryCalculateAggregateTransferProgressValue(out double transferProgressValue)
+            ? transferProgressValue
             : HasCurrentTransfer ? CurrentTransferProgressValue : CurrentRunProgressValue;
 
-    public bool IsCurrentWorkProgressIndeterminate => HasActiveTransferProgress
-        ? !TryCalculateAggregateTransferProgressValue(out _)
-        : IsRunProgressPrimary
-            ? IsCurrentRunProgressIndeterminate
+    public bool IsCurrentWorkProgressIndeterminate => IsRunProgressPrimary
+        ? IsCurrentRunProgressIndeterminate
+        : HasActiveTransferProgress
+            ? !TryCalculateAggregateTransferProgressValue(out _)
             : HasCurrentTransfer ? IsCurrentTransferIndeterminate : IsCurrentRunProgressIndeterminate;
 
     private bool IsRunProgressPrimary => HasCurrentRunProgress;
@@ -3038,8 +3028,17 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
         syncPair.CurrentOperation = CreateTransferOperation(progress);
         syncPair.HasCurrentProgress = true;
-        syncPair.IsCurrentProgressIndeterminate = IsCurrentTransferIndeterminate;
-        syncPair.CurrentProgressValue = CurrentTransferProgressValue;
+        if (_runProgressByPair.TryGetValue(progress.SyncPairId, out DesktopRunProgressSnapshot? runProgress))
+        {
+            syncPair.IsCurrentProgressIndeterminate = !runProgress.FilesTotal.HasValue && !runProgress.IsCompleted;
+            syncPair.CurrentProgressValue = CalculateRunProgressValue(runProgress);
+        }
+        else
+        {
+            syncPair.IsCurrentProgressIndeterminate = IsCurrentTransferIndeterminate;
+            syncPair.CurrentProgressValue = CurrentTransferProgressValue;
+        }
+
         RaiseCurrentWorkProgressProperties();
         RefreshCurrentProgressText();
     }
@@ -3068,14 +3067,15 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
         _runProgressByPair[progress.SyncPairId] = progress;
         _runProgressAppliedAtUtcByPair[progress.SyncPairId] = DateTime.UtcNow;
-        if (!HasCurrentTransfer || _transferSyncPairId != progress.SyncPairId)
+        bool hasActiveTransferForPair = HasCurrentTransfer && _transferSyncPairId == progress.SyncPairId;
+        if (!hasActiveTransferForPair)
         {
             syncPair.CurrentOperation = CreateRunProgressOperation(progress);
-            syncPair.HasCurrentProgress = true;
-            syncPair.IsCurrentProgressIndeterminate = !progress.FilesTotal.HasValue && !progress.IsCompleted;
-            syncPair.CurrentProgressValue = CalculateRunProgressValue(progress);
         }
 
+        syncPair.HasCurrentProgress = true;
+        syncPair.IsCurrentProgressIndeterminate = !progress.FilesTotal.HasValue && !progress.IsCompleted;
+        syncPair.CurrentProgressValue = CalculateRunProgressValue(progress);
         RefreshRunProgressSummary();
         RefreshCurrentProgressText();
     }
@@ -3758,6 +3758,16 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         return true;
     }
 
+    private string CreateActiveTransferDetails()
+    {
+        if (_transferProgressByPair.Count != 1)
+        {
+            return string.Empty;
+        }
+
+        return CreateTransferOperation(_transferProgressByPair.Values.First());
+    }
+
     private static string CreateAggregateRunProgressDetails(IReadOnlyList<DesktopRunProgressSnapshot> progressValues)
     {
         int completedFiles = 0;
@@ -3833,12 +3843,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 + progress.FilesTotal.Value.ToString(CultureInfo.CurrentCulture)
                 + " "
                 + unitName;
-            if (!string.IsNullOrWhiteSpace(progress.CurrentPath))
-            {
-                details += " · " + GetDisplayFileName(progress.CurrentPath);
-            }
-
-            return details;
+            return IsCountedRunStage(progress.Stage) || string.IsNullOrWhiteSpace(progress.CurrentPath)
+                ? details
+                : details + " · " + GetDisplayFileName(progress.CurrentPath);
         }
 
         return progress.Stage switch
