@@ -1737,15 +1737,32 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
 
         bool enabled = !selected.IsEnabled;
+        bool wasSyncPaused = IsSyncPaused;
         IsBusy = true;
         try
         {
             await _controller.SetSyncPairEnabledAsync(selected.Id, enabled).ConfigureAwait(true);
             selected.IsEnabled = enabled;
             OnPropertyChanged(nameof(SelectedSyncPairToggleEnabledLabel));
-            selected.Status = enabled ? "Idle" : "Disabled";
+            if (enabled)
+            {
+                selected.Status = wasSyncPaused ? "Paused" : "Idle";
+            }
+            else
+            {
+                selected.Status = "Disabled";
+            }
+
             selected.CurrentOperation = string.Empty;
-            GlobalStatus = enabled ? "Ready" : "Folder disabled";
+            if (wasSyncPaused && HasEnabledSyncPairs)
+            {
+                GlobalStatus = "Paused";
+            }
+            else
+            {
+                GlobalStatus = enabled ? "Ready" : "Folder disabled";
+            }
+
             ActionRequiredMessage = string.Empty;
             AddActivity("Pair", selected.LocalPath, enabled ? "Folder enabled" : "Folder disabled");
             RefreshCurrentProgressText();

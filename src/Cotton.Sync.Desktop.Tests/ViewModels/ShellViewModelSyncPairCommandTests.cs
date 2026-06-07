@@ -41,6 +41,36 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task ToggleSelectedSyncPairEnabledCommand_KeepsOtherPairsPausedWhenDisablingDuringGlobalPause()
+    {
+        Guid disabledSyncPairId = Guid.NewGuid();
+        Guid otherSyncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(
+            CreateSignedInSnapshot(
+                CreatePair(disabledSyncPairId, "Cloud", "Paused"),
+                CreatePair(otherSyncPairId, "Videos", "Paused")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        await ExecuteAsync(viewModel.ToggleSelectedSyncPairEnabledCommand);
+
+        SyncPairRowViewModel disabledPair = viewModel.SyncPairs.Single(pair => pair.Id == disabledSyncPairId);
+        SyncPairRowViewModel otherPair = viewModel.SyncPairs.Single(pair => pair.Id == otherSyncPairId);
+        Assert.Multiple(() =>
+        {
+            Assert.That(controller.EnabledSyncPairId, Is.EqualTo(disabledSyncPairId));
+            Assert.That(controller.EnabledSyncPairValue, Is.False);
+            Assert.That(disabledPair.Status, Is.EqualTo("Disabled"));
+            Assert.That(disabledPair.IsEnabled, Is.False);
+            Assert.That(otherPair.Status, Is.EqualTo("Paused"));
+            Assert.That(otherPair.IsEnabled, Is.True);
+            Assert.That(viewModel.IsSyncPaused, Is.True);
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Paused"));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Sync is paused."));
+        });
+    }
+
+    [Test]
     public async Task RemoveSelectedSyncPairCommand_RequiresConfirmationBeforeRemovingPair()
     {
         Guid firstSyncPairId = Guid.NewGuid();

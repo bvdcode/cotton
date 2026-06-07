@@ -34,6 +34,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
     private readonly SyncPairSettingsValidator _validator;
     private readonly ILogger<SyncApplicationService> _logger;
     private bool _isSyncCoreStarted;
+    private bool _isSyncGloballyPaused;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SyncApplicationService" /> class.
@@ -90,6 +91,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
         await _localChanges.StopAsync(cancellationToken).ConfigureAwait(false);
         await _authFlow.SignOutAsync(cancellationToken).ConfigureAwait(false);
         await _supervisor.StopAsync(cancellationToken).ConfigureAwait(false);
+        _isSyncGloballyPaused = false;
     }
 
     /// <inheritdoc />
@@ -234,9 +236,10 @@ public sealed class SyncApplicationService : ISyncApplicationService
     }
 
     /// <inheritdoc />
-    public Task PauseAllAsync(CancellationToken cancellationToken = default)
+    public async Task PauseAllAsync(CancellationToken cancellationToken = default)
     {
-        return _supervisor.PauseAllAsync(cancellationToken);
+        await _supervisor.PauseAllAsync(cancellationToken).ConfigureAwait(false);
+        _isSyncGloballyPaused = true;
     }
 
     /// <inheritdoc />
@@ -246,9 +249,10 @@ public sealed class SyncApplicationService : ISyncApplicationService
     }
 
     /// <inheritdoc />
-    public Task ResumeAllAsync(CancellationToken cancellationToken = default)
+    public async Task ResumeAllAsync(CancellationToken cancellationToken = default)
     {
-        return _supervisor.ResumeAllAsync(cancellationToken);
+        _isSyncGloballyPaused = false;
+        await _supervisor.ResumeAllAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -335,6 +339,10 @@ public sealed class SyncApplicationService : ISyncApplicationService
             startedComponents.Add(new StartedSyncComponent(
                 "sync supervisor",
                 token => _supervisor.StopAsync(token)));
+            if (_isSyncGloballyPaused)
+            {
+                await _supervisor.PauseAllAsync(cancellationToken).ConfigureAwait(false);
+            }
 
             await _localChanges.StartAsync(cancellationToken).ConfigureAwait(false);
             startedComponents.Add(new StartedSyncComponent(

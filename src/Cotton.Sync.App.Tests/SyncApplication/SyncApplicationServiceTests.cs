@@ -388,6 +388,37 @@ public sealed class SyncApplicationServiceTests
     }
 
     [Test]
+    public async Task SaveSyncPairAsync_ReappliesGlobalPauseWhenSyncCoreRestarts()
+    {
+        var store = new InMemorySyncPairSettingsStore();
+        var supervisor = new FakeSyncSupervisor();
+        var localChanges = new FakeLocalChangeSyncCoordinator();
+        var remoteChanges = new FakeRemoteChangeSyncCoordinator();
+        var periodicSync = new FakePeriodicSyncCoordinator();
+        SyncApplicationService service = CreateService(
+            store,
+            supervisor: supervisor,
+            localChanges: localChanges,
+            remoteChanges: remoteChanges,
+            periodicSync: periodicSync);
+        await service.StartSyncAsync();
+        await service.PauseAllAsync();
+
+        SyncPairSaveResult result = await service.SaveSyncPairAsync(CreatePair("/home/user/Cotton"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.IsSaved, Is.True);
+            Assert.That(supervisor.StopCallCount, Is.EqualTo(1));
+            Assert.That(supervisor.StartCallCount, Is.EqualTo(2));
+            Assert.That(supervisor.PauseAllCallCount, Is.EqualTo(2));
+            Assert.That(localChanges.StartCallCount, Is.EqualTo(2));
+            Assert.That(remoteChanges.StartCallCount, Is.EqualTo(2));
+            Assert.That(periodicSync.StartCallCount, Is.EqualTo(2));
+        });
+    }
+
+    [Test]
     public async Task SaveSyncPairAsync_DoesNotRestartSyncComponentsWhenValidationFails()
     {
         var store = new InMemorySyncPairSettingsStore();
@@ -1031,6 +1062,8 @@ public sealed class SyncApplicationServiceTests
 
         public int SyncNowCallCount { get; private set; }
 
+        public int PauseAllCallCount { get; private set; }
+
         public Task StartAsync(CancellationToken cancellationToken = default)
         {
             StartCallCount++;
@@ -1052,6 +1085,7 @@ public sealed class SyncApplicationServiceTests
 
         public Task PauseAllAsync(CancellationToken cancellationToken = default)
         {
+            PauseAllCallCount++;
             return Task.CompletedTask;
         }
 
