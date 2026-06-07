@@ -3912,19 +3912,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
 
         long transferredDelta = effectiveTransferredBytes - previousTransferredBytes;
-        bool hasReportedSpeed = progress.SpeedBytesPerSecond is > 0;
-        if (hasReportedSpeed)
-        {
-            UpdateRunTransferSpeed(progress.SpeedBytesPerSecond!.Value, progress.OccurredAtUtc);
-        }
-
         if (transferredDelta <= 0)
         {
             return;
         }
 
         _runTransferredBytes += transferredDelta;
-        AddRunTransferSample(progress.OccurredAtUtc, updateSpeedFromSamples: !hasReportedSpeed);
+        AddRunTransferSample(progress.OccurredAtUtc);
     }
 
     private void TrackCompletedRunTransferBytes(RunTransferProgressKey key, long completedBytes)
@@ -3944,7 +3938,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
     }
 
-    private void AddRunTransferSample(DateTime occurredAtUtc, bool updateSpeedFromSamples)
+    private void AddRunTransferSample(DateTime occurredAtUtc)
     {
         if (_runTransferSamples.Count > 0
             && occurredAtUtc - _runTransferSamples.Last().OccurredAtUtc > RunTransferMetricsWindow)
@@ -3962,10 +3956,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
         _runTransferSamples.Enqueue(new RunTransferProgressSample(_runTransferredBytes, occurredAtUtc));
         PruneRunTransferSamples(occurredAtUtc);
-        if (updateSpeedFromSamples)
-        {
-            UpdateRunTransferSpeedFromSamples();
-        }
+        UpdateRunTransferSpeedFromSamples();
     }
 
     private void PruneRunTransferSamples(DateTime occurredAtUtc)

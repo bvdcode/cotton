@@ -1862,10 +1862,20 @@ public sealed class ShellViewModelSyncPairCommandTests
             syncPairId,
             SyncTransferDirection.Download,
             "Videos/clip.mp4",
+            TransferredBytes: 256L * 1024 * 1024,
+            TotalBytes: 1024L * 1024 * 1024,
+            IsCompleted: false,
+            OccurredAtUtc: startedAtUtc.AddSeconds(60),
+            SpeedBytesPerSecond: 512L * 1024 * 1024,
+            EstimatedTimeRemaining: TimeSpan.FromSeconds(2)));
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            syncPairId,
+            SyncTransferDirection.Download,
+            "Videos/clip.mp4",
             TransferredBytes: currentFileTransferredBytes,
             TotalBytes: 1024L * 1024 * 1024,
             IsCompleted: false,
-            OccurredAtUtc: startedAtUtc.AddSeconds(61),
+            OccurredAtUtc: startedAtUtc.AddSeconds(62),
             SpeedBytesPerSecond: 64L * 1024 * 1024,
             EstimatedTimeRemaining: TimeSpan.FromSeconds(8)));
 
@@ -1873,7 +1883,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Videos"));
             Assert.That(viewModel.CurrentWorkProgressHeaderSizeDetails, Is.EqualTo("3.5 GB / 10 GB"));
-            Assert.That(viewModel.CurrentWorkProgressHeaderRateDetails, Is.EqualTo("64 MB/s · 1m 45s left"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderRateDetails, Is.EqualTo("128 MB/s · 55s left"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("Checking files · 200 of 29189 files"));
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Downloading clip.mp4"));
             Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(35).Within(0.01));

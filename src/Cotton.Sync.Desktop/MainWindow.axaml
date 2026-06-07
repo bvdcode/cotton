@@ -345,6 +345,7 @@
                          Text="{Binding CurrentWorkProgressDetails}"
                          Classes="secondary"
                          FontSize="12"
+                         MinHeight="16"
                          TextTrimming="CharacterEllipsis" />
               <TextBlock Grid.Row="2"
                          Text="{Binding CurrentWorkProgressSecondaryDetails}"
