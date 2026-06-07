@@ -18,6 +18,7 @@ namespace Cotton.Sync.Remote;
 public sealed class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynchronizer
 {
     private const string DefaultContentType = "application/octet-stream";
+    private const int MaximumInitialChunkCollectionCapacity = 65_536;
     private readonly ICottonCloudClient _client;
     private readonly SdkRemoteFileSynchronizerOptions _options;
     private readonly Dictionary<string, Guid> _directoryCache = new(StringComparer.OrdinalIgnoreCase);
@@ -176,9 +177,10 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynch
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         int chunkSize = await GetChunkSizeAsync(cancellationToken).ConfigureAwait(false);
         byte[] buffer = ArrayPool<byte>.Shared.Rent(chunkSize);
-        var chunkHashes = new List<string>();
-        var knownChunkHashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var pendingUploads = new List<Task<int>>();
+        int chunkCollectionCapacity = EstimateChunkCollectionCapacity(totalBytes, chunkSize);
+        var chunkHashes = new List<string>(chunkCollectionCapacity);
+        var knownChunkHashes = new HashSet<string>(chunkCollectionCapacity, StringComparer.OrdinalIgnoreCase);
+        var pendingUploads = new List<Task<int>>(_options.MaxConcurrentChunkUploads);
         long transferredBytes = 0;
         using IncrementalHash contentHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         try
@@ -285,6 +287,19 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynch
         }
 
         return transferredBytes;
+    }
+
+    private static int EstimateChunkCollectionCapacity(long totalBytes, int chunkSize)
+    {
+        if (totalBytes <= 0)
+        {
+            return 0;
+        }
+
+        long estimatedChunkCount = ((totalBytes - 1) / chunkSize) + 1;
+        return estimatedChunkCount > MaximumInitialChunkCollectionCapacity
+            ? MaximumInitialChunkCollectionCapacity
+            : (int)estimatedChunkCount;
     }
 
     private static void ReportTransfer(
