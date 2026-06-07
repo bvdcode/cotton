@@ -106,6 +106,13 @@ public sealed class SyncEngine : ISyncEngine
         await EnsureLocalContentHashesForStateFilesAsync(localByPath, stateByPath, cancellationToken)
             .ConfigureAwait(false);
 
+        DirectoryContentIndex localDirectoryContentIndex = DirectoryContentIndex.Create(
+            localDirectoriesByPath.Keys,
+            localByPath.Keys);
+        DirectoryContentIndex remoteDirectoryContentIndex = DirectoryContentIndex.Create(
+            remoteDirectoriesByPath.Keys,
+            remoteByPath.Keys);
+
         SyncDeleteGuard deleteGuard = BuildDeleteGuard(
             options,
             localByPath,
@@ -113,7 +120,9 @@ public sealed class SyncEngine : ISyncEngine
             stateByPath,
             localDirectoriesByPath,
             remoteDirectoriesByPath,
-            directoryStateByPath);
+            directoryStateByPath,
+            localDirectoryContentIndex,
+            remoteDirectoryContentIndex);
 
         await ReconcileDirectoryDeletesAsync(
             syncPair,
@@ -124,8 +133,8 @@ public sealed class SyncEngine : ISyncEngine
             localDirectoriesByPath,
             remoteDirectoriesByPath,
             directoryStateByPath,
-            localByPath,
-            remoteByPath,
+            localDirectoryContentIndex,
+            remoteDirectoryContentIndex,
             cancellationToken).ConfigureAwait(false);
 
         int filesCompleted = 0;
@@ -472,8 +481,8 @@ public sealed class SyncEngine : ISyncEngine
         IReadOnlyDictionary<string, LocalDirectorySnapshot> localByPath,
         IReadOnlyDictionary<string, RemoteDirectorySnapshot> remoteByPath,
         IReadOnlyDictionary<string, SyncStateEntry> stateByPath,
-        IReadOnlyDictionary<string, LocalFileSnapshot> localFilesByPath,
-        IReadOnlyDictionary<string, RemoteFileSnapshot> remoteFilesByPath,
+        DirectoryContentIndex localDirectoryContentIndex,
+        DirectoryContentIndex remoteDirectoryContentIndex,
         CancellationToken cancellationToken)
     {
         foreach (string key in EnumerateDirectoryDeleteKeys(pathKeys))
@@ -503,8 +512,7 @@ public sealed class SyncEngine : ISyncEngine
                     deleteGuard,
                     relativePath,
                     remote,
-                    remoteByPath,
-                    remoteFilesByPath,
+                    remoteDirectoryContentIndex,
                     cancellationToken).ConfigureAwait(false);
                 continue;
             }
@@ -517,8 +525,7 @@ public sealed class SyncEngine : ISyncEngine
                     result,
                     deleteGuard,
                     relativePath,
-                    localByPath,
-                    localFilesByPath,
+                    localDirectoryContentIndex,
                     cancellationToken).ConfigureAwait(false);
             }
         }
@@ -782,8 +789,7 @@ public sealed class SyncEngine : ISyncEngine
         SyncDeleteGuard deleteGuard,
         string relativePath,
         RemoteDirectorySnapshot remote,
-        IReadOnlyDictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath,
-        IReadOnlyDictionary<string, RemoteFileSnapshot> remoteFilesByPath,
+        DirectoryContentIndex remoteDirectoryContentIndex,
         CancellationToken cancellationToken)
     {
         if (_remoteDirectories is null)
@@ -792,7 +798,7 @@ public sealed class SyncEngine : ISyncEngine
             return;
         }
 
-        if (!IsRemoteDirectoryEmpty(relativePath, remoteDirectoriesByPath, remoteFilesByPath))
+        if (remoteDirectoryContentIndex.HasChildren(relativePath))
         {
             Report(result, options, SyncActivityKind.Skipped, relativePath, "Remote folder delete skipped because the folder is not empty.");
             return;
@@ -817,11 +823,10 @@ public sealed class SyncEngine : ISyncEngine
         SyncRunResult result,
         SyncDeleteGuard deleteGuard,
         string relativePath,
-        IReadOnlyDictionary<string, LocalDirectorySnapshot> localDirectoriesByPath,
-        IReadOnlyDictionary<string, LocalFileSnapshot> localFilesByPath,
+        DirectoryContentIndex localDirectoryContentIndex,
         CancellationToken cancellationToken)
     {
-        if (!IsLocalDirectoryEmpty(relativePath, localDirectoriesByPath, localFilesByPath))
+        if (localDirectoryContentIndex.HasChildren(relativePath))
         {
             Report(result, options, SyncActivityKind.Skipped, relativePath, "Local folder delete skipped because the folder is not empty.");
             return;
@@ -1052,31 +1057,6 @@ public sealed class SyncEngine : ISyncEngine
         return lastSlashIndex < 0 ? normalized : normalized[(lastSlashIndex + 1)..];
     }
 
-    private static bool IsLocalDirectoryEmpty(
-        string relativePath,
-        IReadOnlyDictionary<string, LocalDirectorySnapshot> localDirectoriesByPath,
-        IReadOnlyDictionary<string, LocalFileSnapshot> localFilesByPath)
-    {
-        string prefix = SyncPath.ToKey(relativePath) + "/";
-        return !HasDescendant(prefix, localDirectoriesByPath.Keys)
-            && !HasDescendant(prefix, localFilesByPath.Keys);
-    }
-
-    private static bool IsRemoteDirectoryEmpty(
-        string relativePath,
-        IReadOnlyDictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath,
-        IReadOnlyDictionary<string, RemoteFileSnapshot> remoteFilesByPath)
-    {
-        string prefix = SyncPath.ToKey(relativePath) + "/";
-        return !HasDescendant(prefix, remoteDirectoriesByPath.Keys)
-            && !HasDescendant(prefix, remoteFilesByPath.Keys);
-    }
-
-    private static bool HasDescendant(string prefix, IEnumerable<string> keys)
-    {
-        return keys.Any(key => key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
-    }
-
     private static bool RemoteMatchesBaseline(NodeFileManifestDto remoteFile, SyncStateEntry state)
     {
         if (!string.IsNullOrWhiteSpace(state.RemoteContentHash))
@@ -1123,7 +1103,9 @@ public sealed class SyncEngine : ISyncEngine
         IReadOnlyDictionary<string, SyncStateEntry> stateByPath,
         IReadOnlyDictionary<string, LocalDirectorySnapshot> localDirectoriesByPath,
         IReadOnlyDictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath,
-        IReadOnlyDictionary<string, SyncStateEntry> directoryStateByPath)
+        IReadOnlyDictionary<string, SyncStateEntry> directoryStateByPath,
+        DirectoryContentIndex localDirectoryContentIndex,
+        DirectoryContentIndex remoteDirectoryContentIndex)
     {
         if (stateByPath.Count == 0 && directoryStateByPath.Count == 0)
         {
@@ -1159,10 +1141,8 @@ public sealed class SyncEngine : ISyncEngine
                 state,
                 local,
                 remote,
-                localDirectoriesByPath,
-                localByPath,
-                remoteDirectoriesByPath,
-                remoteByPath))
+                localDirectoryContentIndex,
+                remoteDirectoryContentIndex))
             {
                 case SyncDeleteDirection.Local:
                     plannedLocalDeletes++;
@@ -1180,10 +1160,8 @@ public sealed class SyncEngine : ISyncEngine
         SyncStateEntry state,
         LocalDirectorySnapshot? local,
         RemoteDirectorySnapshot? remote,
-        IReadOnlyDictionary<string, LocalDirectorySnapshot> localDirectoriesByPath,
-        IReadOnlyDictionary<string, LocalFileSnapshot> localFilesByPath,
-        IReadOnlyDictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath,
-        IReadOnlyDictionary<string, RemoteFileSnapshot> remoteFilesByPath)
+        DirectoryContentIndex localDirectoryContentIndex,
+        DirectoryContentIndex remoteDirectoryContentIndex)
     {
         if (state.RemoteNodeId is null || local is null && remote is null)
         {
@@ -1191,12 +1169,12 @@ public sealed class SyncEngine : ISyncEngine
         }
 
         string relativePath = local?.RelativePath ?? remote?.RelativePath ?? state.RelativePath;
-        if (local is null && remote is not null && IsRemoteDirectoryEmpty(relativePath, remoteDirectoriesByPath, remoteFilesByPath))
+        if (local is null && remote is not null && !remoteDirectoryContentIndex.HasChildren(relativePath))
         {
             return SyncDeleteDirection.Remote;
         }
 
-        if (remote is null && local is not null && IsLocalDirectoryEmpty(relativePath, localDirectoriesByPath, localFilesByPath))
+        if (remote is null && local is not null && !localDirectoryContentIndex.HasChildren(relativePath))
         {
             return SyncDeleteDirection.Local;
         }
@@ -1562,6 +1540,54 @@ public sealed class SyncEngine : ISyncEngine
         None,
         Local,
         Remote,
+    }
+
+    private sealed class DirectoryContentIndex
+    {
+        private readonly HashSet<string> _directoryKeysWithChildren;
+
+        private DirectoryContentIndex(HashSet<string> directoryKeysWithChildren)
+        {
+            _directoryKeysWithChildren = directoryKeysWithChildren;
+        }
+
+        public static DirectoryContentIndex Create(IEnumerable<string> directoryKeys, IEnumerable<string> fileKeys)
+        {
+            var directoryKeysWithChildren = new HashSet<string>(PathComparer);
+            AddAncestorDirectoryKeys(directoryKeysWithChildren, directoryKeys);
+            AddAncestorDirectoryKeys(directoryKeysWithChildren, fileKeys);
+            return new DirectoryContentIndex(directoryKeysWithChildren);
+        }
+
+        public bool HasChildren(string relativePath)
+        {
+            return _directoryKeysWithChildren.Contains(SyncPath.ToKey(relativePath));
+        }
+
+        private static void AddAncestorDirectoryKeys(HashSet<string> directoryKeysWithChildren, IEnumerable<string> childKeys)
+        {
+            foreach (string childKey in childKeys)
+            {
+                AddAncestorDirectoryKeys(directoryKeysWithChildren, childKey);
+            }
+        }
+
+        private static void AddAncestorDirectoryKeys(HashSet<string> directoryKeysWithChildren, string childKey)
+        {
+            string currentKey = childKey;
+            while (!string.IsNullOrEmpty(currentKey))
+            {
+                int separatorIndex = currentKey.LastIndexOf('/');
+                if (separatorIndex < 0)
+                {
+                    break;
+                }
+
+                string parentKey = currentKey[..separatorIndex];
+                directoryKeysWithChildren.Add(parentKey);
+                currentKey = parentKey;
+            }
+        }
     }
 
     private sealed class LocalTreeScanProgressReporter : IProgress<LocalTreeScanProgress>
