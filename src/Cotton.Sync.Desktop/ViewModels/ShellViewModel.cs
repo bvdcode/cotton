@@ -149,8 +149,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         RemoteFolderUpCommand = new AsyncRelayCommand(RemoteFolderUpAsync, CanGoUpRemoteFolder, HandleCommandError);
         ShowCreateRemoteFolderCommand = new AsyncRelayCommand(ShowCreateRemoteFolderAsync, CanShowCreateRemoteFolder, HandleCommandError);
         ShowAddSyncPairCommand = new AsyncRelayCommand(ShowAddSyncPairAsync, CanShowAddSyncPair, HandleCommandError);
-        ShowSettingsCommand = new AsyncRelayCommand(ShowSettingsAsync, () => IsSignedIn && !IsBusy, HandleCommandError);
-        CloseSettingsCommand = new AsyncRelayCommand(CloseSettingsAsync, () => !IsBusy, HandleCommandError);
+        ShowSettingsCommand = new AsyncRelayCommand(ShowSettingsAsync, () => IsSignedIn, HandleCommandError);
+        CloseSettingsCommand = new AsyncRelayCommand(CloseSettingsAsync, () => IsSettingsVisible, HandleCommandError);
         SyncNowCommand = new AsyncRelayCommand(SyncNowAsync, () => CanSyncNow, HandleCommandError);
         PauseCommand = new AsyncRelayCommand(PauseAsync, () => CanPauseSync, HandleCommandError);
         ResumeCommand = new AsyncRelayCommand(ResumeAsync, () => CanResumeSync, HandleCommandError);
@@ -338,6 +338,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
                 OnPropertyChanged(nameof(HasActionRequired));
                 OnPropertyChanged(nameof(HasStatusAttention));
+                OnPropertyChanged(nameof(HeaderStatusText));
                 OnPropertyChanged(nameof(IsStatusCardVisible));
                 OnPropertyChanged(nameof(ActionRequiredOpacity));
                 OnPropertyChanged(nameof(CanRetryActionRequired));
@@ -364,7 +365,23 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
     }
 
-    public string HeaderStatusText => HasConflicts ? "Conflicts need review" : GlobalStatus;
+    public string HeaderStatusText
+    {
+        get
+        {
+            if (HasConflicts)
+            {
+                return "Conflicts need review";
+            }
+
+            if (HasActionRequired || IsSyncPaused)
+            {
+                return GlobalStatus;
+            }
+
+            return HasCurrentWorkProgress ? "Syncing" : GlobalStatus;
+        }
+    }
 
     public string HeaderTitleText => IsSignedIn ? ResolveAccountDisplayName(AccountName, null) : "Cotton Sync";
 
@@ -633,11 +650,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public bool CanSyncNow => IsSignedIn && !IsBusy && HasEnabledSyncPairs && !IsSyncPaused;
 
-    public bool CanPauseSync => IsSignedIn && !IsBusy && HasEnabledSyncPairs && !IsSyncPaused;
+    public bool CanPauseSync => IsSignedIn && HasEnabledSyncPairs && !IsSyncPaused;
 
-    public bool CanResumeSync => IsSignedIn && !IsBusy && IsSyncPaused;
+    public bool CanResumeSync => IsSignedIn && IsSyncPaused;
 
-    public bool CanTogglePauseResumeSync => IsSignedIn && !IsBusy && HasEnabledSyncPairs;
+    public bool CanTogglePauseResumeSync => IsSignedIn && HasEnabledSyncPairs;
 
     public string PauseResumeSyncLabel => IsSyncPaused ? "Resume sync" : "Pause sync";
 
@@ -872,6 +889,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             {
                 OnPropertyChanged(nameof(IsDashboardChromeVisible));
                 OnPropertyChanged(nameof(IsDashboardHeaderVisible));
+                CloseSettingsCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -1914,20 +1932,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private async Task PauseAsync()
     {
-        IsBusy = true;
-        try
-        {
-            await _controller.PauseAllAsync().ConfigureAwait(true);
-            GlobalStatus = "Paused";
-            ActionRequiredMessage = string.Empty;
-            SetAllPairStatuses("Paused", enabledOnly: true);
-            RefreshCurrentProgressText();
-            AddActivity("Sync", string.Empty, "Synchronization paused");
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        await _controller.PauseAllAsync().ConfigureAwait(true);
+        GlobalStatus = "Paused";
+        ActionRequiredMessage = string.Empty;
+        SetAllPairStatuses("Paused", enabledOnly: true);
+        RefreshCurrentProgressText();
+        AddActivity("Sync", string.Empty, "Synchronization paused");
     }
 
     private Task PauseResumeAsync()
@@ -1937,20 +1947,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private async Task ResumeAsync()
     {
-        IsBusy = true;
-        try
-        {
-            await _controller.ResumeAllAsync().ConfigureAwait(true);
-            GlobalStatus = "Ready";
-            ActionRequiredMessage = string.Empty;
-            SetAllPairStatuses("Idle", enabledOnly: true);
-            RefreshCurrentProgressText();
-            AddActivity("Sync", string.Empty, "Synchronization resumed");
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        await _controller.ResumeAllAsync().ConfigureAwait(true);
+        GlobalStatus = "Ready";
+        ActionRequiredMessage = string.Empty;
+        SetAllPairStatuses("Idle", enabledOnly: true);
+        RefreshCurrentProgressText();
+        AddActivity("Sync", string.Empty, "Synchronization resumed");
     }
 
     private async Task SignInAsync()
@@ -3231,6 +3233,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OnPropertyChanged(nameof(PauseResumeSyncLabel));
         OnPropertyChanged(nameof(PauseResumeTrayLabel));
         OnPropertyChanged(nameof(IsSyncPaused));
+        OnPropertyChanged(nameof(HeaderStatusText));
         OnPropertyChanged(nameof(HasDashboardNotifications));
     }
 
@@ -3447,6 +3450,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private void RaiseCurrentWorkProgressProperties()
     {
         OnPropertyChanged(nameof(HasCurrentWorkProgress));
+        OnPropertyChanged(nameof(HeaderStatusText));
         OnPropertyChanged(nameof(IsStatusCardVisible));
         OnPropertyChanged(nameof(HasDashboardNotifications));
         OnPropertyChanged(nameof(CurrentWorkProgressTitle));

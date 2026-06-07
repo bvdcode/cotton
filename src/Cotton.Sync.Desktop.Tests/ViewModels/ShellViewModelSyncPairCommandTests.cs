@@ -567,6 +567,45 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task GlobalControls_RemainAvailableWhileManualSyncIsRunning()
+    {
+        var syncAllCompletion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Idle")))
+        {
+            SyncAllCompletion = syncAllCompletion,
+        };
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        viewModel.SyncNowCommand.Execute(null);
+        await WaitForAsync(() => viewModel.IsBusy && controller.SyncAllCalls == 1);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.SyncNowCommand.CanExecute(null), Is.False);
+            Assert.That(viewModel.ShowSettingsCommand.CanExecute(null), Is.True);
+            Assert.That(viewModel.CanPauseSync, Is.True);
+            Assert.That(viewModel.CanTogglePauseResumeSync, Is.True);
+            Assert.That(viewModel.PauseResumeCommand.CanExecute(null), Is.True);
+        });
+
+        await ExecuteAsync(viewModel.PauseResumeCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(controller.PauseAllCalls, Is.EqualTo(1));
+            Assert.That(viewModel.IsBusy, Is.True);
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Paused"));
+            Assert.That(viewModel.PauseResumeTrayLabel, Is.EqualTo("Resume"));
+        });
+
+        syncAllCompletion.SetResult(true);
+        await WaitForAsync(() => !viewModel.SyncNowCommand.IsRunning);
+
+        Assert.That(viewModel.IsBusy, Is.False);
+    }
+
+    [Test]
     public async Task GlobalSyncCommands_DoNotChangeDisabledPairRows()
     {
         Guid enabledPairId = Guid.NewGuid();
@@ -836,6 +875,32 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(row.IsCurrentProgressIndeterminate, Is.False);
             Assert.That(row.CurrentProgressValue, Is.EqualTo(50).Within(0.01));
             Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Documents: Uploading report.txt"));
+        });
+    }
+
+    [Test]
+    public async Task TransferProgressChanged_ShowsSyncingHeaderEvenWhenLatestStatusIsIdle()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Videos", "Idle")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            syncPairId,
+            SyncTransferDirection.Download,
+            "Archive/09.7z",
+            TransferredBytes: 25L * 1024L * 1024L * 1024L,
+            TotalBytes: 28L * 1024L * 1024L * 1024L,
+            IsCompleted: false,
+            new DateTime(2026, 6, 7, 10, 0, 0, DateTimeKind.Utc)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Connected"));
+            Assert.That(viewModel.HeaderStatusText, Is.EqualTo("Syncing"));
+            Assert.That(viewModel.HasCurrentWorkProgress, Is.True);
+            Assert.That(viewModel.CurrentTransferTitle, Is.EqualTo("Videos: Downloading 09.7z"));
         });
     }
 
@@ -3460,6 +3525,8 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public Exception? SyncAllException { get; set; }
 
+        public TaskCompletionSource<bool>? SyncAllCompletion { get; set; }
+
         public int ExportDiagnosticsCalls { get; private set; }
 
         public string ExportDiagnosticsPath { get; set; } = "/tmp/cotton-sync-diagnostics.zip";
@@ -3647,7 +3714,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             });
         }
 
-        public Task SyncAllAsync(CancellationToken cancellationToken = default)
+        public async Task SyncAllAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (SyncAllException is not null)
@@ -3656,7 +3723,10 @@ public sealed class ShellViewModelSyncPairCommandTests
             }
 
             SyncAllCalls++;
-            return Task.CompletedTask;
+            if (SyncAllCompletion is not null)
+            {
+                await SyncAllCompletion.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
         }
 
         public Task PauseAllAsync(CancellationToken cancellationToken = default)
