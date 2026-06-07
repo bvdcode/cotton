@@ -43,7 +43,49 @@ public sealed class RemoteTreeCrawlerTests
             Assert.That(snapshot.RootNode.Id, Is.EqualTo(rootId));
             Assert.That(snapshot.Directories.Select(x => x.RelativePath), Is.EqualTo(new[] { "Docs" }));
             Assert.That(snapshot.Files.Select(x => x.RelativePath), Is.EqualTo(new[] { "Docs/report.txt", "later.txt", "root.txt" }));
-            Assert.That(client.GetChildrenCalls, Is.EqualTo(new[] { (rootId, 1), (rootId, 2), (docsId, 1) }));
+            Assert.That(client.GetChildrenCalls, Is.EqualTo(new[] { (rootId, 1), (docsId, 1), (rootId, 2) }));
+        });
+    }
+
+    [Test]
+    public async Task CrawlAsync_TraversesFirstPageChildrenBeforeLoadingSiblingPages()
+    {
+        Guid rootId = Guid.NewGuid();
+        Guid docsId = Guid.NewGuid();
+        Guid videosId = Guid.NewGuid();
+        var client = new FakeNodeClient();
+        client.Nodes[rootId] = Node(rootId, null, "root");
+        client.Nodes[docsId] = Node(docsId, rootId, "Docs");
+        client.Nodes[videosId] = Node(videosId, rootId, "Videos");
+        client.Children[(rootId, 1)] = new NodeContentDto
+        {
+            TotalCount = 2,
+            Nodes = [client.Nodes[docsId]],
+        };
+        client.Children[(rootId, 2)] = new NodeContentDto
+        {
+            TotalCount = 2,
+            Nodes = [client.Nodes[videosId]],
+        };
+        client.Children[(docsId, 1)] = new NodeContentDto
+        {
+            TotalCount = 1,
+            Files = [File(docsId, "report.txt")],
+        };
+        client.Children[(videosId, 1)] = new NodeContentDto
+        {
+            TotalCount = 1,
+            Files = [File(videosId, "clip.mp4")],
+        };
+        var crawler = new RemoteTreeCrawler(client, pageSize: 1);
+
+        RemoteTreeSnapshot snapshot = await crawler.CrawlAsync(rootId);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.Directories.Select(x => x.RelativePath), Is.EqualTo(new[] { "Docs", "Videos" }));
+            Assert.That(snapshot.Files.Select(x => x.RelativePath), Is.EqualTo(new[] { "Docs/report.txt", "Videos/clip.mp4" }));
+            Assert.That(client.GetChildrenCalls, Is.EqualTo(new[] { (rootId, 1), (docsId, 1), (rootId, 2), (videosId, 1) }));
         });
     }
 

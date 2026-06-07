@@ -82,69 +82,68 @@ public sealed class RemoteTreeCrawler : IRemoteTreeLookupCrawler
         ArgumentNullException.ThrowIfNull(addDirectory);
         ArgumentNullException.ThrowIfNull(addFile);
         NodeDto root = await _nodes.GetAsync(rootNodeId, cancellationToken).ConfigureAwait(false);
-        var queue = new Queue<(NodeDto Node, string RelativePath)>();
-        queue.Enqueue((root, string.Empty));
+        var pending = new Stack<RemoteCrawlFrame>();
+        pending.Push(new RemoteCrawlFrame(root, string.Empty, Page: 1, Loaded: 0));
         int directoriesScanned = 0;
         int filesScanned = 0;
         progress?.Report(new RemoteTreeScanProgress(filesScanned, directoriesScanned, currentPath: null));
 
-        while (queue.Count > 0)
+        while (pending.Count > 0)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var (node, parentPath) = queue.Dequeue();
-            int page = 1;
-            int loaded = 0;
-            while (true)
+            RemoteCrawlFrame frame = pending.Pop();
+            NodeContentDto children = await _nodes.GetChildrenAsync(
+                frame.Node.Id,
+                frame.Page,
+                _pageSize,
+                depth: 0,
+                cancellationToken).ConfigureAwait(false);
+            var childDirectories = new List<RemoteCrawlFrame>(children.Nodes.Count);
+            foreach (NodeDto childNode in children.Nodes)
             {
-                NodeContentDto children = await _nodes.GetChildrenAsync(
-                    node.Id,
-                    page,
-                    _pageSize,
-                    depth: 0,
-                    cancellationToken).ConfigureAwait(false);
-                foreach (NodeDto childNode in children.Nodes)
+                string relativePath = Combine(frame.ParentPath, childNode.Name);
+                if (SyncPathIgnoreRules.ShouldIgnore(relativePath))
                 {
-                    string relativePath = Combine(parentPath, childNode.Name);
-                    if (SyncPathIgnoreRules.ShouldIgnore(relativePath))
-                    {
-                        continue;
-                    }
-
-                    addDirectory(new RemoteDirectorySnapshot
-                    {
-                        RelativePath = relativePath,
-                        Node = childNode,
-                    });
-                    directoriesScanned++;
-                    ReportDirectoryScanProgress(progress, filesScanned, directoriesScanned, relativePath);
-                    queue.Enqueue((childNode, relativePath));
+                    continue;
                 }
 
-                foreach (NodeFileManifestDto file in children.Files)
+                addDirectory(new RemoteDirectorySnapshot
                 {
-                    string relativePath = Combine(parentPath, file.Name);
-                    if (SyncPathIgnoreRules.ShouldIgnore(relativePath))
-                    {
-                        continue;
-                    }
+                    RelativePath = relativePath,
+                    Node = childNode,
+                });
+                directoriesScanned++;
+                ReportDirectoryScanProgress(progress, filesScanned, directoriesScanned, relativePath);
+                childDirectories.Add(new RemoteCrawlFrame(childNode, relativePath, Page: 1, Loaded: 0));
+            }
 
-                    addFile(new RemoteFileSnapshot
-                    {
-                        RelativePath = relativePath,
-                        File = file,
-                    });
-                    filesScanned++;
-                    ReportScanProgress(progress, filesScanned, directoriesScanned, relativePath);
+            foreach (NodeFileManifestDto file in children.Files)
+            {
+                string relativePath = Combine(frame.ParentPath, file.Name);
+                if (SyncPathIgnoreRules.ShouldIgnore(relativePath))
+                {
+                    continue;
                 }
 
-                int count = children.Nodes.Count + children.Files.Count;
-                loaded += count;
-                if (count == 0 || loaded >= children.TotalCount)
+                addFile(new RemoteFileSnapshot
                 {
-                    break;
-                }
+                    RelativePath = relativePath,
+                    File = file,
+                });
+                filesScanned++;
+                ReportScanProgress(progress, filesScanned, directoriesScanned, relativePath);
+            }
 
-                page++;
+            int count = children.Nodes.Count + children.Files.Count;
+            int loaded = frame.Loaded + count;
+            if (count != 0 && loaded < children.TotalCount)
+            {
+                pending.Push(frame with { Page = frame.Page + 1, Loaded = loaded });
+            }
+
+            for (int index = childDirectories.Count - 1; index >= 0; index--)
+            {
+                pending.Push(childDirectories[index]);
             }
         }
 
@@ -194,4 +193,5 @@ public sealed class RemoteTreeCrawler : IRemoteTreeLookupCrawler
         return SyncPath.Normalize(combined);
     }
 
+    private readonly record struct RemoteCrawlFrame(NodeDto Node, string ParentPath, int Page, int Loaded);
 }
