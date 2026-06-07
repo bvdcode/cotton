@@ -997,7 +997,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             TransferredBytes: 40,
             TotalBytes: 100,
             IsCompleted: false,
-            startedAtUtc.AddMilliseconds(100)));
+            startedAtUtc.AddMilliseconds(50)));
 
         Assert.Multiple(() =>
         {
@@ -1012,7 +1012,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             TransferredBytes: 60,
             TotalBytes: 100,
             IsCompleted: false,
-            startedAtUtc.AddMilliseconds(250)));
+            startedAtUtc.AddMilliseconds(100)));
 
         Assert.Multiple(() =>
         {
@@ -1121,7 +1121,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             CurrentPath: "Reports/file-050.txt",
             StartedAtUtc: startedAtUtc,
             IsCompleted: false,
-            OccurredAtUtc: startedAtUtc.AddMilliseconds(100)));
+            OccurredAtUtc: startedAtUtc.AddMilliseconds(50)));
 
         Assert.Multiple(() =>
         {
@@ -1137,7 +1137,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             CurrentPath: "Reports/file-075.txt",
             StartedAtUtc: startedAtUtc,
             IsCompleted: false,
-            OccurredAtUtc: startedAtUtc.AddMilliseconds(250)));
+            OccurredAtUtc: startedAtUtc.AddMilliseconds(100)));
 
         Assert.Multiple(() =>
         {

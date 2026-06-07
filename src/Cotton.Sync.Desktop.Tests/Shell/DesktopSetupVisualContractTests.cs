@@ -500,7 +500,8 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(dashboardHeader, Does.Contain("ToolTip.Tip=\"Sync now\""));
             Assert.That(dashboardHeader, Does.Contain("Kind=\"Refresh\""));
             Assert.That(dashboardHeader, Does.Contain("IsVisible=\"{Binding CanSyncNow}\""));
-            Assert.That(dashboardHeader, Does.Contain("Header=\"Open in Cotton Cloud\""));
+            Assert.That(dashboardHeader, Does.Contain("Header=\"Web app\""));
+            Assert.That(dashboardHeader, Does.Not.Contain("Header=\"Open in Cotton Cloud\""));
             Assert.That(dashboardHeader, Does.Not.Contain("Header=\"Open Cotton Cloud\""));
             Assert.That(dashboardHeader, Does.Not.Contain("Content=\"Sync\""));
             Assert.That(actionRequiredRow, Does.Contain("Kind=\"Refresh\""));

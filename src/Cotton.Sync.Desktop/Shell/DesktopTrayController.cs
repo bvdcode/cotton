@@ -62,7 +62,7 @@ internal sealed class DesktopTrayController : IDisposable
     private TrayIcon CreateTrayIcon()
     {
         _openFolderMenuItem = CreateMenuItem("Open local folder", () => Execute(commandSource => commandSource.OpenTrayFolderCommand));
-        _openWebMenuItem = CreateMenuItem("Open in Cotton Cloud", () => Execute(commandSource => commandSource.OpenWebCommand));
+        _openWebMenuItem = CreateMenuItem("Web app", () => Execute(commandSource => commandSource.OpenWebCommand));
         _syncNowMenuItem = CreateMenuItem("Sync now", () => Execute(commandSource => commandSource.SyncNowCommand));
         _pauseResumeMenuItem = CreateMenuItem("Pause", () => Execute(commandSource => commandSource.PauseResumeCommand));
         _settingsMenuItem = CreateMenuItem("Settings", ShowSettings);

@@ -22,8 +22,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private const int MaxActivityRows = 30;
     private const int MaxConflictRows = 20;
     private static readonly TimeSpan TransferActivityCoalescingWindow = TimeSpan.FromMilliseconds(750);
-    private static readonly TimeSpan VisibleTransferProgressUpdateInterval = TimeSpan.FromMilliseconds(250);
-    private static readonly TimeSpan VisibleRunProgressUpdateInterval = TimeSpan.FromMilliseconds(250);
+    private static readonly TimeSpan VisibleTransferProgressUpdateInterval = TimeSpan.FromMilliseconds(100);
+    private static readonly TimeSpan VisibleRunProgressUpdateInterval = TimeSpan.FromMilliseconds(100);
 
     private readonly IDesktopShellController _controller;
     private readonly DesktopFeatureFlags _featureFlags;

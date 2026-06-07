@@ -8,15 +8,15 @@ namespace Cotton.Sync.App.Progress;
 /// </summary>
 public sealed class AppTransferProgressEstimator
 {
-    private static readonly TimeSpan RollingWindow = TimeSpan.FromSeconds(5);
-    private const double SpeedSmoothingFactor = 0.2;
-    private const double RemainingTimeIncreaseSmoothingFactor = 0.12;
-    private const double RemainingTimeDecreaseSmoothingFactor = 0.25;
-    private const int MaximumSamples = 8;
+    private static readonly TimeSpan RollingWindow = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan SpeedSmoothingTimeConstant = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan RemainingTimeSmoothingTimeConstant = TimeSpan.FromSeconds(10);
+    private const int MaximumSamples = 2048;
     private readonly Queue<TransferSample> _samples = new();
     private SyncTransferDirection _direction = SyncTransferDirection.Unknown;
     private double? _smoothedSpeedBytesPerSecond;
     private TimeSpan? _smoothedEstimatedTimeRemaining;
+    private DateTime? _lastSpeedOccurredAtUtc;
     private DateTime? _lastEstimateOccurredAtUtc;
     private string _relativePath = string.Empty;
 
@@ -59,6 +59,7 @@ public sealed class AppTransferProgressEstimator
             _samples.Clear();
             _smoothedSpeedBytesPerSecond = null;
             _smoothedEstimatedTimeRemaining = null;
+            _lastSpeedOccurredAtUtc = null;
             _lastEstimateOccurredAtUtc = null;
         }
 
@@ -70,6 +71,7 @@ public sealed class AppTransferProgressEstimator
         _samples.Clear();
         _smoothedSpeedBytesPerSecond = null;
         _smoothedEstimatedTimeRemaining = null;
+        _lastSpeedOccurredAtUtc = null;
         _lastEstimateOccurredAtUtc = null;
         _direction = direction;
         _relativePath = relativePath;
@@ -106,7 +108,7 @@ public sealed class AppTransferProgressEstimator
             return new AppTransferProgressEstimate(null, null);
         }
 
-        double speedBytesPerSecond = SmoothSpeed(bytesTransferred / seconds);
+        double speedBytesPerSecond = SmoothSpeed(bytesTransferred / seconds, currentSample.OccurredAtUtc);
         TimeSpan? estimatedTimeRemaining = null;
         if (totalBytes.HasValue && totalBytes.Value > currentSample.TransferredBytes)
         {
@@ -123,17 +125,20 @@ public sealed class AppTransferProgressEstimator
         return new AppTransferProgressEstimate(speedBytesPerSecond, estimatedTimeRemaining);
     }
 
-    private double SmoothSpeed(double speedBytesPerSecond)
+    private double SmoothSpeed(double speedBytesPerSecond, DateTime occurredAtUtc)
     {
-        if (!_smoothedSpeedBytesPerSecond.HasValue)
+        if (!_smoothedSpeedBytesPerSecond.HasValue || !_lastSpeedOccurredAtUtc.HasValue)
         {
             _smoothedSpeedBytesPerSecond = speedBytesPerSecond;
+            _lastSpeedOccurredAtUtc = occurredAtUtc;
             return speedBytesPerSecond;
         }
 
+        double smoothingFactor = CalculateSmoothingFactor(occurredAtUtc - _lastSpeedOccurredAtUtc.Value, SpeedSmoothingTimeConstant);
         double smoothedSpeed = _smoothedSpeedBytesPerSecond.Value
-            + ((speedBytesPerSecond - _smoothedSpeedBytesPerSecond.Value) * SpeedSmoothingFactor);
+            + ((speedBytesPerSecond - _smoothedSpeedBytesPerSecond.Value) * smoothingFactor);
         _smoothedSpeedBytesPerSecond = Math.Max(0, smoothedSpeed);
+        _lastSpeedOccurredAtUtc = occurredAtUtc;
         return _smoothedSpeedBytesPerSecond.Value;
     }
 
@@ -155,15 +160,23 @@ public sealed class AppTransferProgressEstimator
             agedPreviousEstimate = TimeSpan.Zero;
         }
 
-        double smoothingFactor = rawEstimate > agedPreviousEstimate
-            ? RemainingTimeIncreaseSmoothingFactor
-            : RemainingTimeDecreaseSmoothingFactor;
+        double smoothingFactor = CalculateSmoothingFactor(elapsed, RemainingTimeSmoothingTimeConstant);
         double smoothedSeconds = agedPreviousEstimate.TotalSeconds
             + ((rawEstimate.TotalSeconds - agedPreviousEstimate.TotalSeconds) * smoothingFactor);
         TimeSpan smoothedEstimate = TimeSpan.FromSeconds(Math.Max(0, smoothedSeconds));
         _smoothedEstimatedTimeRemaining = smoothedEstimate;
         _lastEstimateOccurredAtUtc = occurredAtUtc;
         return smoothedEstimate;
+    }
+
+    private static double CalculateSmoothingFactor(TimeSpan elapsed, TimeSpan timeConstant)
+    {
+        if (elapsed <= TimeSpan.Zero)
+        {
+            return 0;
+        }
+
+        return 1 - Math.Exp(-elapsed.TotalSeconds / timeConstant.TotalSeconds);
     }
 
     private readonly record struct TransferSample(long TransferredBytes, DateTime OccurredAtUtc);
