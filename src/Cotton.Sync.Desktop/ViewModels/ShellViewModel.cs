@@ -484,17 +484,17 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public bool HasCurrentWorkProgress => HasCurrentTransfer || HasCurrentRunProgress;
 
-    public string CurrentWorkProgressTitle => IsAggregateRunProgressPrimary
+    public string CurrentWorkProgressTitle => IsRunProgressPrimary
         ? CurrentRunProgressTitle
         : HasCurrentTransfer ? CurrentTransferTitle : CurrentRunProgressTitle;
 
-    public string CurrentWorkProgressHeaderDetails => IsAggregateRunProgressPrimary && HasActiveAggregateTransferProgress
+    public string CurrentWorkProgressHeaderDetails => IsRunProgressPrimary && HasActiveTransferProgress
         ? CreateAggregateTransferDetails(_transferProgressByPair.Values)
         : string.Empty;
 
     public bool HasCurrentWorkProgressHeaderDetails => !string.IsNullOrWhiteSpace(CurrentWorkProgressHeaderDetails);
 
-    public string CurrentWorkProgressDetails => IsAggregateRunProgressPrimary
+    public string CurrentWorkProgressDetails => IsRunProgressPrimary
         ? CurrentRunProgressDetails
         : HasCurrentTransfer ? CurrentTransferDetails : CurrentRunProgressDetails;
 
@@ -502,9 +502,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         get
         {
-            if (IsAggregateRunProgressPrimary)
+            if (IsRunProgressPrimary)
             {
-                if (HasActiveAggregateTransferProgress)
+                if (HasActiveTransferProgress)
                 {
                     return _transferProgressByPair.Count > 1
                         ? _transferProgressByPair.Count.ToString(CultureInfo.CurrentCulture) + " files transferring"
@@ -522,17 +522,17 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public bool HasCurrentWorkProgressSecondaryDetails => !string.IsNullOrWhiteSpace(CurrentWorkProgressSecondaryDetails);
 
-    public double CurrentWorkProgressValue => IsAggregateRunProgressPrimary
+    public double CurrentWorkProgressValue => IsRunProgressPrimary
         ? CurrentRunProgressValue
         : HasCurrentTransfer ? CurrentTransferProgressValue : CurrentRunProgressValue;
 
-    public bool IsCurrentWorkProgressIndeterminate => IsAggregateRunProgressPrimary
+    public bool IsCurrentWorkProgressIndeterminate => IsRunProgressPrimary
         ? IsCurrentRunProgressIndeterminate
         : HasCurrentTransfer ? IsCurrentTransferIndeterminate : IsCurrentRunProgressIndeterminate;
 
-    private bool IsAggregateRunProgressPrimary => _runProgressByPair.Count > 1;
+    private bool IsRunProgressPrimary => HasCurrentRunProgress;
 
-    private bool HasActiveAggregateTransferProgress => _transferProgressByPair.Count > 0;
+    private bool HasActiveTransferProgress => _transferProgressByPair.Count > 0;
 
     public bool IsBusy
     {

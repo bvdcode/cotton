@@ -1396,6 +1396,45 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task TransferProgressChanged_KeepsRunProgressPrimaryForOneFolder()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 5,
+            FilesTotal: 20,
+            CurrentPath: "Reports/report.txt",
+            StartedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 5, DateTimeKind.Utc)));
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            syncPairId,
+            SyncTransferDirection.Upload,
+            "Reports/report.txt",
+            TransferredBytes: 512,
+            TotalBytes: 1024,
+            IsCompleted: false,
+            new DateTime(2026, 6, 4, 9, 0, 7, DateTimeKind.Utc),
+            SpeedBytesPerSecond: 256,
+            EstimatedTimeRemaining: TimeSpan.FromSeconds(2)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents: Checking files"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("512 B / 1.0 KB · 256 B/s · 2s left"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("5 of 20 files · report.txt"));
+            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Documents: Uploading report.txt"));
+            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(25).Within(0.01));
+            Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.False);
+        });
+    }
+
+    [Test]
     public async Task TransferProgressChanged_AggregatesHeaderMetricsForMultipleActiveTransfers()
     {
         Guid documentsPairId = Guid.NewGuid();
