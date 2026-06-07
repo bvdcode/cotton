@@ -339,14 +339,10 @@ public sealed class SyncApplicationService : ISyncApplicationService
         try
         {
             _isSyncGloballyPaused = await LoadSyncPausedPreferenceAsync(cancellationToken).ConfigureAwait(false);
-            await _supervisor.StartAsync(cancellationToken).ConfigureAwait(false);
+            await _supervisor.StartAsync(_isSyncGloballyPaused, cancellationToken).ConfigureAwait(false);
             startedComponents.Add(new StartedSyncComponent(
                 "sync supervisor",
                 token => _supervisor.StopAsync(token)));
-            if (_isSyncGloballyPaused)
-            {
-                await _supervisor.PauseAllAsync(cancellationToken).ConfigureAwait(false);
-            }
 
             await _localChanges.StartAsync(cancellationToken).ConfigureAwait(false);
             startedComponents.Add(new StartedSyncComponent(

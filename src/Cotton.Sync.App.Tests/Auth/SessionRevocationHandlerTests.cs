@@ -171,6 +171,11 @@ public sealed class SessionRevocationHandlerTests
             throw new NotSupportedException();
         }
 
+        public Task StartAsync(bool startPaused, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
         public Task StopAsync(CancellationToken cancellationToken = default)
         {
             StopCallCount++;

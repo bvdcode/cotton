@@ -21,6 +21,11 @@ public interface ISyncSupervisor
     Task StartAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Starts runners for configured sync pairs and optionally pauses them before publishing status.
+    /// </summary>
+    Task StartAsync(bool startPaused, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Requests one sync pass for every runner.
     /// </summary>
     Task SyncAllAsync(CancellationToken cancellationToken = default);

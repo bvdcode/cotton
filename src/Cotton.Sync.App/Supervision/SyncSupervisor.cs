@@ -44,6 +44,12 @@ public sealed class SyncSupervisor : ISyncSupervisor
     /// <inheritdoc />
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
+        await StartAsync(startPaused: false, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task StartAsync(bool startPaused, CancellationToken cancellationToken = default)
+    {
         SyncAppStatus status;
         await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -59,6 +65,10 @@ public sealed class SyncSupervisor : ISyncSupervisor
                     ISyncPairRunner runner = _runnerFactory.Create(syncPair);
                     _runners[syncPair.Id] = runner;
                     await runner.StartAsync(cancellationToken).ConfigureAwait(false);
+                    if (startPaused)
+                    {
+                        await runner.PauseAsync(cancellationToken).ConfigureAwait(false);
+                    }
                 }
 
                 status = CreateAppStatusSnapshot();

@@ -411,7 +411,8 @@ public sealed class SyncApplicationServiceTests
             Assert.That(result.IsSaved, Is.True);
             Assert.That(supervisor.StopCallCount, Is.EqualTo(1));
             Assert.That(supervisor.StartCallCount, Is.EqualTo(2));
-            Assert.That(supervisor.PauseAllCallCount, Is.EqualTo(2));
+            Assert.That(supervisor.PauseAllCallCount, Is.EqualTo(1));
+            Assert.That(supervisor.LastStartPaused, Is.True);
             Assert.That(localChanges.StartCallCount, Is.EqualTo(2));
             Assert.That(remoteChanges.StartCallCount, Is.EqualTo(2));
             Assert.That(periodicSync.StartCallCount, Is.EqualTo(2));
@@ -1064,9 +1065,17 @@ public sealed class SyncApplicationServiceTests
 
         public int PauseAllCallCount { get; private set; }
 
+        public bool LastStartPaused { get; private set; }
+
         public Task StartAsync(CancellationToken cancellationToken = default)
         {
+            return StartAsync(startPaused: false, cancellationToken);
+        }
+
+        public Task StartAsync(bool startPaused, CancellationToken cancellationToken = default)
+        {
             StartCallCount++;
+            LastStartPaused = startPaused;
             _calls?.Add("supervisor:start");
             return Task.CompletedTask;
         }

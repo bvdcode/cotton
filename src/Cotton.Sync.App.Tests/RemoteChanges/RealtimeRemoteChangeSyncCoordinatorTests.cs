@@ -364,6 +364,11 @@ public sealed class RealtimeRemoteChangeSyncCoordinatorTests
             return Task.CompletedTask;
         }
 
+        public Task StartAsync(bool startPaused, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
         public Task StopAsync(CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
