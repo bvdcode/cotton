@@ -276,6 +276,41 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task SelfTestPass_PreservesCurrentSyncPairErrorActionRequired()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Videos", "Idle")))
+        {
+            SelfTestSnapshot = new DesktopSelfTestSnapshot(
+            [
+                new DesktopSelfTestItemSnapshot("Preferences database", true, "Ready"),
+                new DesktopSelfTestItemSnapshot("Sync state database", true, "Ready"),
+            ]),
+        };
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportStatus(new DesktopSyncStatusSnapshot(
+        [
+            new DesktopSyncPairStatusSnapshot(syncPairId, "Error", "There is not enough space on the disk."),
+        ]));
+
+        await ExecuteAsync(viewModel.SelfTestCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Action required"));
+            Assert.That(viewModel.HeaderStatusText, Is.EqualTo("Action required"));
+            Assert.That(viewModel.HasActionRequired, Is.True);
+            Assert.That(viewModel.IsStatusCardVisible, Is.False);
+            Assert.That(
+                viewModel.ActionRequiredMessage,
+                Is.EqualTo("This computer does not have enough free disk space for sync. Free space and retry."));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Fix the issue below to continue syncing."));
+        });
+    }
+
+    [Test]
     public async Task CommandFailure_UpdatesProgressTextInsteadOfReportingUpToDate()
     {
         var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Documents", "Idle")))

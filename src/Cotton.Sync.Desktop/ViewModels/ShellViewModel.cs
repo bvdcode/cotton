@@ -2127,9 +2127,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         try
         {
             DesktopSelfTestSnapshot result = await _controller.RunSelfTestAsync().ConfigureAwait(true);
-            string actionRequiredMessage = DesktopActionRequiredMessageResolver.FromSelfTest(result);
+            string selfTestActionRequiredMessage = DesktopActionRequiredMessageResolver.FromSelfTest(result);
+            string syncPairActionRequiredMessage = ResolveCurrentSyncPairActionRequiredMessage();
+            string actionRequiredMessage = string.IsNullOrWhiteSpace(selfTestActionRequiredMessage)
+                ? syncPairActionRequiredMessage
+                : selfTestActionRequiredMessage;
             SetDesktopSyncChangesApiUnavailable(HasMissingDesktopSyncChangesApiFailure(result));
-            GlobalStatus = result.Passed ? "Self-test passed" : "Action required";
+            GlobalStatus = string.IsNullOrWhiteSpace(actionRequiredMessage) ? "Self-test passed" : "Action required";
             ActionRequiredMessage = actionRequiredMessage;
             SelfTestItems.Clear();
             foreach (DesktopSelfTestItemSnapshot item in result.Items)
@@ -2147,6 +2151,25 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         {
             IsBusy = false;
         }
+    }
+
+    private string ResolveCurrentSyncPairActionRequiredMessage()
+    {
+        if (SyncPairs.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        DesktopSyncPairStatusSnapshot[] pairStatuses = SyncPairs
+            .Select(static pair => new DesktopSyncPairStatusSnapshot(
+                pair.Id,
+                pair.Status,
+                pair.LastError,
+                pair.CurrentOperation,
+                pair.LastSyncedAtUtc))
+            .ToArray();
+
+        return DesktopActionRequiredMessageResolver.FromStatus(new DesktopSyncStatusSnapshot(pairStatuses));
     }
 
     private async Task ExportDiagnosticsAsync()
