@@ -142,7 +142,9 @@ public sealed class SdkRemoteFileSynchronizerTests
         byte[] bytes = Encoding.UTF8.GetBytes("abcdefghij");
         LocalFileSnapshot local = WriteLocalFile("Docs/file.txt", bytes);
         var client = new FakeCottonCloudClient(chunkSizeBytes: 4);
-        var synchronizer = new SdkRemoteFileSynchronizer(client);
+        var synchronizer = new SdkRemoteFileSynchronizer(
+            client,
+            new SdkRemoteFileSynchronizerOptions { MaxConcurrentChunkUploads = 1 });
         var progress = new RecordingProgress<SyncTransferProgress>();
 
         await synchronizer.UploadFileAsync(
@@ -160,6 +162,39 @@ public sealed class SdkRemoteFileSynchronizerTests
             Assert.That(progress.Values.Select(value => value.RelativePath), Is.All.EqualTo("Docs/file.txt"));
             Assert.That(progress.Values[^1].IsCompleted, Is.True);
         });
+    }
+
+    [Test]
+    public async Task UploadFileAsync_ReportsChunkProgressBeforeWholeBatchCompletes()
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes("abcdefghijkl");
+        LocalFileSnapshot local = WriteLocalFile("Docs/file.txt", bytes);
+        var client = new FakeCottonCloudClient(chunkSizeBytes: 4);
+        string firstChunkHash = Hash(Encoding.UTF8.GetBytes("abcd"));
+        client.ChunksClient.BlockUpload(firstChunkHash);
+        var synchronizer = new SdkRemoteFileSynchronizer(
+            client,
+            new SdkRemoteFileSynchronizerOptions { MaxConcurrentChunkUploads = 2 });
+        var progress = new SignalingProgress<SyncTransferProgress>(
+            value => value.TransferredBytes > 0);
+
+        Task upload = synchronizer.UploadFileAsync(
+            _rootNodeId,
+            local.RelativePath,
+            local,
+            existingRemoteFile: null,
+            transferProgress: progress);
+        SyncTransferProgress firstProgress = await progress.WaitForMatchAsync().ConfigureAwait(false);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstProgress.TransferredBytes, Is.EqualTo(4));
+            Assert.That(firstProgress.TotalBytes, Is.EqualTo(12));
+            Assert.That(upload.IsCompleted, Is.False);
+        });
+
+        client.ChunksClient.ReleaseUpload(firstChunkHash);
+        await upload.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
     }
 
     [Test]
@@ -335,6 +370,30 @@ public sealed class SdkRemoteFileSynchronizerTests
         }
     }
 
+    private class SignalingProgress<T> : IProgress<T>
+    {
+        private readonly Func<T, bool> _matches;
+        private readonly TaskCompletionSource<T> _match = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public SignalingProgress(Func<T, bool> matches)
+        {
+            _matches = matches;
+        }
+
+        public void Report(T value)
+        {
+            if (_matches(value))
+            {
+                _match.TrySetResult(value);
+            }
+        }
+
+        public async Task<T> WaitForMatchAsync()
+        {
+            return await _match.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        }
+    }
+
     private sealed class FakeCottonCloudClient : ICottonCloudClient
     {
         public FakeCottonCloudClient(int chunkSizeBytes)
@@ -390,6 +449,7 @@ public sealed class SdkRemoteFileSynchronizerTests
     private sealed class FakeChunkClient : ICottonChunkClient
     {
         private readonly object _gate = new();
+        private readonly Dictionary<string, TaskCompletionSource> _blockedUploads = new(StringComparer.OrdinalIgnoreCase);
         private int _activeOperations;
 
         public HashSet<string> ExistingHashes { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -401,6 +461,30 @@ public sealed class SdkRemoteFileSynchronizerTests
         public TimeSpan OperationDelay { get; set; }
 
         public int MaxConcurrentOperations { get; private set; }
+
+        public void BlockUpload(string hash)
+        {
+            lock (_gate)
+            {
+                _blockedUploads[hash] = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            }
+        }
+
+        public void ReleaseUpload(string hash)
+        {
+            TaskCompletionSource? block;
+            lock (_gate)
+            {
+                if (!_blockedUploads.TryGetValue(hash, out block))
+                {
+                    return;
+                }
+
+                _blockedUploads.Remove(hash);
+            }
+
+            block.SetResult();
+        }
 
         public async Task<bool> ExistsAsync(string hash, CancellationToken cancellationToken = default)
         {
@@ -421,6 +505,7 @@ public sealed class SdkRemoteFileSynchronizerTests
             BeginOperation();
             try
             {
+                await WaitForUploadReleaseAsync(hash, cancellationToken).ConfigureAwait(false);
                 await DelayOperationAsync(cancellationToken).ConfigureAwait(false);
                 await using var copy = new MemoryStream();
                 await content.CopyToAsync(copy, cancellationToken);
@@ -446,6 +531,20 @@ public sealed class SdkRemoteFileSynchronizerTests
             finally
             {
                 EndOperation();
+            }
+        }
+
+        private async Task WaitForUploadReleaseAsync(string hash, CancellationToken cancellationToken)
+        {
+            TaskCompletionSource? block;
+            lock (_gate)
+            {
+                _blockedUploads.TryGetValue(hash, out block);
+            }
+
+            if (block is not null)
+            {
+                await block.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
             }
         }
 

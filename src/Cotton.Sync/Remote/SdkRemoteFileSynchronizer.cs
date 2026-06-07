@@ -273,10 +273,21 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynch
             return transferredBytes;
         }
 
-        int[] completedBytes = await Task.WhenAll(pendingUploads).ConfigureAwait(false);
-        pendingUploads.Clear();
-        foreach (int bytes in completedBytes)
+        while (pendingUploads.Count > 0)
         {
+            Task<int> completedTask = await Task.WhenAny(pendingUploads).ConfigureAwait(false);
+            pendingUploads.Remove(completedTask);
+            int bytes;
+            try
+            {
+                bytes = await completedTask.ConfigureAwait(false);
+            }
+            catch
+            {
+                ObservePendingUploadFailures(pendingUploads);
+                throw;
+            }
+
             transferredBytes += bytes;
             ReportTransfer(
                 transferProgress,
@@ -287,6 +298,22 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynch
         }
 
         return transferredBytes;
+    }
+
+    private static void ObservePendingUploadFailures(List<Task<int>> pendingUploads)
+    {
+        if (pendingUploads.Count == 0)
+        {
+            return;
+        }
+
+        Task pendingBatch = Task.WhenAll(pendingUploads);
+        pendingUploads.Clear();
+        _ = pendingBatch.ContinueWith(
+            static task => _ = task.Exception,
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnFaulted,
+            TaskScheduler.Default);
     }
 
     private static int EstimateChunkCollectionCapacity(long totalBytes, int chunkSize)
