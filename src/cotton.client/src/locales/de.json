@@ -2888,7 +2888,8 @@
           "testGeoIpProvider": "Anbieter testen"
         },
         "state": {
-          "geoIpTestPassed": "Test des eigenen Resolvers bestanden."
+          "geoIpTestPassed": "Test des eigenen Resolvers bestanden.",
+          "geoIpTestPassedWithResult": "Test des eigenen Resolvers bestanden: {{input}} wurde als {{location}} aufgelöst."
         },
         "openSetupWizard": {
           "title": "Einrichtungsassistent öffnen",

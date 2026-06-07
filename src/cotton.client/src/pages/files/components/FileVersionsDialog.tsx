@@ -68,7 +68,7 @@ export const FileVersionsDialog: React.FC<FileVersionsDialogProps> = ({
   } | null>(null);
   const [busy, setBusy] = React.useState<BusyState | null>(null);
 
-  const loading = isLoading || (isFetching && versions.length === 0);
+  const loading = isLoading || isFetching;
   const error = actionError?.fileId === fileId
     ? actionError.message
     : isError

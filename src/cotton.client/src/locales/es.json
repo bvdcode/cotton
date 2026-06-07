@@ -3103,7 +3103,8 @@
           "testGeoIpProvider": "Probar proveedor"
         },
         "state": {
-          "geoIpTestPassed": "La prueba del resolvedor personalizado pasó."
+          "geoIpTestPassed": "La prueba del resolvedor personalizado pasó.",
+          "geoIpTestPassedWithResult": "La prueba del resolvedor personalizado pasó: {{input}} se resolvió como {{location}}."
         },
         "title": "Ajustes generales",
         "description": "Comportamiento principal del servidor y búsqueda de ubicación para notificaciones.",

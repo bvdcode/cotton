@@ -41,6 +41,7 @@ import {
 const LIGHTBOX_ANIMATION_MS = 200;
 const LIGHTBOX_PREFETCH_OFFSETS: ReadonlyArray<number> = [-1, 0, 1];
 const TOUCH_CONTROLS_AUTOHIDE_MS = 2500;
+const LIGHTBOX_TITLE_SEPARATOR = "\u2022";
 const HlsVideoSlide = React.lazy(async () => {
   const module = await import("./HlsVideoSlide");
   return { default: module.HlsVideoSlide };
@@ -69,6 +70,11 @@ type ActiveVideoState = {
   element: HTMLVideoElement;
 };
 
+type SetActiveVideoElementForFile = (
+  fileId: string,
+  element: HTMLVideoElement | null,
+) => void;
+
 const buildLightboxIndexKey = (
   open: boolean,
   initialIndex: number,
@@ -84,6 +90,206 @@ const buildLightboxIndexKey = (
 const resolveIndex = (current: number, next: IndexOrUpdater): number => {
   return typeof next === "function" ? next(current) : next;
 };
+
+type HlsVideoLightboxSlideProps = {
+  currentItemId: string | null;
+  errorText: string;
+  noticeText: string;
+  offset: number;
+  setActiveVideoElementForFile: SetActiveVideoElementForFile;
+  slide: Slide;
+};
+
+const HlsVideoLightboxSlide = ({
+  currentItemId,
+  errorText,
+  noticeText,
+  offset,
+  setActiveVideoElementForFile,
+  slide,
+}: HlsVideoLightboxSlideProps) => {
+  if (slide.type !== HLS_VIDEO_SLIDE_TYPE) {
+    return undefined;
+  }
+
+  const hlsSlide = slide as SlideHlsVideo & SlideWithTitle;
+  return (
+    <React.Suspense fallback={null}>
+      <HlsVideoSlide
+        src={hlsSlide.src}
+        poster={hlsSlide.poster}
+        width={hlsSlide.width}
+        height={hlsSlide.height}
+        active={offset === 0 && hlsSlide.fileId === currentItemId}
+        onVideoElementChange={(element) =>
+          setActiveVideoElementForFile(hlsSlide.fileId, element)
+        }
+        noticeText={noticeText}
+        errorText={errorText}
+      />
+    </React.Suspense>
+  );
+};
+
+const MediaLightboxSlideHeader = ({ slide }: { slide: Slide }) => {
+  const maybeTitle = (slide as { title?: string }).title;
+  const title = typeof maybeTitle === "string" ? maybeTitle : "";
+  const parts = title
+    .split(LIGHTBOX_TITLE_SEPARATOR)
+    .map((p: string) => p.trim())
+    .filter((p: string) => p.length > 0);
+
+  const counter = parts[0] ?? "";
+  const size = parts.length >= 3 ? (parts[1] ?? "") : "";
+  const name = parts.length >= 2 ? (parts[parts.length - 1] ?? "") : "";
+
+  return (
+    <div className="media-lightbox__header" aria-label={title}>
+      <span className="media-lightbox__counter">{counter}</span>
+      <span className="media-lightbox__meta">
+        {size ? (
+          <>
+            <span className="media-lightbox__sep">
+              {LIGHTBOX_TITLE_SEPARATOR}
+            </span>
+            <span className="media-lightbox__size">{size}</span>
+          </>
+        ) : null}
+        {name ? (
+          <>
+            <span className="media-lightbox__sep">
+              {LIGHTBOX_TITLE_SEPARATOR}
+            </span>
+            <span className="media-lightbox__name">{name}</span>
+          </>
+        ) : null}
+      </span>
+    </div>
+  );
+};
+
+type MediaLightboxSlideContainerProps = {
+  children?: React.ReactNode;
+  currentItemId: string | null;
+  handleSlideImageError: (slide: Slide) => void;
+  setActiveVideoElementForFile: SetActiveVideoElementForFile;
+  slide: Slide;
+};
+
+const MediaLightboxSlideContainer = ({
+  children,
+  currentItemId,
+  handleSlideImageError,
+  setActiveVideoElementForFile,
+  slide,
+}: MediaLightboxSlideContainerProps) => {
+  const lightboxSlide = slide as Partial<SlideWithTitle>;
+  const fileId =
+    typeof lightboxSlide.fileId === "string"
+      ? lightboxSlide.fileId
+      : null;
+  const previewUrl =
+    slide.type === "image"
+      ? (slide as { thumbnail?: string }).thumbnail
+      : undefined;
+
+  return (
+    <div
+      className="media-lightbox__tap-area"
+      data-cotton-media-lightbox-file-id={fileId ?? undefined}
+      onPlayCapture={(event) => {
+        const target = event.target;
+        if (
+          fileId &&
+          fileId === currentItemId &&
+          target instanceof HTMLVideoElement
+        ) {
+          setActiveVideoElementForFile(fileId, target);
+        }
+      }}
+      onErrorCapture={() => {
+        void handleSlideImageError(slide);
+      }}
+    >
+      {previewUrl && (
+        <img
+          src={previewUrl}
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="media-lightbox__preview-bg"
+        />
+      )}
+      {children}
+    </div>
+  );
+};
+
+type UseMediaLightboxRenderOptions = {
+  currentItemId: string | null;
+  handleSlideImageError: (slide: Slide) => void;
+  hlsErrorText: string;
+  hlsNoticeText: string;
+  setActiveVideoElementForFile: SetActiveVideoElementForFile;
+};
+
+const useMediaLightboxRender = ({
+  currentItemId,
+  handleSlideImageError,
+  hlsErrorText,
+  hlsNoticeText,
+  setActiveVideoElementForFile,
+}: UseMediaLightboxRenderOptions) =>
+  React.useMemo(
+    () => ({
+      buttonZoom: () => null,
+      iconZoomIn: () => null,
+      iconZoomOut: () => null,
+      iconLoading: () => <CircularProgress size={28} />,
+      iconClose: () => <Close />,
+      iconShare: () => <ShareIcon />,
+      iconDownload: () => <DownloadIcon />,
+      iconSlideshowPause: () => <PauseIcon />,
+      iconSlideshowPlay: () => <SlideshowIcon />,
+      slide: ({ slide, offset }: { slide: Slide; offset: number }) =>
+        slide.type === HLS_VIDEO_SLIDE_TYPE ? (
+          <HlsVideoLightboxSlide
+            currentItemId={currentItemId}
+            errorText={hlsErrorText}
+            noticeText={hlsNoticeText}
+            offset={offset}
+            setActiveVideoElementForFile={setActiveVideoElementForFile}
+            slide={slide}
+          />
+        ) : undefined,
+      slideHeader: ({ slide }: { slide: Slide }) => (
+        <MediaLightboxSlideHeader slide={slide} />
+      ),
+      slideContainer: ({
+        children,
+        slide,
+      }: {
+        children?: React.ReactNode;
+        slide: Slide;
+      }) => (
+        <MediaLightboxSlideContainer
+          currentItemId={currentItemId}
+          handleSlideImageError={handleSlideImageError}
+          setActiveVideoElementForFile={setActiveVideoElementForFile}
+          slide={slide}
+        >
+          {children}
+        </MediaLightboxSlideContainer>
+      ),
+    }),
+    [
+      currentItemId,
+      handleSlideImageError,
+      hlsErrorText,
+      hlsNoticeText,
+      setActiveVideoElementForFile,
+    ],
+  );
 
 export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   items,
@@ -432,129 +638,13 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     ],
   );
 
-  const lightboxRender = React.useMemo(
-    () => ({
-      buttonZoom: () => null,
-      iconZoomIn: () => null,
-      iconZoomOut: () => null,
-      iconLoading: () => <CircularProgress size={28} />,
-      iconClose: () => <Close />,
-      iconShare: () => <ShareIcon />,
-      iconDownload: () => <DownloadIcon />,
-      iconSlideshowPause: () => <PauseIcon />,
-      iconSlideshowPlay: () => <SlideshowIcon />,
-      slide: ({ slide, offset }: { slide: Slide; offset: number }) => {
-        if (slide.type !== HLS_VIDEO_SLIDE_TYPE) {
-          return undefined;
-        }
-
-        const hlsSlide = slide as SlideHlsVideo & SlideWithTitle;
-        return (
-          <React.Suspense fallback={null}>
-            <HlsVideoSlide
-              src={hlsSlide.src}
-              poster={hlsSlide.poster}
-              width={hlsSlide.width}
-              height={hlsSlide.height}
-              active={offset === 0 && hlsSlide.fileId === currentItemId}
-              onVideoElementChange={(element) =>
-                setActiveVideoElementForFile(hlsSlide.fileId, element)
-              }
-              noticeText={hlsNoticeText}
-              errorText={hlsErrorText}
-            />
-          </React.Suspense>
-        );
-      },
-      slideHeader: ({ slide }: { slide: Slide }) => {
-        const maybeTitle = (slide as { title?: string }).title;
-        const title = typeof maybeTitle === "string" ? maybeTitle : "";
-        const parts = title
-          .split("•")
-          .map((p: string) => p.trim())
-          .filter((p: string) => p.length > 0);
-
-        const counter = parts[0] ?? "";
-        const size = parts.length >= 3 ? (parts[1] ?? "") : "";
-        const name = parts.length >= 2 ? (parts[parts.length - 1] ?? "") : "";
-
-        return (
-          <div className="media-lightbox__header" aria-label={title}>
-            <span className="media-lightbox__counter">{counter}</span>
-            <span className="media-lightbox__meta">
-              {size ? (
-                <>
-                  <span className="media-lightbox__sep">•</span>
-                  <span className="media-lightbox__size">{size}</span>
-                </>
-              ) : null}
-              {name ? (
-                <>
-                  <span className="media-lightbox__sep">•</span>
-                  <span className="media-lightbox__name">{name}</span>
-                </>
-              ) : null}
-            </span>
-          </div>
-        );
-      },
-      slideContainer: ({
-        children,
-        slide,
-      }: {
-        children?: React.ReactNode;
-        slide: Slide;
-      }) => {
-        const lightboxSlide = slide as Partial<SlideWithTitle>;
-        const fileId =
-          typeof lightboxSlide.fileId === "string"
-            ? lightboxSlide.fileId
-            : null;
-        const previewUrl =
-          slide.type === "image"
-            ? (slide as { thumbnail?: string }).thumbnail
-            : undefined;
-
-        return (
-          <div
-            className="media-lightbox__tap-area"
-            data-cotton-media-lightbox-file-id={fileId ?? undefined}
-            onPlayCapture={(event) => {
-              const target = event.target;
-              if (
-                fileId &&
-                fileId === currentItemId &&
-                target instanceof HTMLVideoElement
-              ) {
-                setActiveVideoElementForFile(fileId, target);
-              }
-            }}
-            onErrorCapture={() => {
-              void handleSlideImageError(slide);
-            }}
-          >
-            {previewUrl && (
-              <img
-                src={previewUrl}
-                alt=""
-                aria-hidden
-                draggable={false}
-                className="media-lightbox__preview-bg"
-              />
-            )}
-            {children}
-          </div>
-        );
-      },
-    }),
-    [
-      currentItemId,
-      handleSlideImageError,
-      hlsErrorText,
-      hlsNoticeText,
-      setActiveVideoElementForFile,
-    ],
-  );
+  const lightboxRender = useMediaLightboxRender({
+    currentItemId,
+    handleSlideImageError,
+    hlsErrorText,
+    hlsNoticeText,
+    setActiveVideoElementForFile,
+  });
 
   const lightboxDownload = React.useMemo(
     () => ({

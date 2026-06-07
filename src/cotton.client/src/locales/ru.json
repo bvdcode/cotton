@@ -3245,7 +3245,8 @@
           "testGeoIpProvider": "Проверить провайдера"
         },
         "state": {
-          "geoIpTestPassed": "Проверка кастомного resolver прошла успешно."
+          "geoIpTestPassed": "Проверка кастомного resolver прошла успешно.",
+          "geoIpTestPassedWithResult": "Проверка кастомного resolver прошла успешно: {{input}} определился как {{location}}."
         },
         "title": "Основные настройки",
         "description": "Базовое поведение сервера и определение местоположения в уведомлениях.",

@@ -2901,7 +2901,8 @@
           "testGeoIpProvider": "测试提供商"
         },
         "state": {
-          "geoIpTestPassed": "自定义解析器测试通过。"
+          "geoIpTestPassed": "自定义解析器测试通过。",
+          "geoIpTestPassedWithResult": "自定义解析器测试通过：{{input}} 解析为 {{location}}。"
         },
         "openSetupWizard": {
           "title": "打开安装向导",

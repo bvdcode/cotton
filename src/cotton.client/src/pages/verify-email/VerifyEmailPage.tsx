@@ -1,10 +1,7 @@
 import {
   Box,
-  Paper,
   Button,
-  Container,
   Typography,
-  Avatar,
   Alert,
   CircularProgress,
 } from "@mui/material";
@@ -17,6 +14,7 @@ import {
   getApiErrorMessage,
   isAxiosError,
 } from "../../shared/api/httpClient";
+import { AuthActionShell } from "../../shared/ui/AuthActionShell";
 
 export const VerifyEmailPage = () => {
   const { t } = useTranslation("verifyEmail");
@@ -63,80 +61,52 @@ export const VerifyEmailPage = () => {
   }, [navigate, isAuthenticated]);
 
   return (
-    <Container
-      maxWidth="sm"
-      sx={{
-        minHeight: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        py: 4,
-      }}
+    <AuthActionShell
+      title={t("title")}
+      logoAlt={tCommon("app.logoAlt")}
     >
-      <Paper sx={{ p: 4, width: "100%" }}>
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          gap={1.5}
-        >
-          <Typography
-            variant="h4"
-            component="h1"
-            sx={{ flex: 1, minWidth: 0 }}
-          >
-            {t("title")}
+      {loading && (
+        <Box display="flex" alignItems="center" gap={2} mt={2}>
+          <CircularProgress size={24} />
+          <Typography variant="body1" color="text.secondary">
+            {t("verifying")}
           </Typography>
-          <Avatar
-            src="/assets/icons/icon.svg"
-            alt={tCommon("app.logoAlt")}
-            sx={{ flexShrink: 0 }}
-          />
         </Box>
+      )}
 
-        {loading && (
-          <Box display="flex" alignItems="center" gap={2} mt={2}>
-            <CircularProgress size={24} />
-            <Typography variant="body1" color="text.secondary">
-              {t("verifying")}
-            </Typography>
-          </Box>
-        )}
+      {success && (
+        <Box>
+          <Alert severity="success" sx={{ mt: 2 }}>
+            {t("success")}
+          </Alert>
+          <Button
+            variant="contained"
+            color="primary"
+            fullWidth
+            onClick={handleNavigate}
+            sx={{ mt: 3 }}
+          >
+            {isAuthenticated ? t("goToSettings") : t("goToLogin")}
+          </Button>
+        </Box>
+      )}
 
-        {success && (
-          <Box>
-            <Alert severity="success" sx={{ mt: 2 }}>
-              {t("success")}
-            </Alert>
-            <Button
-              variant="contained"
-              color="primary"
-              fullWidth
-              onClick={handleNavigate}
-              sx={{ mt: 3 }}
-            >
-              {isAuthenticated ? t("goToSettings") : t("goToLogin")}
-            </Button>
-          </Box>
-        )}
-
-        {error && !loading && (
-          <Box>
-            <Alert severity="error" sx={{ mt: 2 }}>
-              {error}
-            </Alert>
-            <Button
-              variant="contained"
-              color="primary"
-              fullWidth
-              onClick={handleNavigate}
-              sx={{ mt: 3 }}
-            >
-              {isAuthenticated ? t("goToSettings") : t("goToLogin")}
-            </Button>
-          </Box>
-        )}
-      </Paper>
-    </Container>
+      {error && !loading && (
+        <Box>
+          <Alert severity="error" sx={{ mt: 2 }}>
+            {error}
+          </Alert>
+          <Button
+            variant="contained"
+            color="primary"
+            fullWidth
+            onClick={handleNavigate}
+            sx={{ mt: 3 }}
+          >
+            {isAuthenticated ? t("goToSettings") : t("goToLogin")}
+          </Button>
+        </Box>
+      )}
+    </AuthActionShell>
   );
 };

@@ -2907,7 +2907,8 @@
           "testGeoIpProvider": "Перевірити провайдера"
         },
         "state": {
-          "geoIpTestPassed": "Перевірку власного резолвера пройдено."
+          "geoIpTestPassed": "Перевірку власного резолвера пройдено.",
+          "geoIpTestPassedWithResult": "Перевірку власного резолвера пройдено: {{input}} визначено як {{location}}."
         },
         "openSetupWizard": {
           "title": "Відкрити майстер налаштування",

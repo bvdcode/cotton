@@ -2687,7 +2687,8 @@
           "testGeoIpProvider": "Test provider"
         },
         "state": {
-          "geoIpTestPassed": "Custom resolver test passed."
+          "geoIpTestPassed": "Custom resolver test passed.",
+          "geoIpTestPassedWithResult": "Custom resolver test passed: {{input}} resolved to {{location}}."
         },
         "openSetupWizard": {
           "title": "Open setup wizard",

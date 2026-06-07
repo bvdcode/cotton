@@ -236,6 +236,15 @@ export const customGeoIpLookupUrlSchema = z
   .object({ customGeoIpLookupUrl: nullableStringSchema })
   .transform((value) => value.customGeoIpLookupUrl ?? "");
 
+export const customGeoIpLookupTestResultSchema = z.object({
+  inputLabel: z.string(),
+  inputValue: z.string(),
+  country: nullableStringSchema,
+  region: nullableStringSchema,
+  city: nullableStringSchema,
+});
+export type CustomGeoIpLookupTestResult = z.infer<typeof customGeoIpLookupTestResultSchema>;
+
 export const s3ConfigSchema = z.object({
   accessKey: configStringSchema,
   secretKey: configStringSchema,

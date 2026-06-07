@@ -1,7 +1,11 @@
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { NodeDto } from "../../../shared/api/layoutsApi";
-import { nodesApi, type NodeContentDto } from "../../../shared/api/nodesApi";
+import {
+  nodesApi,
+  type NodeContentDto,
+  type NodeFileManifestDto,
+} from "../../../shared/api/nodesApi";
 import {
   FOLDER_ENCRYPTION_POLICY_KEY,
   getFolderEncryptionPolicyStateFromParentResolver,
@@ -66,6 +70,7 @@ type UploadToastVariant = "info" | "error";
 
 type FileUploadOptions = {
   onToast?: (message: string, variant?: UploadToastVariant) => void;
+  onFileUploaded?: (file: NodeFileManifestDto) => void;
 };
 
 const hasFileDragPayload = (dataTransfer: DataTransfer | null): boolean => {
@@ -109,6 +114,7 @@ export const useFileUpload = (
   const skippedItemsToastIdRef = useRef<string | null>(null);
   const skippedItemsToastSequenceRef = useRef(0);
   const onToast = options?.onToast;
+  const onFileUploaded = options?.onFileUploaded;
 
   const baseLabel = useMemo(() => {
     const label = breadcrumbs
@@ -198,9 +204,19 @@ export const useFileUpload = (
 
       uploadManager.enqueue(result.files, nodeId, baseLabel, {
         encrypt: decision.encrypt,
+        onFileUploaded,
       });
     },
-    [nodeId, content, baseLabel, showConflictDialog, onToast, t, decideEncrypt],
+    [
+      nodeId,
+      content,
+      baseLabel,
+      showConflictDialog,
+      onToast,
+      onFileUploaded,
+      t,
+      decideEncrypt,
+    ],
   );
 
   const handleUploadDroppedFiles = useMemo(
@@ -449,6 +465,7 @@ export const useFileUpload = (
 
         uploadManager.enqueue(result.files, targetNodeId, bucket.label, {
           encrypt: decision.encrypt,
+          onFileUploaded,
         });
         totalEnqueued += result.files.length;
       }
@@ -462,6 +479,7 @@ export const useFileUpload = (
       baseLabel,
       showConflictDialog,
       onToast,
+      onFileUploaded,
       t,
       decideEncrypt,
       isPolicyEnabledForNode,

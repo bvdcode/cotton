@@ -1,11 +1,7 @@
 import {
   Box,
-  Paper,
   Button,
   TextField,
-  Container,
-  Typography,
-  Avatar,
   Alert,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
@@ -16,9 +12,11 @@ import {
   getApiErrorMessage,
   isAxiosError,
 } from "../../shared/api/httpClient";
+import { AuthActionShell } from "../../shared/ui/AuthActionShell";
 
 export const ResetPasswordPage = () => {
   const { t } = useTranslation("resetPassword");
+  const { t: tCommon } = useTranslation("common");
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get("token") ?? "";
@@ -70,97 +68,69 @@ export const ResetPasswordPage = () => {
   }, [navigate]);
 
   return (
-    <Container
-      maxWidth="sm"
-      sx={{
-        minHeight: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        py: 4,
-      }}
+    <AuthActionShell
+      title={t("title")}
+      logoAlt={tCommon("app.logoAlt")}
     >
-      <Paper sx={{ p: 4, width: "100%" }}>
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          gap={1.5}
-        >
-          <Typography
-            variant="h4"
-            component="h1"
-            sx={{ flex: 1, minWidth: 0 }}
+      {success ? (
+        <Box>
+          <Alert severity="success" sx={{ mt: 2 }}>
+            {t("success")}
+          </Alert>
+          <Button
+            variant="contained"
+            color="primary"
+            fullWidth
+            onClick={handleGoToLogin}
+            sx={{ mt: 3 }}
           >
-            {t("title")}
-          </Typography>
-          <Avatar
-            src="/assets/icons/icon.svg"
-            alt="App Logo"
-            sx={{ flexShrink: 0 }}
-          />
+            {t("goToLogin")}
+          </Button>
         </Box>
-
-        {success ? (
-          <Box>
-            <Alert severity="success" sx={{ mt: 2 }}>
-              {t("success")}
+      ) : (
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          noValidate
+          autoComplete="off"
+        >
+          <TextField
+            fullWidth
+            label={t("newPassword")}
+            type="password"
+            margin="normal"
+            variant="outlined"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            disabled={loading}
+          />
+          <TextField
+            fullWidth
+            label={t("confirmPassword")}
+            type="password"
+            margin="normal"
+            variant="outlined"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            disabled={loading}
+          />
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
             </Alert>
-            <Button
-              variant="contained"
-              color="primary"
-              fullWidth
-              onClick={handleGoToLogin}
-              sx={{ mt: 3 }}
-            >
-              {t("goToLogin")}
-            </Button>
-          </Box>
-        ) : (
-          <Box
-            component="form"
-            onSubmit={handleSubmit}
-            noValidate
-            autoComplete="off"
+          )}
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            disabled={loading || !newPassword || !confirmPassword}
+            fullWidth
+            sx={{ mt: 3 }}
           >
-            <TextField
-              fullWidth
-              label={t("newPassword")}
-              type="password"
-              margin="normal"
-              variant="outlined"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              disabled={loading}
-            />
-            <TextField
-              fullWidth
-              label={t("confirmPassword")}
-              type="password"
-              margin="normal"
-              variant="outlined"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              disabled={loading}
-            />
-            {error && (
-              <Alert severity="error" sx={{ mt: 2 }}>
-                {error}
-              </Alert>
-            )}
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              disabled={loading || !newPassword || !confirmPassword}
-              fullWidth
-              sx={{ mt: 3 }}
-            >
-              {loading ? t("submitting") : t("submit")}
-            </Button>
-          </Box>
-        )}
-      </Paper>
-    </Container>
+            {loading ? t("submitting") : t("submit")}
+          </Button>
+        </Box>
+      )}
+    </AuthActionShell>
   );
 };
