@@ -770,6 +770,7 @@ public sealed class SyncCliCommandRunnerTests
             Assert.That(error.ToString(), Is.Empty);
             Assert.That(text, Does.Contain("Cotton Sync soak run"));
             Assert.That(text, Does.Contain("Iteration 1: activities=1, stateEntries=1"));
+            Assert.That(text, Does.Contain("elapsedSeconds="));
             Assert.That(text, Does.Contain("Elapsed seconds:"));
             Assert.That(text, Does.Contain("CPU seconds:"));
             Assert.That(text, Does.Contain("CPU utilization percent:"));
@@ -784,6 +785,9 @@ public sealed class SyncCliCommandRunnerTests
             Assert.That(text, Does.Contain("Peak managed memory bytes:"));
             Assert.That(text, Does.Contain("Peak managed memory growth bytes:"));
             Assert.That(text, Does.Contain("Iterations completed: 1"));
+            Assert.That(text, Does.Contain("Iteration seconds total:"));
+            Assert.That(text, Does.Contain("Iteration seconds average:"));
+            Assert.That(text, Does.Contain("Iteration seconds max:"));
             Assert.That(text, Does.Contain("Final convergence activities: 0"));
             Assert.That(text, Does.Contain("Final state entries: 1"));
             Assert.That(text, Does.Contain("Sync errors: 0"));
@@ -861,6 +865,9 @@ public sealed class SyncCliCommandRunnerTests
             Assert.That(text, Does.Contain("Peak managed memory bytes:"));
             Assert.That(text, Does.Contain("Peak managed memory growth bytes:"));
             Assert.That(text, Does.Contain("Iterations completed: 0"));
+            Assert.That(text, Does.Contain("Iteration seconds total: 0"));
+            Assert.That(text, Does.Contain("Iteration seconds average: 0"));
+            Assert.That(text, Does.Contain("Iteration seconds max: 0"));
             Assert.That(text, Does.Contain("Total activities: 0"));
             Assert.That(text, Does.Contain("Sync errors: 1"));
             Assert.That(text, Does.Contain("Final convergence activities: not run"));

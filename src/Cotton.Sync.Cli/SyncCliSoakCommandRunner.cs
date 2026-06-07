@@ -98,6 +98,8 @@ internal static class SyncCliSoakCommandRunner
         int syncErrors = 0;
         int? finalConvergenceActivities = null;
         int? finalStateEntries = null;
+        TimeSpan totalIterationElapsed = TimeSpan.Zero;
+        TimeSpan longestIterationElapsed = TimeSpan.Zero;
         long peakWorkingSetBytes = startedWorkingSetBytes;
         long peakManagedMemoryBytes = startedManagedMemoryBytes;
         await output.WriteLineAsync("Cotton Sync soak run").ConfigureAwait(false);
@@ -115,6 +117,7 @@ internal static class SyncCliSoakCommandRunner
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 int iteration = completedIterations + 1;
+                long iterationStartedTimestamp = Stopwatch.GetTimestamp();
                 if (normalizedProbeFile is not null)
                 {
                     await WriteProbeFileAsync(options.LocalRoot, normalizedProbeFile, iteration, cancellationToken)
@@ -129,11 +132,18 @@ internal static class SyncCliSoakCommandRunner
                     : await SyncCliRuntimeFactory
                         .RunSinglePassAsync(secondRuntime, cancellationToken)
                         .ConfigureAwait(false);
+                TimeSpan iterationElapsed = Stopwatch.GetElapsedTime(iterationStartedTimestamp);
+                totalIterationElapsed += iterationElapsed;
+                if (iterationElapsed > longestIterationElapsed)
+                {
+                    longestIterationElapsed = iterationElapsed;
+                }
+
                 completedIterations++;
                 totalActivities += pass.Result.Activities.Count + (secondPass?.Result.Activities.Count ?? 0);
                 peakWorkingSetBytes = Math.Max(peakWorkingSetBytes, GetWorkingSetBytes(process));
                 peakManagedMemoryBytes = Math.Max(peakManagedMemoryBytes, GC.GetTotalMemory(forceFullCollection: false));
-                await WriteIterationAsync(output, iteration, pass, secondPass, process).ConfigureAwait(false);
+                await WriteIterationAsync(output, iteration, pass, secondPass, process, iterationElapsed).ConfigureAwait(false);
 
                 if (!ShouldRunNextSoakIteration(completedIterations, iterations, stopAtUtc))
                 {
@@ -175,6 +185,8 @@ internal static class SyncCliSoakCommandRunner
             peakWorkingSetBytes,
             peakManagedMemoryBytes,
             completedIterations,
+            totalIterationElapsed,
+            longestIterationElapsed,
             totalActivities,
             syncErrors,
             finalConvergenceActivities,
@@ -319,10 +331,12 @@ internal static class SyncCliSoakCommandRunner
         int iteration,
         SyncCliPassResult pass,
         SyncCliPassResult? secondPass,
-        Process process)
+        Process process,
+        TimeSpan iterationElapsed)
     {
         string metrics = ", workingSetBytes=" + GetWorkingSetBytes(process).ToStringInvariant()
-            + ", managedMemoryBytes=" + GC.GetTotalMemory(forceFullCollection: false).ToStringInvariant();
+            + ", managedMemoryBytes=" + GC.GetTotalMemory(forceFullCollection: false).ToStringInvariant()
+            + ", elapsedSeconds=" + iterationElapsed.TotalSeconds.ToStringInvariant();
         if (secondPass is null)
         {
             await output
@@ -376,6 +390,8 @@ internal static class SyncCliSoakCommandRunner
         long peakWorkingSetBytes,
         long peakManagedMemoryBytes,
         int completedIterations,
+        TimeSpan totalIterationElapsed,
+        TimeSpan longestIterationElapsed,
         int totalActivities,
         int syncErrors,
         int? finalConvergenceActivities,
@@ -411,6 +427,9 @@ internal static class SyncCliSoakCommandRunner
         await output.WriteLineAsync("Peak managed memory bytes: " + peakManagedMemoryBytes.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Peak managed memory growth bytes: " + (peakManagedMemoryBytes - startedManagedMemoryBytes).ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Iterations completed: " + completedIterations.ToStringInvariant()).ConfigureAwait(false);
+        await output.WriteLineAsync("Iteration seconds total: " + totalIterationElapsed.TotalSeconds.ToStringInvariant()).ConfigureAwait(false);
+        await output.WriteLineAsync("Iteration seconds average: " + CalculateAverageIterationSeconds(totalIterationElapsed, completedIterations).ToStringInvariant()).ConfigureAwait(false);
+        await output.WriteLineAsync("Iteration seconds max: " + longestIterationElapsed.TotalSeconds.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Total activities: " + totalActivities.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Sync errors: " + syncErrors.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Final convergence activities: " + FormatOptionalInt(finalConvergenceActivities)).ConfigureAwait(false);
@@ -422,6 +441,13 @@ internal static class SyncCliSoakCommandRunner
     private static string FormatOptionalInt(int? value)
     {
         return value.HasValue ? value.Value.ToStringInvariant() : "not run";
+    }
+
+    private static double CalculateAverageIterationSeconds(TimeSpan totalIterationElapsed, int completedIterations)
+    {
+        return completedIterations > 0
+            ? totalIterationElapsed.TotalSeconds / completedIterations
+            : 0;
     }
 
     private static double CalculateCpuUtilizationPercent(TimeSpan cpu, TimeSpan elapsed)
