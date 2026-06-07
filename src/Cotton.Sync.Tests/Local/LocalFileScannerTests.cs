@@ -88,6 +88,30 @@ public sealed class LocalFileScannerTests
     }
 
     [Test]
+    public async Task ScanTreeMetadataLookupsAsync_ReturnsPathLookupsWithoutContentHashes()
+    {
+        Directory.CreateDirectory(FullPath("Docs"));
+        WriteFile(Path.Combine("Docs", "Report.txt"), "report");
+        var scanner = new LocalFileScanner();
+        var progress = new RecordingProgress<LocalTreeScanProgress>();
+
+        LocalTreeLookupSnapshot tree = await scanner.ScanTreeMetadataLookupsAsync(_root, progress);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tree.DirectoriesByPath.Keys, Is.EqualTo(new[] { "DOCS" }));
+            Assert.That(tree.DirectoriesByPath["DOCS"].RelativePath, Is.EqualTo("Docs"));
+            Assert.That(tree.FilesByPath.Keys, Is.EqualTo(new[] { "DOCS/REPORT.TXT" }));
+            Assert.That(tree.FilesByPath["DOCS/REPORT.TXT"].RelativePath, Is.EqualTo("Docs/Report.txt"));
+            Assert.That(tree.FilesByPath["DOCS/REPORT.TXT"].ContentHash, Is.Empty);
+            Assert.That(tree.FilesByPath["DOCS/REPORT.TXT"].SizeBytes, Is.EqualTo(6));
+            Assert.That(progress.Values, Has.Count.GreaterThanOrEqualTo(3));
+            Assert.That(progress.Values[^1].FilesScanned, Is.EqualTo(1));
+            Assert.That(progress.Values[^1].DirectoriesScanned, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
     public async Task ScanTreeMetadataAsync_ReportsScanProgressAsFilesAreDiscovered()
     {
         WriteFile("alpha.txt", "alpha");

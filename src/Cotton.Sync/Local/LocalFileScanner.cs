@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Security.Cryptography;
+using Cotton.Sync;
 using Cotton.Sync.State;
 
 namespace Cotton.Sync.Local;
@@ -14,6 +15,7 @@ public sealed class LocalFileScanner :
     ILocalTreeScanner,
     ILocalFileMetadataTreeScanner,
     ILocalFileMetadataTreeProgressScanner,
+    ILocalFileMetadataTreeLookupScanner,
     ILocalFileContentHasher
 {
     private static readonly StringComparer PathComparer = StringComparer.OrdinalIgnoreCase;
@@ -40,7 +42,17 @@ public sealed class LocalFileScanner :
         string rootPath,
         CancellationToken cancellationToken = default)
     {
-        return await ScanTreeCoreAsync(rootPath, computeHashes: true, progress: null, cancellationToken).ConfigureAwait(false);
+        var tree = new LocalTreeSnapshot();
+        await ScanTreeCoreAsync(
+                rootPath,
+                computeHashes: true,
+                progress: null,
+                tree.Directories.Add,
+                tree.Files.Add,
+                cancellationToken)
+            .ConfigureAwait(false);
+        SortTree(tree);
+        return tree;
     }
 
     /// <inheritdoc />
@@ -57,7 +69,35 @@ public sealed class LocalFileScanner :
         IProgress<LocalTreeScanProgress>? progress,
         CancellationToken cancellationToken = default)
     {
-        return await ScanTreeCoreAsync(rootPath, computeHashes: false, progress, cancellationToken).ConfigureAwait(false);
+        var tree = new LocalTreeSnapshot();
+        await ScanTreeCoreAsync(
+                rootPath,
+                computeHashes: false,
+                progress,
+                tree.Directories.Add,
+                tree.Files.Add,
+                cancellationToken)
+            .ConfigureAwait(false);
+        SortTree(tree);
+        return tree;
+    }
+
+    /// <inheritdoc />
+    public async Task<LocalTreeLookupSnapshot> ScanTreeMetadataLookupsAsync(
+        string rootPath,
+        IProgress<LocalTreeScanProgress>? progress,
+        CancellationToken cancellationToken = default)
+    {
+        var tree = new LocalTreeLookupSnapshot();
+        await ScanTreeCoreAsync(
+                rootPath,
+                computeHashes: false,
+                progress,
+                directory => AddLookup(tree.DirectoriesByPath, directory, static item => item.RelativePath),
+                file => AddLookup(tree.FilesByPath, file, static item => item.RelativePath),
+                cancellationToken)
+            .ConfigureAwait(false);
+        return tree;
     }
 
     /// <inheritdoc />
@@ -71,20 +111,23 @@ public sealed class LocalFileScanner :
         return await ComputeHashAsync(localFile.FullPath, localFile.RelativePath, cancellationToken).ConfigureAwait(false);
     }
 
-    private static async Task<LocalTreeSnapshot> ScanTreeCoreAsync(
+    private static async Task ScanTreeCoreAsync(
         string rootPath,
         bool computeHashes,
         IProgress<LocalTreeScanProgress>? progress,
+        Action<LocalDirectorySnapshot> addDirectory,
+        Action<LocalFileSnapshot> addFile,
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
+        ArgumentNullException.ThrowIfNull(addDirectory);
+        ArgumentNullException.ThrowIfNull(addFile);
         string fullRoot = Path.GetFullPath(rootPath);
         if (!Directory.Exists(fullRoot))
         {
             throw new DirectoryNotFoundException($"Local sync root was not found: {fullRoot}");
         }
 
-        var tree = new LocalTreeSnapshot();
         int directoriesScanned = 0;
         int filesScanned = 0;
         progress?.Report(new LocalTreeScanProgress(filesScanned, directoriesScanned, currentPath: null));
@@ -109,7 +152,7 @@ public sealed class LocalFileScanner :
                     continue;
                 }
 
-                tree.Directories.Add(new LocalDirectorySnapshot
+                addDirectory(new LocalDirectorySnapshot
                 {
                     RelativePath = relativePath,
                     FullPath = directory.FullName,
@@ -136,16 +179,34 @@ public sealed class LocalFileScanner :
 
                 LocalFileSnapshot fileSnapshot = await CreateSnapshotAsync(file, relativePath, computeHashes, cancellationToken)
                     .ConfigureAwait(false);
-                tree.Files.Add(fileSnapshot);
+                addFile(fileSnapshot);
                 filesScanned++;
                 ReportScanProgress(progress, filesScanned, directoriesScanned, relativePath);
             }
         }
 
+        progress?.Report(new LocalTreeScanProgress(filesScanned, directoriesScanned, currentPath: null));
+    }
+
+    private static void SortTree(LocalTreeSnapshot tree)
+    {
         tree.Directories.Sort((left, right) => PathComparer.Compare(left.RelativePath, right.RelativePath));
         tree.Files.Sort((left, right) => PathComparer.Compare(left.RelativePath, right.RelativePath));
-        progress?.Report(new LocalTreeScanProgress(filesScanned, directoriesScanned, currentPath: null));
-        return tree;
+    }
+
+    private static void AddLookup<T>(
+        Dictionary<string, T> entriesByPath,
+        T entry,
+        Func<T, string> pathSelector)
+    {
+        string relativePath = pathSelector(entry);
+        string key = SyncPath.ToKey(relativePath);
+        if (entriesByPath.TryGetValue(key, out T? existing))
+        {
+            throw new SyncPathCollisionException(pathSelector(existing), relativePath);
+        }
+
+        entriesByPath[key] = entry;
     }
 
     private static void ReportScanProgress(

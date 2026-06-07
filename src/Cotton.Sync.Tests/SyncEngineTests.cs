@@ -142,6 +142,40 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_UsesMetadataLookupScannerWhenAvailable()
+    {
+        const string uploadedHash = "lookup-uploaded-content-hash";
+        var local = new LocalFileSnapshot
+        {
+            RelativePath = "Docs/direct-lookup.bin",
+            FullPath = Path.Combine(_root, "Docs", "direct-lookup.bin"),
+            ContentHash = string.Empty,
+            SizeBytes = 2048,
+            LastWriteUtc = new DateTime(2026, 6, 6, 9, 0, 0, DateTimeKind.Utc),
+        };
+        var scanner = new LookupOnlyLocalFileScanner(local);
+        var remoteFiles = new FakeRemoteFileSynchronizer
+        {
+            EmptyLocalHashUploadContentHash = uploadedHash,
+        };
+        SyncEngine engine = CreateEngine(scanner, EmptyRemoteTree(), remoteFiles, out SqliteSyncStateStore stateStore);
+
+        await engine.RunOnceAsync(Pair());
+
+        SyncStateEntry? entry = await stateStore.GetAsync("pair-a", "docs/direct-lookup.bin");
+        Assert.Multiple(() =>
+        {
+            Assert.That(scanner.LookupScanCalls, Is.EqualTo(1));
+            Assert.That(scanner.MetadataTreeScanCalls, Is.Zero);
+            Assert.That(scanner.TreeScanCalls, Is.Zero);
+            Assert.That(remoteFiles.UploadInputContentHashes, Is.EqualTo(new[] { string.Empty }));
+            Assert.That(entry, Is.Not.Null);
+            Assert.That(entry!.LocalContentHash, Is.EqualTo(uploadedHash));
+            Assert.That(entry.LocalSizeBytes, Is.EqualTo(local.SizeBytes));
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_HashesMetadataSnapshotWhenBaselineNeedsComparison()
     {
         const string baselineHash = "precomputed-content-hash";
@@ -2085,6 +2119,69 @@ public sealed class SyncEngineTests
         public Task<string> ComputeContentHashAsync(LocalFileSnapshot localFile, CancellationToken cancellationToken = default)
         {
             ContentHashCalls++;
+            return Task.FromResult("precomputed-content-hash");
+        }
+    }
+
+    private sealed class LookupOnlyLocalFileScanner :
+        ILocalFileScanner,
+        ILocalTreeScanner,
+        ILocalFileMetadataTreeLookupScanner,
+        ILocalFileContentHasher
+    {
+        public LookupOnlyLocalFileScanner(params LocalFileSnapshot[] files)
+        {
+            Files = files.ToList();
+        }
+
+        public List<LocalFileSnapshot> Files { get; }
+
+        public int LookupScanCalls { get; private set; }
+
+        public int MetadataTreeScanCalls { get; private set; }
+
+        public int TreeScanCalls { get; private set; }
+
+        public Task<IReadOnlyList<LocalFileSnapshot>> ScanAsync(string rootPath, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<LocalFileSnapshot>>(Files);
+        }
+
+        public Task<LocalTreeSnapshot> ScanTreeAsync(string rootPath, CancellationToken cancellationToken = default)
+        {
+            TreeScanCalls++;
+            return Task.FromResult(new LocalTreeSnapshot
+            {
+                Files = Files,
+            });
+        }
+
+        public Task<LocalTreeSnapshot> ScanTreeMetadataAsync(string rootPath, CancellationToken cancellationToken = default)
+        {
+            MetadataTreeScanCalls++;
+            return Task.FromResult(new LocalTreeSnapshot
+            {
+                Files = Files,
+            });
+        }
+
+        public Task<LocalTreeLookupSnapshot> ScanTreeMetadataLookupsAsync(
+            string rootPath,
+            IProgress<LocalTreeScanProgress>? progress,
+            CancellationToken cancellationToken = default)
+        {
+            LookupScanCalls++;
+            var snapshot = new LocalTreeLookupSnapshot();
+            foreach (LocalFileSnapshot file in Files)
+            {
+                snapshot.FilesByPath.Add(SyncPath.ToKey(file.RelativePath), file);
+            }
+
+            return Task.FromResult(snapshot);
+        }
+
+        public Task<string> ComputeContentHashAsync(LocalFileSnapshot localFile, CancellationToken cancellationToken = default)
+        {
             return Task.FromResult("precomputed-content-hash");
         }
     }

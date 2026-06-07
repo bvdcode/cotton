@@ -22,6 +22,7 @@ public sealed class SyncEngine : ISyncEngine
     private readonly ILocalFileScanner _localScanner;
     private readonly ILocalFileContentHasher? _localContentHasher;
     private readonly ILocalFileMetadataTreeScanner? _localMetadataTreeScanner;
+    private readonly ILocalFileMetadataTreeLookupScanner? _localMetadataTreeLookupScanner;
     private readonly ILocalTreeScanner? _localTreeScanner;
     private readonly IRemoteDirectorySynchronizer? _remoteDirectories;
     private readonly IRemoteTreeCrawler _remoteCrawler;
@@ -45,6 +46,7 @@ public sealed class SyncEngine : ISyncEngine
         _localScanner = localScanner ?? throw new ArgumentNullException(nameof(localScanner));
         _localContentHasher = localScanner as ILocalFileContentHasher;
         _localMetadataTreeScanner = localScanner as ILocalFileMetadataTreeScanner;
+        _localMetadataTreeLookupScanner = localScanner as ILocalFileMetadataTreeLookupScanner;
         _localTreeScanner = localScanner as ILocalTreeScanner;
         _remoteCrawler = remoteCrawler ?? throw new ArgumentNullException(nameof(remoteCrawler));
         _remoteFiles = remoteFiles ?? throw new ArgumentNullException(nameof(remoteFiles));
@@ -163,14 +165,27 @@ public sealed class SyncEngine : ISyncEngine
         DateTime startedAtUtc,
         CancellationToken cancellationToken)
     {
-        LocalTreeSnapshot localTree = await ScanLocalTreeAsync(syncPair.LocalRootPath, options, startedAtUtc, cancellationToken)
+        LocalTreeLookupSnapshot? localTreeLookups = await ScanLocalTreeLookupsAsync(
+                syncPair.LocalRootPath,
+                options,
+                startedAtUtc,
+                cancellationToken)
             .ConfigureAwait(false);
+        LocalTreeSnapshot? localTree = null;
+        if (localTreeLookups is null)
+        {
+            localTree = await ScanLocalTreeAsync(syncPair.LocalRootPath, options, startedAtUtc, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
         RemoteTreeSnapshot remoteTree = await ScanRemoteTreeAsync(syncPair.RemoteRootNodeId, options, startedAtUtc, cancellationToken)
             .ConfigureAwait(false);
 
-        Dictionary<string, LocalDirectorySnapshot> localDirectoriesByPath = ToDictionary(localTree.Directories, directory => directory.RelativePath);
+        Dictionary<string, LocalDirectorySnapshot> localDirectoriesByPath = localTreeLookups?.DirectoriesByPath
+            ?? ToDictionary(localTree!.Directories, directory => directory.RelativePath);
         Dictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath = ToDictionary(remoteTree.Directories, directory => directory.RelativePath);
-        Dictionary<string, LocalFileSnapshot> localByPath = ToDictionary(localTree.Files, file => file.RelativePath);
+        Dictionary<string, LocalFileSnapshot> localByPath = localTreeLookups?.FilesByPath
+            ?? ToDictionary(localTree!.Files, file => file.RelativePath);
         Dictionary<string, RemoteFileSnapshot> remoteByPath = ToDictionary(remoteTree.Files, file => file.RelativePath);
         ThrowIfPathKindCollisions(
             localDirectoriesByPath,
@@ -269,6 +284,25 @@ public sealed class SyncEngine : ISyncEngine
         {
             Files = files.ToList(),
         };
+    }
+
+    private async Task<LocalTreeLookupSnapshot?> ScanLocalTreeLookupsAsync(
+        string localRootPath,
+        SyncRunOptions options,
+        DateTime startedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        if (_localMetadataTreeLookupScanner is null || _localContentHasher is null)
+        {
+            return null;
+        }
+
+        return await _localMetadataTreeLookupScanner
+            .ScanTreeMetadataLookupsAsync(
+                localRootPath,
+                new LocalTreeScanProgressReporter(options, startedAtUtc),
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private async Task<RemoteTreeSnapshot> ScanRemoteTreeAsync(
