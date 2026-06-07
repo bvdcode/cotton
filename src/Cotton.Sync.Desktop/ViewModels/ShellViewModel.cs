@@ -79,6 +79,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private bool _isSelectedSyncPairEditorVisible;
     private bool _isSettingsVisible;
     private bool _isActivityVisible;
+    private bool _isSyncPausePending;
     private bool _isLoadingSnapshot;
     private bool _isStartWithOperatingSystemSupported = true;
     private bool _isTrayLifecycleSupported;
@@ -382,7 +383,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 return "Conflicts need review";
             }
 
-            if (HasActionRequired || IsSyncPaused)
+            if (HasActionRequired || IsSyncPaused || IsSyncPausePending)
             {
                 return GlobalStatus;
             }
@@ -707,17 +708,17 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
     }
 
-    public bool CanSyncNow => IsSignedIn && !IsBusy && HasEnabledSyncPairs && !IsSyncPaused;
+    public bool CanSyncNow => IsSignedIn && !IsBusy && HasEnabledSyncPairs && !IsSyncPaused && !IsSyncPausePending;
 
-    public bool CanPauseSync => IsSignedIn && HasEnabledSyncPairs && !IsSyncPaused;
+    public bool CanPauseSync => IsSignedIn && HasEnabledSyncPairs && !IsSyncPaused && !IsSyncPausePending;
 
     public bool CanResumeSync => IsSignedIn && IsSyncPaused;
 
     public bool CanTogglePauseResumeSync => IsSignedIn && HasEnabledSyncPairs;
 
-    public string PauseResumeSyncLabel => IsSyncPaused ? "Resume sync" : "Pause sync";
+    public string PauseResumeSyncLabel => IsSyncPausePending ? "Pausing sync" : IsSyncPaused ? "Resume sync" : "Pause sync";
 
-    public string PauseResumeTrayLabel => IsSyncPaused ? "Resume" : "Pause";
+    public string PauseResumeTrayLabel => IsSyncPausePending ? "Pausing" : IsSyncPaused ? "Resume" : "Pause";
 
     public bool CanOpenTrayFolder => IsSignedIn && !IsBusy && SyncPairs.Count == 1;
 
@@ -727,6 +728,18 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         && SyncPairs
             .Where(static syncPair => syncPair.IsEnabled)
             .All(static syncPair => string.Equals(syncPair.Status, "Paused", StringComparison.Ordinal));
+
+    public bool IsSyncPausePending
+    {
+        get => _isSyncPausePending;
+        private set
+        {
+            if (SetProperty(ref _isSyncPausePending, value))
+            {
+                RaiseSyncStateProperties();
+            }
+        }
+    }
 
     private bool HasEnabledSyncPairs => SyncPairs.Any(static syncPair => syncPair.IsEnabled);
 
@@ -1997,12 +2010,24 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private async Task PauseAsync()
     {
-        await _controller.PauseAllAsync().ConfigureAwait(true);
-        GlobalStatus = "Paused";
+        IsSyncPausePending = true;
+        GlobalStatus = "Pausing";
         ActionRequiredMessage = string.Empty;
-        SetAllPairStatuses("Paused", enabledOnly: true);
+        SetAllPairStatuses("Pausing", enabledOnly: true);
         RefreshCurrentProgressText();
-        AddActivity("Sync", string.Empty, "Synchronization paused");
+        AddActivity("Sync", string.Empty, "Synchronization pause requested");
+        try
+        {
+            await _controller.PauseAllAsync().ConfigureAwait(true);
+            GlobalStatus = "Paused";
+            SetAllPairStatuses("Paused", enabledOnly: true);
+            RefreshCurrentProgressText();
+            AddActivity("Sync", string.Empty, "Synchronization paused");
+        }
+        finally
+        {
+            IsSyncPausePending = false;
+        }
     }
 
     private Task PauseResumeAsync()
@@ -3992,6 +4017,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             || string.Equals(syncPair.Status, "Scanning", StringComparison.Ordinal)
             || string.Equals(syncPair.Status, "Syncing", StringComparison.Ordinal)
             || string.Equals(syncPair.Status, "Sync requested", StringComparison.Ordinal)
+            || string.Equals(syncPair.Status, "Pausing", StringComparison.Ordinal)
             || string.Equals(syncPair.Status, "Offline", StringComparison.Ordinal)
             || string.Equals(syncPair.Status, "Error", StringComparison.Ordinal)
             || string.Equals(syncPair.Status, "Conflict", StringComparison.Ordinal);

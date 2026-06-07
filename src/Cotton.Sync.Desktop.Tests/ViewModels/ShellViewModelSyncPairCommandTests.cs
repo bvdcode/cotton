@@ -606,6 +606,44 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task PauseResumeCommand_ShowsPausingWhilePauseRequestIsRunning()
+    {
+        var pauseAllCompletion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Videos", "Syncing")))
+        {
+            PauseAllCompletion = pauseAllCompletion,
+        };
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        viewModel.PauseResumeCommand.Execute(null);
+        await WaitForAsync(() => viewModel.PauseResumeCommand.IsRunning && controller.PauseAllCalls == 1);
+
+        SyncPairRowViewModel row = viewModel.SyncPairs.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsSyncPausePending, Is.True);
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Pausing"));
+            Assert.That(viewModel.PauseResumeSyncLabel, Is.EqualTo("Pausing sync"));
+            Assert.That(viewModel.PauseResumeTrayLabel, Is.EqualTo("Pausing"));
+            Assert.That(viewModel.PauseResumeCommand.CanExecute(null), Is.False);
+            Assert.That(row.Status, Is.EqualTo("Pausing"));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Videos: Pausing"));
+        });
+
+        pauseAllCompletion.SetResult(true);
+        await WaitForAsync(() => !viewModel.PauseResumeCommand.IsRunning);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsSyncPausePending, Is.False);
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Paused"));
+            Assert.That(viewModel.PauseResumeSyncLabel, Is.EqualTo("Resume sync"));
+        });
+    }
+
+    [Test]
     public async Task GlobalSyncCommands_DoNotChangeDisabledPairRows()
     {
         Guid enabledPairId = Guid.NewGuid();
@@ -3602,6 +3640,8 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public TaskCompletionSource<bool>? SyncAllCompletion { get; set; }
 
+        public TaskCompletionSource<bool>? PauseAllCompletion { get; set; }
+
         public int ExportDiagnosticsCalls { get; private set; }
 
         public string ExportDiagnosticsPath { get; set; } = "/tmp/cotton-sync-diagnostics.zip";
@@ -3804,11 +3844,14 @@ public sealed class ShellViewModelSyncPairCommandTests
             }
         }
 
-        public Task PauseAllAsync(CancellationToken cancellationToken = default)
+        public async Task PauseAllAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             PauseAllCalls++;
-            return Task.CompletedTask;
+            if (PauseAllCompletion is not null)
+            {
+                await PauseAllCompletion.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
         }
 
         public Task ResumeAllAsync(CancellationToken cancellationToken = default)

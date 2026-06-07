@@ -90,7 +90,9 @@ internal sealed class SyncPairRowViewModel : ViewModelBase
         || string.Equals(DisplayStatus, "Syncing", StringComparison.Ordinal)
         || string.Equals(DisplayStatus, "Sync requested", StringComparison.Ordinal);
 
-    public bool IsStatusPaused => string.Equals(DisplayStatus, "Paused", StringComparison.Ordinal);
+    public bool IsStatusPaused =>
+        string.Equals(DisplayStatus, "Paused", StringComparison.Ordinal)
+        || string.Equals(DisplayStatus, "Pausing", StringComparison.Ordinal);
 
     public bool IsStatusAttention =>
         string.Equals(DisplayStatus, "Error", StringComparison.Ordinal)
