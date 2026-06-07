@@ -108,7 +108,6 @@ public sealed class SyncEngine : ISyncEngine
 
         SyncDeleteGuard deleteGuard = BuildDeleteGuard(
             options,
-            pathKeys,
             localByPath,
             remoteByPath,
             stateByPath,
@@ -1119,7 +1118,6 @@ public sealed class SyncEngine : ISyncEngine
 
     private static SyncDeleteGuard BuildDeleteGuard(
         SyncRunOptions options,
-        IEnumerable<string> pathKeys,
         IReadOnlyDictionary<string, LocalFileSnapshot> localByPath,
         IReadOnlyDictionary<string, RemoteFileSnapshot> remoteByPath,
         IReadOnlyDictionary<string, SyncStateEntry> stateByPath,
@@ -1135,13 +1133,12 @@ public sealed class SyncEngine : ISyncEngine
         int plannedLocalDeletes = 0;
         int plannedRemoteDeletes = 0;
 
-        foreach (string key in pathKeys)
+        foreach (KeyValuePair<string, SyncStateEntry> state in stateByPath)
         {
-            localByPath.TryGetValue(key, out LocalFileSnapshot? local);
-            remoteByPath.TryGetValue(key, out RemoteFileSnapshot? remote);
-            stateByPath.TryGetValue(key, out SyncStateEntry? state);
+            localByPath.TryGetValue(state.Key, out LocalFileSnapshot? local);
+            remoteByPath.TryGetValue(state.Key, out RemoteFileSnapshot? remote);
 
-            switch (GetPlannedDeleteDirection(state, local, remote))
+            switch (GetPlannedDeleteDirection(state.Value, local, remote))
             {
                 case SyncDeleteDirection.Local:
                     plannedLocalDeletes++;
