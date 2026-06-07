@@ -140,6 +140,12 @@ public sealed class SyncEngine : ISyncEngine
         }
 
         IReadOnlyList<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys);
+        EnsureEnoughLocalFreeSpaceForPlannedDownloads(
+            syncPair.LocalRootPath,
+            pathKeys,
+            localByPath,
+            remoteByPath,
+            stateByPath);
         int filesCompleted = 0;
         ReportRunProgress(options, SyncRunProgressStage.ReconcilingFiles, filesCompleted, pathKeys.Count, null, startedAtUtc);
         foreach (string key in pathKeys)
@@ -1141,6 +1147,153 @@ public sealed class SyncEngine : ISyncEngine
         {
             return null;
         }
+    }
+
+    private static void EnsureEnoughLocalFreeSpaceForPlannedDownloads(
+        string localRootPath,
+        IReadOnlyList<string> pathKeys,
+        IReadOnlyDictionary<string, LocalFileSnapshot> localByPath,
+        IReadOnlyDictionary<string, RemoteFileSnapshot> remoteByPath,
+        IReadOnlyDictionary<string, SyncStateEntry> stateByPath)
+    {
+        long? availableFreeBytes = TryGetAvailableFreeBytes(localRootPath);
+        if (!availableFreeBytes.HasValue)
+        {
+            return;
+        }
+
+        long simulatedFreeBytes = availableFreeBytes.Value;
+        foreach (string key in pathKeys)
+        {
+            if (!TryCreatePlannedLocalDownload(
+                    key,
+                    localByPath,
+                    remoteByPath,
+                    stateByPath,
+                    out string relativePath,
+                    out long downloadBytes,
+                    out long replacedLocalBytes))
+            {
+                continue;
+            }
+
+            if (downloadBytes <= 0)
+            {
+                continue;
+            }
+
+            if (simulatedFreeBytes < downloadBytes)
+            {
+                throw new IOException(
+                    "Not enough disk space to download '" + relativePath
+                    + "'. Free space on this computer and retry sync.");
+            }
+
+            simulatedFreeBytes += replacedLocalBytes - downloadBytes;
+        }
+    }
+
+    private static bool TryCreatePlannedLocalDownload(
+        string key,
+        IReadOnlyDictionary<string, LocalFileSnapshot> localByPath,
+        IReadOnlyDictionary<string, RemoteFileSnapshot> remoteByPath,
+        IReadOnlyDictionary<string, SyncStateEntry> stateByPath,
+        out string relativePath,
+        out long downloadBytes,
+        out long replacedLocalBytes)
+    {
+        localByPath.TryGetValue(key, out LocalFileSnapshot? local);
+        remoteByPath.TryGetValue(key, out RemoteFileSnapshot? remote);
+        stateByPath.TryGetValue(key, out SyncStateEntry? state);
+        relativePath = local?.RelativePath ?? remote?.RelativePath ?? state?.RelativePath ?? key;
+
+        if (state is null)
+        {
+            return TryCreateRemoteOnlyDownload(local, remote, out downloadBytes, out replacedLocalBytes);
+        }
+
+        if (local is not null && remote is not null && ContentMatches(local.ContentHash, remote.File.ContentHash))
+        {
+            downloadBytes = 0;
+            replacedLocalBytes = 0;
+            return false;
+        }
+
+        bool localDeleted = local is null && !string.IsNullOrWhiteSpace(state.LocalContentHash);
+        bool remoteDeleted = remote is null && state.RemoteFileId.HasValue;
+        bool localChanged = local is not null && !ContentMatches(local.ContentHash, state.LocalContentHash);
+        bool remoteChanged = remote is not null && !RemoteMatchesBaseline(remote.File, state);
+        bool baselineDiverged = !ContentMatches(state.LocalContentHash, state.RemoteContentHash);
+
+        if (baselineDiverged)
+        {
+            if (!localDeleted && !remoteDeleted && !localChanged && !remoteChanged)
+            {
+                downloadBytes = 0;
+                replacedLocalBytes = 0;
+                return false;
+            }
+
+            return TryCreateConflictDownload(remote, out downloadBytes, out replacedLocalBytes);
+        }
+
+        if (!localDeleted && !remoteDeleted && !localChanged && !remoteChanged)
+        {
+            downloadBytes = 0;
+            replacedLocalBytes = 0;
+            return false;
+        }
+
+        if (localDeleted && remoteChanged)
+        {
+            return TryCreateConflictDownload(remote, out downloadBytes, out replacedLocalBytes);
+        }
+
+        if (remoteChanged && !localChanged && remote is not null)
+        {
+            downloadBytes = remote.File.SizeBytes;
+            replacedLocalBytes = local?.SizeBytes ?? 0;
+            return true;
+        }
+
+        downloadBytes = 0;
+        replacedLocalBytes = 0;
+        return false;
+    }
+
+    private static bool TryCreateRemoteOnlyDownload(
+        LocalFileSnapshot? local,
+        RemoteFileSnapshot? remote,
+        out long downloadBytes,
+        out long replacedLocalBytes)
+    {
+        if (local is null && remote is not null)
+        {
+            downloadBytes = remote.File.SizeBytes;
+            replacedLocalBytes = 0;
+            return true;
+        }
+
+        downloadBytes = 0;
+        replacedLocalBytes = 0;
+        return false;
+    }
+
+    private static bool TryCreateConflictDownload(
+        RemoteFileSnapshot? remote,
+        out long downloadBytes,
+        out long replacedLocalBytes)
+    {
+        if (remote is null)
+        {
+            downloadBytes = 0;
+            replacedLocalBytes = 0;
+            return false;
+        }
+
+        downloadBytes = remote.File.SizeBytes;
+        replacedLocalBytes = 0;
+        return true;
     }
 
     private static SyncDeleteGuard BuildDeleteGuard(

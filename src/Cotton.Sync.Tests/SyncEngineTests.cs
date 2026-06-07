@@ -530,6 +530,23 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public void RunOnceAsync_FailsBeforeDownloadWhenPlannedDownloadsExceedFreeSpace()
+    {
+        NodeFileManifestDto remote = RemoteFile("huge.bin", HashText("huge"), sizeBytes: long.MaxValue);
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        SyncEngine engine = CreateEngine(new FakeLocalFileScanner(), RemoteTree(remote), remoteFiles, out _);
+
+        IOException? exception = Assert.ThrowsAsync<IOException>(() => engine.RunOnceAsync(Pair()));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception?.Message, Does.Contain("Not enough disk space"));
+            Assert.That(exception?.Message, Does.Contain("huge.bin"));
+            Assert.That(File.Exists(Path.Combine(_root, "huge.bin")), Is.False);
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_CreatesRemoteFolderForLocalOnlyEmptyDirectoryAndStoresBaseline()
     {
         Directory.CreateDirectory(Path.Combine(_root, "Projects", "Archive"));
