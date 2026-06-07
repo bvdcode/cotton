@@ -493,9 +493,18 @@ public sealed class SyncEngineTests
         int transferCompletedIndex = eventLog.FindIndex(item => item == $"transfer:Upload:Docs/local.txt:{local.SizeBytes}:{local.SizeBytes}:True");
         int activityIndex = eventLog.FindIndex(item => item == "activity:Uploaded:Docs/local.txt");
         int runCompletedIndex = eventLog.FindIndex(item => item == "run:Completed:1::True");
+        SyncRunProgress? fileStartProgress = runProgress.Values.FirstOrDefault(item =>
+            item.Stage == SyncRunProgressStage.ReconcilingFiles && item.FilesCompleted == 0);
+        SyncRunProgress? completedProgress = runProgress.Values.FirstOrDefault(item => item.Stage == SyncRunProgressStage.Completed);
         Assert.Multiple(() =>
         {
             Assert.That(runProgress.Values.Select(item => item.Stage), Does.Contain(SyncRunProgressStage.Completed));
+            Assert.That(fileStartProgress, Is.Not.Null);
+            Assert.That(fileStartProgress!.BytesCompleted, Is.Zero);
+            Assert.That(fileStartProgress.BytesTotal, Is.EqualTo(local.SizeBytes));
+            Assert.That(completedProgress, Is.Not.Null);
+            Assert.That(completedProgress!.BytesCompleted, Is.EqualTo(local.SizeBytes));
+            Assert.That(completedProgress.BytesTotal, Is.EqualTo(local.SizeBytes));
             Assert.That(transferProgress.Values.Select(item => item.IsCompleted), Is.EqualTo(new[] { false, true }));
             Assert.That(activityProgress.Values.Select(item => item.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
             Assert.That(fileStartedIndex, Is.GreaterThanOrEqualTo(0));

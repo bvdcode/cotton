@@ -146,8 +146,23 @@ public sealed class SyncEngine : ISyncEngine
             localByPath,
             remoteByPath,
             stateByPath);
+        Dictionary<string, long> plannedTransferBytesByPath = BuildPlannedTransferBytesByPath(
+            pathKeys,
+            localByPath,
+            remoteByPath,
+            stateByPath);
+        long plannedTransferBytesTotal = plannedTransferBytesByPath.Values.Sum();
+        long completedTransferBytes = 0;
         int filesCompleted = 0;
-        ReportRunProgress(options, SyncRunProgressStage.ReconcilingFiles, filesCompleted, pathKeys.Count, null, startedAtUtc);
+        ReportRunProgress(
+            options,
+            SyncRunProgressStage.ReconcilingFiles,
+            filesCompleted,
+            pathKeys.Count,
+            null,
+            startedAtUtc,
+            bytesCompleted: completedTransferBytes,
+            bytesTotal: plannedTransferBytesTotal);
         foreach (string key in pathKeys)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -155,23 +170,58 @@ public sealed class SyncEngine : ISyncEngine
             remoteByPath.TryGetValue(key, out RemoteFileSnapshot? remote);
             stateByPath.TryGetValue(key, out SyncStateEntry? state);
             string relativePath = local?.RelativePath ?? remote?.RelativePath ?? state?.RelativePath ?? key;
-            ReportItemRunProgress(options, SyncRunProgressStage.ReconcilingFiles, filesCompleted, pathKeys.Count, relativePath, startedAtUtc);
+            ReportItemRunProgress(
+                options,
+                SyncRunProgressStage.ReconcilingFiles,
+                filesCompleted,
+                pathKeys.Count,
+                relativePath,
+                startedAtUtc,
+                bytesCompleted: completedTransferBytes,
+                bytesTotal: plannedTransferBytesTotal);
 
             if (state is null)
             {
                 await ReconcileWithoutBaselineAsync(syncPair, options, result, relativePath, local, remote, cancellationToken).ConfigureAwait(false);
                 filesCompleted++;
-                ReportItemRunProgress(options, SyncRunProgressStage.ReconcilingFiles, filesCompleted, pathKeys.Count, relativePath, startedAtUtc);
+                completedTransferBytes += GetPlannedTransferBytes(plannedTransferBytesByPath, key);
+                ReportItemRunProgress(
+                    options,
+                    SyncRunProgressStage.ReconcilingFiles,
+                    filesCompleted,
+                    pathKeys.Count,
+                    relativePath,
+                    startedAtUtc,
+                    bytesCompleted: completedTransferBytes,
+                    bytesTotal: plannedTransferBytesTotal);
                 continue;
             }
 
             await ReconcileWithBaselineAsync(syncPair, options, result, deleteGuard, state, relativePath, local, remote, cancellationToken)
                 .ConfigureAwait(false);
             filesCompleted++;
-            ReportItemRunProgress(options, SyncRunProgressStage.ReconcilingFiles, filesCompleted, pathKeys.Count, relativePath, startedAtUtc);
+            completedTransferBytes += GetPlannedTransferBytes(plannedTransferBytesByPath, key);
+            ReportItemRunProgress(
+                options,
+                SyncRunProgressStage.ReconcilingFiles,
+                filesCompleted,
+                pathKeys.Count,
+                relativePath,
+                startedAtUtc,
+                bytesCompleted: completedTransferBytes,
+                bytesTotal: plannedTransferBytesTotal);
         }
 
-        ReportRunProgress(options, SyncRunProgressStage.Completed, filesCompleted, pathKeys.Count, null, startedAtUtc, isCompleted: true);
+        ReportRunProgress(
+            options,
+            SyncRunProgressStage.Completed,
+            filesCompleted,
+            pathKeys.Count,
+            null,
+            startedAtUtc,
+            isCompleted: true,
+            bytesCompleted: plannedTransferBytesTotal,
+            bytesTotal: plannedTransferBytesTotal);
         _logger.LogInformation(
             "Completed sync pass for pair {SyncPairId} with {ActivityCount} activities.",
             syncPair.SyncPairId,
@@ -1193,6 +1243,158 @@ public sealed class SyncEngine : ISyncEngine
         }
     }
 
+    private static Dictionary<string, long> BuildPlannedTransferBytesByPath(
+        IReadOnlyList<string> pathKeys,
+        IReadOnlyDictionary<string, LocalFileSnapshot> localByPath,
+        IReadOnlyDictionary<string, RemoteFileSnapshot> remoteByPath,
+        IReadOnlyDictionary<string, SyncStateEntry> stateByPath)
+    {
+        var plannedBytesByPath = new Dictionary<string, long>(PathComparer);
+        foreach (string key in pathKeys)
+        {
+            if (TryCalculatePlannedTransferBytes(key, localByPath, remoteByPath, stateByPath, out long transferBytes)
+                && transferBytes > 0)
+            {
+                plannedBytesByPath[key] = transferBytes;
+            }
+        }
+
+        return plannedBytesByPath;
+    }
+
+    private static long GetPlannedTransferBytes(IReadOnlyDictionary<string, long> plannedTransferBytesByPath, string key)
+    {
+        return plannedTransferBytesByPath.TryGetValue(key, out long bytes) ? bytes : 0;
+    }
+
+    private static bool TryCalculatePlannedTransferBytes(
+        string key,
+        IReadOnlyDictionary<string, LocalFileSnapshot> localByPath,
+        IReadOnlyDictionary<string, RemoteFileSnapshot> remoteByPath,
+        IReadOnlyDictionary<string, SyncStateEntry> stateByPath,
+        out long transferBytes)
+    {
+        localByPath.TryGetValue(key, out LocalFileSnapshot? local);
+        remoteByPath.TryGetValue(key, out RemoteFileSnapshot? remote);
+        stateByPath.TryGetValue(key, out SyncStateEntry? state);
+
+        if (state is null)
+        {
+            return TryCalculateUntrackedTransferBytes(local, remote, out transferBytes);
+        }
+
+        if (local is not null && remote is not null && ContentMatches(local.ContentHash, remote.File.ContentHash))
+        {
+            transferBytes = 0;
+            return false;
+        }
+
+        bool localDeleted = local is null && !string.IsNullOrWhiteSpace(state.LocalContentHash);
+        bool remoteDeleted = remote is null && state.RemoteFileId.HasValue;
+        bool localChanged = local is not null && !ContentMatches(local.ContentHash, state.LocalContentHash);
+        bool remoteChanged = remote is not null && RemoteMatchesBaseline(remote.File, state) is false;
+        bool baselineDiverged = !ContentMatches(state.LocalContentHash, state.RemoteContentHash);
+
+        if (baselineDiverged)
+        {
+            if (!localDeleted && !remoteDeleted && !localChanged && !remoteChanged)
+            {
+                transferBytes = 0;
+                return false;
+            }
+
+            return TryCalculateConflictTransferBytes(local, remote?.File, out transferBytes);
+        }
+
+        if (!localDeleted && !remoteDeleted && !localChanged && !remoteChanged)
+        {
+            transferBytes = 0;
+            return false;
+        }
+
+        if (localDeleted && remoteChanged)
+        {
+            return TryCalculateConflictTransferBytes(local, remote?.File, out transferBytes);
+        }
+
+        if (remoteDeleted && localChanged && local is not null)
+        {
+            transferBytes = local.SizeBytes;
+            return true;
+        }
+
+        if (localChanged && !remoteChanged && local is not null)
+        {
+            transferBytes = local.SizeBytes;
+            return true;
+        }
+
+        if (remoteChanged && !localChanged && remote is not null)
+        {
+            transferBytes = remote.File.SizeBytes;
+            return true;
+        }
+
+        if ((localChanged && remoteChanged) || (localDeleted && remoteChanged) || (remoteDeleted && localChanged))
+        {
+            return TryCalculateConflictTransferBytes(local, remote?.File, out transferBytes);
+        }
+
+        transferBytes = 0;
+        return false;
+    }
+
+    private static bool TryCalculateUntrackedTransferBytes(
+        LocalFileSnapshot? local,
+        RemoteFileSnapshot? remote,
+        out long transferBytes)
+    {
+        if (local is not null && remote is null)
+        {
+            transferBytes = local.SizeBytes;
+            return true;
+        }
+
+        if (local is null && remote is not null)
+        {
+            transferBytes = remote.File.SizeBytes;
+            return true;
+        }
+
+        if (local is not null
+            && remote is not null
+            && !string.IsNullOrWhiteSpace(local.ContentHash)
+            && !ContentMatches(local.ContentHash, remote.File.ContentHash))
+        {
+            transferBytes = remote.File.SizeBytes;
+            return true;
+        }
+
+        transferBytes = 0;
+        return false;
+    }
+
+    private static bool TryCalculateConflictTransferBytes(
+        LocalFileSnapshot? local,
+        NodeFileManifestDto? remoteFile,
+        out long transferBytes)
+    {
+        if (local is not null && remoteFile is null)
+        {
+            transferBytes = local.SizeBytes;
+            return true;
+        }
+
+        if (remoteFile is not null)
+        {
+            transferBytes = remoteFile.SizeBytes;
+            return true;
+        }
+
+        transferBytes = 0;
+        return false;
+    }
+
     private static bool TryCreatePlannedLocalDownload(
         string key,
         IReadOnlyDictionary<string, LocalFileSnapshot> localByPath,
@@ -1700,7 +1902,9 @@ public sealed class SyncEngine : ISyncEngine
         int? filesTotal,
         string? currentPath,
         DateTime startedAtUtc,
-        bool isCompleted = false)
+        bool isCompleted = false,
+        long bytesCompleted = 0,
+        long? bytesTotal = null)
     {
         options.RunProgress?.Report(new SyncRunProgress(
             stage,
@@ -1708,7 +1912,9 @@ public sealed class SyncEngine : ISyncEngine
             filesTotal,
             currentPath,
             startedAtUtc,
-            isCompleted));
+            isCompleted,
+            bytesCompleted,
+            bytesTotal));
     }
 
     private static void ReportItemRunProgress(
@@ -1717,14 +1923,24 @@ public sealed class SyncEngine : ISyncEngine
         int itemsCompleted,
         int itemsTotal,
         string? currentPath,
-        DateTime startedAtUtc)
+        DateTime startedAtUtc,
+        long bytesCompleted = 0,
+        long? bytesTotal = null)
     {
         if (!ShouldReportItemRunProgress(itemsCompleted, itemsTotal))
         {
             return;
         }
 
-        ReportRunProgress(options, stage, itemsCompleted, itemsTotal, currentPath, startedAtUtc);
+        ReportRunProgress(
+            options,
+            stage,
+            itemsCompleted,
+            itemsTotal,
+            currentPath,
+            startedAtUtc,
+            bytesCompleted: bytesCompleted,
+            bytesTotal: bytesTotal);
     }
 
     private static bool ShouldReportItemRunProgress(int itemsCompleted, int itemsTotal)

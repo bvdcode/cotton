@@ -19,7 +19,9 @@ public sealed class SyncRunProgress
         int? filesTotal,
         string? currentPath,
         DateTime startedAtUtc,
-        bool isCompleted = false)
+        bool isCompleted = false,
+        long bytesCompleted = 0,
+        long? bytesTotal = null)
     {
         if (stage == SyncRunProgressStage.Unknown)
         {
@@ -36,12 +38,24 @@ public sealed class SyncRunProgress
             }
         }
 
+        ArgumentOutOfRangeException.ThrowIfNegative(bytesCompleted);
+        if (bytesTotal.HasValue)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(bytesTotal.Value);
+            if (bytesCompleted > bytesTotal.Value)
+            {
+                throw new ArgumentOutOfRangeException(nameof(bytesCompleted), "Completed byte count cannot exceed total byte count.");
+            }
+        }
+
         Stage = stage;
         FilesCompleted = filesCompleted;
         FilesTotal = filesTotal;
         CurrentPath = string.IsNullOrWhiteSpace(currentPath) ? string.Empty : SyncPath.Normalize(currentPath);
         StartedAtUtc = startedAtUtc.ToUniversalTime();
         IsCompleted = isCompleted;
+        BytesCompleted = bytesCompleted;
+        BytesTotal = bytesTotal;
         OccurredAtUtc = DateTime.UtcNow;
     }
 
@@ -74,6 +88,16 @@ public sealed class SyncRunProgress
     /// Gets a value indicating whether the sync pass completed.
     /// </summary>
     public bool IsCompleted { get; }
+
+    /// <summary>
+    /// Gets the number of transfer bytes already completed in this pass.
+    /// </summary>
+    public long BytesCompleted { get; }
+
+    /// <summary>
+    /// Gets the total transfer bytes planned for this pass when known.
+    /// </summary>
+    public long? BytesTotal { get; }
 
     /// <summary>
     /// Gets the UTC timestamp when this progress sample was produced.

@@ -44,6 +44,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private readonly Dictionary<Guid, DesktopRunProgressSnapshot> _runProgressByPair = [];
     private readonly Dictionary<Guid, DateTime> _runProgressAppliedAtUtcByPair = [];
     private readonly Dictionary<Guid, DesktopTransferProgressSnapshot> _transferProgressByPair = [];
+    private readonly Dictionary<Guid, long> _runCompletedTransferBytesByPair = [];
     private readonly Dictionary<RunTransferProgressKey, long> _runTransferBytesByKey = [];
     private readonly Queue<RunTransferProgressSample> _runTransferSamples = new();
     private readonly SyncPairSettingsValidator _syncPairSettingsValidator = new();
@@ -3758,6 +3759,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private string CreateRunTransferSizeDetails()
     {
+        if (TryCalculateAggregateRunTransferBytes(out long transferredBytes, out long totalBytes))
+        {
+            return FormatBytes(transferredBytes) + " / " + FormatBytes(totalBytes);
+        }
+
         if (_runTransferredBytes > 0)
         {
             return FormatBytes(_runTransferredBytes);
@@ -3771,8 +3777,23 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private string CreateRunTransferRateDetails()
     {
         var parts = new List<string>();
+        bool hasAggregateTransferBytes = TryCalculateAggregateRunTransferBytes(
+            out long transferredBytes,
+            out long totalBytes);
         bool hasByteRate = false;
-        if (HasActiveTransferProgress)
+        bool hasByteEstimate = false;
+        if (hasAggregateTransferBytes && TryGetRunTransferSpeed(out double bytesPerSecond))
+        {
+            parts.Add(FormatBytes(bytesPerSecond) + "/s");
+            hasByteRate = true;
+            if (totalBytes > transferredBytes)
+            {
+                TimeSpan estimatedTimeRemaining = TimeSpan.FromSeconds((totalBytes - transferredBytes) / bytesPerSecond);
+                parts.Add(FormatDuration(estimatedTimeRemaining) + " left");
+                hasByteEstimate = true;
+            }
+        }
+        else if (HasActiveTransferProgress && !hasAggregateTransferBytes)
         {
             string activeTransferRate = CreateAggregateTransferMetricDetails(
                 _transferProgressByPair.Values,
@@ -3794,7 +3815,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             parts.Add(FormatFileRate(_currentRunProgressFilesPerSecond.Value));
         }
 
-        if (_currentRunProgressEstimatedTimeRemaining.HasValue)
+        if (!hasByteEstimate && _currentRunProgressEstimatedTimeRemaining.HasValue)
         {
             parts.Add(FormatDuration(_currentRunProgressEstimatedTimeRemaining.Value) + " left");
         }
@@ -3804,6 +3825,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private void ClearRunTransferMetrics()
     {
+        _runCompletedTransferBytesByPair.Clear();
         _runTransferBytesByKey.Clear();
         _runTransferSamples.Clear();
         _runTransferredBytes = 0;
@@ -3841,6 +3863,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         if (transferredDelta <= 0)
         {
             return;
+        }
+
+        if (progress.IsCompleted)
+        {
+            _runCompletedTransferBytesByPair.TryGetValue(progress.SyncPairId, out long completedBytes);
+            _runCompletedTransferBytesByPair[progress.SyncPairId] = completedBytes + effectiveTransferredBytes;
         }
 
         _runTransferredBytes += transferredDelta;
@@ -4031,6 +4059,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private double CalculateRunProgressValue(DesktopRunProgressSnapshot progress)
     {
+        if (TryCalculateRunTransferBytes(progress, out long transferredBytes, out long totalBytes))
+        {
+            return Math.Clamp((double)transferredBytes / totalBytes * 100, 0, 100);
+        }
+
         if (progress.FilesTotal is > 0)
         {
             double displayCount = GetDisplayedRunProgressUnits(progress);
@@ -4042,6 +4075,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private double CalculateAggregateRunProgressValue(IReadOnlyList<DesktopRunProgressSnapshot> progressValues)
     {
+        if (TryCalculateAggregateRunTransferBytes(progressValues, out long transferredBytes, out long totalBytes))
+        {
+            return Math.Clamp((double)transferredBytes / totalBytes * 100, 0, 100);
+        }
+
         int totalFiles = 0;
         double completedFiles = 0;
         foreach (DesktopRunProgressSnapshot progress in progressValues)
@@ -4058,6 +4096,71 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         return totalFiles > 0
             ? Math.Clamp(completedFiles / totalFiles * 100, 0, 100)
             : progressValues.All(static item => item.IsCompleted) ? 100 : 0;
+    }
+
+    private bool TryCalculateAggregateRunTransferBytes(out long transferredBytes, out long totalBytes)
+    {
+        return TryCalculateAggregateRunTransferBytes(
+            GetOrderedRunProgressSnapshots(),
+            out transferredBytes,
+            out totalBytes);
+    }
+
+    private bool TryCalculateAggregateRunTransferBytes(
+        IReadOnlyList<DesktopRunProgressSnapshot> progressValues,
+        out long transferredBytes,
+        out long totalBytes)
+    {
+        transferredBytes = 0;
+        totalBytes = 0;
+        foreach (DesktopRunProgressSnapshot progress in progressValues)
+        {
+            if (!TryCalculateRunTransferBytes(progress, out long progressTransferredBytes, out long progressTotalBytes))
+            {
+                continue;
+            }
+
+            transferredBytes += progressTransferredBytes;
+            totalBytes += progressTotalBytes;
+        }
+
+        if (totalBytes <= 0)
+        {
+            transferredBytes = 0;
+            return false;
+        }
+
+        transferredBytes = Math.Clamp(transferredBytes, 0, totalBytes);
+        return true;
+    }
+
+    private bool TryCalculateRunTransferBytes(
+        DesktopRunProgressSnapshot progress,
+        out long transferredBytes,
+        out long totalBytes)
+    {
+        transferredBytes = 0;
+        totalBytes = 0;
+        if (!IsCountedRunStage(progress.Stage) || progress.BytesTotal is not > 0)
+        {
+            return false;
+        }
+
+        totalBytes = progress.BytesTotal.Value;
+        _runCompletedTransferBytesByPair.TryGetValue(progress.SyncPairId, out long observedCompletedBytes);
+        transferredBytes = Math.Clamp(Math.Max(progress.BytesCompleted, observedCompletedBytes), 0, totalBytes);
+        foreach (KeyValuePair<RunTransferProgressKey, long> activeTransfer in _runTransferBytesByKey)
+        {
+            if (activeTransfer.Key.SyncPairId != progress.SyncPairId)
+            {
+                continue;
+            }
+
+            transferredBytes += Math.Max(0, activeTransfer.Value);
+        }
+
+        transferredBytes = Math.Clamp(transferredBytes, 0, totalBytes);
+        return true;
     }
 
     private double GetDisplayedRunProgressUnits(DesktopRunProgressSnapshot progress)
@@ -4079,6 +4182,30 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
 
         return GetDisplayedRunProgressCount(progress);
+    }
+
+    private bool TryGetRunTransferSpeed(out double bytesPerSecond)
+    {
+        if (_runTransferSpeedBytesPerSecond is > 0)
+        {
+            bytesPerSecond = _runTransferSpeedBytesPerSecond.Value;
+            return true;
+        }
+
+        if (HasActiveTransferProgress)
+        {
+            double transferSpeed = _transferProgressByPair.Values
+                .Where(static progress => progress.SpeedBytesPerSecond is > 0)
+                .Sum(static progress => progress.SpeedBytesPerSecond!.Value);
+            if (transferSpeed > 0)
+            {
+                bytesPerSecond = transferSpeed;
+                return true;
+            }
+        }
+
+        bytesPerSecond = 0;
+        return false;
     }
 
     private bool TryCalculateAggregateTransferProgressValue(out double progressValue)

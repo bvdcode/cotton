@@ -115,7 +115,9 @@ public sealed class SyncEnginePairWork : ISyncPairWork
             progress.CurrentPath,
             progress.StartedAtUtc,
             progress.IsCompleted,
-            progress.OccurredAtUtc);
+            progress.OccurredAtUtc,
+            progress.BytesCompleted,
+            progress.BytesTotal);
     }
 
     private static string CreateMessage(CoreSyncActivityKind kind, string relativePath, string? details)

@@ -1191,7 +1191,9 @@ internal sealed class DesktopShellController : IDesktopShellController
             progress.CurrentPath,
             progress.StartedAtUtc,
             progress.IsCompleted,
-            progress.OccurredAtUtc);
+            progress.OccurredAtUtc,
+            progress.BytesCompleted,
+            progress.BytesTotal);
     }
 
     private async Task<AuthSession?> TryRestoreSessionAsync(

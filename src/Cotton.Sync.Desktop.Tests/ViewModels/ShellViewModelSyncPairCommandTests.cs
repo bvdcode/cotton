@@ -1258,6 +1258,37 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task RunProgressChanged_UsesPlannedBytesForGlobalProgress()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Videos", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        const long totalBytes = 10L * 1024 * 1024 * 1024;
+        const long completedBytes = 3L * 1024 * 1024 * 1024;
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 200,
+            FilesTotal: 29189,
+            CurrentPath: "Videos/clip.mp4",
+            StartedAtUtc: new DateTime(2026, 6, 7, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 7, 9, 1, 0, DateTimeKind.Utc),
+            BytesCompleted: completedBytes,
+            BytesTotal: totalBytes));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.CurrentRunProgressValue, Is.EqualTo(30).Within(0.01));
+            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(30).Within(0.01));
+            Assert.That(viewModel.CurrentWorkProgressHeaderSizeDetails, Is.EqualTo("3.0 GB / 10 GB"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("200 of 29189 files"));
+        });
+    }
+
+    [Test]
     public async Task RunProgressChanged_ThrottlesVisibleUpdates()
     {
         Guid syncPairId = Guid.NewGuid();
@@ -1792,6 +1823,51 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Uploading report.txt"));
             Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(27.5).Within(0.01));
             Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task TransferProgressChanged_KeepsGlobalRunByteProgressPrimaryForOneFolder()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Videos", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        DateTime startedAtUtc = new(2026, 6, 7, 9, 0, 0, DateTimeKind.Utc);
+        const long totalRunBytes = 10L * 1024 * 1024 * 1024;
+        const long completedRunBytes = 3L * 1024 * 1024 * 1024;
+        const long currentFileTransferredBytes = 512L * 1024 * 1024;
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 200,
+            FilesTotal: 29189,
+            CurrentPath: "Videos/clip.mp4",
+            StartedAtUtc: startedAtUtc,
+            IsCompleted: false,
+            OccurredAtUtc: startedAtUtc.AddSeconds(60),
+            BytesCompleted: completedRunBytes,
+            BytesTotal: totalRunBytes));
+
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            syncPairId,
+            SyncTransferDirection.Download,
+            "Videos/clip.mp4",
+            TransferredBytes: currentFileTransferredBytes,
+            TotalBytes: 1024L * 1024 * 1024,
+            IsCompleted: false,
+            OccurredAtUtc: startedAtUtc.AddSeconds(61),
+            SpeedBytesPerSecond: 64L * 1024 * 1024,
+            EstimatedTimeRemaining: TimeSpan.FromSeconds(8)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Videos: Checking files"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderSizeDetails, Is.EqualTo("3.5 GB / 10 GB"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderRateDetails, Is.EqualTo("64 MB/s · 1m 45s left"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("200 of 29189 files"));
+            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Downloading clip.mp4"));
+            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(35).Within(0.01));
         });
     }
 

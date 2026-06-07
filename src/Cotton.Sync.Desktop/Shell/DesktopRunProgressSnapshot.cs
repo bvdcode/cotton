@@ -11,4 +11,6 @@ internal sealed record DesktopRunProgressSnapshot(
     string CurrentPath,
     DateTime StartedAtUtc,
     bool IsCompleted,
-    DateTime OccurredAtUtc);
+    DateTime OccurredAtUtc,
+    long BytesCompleted = 0,
+    long? BytesTotal = null);
