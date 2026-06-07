@@ -106,12 +106,20 @@ public sealed class SyncEngine : ISyncEngine
         await EnsureLocalContentHashesForStateFilesAsync(localByPath, stateByPath, options, startedAtUtc, cancellationToken)
             .ConfigureAwait(false);
 
-        DirectoryContentIndex localDirectoryContentIndex = directoryStateByPath.Count == 0
-            ? DirectoryContentIndex.Empty
-            : DirectoryContentIndex.Create(localDirectoriesByPath.Keys, localByPath.Keys);
-        DirectoryContentIndex remoteDirectoryContentIndex = directoryStateByPath.Count == 0
-            ? DirectoryContentIndex.Empty
-            : DirectoryContentIndex.Create(remoteDirectoriesByPath.Keys, remoteByPath.Keys);
+        bool hasLocalDirectoryDeleteCandidates = HasLocalDirectoryDeleteCandidates(
+            localDirectoriesByPath,
+            remoteDirectoriesByPath,
+            directoryStateByPath);
+        bool hasRemoteDirectoryDeleteCandidates = HasRemoteDirectoryDeleteCandidates(
+            localDirectoriesByPath,
+            remoteDirectoriesByPath,
+            directoryStateByPath);
+        DirectoryContentIndex localDirectoryContentIndex = hasLocalDirectoryDeleteCandidates
+            ? DirectoryContentIndex.Create(localDirectoriesByPath.Keys, localByPath.Keys)
+            : DirectoryContentIndex.Empty;
+        DirectoryContentIndex remoteDirectoryContentIndex = hasRemoteDirectoryDeleteCandidates
+            ? DirectoryContentIndex.Create(remoteDirectoriesByPath.Keys, remoteByPath.Keys)
+            : DirectoryContentIndex.Empty;
 
         SyncDeleteGuard deleteGuard = BuildDeleteGuard(
             options,
@@ -124,7 +132,7 @@ public sealed class SyncEngine : ISyncEngine
             localDirectoryContentIndex,
             remoteDirectoryContentIndex);
 
-        if (directoryStateByPath.Count != 0)
+        if (hasLocalDirectoryDeleteCandidates || hasRemoteDirectoryDeleteCandidates)
         {
             await ReconcileDirectoryDeletesAsync(
                 syncPair,
@@ -1620,14 +1628,13 @@ public sealed class SyncEngine : ISyncEngine
             }
         }
 
-        foreach (string key in directoryStateByPath.Keys)
+        foreach (KeyValuePair<string, SyncStateEntry> state in directoryStateByPath)
         {
-            localDirectoriesByPath.TryGetValue(key, out LocalDirectorySnapshot? local);
-            remoteDirectoriesByPath.TryGetValue(key, out RemoteDirectorySnapshot? remote);
-            SyncStateEntry state = directoryStateByPath[key];
+            localDirectoriesByPath.TryGetValue(state.Key, out LocalDirectorySnapshot? local);
+            remoteDirectoriesByPath.TryGetValue(state.Key, out RemoteDirectorySnapshot? remote);
 
             switch (GetPlannedDirectoryDeleteDirection(
-                state,
+                state.Value,
                 local,
                 remote,
                 localDirectoryContentIndex,
@@ -1643,6 +1650,48 @@ public sealed class SyncEngine : ISyncEngine
         }
 
         return new SyncDeleteGuard(options, plannedLocalDeletes, plannedRemoteDeletes);
+    }
+
+    private static bool HasLocalDirectoryDeleteCandidates(
+        IReadOnlyDictionary<string, LocalDirectorySnapshot> localDirectoriesByPath,
+        IReadOnlyDictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath,
+        IReadOnlyDictionary<string, SyncStateEntry> directoryStateByPath)
+    {
+        foreach (KeyValuePair<string, SyncStateEntry> state in directoryStateByPath)
+        {
+            if (state.Value.RemoteNodeId is null)
+            {
+                continue;
+            }
+
+            if (localDirectoriesByPath.ContainsKey(state.Key) && !remoteDirectoriesByPath.ContainsKey(state.Key))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasRemoteDirectoryDeleteCandidates(
+        IReadOnlyDictionary<string, LocalDirectorySnapshot> localDirectoriesByPath,
+        IReadOnlyDictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath,
+        IReadOnlyDictionary<string, SyncStateEntry> directoryStateByPath)
+    {
+        foreach (KeyValuePair<string, SyncStateEntry> state in directoryStateByPath)
+        {
+            if (state.Value.RemoteNodeId is null)
+            {
+                continue;
+            }
+
+            if (!localDirectoriesByPath.ContainsKey(state.Key) && remoteDirectoriesByPath.ContainsKey(state.Key))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static SyncDeleteDirection GetPlannedDirectoryDeleteDirection(
