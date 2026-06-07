@@ -131,61 +131,106 @@ public sealed class LocalFileScanner :
         int directoriesScanned = 0;
         int filesScanned = 0;
         progress?.Report(new LocalTreeScanProgress(filesScanned, directoriesScanned, currentPath: null));
-        var pendingDirectories = new Stack<string>();
-        pendingDirectories.Push(fullRoot);
-        while (pendingDirectories.Count > 0)
+        var pendingDirectories = new Stack<LocalDirectoryScanFrame>();
+        pendingDirectories.Push(new LocalDirectoryScanFrame(fullRoot));
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            string currentDirectory = pendingDirectories.Pop();
-            foreach (string directoryPath in Directory.EnumerateDirectories(currentDirectory, "*", ChildEnumerationOptions))
+            while (pendingDirectories.Count > 0)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                string relativePath = ToRelativePath(fullRoot, directoryPath);
-                if (LocalFileIgnoreRules.ShouldIgnore(relativePath))
+                LocalDirectoryScanFrame currentDirectory = pendingDirectories.Peek();
+                if (TryReadNextChildFile(currentDirectory, fullRoot, out FileInfo? file, out string relativePath))
                 {
+                    LocalFileSnapshot fileSnapshot = await CreateSnapshotAsync(file, relativePath, computeHashes, cancellationToken)
+                        .ConfigureAwait(false);
+                    addFile(fileSnapshot);
+                    filesScanned++;
+                    ReportScanProgress(progress, filesScanned, directoriesScanned, relativePath);
                     continue;
                 }
 
-                DirectoryInfo directory = new(directoryPath);
-                if ((directory.Attributes & FileAttributes.ReparsePoint) != 0)
+                if (TryReadNextChildDirectory(currentDirectory, fullRoot, out LocalDirectorySnapshot? directory))
                 {
+                    addDirectory(directory);
+                    directoriesScanned++;
+                    ReportDirectoryScanProgress(progress, filesScanned, directoriesScanned, directory.RelativePath);
+                    pendingDirectories.Push(new LocalDirectoryScanFrame(directory.FullPath));
                     continue;
                 }
 
-                addDirectory(new LocalDirectorySnapshot
-                {
-                    RelativePath = relativePath,
-                    FullPath = directory.FullName,
-                });
-                directoriesScanned++;
-                ReportDirectoryScanProgress(progress, filesScanned, directoriesScanned, relativePath);
-                pendingDirectories.Push(directory.FullName);
+                pendingDirectories.Pop().Dispose();
             }
-
-            foreach (string filePath in Directory.EnumerateFiles(currentDirectory, "*", ChildEnumerationOptions))
+        }
+        finally
+        {
+            while (pendingDirectories.Count > 0)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                string relativePath = ToRelativePath(fullRoot, filePath);
-                if (LocalFileIgnoreRules.ShouldIgnore(relativePath))
-                {
-                    continue;
-                }
-
-                FileInfo file = new(filePath);
-                if ((file.Attributes & FileAttributes.ReparsePoint) != 0)
-                {
-                    continue;
-                }
-
-                LocalFileSnapshot fileSnapshot = await CreateSnapshotAsync(file, relativePath, computeHashes, cancellationToken)
-                    .ConfigureAwait(false);
-                addFile(fileSnapshot);
-                filesScanned++;
-                ReportScanProgress(progress, filesScanned, directoriesScanned, relativePath);
+                pendingDirectories.Pop().Dispose();
             }
         }
 
         progress?.Report(new LocalTreeScanProgress(filesScanned, directoriesScanned, currentPath: null));
+    }
+
+    private static bool TryReadNextChildDirectory(
+        LocalDirectoryScanFrame currentDirectory,
+        string fullRoot,
+        out LocalDirectorySnapshot directory)
+    {
+        while (currentDirectory.TryReadNextDirectoryPath(out string? directoryPath))
+        {
+            string path = directoryPath ?? throw new InvalidOperationException("Directory enumeration returned a null path.");
+            string relativePath = ToRelativePath(fullRoot, path);
+            if (LocalFileIgnoreRules.ShouldIgnore(relativePath))
+            {
+                continue;
+            }
+
+            DirectoryInfo directoryInfo = new(path);
+            if ((directoryInfo.Attributes & FileAttributes.ReparsePoint) != 0)
+            {
+                continue;
+            }
+
+            directory = new LocalDirectorySnapshot
+            {
+                RelativePath = relativePath,
+                FullPath = directoryInfo.FullName,
+            };
+            return true;
+        }
+
+        directory = null!;
+        return false;
+    }
+
+    private static bool TryReadNextChildFile(
+        LocalDirectoryScanFrame currentDirectory,
+        string fullRoot,
+        out FileInfo file,
+        out string relativePath)
+    {
+        while (currentDirectory.TryReadNextFilePath(out string? filePath))
+        {
+            string path = filePath ?? throw new InvalidOperationException("File enumeration returned a null path.");
+            relativePath = ToRelativePath(fullRoot, path);
+            if (LocalFileIgnoreRules.ShouldIgnore(relativePath))
+            {
+                continue;
+            }
+
+            file = new FileInfo(path);
+            if ((file.Attributes & FileAttributes.ReparsePoint) != 0)
+            {
+                continue;
+            }
+
+            return true;
+        }
+
+        file = null!;
+        relativePath = string.Empty;
+        return false;
     }
 
     private static void SortTree(LocalTreeSnapshot tree)
@@ -343,4 +388,61 @@ public sealed class LocalFileScanner :
     }
 
     private readonly record struct LocalFileMetadata(long Length, DateTime LastWriteUtc);
+
+    private sealed class LocalDirectoryScanFrame : IDisposable
+    {
+        private readonly IEnumerator<string> _directoryEnumerator;
+        private IEnumerator<string>? _fileEnumerator;
+        private bool _filesDrained;
+
+        public LocalDirectoryScanFrame(string directoryPath)
+        {
+            DirectoryPath = directoryPath;
+            _directoryEnumerator = Directory
+                .EnumerateDirectories(directoryPath, "*", ChildEnumerationOptions)
+                .GetEnumerator();
+        }
+
+        public string DirectoryPath { get; }
+
+        public bool TryReadNextDirectoryPath(out string? directoryPath)
+        {
+            if (_directoryEnumerator.MoveNext())
+            {
+                directoryPath = _directoryEnumerator.Current;
+                return true;
+            }
+
+            directoryPath = null;
+            return false;
+        }
+
+        public bool TryReadNextFilePath(out string? filePath)
+        {
+            if (_filesDrained)
+            {
+                filePath = null;
+                return false;
+            }
+
+            _fileEnumerator ??= Directory
+                .EnumerateFiles(DirectoryPath, "*", ChildEnumerationOptions)
+                .GetEnumerator();
+            if (_fileEnumerator.MoveNext())
+            {
+                filePath = _fileEnumerator.Current;
+                return true;
+            }
+
+            _filesDrained = true;
+            filePath = null;
+            return false;
+        }
+
+        public void Dispose()
+        {
+            _directoryEnumerator.Dispose();
+            _fileEnumerator?.Dispose();
+        }
+    }
 }
