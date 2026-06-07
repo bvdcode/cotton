@@ -322,21 +322,24 @@
                            TextTrimming="CharacterEllipsis" />
                 <StackPanel Grid.Column="1"
                             Spacing="1"
+                            MinWidth="112"
+                            MaxWidth="148"
                             HorizontalAlignment="Right"
-                            IsVisible="{Binding HasCurrentWorkProgressHeaderSizeDetails}">
+                            VerticalAlignment="Top">
                   <TextBlock Text="{Binding CurrentWorkProgressHeaderSizeDetails}"
                              Classes="secondary"
                              FontSize="12"
+                             MinHeight="15"
                              HorizontalAlignment="Right"
                              TextAlignment="Right"
                              TextTrimming="CharacterEllipsis" />
                   <TextBlock Text="{Binding CurrentWorkProgressHeaderRateDetails}"
                              Classes="secondary"
                              FontSize="12"
+                             MinHeight="15"
                              HorizontalAlignment="Right"
                              TextAlignment="Right"
-                             TextTrimming="CharacterEllipsis"
-                             IsVisible="{Binding HasCurrentWorkProgressHeaderRateDetails}" />
+                             TextTrimming="CharacterEllipsis" />
                 </StackPanel>
               </Grid>
               <TextBlock Grid.Row="1"
