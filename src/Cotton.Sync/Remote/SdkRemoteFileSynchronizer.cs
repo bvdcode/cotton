@@ -92,7 +92,7 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynch
         var request = new CreateFileFromChunksRequestDto
         {
             NodeId = parentNodeId,
-            ChunkHashes = uploadedChunks.ChunkHashes.ToList(),
+            ChunkHashes = uploadedChunks.ChunkHashes,
             Name = Path.GetFileName(normalizedPath),
             ContentType = ResolveContentType(normalizedPath),
             Hash = uploadedChunks.ContentHash,
@@ -495,5 +495,5 @@ public sealed class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynch
         return total;
     }
 
-    private sealed record UploadedChunks(IReadOnlyList<string> ChunkHashes, string ContentHash);
+    private sealed record UploadedChunks(List<string> ChunkHashes, string ContentHash);
 }
