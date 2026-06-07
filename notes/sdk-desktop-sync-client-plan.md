@@ -105,7 +105,7 @@ Revision date: 2026-06-07.
 - Fully complete: 5 implementation sub-plans.
 - Newly closed by this audit: 0 sub-plans.
 - Current desktop-polish queue: 5 open, 1 done.
-- Active/manual visual polish: Phase 8 has 8 open, 22 done.
+- Active/manual visual polish: Phase 8 has 7 open, 23 done.
 - Active/manual end-to-end edge cases: Phase 12 has 3 open, 21 done.
 - Active/manual performance and soak: Phase 13 has 5 open, 8 done.
 - Manual platform, diagnostics, packaging, and release gates remain open by design.
@@ -140,7 +140,7 @@ The release plan is split into focused files so the active checklist stays visib
 - [x] [Phase 5 - Sync Core Hardening](sdk-desktop-sync-client-plan/15-phase-5-sync-core-hardening.md) - complete, 27 done
 - [ ] [Phase 6 - Continuous Sync](sdk-desktop-sync-client-plan/16-phase-6-continuous-sync.md) - manual-gated soak, 1 open, 14 done
 - [ ] [Phase 7 - Authentication And Token Storage](sdk-desktop-sync-client-plan/17-phase-7-authentication-and-token-storage.md) - manual-gated secure-storage checks, 2 open, 10 done
-- [ ] [Phase 8 - Desktop UX And Visual Design](sdk-desktop-sync-client-plan/18-phase-8-desktop-ux-and-visual-design.md) - active/manual-gated visual polish, 8 open, 22 done
+- [ ] [Phase 8 - Desktop UX And Visual Design](sdk-desktop-sync-client-plan/18-phase-8-desktop-ux-and-visual-design.md) - active/manual-gated visual polish, 7 open, 23 done
 - [ ] [Phase 9 - Tray, Autostart, Notifications, And Lifecycle](sdk-desktop-sync-client-plan/19-phase-9-tray-autostart-notifications-and-lifecycle.md) - manual-gated platform polish, 5 open, 12 done
 - [ ] [Phase 10 - Diagnostics And Supportability](sdk-desktop-sync-client-plan/20-phase-10-diagnostics-and-supportability.md) - manual-gated diagnostics export, 1 open, 7 done
 - [ ] [Phase 11 - Packaging And Installers](sdk-desktop-sync-client-plan/21-phase-11-packaging-and-installers.md) - manual-gated clean-machine packaging, 5 open, 9 done
