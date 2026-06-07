@@ -103,7 +103,7 @@ public sealed class SyncEngine : ISyncEngine
             startedAtUtc,
             cancellationToken).ConfigureAwait(false);
 
-        await EnsureLocalContentHashesForStateFilesAsync(pathKeys, localByPath, stateByPath, cancellationToken)
+        await EnsureLocalContentHashesForStateFilesAsync(localByPath, stateByPath, cancellationToken)
             .ConfigureAwait(false);
 
         SyncDeleteGuard deleteGuard = BuildDeleteGuard(
@@ -254,16 +254,20 @@ public sealed class SyncEngine : ISyncEngine
     }
 
     private async Task EnsureLocalContentHashesForStateFilesAsync(
-        IEnumerable<string> pathKeys,
         IReadOnlyDictionary<string, LocalFileSnapshot> localByPath,
         IReadOnlyDictionary<string, SyncStateEntry> stateByPath,
         CancellationToken cancellationToken)
     {
-        foreach (string key in pathKeys)
+        if (stateByPath.Count == 0)
         {
-            if (stateByPath.TryGetValue(key, out SyncStateEntry? state) && localByPath.TryGetValue(key, out LocalFileSnapshot? local))
+            return;
+        }
+
+        foreach (KeyValuePair<string, SyncStateEntry> state in stateByPath)
+        {
+            if (localByPath.TryGetValue(state.Key, out LocalFileSnapshot? local))
             {
-                await EnsureLocalContentHashForBaselineComparisonAsync(local, state, cancellationToken).ConfigureAwait(false);
+                await EnsureLocalContentHashForBaselineComparisonAsync(local, state.Value, cancellationToken).ConfigureAwait(false);
             }
         }
     }
@@ -1123,6 +1127,11 @@ public sealed class SyncEngine : ISyncEngine
         IReadOnlyDictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath,
         IReadOnlyDictionary<string, SyncStateEntry> directoryStateByPath)
     {
+        if (stateByPath.Count == 0 && directoryStateByPath.Count == 0)
+        {
+            return new SyncDeleteGuard(options, plannedLocalDeletes: 0, plannedRemoteDeletes: 0);
+        }
+
         int plannedLocalDeletes = 0;
         int plannedRemoteDeletes = 0;
 
