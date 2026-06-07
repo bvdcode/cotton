@@ -868,6 +868,13 @@ public sealed class SyncApplicationServiceTests
             return EmptyEntries();
         }
 
+        public Task<DateTime?> GetPairLastSyncedAtUtcAsync(
+            string syncPairId,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<DateTime?>(null);
+        }
+
         public Task<SyncChangeCursor> GetChangeCursorAsync(
             string syncPairId,
             CancellationToken cancellationToken = default)

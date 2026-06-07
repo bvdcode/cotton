@@ -2538,6 +2538,11 @@ public sealed class SyncEngineTests
             return _inner.LoadPairEntriesAsync(syncPairId, cancellationToken);
         }
 
+        public virtual Task<DateTime?> GetPairLastSyncedAtUtcAsync(string syncPairId, CancellationToken cancellationToken = default)
+        {
+            return _inner.GetPairLastSyncedAtUtcAsync(syncPairId, cancellationToken);
+        }
+
         public virtual Task<SyncChangeCursor> GetChangeCursorAsync(string syncPairId, CancellationToken cancellationToken = default)
         {
             return _inner.GetChangeCursorAsync(syncPairId, cancellationToken);

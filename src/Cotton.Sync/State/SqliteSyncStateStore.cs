@@ -67,6 +67,21 @@ public sealed class SqliteSyncStateStore : ISyncStateStore
     }
 
     /// <inheritdoc />
+    public async Task<DateTime?> GetPairLastSyncedAtUtcAsync(string syncPairId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(syncPairId);
+        await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
+        await using SyncStateDbContext context = CreateContext();
+        DateTime? lastSyncedAtUtc = await context.SyncEntries
+            .AsNoTracking()
+            .Where(entry => entry.SyncPairId == syncPairId)
+            .Select(entry => (DateTime?)entry.SyncedAtUtc)
+            .MaxAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return ToUtc(lastSyncedAtUtc);
+    }
+
+    /// <inheritdoc />
     public async Task<SyncChangeCursor> GetChangeCursorAsync(string syncPairId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(syncPairId);

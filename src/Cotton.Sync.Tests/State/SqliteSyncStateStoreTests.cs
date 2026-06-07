@@ -42,23 +42,28 @@ public sealed class SqliteSyncStateStoreTests
     {
         var store = CreateStore();
         await store.InitializeAsync();
+        DateTime firstSyncedAtUtc = new(2026, 6, 7, 10, 0, 0, DateTimeKind.Utc);
+        DateTime lastSyncedAtUtc = new(2026, 6, 7, 10, 5, 0, DateTimeKind.Utc);
         await store.UpsertAsync(new SyncStateEntry
         {
             SyncPairId = "pair-a",
             RelativePath = "z-last.txt",
             Kind = SyncEntryKind.File,
+            SyncedAtUtc = firstSyncedAtUtc,
         });
         await store.UpsertAsync(new SyncStateEntry
         {
             SyncPairId = "pair-a",
             RelativePath = "a-first.txt",
             Kind = SyncEntryKind.File,
+            SyncedAtUtc = lastSyncedAtUtc,
         });
         await store.UpsertAsync(new SyncStateEntry
         {
             SyncPairId = "pair-b",
             RelativePath = "ignored.txt",
             Kind = SyncEntryKind.File,
+            SyncedAtUtc = lastSyncedAtUtc.AddMinutes(1),
         });
 
         var entries = new List<SyncStateEntry>();
@@ -66,8 +71,13 @@ public sealed class SqliteSyncStateStoreTests
         {
             entries.Add(entry);
         }
+        DateTime? pairLastSyncedAtUtc = await store.GetPairLastSyncedAtUtcAsync("pair-a");
 
-        Assert.That(entries.Select(entry => entry.RelativePath), Is.EqualTo(new[] { "a-first.txt", "z-last.txt" }));
+        Assert.Multiple(() =>
+        {
+            Assert.That(entries.Select(entry => entry.RelativePath), Is.EqualTo(new[] { "a-first.txt", "z-last.txt" }));
+            Assert.That(pairLastSyncedAtUtc, Is.EqualTo(lastSyncedAtUtc));
+        });
     }
 
     [Test]

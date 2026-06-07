@@ -26,6 +26,11 @@ public interface ISyncStateStore
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Loads the latest sync timestamp for a sync pair without materializing all entries.
+    /// </summary>
+    Task<DateTime?> GetPairLastSyncedAtUtcAsync(string syncPairId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Loads the remote change-feed checkpoint for a sync pair.
     /// </summary>
     Task<SyncChangeCursor> GetChangeCursorAsync(string syncPairId, CancellationToken cancellationToken = default);

@@ -950,15 +950,15 @@ internal sealed class DesktopShellController : IDesktopShellController
         foreach (SyncPairSettings syncPair in settings)
         {
             string syncPairId = syncPair.Id.ToString();
-            IReadOnlyList<SyncStateEntry> entries = await stateStore
-                .LoadPairAsync(syncPairId, cancellationToken)
+            DateTime? persistedLastSyncedAtUtc = await stateStore
+                .GetPairLastSyncedAtUtcAsync(syncPairId, cancellationToken)
                 .ConfigureAwait(false);
             SyncChangeCursor cursor = await stateStore
                 .GetChangeCursorAsync(syncPairId, cancellationToken)
                 .ConfigureAwait(false);
             SyncPairStatus? status = currentStatus?.SyncPairs
                 .FirstOrDefault(pair => pair.SyncPairId == syncPair.Id);
-            snapshots.Add(ToSnapshot(syncPair, entries, cursor, status));
+            snapshots.Add(ToSnapshot(syncPair, persistedLastSyncedAtUtc, cursor, status));
         }
 
         return snapshots;
@@ -966,14 +966,12 @@ internal sealed class DesktopShellController : IDesktopShellController
 
     private static DesktopSyncPairSnapshot ToSnapshot(
         SyncPairSettings settings,
-        IReadOnlyList<SyncStateEntry>? entries = null,
+        DateTime? persistedLastSyncedAtUtc = null,
         SyncChangeCursor? cursor = null,
         SyncPairStatus? status = null)
     {
         DateTime? lastSyncedAtUtc = status?.LastSuccessfulSyncAtUtc;
-        lastSyncedAtUtc ??= entries is { Count: > 0 }
-            ? entries.Max(static entry => entry.SyncedAtUtc)
-            : null;
+        lastSyncedAtUtc ??= persistedLastSyncedAtUtc;
         return new DesktopSyncPairSnapshot(
             settings.Id,
             settings.DisplayName,
