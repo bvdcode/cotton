@@ -219,9 +219,11 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Not.Contain("<ScrollViewer MaxHeight=\"216\""));
             Assert.That(foldersSection, Does.Not.Contain("<ScrollViewer MaxHeight=\"236\""));
             Assert.That(foldersSection, Does.Not.Contain("MaxHeight=\"300\""));
-            Assert.That(foldersSection, Does.Contain("<ScrollViewer VerticalScrollBarVisibility=\"Auto\""));
+            Assert.That(foldersSection, Does.Contain("<ScrollViewer x:Name=\"SyncPairsScrollViewer\""));
+            Assert.That(foldersSection, Does.Contain("VerticalScrollBarVisibility=\"Auto\""));
             Assert.That(foldersSection, Does.Contain("ClipToBounds=\"True\""));
             Assert.That(foldersSection, Does.Contain("MinHeight=\"0\""));
+            Assert.That(foldersSection, Does.Contain("Tag=\"{Binding Id}\""));
             Assert.That(foldersSection, Does.Contain("<ItemsControl ItemsSource=\"{Binding SyncPairs}\">"));
         });
     }
@@ -328,7 +330,7 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding IsDashboardChromeVisible}\""));
             Assert.That(dashboardView, Does.Contain("<Border Grid.Row=\"0\"\n                Padding=\"10\""));
             Assert.That(dashboardView, Does.Contain("<Border Grid.Row=\"1\"\n                Padding=\"10\""));
-            Assert.That(dashboardView, Does.Contain("MaxHeight=\"190\""));
+            Assert.That(dashboardView, Does.Contain("MaxHeight=\"150\""));
             Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding IsActivityVisible}\""));
             Assert.That(dashboardView, Does.Contain("VerticalScrollBarVisibility=\"Auto\""));
             Assert.That(dashboardView, Does.Contain("Grid.RowSpan=\"2\""));
@@ -593,11 +595,10 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(dashboardView, Does.Contain("Text=\"{Binding CurrentWorkProgressHeaderSizeDetails}\""));
             Assert.That(dashboardView, Does.Contain("Text=\"{Binding CurrentWorkProgressHeaderRateDetails}\""));
             Assert.That(dashboardView, Does.Contain("HorizontalAlignment=\"Right\""));
-            Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding HasCurrentWorkProgressHeaderSizeDetails}\""));
-            Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding HasCurrentWorkProgressHeaderRateDetails}\""));
+            Assert.That(dashboardView, Does.Contain("MinHeight=\"15\""));
             Assert.That(dashboardView, Does.Contain("Text=\"{Binding CurrentWorkProgressDetails}\""));
             Assert.That(dashboardView, Does.Contain("Text=\"{Binding CurrentWorkProgressSecondaryDetails}\""));
-            Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding HasCurrentWorkProgressSecondaryDetails}\""));
+            Assert.That(dashboardView, Does.Contain("MinHeight=\"16\""));
             Assert.That(dashboardView, Does.Contain("Value=\"{Binding CurrentWorkProgressValue}\""));
             Assert.That(dashboardView, Does.Contain("IsIndeterminate=\"{Binding IsCurrentWorkProgressIndeterminate}\""));
             Assert.That(dashboardView, Does.Not.Contain("IsVisible=\"{Binding HasCurrentRunProgress}\""));

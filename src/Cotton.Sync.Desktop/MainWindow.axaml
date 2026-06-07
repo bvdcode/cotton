@@ -583,7 +583,8 @@
                   </StackPanel>
                 </Border>
 
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                <ScrollViewer x:Name="SyncPairsScrollViewer"
+                              VerticalScrollBarVisibility="Auto"
                               ClipToBounds="True"
                               MinHeight="0"
                               IsVisible="{Binding HasSyncPairs}">
@@ -593,6 +594,7 @@
                       <ItemsControl.ItemTemplate>
                         <DataTemplate>
                         <Border Padding="8"
+                                Tag="{Binding Id}"
                                 Margin="0,0,0,7"
                                 CornerRadius="6"
                                 Background="{DynamicResource CottonSurfaceMutedBrush}">
@@ -784,7 +786,7 @@
                 BorderBrush="{DynamicResource CottonBorderBrush}"
                 BorderThickness="1"
                 ClipToBounds="True"
-                MaxHeight="190"
+                MaxHeight="150"
                 MinHeight="0"
                 IsVisible="{Binding IsActivityVisible}">
             <Grid RowDefinitions="Auto,*"

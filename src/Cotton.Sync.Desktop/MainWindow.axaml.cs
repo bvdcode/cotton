@@ -6,6 +6,8 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Platform;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Cotton.Sync.Desktop.Platform;
 using Cotton.Sync.Desktop.Shell;
 using Cotton.Sync.Desktop.Startup;
@@ -120,7 +122,33 @@ public sealed partial class MainWindow : Window
         if (e.PropertyName == nameof(ShellViewModel.IsSignInStepVisible) && sender is ShellViewModel setupViewModel)
         {
             ApplyWindowMode(setupViewModel);
+            return;
         }
+
+        if ((e.PropertyName == nameof(ShellViewModel.IsSelectedSyncPairEditorVisible)
+            || e.PropertyName == nameof(ShellViewModel.SelectedSyncPair))
+            && sender is ShellViewModel syncPairViewModel)
+        {
+            ScrollSelectedSyncPairIntoView(syncPairViewModel);
+        }
+    }
+
+    private void ScrollSelectedSyncPairIntoView(ShellViewModel viewModel)
+    {
+        if (!viewModel.IsSelectedSyncPairEditorVisible || viewModel.SelectedSyncPair is null)
+        {
+            return;
+        }
+
+        Guid syncPairId = viewModel.SelectedSyncPair.Id;
+        Dispatcher.UIThread.Post(() =>
+        {
+            Control? row = SyncPairsScrollViewer
+                .GetVisualDescendants()
+                .OfType<Control>()
+                .FirstOrDefault(control => control.Tag is Guid rowSyncPairId && rowSyncPairId == syncPairId);
+            row?.BringIntoView();
+        });
     }
 
     private void RemoteFoldersListBox_DoubleTapped(object? sender, TappedEventArgs e)
