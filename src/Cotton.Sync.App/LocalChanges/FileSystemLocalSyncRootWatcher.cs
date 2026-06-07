@@ -11,6 +11,7 @@ namespace Cotton.Sync.App.LocalChanges;
 /// </summary>
 public sealed class FileSystemLocalSyncRootWatcher : ILocalSyncRootWatcher
 {
+    private const int InternalBufferSizeBytes = 64 * 1024;
     private readonly Guid _syncPairId;
     private readonly string _localRootPath;
     private readonly LocalSyncRootChangeFilter _changeFilter;
@@ -58,6 +59,7 @@ public sealed class FileSystemLocalSyncRootWatcher : ILocalSyncRootWatcher
                 | NotifyFilters.LastWrite
                 | NotifyFilters.Size
                 | NotifyFilters.CreationTime,
+            InternalBufferSize = InternalBufferSizeBytes,
         };
         _watcher.Created += OnCreated;
         _watcher.Changed += OnChanged;
