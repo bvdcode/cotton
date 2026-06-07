@@ -536,7 +536,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentTransferDetails, Does.Contain("/s"));
             Assert.That(viewModel.CurrentTransferDetails, Does.Contain("left"));
             Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Syncing 2 folders"));
-            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("7.0 MB / 27 MB · 4.0 MB/s · 6s left"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("7.0 MB / 27 MB · 4.0 MB/s"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("10 of 40 files across 2 folders"));
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("2 files transferring"));
         });
@@ -1728,7 +1728,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents: Checking files"));
-            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("512 B / 1.0 KB · 256 B/s · 2s left"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("512 B / 1.0 KB · 256 B/s"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("5 of 20 files"));
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Uploading report.txt"));
             Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(25).Within(0.01));
@@ -1768,7 +1768,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Syncing 2 folders"));
-            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("2.0 KB / 4.0 KB · 768 B/s · 3s left"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("2.0 KB / 4.0 KB · 768 B/s"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("8 of 30 files across 2 folders"));
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("2 files transferring"));
             Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(26.666).Within(0.01));
@@ -1776,7 +1776,7 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
-    public async Task TransferProgressChanged_UsesLongestSmoothedTransferEstimateForAggregateHeader()
+    public async Task TransferProgressChanged_OmitsTransferEstimateFromAggregateRunHeader()
     {
         Guid documentsPairId = Guid.NewGuid();
         Guid videosPairId = Guid.NewGuid();
@@ -1806,7 +1806,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             SpeedBytesPerSecond: 512,
             EstimatedTimeRemaining: TimeSpan.FromSeconds(20)));
 
-        Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("2.0 KB / 4.0 KB · 768 B/s · 20s left"));
+        Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("2.0 KB / 4.0 KB · 768 B/s"));
     }
 
     [Test]

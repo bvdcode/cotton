@@ -525,7 +525,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     }
 
     public string CurrentWorkProgressHeaderDetails => IsRunProgressPrimary && HasActiveTransferProgress
-        ? CreateAggregateTransferDetails(_transferProgressByPair.Values)
+        ? CreateAggregateTransferDetails(_transferProgressByPair.Values, includeEstimatedTimeRemaining: false)
         : string.Empty;
 
     public bool HasCurrentWorkProgressHeaderDetails => !string.IsNullOrWhiteSpace(CurrentWorkProgressHeaderDetails);
@@ -538,7 +538,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         !string.IsNullOrWhiteSpace(CurrentWorkProgressHeaderSizeDetails);
 
     public string CurrentWorkProgressHeaderRateDetails => IsRunProgressPrimary && HasActiveTransferProgress
-        ? CreateAggregateTransferMetricDetails(_transferProgressByPair.Values).Rate
+        ? CreateAggregateTransferMetricDetails(
+            _transferProgressByPair.Values,
+            includeEstimatedTimeRemaining: false).Rate
         : string.Empty;
 
     public bool HasCurrentWorkProgressHeaderRateDetails =>
@@ -4011,14 +4013,19 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         return details;
     }
 
-    private static string CreateAggregateTransferDetails(IEnumerable<DesktopTransferProgressSnapshot> progressValues)
+    private static string CreateAggregateTransferDetails(
+        IEnumerable<DesktopTransferProgressSnapshot> progressValues,
+        bool includeEstimatedTimeRemaining)
     {
-        TransferMetricDetails details = CreateAggregateTransferMetricDetails(progressValues);
+        TransferMetricDetails details = CreateAggregateTransferMetricDetails(
+            progressValues,
+            includeEstimatedTimeRemaining);
         return string.IsNullOrWhiteSpace(details.Rate) ? details.Size : details.Size + " · " + details.Rate;
     }
 
     private static TransferMetricDetails CreateAggregateTransferMetricDetails(
-        IEnumerable<DesktopTransferProgressSnapshot> progressValues)
+        IEnumerable<DesktopTransferProgressSnapshot> progressValues,
+        bool includeEstimatedTimeRemaining = true)
     {
         long transferredBytes = 0;
         long totalBytes = 0;
@@ -4061,7 +4068,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
 
         string rate = FormatBytes(speedBytesPerSecond) + "/s";
-        if (longestEstimatedTimeRemaining.HasValue)
+        if (includeEstimatedTimeRemaining && longestEstimatedTimeRemaining.HasValue)
         {
             rate += " · " + FormatDuration(longestEstimatedTimeRemaining.Value) + " left";
         }

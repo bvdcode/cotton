@@ -348,8 +348,8 @@
                          Text="{Binding CurrentWorkProgressSecondaryDetails}"
                          Classes="secondary"
                          FontSize="12"
-                         TextTrimming="CharacterEllipsis"
-                         IsVisible="{Binding HasCurrentWorkProgressSecondaryDetails}" />
+                         MinHeight="16"
+                         TextTrimming="CharacterEllipsis" />
               <ProgressBar Grid.Row="3"
                            Height="4"
                            Minimum="0"

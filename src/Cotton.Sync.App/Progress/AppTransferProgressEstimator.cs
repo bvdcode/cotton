@@ -9,6 +9,8 @@ namespace Cotton.Sync.App.Progress;
 public sealed class AppTransferProgressEstimator
 {
     private static readonly TimeSpan RollingWindow = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan MinimumEstimateSampleDuration = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan MaximumInitialZeroBaselineAge = TimeSpan.FromSeconds(3);
     private static readonly TimeSpan SpeedSmoothingTimeConstant = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan RemainingTimeSmoothingTimeConstant = TimeSpan.FromSeconds(10);
     private const int MaximumSamples = 2048;
@@ -52,7 +54,13 @@ public sealed class AppTransferProgressEstimator
 
         var currentSample = new TransferSample(transferredBytes, normalizedOccurredAtUtc);
         _samples.Enqueue(currentSample);
+        PruneNonProgressSamples();
         PruneSamples(currentSample.OccurredAtUtc);
+        if (TryUseCurrentSampleAsBaselineAfterStaleZero(currentSample))
+        {
+            return new AppTransferProgressEstimate(null, null);
+        }
+
         AppTransferProgressEstimate estimate = CreateEstimate(currentSample, totalBytes, isCompleted);
         if (isCompleted)
         {
@@ -90,6 +98,44 @@ public sealed class AppTransferProgressEstimator
         }
     }
 
+    private void PruneNonProgressSamples()
+    {
+        while (_samples.Count > 1)
+        {
+            TransferSample firstSample = _samples.Peek();
+            TransferSample secondSample = _samples.ElementAt(1);
+            if (secondSample.TransferredBytes > firstSample.TransferredBytes)
+            {
+                return;
+            }
+
+            _samples.Dequeue();
+        }
+    }
+
+    private bool TryUseCurrentSampleAsBaselineAfterStaleZero(TransferSample currentSample)
+    {
+        if (_samples.Count != 2)
+        {
+            return false;
+        }
+
+        TransferSample firstSample = _samples.Peek();
+        if (firstSample.TransferredBytes != 0
+            || currentSample.TransferredBytes <= 0
+            || currentSample.OccurredAtUtc - firstSample.OccurredAtUtc <= MaximumInitialZeroBaselineAge)
+        {
+            return false;
+        }
+
+        _samples.Dequeue();
+        _smoothedSpeedBytesPerSecond = null;
+        _smoothedEstimatedTimeRemaining = null;
+        _lastSpeedOccurredAtUtc = null;
+        _lastEstimateOccurredAtUtc = null;
+        return true;
+    }
+
     private AppTransferProgressEstimate CreateEstimate(
         TransferSample currentSample,
         long? totalBytes,
@@ -103,7 +149,7 @@ public sealed class AppTransferProgressEstimator
         TransferSample firstSample = _samples.Peek();
         double seconds = (currentSample.OccurredAtUtc - firstSample.OccurredAtUtc).TotalSeconds;
         long bytesTransferred = currentSample.TransferredBytes - firstSample.TransferredBytes;
-        if (seconds <= 0 || bytesTransferred <= 0)
+        if (seconds < MinimumEstimateSampleDuration.TotalSeconds || bytesTransferred <= 0)
         {
             return new AppTransferProgressEstimate(null, null);
         }
