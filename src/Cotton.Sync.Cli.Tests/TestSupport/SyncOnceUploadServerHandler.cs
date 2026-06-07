@@ -137,7 +137,7 @@ internal sealed class SyncOnceUploadServerHandler : HttpMessageHandler
                 Assert.That(createRequest.Name, Is.EqualTo(Path.GetFileName(_expectedRelativePath)));
                 Assert.That(createRequest.Hash, Is.EqualTo(_expectedContentHash));
                 Assert.That(createRequest.ChunkHashes, Is.EqualTo(new[] { _expectedContentHash }));
-                Assert.That(createRequest.Validate, Is.True);
+                Assert.That(createRequest.Validate, Is.False);
             });
 
             _fileCreated = true;

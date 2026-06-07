@@ -93,6 +93,9 @@ internal static class SyncCliSoakCommandRunner
             : null;
         int completedIterations = 0;
         int totalActivities = 0;
+        int syncErrors = 0;
+        int? finalConvergenceActivities = null;
+        int? finalStateEntries = null;
         long peakWorkingSetBytes = GetWorkingSetBytes(process);
         long peakManagedMemoryBytes = GC.GetTotalMemory(forceFullCollection: false);
         await output.WriteLineAsync("Cotton Sync soak run").ConfigureAwait(false);
@@ -104,51 +107,62 @@ internal static class SyncCliSoakCommandRunner
 
         await output.WriteLineAsync("Started UTC: " + SyncCliFormat.FormatUtc(startedAtUtc)).ConfigureAwait(false);
 
-        while (ShouldRunNextSoakIteration(completedIterations, iterations, stopAtUtc))
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            int iteration = completedIterations + 1;
-            if (normalizedProbeFile is not null)
+            while (ShouldRunNextSoakIteration(completedIterations, iterations, stopAtUtc))
             {
-                await WriteProbeFileAsync(options.LocalRoot, normalizedProbeFile, iteration, cancellationToken)
+                cancellationToken.ThrowIfCancellationRequested();
+                int iteration = completedIterations + 1;
+                if (normalizedProbeFile is not null)
+                {
+                    await WriteProbeFileAsync(options.LocalRoot, normalizedProbeFile, iteration, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+
+                SyncCliPassResult pass = await SyncCliRuntimeFactory
+                    .RunSinglePassAsync(runtime, cancellationToken)
                     .ConfigureAwait(false);
+                SyncCliPassResult? secondPass = secondRuntime is null
+                    ? null
+                    : await SyncCliRuntimeFactory
+                        .RunSinglePassAsync(secondRuntime, cancellationToken)
+                        .ConfigureAwait(false);
+                completedIterations++;
+                totalActivities += pass.Result.Activities.Count + (secondPass?.Result.Activities.Count ?? 0);
+                peakWorkingSetBytes = Math.Max(peakWorkingSetBytes, GetWorkingSetBytes(process));
+                peakManagedMemoryBytes = Math.Max(peakManagedMemoryBytes, GC.GetTotalMemory(forceFullCollection: false));
+                await WriteIterationAsync(output, iteration, pass, secondPass, process).ConfigureAwait(false);
+
+                if (!ShouldRunNextSoakIteration(completedIterations, iterations, stopAtUtc))
+                {
+                    break;
+                }
+
+                await Task.Delay(GetNextSoakDelay(intervalSeconds, stopAtUtc), cancellationToken).ConfigureAwait(false);
             }
 
-            SyncCliPassResult pass = await SyncCliRuntimeFactory
+            SyncCliPassResult convergencePass = await SyncCliRuntimeFactory
                 .RunSinglePassAsync(runtime, cancellationToken)
                 .ConfigureAwait(false);
-            SyncCliPassResult? secondPass = secondRuntime is null
+            SyncCliPassResult? secondConvergencePass = secondRuntime is null
                 ? null
                 : await SyncCliRuntimeFactory
                     .RunSinglePassAsync(secondRuntime, cancellationToken)
                     .ConfigureAwait(false);
-            completedIterations++;
-            totalActivities += pass.Result.Activities.Count + (secondPass?.Result.Activities.Count ?? 0);
             peakWorkingSetBytes = Math.Max(peakWorkingSetBytes, GetWorkingSetBytes(process));
             peakManagedMemoryBytes = Math.Max(peakManagedMemoryBytes, GC.GetTotalMemory(forceFullCollection: false));
-            await WriteIterationAsync(output, iteration, pass, secondPass, process).ConfigureAwait(false);
-
-            if (!ShouldRunNextSoakIteration(completedIterations, iterations, stopAtUtc))
-            {
-                break;
-            }
-
-            await Task.Delay(GetNextSoakDelay(intervalSeconds, stopAtUtc), cancellationToken).ConfigureAwait(false);
+            finalConvergenceActivities = convergencePass.Result.Activities.Count
+                + (secondConvergencePass?.Result.Activities.Count ?? 0);
+            finalStateEntries = convergencePass.StateEntries.Count + (secondConvergencePass?.StateEntries.Count ?? 0);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            syncErrors++;
+            peakWorkingSetBytes = Math.Max(peakWorkingSetBytes, GetWorkingSetBytes(process));
+            peakManagedMemoryBytes = Math.Max(peakManagedMemoryBytes, GC.GetTotalMemory(forceFullCollection: false));
+            await output.WriteLineAsync("Sync error: " + FormatException(exception)).ConfigureAwait(false);
         }
 
-        SyncCliPassResult convergencePass = await SyncCliRuntimeFactory
-            .RunSinglePassAsync(runtime, cancellationToken)
-            .ConfigureAwait(false);
-        SyncCliPassResult? secondConvergencePass = secondRuntime is null
-            ? null
-            : await SyncCliRuntimeFactory
-                .RunSinglePassAsync(secondRuntime, cancellationToken)
-                .ConfigureAwait(false);
-        peakWorkingSetBytes = Math.Max(peakWorkingSetBytes, GetWorkingSetBytes(process));
-        peakManagedMemoryBytes = Math.Max(peakManagedMemoryBytes, GC.GetTotalMemory(forceFullCollection: false));
-        int finalConvergenceActivities = convergencePass.Result.Activities.Count
-            + (secondConvergencePass?.Result.Activities.Count ?? 0);
-        int finalStateEntries = convergencePass.StateEntries.Count + (secondConvergencePass?.StateEntries.Count ?? 0);
         await WriteSummaryAsync(
             output,
             startedAtUtc,
@@ -158,9 +172,10 @@ internal static class SyncCliSoakCommandRunner
             peakManagedMemoryBytes,
             completedIterations,
             totalActivities,
+            syncErrors,
             finalConvergenceActivities,
             finalStateEntries).ConfigureAwait(false);
-        return finalConvergenceActivities == 0 ? 0 : 1;
+        return syncErrors == 0 && finalConvergenceActivities == 0 ? 0 : 1;
     }
 
     private static SyncCliConnectionOptions? ReadSecondClientOptions(
@@ -356,12 +371,20 @@ internal static class SyncCliSoakCommandRunner
         long peakManagedMemoryBytes,
         int completedIterations,
         int totalActivities,
-        int finalConvergenceActivities,
-        int finalStateEntries)
+        int syncErrors,
+        int? finalConvergenceActivities,
+        int? finalStateEntries)
     {
         DateTime completedAtUtc = DateTime.UtcNow;
         TimeSpan elapsed = completedAtUtc - startedAtUtc;
         TimeSpan cpu = GetTotalProcessorTime(process) - startedCpu;
+        bool converged = syncErrors == 0 && finalConvergenceActivities == 0;
+        int failures = syncErrors;
+        if (syncErrors == 0 && finalConvergenceActivities.GetValueOrDefault() > 0)
+        {
+            failures++;
+        }
+
         await output.WriteLineAsync("Completed UTC: " + SyncCliFormat.FormatUtc(completedAtUtc)).ConfigureAwait(false);
         await output.WriteLineAsync("Elapsed seconds: " + elapsed.TotalSeconds.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("CPU seconds: " + cpu.TotalSeconds.ToStringInvariant()).ConfigureAwait(false);
@@ -369,9 +392,23 @@ internal static class SyncCliSoakCommandRunner
         await output.WriteLineAsync("Peak managed memory bytes: " + peakManagedMemoryBytes.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Iterations completed: " + completedIterations.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Total activities: " + totalActivities.ToStringInvariant()).ConfigureAwait(false);
-        await output.WriteLineAsync("Final convergence activities: " + finalConvergenceActivities.ToStringInvariant()).ConfigureAwait(false);
-        await output.WriteLineAsync("Final state entries: " + finalStateEntries.ToStringInvariant()).ConfigureAwait(false);
-        await output.WriteLineAsync("Converged: " + (finalConvergenceActivities == 0 ? "yes" : "no")).ConfigureAwait(false);
-        await output.WriteLineAsync("Failures: " + (finalConvergenceActivities == 0 ? "0" : "1")).ConfigureAwait(false);
+        await output.WriteLineAsync("Sync errors: " + syncErrors.ToStringInvariant()).ConfigureAwait(false);
+        await output.WriteLineAsync("Final convergence activities: " + FormatOptionalInt(finalConvergenceActivities)).ConfigureAwait(false);
+        await output.WriteLineAsync("Final state entries: " + FormatOptionalInt(finalStateEntries)).ConfigureAwait(false);
+        await output.WriteLineAsync("Converged: " + (converged ? "yes" : "no")).ConfigureAwait(false);
+        await output.WriteLineAsync("Failures: " + failures.ToStringInvariant()).ConfigureAwait(false);
+    }
+
+    private static string FormatOptionalInt(int? value)
+    {
+        return value.HasValue ? value.Value.ToStringInvariant() : "not run";
+    }
+
+    private static string FormatException(Exception exception)
+    {
+        string message = string.IsNullOrWhiteSpace(exception.Message)
+            ? "No details."
+            : exception.Message.ReplaceLineEndings(" ");
+        return exception.GetType().Name + ": " + message;
     }
 }
