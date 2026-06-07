@@ -1254,8 +1254,7 @@ public sealed class SyncEngine : ISyncEngine
         }
 
         string displayPath = string.IsNullOrWhiteSpace(relativePath) ? "remote file" : relativePath;
-        throw new IOException(
-            "Not enough disk space to download '" + displayPath + "'. Free space on this computer and retry sync.");
+        throw new LocalInsufficientDiskSpaceException(displayPath, requiredBytes, availableFreeBytes.Value);
     }
 
     private static long? TryGetAvailableFreeBytes(string localRootPath)
@@ -1318,9 +1317,7 @@ public sealed class SyncEngine : ISyncEngine
 
             if (simulatedFreeBytes < downloadBytes)
             {
-                throw new IOException(
-                    "Not enough disk space to download '" + relativePath
-                    + "'. Free space on this computer and retry sync.");
+                throw new LocalInsufficientDiskSpaceException(relativePath, downloadBytes, simulatedFreeBytes);
             }
 
             simulatedFreeBytes += replacedLocalBytes - downloadBytes;

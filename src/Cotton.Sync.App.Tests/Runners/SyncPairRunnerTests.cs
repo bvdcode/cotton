@@ -347,6 +347,28 @@ public sealed class SyncPairRunnerTests
     }
 
     [Test]
+    public void SyncNowAsync_ReportsPreflightLocalDiskFullAsActionRequiredMessage()
+    {
+        var work = new FakeSyncPairWork
+        {
+            Failure = new LocalInsufficientDiskSpaceException("Videos/big.bin", requiredBytes: 200, availableBytes: 100),
+        };
+        SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true), work);
+
+        LocalInsufficientDiskSpaceException? exception = Assert.ThrowsAsync<LocalInsufficientDiskSpaceException>(
+            async () => await runner.SyncNowAsync());
+
+        const string expected = "Local disk is full. Free space on this computer and retry sync.";
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Error));
+            Assert.That(runner.Status.LastError, Is.EqualTo(expected));
+            Assert.That(runner.Status.CurrentOperation, Is.EqualTo("Action required: " + expected));
+        });
+    }
+
+    [Test]
     public async Task SyncNowAsync_RetriesTransientNetworkFailureAndReturnsIdleOnRecovery()
     {
         var work = new FakeSyncPairWork

@@ -429,6 +429,8 @@ public sealed class SyncPairRunner : ISyncPairRunner
                 => "Remote upload was rejected because it is larger than the server limit.",
             UnauthorizedAccessException
                 => "Permission denied while accessing local sync files. Check folder permissions and retry.",
+            LocalInsufficientDiskSpaceException
+                => "Local disk is full. Free space on this computer and retry sync.",
             IOException ioException when IsDiskFull(ioException)
                 => "Local disk is full. Free space on this computer and retry sync.",
             LocalFileUnavailableException localFileUnavailable

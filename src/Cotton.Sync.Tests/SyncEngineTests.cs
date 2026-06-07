@@ -553,12 +553,15 @@ public sealed class SyncEngineTests
         var remoteFiles = new FakeRemoteFileSynchronizer();
         SyncEngine engine = CreateEngine(new FakeLocalFileScanner(), RemoteTree(remote), remoteFiles, out _);
 
-        IOException? exception = Assert.ThrowsAsync<IOException>(() => engine.RunOnceAsync(Pair()));
+        LocalInsufficientDiskSpaceException? exception = Assert.ThrowsAsync<LocalInsufficientDiskSpaceException>(
+            () => engine.RunOnceAsync(Pair()));
 
         Assert.Multiple(() =>
         {
             Assert.That(exception?.Message, Does.Contain("Not enough disk space"));
             Assert.That(exception?.Message, Does.Contain("huge.bin"));
+            Assert.That(exception?.RelativePath, Is.EqualTo("huge.bin"));
+            Assert.That(exception?.RequiredBytes, Is.EqualTo(long.MaxValue));
             Assert.That(File.Exists(Path.Combine(_root, "huge.bin")), Is.False);
         });
     }
