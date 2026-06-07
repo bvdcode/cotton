@@ -154,7 +154,7 @@ public sealed class DesktopSetupVisualContractTests
             Assert.That(foldersSection, Does.Contain("Classes.active=\"{Binding IsStatusActive}\""));
             Assert.That(foldersSection, Does.Contain("Classes.paused=\"{Binding IsStatusPaused}\""));
             Assert.That(foldersSection, Does.Contain("Classes.attention=\"{Binding IsStatusAttention}\""));
-            Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"{Binding DisplayStatus}\""));
+            Assert.That(foldersSection, Does.Contain("ToolTip.Tip=\"{Binding StatusIndicatorToolTip}\""));
             Assert.That(foldersSection, Does.Contain("IsVisible=\"{Binding IsStatusIndicatorVisible}\""));
             Assert.That(foldersSection, Does.Not.Contain("Text=\"{Binding HeaderText}\""));
             Assert.That(foldersSection, Does.Not.Contain("Classes.errorStatus=\"{Binding IsErrorStatus}\""));

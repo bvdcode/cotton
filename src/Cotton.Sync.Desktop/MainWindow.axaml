@@ -674,63 +674,63 @@
                                     BorderBrush="{DynamicResource CottonBorderBrush}"
                                     BorderThickness="1"
                                     IsVisible="{Binding IsEditorVisible}">
-                              <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto"
-                                    ColumnSpacing="6">
+                              <Grid RowDefinitions="Auto,Auto"
+                                    RowSpacing="6">
                                 <TextBox Text="{Binding EditableDisplayName}"
                                          PlaceholderText="Folder name" />
-                                <Button Grid.Column="1"
-                                        Classes="icon"
-                                        ToolTip.Tip="Save folder name"
-                                        Command="{Binding $parent[Window].DataContext.SaveSelectedSyncPairNameCommand}">
-                                  <materialIcons:MaterialIcon Kind="ContentSaveOutline"
-                                                              Width="16"
-                                                              Height="16"
-                                                              Foreground="{DynamicResource CottonTextPrimaryBrush}" />
-                                </Button>
-                                <Button Grid.Column="2"
-                                        Classes="icon"
-                                        ToolTip.Tip="Change local folder"
-                                        Command="{Binding $parent[Window].DataContext.ChangeSelectedSyncPairLocalFolderCommand}">
-                                  <materialIcons:MaterialIcon Kind="FolderSearchOutline"
-                                                              Width="16"
-                                                              Height="16"
-                                                              Foreground="{DynamicResource CottonTextPrimaryBrush}" />
-                                </Button>
-                                <Button Grid.Column="3"
-                                        Classes="icon"
-                                        ToolTip.Tip="Change cloud folder"
-                                        Command="{Binding $parent[Window].DataContext.ChangeSelectedSyncPairRemoteFolderCommand}">
-                                  <materialIcons:MaterialIcon Kind="CloudSearchOutline"
-                                                              Width="16"
-                                                              Height="16"
-                                                              Foreground="{DynamicResource CottonTextPrimaryBrush}" />
-                                </Button>
-                                <Button Grid.Column="4"
-                                        Classes="icon"
-                                        ToolTip.Tip="{Binding ToggleEnabledLabel}"
-                                        Command="{Binding $parent[Window].DataContext.ToggleSelectedSyncPairEnabledCommand}">
-                                  <Grid>
-                                    <materialIcons:MaterialIcon Kind="FolderOffOutline"
+                                <StackPanel Grid.Row="1"
+                                            Orientation="Horizontal"
+                                            Spacing="6"
+                                            HorizontalAlignment="Right">
+                                  <Button Classes="icon"
+                                          ToolTip.Tip="Save folder name"
+                                          Command="{Binding $parent[Window].DataContext.SaveSelectedSyncPairNameCommand}">
+                                    <materialIcons:MaterialIcon Kind="ContentSaveOutline"
                                                                 Width="16"
                                                                 Height="16"
-                                                                Foreground="{DynamicResource CottonTextPrimaryBrush}"
-                                                                IsVisible="{Binding IsEnabled}" />
-                                    <materialIcons:MaterialIcon Kind="FolderCheckOutline"
+                                                                Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                                  </Button>
+                                  <Button Classes="icon"
+                                          ToolTip.Tip="Change local folder"
+                                          Command="{Binding $parent[Window].DataContext.ChangeSelectedSyncPairLocalFolderCommand}">
+                                    <materialIcons:MaterialIcon Kind="FolderSearchOutline"
                                                                 Width="16"
                                                                 Height="16"
-                                                                Foreground="{DynamicResource CottonTextPrimaryBrush}"
-                                                                IsVisible="{Binding IsDisabled}" />
-                                  </Grid>
-                                </Button>
-                                <Button Grid.Column="5"
-                                        Classes="icon"
-                                        ToolTip.Tip="Remove sync folder"
-                                        Command="{Binding $parent[Window].DataContext.RemoveSelectedSyncPairCommand}">
-                                  <materialIcons:MaterialIcon Kind="TrashCanOutline"
-                                                              Width="16"
-                                                              Height="16"
-                                                              Foreground="{DynamicResource CottonTextPrimaryBrush}" />
-                                </Button>
+                                                                Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                                  </Button>
+                                  <Button Classes="icon"
+                                          ToolTip.Tip="Change cloud folder"
+                                          Command="{Binding $parent[Window].DataContext.ChangeSelectedSyncPairRemoteFolderCommand}">
+                                    <materialIcons:MaterialIcon Kind="CloudSearchOutline"
+                                                                Width="16"
+                                                                Height="16"
+                                                                Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                                  </Button>
+                                  <Button Classes="icon"
+                                          ToolTip.Tip="{Binding ToggleEnabledLabel}"
+                                          Command="{Binding $parent[Window].DataContext.ToggleSelectedSyncPairEnabledCommand}">
+                                    <Grid>
+                                      <materialIcons:MaterialIcon Kind="FolderOffOutline"
+                                                                  Width="16"
+                                                                  Height="16"
+                                                                  Foreground="{DynamicResource CottonTextPrimaryBrush}"
+                                                                  IsVisible="{Binding IsEnabled}" />
+                                      <materialIcons:MaterialIcon Kind="FolderCheckOutline"
+                                                                  Width="16"
+                                                                  Height="16"
+                                                                  Foreground="{DynamicResource CottonTextPrimaryBrush}"
+                                                                  IsVisible="{Binding IsDisabled}" />
+                                    </Grid>
+                                  </Button>
+                                  <Button Classes="icon"
+                                          ToolTip.Tip="Remove sync folder"
+                                          Command="{Binding $parent[Window].DataContext.RemoveSelectedSyncPairCommand}">
+                                    <materialIcons:MaterialIcon Kind="TrashCanOutline"
+                                                                Width="16"
+                                                                Height="16"
+                                                                Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                                  </Button>
+                                </StackPanel>
                               </Grid>
                             </Border>
                           </Grid>
@@ -1009,7 +1009,7 @@
                       </Button>
                       <Button Grid.Column="3"
                               Classes="icon"
-                              ToolTip.Tip="Open selected cloud folder"
+                              ToolTip.Tip="Open cloud folder"
                               Command="{Binding OpenRemoteFolderCommand}">
                         <materialIcons:MaterialIcon Kind="ArrowRightCircleOutline"
                                                     Width="16"
