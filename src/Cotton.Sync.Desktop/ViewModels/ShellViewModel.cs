@@ -24,6 +24,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private static readonly TimeSpan TransferActivityCoalescingWindow = TimeSpan.FromMilliseconds(750);
     private static readonly TimeSpan VisibleTransferProgressUpdateInterval = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan VisibleRunProgressUpdateInterval = TimeSpan.FromMilliseconds(100);
+    private static readonly TimeSpan ActiveStatusRunProgressStaleThreshold = TimeSpan.FromSeconds(10);
 
     private readonly IDesktopShellController _controller;
     private readonly DesktopFeatureFlags _featureFlags;
@@ -36,6 +37,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private readonly object _progressDispatchGate = new();
     private readonly DesktopNotificationTracker _notificationTracker = new();
     private readonly Dictionary<Guid, DesktopRunProgressSnapshot> _runProgressByPair = [];
+    private readonly Dictionary<Guid, DateTime> _runProgressAppliedAtUtcByPair = [];
     private readonly Dictionary<Guid, DesktopTransferProgressSnapshot> _transferProgressByPair = [];
     private readonly SyncPairSettingsValidator _syncPairSettingsValidator = new();
     private readonly Dictionary<Guid, string> _lastStatusErrorActivityMessages = [];
@@ -3053,6 +3055,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         if (progress.IsCompleted)
         {
             _runProgressByPair.Remove(progress.SyncPairId);
+            _runProgressAppliedAtUtcByPair.Remove(progress.SyncPairId);
             if (!HasCurrentTransfer || _transferSyncPairId != progress.SyncPairId)
             {
                 ClearSyncPairProgress(syncPair);
@@ -3064,6 +3067,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
 
         _runProgressByPair[progress.SyncPairId] = progress;
+        _runProgressAppliedAtUtcByPair[progress.SyncPairId] = DateTime.UtcNow;
         if (!HasCurrentTransfer || _transferSyncPairId != progress.SyncPairId)
         {
             syncPair.CurrentOperation = CreateRunProgressOperation(progress);
@@ -3092,8 +3096,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             row.Status = pairStatus.Status;
             row.IsEnabled = !string.Equals(pairStatus.Status, "Disabled", StringComparison.Ordinal);
             row.LastError = pairStatus.LastError;
-            row.CurrentOperation = pairStatus.CurrentOperation ?? string.Empty;
             bool isActiveStatus = IsActiveSyncStatus(pairStatus);
+            bool hasFreshDetailedProgress = HasFreshDetailedProgress(pairStatus.Id);
+            if (!isActiveStatus || !hasFreshDetailedProgress)
+            {
+                row.CurrentOperation = pairStatus.CurrentOperation ?? string.Empty;
+            }
+
             hasActiveSyncStatus |= isActiveStatus;
             if (isActiveStatus)
             {
@@ -3103,6 +3112,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             {
                 ClearSyncPairProgress(row);
                 runProgressChanged |= _runProgressByPair.Remove(pairStatus.Id);
+                _runProgressAppliedAtUtcByPair.Remove(pairStatus.Id);
                 _transferProgressByPair.Remove(pairStatus.Id);
                 shouldClearCurrentTransfer |= _transferSyncPairId == pairStatus.Id;
             }
@@ -3167,6 +3177,31 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
         _lastStatusErrorActivityMessages[pairStatus.Id] = pairStatus.LastError;
         return true;
+    }
+
+    private bool HasFreshDetailedProgress(Guid syncPairId)
+    {
+        if (_transferProgressByPair.ContainsKey(syncPairId)
+            || (_transferSyncPairId == syncPairId && HasCurrentTransfer))
+        {
+            return true;
+        }
+
+        if (!_runProgressByPair.ContainsKey(syncPairId))
+        {
+            return false;
+        }
+
+        if (!_runProgressAppliedAtUtcByPair.TryGetValue(syncPairId, out DateTime appliedAtUtc)
+            || DateTime.UtcNow - appliedAtUtc.ToUniversalTime() <= ActiveStatusRunProgressStaleThreshold)
+        {
+            return true;
+        }
+
+        _runProgressByPair.Remove(syncPairId);
+        _runProgressAppliedAtUtcByPair.Remove(syncPairId);
+        RefreshRunProgressSummary();
+        return false;
     }
 
     private static void EnsureSyncPairProgress(SyncPairRowViewModel row)
@@ -3565,6 +3600,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private void ClearRunProgress()
     {
         _runProgressByPair.Clear();
+        _runProgressAppliedAtUtcByPair.Clear();
         lock (_progressDispatchGate)
         {
             _pendingCoalescedRunProgress = null;
@@ -3665,7 +3701,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         if (progress.FilesTotal is > 0)
         {
-            return Math.Clamp((double)progress.FilesCompleted / progress.FilesTotal.Value * 100, 0, 100);
+            int displayCount = GetDisplayedRunProgressCount(progress);
+            return Math.Clamp((double)displayCount / progress.FilesTotal.Value * 100, 0, 100);
         }
 
         return progress.IsCompleted ? 100 : 0;
@@ -3683,7 +3720,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             }
 
             totalFiles += progress.FilesTotal.Value;
-            completedFiles += progress.FilesCompleted;
+            completedFiles += GetDisplayedRunProgressCount(progress);
         }
 
         return totalFiles > 0
@@ -3731,11 +3768,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             if (!progress.FilesTotal.HasValue)
             {
                 hasUnknownTotals = true;
-                completedFiles += progress.FilesCompleted;
+                completedFiles += GetDisplayedRunProgressCount(progress);
                 continue;
             }
 
-            completedFiles += progress.FilesCompleted;
+            completedFiles += GetDisplayedRunProgressCount(progress);
             totalFiles += progress.FilesTotal.Value;
         }
 
@@ -3778,7 +3815,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         string label = GetRunStageLabel(progress.Stage);
         if (progress.FilesTotal.HasValue && IsCountedRunStage(progress.Stage))
         {
-            return label + " " + progress.FilesCompleted.ToString(CultureInfo.CurrentCulture)
+            return label + " " + GetDisplayedRunProgressCount(progress).ToString(CultureInfo.CurrentCulture)
                 + " of " + progress.FilesTotal.Value.ToString(CultureInfo.CurrentCulture);
         }
 
@@ -3789,8 +3826,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         if (progress.FilesTotal.HasValue)
         {
-            string unitName = GetRunProgressUnitName(progress.Stage, progress.FilesCompleted, progress.FilesTotal.Value);
-            string details = progress.FilesCompleted.ToString(CultureInfo.CurrentCulture)
+            int displayCount = GetDisplayedRunProgressCount(progress);
+            string unitName = GetRunProgressUnitName(progress.Stage, displayCount, progress.FilesTotal.Value);
+            string details = displayCount.ToString(CultureInfo.CurrentCulture)
                 + " of "
                 + progress.FilesTotal.Value.ToString(CultureInfo.CurrentCulture)
                 + " "
@@ -3839,6 +3877,20 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         return stage == SyncRunProgressStage.ReconcilingDirectories
             || stage == SyncRunProgressStage.ReconcilingFiles;
+    }
+
+    private static int GetDisplayedRunProgressCount(DesktopRunProgressSnapshot progress)
+    {
+        if (!progress.IsCompleted
+            && IsCountedRunStage(progress.Stage)
+            && progress.FilesTotal is > 0
+            && progress.FilesCompleted == 0
+            && !string.IsNullOrWhiteSpace(progress.CurrentPath))
+        {
+            return 1;
+        }
+
+        return progress.FilesCompleted;
     }
 
     private static string GetRunProgressUnitName(SyncRunProgressStage stage, int completed, int total)

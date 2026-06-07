@@ -18,7 +18,6 @@ namespace Cotton.Sync;
 public sealed class SyncEngine : ISyncEngine
 {
     private static readonly StringComparer PathComparer = StringComparer.OrdinalIgnoreCase;
-    private const int RunProgressReportItemInterval = 100;
     private readonly ILocalFileScanner _localScanner;
     private readonly ILocalFileContentHasher? _localContentHasher;
     private readonly ILocalFileMetadataTreeScanner? _localMetadataTreeScanner;
@@ -1719,20 +1718,7 @@ public sealed class SyncEngine : ISyncEngine
         string? currentPath,
         DateTime startedAtUtc)
     {
-        if (!ShouldReportItemRunProgress(itemsCompleted, itemsTotal))
-        {
-            return;
-        }
-
         ReportRunProgress(options, stage, itemsCompleted, itemsTotal, currentPath, startedAtUtc);
-    }
-
-    private static bool ShouldReportItemRunProgress(int itemsCompleted, int itemsTotal)
-    {
-        return itemsTotal <= RunProgressReportItemInterval
-            || itemsCompleted == 0
-            || itemsCompleted == itemsTotal
-            || itemsCompleted % RunProgressReportItemInterval == 0;
     }
 
     private enum SyncDeleteDirection
