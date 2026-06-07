@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Auth;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Models;
@@ -17,8 +18,11 @@ using EasyExtensions.EntityFrameworkCore.Database;
 using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Collections.Concurrent;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Caching.Memory;
 using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Cotton.Server.Controllers;
 
@@ -35,7 +39,16 @@ public sealed class AppCodeOAuthController(
     IGeoLookupService _geoLookup,
     ILogger<AppCodeOAuthController> _logger) : ControllerBase
 {
-    private static readonly ConcurrentDictionary<Guid, AppCodeRequestState> Requests = new();
+    private const int MaxActiveRequests = 1024;
+    private const int PollSecretByteLength = 32;
+    private const int PollSecretLength = PollSecretByteLength * 2;
+
+    private static readonly Lock RequestsGate = new();
+    private static readonly MemoryCache Requests = new(new MemoryCacheOptions
+    {
+        SizeLimit = MaxActiveRequests,
+        ExpirationScanFrequency = TimeSpan.FromSeconds(30),
+    });
     private static readonly TimeSpan RequestLifetime = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan LongPollTimeout = TimeSpan.FromSeconds(25);
@@ -44,34 +57,51 @@ public sealed class AppCodeOAuthController(
     /// Starts an app-code authorization request.
     /// </summary>
     [AllowAnonymous]
+    [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
     [HttpPost("start")]
     public ActionResult<AppCodeStartResponseDto> Start([FromBody] AppCodeStartRequestDto request)
     {
-        CleanupExpiredRequests();
         string applicationName = NormalizeRequired(request.ApplicationName, "ApplicationName", maxLength: 120);
         string applicationVersion = NormalizeOptional(request.ApplicationVersion, maxLength: 80) ?? "Unknown version";
         string? deviceName = NormalizeOptional(request.DeviceName, maxLength: 160);
-        Guid id = Guid.NewGuid();
+        Guid approvalId = Guid.NewGuid();
         DateTime now = DateTime.UtcNow;
         DateTime expiresAt = now.Add(RequestLifetime);
         IPAddress originAddress = ResolveRequestIpAddress(Request);
         string origin = originAddress.ToString();
         string userAgent = Request.Headers.UserAgent.ToString();
-        var state = new AppCodeRequestState(
-            id,
-            applicationName,
-            applicationVersion,
-            deviceName,
-            origin,
-            userAgent,
-            now,
-            expiresAt);
-        Requests[id] = state;
+
+        string pollSecret = CreatePollSecret();
+        string pollToken = CreatePollToken(approvalId, pollSecret);
+        lock (RequestsGate)
+        {
+            if (Requests.Count >= MaxActiveRequests)
+            {
+                return StatusCode(StatusCodes.Status429TooManyRequests, new AppCodePollErrorDto
+                {
+                    Error = "too_many_requests",
+                    RetryAfterSeconds = (int)PollInterval.TotalSeconds,
+                });
+            }
+
+            var state = new AppCodeRequestState(
+                approvalId,
+                HashPollSecret(pollSecret),
+                applicationName,
+                applicationVersion,
+                deviceName,
+                origin,
+                userAgent,
+                now,
+                expiresAt);
+            Requests.Set(GetCacheKey(approvalId), state, CreateCacheEntryOptions(expiresAt));
+        }
 
         return Ok(new AppCodeStartResponseDto
         {
-            Id = id,
-            ApprovalUrl = $"/oauth/app-code/{id:D}",
+            ApprovalId = approvalId,
+            ApprovalUrl = $"/oauth/app-code/{approvalId:D}",
+            PollToken = pollToken,
             ExpiresAt = expiresAt,
             PollIntervalSeconds = (int)PollInterval.TotalSeconds,
         });
@@ -84,11 +114,10 @@ public sealed class AppCodeOAuthController(
     [HttpGet("{id:guid}")]
     public ActionResult<AppCodeDetailsDto> Get([FromRoute] Guid id)
     {
-        CleanupExpiredRequests();
         AppCodeRequestState state = GetExistingState(id);
         return Ok(new AppCodeDetailsDto
         {
-            Id = state.Id,
+            Id = state.ApprovalId,
             ApplicationName = state.ApplicationName,
             ApplicationVersion = state.ApplicationVersion,
             DeviceName = state.DeviceName,
@@ -106,7 +135,6 @@ public sealed class AppCodeOAuthController(
     [HttpPost("{id:guid}/approve")]
     public async Task<IActionResult> Approve([FromRoute] Guid id, CancellationToken cancellationToken)
     {
-        CleanupExpiredRequests();
         AppCodeRequestState state = GetExistingState(id);
 
         await state.Gate.WaitAsync(cancellationToken);
@@ -154,7 +182,6 @@ public sealed class AppCodeOAuthController(
     [HttpPost("{id:guid}/deny")]
     public async Task<IActionResult> Deny([FromRoute] Guid id, CancellationToken cancellationToken)
     {
-        CleanupExpiredRequests();
         AppCodeRequestState state = GetExistingState(id);
 
         await state.Gate.WaitAsync(cancellationToken);
@@ -176,11 +203,13 @@ public sealed class AppCodeOAuthController(
     /// Polls an app-code request until approval returns a token pair.
     /// </summary>
     [AllowAnonymous]
-    [HttpPost("{id:guid}/poll")]
-    public async Task<IActionResult> Poll([FromRoute] Guid id, CancellationToken cancellationToken)
+    [EnableRateLimiting(AuthRateLimitPolicies.Refresh)]
+    [HttpPost("poll")]
+    public async Task<IActionResult> Poll([FromBody] AppCodePollRequestDto request, CancellationToken cancellationToken)
     {
-        CleanupExpiredRequests();
-        if (!Requests.TryGetValue(id, out AppCodeRequestState? state))
+        (Guid approvalId, string pollSecret) = ParsePollToken(request.PollToken);
+        if (!Requests.TryGetValue(GetCacheKey(approvalId), out AppCodeRequestState? state)
+            || !IsPollSecretValid(state, pollSecret))
         {
             return NotFound(new AppCodePollErrorDto { Error = "not_found" });
         }
@@ -199,13 +228,13 @@ public sealed class AppCodeOAuthController(
         {
             if (IsExpired(state))
             {
-                Requests.TryRemove(id, out _);
+                RemoveRequest(state);
                 return StatusCode(StatusCodes.Status410Gone, new AppCodePollErrorDto { Error = "expired" });
             }
 
             if (state.Status == AppCodeRequestStatus.Denied)
             {
-                Requests.TryRemove(id, out _);
+                RemoveRequest(state);
                 return StatusCode(StatusCodes.Status403Forbidden, new AppCodePollErrorDto { Error = "denied" });
             }
 
@@ -213,7 +242,8 @@ public sealed class AppCodeOAuthController(
             {
                 TokenPairResponseDto tokens = state.Tokens;
                 state.Status = AppCodeRequestStatus.Consumed;
-                Requests.TryRemove(id, out _);
+                state.Tokens = null;
+                RemoveRequest(state);
                 return Ok(tokens);
             }
 
@@ -262,7 +292,7 @@ public sealed class AppCodeOAuthController(
                     ["applicationName"] = state.ApplicationName,
                     ["applicationVersion"] = state.ApplicationVersion,
                     ["origin"] = state.Origin,
-                    ["requestId"] = state.Id.ToString("D"),
+                    ["requestId"] = state.ApprovalId.ToString("D"),
                 });
         }
         catch (Exception ex)
@@ -270,15 +300,19 @@ public sealed class AppCodeOAuthController(
             _logger.LogWarning(
                 ex,
                 "Failed to send app-code approval notification for request {RequestId}",
-                state.Id);
+                state.ApprovalId);
         }
     }
 
     private static AppCodeRequestState GetExistingState(Guid id)
     {
-        if (!Requests.TryGetValue(id, out AppCodeRequestState? state) || IsExpired(state))
+        if (!Requests.TryGetValue(GetCacheKey(id), out AppCodeRequestState? state) || IsExpired(state))
         {
-            Requests.TryRemove(id, out _);
+            if (state is not null)
+            {
+                RemoveRequest(state);
+            }
+
             throw new EntityNotFoundException<AppCodeDetailsDto>();
         }
 
@@ -289,7 +323,7 @@ public sealed class AppCodeOAuthController(
     {
         if (IsExpired(state))
         {
-            Requests.TryRemove(state.Id, out _);
+            RemoveRequest(state);
             throw new BadRequestException<AppCodeDetailsDto>("Application sign-in request has expired.");
         }
 
@@ -299,16 +333,33 @@ public sealed class AppCodeOAuthController(
         }
     }
 
-    private static void CleanupExpiredRequests()
+    private static void RemoveRequest(AppCodeRequestState state)
     {
-        foreach ((Guid id, AppCodeRequestState state) in Requests)
-        {
-            if (IsExpired(state))
+        state.Tokens = null;
+        state.Completion.TrySetResult();
+        Requests.Remove(GetCacheKey(state.ApprovalId));
+    }
+
+    private static MemoryCacheEntryOptions CreateCacheEntryOptions(DateTime expiresAt)
+    {
+        return new MemoryCacheEntryOptions()
+            .SetAbsoluteExpiration(expiresAt)
+            .SetSize(1)
+            .RegisterPostEvictionCallback(static (_, value, _, _) =>
             {
+                if (value is not AppCodeRequestState state)
+                {
+                    return;
+                }
+
+                state.Tokens = null;
                 state.Completion.TrySetResult();
-                Requests.TryRemove(id, out _);
-            }
-        }
+            });
+    }
+
+    private static string GetCacheKey(Guid approvalId)
+    {
+        return $"oauth-app-code:{approvalId:D}";
     }
 
     private static bool IsExpired(AppCodeRequestState state)
@@ -354,6 +405,46 @@ public sealed class AppCodeOAuthController(
         return normalized.Length <= maxLength ? normalized : normalized[..maxLength];
     }
 
+    private static (Guid ApprovalId, string PollSecret) ParsePollToken(string? value)
+    {
+        string? normalized = value?.Trim();
+        if (string.IsNullOrEmpty(normalized))
+        {
+            throw new BadRequestException<AppCodePollRequestDto>("PollToken is required.");
+        }
+
+        string[] parts = normalized.Split('.', 2);
+        if (parts.Length != 2
+            || !Guid.TryParse(parts[0], out Guid approvalId)
+            || parts[1].Length != PollSecretLength)
+        {
+            throw new BadRequestException<AppCodePollRequestDto>("PollToken is invalid.");
+        }
+
+        return (approvalId, parts[1]);
+    }
+
+    private static bool IsPollSecretValid(AppCodeRequestState state, string pollSecret)
+    {
+        byte[] candidateHash = HashPollSecret(pollSecret);
+        return CryptographicOperations.FixedTimeEquals(state.PollSecretHash, candidateHash);
+    }
+
+    private static byte[] HashPollSecret(string pollSecret)
+    {
+        return SHA256.HashData(Encoding.UTF8.GetBytes(pollSecret));
+    }
+
+    private static string CreatePollSecret()
+    {
+        return Convert.ToHexString(RandomNumberGenerator.GetBytes(PollSecretByteLength)).ToLowerInvariant();
+    }
+
+    private static string CreatePollToken(Guid approvalId, string pollSecret)
+    {
+        return $"{approvalId:D}.{pollSecret}";
+    }
+
     private static IPAddress ResolveRequestIpAddress(HttpRequest request)
     {
         return Constants.IsPublicInstance
@@ -369,7 +460,8 @@ public sealed class AppCodeOAuthController(
     private sealed class AppCodeRequestState
     {
         public AppCodeRequestState(
-            Guid id,
+            Guid approvalId,
+            byte[] pollSecretHash,
             string applicationName,
             string applicationVersion,
             string? deviceName,
@@ -378,7 +470,8 @@ public sealed class AppCodeOAuthController(
             DateTime requestedAt,
             DateTime expiresAt)
         {
-            Id = id;
+            ApprovalId = approvalId;
+            PollSecretHash = pollSecretHash;
             ApplicationName = applicationName;
             ApplicationVersion = applicationVersion;
             DeviceName = deviceName;
@@ -388,7 +481,9 @@ public sealed class AppCodeOAuthController(
             ExpiresAt = expiresAt;
         }
 
-        public Guid Id { get; }
+        public Guid ApprovalId { get; }
+
+        public byte[] PollSecretHash { get; }
 
         public string ApplicationName { get; }
 
@@ -453,14 +548,19 @@ public sealed class AppCodeStartRequestDto
 public sealed class AppCodeStartResponseDto
 {
     /// <summary>
-    /// Authorization request id.
+    /// Browser approval request id.
     /// </summary>
-    public Guid Id { get; set; }
+    public Guid ApprovalId { get; set; }
 
     /// <summary>
     /// Browser path where the user can approve the request.
     /// </summary>
     public string ApprovalUrl { get; set; } = null!;
+
+    /// <summary>
+    /// Secret token used by the requesting application to poll for authorization completion.
+    /// </summary>
+    public string PollToken { get; set; } = null!;
 
     /// <summary>
     /// UTC timestamp when the request expires.
@@ -471,6 +571,17 @@ public sealed class AppCodeStartResponseDto
     /// Suggested polling interval in seconds.
     /// </summary>
     public int PollIntervalSeconds { get; set; }
+}
+
+/// <summary>
+/// Request payload for polling an app-code authorization request.
+/// </summary>
+public sealed class AppCodePollRequestDto
+{
+    /// <summary>
+    /// Secret polling token returned from the start endpoint.
+    /// </summary>
+    public string PollToken { get; set; } = null!;
 }
 
 /// <summary>
