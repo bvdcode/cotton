@@ -692,6 +692,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.GlobalStatus, Is.EqualTo("Pausing"));
             Assert.That(viewModel.PauseResumeSyncLabel, Is.EqualTo("Pausing sync"));
             Assert.That(viewModel.PauseResumeTrayLabel, Is.EqualTo("Pausing"));
+            Assert.That(viewModel.CanTogglePauseResumeSync, Is.False);
             Assert.That(viewModel.PauseResumeCommand.CanExecute(null), Is.False);
             Assert.That(row.Status, Is.EqualTo("Pausing"));
             Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Videos: Pausing"));
@@ -704,7 +705,45 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             Assert.That(viewModel.IsSyncPausePending, Is.False);
             Assert.That(viewModel.GlobalStatus, Is.EqualTo("Paused"));
+            Assert.That(viewModel.CanTogglePauseResumeSync, Is.True);
             Assert.That(viewModel.PauseResumeSyncLabel, Is.EqualTo("Resume sync"));
+        });
+    }
+
+    [Test]
+    public async Task PauseResumeCommand_RemainsAvailableDuringBackgroundSyncProgress()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Videos", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 5,
+            FilesTotal: 20,
+            CurrentPath: "Videos/clip.mp4",
+            StartedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 5, DateTimeKind.Utc)));
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            syncPairId,
+            SyncTransferDirection.Download,
+            "Videos/clip.mp4",
+            TransferredBytes: 512,
+            TotalBytes: 1024,
+            IsCompleted: false,
+            new DateTime(2026, 6, 4, 9, 0, 7, DateTimeKind.Utc)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HeaderStatusText, Is.EqualTo("Syncing"));
+            Assert.That(viewModel.CanPauseSync, Is.True);
+            Assert.That(viewModel.CanTogglePauseResumeSync, Is.True);
+            Assert.That(viewModel.PauseResumeCommand.CanExecute(null), Is.True);
+            Assert.That(viewModel.PauseResumeSyncLabel, Is.EqualTo("Pause sync"));
+            Assert.That(viewModel.PauseResumeTrayLabel, Is.EqualTo("Pause"));
         });
     }
 

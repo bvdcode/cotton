@@ -716,7 +716,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public bool CanResumeSync => IsSignedIn && IsSyncPaused;
 
-    public bool CanTogglePauseResumeSync => IsSignedIn && HasEnabledSyncPairs;
+    public bool CanTogglePauseResumeSync => CanPauseSync || CanResumeSync;
 
     public string PauseResumeSyncLabel => IsSyncPausePending ? "Pausing sync" : IsSyncPaused ? "Resume sync" : "Pause sync";
 
