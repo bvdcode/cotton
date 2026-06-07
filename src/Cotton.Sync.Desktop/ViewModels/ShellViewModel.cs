@@ -3062,14 +3062,15 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         {
             syncPair.IsCurrentProgressIndeterminate = !runProgress.FilesTotal.HasValue && !runProgress.IsCompleted;
             syncPair.CurrentProgressValue = CalculateRunProgressValue(runProgress);
+            RefreshRunProgressSummary(updateEstimate: false);
         }
         else
         {
             syncPair.IsCurrentProgressIndeterminate = IsCurrentTransferIndeterminate;
             syncPair.CurrentProgressValue = CurrentTransferProgressValue;
+            RaiseCurrentWorkProgressProperties();
         }
 
-        RaiseCurrentWorkProgressProperties();
         RefreshCurrentProgressText();
     }
 
@@ -3665,7 +3666,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         RaiseCurrentWorkProgressProperties();
     }
 
-    private void RefreshRunProgressSummary()
+    private void RefreshRunProgressSummary(bool updateEstimate = true)
     {
         List<DesktopRunProgressSnapshot> progressValues = GetOrderedRunProgressSnapshots();
         if (progressValues.Count == 0)
@@ -3675,7 +3676,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
 
         HasCurrentRunProgress = true;
-        UpdateRunProgressEstimatedTimeRemaining(progressValues);
+        if (updateEstimate)
+        {
+            UpdateRunProgressEstimatedTimeRemaining(progressValues);
+        }
+
         if (progressValues.Count == 1)
         {
             DesktopRunProgressSnapshot progress = progressValues[0];
@@ -3960,21 +3965,21 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         return progress.IsCompleted ? 100 : 0;
     }
 
-    private static double CalculateRunProgressValue(DesktopRunProgressSnapshot progress)
+    private double CalculateRunProgressValue(DesktopRunProgressSnapshot progress)
     {
         if (progress.FilesTotal is > 0)
         {
-            int displayCount = GetDisplayedRunProgressCount(progress);
-            return Math.Clamp((double)displayCount / progress.FilesTotal.Value * 100, 0, 100);
+            double displayCount = GetDisplayedRunProgressUnits(progress);
+            return Math.Clamp(displayCount / progress.FilesTotal.Value * 100, 0, 100);
         }
 
         return progress.IsCompleted ? 100 : 0;
     }
 
-    private static double CalculateAggregateRunProgressValue(IReadOnlyList<DesktopRunProgressSnapshot> progressValues)
+    private double CalculateAggregateRunProgressValue(IReadOnlyList<DesktopRunProgressSnapshot> progressValues)
     {
         int totalFiles = 0;
-        int completedFiles = 0;
+        double completedFiles = 0;
         foreach (DesktopRunProgressSnapshot progress in progressValues)
         {
             if (!progress.FilesTotal.HasValue)
@@ -3983,12 +3988,33 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             }
 
             totalFiles += progress.FilesTotal.Value;
-            completedFiles += GetDisplayedRunProgressCount(progress);
+            completedFiles += GetDisplayedRunProgressUnits(progress);
         }
 
         return totalFiles > 0
-            ? Math.Clamp((double)completedFiles / totalFiles * 100, 0, 100)
+            ? Math.Clamp(completedFiles / totalFiles * 100, 0, 100)
             : progressValues.All(static item => item.IsCompleted) ? 100 : 0;
+    }
+
+    private double GetDisplayedRunProgressUnits(DesktopRunProgressSnapshot progress)
+    {
+        if (progress.FilesTotal is not > 0)
+        {
+            return progress.IsCompleted ? 1 : 0;
+        }
+
+        int total = progress.FilesTotal.Value;
+        double completed = Math.Clamp(progress.FilesCompleted, 0, total);
+        if (!progress.IsCompleted
+            && IsCountedRunStage(progress.Stage)
+            && _transferProgressByPair.TryGetValue(progress.SyncPairId, out DesktopTransferProgressSnapshot? transfer)
+            && transfer.TotalBytes is > 0)
+        {
+            double transferred = Math.Clamp(transfer.TransferredBytes, 0, transfer.TotalBytes.Value);
+            return Math.Clamp(completed + transferred / transfer.TotalBytes.Value, 0, total);
+        }
+
+        return GetDisplayedRunProgressCount(progress);
     }
 
     private bool TryCalculateAggregateTransferProgressValue(out double progressValue)

@@ -1692,7 +1692,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("512 B · 15s left"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("8 of 30 files across 2 folders"));
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Uploading report.txt"));
-            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(26.666).Within(0.01));
+            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(28.333).Within(0.01));
             Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.False);
         });
     }
@@ -1731,7 +1731,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("512 B · 256 B/s · 15s left"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("5 of 20 files"));
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Uploading report.txt"));
-            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(25).Within(0.01));
+            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(27.5).Within(0.01));
             Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.False);
         });
     }
@@ -1771,7 +1771,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("2.0 KB · 768 B/s · 15s left"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("8 of 30 files across 2 folders"));
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("2 files transferring"));
-            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(26.666).Within(0.01));
+            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(30).Within(0.01));
         });
     }
 
