@@ -21,6 +21,12 @@ Use the checkbox in the `Plan Files` section as the sub-plan reopen flag:
 - `[x]` means the sub-plan is fully closed and should not be opened during normal work.
 - `[ ]` means the sub-plan still has open release work, manual verification, reference guardrails, or future scope.
 
+Mechanical audit 2026-06-07:
+
+- Command used: `for f in notes/sdk-desktop-sync-client-plan/*.md; do open=$(rg -c '^[-*] \[ \]' "$f" || true); done=$(rg -c '^[-*] \[[xX]\]' "$f" || true); printf '%s|open=%s|done=%s\n' "$f" "$open" "$done"; done`
+- Result: the `Plan Files` counts below match the actual sub-plan checkboxes.
+- Fully closed files are only the five `[x]` implementation phases below. Treat any other file as open until another mechanical audit proves it has zero open release or manual-gate checkboxes.
+
 Latest audit result: no additional sub-plan can be marked fully complete after the current desktop pass. Phase 1 through Phase 5 remain the only fully closed implementation sub-plans. Every other unchecked file still has at least one open release gate, manual gate, reference guardrail, or future item.
 
 Closed implementation sub-plans after this audit:
