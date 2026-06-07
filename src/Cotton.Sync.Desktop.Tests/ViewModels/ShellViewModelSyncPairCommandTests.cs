@@ -1870,7 +1870,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Syncing 2 folders"));
-            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("1.0 KB · 15s left"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("1.0 KB · 0.7 files/s · 15s left"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("8 of 30 files across 2 folders"));
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.Empty);
         });
@@ -1936,6 +1936,34 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentWorkProgressHeaderRateDetails, Does.Contain("left"));
             Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Does.Contain("2.0 KB · 512 B/s"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("2 of 100 files"));
+        });
+    }
+
+    [Test]
+    public async Task RunProgressChanged_ShowsGlobalFileRateWhenByteRateIsUnavailable()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Videos", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 100,
+            FilesTotal: 1000,
+            CurrentPath: "Videos/clip-0100.mp4",
+            StartedAtUtc: startedAtUtc,
+            IsCompleted: false,
+            OccurredAtUtc: startedAtUtc.AddSeconds(10)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.CurrentWorkProgressHeaderSizeDetails, Is.Empty);
+            Assert.That(viewModel.CurrentWorkProgressHeaderRateDetails, Is.EqualTo("10 files/s · 1m 30s left"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("10 files/s · 1m 30s left"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("100 of 1000 files"));
         });
     }
 

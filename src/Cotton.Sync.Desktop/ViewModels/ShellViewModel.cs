@@ -55,7 +55,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private string _currentTransferTitle = string.Empty;
     private long _runTransferredBytes;
     private double? _runTransferSpeedBytesPerSecond;
+    private double? _currentRunProgressFilesPerSecond;
     private TimeSpan? _currentRunProgressEstimatedTimeRemaining;
+    private DateTime? _lastRunProgressFileRateOccurredAtUtc;
     private DateTime? _lastRunProgressEstimateOccurredAtUtc;
     private string _dataDirectory = string.Empty;
     private string _deviceName = "Cotton Sync Desktop";
@@ -3749,6 +3751,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private string CreateRunTransferRateDetails()
     {
         var parts = new List<string>();
+        bool hasByteRate = false;
         if (HasActiveTransferProgress)
         {
             string activeTransferRate = CreateAggregateTransferMetricDetails(
@@ -3757,11 +3760,18 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             if (!string.IsNullOrWhiteSpace(activeTransferRate))
             {
                 parts.Add(activeTransferRate);
+                hasByteRate = true;
             }
         }
         else if (_runTransferSpeedBytesPerSecond is > 0)
         {
             parts.Add(FormatBytes(_runTransferSpeedBytesPerSecond.Value) + "/s");
+            hasByteRate = true;
+        }
+
+        if (!hasByteRate && !HasActiveTransferProgress && _currentRunProgressFilesPerSecond is > 0)
+        {
+            parts.Add(FormatFileRate(_currentRunProgressFilesPerSecond.Value));
         }
 
         if (_currentRunProgressEstimatedTimeRemaining.HasValue)
@@ -3778,7 +3788,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         _runTransferSamples.Clear();
         _runTransferredBytes = 0;
         _runTransferSpeedBytesPerSecond = null;
+        _currentRunProgressFilesPerSecond = null;
         _currentRunProgressEstimatedTimeRemaining = null;
+        _lastRunProgressFileRateOccurredAtUtc = null;
         _lastRunProgressEstimateOccurredAtUtc = null;
     }
 
@@ -3868,13 +3880,17 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         if (!TryCalculateAggregateRunProgressEstimate(
             progressValues,
             out TimeSpan estimatedTimeRemaining,
+            out double filesPerSecond,
             out DateTime occurredAtUtc))
         {
+            _currentRunProgressFilesPerSecond = null;
             _currentRunProgressEstimatedTimeRemaining = null;
+            _lastRunProgressFileRateOccurredAtUtc = null;
             _lastRunProgressEstimateOccurredAtUtc = null;
             return;
         }
 
+        UpdateRunProgressFilesPerSecond(filesPerSecond, occurredAtUtc);
         if (!_currentRunProgressEstimatedTimeRemaining.HasValue
             || !_lastRunProgressEstimateOccurredAtUtc.HasValue
             || occurredAtUtc <= _lastRunProgressEstimateOccurredAtUtc.Value)
@@ -3891,19 +3907,41 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             agedEstimate = TimeSpan.Zero;
         }
 
-        double smoothingFactor = 1 - Math.Exp(-elapsed.TotalSeconds / RunProgressEstimateSmoothingPeriod.TotalSeconds);
+        double smoothingFactor = CalculateExponentialSmoothingFactor(elapsed, RunProgressEstimateSmoothingPeriod);
         double smoothedSeconds = agedEstimate.TotalSeconds
             + (estimatedTimeRemaining.TotalSeconds - agedEstimate.TotalSeconds) * smoothingFactor;
         _currentRunProgressEstimatedTimeRemaining = TimeSpan.FromSeconds(Math.Max(1, smoothedSeconds));
         _lastRunProgressEstimateOccurredAtUtc = occurredAtUtc;
     }
 
+    private void UpdateRunProgressFilesPerSecond(double filesPerSecond, DateTime occurredAtUtc)
+    {
+        if (!_currentRunProgressFilesPerSecond.HasValue
+            || !_lastRunProgressFileRateOccurredAtUtc.HasValue
+            || occurredAtUtc <= _lastRunProgressFileRateOccurredAtUtc.Value)
+        {
+            _currentRunProgressFilesPerSecond = filesPerSecond;
+            _lastRunProgressFileRateOccurredAtUtc = occurredAtUtc;
+            return;
+        }
+
+        TimeSpan elapsed = occurredAtUtc - _lastRunProgressFileRateOccurredAtUtc.Value;
+        double smoothingFactor = CalculateExponentialSmoothingFactor(elapsed, RunProgressEstimateSmoothingPeriod);
+        _currentRunProgressFilesPerSecond = Math.Max(
+            0,
+            _currentRunProgressFilesPerSecond.Value
+                + ((filesPerSecond - _currentRunProgressFilesPerSecond.Value) * smoothingFactor));
+        _lastRunProgressFileRateOccurredAtUtc = occurredAtUtc;
+    }
+
     private static bool TryCalculateAggregateRunProgressEstimate(
         IReadOnlyList<DesktopRunProgressSnapshot> progressValues,
         out TimeSpan estimatedTimeRemaining,
+        out double filesPerSecond,
         out DateTime occurredAtUtc)
     {
         estimatedTimeRemaining = TimeSpan.Zero;
+        filesPerSecond = 0;
         occurredAtUtc = DateTime.MinValue;
         int completedFiles = 0;
         int totalFiles = 0;
@@ -3935,6 +3973,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
         TimeSpan elapsed = occurredAtUtc - startedAtUtc;
         if (elapsed < MinimumRunTransferSampleDuration)
+        {
+            return false;
+        }
+
+        filesPerSecond = completedFiles / elapsed.TotalSeconds;
+        if (!double.IsFinite(filesPerSecond) || filesPerSecond <= 0)
         {
             return false;
         }
@@ -4369,6 +4413,18 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         return value.ToString(format, CultureInfo.CurrentCulture) + " " + units[unitIndex];
     }
 
+    private static string FormatFileRate(double filesPerSecond)
+    {
+        double roundedValue = filesPerSecond >= 10
+            ? Math.Round(filesPerSecond)
+            : Math.Round(filesPerSecond, 1);
+        string format = roundedValue >= 10 || Math.Abs(roundedValue - Math.Round(roundedValue)) < 0.05
+            ? "0"
+            : "0.0";
+        string unit = Math.Abs(roundedValue - 1) < 0.05 ? " file/s" : " files/s";
+        return roundedValue.ToString(format, CultureInfo.CurrentCulture) + unit;
+    }
+
     private static string FormatDuration(TimeSpan duration)
     {
         if (duration.TotalSeconds < 60)
@@ -4401,6 +4457,16 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private static int RoundUp(int value, int step)
     {
         return ((value + step - 1) / step) * step;
+    }
+
+    private static double CalculateExponentialSmoothingFactor(TimeSpan elapsed, TimeSpan timeConstant)
+    {
+        if (elapsed <= TimeSpan.Zero)
+        {
+            return 0;
+        }
+
+        return 1 - Math.Exp(-elapsed.TotalSeconds / timeConstant.TotalSeconds);
     }
 
     private readonly record struct RunTransferProgressKey(
