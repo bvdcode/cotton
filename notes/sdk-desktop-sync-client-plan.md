@@ -8,7 +8,7 @@ All implementation checkboxes start unchecked. A task can be marked done only af
 
 The release plan is split into focused files so the active checklist stays visible and reviewable. Keep current execution work in `00-current-work-order.md`; keep platform-specific Windows tasks in `01-windows-only-work.md`.
 
-- [ ] [Current Work Order](sdk-desktop-sync-client-plan/00-current-work-order.md) - 6 open
+- [ ] [Current Work Order](sdk-desktop-sync-client-plan/00-current-work-order.md) - 5 open, 1 done
 - [ ] [Windows-Only Work](sdk-desktop-sync-client-plan/01-windows-only-work.md) - 4 open
 - [ ] [Product Target](sdk-desktop-sync-client-plan/02-product-target.md) - 11 open
 - [ ] [Non-Negotiable Decisions](sdk-desktop-sync-client-plan/03-non-negotiable-decisions.md) - 9 open, 1 done

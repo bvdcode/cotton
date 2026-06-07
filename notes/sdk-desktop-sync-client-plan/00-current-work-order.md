@@ -22,6 +22,8 @@ Use this section as the active checklist for the current desktop-client pass. Do
   Required behavior: tray icon is the normal Cotton icon when idle, changes only for syncing/paused/error states, Windows notifications use the product name and icon where the platform API allows it, and key desktop app events notify outside the web app too.
   Current status: code-side tray/notification audit is done; Windows installed-app identity and visual notification check remain in Windows-only work.
   Verification: Linux smoke where supported and Windows manual notification/tray check.
-- [ ] Re-run a minimal desktop verification pass.
+- [x] Re-run a minimal desktop verification pass.
   Required behavior: avoid full-suite churn for every tiny step; run focused tests for the changed behavior, then desktop Release build before commit.
+  Current status: completed for this pass with focused desktop tests and desktop build.
   Verification: record exact commands and results before marking done.
+  Verification result: `dotnet test src/Cotton.Sync.Desktop.Tests/Cotton.Sync.Desktop.Tests.csproj --no-restore --filter "RunProgressChanged|TransferProgressChanged|DesktopSetupVisualContractTests|ShowSelectedSyncPairEditorCommand|ToggleActivityCommand|InitializeAsync_ShowsStartupLoadingInsteadOfSetupWhileRestoringSession|SignInCommand_ShowsHuman|SignInInputs_SubmitOnEnterAndReturnKeys|DesktopTrayStatusResolverTests|DesktopTrayMenuContractTests|DesktopNotificationServiceFactoryTests"` passed 94/94; `dotnet build src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj --no-restore` passed with 0 warnings and 0 errors.
