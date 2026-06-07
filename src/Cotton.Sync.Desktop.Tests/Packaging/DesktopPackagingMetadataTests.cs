@@ -339,6 +339,8 @@ public sealed class DesktopPackagingMetadataTests
         {
             Assert.That(workflow, Does.Contain("Smoke desktop Linux archive artifact"));
             Assert.That(workflow, Does.Contain("tar -xzf cotton-sync-desktop-linux-x64.tar.gz"));
+            Assert.That(workflow, Does.Contain("self_test_timeout=120s"));
+            Assert.That(workflow, Does.Contain("timeout \"$self_test_timeout\""));
             Assert.That(workflow, Does.Contain("\"$extract_dir/Cotton.Sync.Desktop\" --self-test --data-dir"));
             Assert.That(workflow, Does.Contain("Packaging/linux/verify-checksums.sh"));
             Assert.That(workflow, Does.Contain("Packaging/linux/smoke-diagnostics-export.sh"));
