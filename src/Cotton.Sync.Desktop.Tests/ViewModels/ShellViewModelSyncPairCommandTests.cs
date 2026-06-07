@@ -3093,6 +3093,40 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task InitializeAsync_ShowsStartupLoadingInsteadOfSetupWhileRestoringSession()
+    {
+        var loadCompletion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Cloud", "Idle")))
+        {
+            LoadCompletion = loadCompletion,
+        };
+        using ShellViewModel viewModel = CreateViewModel(controller);
+
+        Task initializeTask = viewModel.InitializeAsync();
+        await WaitForAsync(() => controller.LoadStarted);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsStartupLoadingVisible, Is.True);
+            Assert.That(viewModel.IsSetupVisible, Is.False);
+            Assert.That(viewModel.IsServerStepVisible, Is.False);
+            Assert.That(viewModel.IsSignInStepVisible, Is.False);
+            Assert.That(viewModel.IsDashboardVisible, Is.False);
+        });
+
+        loadCompletion.SetResult(true);
+        await initializeTask;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsStartupLoadingVisible, Is.False);
+            Assert.That(viewModel.IsSignedIn, Is.True);
+            Assert.That(viewModel.IsSetupVisible, Is.False);
+            Assert.That(viewModel.IsDashboardVisible, Is.True);
+        });
+    }
+
+    [Test]
     public async Task InitializeAsync_WhenLoadFailsBeforeSignInStepShowsActionRequired()
     {
         var controller = new FakeDesktopShellController(CreateSignedOutSnapshot())
@@ -3687,6 +3721,10 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public Exception? LoadException { get; set; }
 
+        public TaskCompletionSource<bool>? LoadCompletion { get; set; }
+
+        public bool LoadStarted { get; private set; }
+
         public Dictionary<string, DesktopRemoteFolderListSnapshot> RemoteFoldersByPath { get; } = [];
 
         public List<string> ListRemoteFolderPaths { get; } = [];
@@ -3740,15 +3778,21 @@ public sealed class ShellViewModelSyncPairCommandTests
             RunProgressChanged?.Invoke(this, progress);
         }
 
-        public Task<DesktopShellSnapshot> LoadAsync(CancellationToken cancellationToken = default)
+        public async Task<DesktopShellSnapshot> LoadAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            LoadStarted = true;
             if (LoadException is not null)
             {
                 throw LoadException;
             }
 
-            return Task.FromResult(_snapshot);
+            if (LoadCompletion is not null)
+            {
+                await LoadCompletion.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            return _snapshot;
         }
 
         public Task SetSyncPairEnabledAsync(

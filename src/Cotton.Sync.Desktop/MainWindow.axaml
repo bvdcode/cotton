@@ -86,6 +86,42 @@
 
     <Grid Grid.Row="2"
           Background="{DynamicResource CottonSurfaceBrush}"
+          IsVisible="{Binding IsStartupLoadingVisible}">
+      <StackPanel Spacing="8"
+                  Margin="20,0"
+                  HorizontalAlignment="Stretch"
+                  VerticalAlignment="Center">
+        <Border Width="50"
+                Height="50"
+                CornerRadius="10"
+                Background="{DynamicResource CottonPrimaryTextBrush}"
+                HorizontalAlignment="Center"
+                BorderBrush="{DynamicResource CottonSecondaryBrush}"
+                BorderThickness="1">
+          <Image Source="avares://Cotton.Sync.Desktop/Assets/icon-192.png"
+                 Width="36"
+                 Height="36"
+                 HorizontalAlignment="Center"
+                 VerticalAlignment="Center" />
+        </Border>
+        <TextBlock Text="Connecting..."
+                   FontSize="20"
+                   FontWeight="SemiBold"
+                   TextAlignment="Center"
+                   HorizontalAlignment="Center" />
+        <TextBlock Text="Checking saved session and settings."
+                   Classes="secondary"
+                   FontSize="12"
+                   TextAlignment="Center"
+                   HorizontalAlignment="Center" />
+        <ProgressBar IsIndeterminate="True"
+                     Height="4"
+                     Margin="8,6,8,0" />
+      </StackPanel>
+    </Grid>
+
+    <Grid Grid.Row="2"
+          Background="{DynamicResource CottonSurfaceBrush}"
           IsVisible="{Binding IsSetupVisible}">
       <StackPanel Spacing="9"
                   Margin="20,0"

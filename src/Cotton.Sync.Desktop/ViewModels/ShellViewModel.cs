@@ -82,7 +82,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private bool _isSettingsVisible;
     private bool _isActivityVisible;
     private bool _isSyncPausePending;
-    private bool _isLoadingSnapshot;
+    private bool _isLoadingSnapshot = true;
     private bool _isStartWithOperatingSystemSupported = true;
     private bool _isTrayLifecycleSupported;
     private int _selectedSettingsTabIndex;
@@ -759,9 +759,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
     }
 
-    public bool IsDashboardVisible => IsSignedIn;
+    public bool IsStartupLoadingVisible => _isLoadingSnapshot;
 
-    public bool IsSetupVisible => !IsSignedIn;
+    public bool IsDashboardVisible => IsSignedIn && !IsStartupLoadingVisible;
+
+    public bool IsSetupVisible => !IsSignedIn && !IsStartupLoadingVisible;
 
     public bool IsServerStepVisible => IsSetupVisible && !IsServerVerified;
 
@@ -1281,7 +1283,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public async Task InitializeAsync()
     {
         IsBusy = true;
-        _isLoadingSnapshot = true;
+        SetSnapshotLoading(true);
         try
         {
             DesktopShellSnapshot snapshot = await _controller.LoadAsync().ConfigureAwait(true);
@@ -1334,7 +1336,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
         finally
         {
-            _isLoadingSnapshot = false;
+            SetSnapshotLoading(false);
             IsBusy = false;
         }
     }
@@ -3489,6 +3491,18 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OnPropertyChanged(nameof(IsSignInStepVisible));
         OnPropertyChanged(nameof(SetupTitle));
         OnPropertyChanged(nameof(SetupSubtitle));
+    }
+
+    private void SetSnapshotLoading(bool isLoading)
+    {
+        if (SetProperty(ref _isLoadingSnapshot, isLoading, nameof(IsStartupLoadingVisible)))
+        {
+            OnPropertyChanged(nameof(IsDashboardVisible));
+            OnPropertyChanged(nameof(IsDashboardHeaderVisible));
+            OnPropertyChanged(nameof(IsSetupVisible));
+            RaiseSetupStateProperties();
+            RaiseCommandStates();
+        }
     }
 
     private void RaiseWizardStateProperties()
