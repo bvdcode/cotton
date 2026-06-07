@@ -130,6 +130,11 @@ const VerifyEmailPage = lazy(() =>
     default: module.VerifyEmailPage,
   })),
 );
+const AppCodeApprovalPage = lazy(() =>
+  import("../pages/oauth/AppCodeApprovalPage").then((module) => ({
+    default: module.AppCodeApprovalPage,
+  })),
+);
 const UnlockPage = lazy(() =>
   import("../pages/unlock/UnlockPage").then((module) => ({
     default: module.UnlockPage,
@@ -413,6 +418,15 @@ export function AppRoutes() {
         element={
           <RequireAuth>
             {withRouteSuspense(<OnboardingPage />)}
+          </RequireAuth>
+        }
+      />
+
+      <Route
+        path="/oauth/app-code/:id"
+        element={
+          <RequireAuth>
+            {withRouteSuspense(<AppCodeApprovalPage />)}
           </RequireAuth>
         }
       />
