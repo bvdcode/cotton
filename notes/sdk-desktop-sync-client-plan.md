@@ -16,6 +16,13 @@ All implementation checkboxes start unchecked. A task can be marked done only af
 
 Audit date: 2026-06-07.
 
+Use the checkbox in the `Plan Files` section as the sub-plan reopen flag:
+
+- `[x]` means the sub-plan is closed and should not be opened during normal work.
+- `[ ]` means the sub-plan still has open release work, manual verification, reference guardrails, or future scope.
+
+Closed implementation sub-plans after this audit: Phase 1, Phase 2, Phase 3, Phase 4, and Phase 5. They are done unless a new bug explicitly points back to one of them.
+
 Highest-priority active work lives in `00-current-work-order.md`. It is the shortest queue for the current desktop polish pass: sync controls, dashboard progress, folder-list usability, startup/auth polish, and tray/notification polish. Most of those are now code-side audited and waiting for Windows/manual verification, so do not repeatedly reopen completed phase files unless a new bug points there.
 
 Release-grade remaining work is mostly verification, not broad architecture:
@@ -24,6 +31,12 @@ Release-grade remaining work is mostly verification, not broad architecture:
 - Clean-machine gates: Windows installer/archive, Linux package/archive, uninstall, and upgrade.
 - Soak/performance gates: continuous sync soak, crash recovery, disk-full and permission-denied action-required checks, many-file stability, and 24-hour one/two-client soak.
 - Final release gates: full Release build/test pass, screenshot review, diagnostics export verification, release notes, checksums, and final branch diff review.
+
+Current code-side horizon:
+
+- Continue from `00-current-work-order.md` first.
+- Then finish active Phase 8 polish that can be validated on Linux.
+- Then defer Windows-only, clean-machine, and long-running soak items to their manual-gated files.
 
 Do not spend time in `future` or `reference` sub-plans unless the user explicitly promotes that work.
 
