@@ -7,7 +7,7 @@ These are intentionally outside the first releasable full-mirror sync product.
 - [ ] Selective sync.
 - [ ] Bandwidth limits.
 - [ ] Multiple accounts.
-- [ ] Browser-based OAuth/PKCE desktop login.
+- [ ] Standards-based OAuth/PKCE login beyond the first-release app-code browser login.
 - [ ] Auto-update implementation.
 - [ ] File manager overlay icons.
 - [ ] macOS support.

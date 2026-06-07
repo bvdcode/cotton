@@ -29,5 +29,17 @@
   Verification: `CottonAuthClient.LogoutAsync` clears saved tokens in a `finally` block when server logout fails, `RealtimeRemoteChangeSyncCoordinator` subscribes to SDK `SessionRevoked`, cancels pending remote-triggered sync, invokes `SessionRevocationHandler`, and stops realtime observation. `SessionRevocationHandler` stops periodic/local sync, signs out, and stops the supervisor while logging and continuing through non-cancellation failures. Focused `CottonAuthClientTests` passed 3/3; focused `RealtimeRemoteChangeSyncCoordinatorTests|SessionRevocationHandlerTests` passed 7/7; full `Cotton.Sdk.Tests` passed 18/18; full `Cotton.Sync.App.Tests` passed 81/81; `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with known NU1903 Avalonia/Tmds.DBus.Protocol warnings.
 - [x] Add tests for login, refresh, logout, token clear, and invalid saved token.
   Verification: `PasswordAuthFlowTests` cover login/TOTP/logout delegation, `CottonHttpTransportTests|CottonAuthClientTests` passed 3/3 for refresh/logout/token clear behavior, and `FileCottonTokenStoreTests` cover token clear, invalid saved-token rejection, and external protected-payload cleanup.
+- [ ] Add SDK app-code browser authentication client.
+  Required behavior: wrap the `develop` server flow under `/api/v1/oauth/app-code`: start authorization with application/device metadata, expose the absolute approval URL for browser opening, poll with the server-provided interval/long-poll behavior, persist returned access/refresh tokens through the existing token store, and surface `pending`, `denied`, `expired`, `not_found`, rate-limit, cancellation, and network errors as human-readable auth results.
+  Verification: focused SDK tests for start/poll success, pending, denied, expired/not-found, cancellation, retry interval handling, token persistence, and request metadata.
+- [ ] Add application-layer browser auth flow.
+  Required behavior: implement an `IAuthFlow` app-code/browser flow alongside `PasswordAuthFlow`, keep password/TOTP login available, open the approval URL through the platform browser adapter, poll without blocking the UI, support cancellation, and record auth activity/status consistently.
+  Verification: focused `Cotton.Sync.App.Tests` proving browser auth success, cancellation, denied/expired failures, token storage, and no password-field dependency.
+- [ ] Integrate app-code browser login into `Cotton.Sync.Cli`.
+  Required behavior: add a headless command path that starts app-code auth, prints the approval URL, polls until approval/denial/expiration, saves or returns tokens according to the existing CLI auth mode, and remains script-friendly.
+  Verification: focused CLI command tests with a fake server plus one integration smoke where practical.
+- [ ] Integrate app-code browser login into `Cotton.Sync.Desktop`.
+  Required behavior: offer browser sign-in on the login screen, keep the UI in a clear waiting/cancellable state while polling, open the approval URL in the system browser, store tokens through the existing release-secure token boundary, and fall back to password/TOTP only as an explicit alternate sign-in method.
+  Verification: focused desktop view-model/controller tests plus Windows manual browser-approval smoke.
 - [ ] Add manual verification on Windows secure storage.
 - [ ] Add manual verification on Linux secure storage.

@@ -58,10 +58,11 @@ The `Plan Files` checklist is the closure ledger for the whole desktop plan.
 Open plan files in this order:
 
 1. `00-current-work-order.md` for active desktop-client bugs and polish.
-2. `18-phase-8-desktop-ux-and-visual-design.md` only when the current work order points to visual/layout/manual screenshot work.
-3. `22-phase-12-end-to-end-test-matrix.md` only when a concrete end-to-end edge case is being verified or fixed.
-4. `23-phase-13-performance-and-soak.md` only when working on scale, throughput, memory, UI responsiveness, or soak behavior.
-5. Manual-gated files only when the matching platform or clean-machine environment is available.
+2. `17-phase-7-authentication-and-token-storage.md` when working on the promoted app-code browser login integration or secure-storage verification.
+3. `18-phase-8-desktop-ux-and-visual-design.md` only when the current work order points to visual/layout/manual screenshot work.
+4. `22-phase-12-end-to-end-test-matrix.md` only when a concrete end-to-end edge case is being verified or fixed.
+5. `23-phase-13-performance-and-soak.md` only when working on scale, throughput, memory, UI responsiveness, or soak behavior.
+6. Manual-gated files only when the matching platform or clean-machine environment is available.
 
 Do not open `[x]` sub-plans during normal work. Do not use `reference` or `future` files as implementation queues unless the user explicitly promotes one of those items.
 
@@ -69,11 +70,13 @@ Primary active queue:
 
 - `00-current-work-order.md` remains the first file to open. It has 5 open desktop-polish items and 1 completed verification item.
 - The open items are mostly code-side audited, but they are not complete until the required Windows/manual checks pass or a new implementation bug is fixed.
+- Browser-login integration is now release scope because `develop` added `/api/v1/oauth/app-code` start/approval/poll endpoints; use Phase 7 for the SDK, app-layer, CLI, and desktop implementation details.
 - Do not jump into lower-priority files while an item in this work order has an unresolved correctness or usability blocker.
 
 Current implementation horizon:
 
 - Finish Linux-verifiable desktop polish only when it directly closes an open `00-current-work-order.md` item.
+- Implement the app-code browser login path across SDK, app layer, CLI, and desktop before treating authentication as release-ready.
 - Use Phase 8 only for remaining visual/layout polish and screenshot/manual walkthrough gates.
 - Use Phase 12 only for concrete end-to-end edge cases: process crash recovery, real disk-full behavior, and Windows permission-denied behavior.
 - Use Phase 13 only for scale/performance safety: many-file stability, Windows desktop large-file smoke, 24-hour soak, and measured resource tracking.
@@ -96,6 +99,7 @@ The audit counted implementation checkboxes in every linked sub-plan. Closed fil
 Active code-side queue:
 
 - `00-current-work-order.md`: immediate desktop polish queue and the first source for the next implementation step.
+- `17-phase-7-authentication-and-token-storage.md`: active again for app-code browser login integration across SDK, app layer, CLI, and desktop; secure-storage verification remains manual-gated.
 - `18-phase-8-desktop-ux-and-visual-design.md`: open only for desktop visual/layout polish, screenshot review, or manual walkthrough work not already captured by the current work order.
 - `22-phase-12-end-to-end-test-matrix.md`: open only for focused edge-case coverage tied to a concrete bug or release gate.
 - `23-phase-13-performance-and-soak.md`: open only for performance fixes, scale safety, and measured desktop sync behavior.
@@ -104,7 +108,7 @@ Manual-gated queue:
 
 - `01-windows-only-work.md`: Windows-only shell, tray, virtual-files, and large-tree/large-file work. Do not implement Windows-specific features from Linux unless the item is only plan/research.
 - `16-phase-6-continuous-sync.md`: 2-hour continuous sync soak remains.
-- `17-phase-7-authentication-and-token-storage.md`: Windows/Linux secure-storage manual verification remains.
+- `17-phase-7-authentication-and-token-storage.md`: Windows/Linux secure-storage manual verification remains after the browser-login code path is implemented.
 - `19-phase-9-tray-autostart-notifications-and-lifecycle.md`: installed-app tray/autostart/notification verification remains.
 - `20-phase-10-diagnostics-and-supportability.md`: manual diagnostics export verification remains.
 - `21-phase-11-packaging-and-installers.md`: clean-machine install, uninstall, portable archive, Linux package/archive, and upgrade checks remain.
@@ -119,6 +123,7 @@ Revision date: 2026-06-07.
 - Fully complete: 5 implementation sub-plans.
 - Newly closed by this audit: 0 sub-plans.
 - Current desktop-polish queue: 5 open, 1 done.
+- Active/manual authentication: Phase 7 has 6 open, 10 done.
 - Active/manual visual polish: Phase 8 has 7 open, 23 done.
 - Active/manual end-to-end edge cases: Phase 12 has 3 open, 21 done.
 - Active/manual performance and soak: Phase 13 has 5 open, 8 done.
@@ -153,7 +158,7 @@ The release plan is split into focused files so the active checklist stays visib
 - [x] [Phase 4 - Optimistic Concurrency And Safe Remote Operations](sdk-desktop-sync-client-plan/14-phase-4-optimistic-concurrency-and-safe-remote-operations.md) - complete, 10 done
 - [x] [Phase 5 - Sync Core Hardening](sdk-desktop-sync-client-plan/15-phase-5-sync-core-hardening.md) - complete, 27 done
 - [ ] [Phase 6 - Continuous Sync](sdk-desktop-sync-client-plan/16-phase-6-continuous-sync.md) - manual-gated soak, 1 open, 14 done
-- [ ] [Phase 7 - Authentication And Token Storage](sdk-desktop-sync-client-plan/17-phase-7-authentication-and-token-storage.md) - manual-gated secure-storage checks, 2 open, 10 done
+- [ ] [Phase 7 - Authentication And Token Storage](sdk-desktop-sync-client-plan/17-phase-7-authentication-and-token-storage.md) - active app-code browser login plus manual secure-storage checks, 6 open, 10 done
 - [ ] [Phase 8 - Desktop UX And Visual Design](sdk-desktop-sync-client-plan/18-phase-8-desktop-ux-and-visual-design.md) - active/manual-gated visual polish, 7 open, 23 done
 - [ ] [Phase 9 - Tray, Autostart, Notifications, And Lifecycle](sdk-desktop-sync-client-plan/19-phase-9-tray-autostart-notifications-and-lifecycle.md) - manual-gated platform polish, 5 open, 12 done
 - [ ] [Phase 10 - Diagnostics And Supportability](sdk-desktop-sync-client-plan/20-phase-10-diagnostics-and-supportability.md) - manual-gated diagnostics export, 1 open, 7 done

@@ -20,9 +20,9 @@ Use this section as the active checklist for the current desktop-client pass. Do
   Partial 2026-06-07: refreshed Linux visual-smoke from a fresh desktop publish at `/tmp/cotton-sync-linux-walkthrough-20260607-r2`; folder rows use status dots, compact folder/menu buttons, an independently sized Folders area, and the expanded editor remains reachable without Activity consuming the panel.
   Verification: visual check on Linux for layout regressions and Windows manual check with two or more sync pairs.
 - [ ] Fix startup and authentication polish.
-  Required behavior: saved sessions show a connecting/restoring state instead of the login form, login supports Enter, and auth errors stay human-readable without moving the whole form offscreen.
-  Current status: code-side audit is done; keep open for Windows restart/sign-in verification.
-  Verification: focused view-model tests plus Windows manual restart/sign-in check.
+  Required behavior: saved sessions show a connecting/restoring state instead of the login form, login supports Enter, auth errors stay human-readable without moving the whole form offscreen, and the app-code browser login flow from `develop` is integrated into both the CLI and desktop app.
+  Current status: code-side password-login audit is done; app-code browser login was promoted into the release scope after `develop` added `/api/v1/oauth/app-code` start/approval/poll endpoints. Keep open for SDK/CLI/desktop integration and Windows restart/sign-in verification.
+  Verification: focused SDK/app/CLI/view-model tests plus Windows manual restart/sign-in/browser-approval check.
 - [ ] Fix desktop notification and tray polish.
   Required behavior: tray icon is the normal Cotton icon when idle, changes only for syncing/paused/error states, Windows notifications use the product name and icon where the platform API allows it, and key desktop app events notify outside the web app too.
   Current status: code-side tray/notification audit is done. Tray unavailable actions are now removed from the native menu instead of relying on disabled/hidden menu items, so Windows native menu rendering should not show a disabled `Pause sync` entry when pause/resume is unavailable. Windows installed-app identity and visual notification check remain in Windows-only work.
