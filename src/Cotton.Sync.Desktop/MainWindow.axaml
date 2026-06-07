@@ -868,10 +868,12 @@
                 Background="{DynamicResource CottonSurfaceBrush}"
                 BorderBrush="{DynamicResource CottonBorderBrush}"
                 BorderThickness="1"
+                ClipToBounds="True"
                 HorizontalAlignment="Stretch"
-                VerticalAlignment="Center">
+                VerticalAlignment="Stretch">
           <Grid RowDefinitions="Auto,Auto,*"
-                RowSpacing="14">
+                RowSpacing="14"
+                MinHeight="0">
             <Grid ColumnDefinitions="*,Auto"
                   ColumnSpacing="8">
               <StackPanel Spacing="2">
@@ -911,248 +913,252 @@
                          TextTrimming="CharacterEllipsis" />
             </Border>
 
-            <Grid Grid.Row="2">
-              <StackPanel Spacing="12"
-                          IsVisible="{Binding IsAddSyncPairLocalStepVisible}">
-                <Grid ColumnDefinitions="Auto,*,Auto"
-                      ColumnSpacing="8">
-                  <Border Width="24"
-                          Height="24"
-                          CornerRadius="12"
-                          Background="{DynamicResource CottonPrimaryBrush}">
-                    <TextBlock Text="1"
-                               Foreground="{DynamicResource CottonPrimaryTextBrush}"
-                               FontWeight="SemiBold"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center" />
-                  </Border>
-                  <TextBlock Grid.Column="1"
-                             Text="Local folder"
-                             FontWeight="SemiBold"
-                             VerticalAlignment="Center" />
-                  <TextBlock Grid.Column="2"
-                             Text="Cloud folder"
-                             Classes="secondary"
-                             FontSize="12"
-                             VerticalAlignment="Center" />
-                </Grid>
-
-                <Button HorizontalAlignment="Stretch"
-                        HorizontalContentAlignment="Stretch"
-                        Padding="14"
-                        Command="{Binding BrowseLocalFolderCommand}">
-                  <Grid RowDefinitions="Auto,Auto"
-                        RowSpacing="4">
-                    <materialIcons:MaterialIcon Kind="FolderPlusOutline"
-                                                Width="30"
-                                                Height="30"
-                                                HorizontalAlignment="Center"
-                                                Foreground="{DynamicResource CottonTextPrimaryBrush}" />
-                    <TextBlock Grid.Row="1"
-                               Text="Choose folder"
-                               FontSize="16"
-                               FontWeight="SemiBold"
-                               HorizontalAlignment="Center" />
-                  </Grid>
-                </Button>
-              </StackPanel>
-
-              <StackPanel Spacing="12"
-                          IsVisible="{Binding IsAddSyncPairCloudStepVisible}">
-                <Grid ColumnDefinitions="Auto,*,Auto"
-                      ColumnSpacing="8"
-                      IsVisible="{Binding IsAddSyncPairLocalSummaryVisible}">
-                  <Border Width="24"
-                          Height="24"
-                          CornerRadius="12"
-                          Background="{DynamicResource CottonSuccessBrush}">
-                    <TextBlock Text="1"
-                               FontWeight="SemiBold"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center" />
-                  </Border>
-                  <TextBlock Grid.Column="1"
-                             Text="{Binding LocalFolderPath}"
-                             ToolTip.Tip="{Binding LocalFolderPath}"
-                             TextTrimming="CharacterEllipsis"
-                             VerticalAlignment="Center" />
-                  <Button Grid.Column="2"
-                          Content="Change"
-                          Classes="compact"
-                          Command="{Binding BrowseLocalFolderCommand}" />
-                </Grid>
-
-                <Border Padding="10"
-                        CornerRadius="6"
-                        Background="{DynamicResource CottonSurfaceMutedBrush}">
-                  <Grid RowDefinitions="Auto,Auto,160,Auto"
-                        RowSpacing="8">
-                    <Grid ColumnDefinitions="Auto,*,Auto,Auto"
-                          ColumnSpacing="6">
-                      <Button Classes="icon"
-                              ToolTip.Tip="Go to parent folder"
-                              Command="{Binding RemoteFolderUpCommand}">
-                        <materialIcons:MaterialIcon Kind="ArrowLeftCircleOutline"
-                                                    Width="16"
-                                                    Height="16"
-                                                    Foreground="{DynamicResource CottonTextPrimaryBrush}" />
-                      </Button>
-                      <TextBlock Grid.Column="1"
-                                 Text="{Binding RemoteBrowserPath}"
-                                 TextTrimming="CharacterEllipsis"
+            <ScrollViewer Grid.Row="2"
+                          VerticalScrollBarVisibility="Auto"
+                          MinHeight="0">
+              <Grid>
+                <StackPanel Spacing="12"
+                            IsVisible="{Binding IsAddSyncPairLocalStepVisible}">
+                  <Grid ColumnDefinitions="Auto,*,Auto"
+                        ColumnSpacing="8">
+                    <Border Width="24"
+                            Height="24"
+                            CornerRadius="12"
+                            Background="{DynamicResource CottonPrimaryBrush}">
+                      <TextBlock Text="1"
+                                 Foreground="{DynamicResource CottonPrimaryTextBrush}"
+                                 FontWeight="SemiBold"
+                                 HorizontalAlignment="Center"
                                  VerticalAlignment="Center" />
-                      <Button Grid.Column="2"
-                              Classes="icon primary"
-                              ToolTip.Tip="Create cloud folder"
-                              Command="{Binding ShowCreateRemoteFolderCommand}">
-                        <materialIcons:MaterialIcon Kind="FolderPlusOutline"
-                                                    Width="16"
-                                                    Height="16"
-                                                    Foreground="{DynamicResource CottonPrimaryTextBrush}" />
-                      </Button>
-                      <Button Grid.Column="3"
-                              Classes="icon"
-                              ToolTip.Tip="Open cloud folder"
-                              Command="{Binding OpenRemoteFolderCommand}">
-                        <materialIcons:MaterialIcon Kind="ArrowRightCircleOutline"
-                                                    Width="16"
-                                                    Height="16"
-                                                    Foreground="{DynamicResource CottonTextPrimaryBrush}" />
-                      </Button>
-                    </Grid>
-
-                    <Grid Grid.Row="1"
-                          ColumnDefinitions="*,Auto,Auto"
-                          ColumnSpacing="6"
-                          IsVisible="{Binding IsCreateRemoteFolderVisible}">
-                      <TextBox Text="{Binding NewRemoteFolderName}"
-                               PlaceholderText="New folder name" />
-                      <Button Grid.Column="1"
-                              Classes="icon"
-                              ToolTip.Tip="Create folder"
-                              Command="{Binding CreateRemoteFolderCommand}">
-                        <materialIcons:MaterialIcon Kind="CheckCircleOutline"
-                                                    Width="16"
-                                                    Height="16"
-                                                    Foreground="{DynamicResource CottonTextPrimaryBrush}" />
-                      </Button>
-                      <Button Grid.Column="2"
-                              Classes="icon"
-                              ToolTip.Tip="Cancel"
-                              Command="{Binding CancelCreateRemoteFolderCommand}">
-                        <materialIcons:MaterialIcon Kind="CloseCircleOutline"
-                                                    Width="16"
-                                                    Height="16"
-                                                    Foreground="{DynamicResource CottonTextPrimaryBrush}" />
-                      </Button>
-                    </Grid>
-
-                    <Grid Grid.Row="2">
-                      <StackPanel Spacing="3"
-                                  HorizontalAlignment="Center"
-                                  VerticalAlignment="Center"
-                                  IsVisible="{Binding HasNoRemoteFolders}">
-                        <TextBlock Text="No folders here"
-                                   FontSize="13"
-                                   FontWeight="SemiBold"
-                                   HorizontalAlignment="Center" />
-                        <TextBlock Text="The current cloud folder can still be selected."
-                                   Classes="secondary"
-                                   FontSize="12"
-                                   TextAlignment="Center"
-                                   TextWrapping="Wrap" />
-                      </StackPanel>
-                      <ListBox ItemsSource="{Binding RemoteFolders}"
-                               SelectedItem="{Binding SelectedRemoteFolder}"
-                               BorderThickness="0"
-                               Background="Transparent"
-                               DoubleTapped="RemoteFoldersListBox_DoubleTapped"
-                               IsVisible="{Binding HasRemoteFolders}">
-                        <ListBox.ItemTemplate>
-                          <DataTemplate>
-                            <Grid ColumnDefinitions="Auto,*"
-                                  ColumnSpacing="8"
-                                  Margin="0,5">
-                              <materialIcons:MaterialIcon Kind="ChevronRight"
-                                                          Width="16"
-                                                          Height="16"
-                                                          VerticalAlignment="Center"
-                                                          Foreground="{DynamicResource CottonTextSecondaryBrush}" />
-                              <TextBlock Grid.Column="1"
-                                         Text="{Binding Name}"
-                                         TextTrimming="CharacterEllipsis"
-                                         VerticalAlignment="Center" />
-                            </Grid>
-                          </DataTemplate>
-                        </ListBox.ItemTemplate>
-                      </ListBox>
-                    </Grid>
-
-                    <TextBlock Grid.Row="3"
-                               Text="{Binding RemoteFolderSelectionLabel}"
-                               ToolTip.Tip="{Binding RemoteFolderSelectionLabel}"
+                    </Border>
+                    <TextBlock Grid.Column="1"
+                               Text="Local folder"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2"
+                               Text="Cloud folder"
                                Classes="secondary"
                                FontSize="12"
-                               TextTrimming="CharacterEllipsis" />
+                               VerticalAlignment="Center" />
                   </Grid>
-                </Border>
 
-                <StackPanel Spacing="7"
-                            IsVisible="{Binding IsFutureSyncModesVisible}">
-                  <TextBlock Text="Sync mode"
-                             FontSize="12"
-                             FontWeight="SemiBold" />
-                  <Grid ColumnDefinitions="*,*"
-                        ColumnSpacing="8">
-                    <Border Padding="9"
-                            CornerRadius="6"
-                            Background="{DynamicResource CottonPrimarySoftBrush}"
-                            BorderBrush="{DynamicResource CottonPrimaryBrush}"
-                            BorderThickness="1">
-                      <Grid RowDefinitions="Auto,Auto"
-                            RowSpacing="2">
-                        <TextBlock Text="{Binding SelectedSyncModeLabel}"
-                                   FontSize="12"
-                                   FontWeight="SemiBold"
-                                   TextTrimming="CharacterEllipsis" />
-                        <TextBlock Grid.Row="1"
-                                   Text="Available"
-                                   Classes="secondary"
-                                   FontSize="11" />
-                      </Grid>
-                    </Border>
-                    <Border Grid.Column="1"
-                            Padding="9"
-                            CornerRadius="6"
-                            Background="{DynamicResource CottonSurfaceMutedBrush}"
-                            BorderBrush="{DynamicResource CottonBorderBrush}"
-                            BorderThickness="1"
-                            Opacity="0.62">
-                      <Grid RowDefinitions="Auto,Auto"
-                            RowSpacing="2">
-                        <TextBlock Text="Virtual files"
-                                   FontSize="12"
-                                   FontWeight="SemiBold"
-                                   TextTrimming="CharacterEllipsis" />
-                        <TextBlock Grid.Row="1"
-                                   Text="Not implemented"
-                                   Classes="secondary"
-                                   FontSize="11" />
-                      </Grid>
-                    </Border>
-                  </Grid>
+                  <Button HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Stretch"
+                          Padding="14"
+                          Command="{Binding BrowseLocalFolderCommand}">
+                    <Grid RowDefinitions="Auto,Auto"
+                          RowSpacing="4">
+                      <materialIcons:MaterialIcon Kind="FolderPlusOutline"
+                                                  Width="30"
+                                                  Height="30"
+                                                  HorizontalAlignment="Center"
+                                                  Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                      <TextBlock Grid.Row="1"
+                                 Text="Choose folder"
+                                 FontSize="16"
+                                 FontWeight="SemiBold"
+                                 HorizontalAlignment="Center" />
+                    </Grid>
+                  </Button>
                 </StackPanel>
 
-                <Grid ColumnDefinitions="*,Auto"
-                      ColumnSpacing="8">
-                  <Button Grid.Column="1"
-                          Content="{Binding RemoteFolderWizardPrimaryActionText}"
-                          Classes="primary"
-                          ToolTip.Tip="{Binding RemoteFolderWizardPrimaryActionToolTip}"
-                          Command="{Binding UseRemoteFolderCommand}" />
-                </Grid>
-              </StackPanel>
-            </Grid>
+                <StackPanel Spacing="12"
+                            IsVisible="{Binding IsAddSyncPairCloudStepVisible}">
+                  <Grid ColumnDefinitions="Auto,*,Auto"
+                        ColumnSpacing="8"
+                        IsVisible="{Binding IsAddSyncPairLocalSummaryVisible}">
+                    <Border Width="24"
+                            Height="24"
+                            CornerRadius="12"
+                            Background="{DynamicResource CottonSuccessBrush}">
+                      <TextBlock Text="1"
+                                 FontWeight="SemiBold"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center" />
+                    </Border>
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding LocalFolderPath}"
+                               ToolTip.Tip="{Binding LocalFolderPath}"
+                               TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" />
+                    <Button Grid.Column="2"
+                            Content="Change"
+                            Classes="compact"
+                            Command="{Binding BrowseLocalFolderCommand}" />
+                  </Grid>
+
+                  <Border Padding="10"
+                          CornerRadius="6"
+                          Background="{DynamicResource CottonSurfaceMutedBrush}">
+                    <Grid RowDefinitions="Auto,Auto,160,Auto"
+                          RowSpacing="8">
+                      <Grid ColumnDefinitions="Auto,*,Auto,Auto"
+                            ColumnSpacing="6">
+                        <Button Classes="icon"
+                                ToolTip.Tip="Go to parent folder"
+                                Command="{Binding RemoteFolderUpCommand}">
+                          <materialIcons:MaterialIcon Kind="ArrowLeftCircleOutline"
+                                                      Width="16"
+                                                      Height="16"
+                                                      Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                        </Button>
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding RemoteBrowserPath}"
+                                   TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center" />
+                        <Button Grid.Column="2"
+                                Classes="icon primary"
+                                ToolTip.Tip="Create cloud folder"
+                                Command="{Binding ShowCreateRemoteFolderCommand}">
+                          <materialIcons:MaterialIcon Kind="FolderPlusOutline"
+                                                      Width="16"
+                                                      Height="16"
+                                                      Foreground="{DynamicResource CottonPrimaryTextBrush}" />
+                        </Button>
+                        <Button Grid.Column="3"
+                                Classes="icon"
+                                ToolTip.Tip="Open cloud folder"
+                                Command="{Binding OpenRemoteFolderCommand}">
+                          <materialIcons:MaterialIcon Kind="ArrowRightCircleOutline"
+                                                      Width="16"
+                                                      Height="16"
+                                                      Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                        </Button>
+                      </Grid>
+
+                      <Grid Grid.Row="1"
+                            ColumnDefinitions="*,Auto,Auto"
+                            ColumnSpacing="6"
+                            IsVisible="{Binding IsCreateRemoteFolderVisible}">
+                        <TextBox Text="{Binding NewRemoteFolderName}"
+                                 PlaceholderText="New folder name" />
+                        <Button Grid.Column="1"
+                                Classes="icon"
+                                ToolTip.Tip="Create folder"
+                                Command="{Binding CreateRemoteFolderCommand}">
+                          <materialIcons:MaterialIcon Kind="CheckCircleOutline"
+                                                      Width="16"
+                                                      Height="16"
+                                                      Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                        </Button>
+                        <Button Grid.Column="2"
+                                Classes="icon"
+                                ToolTip.Tip="Cancel"
+                                Command="{Binding CancelCreateRemoteFolderCommand}">
+                          <materialIcons:MaterialIcon Kind="CloseCircleOutline"
+                                                      Width="16"
+                                                      Height="16"
+                                                      Foreground="{DynamicResource CottonTextPrimaryBrush}" />
+                        </Button>
+                      </Grid>
+
+                      <Grid Grid.Row="2">
+                        <StackPanel Spacing="3"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    IsVisible="{Binding HasNoRemoteFolders}">
+                          <TextBlock Text="No folders here"
+                                     FontSize="13"
+                                     FontWeight="SemiBold"
+                                     HorizontalAlignment="Center" />
+                          <TextBlock Text="The current cloud folder can still be selected."
+                                     Classes="secondary"
+                                     FontSize="12"
+                                     TextAlignment="Center"
+                                     TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ListBox ItemsSource="{Binding RemoteFolders}"
+                                 SelectedItem="{Binding SelectedRemoteFolder}"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 DoubleTapped="RemoteFoldersListBox_DoubleTapped"
+                                 IsVisible="{Binding HasRemoteFolders}">
+                          <ListBox.ItemTemplate>
+                            <DataTemplate>
+                              <Grid ColumnDefinitions="Auto,*"
+                                    ColumnSpacing="8"
+                                    Margin="0,5">
+                                <materialIcons:MaterialIcon Kind="ChevronRight"
+                                                            Width="16"
+                                                            Height="16"
+                                                            VerticalAlignment="Center"
+                                                            Foreground="{DynamicResource CottonTextSecondaryBrush}" />
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Name}"
+                                           TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Center" />
+                              </Grid>
+                            </DataTemplate>
+                          </ListBox.ItemTemplate>
+                        </ListBox>
+                      </Grid>
+
+                      <TextBlock Grid.Row="3"
+                                 Text="{Binding RemoteFolderSelectionLabel}"
+                                 ToolTip.Tip="{Binding RemoteFolderSelectionLabel}"
+                                 Classes="secondary"
+                                 FontSize="12"
+                                 TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                  </Border>
+
+                  <StackPanel Spacing="7"
+                              IsVisible="{Binding IsFutureSyncModesVisible}">
+                    <TextBlock Text="Sync mode"
+                               FontSize="12"
+                               FontWeight="SemiBold" />
+                    <Grid ColumnDefinitions="*,*"
+                          ColumnSpacing="8">
+                      <Border Padding="9"
+                              CornerRadius="6"
+                              Background="{DynamicResource CottonPrimarySoftBrush}"
+                              BorderBrush="{DynamicResource CottonPrimaryBrush}"
+                              BorderThickness="1">
+                        <Grid RowDefinitions="Auto,Auto"
+                              RowSpacing="2">
+                          <TextBlock Text="{Binding SelectedSyncModeLabel}"
+                                     FontSize="12"
+                                     FontWeight="SemiBold"
+                                     TextTrimming="CharacterEllipsis" />
+                          <TextBlock Grid.Row="1"
+                                     Text="Available"
+                                     Classes="secondary"
+                                     FontSize="11" />
+                        </Grid>
+                      </Border>
+                      <Border Grid.Column="1"
+                              Padding="9"
+                              CornerRadius="6"
+                              Background="{DynamicResource CottonSurfaceMutedBrush}"
+                              BorderBrush="{DynamicResource CottonBorderBrush}"
+                              BorderThickness="1"
+                              Opacity="0.62">
+                        <Grid RowDefinitions="Auto,Auto"
+                              RowSpacing="2">
+                          <TextBlock Text="Virtual files"
+                                     FontSize="12"
+                                     FontWeight="SemiBold"
+                                     TextTrimming="CharacterEllipsis" />
+                          <TextBlock Grid.Row="1"
+                                     Text="Not implemented"
+                                     Classes="secondary"
+                                     FontSize="11" />
+                        </Grid>
+                      </Border>
+                    </Grid>
+                  </StackPanel>
+
+                  <Grid ColumnDefinitions="*,Auto"
+                        ColumnSpacing="8">
+                    <Button Grid.Column="1"
+                            Content="{Binding RemoteFolderWizardPrimaryActionText}"
+                            Classes="primary"
+                            ToolTip.Tip="{Binding RemoteFolderWizardPrimaryActionToolTip}"
+                            Command="{Binding UseRemoteFolderCommand}" />
+                  </Grid>
+                </StackPanel>
+              </Grid>
+            </ScrollViewer>
           </Grid>
         </Border>
       </Border>

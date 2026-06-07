@@ -689,6 +689,10 @@ public sealed class DesktopSetupVisualContractTests
         {
             Assert.That(addFolderWizard, Does.Not.Contain("MaxWidth=\"372\""));
             Assert.That(addFolderWizard, Does.Contain("HorizontalAlignment=\"Stretch\""));
+            Assert.That(addFolderWizard, Does.Contain("VerticalAlignment=\"Stretch\""));
+            Assert.That(addFolderWizard, Does.Contain("ClipToBounds=\"True\""));
+            Assert.That(addFolderWizard, Does.Contain("<ScrollViewer Grid.Row=\"2\""));
+            Assert.That(addFolderWizard, Does.Contain("VerticalScrollBarVisibility=\"Auto\""));
             Assert.That(addFolderWizard, Does.Contain("ToolTip.Tip=\"{Binding ActionRequiredMessage}\""));
             Assert.That(addFolderWizard, Does.Not.Contain("<Border Width=\"372\""));
         });
