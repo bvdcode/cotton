@@ -15,11 +15,13 @@ internal sealed class DesktopTrayController : IDisposable
     private readonly IClassicDesktopStyleApplicationLifetime _lifetime;
     private readonly MainWindow _window;
     private readonly TrayIcon _trayIcon;
+    private NativeMenuItem? _showMenuItem;
     private NativeMenuItem? _openFolderMenuItem;
     private NativeMenuItem? _openWebMenuItem;
     private NativeMenuItem? _pauseResumeMenuItem;
     private NativeMenuItem? _settingsMenuItem;
     private NativeMenuItem? _syncNowMenuItem;
+    private NativeMenuItem? _quitMenuItem;
     private Uri _currentIconUri = DesktopTrayIconAssetResolver.Resolve(DesktopTrayStatusKind.SignedOut);
     private ShellViewModel? _viewModel;
     private bool _disposed;
@@ -61,30 +63,19 @@ internal sealed class DesktopTrayController : IDisposable
 
     private TrayIcon CreateTrayIcon()
     {
+        _showMenuItem = CreateMenuItem("Show", ShowWindow);
         _openFolderMenuItem = CreateMenuItem("Open local folder", () => Execute(commandSource => commandSource.OpenTrayFolderCommand));
         _openWebMenuItem = CreateMenuItem("Open in web", () => Execute(commandSource => commandSource.OpenWebCommand));
         _syncNowMenuItem = CreateMenuItem("Sync now", () => Execute(commandSource => commandSource.SyncNowCommand));
         _pauseResumeMenuItem = CreateMenuItem("Pause", () => Execute(commandSource => commandSource.PauseResumeCommand));
         _settingsMenuItem = CreateMenuItem("Settings", ShowSettings);
+        _quitMenuItem = CreateMenuItem("Quit", Quit);
         var trayIcon = new TrayIcon
         {
             Icon = LoadIcon(_currentIconUri),
             ToolTipText = "Cotton Sync",
             IsVisible = true,
-            Menu = new NativeMenu
-            {
-                Items =
-                {
-                    CreateMenuItem("Show", ShowWindow),
-                    _openFolderMenuItem,
-                    _openWebMenuItem,
-                    _syncNowMenuItem,
-                    _pauseResumeMenuItem,
-                    _settingsMenuItem,
-                    new NativeMenuItemSeparator(),
-                    CreateMenuItem("Quit", Quit),
-                },
-            },
+            Menu = new NativeMenu(),
         };
         trayIcon.Clicked += (_, _) => ShowWindow();
         return trayIcon;
@@ -165,38 +156,69 @@ internal sealed class DesktopTrayController : IDisposable
     {
         if (_viewModel is null)
         {
-            SetMenuItemAvailability(_openFolderMenuItem, false);
-            SetMenuItemAvailability(_openWebMenuItem, false);
-            SetMenuItemAvailability(_syncNowMenuItem, false);
-            SetMenuItemAvailability(_pauseResumeMenuItem, false);
-            SetMenuItemAvailability(_settingsMenuItem, false);
+            RebuildTrayMenu(
+                showOpenFolder: false,
+                showOpenWeb: false,
+                showSyncNow: false,
+                showPauseResume: false,
+                showSettings: false);
             return;
         }
 
         if (_openFolderMenuItem is not null)
         {
             _openFolderMenuItem.Header = _viewModel.TrayOpenFolderLabel;
-            SetMenuItemAvailability(
-                _openFolderMenuItem,
-                _viewModel.CanOpenTrayFolder && _viewModel.OpenTrayFolderCommand.CanExecute(null));
         }
 
-        SetMenuItemAvailability(_openWebMenuItem, _viewModel.OpenWebCommand.CanExecute(null));
-        SetMenuItemAvailability(_syncNowMenuItem, _viewModel.SyncNowCommand.CanExecute(null));
-        SetMenuItemAvailability(_settingsMenuItem, _viewModel.ShowSettingsCommand.CanExecute(null));
         if (_pauseResumeMenuItem is not null)
         {
             _pauseResumeMenuItem.Header = _viewModel.PauseResumeTrayLabel;
-            SetMenuItemAvailability(_pauseResumeMenuItem, _viewModel.PauseResumeCommand.CanExecute(null));
+        }
+
+        RebuildTrayMenu(
+            _viewModel.CanOpenTrayFolder && _viewModel.OpenTrayFolderCommand.CanExecute(null),
+            _viewModel.OpenWebCommand.CanExecute(null),
+            _viewModel.SyncNowCommand.CanExecute(null),
+            _viewModel.PauseResumeCommand.CanExecute(null),
+            _viewModel.ShowSettingsCommand.CanExecute(null));
+    }
+
+    private void RebuildTrayMenu(
+        bool showOpenFolder,
+        bool showOpenWeb,
+        bool showSyncNow,
+        bool showPauseResume,
+        bool showSettings)
+    {
+        if (_trayIcon.Menu is null)
+        {
+            _trayIcon.Menu = new NativeMenu();
+        }
+
+        _trayIcon.Menu.Items.Clear();
+        AddMenuItem(_showMenuItem);
+        AddMenuItemIf(showOpenFolder, _openFolderMenuItem);
+        AddMenuItemIf(showOpenWeb, _openWebMenuItem);
+        AddMenuItemIf(showSyncNow, _syncNowMenuItem);
+        AddMenuItemIf(showPauseResume, _pauseResumeMenuItem);
+        AddMenuItemIf(showSettings, _settingsMenuItem);
+        _trayIcon.Menu.Items.Add(new NativeMenuItemSeparator());
+        AddMenuItem(_quitMenuItem);
+    }
+
+    private void AddMenuItemIf(bool condition, NativeMenuItem? menuItem)
+    {
+        if (condition)
+        {
+            AddMenuItem(menuItem);
         }
     }
 
-    private static void SetMenuItemAvailability(NativeMenuItem? menuItem, bool isAvailable)
+    private void AddMenuItem(NativeMenuItem? menuItem)
     {
         if (menuItem is not null)
         {
-            menuItem.IsVisible = isAvailable;
-            menuItem.IsEnabled = isAvailable;
+            _trayIcon.Menu?.Items.Add(menuItem);
         }
     }
 

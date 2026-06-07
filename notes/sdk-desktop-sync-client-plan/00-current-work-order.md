@@ -20,7 +20,8 @@ Use this section as the active checklist for the current desktop-client pass. Do
   Verification: focused view-model tests plus Windows manual restart/sign-in check.
 - [ ] Fix desktop notification and tray polish.
   Required behavior: tray icon is the normal Cotton icon when idle, changes only for syncing/paused/error states, Windows notifications use the product name and icon where the platform API allows it, and key desktop app events notify outside the web app too.
-  Current status: code-side tray/notification audit is done; Windows installed-app identity and visual notification check remain in Windows-only work.
+  Current status: code-side tray/notification audit is done. Tray unavailable actions are now removed from the native menu instead of relying on disabled/hidden menu items, so Windows native menu rendering should not show a disabled `Pause sync` entry when pause/resume is unavailable. Windows installed-app identity and visual notification check remain in Windows-only work.
+  Partial 2026-06-07: `DesktopTrayController` now rebuilds the native tray menu from available actions and does not set disabled action items. Focused tray/menu verification passed 15/15 after a clean desktop build.
   Verification: Linux smoke where supported and Windows manual notification/tray check.
 - [x] Re-run a minimal desktop verification pass.
   Required behavior: avoid full-suite churn for every tiny step; run focused tests for the changed behavior, then desktop Release build before commit.
