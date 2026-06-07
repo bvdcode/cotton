@@ -909,6 +909,89 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task TransferProgressChanged_ThrottlesVisibleUpdates()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        DateTime startedAtUtc = new(2026, 6, 7, 10, 0, 0, DateTimeKind.Utc);
+
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            syncPairId,
+            SyncTransferDirection.Upload,
+            "Reports/report.txt",
+            TransferredBytes: 20,
+            TotalBytes: 100,
+            IsCompleted: false,
+            startedAtUtc));
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            syncPairId,
+            SyncTransferDirection.Upload,
+            "Reports/report.txt",
+            TransferredBytes: 40,
+            TotalBytes: 100,
+            IsCompleted: false,
+            startedAtUtc.AddMilliseconds(100)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.CurrentTransferProgressValue, Is.EqualTo(20).Within(0.01));
+            Assert.That(viewModel.CurrentTransferDetails, Is.EqualTo("20 B / 100 B"));
+        });
+
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            syncPairId,
+            SyncTransferDirection.Upload,
+            "Reports/report.txt",
+            TransferredBytes: 60,
+            TotalBytes: 100,
+            IsCompleted: false,
+            startedAtUtc.AddMilliseconds(250)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.CurrentTransferProgressValue, Is.EqualTo(60).Within(0.01));
+            Assert.That(viewModel.CurrentTransferDetails, Is.EqualTo("60 B / 100 B"));
+        });
+    }
+
+    [Test]
+    public async Task TransferProgressChanged_DoesNotThrottleCompletionSample()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        DateTime startedAtUtc = new(2026, 6, 7, 10, 0, 0, DateTimeKind.Utc);
+
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            syncPairId,
+            SyncTransferDirection.Upload,
+            "Reports/report.txt",
+            TransferredBytes: 20,
+            TotalBytes: 100,
+            IsCompleted: false,
+            startedAtUtc));
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            syncPairId,
+            SyncTransferDirection.Upload,
+            "Reports/report.txt",
+            TransferredBytes: 100,
+            TotalBytes: 100,
+            IsCompleted: true,
+            startedAtUtc.AddMilliseconds(100)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasCurrentTransfer, Is.True);
+            Assert.That(viewModel.CurrentTransferProgressValue, Is.EqualTo(100).Within(0.01));
+            Assert.That(viewModel.CurrentTransferTitle, Is.EqualTo("Documents: Uploaded report.txt"));
+            Assert.That(viewModel.CurrentTransferDetails, Is.EqualTo("100 B / 100 B"));
+        });
+    }
+
+    [Test]
     public async Task RunProgressChanged_UpdatesCurrentRunProgressState()
     {
         Guid syncPairId = Guid.NewGuid();

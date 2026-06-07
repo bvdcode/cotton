@@ -22,6 +22,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private const int MaxActivityRows = 30;
     private const int MaxConflictRows = 20;
     private static readonly TimeSpan TransferActivityCoalescingWindow = TimeSpan.FromMilliseconds(750);
+    private static readonly TimeSpan VisibleTransferProgressUpdateInterval = TimeSpan.FromMilliseconds(250);
 
     private readonly IDesktopShellController _controller;
     private readonly DesktopFeatureFlags _featureFlags;
@@ -105,6 +106,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private bool _isCoalescedTransferProgressDispatchScheduled;
     private DesktopRunProgressSnapshot? _pendingCoalescedRunProgress;
     private bool _isCoalescedRunProgressDispatchScheduled;
+    private DateTime? _lastVisibleTransferProgressAtUtc;
+    private Guid? _visibleTransferSyncPairId;
+    private SyncTransferDirection _visibleTransferDirection = SyncTransferDirection.Unknown;
+    private string _visibleTransferRelativePath = string.Empty;
 
     internal ShellViewModel(
         IDesktopShellController controller,
@@ -2629,7 +2634,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         if (_uiDispatcher.CheckAccess())
         {
-            ApplyTransferProgress(progress);
+            if (ShouldQueueVisibleTransferProgress(progress))
+            {
+                ApplyTransferProgress(progress);
+            }
+
             return;
         }
 
@@ -2638,7 +2647,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             return;
         }
 
-        _uiDispatcher.Post(() => ApplyTransferProgress(progress));
+        if (ShouldQueueVisibleTransferProgress(progress))
+        {
+            _uiDispatcher.Post(() => ApplyTransferProgress(progress));
+        }
     }
 
     private void OnRunProgressChanged(object? sender, DesktopRunProgressSnapshot progress)
@@ -2665,12 +2677,18 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 && CanReplacePendingTransferProgress(_pendingCoalescedTransferProgress, progress))
             {
                 _pendingCoalescedTransferProgress = progress;
+                TrackVisibleTransferProgressUnsafe(progress);
                 return true;
             }
 
             if (_isCoalescedTransferProgressDispatchScheduled)
             {
                 return false;
+            }
+
+            if (!ShouldQueueVisibleTransferProgressUnsafe(progress))
+            {
+                return true;
             }
 
             _pendingCoalescedTransferProgress = progress;
@@ -2745,6 +2763,42 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             && pending.Direction == next.Direction
             && string.Equals(pending.RelativePath, next.RelativePath, StringComparison.Ordinal)
             && next.OccurredAtUtc >= pending.OccurredAtUtc;
+    }
+
+    private bool ShouldQueueVisibleTransferProgress(DesktopTransferProgressSnapshot progress)
+    {
+        lock (_progressDispatchGate)
+        {
+            return ShouldQueueVisibleTransferProgressUnsafe(progress);
+        }
+    }
+
+    private bool ShouldQueueVisibleTransferProgressUnsafe(DesktopTransferProgressSnapshot progress)
+    {
+        DateTime occurredAtUtc = progress.OccurredAtUtc.ToUniversalTime();
+        bool isNewVisibleTransfer = !_visibleTransferSyncPairId.HasValue
+            || _visibleTransferSyncPairId.Value != progress.SyncPairId
+            || _visibleTransferDirection != progress.Direction
+            || !string.Equals(_visibleTransferRelativePath, progress.RelativePath, StringComparison.Ordinal);
+        if (isNewVisibleTransfer
+            || progress.IsCompleted
+            || !_lastVisibleTransferProgressAtUtc.HasValue
+            || occurredAtUtc < _lastVisibleTransferProgressAtUtc.Value
+            || occurredAtUtc - _lastVisibleTransferProgressAtUtc.Value >= VisibleTransferProgressUpdateInterval)
+        {
+            TrackVisibleTransferProgressUnsafe(progress);
+            return true;
+        }
+
+        return false;
+    }
+
+    private void TrackVisibleTransferProgressUnsafe(DesktopTransferProgressSnapshot progress)
+    {
+        _lastVisibleTransferProgressAtUtc = progress.OccurredAtUtc.ToUniversalTime();
+        _visibleTransferSyncPairId = progress.SyncPairId;
+        _visibleTransferDirection = progress.Direction;
+        _visibleTransferRelativePath = progress.RelativePath;
     }
 
     private static bool CanReplacePendingRunProgress(
@@ -3314,6 +3368,16 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private void ClearTransferProgress()
     {
+        lock (_progressDispatchGate)
+        {
+            _pendingCoalescedTransferProgress = null;
+            _isCoalescedTransferProgressDispatchScheduled = false;
+            _lastVisibleTransferProgressAtUtc = null;
+            _visibleTransferSyncPairId = null;
+            _visibleTransferDirection = SyncTransferDirection.Unknown;
+            _visibleTransferRelativePath = string.Empty;
+        }
+
         HasCurrentTransfer = false;
         IsCurrentTransferIndeterminate = false;
         CurrentTransferProgressValue = 0;
