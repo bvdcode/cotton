@@ -21,6 +21,8 @@ Use the checkbox in the `Plan Files` section as the sub-plan reopen flag:
 - `[x]` means the sub-plan is fully closed and should not be opened during normal work.
 - `[ ]` means the sub-plan still has open release work, manual verification, reference guardrails, or future scope.
 
+Latest audit result: no additional sub-plan can be marked fully complete after the current desktop pass. Phase 1 through Phase 5 remain the only fully closed implementation sub-plans. Every other unchecked file still has at least one open release gate, manual gate, reference guardrail, or future item.
+
 Closed implementation sub-plans after this audit:
 
 - Phase 1 - Release-Grade App Model.
@@ -30,6 +32,18 @@ Closed implementation sub-plans after this audit:
 - Phase 5 - Sync Core Hardening.
 
 These closed sub-plans are done. Do not reopen them during normal work unless a new concrete bug points directly back to one of them.
+
+## Sub-Plan Opening Rules
+
+Open plan files in this order:
+
+1. `00-current-work-order.md` for active desktop-client bugs and polish.
+2. `18-phase-8-desktop-ux-and-visual-design.md` only when the current work order points to visual/layout/manual screenshot work.
+3. `22-phase-12-end-to-end-test-matrix.md` only when a concrete end-to-end edge case is being verified or fixed.
+4. `23-phase-13-performance-and-soak.md` only when working on scale, throughput, memory, UI responsiveness, or soak behavior.
+5. Manual-gated files only when the matching platform or clean-machine environment is available.
+
+Do not open `[x]` sub-plans during normal work. Do not use `reference` or `future` files as implementation queues unless the user explicitly promotes one of those items.
 
 Primary active queue:
 
@@ -83,12 +97,19 @@ Reference and future files are not execution queues. They stay unchecked because
 Revision date: 2026-06-07.
 
 - Fully complete: 5 implementation sub-plans.
+- Newly closed by this audit: 0 sub-plans.
 - Current desktop-polish queue: 5 open, 1 done.
 - Active/manual visual polish: Phase 8 has 8 open, 22 done.
 - Active/manual end-to-end edge cases: Phase 12 has 3 open, 21 done.
 - Active/manual performance and soak: Phase 13 has 5 open, 8 done.
 - Manual platform, diagnostics, packaging, and release gates remain open by design.
 - Reference and future files remain unchecked by design and are not part of the immediate work queue.
+
+Immediate next horizon:
+
+- Close `00-current-work-order.md` items only when their Windows/manual checks are complete or a concrete implementation bug is fixed.
+- Use Linux only for code-side desktop checks, visual-smoke screenshots, and non-Windows logic. Do not start Windows-only implementation work from Linux.
+- Keep backend/server changes out of this desktop branch unless the user explicitly asks for a reviewed backend change.
 
 ## Plan Files
 
