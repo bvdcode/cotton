@@ -16,6 +16,7 @@ Use this section as the active checklist for the current desktop-client pass. Do
   Verification: visual check on Linux for layout regressions and Windows manual check with two or more sync pairs.
 - [ ] Fix startup and authentication polish.
   Required behavior: saved sessions show a connecting/restoring state instead of the login form, login supports Enter, and auth errors stay human-readable without moving the whole form offscreen.
+  Current status: code-side audit is done; keep open for Windows restart/sign-in verification.
   Verification: focused view-model tests plus Windows manual restart/sign-in check.
 - [ ] Fix desktop notification and tray polish.
   Required behavior: tray icon is the normal Cotton icon when idle, changes only for syncing/paused/error states, Windows notifications use the product name and icon where the platform API allows it, and key desktop app events notify outside the web app too.
