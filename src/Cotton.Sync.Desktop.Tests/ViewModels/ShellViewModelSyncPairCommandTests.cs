@@ -2127,6 +2127,54 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task RunProgressChanged_KeepsGlobalFileRateWhenAggregateTotalGrows()
+    {
+        Guid firstSyncPairId = Guid.NewGuid();
+        Guid secondSyncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(
+            CreatePair(firstSyncPairId, "Cloud", "Syncing"),
+            CreatePair(secondSyncPairId, "Videos", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            firstSyncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 0,
+            FilesTotal: 1000,
+            CurrentPath: "Cloud/file-0000.txt",
+            StartedAtUtc: startedAtUtc,
+            IsCompleted: false,
+            OccurredAtUtc: startedAtUtc));
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            firstSyncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 100,
+            FilesTotal: 1000,
+            CurrentPath: "Cloud/file-0100.txt",
+            StartedAtUtc: startedAtUtc,
+            IsCompleted: false,
+            OccurredAtUtc: startedAtUtc.AddSeconds(10)));
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            secondSyncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 50,
+            FilesTotal: 1000,
+            CurrentPath: "Videos/clip-0050.mp4",
+            StartedAtUtc: startedAtUtc,
+            IsCompleted: false,
+            OccurredAtUtc: startedAtUtc.AddSeconds(15)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Syncing 2 folders"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderRateDetails, Is.EqualTo("10 files/s · 2m 05s left"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("150 of 2000 files across 2 folders"));
+        });
+    }
+
+    [Test]
     public async Task TransferProgressChanged_UsesGlobalFileRateWhenActiveTransferHasNoByteRate()
     {
         Guid syncPairId = Guid.NewGuid();

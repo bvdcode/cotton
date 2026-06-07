@@ -4186,7 +4186,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         if (_runFileProgressSamples.Count > 0)
         {
             RunFileProgressSample lastSample = _runFileProgressSamples.Last();
-            if (totalFiles != lastSample.TotalFiles
+            if (totalFiles < lastSample.TotalFiles
                 || completedFiles < lastSample.CompletedFiles
                 || occurredAtUtc - lastSample.OccurredAtUtc > RunTransferMetricsWindow)
             {
