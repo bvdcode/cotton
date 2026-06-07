@@ -34,6 +34,11 @@ public sealed class AppPreferences
     public bool EnableNotifications { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets a value indicating whether synchronization is globally paused.
+    /// </summary>
+    public bool IsSyncPaused { get; set; }
+
+    /// <summary>
     /// Gets or sets the preferred desktop theme.
     /// </summary>
     public AppThemeMode ThemeMode { get; set; } = AppThemeMode.Dark;

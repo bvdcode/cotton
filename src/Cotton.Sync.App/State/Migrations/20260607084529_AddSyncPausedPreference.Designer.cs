@@ -3,6 +3,7 @@ using System;
 using Cotton.Sync.App.State;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cotton.Sync.App.State.Migrations
 {
     [DbContext(typeof(SyncAppDbContext))]
-    partial class SyncAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260607084529_AddSyncPausedPreference")]
+    partial class AddSyncPausedPreference
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.8");

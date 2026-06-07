@@ -92,6 +92,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
         await _authFlow.SignOutAsync(cancellationToken).ConfigureAwait(false);
         await _supervisor.StopAsync(cancellationToken).ConfigureAwait(false);
         _isSyncGloballyPaused = false;
+        await SaveSyncPausedPreferenceAsync(isPaused: false, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -240,6 +241,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
     {
         await _supervisor.PauseAllAsync(cancellationToken).ConfigureAwait(false);
         _isSyncGloballyPaused = true;
+        await SaveSyncPausedPreferenceAsync(isPaused: true, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -251,8 +253,9 @@ public sealed class SyncApplicationService : ISyncApplicationService
     /// <inheritdoc />
     public async Task ResumeAllAsync(CancellationToken cancellationToken = default)
     {
-        _isSyncGloballyPaused = false;
         await _supervisor.ResumeAllAsync(cancellationToken).ConfigureAwait(false);
+        _isSyncGloballyPaused = false;
+        await SaveSyncPausedPreferenceAsync(isPaused: false, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -335,6 +338,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
 
         try
         {
+            _isSyncGloballyPaused = await LoadSyncPausedPreferenceAsync(cancellationToken).ConfigureAwait(false);
             await _supervisor.StartAsync(cancellationToken).ConfigureAwait(false);
             startedComponents.Add(new StartedSyncComponent(
                 "sync supervisor",
@@ -367,6 +371,21 @@ public sealed class SyncApplicationService : ISyncApplicationService
             _isSyncCoreStarted = false;
             throw;
         }
+    }
+
+    private async Task<bool> LoadSyncPausedPreferenceAsync(CancellationToken cancellationToken)
+    {
+        await _preferences.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        AppPreferences preferences = await _preferences.GetAsync(cancellationToken).ConfigureAwait(false);
+        return preferences.IsSyncPaused;
+    }
+
+    private async Task SaveSyncPausedPreferenceAsync(bool isPaused, CancellationToken cancellationToken)
+    {
+        await _preferences.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        AppPreferences preferences = await _preferences.GetAsync(cancellationToken).ConfigureAwait(false);
+        preferences.IsSyncPaused = isPaused;
+        await _preferences.SaveAsync(preferences, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task StopSyncCoreUnlockedAsync(CancellationToken cancellationToken, bool force)
