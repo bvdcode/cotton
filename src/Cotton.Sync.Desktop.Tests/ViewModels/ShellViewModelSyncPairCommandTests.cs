@@ -556,9 +556,9 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentTransferDetails, Does.Contain("/s"));
             Assert.That(viewModel.CurrentTransferDetails, Does.Contain("left"));
             Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Syncing 2 folders"));
-            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("7.0 MB · 4.0 MB/s · 20s left"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("7.0 MB · 4.0 MB/s"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("10 of 40 files across 2 folders"));
-            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("2 files transferring"));
+            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.Empty);
         });
     }
 
@@ -1781,7 +1781,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Syncing 2 folders"));
             Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("512 B · 1.3 files/s · 20s left"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("8 of 30 files across 2 folders"));
-            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Uploading report.txt"));
+            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.Empty);
             Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(28.333).Within(0.01));
             Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.False);
         });
@@ -1829,7 +1829,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents"));
             Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("512 B · 256 B/s · 15s left"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("Checking files · 5 of 20 files"));
-            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Uploading report.txt"));
+            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.Empty);
             Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(27.5).Within(0.01));
             Assert.That(viewModel.IsCurrentWorkProgressIndeterminate, Is.False);
         });
@@ -1885,7 +1885,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentWorkProgressHeaderSizeDetails, Is.EqualTo("3.5 GB / 10 GB"));
             Assert.That(viewModel.CurrentWorkProgressHeaderRateDetails, Is.EqualTo("128 MB/s · 55s left"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("Checking files · 200 of 29189 files"));
-            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Downloading clip.mp4"));
+            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.Empty);
             Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(35).Within(0.01));
         });
     }
@@ -1924,7 +1924,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Syncing 2 folders"));
             Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("2.0 KB · 768 B/s · 20s left"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("8 of 30 files across 2 folders"));
-            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("2 files transferring"));
+            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.Empty);
             Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(30).Within(0.01));
         });
     }
@@ -2214,7 +2214,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             Assert.That(viewModel.HasCurrentTransfer, Is.True);
             Assert.That(viewModel.CurrentWorkProgressHeaderRateDetails, Is.EqualTo("10 files/s · 1m 30s left"));
-            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Downloading clip-0101.mp4"));
+            Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.Empty);
         });
     }
 

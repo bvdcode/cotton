@@ -582,16 +582,6 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         {
             if (IsRunProgressPrimary)
             {
-                if (HasActiveTransferProgress)
-                {
-                    if (_transferProgressByPair.Count > 1)
-                    {
-                        return _transferProgressByPair.Count.ToString(CultureInfo.CurrentCulture) + " files transferring";
-                    }
-
-                    return CreateActiveTransferDetails();
-                }
-
                 return string.Empty;
             }
 
@@ -4426,16 +4416,6 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
         progressValue = Math.Clamp((double)transferredBytes / totalBytes * 100, 0, 100);
         return true;
-    }
-
-    private string CreateActiveTransferDetails()
-    {
-        if (_transferProgressByPair.Count != 1)
-        {
-            return string.Empty;
-        }
-
-        return CreateTransferOperation(_transferProgressByPair.Values.First());
     }
 
     private static string CreateAggregateRunProgressDetails(IReadOnlyList<DesktopRunProgressSnapshot> progressValues)
