@@ -62,8 +62,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private long _runTransferredBytes;
     private double? _runTransferSpeedBytesPerSecond;
     private double? _currentRunProgressFilesPerSecond;
+    private TimeSpan? _runTransferEstimatedTimeRemaining;
     private TimeSpan? _currentRunProgressEstimatedTimeRemaining;
     private DateTime? _lastRunTransferSpeedOccurredAtUtc;
+    private DateTime? _lastRunTransferEstimateOccurredAtUtc;
     private DateTime? _lastRunProgressFileRateOccurredAtUtc;
     private DateTime? _lastRunProgressEstimateOccurredAtUtc;
     private string _dataDirectory = string.Empty;
@@ -3751,6 +3753,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         if (updateEstimate)
         {
             UpdateRunProgressEstimatedTimeRemaining(progressValues);
+            UpdateRunTransferEstimatedTimeRemaining(progressValues);
         }
 
         if (progressValues.Count == 1)
@@ -3837,7 +3840,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             hasByteRate = true;
             if (totalBytes > transferredBytes)
             {
-                TimeSpan estimatedTimeRemaining = TimeSpan.FromSeconds((totalBytes - transferredBytes) / bytesPerSecond);
+                TimeSpan estimatedTimeRemaining = _runTransferEstimatedTimeRemaining
+                    ?? TimeSpan.FromSeconds((totalBytes - transferredBytes) / bytesPerSecond);
                 parts.Add(FormatDuration(estimatedTimeRemaining) + " left");
                 hasByteEstimate = true;
             }
@@ -3881,7 +3885,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         _runTransferSamples.Clear();
         _runTransferredBytes = 0;
         _runTransferSpeedBytesPerSecond = null;
+        _runTransferEstimatedTimeRemaining = null;
         _lastRunTransferSpeedOccurredAtUtc = null;
+        _lastRunTransferEstimateOccurredAtUtc = null;
         _currentRunProgressFilesPerSecond = null;
         _currentRunProgressEstimatedTimeRemaining = null;
         _lastRunProgressFileRateOccurredAtUtc = null;
@@ -4025,10 +4031,81 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
 
         UpdateRunFileRate(observedFilesPerSecond, occurredAtUtc);
-        _currentRunProgressEstimatedTimeRemaining = _currentRunProgressFilesPerSecond is > 0
+        TimeSpan? rawEstimatedTimeRemaining = _currentRunProgressFilesPerSecond is > 0
             ? TimeSpan.FromSeconds(remainingFiles / _currentRunProgressFilesPerSecond.Value)
             : null;
-        _lastRunProgressEstimateOccurredAtUtc = occurredAtUtc;
+        _currentRunProgressEstimatedTimeRemaining = rawEstimatedTimeRemaining.HasValue
+            ? SmoothEstimatedTimeRemaining(
+                rawEstimatedTimeRemaining.Value,
+                occurredAtUtc,
+                _currentRunProgressEstimatedTimeRemaining,
+                _lastRunProgressEstimateOccurredAtUtc)
+            : null;
+        _lastRunProgressEstimateOccurredAtUtc = rawEstimatedTimeRemaining.HasValue ? occurredAtUtc : null;
+    }
+
+    private void UpdateRunTransferEstimatedTimeRemaining(IReadOnlyList<DesktopRunProgressSnapshot> progressValues)
+    {
+        if (!TryCalculateAggregateRunTransferBytes(progressValues, out long transferredBytes, out long totalBytes)
+            || transferredBytes >= totalBytes
+            || !TryGetRunTransferSpeed(out double bytesPerSecond))
+        {
+            _runTransferEstimatedTimeRemaining = null;
+            _lastRunTransferEstimateOccurredAtUtc = null;
+            return;
+        }
+
+        DateTime occurredAtUtc = GetLatestRunTransferEstimateOccurredAtUtc(progressValues);
+        TimeSpan rawEstimatedTimeRemaining = TimeSpan.FromSeconds((totalBytes - transferredBytes) / bytesPerSecond);
+        _runTransferEstimatedTimeRemaining = SmoothEstimatedTimeRemaining(
+            rawEstimatedTimeRemaining,
+            occurredAtUtc,
+            _runTransferEstimatedTimeRemaining,
+            _lastRunTransferEstimateOccurredAtUtc);
+        _lastRunTransferEstimateOccurredAtUtc = occurredAtUtc;
+    }
+
+    private DateTime GetLatestRunTransferEstimateOccurredAtUtc(IReadOnlyList<DesktopRunProgressSnapshot> progressValues)
+    {
+        DateTime occurredAtUtc = _runTransferSamples.Count > 0
+            ? _runTransferSamples.Last().OccurredAtUtc
+            : DateTime.MinValue;
+        foreach (DesktopRunProgressSnapshot progress in progressValues)
+        {
+            DateTime progressOccurredAtUtc = progress.OccurredAtUtc.ToUniversalTime();
+            if (progressOccurredAtUtc > occurredAtUtc)
+            {
+                occurredAtUtc = progressOccurredAtUtc;
+            }
+        }
+
+        return occurredAtUtc;
+    }
+
+    private static TimeSpan SmoothEstimatedTimeRemaining(
+        TimeSpan rawEstimate,
+        DateTime occurredAtUtc,
+        TimeSpan? previousEstimate,
+        DateTime? previousOccurredAtUtc)
+    {
+        if (!previousEstimate.HasValue
+            || !previousOccurredAtUtc.HasValue
+            || occurredAtUtc <= previousOccurredAtUtc.Value)
+        {
+            return rawEstimate;
+        }
+
+        TimeSpan elapsed = occurredAtUtc - previousOccurredAtUtc.Value;
+        TimeSpan agedPreviousEstimate = previousEstimate.Value - elapsed;
+        if (agedPreviousEstimate < TimeSpan.Zero)
+        {
+            agedPreviousEstimate = TimeSpan.Zero;
+        }
+
+        double smoothingFactor = CalculateExponentialSmoothingFactor(elapsed, RunProgressEstimateSmoothingPeriod);
+        double smoothedSeconds = agedPreviousEstimate.TotalSeconds
+            + ((rawEstimate.TotalSeconds - agedPreviousEstimate.TotalSeconds) * smoothingFactor);
+        return TimeSpan.FromSeconds(Math.Max(0, smoothedSeconds));
     }
 
     private bool TryCalculateAggregateRunProgressEstimate(
