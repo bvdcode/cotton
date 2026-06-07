@@ -4012,8 +4012,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         if (!TryCalculateAggregateRunProgressEstimate(
             progressValues,
-            out TimeSpan estimatedTimeRemaining,
-            out double filesPerSecond,
+            out double observedFilesPerSecond,
+            out double remainingFiles,
             out DateTime occurredAtUtc))
         {
             _currentRunProgressFilesPerSecond = null;
@@ -4023,20 +4023,21 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             return;
         }
 
-        _currentRunProgressFilesPerSecond = filesPerSecond;
-        _lastRunProgressFileRateOccurredAtUtc = occurredAtUtc;
-        _currentRunProgressEstimatedTimeRemaining = estimatedTimeRemaining;
+        UpdateRunFileRate(observedFilesPerSecond, occurredAtUtc);
+        _currentRunProgressEstimatedTimeRemaining = _currentRunProgressFilesPerSecond is > 0
+            ? TimeSpan.FromSeconds(remainingFiles / _currentRunProgressFilesPerSecond.Value)
+            : null;
         _lastRunProgressEstimateOccurredAtUtc = occurredAtUtc;
     }
 
     private bool TryCalculateAggregateRunProgressEstimate(
         IReadOnlyList<DesktopRunProgressSnapshot> progressValues,
-        out TimeSpan estimatedTimeRemaining,
         out double filesPerSecond,
+        out double remainingFiles,
         out DateTime occurredAtUtc)
     {
-        estimatedTimeRemaining = TimeSpan.Zero;
         filesPerSecond = 0;
+        remainingFiles = 0;
         occurredAtUtc = DateTime.MinValue;
         double completedFiles = 0;
         int totalFiles = 0;
@@ -4063,19 +4064,38 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
 
         occurredAtUtc = latestRunProgressAtUtc;
+        remainingFiles = totalFiles - completedFiles;
         if (!TryCalculateRunFileRate(totalFiles, completedFiles, occurredAtUtc, out filesPerSecond))
         {
             return false;
         }
 
-        double estimatedSeconds = (totalFiles - completedFiles) / filesPerSecond;
-        if (!double.IsFinite(estimatedSeconds) || estimatedSeconds <= 0)
+        return remainingFiles > 0;
+    }
+
+    private void UpdateRunFileRate(double observedFilesPerSecond, DateTime occurredAtUtc)
+    {
+        if (!double.IsFinite(observedFilesPerSecond) || observedFilesPerSecond <= 0)
         {
-            return false;
+            return;
         }
 
-        estimatedTimeRemaining = TimeSpan.FromSeconds(estimatedSeconds);
-        return true;
+        if (!_currentRunProgressFilesPerSecond.HasValue
+            || !_lastRunProgressFileRateOccurredAtUtc.HasValue
+            || occurredAtUtc <= _lastRunProgressFileRateOccurredAtUtc.Value)
+        {
+            _currentRunProgressFilesPerSecond = observedFilesPerSecond;
+            _lastRunProgressFileRateOccurredAtUtc = occurredAtUtc;
+            return;
+        }
+
+        TimeSpan sampleElapsed = occurredAtUtc - _lastRunProgressFileRateOccurredAtUtc.Value;
+        double smoothingFactor = CalculateExponentialSmoothingFactor(sampleElapsed, RunProgressEstimateSmoothingPeriod);
+        _currentRunProgressFilesPerSecond = Math.Max(
+            0,
+            _currentRunProgressFilesPerSecond.Value
+                + ((observedFilesPerSecond - _currentRunProgressFilesPerSecond.Value) * smoothingFactor));
+        _lastRunProgressFileRateOccurredAtUtc = occurredAtUtc;
     }
 
     private bool TryCalculateRunFileRate(
