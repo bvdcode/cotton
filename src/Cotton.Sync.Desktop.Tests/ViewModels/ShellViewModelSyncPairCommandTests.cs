@@ -306,6 +306,26 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task Initialize_TreatsSyncPairErrorAsAttentionBeforeErrorMessageIsResolved()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(Guid.NewGuid(), "Videos", "Error")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+
+        await viewModel.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasActionRequired, Is.False);
+            Assert.That(viewModel.HasStatusAttention, Is.True);
+            Assert.That(viewModel.HeaderStatusText, Is.EqualTo("Action required"));
+            Assert.That(viewModel.IsStatusCardVisible, Is.True);
+            Assert.That(viewModel.StatusCardTitle, Is.EqualTo("Sync needs attention"));
+            Assert.That(viewModel.StatusCardDetailText, Is.EqualTo("Fix the folder issue to continue syncing."));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Fix the folder issue to continue syncing."));
+        });
+    }
+
+    [Test]
     public async Task SelfTestPass_PreservesCurrentSyncPairErrorActionRequired()
     {
         Guid syncPairId = Guid.NewGuid();

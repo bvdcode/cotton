@@ -396,7 +396,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 return "Conflicts need review";
             }
 
-            if (HasActionRequired || IsSyncPaused || IsSyncPausePending)
+            if (HasActionRequired || HasPairStatusAttention)
+            {
+                return "Action required";
+            }
+
+            if (IsSyncPaused || IsSyncPausePending)
             {
                 return GlobalStatus;
             }
@@ -411,7 +416,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         get
         {
-            if (HasActionRequired)
+            if (HasActionRequired || HasPairStatusAttention)
             {
                 return "Sync needs attention";
             }
@@ -420,7 +425,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
     }
 
-    public string StatusCardDetailText => HasActionRequired ? CurrentProgressText : string.Empty;
+    public string StatusCardDetailText => HasActionRequired || HasPairStatusAttention ? CurrentProgressText : string.Empty;
 
     public bool HasStatusCardDetail => !string.IsNullOrWhiteSpace(StatusCardDetailText);
 
@@ -663,7 +668,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public bool HasActionRequired => !string.IsNullOrWhiteSpace(ActionRequiredMessage);
 
-    public bool HasStatusAttention => HasActionRequired || HasConflicts;
+    public bool HasStatusAttention => HasActionRequired || HasConflicts || HasPairStatusAttention;
+
+    private bool HasPairStatusAttention => SyncPairs.Any(static pair => pair.IsStatusAttention);
 
     public bool IsStatusCardVisible =>
         HasSyncPairs
@@ -3474,7 +3481,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OnPropertyChanged(nameof(PauseResumeSyncLabel));
         OnPropertyChanged(nameof(PauseResumeTrayLabel));
         OnPropertyChanged(nameof(IsSyncPaused));
+        OnPropertyChanged(nameof(HasStatusAttention));
+        OnPropertyChanged(nameof(IsStatusCardVisible));
         OnPropertyChanged(nameof(HeaderStatusText));
+        OnPropertyChanged(nameof(StatusCardTitle));
+        OnPropertyChanged(nameof(StatusCardDetailText));
+        OnPropertyChanged(nameof(HasStatusCardDetail));
         OnPropertyChanged(nameof(HasDashboardNotifications));
     }
 
@@ -3582,6 +3594,12 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         if (HasActionRequired)
         {
             CurrentProgressText = "Fix the issue below to continue syncing.";
+            return;
+        }
+
+        if (HasPairStatusAttention)
+        {
+            CurrentProgressText = "Fix the folder issue to continue syncing.";
             return;
         }
 
@@ -4484,10 +4502,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             || string.Equals(syncPair.Status, "Scanning", StringComparison.Ordinal)
             || string.Equals(syncPair.Status, "Syncing", StringComparison.Ordinal)
             || string.Equals(syncPair.Status, "Sync requested", StringComparison.Ordinal)
-            || string.Equals(syncPair.Status, "Pausing", StringComparison.Ordinal)
-            || string.Equals(syncPair.Status, "Offline", StringComparison.Ordinal)
-            || string.Equals(syncPair.Status, "Error", StringComparison.Ordinal)
-            || string.Equals(syncPair.Status, "Conflict", StringComparison.Ordinal);
+            || string.Equals(syncPair.Status, "Pausing", StringComparison.Ordinal);
     }
 
     private SyncPairRowViewModel? ResolveConflictSyncPair(ConflictRowViewModel conflict)
