@@ -105,12 +105,12 @@ public sealed class SyncEngine : ISyncEngine
         await EnsureLocalContentHashesForStateFilesAsync(localByPath, stateByPath, cancellationToken)
             .ConfigureAwait(false);
 
-        DirectoryContentIndex localDirectoryContentIndex = DirectoryContentIndex.Create(
-            localDirectoriesByPath.Keys,
-            localByPath.Keys);
-        DirectoryContentIndex remoteDirectoryContentIndex = DirectoryContentIndex.Create(
-            remoteDirectoriesByPath.Keys,
-            remoteByPath.Keys);
+        DirectoryContentIndex localDirectoryContentIndex = directoryStateByPath.Count == 0
+            ? DirectoryContentIndex.Empty
+            : DirectoryContentIndex.Create(localDirectoriesByPath.Keys, localByPath.Keys);
+        DirectoryContentIndex remoteDirectoryContentIndex = directoryStateByPath.Count == 0
+            ? DirectoryContentIndex.Empty
+            : DirectoryContentIndex.Create(remoteDirectoriesByPath.Keys, remoteByPath.Keys);
 
         SyncDeleteGuard deleteGuard = BuildDeleteGuard(
             options,
@@ -123,18 +123,21 @@ public sealed class SyncEngine : ISyncEngine
             localDirectoryContentIndex,
             remoteDirectoryContentIndex);
 
-        await ReconcileDirectoryDeletesAsync(
-            syncPair,
-            options,
-            result,
-            deleteGuard,
-            directoryPathKeys,
-            localDirectoriesByPath,
-            remoteDirectoriesByPath,
-            directoryStateByPath,
-            localDirectoryContentIndex,
-            remoteDirectoryContentIndex,
-            cancellationToken).ConfigureAwait(false);
+        if (directoryStateByPath.Count != 0)
+        {
+            await ReconcileDirectoryDeletesAsync(
+                syncPair,
+                options,
+                result,
+                deleteGuard,
+                directoryPathKeys,
+                localDirectoriesByPath,
+                remoteDirectoriesByPath,
+                directoryStateByPath,
+                localDirectoryContentIndex,
+                remoteDirectoryContentIndex,
+                cancellationToken).ConfigureAwait(false);
+        }
 
         IReadOnlyList<string> pathKeys = BuildPathKeys(localByPath.Keys, remoteByPath.Keys, stateByPath.Keys);
         int filesCompleted = 0;
@@ -1550,6 +1553,8 @@ public sealed class SyncEngine : ISyncEngine
         {
             _directoryKeysWithChildren = directoryKeysWithChildren;
         }
+
+        public static DirectoryContentIndex Empty { get; } = new([]);
 
         public static DirectoryContentIndex Create(IEnumerable<string> directoryKeys, IEnumerable<string> fileKeys)
         {
