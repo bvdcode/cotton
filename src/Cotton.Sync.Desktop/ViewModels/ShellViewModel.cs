@@ -38,6 +38,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private readonly bool _notifyOnSessionRestore;
     private readonly IDesktopThemeService _themeService;
     private readonly IDesktopUiDispatcher _uiDispatcher;
+    private readonly object _statusDispatchGate = new();
     private readonly object _activityDispatchGate = new();
     private readonly object _progressDispatchGate = new();
     private readonly DesktopNotificationTracker _notificationTracker = new();
@@ -71,6 +72,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private bool _hasCurrentRunProgress;
     private bool _hasCurrentTransfer;
     private bool _isBusy;
+    private bool _isStatusDispatchQueued;
     private bool _isCurrentRunProgressIndeterminate;
     private bool _isCurrentTransferIndeterminate;
     private bool _isSignedIn;
@@ -117,6 +119,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private Guid? _transferSyncPairId;
     private string _transferRelativePath = string.Empty;
     private string _username = string.Empty;
+    private DesktopSyncStatusSnapshot? _pendingStatus;
     private DateTimeOffset? _lastCoalescedActivityAt;
     private Guid? _lastCoalescedActivitySyncPairId;
     private DesktopActivitySnapshot? _pendingCoalescedActivity;
@@ -2688,7 +2691,45 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private void OnStatusChanged(object? sender, DesktopSyncStatusSnapshot status)
     {
-        _uiDispatcher.Post(() => ApplyStatus(status));
+        if (_uiDispatcher.CheckAccess())
+        {
+            ApplyStatus(status);
+            return;
+        }
+
+        PostCoalescedStatus(status);
+    }
+
+    private void PostCoalescedStatus(DesktopSyncStatusSnapshot status)
+    {
+        lock (_statusDispatchGate)
+        {
+            _pendingStatus = status;
+            if (_isStatusDispatchQueued)
+            {
+                return;
+            }
+
+            _isStatusDispatchQueued = true;
+        }
+
+        _uiDispatcher.Post(ApplyPendingStatus);
+    }
+
+    private void ApplyPendingStatus()
+    {
+        DesktopSyncStatusSnapshot? status;
+        lock (_statusDispatchGate)
+        {
+            status = _pendingStatus;
+            _pendingStatus = null;
+            _isStatusDispatchQueued = false;
+        }
+
+        if (status is not null)
+        {
+            ApplyStatus(status);
+        }
     }
 
     private void OnActivityReported(object? sender, DesktopActivitySnapshot activity)
