@@ -18,25 +18,38 @@ Audit date: 2026-06-07.
 
 Use the checkbox in the `Plan Files` section as the sub-plan reopen flag:
 
-- `[x]` means the sub-plan is closed and should not be opened during normal work.
+- `[x]` means the sub-plan is fully closed and should not be opened during normal work.
 - `[ ]` means the sub-plan still has open release work, manual verification, reference guardrails, or future scope.
 
-Closed implementation sub-plans after this audit: Phase 1, Phase 2, Phase 3, Phase 4, and Phase 5. They are done unless a new bug explicitly points back to one of them.
+Closed implementation sub-plans after this audit:
 
-Highest-priority active work lives in `00-current-work-order.md`. It is the shortest queue for the current desktop polish pass: sync controls, dashboard progress, folder-list usability, startup/auth polish, and tray/notification polish. Most of those are now code-side audited and waiting for Windows/manual verification, so do not repeatedly reopen completed phase files unless a new bug points there.
+- Phase 1 - Release-Grade App Model.
+- Phase 2 - Application Layer.
+- Phase 3 - Backend Sync Change Feed.
+- Phase 4 - Optimistic Concurrency And Safe Remote Operations.
+- Phase 5 - Sync Core Hardening.
 
-Release-grade remaining work is mostly verification, not broad architecture:
+These closed sub-plans are done. Do not reopen them during normal work unless a new concrete bug points directly back to one of them.
+
+Primary active queue:
+
+- `00-current-work-order.md` remains the first file to open. It has 5 open desktop-polish items and 1 completed verification item.
+- The open items are mostly code-side audited, but they are not complete until the required Windows/manual checks pass or a new implementation bug is fixed.
+- Do not jump into lower-priority files while an item in this work order has an unresolved correctness or usability blocker.
+
+Current implementation horizon:
+
+- Finish Linux-verifiable desktop polish only when it directly closes an open `00-current-work-order.md` item.
+- Use Phase 8 only for remaining visual/layout polish and screenshot/manual walkthrough gates.
+- Use Phase 12 only for concrete end-to-end edge cases: process crash recovery, real disk-full behavior, and Windows permission-denied behavior.
+- Use Phase 13 only for scale/performance safety: many-file stability, Windows desktop large-file smoke, 24-hour soak, and measured resource tracking.
+
+Manual and release horizon:
 
 - Windows/manual gates: Windows shell identity, tray behavior, notifications, secure storage, and large-tree/large-file desktop smoke.
 - Clean-machine gates: Windows installer/archive, Linux package/archive, uninstall, and upgrade.
 - Soak/performance gates: continuous sync soak, crash recovery, disk-full and permission-denied action-required checks, many-file stability, and 24-hour one/two-client soak.
 - Final release gates: full Release build/test pass, screenshot review, diagnostics export verification, release notes, checksums, and final branch diff review.
-
-Current code-side horizon:
-
-- Continue from `00-current-work-order.md` first.
-- Then finish active Phase 8 polish that can be validated on Linux.
-- Then defer Windows-only, clean-machine, and long-running soak items to their manual-gated files.
 
 Do not spend time in `future` or `reference` sub-plans unless the user explicitly promotes that work.
 
@@ -48,22 +61,34 @@ The audit counted implementation checkboxes in every linked sub-plan. Closed fil
 
 Active code-side queue:
 
-- `00-current-work-order.md`: the immediate desktop polish queue. This is the first file to use when deciding the next implementation step.
-- `18-phase-8-desktop-ux-and-visual-design.md`: open only for Linux-verifiable desktop visual/layout polish not already captured by the current work order.
+- `00-current-work-order.md`: immediate desktop polish queue and the first source for the next implementation step.
+- `18-phase-8-desktop-ux-and-visual-design.md`: open only for desktop visual/layout polish, screenshot review, or manual walkthrough work not already captured by the current work order.
 - `22-phase-12-end-to-end-test-matrix.md`: open only for focused edge-case coverage tied to a concrete bug or release gate.
 - `23-phase-13-performance-and-soak.md`: open only for performance fixes, scale safety, and measured desktop sync behavior.
 
 Manual-gated queue:
 
-- `01-windows-only-work.md`
-- `16-phase-6-continuous-sync.md`
-- `17-phase-7-authentication-and-token-storage.md`
-- `19-phase-9-tray-autostart-notifications-and-lifecycle.md`
-- `20-phase-10-diagnostics-and-supportability.md`
-- `21-phase-11-packaging-and-installers.md`
-- `24-phase-14-release-readiness-gate.md`
+- `01-windows-only-work.md`: Windows-only shell, tray, virtual-files, and large-tree/large-file work. Do not implement Windows-specific features from Linux unless the item is only plan/research.
+- `16-phase-6-continuous-sync.md`: 2-hour continuous sync soak remains.
+- `17-phase-7-authentication-and-token-storage.md`: Windows/Linux secure-storage manual verification remains.
+- `19-phase-9-tray-autostart-notifications-and-lifecycle.md`: installed-app tray/autostart/notification verification remains.
+- `20-phase-10-diagnostics-and-supportability.md`: manual diagnostics export verification remains.
+- `21-phase-11-packaging-and-installers.md`: clean-machine install, uninstall, portable archive, Linux package/archive, and upgrade checks remain.
+- `24-phase-14-release-readiness-gate.md`: final release gate; only use after active/manual gates above are complete.
 
 Reference and future files are not execution queues. They stay unchecked because they contain product guardrails or intentionally deferred scope, not because they should be worked top-to-bottom now.
+
+## Revision Result
+
+Revision date: 2026-06-07.
+
+- Fully complete: 5 implementation sub-plans.
+- Current desktop-polish queue: 5 open, 1 done.
+- Active/manual visual polish: Phase 8 has 8 open, 22 done.
+- Active/manual end-to-end edge cases: Phase 12 has 3 open, 21 done.
+- Active/manual performance and soak: Phase 13 has 5 open, 8 done.
+- Manual platform, diagnostics, packaging, and release gates remain open by design.
+- Reference and future files remain unchecked by design and are not part of the immediate work queue.
 
 ## Plan Files
 
