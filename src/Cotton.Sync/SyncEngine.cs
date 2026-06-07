@@ -18,6 +18,7 @@ namespace Cotton.Sync;
 public sealed class SyncEngine : ISyncEngine
 {
     private const int RunProgressReportItemInterval = 100;
+    private static readonly TimeSpan RunProgressReportTimeInterval = TimeSpan.FromMilliseconds(250);
     private static readonly StringComparer PathComparer = StringComparer.OrdinalIgnoreCase;
     private readonly ILocalFileScanner _localScanner;
     private readonly ILocalFileContentHasher? _localContentHasher;
@@ -154,6 +155,7 @@ public sealed class SyncEngine : ISyncEngine
         long plannedTransferBytesTotal = plannedTransferBytesByPath.Values.Sum();
         long completedTransferBytes = 0;
         int filesCompleted = 0;
+        DateTime? lastFileRunProgressReportedAtUtc = null;
         ReportRunProgress(
             options,
             SyncRunProgressStage.ReconcilingFiles,
@@ -177,6 +179,7 @@ public sealed class SyncEngine : ISyncEngine
                 pathKeys.Count,
                 relativePath,
                 startedAtUtc,
+                ref lastFileRunProgressReportedAtUtc,
                 bytesCompleted: completedTransferBytes,
                 bytesTotal: plannedTransferBytesTotal);
 
@@ -192,6 +195,7 @@ public sealed class SyncEngine : ISyncEngine
                     pathKeys.Count,
                     relativePath,
                     startedAtUtc,
+                    ref lastFileRunProgressReportedAtUtc,
                     bytesCompleted: completedTransferBytes,
                     bytesTotal: plannedTransferBytesTotal);
                 continue;
@@ -208,6 +212,7 @@ public sealed class SyncEngine : ISyncEngine
                 pathKeys.Count,
                 relativePath,
                 startedAtUtc,
+                ref lastFileRunProgressReportedAtUtc,
                 bytesCompleted: completedTransferBytes,
                 bytesTotal: plannedTransferBytesTotal);
         }
@@ -444,6 +449,7 @@ public sealed class SyncEngine : ISyncEngine
         CancellationToken cancellationToken)
     {
         int foldersCompleted = 0;
+        DateTime? lastDirectoryRunProgressReportedAtUtc = null;
         foreach (string key in pathKeys)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -451,11 +457,25 @@ public sealed class SyncEngine : ISyncEngine
             remoteByPath.TryGetValue(key, out RemoteDirectorySnapshot? remote);
             stateByPath.TryGetValue(key, out SyncStateEntry? state);
             string relativePath = local?.RelativePath ?? remote?.RelativePath ?? state?.RelativePath ?? key;
-            ReportItemRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
+            ReportItemRunProgress(
+                options,
+                SyncRunProgressStage.ReconcilingDirectories,
+                foldersCompleted,
+                pathKeys.Count,
+                relativePath,
+                startedAtUtc,
+                ref lastDirectoryRunProgressReportedAtUtc);
             if (state is not null)
             {
                 foldersCompleted++;
-                ReportItemRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
+                ReportItemRunProgress(
+                    options,
+                    SyncRunProgressStage.ReconcilingDirectories,
+                    foldersCompleted,
+                    pathKeys.Count,
+                    relativePath,
+                    startedAtUtc,
+                    ref lastDirectoryRunProgressReportedAtUtc);
                 continue;
             }
 
@@ -466,7 +486,14 @@ public sealed class SyncEngine : ISyncEngine
                     .ConfigureAwait(false);
                 Report(result, options, SyncActivityKind.Downloaded, relativePath, "Created local folder.");
                 foldersCompleted++;
-                ReportItemRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
+                ReportItemRunProgress(
+                    options,
+                    SyncRunProgressStage.ReconcilingDirectories,
+                    foldersCompleted,
+                    pathKeys.Count,
+                    relativePath,
+                    startedAtUtc,
+                    ref lastDirectoryRunProgressReportedAtUtc);
                 continue;
             }
 
@@ -477,7 +504,14 @@ public sealed class SyncEngine : ISyncEngine
                 if (!TryGetRemoteDirectoryNodeId(remoteByPath, parentKey, remoteRootNode.Id, out Guid parentNodeId))
                 {
                     foldersCompleted++;
-                    ReportItemRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
+                    ReportItemRunProgress(
+                        options,
+                        SyncRunProgressStage.ReconcilingDirectories,
+                        foldersCompleted,
+                        pathKeys.Count,
+                        relativePath,
+                        startedAtUtc,
+                        ref lastDirectoryRunProgressReportedAtUtc);
                     continue;
                 }
 
@@ -494,7 +528,14 @@ public sealed class SyncEngine : ISyncEngine
                     .ConfigureAwait(false);
                 Report(result, options, SyncActivityKind.Uploaded, relativePath, "Created remote folder.");
                 foldersCompleted++;
-                ReportItemRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
+                ReportItemRunProgress(
+                    options,
+                    SyncRunProgressStage.ReconcilingDirectories,
+                    foldersCompleted,
+                    pathKeys.Count,
+                    relativePath,
+                    startedAtUtc,
+                    ref lastDirectoryRunProgressReportedAtUtc);
                 continue;
             }
 
@@ -505,7 +546,14 @@ public sealed class SyncEngine : ISyncEngine
             }
 
             foldersCompleted++;
-            ReportItemRunProgress(options, SyncRunProgressStage.ReconcilingDirectories, foldersCompleted, pathKeys.Count, relativePath, startedAtUtc);
+            ReportItemRunProgress(
+                options,
+                SyncRunProgressStage.ReconcilingDirectories,
+                foldersCompleted,
+                pathKeys.Count,
+                relativePath,
+                startedAtUtc,
+                ref lastDirectoryRunProgressReportedAtUtc);
         }
     }
 
@@ -1924,13 +1972,17 @@ public sealed class SyncEngine : ISyncEngine
         int itemsTotal,
         string? currentPath,
         DateTime startedAtUtc,
+        ref DateTime? lastReportedAtUtc,
         long bytesCompleted = 0,
         long? bytesTotal = null)
     {
-        if (!ShouldReportItemRunProgress(itemsCompleted, itemsTotal))
+        DateTime occurredAtUtc = DateTime.UtcNow;
+        if (!ShouldReportItemRunProgress(itemsCompleted, itemsTotal, lastReportedAtUtc, occurredAtUtc))
         {
             return;
         }
+
+        lastReportedAtUtc = occurredAtUtc;
 
         ReportRunProgress(
             options,
@@ -1943,12 +1995,18 @@ public sealed class SyncEngine : ISyncEngine
             bytesTotal: bytesTotal);
     }
 
-    private static bool ShouldReportItemRunProgress(int itemsCompleted, int itemsTotal)
+    private static bool ShouldReportItemRunProgress(
+        int itemsCompleted,
+        int itemsTotal,
+        DateTime? lastReportedAtUtc,
+        DateTime occurredAtUtc)
     {
         return itemsTotal <= RunProgressReportItemInterval
             || itemsCompleted == 0
             || itemsCompleted == itemsTotal
-            || itemsCompleted % RunProgressReportItemInterval == 0;
+            || itemsCompleted % RunProgressReportItemInterval == 0
+            || (lastReportedAtUtc.HasValue
+                && occurredAtUtc - lastReportedAtUtc.Value >= RunProgressReportTimeInterval);
     }
 
     private enum SyncDeleteDirection

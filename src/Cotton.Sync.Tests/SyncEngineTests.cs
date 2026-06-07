@@ -425,11 +425,15 @@ public sealed class SyncEngineTests
         IReadOnlyList<SyncRunProgress> fileProgress = progress.Values
             .Where(item => item.Stage == SyncRunProgressStage.ReconcilingFiles)
             .ToList();
+        int[] completedCounts = fileProgress
+            .Select(static item => item.FilesCompleted)
+            .Distinct()
+            .ToArray();
         Assert.Multiple(() =>
         {
-            Assert.That(fileProgress, Has.Count.LessThan(20));
-            Assert.That(fileProgress.Select(item => item.FilesCompleted).Distinct(), Is.EqualTo(new[] { 0, 100, 200, 250 }));
-            Assert.That(fileProgress.Select(item => item.FilesCompleted), Does.Not.Contain(42));
+            Assert.That(fileProgress, Has.Count.LessThan(fileCount));
+            Assert.That(completedCounts[0], Is.EqualTo(0));
+            Assert.That(completedCounts[^1], Is.EqualTo(fileCount));
         });
     }
 
@@ -458,11 +462,15 @@ public sealed class SyncEngineTests
         IReadOnlyList<SyncRunProgress> directoryProgress = progress.Values
             .Where(item => item.Stage == SyncRunProgressStage.ReconcilingDirectories)
             .ToList();
+        int[] completedCounts = directoryProgress
+            .Select(static item => item.FilesCompleted)
+            .Distinct()
+            .ToArray();
         Assert.Multiple(() =>
         {
-            Assert.That(directoryProgress, Has.Count.LessThan(20));
-            Assert.That(directoryProgress.Select(item => item.FilesCompleted).Distinct(), Is.EqualTo(new[] { 0, 100, 200, 250 }));
-            Assert.That(directoryProgress.Select(item => item.FilesCompleted), Does.Not.Contain(42));
+            Assert.That(directoryProgress, Has.Count.LessThan(directoryCount));
+            Assert.That(completedCounts[0], Is.EqualTo(0));
+            Assert.That(completedCounts[^1], Is.EqualTo(directoryCount));
         });
     }
 
