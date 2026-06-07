@@ -103,7 +103,7 @@ public sealed class SyncEngine : ISyncEngine
             startedAtUtc,
             cancellationToken).ConfigureAwait(false);
 
-        await EnsureLocalContentHashesForStateFilesAsync(localByPath, stateByPath, cancellationToken)
+        await EnsureLocalContentHashesForStateFilesAsync(localByPath, stateByPath, options, startedAtUtc, cancellationToken)
             .ConfigureAwait(false);
 
         DirectoryContentIndex localDirectoryContentIndex = directoryStateByPath.Count == 0
@@ -328,6 +328,8 @@ public sealed class SyncEngine : ISyncEngine
     private async Task EnsureLocalContentHashesForStateFilesAsync(
         IReadOnlyDictionary<string, LocalFileSnapshot> localByPath,
         IReadOnlyDictionary<string, SyncStateEntry> stateByPath,
+        SyncRunOptions options,
+        DateTime startedAtUtc,
         CancellationToken cancellationToken)
     {
         if (stateByPath.Count == 0)
@@ -335,11 +337,45 @@ public sealed class SyncEngine : ISyncEngine
             return;
         }
 
+        int filesTotal = stateByPath.Count(state => localByPath.ContainsKey(state.Key));
+        if (filesTotal == 0)
+        {
+            return;
+        }
+
+        int filesCompleted = 0;
+        DateTime? lastReportedAtUtc = null;
+        ReportItemRunProgress(
+            options,
+            SyncRunProgressStage.ScanningLocal,
+            filesCompleted,
+            filesTotal,
+            currentPath: null,
+            startedAtUtc,
+            ref lastReportedAtUtc);
+
         foreach (KeyValuePair<string, SyncStateEntry> state in stateByPath)
         {
             if (localByPath.TryGetValue(state.Key, out LocalFileSnapshot? local))
             {
+                ReportItemRunProgress(
+                    options,
+                    SyncRunProgressStage.ScanningLocal,
+                    filesCompleted,
+                    filesTotal,
+                    local.RelativePath,
+                    startedAtUtc,
+                    ref lastReportedAtUtc);
                 await EnsureLocalContentHashForBaselineComparisonAsync(local, state.Value, cancellationToken).ConfigureAwait(false);
+                filesCompleted++;
+                ReportItemRunProgress(
+                    options,
+                    SyncRunProgressStage.ScanningLocal,
+                    filesCompleted,
+                    filesTotal,
+                    local.RelativePath,
+                    startedAtUtc,
+                    ref lastReportedAtUtc);
             }
         }
     }
