@@ -524,6 +524,45 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_KeepsPlannedByteProgressStableWhenLazyHashCreatesConflict()
+    {
+        const string relativePath = "Docs/conflict.txt";
+        byte[] remoteContent = Encoding.UTF8.GetBytes("remote-content");
+        var local = new LocalFileSnapshot
+        {
+            RelativePath = relativePath,
+            FullPath = Path.Combine(_root, "Docs", "conflict.txt"),
+            ContentHash = string.Empty,
+            SizeBytes = 1024,
+            LastWriteUtc = new DateTime(2026, 6, 2, 13, 0, 0, DateTimeKind.Utc),
+        };
+        NodeFileManifestDto remote = RemoteFile(relativePath, Hash(remoteContent), sizeBytes: remoteContent.Length);
+        var scanner = new MetadataOnlyLocalFileScanner(local);
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        remoteFiles.Downloads[remote.Id] = remoteContent;
+        var runProgress = new RecordingProgress<SyncRunProgress>();
+        SyncEngine engine = CreateEngine(scanner, RemoteTree(remote), remoteFiles, out _);
+
+        SyncRunResult result = await engine.RunOnceAsync(
+            Pair(),
+            new SyncRunOptions { RunProgress = runProgress });
+
+        IReadOnlyList<SyncRunProgress> fileProgress = runProgress.Values
+            .Where(item => item.Stage is SyncRunProgressStage.ReconcilingFiles or SyncRunProgressStage.Completed)
+            .ToList();
+        Assert.Multiple(() =>
+        {
+            Assert.That(scanner.ContentHashCalls, Is.EqualTo(1));
+            Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Conflict }));
+            Assert.That(fileProgress, Is.Not.Empty);
+            Assert.That(fileProgress.Any(item => item.BytesTotal.HasValue), Is.True);
+            Assert.That(
+                fileProgress.Where(item => item.BytesTotal.HasValue).All(item => item.BytesCompleted <= item.BytesTotal),
+                Is.True);
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_DownloadsRemoteOnlyFileAndStoresBaseline()
     {
         byte[] content = Encoding.UTF8.GetBytes("remote-content");

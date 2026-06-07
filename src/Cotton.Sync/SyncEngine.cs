@@ -147,12 +147,11 @@ public sealed class SyncEngine : ISyncEngine
             localByPath,
             remoteByPath,
             stateByPath);
-        Dictionary<string, long> plannedTransferBytesByPath = BuildPlannedTransferBytesByPath(
+        long plannedTransferBytesTotal = CalculatePlannedTransferBytesTotal(
             pathKeys,
             localByPath,
             remoteByPath,
             stateByPath);
-        long plannedTransferBytesTotal = plannedTransferBytesByPath.Values.Sum();
         long completedTransferBytes = 0;
         int filesCompleted = 0;
         DateTime? lastFileRunProgressReportedAtUtc = null;
@@ -172,6 +171,7 @@ public sealed class SyncEngine : ISyncEngine
             remoteByPath.TryGetValue(key, out RemoteFileSnapshot? remote);
             stateByPath.TryGetValue(key, out SyncStateEntry? state);
             string relativePath = local?.RelativePath ?? remote?.RelativePath ?? state?.RelativePath ?? key;
+            long plannedTransferBytes = CalculatePlannedTransferBytes(key, localByPath, remoteByPath, stateByPath);
             ReportItemRunProgress(
                 options,
                 SyncRunProgressStage.ReconcilingFiles,
@@ -187,7 +187,7 @@ public sealed class SyncEngine : ISyncEngine
             {
                 await ReconcileWithoutBaselineAsync(syncPair, options, result, relativePath, local, remote, cancellationToken).ConfigureAwait(false);
                 filesCompleted++;
-                completedTransferBytes += GetPlannedTransferBytes(plannedTransferBytesByPath, key);
+                completedTransferBytes += plannedTransferBytes;
                 ReportItemRunProgress(
                     options,
                     SyncRunProgressStage.ReconcilingFiles,
@@ -204,7 +204,7 @@ public sealed class SyncEngine : ISyncEngine
             await ReconcileWithBaselineAsync(syncPair, options, result, deleteGuard, state, relativePath, local, remote, cancellationToken)
                 .ConfigureAwait(false);
             filesCompleted++;
-            completedTransferBytes += GetPlannedTransferBytes(plannedTransferBytesByPath, key);
+            completedTransferBytes += plannedTransferBytes;
             ReportItemRunProgress(
                 options,
                 SyncRunProgressStage.ReconcilingFiles,
@@ -1324,28 +1324,34 @@ public sealed class SyncEngine : ISyncEngine
         }
     }
 
-    private static Dictionary<string, long> BuildPlannedTransferBytesByPath(
+    private static long CalculatePlannedTransferBytesTotal(
         IReadOnlyList<string> pathKeys,
         IReadOnlyDictionary<string, LocalFileSnapshot> localByPath,
         IReadOnlyDictionary<string, RemoteFileSnapshot> remoteByPath,
         IReadOnlyDictionary<string, SyncStateEntry> stateByPath)
     {
-        var plannedBytesByPath = new Dictionary<string, long>(PathComparer);
+        long totalBytes = 0;
         foreach (string key in pathKeys)
         {
             if (TryCalculatePlannedTransferBytes(key, localByPath, remoteByPath, stateByPath, out long transferBytes)
                 && transferBytes > 0)
             {
-                plannedBytesByPath[key] = transferBytes;
+                totalBytes += transferBytes;
             }
         }
 
-        return plannedBytesByPath;
+        return totalBytes;
     }
 
-    private static long GetPlannedTransferBytes(IReadOnlyDictionary<string, long> plannedTransferBytesByPath, string key)
+    private static long CalculatePlannedTransferBytes(
+        string key,
+        IReadOnlyDictionary<string, LocalFileSnapshot> localByPath,
+        IReadOnlyDictionary<string, RemoteFileSnapshot> remoteByPath,
+        IReadOnlyDictionary<string, SyncStateEntry> stateByPath)
     {
-        return plannedTransferBytesByPath.TryGetValue(key, out long bytes) ? bytes : 0;
+        return TryCalculatePlannedTransferBytes(key, localByPath, remoteByPath, stateByPath, out long transferBytes)
+            ? transferBytes
+            : 0;
     }
 
     private static bool TryCalculatePlannedTransferBytes(
