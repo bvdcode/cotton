@@ -1977,6 +1977,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         SelectedSyncPair = target;
         ClearRemoveSyncPairConfirmation();
         IsSelectedSyncPairEditorVisible = true;
+        IsActivityVisible = false;
         return Task.CompletedTask;
     }
 

@@ -681,10 +681,11 @@
                                     RowSpacing="6">
                                 <TextBox Text="{Binding EditableDisplayName}"
                                          PlaceholderText="Folder name" />
-                                <StackPanel Grid.Row="1"
-                                            Orientation="Horizontal"
-                                            Spacing="6"
-                                            HorizontalAlignment="Right">
+                                <WrapPanel Grid.Row="1"
+                                           Orientation="Horizontal"
+                                           ItemSpacing="6"
+                                           LineSpacing="6"
+                                           HorizontalAlignment="Right">
                                   <Button Classes="icon"
                                           ToolTip.Tip="Save folder name"
                                           Command="{Binding $parent[Window].DataContext.SaveSelectedSyncPairNameCommand}">
@@ -733,7 +734,7 @@
                                                                 Height="16"
                                                                 Foreground="{DynamicResource CottonTextPrimaryBrush}" />
                                   </Button>
-                                </StackPanel>
+                                </WrapPanel>
                               </Grid>
                             </Border>
                           </Grid>

@@ -12,6 +12,7 @@ Use this section as the active checklist for the current desktop-client pass. Do
   Verification: focused view-model tests plus Windows manual check with many small files and at least one large file.
 - [ ] Fix folder-list usability.
   Required behavior: folder rows use compact status dots/icons instead of dangling status text, expanded row actions remain reachable in a small window, the folder list scrolls independently, and Activity does not consume the primary folder-management area unless explicitly opened.
+  Current status: layout-side fixes are implemented; keep open for Windows visual verification with multiple sync pairs.
   Verification: visual check on Linux for layout regressions and Windows manual check with two or more sync pairs.
 - [ ] Fix startup and authentication polish.
   Required behavior: saved sessions show a connecting/restoring state instead of the login form, login supports Enter, and auth errors stay human-readable without moving the whole form offscreen.

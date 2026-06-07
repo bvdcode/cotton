@@ -147,8 +147,28 @@ public sealed partial class MainWindow : Window
                 .GetVisualDescendants()
                 .OfType<Control>()
                 .FirstOrDefault(control => control.Tag is Guid rowSyncPairId && rowSyncPairId == syncPairId);
-            row?.BringIntoView();
+
+            if (row is null)
+            {
+                return;
+            }
+
+            row.BringIntoView();
+            Dispatcher.UIThread.Post(
+                () => BringSyncPairRowBottomIntoView(row),
+                DispatcherPriority.Background);
         });
+    }
+
+    private static void BringSyncPairRowBottomIntoView(Control row)
+    {
+        if (row.Bounds.Width <= 0 || row.Bounds.Height <= 0)
+        {
+            row.BringIntoView();
+            return;
+        }
+
+        row.BringIntoView(new Rect(0, row.Bounds.Height - 1, row.Bounds.Width, 1));
     }
 
     private void RemoteFoldersListBox_DoubleTapped(object? sender, TappedEventArgs e)
