@@ -45,6 +45,8 @@ internal sealed class CottonHttpTransport
         }
     }
 
+    public Uri BaseAddress => _options.BaseAddress;
+
     public async Task<T> SendJsonAsync<T>(
         HttpMethod method,
         string path,

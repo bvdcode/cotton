@@ -24,6 +24,11 @@ namespace Cotton
             public const string Auth = Base + "/auth";
 
             /// <summary>
+            /// Browser app-code OAuth endpoint path.
+            /// </summary>
+            public const string AppCodeOAuth = Base + "/oauth/app-code";
+
+            /// <summary>
             /// Users endpoint path.
             /// </summary>
             public const string Users = Base + "/users";
