@@ -3116,7 +3116,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         {
             syncPair.IsCurrentProgressIndeterminate = !runProgress.FilesTotal.HasValue && !runProgress.IsCompleted;
             syncPair.CurrentProgressValue = CalculateRunProgressValue(runProgress);
-            RefreshRunProgressSummary(updateEstimate: false);
+            RefreshRunProgressSummary();
         }
         else
         {
@@ -4037,7 +4037,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         _lastRunProgressFileRateOccurredAtUtc = occurredAtUtc;
     }
 
-    private static bool TryCalculateAggregateRunProgressEstimate(
+    private bool TryCalculateAggregateRunProgressEstimate(
         IReadOnlyList<DesktopRunProgressSnapshot> progressValues,
         out TimeSpan estimatedTimeRemaining,
         out double filesPerSecond,
@@ -4046,7 +4046,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         estimatedTimeRemaining = TimeSpan.Zero;
         filesPerSecond = 0;
         occurredAtUtc = DateTime.MinValue;
-        int completedFiles = 0;
+        double completedFiles = 0;
         int totalFiles = 0;
         DateTime startedAtUtc = DateTime.MaxValue;
         foreach (DesktopRunProgressSnapshot progress in progressValues)
@@ -4056,16 +4056,17 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 continue;
             }
 
-            completedFiles += Math.Clamp(progress.FilesCompleted, 0, progress.FilesTotal.Value);
+            completedFiles += Math.Clamp(GetDisplayedRunProgressUnits(progress), 0, progress.FilesTotal.Value);
             totalFiles += progress.FilesTotal.Value;
             if (progress.StartedAtUtc < startedAtUtc)
             {
                 startedAtUtc = progress.StartedAtUtc;
             }
 
-            if (progress.OccurredAtUtc > occurredAtUtc)
+            DateTime metricOccurredAtUtc = GetRunProgressMetricOccurredAtUtc(progress);
+            if (metricOccurredAtUtc > occurredAtUtc)
             {
-                occurredAtUtc = progress.OccurredAtUtc;
+                occurredAtUtc = metricOccurredAtUtc;
             }
         }
 
@@ -4094,6 +4095,18 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
         estimatedTimeRemaining = TimeSpan.FromSeconds(estimatedSeconds);
         return true;
+    }
+
+    private DateTime GetRunProgressMetricOccurredAtUtc(DesktopRunProgressSnapshot progress)
+    {
+        DateTime occurredAtUtc = progress.OccurredAtUtc;
+        if (_transferProgressByPair.TryGetValue(progress.SyncPairId, out DesktopTransferProgressSnapshot? transferProgress)
+            && transferProgress.OccurredAtUtc > occurredAtUtc)
+        {
+            occurredAtUtc = transferProgress.OccurredAtUtc;
+        }
+
+        return occurredAtUtc;
     }
 
     private static bool IsActiveSyncStatus(DesktopSyncPairStatusSnapshot status)
