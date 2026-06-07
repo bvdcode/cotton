@@ -323,13 +323,15 @@ public sealed class DesktopSetupVisualContractTests
         {
             Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"Auto\" />"));
             Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"*\" MinHeight=\"132\" />"));
+            Assert.That(dashboardView, Does.Contain("<Grid Grid.Row=\"1\"\n            RowDefinitions=\"*,Auto\""));
             Assert.That(dashboardView, Does.Contain("<StackPanel Grid.Row=\"0\""));
             Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding IsDashboardChromeVisible}\""));
-            Assert.That(dashboardView, Does.Contain("<Border Grid.Row=\"1\""));
-            Assert.That(dashboardView, Does.Contain("<Border Grid.Row=\"2\""));
+            Assert.That(dashboardView, Does.Contain("<Border Grid.Row=\"0\"\n                Padding=\"10\""));
+            Assert.That(dashboardView, Does.Contain("<Border Grid.Row=\"1\"\n                Padding=\"10\""));
             Assert.That(dashboardView, Does.Contain("MaxHeight=\"190\""));
             Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding IsActivityVisible}\""));
             Assert.That(dashboardView, Does.Contain("VerticalScrollBarVisibility=\"Auto\""));
+            Assert.That(dashboardView, Does.Contain("Grid.RowSpan=\"2\""));
             Assert.That(dashboardView, Does.Not.Contain("<ScrollViewer Grid.Row=\"0\""));
             Assert.That(dashboardView, Does.Not.Contain("MaxHeight=\"332\""));
             Assert.That(dashboardView, Does.Not.Contain("MaxHeight=\"300\""));
@@ -633,6 +635,7 @@ public sealed class DesktopSetupVisualContractTests
         {
             Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"Auto\" />"));
             Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"*\" MinHeight=\"132\" />"));
+            Assert.That(dashboardView, Does.Contain("<Grid Grid.Row=\"1\"\n            RowDefinitions=\"*,Auto\""));
             Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding IsActivityVisible}\""));
             Assert.That(dashboardView, Does.Not.Contain("Height=\"Auto\" MaxHeight=\"236\""));
             Assert.That(dashboardView, Does.Not.Contain("Height=\"2*\""));

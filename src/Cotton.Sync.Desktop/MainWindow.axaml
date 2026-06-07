@@ -272,7 +272,6 @@
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto" />
         <RowDefinition Height="*" MinHeight="132" />
-        <RowDefinition Height="Auto" />
       </Grid.RowDefinitions>
       <StackPanel Grid.Row="0"
                   Spacing="8"
@@ -519,14 +518,18 @@
 
       </StackPanel>
 
-      <Border Grid.Row="1"
-              Padding="10"
-              CornerRadius="6"
-              Background="{DynamicResource CottonSurfaceBrush}"
-              BorderBrush="{DynamicResource CottonBorderBrush}"
-              BorderThickness="1"
-              ClipToBounds="True"
-              MinHeight="0">
+      <Grid Grid.Row="1"
+            RowDefinitions="*,Auto"
+            RowSpacing="8"
+            MinHeight="0">
+        <Border Grid.Row="0"
+                Padding="10"
+                CornerRadius="6"
+                Background="{DynamicResource CottonSurfaceBrush}"
+                BorderBrush="{DynamicResource CottonBorderBrush}"
+                BorderThickness="1"
+                ClipToBounds="True"
+                MinHeight="0">
             <Grid RowDefinitions="Auto,*"
                   RowSpacing="10"
                   MinHeight="0">
@@ -774,16 +777,16 @@
             </Grid>
         </Border>
 
-      <Border Grid.Row="2"
-              Padding="10"
-              CornerRadius="6"
-              Background="{DynamicResource CottonSurfaceBrush}"
-              BorderBrush="{DynamicResource CottonBorderBrush}"
-              BorderThickness="1"
-              ClipToBounds="True"
-              MaxHeight="190"
-              MinHeight="0"
-              IsVisible="{Binding IsActivityVisible}">
+        <Border Grid.Row="1"
+                Padding="10"
+                CornerRadius="6"
+                Background="{DynamicResource CottonSurfaceBrush}"
+                BorderBrush="{DynamicResource CottonBorderBrush}"
+                BorderThickness="1"
+                ClipToBounds="True"
+                MaxHeight="190"
+                MinHeight="0"
+                IsVisible="{Binding IsActivityVisible}">
             <Grid RowDefinitions="Auto,*"
                   RowSpacing="8"
                   MinHeight="0">
@@ -849,9 +852,10 @@
                 </ScrollViewer>
               </Grid>
             </Grid>
-      </Border>
+        </Border>
+      </Grid>
 
-      <Border Grid.RowSpan="3"
+      <Border Grid.RowSpan="2"
               Background="{DynamicResource CottonOverlayBrush}"
               IsVisible="{Binding IsAddSyncPairWizardVisible}">
         <Border MaxWidth="372"
