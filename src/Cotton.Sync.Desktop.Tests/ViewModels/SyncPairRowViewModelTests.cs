@@ -8,7 +8,7 @@ namespace Cotton.Sync.Desktop.Tests.ViewModels;
 public sealed class SyncPairRowViewModelTests
 {
     [Test]
-    public void StatusIndicator_HidesDecorativeIdleAndClassifiesVisibleStates()
+    public void StatusIndicator_UsesBrandDotForEnabledIdleAndClassifiesVisibleStates()
     {
         var row = new SyncPairRowViewModel
         {
@@ -20,7 +20,9 @@ public sealed class SyncPairRowViewModelTests
         {
             Assert.That(row.DisplayStatus, Is.Empty);
             Assert.That(row.HasDisplayStatus, Is.False);
-            Assert.That(row.IsStatusIndicatorVisible, Is.False);
+            Assert.That(row.IsStatusIndicatorVisible, Is.True);
+            Assert.That(row.IsStatusActive, Is.True);
+            Assert.That(row.StatusIndicatorToolTip, Is.EqualTo("Sync enabled"));
         });
 
         row.Status = " Syncing ";
