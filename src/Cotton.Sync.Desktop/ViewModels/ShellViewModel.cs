@@ -25,6 +25,9 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private static readonly TimeSpan VisibleTransferProgressUpdateInterval = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan VisibleRunProgressUpdateInterval = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan ActiveStatusRunProgressStaleThreshold = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan RunTransferMetricsWindow = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan MinimumRunTransferSampleDuration = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan RunProgressEstimateSmoothingPeriod = TimeSpan.FromSeconds(10);
 
     private readonly IDesktopShellController _controller;
     private readonly DesktopFeatureFlags _featureFlags;
@@ -39,6 +42,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private readonly Dictionary<Guid, DesktopRunProgressSnapshot> _runProgressByPair = [];
     private readonly Dictionary<Guid, DateTime> _runProgressAppliedAtUtcByPair = [];
     private readonly Dictionary<Guid, DesktopTransferProgressSnapshot> _transferProgressByPair = [];
+    private readonly Dictionary<RunTransferProgressKey, long> _runTransferBytesByKey = [];
+    private readonly Queue<RunTransferProgressSample> _runTransferSamples = new();
     private readonly SyncPairSettingsValidator _syncPairSettingsValidator = new();
     private readonly Dictionary<Guid, string> _lastStatusErrorActivityMessages = [];
     private string _accountName = "Signed out";
@@ -48,6 +53,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private string _currentRunProgressTitle = string.Empty;
     private string _currentTransferDetails = string.Empty;
     private string _currentTransferTitle = string.Empty;
+    private long _runTransferredBytes;
+    private double? _runTransferSpeedBytesPerSecond;
+    private TimeSpan? _currentRunProgressEstimatedTimeRemaining;
+    private DateTime? _lastRunProgressEstimateOccurredAtUtc;
     private string _dataDirectory = string.Empty;
     private string _deviceName = "Cotton Sync Desktop";
     private string _appDatabasePath = string.Empty;
@@ -524,23 +533,22 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             : HasCurrentTransfer ? CurrentTransferTitle : CurrentRunProgressTitle;
     }
 
-    public string CurrentWorkProgressHeaderDetails => IsRunProgressPrimary && HasActiveTransferProgress
-        ? CreateAggregateTransferDetails(_transferProgressByPair.Values, includeEstimatedTimeRemaining: false)
+    public string CurrentWorkProgressHeaderDetails => IsRunProgressPrimary
+        ? CreateHeaderDetails(CurrentWorkProgressHeaderSizeDetails, CurrentWorkProgressHeaderRateDetails)
         : string.Empty;
 
     public bool HasCurrentWorkProgressHeaderDetails => !string.IsNullOrWhiteSpace(CurrentWorkProgressHeaderDetails);
 
-    public string CurrentWorkProgressHeaderSizeDetails => IsRunProgressPrimary && HasActiveTransferProgress
-        ? CreateAggregateTransferMetricDetails(_transferProgressByPair.Values).Size
+    public string CurrentWorkProgressHeaderSizeDetails => IsRunProgressPrimary
+        ? CreateRunTransferSizeDetails()
         : string.Empty;
 
     public bool HasCurrentWorkProgressHeaderSizeDetails =>
-        !string.IsNullOrWhiteSpace(CurrentWorkProgressHeaderSizeDetails);
+        !string.IsNullOrWhiteSpace(CurrentWorkProgressHeaderSizeDetails)
+        || !string.IsNullOrWhiteSpace(CurrentWorkProgressHeaderRateDetails);
 
-    public string CurrentWorkProgressHeaderRateDetails => IsRunProgressPrimary && HasActiveTransferProgress
-        ? CreateAggregateTransferMetricDetails(
-            _transferProgressByPair.Values,
-            includeEstimatedTimeRemaining: false).Rate
+    public string CurrentWorkProgressHeaderRateDetails => IsRunProgressPrimary
+        ? CreateRunTransferRateDetails()
         : string.Empty;
 
     public bool HasCurrentWorkProgressHeaderRateDetails =>
@@ -3038,6 +3046,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         CurrentTransferProgressValue = CalculateProgressValue(progress);
         CurrentTransferTitle = CreateTransferTitle(progress, syncPair.DisplayName);
         CurrentTransferDetails = CreateTransferDetails(progress);
+        TrackRunTransferProgress(progress);
         if (progress.IsCompleted)
         {
             _transferProgressByPair.Remove(progress.SyncPairId);
@@ -3634,6 +3643,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         _runProgressByPair.Clear();
         _runProgressAppliedAtUtcByPair.Clear();
+        ClearRunTransferMetrics();
         lock (_progressDispatchGate)
         {
             _pendingCoalescedRunProgress = null;
@@ -3661,6 +3671,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
 
         HasCurrentRunProgress = true;
+        UpdateRunProgressEstimatedTimeRemaining(progressValues);
         if (progressValues.Count == 1)
         {
             DesktopRunProgressSnapshot progress = progressValues[0];
@@ -3712,6 +3723,221 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         OnPropertyChanged(nameof(HasCurrentWorkProgressSecondaryDetails));
         OnPropertyChanged(nameof(CurrentWorkProgressValue));
         OnPropertyChanged(nameof(IsCurrentWorkProgressIndeterminate));
+    }
+
+    private string CreateRunTransferSizeDetails()
+    {
+        if (_runTransferredBytes > 0)
+        {
+            return FormatBytes(_runTransferredBytes);
+        }
+
+        return HasActiveTransferProgress
+            ? CreateAggregateTransferMetricDetails(_transferProgressByPair.Values).Size
+            : string.Empty;
+    }
+
+    private string CreateRunTransferRateDetails()
+    {
+        var parts = new List<string>();
+        if (HasActiveTransferProgress)
+        {
+            string activeTransferRate = CreateAggregateTransferMetricDetails(
+                _transferProgressByPair.Values,
+                includeEstimatedTimeRemaining: false).Rate;
+            if (!string.IsNullOrWhiteSpace(activeTransferRate))
+            {
+                parts.Add(activeTransferRate);
+            }
+        }
+        else if (_runTransferSpeedBytesPerSecond is > 0)
+        {
+            parts.Add(FormatBytes(_runTransferSpeedBytesPerSecond.Value) + "/s");
+        }
+
+        if (_currentRunProgressEstimatedTimeRemaining.HasValue)
+        {
+            parts.Add(FormatDuration(_currentRunProgressEstimatedTimeRemaining.Value) + " left");
+        }
+
+        return string.Join(" · ", parts);
+    }
+
+    private void ClearRunTransferMetrics()
+    {
+        _runTransferBytesByKey.Clear();
+        _runTransferSamples.Clear();
+        _runTransferredBytes = 0;
+        _runTransferSpeedBytesPerSecond = null;
+        _currentRunProgressEstimatedTimeRemaining = null;
+        _lastRunProgressEstimateOccurredAtUtc = null;
+    }
+
+    private void TrackRunTransferProgress(DesktopTransferProgressSnapshot progress)
+    {
+        long effectiveTransferredBytes = progress.IsCompleted && progress.TotalBytes.HasValue
+            ? progress.TotalBytes.Value
+            : progress.TransferredBytes;
+        effectiveTransferredBytes = Math.Max(0, effectiveTransferredBytes);
+
+        var key = new RunTransferProgressKey(progress.SyncPairId, progress.Direction, progress.RelativePath);
+        _runTransferBytesByKey.TryGetValue(key, out long previousTransferredBytes);
+        if (effectiveTransferredBytes < previousTransferredBytes)
+        {
+            previousTransferredBytes = 0;
+        }
+
+        if (progress.IsCompleted)
+        {
+            _runTransferBytesByKey.Remove(key);
+        }
+        else
+        {
+            _runTransferBytesByKey[key] = effectiveTransferredBytes;
+        }
+
+        long transferredDelta = effectiveTransferredBytes - previousTransferredBytes;
+        if (transferredDelta <= 0)
+        {
+            return;
+        }
+
+        _runTransferredBytes += transferredDelta;
+        AddRunTransferSample(progress.OccurredAtUtc);
+    }
+
+    private void AddRunTransferSample(DateTime occurredAtUtc)
+    {
+        if (_runTransferSamples.Count > 0
+            && occurredAtUtc - _runTransferSamples.Last().OccurredAtUtc > RunTransferMetricsWindow)
+        {
+            _runTransferSamples.Clear();
+            _runTransferSpeedBytesPerSecond = null;
+        }
+
+        if (_runTransferSamples.Count == 0)
+        {
+            _runTransferSamples.Enqueue(new RunTransferProgressSample(_runTransferredBytes, occurredAtUtc));
+            return;
+        }
+
+        _runTransferSamples.Enqueue(new RunTransferProgressSample(_runTransferredBytes, occurredAtUtc));
+        PruneRunTransferSamples(occurredAtUtc);
+        UpdateRunTransferSpeed();
+    }
+
+    private void PruneRunTransferSamples(DateTime occurredAtUtc)
+    {
+        while (_runTransferSamples.Count > 2
+            && occurredAtUtc - _runTransferSamples.Peek().OccurredAtUtc > RunTransferMetricsWindow)
+        {
+            _runTransferSamples.Dequeue();
+        }
+    }
+
+    private void UpdateRunTransferSpeed()
+    {
+        if (_runTransferSamples.Count < 2)
+        {
+            return;
+        }
+
+        RunTransferProgressSample firstSample = _runTransferSamples.Peek();
+        RunTransferProgressSample lastSample = _runTransferSamples.Last();
+        TimeSpan elapsed = lastSample.OccurredAtUtc - firstSample.OccurredAtUtc;
+        long transferredBytes = lastSample.TransferredBytes - firstSample.TransferredBytes;
+        if (elapsed < MinimumRunTransferSampleDuration || transferredBytes <= 0)
+        {
+            return;
+        }
+
+        _runTransferSpeedBytesPerSecond = transferredBytes / elapsed.TotalSeconds;
+    }
+
+    private void UpdateRunProgressEstimatedTimeRemaining(IReadOnlyList<DesktopRunProgressSnapshot> progressValues)
+    {
+        if (!TryCalculateAggregateRunProgressEstimate(
+            progressValues,
+            out TimeSpan estimatedTimeRemaining,
+            out DateTime occurredAtUtc))
+        {
+            _currentRunProgressEstimatedTimeRemaining = null;
+            _lastRunProgressEstimateOccurredAtUtc = null;
+            return;
+        }
+
+        if (!_currentRunProgressEstimatedTimeRemaining.HasValue
+            || !_lastRunProgressEstimateOccurredAtUtc.HasValue
+            || occurredAtUtc <= _lastRunProgressEstimateOccurredAtUtc.Value)
+        {
+            _currentRunProgressEstimatedTimeRemaining = estimatedTimeRemaining;
+            _lastRunProgressEstimateOccurredAtUtc = occurredAtUtc;
+            return;
+        }
+
+        TimeSpan elapsed = occurredAtUtc - _lastRunProgressEstimateOccurredAtUtc.Value;
+        TimeSpan agedEstimate = _currentRunProgressEstimatedTimeRemaining.Value - elapsed;
+        if (agedEstimate < TimeSpan.Zero)
+        {
+            agedEstimate = TimeSpan.Zero;
+        }
+
+        double smoothingFactor = 1 - Math.Exp(-elapsed.TotalSeconds / RunProgressEstimateSmoothingPeriod.TotalSeconds);
+        double smoothedSeconds = agedEstimate.TotalSeconds
+            + (estimatedTimeRemaining.TotalSeconds - agedEstimate.TotalSeconds) * smoothingFactor;
+        _currentRunProgressEstimatedTimeRemaining = TimeSpan.FromSeconds(Math.Max(1, smoothedSeconds));
+        _lastRunProgressEstimateOccurredAtUtc = occurredAtUtc;
+    }
+
+    private static bool TryCalculateAggregateRunProgressEstimate(
+        IReadOnlyList<DesktopRunProgressSnapshot> progressValues,
+        out TimeSpan estimatedTimeRemaining,
+        out DateTime occurredAtUtc)
+    {
+        estimatedTimeRemaining = TimeSpan.Zero;
+        occurredAtUtc = DateTime.MinValue;
+        int completedFiles = 0;
+        int totalFiles = 0;
+        DateTime startedAtUtc = DateTime.MaxValue;
+        foreach (DesktopRunProgressSnapshot progress in progressValues)
+        {
+            if (!IsCountedRunStage(progress.Stage) || progress.FilesTotal is not > 0)
+            {
+                continue;
+            }
+
+            completedFiles += Math.Clamp(progress.FilesCompleted, 0, progress.FilesTotal.Value);
+            totalFiles += progress.FilesTotal.Value;
+            if (progress.StartedAtUtc < startedAtUtc)
+            {
+                startedAtUtc = progress.StartedAtUtc;
+            }
+
+            if (progress.OccurredAtUtc > occurredAtUtc)
+            {
+                occurredAtUtc = progress.OccurredAtUtc;
+            }
+        }
+
+        if (totalFiles <= 0 || completedFiles <= 0 || completedFiles >= totalFiles)
+        {
+            return false;
+        }
+
+        TimeSpan elapsed = occurredAtUtc - startedAtUtc;
+        if (elapsed < MinimumRunTransferSampleDuration)
+        {
+            return false;
+        }
+
+        double estimatedSeconds = elapsed.TotalSeconds * (totalFiles - completedFiles) / completedFiles;
+        if (!double.IsFinite(estimatedSeconds) || estimatedSeconds <= 0)
+        {
+            return false;
+        }
+
+        estimatedTimeRemaining = TimeSpan.FromSeconds(estimatedSeconds);
+        return true;
     }
 
     private static bool IsActiveSyncStatus(DesktopSyncPairStatusSnapshot status)
@@ -4023,6 +4249,16 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         return string.IsNullOrWhiteSpace(details.Rate) ? details.Size : details.Size + " · " + details.Rate;
     }
 
+    private static string CreateHeaderDetails(string size, string rate)
+    {
+        if (string.IsNullOrWhiteSpace(size))
+        {
+            return rate;
+        }
+
+        return string.IsNullOrWhiteSpace(rate) ? size : size + " · " + rate;
+    }
+
     private static TransferMetricDetails CreateAggregateTransferMetricDetails(
         IEnumerable<DesktopTransferProgressSnapshot> progressValues,
         bool includeEstimatedTimeRemaining = true)
@@ -4136,6 +4372,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         return ((value + step - 1) / step) * step;
     }
+
+    private readonly record struct RunTransferProgressKey(
+        Guid SyncPairId,
+        SyncTransferDirection Direction,
+        string RelativePath);
+
+    private readonly record struct RunTransferProgressSample(long TransferredBytes, DateTime OccurredAtUtc);
 
     private readonly record struct TransferMetricDetails(string Size, string Rate);
 

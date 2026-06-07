@@ -536,7 +536,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.CurrentTransferDetails, Does.Contain("/s"));
             Assert.That(viewModel.CurrentTransferDetails, Does.Contain("left"));
             Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Syncing 2 folders"));
-            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("7.0 MB / 27 MB · 4.0 MB/s"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("7.0 MB · 4.0 MB/s · 6s left"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("10 of 40 files across 2 folders"));
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("2 files transferring"));
         });
@@ -1689,7 +1689,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         {
             Assert.That(viewModel.HasCurrentTransfer, Is.True);
             Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Syncing 2 folders"));
-            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("512 B / 1.0 KB"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("512 B · 15s left"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("8 of 30 files across 2 folders"));
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Uploading report.txt"));
             Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(26.666).Within(0.01));
@@ -1728,7 +1728,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Documents: Checking files"));
-            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("512 B / 1.0 KB · 256 B/s"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("512 B · 256 B/s · 15s left"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("5 of 20 files"));
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Uploading report.txt"));
             Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(25).Within(0.01));
@@ -1768,7 +1768,7 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Syncing 2 folders"));
-            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("2.0 KB / 4.0 KB · 768 B/s"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("2.0 KB · 768 B/s · 15s left"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("8 of 30 files across 2 folders"));
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("2 files transferring"));
             Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(26.666).Within(0.01));
@@ -1806,7 +1806,7 @@ public sealed class ShellViewModelSyncPairCommandTests
             SpeedBytesPerSecond: 512,
             EstimatedTimeRemaining: TimeSpan.FromSeconds(20)));
 
-        Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("2.0 KB / 4.0 KB · 768 B/s"));
+        Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("2.0 KB · 768 B/s · 15s left"));
     }
 
     [Test]
@@ -1831,9 +1831,72 @@ public sealed class ShellViewModelSyncPairCommandTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.CurrentWorkProgressTitle, Is.EqualTo("Syncing 2 folders"));
-            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.Empty);
+            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Is.EqualTo("1.0 KB · 15s left"));
             Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("8 of 30 files across 2 folders"));
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.Empty);
+        });
+    }
+
+    [Test]
+    public async Task TransferProgressChanged_KeepsRunMetricsAfterCompletedSmallTransfers()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Videos", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 0,
+            FilesTotal: 100,
+            CurrentPath: "Videos/first.mp4",
+            StartedAtUtc: startedAtUtc,
+            IsCompleted: false,
+            OccurredAtUtc: startedAtUtc));
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            syncPairId,
+            SyncTransferDirection.Upload,
+            "Videos/first.mp4",
+            TransferredBytes: 1024,
+            TotalBytes: 1024,
+            IsCompleted: true,
+            startedAtUtc.AddSeconds(1)));
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 1,
+            FilesTotal: 100,
+            CurrentPath: "Videos/second.mp4",
+            StartedAtUtc: startedAtUtc,
+            IsCompleted: false,
+            OccurredAtUtc: startedAtUtc.AddSeconds(1)));
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            syncPairId,
+            SyncTransferDirection.Upload,
+            "Videos/second.mp4",
+            TransferredBytes: 1024,
+            TotalBytes: 1024,
+            IsCompleted: true,
+            startedAtUtc.AddSeconds(3)));
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 2,
+            FilesTotal: 100,
+            CurrentPath: "Videos/third.mp4",
+            StartedAtUtc: startedAtUtc,
+            IsCompleted: false,
+            OccurredAtUtc: startedAtUtc.AddSeconds(3)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.CurrentWorkProgressHeaderSizeDetails, Is.EqualTo("2.0 KB"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderRateDetails, Does.Contain("512 B/s"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderRateDetails, Does.Contain("left"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderDetails, Does.Contain("2.0 KB · 512 B/s"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("2 of 100 files"));
         });
     }
 
