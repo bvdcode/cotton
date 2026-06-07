@@ -1798,6 +1798,15 @@ public sealed class ShellViewModelSyncPairCommandTests
         controller.ReportRunProgress(new DesktopRunProgressSnapshot(
             syncPairId,
             SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 0,
+            FilesTotal: 20,
+            CurrentPath: "Reports/report.txt",
+            StartedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc)));
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
             FilesCompleted: 5,
             FilesTotal: 20,
             CurrentPath: "Reports/report.txt",
@@ -2047,6 +2056,15 @@ public sealed class ShellViewModelSyncPairCommandTests
         controller.ReportRunProgress(new DesktopRunProgressSnapshot(
             syncPairId,
             SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 0,
+            FilesTotal: 1000,
+            CurrentPath: "Videos/clip-0000.mp4",
+            StartedAtUtc: startedAtUtc,
+            IsCompleted: false,
+            OccurredAtUtc: startedAtUtc));
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
             FilesCompleted: 100,
             FilesTotal: 1000,
             CurrentPath: "Videos/clip-0100.mp4",
@@ -2075,6 +2093,15 @@ public sealed class ShellViewModelSyncPairCommandTests
         controller.ReportRunProgress(new DesktopRunProgressSnapshot(
             syncPairId,
             SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 0,
+            FilesTotal: 1000,
+            CurrentPath: "Videos/clip-0000.mp4",
+            StartedAtUtc: startedAtUtc,
+            IsCompleted: false,
+            OccurredAtUtc: startedAtUtc));
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
             FilesCompleted: 100,
             FilesTotal: 1000,
             CurrentPath: "Videos/clip-0100.mp4",
@@ -2095,6 +2122,42 @@ public sealed class ShellViewModelSyncPairCommandTests
             Assert.That(viewModel.HasCurrentTransfer, Is.True);
             Assert.That(viewModel.CurrentWorkProgressHeaderRateDetails, Is.EqualTo("10 files/s · 1m 30s left"));
             Assert.That(viewModel.CurrentWorkProgressSecondaryDetails, Is.EqualTo("Downloading clip-0101.mp4"));
+        });
+    }
+
+    [Test]
+    public async Task RunProgressChanged_EstimatesFromRecentFileProgressInsteadOfPassStart()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Videos", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        DateTime passStartedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
+        DateTime reconcileStartedAtUtc = passStartedAtUtc.AddMinutes(5);
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 0,
+            FilesTotal: 1000,
+            CurrentPath: "Videos/clip-0000.mp4",
+            StartedAtUtc: passStartedAtUtc,
+            IsCompleted: false,
+            OccurredAtUtc: reconcileStartedAtUtc));
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 100,
+            FilesTotal: 1000,
+            CurrentPath: "Videos/clip-0100.mp4",
+            StartedAtUtc: passStartedAtUtc,
+            IsCompleted: false,
+            OccurredAtUtc: reconcileStartedAtUtc.AddSeconds(10)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.CurrentWorkProgressHeaderRateDetails, Is.EqualTo("10 files/s · 1m 30s left"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderRateDetails, Does.Not.Contain("45m"));
         });
     }
 
@@ -3911,6 +3974,24 @@ public sealed class ShellViewModelSyncPairCommandTests
         Guid documentsPairId,
         Guid videosPairId)
     {
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            documentsPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 0,
+            FilesTotal: 10,
+            CurrentPath: "Reports/report.txt",
+            StartedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc)));
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            videosPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 0,
+            FilesTotal: 20,
+            CurrentPath: "Videos/clip.mp4",
+            StartedAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc),
+            IsCompleted: false,
+            OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc)));
         controller.ReportRunProgress(new DesktopRunProgressSnapshot(
             documentsPairId,
             SyncRunProgressStage.ReconcilingFiles,

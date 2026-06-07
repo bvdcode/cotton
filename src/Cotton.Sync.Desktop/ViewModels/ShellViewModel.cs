@@ -48,6 +48,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private readonly Dictionary<Guid, long> _runCompletedTransferBytesByPair = [];
     private readonly Dictionary<RunTransferProgressKey, long> _runCompletedTransferBytesByKey = [];
     private readonly Dictionary<RunTransferProgressKey, long> _runTransferBytesByKey = [];
+    private readonly Queue<RunFileProgressSample> _runFileProgressSamples = new();
     private readonly Queue<RunTransferProgressSample> _runTransferSamples = new();
     private readonly SyncPairSettingsValidator _syncPairSettingsValidator = new();
     private readonly Dictionary<Guid, string> _lastStatusErrorActivityMessages = [];
@@ -3875,6 +3876,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         _runCompletedTransferBytesByPair.Clear();
         _runCompletedTransferBytesByKey.Clear();
         _runTransferBytesByKey.Clear();
+        _runFileProgressSamples.Clear();
         _runTransferSamples.Clear();
         _runTransferredBytes = 0;
         _runTransferSpeedBytesPerSecond = null;
@@ -4030,48 +4032,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             return;
         }
 
-        UpdateRunProgressFilesPerSecond(filesPerSecond, occurredAtUtc);
-        if (!_currentRunProgressEstimatedTimeRemaining.HasValue
-            || !_lastRunProgressEstimateOccurredAtUtc.HasValue
-            || occurredAtUtc <= _lastRunProgressEstimateOccurredAtUtc.Value)
-        {
-            _currentRunProgressEstimatedTimeRemaining = estimatedTimeRemaining;
-            _lastRunProgressEstimateOccurredAtUtc = occurredAtUtc;
-            return;
-        }
-
-        TimeSpan elapsed = occurredAtUtc - _lastRunProgressEstimateOccurredAtUtc.Value;
-        TimeSpan agedEstimate = _currentRunProgressEstimatedTimeRemaining.Value - elapsed;
-        if (agedEstimate < TimeSpan.Zero)
-        {
-            agedEstimate = TimeSpan.Zero;
-        }
-
-        double smoothingFactor = CalculateExponentialSmoothingFactor(elapsed, RunProgressEstimateSmoothingPeriod);
-        double smoothedSeconds = agedEstimate.TotalSeconds
-            + (estimatedTimeRemaining.TotalSeconds - agedEstimate.TotalSeconds) * smoothingFactor;
-        _currentRunProgressEstimatedTimeRemaining = TimeSpan.FromSeconds(Math.Max(1, smoothedSeconds));
-        _lastRunProgressEstimateOccurredAtUtc = occurredAtUtc;
-    }
-
-    private void UpdateRunProgressFilesPerSecond(double filesPerSecond, DateTime occurredAtUtc)
-    {
-        if (!_currentRunProgressFilesPerSecond.HasValue
-            || !_lastRunProgressFileRateOccurredAtUtc.HasValue
-            || occurredAtUtc <= _lastRunProgressFileRateOccurredAtUtc.Value)
-        {
-            _currentRunProgressFilesPerSecond = filesPerSecond;
-            _lastRunProgressFileRateOccurredAtUtc = occurredAtUtc;
-            return;
-        }
-
-        TimeSpan elapsed = occurredAtUtc - _lastRunProgressFileRateOccurredAtUtc.Value;
-        double smoothingFactor = CalculateExponentialSmoothingFactor(elapsed, RunProgressEstimateSmoothingPeriod);
-        _currentRunProgressFilesPerSecond = Math.Max(
-            0,
-            _currentRunProgressFilesPerSecond.Value
-                + ((filesPerSecond - _currentRunProgressFilesPerSecond.Value) * smoothingFactor));
+        _currentRunProgressFilesPerSecond = filesPerSecond;
         _lastRunProgressFileRateOccurredAtUtc = occurredAtUtc;
+        _currentRunProgressEstimatedTimeRemaining = estimatedTimeRemaining;
+        _lastRunProgressEstimateOccurredAtUtc = occurredAtUtc;
     }
 
     private bool TryCalculateAggregateRunProgressEstimate(
@@ -4085,7 +4049,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         occurredAtUtc = DateTime.MinValue;
         double completedFiles = 0;
         int totalFiles = 0;
-        DateTime startedAtUtc = DateTime.MaxValue;
+        DateTime latestRunProgressAtUtc = DateTime.MinValue;
         foreach (DesktopRunProgressSnapshot progress in progressValues)
         {
             if (!IsCountedRunStage(progress.Stage) || progress.FilesTotal is not > 0)
@@ -4093,38 +4057,27 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 continue;
             }
 
-            completedFiles += Math.Clamp(GetDisplayedRunProgressUnits(progress), 0, progress.FilesTotal.Value);
+            completedFiles += Math.Clamp(progress.FilesCompleted, 0, progress.FilesTotal.Value);
             totalFiles += progress.FilesTotal.Value;
-            if (progress.StartedAtUtc < startedAtUtc)
+            DateTime progressOccurredAtUtc = progress.OccurredAtUtc.ToUniversalTime();
+            if (progressOccurredAtUtc > latestRunProgressAtUtc)
             {
-                startedAtUtc = progress.StartedAtUtc;
-            }
-
-            DateTime metricOccurredAtUtc = GetRunProgressMetricOccurredAtUtc(progress);
-            if (metricOccurredAtUtc > occurredAtUtc)
-            {
-                occurredAtUtc = metricOccurredAtUtc;
+                latestRunProgressAtUtc = progressOccurredAtUtc;
             }
         }
 
-        if (totalFiles <= 0 || completedFiles < MinimumRunProgressEstimateCompletedFiles || completedFiles >= totalFiles)
+        if (totalFiles <= 0 || completedFiles >= totalFiles || latestRunProgressAtUtc == DateTime.MinValue)
         {
             return false;
         }
 
-        TimeSpan elapsed = occurredAtUtc - startedAtUtc;
-        if (elapsed < MinimumRunProgressEstimateDuration)
+        occurredAtUtc = latestRunProgressAtUtc;
+        if (!TryCalculateRunFileRate(totalFiles, completedFiles, occurredAtUtc, out filesPerSecond))
         {
             return false;
         }
 
-        filesPerSecond = completedFiles / elapsed.TotalSeconds;
-        if (!double.IsFinite(filesPerSecond) || filesPerSecond <= 0)
-        {
-            return false;
-        }
-
-        double estimatedSeconds = elapsed.TotalSeconds * (totalFiles - completedFiles) / completedFiles;
+        double estimatedSeconds = (totalFiles - completedFiles) / filesPerSecond;
         if (!double.IsFinite(estimatedSeconds) || estimatedSeconds <= 0)
         {
             return false;
@@ -4134,16 +4087,71 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         return true;
     }
 
-    private DateTime GetRunProgressMetricOccurredAtUtc(DesktopRunProgressSnapshot progress)
+    private bool TryCalculateRunFileRate(
+        int totalFiles,
+        double completedFiles,
+        DateTime occurredAtUtc,
+        out double filesPerSecond)
     {
-        DateTime occurredAtUtc = progress.OccurredAtUtc;
-        if (_transferProgressByPair.TryGetValue(progress.SyncPairId, out DesktopTransferProgressSnapshot? transferProgress)
-            && transferProgress.OccurredAtUtc > occurredAtUtc)
+        filesPerSecond = 0;
+        if (_runFileProgressSamples.Count > 0)
         {
-            occurredAtUtc = transferProgress.OccurredAtUtc;
+            RunFileProgressSample lastSample = _runFileProgressSamples.Last();
+            if (totalFiles != lastSample.TotalFiles
+                || completedFiles < lastSample.CompletedFiles
+                || occurredAtUtc - lastSample.OccurredAtUtc > RunTransferMetricsWindow)
+            {
+                _runFileProgressSamples.Clear();
+            }
+            else if (completedFiles == lastSample.CompletedFiles)
+            {
+                return TryCalculateRunFileRateFromSamples(out filesPerSecond);
+            }
         }
 
-        return occurredAtUtc;
+        _runFileProgressSamples.Enqueue(new RunFileProgressSample(completedFiles, totalFiles, occurredAtUtc));
+        PruneRunFileProgressSamples(occurredAtUtc);
+        if (completedFiles < MinimumRunProgressEstimateCompletedFiles)
+        {
+            return false;
+        }
+
+        return TryCalculateRunFileRateFromSamples(out filesPerSecond);
+    }
+
+    private void PruneRunFileProgressSamples(DateTime occurredAtUtc)
+    {
+        while (_runFileProgressSamples.Count > 2
+            && occurredAtUtc - _runFileProgressSamples.Peek().OccurredAtUtc > RunTransferMetricsWindow)
+        {
+            _runFileProgressSamples.Dequeue();
+        }
+    }
+
+    private bool TryCalculateRunFileRateFromSamples(out double filesPerSecond)
+    {
+        filesPerSecond = 0;
+        if (_runFileProgressSamples.Count < 2)
+        {
+            return false;
+        }
+
+        RunFileProgressSample firstSample = _runFileProgressSamples.Peek();
+        RunFileProgressSample lastSample = _runFileProgressSamples.Last();
+        if (lastSample.CompletedFiles < MinimumRunProgressEstimateCompletedFiles)
+        {
+            return false;
+        }
+
+        TimeSpan elapsed = lastSample.OccurredAtUtc - firstSample.OccurredAtUtc;
+        double completedFiles = lastSample.CompletedFiles - firstSample.CompletedFiles;
+        if (elapsed < MinimumRunProgressEstimateDuration || completedFiles <= 0)
+        {
+            return false;
+        }
+
+        filesPerSecond = completedFiles / elapsed.TotalSeconds;
+        return double.IsFinite(filesPerSecond) && filesPerSecond > 0;
     }
 
     private static bool IsActiveSyncStatus(DesktopSyncPairStatusSnapshot status)
@@ -4725,6 +4733,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         Guid SyncPairId,
         SyncTransferDirection Direction,
         string RelativePath);
+
+    private readonly record struct RunFileProgressSample(double CompletedFiles, int TotalFiles, DateTime OccurredAtUtc);
 
     private readonly record struct RunTransferProgressSample(long TransferredBytes, DateTime OccurredAtUtc);
 
