@@ -3519,6 +3519,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private void RaiseSyncStateProperties()
     {
+        SyncNowCommand.RaiseCanExecuteChanged();
+        PauseCommand.RaiseCanExecuteChanged();
+        ResumeCommand.RaiseCanExecuteChanged();
+        PauseResumeCommand.RaiseCanExecuteChanged();
         OnPropertyChanged(nameof(CanSyncNow));
         OnPropertyChanged(nameof(CanPauseSync));
         OnPropertyChanged(nameof(CanResumeSync));
