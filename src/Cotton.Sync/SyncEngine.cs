@@ -714,6 +714,7 @@ public sealed class SyncEngine : ISyncEngine
         NodeFileManifestDto remoteFile,
         CancellationToken cancellationToken)
     {
+        EnsureEnoughLocalFreeSpace(syncPair.LocalRootPath, relativePath, remoteFile.SizeBytes);
         await _localWriter.WriteFileAsync(
             syncPair.LocalRootPath,
             relativePath,
@@ -1096,6 +1097,49 @@ public sealed class SyncEngine : ISyncEngine
             throw new ArgumentOutOfRangeException(
                 nameof(options),
                 "Maximum stored result activities cannot be negative.");
+        }
+    }
+
+    private static void EnsureEnoughLocalFreeSpace(string localRootPath, string relativePath, long requiredBytes)
+    {
+        if (requiredBytes <= 0)
+        {
+            return;
+        }
+
+        long? availableFreeBytes = TryGetAvailableFreeBytes(localRootPath);
+        if (!availableFreeBytes.HasValue || availableFreeBytes.Value >= requiredBytes)
+        {
+            return;
+        }
+
+        string displayPath = string.IsNullOrWhiteSpace(relativePath) ? "remote file" : relativePath;
+        throw new IOException(
+            "Not enough disk space to download '" + displayPath + "'. Free space on this computer and retry sync.");
+    }
+
+    private static long? TryGetAvailableFreeBytes(string localRootPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(localRootPath);
+        try
+        {
+            string fullRoot = Path.GetFullPath(localRootPath);
+            Directory.CreateDirectory(fullRoot);
+            string? driveRoot = Path.GetPathRoot(fullRoot);
+            if (string.IsNullOrWhiteSpace(driveRoot))
+            {
+                return null;
+            }
+
+            var drive = new DriveInfo(driveRoot);
+            return drive.IsReady ? drive.AvailableFreeSpace : null;
+        }
+        catch (Exception exception) when (exception is ArgumentException
+            or IOException
+            or NotSupportedException
+            or UnauthorizedAccessException)
+        {
+            return null;
         }
     }
 
