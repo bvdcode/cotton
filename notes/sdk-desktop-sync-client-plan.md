@@ -117,6 +117,12 @@ Immediate next horizon:
 - Use Linux only for code-side desktop checks, visual-smoke screenshots, and non-Windows logic. Do not start Windows-only implementation work from Linux.
 - Keep backend/server changes out of this desktop branch unless the user explicitly asks for a reviewed backend change.
 
+Current platform boundary:
+
+- The Linux branch can still support code audits, focused tests, visual-smoke screenshots, packaging scripts, and sync-core/app-layer performance work.
+- The current work order cannot be fully closed from Linux alone. Its remaining closure evidence is mostly animated Windows desktop behavior: two-pair pause/disable/restart, tray menu availability while syncing, notification identity/icon rendering, compact folder-list interaction, and large-file/many-small-file progress stability.
+- When a Windows agent/session is available, open `01-windows-only-work.md` first and verify those platform gates before changing code. If a Windows-only failure is found, make the smallest Windows/platform-scoped fix and record the evidence in the matching sub-plan.
+
 ## Plan Files
 
 The release plan is split into focused files so the active checklist stays visible and reviewable. Keep current execution work in `00-current-work-order.md`; keep platform-specific Windows tasks in `01-windows-only-work.md`.
