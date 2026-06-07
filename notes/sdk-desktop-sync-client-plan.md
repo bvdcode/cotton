@@ -40,6 +40,31 @@ Current code-side horizon:
 
 Do not spend time in `future` or `reference` sub-plans unless the user explicitly promotes that work.
 
+## Execution Buckets
+
+Revision date: 2026-06-07.
+
+The audit counted implementation checkboxes in every linked sub-plan. Closed files are marked with `[x]` in `Plan Files` and should not be opened again during normal work.
+
+Active code-side queue:
+
+- `00-current-work-order.md`: the immediate desktop polish queue. This is the first file to use when deciding the next implementation step.
+- `18-phase-8-desktop-ux-and-visual-design.md`: open only for Linux-verifiable desktop visual/layout polish not already captured by the current work order.
+- `22-phase-12-end-to-end-test-matrix.md`: open only for focused edge-case coverage tied to a concrete bug or release gate.
+- `23-phase-13-performance-and-soak.md`: open only for performance fixes, scale safety, and measured desktop sync behavior.
+
+Manual-gated queue:
+
+- `01-windows-only-work.md`
+- `16-phase-6-continuous-sync.md`
+- `17-phase-7-authentication-and-token-storage.md`
+- `19-phase-9-tray-autostart-notifications-and-lifecycle.md`
+- `20-phase-10-diagnostics-and-supportability.md`
+- `21-phase-11-packaging-and-installers.md`
+- `24-phase-14-release-readiness-gate.md`
+
+Reference and future files are not execution queues. They stay unchecked because they contain product guardrails or intentionally deferred scope, not because they should be worked top-to-bottom now.
+
 ## Plan Files
 
 The release plan is split into focused files so the active checklist stays visible and reviewable. Keep current execution work in `00-current-work-order.md`; keep platform-specific Windows tasks in `01-windows-only-work.md`.
