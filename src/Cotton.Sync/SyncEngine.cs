@@ -121,6 +121,7 @@ public sealed class SyncEngine : ISyncEngine
             options,
             result,
             deleteGuard,
+            directoryPathKeys,
             localDirectoriesByPath,
             remoteDirectoriesByPath,
             directoryStateByPath,
@@ -464,6 +465,7 @@ public sealed class SyncEngine : ISyncEngine
         SyncRunOptions options,
         SyncRunResult result,
         SyncDeleteGuard deleteGuard,
+        IReadOnlyList<string> pathKeys,
         IReadOnlyDictionary<string, LocalDirectorySnapshot> localByPath,
         IReadOnlyDictionary<string, RemoteDirectorySnapshot> remoteByPath,
         IReadOnlyDictionary<string, SyncStateEntry> stateByPath,
@@ -471,14 +473,14 @@ public sealed class SyncEngine : ISyncEngine
         IReadOnlyDictionary<string, RemoteFileSnapshot> remoteFilesByPath,
         CancellationToken cancellationToken)
     {
-        List<string> stateKeys = stateByPath.Keys
-            .OrderByDescending(static key => GetPathDepth(key))
-            .ThenBy(static key => key, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        foreach (string key in stateKeys)
+        foreach (string key in EnumerateDirectoryDeleteKeys(pathKeys))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            SyncStateEntry state = stateByPath[key];
+            if (!stateByPath.TryGetValue(key, out SyncStateEntry? state))
+            {
+                continue;
+            }
+
             localByPath.TryGetValue(key, out LocalDirectorySnapshot? local);
             remoteByPath.TryGetValue(key, out RemoteDirectorySnapshot? remote);
             string relativePath = local?.RelativePath ?? remote?.RelativePath ?? state.RelativePath;
@@ -1336,6 +1338,26 @@ public sealed class SyncEngine : ISyncEngine
         }
 
         return keys;
+    }
+
+    private static IEnumerable<string> EnumerateDirectoryDeleteKeys(IReadOnlyList<string> pathKeys)
+    {
+        for (int index = pathKeys.Count - 1; index >= 0;)
+        {
+            int depth = GetPathDepth(pathKeys[index]);
+            int groupStart = index;
+            while (groupStart > 0 && GetPathDepth(pathKeys[groupStart - 1]) == depth)
+            {
+                groupStart--;
+            }
+
+            for (int groupIndex = groupStart; groupIndex <= index; groupIndex++)
+            {
+                yield return pathKeys[groupIndex];
+            }
+
+            index = groupStart - 1;
+        }
     }
 
     private static void Report(
