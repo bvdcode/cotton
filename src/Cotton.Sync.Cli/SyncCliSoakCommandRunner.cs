@@ -404,10 +404,12 @@ internal static class SyncCliSoakCommandRunner
         await output.WriteLineAsync("End working set bytes: " + completedWorkingSetBytes.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Working set growth bytes: " + (completedWorkingSetBytes - startedWorkingSetBytes).ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Peak working set bytes: " + peakWorkingSetBytes.ToStringInvariant()).ConfigureAwait(false);
+        await output.WriteLineAsync("Peak working set growth bytes: " + (peakWorkingSetBytes - startedWorkingSetBytes).ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Start managed memory bytes: " + startedManagedMemoryBytes.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("End managed memory bytes: " + completedManagedMemoryBytes.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Managed memory growth bytes: " + (completedManagedMemoryBytes - startedManagedMemoryBytes).ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Peak managed memory bytes: " + peakManagedMemoryBytes.ToStringInvariant()).ConfigureAwait(false);
+        await output.WriteLineAsync("Peak managed memory growth bytes: " + (peakManagedMemoryBytes - startedManagedMemoryBytes).ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Iterations completed: " + completedIterations.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Total activities: " + totalActivities.ToStringInvariant()).ConfigureAwait(false);
         await output.WriteLineAsync("Sync errors: " + syncErrors.ToStringInvariant()).ConfigureAwait(false);

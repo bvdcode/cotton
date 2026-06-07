@@ -777,10 +777,12 @@ public sealed class SyncCliCommandRunnerTests
             Assert.That(text, Does.Contain("End working set bytes:"));
             Assert.That(text, Does.Contain("Working set growth bytes:"));
             Assert.That(text, Does.Contain("Peak working set bytes:"));
+            Assert.That(text, Does.Contain("Peak working set growth bytes:"));
             Assert.That(text, Does.Contain("Start managed memory bytes:"));
             Assert.That(text, Does.Contain("End managed memory bytes:"));
             Assert.That(text, Does.Contain("Managed memory growth bytes:"));
             Assert.That(text, Does.Contain("Peak managed memory bytes:"));
+            Assert.That(text, Does.Contain("Peak managed memory growth bytes:"));
             Assert.That(text, Does.Contain("Iterations completed: 1"));
             Assert.That(text, Does.Contain("Final convergence activities: 0"));
             Assert.That(text, Does.Contain("Final state entries: 1"));
@@ -852,10 +854,12 @@ public sealed class SyncCliCommandRunnerTests
             Assert.That(text, Does.Contain("End working set bytes:"));
             Assert.That(text, Does.Contain("Working set growth bytes:"));
             Assert.That(text, Does.Contain("Peak working set bytes:"));
+            Assert.That(text, Does.Contain("Peak working set growth bytes:"));
             Assert.That(text, Does.Contain("Start managed memory bytes:"));
             Assert.That(text, Does.Contain("End managed memory bytes:"));
             Assert.That(text, Does.Contain("Managed memory growth bytes:"));
             Assert.That(text, Does.Contain("Peak managed memory bytes:"));
+            Assert.That(text, Does.Contain("Peak managed memory growth bytes:"));
             Assert.That(text, Does.Contain("Iterations completed: 0"));
             Assert.That(text, Does.Contain("Total activities: 0"));
             Assert.That(text, Does.Contain("Sync errors: 1"));
