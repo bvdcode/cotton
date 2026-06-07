@@ -4,9 +4,11 @@ Use this section as the active checklist for the current desktop-client pass. Do
 
 - [ ] Stabilize sync controls during active work.
   Required behavior: global pause/resume is available while synchronization is running, disabling one pair does not resume other pairs after a global pause, and paused state survives application restart.
+  Current status: code-side command/state audit is done; keep open for Windows two-pair manual verification.
   Verification: focused command/state tests plus Windows manual check with two sync pairs.
 - [ ] Stabilize dashboard progress.
   Required behavior: the top progress card represents the whole active sync cycle, not only the current file; progress does not reset on every file; speed and ETA use smoothed global samples and do not flicker; many-small-file sync still shows useful global file-rate/ETA.
+  Current status: global file-rate smoothing is implemented; keep open for visual Windows verification and any remaining global-progress corrections.
   Verification: focused view-model tests plus Windows manual check with many small files and at least one large file.
 - [ ] Fix folder-list usability.
   Required behavior: folder rows use compact status dots/icons instead of dangling status text, expanded row actions remain reachable in a small window, the folder list scrolls independently, and Activity does not consume the primary folder-management area unless explicitly opened.
