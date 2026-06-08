@@ -3,6 +3,7 @@
 
 using System.Security.Cryptography;
 using System.Text;
+using Cotton.Sync;
 using Cotton.Sync.Local;
 
 namespace Cotton.Sync.Tests.Local;
@@ -84,6 +85,28 @@ public sealed class LocalFileScannerTests
             Assert.That(tree.Files.Single().ContentHash, Is.Empty);
             Assert.That(tree.Files.Single().SizeBytes, Is.EqualTo(5));
             Assert.That(contentHash, Is.EqualTo(Hash("alpha")));
+        });
+    }
+
+    [Test]
+    public async Task ComputeContentHashAsync_ReportsHashProgress()
+    {
+        WriteFile("alpha.txt", "alpha");
+        var scanner = new LocalFileScanner();
+        var progress = new RecordingProgress<SyncTransferProgress>();
+        LocalTreeSnapshot tree = await scanner.ScanTreeMetadataAsync(_root);
+
+        string contentHash = await scanner.ComputeContentHashAsync(tree.Files.Single(), progress);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(contentHash, Is.EqualTo(Hash("alpha")));
+            Assert.That(progress.Values, Has.Count.GreaterThanOrEqualTo(2));
+            Assert.That(progress.Values.Select(static item => item.Direction), Is.All.EqualTo(SyncTransferDirection.Hash));
+            Assert.That(progress.Values[0].TransferredBytes, Is.Zero);
+            Assert.That(progress.Values[0].TotalBytes, Is.EqualTo(5));
+            Assert.That(progress.Values[^1].TransferredBytes, Is.EqualTo(5));
+            Assert.That(progress.Values[^1].IsCompleted, Is.True);
         });
     }
 

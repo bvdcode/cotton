@@ -4001,6 +4001,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private void TrackRunTransferProgress(DesktopTransferProgressSnapshot progress)
     {
+        if (!IsRunTransferDirection(progress.Direction))
+        {
+            return;
+        }
+
         long effectiveTransferredBytes = progress.IsCompleted && progress.TotalBytes.HasValue
             ? progress.TotalBytes.Value
             : progress.TransferredBytes;
@@ -4546,6 +4551,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         return GetDisplayedRunProgressCount(progress);
     }
 
+    private static bool IsRunTransferDirection(SyncTransferDirection direction)
+    {
+        return direction is SyncTransferDirection.Upload or SyncTransferDirection.Download;
+    }
+
     private bool TryGetRunTransferSpeed(out double bytesPerSecond)
     {
         if (_runTransferSpeedBytesPerSecond is > 0)
@@ -4780,16 +4790,25 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     private static string CreateTransferTitle(DesktopTransferProgressSnapshot progress, string syncPairName)
     {
-        string action = progress.IsCompleted
-            ? progress.Direction == SyncTransferDirection.Upload ? "Uploaded" : "Downloaded"
-            : progress.Direction == SyncTransferDirection.Upload ? "Uploading" : "Downloading";
+        string action = CreateTransferAction(progress.Direction, progress.IsCompleted);
         return syncPairName + ": " + action + " " + GetDisplayFileName(progress.RelativePath);
     }
 
     private static string CreateTransferOperation(DesktopTransferProgressSnapshot progress)
     {
-        string action = progress.Direction == SyncTransferDirection.Upload ? "Uploading" : "Downloading";
+        string action = CreateTransferAction(progress.Direction, isCompleted: false);
         return action + " " + GetDisplayFileName(progress.RelativePath);
+    }
+
+    private static string CreateTransferAction(SyncTransferDirection direction, bool isCompleted)
+    {
+        return direction switch
+        {
+            SyncTransferDirection.Upload => isCompleted ? "Uploaded" : "Uploading",
+            SyncTransferDirection.Download => isCompleted ? "Downloaded" : "Downloading",
+            SyncTransferDirection.Hash => isCompleted ? "Checked" : "Checking",
+            _ => isCompleted ? "Synced" : "Syncing",
+        };
     }
 
     private static string CreateTransferDetails(DesktopTransferProgressSnapshot progress)

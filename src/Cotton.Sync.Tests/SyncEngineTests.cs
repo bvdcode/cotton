@@ -565,6 +565,37 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_ReportsLocalHashProgressWhenCheckingBaselineFile()
+    {
+        const string relativePath = "Docs/changed.txt";
+        LocalFileSnapshot local = LocalFile(relativePath, "local-new");
+        local.ContentHash = string.Empty;
+        local.LastWriteUtc = new DateTime(2026, 6, 2, 14, 0, 0, DateTimeKind.Utc);
+        NodeFileManifestDto remote = RemoteFile(relativePath, HashText("old"));
+        var scanner = new MetadataOnlyLocalFileScanner(local);
+        var transferProgress = new RecordingProgress<SyncTransferProgress>();
+        SyncEngine engine = CreateEngine(scanner, RemoteTree(remote), new FakeRemoteFileSynchronizer(), out SqliteSyncStateStore stateStore);
+        await InsertBaselineAsync(stateStore, relativePath, HashText("old"), remote);
+
+        await engine.RunOnceAsync(
+            Pair(),
+            new SyncRunOptions { TransferProgress = transferProgress });
+
+        IReadOnlyList<SyncTransferProgress> hashProgress = transferProgress.Values
+            .Where(static item => item.Direction == SyncTransferDirection.Hash)
+            .ToList();
+        Assert.Multiple(() =>
+        {
+            Assert.That(scanner.ContentHashCalls, Is.EqualTo(1));
+            Assert.That(hashProgress, Has.Count.EqualTo(2));
+            Assert.That(hashProgress[0].TransferredBytes, Is.Zero);
+            Assert.That(hashProgress[0].TotalBytes, Is.EqualTo(local.SizeBytes));
+            Assert.That(hashProgress[^1].TransferredBytes, Is.EqualTo(local.SizeBytes));
+            Assert.That(hashProgress[^1].IsCompleted, Is.True);
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_DownloadsRemoteOnlyFileAndStoresBaseline()
     {
         byte[] content = Encoding.UTF8.GetBytes("remote-content");
@@ -2192,7 +2223,7 @@ public sealed class SyncEngineTests
         ILocalTreeScanner,
         ILocalFileMetadataTreeScanner,
         ILocalFileMetadataTreeProgressScanner,
-        ILocalFileContentHasher
+        ILocalFileContentHashProgressHasher
     {
         public MetadataOnlyLocalFileScanner(params LocalFileSnapshot[] files)
         {
@@ -2247,7 +2278,26 @@ public sealed class SyncEngineTests
 
         public Task<string> ComputeContentHashAsync(LocalFileSnapshot localFile, CancellationToken cancellationToken = default)
         {
+            return ComputeContentHashAsync(localFile, progress: null, cancellationToken);
+        }
+
+        public Task<string> ComputeContentHashAsync(
+            LocalFileSnapshot localFile,
+            IProgress<SyncTransferProgress>? progress,
+            CancellationToken cancellationToken = default)
+        {
             ContentHashCalls++;
+            progress?.Report(new SyncTransferProgress(
+                SyncTransferDirection.Hash,
+                localFile.RelativePath,
+                transferredBytes: 0,
+                totalBytes: localFile.SizeBytes));
+            progress?.Report(new SyncTransferProgress(
+                SyncTransferDirection.Hash,
+                localFile.RelativePath,
+                localFile.SizeBytes,
+                localFile.SizeBytes,
+                isCompleted: true));
             return Task.FromResult("precomputed-content-hash");
         }
     }

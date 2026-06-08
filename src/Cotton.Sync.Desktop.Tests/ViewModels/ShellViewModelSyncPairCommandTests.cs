@@ -1041,6 +1041,76 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task TransferProgressChanged_ShowsHashProgressAsChecking()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Videos", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            syncPairId,
+            SyncTransferDirection.Hash,
+            "2026/video.mp4",
+            TransferredBytes: 256,
+            TotalBytes: 1024,
+            IsCompleted: false,
+            new DateTime(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc)));
+
+        Assert.Multiple(() =>
+        {
+            SyncPairRowViewModel row = viewModel.SyncPairs.Single();
+            Assert.That(viewModel.CurrentTransferTitle, Is.EqualTo("Videos: Checking video.mp4"));
+            Assert.That(viewModel.CurrentTransferDetails, Is.EqualTo("256 B / 1.0 KB"));
+            Assert.That(row.CurrentOperation, Is.EqualTo("Checking video.mp4"));
+            Assert.That(row.CurrentProgressValue, Is.EqualTo(25).Within(0.01));
+            Assert.That(viewModel.CurrentProgressText, Is.EqualTo("Videos: Checking video.mp4"));
+        });
+    }
+
+    [Test]
+    public async Task TransferProgressChanged_DoesNotCountHashBytesAsRunTransferBytes()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Videos", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        DateTime startedAtUtc = new(2026, 6, 7, 9, 0, 0, DateTimeKind.Utc);
+        const long totalRunBytes = 10L * 1024 * 1024 * 1024;
+        const long completedRunBytes = 3L * 1024 * 1024 * 1024;
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 200,
+            FilesTotal: 29189,
+            CurrentPath: "Videos/clip.mp4",
+            StartedAtUtc: startedAtUtc,
+            IsCompleted: false,
+            OccurredAtUtc: startedAtUtc.AddSeconds(60),
+            BytesCompleted: completedRunBytes,
+            BytesTotal: totalRunBytes));
+        controller.ReportTransferProgress(new DesktopTransferProgressSnapshot(
+            syncPairId,
+            SyncTransferDirection.Hash,
+            "Videos/clip.mp4",
+            TransferredBytes: 512L * 1024 * 1024,
+            TotalBytes: 1024L * 1024 * 1024,
+            IsCompleted: false,
+            OccurredAtUtc: startedAtUtc.AddSeconds(61),
+            SpeedBytesPerSecond: 256L * 1024 * 1024,
+            EstimatedTimeRemaining: TimeSpan.FromSeconds(2)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.CurrentTransferTitle, Is.EqualTo("Videos: Checking clip.mp4"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderSizeDetails, Is.EqualTo("3.0 GB / 10 GB"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("Checking files · 200 of 29189 files"));
+            Assert.That(viewModel.CurrentWorkProgressValue, Is.EqualTo(30).Within(0.01));
+        });
+    }
+
+    [Test]
     public async Task TransferProgressChanged_ShowsSyncingHeaderEvenWhenLatestStatusIsIdle()
     {
         Guid syncPairId = Guid.NewGuid();

@@ -24,6 +24,7 @@ public sealed class SyncEngine : ISyncEngine
     private static readonly StringComparer PathComparer = StringComparer.OrdinalIgnoreCase;
     private readonly ILocalFileScanner _localScanner;
     private readonly ILocalFileContentHasher? _localContentHasher;
+    private readonly ILocalFileContentHashProgressHasher? _localContentHashProgressHasher;
     private readonly ILocalFileMetadataTreeScanner? _localMetadataTreeScanner;
     private readonly ILocalFileMetadataTreeLookupScanner? _localMetadataTreeLookupScanner;
     private readonly ILocalTreeScanner? _localTreeScanner;
@@ -49,6 +50,7 @@ public sealed class SyncEngine : ISyncEngine
     {
         _localScanner = localScanner ?? throw new ArgumentNullException(nameof(localScanner));
         _localContentHasher = localScanner as ILocalFileContentHasher;
+        _localContentHashProgressHasher = localScanner as ILocalFileContentHashProgressHasher;
         _localMetadataTreeScanner = localScanner as ILocalFileMetadataTreeScanner;
         _localMetadataTreeLookupScanner = localScanner as ILocalFileMetadataTreeLookupScanner;
         _localTreeScanner = localScanner as ILocalTreeScanner;
@@ -376,7 +378,8 @@ public sealed class SyncEngine : ISyncEngine
                     local.RelativePath,
                     startedAtUtc,
                     ref lastReportedAtUtc);
-                await EnsureLocalContentHashForBaselineComparisonAsync(local, state.Value, cancellationToken).ConfigureAwait(false);
+                await EnsureLocalContentHashForBaselineComparisonAsync(local, state.Value, options, cancellationToken)
+                    .ConfigureAwait(false);
                 filesCompleted++;
                 ReportItemRunProgress(
                     options,
@@ -707,7 +710,7 @@ public sealed class SyncEngine : ISyncEngine
 
         if (local is not null && remote is not null)
         {
-            await EnsureLocalContentHashAsync(local, cancellationToken).ConfigureAwait(false);
+            await EnsureLocalContentHashAsync(local, options, cancellationToken).ConfigureAwait(false);
             if (ContentMatches(local.ContentHash, remote.File.ContentHash))
             {
                 await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, local.SizeBytes, remote.File), cancellationToken)
@@ -732,7 +735,8 @@ public sealed class SyncEngine : ISyncEngine
     {
         if (local is not null)
         {
-            await EnsureLocalContentHashForBaselineComparisonAsync(local, state, cancellationToken).ConfigureAwait(false);
+            await EnsureLocalContentHashForBaselineComparisonAsync(local, state, options, cancellationToken)
+                .ConfigureAwait(false);
         }
 
         bool localDeleted = local is null && !string.IsNullOrWhiteSpace(state.LocalContentHash);
@@ -1009,7 +1013,7 @@ public sealed class SyncEngine : ISyncEngine
         string? details = null;
         if (local is not null && remoteFile is not null)
         {
-            await EnsureLocalContentHashAsync(local, cancellationToken).ConfigureAwait(false);
+            await EnsureLocalContentHashAsync(local, options, cancellationToken).ConfigureAwait(false);
             string conflictPath = _localWriter.CreateConflictRelativePath(syncPair.LocalRootPath, relativePath, DateTime.UtcNow);
             EnsureEnoughLocalFreeSpace(syncPair.LocalRootPath, conflictPath, remoteFile.SizeBytes);
             await _localWriter.WriteFileAsync(
@@ -1977,7 +1981,10 @@ public sealed class SyncEngine : ISyncEngine
             isCompleted));
     }
 
-    private async Task EnsureLocalContentHashAsync(LocalFileSnapshot local, CancellationToken cancellationToken)
+    private async Task EnsureLocalContentHashAsync(
+        LocalFileSnapshot local,
+        SyncRunOptions options,
+        CancellationToken cancellationToken)
     {
         if (!string.IsNullOrWhiteSpace(local.ContentHash))
         {
@@ -1989,12 +1996,17 @@ public sealed class SyncEngine : ISyncEngine
             throw new InvalidOperationException("Local file snapshot does not include a content hash and no local content hasher is available.");
         }
 
-        local.ContentHash = await _localContentHasher.ComputeContentHashAsync(local, cancellationToken).ConfigureAwait(false);
+        local.ContentHash = _localContentHashProgressHasher is null
+            ? await _localContentHasher.ComputeContentHashAsync(local, cancellationToken).ConfigureAwait(false)
+            : await _localContentHashProgressHasher
+                .ComputeContentHashAsync(local, options.TransferProgress, cancellationToken)
+                .ConfigureAwait(false);
     }
 
     private async Task EnsureLocalContentHashForBaselineComparisonAsync(
         LocalFileSnapshot local,
         SyncStateEntry state,
+        SyncRunOptions options,
         CancellationToken cancellationToken)
     {
         if (!string.IsNullOrWhiteSpace(local.ContentHash))
@@ -2008,7 +2020,7 @@ public sealed class SyncEngine : ISyncEngine
             return;
         }
 
-        await EnsureLocalContentHashAsync(local, cancellationToken).ConfigureAwait(false);
+        await EnsureLocalContentHashAsync(local, options, cancellationToken).ConfigureAwait(false);
     }
 
     private static bool CanReuseBaselineLocalContentHash(LocalFileSnapshot local, SyncStateEntry state)

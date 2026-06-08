@@ -22,4 +22,9 @@ public enum SyncTransferDirection
     /// Remote content is being downloaded to the local sync folder.
     /// </summary>
     Download = 2,
+
+    /// <summary>
+    /// Local content is being hashed before reconciliation can continue.
+    /// </summary>
+    Hash = 3,
 }

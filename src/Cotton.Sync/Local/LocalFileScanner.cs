@@ -16,10 +16,12 @@ public sealed class LocalFileScanner :
     ILocalFileMetadataTreeScanner,
     ILocalFileMetadataTreeProgressScanner,
     ILocalFileMetadataTreeLookupScanner,
-    ILocalFileContentHasher
+    ILocalFileContentHashProgressHasher
 {
     private static readonly StringComparer PathComparer = StringComparer.OrdinalIgnoreCase;
     private const int ProgressReportItemInterval = 100;
+    private const int HashBufferSize = 1024 * 128;
+    private static readonly TimeSpan HashProgressReportInterval = TimeSpan.FromMilliseconds(250);
     private static readonly EnumerationOptions ChildEnumerationOptions = new()
     {
         AttributesToSkip = FileAttributes.ReparsePoint,
@@ -105,10 +107,25 @@ public sealed class LocalFileScanner :
         LocalFileSnapshot localFile,
         CancellationToken cancellationToken = default)
     {
+        return await ComputeContentHashAsync(localFile, progress: null, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<string> ComputeContentHashAsync(
+        LocalFileSnapshot localFile,
+        IProgress<SyncTransferProgress>? progress,
+        CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(localFile);
         ArgumentException.ThrowIfNullOrWhiteSpace(localFile.FullPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(localFile.RelativePath);
-        return await ComputeHashAsync(localFile.FullPath, localFile.RelativePath, cancellationToken).ConfigureAwait(false);
+        return await ComputeHashAsync(
+                localFile.FullPath,
+                localFile.RelativePath,
+                progress,
+                localFile.SizeBytes,
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private static async Task ScanTreeCoreAsync(
@@ -288,7 +305,8 @@ public sealed class LocalFileScanner :
         ValidatePlatformPermissions(file, relativePath);
         LocalFileMetadata before = ReadMetadata(file, relativePath);
         string contentHash = computeHash
-            ? await ComputeHashAsync(file.FullName, relativePath, cancellationToken).ConfigureAwait(false)
+            ? await ComputeHashAsync(file.FullName, relativePath, progress: null, before.Length, cancellationToken)
+                .ConfigureAwait(false)
             : string.Empty;
         LocalFileMetadata after = ReadMetadata(file, relativePath);
         if (before.Length != after.Length || before.LastWriteUtc != after.LastWriteUtc)
@@ -363,18 +381,44 @@ public sealed class LocalFileScanner :
     private static async Task<string> ComputeHashAsync(
         string filePath,
         string relativePath,
+        IProgress<SyncTransferProgress>? progress,
+        long? totalBytes,
         CancellationToken cancellationToken)
     {
         try
         {
+            long bytesRead = 0;
+            DateTime lastReportedAtUtc = DateTime.UtcNow;
+            ReportHashProgress(progress, relativePath, bytesRead, totalBytes, isCompleted: false);
             await using FileStream stream = new(
                 filePath,
                 FileMode.Open,
                 FileAccess.Read,
                 FileShare.Read,
-                bufferSize: 1024 * 128,
+                bufferSize: HashBufferSize,
                 FileOptions.Asynchronous | FileOptions.SequentialScan);
-            byte[] hash = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
+            using IncrementalHash hasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            byte[] buffer = new byte[HashBufferSize];
+            while (true)
+            {
+                int read = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false);
+                if (read == 0)
+                {
+                    break;
+                }
+
+                hasher.AppendData(buffer.AsSpan(0, read));
+                bytesRead += read;
+                DateTime now = DateTime.UtcNow;
+                if (now - lastReportedAtUtc >= HashProgressReportInterval)
+                {
+                    ReportHashProgress(progress, relativePath, bytesRead, totalBytes, isCompleted: false);
+                    lastReportedAtUtc = now;
+                }
+            }
+
+            byte[] hash = hasher.GetHashAndReset();
+            ReportHashProgress(progress, relativePath, bytesRead, totalBytes, isCompleted: true);
             return Convert.ToHexStringLower(hash);
         }
         catch (UnauthorizedAccessException exception)
@@ -385,6 +429,31 @@ public sealed class LocalFileScanner :
         {
             throw new LocalFileUnavailableException(relativePath, filePath, exception);
         }
+    }
+
+    private static void ReportHashProgress(
+        IProgress<SyncTransferProgress>? progress,
+        string relativePath,
+        long processedBytes,
+        long? totalBytes,
+        bool isCompleted)
+    {
+        if (progress is null)
+        {
+            return;
+        }
+
+        if (totalBytes.HasValue && processedBytes > totalBytes.Value)
+        {
+            processedBytes = totalBytes.Value;
+        }
+
+        progress.Report(new SyncTransferProgress(
+            SyncTransferDirection.Hash,
+            relativePath,
+            processedBytes,
+            totalBytes,
+            isCompleted));
     }
 
     private readonly record struct LocalFileMetadata(long Length, DateTime LastWriteUtc);
