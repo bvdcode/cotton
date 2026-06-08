@@ -2,8 +2,11 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Diagnostics;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
+using Cotton.Auth;
 using Cotton.Sync.Cli;
 using Cotton.Sync.Cli.Tests.TestSupport;
 using Cotton.Sync.State;
@@ -42,9 +45,100 @@ public sealed class SyncCliCommandRunnerTests
         {
             Assert.That(exitCode, Is.EqualTo(0));
             Assert.That(output.ToString(), Does.Contain("state-summary"));
+            Assert.That(output.ToString(), Does.Contain("auth-browser"));
             Assert.That(output.ToString(), Does.Contain("sync-once"));
             Assert.That(output.ToString(), Does.Contain("sync-soak"));
             Assert.That(error.ToString(), Is.Empty);
+        });
+    }
+
+    [Test]
+    public async Task AuthBrowser_PrintsApprovalUrlAndSignedInAccount()
+    {
+        var handler = new AppCodeAuthServerHandler();
+        using var httpClient = new HttpClient(handler);
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        int exitCode = await SyncCliCommandRunner.RunAsync(
+            [
+                "auth-browser",
+                "--server",
+                "cotton.test",
+                "--application-version",
+                "1.2.3",
+                "--device-name",
+                "workstation",
+            ],
+            output,
+            error,
+            httpClient);
+
+        string text = output.ToString();
+        Assert.Multiple(() =>
+        {
+            Assert.That(exitCode, Is.EqualTo(0));
+            Assert.That(error.ToString(), Is.Empty);
+            Assert.That(text, Does.Contain("Cotton Sync browser sign-in"));
+            Assert.That(text, Does.Contain("Approval URL: https://cotton.test/oauth/app-code/0190a000-0000-7000-8000-000000000022"));
+            Assert.That(text, Does.Contain("Signed in: browser@example.test"));
+            Assert.That(handler.Requests.Select(static request => request.PathAndQuery), Is.EqualTo(new[]
+            {
+                "/api/v1/oauth/app-code/start",
+                "/api/v1/oauth/app-code/poll",
+                "/api/v1/auth/me",
+            }));
+            Assert.That(handler.Requests[0].Body, Does.Contain("\"applicationName\":\"Cotton Sync CLI\""));
+            Assert.That(handler.Requests[0].Body, Does.Contain("\"applicationVersion\":\"1.2.3\""));
+            Assert.That(handler.Requests[0].Body, Does.Contain("\"deviceName\":\"workstation\""));
+        });
+    }
+
+    [Test]
+    public async Task AuthBrowser_ReturnsFailureForDeniedApproval()
+    {
+        var handler = new AppCodeAuthServerHandler(deny: true);
+        using var httpClient = new HttpClient(handler);
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        int exitCode = await SyncCliCommandRunner.RunAsync(
+            [
+                "auth-browser",
+                "--server",
+                "https://cotton.test/",
+            ],
+            output,
+            error,
+            httpClient);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exitCode, Is.EqualTo(1));
+            Assert.That(output.ToString(), Does.Contain("Approval URL: https://cotton.test/oauth/app-code/0190a000-0000-7000-8000-000000000022"));
+            Assert.That(error.ToString(), Does.Contain("Browser sign-in was denied."));
+            Assert.That(error.ToString(), Does.Contain("denied"));
+            Assert.That(handler.Requests.Select(static request => request.PathAndQuery), Is.EqualTo(new[]
+            {
+                "/api/v1/oauth/app-code/start",
+                "/api/v1/oauth/app-code/poll",
+            }));
+        });
+    }
+
+    [Test]
+    public async Task AuthBrowser_ReturnsErrorForMissingServer()
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        int exitCode = await SyncCliCommandRunner.RunAsync(["auth-browser"], output, error);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exitCode, Is.EqualTo(2));
+            Assert.That(output.ToString(), Is.Empty);
+            Assert.That(error.ToString(), Does.Contain("--server"));
         });
     }
 
@@ -1182,6 +1276,84 @@ public sealed class SyncCliCommandRunnerTests
         }
         catch (InvalidOperationException)
         {
+        }
+    }
+
+    private sealed class AppCodeAuthServerHandler : HttpMessageHandler
+    {
+        private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+        private readonly bool _deny;
+        private int _pollCount;
+
+        public AppCodeAuthServerHandler(bool deny = false)
+        {
+            _deny = deny;
+        }
+
+        public List<HttpRequestSnapshot> Requests { get; } = [];
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            byte[] rawBody = request.Content is null
+                ? []
+                : await request.Content.ReadAsByteArrayAsync(cancellationToken);
+            string body = Encoding.UTF8.GetString(rawBody);
+            var snapshot = new HttpRequestSnapshot(
+                request.Method,
+                request.RequestUri?.PathAndQuery ?? string.Empty,
+                request.Headers.Authorization?.Parameter,
+                body,
+                rawBody);
+            Requests.Add(snapshot);
+
+            if (snapshot.Method == HttpMethod.Post && snapshot.PathAndQuery == "/api/v1/oauth/app-code/start")
+            {
+                return Json(HttpStatusCode.OK, new
+                {
+                    approvalId = Guid.Parse("0190a000-0000-7000-8000-000000000022"),
+                    approvalUrl = "/oauth/app-code/0190a000-0000-7000-8000-000000000022",
+                    pollToken = "poll-token",
+                    expiresAt = new DateTime(2026, 6, 8, 12, 0, 0, DateTimeKind.Utc),
+                    pollIntervalSeconds = 1,
+                });
+            }
+
+            if (snapshot.Method == HttpMethod.Post && snapshot.PathAndQuery == "/api/v1/oauth/app-code/poll")
+            {
+                Assert.That(snapshot.Body, Does.Contain("\"pollToken\":\"poll-token\""));
+                _pollCount++;
+                return _deny
+                    ? Json(HttpStatusCode.Forbidden, new { error = "denied" })
+                    : Json(HttpStatusCode.OK, new { accessToken = "access-token", refreshToken = "refresh-token" });
+            }
+
+            if (snapshot.Method == HttpMethod.Get && snapshot.PathAndQuery == "/api/v1/auth/me")
+            {
+                Assert.That(snapshot.AuthorizationParameter, Is.EqualTo("access-token"));
+                Assert.That(_pollCount, Is.EqualTo(1));
+                return Json(HttpStatusCode.OK, new UserDto
+                {
+                    Id = Guid.Parse("0190a000-0000-7000-8000-000000000023"),
+                    Username = "browser",
+                    Email = "browser@example.test",
+                });
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound)
+            {
+                Content = new StringContent("Unexpected request: " + snapshot.PathAndQuery),
+            };
+        }
+
+        private static HttpResponseMessage Json(HttpStatusCode statusCode, object payload)
+        {
+            return new HttpResponseMessage(statusCode)
+            {
+                Content = new StringContent(
+                    JsonSerializer.Serialize(payload, JsonOptions),
+                    Encoding.UTF8,
+                    "application/json"),
+            };
         }
     }
 

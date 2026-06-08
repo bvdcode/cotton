@@ -59,6 +59,38 @@ internal static class SyncCliOptionsReader
             string.IsNullOrWhiteSpace(twoFactorCode) ? null : twoFactorCode.Trim());
     }
 
+    public static SyncCliBrowserAuthOptions? ReadBrowserAuthOptions(
+        IReadOnlyList<string> args,
+        TextWriter error)
+    {
+        string? server = ReadOption(args, "--server");
+        if (string.IsNullOrWhiteSpace(server))
+        {
+            error.WriteLine("auth-browser requires --server.");
+            return null;
+        }
+
+        Uri? serverUri = CottonServerUrl.NormalizeOptional(server);
+        if (serverUri is null)
+        {
+            error.WriteLine("--server must be an HTTP or HTTPS URL.");
+            return null;
+        }
+
+        string applicationName = ReadOption(args, "--application-name")?.Trim() ?? "Cotton Sync CLI";
+        if (string.IsNullOrWhiteSpace(applicationName))
+        {
+            error.WriteLine("--application-name must not be empty.");
+            return null;
+        }
+
+        return new SyncCliBrowserAuthOptions(
+            serverUri,
+            applicationName,
+            NormalizeOptional(ReadOption(args, "--application-version")),
+            NormalizeOptional(ReadOption(args, "--device-name")) ?? "Cotton Sync CLI");
+    }
+
     public static bool TryReadOptionalPositiveInt(
         IReadOnlyList<string> args,
         string name,
@@ -154,5 +186,11 @@ internal static class SyncCliOptionsReader
         }
 
         return Environment.GetEnvironmentVariable(passwordEnvironmentVariable.Trim());
+    }
+
+    private static string? NormalizeOptional(string? value)
+    {
+        string? trimmed = value?.Trim();
+        return string.IsNullOrEmpty(trimmed) ? null : trimmed;
     }
 }

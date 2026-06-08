@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton.Sdk;
+using Cotton.Sdk.Auth;
+using Cotton.Sync.App.Auth;
 using Cotton.Sync.State;
 
 namespace Cotton.Sync.Cli;
@@ -10,6 +13,7 @@ namespace Cotton.Sync.Cli;
 /// </summary>
 public static class SyncCliCommandRunner
 {
+    private const string AuthBrowserCommand = "auth-browser";
     private const string StateSummaryCommand = "state-summary";
     private const string SyncOnceCommand = "sync-once";
     private const string SyncSoakCommand = "sync-soak";
@@ -45,6 +49,12 @@ public static class SyncCliCommandRunner
         }
 
         string command = args[0];
+        if (string.Equals(command, AuthBrowserCommand, StringComparison.OrdinalIgnoreCase))
+        {
+            return await RunAuthBrowserAsync(args.Skip(1).ToArray(), output, error, httpClient, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
         if (string.Equals(command, StateSummaryCommand, StringComparison.OrdinalIgnoreCase))
         {
             return await RunStateSummaryAsync(args.Skip(1).ToArray(), output, error, cancellationToken)
@@ -67,6 +77,64 @@ public static class SyncCliCommandRunner
         await error.WriteLineAsync("Unknown command: " + command).ConfigureAwait(false);
         await WriteHelpAsync(error).ConfigureAwait(false);
         return 2;
+    }
+
+    private static async Task<int> RunAuthBrowserAsync(
+        IReadOnlyList<string> args,
+        TextWriter output,
+        TextWriter error,
+        HttpClient? injectedHttpClient,
+        CancellationToken cancellationToken)
+    {
+        SyncCliBrowserAuthOptions? options = SyncCliOptionsReader.ReadBrowserAuthOptions(args, error);
+        if (options is null)
+        {
+            return 2;
+        }
+
+        using HttpClient? ownedHttpClient = injectedHttpClient is null ? new HttpClient() : null;
+        HttpClient httpClient = injectedHttpClient ?? ownedHttpClient!;
+        var client = new CottonCloudClient(
+            httpClient,
+            new InMemoryCottonTokenStore(),
+            new CottonSdkOptions
+            {
+                BaseAddress = options.ServerUri,
+                RefreshOnUnauthorized = false,
+                UserAgent = "CottonSyncCli",
+                DeviceName = options.DeviceName,
+            });
+        var authFlow = new AppCodeBrowserAuthFlow(
+            client.Auth,
+            new SyncCliApprovalUrlWriter(output));
+
+        await output.WriteLineAsync("Cotton Sync browser sign-in").ConfigureAwait(false);
+        try
+        {
+            AuthSession session = await authFlow
+                .SignInAsync(
+                    new AppCodeBrowserSignInRequest
+                    {
+                        ApplicationName = options.ApplicationName,
+                        ApplicationVersion = options.ApplicationVersion,
+                        DeviceName = options.DeviceName,
+                    },
+                    cancellationToken)
+                .ConfigureAwait(false);
+            string account = string.IsNullOrWhiteSpace(session.Email) ? session.Username : session.Email!;
+            await output.WriteLineAsync("Signed in: " + account).ConfigureAwait(false);
+            return 0;
+        }
+        catch (AppCodeBrowserSignInException exception)
+        {
+            await error.WriteLineAsync(exception.Message).ConfigureAwait(false);
+            if (!string.IsNullOrWhiteSpace(exception.Error))
+            {
+                await error.WriteLineAsync("Error: " + exception.Error).ConfigureAwait(false);
+            }
+
+            return 1;
+        }
     }
 
     private static async Task<int> RunStateSummaryAsync(
@@ -149,6 +217,11 @@ public static class SyncCliCommandRunner
             Cotton Sync CLI
 
             Commands:
+              auth-browser --server <url-or-host>
+                  [--application-name <name>] [--application-version <version>]
+                  [--device-name <name>]
+                  Starts app-code browser sign-in, prints the approval URL, and waits.
+
               state-summary --database <path> --sync-pair <id>
                   Initializes and summarizes a sync-state SQLite database for one sync pair.
               sync-once --server <url-or-host> --username <name>
