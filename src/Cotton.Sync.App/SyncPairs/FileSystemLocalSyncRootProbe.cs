@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton.Sync.State;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -33,6 +34,7 @@ public sealed class FileSystemLocalSyncRootProbe : ILocalSyncRootProbe
         try
         {
             DirectoryInfo directory = Directory.CreateDirectory(localRootPath);
+            SyncMetadataDirectory.HideIfExists(directory.FullName);
             bool canUse = directory.Exists;
             return Task.FromResult(canUse);
         }

@@ -8,8 +8,6 @@ namespace Cotton.Sync.State;
 /// </summary>
 public static class SyncPathIgnoreRules
 {
-    private const string MetadataDirectoryName = ".cotton-sync";
-
     private static readonly string[] TemporaryFilePrefixes =
     [
         "~$",
@@ -55,7 +53,7 @@ public static class SyncPathIgnoreRules
 
     private static bool ShouldIgnoreSegment(string segment)
     {
-        return string.Equals(segment, MetadataDirectoryName, StringComparison.OrdinalIgnoreCase)
+        return string.Equals(segment, SyncMetadataDirectory.Name, StringComparison.OrdinalIgnoreCase)
             || IgnoredFileNames.Contains(segment)
             || TemporaryFilePrefixes.Any(prefix => segment.StartsWith(prefix, StringComparison.Ordinal))
             || TemporaryFileSuffixes.Any(suffix => segment.EndsWith(suffix, StringComparison.OrdinalIgnoreCase));

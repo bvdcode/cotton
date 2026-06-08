@@ -12,7 +12,6 @@ namespace Cotton.Sync.Local;
 /// </summary>
 public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
 {
-    private const string MetadataDirectoryName = ".cotton-sync";
     private const string DeletedDirectoryName = "deleted";
     private const string TemporaryDirectoryName = "tmp";
 
@@ -37,7 +36,7 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
             Directory.CreateDirectory(targetDirectory);
         }
 
-        string temporaryDirectory = Path.Combine(EnsureMetadataDirectory(fullRoot), TemporaryDirectoryName);
+        string temporaryDirectory = Path.Combine(SyncMetadataDirectory.Ensure(fullRoot), TemporaryDirectoryName);
         Directory.CreateDirectory(temporaryDirectory);
         CleanupTemporaryDownloads(temporaryDirectory);
         string temporaryPath = Path.Combine(temporaryDirectory, Guid.NewGuid().ToString("N") + ".download");
@@ -87,7 +86,7 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
             string? preservedDirectory = Path.GetDirectoryName(preservedPath);
             if (!string.IsNullOrWhiteSpace(preservedDirectory))
             {
-                EnsureMetadataDirectory(fullRoot);
+                SyncMetadataDirectory.Ensure(fullRoot);
                 Directory.CreateDirectory(preservedDirectory);
             }
 
@@ -122,7 +121,7 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
             string? preservedParentDirectory = Path.GetDirectoryName(preservedPath);
             if (!string.IsNullOrWhiteSpace(preservedParentDirectory))
             {
-                EnsureMetadataDirectory(fullRoot);
+                SyncMetadataDirectory.Ensure(fullRoot);
                 Directory.CreateDirectory(preservedParentDirectory);
             }
 
@@ -190,39 +189,6 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
         }
     }
 
-    private static string EnsureMetadataDirectory(string fullRoot)
-    {
-        string metadataDirectory = Path.Combine(fullRoot, MetadataDirectoryName);
-        Directory.CreateDirectory(metadataDirectory);
-        HideMetadataDirectoryIfSupported(metadataDirectory);
-        return metadataDirectory;
-    }
-
-    private static void HideMetadataDirectoryIfSupported(string metadataDirectory)
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
-        try
-        {
-            FileAttributes attributes = File.GetAttributes(metadataDirectory);
-            if ((attributes & FileAttributes.Hidden) == 0)
-            {
-                File.SetAttributes(metadataDirectory, attributes | FileAttributes.Hidden);
-            }
-        }
-        catch (IOException exception)
-        {
-            Trace.TraceWarning("Failed to hide sync metadata directory '{0}': {1}", metadataDirectory, exception.Message);
-        }
-        catch (UnauthorizedAccessException exception)
-        {
-            Trace.TraceWarning("Failed to hide sync metadata directory '{0}': {1}", metadataDirectory, exception.Message);
-        }
-    }
-
     private static string CreateDeletedPath(string fullRoot, string normalizedPath)
     {
         string quarantineName = DateTime.UtcNow.ToString("yyyyMMddTHHmmssfffZ", CultureInfo.InvariantCulture)
@@ -230,7 +196,7 @@ public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
             + Guid.NewGuid().ToString("N");
         return Path.Combine(
             fullRoot,
-            MetadataDirectoryName,
+            SyncMetadataDirectory.Name,
             DeletedDirectoryName,
             quarantineName,
             normalizedPath.Replace('/', Path.DirectorySeparatorChar));
