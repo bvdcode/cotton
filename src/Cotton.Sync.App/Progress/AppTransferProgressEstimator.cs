@@ -13,6 +13,9 @@ public sealed class AppTransferProgressEstimator
     private static readonly TimeSpan MaximumInitialZeroBaselineAge = TimeSpan.FromSeconds(3);
     private static readonly TimeSpan SpeedSmoothingTimeConstant = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan RemainingTimeSmoothingTimeConstant = TimeSpan.FromSeconds(10);
+    private const long UnknownTotalEstimateTransferredBytes = 64L * 1024;
+    private const long MaximumEstimateTransferredBytes = 1024L * 1024;
+    private const long EstimateTransferredBytesDivisor = 100;
     private const int MaximumSamples = 2048;
     private readonly Queue<TransferSample> _samples = new();
     private SyncTransferDirection _direction = SyncTransferDirection.Unknown;
@@ -149,7 +152,8 @@ public sealed class AppTransferProgressEstimator
         TransferSample firstSample = _samples.Peek();
         double seconds = (currentSample.OccurredAtUtc - firstSample.OccurredAtUtc).TotalSeconds;
         long bytesTransferred = currentSample.TransferredBytes - firstSample.TransferredBytes;
-        if (seconds < MinimumEstimateSampleDuration.TotalSeconds || bytesTransferred <= 0)
+        if (seconds < MinimumEstimateSampleDuration.TotalSeconds
+            || bytesTransferred < GetMinimumEstimateTransferredBytes(totalBytes))
         {
             return new AppTransferProgressEstimate(null, null);
         }
@@ -223,6 +227,20 @@ public sealed class AppTransferProgressEstimator
         }
 
         return 1 - Math.Exp(-elapsed.TotalSeconds / timeConstant.TotalSeconds);
+    }
+
+    private static long GetMinimumEstimateTransferredBytes(long? totalBytes)
+    {
+        if (totalBytes is not > 0)
+        {
+            return UnknownTotalEstimateTransferredBytes;
+        }
+
+        return Math.Max(
+            1,
+            Math.Min(
+                totalBytes.Value / EstimateTransferredBytesDivisor,
+                MaximumEstimateTransferredBytes));
     }
 
     private readonly record struct TransferSample(long TransferredBytes, DateTime OccurredAtUtc);

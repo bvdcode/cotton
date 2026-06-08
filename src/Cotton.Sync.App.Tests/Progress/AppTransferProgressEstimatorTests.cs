@@ -145,6 +145,44 @@ public sealed class AppTransferProgressEstimatorTests
     }
 
     [Test]
+    public void AddSample_WaitsForMeaningfulLargeFileProgressBeforeEstimating()
+    {
+        var estimator = new AppTransferProgressEstimator();
+        DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
+        const long totalBytes = 10L * 1024 * 1024 * 1024;
+
+        _ = estimator.AddSample(
+            SyncTransferDirection.Download,
+            "Videos/large.bin",
+            transferredBytes: 0,
+            totalBytes,
+            isCompleted: false,
+            startedAtUtc);
+        AppTransferProgressEstimate tinyFirstDelta = estimator.AddSample(
+            SyncTransferDirection.Download,
+            "Videos/large.bin",
+            transferredBytes: 8 * 1024,
+            totalBytes,
+            isCompleted: false,
+            startedAtUtc.AddSeconds(1));
+        AppTransferProgressEstimate meaningfulDelta = estimator.AddSample(
+            SyncTransferDirection.Download,
+            "Videos/large.bin",
+            transferredBytes: 2L * 1024 * 1024,
+            totalBytes,
+            isCompleted: false,
+            startedAtUtc.AddSeconds(2));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tinyFirstDelta.SpeedBytesPerSecond, Is.Null);
+            Assert.That(tinyFirstDelta.EstimatedTimeRemaining, Is.Null);
+            Assert.That(meaningfulDelta.SpeedBytesPerSecond, Is.EqualTo(1024 * 1024).Within(1));
+            Assert.That(meaningfulDelta.EstimatedTimeRemaining, Is.EqualTo(TimeSpan.FromSeconds(10238)));
+        });
+    }
+
+    [Test]
     public void AddSample_SmoothsRemainingTimePrediction()
     {
         var estimator = new AppTransferProgressEstimator();
