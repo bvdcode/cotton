@@ -91,7 +91,7 @@ public sealed class SyncApplicationServiceTests
     }
 
     [Test]
-    public async Task RestoreSessionAsync_RestoresAuthAndStartsSupervisor()
+    public async Task RestoreSessionAsync_RestoresAuthOnly()
     {
         var authFlow = new FakeAuthFlow();
         var supervisor = new FakeSyncSupervisor();
@@ -111,10 +111,10 @@ public sealed class SyncApplicationServiceTests
         Assert.Multiple(() =>
         {
             Assert.That(authFlow.RestoreSessionCallCount, Is.EqualTo(1));
-            Assert.That(supervisor.StartCallCount, Is.EqualTo(1));
-            Assert.That(localChanges.StartCallCount, Is.EqualTo(1));
-            Assert.That(remoteChanges.StartCallCount, Is.EqualTo(1));
-            Assert.That(periodicSync.StartCallCount, Is.EqualTo(1));
+            Assert.That(supervisor.StartCallCount, Is.Zero);
+            Assert.That(localChanges.StartCallCount, Is.Zero);
+            Assert.That(remoteChanges.StartCallCount, Is.Zero);
+            Assert.That(periodicSync.StartCallCount, Is.Zero);
             Assert.That(session, Is.SameAs(authFlow.Session));
         });
     }
@@ -186,7 +186,7 @@ public sealed class SyncApplicationServiceTests
     }
 
     [Test]
-    public void RestoreSessionAsync_RollsBackStartedComponentsWhenPeriodicStartupFails()
+    public void StartSyncAsync_RollsBackStartedComponentsWhenPeriodicStartupFails()
     {
         List<string> calls = [];
         var startupError = new InvalidOperationException("Periodic sync failed.");
@@ -207,12 +207,12 @@ public sealed class SyncApplicationServiceTests
             periodicSync: periodicSync);
 
         InvalidOperationException error = Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.RestoreSessionAsync())!;
+            () => service.StartSyncAsync())!;
 
         Assert.Multiple(() =>
         {
             Assert.That(error, Is.SameAs(startupError));
-            Assert.That(authFlow.RestoreSessionCallCount, Is.EqualTo(1));
+            Assert.That(authFlow.RestoreSessionCallCount, Is.Zero);
             Assert.That(remoteChanges.StopCallCount, Is.EqualTo(1));
             Assert.That(localChanges.StopCallCount, Is.EqualTo(1));
             Assert.That(supervisor.StopCallCount, Is.EqualTo(1));

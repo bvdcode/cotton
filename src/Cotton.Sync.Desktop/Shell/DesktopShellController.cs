@@ -1266,6 +1266,7 @@ internal sealed class DesktopShellController : IDesktopShellController
                 .WaitAsync(restoreCancellation.Token)
                 .ConfigureAwait(false);
             await ReplaceHostAsync(host, cancellationToken).ConfigureAwait(false);
+            StartRestoredSessionSyncInBackground(host);
             return session;
         }
         catch (Cotton.Sdk.CottonApiException exception)
@@ -1290,6 +1291,33 @@ internal sealed class DesktopShellController : IDesktopShellController
             await host.DisposeAsync().ConfigureAwait(false);
             return null;
         }
+    }
+
+    private void StartRestoredSessionSyncInBackground(DesktopSyncApplicationHost host)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await host.App.StartSyncAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                Trace.TraceWarning("Failed to start desktop sync after session restore: {0}", exception);
+                if (!ReferenceEquals(_host, host))
+                {
+                    return;
+                }
+
+                ActivityReported?.Invoke(
+                    this,
+                    new DesktopActivitySnapshot(
+                        "Error",
+                        string.Empty,
+                        DesktopActionRequiredMessageResolver.FromException(exception),
+                        DateTime.UtcNow));
+            }
+        });
     }
 
     private async Task EnsureReleaseSecureTokenStorageAsync(CancellationToken cancellationToken)
