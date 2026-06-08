@@ -3366,6 +3366,42 @@
       "failed": "No se pudo verificar el correo. Inténtalo de nuevo."
     }
   },
+  "appCodeApproval": {
+    "title": "Inicio de sesión de la aplicación",
+    "loading": "Espera, cargando los detalles de inicio de sesión...",
+    "request": {
+      "version": "Versión {{version}}",
+      "versionWithDevice": "Versión {{version}} en {{deviceName}}",
+      "origin": "Solicitud desde {{origin}}"
+    },
+    "access": {
+      "title": "Esta aplicación podrá:",
+      "bullets": {
+        "files": "Acceder a tus archivos y carpetas de Cotton Cloud.",
+        "content": "Subir, descargar, renombrar, mover y eliminar contenido.",
+        "profile": "Leer información básica del perfil de la cuenta.",
+        "session": "Mantener la sesión iniciada hasta que revoques la sesión de la aplicación."
+      }
+    },
+    "actions": {
+      "allow": "Permitir",
+      "deny": "Denegar"
+    },
+    "approved": {
+      "title": "Acceso concedido",
+      "message": "Puedes volver a la aplicación."
+    },
+    "denied": {
+      "title": "Solicitud denegada",
+      "message": "La aplicación no inició sesión."
+    },
+    "errors": {
+      "missingRequest": "Falta la solicitud de inicio de sesión.",
+      "unavailable": "Esta solicitud de inicio de sesión ya no está disponible.",
+      "approveFailed": "No se pudo aprobar el inicio de sesión.",
+      "denyFailed": "No se pudo denegar el inicio de sesión."
+    }
+  },
   "unlock": {
     "title": "Desbloquear Cotton",
     "caption": "El servidor espera la clave maestra antes de iniciar la aplicación.",

@@ -3363,6 +3363,42 @@
       "failed": "E-Mail konnte nicht bestätigt werden. Bitte versuche es erneut."
     }
   },
+  "appCodeApproval": {
+    "title": "Anwendungsanmeldung",
+    "loading": "Bitte warten, die Anmeldedetails werden geladen...",
+    "request": {
+      "version": "Version {{version}}",
+      "versionWithDevice": "Version {{version}} auf {{deviceName}}",
+      "origin": "Anfrage von {{origin}}"
+    },
+    "access": {
+      "title": "Diese Anwendung kann:",
+      "bullets": {
+        "files": "Auf Ihre Cotton-Cloud-Dateien und -Ordner zugreifen.",
+        "content": "Inhalte hochladen, herunterladen, umbenennen, verschieben und löschen.",
+        "profile": "Grundlegende Profilinformationen des Kontos lesen.",
+        "session": "Angemeldet bleiben, bis Sie die Anwendungssitzung widerrufen."
+      }
+    },
+    "actions": {
+      "allow": "Zulassen",
+      "deny": "Ablehnen"
+    },
+    "approved": {
+      "title": "Zugriff gewährt",
+      "message": "Sie können zur Anwendung zurückkehren."
+    },
+    "denied": {
+      "title": "Anfrage abgelehnt",
+      "message": "Die Anwendung wurde nicht angemeldet."
+    },
+    "errors": {
+      "missingRequest": "Anmeldeanfrage fehlt.",
+      "unavailable": "Diese Anmeldeanfrage ist nicht mehr verfügbar.",
+      "approveFailed": "Anmeldung konnte nicht genehmigt werden.",
+      "denyFailed": "Anmeldung konnte nicht abgelehnt werden."
+    }
+  },
   "unlock": {
     "title": "Cotton entsperren",
     "caption": "Der Server wartet auf den Master-Key, bevor die App startet.",
