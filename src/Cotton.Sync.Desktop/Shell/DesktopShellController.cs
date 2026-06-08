@@ -30,6 +30,7 @@ internal sealed class DesktopShellController : IDesktopShellController
 {
     private const string SelfTestSyncPairId = "__desktop_self_test__";
 
+    private static readonly TimeSpan SavedSessionRestoreTimeout = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan ServerProbeTimeout = TimeSpan.FromSeconds(5);
 
     private readonly IDesktopSyncApplicationFactory _factory;
@@ -1258,7 +1259,12 @@ internal sealed class DesktopShellController : IDesktopShellController
                 return null;
             }
 
-            AuthSession session = await host.App.RestoreSessionAsync(cancellationToken).ConfigureAwait(false);
+            using CancellationTokenSource restoreCancellation =
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            restoreCancellation.CancelAfter(SavedSessionRestoreTimeout);
+            AuthSession session = await host.App.RestoreSessionAsync(restoreCancellation.Token)
+                .WaitAsync(restoreCancellation.Token)
+                .ConfigureAwait(false);
             await ReplaceHostAsync(host, cancellationToken).ConfigureAwait(false);
             return session;
         }
@@ -1266,6 +1272,15 @@ internal sealed class DesktopShellController : IDesktopShellController
         {
             Trace.TraceWarning("Failed to restore desktop session: {0}", exception);
             await host.TokenStore.ClearAsync(cancellationToken).ConfigureAwait(false);
+            await host.DisposeAsync().ConfigureAwait(false);
+            return null;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            Trace.TraceWarning(
+                "Timed out restoring desktop session for {0} after {1} seconds.",
+                serverUrl,
+                SavedSessionRestoreTimeout.TotalSeconds);
             await host.DisposeAsync().ConfigureAwait(false);
             return null;
         }

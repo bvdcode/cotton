@@ -27,6 +27,8 @@ namespace Cotton.Sync.Desktop.Composition;
 
 internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFactory
 {
+    private static readonly TimeSpan HttpRequestTimeout = TimeSpan.FromSeconds(30);
+
     private readonly ILoggerFactory _loggerFactory;
     private readonly DesktopAppPaths _paths;
 
@@ -40,7 +42,10 @@ internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFac
     {
         ArgumentNullException.ThrowIfNull(serverUrl);
 
-        var httpClient = new HttpClient();
+        var httpClient = new HttpClient
+        {
+            Timeout = HttpRequestTimeout,
+        };
         var tokenStore = new FileCottonTokenStore(_paths.TokenStorePath);
         var sdkOptions = new CottonSdkOptions
         {
