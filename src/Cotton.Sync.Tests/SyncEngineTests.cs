@@ -1676,6 +1676,39 @@ public sealed class SyncEngineTests
     }
 
     [Test]
+    public async Task RunOnceAsync_FailsBeforeRaceConflictDownloadWhenRemoteVersionExceedsFreeSpace()
+    {
+        string relativePath = "stale-huge-upload.txt";
+        WriteFile(relativePath, "local-new");
+        LocalFileSnapshot local = LocalFile(relativePath, "local-new");
+        Guid remoteId = Guid.NewGuid();
+        NodeFileManifestDto baselineRemote = RemoteFile(relativePath, HashText("old"), remoteId);
+        NodeFileManifestDto initialRemote = RemoteFile(relativePath, HashText("old"), remoteId);
+        NodeFileManifestDto latestRemote = RemoteFile(relativePath, HashText("remote-huge"), remoteId, long.MaxValue);
+        var remoteFiles = new FakeRemoteFileSynchronizer();
+        remoteFiles.PreconditionFailedUploadIds.Add(remoteId);
+        SyncEngine engine = CreateEngine(
+            new FakeLocalFileScanner(local),
+            remoteFiles,
+            out SqliteSyncStateStore stateStore,
+            RemoteTree(initialRemote),
+            RemoteTree(latestRemote));
+        await InsertBaselineAsync(stateStore, relativePath, baselineRemote.ContentHash, baselineRemote);
+
+        LocalInsufficientDiskSpaceException? exception = Assert.ThrowsAsync<LocalInsufficientDiskSpaceException>(
+            () => engine.RunOnceAsync(Pair()));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception?.Message, Does.Contain("Not enough disk space"));
+            Assert.That(exception?.RelativePath, Does.Contain("stale-huge-upload"));
+            Assert.That(exception?.RequiredBytes, Is.EqualTo(long.MaxValue));
+            Assert.That(remoteFiles.Uploads, Is.Empty);
+            Assert.That(Directory.GetFiles(_root, "*Cotton conflict*", SearchOption.AllDirectories), Is.Empty);
+        });
+    }
+
+    [Test]
     public async Task RunOnceAsync_RestoresRemoteVersionWhenStaleDeleteLosesRemoteRace()
     {
         string relativePath = "stale-delete.txt";

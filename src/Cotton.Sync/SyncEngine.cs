@@ -1011,6 +1011,7 @@ public sealed class SyncEngine : ISyncEngine
         {
             await EnsureLocalContentHashAsync(local, cancellationToken).ConfigureAwait(false);
             string conflictPath = _localWriter.CreateConflictRelativePath(syncPair.LocalRootPath, relativePath, DateTime.UtcNow);
+            EnsureEnoughLocalFreeSpace(syncPair.LocalRootPath, conflictPath, remoteFile.SizeBytes);
             await _localWriter.WriteFileAsync(
                 syncPair.LocalRootPath,
                 conflictPath,
@@ -1038,6 +1039,7 @@ public sealed class SyncEngine : ISyncEngine
         }
         else if (remoteFile is not null)
         {
+            EnsureEnoughLocalFreeSpace(syncPair.LocalRootPath, relativePath, remoteFile.SizeBytes);
             await _localWriter.WriteFileAsync(
                 syncPair.LocalRootPath,
                 relativePath,
