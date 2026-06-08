@@ -4,6 +4,8 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Auth;
+using Cotton;
 using Cotton.Server.Auth;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
@@ -24,14 +26,15 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Cotton.Server.Controllers;
+namespace Cotton.Server.Controllers
+{
 
 /// <summary>
 /// Exposes in-memory app-code authorization endpoints for desktop and native applications.
 /// </summary>
 [ApiController]
-[Route("/api/v1/oauth/app-code")]
-public sealed class AppCodeOAuthController(
+[Route(Routes.V1.AppCodeOAuth)]
+public class AppCodeOAuthController(
     CottonDbContext _dbContext,
     AuthSessionIssuer _sessionIssuer,
     INotificationsProvider _notifications,
@@ -460,7 +463,7 @@ public sealed class AppCodeOAuthController(
         return string.IsNullOrWhiteSpace(value) ? "Unknown" : value;
     }
 
-    private sealed class AppCodeRequestState
+    private class AppCodeRequestState
     {
         public AppCodeRequestState(
             Guid approvalId,
@@ -523,129 +526,4 @@ public sealed class AppCodeOAuthController(
         Consumed,
     }
 }
-
-/// <summary>
-/// Request payload for starting an app-code authorization request.
-/// </summary>
-public sealed class AppCodeStartRequestDto
-{
-    /// <summary>
-    /// Name of the requesting application.
-    /// </summary>
-    public string ApplicationName { get; set; } = null!;
-
-    /// <summary>
-    /// Version of the requesting application.
-    /// </summary>
-    public string? ApplicationVersion { get; set; }
-
-    /// <summary>
-    /// Optional device name shown in session history.
-    /// </summary>
-    public string? DeviceName { get; set; }
-}
-
-/// <summary>
-/// Response payload returned after starting an app-code authorization request.
-/// </summary>
-public sealed class AppCodeStartResponseDto
-{
-    /// <summary>
-    /// Browser approval request id.
-    /// </summary>
-    public Guid ApprovalId { get; set; }
-
-    /// <summary>
-    /// Browser path where the user can approve the request.
-    /// </summary>
-    public string ApprovalUrl { get; set; } = null!;
-
-    /// <summary>
-    /// Secret token used by the requesting application to poll for authorization completion.
-    /// </summary>
-    public string PollToken { get; set; } = null!;
-
-    /// <summary>
-    /// UTC timestamp when the request expires.
-    /// </summary>
-    public DateTime ExpiresAt { get; set; }
-
-    /// <summary>
-    /// Suggested polling interval in seconds.
-    /// </summary>
-    public int PollIntervalSeconds { get; set; }
-}
-
-/// <summary>
-/// Request payload for polling an app-code authorization request.
-/// </summary>
-public sealed class AppCodePollRequestDto
-{
-    /// <summary>
-    /// Secret polling token returned from the start endpoint.
-    /// </summary>
-    public string PollToken { get; set; } = null!;
-}
-
-/// <summary>
-/// Browser-facing details for an app-code authorization request.
-/// </summary>
-public sealed class AppCodeDetailsDto
-{
-    /// <summary>
-    /// Authorization request id.
-    /// </summary>
-    public Guid Id { get; set; }
-
-    /// <summary>
-    /// Name of the requesting application.
-    /// </summary>
-    public string ApplicationName { get; set; } = null!;
-
-    /// <summary>
-    /// Version of the requesting application.
-    /// </summary>
-    public string ApplicationVersion { get; set; } = null!;
-
-    /// <summary>
-    /// Optional device name supplied by the requesting application.
-    /// </summary>
-    public string? DeviceName { get; set; }
-
-    /// <summary>
-    /// Origin address of the request.
-    /// </summary>
-    public string Origin { get; set; } = null!;
-
-    /// <summary>
-    /// UTC timestamp when the request was created.
-    /// </summary>
-    public DateTime RequestedAt { get; set; }
-
-    /// <summary>
-    /// UTC timestamp when the request expires.
-    /// </summary>
-    public DateTime ExpiresAt { get; set; }
-
-    /// <summary>
-    /// Current request status.
-    /// </summary>
-    public string Status { get; set; } = null!;
-
-}
-
-/// <summary>
-/// Polling error payload for app-code authorization requests.
-/// </summary>
-public sealed class AppCodePollErrorDto
-{
-    /// <summary>
-    /// Machine-readable polling error.
-    /// </summary>
-    public string Error { get; set; } = null!;
-
-    /// <summary>
-    /// Optional retry interval in seconds.
-    /// </summary>
-    public int? RetryAfterSeconds { get; set; }
 }
