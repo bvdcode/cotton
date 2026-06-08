@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Net;
 using Cotton.Auth;
 using Cotton.Files;
 using Cotton.Nodes;
+using Cotton.Sdk;
 using Cotton.Sync;
 using Cotton.Sdk.Auth;
 using Cotton.Sdk.Nodes;
@@ -180,6 +182,65 @@ public sealed class DesktopShellControllerHostLifecycleTests
             Assert.That(snapshot.ServerUrl, Is.EqualTo(serverUrl));
             Assert.That(snapshot.IsSignedIn, Is.False);
             Assert.That(factory.CreatedServerUrls, Is.Empty);
+        });
+    }
+
+    [Test]
+    public async Task LoadAsync_ClearsStoredSessionWhenRestoreIsUnauthorized()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        Uri serverUrl = new("https://cotton.example.test/");
+        var preferencesStore = new SqliteAppPreferencesStore(paths.AppDatabasePath);
+        await preferencesStore.InitializeAsync();
+        await preferencesStore.SaveAsync(new AppPreferences
+        {
+            RememberedServerUrl = serverUrl,
+        });
+        FakeDesktopApplicationHost host = FakeDesktopApplicationHost.Create(serverUrl);
+        host.App.RestoreSessionException = new CottonApiException(
+            HttpStatusCode.Unauthorized,
+            null,
+            "Unauthorized");
+        var factory = new QueueingDesktopSyncApplicationFactory(host.Host);
+        using DesktopShellController controller = CreateController(paths, factory);
+
+        DesktopShellSnapshot snapshot = await controller.LoadAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.IsSignedIn, Is.False);
+            Assert.That(host.TokenStore.ClearAsyncCalls, Is.EqualTo(1));
+            Assert.That(host.AsyncResource.DisposeAsyncCalls, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task LoadAsync_ReportsTransientSessionRestoreFailureInsteadOfSigningOut()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        Uri serverUrl = new("https://cotton.example.test/");
+        var preferencesStore = new SqliteAppPreferencesStore(paths.AppDatabasePath);
+        await preferencesStore.InitializeAsync();
+        await preferencesStore.SaveAsync(new AppPreferences
+        {
+            RememberedServerUrl = serverUrl,
+        });
+        FakeDesktopApplicationHost host = FakeDesktopApplicationHost.Create(serverUrl);
+        host.App.RestoreSessionException = new CottonApiException(
+            HttpStatusCode.InternalServerError,
+            null,
+            "Internal Server Error");
+        var factory = new QueueingDesktopSyncApplicationFactory(host.Host);
+        using DesktopShellController controller = CreateController(paths, factory);
+
+        CottonApiException exception = Assert.ThrowsAsync<CottonApiException>(
+            () => controller.LoadAsync())!;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+            Assert.That(host.TokenStore.ClearAsyncCalls, Is.Zero);
+            Assert.That(host.AsyncResource.DisposeAsyncCalls, Is.EqualTo(1));
         });
     }
 
@@ -615,6 +676,7 @@ public sealed class DesktopShellControllerHostLifecycleTests
             AsyncResource = new FakeAsyncResource();
             StatusPublisher = new InMemoryAppStatusPublisher();
             SessionRevocationPublisher = new InMemorySessionRevocationPublisher();
+            TokenStore = new FakeCottonTokenStore();
             Host = new DesktopSyncApplicationHost(
                 App,
                 new FakeRemoteRootResolver(),
@@ -623,7 +685,7 @@ public sealed class DesktopShellControllerHostLifecycleTests
                 SessionRevocationPublisher,
                 new InMemoryAppTransferProgressPublisher(),
                 new InMemoryAppRunProgressPublisher(),
-                new FakeCottonTokenStore(),
+                TokenStore,
                 new FakeCottonNodeClient(),
                 new FakeCottonSyncClient(),
                 new HttpClient(),
@@ -638,6 +700,8 @@ public sealed class DesktopShellControllerHostLifecycleTests
         public InMemorySessionRevocationPublisher SessionRevocationPublisher { get; }
 
         public FakeAsyncResource AsyncResource { get; }
+
+        public FakeCottonTokenStore TokenStore { get; }
 
         public DesktopSyncApplicationHost Host { get; }
 
@@ -678,6 +742,8 @@ public sealed class DesktopShellControllerHostLifecycleTests
 
         public Exception? SyncNowException { get; set; }
 
+        public Exception? RestoreSessionException { get; set; }
+
         public Task<AuthSession> SignInAsync(
             PasswordSignInRequest request,
             CancellationToken cancellationToken = default)
@@ -695,6 +761,11 @@ public sealed class DesktopShellControllerHostLifecycleTests
         public Task<AuthSession> RestoreSessionAsync(CancellationToken cancellationToken = default)
         {
             RestoreSessionCalls++;
+            if (RestoreSessionException is not null)
+            {
+                throw RestoreSessionException;
+            }
+
             return Task.FromResult(CreateSession("restored"));
         }
 
@@ -811,6 +882,8 @@ public sealed class DesktopShellControllerHostLifecycleTests
             RefreshToken = "refresh-token",
         };
 
+        public int ClearAsyncCalls { get; private set; }
+
         public Task<TokenPairDto?> GetAsync(CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_tokens);
@@ -824,6 +897,7 @@ public sealed class DesktopShellControllerHostLifecycleTests
 
         public Task ClearAsync(CancellationToken cancellationToken = default)
         {
+            ClearAsyncCalls++;
             _tokens = null;
             return Task.CompletedTask;
         }

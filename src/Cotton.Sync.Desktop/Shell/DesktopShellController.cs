@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Diagnostics;
+using System.Net;
 using System.Net.Http.Json;
 using Cotton;
 using Cotton.Nodes;
@@ -1269,12 +1270,17 @@ internal sealed class DesktopShellController : IDesktopShellController
             StartRestoredSessionSyncInBackground(host);
             return session;
         }
-        catch (Cotton.Sdk.CottonApiException exception)
+        catch (Cotton.Sdk.CottonApiException exception) when (IsAuthSessionRejected(exception))
         {
             Trace.TraceWarning("Failed to restore desktop session: {0}", exception);
             await host.TokenStore.ClearAsync(cancellationToken).ConfigureAwait(false);
             await host.DisposeAsync().ConfigureAwait(false);
             return null;
+        }
+        catch (Cotton.Sdk.CottonApiException)
+        {
+            await host.DisposeAsync().ConfigureAwait(false);
+            throw;
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -1283,14 +1289,19 @@ internal sealed class DesktopShellController : IDesktopShellController
                 serverUrl,
                 SavedSessionRestoreTimeout.TotalSeconds);
             await host.DisposeAsync().ConfigureAwait(false);
-            return null;
+            throw new TimeoutException("Saved session could not be restored. Check connection to Cotton Cloud and retry.");
         }
         catch (HttpRequestException)
         {
             Trace.TraceWarning("Failed to restore desktop session because the server is unreachable: {0}", serverUrl);
             await host.DisposeAsync().ConfigureAwait(false);
-            return null;
+            throw;
         }
+    }
+
+    private static bool IsAuthSessionRejected(Cotton.Sdk.CottonApiException exception)
+    {
+        return exception.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden;
     }
 
     private void StartRestoredSessionSyncInBackground(DesktopSyncApplicationHost host)
