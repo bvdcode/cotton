@@ -21,7 +21,7 @@ Use this section as the active checklist for the current desktop-client pass. Do
   Verification: visual check on Linux for layout regressions and Windows manual check with two or more sync pairs.
 - [ ] Fix startup and authentication polish.
   Required behavior: saved sessions show a connecting/restoring state instead of the login form, login supports Enter, auth errors stay human-readable without moving the whole form offscreen, and the app-code browser login flow from `develop` is integrated into both the CLI and desktop app.
-  Current status: code-side password-login audit is done; app-code browser login was promoted into the release scope after `develop` added `/api/v1/oauth/app-code` start/approval/poll endpoints. Keep open for SDK/CLI/desktop integration and Windows restart/sign-in verification.
+  Current status: code-side password-login audit is done; startup loading already hides setup while session restore is in progress; app-code browser login is integrated through shared DTOs, SDK, app layer, CLI, and desktop login UI. Keep open for Windows restart/sign-in/browser-approval verification.
   Verification: focused SDK/app/CLI/view-model tests plus Windows manual restart/sign-in/browser-approval check.
 - [ ] Fix desktop notification and tray polish.
   Required behavior: tray icon is the normal Cotton icon when idle, changes only for syncing/paused/error states, Windows notifications use the product name and icon where the platform API allows it, and key desktop app events notify outside the web app too.

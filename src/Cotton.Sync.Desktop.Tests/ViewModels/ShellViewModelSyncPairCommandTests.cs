@@ -3668,6 +3668,85 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task SignInWithBrowserCommand_UsesVerifiedServerAndAppliesSession()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedOutSnapshot())
+        {
+            ServerProbeResult = new DesktopServerProbeResult(
+                new Uri("https://app.cottoncloud.dev/"),
+                true,
+                "Cotton Cloud",
+                "instance-hash"),
+        };
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        viewModel.ServerUrl = "app.cottoncloud.dev";
+        await WaitForAsync(() => viewModel.IsSignInStepVisible);
+
+        await ExecuteAsync(viewModel.SignInWithBrowserCommand);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsSignedIn, Is.True);
+            Assert.That(viewModel.HeaderTitleText, Is.EqualTo("browser@example.test"));
+            Assert.That(viewModel.HeaderStatusText, Is.EqualTo("Connected"));
+            Assert.That(viewModel.Password, Is.Empty);
+            Assert.That(viewModel.TotpCode, Is.Empty);
+            Assert.That(viewModel.BrowserSignInStatus, Is.Empty);
+            Assert.That(viewModel.IsBrowserSignInPending, Is.False);
+            Assert.That(controller.BrowserSignInServerUrl, Is.EqualTo("https://app.cottoncloud.dev/"));
+            Assert.That(controller.SignInRequest, Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task SignInWithBrowserCommand_CanCancelPendingApproval()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedOutSnapshot())
+        {
+            ServerProbeResult = new DesktopServerProbeResult(
+                new Uri("https://app.cottoncloud.dev/"),
+                true,
+                "Cotton Cloud",
+                "instance-hash"),
+            BrowserSignInCompletion = new TaskCompletionSource<AuthSession>(
+                TaskCreationOptions.RunContinuationsAsynchronously),
+        };
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        viewModel.ServerUrl = "app.cottoncloud.dev";
+        await WaitForAsync(() => viewModel.IsSignInStepVisible);
+
+        viewModel.SignInWithBrowserCommand.Execute(null);
+        await WaitForAsync(() => viewModel.IsBrowserSignInPending);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsBusy, Is.True);
+            Assert.That(viewModel.BrowserSignInButtonText, Is.EqualTo("Waiting for approval"));
+            Assert.That(viewModel.BrowserSignInStatus, Is.EqualTo("Approve this sign-in in your browser."));
+            Assert.That(viewModel.IsPasswordSignInVisible, Is.False);
+            Assert.That(viewModel.CancelBrowserSignInCommand.CanExecute(null), Is.True);
+            Assert.That(viewModel.SignInWithBrowserCommand.CanExecute(null), Is.False);
+            Assert.That(controller.BrowserSignInServerUrl, Is.EqualTo("https://app.cottoncloud.dev/"));
+        });
+
+        await ExecuteAsync(viewModel.CancelBrowserSignInCommand);
+        await WaitForAsync(() => viewModel.GlobalStatus == "Sign-in cancelled");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsSignedIn, Is.False);
+            Assert.That(viewModel.IsBrowserSignInPending, Is.False);
+            Assert.That(viewModel.IsBusy, Is.False);
+            Assert.That(viewModel.BrowserSignInStatus, Is.Empty);
+            Assert.That(viewModel.IsPasswordSignInVisible, Is.True);
+            Assert.That(viewModel.GlobalStatus, Is.EqualTo("Sign-in cancelled"));
+            Assert.That(viewModel.Activities.First().Details, Is.EqualTo("Browser sign-in cancelled"));
+        });
+    }
+
+    [Test]
     public async Task SignInCommand_DoesNotShowNativeNotificationWhenDisabled()
     {
         var controller = new FakeDesktopShellController(CreateSignedOutSnapshot(enableNotifications: false))
@@ -4156,6 +4235,8 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public string? BrowserSignInServerUrl { get; private set; }
 
+        public TaskCompletionSource<AuthSession>? BrowserSignInCompletion { get; set; }
+
         public Exception? LoadException { get; set; }
 
         public TaskCompletionSource<bool>? LoadCompletion { get; set; }
@@ -4333,11 +4414,28 @@ public sealed class ShellViewModelSyncPairCommandTests
                 throw SignInException;
             }
 
-            return Task.FromResult(new AuthSession(
+            AuthSession session = new(
                 Guid.NewGuid(),
                 "browser",
                 "browser@example.test",
-                false));
+                false);
+            return BrowserSignInCompletion is null
+                ? Task.FromResult(session)
+                : WaitForBrowserSignInAsync(BrowserSignInCompletion, cancellationToken);
+        }
+
+        private static async Task<AuthSession> WaitForBrowserSignInAsync(
+            TaskCompletionSource<AuthSession> completion,
+            CancellationToken cancellationToken)
+        {
+            using CancellationTokenRegistration registration = cancellationToken.Register(
+                static state =>
+                {
+                    var taskCompletion = (TaskCompletionSource<AuthSession>)state!;
+                    taskCompletion.TrySetCanceled();
+                },
+                completion);
+            return await completion.Task.ConfigureAwait(false);
         }
 
         public Task<DesktopRemoteFolderListSnapshot> ListRemoteFoldersAsync(
