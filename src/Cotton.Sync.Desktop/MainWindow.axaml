@@ -247,20 +247,43 @@
             </Grid>
           </Border>
 
-          <TextBox PlaceholderText="Username"
-                   Text="{Binding Username}"
-                   KeyDown="SignInInput_KeyDown" />
-          <TextBox PlaceholderText="Password"
-                   PasswordChar="*"
-                   Text="{Binding Password}"
-                   KeyDown="SignInInput_KeyDown" />
-          <TextBox PlaceholderText="2FA code"
-                   Text="{Binding TotpCode}"
-                   KeyDown="SignInInput_KeyDown" />
-          <Button Content="Sign in"
-                  Classes="primary"
-                  HorizontalAlignment="Stretch"
-                  Command="{Binding SignInCommand}" />
+          <Grid ColumnDefinitions="*,Auto"
+                ColumnSpacing="8">
+            <Button Content="{Binding BrowserSignInButtonText}"
+                    Classes="primary"
+                    HorizontalAlignment="Stretch"
+                    Command="{Binding SignInWithBrowserCommand}" />
+            <Button Grid.Column="1"
+                    Content="Cancel"
+                    Classes="compact"
+                    Command="{Binding CancelBrowserSignInCommand}"
+                    IsVisible="{Binding IsBrowserSignInPending}" />
+          </Grid>
+          <TextBlock Text="{Binding BrowserSignInStatus}"
+                     Classes="secondary"
+                     FontSize="12"
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding HasBrowserSignInStatus}" />
+
+          <StackPanel Spacing="8"
+                      IsVisible="{Binding IsPasswordSignInVisible}">
+            <TextBlock Text="Password sign-in"
+                       Classes="secondary"
+                       FontSize="12" />
+            <TextBox PlaceholderText="Username"
+                     Text="{Binding Username}"
+                     KeyDown="SignInInput_KeyDown" />
+            <TextBox PlaceholderText="Password"
+                     PasswordChar="*"
+                     Text="{Binding Password}"
+                     KeyDown="SignInInput_KeyDown" />
+            <TextBox PlaceholderText="2FA code"
+                     Text="{Binding TotpCode}"
+                     KeyDown="SignInInput_KeyDown" />
+            <Button Content="Sign in"
+                    HorizontalAlignment="Stretch"
+                    Command="{Binding SignInCommand}" />
+          </StackPanel>
         </StackPanel>
       </StackPanel>
     </Grid>

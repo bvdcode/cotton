@@ -77,6 +77,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private bool _hasCurrentRunProgress;
     private bool _hasCurrentTransfer;
     private bool _isBusy;
+    private bool _isBrowserSignInPending;
     private bool _isStatusDispatchQueued;
     private bool _isCurrentRunProgressIndeterminate;
     private bool _isCurrentTransferIndeterminate;
@@ -85,6 +86,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private string _localFolderPath = string.Empty;
     private string _newRemoteFolderName = string.Empty;
     private string _password = string.Empty;
+    private string _browserSignInStatus = string.Empty;
     private string _remoteBrowserPath = "/";
     private string _remoteFolderPath = string.Empty;
     private bool _enableNotifications = true;
@@ -115,6 +117,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private double _currentRunProgressValue;
     private double _currentTransferProgressValue;
     private CancellationTokenSource? _serverProbeCancellation;
+    private CancellationTokenSource? _browserSignInCancellation;
     private ConflictRowViewModel? _selectedConflict;
     private RemoteFolderRowViewModel? _selectedRemoteFolder;
     private SyncPairRowViewModel? _selectedSyncPair;
@@ -169,6 +172,14 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         _controller.RunProgressChanged += OnRunProgressChanged;
         _controller.StatusChanged += OnStatusChanged;
         SignInCommand = new AsyncRelayCommand(SignInAsync, CanSignIn, HandleCommandError);
+        SignInWithBrowserCommand = new AsyncRelayCommand(
+            SignInWithBrowserAsync,
+            CanSignInWithBrowser,
+            HandleCommandError);
+        CancelBrowserSignInCommand = new AsyncRelayCommand(
+            CancelBrowserSignInAsync,
+            CanCancelBrowserSignIn,
+            HandleCommandError);
         ChangeServerCommand = new AsyncRelayCommand(ChangeServerAsync, () => !IsBusy, HandleCommandError);
         AddSyncPairCommand = new AsyncRelayCommand(AddSyncPairAsync, CanAddSyncPair, HandleCommandError);
         BrowseLocalFolderCommand = new AsyncRelayCommand(BrowseLocalFolderAsync, CanBrowseLocalFolder, HandleCommandError);
@@ -269,6 +280,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
     public AsyncRelayCommand CancelAddSyncPairCommand { get; }
 
+    public AsyncRelayCommand CancelBrowserSignInCommand { get; }
+
     public AsyncRelayCommand CancelCreateRemoteFolderCommand { get; }
 
     public AsyncRelayCommand CancelRemoveSyncPairCommand { get; }
@@ -320,6 +333,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     public AsyncRelayCommand RemoteFolderUpCommand { get; }
 
     public AsyncRelayCommand SignInCommand { get; }
+
+    public AsyncRelayCommand SignInWithBrowserCommand { get; }
 
     public AsyncRelayCommand SignOutCommand { get; }
 
@@ -620,6 +635,40 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             }
         }
     }
+
+    public bool IsBrowserSignInPending
+    {
+        get => _isBrowserSignInPending;
+        private set
+        {
+            if (SetProperty(ref _isBrowserSignInPending, value))
+            {
+                OnPropertyChanged(nameof(BrowserSignInButtonText));
+                OnPropertyChanged(nameof(IsPasswordSignInVisible));
+                CancelBrowserSignInCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public string BrowserSignInStatus
+    {
+        get => _browserSignInStatus;
+        private set
+        {
+            if (SetProperty(ref _browserSignInStatus, value))
+            {
+                OnPropertyChanged(nameof(HasBrowserSignInStatus));
+            }
+        }
+    }
+
+    public bool HasBrowserSignInStatus => !string.IsNullOrWhiteSpace(BrowserSignInStatus);
+
+    public string BrowserSignInButtonText => IsBrowserSignInPending
+        ? "Waiting for approval"
+        : "Open browser";
+
+    public bool IsPasswordSignInVisible => !IsBrowserSignInPending;
 
     public bool IsSignedIn
     {
@@ -1032,6 +1081,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             if (SetProperty(ref _isServerVerified, value))
             {
                 SignInCommand.RaiseCanExecuteChanged();
+                SignInWithBrowserCommand.RaiseCanExecuteChanged();
                 RaiseSetupStateProperties();
             }
         }
@@ -1158,6 +1208,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             {
                 ScheduleServerProbe(value);
                 SignInCommand.RaiseCanExecuteChanged();
+                SignInWithBrowserCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -1298,6 +1349,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         Notifications.CollectionChanged -= OnNotificationsChanged;
         _serverProbeCancellation?.Cancel();
         _serverProbeCancellation?.Dispose();
+        _browserSignInCancellation?.Cancel();
     }
 
     public async Task InitializeAsync()
@@ -2084,19 +2136,68 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         {
             AuthSession session = await _controller.SignInAsync(
                 new DesktopSignInRequest(ServerUrl, Username, Password, TotpCode)).ConfigureAwait(true);
-            IsSignedIn = true;
-            AccountName = ResolveAccountDisplayName(session.Email, session.Username);
-            Password = string.Empty;
-            GlobalStatus = "Connected";
-            ActionRequiredMessage = string.Empty;
-            AddActivity("Account", AccountName, "Signed in");
-            ShowNativeNotification("Signed in", AccountName);
-            RefreshDiagnosticsItems();
+            ApplySignedInSession(session, "Signed in");
         }
         finally
         {
             IsBusy = false;
         }
+    }
+
+    private async Task SignInWithBrowserAsync()
+    {
+        using var cancellation = new CancellationTokenSource();
+        _browserSignInCancellation = cancellation;
+        IsBrowserSignInPending = true;
+        BrowserSignInStatus = "Approve this sign-in in your browser.";
+        IsBusy = true;
+        GlobalStatus = "Waiting for browser sign-in";
+        ActionRequiredMessage = string.Empty;
+        try
+        {
+            AuthSession session = await _controller.SignInWithBrowserAsync(ServerUrl, cancellation.Token)
+                .ConfigureAwait(true);
+            ApplySignedInSession(session, "Signed in with browser");
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            GlobalStatus = "Sign-in cancelled";
+            BrowserSignInStatus = string.Empty;
+            AddActivity("Account", string.Empty, "Browser sign-in cancelled");
+        }
+        finally
+        {
+            if (ReferenceEquals(_browserSignInCancellation, cancellation))
+            {
+                _browserSignInCancellation = null;
+            }
+
+            IsBrowserSignInPending = false;
+            BrowserSignInStatus = string.Empty;
+            IsBusy = false;
+        }
+    }
+
+    private Task CancelBrowserSignInAsync()
+    {
+        _browserSignInCancellation?.Cancel();
+        BrowserSignInStatus = "Cancelling browser sign-in.";
+        GlobalStatus = "Cancelling sign-in";
+        return Task.CompletedTask;
+    }
+
+    private void ApplySignedInSession(AuthSession session, string activityDetails)
+    {
+        IsSignedIn = true;
+        AccountName = ResolveAccountDisplayName(session.Email, session.Username);
+        Username = AccountName;
+        Password = string.Empty;
+        TotpCode = string.Empty;
+        GlobalStatus = "Connected";
+        ActionRequiredMessage = string.Empty;
+        AddActivity("Account", AccountName, activityDetails);
+        ShowNativeNotification("Signed in", AccountName);
+        RefreshDiagnosticsItems();
     }
 
     private async Task SignOutAsync()
@@ -2457,6 +2558,18 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
             && !string.IsNullOrWhiteSpace(Username)
             && !string.IsNullOrEmpty(Password)
             && IsServerVerified;
+    }
+
+    private bool CanSignInWithBrowser()
+    {
+        return !IsBusy
+            && !string.IsNullOrWhiteSpace(ServerUrl)
+            && IsServerVerified;
+    }
+
+    private bool CanCancelBrowserSignIn()
+    {
+        return IsBrowserSignInPending && _browserSignInCancellation is not null;
     }
 
     private void HandleCommandError(Exception exception)
@@ -3473,6 +3586,8 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     {
         RaiseSyncStateProperties();
         SignInCommand.RaiseCanExecuteChanged();
+        SignInWithBrowserCommand.RaiseCanExecuteChanged();
+        CancelBrowserSignInCommand.RaiseCanExecuteChanged();
         SignOutCommand.RaiseCanExecuteChanged();
         AddSyncPairCommand.RaiseCanExecuteChanged();
         BrowseLocalFolderCommand.RaiseCanExecuteChanged();

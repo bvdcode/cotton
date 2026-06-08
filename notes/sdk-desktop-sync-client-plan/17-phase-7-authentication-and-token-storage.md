@@ -43,6 +43,7 @@
   Verification: focused CLI command tests with a fake server plus one integration smoke where practical.
 - [ ] Integrate app-code browser login into `Cotton.Sync.Desktop`.
   Required behavior: offer browser sign-in on the login screen, keep the UI in a clear waiting/cancellable state while polling, open the approval URL in the system browser, store tokens through the existing release-secure token boundary, and fall back to password/TOTP only as an explicit alternate sign-in method.
+  Partial 2026-06-08: desktop shell now exposes browser sign-in through `IDesktopShellController.SignInWithBrowserAsync`, reuses the existing app-layer `AppCodeBrowserAuthFlow`, preserves the same release-secure token-storage check and post-auth host startup path as password sign-in, and adds login-screen browser sign-in with waiting/cancel UI while password/TOTP remains as the explicit alternate. `dotnet build src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj --no-restore` and `dotnet build src/Cotton.Sync.Desktop.Tests/Cotton.Sync.Desktop.Tests.csproj --no-restore` passed with 0 warnings.
   Verification: focused desktop view-model/controller tests plus Windows manual browser-approval smoke.
 - [ ] Add manual verification on Windows secure storage.
 - [ ] Add manual verification on Linux secure storage.

@@ -165,14 +165,41 @@ internal sealed class DesktopShellController : IDesktopShellController
                     TrustDevice = true,
                 },
                 cancellationToken).ConfigureAwait(false);
-            await _preferencesStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
-            AppPreferences preferences = await _preferencesStore.GetAsync(cancellationToken).ConfigureAwait(false);
-            preferences.RememberedServerUrl = serverUrl;
-            preferences.RememberedUsername = request.Username.Trim();
-            await TryApplyPreferredAutostartAsync(preferences, cancellationToken).ConfigureAwait(false);
-            await host.App.SavePreferencesAsync(preferences, cancellationToken).ConfigureAwait(false);
-            await host.App.StartSyncAsync(cancellationToken).ConfigureAwait(false);
-            await ReplaceHostAsync(host, cancellationToken).ConfigureAwait(false);
+            await CompleteSignInAsync(host, serverUrl, session, request.Username.Trim(), cancellationToken)
+                .ConfigureAwait(false);
+            return session;
+        }
+        catch
+        {
+            await host.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    public async Task<AuthSession> SignInWithBrowserAsync(
+        string serverUrl,
+        CancellationToken cancellationToken = default)
+    {
+        Uri parsedServerUrl = ParseServerUrl(serverUrl);
+        await EnsureReleaseSecureTokenStorageAsync(cancellationToken).ConfigureAwait(false);
+        DesktopSyncApplicationHost host = _factory.Create(parsedServerUrl);
+        try
+        {
+            AuthSession session = await host.App.SignInWithBrowserAsync(
+                new AppCodeBrowserSignInRequest
+                {
+                    ApplicationName = "Cotton Sync Desktop",
+                    ApplicationVersion = DesktopAppVersion.Current,
+                    DeviceName = DesktopDeviceIdentity.CreateDeviceName(),
+                },
+                cancellationToken).ConfigureAwait(false);
+            await CompleteSignInAsync(
+                    host,
+                    parsedServerUrl,
+                    session,
+                    session.Email ?? session.Username,
+                    cancellationToken)
+                .ConfigureAwait(false);
             return session;
         }
         catch
@@ -438,6 +465,23 @@ internal sealed class DesktopShellController : IDesktopShellController
 
             await host.DisposeAsync().ConfigureAwait(false);
         }
+    }
+
+    private async Task CompleteSignInAsync(
+        DesktopSyncApplicationHost host,
+        Uri serverUrl,
+        AuthSession session,
+        string rememberedUsername,
+        CancellationToken cancellationToken)
+    {
+        await _preferencesStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        AppPreferences preferences = await _preferencesStore.GetAsync(cancellationToken).ConfigureAwait(false);
+        preferences.RememberedServerUrl = serverUrl;
+        preferences.RememberedUsername = rememberedUsername;
+        await TryApplyPreferredAutostartAsync(preferences, cancellationToken).ConfigureAwait(false);
+        await host.App.SavePreferencesAsync(preferences, cancellationToken).ConfigureAwait(false);
+        await host.App.StartSyncAsync(cancellationToken).ConfigureAwait(false);
+        await ReplaceHostAsync(host, cancellationToken).ConfigureAwait(false);
     }
 
     public Task SyncAllAsync(CancellationToken cancellationToken = default)

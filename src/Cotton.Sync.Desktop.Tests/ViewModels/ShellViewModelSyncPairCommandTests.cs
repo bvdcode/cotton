@@ -4154,6 +4154,8 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public DesktopSignInRequest? SignInRequest { get; private set; }
 
+        public string? BrowserSignInServerUrl { get; private set; }
+
         public Exception? LoadException { get; set; }
 
         public TaskCompletionSource<bool>? LoadCompletion { get; set; }
@@ -4317,6 +4319,24 @@ public sealed class ShellViewModelSyncPairCommandTests
                 Guid.NewGuid(),
                 request.Username,
                 request.Username,
+                false));
+        }
+
+        public Task<AuthSession> SignInWithBrowserAsync(
+            string serverUrl,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            BrowserSignInServerUrl = serverUrl;
+            if (SignInException is not null)
+            {
+                throw SignInException;
+            }
+
+            return Task.FromResult(new AuthSession(
+                Guid.NewGuid(),
+                "browser",
+                "browser@example.test",
                 false));
         }
 

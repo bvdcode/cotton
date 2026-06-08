@@ -685,6 +685,13 @@ public sealed class DesktopShellControllerHostLifecycleTests
             return Task.FromResult(CreateSession(request.Username));
         }
 
+        public Task<AuthSession> SignInWithBrowserAsync(
+            AppCodeBrowserSignInRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(CreateSession(request.DeviceName ?? "browser"));
+        }
+
         public Task<AuthSession> RestoreSessionAsync(CancellationToken cancellationToken = default)
         {
             RestoreSessionCalls++;

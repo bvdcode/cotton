@@ -101,6 +101,18 @@ internal sealed class VisualSmokeShellController : IDesktopShellController
             isTotpEnabled: true));
     }
 
+    public Task<AuthSession> SignInWithBrowserAsync(
+        string serverUrl,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(new AuthSession(
+            Guid.Parse("7ab1a10f-5fa8-4e4e-8d4d-db3ea720aeef"),
+            "qa@cottoncloud.dev",
+            "qa@cottoncloud.dev",
+            isTotpEnabled: true));
+    }
+
     public Task<DesktopRemoteFolderListSnapshot> ListRemoteFoldersAsync(
         string remotePath,
         CancellationToken cancellationToken = default)
