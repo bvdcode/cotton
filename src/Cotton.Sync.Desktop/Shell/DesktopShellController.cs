@@ -96,9 +96,21 @@ internal sealed class DesktopShellController : IDesktopShellController
             cancellationToken).ConfigureAwait(false);
         IReadOnlyList<SyncPairSettings> syncPairs = await _syncPairStore.ListAsync(cancellationToken).ConfigureAwait(false);
         Uri? serverUrl = _startupOptions.ServerUrl ?? preferences.RememberedServerUrl;
-        AuthSession? session = serverUrl is null
-            ? null
-            : await TryRestoreSessionAsync(serverUrl, cancellationToken).ConfigureAwait(false);
+        string? startupErrorMessage = null;
+        AuthSession? session = null;
+        if (serverUrl is not null)
+        {
+            try
+            {
+                session = await TryRestoreSessionAsync(serverUrl, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                Trace.TraceWarning("Failed to restore desktop session for {0}: {1}", serverUrl, exception);
+                startupErrorMessage = DesktopActionRequiredMessageResolver.FromException(exception);
+            }
+        }
+
         if (session is not null)
         {
             bool applied = await TryApplyPreferredAutostartAsync(preferences, cancellationToken).ConfigureAwait(false);
@@ -124,7 +136,8 @@ internal sealed class DesktopShellController : IDesktopShellController
             platformCapabilities with { IsAutostartSupported = _autostartService.IsSupported },
             session is not null,
             syncPairSnapshots,
-            DesktopDeviceIdentity.CreateDeviceName());
+            DesktopDeviceIdentity.CreateDeviceName(),
+            startupErrorMessage);
     }
 
     public async Task<DesktopServerProbeResult> ProbeServerAsync(

@@ -233,12 +233,13 @@ public sealed class DesktopShellControllerHostLifecycleTests
         var factory = new QueueingDesktopSyncApplicationFactory(host.Host);
         using DesktopShellController controller = CreateController(paths, factory);
 
-        CottonApiException exception = Assert.ThrowsAsync<CottonApiException>(
-            () => controller.LoadAsync())!;
+        DesktopShellSnapshot snapshot = await controller.LoadAsync();
 
         Assert.Multiple(() =>
         {
-            Assert.That(exception.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+            Assert.That(snapshot.ServerUrl, Is.EqualTo(serverUrl));
+            Assert.That(snapshot.IsSignedIn, Is.False);
+            Assert.That(snapshot.StartupErrorMessage, Is.Not.Empty);
             Assert.That(host.TokenStore.ClearAsyncCalls, Is.Zero);
             Assert.That(host.AsyncResource.DisposeAsyncCalls, Is.EqualTo(1));
         });

@@ -1206,6 +1206,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         {
             if (SetProperty(ref _serverUrl, value))
             {
+                if (!_isLoadingSnapshot && !IsSignedIn && HasActionRequired)
+                {
+                    ActionRequiredMessage = string.Empty;
+                }
+
                 ScheduleServerProbe(value);
                 SignInCommand.RaiseCanExecuteChanged();
                 SignInWithBrowserCommand.RaiseCanExecuteChanged();
@@ -1397,6 +1402,11 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
                 {
                     ShowNativeNotification("Session restored", AccountName);
                 }
+            }
+            else if (!string.IsNullOrWhiteSpace(snapshot.StartupErrorMessage))
+            {
+                ActionRequiredMessage = snapshot.StartupErrorMessage;
+                AddActivity("Error", string.Empty, snapshot.StartupErrorMessage);
             }
 
             RefreshDiagnosticsItems();
