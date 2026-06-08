@@ -16,6 +16,7 @@ Windows entry rule:
 - [ ] Windows shell integration.
   Required behavior: installer/start-menu registration, application identity, notification identity, taskbar/window icon, uninstall cleanup, and autostart behavior are verified from an installed app, not from Visual Studio debug launch.
   Windows agent note: verify installed app identity separately from Visual Studio/debug launch because debug launch may legitimately show raw process identity or generic shell metadata.
+  Linux-side partial 2026-06-08: `.cotton-sync` creation now applies the Windows `Hidden` file attribute through `SyncMetadataDirectory`, and existing metadata folders are re-hidden when a sync root is probed. Windows Explorer verification is still required before closing shell integration.
   Verification: clean Windows install/uninstall smoke.
 - [ ] Windows tray behavior.
   Required behavior: tray menu labels are short and unambiguous, pause/resume remains available during active sync, icon changes reflect syncing/paused/error only, and the normal Cotton icon is used when healthy/idle.
