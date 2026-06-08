@@ -1289,6 +1289,47 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task RunProgressChanged_UsesGlobalBytesForHeaderSpeedAndEstimate()
+    {
+        Guid syncPairId = Guid.NewGuid();
+        var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Videos", "Syncing")));
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        DateTime startedAtUtc = new(2026, 6, 7, 9, 0, 0, DateTimeKind.Utc);
+        const long totalBytes = 10L * 1024 * 1024 * 1024;
+
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 100,
+            FilesTotal: 1_000,
+            CurrentPath: "Videos/clip-100.mp4",
+            startedAtUtc,
+            IsCompleted: false,
+            startedAtUtc.AddSeconds(10),
+            BytesCompleted: 1L * 1024 * 1024 * 1024,
+            BytesTotal: totalBytes));
+        controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+            syncPairId,
+            SyncRunProgressStage.ReconcilingFiles,
+            FilesCompleted: 200,
+            FilesTotal: 1_000,
+            CurrentPath: "Videos/clip-200.mp4",
+            startedAtUtc,
+            IsCompleted: false,
+            startedAtUtc.AddSeconds(15),
+            BytesCompleted: 2L * 1024 * 1024 * 1024,
+            BytesTotal: totalBytes));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.CurrentWorkProgressHeaderSizeDetails, Is.EqualTo("2.0 GB / 10 GB"));
+            Assert.That(viewModel.CurrentWorkProgressHeaderRateDetails, Is.EqualTo("205 MB/s · 40s left"));
+            Assert.That(viewModel.CurrentWorkProgressDetails, Is.EqualTo("Checking files · 200 of 1000 files"));
+        });
+    }
+
+    [Test]
     public async Task RunProgressChanged_ThrottlesVisibleUpdates()
     {
         Guid syncPairId = Guid.NewGuid();

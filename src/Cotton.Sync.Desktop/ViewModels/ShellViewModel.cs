@@ -4030,7 +4030,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
 
         _runTransferredBytes += transferredDelta;
-        AddRunTransferSample(progress.OccurredAtUtc);
+        AddRunTransferSample(_runTransferredBytes, progress.OccurredAtUtc);
     }
 
     private void TrackCompletedRunTransferBytes(RunTransferProgressKey key, long completedBytes)
@@ -4050,8 +4050,13 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
     }
 
-    private void AddRunTransferSample(DateTime occurredAtUtc)
+    private void AddRunTransferSample(long transferredBytes, DateTime occurredAtUtc)
     {
+        if (_runTransferSamples.Count == 0 && transferredBytes <= 0)
+        {
+            return;
+        }
+
         if (_runTransferSamples.Count > 0
             && occurredAtUtc - _runTransferSamples.Last().OccurredAtUtc > RunTransferMetricsWindow)
         {
@@ -4062,13 +4067,51 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
 
         if (_runTransferSamples.Count == 0)
         {
-            _runTransferSamples.Enqueue(new RunTransferProgressSample(_runTransferredBytes, occurredAtUtc));
+            _runTransferSamples.Enqueue(new RunTransferProgressSample(transferredBytes, occurredAtUtc));
             return;
         }
 
-        _runTransferSamples.Enqueue(new RunTransferProgressSample(_runTransferredBytes, occurredAtUtc));
+        RunTransferProgressSample lastSample = _runTransferSamples.Last();
+        if (occurredAtUtc == lastSample.OccurredAtUtc)
+        {
+            if (transferredBytes > lastSample.TransferredBytes)
+            {
+                ReplaceLastRunTransferSample(new RunTransferProgressSample(transferredBytes, occurredAtUtc));
+                UpdateRunTransferSpeedFromSamples();
+            }
+
+            return;
+        }
+
+        if (occurredAtUtc < lastSample.OccurredAtUtc)
+        {
+            return;
+        }
+
+        if (transferredBytes < _runTransferSamples.Last().TransferredBytes)
+        {
+            _runTransferSamples.Clear();
+            _runTransferSpeedBytesPerSecond = null;
+            _lastRunTransferSpeedOccurredAtUtc = null;
+            _runTransferSamples.Enqueue(new RunTransferProgressSample(transferredBytes, occurredAtUtc));
+            return;
+        }
+
+        _runTransferSamples.Enqueue(new RunTransferProgressSample(transferredBytes, occurredAtUtc));
         PruneRunTransferSamples(occurredAtUtc);
         UpdateRunTransferSpeedFromSamples();
+    }
+
+    private void ReplaceLastRunTransferSample(RunTransferProgressSample sample)
+    {
+        RunTransferProgressSample[] samples = _runTransferSamples.ToArray();
+        _runTransferSamples.Clear();
+        for (int index = 0; index < samples.Length - 1; index++)
+        {
+            _runTransferSamples.Enqueue(samples[index]);
+        }
+
+        _runTransferSamples.Enqueue(sample);
     }
 
     private void PruneRunTransferSamples(DateTime occurredAtUtc)
@@ -4152,8 +4195,7 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
     private void UpdateRunTransferEstimatedTimeRemaining(IReadOnlyList<DesktopRunProgressSnapshot> progressValues)
     {
         if (!TryCalculateAggregateRunTransferBytes(progressValues, out long transferredBytes, out long totalBytes)
-            || transferredBytes >= totalBytes
-            || !TryGetRunTransferSpeed(out double bytesPerSecond))
+            || transferredBytes >= totalBytes)
         {
             _runTransferEstimatedTimeRemaining = null;
             _lastRunTransferEstimateOccurredAtUtc = null;
@@ -4161,6 +4203,19 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         }
 
         DateTime occurredAtUtc = GetLatestRunTransferEstimateOccurredAtUtc(progressValues);
+        if (transferredBytes > _runTransferredBytes)
+        {
+            _runTransferredBytes = transferredBytes;
+        }
+
+        AddRunTransferSample(_runTransferredBytes, occurredAtUtc);
+        if (!TryGetRunTransferSpeed(out double bytesPerSecond))
+        {
+            _runTransferEstimatedTimeRemaining = null;
+            _lastRunTransferEstimateOccurredAtUtc = null;
+            return;
+        }
+
         TimeSpan rawEstimatedTimeRemaining = TimeSpan.FromSeconds((totalBytes - transferredBytes) / bytesPerSecond);
         _runTransferEstimatedTimeRemaining = SmoothEstimatedTimeRemaining(
             rawEstimatedTimeRemaining,
