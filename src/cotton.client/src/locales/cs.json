@@ -3414,6 +3414,42 @@
       "failed": "Ověření e-mailu se nezdařilo. Zkuste to prosím znovu."
     }
   },
+  "appCodeApproval": {
+    "title": "Přihlášení aplikace",
+    "loading": "Počkejte prosím, načítají se podrobnosti přihlášení...",
+    "request": {
+      "version": "Verze {{version}}",
+      "versionWithDevice": "Verze {{version}} na zařízení {{deviceName}}",
+      "origin": "Požadavek z {{origin}}"
+    },
+    "access": {
+      "title": "Tato aplikace bude moci:",
+      "bullets": {
+        "files": "Přistupovat k vašim souborům a složkám Cotton Cloud.",
+        "content": "Nahrávat, stahovat, přejmenovávat, přesouvat a mazat obsah.",
+        "profile": "Číst základní informace profilu účtu.",
+        "session": "Zůstat přihlášená, dokud relaci aplikace neodvoláte."
+      }
+    },
+    "actions": {
+      "allow": "Povolit",
+      "deny": "Odmítnout"
+    },
+    "approved": {
+      "title": "Přístup povolen",
+      "message": "Můžete se vrátit do aplikace."
+    },
+    "denied": {
+      "title": "Požadavek odmítnut",
+      "message": "Aplikace nebyla přihlášena."
+    },
+    "errors": {
+      "missingRequest": "Požadavek na přihlášení chybí.",
+      "unavailable": "Tento požadavek na přihlášení již není dostupný.",
+      "approveFailed": "Přihlášení se nepodařilo schválit.",
+      "denyFailed": "Přihlášení se nepodařilo odmítnout."
+    }
+  },
   "unlock": {
     "title": "Odemknout Cotton",
     "caption": "Server před spuštěním aplikace čeká na hlavní klíč.",
