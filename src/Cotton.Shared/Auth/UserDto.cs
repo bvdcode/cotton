@@ -1,60 +1,72 @@
-﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using EasyExtensions.Models.Dto;
-using EasyExtensions.Models.Enums;
+using System;
+using System.Collections.Generic;
 
-namespace Cotton.Server.Models.Dto
+namespace Cotton.Auth
 {
     /// <summary>
-    /// Represents the user API payload.
+    /// Represents the current authenticated Cotton user.
     /// </summary>
     public class UserDto : BaseDto<Guid>
     {
         /// <summary>
         /// Gets or sets the normalized username.
         /// </summary>
-        public string Username { get; set; } = null!;
+        public string Username { get; set; } = string.Empty;
+
         /// <summary>
-        /// Gets or sets the email address.
+        /// Gets or sets the optional email address.
         /// </summary>
         public string? Email { get; set; }
+
         /// <summary>
-        /// Indicates whether email verified.
+        /// Gets or sets a value indicating whether the email address is verified.
         /// </summary>
         public bool IsEmailVerified { get; set; }
+
         /// <summary>
-        /// Gets or sets the user role.
+        /// Gets or sets the numeric server user role value.
         /// </summary>
-        public UserRole Role { get; set; }
+        public int Role { get; set; }
+
         /// <summary>
-        /// Indicates whether totp enabled.
+        /// Gets or sets a value indicating whether TOTP is enabled.
         /// </summary>
         public bool IsTotpEnabled { get; set; }
+
         /// <summary>
-        /// Gets or sets totp enabled at.
+        /// Gets or sets the timestamp when TOTP was enabled.
         /// </summary>
         public DateTime? TotpEnabledAt { get; set; }
+
         /// <summary>
-        /// Gets or sets totp failed attempts.
+        /// Gets or sets the current failed TOTP attempt count.
         /// </summary>
         public int TotpFailedAttempts { get; set; }
+
         /// <summary>
-        /// Gets or sets first name.
+        /// Gets or sets the optional first name.
         /// </summary>
         public string? FirstName { get; set; }
+
         /// <summary>
-        /// Gets or sets last name.
+        /// Gets or sets the optional last name.
         /// </summary>
         public string? LastName { get; set; }
+
         /// <summary>
-        /// Gets or sets birth date.
+        /// Gets or sets the optional birth date.
         /// </summary>
         public DateOnly? BirthDate { get; set; }
+
         /// <summary>
-        /// Gets or sets avatar hash encrypted hex.
+        /// Gets or sets the encrypted avatar hash token.
         /// </summary>
         public string? AvatarHashEncryptedHex { get; set; }
+
         /// <summary>
         /// Gets or sets user interface and behavior preferences.
         /// </summary>

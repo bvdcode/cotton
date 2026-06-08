@@ -1,9 +1,13 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Auth;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Helpers;
+using Cotton;
+using Cotton.Server.Models.Dto;
+using Cotton.Server.Services;
 using ServerChangePasswordRequestDto = Cotton.Server.Models.Requests.ChangePasswordRequestDto;
 using Cotton.Storage.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
@@ -20,6 +24,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
+using CottonLoginRequestDto = Cotton.Auth.LoginRequestDto;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -139,6 +144,29 @@ public class AuthSmokeTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Login_StoresClientDeviceNameInSession()
+    {
+        Assert.That(_client, Is.Not.Null);
+
+        using HttpResponseMessage login = await PostLoginAsync(
+            "deviceuser",
+            "testpassword",
+            "8.8.4.4",
+            "Cotton Sync Desktop (CI workstation)");
+        login.EnsureSuccessStatusCode();
+
+        TokenPairResponseDto? payload = await login.Content.ReadFromJsonAsync<TokenPairResponseDto>();
+        Assert.That(payload, Is.Not.Null);
+
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", payload!.AccessToken);
+        List<SessionDto>? sessions = await _client.GetFromJsonAsync<List<SessionDto>>("/api/v1/auth/sessions");
+
+        Assert.That(
+            sessions?.Single(session => session.IsCurrentSession).Device,
+            Is.EqualTo("Cotton Sync Desktop (CI workstation)"));
+    }
+
+    [Test]
     public async Task RevokeSession_Invalidates_Current_AccessToken()
     {
         Assert.That(_client, Is.Not.Null);
@@ -195,17 +223,26 @@ public class AuthSmokeTests : IntegrationTestBase
         return payload!;
     }
 
-    private Task<HttpResponseMessage> PostLoginAsync(string username, string password, string ipAddress)
+    private Task<HttpResponseMessage> PostLoginAsync(
+        string username,
+        string password,
+        string ipAddress,
+        string? deviceName = null)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
         {
-            Content = JsonContent.Create(new LoginRequestDto
+            Content = JsonContent.Create(new CottonLoginRequestDto
             {
                 Username = username,
                 Password = password
             })
         };
         request.Headers.Add("X-Forwarded-For", ipAddress);
+        if (!string.IsNullOrWhiteSpace(deviceName))
+        {
+            request.Headers.Add(CottonClientHeaders.DeviceName, deviceName);
+        }
+
         return _client!.SendAsync(request);
     }
 }

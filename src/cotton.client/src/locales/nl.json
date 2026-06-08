@@ -2893,7 +2893,8 @@
           "testGeoIpProvider": "Provider testen"
         },
         "state": {
-          "geoIpTestPassed": "Test van eigen resolver geslaagd."
+          "geoIpTestPassed": "Test van eigen resolver geslaagd.",
+          "geoIpTestPassedWithResult": "Test van eigen resolver geslaagd: {{input}} is opgelost naar {{location}}."
         },
         "openSetupWizard": {
           "title": "Installatiewizard openen",
@@ -3365,6 +3366,42 @@
     "errors": {
       "invalidToken": "De verificatielink is ongeldig of verlopen.",
       "failed": "Verifiëren van het e-mailadres is mislukt. Probeer het opnieuw."
+    }
+  },
+  "appCodeApproval": {
+    "title": "Aanmelding van toepassing",
+    "loading": "Even geduld, aanmeldgegevens worden geladen...",
+    "request": {
+      "version": "Versie {{version}}",
+      "versionWithDevice": "Versie {{version}} op {{deviceName}}",
+      "origin": "Verzoek vanaf {{origin}}"
+    },
+    "access": {
+      "title": "Deze toepassing kan:",
+      "bullets": {
+        "files": "Toegang krijgen tot uw Cotton Cloud-bestanden en -mappen.",
+        "content": "Inhoud uploaden, downloaden, hernoemen, verplaatsen en verwijderen.",
+        "profile": "Basisprofielgegevens van het account lezen.",
+        "session": "Aangemeld blijven totdat u de toepassingssessie intrekt."
+      }
+    },
+    "actions": {
+      "allow": "Toestaan",
+      "deny": "Weigeren"
+    },
+    "approved": {
+      "title": "Toegang verleend",
+      "message": "U kunt terugkeren naar de toepassing."
+    },
+    "denied": {
+      "title": "Verzoek geweigerd",
+      "message": "De toepassing is niet aangemeld."
+    },
+    "errors": {
+      "missingRequest": "Aanmeldverzoek ontbreekt.",
+      "unavailable": "Dit aanmeldverzoek is niet meer beschikbaar.",
+      "approveFailed": "Aanmelding kon niet worden goedgekeurd.",
+      "denyFailed": "Aanmelding kon niet worden geweigerd."
     }
   },
   "unlock": {

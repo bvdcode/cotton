@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models.Enums;
+using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Handlers.Nodes;

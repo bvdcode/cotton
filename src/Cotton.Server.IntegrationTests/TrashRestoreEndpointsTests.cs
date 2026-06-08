@@ -1,13 +1,13 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Files;
+using Cotton.Nodes;
 using Cotton.Database;
 using Cotton.Database.Models.Enums;
-using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Dto;
-using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -282,7 +282,7 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
     {
         var response = await _client!.PutAsJsonAsync(
             "/api/v1/layouts/nodes",
-            new CreateNodeRequest { ParentId = parentId, Name = name });
+            new CreateNodeRequestDto { ParentId = parentId, Name = name });
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<NodeDto>())!;
     }
@@ -290,7 +290,7 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
     private async Task<NodeFileManifestDto> CreateFileAsync(Guid nodeId, string name, string body)
     {
         string hash = await UploadChunkAsync(body);
-        var fileReq = new CreateFileRequest
+        var fileReq = new CreateFileFromChunksRequestDto
         {
             ChunkHashes = [hash],
             Name = name,
@@ -334,7 +334,7 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
     {
         var response = await _client!.PostAsJsonAsync(
             $"/api/v1/files/{fileId}/restore",
-            new RestoreItemRequest
+            new RestoreItemRequestDto
             {
                 CreateMissingParents = createMissingParents,
                 Overwrite = overwrite,
@@ -350,7 +350,7 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
     {
         var response = await _client!.PostAsJsonAsync(
             $"/api/v1/layouts/nodes/{nodeId}/restore",
-            new RestoreItemRequest
+            new RestoreItemRequestDto
             {
                 CreateMissingParents = createMissingParents,
                 Overwrite = overwrite,

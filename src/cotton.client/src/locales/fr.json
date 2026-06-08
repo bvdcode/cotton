@@ -2892,7 +2892,8 @@
           "testGeoIpProvider": "Tester le fournisseur"
         },
         "state": {
-          "geoIpTestPassed": "Test du résolveur personnalisé réussi."
+          "geoIpTestPassed": "Test du résolveur personnalisé réussi.",
+          "geoIpTestPassedWithResult": "Test du résolveur personnalisé réussi : {{input}} résolu en {{location}}."
         },
         "openSetupWizard": {
           "title": "Ouvrir l'assistant de configuration",
@@ -3364,6 +3365,42 @@
     "errors": {
       "invalidToken": "Le lien de vérification est invalide ou a expiré.",
       "failed": "Échec de la vérification de l'e-mail. Veuillez réessayer."
+    }
+  },
+  "appCodeApproval": {
+    "title": "Connexion de l'application",
+    "loading": "Veuillez patienter, chargement des détails de connexion...",
+    "request": {
+      "version": "Version {{version}}",
+      "versionWithDevice": "Version {{version}} sur {{deviceName}}",
+      "origin": "Demande depuis {{origin}}"
+    },
+    "access": {
+      "title": "Cette application pourra :",
+      "bullets": {
+        "files": "Accéder à vos fichiers et dossiers Cotton Cloud.",
+        "content": "Importer, télécharger, renommer, déplacer et supprimer du contenu.",
+        "profile": "Lire les informations de base du profil du compte.",
+        "session": "Rester connectée jusqu'à ce que vous révoquiez la session de l'application."
+      }
+    },
+    "actions": {
+      "allow": "Autoriser",
+      "deny": "Refuser"
+    },
+    "approved": {
+      "title": "Accès accordé",
+      "message": "Vous pouvez retourner à l'application."
+    },
+    "denied": {
+      "title": "Demande refusée",
+      "message": "L'application n'a pas été connectée."
+    },
+    "errors": {
+      "missingRequest": "La demande de connexion est manquante.",
+      "unavailable": "Cette demande de connexion n'est plus disponible.",
+      "approveFailed": "Impossible d'approuver la connexion.",
+      "denyFailed": "Impossible de refuser la connexion."
     }
   },
   "unlock": {

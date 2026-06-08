@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models;
@@ -395,7 +396,7 @@ public class WebDavPutFileRequestHandler(
 
             return null;
         }
-        catch (BadRequestException<User>)
+        catch (StorageQuotaExceededException<User>)
         {
             return Fail(WebDavPutFileError.QuotaExceeded);
         }
@@ -414,7 +415,7 @@ public class WebDavPutFileRequestHandler(
             long addedBytes = await _quota.EnsureCanAddFileReferenceAsync(request.UserId, fileManifestId, ct);
             return (null, addedBytes);
         }
-        catch (BadRequestException<User>)
+        catch (StorageQuotaExceededException<User>)
         {
             return (Fail(WebDavPutFileError.QuotaExceeded), 0);
         }

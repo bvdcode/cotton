@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "@shared/ui/notifications";
 import {
   settingsApi,
+  type CustomGeoIpLookupTestResult,
   type GeoIpLookupMode,
 } from "../../../shared/api/settingsApi";
 import { showApiErrorToast } from "../../../shared/api/httpClient";
@@ -37,6 +38,22 @@ const loadGeoIpState = async (): Promise<LoadedState> => {
   ]);
   return { mode, url: url.trim(), telemetry };
 };
+
+const formatGeoIpTestInput = (
+  result: CustomGeoIpLookupTestResult,
+): string => {
+  const inputLabel = result.inputLabel.trim();
+  const inputValue = result.inputValue.trim();
+  return inputValue.length > 0 ? `${inputLabel} (${inputValue})` : inputLabel;
+};
+
+const formatGeoIpTestLocation = (
+  result: CustomGeoIpLookupTestResult,
+): string =>
+  [result.city, result.region, result.country]
+    .map((part) => part?.trim())
+    .filter((part): part is string => Boolean(part))
+    .join(", ");
 
 export const GeoIpLookupSetting = () => {
   const { t } = useTranslation("admin");
@@ -199,9 +216,15 @@ export const GeoIpLookupSetting = () => {
 
     setTesting(true);
     try {
-      await settingsApi.testCustomGeoIpLookupUrl();
+      const result = await settingsApi.testCustomGeoIpLookupUrl();
+      const location = formatGeoIpTestLocation(result);
       toast.success(
-        t("settings.general.state.geoIpTestPassed"),
+        location.length > 0
+          ? t("settings.general.state.geoIpTestPassedWithResult", {
+              input: formatGeoIpTestInput(result),
+              location,
+            })
+          : t("settings.general.state.geoIpTestPassed"),
         {
           toastId: "admin-general:geoip:test-success",
         },

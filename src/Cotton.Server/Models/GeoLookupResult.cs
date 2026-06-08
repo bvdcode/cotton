@@ -7,4 +7,13 @@ namespace Cotton.Server.Models
     /// Represents the result of geo lookup.
     /// </summary>
     public record GeoLookupResult(string? Country, string? Region, string? City);
+
+    /// <summary>
+    /// Represents the result of testing a custom geo lookup resolver.
+    /// </summary>
+    public record CustomGeoLookupTestResult(
+        string? Error,
+        string? InputLabel,
+        string? InputValue,
+        GeoLookupResult? Result);
 }

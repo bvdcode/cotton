@@ -1,4 +1,5 @@
 import type { Guid } from "../api/layoutsApi";
+import type { NodeFileManifestDto } from "../api/nodesApi";
 import { refreshNodeContent } from "../store/nodesActions";
 import { getCachedServerSettings } from "../api/queries/serverSettings";
 import { storageQuotaApi, type UserStorageQuotaDto } from "../api/storageQuotaApi";
@@ -46,6 +47,7 @@ interface UploadTaskInternal extends UploadTask {
   _file: File;
   _encrypt: boolean;
   _replaceNodeFileId?: Guid | null;
+  _onFileUploaded?: (file: NodeFileManifestDto) => void;
   _startedAt?: number;
   _sawProgress?: boolean;
   _laneProbeConsumed?: boolean;
@@ -60,6 +62,7 @@ interface ExternalTaskInternal extends AppTask {
 
 export interface EnqueueOptions {
   encrypt?: boolean;
+  onFileUploaded?: (file: NodeFileManifestDto) => void;
 }
 
 type UploadQueueEntry = File | UploadFileQueueItem;
@@ -294,6 +297,7 @@ export class UploadManager {
         _file: file.file,
         _encrypt: options?.encrypt ?? false,
         _replaceNodeFileId: file.replaceNodeFileId,
+        _onFileUploaded: options?.onFileUploaded,
       });
     }
 
@@ -615,7 +619,7 @@ export class UploadManager {
 
     void (async () => {
       try {
-        await uploadFileToNode({
+        const uploadedFile = await uploadFileToNode({
           file: task._file,
           nodeId: task.nodeId,
           replaceNodeFileId: task._replaceNodeFileId,
@@ -692,6 +696,14 @@ export class UploadManager {
             this.emit();
           },
         });
+
+        if (uploadedFile) {
+          try {
+            task._onFileUploaded?.(uploadedFile);
+          } catch (listenerError) {
+            console.error("Upload completion listener failed:", listenerError);
+          }
+        }
 
         task.status = "completed";
         this.releaseQuotaReservation(task, true);

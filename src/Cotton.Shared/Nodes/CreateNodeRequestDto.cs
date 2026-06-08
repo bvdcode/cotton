@@ -1,17 +1,20 @@
-﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Server.Models.Requests
+using System;
+
+namespace Cotton.Nodes
 {
     /// <summary>
-    /// Represents the create node request request payload accepted by the API.
+    /// Represents a create-node request.
     /// </summary>
-    public class CreateNodeRequest
+    public class CreateNodeRequestDto
     {
         /// <summary>
-        /// Gets or sets parent id.
+        /// Gets or sets the parent node identifier.
         /// </summary>
         public Guid ParentId { get; set; }
+
         /// <summary>
         /// Gets or sets the display name.
         /// </summary>

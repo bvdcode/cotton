@@ -60,8 +60,15 @@ import {
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
 import { filesApi } from "../../shared/api/filesApi";
+import {
+  invalidateAllFileVersions,
+  invalidateFileVersions,
+} from "../../shared/api/queries/fileVersions";
 import { fetchServerSettings } from "../../shared/api/queries/serverSettings";
-import { nodesApi } from "../../shared/api/nodesApi";
+import {
+  nodesApi,
+  type NodeFileManifestDto,
+} from "../../shared/api/nodesApi";
 import {
   applyDisplayMetaToFile,
   FOLDER_ENCRYPTION_POLICY_KEY,
@@ -463,9 +470,14 @@ export const FilesPage: React.FC = () => {
     refreshNodeContent,
   });
 
+  const handleRealtimeInvalidate = React.useCallback(() => {
+    void invalidateAllFileVersions(queryClient);
+    reloadCurrentNode();
+  }, [queryClient, reloadCurrentNode]);
+
   useFilesRealtimeEvents({
     nodeId,
-    onInvalidate: reloadCurrentNode,
+    onInvalidate: handleRealtimeInvalidate,
     onPreviewGenerated: optimisticUpdateCurrentNodeFilePreviewHash,
   });
 
@@ -606,8 +618,15 @@ export const FilesPage: React.FC = () => {
   } = folderEncryptionActions;
 
   const folderOps = useFolderOperations(nodeId, handleFolderChanged);
+  const handleFileUploaded = React.useCallback(
+    (file: NodeFileManifestDto) => {
+      void invalidateFileVersions(queryClient, file.id);
+    },
+    [queryClient],
+  );
   const fileUpload = useFileUpload(nodeId, breadcrumbs, content, {
     onToast: showToast,
+    onFileUploaded: handleFileUploaded,
   });
   const fileOps = useFileOperations(reloadCurrentNode);
   const [isCreatingMarkdownFile, setIsCreatingMarkdownFile] =

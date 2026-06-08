@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Handlers.Nodes;
@@ -212,7 +213,7 @@ public class WebDavCopyRequestHandler(
                 ct);
             return CopyOperationOutcome.Success(nodeId, nodeFileId, addedBytes);
         }
-        catch (BadRequestException<User>)
+        catch (StorageQuotaExceededException<User>)
         {
             return CopyOperationOutcome.Failed(Fail(WebDavCopyError.QuotaExceeded));
         }

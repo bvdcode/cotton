@@ -1,12 +1,12 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Files;
+using Cotton.Nodes;
 using Cotton.Database;
-using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Dto;
-using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -358,7 +358,7 @@ public class MoveEndpointsTests : IntegrationTestBase
         var moveFile = MoveFileAsync(movingFile.Id, dst.Id);
         var createFolder = _client!.PutAsJsonAsync(
             "/api/v1/layouts/nodes",
-            new CreateNodeRequest { ParentId = dst.Id, Name = "thing" });
+            new CreateNodeRequestDto { ParentId = dst.Id, Name = "thing" });
         var results = await Task.WhenAll(moveFile, createFolder);
 
         int oks = results.Count(r => r.StatusCode == HttpStatusCode.OK);
@@ -384,7 +384,7 @@ public class MoveEndpointsTests : IntegrationTestBase
 
         var createFile = _client!.PostAsJsonAsync(
             "/api/v1/files/from-chunks",
-            new CreateFileRequest
+            new CreateFileFromChunksRequestDto
             {
                 ChunkHashes = [hash],
                 Name = "thing",
@@ -394,7 +394,7 @@ public class MoveEndpointsTests : IntegrationTestBase
             });
         var createFolder = _client!.PutAsJsonAsync(
             "/api/v1/layouts/nodes",
-            new CreateNodeRequest { ParentId = target.Id, Name = "thing" });
+            new CreateNodeRequestDto { ParentId = target.Id, Name = "thing" });
 
         var results = await Task.WhenAll(createFile, createFolder);
 
@@ -716,7 +716,7 @@ public class MoveEndpointsTests : IntegrationTestBase
 
         var res = await client.PatchAsJsonAsync(
             $"/api/v1/files/{file.Id}/move",
-            new MoveFileRequest { ParentId = dst.Id });
+            new MoveFileRequestDto { ParentId = dst.Id });
 
         // The handler must catch the notifier exception and still return 200.
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK),
@@ -785,7 +785,7 @@ public class MoveEndpointsTests : IntegrationTestBase
 
     private static async Task<NodeDto> CreateFolderViaClientAsync(HttpClient client, Guid parentId, string name)
     {
-        var res = await client.PutAsJsonAsync("/api/v1/layouts/nodes", new CreateNodeRequest { ParentId = parentId, Name = name });
+        var res = await client.PutAsJsonAsync("/api/v1/layouts/nodes", new CreateNodeRequestDto { ParentId = parentId, Name = name });
         res.EnsureSuccessStatusCode();
         var node = await res.Content.ReadFromJsonAsync<NodeDto>();
         return node!;
@@ -798,7 +798,7 @@ public class MoveEndpointsTests : IntegrationTestBase
     {
         var hash = await UploadChunkViaClientAsync(client, body);
 
-        var fileReq = new CreateFileRequest
+        var fileReq = new CreateFileFromChunksRequestDto
         {
             ChunkHashes = [hash],
             Name = name,
@@ -860,10 +860,10 @@ public class MoveEndpointsTests : IntegrationTestBase
     }
 
     private Task<HttpResponseMessage> MoveFileAsync(Guid fileId, Guid parentId)
-        => _client!.PatchAsJsonAsync($"/api/v1/files/{fileId}/move", new MoveFileRequest { ParentId = parentId });
+        => _client!.PatchAsJsonAsync($"/api/v1/files/{fileId}/move", new MoveFileRequestDto { ParentId = parentId });
 
     private Task<HttpResponseMessage> MoveNodeAsync(Guid nodeId, Guid parentId)
-        => _client!.PatchAsJsonAsync($"/api/v1/layouts/nodes/{nodeId}/move", new MoveNodeRequest { ParentId = parentId });
+        => _client!.PatchAsJsonAsync($"/api/v1/layouts/nodes/{nodeId}/move", new MoveNodeRequestDto { ParentId = parentId });
 }
 
 internal sealed class ThrowingEventNotificationService : IEventNotificationService
