@@ -2,6 +2,10 @@
 
 Use this section as the active checklist for the current desktop-client pass. Do not jump to a lower item while a higher item has an unresolved correctness or usability blocker.
 
+- [ ] Resolve the `develop` branch split before release.
+  Required behavior: the feature branch must either contain only desktop/sync/SDK work that is intentionally separate from `develop`, or every server/shared/main-application change must go through a separate reviewed transfer to `develop` before the desktop branch is considered clean.
+  Current status: `origin/develop` is merged into this branch, but `git diff origin/develop..HEAD -- src/Cotton.Server src/Cotton.Shared .github/workflows/docker-image.yml src/Cotton.sln` still shows non-desktop changes: app-code OAuth controller/shared DTO/routes, solution/project wiring, and release workflow edits. The app-code server/shared slice is required by browser login but is not proven as already owned by `develop` from the current branch evidence.
+  Verification: review or transfer the server/shared/workflow/solution diff explicitly, then confirm the remaining branch diff is limited to accepted desktop sync client, SDK, sync core, CLI, packaging, tests, and notes scope.
 - [ ] Stabilize sync controls during active work.
   Required behavior: global pause/resume is available while synchronization is running, disabling one pair does not resume other pairs after a global pause, and paused state survives application restart.
   Current status: code-side command/state audit is done; keep open for Windows two-pair manual verification.
@@ -20,7 +24,7 @@ Use this section as the active checklist for the current desktop-client pass. Do
   Partial 2026-06-07: refreshed Linux visual-smoke from a fresh desktop publish at `/tmp/cotton-sync-linux-walkthrough-20260607-r2`; folder rows use status dots, compact folder/menu buttons, an independently sized Folders area, and the expanded editor remains reachable without Activity consuming the panel.
   Verification: visual check on Linux for layout regressions and Windows manual check with two or more sync pairs.
 - [ ] Fix startup and authentication polish.
-  Required behavior: saved sessions show a connecting/restoring state instead of the login form, login supports Enter, auth errors stay human-readable without moving the whole form offscreen, and the app-code browser login flow from `develop` is integrated into both the CLI and desktop app.
+  Required behavior: saved sessions show a connecting/restoring state instead of the login form, login supports Enter, auth errors stay human-readable without moving the whole form offscreen, and the app-code browser login flow is integrated into both the CLI and desktop app after its server/shared contract is reviewed or transferred to `develop`.
   Current status: code-side password-login audit is done; startup loading already hides setup while session restore is in progress; app-code browser login is integrated through shared DTOs, SDK, app layer, CLI, and desktop login UI. Keep open for Windows restart/sign-in/browser-approval verification.
   Verification: focused SDK/app/CLI/view-model tests plus Windows manual restart/sign-in/browser-approval check.
 - [ ] Fix desktop notification and tray polish.
