@@ -18,6 +18,7 @@ internal sealed class SyncOnceUploadServerHandler : HttpMessageHandler
     private readonly string _expectedContentHash;
     private readonly string _expectedRelativePath;
     private readonly bool _exposeCreatedFileInChildren;
+    private readonly bool _allowAppCodeAuth;
     private readonly Guid _ownerId = Guid.Parse("22222222-2222-2222-2222-222222222222");
     private readonly Guid _remoteRootId;
     private bool _fileCreated;
@@ -27,13 +28,15 @@ internal sealed class SyncOnceUploadServerHandler : HttpMessageHandler
         string expectedRelativePath,
         string expectedContentHash,
         byte[] expectedContent,
-        bool exposeCreatedFileInChildren = true)
+        bool exposeCreatedFileInChildren = true,
+        bool allowAppCodeAuth = false)
     {
         _remoteRootId = remoteRootId;
         _expectedRelativePath = expectedRelativePath;
         _expectedContentHash = expectedContentHash;
         _expectedContent = expectedContent;
         _exposeCreatedFileInChildren = exposeCreatedFileInChildren;
+        _allowAppCodeAuth = allowAppCodeAuth;
     }
 
     public Guid CreatedFileId { get; } = Guid.Parse("33333333-3333-3333-3333-333333333333");
@@ -67,6 +70,44 @@ internal sealed class SyncOnceUploadServerHandler : HttpMessageHandler
             {
                 AccessToken = "access-token",
                 RefreshToken = "refresh-token",
+            });
+        }
+
+        if (_allowAppCodeAuth
+            && request.Method == HttpMethod.Post
+            && request.PathAndQuery == "/api/v1/oauth/app-code/start")
+        {
+            return Json(HttpStatusCode.OK, new
+            {
+                approvalId = "0190a000-0000-7000-8000-000000000022",
+                approvalUrl = "/oauth/app-code/0190a000-0000-7000-8000-000000000022",
+                pollToken = "poll-token",
+                expiresAt = new DateTimeOffset(2026, 6, 8, 12, 0, 0, TimeSpan.Zero),
+                pollIntervalSeconds = 1,
+            });
+        }
+
+        if (_allowAppCodeAuth
+            && request.Method == HttpMethod.Post
+            && request.PathAndQuery == "/api/v1/oauth/app-code/poll")
+        {
+            Assert.That(request.Body, Does.Contain("\"pollToken\":\"poll-token\""));
+            return Json(HttpStatusCode.OK, new TokenPairDto
+            {
+                AccessToken = "access-token",
+                RefreshToken = "refresh-token",
+            });
+        }
+
+        if (_allowAppCodeAuth
+            && request.Method == HttpMethod.Get
+            && request.PathAndQuery == "/api/v1/auth/me")
+        {
+            return Json(HttpStatusCode.OK, new UserDto
+            {
+                Id = _ownerId,
+                Username = "browser",
+                Email = "browser@example.test",
             });
         }
 

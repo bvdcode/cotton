@@ -11,8 +11,10 @@ internal static class SyncCliOptionsReader
     public static SyncCliConnectionOptions? ReadConnectionOptions(
         IReadOnlyList<string> args,
         TextWriter error,
-        string command)
+        string command,
+        bool allowBrowserLogin = false)
     {
+        bool useBrowserLogin = allowBrowserLogin && HasFlag(args, "--browser-login");
         string? server = ReadOption(args, "--server");
         string? username = ReadOption(args, "--username");
         string? password = ReadPassword(args);
@@ -22,16 +24,30 @@ internal static class SyncCliOptionsReader
         string? databasePath = ReadOption(args, "--database");
         string? twoFactorCode = ReadOption(args, "--two-factor-code");
         if (string.IsNullOrWhiteSpace(server)
-            || string.IsNullOrWhiteSpace(username)
-            || string.IsNullOrWhiteSpace(password)
             || string.IsNullOrWhiteSpace(localRoot)
             || string.IsNullOrWhiteSpace(remoteRoot)
             || string.IsNullOrWhiteSpace(syncPairId)
             || string.IsNullOrWhiteSpace(databasePath))
         {
             error.WriteLine(
-                command + " requires --server, --username, --password or --password-env, "
-                + "--local-root, --remote-root, --sync-pair, and --database.");
+                command + " requires --server, --local-root, --remote-root, --sync-pair, and --database.");
+            return null;
+        }
+
+        if (useBrowserLogin)
+        {
+            if (!string.IsNullOrWhiteSpace(username)
+                || !string.IsNullOrWhiteSpace(password)
+                || !string.IsNullOrWhiteSpace(twoFactorCode))
+            {
+                error.WriteLine("--browser-login cannot be combined with password sign-in options.");
+                return null;
+            }
+        }
+        else if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+        {
+            error.WriteLine(
+                command + " requires --username and --password or --password-env unless --browser-login is used.");
             return null;
         }
 
@@ -50,13 +66,14 @@ internal static class SyncCliOptionsReader
 
         return new SyncCliConnectionOptions(
             serverUri,
-            username.Trim(),
-            password,
+            useBrowserLogin ? null : username!.Trim(),
+            useBrowserLogin ? null : password!,
             localRoot,
             remoteRootNodeId,
             syncPairId.Trim(),
             databasePath,
-            string.IsNullOrWhiteSpace(twoFactorCode) ? null : twoFactorCode.Trim());
+            string.IsNullOrWhiteSpace(twoFactorCode) ? null : twoFactorCode.Trim(),
+            useBrowserLogin);
     }
 
     public static SyncCliBrowserAuthOptions? ReadBrowserAuthOptions(
@@ -169,6 +186,11 @@ internal static class SyncCliOptionsReader
         }
 
         return null;
+    }
+
+    public static bool HasFlag(IReadOnlyList<string> args, string name)
+    {
+        return args.Any(argument => string.Equals(argument, name, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string? ReadPassword(IReadOnlyList<string> args)

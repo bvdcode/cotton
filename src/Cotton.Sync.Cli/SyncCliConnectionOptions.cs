@@ -5,10 +5,11 @@ namespace Cotton.Sync.Cli;
 
 internal record SyncCliConnectionOptions(
     Uri ServerUri,
-    string Username,
-    string Password,
+    string? Username,
+    string? Password,
     string LocalRoot,
     Guid RemoteRootNodeId,
     string SyncPairId,
     string DatabasePath,
-    string? TwoFactorCode);
+    string? TwoFactorCode,
+    bool UseBrowserLogin);

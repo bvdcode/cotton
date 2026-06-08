@@ -176,7 +176,11 @@ public static class SyncCliCommandRunner
         HttpClient? injectedHttpClient,
         CancellationToken cancellationToken)
     {
-        SyncCliConnectionOptions? options = SyncCliOptionsReader.ReadConnectionOptions(args, error, SyncOnceCommand);
+        SyncCliConnectionOptions? options = SyncCliOptionsReader.ReadConnectionOptions(
+            args,
+            error,
+            SyncOnceCommand,
+            allowBrowserLogin: true);
         if (options is null)
         {
             return 2;
@@ -184,8 +188,31 @@ public static class SyncCliCommandRunner
 
         using HttpClient? ownedHttpClient = injectedHttpClient is null ? new HttpClient() : null;
         HttpClient httpClient = injectedHttpClient ?? ownedHttpClient!;
-        SyncCliRuntime runtime = await SyncCliRuntimeFactory.CreateAsync(options, httpClient, cancellationToken)
-            .ConfigureAwait(false);
+        SyncCliRuntime runtime;
+        try
+        {
+            runtime = options.UseBrowserLogin
+                ? await SyncCliRuntimeFactory
+                    .CreateWithBrowserAuthAsync(
+                        options,
+                        httpClient,
+                        new SyncCliApprovalUrlWriter(output),
+                        cancellationToken)
+                    .ConfigureAwait(false)
+                : await SyncCliRuntimeFactory.CreateAsync(options, httpClient, cancellationToken)
+                    .ConfigureAwait(false);
+        }
+        catch (AppCodeBrowserSignInException exception)
+        {
+            await error.WriteLineAsync(exception.Message).ConfigureAwait(false);
+            if (!string.IsNullOrWhiteSpace(exception.Error))
+            {
+                await error.WriteLineAsync("Error: " + exception.Error).ConfigureAwait(false);
+            }
+
+            return 1;
+        }
+
         SyncCliPassResult pass = await SyncCliRuntimeFactory.RunSinglePassAsync(runtime, cancellationToken)
             .ConfigureAwait(false);
 
@@ -228,6 +255,8 @@ public static class SyncCliCommandRunner
                   (--password <password> | --password-env <name>) --local-root <path>
                   --remote-root <node-id> --sync-pair <id> --database <path>
                   [--two-factor-code <code>]
+              sync-once --server <url-or-host> --browser-login --local-root <path>
+                  --remote-root <node-id> --sync-pair <id> --database <path>
                   Signs in and runs one full-mirror sync pass for one pair.
               sync-soak --server <url-or-host> --username <name>
                   (--password <password> | --password-env <name>) --local-root <path>
