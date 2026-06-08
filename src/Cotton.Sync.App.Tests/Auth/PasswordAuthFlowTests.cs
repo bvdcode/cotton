@@ -165,6 +165,20 @@ public sealed class PasswordAuthFlowTests
             });
         }
 
+        public Task<AppCodeAuthorizationSession> StartAppCodeAsync(
+            AppCodeStartRequestDto request,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<AppCodePollResult> PollAppCodeAsync(
+            string pollToken,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
         public Task<TokenPairDto> RefreshAsync(
             string? refreshToken = null,
             CancellationToken cancellationToken = default)

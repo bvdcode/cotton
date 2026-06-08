@@ -39,6 +39,30 @@ public sealed class SyncApplicationServiceTests
     }
 
     [Test]
+    public async Task SignInWithBrowserAsync_DelegatesToAppCodeBrowserAuthFlow()
+    {
+        var appCodeBrowserAuthFlow = new FakeAppCodeBrowserAuthFlow();
+        SyncApplicationService service = CreateService(
+            new InMemorySyncPairSettingsStore(),
+            appCodeBrowserAuthFlow: appCodeBrowserAuthFlow);
+        var request = new AppCodeBrowserSignInRequest
+        {
+            ApplicationName = "Cotton Sync Desktop",
+            ApplicationVersion = "1.2.3",
+            DeviceName = "workstation",
+        };
+
+        AuthSession session = await service.SignInWithBrowserAsync(request);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(appCodeBrowserAuthFlow.SignInCallCount, Is.EqualTo(1));
+            Assert.That(appCodeBrowserAuthFlow.LastSignInRequest, Is.SameAs(request));
+            Assert.That(session, Is.SameAs(appCodeBrowserAuthFlow.Session));
+        });
+    }
+
+    [Test]
     public async Task SignOutAsync_SignsOutAndStopsSupervisor()
     {
         var authFlow = new FakeAuthFlow();
@@ -783,6 +807,7 @@ public sealed class SyncApplicationServiceTests
         ISyncPairPrerequisiteValidator? prerequisites = null,
         IAppPreferencesStore? preferences = null,
         IAuthFlow? authFlow = null,
+        IAppCodeBrowserAuthFlow? appCodeBrowserAuthFlow = null,
         ISyncSupervisor? supervisor = null,
         IPlatformCommandService? platformCommands = null,
         ILocalChangeSyncCoordinator? localChanges = null,
@@ -795,6 +820,7 @@ public sealed class SyncApplicationServiceTests
             prerequisites ?? new FakeSyncPairPrerequisiteValidator([]),
             preferences ?? new FakeAppPreferencesStore(),
             authFlow ?? new FakeAuthFlow(),
+            appCodeBrowserAuthFlow ?? new FakeAppCodeBrowserAuthFlow(),
             supervisor ?? new FakeSyncSupervisor(),
             platformCommands ?? new FakePlatformCommandService(),
             localChanges,
@@ -1041,6 +1067,24 @@ public sealed class SyncApplicationServiceTests
         {
             SignOutCallCount++;
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeAppCodeBrowserAuthFlow : IAppCodeBrowserAuthFlow
+    {
+        public AuthSession Session { get; } = new(Guid.NewGuid(), "browser", "browser@example.test", false);
+
+        public int SignInCallCount { get; private set; }
+
+        public AppCodeBrowserSignInRequest? LastSignInRequest { get; private set; }
+
+        public Task<AuthSession> SignInAsync(
+            AppCodeBrowserSignInRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            SignInCallCount++;
+            LastSignInRequest = request;
+            return Task.FromResult(Session);
         }
     }
 

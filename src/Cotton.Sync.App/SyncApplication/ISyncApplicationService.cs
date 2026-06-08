@@ -18,6 +18,13 @@ public interface ISyncApplicationService
     Task<AuthSession> SignInAsync(PasswordSignInRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Signs in through browser app-code approval.
+    /// </summary>
+    Task<AuthSession> SignInWithBrowserAsync(
+        AppCodeBrowserSignInRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Restores a saved authenticated session.
     /// </summary>
     Task<AuthSession> RestoreSessionAsync(CancellationToken cancellationToken = default);

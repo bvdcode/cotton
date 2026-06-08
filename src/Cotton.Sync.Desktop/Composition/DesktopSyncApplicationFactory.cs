@@ -83,7 +83,10 @@ internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFac
         var periodicSync = new PeriodicSyncCoordinator(
             supervisor,
             logger: _loggerFactory.CreateLogger<PeriodicSyncCoordinator>());
+        var platformCommands = new ProcessPlatformCommandService(
+            _loggerFactory.CreateLogger<ProcessPlatformCommandService>());
         var authFlow = new PasswordAuthFlow(cottonClient.Auth);
+        var appCodeBrowserAuthFlow = new AppCodeBrowserAuthFlow(cottonClient.Auth, platformCommands);
         var sessionRevocationHandler = new SessionRevocationHandler(
             authFlow,
             localChanges,
@@ -106,8 +109,9 @@ internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFac
             prerequisites,
             preferencesStore,
             authFlow,
+            appCodeBrowserAuthFlow,
             supervisor,
-            new ProcessPlatformCommandService(_loggerFactory.CreateLogger<ProcessPlatformCommandService>()),
+            platformCommands,
             localChanges,
             remoteChanges,
             periodicSync,

@@ -21,6 +21,7 @@ namespace Cotton.Sync.App.SyncApplication;
 public sealed class SyncApplicationService : ISyncApplicationService
 {
     private readonly SemaphoreSlim _syncCoreGate = new(1, 1);
+    private readonly IAppCodeBrowserAuthFlow _appCodeBrowserAuthFlow;
     private readonly IAuthFlow _authFlow;
     private readonly ILocalChangeSyncCoordinator _localChanges;
     private readonly IPeriodicSyncCoordinator _periodicSync;
@@ -44,6 +45,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
         ISyncPairPrerequisiteValidator prerequisites,
         IAppPreferencesStore preferences,
         IAuthFlow authFlow,
+        IAppCodeBrowserAuthFlow appCodeBrowserAuthFlow,
         ISyncSupervisor supervisor,
         IPlatformCommandService platformCommands,
         ILocalChangeSyncCoordinator? localChanges = null,
@@ -57,6 +59,7 @@ public sealed class SyncApplicationService : ISyncApplicationService
         _prerequisites = prerequisites ?? throw new ArgumentNullException(nameof(prerequisites));
         _preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));
         _authFlow = authFlow ?? throw new ArgumentNullException(nameof(authFlow));
+        _appCodeBrowserAuthFlow = appCodeBrowserAuthFlow ?? throw new ArgumentNullException(nameof(appCodeBrowserAuthFlow));
         _supervisor = supervisor ?? throw new ArgumentNullException(nameof(supervisor));
         _platformCommands = platformCommands ?? throw new ArgumentNullException(nameof(platformCommands));
         _localChanges = localChanges ?? NullLocalChangeSyncCoordinator.Instance;
@@ -73,6 +76,14 @@ public sealed class SyncApplicationService : ISyncApplicationService
         CancellationToken cancellationToken = default)
     {
         return _authFlow.SignInAsync(request, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<AuthSession> SignInWithBrowserAsync(
+        AppCodeBrowserSignInRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        return _appCodeBrowserAuthFlow.SignInAsync(request, cancellationToken);
     }
 
     /// <inheritdoc />
