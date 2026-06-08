@@ -155,7 +155,7 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(packageScript, Does.Contain("Exec=/opt/cotton-sync/Cotton.Sync.Desktop"));
             Assert.That(packageScript, Does.Contain("chmod 755 \"$package_root/DEBIAN/postrm\""));
             Assert.That(packageScript, Does.Contain("Architecture: amd64"));
-            Assert.That(packageScript, Does.Contain("Depends: libsecret-tools"));
+            Assert.That(packageScript, Does.Contain("Depends: libnotify-bin, libsecret-tools"));
             Assert.That(packageScript, Does.Contain("dpkg-deb --root-owner-group --build"));
         });
     }
@@ -316,8 +316,9 @@ public sealed class DesktopPackagingMetadataTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(workflow, Does.Contain("ffmpeg gnome-keyring libsecret-tools x11-utils xauth xvfb"));
+            Assert.That(workflow, Does.Contain("ffmpeg gnome-keyring libnotify-bin libsecret-tools x11-utils xauth xvfb"));
             Assert.That(workflow, Does.Contain("command -v xprop"));
+            Assert.That(workflow, Does.Contain("command -v notify-send"));
             Assert.That(workflow, Does.Contain("command -v xwd"));
             Assert.That(workflow, Does.Contain("command -v xwininfo"));
             Assert.That(workflow, Does.Contain("Smoke desktop Linux GUI screenshot"));
