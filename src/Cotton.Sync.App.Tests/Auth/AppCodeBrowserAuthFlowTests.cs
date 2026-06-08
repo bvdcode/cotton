@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Net.Http;
 using Cotton.Auth;
 using Cotton.Sdk.Auth;
 using Cotton.Sync.App.Auth;
@@ -93,6 +94,40 @@ namespace Cotton.Sync.App.Tests.Auth
             });
         }
 
+        [Test]
+        public async Task SignInAsync_RetriesTransientPollFailureAndContinues()
+        {
+            var delays = new List<TimeSpan>();
+            var authClient = new FakeCottonAuthClient();
+            authClient.PollExceptions.Enqueue(new HttpRequestException("Temporary network failure."));
+            authClient.PollResults.Enqueue(new AppCodePollResult
+            {
+                Status = AppCodePollStatus.Approved,
+                Tokens = new TokenPairDto { AccessToken = "access", RefreshToken = "refresh" },
+            });
+            var flow = new AppCodeBrowserAuthFlow(
+                authClient,
+                new FakePlatformCommandService(),
+                (delay, _) =>
+                {
+                    delays.Add(delay);
+                    return Task.CompletedTask;
+                });
+
+            await flow.SignInAsync(new AppCodeBrowserSignInRequest
+            {
+                ApplicationName = "Cotton Sync Desktop",
+            });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(authClient.PollCallCount, Is.EqualTo(2));
+                Assert.That(authClient.LastPollToken, Is.EqualTo(authClient.Session.PollToken));
+                Assert.That(authClient.MeCallCount, Is.EqualTo(1));
+                Assert.That(delays, Is.EqualTo(new[] { authClient.Session.PollInterval }));
+            });
+        }
+
         [TestCase(AppCodePollStatus.Denied, "denied", "Browser sign-in was denied.")]
         [TestCase(AppCodePollStatus.Expired, "expired", "Browser sign-in request expired.")]
         [TestCase(AppCodePollStatus.NotFound, "not_found", "Browser sign-in request was not found.")]
@@ -156,6 +191,8 @@ namespace Cotton.Sync.App.Tests.Auth
                 PollInterval = TimeSpan.FromSeconds(2),
             };
 
+            public Queue<Exception> PollExceptions { get; } = new();
+
             public Queue<AppCodePollResult> PollResults { get; } = new();
 
             public int StartCallCount { get; private set; }
@@ -195,6 +232,11 @@ namespace Cotton.Sync.App.Tests.Auth
             {
                 PollCallCount++;
                 LastPollToken = pollToken;
+                if (PollExceptions.TryDequeue(out Exception? exception))
+                {
+                    throw exception;
+                }
+
                 return Task.FromResult(PollResults.Dequeue());
             }
 

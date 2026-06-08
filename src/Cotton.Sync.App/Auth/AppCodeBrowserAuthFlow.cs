@@ -4,6 +4,8 @@
 using Cotton.Auth;
 using Cotton.Sdk.Auth;
 using Cotton.Sync.App.Platform;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Sync.App.Auth
 {
@@ -16,6 +18,7 @@ namespace Cotton.Sync.App.Auth
 
         private readonly ICottonAuthClient _authClient;
         private readonly Func<TimeSpan, CancellationToken, Task> _delayAsync;
+        private readonly ILogger<AppCodeBrowserAuthFlow> _logger;
         private readonly IPlatformCommandService _platformCommands;
 
         /// <summary>
@@ -24,11 +27,13 @@ namespace Cotton.Sync.App.Auth
         public AppCodeBrowserAuthFlow(
             ICottonAuthClient authClient,
             IPlatformCommandService platformCommands,
-            Func<TimeSpan, CancellationToken, Task>? delayAsync = null)
+            Func<TimeSpan, CancellationToken, Task>? delayAsync = null,
+            ILogger<AppCodeBrowserAuthFlow>? logger = null)
         {
             _authClient = authClient ?? throw new ArgumentNullException(nameof(authClient));
             _platformCommands = platformCommands ?? throw new ArgumentNullException(nameof(platformCommands));
             _delayAsync = delayAsync ?? Task.Delay;
+            _logger = logger ?? NullLogger<AppCodeBrowserAuthFlow>.Instance;
         }
 
         /// <inheritdoc />
@@ -50,9 +55,19 @@ namespace Cotton.Sync.App.Auth
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                AppCodePollResult result = await _authClient
-                    .PollAppCodeAsync(session.PollToken, cancellationToken)
-                    .ConfigureAwait(false);
+                AppCodePollResult result;
+                try
+                {
+                    result = await _authClient
+                        .PollAppCodeAsync(session.PollToken, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                catch (Exception exception) when (IsRetriablePollException(exception, cancellationToken))
+                {
+                    _logger.LogWarning(exception, "Browser sign-in polling failed transiently. Retrying.");
+                    await _delayAsync(GetRetryDelay(session.PollInterval), cancellationToken).ConfigureAwait(false);
+                    continue;
+                }
                 if (result.Status == AppCodePollStatus.Approved)
                 {
                     UserDto user = await _authClient.MeAsync(cancellationToken).ConfigureAwait(false);
@@ -65,14 +80,24 @@ namespace Cotton.Sync.App.Auth
                     throw CreateFailure(result);
                 }
 
-                TimeSpan delay = result.RetryAfter ?? session.PollInterval;
-                if (delay <= TimeSpan.Zero)
-                {
-                    delay = DefaultPollDelay;
-                }
-
-                await _delayAsync(delay, cancellationToken).ConfigureAwait(false);
+                await _delayAsync(GetRetryDelay(result.RetryAfter ?? session.PollInterval), cancellationToken)
+                    .ConfigureAwait(false);
             }
+        }
+
+        private static TimeSpan GetRetryDelay(TimeSpan delay)
+        {
+            return delay <= TimeSpan.Zero ? DefaultPollDelay : delay;
+        }
+
+        private static bool IsRetriablePollException(Exception exception, CancellationToken cancellationToken)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return false;
+            }
+
+            return exception is HttpRequestException or IOException or TimeoutException or TaskCanceledException;
         }
 
         private static AppCodeStartRequestDto ToStartRequest(AppCodeBrowserSignInRequest request)
