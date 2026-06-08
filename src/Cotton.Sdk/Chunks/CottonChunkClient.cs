@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton;
 using Cotton.Sdk.Internal;
 
 namespace Cotton.Sdk.Chunks;
@@ -23,14 +24,11 @@ public sealed class CottonChunkClient : ICottonChunkClient
     public async Task<bool> ExistsAsync(string hash, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(hash);
-        string path = "/api/v1/chunks/" + Uri.EscapeDataString(hash) + "/exists";
-        using HttpResponseMessage response = await _transport.SendAsync(
+        string path = Routes.V1.Chunks + "/" + Uri.EscapeDataString(hash) + "/exists";
+        return await _transport.SendJsonAsync<bool>(
             HttpMethod.Get,
             path,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        await CottonHttpTransport.EnsureSuccessAsync(response, HttpMethod.Get, path, cancellationToken).ConfigureAwait(false);
-        string body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        return bool.TryParse(body, out bool exists) && exists;
     }
 
     /// <summary>
@@ -44,7 +42,7 @@ public sealed class CottonChunkClient : ICottonChunkClient
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(hash);
         return _transport.UploadRawAsync(
-            "/api/v1/chunks/raw?hash=" + Uri.EscapeDataString(hash),
+            Routes.V1.Chunks + "/raw?hash=" + Uri.EscapeDataString(hash),
             content,
             contentType,
             authorize: true,

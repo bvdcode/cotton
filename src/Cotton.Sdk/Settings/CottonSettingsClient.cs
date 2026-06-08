@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton;
 using Cotton.Settings;
 using Cotton.Sdk.Internal;
 
@@ -25,7 +26,7 @@ public sealed class CottonSettingsClient : ICottonSettingsClient
     {
         return _transport.SendJsonAsync<ClientSettingsDto>(
             HttpMethod.Get,
-            "/api/v1/settings",
+            Routes.V1.Settings,
             cancellationToken: cancellationToken);
     }
 }

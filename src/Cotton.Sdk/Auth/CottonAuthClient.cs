@@ -5,8 +5,6 @@ using Cotton.Auth;
 using Cotton.Sdk.Internal;
 using Cotton;
 using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
 
 namespace Cotton.Sdk.Auth
 {
@@ -15,8 +13,6 @@ namespace Cotton.Sdk.Auth
     /// </summary>
     public class CottonAuthClient : ICottonAuthClient
     {
-        private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
         private readonly CottonHttpTransport _transport;
         private readonly ICottonTokenStore _tokenStore;
 
@@ -78,17 +74,20 @@ namespace Cotton.Sdk.Auth
                 throw new ArgumentException("A poll token is required.", nameof(pollToken));
             }
 
+            string path = Routes.V1.AppCodeOAuth + "/poll";
             using HttpResponseMessage response = await _transport.SendAsync(
                 HttpMethod.Post,
-                Routes.V1.AppCodeOAuth + "/poll",
+                path,
                 new AppCodePollRequestDto { PollToken = pollToken },
                 authorize: false,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (response.StatusCode == HttpStatusCode.OK)
             {
-                TokenPairDto tokens = await ReadRequiredJsonAsync<TokenPairDto>(
+                TokenPairDto tokens = await _transport.ReadRequiredJsonAsync<TokenPairDto>(
                     response,
+                    HttpMethod.Post,
+                    path,
                     cancellationToken).ConfigureAwait(false);
                 await _tokenStore.SaveAsync(tokens, cancellationToken).ConfigureAwait(false);
                 return new AppCodePollResult
@@ -141,7 +140,7 @@ namespace Cotton.Sdk.Auth
             await CottonHttpTransport.EnsureSuccessAsync(
                 response,
                 HttpMethod.Post,
-                Routes.V1.AppCodeOAuth + "/poll",
+                path,
                 cancellationToken).ConfigureAwait(false);
             return new AppCodePollResult { Status = AppCodePollStatus.Unknown };
         }
@@ -210,14 +209,17 @@ namespace Cotton.Sdk.Auth
                 cancellationToken: cancellationToken);
         }
 
-        private static async Task<AppCodePollResult> ReadPollErrorAsync(
+        private async Task<AppCodePollResult> ReadPollErrorAsync(
             HttpResponseMessage response,
             AppCodePollStatus status,
             CancellationToken cancellationToken)
         {
-            AppCodePollErrorDto error = await ReadRequiredJsonAsync<AppCodePollErrorDto>(
+            AppCodePollErrorDto error = await _transport.ReadRequiredJsonAsync<AppCodePollErrorDto>(
                 response,
-                cancellationToken).ConfigureAwait(false);
+                HttpMethod.Post,
+                Routes.V1.AppCodeOAuth + "/poll",
+                cancellationToken,
+                ensureSuccess: false).ConfigureAwait(false);
             return new AppCodePollResult
             {
                 Status = status,
@@ -226,19 +228,6 @@ namespace Cotton.Sdk.Auth
                     ? TimeSpan.FromSeconds(error.RetryAfterSeconds.Value)
                     : null,
             };
-        }
-
-        private static async Task<T> ReadRequiredJsonAsync<T>(
-            HttpResponseMessage response,
-            CancellationToken cancellationToken)
-        {
-            T? result = await response.Content.ReadFromJsonAsync<T>(
-                JsonOptions,
-                cancellationToken).ConfigureAwait(false);
-            return result ?? throw new CottonApiException(
-                response.StatusCode,
-                null,
-                "Cotton API returned an empty JSON response.");
         }
     }
 }

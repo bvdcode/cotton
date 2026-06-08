@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton;
 using Cotton.Files;
 using Cotton.Nodes;
 using Cotton.Sdk.Internal;
@@ -25,8 +26,8 @@ public sealed class CottonNodeClient : ICottonNodeClient
     public Task<NodeDto> ResolveAsync(string? path = null, CancellationToken cancellationToken = default)
     {
         string route = string.IsNullOrWhiteSpace(path)
-            ? "/api/v1/layouts/resolver"
-            : "/api/v1/layouts/resolver/" + EncodePath(path);
+            ? Routes.V1.Layouts + "/resolver"
+            : Routes.V1.Layouts + "/resolver/" + EncodePath(path);
         return _transport.SendJsonAsync<NodeDto>(HttpMethod.Get, route, cancellationToken: cancellationToken);
     }
 
@@ -41,7 +42,7 @@ public sealed class CottonNodeClient : ICottonNodeClient
     /// </summary>
     public Task<NodeDto> GetAsync(Guid nodeId, CancellationToken cancellationToken = default)
     {
-        return _transport.SendJsonAsync<NodeDto>(HttpMethod.Get, $"/api/v1/layouts/nodes/{nodeId}", cancellationToken: cancellationToken);
+        return _transport.SendJsonAsync<NodeDto>(HttpMethod.Get, $"{Routes.V1.Layouts}/nodes/{nodeId}", cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -54,7 +55,7 @@ public sealed class CottonNodeClient : ICottonNodeClient
         int depth = 0,
         CancellationToken cancellationToken = default)
     {
-        string route = $"/api/v1/layouts/nodes/{nodeId}/children?page={page}&pageSize={pageSize}&depth={depth}";
+        string route = $"{Routes.V1.Layouts}/nodes/{nodeId}/children?page={page}&pageSize={pageSize}&depth={depth}";
         return _transport.SendJsonAsync<NodeContentDto>(HttpMethod.Get, route, cancellationToken: cancellationToken);
     }
 
@@ -66,7 +67,7 @@ public sealed class CottonNodeClient : ICottonNodeClient
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         return _transport.SendJsonAsync<NodeDto>(
             HttpMethod.Put,
-            "/api/v1/layouts/nodes",
+            Routes.V1.Layouts + "/nodes",
             new CreateNodeRequestDto { ParentId = parentId, Name = name.Trim() },
             cancellationToken: cancellationToken);
     }
@@ -78,7 +79,7 @@ public sealed class CottonNodeClient : ICottonNodeClient
     {
         return _transport.SendJsonAsync<NodeDto>(
             HttpMethod.Patch,
-            $"/api/v1/layouts/nodes/{nodeId}/move",
+            $"{Routes.V1.Layouts}/nodes/{nodeId}/move",
             new MoveNodeRequestDto { ParentId = parentId },
             cancellationToken: cancellationToken);
     }
@@ -91,7 +92,7 @@ public sealed class CottonNodeClient : ICottonNodeClient
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         return _transport.SendJsonAsync<NodeDto>(
             HttpMethod.Patch,
-            $"/api/v1/layouts/nodes/{nodeId}/rename",
+            $"{Routes.V1.Layouts}/nodes/{nodeId}/rename",
             new RenameNodeRequestDto { Name = name.Trim() },
             cancellationToken: cancellationToken);
     }
@@ -107,7 +108,7 @@ public sealed class CottonNodeClient : ICottonNodeClient
         ArgumentNullException.ThrowIfNull(metadata);
         return _transport.SendJsonAsync<NodeDto>(
             HttpMethod.Patch,
-            $"/api/v1/layouts/nodes/{nodeId}/metadata",
+            $"{Routes.V1.Layouts}/nodes/{nodeId}/metadata",
             new Dictionary<string, string>(metadata),
             cancellationToken: cancellationToken);
     }
@@ -119,7 +120,7 @@ public sealed class CottonNodeClient : ICottonNodeClient
     {
         return _transport.SendNoContentAsync(
             HttpMethod.Delete,
-            $"/api/v1/layouts/nodes/{nodeId}?skipTrash={skipTrash.ToString().ToLowerInvariant()}",
+            $"{Routes.V1.Layouts}/nodes/{nodeId}?skipTrash={skipTrash.ToString().ToLowerInvariant()}",
             cancellationToken: cancellationToken);
     }
 
@@ -133,7 +134,7 @@ public sealed class CottonNodeClient : ICottonNodeClient
     {
         return _transport.SendJsonAsync<NodeDto>(
             HttpMethod.Post,
-            $"/api/v1/layouts/nodes/{nodeId}/restore",
+            $"{Routes.V1.Layouts}/nodes/{nodeId}/restore",
             request ?? new RestoreItemRequestDto(),
             cancellationToken: cancellationToken);
     }
@@ -145,7 +146,7 @@ public sealed class CottonNodeClient : ICottonNodeClient
     {
         return _transport.SendJsonAsync<List<NodeDto>>(
             HttpMethod.Get,
-            $"/api/v1/layouts/nodes/{nodeId}/ancestors",
+            $"{Routes.V1.Layouts}/nodes/{nodeId}/ancestors",
             cancellationToken: cancellationToken);
     }
 }

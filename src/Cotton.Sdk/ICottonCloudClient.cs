@@ -14,7 +14,7 @@ namespace Cotton.Sdk;
 /// <summary>
 /// Provides typed access to Cotton Cloud API groups.
 /// </summary>
-public interface ICottonCloudClient
+public interface ICottonCloudClient : IAsyncDisposable
 {
     /// <summary>
     /// Gets authentication operations.

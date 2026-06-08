@@ -176,6 +176,37 @@ public sealed class CottonHttpTransportTests
     }
 
     [Test]
+    public async Task AuthorizedRequest_UsesSingleRefreshForConcurrentUnauthorizedRequests()
+    {
+        var handler = new ConcurrentRefreshHttpMessageHandler();
+        var store = new InMemoryCottonTokenStore();
+        await store.SaveAsync(new TokenPairDto { AccessToken = "old-access", RefreshToken = "old-refresh" });
+        var client = new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
+        {
+            BaseAddress = new Uri("https://cotton.test"),
+        });
+
+        var first = client.Settings.GetAsync();
+        var second = client.Settings.GetAsync();
+        var results = await Task.WhenAll(first, second);
+        TokenPairDto? stored = await store.GetAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(results.Select(static settings => settings.MaxChunkSizeBytes), Is.EqualTo(new[]
+            {
+                4194304,
+                4194304,
+            }));
+            Assert.That(stored?.AccessToken, Is.EqualTo("new-access"));
+            Assert.That(stored?.RefreshToken, Is.EqualTo("new-refresh"));
+            Assert.That(handler.OldAccessSettingsRequestCount, Is.EqualTo(2));
+            Assert.That(handler.NewAccessSettingsRequestCount, Is.EqualTo(2));
+            Assert.That(handler.RefreshRequestCount, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
     public void SendJsonAsync_ReportsInvalidJsonResponseWithContentPreview()
     {
         var handler = new QueuedHttpMessageHandler();

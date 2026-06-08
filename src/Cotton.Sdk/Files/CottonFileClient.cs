@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton;
 using Cotton.Files;
 using Cotton.Sdk.Internal;
 
@@ -30,7 +31,7 @@ public sealed class CottonFileClient : ICottonFileClient
         ArgumentNullException.ThrowIfNull(request);
         return _transport.SendJsonAsync<NodeFileManifestDto>(
             HttpMethod.Post,
-            "/api/v1/files/from-chunks",
+            Routes.V1.Files + "/from-chunks",
             request,
             cancellationToken: cancellationToken);
     }
@@ -47,7 +48,7 @@ public sealed class CottonFileClient : ICottonFileClient
         ArgumentNullException.ThrowIfNull(request);
         return _transport.SendJsonAsync<NodeFileManifestDto>(
             HttpMethod.Patch,
-            $"/api/v1/files/{nodeFileId}/update-content",
+            $"{Routes.V1.Files}/{nodeFileId}/update-content",
             request,
             headers: CreateIfMatchHeader(expectedETag),
             cancellationToken: cancellationToken);
@@ -64,7 +65,7 @@ public sealed class CottonFileClient : ICottonFileClient
     {
         return _transport.SendJsonAsync<NodeFileManifestDto>(
             HttpMethod.Patch,
-            $"/api/v1/files/{nodeFileId}/move",
+            $"{Routes.V1.Files}/{nodeFileId}/move",
             new MoveFileRequestDto { ParentId = parentId },
             headers: CreateIfMatchHeader(expectedETag),
             cancellationToken: cancellationToken);
@@ -82,7 +83,7 @@ public sealed class CottonFileClient : ICottonFileClient
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         return _transport.SendJsonAsync<NodeFileManifestDto>(
             HttpMethod.Patch,
-            $"/api/v1/files/{nodeFileId}/rename",
+            $"{Routes.V1.Files}/{nodeFileId}/rename",
             new RenameFileRequestDto { Name = name.Trim() },
             headers: CreateIfMatchHeader(expectedETag),
             cancellationToken: cancellationToken);
@@ -99,7 +100,7 @@ public sealed class CottonFileClient : ICottonFileClient
         ArgumentNullException.ThrowIfNull(metadata);
         return _transport.SendJsonAsync<NodeFileManifestDto>(
             HttpMethod.Patch,
-            $"/api/v1/files/{nodeFileId}/metadata",
+            $"{Routes.V1.Files}/{nodeFileId}/metadata",
             new Dictionary<string, string>(metadata),
             cancellationToken: cancellationToken);
     }
@@ -115,7 +116,7 @@ public sealed class CottonFileClient : ICottonFileClient
     {
         return _transport.SendNoContentAsync(
             HttpMethod.Delete,
-            $"/api/v1/files/{nodeFileId}?skipTrash={skipTrash.ToString().ToLowerInvariant()}",
+            $"{Routes.V1.Files}/{nodeFileId}?skipTrash={skipTrash.ToString().ToLowerInvariant()}",
             headers: CreateIfMatchHeader(expectedETag),
             cancellationToken: cancellationToken);
     }
@@ -130,7 +131,7 @@ public sealed class CottonFileClient : ICottonFileClient
     {
         return _transport.SendJsonAsync<NodeFileManifestDto>(
             HttpMethod.Post,
-            $"/api/v1/files/{nodeFileId}/restore",
+            $"{Routes.V1.Files}/{nodeFileId}/restore",
             request ?? new RestoreItemRequestDto(),
             cancellationToken: cancellationToken);
     }
@@ -142,7 +143,7 @@ public sealed class CottonFileClient : ICottonFileClient
     {
         return _transport.SendJsonAsync<List<FileVersionDto>>(
             HttpMethod.Get,
-            $"/api/v1/files/{nodeFileId}/versions",
+            $"{Routes.V1.Files}/{nodeFileId}/versions",
             cancellationToken: cancellationToken);
     }
 
@@ -156,7 +157,7 @@ public sealed class CottonFileClient : ICottonFileClient
         IProgress<long>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        string path = $"/api/v1/files/{nodeFileId}/content?download={download.ToString().ToLowerInvariant()}";
+        string path = $"{Routes.V1.Files}/{nodeFileId}/content?download={download.ToString().ToLowerInvariant()}";
         return _transport.DownloadAsync(path, destination, authorize: true, progress, cancellationToken);
     }
 

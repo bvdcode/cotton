@@ -98,6 +98,7 @@ internal sealed class CottonHttpTransport
             authorize,
             headers,
             cancellationToken).ConfigureAwait(false);
+        string? requestAccessToken = request.Headers.Authorization?.Parameter;
         HttpResponseMessage response = await SendHttpAsync(request, method, path, cancellationToken).ConfigureAwait(false);
         if (response.StatusCode != HttpStatusCode.Unauthorized || !authorize || !_options.RefreshOnUnauthorized)
         {
@@ -105,7 +106,7 @@ internal sealed class CottonHttpTransport
         }
 
         response.Dispose();
-        await RefreshAndLogRetryAsync(method, path, cancellationToken).ConfigureAwait(false);
+        await RefreshAndLogRetryAsync(method, path, requestAccessToken, cancellationToken).ConfigureAwait(false);
 
         using HttpRequestMessage retry = await CreateRequestAsync(
             method,
@@ -125,31 +126,36 @@ internal sealed class CottonHttpTransport
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(content);
-        using HttpResponseMessage response = await SendRawUploadOnceAsync(
+        (HttpResponseMessage response, string? requestAccessToken) = await SendRawUploadOnceAsync(
             path,
             content,
             contentType,
             authorize,
             cancellationToken).ConfigureAwait(false);
-        if (response.StatusCode != HttpStatusCode.Unauthorized || !authorize || !_options.RefreshOnUnauthorized || !content.CanSeek)
+        using (response)
         {
-            await EnsureSuccessAsync(response, HttpMethod.Post, path, cancellationToken).ConfigureAwait(false);
-            return;
+            if (response.StatusCode != HttpStatusCode.Unauthorized || !authorize || !_options.RefreshOnUnauthorized || !content.CanSeek)
+            {
+                await EnsureSuccessAsync(response, HttpMethod.Post, path, cancellationToken).ConfigureAwait(false);
+                return;
+            }
         }
 
-        response.Dispose();
-        await RefreshAndLogRetryAsync(HttpMethod.Post, path, cancellationToken).ConfigureAwait(false);
+        await RefreshAndLogRetryAsync(HttpMethod.Post, path, requestAccessToken, cancellationToken).ConfigureAwait(false);
         content.Position = 0;
-        using HttpResponseMessage retry = await SendRawUploadOnceAsync(
+        (HttpResponseMessage retry, _) = await SendRawUploadOnceAsync(
             path,
             content,
             contentType,
             authorize,
             cancellationToken).ConfigureAwait(false);
-        await EnsureSuccessAsync(retry, HttpMethod.Post, path, cancellationToken).ConfigureAwait(false);
+        using (retry)
+        {
+            await EnsureSuccessAsync(retry, HttpMethod.Post, path, cancellationToken).ConfigureAwait(false);
+        }
     }
 
-    private async Task<HttpResponseMessage> SendRawUploadOnceAsync(
+    private async Task<(HttpResponseMessage Response, string? AccessToken)> SendRawUploadOnceAsync(
         string path,
         Stream content,
         string contentType,
@@ -163,6 +169,7 @@ internal sealed class CottonHttpTransport
             authorize: authorize,
             headers: null,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+        string? accessToken = request.Headers.Authorization?.Parameter;
         try
         {
             request.Content = new StreamContent(content);
@@ -173,7 +180,7 @@ internal sealed class CottonHttpTransport
                 path,
                 cancellationToken).ConfigureAwait(false);
             request.Content = null;
-            return response;
+            return (response, accessToken);
         }
         finally
         {
@@ -283,13 +290,18 @@ internal sealed class CottonHttpTransport
         return request;
     }
 
-    private async Task<T> ReadRequiredJsonAsync<T>(
+    internal async Task<T> ReadRequiredJsonAsync<T>(
         HttpResponseMessage response,
         HttpMethod method,
         string path,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool ensureSuccess = true)
     {
-        await EnsureSuccessAsync(response, method, path, cancellationToken).ConfigureAwait(false);
+        if (ensureSuccess)
+        {
+            await EnsureSuccessAsync(response, method, path, cancellationToken).ConfigureAwait(false);
+        }
+
         string body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(body))
         {
@@ -334,18 +346,23 @@ internal sealed class CottonHttpTransport
             : preview[..ResponsePreviewLength] + "...";
     }
 
-    private async Task<bool> TryRefreshAsync(CancellationToken cancellationToken)
+    private async Task<bool> TryRefreshAsync(string? failedAccessToken, CancellationToken cancellationToken)
     {
         await _refreshGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             TokenPairDto? tokens = await _tokenStore.GetAsync(cancellationToken).ConfigureAwait(false);
+            if (HasUsableAccessTokenChanged(failedAccessToken, tokens?.AccessToken))
+            {
+                return true;
+            }
+
             if (string.IsNullOrWhiteSpace(tokens?.RefreshToken))
             {
                 return false;
             }
 
-            string path = "/api/v1/auth/refresh?refreshToken=" + Uri.EscapeDataString(tokens.RefreshToken);
+            string path = Routes.V1.Auth + "/refresh?refreshToken=" + Uri.EscapeDataString(tokens.RefreshToken);
             using HttpRequestMessage request = new(HttpMethod.Post, path);
             ApplyDefaultHeaders(request);
             using HttpResponseMessage response = await SendHttpAsync(
@@ -379,14 +396,21 @@ internal sealed class CottonHttpTransport
     private async Task RefreshAndLogRetryAsync(
         HttpMethod method,
         string path,
+        string? failedAccessToken,
         CancellationToken cancellationToken)
     {
-        bool refreshed = await TryRefreshAsync(cancellationToken).ConfigureAwait(false);
+        bool refreshed = await TryRefreshAsync(failedAccessToken, cancellationToken).ConfigureAwait(false);
         _logger.LogWarning(
             "Cotton API request {Method} {Path} returned unauthorized; token refresh {RefreshResult}, retrying request.",
             method.Method,
             RedactPath(path),
             refreshed ? "succeeded" : "failed");
+    }
+
+    private static bool HasUsableAccessTokenChanged(string? failedAccessToken, string? currentAccessToken)
+    {
+        return !string.IsNullOrWhiteSpace(currentAccessToken)
+            && !string.Equals(currentAccessToken, failedAccessToken, StringComparison.Ordinal);
     }
 
     private async Task<HttpResponseMessage> SendHttpAsync(

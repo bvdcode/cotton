@@ -80,4 +80,10 @@ public sealed class CottonCloudClient : ICottonCloudClient
     /// Gets realtime event hub operations.
     /// </summary>
     public ICottonRealtimeClient Realtime { get; }
+
+    /// <inheritdoc />
+    public ValueTask DisposeAsync()
+    {
+        return Realtime.DisposeAsync();
+    }
 }

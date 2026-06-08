@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton;
 using Cotton.Sync;
 using Cotton.Sdk.Internal;
 
@@ -27,7 +28,7 @@ public sealed class CottonSyncClient : ICottonSyncClient
         ArgumentOutOfRangeException.ThrowIfNegative(sinceCursor);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(limit);
 
-        string path = $"/api/v1/sync/changes?since={sinceCursor}&limit={limit}";
+        string path = $"{Routes.V1.Sync}/changes?since={sinceCursor}&limit={limit}";
         return _transport.SendJsonAsync<SyncChangesResponseDto>(
             HttpMethod.Get,
             path,
