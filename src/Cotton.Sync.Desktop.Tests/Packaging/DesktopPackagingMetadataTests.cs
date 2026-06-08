@@ -296,7 +296,7 @@ public sealed class DesktopPackagingMetadataTests
     [Test]
     public void CiWorkflow_BuildsAndUploadsLinuxDebArtifact()
     {
-        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+        string workflow = GetDesktopWorkflow();
 
         Assert.Multiple(() =>
         {
@@ -312,7 +312,7 @@ public sealed class DesktopPackagingMetadataTests
     [Test]
     public void CiWorkflow_CapturesLinuxGuiScreenshot()
     {
-        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+        string workflow = GetDesktopWorkflow();
 
         Assert.Multiple(() =>
         {
@@ -333,7 +333,7 @@ public sealed class DesktopPackagingMetadataTests
     [Test]
     public void CiWorkflow_SmokesLinuxPackageArtifacts()
     {
-        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+        string workflow = GetDesktopWorkflow();
 
         Assert.Multiple(() =>
         {
@@ -357,7 +357,7 @@ public sealed class DesktopPackagingMetadataTests
     [Test]
     public void CiWorkflow_SmokesLinuxDebInstallAndUninstall()
     {
-        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+        string workflow = GetDesktopWorkflow();
 
         Assert.Multiple(() =>
         {
@@ -380,7 +380,7 @@ public sealed class DesktopPackagingMetadataTests
     [Test]
     public void CiWorkflow_SmokesLinuxDebUpgrade()
     {
-        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+        string workflow = GetDesktopWorkflow();
 
         Assert.Multiple(() =>
         {
@@ -404,21 +404,20 @@ public sealed class DesktopPackagingMetadataTests
     }
 
     [Test]
-    public void CiWorkflow_RunsWindowsDesktopSmokeBeforeRelease()
+    public void CiWorkflow_RunsWindowsDesktopSmoke()
     {
-        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+        string workflow = GetDesktopWorkflow();
 
         Assert.Multiple(() =>
         {
-            Assert.That(workflow, Does.Contain("desktop-windows-smoke:"));
+            Assert.That(workflow, Does.Contain("windows:"));
+            Assert.That(workflow, Does.Contain("Desktop Windows Package Smoke"));
             Assert.That(workflow, Does.Contain("runs-on: windows-latest"));
-            Assert.That(workflow, Does.Contain("needs: build"));
             Assert.That(workflow, Does.Contain("/p:PublishProfile=win-x64"));
-            Assert.That(workflow, Does.Contain("-p:Version='${{ needs.build.outputs.Version }}'"));
+            Assert.That(workflow, Does.Contain("-p:Version='${{ steps.gitversion.outputs.SemVer }}'"));
             Assert.That(workflow, Does.Contain("Packaging/windows/verify-associated-icon.ps1"));
             Assert.That(workflow, Does.Contain("-ExpectedIcon \"src/Cotton.Sync.Desktop/Assets/app.ico\""));
             Assert.That(workflow, Does.Contain("Cotton.Sync.Desktop.exe --self-test --data-dir"));
-            Assert.That(workflow, Does.Contain("- desktop-windows-smoke"));
         });
     }
 
@@ -455,7 +454,7 @@ public sealed class DesktopPackagingMetadataTests
     [Test]
     public void CiWorkflow_SmokesWindowsZipArchiveOnWindows()
     {
-        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+        string workflow = GetDesktopWorkflow();
 
         Assert.Multiple(() =>
         {
@@ -464,8 +463,8 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("Packaging/windows/package-zip.py"));
             Assert.That(workflow, Does.Contain("Packaging/windows/verify-checksums.ps1"));
             Assert.That(workflow, Does.Contain("Packaging/windows/verify-associated-icon.ps1"));
-            Assert.That(workflow, Does.Contain("cotton-sync-desktop-win-x64-smoke.zip"));
-            Assert.That(workflow, Does.Contain("Expand-Archive cotton-sync-desktop-win-x64-smoke.zip"));
+            Assert.That(workflow, Does.Contain("cotton-sync-desktop-win-x64.zip"));
+            Assert.That(workflow, Does.Contain("Expand-Archive cotton-sync-desktop-win-x64.zip"));
             Assert.That(workflow, Does.Contain("Cotton.Sync.Desktop.exe\") --self-test --data-dir"));
             Assert.That(workflow, Does.Contain("Packaging/windows/smoke-diagnostics-export.ps1"));
             Assert.That(workflow, Does.Contain("-AppExecutable (Join-Path $extractDir \"Cotton.Sync.Desktop.exe\")"));
@@ -475,7 +474,7 @@ public sealed class DesktopPackagingMetadataTests
     [Test]
     public void CiWorkflow_UploadsWindowsZipPortableArtifact()
     {
-        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+        string workflow = GetDesktopWorkflow();
         string packageScript = File.ReadAllText(GetDesktopFilePath("Packaging/windows/package-zip.py"));
 
         Assert.Multiple(() =>
@@ -531,7 +530,7 @@ public sealed class DesktopPackagingMetadataTests
     [Test]
     public void CiWorkflow_BuildsAndUploadsWindowsInstallerArtifact()
     {
-        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+        string workflow = GetDesktopWorkflow();
 
         Assert.Multiple(() =>
         {
@@ -544,14 +543,13 @@ public sealed class DesktopPackagingMetadataTests
             Assert.That(workflow, Does.Contain("cotton-sync-desktop-win-x64-setup.exe"));
             Assert.That(workflow, Does.Contain("Upload desktop Windows installer artifact"));
             Assert.That(workflow, Does.Contain("name: desktop-windows-installer"));
-            Assert.That(workflow, Does.Contain("Download desktop Windows installer artifact"));
         });
     }
 
     [Test]
     public void CiWorkflow_SmokesWindowsInstallerInstallAndUninstall()
     {
-        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+        string workflow = GetDesktopWorkflow();
 
         Assert.Multiple(() =>
         {
@@ -590,7 +588,7 @@ public sealed class DesktopPackagingMetadataTests
     [Test]
     public void CiWorkflow_SmokesWindowsInstallerUpgrade()
     {
-        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+        string workflow = GetDesktopWorkflow();
 
         Assert.Multiple(() =>
         {
@@ -623,22 +621,21 @@ public sealed class DesktopPackagingMetadataTests
     }
 
     [Test]
-    public void CiWorkflow_GeneratesReleaseArtifactChecksums()
+    public void CiWorkflow_KeepsDesktopArtifactsOutOfDockerImageWorkflow()
     {
-        string workflow = File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
+        string desktopWorkflow = GetDesktopWorkflow();
+        string dockerWorkflow = GetDockerImageWorkflow();
 
         Assert.Multiple(() =>
         {
-            Assert.That(workflow, Does.Contain("Generate release artifact checksums"));
-            Assert.That(workflow, Does.Contain("release-artifact-checksums.sha256"));
-            Assert.That(workflow, Does.Contain("find nupkg release-artifacts"));
-            Assert.That(workflow, Does.Contain("! -name '*.sha256'"));
-            Assert.That(workflow, Does.Contain("xargs -0 sha256sum"));
-            Assert.That(workflow, Does.Contain("cotton-sync-desktop-linux-x64.tar.gz"));
-            Assert.That(workflow, Does.Contain("cotton-sync-desktop-linux-x64.deb"));
-            Assert.That(workflow, Does.Contain("cotton-sync-desktop-win-x64.tar.gz"));
-            Assert.That(workflow, Does.Contain("cotton-sync-desktop-win-x64.zip"));
-            Assert.That(workflow, Does.Contain("cotton-sync-desktop-win-x64-setup.exe"));
+            Assert.That(desktopWorkflow, Does.Contain("cotton-sync-desktop-linux-x64.tar.gz"));
+            Assert.That(desktopWorkflow, Does.Contain("cotton-sync-desktop-linux-x64.deb"));
+            Assert.That(desktopWorkflow, Does.Contain("cotton-sync-desktop-win-x64.tar.gz"));
+            Assert.That(desktopWorkflow, Does.Contain("cotton-sync-desktop-win-x64.zip"));
+            Assert.That(desktopWorkflow, Does.Contain("cotton-sync-desktop-win-x64-setup.exe"));
+            Assert.That(dockerWorkflow, Does.Not.Contain("cotton-sync-desktop-linux-x64"));
+            Assert.That(dockerWorkflow, Does.Not.Contain("cotton-sync-desktop-win-x64"));
+            Assert.That(dockerWorkflow, Does.Not.Contain("Cotton.Sync.Desktop/Packaging"));
         });
     }
 
@@ -682,6 +679,16 @@ public sealed class DesktopPackagingMetadataTests
         }
 
         throw new FileNotFoundException(relativePath + " was not found from the test directory.");
+    }
+
+    private static string GetDesktopWorkflow()
+    {
+        return File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "desktop-sync.yml")));
+    }
+
+    private static string GetDockerImageWorkflow()
+    {
+        return File.ReadAllText(GetRepositoryFilePath(Path.Combine(".github", "workflows", "docker-image.yml")));
     }
 
     private static string? TryGetRepositoryFilePath(string relativePath)
