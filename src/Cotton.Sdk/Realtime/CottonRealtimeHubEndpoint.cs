@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton;
+using Cotton.Sdk.Internal;
 
 namespace Cotton.Sdk.Realtime;
 
@@ -16,6 +17,6 @@ public static class CottonRealtimeHubEndpoint
     public static Uri CreateUri(Uri baseAddress)
     {
         ArgumentNullException.ThrowIfNull(baseAddress);
-        return new Uri(baseAddress, Routes.V1.EventHub);
+        return CottonRouteUri.Create(baseAddress, Routes.V1.EventHub);
     }
 }

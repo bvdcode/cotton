@@ -51,6 +51,39 @@ namespace Cotton.Sdk.Tests
         }
 
         [Test]
+        public async Task StartAppCodeAsync_PreservesBaseAddressPathForApprovalUri()
+        {
+            var handler = new QueuedHttpMessageHandler();
+            Guid approvalId = Guid.Parse("0190a000-0000-7000-8000-000000000001");
+            handler.EnqueueJson(HttpStatusCode.OK, new
+            {
+                approvalId,
+                approvalUrl = $"/oauth/app-code/{approvalId:D}",
+                pollToken = "poll-token",
+                expiresAt = DateTime.UtcNow,
+                pollIntervalSeconds = 2,
+            });
+            var client = new CottonCloudClient(
+                new HttpClient(handler),
+                new InMemoryCottonTokenStore(),
+                new CottonSdkOptions
+                {
+                    BaseAddress = new Uri("https://cotton.test/cloud"),
+                });
+
+            AppCodeAuthorizationSession session = await client.Auth.StartAppCodeAsync(new AppCodeStartRequestDto
+            {
+                ApplicationName = "Cotton Sync Desktop",
+            });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(session.ApprovalUri, Is.EqualTo(new Uri($"https://cotton.test/cloud/oauth/app-code/{approvalId:D}")));
+                Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/cloud/api/v1/oauth/app-code/start"));
+            });
+        }
+
+        [Test]
         public async Task PollAppCodeAsync_StoresTokensWhenApproved()
         {
             var handler = new QueuedHttpMessageHandler();

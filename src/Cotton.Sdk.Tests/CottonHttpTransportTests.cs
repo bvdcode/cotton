@@ -176,6 +176,35 @@ public sealed class CottonHttpTransportTests
     }
 
     [Test]
+    public async Task AuthorizedRequest_PreservesBaseAddressPathForApiAndRefreshRequests()
+    {
+        var handler = new QueuedHttpMessageHandler();
+        handler.Enqueue(HttpStatusCode.Unauthorized, "expired");
+        handler.EnqueueJson(HttpStatusCode.OK, new { accessToken = "new-access", refreshToken = "new-refresh" });
+        handler.EnqueueJson(HttpStatusCode.OK, new
+        {
+            version = "1.2.3",
+            maxChunkSizeBytes = 4194304,
+            supportedHashAlgorithm = "SHA256",
+        });
+        var store = new InMemoryCottonTokenStore();
+        await store.SaveAsync(new TokenPairDto { AccessToken = "old-access", RefreshToken = "old refresh" });
+        var client = new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
+        {
+            BaseAddress = new Uri("https://cotton.test/cloud"),
+        });
+
+        await client.Settings.GetAsync();
+
+        Assert.That(handler.Requests.Select(x => x.PathAndQuery), Is.EqualTo(new[]
+        {
+            "/cloud/api/v1/settings",
+            "/cloud/api/v1/auth/refresh?refreshToken=old%20refresh",
+            "/cloud/api/v1/settings",
+        }));
+    }
+
+    [Test]
     public async Task AuthorizedRequest_UsesSingleRefreshForConcurrentUnauthorizedRequests()
     {
         var handler = new ConcurrentRefreshHttpMessageHandler();

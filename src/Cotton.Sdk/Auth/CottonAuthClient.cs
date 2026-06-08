@@ -55,7 +55,7 @@ namespace Cotton.Sdk.Auth
             return new AppCodeAuthorizationSession
             {
                 ApprovalId = response.ApprovalId,
-                ApprovalUri = new Uri(_transport.BaseAddress, response.ApprovalUrl),
+                ApprovalUri = CottonRouteUri.Create(_transport.BaseAddress, response.ApprovalUrl),
                 PollToken = response.PollToken,
                 ExpiresAt = response.ExpiresAt,
                 PollInterval = TimeSpan.FromSeconds(response.PollIntervalSeconds),
