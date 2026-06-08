@@ -26,10 +26,10 @@
 		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 
 		<!-- Display name -->
-		<ApplicationTitle>Cotton</ApplicationTitle>
+		<ApplicationTitle>Cotton.Mobile</ApplicationTitle>
 
 		<!-- App Identifier -->
-		<ApplicationId>dev.cottoncloud.mobile</ApplicationId>
+		<ApplicationId>com.companyname.cotton.mobile</ApplicationId>
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
