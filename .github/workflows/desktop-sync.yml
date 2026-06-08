@@ -1,0 +1,546 @@
+name: Desktop Sync
+
+on:
+  push:
+    paths:
+      - "src/Cotton.Sdk/**"
+      - "src/Cotton.Sdk.Tests/**"
+      - "src/Cotton.Shared/**"
+      - "src/Cotton.Sync/**"
+      - "src/Cotton.Sync.Tests/**"
+      - "src/Cotton.Sync.App/**"
+      - "src/Cotton.Sync.App.Tests/**"
+      - "src/Cotton.Sync.Cli/**"
+      - "src/Cotton.Sync.Desktop/**"
+      - "src/Cotton.Sync.Desktop.Tests/**"
+      - "src/Cotton.sln"
+      - "GitVersion.yml"
+      - ".github/workflows/desktop-sync.yml"
+    branches:
+      - main
+      - develop
+      - feature/desktop-sync-client
+  workflow_dispatch:
+
+jobs:
+  linux:
+    name: Desktop Linux Package Smoke
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: check repository
+        uses: actions/checkout@v5
+        with:
+          lfs: "true"
+          fetch-depth: 0
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v3.1.11
+        with:
+          versionSpec: 5.x
+
+      - name: Determine Version
+        uses: gittools/actions/gitversion/execute@v3.1.11
+        id: gitversion
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install desktop Linux smoke dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends dbus-x11 ffmpeg gnome-keyring libsecret-tools x11-utils xauth xvfb
+          command -v dbus-run-session
+          command -v ffmpeg
+          command -v gnome-keyring-daemon
+          command -v secret-tool
+          command -v xprop
+          command -v xwd
+          command -v xwininfo
+          command -v xvfb-run
+
+      - name: Restore desktop project
+        run: dotnet restore src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj
+
+      - name: Publish desktop Linux x64
+        run: dotnet publish src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj /p:PublishProfile=linux-x64 -p:Version='${{ steps.gitversion.outputs.SemVer }}' -p:InformationalVersion='${{ steps.gitversion.outputs.SemVer }}'
+
+      - name: Smoke desktop Linux self-test
+        run: |
+          dbus-run-session -- bash -euo pipefail <<'EOF'
+          temp_dir="$(mktemp -d)"
+          self_test_timeout=120s
+          trap 'rm -rf "$temp_dir"' EXIT
+          eval "$(gnome-keyring-daemon --start --components=secrets)"
+          src/Cotton.Sync.Desktop/Packaging/linux/verify-checksums.sh \
+            src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64
+          timeout "$self_test_timeout" src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64/Cotton.Sync.Desktop --self-test --data-dir "$temp_dir"
+          EOF
+
+      - name: Smoke desktop Linux GUI screenshot
+        run: |
+          xvfb-run -a -s "-screen 0 1024x768x24" \
+            dbus-run-session -- bash -euo pipefail <<'EOF'
+          eval "$(gnome-keyring-daemon --start --components=secrets)"
+          src/Cotton.Sync.Desktop/Packaging/linux/smoke-gui-screenshot-matrix.sh \
+            src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64/Cotton.Sync.Desktop \
+            .
+          EOF
+
+      - name: Upload desktop Linux GUI screenshot
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: desktop-linux-gui-screenshot
+          path: |
+            cotton-sync-desktop-linux-*.png
+            cotton-sync-desktop-linux-*.png.log
+          if-no-files-found: ignore
+
+      - name: Package desktop Linux x64 archive
+        run: tar -czf cotton-sync-desktop-linux-x64.tar.gz -C src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64 .
+
+      - name: Package desktop Linux x64 deb
+        run: |
+          src/Cotton.Sync.Desktop/Packaging/linux/package-deb.sh \
+            src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64 \
+            cotton-sync-desktop-linux-x64.deb \
+            '${{ steps.gitversion.outputs.SemVer }}'
+
+      - name: Smoke desktop Linux archive artifact
+        run: |
+          dbus-run-session -- bash -euo pipefail <<'EOF'
+          temp_dir="$(mktemp -d)"
+          trap 'rm -rf "$temp_dir"' EXIT
+          extract_dir="$temp_dir/archive"
+          data_dir="$temp_dir/data"
+          self_test_timeout=120s
+          mkdir -p "$extract_dir" "$data_dir"
+          tar -xzf cotton-sync-desktop-linux-x64.tar.gz -C "$extract_dir"
+          src/Cotton.Sync.Desktop/Packaging/linux/verify-checksums.sh "$extract_dir"
+          eval "$(gnome-keyring-daemon --start --components=secrets)"
+          timeout "$self_test_timeout" "$extract_dir/Cotton.Sync.Desktop" --self-test --data-dir "$data_dir"
+          src/Cotton.Sync.Desktop/Packaging/linux/smoke-diagnostics-export.sh \
+            "$extract_dir/Cotton.Sync.Desktop" \
+            "$data_dir"
+          EOF
+
+      - name: Smoke desktop Linux deb artifact
+        run: |
+          dbus-run-session -- bash -euo pipefail <<'EOF'
+          temp_dir="$(mktemp -d)"
+          trap 'rm -rf "$temp_dir"' EXIT
+          extract_dir="$temp_dir/deb"
+          data_dir="$temp_dir/data"
+          self_test_timeout=120s
+          mkdir -p "$extract_dir" "$data_dir"
+          dpkg-deb -x cotton-sync-desktop-linux-x64.deb "$extract_dir"
+          test -f "$extract_dir/usr/share/applications/cotton-sync.desktop"
+          test -f "$extract_dir/usr/share/icons/hicolor/192x192/apps/cotton-sync.png"
+          test -L "$extract_dir/usr/bin/cotton-sync"
+          src/Cotton.Sync.Desktop/Packaging/linux/verify-checksums.sh "$extract_dir/opt/cotton-sync"
+          eval "$(gnome-keyring-daemon --start --components=secrets)"
+          timeout "$self_test_timeout" "$extract_dir/opt/cotton-sync/Cotton.Sync.Desktop" --self-test --data-dir "$data_dir"
+          EOF
+
+      - name: Smoke desktop Linux deb install
+        run: |
+          sudo dpkg -i cotton-sync-desktop-linux-x64.deb
+          cleanup() {
+            sudo dpkg -r cotton-sync-desktop >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          test -x /opt/cotton-sync/Cotton.Sync.Desktop
+          test -L /usr/bin/cotton-sync
+          src/Cotton.Sync.Desktop/Packaging/linux/verify-checksums.sh /opt/cotton-sync
+          mkdir -p "$HOME/.config/autostart"
+          cat > "$HOME/.config/autostart/cotton-sync.desktop" <<'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=Cotton Sync
+          Exec=/opt/cotton-sync/Cotton.Sync.Desktop
+          X-GNOME-Autostart-enabled=true
+          EOF
+
+          dbus-run-session -- bash -euo pipefail <<'EOF'
+          temp_dir="$(mktemp -d)"
+          self_test_timeout=120s
+          trap 'rm -rf "$temp_dir"' EXIT
+          eval "$(gnome-keyring-daemon --start --components=secrets)"
+          timeout "$self_test_timeout" /opt/cotton-sync/Cotton.Sync.Desktop --self-test --data-dir "$temp_dir"
+          src/Cotton.Sync.Desktop/Packaging/linux/smoke-diagnostics-export.sh \
+            /opt/cotton-sync/Cotton.Sync.Desktop \
+            "$temp_dir"
+          EOF
+
+          sudo dpkg -r cotton-sync-desktop
+          trap - EXIT
+          test ! -e /opt/cotton-sync/Cotton.Sync.Desktop
+          test ! -e /usr/bin/cotton-sync
+          test ! -e "$HOME/.config/autostart/cotton-sync.desktop"
+
+      - name: Smoke desktop Linux deb upgrade
+        run: |
+          old_deb="$RUNNER_TEMP/cotton-sync-desktop-linux-x64-old.deb"
+          src/Cotton.Sync.Desktop/Packaging/linux/package-deb.sh \
+            src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64 \
+            "$old_deb" \
+            0.0.1-ci-upgrade
+
+          sudo dpkg -i "$old_deb"
+          cleanup() {
+            sudo dpkg -r cotton-sync-desktop >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          mkdir -p "$HOME/.config/autostart"
+          cat > "$HOME/.config/autostart/cotton-sync.desktop" <<'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=Cotton Sync
+          Exec=/opt/cotton-sync/Cotton.Sync.Desktop
+          X-GNOME-Autostart-enabled=true
+          EOF
+
+          sudo dpkg -i cotton-sync-desktop-linux-x64.deb
+          src/Cotton.Sync.Desktop/Packaging/linux/verify-checksums.sh /opt/cotton-sync
+          installed_version="$(dpkg-query -W -f='${Version}' cotton-sync-desktop)"
+          if [ "$installed_version" != "${{ steps.gitversion.outputs.SemVer }}" ]; then
+            echo "Expected upgraded package version ${{ steps.gitversion.outputs.SemVer }}, got $installed_version." >&2
+            exit 1
+          fi
+
+          dbus-run-session -- bash -euo pipefail <<'EOF'
+          temp_dir="$(mktemp -d)"
+          self_test_timeout=120s
+          trap 'rm -rf "$temp_dir"' EXIT
+          eval "$(gnome-keyring-daemon --start --components=secrets)"
+          timeout "$self_test_timeout" /opt/cotton-sync/Cotton.Sync.Desktop --self-test --data-dir "$temp_dir"
+          src/Cotton.Sync.Desktop/Packaging/linux/smoke-diagnostics-export.sh \
+            /opt/cotton-sync/Cotton.Sync.Desktop \
+            "$temp_dir"
+          EOF
+
+          sudo dpkg -r cotton-sync-desktop
+          trap - EXIT
+          test ! -e /opt/cotton-sync/Cotton.Sync.Desktop
+          test ! -e /usr/bin/cotton-sync
+          test ! -e "$HOME/.config/autostart/cotton-sync.desktop"
+
+      - name: Upload desktop Linux x64 artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: desktop-linux-x64
+          path: |
+            cotton-sync-desktop-linux-x64.tar.gz
+            cotton-sync-desktop-linux-x64.deb
+
+  windows:
+    name: Desktop Windows Package Smoke
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - name: check repository
+        uses: actions/checkout@v5
+        with:
+          lfs: "true"
+          fetch-depth: 0
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v3.1.11
+        with:
+          versionSpec: 5.x
+
+      - name: Determine Version
+        uses: gittools/actions/gitversion/execute@v3.1.11
+        id: gitversion
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+
+      - name: Restore desktop project
+        run: dotnet restore src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj
+
+      - name: Publish desktop Windows x64
+        run: dotnet publish src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj /p:PublishProfile=win-x64 -p:Version='${{ steps.gitversion.outputs.SemVer }}' -p:InformationalVersion='${{ steps.gitversion.outputs.SemVer }}'
+
+      - name: Smoke desktop Windows self-test
+        shell: pwsh
+        run: |
+          $dataDir = Join-Path $env:RUNNER_TEMP "cotton-sync-smoke"
+          New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
+          & "src/Cotton.Sync.Desktop/Packaging/windows/verify-checksums.ps1" `
+            -PublishDirectory "src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64"
+          & "src/Cotton.Sync.Desktop/Packaging/windows/verify-associated-icon.ps1" `
+            -AppExecutable "src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64/Cotton.Sync.Desktop.exe" `
+            -ExpectedIcon "src/Cotton.Sync.Desktop/Assets/app.ico"
+          src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64/Cotton.Sync.Desktop.exe --self-test --data-dir "$dataDir"
+
+      - name: Package desktop Windows x64 archive
+        run: tar -czf cotton-sync-desktop-win-x64.tar.gz -C src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64 .
+
+      - name: Package desktop Windows x64 zip
+        run: >
+          python src/Cotton.Sync.Desktop/Packaging/windows/package-zip.py
+          src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64
+          cotton-sync-desktop-win-x64.zip
+
+      - name: Smoke desktop Windows zip archive
+        shell: pwsh
+        run: |
+          $extractDir = Join-Path $env:RUNNER_TEMP "cotton-sync-win-zip"
+          $dataDir = Join-Path $env:RUNNER_TEMP "cotton-sync-win-zip-data"
+          New-Item -ItemType Directory -Path $extractDir -Force | Out-Null
+          New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
+          Expand-Archive cotton-sync-desktop-win-x64.zip -DestinationPath $extractDir -Force
+          & "src/Cotton.Sync.Desktop/Packaging/windows/verify-checksums.ps1" `
+            -PublishDirectory $extractDir
+          & "src/Cotton.Sync.Desktop/Packaging/windows/verify-associated-icon.ps1" `
+            -AppExecutable (Join-Path $extractDir "Cotton.Sync.Desktop.exe") `
+            -ExpectedIcon "src/Cotton.Sync.Desktop/Assets/app.ico"
+          & (Join-Path $extractDir "Cotton.Sync.Desktop.exe") --self-test --data-dir "$dataDir"
+          & "src/Cotton.Sync.Desktop/Packaging/windows/smoke-diagnostics-export.ps1" `
+            -AppExecutable (Join-Path $extractDir "Cotton.Sync.Desktop.exe") `
+            -DataDirectory $dataDir
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup --yes --no-progress
+          $compiler = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $compiler)) {
+            throw "Inno Setup compiler was not found at $compiler"
+          }
+
+          "INNO_SETUP_COMPILER=$compiler" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Package desktop Windows installer
+        shell: pwsh
+        run: |
+          $publishDir = Resolve-Path "src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64"
+          $iconFile = Resolve-Path "src/Cotton.Sync.Desktop/Assets/app.ico"
+          $outputDir = Resolve-Path "."
+          & "$env:INNO_SETUP_COMPILER" `
+            "/DSourceDir=$publishDir" `
+            "/DIconFile=$iconFile" `
+            "/DOutputDir=$outputDir" `
+            "/DAppVersion=${{ steps.gitversion.outputs.SemVer }}" `
+            "src/Cotton.Sync.Desktop/Packaging/windows/cotton-sync.iss"
+
+          if (-not (Test-Path "cotton-sync-desktop-win-x64-setup.exe")) {
+            throw "Windows installer was not created."
+          }
+
+      - name: Smoke desktop Windows installer
+        shell: pwsh
+        run: |
+          $installDir = Join-Path $env:RUNNER_TEMP "cotton-sync-installed"
+          $dataDir = Join-Path $env:RUNNER_TEMP "cotton-sync-installer-data"
+          $installLog = Join-Path $env:RUNNER_TEMP "cotton-sync-install.log"
+          $uninstallLog = Join-Path $env:RUNNER_TEMP "cotton-sync-uninstall.log"
+          New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
+
+          $install = Start-Process `
+            -FilePath ".\cotton-sync-desktop-win-x64-setup.exe" `
+            -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/TASKS=", "/DIR=$installDir", "/LOG=$installLog") `
+            -Wait `
+            -PassThru
+          if ($install.ExitCode -ne 0) {
+            Get-Content $installLog -ErrorAction SilentlyContinue
+            throw "Windows installer exited with code $($install.ExitCode)."
+          }
+
+          $installedExe = Join-Path $installDir "Cotton.Sync.Desktop.exe"
+          if (-not (Test-Path $installedExe)) {
+            Get-ChildItem $installDir -Recurse -ErrorAction SilentlyContinue
+            throw "Installed desktop executable was not found."
+          }
+
+          $startMenuShortcut = Join-Path ([Environment]::GetFolderPath("Programs")) "Cotton Sync\Cotton Sync.lnk"
+          $startMenuUninstallShortcut = Join-Path ([Environment]::GetFolderPath("Programs")) "Cotton Sync\Uninstall Cotton Sync.lnk"
+          if (-not (Test-Path $startMenuShortcut)) {
+            throw "Installed Start Menu shortcut was not found."
+          }
+          if (-not (Test-Path $startMenuUninstallShortcut)) {
+            throw "Installed Start Menu uninstall shortcut was not found."
+          }
+
+          & "src/Cotton.Sync.Desktop/Packaging/windows/verify-shortcut-app-id.ps1" `
+            -ShortcutPath $startMenuShortcut `
+            -ExpectedAppUserModelId "Cotton.Sync.Desktop"
+          & $installedExe --self-test --data-dir "$dataDir"
+          & "src/Cotton.Sync.Desktop/Packaging/windows/verify-checksums.ps1" `
+            -PublishDirectory $installDir
+          & "src/Cotton.Sync.Desktop/Packaging/windows/verify-associated-icon.ps1" `
+            -AppExecutable $installedExe `
+            -ExpectedIcon "src/Cotton.Sync.Desktop/Assets/app.ico"
+          & "src/Cotton.Sync.Desktop/Packaging/windows/smoke-diagnostics-export.ps1" `
+            -AppExecutable $installedExe `
+            -DataDirectory $dataDir
+
+          $uninstaller = Join-Path $installDir "unins000.exe"
+          if (-not (Test-Path $uninstaller)) {
+            throw "Windows uninstaller was not found."
+          }
+
+          $runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+          New-Item -Path $runKey -Force | Out-Null
+          Set-ItemProperty -Path $runKey -Name "Cotton Sync" -Value "`"$installedExe`" --start-minimized"
+
+          $uninstall = Start-Process `
+            -FilePath $uninstaller `
+            -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/LOG=$uninstallLog") `
+            -Wait `
+            -PassThru
+          if ($uninstall.ExitCode -ne 0) {
+            Get-Content $uninstallLog -ErrorAction SilentlyContinue
+            throw "Windows uninstaller exited with code $($uninstall.ExitCode)."
+          }
+
+          if (Test-Path $installedExe) {
+            Get-ChildItem $installDir -Recurse -ErrorAction SilentlyContinue
+            throw "Installed desktop executable remained after uninstall."
+          }
+          if (Test-Path $startMenuShortcut) {
+            throw "Start Menu shortcut remained after uninstall."
+          }
+          if (Test-Path $startMenuUninstallShortcut) {
+            throw "Start Menu uninstall shortcut remained after uninstall."
+          }
+          $runValue = (Get-ItemProperty -Path $runKey -Name "Cotton Sync" -ErrorAction SilentlyContinue)."Cotton Sync"
+          if ($runValue) {
+            throw "Autostart registry value remained after uninstall."
+          }
+
+      - name: Smoke desktop Windows installer upgrade
+        shell: pwsh
+        run: |
+          $publishDir = Resolve-Path "src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64"
+          $iconFile = Resolve-Path "src/Cotton.Sync.Desktop/Assets/app.ico"
+          $oldOutputDir = Join-Path $env:RUNNER_TEMP "cotton-sync-old-installer"
+          $installDir = Join-Path $env:RUNNER_TEMP "cotton-sync-upgrade-installed"
+          $dataDir = Join-Path $env:RUNNER_TEMP "cotton-sync-upgrade-data"
+          $installLog = Join-Path $env:RUNNER_TEMP "cotton-sync-upgrade-install.log"
+          $upgradeLog = Join-Path $env:RUNNER_TEMP "cotton-sync-upgrade-current.log"
+          $uninstallLog = Join-Path $env:RUNNER_TEMP "cotton-sync-upgrade-uninstall.log"
+          New-Item -ItemType Directory -Path $oldOutputDir -Force | Out-Null
+          New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
+
+          & "$env:INNO_SETUP_COMPILER" `
+            "/DSourceDir=$publishDir" `
+            "/DIconFile=$iconFile" `
+            "/DOutputDir=$oldOutputDir" `
+            "/DAppVersion=0.0.1-ci-upgrade" `
+            "src/Cotton.Sync.Desktop/Packaging/windows/cotton-sync.iss"
+
+          $oldInstaller = Join-Path $oldOutputDir "cotton-sync-desktop-win-x64-setup.exe"
+          if (-not (Test-Path $oldInstaller)) {
+            throw "Old Windows installer was not created."
+          }
+
+          $oldInstall = Start-Process `
+            -FilePath $oldInstaller `
+            -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/TASKS=", "/DIR=$installDir", "/LOG=$installLog") `
+            -Wait `
+            -PassThru
+          if ($oldInstall.ExitCode -ne 0) {
+            Get-Content $installLog -ErrorAction SilentlyContinue
+            throw "Old Windows installer exited with code $($oldInstall.ExitCode)."
+          }
+
+          $installedExe = Join-Path $installDir "Cotton.Sync.Desktop.exe"
+          if (-not (Test-Path $installedExe)) {
+            throw "Old installed desktop executable was not found."
+          }
+
+          $currentInstall = Start-Process `
+            -FilePath ".\cotton-sync-desktop-win-x64-setup.exe" `
+            -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/TASKS=", "/DIR=$installDir", "/LOG=$upgradeLog") `
+            -Wait `
+            -PassThru
+          if ($currentInstall.ExitCode -ne 0) {
+            Get-Content $upgradeLog -ErrorAction SilentlyContinue
+            throw "Current Windows installer exited with code $($currentInstall.ExitCode)."
+          }
+
+          $startMenuShortcut = Join-Path ([Environment]::GetFolderPath("Programs")) "Cotton Sync\Cotton Sync.lnk"
+          $startMenuUninstallShortcut = Join-Path ([Environment]::GetFolderPath("Programs")) "Cotton Sync\Uninstall Cotton Sync.lnk"
+          if (-not (Test-Path $startMenuShortcut)) {
+            throw "Upgraded Start Menu shortcut was not found."
+          }
+          if (-not (Test-Path $startMenuUninstallShortcut)) {
+            throw "Upgraded Start Menu uninstall shortcut was not found."
+          }
+
+          & "src/Cotton.Sync.Desktop/Packaging/windows/verify-shortcut-app-id.ps1" `
+            -ShortcutPath $startMenuShortcut `
+            -ExpectedAppUserModelId "Cotton.Sync.Desktop"
+          & $installedExe --self-test --data-dir "$dataDir"
+          & "src/Cotton.Sync.Desktop/Packaging/windows/verify-checksums.ps1" `
+            -PublishDirectory $installDir
+          & "src/Cotton.Sync.Desktop/Packaging/windows/verify-associated-icon.ps1" `
+            -AppExecutable $installedExe `
+            -ExpectedIcon "src/Cotton.Sync.Desktop/Assets/app.ico"
+          & "src/Cotton.Sync.Desktop/Packaging/windows/smoke-diagnostics-export.ps1" `
+            -AppExecutable $installedExe `
+            -DataDirectory $dataDir
+
+          $uninstaller = Join-Path $installDir "unins000.exe"
+          if (-not (Test-Path $uninstaller)) {
+            throw "Windows uninstaller was not found after upgrade."
+          }
+
+          $runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+          New-Item -Path $runKey -Force | Out-Null
+          Set-ItemProperty -Path $runKey -Name "Cotton Sync" -Value "`"$installedExe`" --start-minimized"
+
+          $uninstall = Start-Process `
+            -FilePath $uninstaller `
+            -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/LOG=$uninstallLog") `
+            -Wait `
+            -PassThru
+          if ($uninstall.ExitCode -ne 0) {
+            Get-Content $uninstallLog -ErrorAction SilentlyContinue
+            throw "Windows upgraded app uninstaller exited with code $($uninstall.ExitCode)."
+          }
+
+          if (Test-Path $installedExe) {
+            Get-ChildItem $installDir -Recurse -ErrorAction SilentlyContinue
+            throw "Upgraded desktop executable remained after uninstall."
+          }
+          if (Test-Path $startMenuShortcut) {
+            throw "Upgraded Start Menu shortcut remained after uninstall."
+          }
+          if (Test-Path $startMenuUninstallShortcut) {
+            throw "Upgraded Start Menu uninstall shortcut remained after uninstall."
+          }
+          $runValue = (Get-ItemProperty -Path $runKey -Name "Cotton Sync" -ErrorAction SilentlyContinue)."Cotton Sync"
+          if ($runValue) {
+            throw "Upgraded autostart registry value remained after uninstall."
+          }
+
+      - name: Upload desktop Windows x64 artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: desktop-win-x64
+          path: |
+            cotton-sync-desktop-win-x64.tar.gz
+            cotton-sync-desktop-win-x64.zip
+
+      - name: Upload desktop Windows installer artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: desktop-windows-installer
+          path: cotton-sync-desktop-win-x64-setup.exe
