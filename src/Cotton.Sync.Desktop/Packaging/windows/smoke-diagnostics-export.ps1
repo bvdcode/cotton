@@ -14,9 +14,22 @@ if (-not (Test-Path $AppExecutable)) {
 
 New-Item -ItemType Directory -Path $DataDirectory -Force | Out-Null
 
-$diagnosticsOutput = & $AppExecutable --export-diagnostics --data-dir "$DataDirectory"
-if ($LASTEXITCODE -ne 0) {
-    throw "Diagnostics export exited with code $LASTEXITCODE."
+$stdoutPath = Join-Path $DataDirectory "diagnostics-export.stdout.log"
+$stderrPath = Join-Path $DataDirectory "diagnostics-export.stderr.log"
+$diagnosticsProcess = Start-Process `
+    -FilePath $AppExecutable `
+    -ArgumentList @("--export-diagnostics", "--data-dir", $DataDirectory) `
+    -RedirectStandardOutput $stdoutPath `
+    -RedirectStandardError $stderrPath `
+    -Wait `
+    -PassThru
+
+$diagnosticsOutput = if (Test-Path $stdoutPath) { Get-Content $stdoutPath } else { @() }
+$diagnosticsError = if (Test-Path $stderrPath) { Get-Content $stderrPath } else { @() }
+if ($diagnosticsProcess.ExitCode -ne 0) {
+    $diagnosticsOutput | ForEach-Object { Write-Host $_ }
+    $diagnosticsError | ForEach-Object { Write-Host $_ }
+    throw "Diagnostics export exited with code $($diagnosticsProcess.ExitCode)."
 }
 
 $diagnosticsOutput | ForEach-Object { Write-Host $_ }

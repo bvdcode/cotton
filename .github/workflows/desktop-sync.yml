@@ -71,7 +71,8 @@ jobs:
 
       - name: Smoke desktop Linux self-test
         run: |
-          dbus-run-session -- bash -euo pipefail <<'EOF'
+          xvfb-run -a -s "-screen 0 1024x768x24" \
+            dbus-run-session -- bash -euo pipefail <<'EOF'
           temp_dir="$(mktemp -d)"
           self_test_timeout=120s
           trap 'rm -rf "$temp_dir"' EXIT
@@ -102,25 +103,26 @@ jobs:
           if-no-files-found: ignore
 
       - name: Package desktop Linux x64 archive
-        run: tar -czf cotton-sync-desktop-linux-x64.tar.gz -C src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64 .
+        run: tar -czf cotton-sync-desktop-linux-x64-${{ steps.gitversion.outputs.SemVer }}.tar.gz -C src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64 .
 
       - name: Package desktop Linux x64 deb
         run: |
           src/Cotton.Sync.Desktop/Packaging/linux/package-deb.sh \
             src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64 \
-            cotton-sync-desktop-linux-x64.deb \
+            cotton-sync-desktop-linux-x64-${{ steps.gitversion.outputs.SemVer }}.deb \
             '${{ steps.gitversion.outputs.SemVer }}'
 
       - name: Smoke desktop Linux archive artifact
         run: |
-          dbus-run-session -- bash -euo pipefail <<'EOF'
+          xvfb-run -a -s "-screen 0 1024x768x24" \
+            dbus-run-session -- bash -euo pipefail <<'EOF'
           temp_dir="$(mktemp -d)"
           trap 'rm -rf "$temp_dir"' EXIT
           extract_dir="$temp_dir/archive"
           data_dir="$temp_dir/data"
           self_test_timeout=120s
           mkdir -p "$extract_dir" "$data_dir"
-          tar -xzf cotton-sync-desktop-linux-x64.tar.gz -C "$extract_dir"
+          tar -xzf cotton-sync-desktop-linux-x64-${{ steps.gitversion.outputs.SemVer }}.tar.gz -C "$extract_dir"
           src/Cotton.Sync.Desktop/Packaging/linux/verify-checksums.sh "$extract_dir"
           eval "$(gnome-keyring-daemon --start --components=secrets)"
           timeout "$self_test_timeout" "$extract_dir/Cotton.Sync.Desktop" --self-test --data-dir "$data_dir"
@@ -131,14 +133,15 @@ jobs:
 
       - name: Smoke desktop Linux deb artifact
         run: |
-          dbus-run-session -- bash -euo pipefail <<'EOF'
+          xvfb-run -a -s "-screen 0 1024x768x24" \
+            dbus-run-session -- bash -euo pipefail <<'EOF'
           temp_dir="$(mktemp -d)"
           trap 'rm -rf "$temp_dir"' EXIT
           extract_dir="$temp_dir/deb"
           data_dir="$temp_dir/data"
           self_test_timeout=120s
           mkdir -p "$extract_dir" "$data_dir"
-          dpkg-deb -x cotton-sync-desktop-linux-x64.deb "$extract_dir"
+          dpkg-deb -x cotton-sync-desktop-linux-x64-${{ steps.gitversion.outputs.SemVer }}.deb "$extract_dir"
           test -f "$extract_dir/usr/share/applications/cotton-sync.desktop"
           test -f "$extract_dir/usr/share/icons/hicolor/192x192/apps/cotton-sync.png"
           test -L "$extract_dir/usr/bin/cotton-sync"
@@ -149,7 +152,7 @@ jobs:
 
       - name: Smoke desktop Linux deb install
         run: |
-          sudo dpkg -i cotton-sync-desktop-linux-x64.deb
+          sudo dpkg -i cotton-sync-desktop-linux-x64-${{ steps.gitversion.outputs.SemVer }}.deb
           cleanup() {
             sudo dpkg -r cotton-sync-desktop >/dev/null 2>&1 || true
           }
@@ -167,7 +170,8 @@ jobs:
           X-GNOME-Autostart-enabled=true
           EOF
 
-          dbus-run-session -- bash -euo pipefail <<'EOF'
+          xvfb-run -a -s "-screen 0 1024x768x24" \
+            dbus-run-session -- bash -euo pipefail <<'EOF'
           temp_dir="$(mktemp -d)"
           self_test_timeout=120s
           trap 'rm -rf "$temp_dir"' EXIT
@@ -207,7 +211,7 @@ jobs:
           X-GNOME-Autostart-enabled=true
           EOF
 
-          sudo dpkg -i cotton-sync-desktop-linux-x64.deb
+          sudo dpkg -i cotton-sync-desktop-linux-x64-${{ steps.gitversion.outputs.SemVer }}.deb
           src/Cotton.Sync.Desktop/Packaging/linux/verify-checksums.sh /opt/cotton-sync
           installed_version="$(dpkg-query -W -f='${Version}' cotton-sync-desktop)"
           if [ "$installed_version" != "${{ steps.gitversion.outputs.SemVer }}" ]; then
@@ -215,7 +219,8 @@ jobs:
             exit 1
           fi
 
-          dbus-run-session -- bash -euo pipefail <<'EOF'
+          xvfb-run -a -s "-screen 0 1024x768x24" \
+            dbus-run-session -- bash -euo pipefail <<'EOF'
           temp_dir="$(mktemp -d)"
           self_test_timeout=120s
           trap 'rm -rf "$temp_dir"' EXIT
@@ -237,8 +242,8 @@ jobs:
         with:
           name: desktop-linux-x64
           path: |
-            cotton-sync-desktop-linux-x64.tar.gz
-            cotton-sync-desktop-linux-x64.deb
+            cotton-sync-desktop-linux-x64-${{ steps.gitversion.outputs.SemVer }}.tar.gz
+            cotton-sync-desktop-linux-x64-${{ steps.gitversion.outputs.SemVer }}.deb
 
   windows:
     name: Desktop Windows Package Smoke
@@ -290,13 +295,13 @@ jobs:
           src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64/Cotton.Sync.Desktop.exe --self-test --data-dir "$dataDir"
 
       - name: Package desktop Windows x64 archive
-        run: tar -czf cotton-sync-desktop-win-x64.tar.gz -C src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64 .
+        run: tar -czf cotton-sync-desktop-win-x64-${{ steps.gitversion.outputs.SemVer }}.tar.gz -C src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64 .
 
       - name: Package desktop Windows x64 zip
         run: >
           python src/Cotton.Sync.Desktop/Packaging/windows/package-zip.py
           src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64
-          cotton-sync-desktop-win-x64.zip
+          cotton-sync-desktop-win-x64-${{ steps.gitversion.outputs.SemVer }}.zip
 
       - name: Smoke desktop Windows zip archive
         shell: pwsh
@@ -305,7 +310,7 @@ jobs:
           $dataDir = Join-Path $env:RUNNER_TEMP "cotton-sync-win-zip-data"
           New-Item -ItemType Directory -Path $extractDir -Force | Out-Null
           New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
-          Expand-Archive cotton-sync-desktop-win-x64.zip -DestinationPath $extractDir -Force
+          Expand-Archive cotton-sync-desktop-win-x64-${{ steps.gitversion.outputs.SemVer }}.zip -DestinationPath $extractDir -Force
           & "src/Cotton.Sync.Desktop/Packaging/windows/verify-checksums.ps1" `
             -PublishDirectory $extractDir
           & "src/Cotton.Sync.Desktop/Packaging/windows/verify-associated-icon.ps1" `
@@ -333,14 +338,16 @@ jobs:
           $publishDir = Resolve-Path "src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/win-x64"
           $iconFile = Resolve-Path "src/Cotton.Sync.Desktop/Assets/app.ico"
           $outputDir = Resolve-Path "."
+          $installerName = "cotton-sync-desktop-win-x64-${{ steps.gitversion.outputs.SemVer }}-setup.exe"
           & "$env:INNO_SETUP_COMPILER" `
             "/DSourceDir=$publishDir" `
             "/DIconFile=$iconFile" `
             "/DOutputDir=$outputDir" `
             "/DAppVersion=${{ steps.gitversion.outputs.SemVer }}" `
+            "/DOutputBaseFilename=cotton-sync-desktop-win-x64-${{ steps.gitversion.outputs.SemVer }}-setup" `
             "src/Cotton.Sync.Desktop/Packaging/windows/cotton-sync.iss"
 
-          if (-not (Test-Path "cotton-sync-desktop-win-x64-setup.exe")) {
+          if (-not (Test-Path $installerName)) {
             throw "Windows installer was not created."
           }
 
@@ -352,9 +359,10 @@ jobs:
           $installLog = Join-Path $env:RUNNER_TEMP "cotton-sync-install.log"
           $uninstallLog = Join-Path $env:RUNNER_TEMP "cotton-sync-uninstall.log"
           New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
+          $installerPath = ".\cotton-sync-desktop-win-x64-${{ steps.gitversion.outputs.SemVer }}-setup.exe"
 
           $install = Start-Process `
-            -FilePath ".\cotton-sync-desktop-win-x64-setup.exe" `
+            -FilePath $installerPath `
             -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/TASKS=", "/DIR=$installDir", "/LOG=$installLog") `
             -Wait `
             -PassThru
@@ -444,9 +452,10 @@ jobs:
             "/DIconFile=$iconFile" `
             "/DOutputDir=$oldOutputDir" `
             "/DAppVersion=0.0.1-ci-upgrade" `
+            "/DOutputBaseFilename=cotton-sync-desktop-win-x64-0.0.1-ci-upgrade-setup" `
             "src/Cotton.Sync.Desktop/Packaging/windows/cotton-sync.iss"
 
-          $oldInstaller = Join-Path $oldOutputDir "cotton-sync-desktop-win-x64-setup.exe"
+          $oldInstaller = Join-Path $oldOutputDir "cotton-sync-desktop-win-x64-0.0.1-ci-upgrade-setup.exe"
           if (-not (Test-Path $oldInstaller)) {
             throw "Old Windows installer was not created."
           }
@@ -465,9 +474,10 @@ jobs:
           if (-not (Test-Path $installedExe)) {
             throw "Old installed desktop executable was not found."
           }
+          $currentInstallerPath = ".\cotton-sync-desktop-win-x64-${{ steps.gitversion.outputs.SemVer }}-setup.exe"
 
           $currentInstall = Start-Process `
-            -FilePath ".\cotton-sync-desktop-win-x64-setup.exe" `
+            -FilePath $currentInstallerPath `
             -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/TASKS=", "/DIR=$installDir", "/LOG=$upgradeLog") `
             -Wait `
             -PassThru
@@ -537,11 +547,11 @@ jobs:
         with:
           name: desktop-win-x64
           path: |
-            cotton-sync-desktop-win-x64.tar.gz
-            cotton-sync-desktop-win-x64.zip
+            cotton-sync-desktop-win-x64-${{ steps.gitversion.outputs.SemVer }}.tar.gz
+            cotton-sync-desktop-win-x64-${{ steps.gitversion.outputs.SemVer }}.zip
 
       - name: Upload desktop Windows installer artifact
         uses: actions/upload-artifact@v5
         with:
           name: desktop-windows-installer
-          path: cotton-sync-desktop-win-x64-setup.exe
+          path: cotton-sync-desktop-win-x64-${{ steps.gitversion.outputs.SemVer }}-setup.exe

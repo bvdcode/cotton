@@ -13,6 +13,10 @@
 #define AppVersion "0.1.0-dev"
 #endif
 
+#ifndef OutputBaseFilename
+#define OutputBaseFilename "cotton-sync-desktop-win-x64-setup"
+#endif
+
 #ifndef IconFile
 #define IconFile "..\..\Assets\app.ico"
 #endif
@@ -39,7 +43,7 @@ PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir={#OutputDir}
-OutputBaseFilename=cotton-sync-desktop-win-x64-setup
+OutputBaseFilename={#OutputBaseFilename}
 SetupIconFile={#IconFile}
 UninstallDisplayIcon={app}\Cotton.Sync.Desktop.exe
 AppMutex={#AppMutexName}
