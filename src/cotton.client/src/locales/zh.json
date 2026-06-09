@@ -6,6 +6,12 @@
     "enterQueryHint": "开始输入即可搜索……",
     "noResults": "未找到任何文件或文件夹",
     "open": "搜索",
+    "history": {
+      "title": "最近搜索",
+      "clear": "清除",
+      "remove": "移除",
+      "removeQuery": "从搜索历史中移除“{{query}}”"
+    },
     "modal": {
       "placeholder": "搜索文件、文件夹、设置……",
       "resultsCount": "{{count}} 项结果"

@@ -6,6 +6,12 @@
     "enterQueryHint": "Commencez à saisir pour rechercher...",
     "noResults": "Aucun fichier ou dossier trouvé",
     "open": "Rechercher",
+    "history": {
+      "title": "Recherches récentes",
+      "clear": "Effacer",
+      "remove": "Supprimer",
+      "removeQuery": "Supprimer \"{{query}}\" de l'historique de recherche"
+    },
     "modal": {
       "placeholder": "Rechercher fichiers, dossiers, paramètres...",
       "resultsCount": "{{count}} résultats"

@@ -28,6 +28,8 @@ import {
 } from "../../shared/store/userPreferencesStore";
 import { useDictionaryMatch } from "./hooks/useDictionaryMatch";
 import { useSearchPagination } from "./hooks/useSearchPagination";
+import { useSearchHistory } from "./hooks/useSearchHistory";
+import { SearchHistoryPanel } from "./components/SearchHistoryPanel";
 import { SearchResultRow } from "./components/SearchResultRow";
 import { SearchResultsScroller } from "./components/SearchResultsScroller";
 import type { SearchDictionaryEntry, SearchRow } from "./types";
@@ -64,6 +66,16 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
 
   const hasSearchQuery = debouncedQuery.length > 0;
   const matchedDictionaryRows = useDictionaryMatch(debouncedQuery);
+  const {
+    entries: searchHistoryEntries,
+    addQuery: addSearchHistoryQuery,
+    removeQuery: removeSearchHistoryQuery,
+    clear: clearSearchHistory,
+  } = useSearchHistory();
+  const hasSearchHistoryEntries = searchHistoryEntries.length > 0;
+  const showSearchHistory =
+    open && !hasQuery && hasSearchHistoryEntries;
+  const hasExpandedSearchSurface = hasQuery || hasSearchHistoryEntries;
 
   useEffect(() => {
     if (!open) return;
@@ -174,8 +186,18 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
     [navigate, onClose],
   );
 
+  const recordActiveSearchHistory = useCallback(() => {
+    if (!debouncedQuery) {
+      return;
+    }
+
+    addSearchHistoryQuery(debouncedQuery);
+  }, [addSearchHistoryQuery, debouncedQuery]);
+
   const activateRow = useCallback(
     (row: SearchRow) => {
+      recordActiveSearchHistory();
+
       if (row.kind === "setting") {
         openSetting(row.entry);
         return;
@@ -189,7 +211,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
 
       openFile(row.file);
     },
-    [navigate, onClose, openFile, openSetting],
+    [navigate, onClose, openFile, openSetting, recordActiveSearchHistory],
   );
 
   const handlePreviewError = useCallback((fileId: string) => {
@@ -198,25 +220,36 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
 
   const handleShareRow = useCallback(
     (row: Extract<SearchRow, { kind: "file" }>) => {
+      recordActiveSearchHistory();
       void handleShareFile(row.file.id, row.file.name);
     },
-    [handleShareFile],
+    [handleShareFile, recordActiveSearchHistory],
   );
 
   const handleOpenFileFolder = useCallback(
     (row: Extract<SearchRow, { kind: "file" }>) => {
+      recordActiveSearchHistory();
       navigate(`/files/${row.file.nodeId}`);
       onClose();
     },
-    [navigate, onClose],
+    [navigate, onClose, recordActiveSearchHistory],
   );
 
   const handleDownloadRow = useCallback(
     (row: Extract<SearchRow, { kind: "file" }>) => {
+      recordActiveSearchHistory();
       void handleDownloadFile(row.file.id, row.file.name);
       onClose();
     },
-    [handleDownloadFile, onClose],
+    [handleDownloadFile, onClose, recordActiveSearchHistory],
+  );
+
+  const handleSelectSearchHistory = useCallback(
+    (historyQuery: string) => {
+      setQuery(historyQuery);
+      addSearchHistoryQuery(historyQuery);
+    },
+    [addSearchHistoryQuery],
   );
 
   const renderSearchRow = useCallback(
@@ -257,17 +290,22 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
             sx: (theme) => ({
               width: {
                 xs: "100%",
-                sm: hasQuery ? 880 : 720,
-                lg: hasQuery ? 1040 : 760,
+                sm: hasExpandedSearchSurface ? 880 : 720,
+                lg: hasExpandedSearchSurface ? 1040 : 760,
               },
-              height: { xs: "100%", sm: hasQuery ? 680 : 86 },
+              height: {
+                xs: "100%",
+                sm: hasExpandedSearchSurface ? 680 : 86,
+              },
               maxHeight: { xs: "100%", sm: "calc(100vh - 32px)" },
               borderRadius: { xs: 0, sm: 1.5 },
               bgcolor: "background.default",
-              transition: theme.transitions.create(["height", "width"], {
-                duration: theme.transitions.duration.shorter,
-                easing: theme.transitions.easing.easeInOut,
-              }),
+              transition: hasSearchHistoryEntries
+                ? "none"
+                : theme.transitions.create(["height", "width"], {
+                    duration: theme.transitions.duration.shorter,
+                    easing: theme.transitions.easing.easeInOut,
+                  }),
             }),
           },
         }}
@@ -334,6 +372,26 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
           />
 
           {error && <Alert severity="error">{t("error")}</Alert>}
+
+          {showSearchHistory && (
+            <Box
+              sx={{
+                flex: 1,
+                minHeight: 0,
+                overflow: "auto",
+                borderRadius: 1,
+                bgcolor: "background.default",
+              }}
+            >
+              <SearchHistoryPanel
+                entries={searchHistoryEntries}
+                onSelect={handleSelectSearchHistory}
+                onRemove={removeSearchHistoryQuery}
+                onClear={clearSearchHistory}
+                compact={!isMobile}
+              />
+            </Box>
+          )}
 
           {hasQuery && (
             <Box

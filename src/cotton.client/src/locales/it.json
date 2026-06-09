@@ -6,6 +6,12 @@
     "enterQueryHint": "Inizi a digitare per cercare...",
     "noResults": "Nessun file o cartella trovati",
     "open": "Cerca",
+    "history": {
+      "title": "Ricerche recenti",
+      "clear": "Cancella",
+      "remove": "Rimuovi",
+      "removeQuery": "Rimuovi \"{{query}}\" dalla cronologia di ricerca"
+    },
     "modal": {
       "placeholder": "Cerca file, cartelle, impostazioni...",
       "resultsCount": "{{count}} risultati"

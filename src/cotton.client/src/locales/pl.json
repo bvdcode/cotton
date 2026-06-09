@@ -6,6 +6,12 @@
     "enterQueryHint": "Zacznij pisać, aby wyszukać...",
     "noResults": "Nie znaleziono plików ani folderów",
     "open": "Wyszukaj",
+    "history": {
+      "title": "Ostatnie wyszukiwania",
+      "clear": "Wyczyść",
+      "remove": "Usuń",
+      "removeQuery": "Usuń „{{query}}” z historii wyszukiwania"
+    },
     "modal": {
       "placeholder": "Wyszukaj pliki, foldery, ustawienia...",
       "resultsCount": "Wyników: {{count}}"

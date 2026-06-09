@@ -6,6 +6,8 @@ import { useTranslation } from "react-i18next";
 import { useRootNodeQuery } from "../../shared/api/queries/layouts";
 import { SearchBar } from "./components/SearchBar";
 import { useLayoutSearch } from "./hooks/useLayoutSearch";
+import { SearchHistoryPanel } from "../../features/search/components/SearchHistoryPanel";
+import { useSearchHistory } from "../../features/search/hooks/useSearchHistory";
 import { FileListViewFactory } from "../files/components";
 import { FilePreviewModal, MediaLightbox } from "@shared/ui/preview";
 import { useFolderOperations } from "../files/hooks/useFolderOperations";
@@ -48,21 +50,52 @@ export const SearchPage: React.FC = () => {
     loading,
     error,
     results,
+    completedQuery,
     setQuery,
     setPage,
     setPageSize,
   } = searchState;
+  const trimmedSearchQuery = query.trim();
+  const {
+    entries: searchHistoryEntries,
+    addQuery: addSearchHistoryQuery,
+    removeQuery: removeSearchHistoryQuery,
+    clear: clearSearchHistory,
+  } = useSearchHistory();
+  const showSearchHistory = Boolean(
+    layoutId &&
+      !trimmedSearchQuery &&
+      !results &&
+      searchHistoryEntries.length > 0,
+  );
 
   // Reset to the first page when query changes.
   useEffect(() => {
     setPage(1);
   }, [query, setPage]);
 
+  const recordActiveSearchHistory = useCallback(() => {
+    if (!completedQuery) {
+      return;
+    }
+
+    addSearchHistoryQuery(completedQuery);
+  }, [addSearchHistoryQuery, completedQuery]);
+
   const handleFolderClick = useCallback(
     (nodeId: string) => {
+      recordActiveSearchHistory();
       navigate(`/files/${nodeId}`);
     },
-    [navigate],
+    [navigate, recordActiveSearchHistory],
+  );
+
+  const handleSelectSearchHistory = useCallback(
+    (historyQuery: string) => {
+      setQuery(historyQuery);
+      addSearchHistoryQuery(historyQuery);
+    },
+    [addSearchHistoryQuery, setQuery],
   );
 
   const fileListSource = useSearchFileList({
@@ -70,7 +103,7 @@ export const SearchPage: React.FC = () => {
     loading,
     error: error ?? null,
     totalCount,
-    hasQuery: !!query.trim(),
+    hasQuery: !!trimmedSearchQuery,
     rootNodeName: rootNode?.name,
   });
 
@@ -110,14 +143,31 @@ export const SearchPage: React.FC = () => {
   const fileOperations = useMemo(
     () =>
       buildFileOperations(rawFileOps, {
-        onDownload: handleDownloadFile,
-        onShare: handleShareFile,
+        onDownload: (fileId, fileName) => {
+          recordActiveSearchHistory();
+          return handleDownloadFile(fileId, fileName);
+        },
+        onShare: (fileId, fileName) => {
+          recordActiveSearchHistory();
+          return handleShareFile(fileId, fileName);
+        },
         onClick: (fileId, fileName, fileSizeBytes) => {
+          recordActiveSearchHistory();
           void handleFileClick(fileId, fileName, fileSizeBytes);
         },
-        onMediaClick: handleMediaClick,
+        onMediaClick: (fileId) => {
+          recordActiveSearchHistory();
+          return handleMediaClick(fileId);
+        },
       }),
-    [rawFileOps, handleDownloadFile, handleShareFile, handleFileClick, handleMediaClick],
+    [
+      rawFileOps,
+      handleDownloadFile,
+      handleShareFile,
+      handleFileClick,
+      handleMediaClick,
+      recordActiveSearchHistory,
+    ],
   );
 
   return (
@@ -139,7 +189,28 @@ export const SearchPage: React.FC = () => {
         </Box>
       )}
 
-      {!loading && layoutId && !query.trim() && !results && (
+      {!loading && showSearchHistory && (
+        <Box
+          width="100%"
+          maxWidth={760}
+          mx="auto"
+          sx={{
+            border: 1,
+            borderColor: "divider",
+            borderRadius: 1,
+            overflow: "hidden",
+          }}
+        >
+          <SearchHistoryPanel
+            entries={searchHistoryEntries}
+            onSelect={handleSelectSearchHistory}
+            onRemove={removeSearchHistoryQuery}
+            onClear={clearSearchHistory}
+          />
+        </Box>
+      )}
+
+      {!loading && layoutId && !trimmedSearchQuery && !results && !showSearchHistory && (
         <Box
           flex={1}
           minHeight={0}
@@ -166,6 +237,8 @@ export const SearchPage: React.FC = () => {
             folderOperations={folderOperations}
             fileOperations={fileOperations}
             onGoToFileLocation={({ nodeId, containerPath }) => {
+              recordActiveSearchHistory();
+
               if (nodeId) {
                 navigate(`/files/${nodeId}`);
                 return;

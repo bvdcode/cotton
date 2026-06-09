@@ -6,6 +6,12 @@
     "enterQueryHint": "Begin met typen om te zoeken...",
     "noResults": "Geen bestanden of mappen gevonden",
     "open": "Zoeken",
+    "history": {
+      "title": "Recente zoekopdrachten",
+      "clear": "Wissen",
+      "remove": "Verwijderen",
+      "removeQuery": "\"{{query}}\" uit zoekgeschiedenis verwijderen"
+    },
     "modal": {
       "placeholder": "Zoek in bestanden, mappen, instellingen...",
       "resultsCount": "{{count}} resultaten"
