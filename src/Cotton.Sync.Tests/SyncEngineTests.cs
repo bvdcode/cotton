@@ -2487,7 +2487,7 @@ namespace Cotton.Sync.Tests
             public IDisposable? BeginScope<TState>(TState state)
                 where TState : notnull
             {
-                return NullScope.Instance;
+                return null;
             }
 
             public bool IsEnabled(LogLevel logLevel)
@@ -2521,15 +2521,6 @@ namespace Cotton.Sync.Tests
             {
                 Values.Add(value);
                 _onReport?.Invoke(value);
-            }
-        }
-
-        private class NullScope : IDisposable
-        {
-            public static readonly NullScope Instance = new();
-
-            public void Dispose()
-            {
             }
         }
 

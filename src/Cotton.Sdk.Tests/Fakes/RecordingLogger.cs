@@ -19,7 +19,7 @@ namespace Cotton.Sdk.Tests.Fakes
         public IDisposable? BeginScope<TState>(TState state)
             where TState : notnull
         {
-            return NullScope.Instance;
+            return null;
         }
 
         public bool IsEnabled(LogLevel logLevel)
@@ -35,15 +35,6 @@ namespace Cotton.Sdk.Tests.Fakes
             Func<TState, Exception?, string> formatter)
         {
             _entries.Add(new RecordingLogEntry(_categoryName, logLevel, formatter(state, exception), exception));
-        }
-
-        private class NullScope : IDisposable
-        {
-            public static readonly NullScope Instance = new();
-
-            public void Dispose()
-            {
-            }
         }
     }
 }

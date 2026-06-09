@@ -18,7 +18,7 @@ namespace Cotton.Sync.Desktop.Diagnostics
         public IDisposable? BeginScope<TState>(TState state)
             where TState : notnull
         {
-            return NullScope.Instance;
+            return null;
         }
 
         public bool IsEnabled(LogLevel logLevel)
@@ -41,15 +41,6 @@ namespace Cotton.Sync.Desktop.Diagnostics
 
             string message = DesktopTraceLogFormatter.Format(_categoryName, logLevel, eventId, formatter(state, exception), exception);
             Trace.WriteLine(DesktopSecretRedactor.Redact(message));
-        }
-
-        private class NullScope : IDisposable
-        {
-            public static readonly NullScope Instance = new();
-
-            public void Dispose()
-            {
-            }
         }
     }
 }
