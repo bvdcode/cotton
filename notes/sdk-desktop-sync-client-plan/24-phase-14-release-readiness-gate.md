@@ -33,6 +33,7 @@ Release can be considered only when every item in this section is checked.
 - [ ] Tray/autostart lifecycle verification passes.
 - [ ] Secure token storage verification passes.
 - [ ] Diagnostics export verification passes.
+  Partial 2026-06-09: refreshed published Linux diagnostics export smoke from the current linux-x64 publish output. `COTTON_SYNC_DIAGNOSTICS_TIMEOUT=60s Packaging/linux/smoke-diagnostics-export.sh src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64/Cotton.Sync.Desktop /tmp/cotton-sync-diagnostics-release-gate-20260609` returned 0, reported `/tmp/cotton-sync-diagnostics-release-gate-20260609/diagnostics/cotton-sync-diagnostics-20260609-013401-6d2ca4d0.zip`, and verified `diagnostics.json` data-path metadata for app data, preferences DB, sync-state DB, and token-store paths. Keep unchecked until installed Windows/Linux GUI export evidence is complete.
 - [ ] No known data-loss bugs remain open.
 - [ ] No known crash-on-start bugs remain open.
 - [ ] No known broken-login bugs remain open.
