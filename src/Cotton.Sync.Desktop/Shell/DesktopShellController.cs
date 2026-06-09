@@ -31,8 +31,8 @@ namespace Cotton.Sync.Desktop.Shell
     {
         private const string SelfTestSyncPairId = "__desktop_self_test__";
 
-        private static readonly TimeSpan SavedSessionRestoreTimeout = TimeSpan.FromSeconds(30);
-        private static readonly TimeSpan ServerProbeTimeout = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan SavedSessionRestoreTimeout = TimeSpan.FromSeconds(15);
+        private static readonly TimeSpan ServerProbeTimeout = TimeSpan.FromSeconds(5);
 
         private readonly IDesktopSyncApplicationFactory _factory;
         private readonly IPlatformCommandService _platformCommands;
@@ -157,11 +157,8 @@ namespace Cotton.Sync.Desktop.Shell
             CancellationToken cancellationToken = default)
         {
             Uri parsedServerUrl = ParseServerUrl(serverUrl);
-            using var httpClient = new HttpClient
-            {
-                BaseAddress = parsedServerUrl,
-                Timeout = _serverProbeTimeout,
-            };
+            using HttpClient httpClient = DesktopHttpClientFactory.Create(_serverProbeTimeout);
+            httpClient.BaseAddress = parsedServerUrl;
             PublicServerInfo? info;
             try
             {

@@ -42,10 +42,7 @@ namespace Cotton.Sync.Desktop.Composition
         {
             ArgumentNullException.ThrowIfNull(serverUrl);
 
-            var httpClient = new HttpClient
-            {
-                Timeout = HttpRequestTimeout,
-            };
+            HttpClient httpClient = DesktopHttpClientFactory.Create(HttpRequestTimeout);
             var tokenStore = new FileCottonTokenStore(_paths.TokenStorePath);
             var sdkOptions = new CottonSdkOptions
             {

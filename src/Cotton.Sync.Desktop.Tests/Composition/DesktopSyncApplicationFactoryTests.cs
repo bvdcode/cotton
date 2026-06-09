@@ -2,6 +2,8 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Reflection;
+using System.Net;
+using System.Net.Sockets;
 using Cotton.Sdk;
 using Cotton.Sync.App.Continuous;
 using Cotton.Sync.App.LocalChanges;
@@ -62,6 +64,25 @@ namespace Cotton.Sync.Desktop.Tests.Composition
                 Assert.That(localChanges, Is.TypeOf<LocalChangeSyncCoordinator>());
                 Assert.That(remoteChanges, Is.TypeOf<RealtimeRemoteChangeSyncCoordinator>());
                 Assert.That(periodicSync, Is.TypeOf<PeriodicSyncCoordinator>());
+            });
+        }
+
+        [Test]
+        public void DesktopHttpClientFactory_PrefersIpv4ForDualStackHosts()
+        {
+            IPAddress[] addresses =
+            [
+                IPAddress.Parse("2600:8801:fb00:36:6e1f:f7ff:fe3f:b0db"),
+                IPAddress.Parse("10.0.0.10"),
+            ];
+
+            IReadOnlyList<IPAddress> ordered = DesktopHttpClientFactory.OrderAddressesForConnect(addresses);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(ordered[0].AddressFamily, Is.EqualTo(AddressFamily.InterNetwork));
+                Assert.That(ordered[0], Is.EqualTo(IPAddress.Parse("10.0.0.10")));
+                Assert.That(ordered[1].AddressFamily, Is.EqualTo(AddressFamily.InterNetworkV6));
             });
         }
 
