@@ -20,9 +20,14 @@ Windows entry rule:
   Verification: clean Windows install/uninstall smoke.
 - [ ] Windows tray behavior.
   Required behavior: tray menu labels are short and unambiguous, pause/resume remains available during active sync, icon changes reflect syncing/paused/error only, and the normal Cotton icon is used when healthy/idle.
-  Windows agent note: run this with at least two sync pairs, one active transfer, global pause/resume, disabling one pair while globally paused, and app restart while paused.
+  Windows agent note: run this with at least two sync pairs, one active transfer, global pause/resume, disabling one pair while globally paused, and app restart while paused. This is the handoff for the current work-order sync-controls and tray-polish items closed on Linux.
   Verification: Windows manual check with active upload/download and paused sync.
 - [ ] Windows large-tree and large-file desktop smoke.
   Required behavior: run the packaged or debug Windows desktop app against a suitable public/dedicated backend account with enough quota; cover many small files, at least 100 MiB, and a larger multi-GiB transfer where quota allows.
-  Windows agent note: record both UI behavior and sync correctness. The desktop must stay responsive, keep progress moving, preserve pause/resume availability, and converge server/local/baseline state after completion.
-  Verification: record scan latency, first-progress latency, throughput, ETA stability, UI responsiveness, final server convergence, and final SQLite baseline state.
+  Windows agent note: record both UI behavior and sync correctness. The desktop must stay responsive, keep progress moving, preserve pause/resume availability, converge server/local/baseline state after completion, keep the top progress card global instead of per-file, keep speed/ETA visually stable, and keep folder rows/actions reachable in a small window.
+  Verification: record scan latency, first-progress latency, throughput, ETA stability, UI responsiveness, final server convergence, final SQLite baseline state, and screenshots/video for dashboard and folder-list layout.
+
+- [ ] Windows startup and browser-login flow.
+  Required behavior: saved sessions show Connecting/restoring state instead of the login form, server probing completes against the real Cotton server, Enter submits password login, app-code browser login can approve and return, and auth errors stay readable without pushing the form offscreen.
+  Windows agent note: test both Visual Studio/debug launch and installed/packaged launch because identity and token-store behavior can differ. This is the handoff for the current work-order startup/auth item closed on Linux.
+  Verification: Windows manual restart/sign-in/browser-approval check with screenshots or logs.
