@@ -128,6 +128,42 @@ namespace Cotton.Sync.App.Tests.Auth
             });
         }
 
+        [Test]
+        public void SignInAsync_StopsTransientPollRetriesWhenSessionExpires()
+        {
+            DateTime currentTime = DateTime.UtcNow;
+            var delays = new List<TimeSpan>();
+            var authClient = new FakeCottonAuthClient();
+            authClient.Session.ExpiresAt = currentTime.AddSeconds(1);
+            authClient.PollExceptions.Enqueue(new HttpRequestException("Temporary network failure."));
+            var flow = new AppCodeBrowserAuthFlow(
+                authClient,
+                new FakePlatformCommandService(),
+                (delay, _) =>
+                {
+                    delays.Add(delay);
+                    currentTime = currentTime.Add(delay).AddMilliseconds(1);
+                    return Task.CompletedTask;
+                },
+                utcNow: () => currentTime);
+
+            AppCodeBrowserSignInException? exception = Assert.ThrowsAsync<AppCodeBrowserSignInException>(
+                async () => await flow.SignInAsync(new AppCodeBrowserSignInRequest
+                {
+                    ApplicationName = "Cotton Sync Desktop",
+                }));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exception, Is.Not.Null);
+                Assert.That(exception!.Status, Is.EqualTo(AppCodePollStatus.Expired));
+                Assert.That(exception.Error, Is.EqualTo("expired"));
+                Assert.That(authClient.PollCallCount, Is.EqualTo(1));
+                Assert.That(authClient.MeCallCount, Is.Zero);
+                Assert.That(delays, Is.EqualTo(new[] { authClient.Session.PollInterval }));
+            });
+        }
+
         [TestCase(AppCodePollStatus.Denied, "denied", "Browser sign-in was denied.")]
         [TestCase(AppCodePollStatus.Expired, "expired", "Browser sign-in request expired.")]
         [TestCase(AppCodePollStatus.NotFound, "not_found", "Browser sign-in request was not found.")]
@@ -187,7 +223,7 @@ namespace Cotton.Sync.App.Tests.Auth
                 ApprovalId = Guid.Parse("0190a000-0000-7000-8000-000000000011"),
                 ApprovalUri = new Uri("https://cotton.test/oauth/app-code/0190a000-0000-7000-8000-000000000011"),
                 PollToken = "poll-token",
-                ExpiresAt = new DateTime(2026, 6, 7, 12, 0, 0, DateTimeKind.Utc),
+                ExpiresAt = DateTime.UtcNow.AddMinutes(10),
                 PollInterval = TimeSpan.FromSeconds(2),
             };
 

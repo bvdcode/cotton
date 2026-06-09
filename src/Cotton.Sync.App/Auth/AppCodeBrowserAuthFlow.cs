@@ -20,6 +20,7 @@ namespace Cotton.Sync.App.Auth
         private readonly Func<TimeSpan, CancellationToken, Task> _delayAsync;
         private readonly ILogger<AppCodeBrowserAuthFlow> _logger;
         private readonly IPlatformCommandService _platformCommands;
+        private readonly Func<DateTime> _utcNow;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AppCodeBrowserAuthFlow" /> class.
@@ -28,12 +29,14 @@ namespace Cotton.Sync.App.Auth
             ICottonAuthClient authClient,
             IPlatformCommandService platformCommands,
             Func<TimeSpan, CancellationToken, Task>? delayAsync = null,
-            ILogger<AppCodeBrowserAuthFlow>? logger = null)
+            ILogger<AppCodeBrowserAuthFlow>? logger = null,
+            Func<DateTime>? utcNow = null)
         {
             _authClient = authClient ?? throw new ArgumentNullException(nameof(authClient));
             _platformCommands = platformCommands ?? throw new ArgumentNullException(nameof(platformCommands));
             _delayAsync = delayAsync ?? Task.Delay;
             _logger = logger ?? NullLogger<AppCodeBrowserAuthFlow>.Instance;
+            _utcNow = utcNow ?? (() => DateTime.UtcNow);
         }
 
         /// <inheritdoc />
@@ -55,6 +58,7 @@ namespace Cotton.Sync.App.Auth
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                ThrowIfSessionExpired(session);
                 AppCodePollResult result;
                 try
                 {
@@ -83,6 +87,19 @@ namespace Cotton.Sync.App.Auth
                 await _delayAsync(GetRetryDelay(result.RetryAfter ?? session.PollInterval), cancellationToken)
                     .ConfigureAwait(false);
             }
+        }
+
+        private void ThrowIfSessionExpired(AppCodeAuthorizationSession session)
+        {
+            if (session.ExpiresAt.ToUniversalTime() > _utcNow().ToUniversalTime())
+            {
+                return;
+            }
+
+            throw new AppCodeBrowserSignInException(
+                AppCodePollStatus.Expired,
+                "Browser sign-in request expired.",
+                "expired");
         }
 
         private static TimeSpan GetRetryDelay(TimeSpan delay)
