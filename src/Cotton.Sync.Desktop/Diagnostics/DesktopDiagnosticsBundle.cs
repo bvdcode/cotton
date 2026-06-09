@@ -5,7 +5,7 @@ using Cotton.Sync.Desktop.Shell;
 
 namespace Cotton.Sync.Desktop.Diagnostics
 {
-    internal sealed record DesktopDiagnosticsBundle(
+    internal record DesktopDiagnosticsBundle(
         DateTimeOffset CreatedAtUtc,
         string AppVersion,
         string? ServerUrl,

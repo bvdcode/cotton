@@ -8,7 +8,7 @@ using Cotton.Sync.Desktop.Auth;
 
 namespace Cotton.Sync.Desktop.Tests.Auth
 {
-    public sealed class FileCottonTokenStoreTests
+    public class FileCottonTokenStoreTests
     {
         private const string TestTokenPayloadScheme = "test-file-store-v1";
 
@@ -380,7 +380,7 @@ namespace Cotton.Sync.Desktop.Tests.Auth
             }
         }
 
-        private sealed class ReversingTokenPayloadProtector : ITokenPayloadProtector
+        private class ReversingTokenPayloadProtector : ITokenPayloadProtector
         {
             public ReversingTokenPayloadProtector(string scheme)
             {
@@ -409,7 +409,7 @@ namespace Cotton.Sync.Desktop.Tests.Auth
             }
         }
 
-        private sealed class ThrowingTokenPayloadProtector : ITokenPayloadProtector
+        private class ThrowingTokenPayloadProtector : ITokenPayloadProtector
         {
             public ThrowingTokenPayloadProtector(string scheme)
             {
@@ -429,7 +429,7 @@ namespace Cotton.Sync.Desktop.Tests.Auth
             }
         }
 
-        private sealed class RecordingDeletableTokenPayloadProtector : ITokenPayloadProtector, IDeletableTokenPayloadProtector
+        private class RecordingDeletableTokenPayloadProtector : ITokenPayloadProtector, IDeletableTokenPayloadProtector
         {
             private readonly Dictionary<string, byte[]> _payloads = [];
             private int _nextId;

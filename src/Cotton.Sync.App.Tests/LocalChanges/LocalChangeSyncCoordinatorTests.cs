@@ -8,7 +8,7 @@ using Cotton.Sync.App.SyncPairs;
 
 namespace Cotton.Sync.App.Tests.LocalChanges
 {
-    public sealed class LocalChangeSyncCoordinatorTests
+    public class LocalChangeSyncCoordinatorTests
     {
         private static readonly TimeSpan DebounceInterval = TimeSpan.FromMilliseconds(25);
 
@@ -187,7 +187,7 @@ namespace Cotton.Sync.App.Tests.LocalChanges
             };
         }
 
-        private sealed class FakeWatcherFactory : ILocalSyncRootWatcherFactory
+        private class FakeWatcherFactory : ILocalSyncRootWatcherFactory
         {
             public Dictionary<Guid, FakeWatcher> CreatedWatchers { get; } = [];
 
@@ -206,7 +206,7 @@ namespace Cotton.Sync.App.Tests.LocalChanges
             }
         }
 
-        private sealed class FakeWatcher : ILocalSyncRootWatcher
+        private class FakeWatcher : ILocalSyncRootWatcher
         {
             private readonly Guid _syncPairId;
 
@@ -256,7 +256,7 @@ namespace Cotton.Sync.App.Tests.LocalChanges
             }
         }
 
-        private sealed class FakeSyncPairSettingsStore : ISyncPairSettingsStore
+        private class FakeSyncPairSettingsStore : ISyncPairSettingsStore
         {
             private readonly IReadOnlyList<SyncPairSettings> _syncPairs;
 
@@ -293,7 +293,7 @@ namespace Cotton.Sync.App.Tests.LocalChanges
             }
         }
 
-        private sealed class FakeSyncSupervisor : ISyncSupervisor
+        private class FakeSyncSupervisor : ISyncSupervisor
         {
             private readonly TaskCompletionSource _syncRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
             private readonly TaskCompletionSource _releaseSyncNow = new(TaskCreationOptions.RunContinuationsAsynchronously);

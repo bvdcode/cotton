@@ -6,7 +6,7 @@ namespace Cotton.Sync.App.Progress
     /// <summary>
     /// Publishes aggregate sync-pass progress entries to in-process subscribers.
     /// </summary>
-    public sealed class InMemoryAppRunProgressPublisher : IAppRunProgressPublisher
+    public class InMemoryAppRunProgressPublisher : IAppRunProgressPublisher
     {
         private readonly object _gate = new();
         private readonly List<IObserver<AppRunProgress>> _observers = [];
@@ -47,7 +47,7 @@ namespace Cotton.Sync.App.Progress
             }
         }
 
-        private sealed class Subscription : IDisposable
+        private class Subscription : IDisposable
         {
             private readonly InMemoryAppRunProgressPublisher _publisher;
             private IObserver<AppRunProgress>? _observer;

@@ -6,7 +6,7 @@ namespace Cotton.Sync.State
     /// <summary>
     /// Represents one baseline entry known to a sync pair.
     /// </summary>
-    public sealed class SyncStateEntry
+    public class SyncStateEntry
     {
         /// <summary>
         /// Gets or sets the sync pair identifier.

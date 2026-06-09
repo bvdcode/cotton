@@ -6,7 +6,7 @@ namespace Cotton.Sync.Local
     /// <summary>
     /// Represents one local directory discovered by the sync scanner.
     /// </summary>
-    public sealed class LocalDirectorySnapshot
+    public class LocalDirectorySnapshot
     {
         /// <summary>
         /// Gets or sets the normalized relative path.

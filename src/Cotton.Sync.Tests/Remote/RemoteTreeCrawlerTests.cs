@@ -8,7 +8,7 @@ using Cotton.Sync.Remote;
 
 namespace Cotton.Sync.Tests.Remote
 {
-    public sealed class RemoteTreeCrawlerTests
+    public class RemoteTreeCrawlerTests
     {
         [Test]
         public async Task CrawlAsync_WalksPagedFoldersRecursively()
@@ -278,7 +278,7 @@ namespace Cotton.Sync.Tests.Remote
             };
         }
 
-        private sealed class FakeNodeClient : ICottonNodeClient
+        private class FakeNodeClient : ICottonNodeClient
         {
             public Dictionary<Guid, NodeDto> Nodes { get; } = [];
 
@@ -345,7 +345,7 @@ namespace Cotton.Sync.Tests.Remote
             }
         }
 
-        private sealed class RecordingProgress<T> : IProgress<T>
+        private class RecordingProgress<T> : IProgress<T>
         {
             public List<T> Values { get; } = [];
 

@@ -5,7 +5,7 @@ using Cotton.Sync.Desktop.Shell;
 
 namespace Cotton.Sync.Desktop.Tests.Shell
 {
-    public sealed class DesktopTrayStatusResolverTests
+    public class DesktopTrayStatusResolverTests
     {
         [Test]
         public void FromShellState_ReturnsSignedOutWhenSessionIsMissing()

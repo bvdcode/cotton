@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-    internal sealed class DesktopWindowLifecyclePolicy
+    internal class DesktopWindowLifecyclePolicy
     {
         private readonly bool _canHideToTray;
         private readonly bool _hideAfterSessionRestore;

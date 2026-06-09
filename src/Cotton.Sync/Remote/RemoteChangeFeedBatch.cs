@@ -8,7 +8,7 @@ namespace Cotton.Sync.Remote
     /// <summary>
     /// Represents one durable remote change-feed page read for a sync pair.
     /// </summary>
-    public sealed class RemoteChangeFeedBatch
+    public class RemoteChangeFeedBatch
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="RemoteChangeFeedBatch" /> class.

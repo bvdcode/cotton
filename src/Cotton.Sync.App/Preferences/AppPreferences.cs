@@ -6,7 +6,7 @@ namespace Cotton.Sync.App.Preferences
     /// <summary>
     /// Stores durable desktop sync-client preferences that are not sync-pair specific.
     /// </summary>
-    public sealed class AppPreferences
+    public class AppPreferences
     {
         /// <summary>
         /// Gets or sets the last server URL selected by the user.

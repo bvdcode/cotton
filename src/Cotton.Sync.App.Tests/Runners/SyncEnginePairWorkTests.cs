@@ -23,7 +23,7 @@ using CoreSyncActionRequiredException = Cotton.Sync.SyncActionRequiredException;
 
 namespace Cotton.Sync.App.Tests.Runners
 {
-    public sealed class SyncEnginePairWorkTests
+    public class SyncEnginePairWorkTests
     {
         [Test]
         public async Task RunOnceAsync_MapsAppSyncPairToCoreSyncPair()
@@ -196,7 +196,7 @@ namespace Cotton.Sync.App.Tests.Runners
             };
         }
 
-        private sealed class FakeSyncEngine : CoreSyncEngine
+        private class FakeSyncEngine : CoreSyncEngine
         {
             public CoreSyncActivity? ActivityToReport { get; set; }
 

@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-    internal sealed record DesktopSyncPairStatusSnapshot(
+    internal record DesktopSyncPairStatusSnapshot(
         Guid Id,
         string Status,
         string? LastError,

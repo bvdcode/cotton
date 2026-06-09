@@ -14,7 +14,7 @@ namespace Cotton.Sync.App.Supervision
     /// <summary>
     /// Coordinates sync pair runners and publishes aggregate application status.
     /// </summary>
-    public sealed class SyncSupervisor : ISyncSupervisor
+    public class SyncSupervisor : ISyncSupervisor
     {
         private readonly SemaphoreSlim _operationGate = new(1, 1);
         private readonly ConcurrentDictionary<Guid, ISyncPairRunner> _runners = [];

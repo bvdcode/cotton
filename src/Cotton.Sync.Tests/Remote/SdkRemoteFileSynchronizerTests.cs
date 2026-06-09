@@ -20,7 +20,7 @@ using Cotton.Sync.Remote;
 
 namespace Cotton.Sync.Tests.Remote
 {
-    public sealed class SdkRemoteFileSynchronizerTests
+    public class SdkRemoteFileSynchronizerTests
     {
         private readonly Guid _rootNodeId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         private string _root = string.Empty;
@@ -360,7 +360,7 @@ namespace Cotton.Sync.Tests.Remote
             return Convert.ToHexStringLower(SHA256.HashData(bytes));
         }
 
-        private sealed class RecordingProgress<T> : IProgress<T>
+        private class RecordingProgress<T> : IProgress<T>
         {
             public List<T> Values { get; } = [];
 
@@ -394,7 +394,7 @@ namespace Cotton.Sync.Tests.Remote
             }
         }
 
-        private sealed class FakeCottonCloudClient : ICottonCloudClient
+        private class FakeCottonCloudClient : ICottonCloudClient
         {
             public FakeCottonCloudClient(int chunkSizeBytes)
             {
@@ -429,7 +429,7 @@ namespace Cotton.Sync.Tests.Remote
             }
         }
 
-        private sealed class FakeSettingsClient : ICottonSettingsClient
+        private class FakeSettingsClient : ICottonSettingsClient
         {
             private readonly int _chunkSizeBytes;
 
@@ -451,7 +451,7 @@ namespace Cotton.Sync.Tests.Remote
             }
         }
 
-        private sealed class FakeChunkClient : ICottonChunkClient
+        private class FakeChunkClient : ICottonChunkClient
         {
             private readonly object _gate = new();
             private readonly Dictionary<string, TaskCompletionSource> _blockedUploads = new(StringComparer.OrdinalIgnoreCase);
@@ -576,7 +576,7 @@ namespace Cotton.Sync.Tests.Remote
             }
         }
 
-        private sealed class FakeFileClient : ICottonFileClient
+        private class FakeFileClient : ICottonFileClient
         {
             public List<CreateFileFromChunksRequestDto> CreateRequests { get; } = [];
 
@@ -682,7 +682,7 @@ namespace Cotton.Sync.Tests.Remote
             }
         }
 
-        private sealed class FakeNodeClient : ICottonNodeClient
+        private class FakeNodeClient : ICottonNodeClient
         {
             public Dictionary<Guid, List<NodeDto>> Children { get; } = [];
 

@@ -5,7 +5,7 @@ using Cotton.Sync.Desktop.Shell;
 
 namespace Cotton.Sync.Desktop.Tests.Shell
 {
-    public sealed class DesktopWindowLifecyclePolicyTests
+    public class DesktopWindowLifecyclePolicyTests
     {
         [Test]
         public void ResolveCloseAction_HidesToTrayWhenTrayLifecycleIsAvailable()

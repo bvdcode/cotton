@@ -5,7 +5,7 @@ using Cotton.Sync.App.Platform;
 
 namespace Cotton.Sync.App.Tests.Platform
 {
-    public sealed class ProcessPlatformCommandServiceTests
+    public class ProcessPlatformCommandServiceTests
     {
         [Test]
         public void OpenFolderAsync_RejectsEmptyPath()

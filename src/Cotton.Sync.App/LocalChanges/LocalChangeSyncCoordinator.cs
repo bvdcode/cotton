@@ -11,7 +11,7 @@ namespace Cotton.Sync.App.LocalChanges
     /// <summary>
     /// Watches local sync roots and requests debounced sync passes.
     /// </summary>
-    public sealed class LocalChangeSyncCoordinator : ILocalChangeSyncCoordinator
+    public class LocalChangeSyncCoordinator : ILocalChangeSyncCoordinator
     {
         private static readonly TimeSpan DefaultDebounceInterval = TimeSpan.FromMilliseconds(750);
 
@@ -267,7 +267,7 @@ namespace Cotton.Sync.App.LocalChanges
             await Task.WhenAll(runners).WaitAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        private sealed class PendingLocalSyncRequest
+        private class PendingLocalSyncRequest
         {
             public PendingLocalSyncRequest(CancellationTokenSource cancellation, string changedPath)
             {

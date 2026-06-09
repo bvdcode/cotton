@@ -7,7 +7,7 @@ using Microsoft.Win32;
 namespace Cotton.Sync.Desktop.Platform
 {
     [SupportedOSPlatform("windows")]
-    internal sealed class WindowsCurrentUserRunRegistry : IWindowsRunRegistry
+    internal class WindowsCurrentUserRunRegistry : IWindowsRunRegistry
     {
         private const string RegistryKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
 

@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-    internal sealed record DesktopSelfTestItemSnapshot(
+    internal record DesktopSelfTestItemSnapshot(
         string Name,
         bool Passed,
         string Details);

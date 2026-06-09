@@ -5,7 +5,7 @@ using Cotton.Sync.App.SyncPairs;
 
 namespace Cotton.Sync.Desktop.Shell
 {
-    internal sealed class SyncPairValidationException : Exception
+    internal class SyncPairValidationException : Exception
     {
         public SyncPairValidationException(IReadOnlyList<SyncPairValidationError> errors)
             : base(CreateMessage(errors))

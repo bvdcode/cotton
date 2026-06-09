@@ -5,7 +5,7 @@ using Cotton.Sync.Desktop.ViewModels;
 
 namespace Cotton.Sync.Desktop.Tests.ViewModels
 {
-    public sealed class SyncPairRowViewModelTests
+    public class SyncPairRowViewModelTests
     {
         [Test]
         public void StatusIndicator_UsesBrandDotForEnabledIdleAndClassifiesVisibleStates()

@@ -6,7 +6,7 @@ namespace Cotton.Sync.Local
     /// <summary>
     /// Represents a local sync root scan with directories and files.
     /// </summary>
-    public sealed class LocalTreeSnapshot
+    public class LocalTreeSnapshot
     {
         /// <summary>
         /// Gets discovered child directories under the root.

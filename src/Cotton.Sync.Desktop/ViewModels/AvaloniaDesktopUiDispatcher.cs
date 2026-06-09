@@ -5,7 +5,7 @@ using Avalonia.Threading;
 
 namespace Cotton.Sync.Desktop.ViewModels
 {
-    internal sealed class AvaloniaDesktopUiDispatcher : IDesktopUiDispatcher
+    internal class AvaloniaDesktopUiDispatcher : IDesktopUiDispatcher
     {
         public bool CheckAccess()
         {

@@ -8,7 +8,7 @@ using Cotton.Sync.App.SyncPairs;
 
 namespace Cotton.Sync.App.Tests.Supervision
 {
-    public sealed class SyncSupervisorTests
+    public class SyncSupervisorTests
     {
         [Test]
         public async Task StartAsync_CreatesStartsRunnersAndPublishesStatus()
@@ -284,7 +284,7 @@ namespace Cotton.Sync.App.Tests.Supervision
             };
         }
 
-        private sealed class FakeSyncPairSettingsStore : ISyncPairSettingsStore
+        private class FakeSyncPairSettingsStore : ISyncPairSettingsStore
         {
             private readonly IReadOnlyList<SyncPairSettings> _syncPairs;
 
@@ -322,7 +322,7 @@ namespace Cotton.Sync.App.Tests.Supervision
             }
         }
 
-        private sealed class FakeSyncPairRunnerFactory : ISyncPairRunnerFactory
+        private class FakeSyncPairRunnerFactory : ISyncPairRunnerFactory
         {
             public Dictionary<Guid, FakeSyncPairRunner> CreatedRunners { get; } = [];
 
@@ -344,7 +344,7 @@ namespace Cotton.Sync.App.Tests.Supervision
             }
         }
 
-        private sealed class FakeSyncPairRunner : ISyncPairRunner
+        private class FakeSyncPairRunner : ISyncPairRunner
         {
             private readonly SyncPairSettings _syncPair;
             private readonly TaskCompletionSource _stopStarted = CreateCompletionSource();

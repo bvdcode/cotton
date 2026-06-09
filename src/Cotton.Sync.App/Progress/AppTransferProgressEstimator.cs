@@ -6,7 +6,7 @@ namespace Cotton.Sync.App.Progress
     /// <summary>
     /// Calculates rolling speed and remaining-time estimates for one sync-pair transfer stream.
     /// </summary>
-    public sealed class AppTransferProgressEstimator
+    public class AppTransferProgressEstimator
     {
         private static readonly TimeSpan RollingWindow = TimeSpan.FromSeconds(10);
         private static readonly TimeSpan MinimumEstimateSampleDuration = TimeSpan.FromSeconds(1);

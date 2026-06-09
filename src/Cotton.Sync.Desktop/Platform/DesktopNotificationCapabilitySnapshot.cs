@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Platform
 {
-    internal sealed record DesktopNotificationCapabilitySnapshot(
+    internal record DesktopNotificationCapabilitySnapshot(
         DesktopNotificationPlatform Platform,
         string AdapterName,
         bool IsSupported,

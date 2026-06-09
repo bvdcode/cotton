@@ -9,7 +9,7 @@ namespace Cotton.Sync.State
     /// <summary>
     /// Creates a design-time synchronization state context for EF Core tooling.
     /// </summary>
-    public sealed class SyncStateDbContextDesignTimeFactory : IDesignTimeDbContextFactory<SyncStateDbContext>
+    public class SyncStateDbContextDesignTimeFactory : IDesignTimeDbContextFactory<SyncStateDbContext>
     {
         /// <inheritdoc />
         public SyncStateDbContext CreateDbContext(string[] args)

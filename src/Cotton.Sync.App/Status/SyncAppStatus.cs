@@ -8,7 +8,7 @@ namespace Cotton.Sync.App.Status
     /// <summary>
     /// Describes the current user-visible desktop sync application status.
     /// </summary>
-    public sealed class SyncAppStatus
+    public class SyncAppStatus
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="SyncAppStatus" /> class.

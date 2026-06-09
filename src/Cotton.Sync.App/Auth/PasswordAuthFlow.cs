@@ -9,7 +9,7 @@ namespace Cotton.Sync.App.Auth
     /// <summary>
     /// Implements username/password desktop authentication through the Cotton SDK.
     /// </summary>
-    public sealed class PasswordAuthFlow : IAuthFlow
+    public class PasswordAuthFlow : IAuthFlow
     {
         private readonly ICottonAuthClient _authClient;
 

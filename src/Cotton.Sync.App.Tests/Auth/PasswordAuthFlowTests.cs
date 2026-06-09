@@ -7,7 +7,7 @@ using Cotton.Sdk.Auth;
 
 namespace Cotton.Sync.App.Tests.Auth
 {
-    public sealed class PasswordAuthFlowTests
+    public class PasswordAuthFlowTests
     {
         [Test]
         public async Task SignInAsync_MapsRequestAndReturnsSession()
@@ -136,7 +136,7 @@ namespace Cotton.Sync.App.Tests.Auth
             });
         }
 
-        private sealed class FakeCottonAuthClient : ICottonAuthClient
+        private class FakeCottonAuthClient : ICottonAuthClient
         {
             public int LoginCallCount { get; private set; }
 

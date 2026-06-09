@@ -10,7 +10,7 @@ using Cotton.Settings;
 
 namespace Cotton.Sync.Cli.Tests.TestSupport
 {
-    internal sealed class SyncProcessCrashHttpServer : SyncProcessCrashHttpServerBase
+    internal class SyncProcessCrashHttpServer : SyncProcessCrashHttpServerBase
     {
         private readonly TaskCompletionSource _fileCommitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource _releaseCreateResponse = new(TaskCreationOptions.RunContinuationsAsynchronously);

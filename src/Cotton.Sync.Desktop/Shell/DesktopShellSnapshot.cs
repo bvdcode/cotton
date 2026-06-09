@@ -6,7 +6,7 @@ namespace Cotton.Sync.Desktop.Shell
     using Cotton.Sync.App.Preferences;
     using Cotton.Sync.Desktop.Platform;
 
-    internal sealed record DesktopShellSnapshot(
+    internal record DesktopShellSnapshot(
         Uri? ServerUrl,
         string? AccountName,
         string? RememberedUsername,

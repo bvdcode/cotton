@@ -6,7 +6,7 @@ namespace Cotton.Sync.App.Auth
     /// <summary>
     /// No-op session revocation handler.
     /// </summary>
-    public sealed class NullSessionRevocationHandler : ISessionRevocationHandler
+    public class NullSessionRevocationHandler : ISessionRevocationHandler
     {
         /// <summary>
         /// Gets the singleton no-op instance.

@@ -6,7 +6,7 @@ namespace Cotton.Sync.State
     /// <summary>
     /// Represents a relative sync path that cannot be synchronized safely across supported platforms.
     /// </summary>
-    public sealed class SyncPathValidationException : ArgumentException
+    public class SyncPathValidationException : ArgumentException
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="SyncPathValidationException" /> class.

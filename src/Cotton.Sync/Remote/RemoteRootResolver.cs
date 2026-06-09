@@ -9,7 +9,7 @@ namespace Cotton.Sync.Remote
     /// <summary>
     /// Resolves or creates remote folder roots through the SDK node API.
     /// </summary>
-    public sealed class RemoteRootResolver : IRemoteRootResolver
+    public class RemoteRootResolver : IRemoteRootResolver
     {
         private const int DefaultPageSize = 100;
         private readonly ICottonNodeClient _nodes;

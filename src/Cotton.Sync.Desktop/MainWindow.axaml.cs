@@ -18,7 +18,7 @@ namespace Cotton.Sync.Desktop
     /// <summary>
     /// Main desktop synchronization shell window.
     /// </summary>
-    public sealed partial class MainWindow : Window
+    public partial class MainWindow : Window
     {
         private const double DashboardHeight = 540;
         private const double DashboardMinHeight = 520;

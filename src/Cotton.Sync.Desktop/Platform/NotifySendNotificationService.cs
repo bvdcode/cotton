@@ -6,7 +6,7 @@ using System.Diagnostics;
 
 namespace Cotton.Sync.Desktop.Platform
 {
-    internal sealed class NotifySendNotificationService : IDesktopNotificationService
+    internal class NotifySendNotificationService : IDesktopNotificationService
     {
         private readonly string _executablePath;
         private readonly string? _iconPath;

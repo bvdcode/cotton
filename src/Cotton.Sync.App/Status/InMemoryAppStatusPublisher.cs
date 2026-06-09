@@ -6,7 +6,7 @@ namespace Cotton.Sync.App.Status
     /// <summary>
     /// Stores the latest application status and publishes snapshots to subscribers.
     /// </summary>
-    public sealed class InMemoryAppStatusPublisher : IAppStatusPublisher
+    public class InMemoryAppStatusPublisher : IAppStatusPublisher
     {
         private readonly object _gate = new();
         private readonly List<IObserver<SyncAppStatus>> _observers = [];
@@ -72,7 +72,7 @@ namespace Cotton.Sync.App.Status
             }
         }
 
-        private sealed class Subscription : IDisposable
+        private class Subscription : IDisposable
         {
             private readonly IObserver<SyncAppStatus> _observer;
             private readonly InMemoryAppStatusPublisher _publisher;

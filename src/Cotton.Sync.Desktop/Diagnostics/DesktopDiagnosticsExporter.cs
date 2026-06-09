@@ -11,7 +11,7 @@ using Cotton.Sync.Desktop.Composition;
 
 namespace Cotton.Sync.Desktop.Diagnostics
 {
-    internal sealed class DesktopDiagnosticsExporter
+    internal class DesktopDiagnosticsExporter
     {
         private const string DiagnosticsDirectoryName = "diagnostics";
         private const string DiagnosticsJsonEntryName = "diagnostics.json";

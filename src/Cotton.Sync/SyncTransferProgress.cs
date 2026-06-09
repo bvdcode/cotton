@@ -8,7 +8,7 @@ namespace Cotton.Sync
     /// <summary>
     /// Describes live progress for one file transfer.
     /// </summary>
-    public sealed class SyncTransferProgress
+    public class SyncTransferProgress
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="SyncTransferProgress" /> class.

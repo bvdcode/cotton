@@ -5,7 +5,7 @@ using Cotton.Sync.Desktop.ViewModels;
 
 namespace Cotton.Sync.Desktop.Tests.ViewModels
 {
-    public sealed class DesktopFeatureFlagsTests
+    public class DesktopFeatureFlagsTests
     {
         [TestCase("1")]
         [TestCase("true")]

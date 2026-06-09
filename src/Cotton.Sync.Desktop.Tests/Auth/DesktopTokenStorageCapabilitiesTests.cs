@@ -7,7 +7,7 @@ using Cotton.Sync.Desktop.Auth;
 
 namespace Cotton.Sync.Desktop.Tests.Auth
 {
-    public sealed class DesktopTokenStorageCapabilitiesTests
+    public class DesktopTokenStorageCapabilitiesTests
     {
         [Test]
         public void CreateSnapshot_MarksRestrictedFileProtectorAsDevelopmentFallback()
@@ -108,7 +108,7 @@ namespace Cotton.Sync.Desktop.Tests.Auth
             });
         }
 
-        private sealed class NoopSecretToolProcessRunner : ISecretToolProcessRunner
+        private class NoopSecretToolProcessRunner : ISecretToolProcessRunner
         {
             public Task RunAsync(
                 System.Diagnostics.ProcessStartInfo startInfo,
@@ -124,7 +124,7 @@ namespace Cotton.Sync.Desktop.Tests.Auth
             }
         }
 
-        private sealed class RoundtripSecretToolProcessRunner : ISecretToolProcessRunner
+        private class RoundtripSecretToolProcessRunner : ISecretToolProcessRunner
         {
             private readonly Dictionary<string, string> _secrets = [];
 
@@ -178,7 +178,7 @@ namespace Cotton.Sync.Desktop.Tests.Auth
             }
         }
 
-        private sealed class FailingSecretToolProcessRunner : ISecretToolProcessRunner
+        private class FailingSecretToolProcessRunner : ISecretToolProcessRunner
         {
             public Task RunAsync(
                 ProcessStartInfo startInfo,

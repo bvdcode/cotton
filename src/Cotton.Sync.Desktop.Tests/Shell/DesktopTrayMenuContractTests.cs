@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Tests.Shell
 {
-    public sealed class DesktopTrayMenuContractTests
+    public class DesktopTrayMenuContractTests
     {
         [Test]
         public void TrayMenu_UsesDeterministicFolderAndCloudLabels()

@@ -12,7 +12,7 @@ namespace Cotton.Sync.App.RemoteChanges
     /// <summary>
     /// Listens to remote realtime events and requests debounced sync passes.
     /// </summary>
-    public sealed class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoordinator
+    public class RealtimeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoordinator
     {
         private static readonly TimeSpan DefaultDebounceInterval = TimeSpan.FromMilliseconds(750);
 
@@ -316,7 +316,7 @@ namespace Cotton.Sync.App.RemoteChanges
             await Task.WhenAll(runners).WaitAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        private sealed class PendingRemoteSyncRequest
+        private class PendingRemoteSyncRequest
         {
             public PendingRemoteSyncRequest(CancellationTokenSource cancellation, string methodName)
             {

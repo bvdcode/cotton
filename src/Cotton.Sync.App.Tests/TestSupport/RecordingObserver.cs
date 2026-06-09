@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.App.Tests.TestSupport
 {
-    internal sealed class RecordingObserver<T> : IObserver<T>
+    internal class RecordingObserver<T> : IObserver<T>
     {
         private readonly List<T> _values = [];
 

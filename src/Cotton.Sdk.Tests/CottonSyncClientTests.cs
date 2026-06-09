@@ -11,7 +11,7 @@ using Cotton.Sdk.Tests.Fakes;
 
 namespace Cotton.Sdk.Tests
 {
-    public sealed class CottonSyncClientTests
+    public class CottonSyncClientTests
     {
         [Test]
         public async Task GetChangesAsync_MapsCursorRequestAndResponse()

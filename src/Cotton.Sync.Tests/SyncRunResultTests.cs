@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Tests
 {
-    public sealed class SyncRunResultTests
+    public class SyncRunResultTests
     {
         [Test]
         public void RecordActivity_CapsStoredActivitiesButKeepsActionRequiredSummary()

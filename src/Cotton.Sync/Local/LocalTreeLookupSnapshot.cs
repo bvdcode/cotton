@@ -6,7 +6,7 @@ namespace Cotton.Sync.Local
     /// <summary>
     /// Represents local scan results keyed by normalized relative path.
     /// </summary>
-    public sealed class LocalTreeLookupSnapshot
+    public class LocalTreeLookupSnapshot
     {
         /// <summary>
         /// Gets discovered child directories by normalized relative path key.

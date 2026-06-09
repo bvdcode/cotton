@@ -9,7 +9,7 @@ using Cotton.Sync.Local;
 
 namespace Cotton.Sync.App.Tests.Runners
 {
-    public sealed class SyncPairRunnerTests
+    public class SyncPairRunnerTests
     {
         [Test]
         public async Task StartAsync_SetsIdleForEnabledPair()
@@ -523,7 +523,7 @@ namespace Cotton.Sync.App.Tests.Runners
             };
         }
 
-        private sealed class FakeSyncPairWork : ISyncPairWork
+        private class FakeSyncPairWork : ISyncPairWork
         {
             private readonly Queue<Exception> _failures = [];
 
@@ -563,7 +563,7 @@ namespace Cotton.Sync.App.Tests.Runners
             }
         }
 
-        private sealed class ReleasingLockedFileSyncPairWork : ISyncPairWork
+        private class ReleasingLockedFileSyncPairWork : ISyncPairWork
         {
             private readonly Action _releaseLock;
             private readonly LocalFileScanner _scanner = new();
@@ -595,7 +595,7 @@ namespace Cotton.Sync.App.Tests.Runners
             }
         }
 
-        private sealed class CancellationObservingSyncPairWork : ISyncPairWork
+        private class CancellationObservingSyncPairWork : ISyncPairWork
         {
             private readonly TaskCompletionSource _cancellationObserved = CreateCompletionSource();
             private readonly TaskCompletionSource _runStarted = CreateCompletionSource();
@@ -641,7 +641,7 @@ namespace Cotton.Sync.App.Tests.Runners
             }
         }
 
-        private sealed class BlockingFirstRunSyncPairWork : ISyncPairWork
+        private class BlockingFirstRunSyncPairWork : ISyncPairWork
         {
             private readonly TaskCompletionSource _runStarted = CreateCompletionSource();
             private readonly TaskCompletionSource _releaseRun = CreateCompletionSource();
@@ -674,7 +674,7 @@ namespace Cotton.Sync.App.Tests.Runners
             }
         }
 
-        private sealed class BlockingSyncPairWork : ISyncPairWork
+        private class BlockingSyncPairWork : ISyncPairWork
         {
             private readonly object _gate = new();
             private TaskCompletionSource _currentRunStarted = CreateCompletionSource();
@@ -737,7 +737,7 @@ namespace Cotton.Sync.App.Tests.Runners
             }
         }
 
-        private sealed class TestIOException : IOException
+        private class TestIOException : IOException
         {
             public TestIOException(int hresult)
                 : base("Synthetic I/O failure.")

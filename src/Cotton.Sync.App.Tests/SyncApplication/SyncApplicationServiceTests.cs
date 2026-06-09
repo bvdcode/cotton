@@ -15,7 +15,7 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.App.Tests.SyncApplication
 {
-    public sealed class SyncApplicationServiceTests
+    public class SyncApplicationServiceTests
     {
         [Test]
         public async Task SignInAsync_DelegatesToAuthFlow()
@@ -861,7 +861,7 @@ namespace Cotton.Sync.App.Tests.SyncApplication
             };
         }
 
-        private sealed class InMemorySyncPairSettingsStore : ISyncPairSettingsStore
+        private class InMemorySyncPairSettingsStore : ISyncPairSettingsStore
         {
             private readonly Dictionary<Guid, SyncPairSettings> _syncPairs = [];
 
@@ -900,7 +900,7 @@ namespace Cotton.Sync.App.Tests.SyncApplication
             }
         }
 
-        private sealed class FakeSyncStateStore : ISyncStateStore
+        private class FakeSyncStateStore : ISyncStateStore
         {
             public int InitializeCallCount { get; private set; }
 
@@ -987,7 +987,7 @@ namespace Cotton.Sync.App.Tests.SyncApplication
             }
         }
 
-        private sealed class FakeSyncPairPrerequisiteValidator : ISyncPairPrerequisiteValidator
+        private class FakeSyncPairPrerequisiteValidator : ISyncPairPrerequisiteValidator
         {
             private readonly IReadOnlyList<SyncPairValidationError> _errors;
 
@@ -1007,7 +1007,7 @@ namespace Cotton.Sync.App.Tests.SyncApplication
             }
         }
 
-        private sealed class FakeAppPreferencesStore : IAppPreferencesStore
+        private class FakeAppPreferencesStore : IAppPreferencesStore
         {
             public AppPreferences Preferences { get; } = new();
 
@@ -1036,7 +1036,7 @@ namespace Cotton.Sync.App.Tests.SyncApplication
             }
         }
 
-        private sealed class FakeAuthFlow : IAuthFlow
+        private class FakeAuthFlow : IAuthFlow
         {
             public AuthSession Session { get; } = new(Guid.NewGuid(), "vadim", "vadim@example.test", false);
 
@@ -1070,7 +1070,7 @@ namespace Cotton.Sync.App.Tests.SyncApplication
             }
         }
 
-        private sealed class FakeAppCodeBrowserAuthFlow : IAppCodeBrowserAuthFlow
+        private class FakeAppCodeBrowserAuthFlow : IAppCodeBrowserAuthFlow
         {
             public AuthSession Session { get; } = new(Guid.NewGuid(), "browser", "browser@example.test", false);
 
@@ -1088,7 +1088,7 @@ namespace Cotton.Sync.App.Tests.SyncApplication
             }
         }
 
-        private sealed class FakeSyncSupervisor : ISyncSupervisor
+        private class FakeSyncSupervisor : ISyncSupervisor
         {
             private readonly ICollection<string>? _calls;
 
@@ -1165,7 +1165,7 @@ namespace Cotton.Sync.App.Tests.SyncApplication
             }
         }
 
-        private sealed class FakePlatformCommandService : IPlatformCommandService
+        private class FakePlatformCommandService : IPlatformCommandService
         {
             public string? LastOpenedFolder { get; private set; }
 
@@ -1190,7 +1190,7 @@ namespace Cotton.Sync.App.Tests.SyncApplication
             }
         }
 
-        private sealed class FakeLocalChangeSyncCoordinator : ILocalChangeSyncCoordinator
+        private class FakeLocalChangeSyncCoordinator : ILocalChangeSyncCoordinator
         {
             private readonly ICollection<string>? _calls;
 
@@ -1225,7 +1225,7 @@ namespace Cotton.Sync.App.Tests.SyncApplication
             }
         }
 
-        private sealed class FakeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoordinator
+        private class FakeRemoteChangeSyncCoordinator : IRemoteChangeSyncCoordinator
         {
             private readonly ICollection<string>? _calls;
 
@@ -1260,7 +1260,7 @@ namespace Cotton.Sync.App.Tests.SyncApplication
             }
         }
 
-        private sealed class FakePeriodicSyncCoordinator : IPeriodicSyncCoordinator
+        private class FakePeriodicSyncCoordinator : IPeriodicSyncCoordinator
         {
             private readonly ICollection<string>? _calls;
 

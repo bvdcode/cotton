@@ -6,7 +6,7 @@ namespace Cotton.Sync
     /// <summary>
     /// Contains the activities emitted by one synchronization pass.
     /// </summary>
-    public sealed class SyncRunResult
+    public class SyncRunResult
     {
         private string? _actionRequiredMessage;
         private bool _requiresUserAction;

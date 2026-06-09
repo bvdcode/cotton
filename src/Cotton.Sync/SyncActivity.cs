@@ -6,7 +6,7 @@ namespace Cotton.Sync
     /// <summary>
     /// Represents one synchronization action or decision.
     /// </summary>
-    public sealed class SyncActivity
+    public class SyncActivity
     {
         /// <summary>
         /// Gets or sets the activity kind.

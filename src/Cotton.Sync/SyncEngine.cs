@@ -15,7 +15,7 @@ namespace Cotton.Sync
     /// <summary>
     /// Reconciles local and remote file snapshots for one synchronization pair.
     /// </summary>
-    public sealed class SyncEngine : ISyncEngine
+    public class SyncEngine : ISyncEngine
     {
         private const int RunProgressDetailedItemInterval = 25;
         private const int RunProgressDetailedItemLimit = 50_000;
@@ -2128,7 +2128,7 @@ namespace Cotton.Sync
             Remote,
         }
 
-        private sealed class DirectoryContentIndex
+        private class DirectoryContentIndex
         {
             private readonly HashSet<string> _directoryKeysWithChildren;
 
@@ -2178,7 +2178,7 @@ namespace Cotton.Sync
             }
         }
 
-        private sealed class LocalTreeScanProgressReporter : IProgress<LocalTreeScanProgress>
+        private class LocalTreeScanProgressReporter : IProgress<LocalTreeScanProgress>
         {
             private readonly SyncRunOptions _options;
             private readonly DateTime _startedAtUtc;
@@ -2202,7 +2202,7 @@ namespace Cotton.Sync
             }
         }
 
-        private sealed class RemoteTreeScanProgressReporter : IProgress<RemoteTreeScanProgress>
+        private class RemoteTreeScanProgressReporter : IProgress<RemoteTreeScanProgress>
         {
             private readonly SyncRunOptions _options;
             private readonly DateTime _startedAtUtc;
@@ -2226,7 +2226,7 @@ namespace Cotton.Sync
             }
         }
 
-        private sealed class SyncTreeLookups
+        private class SyncTreeLookups
         {
             public SyncTreeLookups(
                 Dictionary<string, LocalDirectorySnapshot> localDirectoriesByPath,
@@ -2253,7 +2253,7 @@ namespace Cotton.Sync
             public NodeDto RemoteRootNode { get; }
         }
 
-        private sealed class SyncDeleteGuard
+        private class SyncDeleteGuard
         {
             private readonly int _maximumLocalDeletes;
             private readonly int _maximumRemoteDeletes;

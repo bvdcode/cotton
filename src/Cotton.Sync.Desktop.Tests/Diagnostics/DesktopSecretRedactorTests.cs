@@ -5,7 +5,7 @@ using Cotton.Sync.Desktop.Diagnostics;
 
 namespace Cotton.Sync.Desktop.Tests.Diagnostics
 {
-    public sealed class DesktopSecretRedactorTests
+    public class DesktopSecretRedactorTests
     {
         [Test]
         public void Redact_RemovesBearerToken()

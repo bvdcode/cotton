@@ -6,7 +6,7 @@ namespace Cotton.Sync.Local
     /// <summary>
     /// Represents a local file or directory that cannot be read because permission was denied.
     /// </summary>
-    public sealed class LocalFilePermissionDeniedException : UnauthorizedAccessException
+    public class LocalFilePermissionDeniedException : UnauthorizedAccessException
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="LocalFilePermissionDeniedException" /> class.

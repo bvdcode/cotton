@@ -6,7 +6,7 @@ namespace Cotton.Sync.App.SyncPairs
     /// <summary>
     /// Validates sync-pair prerequisites that require local or remote I/O.
     /// </summary>
-    public sealed class SyncPairPrerequisiteValidator : ISyncPairPrerequisiteValidator
+    public class SyncPairPrerequisiteValidator : ISyncPairPrerequisiteValidator
     {
         private readonly ILocalSyncRootProbe _localRoots;
         private readonly IRemoteSyncRootProbe _remoteRoots;

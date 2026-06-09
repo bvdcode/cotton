@@ -6,7 +6,7 @@ namespace Cotton.Sync.App.Progress
     /// <summary>
     /// Contains calculated transfer speed and remaining-time estimates.
     /// </summary>
-    public sealed class AppTransferProgressEstimate
+    public class AppTransferProgressEstimate
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="AppTransferProgressEstimate" /> class.

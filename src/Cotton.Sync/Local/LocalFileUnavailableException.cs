@@ -6,7 +6,7 @@ namespace Cotton.Sync.Local
     /// <summary>
     /// Represents a local file that could not be scanned safely.
     /// </summary>
-    public sealed class LocalFileUnavailableException : IOException
+    public class LocalFileUnavailableException : IOException
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="LocalFileUnavailableException" /> class.

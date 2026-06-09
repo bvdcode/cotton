@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-    internal sealed record DesktopTransferProgressSnapshot(
+    internal record DesktopTransferProgressSnapshot(
         Guid SyncPairId,
         SyncTransferDirection Direction,
         string RelativePath,

@@ -10,7 +10,7 @@ namespace Cotton.Sync.App.Continuous
     /// <summary>
     /// Requests periodic full reconciliation as a safety fallback.
     /// </summary>
-    public sealed class PeriodicSyncCoordinator : IPeriodicSyncCoordinator
+    public class PeriodicSyncCoordinator : IPeriodicSyncCoordinator
     {
         /// <summary>
         /// Default periodic safety sync interval.

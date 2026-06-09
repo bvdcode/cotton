@@ -8,7 +8,7 @@ using Cotton.Sync.App.Tests.TestSupport;
 
 namespace Cotton.Sync.App.Tests.Activities
 {
-    public sealed class AppSyncActivityTests
+    public class AppSyncActivityTests
     {
         [Test]
         public void Constructor_RejectsUnknownType()

@@ -10,7 +10,7 @@ using Cotton.Sync.App.Tests.TestSupport;
 
 namespace Cotton.Sync.App.Tests.Auth
 {
-    public sealed class SessionRevocationHandlerTests
+    public class SessionRevocationHandlerTests
     {
         [Test]
         public async Task HandleSessionRevokedAsync_StopsBackgroundWorkAndSignsOut()
@@ -81,7 +81,7 @@ namespace Cotton.Sync.App.Tests.Auth
             });
         }
 
-        private sealed class FakeAuthFlow : IAuthFlow
+        private class FakeAuthFlow : IAuthFlow
         {
             public Exception? SignOutException { get; init; }
 
@@ -108,7 +108,7 @@ namespace Cotton.Sync.App.Tests.Auth
             }
         }
 
-        private sealed class FakeLocalChangeSyncCoordinator : ILocalChangeSyncCoordinator
+        private class FakeLocalChangeSyncCoordinator : ILocalChangeSyncCoordinator
         {
             public int StopCallCount { get; private set; }
 
@@ -124,7 +124,7 @@ namespace Cotton.Sync.App.Tests.Auth
             }
         }
 
-        private sealed class FakePeriodicSyncCoordinator : IPeriodicSyncCoordinator
+        private class FakePeriodicSyncCoordinator : IPeriodicSyncCoordinator
         {
             public int StopCallCount { get; private set; }
 
@@ -140,7 +140,7 @@ namespace Cotton.Sync.App.Tests.Auth
             }
         }
 
-        private sealed class FakeSyncSupervisor : ISyncSupervisor
+        private class FakeSyncSupervisor : ISyncSupervisor
         {
             public IReadOnlyList<SyncPairStatus> CurrentStatuses => [];
 

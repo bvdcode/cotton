@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Platform
 {
-    internal sealed record DesktopPlatformCapabilitySnapshot(
+    internal record DesktopPlatformCapabilitySnapshot(
         string OperatingSystemName,
         string DesktopSession,
         string CurrentDesktop,

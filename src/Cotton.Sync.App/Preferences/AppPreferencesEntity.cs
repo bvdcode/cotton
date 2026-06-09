@@ -7,7 +7,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Cotton.Sync.App.Preferences
 {
     [Table("app_preferences")]
-    internal sealed class AppPreferencesEntity
+    internal class AppPreferencesEntity
     {
         [Key]
         [Column("id")]

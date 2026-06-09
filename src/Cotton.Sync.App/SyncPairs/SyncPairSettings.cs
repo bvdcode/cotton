@@ -6,7 +6,7 @@ namespace Cotton.Sync.App.SyncPairs
     /// <summary>
     /// Represents one configured local-to-remote synchronization pair.
     /// </summary>
-    public sealed class SyncPairSettings
+    public class SyncPairSettings
     {
         /// <summary>
         /// Gets or sets the stable local client identifier for this sync pair.

@@ -27,7 +27,7 @@ using AppTransferProgress = Cotton.Sync.App.Progress.AppTransferProgress;
 
 namespace Cotton.Sync.Desktop.Shell
 {
-    internal sealed class DesktopShellController : IDesktopShellController
+    internal class DesktopShellController : IDesktopShellController
     {
         private const string SelfTestSyncPairId = "__desktop_self_test__";
 
@@ -1402,7 +1402,7 @@ namespace Cotton.Sync.Desktop.Shell
                 + ". Configure Windows DPAPI or Linux Secret Service before signing in.";
         }
 
-        private sealed class StatusObserver : IObserver<SyncAppStatus>
+        private class StatusObserver : IObserver<SyncAppStatus>
         {
             private readonly DesktopShellController _controller;
 
@@ -1426,7 +1426,7 @@ namespace Cotton.Sync.Desktop.Shell
             }
         }
 
-        private sealed class ActivityObserver : IObserver<AppSyncActivity>
+        private class ActivityObserver : IObserver<AppSyncActivity>
         {
             private readonly DesktopShellController _controller;
 
@@ -1450,7 +1450,7 @@ namespace Cotton.Sync.Desktop.Shell
             }
         }
 
-        private sealed class SessionRevocationObserver : IObserver<SessionRevocationEvent>
+        private class SessionRevocationObserver : IObserver<SessionRevocationEvent>
         {
             private readonly DesktopShellController _controller;
 
@@ -1474,7 +1474,7 @@ namespace Cotton.Sync.Desktop.Shell
             }
         }
 
-        private sealed class TransferProgressObserver : IObserver<AppTransferProgress>
+        private class TransferProgressObserver : IObserver<AppTransferProgress>
         {
             private readonly DesktopShellController _controller;
 
@@ -1498,7 +1498,7 @@ namespace Cotton.Sync.Desktop.Shell
             }
         }
 
-        private sealed class RunProgressObserver : IObserver<AppRunProgress>
+        private class RunProgressObserver : IObserver<AppRunProgress>
         {
             private readonly DesktopShellController _controller;
 

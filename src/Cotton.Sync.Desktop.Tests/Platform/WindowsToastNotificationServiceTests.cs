@@ -6,7 +6,7 @@ using Cotton.Sync.Desktop.Platform;
 
 namespace Cotton.Sync.Desktop.Tests.Platform
 {
-    public sealed class WindowsToastNotificationServiceTests
+    public class WindowsToastNotificationServiceTests
     {
         [Test]
         public void CreateStartInfo_UsesEncodedPowerShellCommandWithoutShell()

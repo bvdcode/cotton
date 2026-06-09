@@ -9,7 +9,7 @@ namespace Cotton.Sync.App.Runners
     /// <summary>
     /// Wraps sync pair work with durable remote change-feed checkpoint handling.
     /// </summary>
-    public sealed class RemoteChangeAwareSyncPairWork : ISyncPairWork
+    public class RemoteChangeAwareSyncPairWork : ISyncPairWork
     {
         private readonly ISyncPairWork _inner;
         private readonly IRemoteChangeFeedReader _remoteChanges;

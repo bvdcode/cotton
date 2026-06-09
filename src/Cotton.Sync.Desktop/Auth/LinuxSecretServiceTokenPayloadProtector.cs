@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Cotton.Sync.Desktop.Auth
 {
-    internal sealed class LinuxSecretServiceTokenPayloadProtector : ITokenPayloadProtector, IDeletableTokenPayloadProtector
+    internal class LinuxSecretServiceTokenPayloadProtector : ITokenPayloadProtector, IDeletableTokenPayloadProtector
     {
         private const string ApplicationAttribute = "application";
         private const string ApplicationValue = "cotton-sync-desktop";

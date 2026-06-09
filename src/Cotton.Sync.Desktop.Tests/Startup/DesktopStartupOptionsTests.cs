@@ -5,7 +5,7 @@ using Cotton.Sync.Desktop.Startup;
 
 namespace Cotton.Sync.Desktop.Tests.Startup
 {
-    public sealed class DesktopStartupOptionsTests
+    public class DesktopStartupOptionsTests
     {
         [Test]
         public void Parse_LoadsServerUrlAndUsername()

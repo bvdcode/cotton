@@ -12,7 +12,7 @@ namespace Cotton.Sync.App.SyncPairs
     /// <summary>
     /// Checks remote sync roots through the Cotton SDK.
     /// </summary>
-    public sealed class SdkRemoteSyncRootProbe : IRemoteSyncRootProbe
+    public class SdkRemoteSyncRootProbe : IRemoteSyncRootProbe
     {
         private readonly ILogger<SdkRemoteSyncRootProbe> _logger;
         private readonly ICottonNodeClient _nodes;

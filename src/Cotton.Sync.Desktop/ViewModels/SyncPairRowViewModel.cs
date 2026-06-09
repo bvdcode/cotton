@@ -8,7 +8,7 @@ namespace Cotton.Sync.Desktop.ViewModels
     /// <summary>
     /// Displays one configured synchronization pair.
     /// </summary>
-    internal sealed class SyncPairRowViewModel : ViewModelBase
+    internal class SyncPairRowViewModel : ViewModelBase
     {
         private string _displayName = string.Empty;
         private string _editableDisplayName = string.Empty;

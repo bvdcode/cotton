@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cotton.Sync.Desktop.Diagnostics
 {
-    internal sealed class DesktopTraceLogger : ILogger
+    internal class DesktopTraceLogger : ILogger
     {
         private readonly string _categoryName;
 
@@ -43,7 +43,7 @@ namespace Cotton.Sync.Desktop.Diagnostics
             Trace.WriteLine(DesktopSecretRedactor.Redact(message));
         }
 
-        private sealed class NullScope : IDisposable
+        private class NullScope : IDisposable
         {
             public static readonly NullScope Instance = new();
 

@@ -6,7 +6,7 @@ using Cotton.Sync.Desktop.Startup;
 
 namespace Cotton.Sync.Desktop.Tests.Shell
 {
-    public sealed class VisualSmokeShellControllerTests
+    public class VisualSmokeShellControllerTests
     {
         [Test]
         public async Task LoadAsync_ReturnsSignedInDashboardSnapshot()

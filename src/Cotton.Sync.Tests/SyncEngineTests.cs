@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cotton.Sync.Tests
 {
-    public sealed class SyncEngineTests
+    public class SyncEngineTests
     {
         private readonly Guid _remoteRootNodeId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         private string _root = string.Empty;
@@ -2188,7 +2188,7 @@ namespace Cotton.Sync.Tests
             return Convert.ToHexStringLower(SHA256.HashData(bytes));
         }
 
-        private sealed class FakeLocalFileScanner : ILocalFileScanner, ILocalTreeScanner
+        private class FakeLocalFileScanner : ILocalFileScanner, ILocalTreeScanner
         {
             public FakeLocalFileScanner(params LocalFileSnapshot[] files)
             {
@@ -2218,7 +2218,7 @@ namespace Cotton.Sync.Tests
             }
         }
 
-        private sealed class MetadataOnlyLocalFileScanner :
+        private class MetadataOnlyLocalFileScanner :
             ILocalFileScanner,
             ILocalTreeScanner,
             ILocalFileMetadataTreeScanner,
@@ -2302,7 +2302,7 @@ namespace Cotton.Sync.Tests
             }
         }
 
-        private sealed class LookupOnlyLocalFileScanner :
+        private class LookupOnlyLocalFileScanner :
             ILocalFileScanner,
             ILocalTreeScanner,
             ILocalFileMetadataTreeLookupScanner,
@@ -2365,7 +2365,7 @@ namespace Cotton.Sync.Tests
             }
         }
 
-        private sealed class FakeRemoteTreeCrawler : IRemoteTreeCrawler
+        private class FakeRemoteTreeCrawler : IRemoteTreeCrawler
         {
             private readonly Queue<RemoteTreeSnapshot> _snapshots;
             private RemoteTreeSnapshot _lastSnapshot;
@@ -2392,7 +2392,7 @@ namespace Cotton.Sync.Tests
             }
         }
 
-        private sealed class FakeRemoteTreeProgressCrawler : IRemoteTreeProgressCrawler
+        private class FakeRemoteTreeProgressCrawler : IRemoteTreeProgressCrawler
         {
             private readonly RemoteTreeSnapshot _snapshot;
             private readonly IReadOnlyList<string> _progressPaths;
@@ -2426,7 +2426,7 @@ namespace Cotton.Sync.Tests
             }
         }
 
-        private sealed class LookupOnlyRemoteTreeCrawler : IRemoteTreeLookupCrawler
+        private class LookupOnlyRemoteTreeCrawler : IRemoteTreeLookupCrawler
         {
             private readonly RemoteTreeSnapshot _snapshot;
 
@@ -2480,7 +2480,7 @@ namespace Cotton.Sync.Tests
             }
         }
 
-        private sealed class RecordingLogger<T> : ILogger<T>
+        private class RecordingLogger<T> : ILogger<T>
         {
             public List<(LogLevel Level, string Message)> Entries { get; } = [];
 
@@ -2506,7 +2506,7 @@ namespace Cotton.Sync.Tests
             }
         }
 
-        private sealed class RecordingProgress<T> : IProgress<T>
+        private class RecordingProgress<T> : IProgress<T>
         {
             private readonly Action<T>? _onReport;
 
@@ -2524,7 +2524,7 @@ namespace Cotton.Sync.Tests
             }
         }
 
-        private sealed class NullScope : IDisposable
+        private class NullScope : IDisposable
         {
             public static readonly NullScope Instance = new();
 
@@ -2533,7 +2533,7 @@ namespace Cotton.Sync.Tests
             }
         }
 
-        private sealed class FakeRemoteFileSynchronizer : IRemoteFileSynchronizer
+        private class FakeRemoteFileSynchronizer : IRemoteFileSynchronizer
         {
             public List<UploadCall> Uploads { get; } = [];
 
@@ -2636,7 +2636,7 @@ namespace Cotton.Sync.Tests
             }
         }
 
-        private sealed class FakeRemoteDirectorySynchronizer : IRemoteDirectorySynchronizer
+        private class FakeRemoteDirectorySynchronizer : IRemoteDirectorySynchronizer
         {
             public List<CreateDirectoryCall> Creates { get; } = [];
 
@@ -2664,9 +2664,9 @@ namespace Cotton.Sync.Tests
             }
         }
 
-        private sealed record CreateDirectoryCall(Guid ParentNodeId, string Name, NodeDto ReturnedNode);
+        private record CreateDirectoryCall(Guid ParentNodeId, string Name, NodeDto ReturnedNode);
 
-        private sealed record UploadCall(
+        private record UploadCall(
             Guid RootNodeId,
             string RelativePath,
             LocalFileSnapshot LocalFile,
@@ -2740,7 +2740,7 @@ namespace Cotton.Sync.Tests
             }
         }
 
-        private sealed class FailingUpsertStateStore : DelegatingStateStore
+        private class FailingUpsertStateStore : DelegatingStateStore
         {
             public FailingUpsertStateStore(ISyncStateStore inner)
                 : base(inner)
@@ -2753,7 +2753,7 @@ namespace Cotton.Sync.Tests
             }
         }
 
-        private sealed class FailingDeleteStateStore : DelegatingStateStore
+        private class FailingDeleteStateStore : DelegatingStateStore
         {
             public FailingDeleteStateStore(ISyncStateStore inner)
                 : base(inner)
@@ -2766,7 +2766,7 @@ namespace Cotton.Sync.Tests
             }
         }
 
-        private sealed class StreamingOnlyStateStore : DelegatingStateStore
+        private class StreamingOnlyStateStore : DelegatingStateStore
         {
             public StreamingOnlyStateStore(ISyncStateStore inner)
                 : base(inner)

@@ -7,7 +7,7 @@ using Cotton.Sync.Desktop.Platform;
 
 namespace Cotton.Sync.Desktop.Tests.Platform
 {
-    public sealed class AvaloniaDesktopThemeServiceTests
+    public class AvaloniaDesktopThemeServiceTests
     {
         [TestCase(AppThemeMode.System, "Default")]
         [TestCase(AppThemeMode.Light, "Light")]

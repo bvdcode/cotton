@@ -10,7 +10,7 @@ namespace Cotton.Sync.App.Runners
     /// <summary>
     /// Creates sync pair runners using a shared sync-work adapter.
     /// </summary>
-    public sealed class SyncPairRunnerFactory : ISyncPairRunnerFactory
+    public class SyncPairRunnerFactory : ISyncPairRunnerFactory
     {
         private readonly SyncPairRunnerRetryOptions _retryOptions;
         private readonly ILoggerFactory _loggerFactory;

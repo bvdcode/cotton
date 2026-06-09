@@ -6,7 +6,7 @@ namespace Cotton.Sync.App.Auth
     /// <summary>
     /// Describes a username/password desktop sign-in attempt.
     /// </summary>
-    public sealed class PasswordSignInRequest
+    public class PasswordSignInRequest
     {
         /// <summary>
         /// Gets or sets the username or email address used for authentication.

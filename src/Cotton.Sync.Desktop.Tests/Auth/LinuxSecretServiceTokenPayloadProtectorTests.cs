@@ -8,7 +8,7 @@ using Cotton.Sync.Desktop.Auth;
 
 namespace Cotton.Sync.Desktop.Tests.Auth
 {
-    public sealed class LinuxSecretServiceTokenPayloadProtectorTests
+    public class LinuxSecretServiceTokenPayloadProtectorTests
     {
         [Test]
         public void CreateStoreStartInfo_UsesSecretToolStoreArguments()
@@ -142,7 +142,7 @@ namespace Cotton.Sync.Desktop.Tests.Auth
             Assert.ThrowsAsync<CryptographicException>(async () => await protector.UnprotectAsync(protectedPayload));
         }
 
-        private sealed class FakeSecretToolProcessRunner : ISecretToolProcessRunner
+        private class FakeSecretToolProcessRunner : ISecretToolProcessRunner
         {
             private readonly Dictionary<string, string> _secrets = [];
 

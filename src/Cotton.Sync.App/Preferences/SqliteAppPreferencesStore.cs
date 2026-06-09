@@ -9,7 +9,7 @@ namespace Cotton.Sync.App.Preferences
     /// <summary>
     /// Persists application preferences in a SQLite database through Entity Framework Core.
     /// </summary>
-    public sealed class SqliteAppPreferencesStore : IAppPreferencesStore
+    public class SqliteAppPreferencesStore : IAppPreferencesStore
     {
         private const int PreferencesId = 1;
 

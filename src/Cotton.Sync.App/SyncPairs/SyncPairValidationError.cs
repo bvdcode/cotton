@@ -6,7 +6,7 @@ namespace Cotton.Sync.App.SyncPairs
     /// <summary>
     /// Describes one validation error for a sync-pair configuration.
     /// </summary>
-    public sealed record SyncPairValidationError(
+    public record SyncPairValidationError(
         SyncPairValidationIssue Issue,
         Guid? SyncPairId,
         Guid? OtherSyncPairId,

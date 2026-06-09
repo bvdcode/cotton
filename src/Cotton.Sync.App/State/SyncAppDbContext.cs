@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Sync.App.State
 {
-    internal sealed class SyncAppDbContext : DbContext
+    internal class SyncAppDbContext : DbContext
     {
         public SyncAppDbContext(DbContextOptions<SyncAppDbContext> options)
             : base(options)

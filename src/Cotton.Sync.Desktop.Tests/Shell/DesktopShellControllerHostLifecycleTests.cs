@@ -28,7 +28,7 @@ using Cotton.Sync.Remote;
 
 namespace Cotton.Sync.Desktop.Tests.Shell
 {
-    public sealed class DesktopShellControllerHostLifecycleTests
+    public class DesktopShellControllerHostLifecycleTests
     {
         private string _tempDirectory = string.Empty;
 
@@ -735,7 +735,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
                 "Development fallback");
         }
 
-        private sealed class QueueingDesktopSyncApplicationFactory : IDesktopSyncApplicationFactory
+        private class QueueingDesktopSyncApplicationFactory : IDesktopSyncApplicationFactory
         {
             private readonly Queue<DesktopSyncApplicationHost> _hosts;
 
@@ -753,7 +753,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             }
         }
 
-        private sealed class FakeDesktopApplicationHost
+        private class FakeDesktopApplicationHost
         {
             private FakeDesktopApplicationHost(Uri serverUrl)
             {
@@ -796,7 +796,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             }
         }
 
-        private sealed class FakeAsyncResource : IAsyncDisposable
+        private class FakeAsyncResource : IAsyncDisposable
         {
             public int DisposeAsyncCalls { get; private set; }
 
@@ -814,7 +814,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             }
         }
 
-        private sealed class FakeSyncApplicationService : ISyncApplicationService
+        private class FakeSyncApplicationService : ISyncApplicationService
         {
             public int RestoreSessionCalls { get; private set; }
 
@@ -966,7 +966,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             }
         }
 
-        private sealed class FakeCottonTokenStore : ICottonTokenStore
+        private class FakeCottonTokenStore : ICottonTokenStore
         {
             private TokenPairDto? _tokens = new()
             {
@@ -995,7 +995,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             }
         }
 
-        private sealed class FakeRemoteRootResolver : IRemoteRootResolver
+        private class FakeRemoteRootResolver : IRemoteRootResolver
         {
             public Task<NodeDto> EnsureAsync(string? remotePath = null, CancellationToken cancellationToken = default)
             {
@@ -1011,7 +1011,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             }
         }
 
-        private sealed class FakeCottonNodeClient : ICottonNodeClient
+        private class FakeCottonNodeClient : ICottonNodeClient
         {
             public Task<NodeDto> ResolveAsync(string? path = null, CancellationToken cancellationToken = default)
             {
@@ -1075,7 +1075,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             }
         }
 
-        private sealed class FakeCottonSyncClient : ICottonSyncClient
+        private class FakeCottonSyncClient : ICottonSyncClient
         {
             public Task<SyncChangesResponseDto> GetChangesAsync(
                 long sinceCursor = 0,
@@ -1091,7 +1091,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             }
         }
 
-        private sealed class FakeAutostartService : IAutostartService
+        private class FakeAutostartService : IAutostartService
         {
             public bool IsSupported => true;
 
@@ -1115,7 +1115,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             }
         }
 
-        private sealed class FakePlatformCommandService : IPlatformCommandService
+        private class FakePlatformCommandService : IPlatformCommandService
         {
             public Task OpenFolderAsync(string localPath, CancellationToken cancellationToken = default)
             {

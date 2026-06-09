@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-    internal sealed record DesktopTrayStatus(
+    internal record DesktopTrayStatus(
         DesktopTrayStatusKind Kind,
         string ToolTipText,
         Uri IconUri);

@@ -5,7 +5,7 @@ using Cotton.Sync.Desktop.Startup;
 
 namespace Cotton.Sync.Desktop.Tests.Startup
 {
-    public sealed class DesktopServerUrlTests
+    public class DesktopServerUrlTests
     {
         [TestCase("app.cottoncloud.dev", "https://app.cottoncloud.dev/")]
         [TestCase(" app.cottoncloud.dev ", "https://app.cottoncloud.dev/")]

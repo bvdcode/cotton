@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-    internal sealed record DesktopNotificationRequest
+    internal record DesktopNotificationRequest
     {
         public DesktopNotificationRequest(
             DesktopNotificationKind kind,

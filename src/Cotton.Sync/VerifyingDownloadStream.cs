@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 
 namespace Cotton.Sync
 {
-    internal sealed class VerifyingDownloadStream : Stream
+    internal class VerifyingDownloadStream : Stream
     {
         private readonly IncrementalHash _hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         private readonly Stream _inner;

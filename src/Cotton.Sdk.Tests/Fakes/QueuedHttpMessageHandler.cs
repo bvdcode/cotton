@@ -7,7 +7,7 @@ using System.Text.Json;
 
 namespace Cotton.Sdk.Tests.Fakes
 {
-    internal sealed class QueuedHttpMessageHandler : HttpMessageHandler
+    internal class QueuedHttpMessageHandler : HttpMessageHandler
     {
         private readonly Queue<Func<HttpRequestMessage, HttpResponseMessage>> _responses = new();
 
@@ -64,7 +64,7 @@ namespace Cotton.Sdk.Tests.Fakes
         }
     }
 
-    internal sealed record HttpRequestMessageSnapshot(
+    internal record HttpRequestMessageSnapshot(
         HttpMethod Method,
         string PathAndQuery,
         string? AuthorizationScheme,

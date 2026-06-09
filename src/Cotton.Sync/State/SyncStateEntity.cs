@@ -14,7 +14,7 @@ namespace Cotton.Sync.State
     [Index(nameof(SyncPairId), nameof(RelativePathKey), IsUnique = true)]
     [Index(nameof(RemoteFileId))]
     [Index(nameof(RemoteNodeId))]
-    public sealed class SyncStateEntity
+    public class SyncStateEntity
     {
         /// <summary>
         /// Gets or sets the database row identifier.

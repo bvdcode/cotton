@@ -8,7 +8,7 @@ using Cotton.Nodes;
 
 namespace Cotton.Sync.Cli.Tests.TestSupport
 {
-    internal sealed class SyncProcessDownloadCrashHttpServer : SyncProcessCrashHttpServerBase
+    internal class SyncProcessDownloadCrashHttpServer : SyncProcessCrashHttpServerBase
     {
         private readonly byte[] _content;
         private readonly TaskCompletionSource _firstDownloadStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);

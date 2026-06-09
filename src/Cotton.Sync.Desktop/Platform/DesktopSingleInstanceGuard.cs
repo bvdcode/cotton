@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace Cotton.Sync.Desktop.Platform
 {
-    internal sealed class DesktopSingleInstanceGuard : IDisposable
+    internal class DesktopSingleInstanceGuard : IDisposable
     {
         private readonly FileStream _lockStream;
         private bool _disposed;

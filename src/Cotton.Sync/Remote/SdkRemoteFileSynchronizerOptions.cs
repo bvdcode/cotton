@@ -6,7 +6,7 @@ namespace Cotton.Sync.Remote
     /// <summary>
     /// Defines SDK-backed remote file synchronization transfer options.
     /// </summary>
-    public sealed class SdkRemoteFileSynchronizerOptions
+    public class SdkRemoteFileSynchronizerOptions
     {
         /// <summary>
         /// Gets or sets an optional chunk size override. When omitted, the server setting is used.

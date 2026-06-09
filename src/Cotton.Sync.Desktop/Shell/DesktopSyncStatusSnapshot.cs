@@ -3,6 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-    internal sealed record DesktopSyncStatusSnapshot(
+    internal record DesktopSyncStatusSnapshot(
         IReadOnlyList<DesktopSyncPairStatusSnapshot> SyncPairs);
 }

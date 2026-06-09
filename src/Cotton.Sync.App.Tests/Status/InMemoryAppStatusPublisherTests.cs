@@ -5,7 +5,7 @@ using Cotton.Sync.App.Status;
 
 namespace Cotton.Sync.App.Tests.Status
 {
-    public sealed class InMemoryAppStatusPublisherTests
+    public class InMemoryAppStatusPublisherTests
     {
         [Test]
         public void Subscribe_ReplaysCurrentStatus()
@@ -112,7 +112,7 @@ namespace Cotton.Sync.App.Tests.Status
                 new DateTime(2026, 6, 3, 10, 0, 0, DateTimeKind.Utc));
         }
 
-        private sealed class RecordingStatusObserver : IObserver<SyncAppStatus>
+        private class RecordingStatusObserver : IObserver<SyncAppStatus>
         {
             public List<SyncAppStatus> Values { get; } = [];
 

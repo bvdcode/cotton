@@ -9,7 +9,7 @@ namespace Cotton.Sync.Remote
     /// <summary>
     /// Performs remote directory mutations through the Cotton SDK node API.
     /// </summary>
-    public sealed class SdkRemoteDirectorySynchronizer : IRemoteDirectorySynchronizer
+    public class SdkRemoteDirectorySynchronizer : IRemoteDirectorySynchronizer
     {
         private readonly ICottonNodeClient _nodes;
 

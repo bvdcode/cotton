@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Tests.Shell
 {
-    public sealed class DesktopSetupVisualContractTests
+    public class DesktopSetupVisualContractTests
     {
         [Test]
         public void Application_DefaultsToDarkThemeForFirstRun()

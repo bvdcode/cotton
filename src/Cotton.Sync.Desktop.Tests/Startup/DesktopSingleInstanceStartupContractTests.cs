@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Tests.Startup
 {
-    public sealed class DesktopSingleInstanceStartupContractTests
+    public class DesktopSingleInstanceStartupContractTests
     {
         [Test]
         public void Program_RequestsExistingInstanceActivationWhenLockIsHeld()

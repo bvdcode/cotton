@@ -10,7 +10,7 @@ namespace Cotton.Sync.Local
     /// <summary>
     /// Scans a local folder and hashes files for synchronization.
     /// </summary>
-    public sealed class LocalFileScanner :
+    public class LocalFileScanner :
         ILocalFileScanner,
         ILocalTreeScanner,
         ILocalFileMetadataTreeScanner,
@@ -458,7 +458,7 @@ namespace Cotton.Sync.Local
 
         private readonly record struct LocalFileMetadata(long Length, DateTime LastWriteUtc);
 
-        private sealed class LocalDirectoryScanFrame : IDisposable
+        private class LocalDirectoryScanFrame : IDisposable
         {
             private readonly IEnumerator<string> _directoryEnumerator;
             private IEnumerator<string>? _fileEnumerator;

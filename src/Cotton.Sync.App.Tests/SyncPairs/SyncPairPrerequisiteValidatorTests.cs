@@ -5,7 +5,7 @@ using Cotton.Sync.App.SyncPairs;
 
 namespace Cotton.Sync.App.Tests.SyncPairs
 {
-    public sealed class SyncPairPrerequisiteValidatorTests
+    public class SyncPairPrerequisiteValidatorTests
     {
         private string _tempDirectory = string.Empty;
 
@@ -88,7 +88,7 @@ namespace Cotton.Sync.App.Tests.SyncPairs
             };
         }
 
-        private sealed class FakeLocalSyncRootProbe : ILocalSyncRootProbe
+        private class FakeLocalSyncRootProbe : ILocalSyncRootProbe
         {
             private readonly bool _canUse;
 
@@ -103,7 +103,7 @@ namespace Cotton.Sync.App.Tests.SyncPairs
             }
         }
 
-        private sealed class FakeRemoteSyncRootProbe : IRemoteSyncRootProbe
+        private class FakeRemoteSyncRootProbe : IRemoteSyncRootProbe
         {
             private readonly bool _exists;
 

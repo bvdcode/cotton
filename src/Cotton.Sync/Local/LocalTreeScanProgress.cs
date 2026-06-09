@@ -8,7 +8,7 @@ namespace Cotton.Sync.Local
     /// <summary>
     /// Describes progress while scanning a local folder tree.
     /// </summary>
-    public sealed class LocalTreeScanProgress
+    public class LocalTreeScanProgress
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="LocalTreeScanProgress" /> class.

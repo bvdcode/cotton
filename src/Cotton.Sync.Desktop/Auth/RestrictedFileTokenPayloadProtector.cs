@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Auth
 {
-    internal sealed class RestrictedFileTokenPayloadProtector : ITokenPayloadProtector
+    internal class RestrictedFileTokenPayloadProtector : ITokenPayloadProtector
     {
         public string Scheme => "restricted-file-v1";
 

@@ -18,7 +18,7 @@ namespace Cotton.Sync.App.SyncApplication
     /// <summary>
     /// Provides high-level sync-client commands over validated application state.
     /// </summary>
-    public sealed class SyncApplicationService : ISyncApplicationService
+    public class SyncApplicationService : ISyncApplicationService
     {
         private readonly SemaphoreSlim _syncCoreGate = new(1, 1);
         private readonly IAppCodeBrowserAuthFlow _appCodeBrowserAuthFlow;
@@ -427,7 +427,7 @@ namespace Cotton.Sync.App.SyncApplication
             }
         }
 
-        private sealed record StartedSyncComponent(
+        private record StartedSyncComponent(
             string Name,
             Func<CancellationToken, Task> StopAsync);
     }

@@ -5,7 +5,7 @@ using Cotton.Sync.Desktop.Platform;
 
 namespace Cotton.Sync.Desktop.Tests.Platform
 {
-    public sealed class WindowsRunAutostartServiceTests
+    public class WindowsRunAutostartServiceTests
     {
         [Test]
         public void TryCreateDefaultLaunchCommand_ReturnsNullForDotnetHost()
@@ -144,7 +144,7 @@ namespace Cotton.Sync.Desktop.Tests.Platform
             Assert.That(registry.Values, Does.Not.ContainKey("Cotton Sync"));
         }
 
-        private sealed class FakeWindowsRunRegistry : IWindowsRunRegistry
+        private class FakeWindowsRunRegistry : IWindowsRunRegistry
         {
             public Dictionary<string, string> Values { get; } = [];
 

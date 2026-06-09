@@ -5,7 +5,7 @@ using Cotton.Sync.Desktop.Auth;
 
 namespace Cotton.Sync.Desktop.Tests.Auth
 {
-    public sealed class DesktopTokenPayloadProtectorFactoryTests
+    public class DesktopTokenPayloadProtectorFactoryTests
     {
         private string _tempDirectory = string.Empty;
 

@@ -14,7 +14,7 @@ namespace Cotton.Sync.App.Runners
     /// <summary>
     /// Manages runtime state and one-shot synchronization requests for one sync pair.
     /// </summary>
-    public sealed class SyncPairRunner : ISyncPairRunner
+    public class SyncPairRunner : ISyncPairRunner
     {
         private readonly SemaphoreSlim _operationGate = new(1, 1);
         private readonly object _syncRequestGate = new();

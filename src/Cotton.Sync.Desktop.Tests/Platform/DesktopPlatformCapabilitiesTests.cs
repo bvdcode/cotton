@@ -5,7 +5,7 @@ using Cotton.Sync.Desktop.Platform;
 
 namespace Cotton.Sync.Desktop.Tests.Platform
 {
-    public sealed class DesktopPlatformCapabilitiesTests
+    public class DesktopPlatformCapabilitiesTests
     {
         [Test]
         public void CreateSnapshot_MatchesPlatformCapabilityFlags()

@@ -6,7 +6,7 @@ namespace Cotton.Sync.App.Activities
     /// <summary>
     /// Publishes live activity entries to in-process subscribers.
     /// </summary>
-    public sealed class InMemoryAppActivityPublisher : IAppActivityPublisher
+    public class InMemoryAppActivityPublisher : IAppActivityPublisher
     {
         private readonly object _gate = new();
         private readonly List<IObserver<AppSyncActivity>> _observers = [];
@@ -47,7 +47,7 @@ namespace Cotton.Sync.App.Activities
             }
         }
 
-        private sealed class Subscription : IDisposable
+        private class Subscription : IDisposable
         {
             private readonly InMemoryAppActivityPublisher _publisher;
             private IObserver<AppSyncActivity>? _observer;

@@ -10,7 +10,7 @@ namespace Cotton.Sync.Local
     /// <summary>
     /// Writes synchronized local files through temporary files under the sync metadata folder.
     /// </summary>
-    public sealed class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
+    public class AtomicLocalFileSyncWriter : ILocalFileSyncWriter
     {
         private const string DeletedDirectoryName = "deleted";
         private const string TemporaryDirectoryName = "tmp";

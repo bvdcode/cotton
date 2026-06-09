@@ -8,7 +8,7 @@ namespace Cotton.Sync.Remote
     /// <summary>
     /// Represents remote scan results keyed by normalized relative path.
     /// </summary>
-    public sealed class RemoteTreeLookupSnapshot
+    public class RemoteTreeLookupSnapshot
     {
         /// <summary>
         /// Gets or sets the root node used for the crawl.

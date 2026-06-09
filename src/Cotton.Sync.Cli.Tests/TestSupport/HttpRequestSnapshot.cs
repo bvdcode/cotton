@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Cli.Tests.TestSupport
 {
-    internal sealed record HttpRequestSnapshot(
+    internal record HttpRequestSnapshot(
         HttpMethod Method,
         string PathAndQuery,
         string? AuthorizationParameter,

@@ -6,7 +6,7 @@ namespace Cotton.Sync.App.LocalChanges
     /// <summary>
     /// Represents a local filesystem change under a configured sync root.
     /// </summary>
-    public sealed record LocalSyncRootChange
+    public record LocalSyncRootChange
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="LocalSyncRootChange" /> class.

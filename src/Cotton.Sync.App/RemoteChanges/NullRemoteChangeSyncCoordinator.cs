@@ -6,7 +6,7 @@ namespace Cotton.Sync.App.RemoteChanges
     /// <summary>
     /// No-op remote change coordinator used when realtime sync is not configured.
     /// </summary>
-    public sealed class NullRemoteChangeSyncCoordinator : IRemoteChangeSyncCoordinator
+    public class NullRemoteChangeSyncCoordinator : IRemoteChangeSyncCoordinator
     {
         /// <summary>
         /// Gets the shared no-op coordinator instance.

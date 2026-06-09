@@ -6,7 +6,7 @@ namespace Cotton.Sync
     /// <summary>
     /// Defines options for one synchronization pass.
     /// </summary>
-    public sealed class SyncRunOptions
+    public class SyncRunOptions
     {
         private const int DefaultMaximumDeletesPerRun = 100;
         private const int DefaultMaximumStoredResultActivities = 1_000;

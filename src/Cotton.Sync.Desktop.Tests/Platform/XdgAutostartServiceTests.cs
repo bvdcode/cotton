@@ -5,7 +5,7 @@ using Cotton.Sync.Desktop.Platform;
 
 namespace Cotton.Sync.Desktop.Tests.Platform
 {
-    public sealed class XdgAutostartServiceTests
+    public class XdgAutostartServiceTests
     {
         private string _tempDirectory = string.Empty;
 

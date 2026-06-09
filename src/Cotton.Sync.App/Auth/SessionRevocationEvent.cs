@@ -8,7 +8,7 @@ namespace Cotton.Sync.App.Auth
     /// <summary>
     /// Describes a server-driven authentication session revocation event.
     /// </summary>
-    public sealed class SessionRevocationEvent
+    public class SessionRevocationEvent
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="SessionRevocationEvent" /> class.

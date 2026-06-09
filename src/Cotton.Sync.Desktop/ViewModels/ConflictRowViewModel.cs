@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.ViewModels
 {
-    internal sealed class ConflictRowViewModel
+    internal class ConflictRowViewModel
     {
         public Guid? SyncPairId { get; init; }
 

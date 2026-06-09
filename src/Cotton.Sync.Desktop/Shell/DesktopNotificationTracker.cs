@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-    internal sealed class DesktopNotificationTracker
+    internal class DesktopNotificationTracker
     {
         private readonly HashSet<Guid> _initialSyncCompleted = [];
         private readonly Dictionary<Guid, string?> _previousErrors = [];

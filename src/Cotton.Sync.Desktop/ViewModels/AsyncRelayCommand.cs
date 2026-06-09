@@ -9,7 +9,7 @@ namespace Cotton.Sync.Desktop.ViewModels
     /// <summary>
     /// Runs an asynchronous view-model command.
     /// </summary>
-    internal sealed class AsyncRelayCommand : ICommand
+    internal class AsyncRelayCommand : ICommand
     {
         private readonly Func<object?, Task> _execute;
         private readonly Func<object?, bool>? _canExecute;

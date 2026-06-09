@@ -6,7 +6,7 @@ namespace Cotton.Sync
     /// <summary>
     /// Represents a sync path collision that cannot be reconciled safely on case-insensitive file systems.
     /// </summary>
-    public sealed class SyncPathCollisionException : Exception
+    public class SyncPathCollisionException : Exception
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="SyncPathCollisionException" /> class.

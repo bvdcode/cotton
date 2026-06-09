@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-    internal sealed record DesktopRemoteFolderSnapshot(
+    internal record DesktopRemoteFolderSnapshot(
         Guid Id,
         string Name,
         string Path);

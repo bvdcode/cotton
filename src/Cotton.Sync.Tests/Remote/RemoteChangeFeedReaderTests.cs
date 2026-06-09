@@ -10,7 +10,7 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.Tests.Remote
 {
-    public sealed class RemoteChangeFeedReaderTests
+    public class RemoteChangeFeedReaderTests
     {
         private string _tempDirectory = string.Empty;
 
@@ -289,7 +289,7 @@ namespace Cotton.Sync.Tests.Remote
             return pages;
         }
 
-        private sealed class FakeCottonSyncClient : ICottonSyncClient
+        private class FakeCottonSyncClient : ICottonSyncClient
         {
             private readonly Queue<SyncChangesResponseDto> _responses;
 

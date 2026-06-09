@@ -6,7 +6,7 @@ using Avalonia.Platform.Storage;
 
 namespace Cotton.Sync.Desktop.Platform
 {
-    internal sealed class WindowLocalFolderPicker : ILocalFolderPicker
+    internal class WindowLocalFolderPicker : ILocalFolderPicker
     {
         private readonly Window _owner;
 

@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-    internal sealed record DesktopRemoteFolderListSnapshot(
+    internal record DesktopRemoteFolderListSnapshot(
         string CurrentPath,
         IReadOnlyList<DesktopRemoteFolderSnapshot> Folders);
 }

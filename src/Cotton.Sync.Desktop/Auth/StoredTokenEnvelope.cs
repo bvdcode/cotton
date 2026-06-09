@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Auth
 {
-    internal sealed class StoredTokenEnvelope
+    internal class StoredTokenEnvelope
     {
         public string Scheme { get; set; } = string.Empty;
 

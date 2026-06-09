@@ -6,7 +6,7 @@ using Cotton.Sync.App.State;
 
 namespace Cotton.Sync.App.Tests.SyncPairs
 {
-    public sealed class SqliteSyncPairSettingsStoreTests
+    public class SqliteSyncPairSettingsStoreTests
     {
         private string _tempDirectory = string.Empty;
 

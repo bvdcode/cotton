@@ -12,7 +12,7 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.Tests
 {
-    public sealed class SyncEnginePerformanceSmokeTests
+    public class SyncEnginePerformanceSmokeTests
     {
         private const long MiB = 1024L * 1024L;
         private static readonly Guid RemoteRootNodeId = Guid.Parse("11111111-1111-1111-1111-111111111111");
@@ -425,7 +425,7 @@ namespace Cotton.Sync.Tests
             };
         }
 
-        private sealed class StaticRemoteTreeCrawler : IRemoteTreeCrawler
+        private class StaticRemoteTreeCrawler : IRemoteTreeCrawler
         {
             private readonly IReadOnlyList<RemoteFileSnapshot> _files;
 
@@ -448,7 +448,7 @@ namespace Cotton.Sync.Tests
             }
         }
 
-        private sealed class GuardedRemoteFileSynchronizer : IRemoteFileSynchronizer
+        private class GuardedRemoteFileSynchronizer : IRemoteFileSynchronizer
         {
             public int UploadCalls { get; private set; }
 
@@ -484,7 +484,7 @@ namespace Cotton.Sync.Tests
             }
         }
 
-        private sealed class RecordingRemoteFileSynchronizer : IRemoteFileSynchronizer
+        private class RecordingRemoteFileSynchronizer : IRemoteFileSynchronizer
         {
             public List<UploadCall> Uploads { get; } = [];
 
@@ -545,16 +545,16 @@ namespace Cotton.Sync.Tests
             }
         }
 
-        private sealed record UploadCall(
+        private record UploadCall(
             Guid RootNodeId,
             string RelativePath,
             LocalFileSnapshot LocalFile,
             NodeFileManifestDto? ExistingRemoteFile,
             NodeFileManifestDto ReturnedFile);
 
-        private sealed record MemorySample(long ManagedHeapBytes, long WorkingSetBytes);
+        private record MemorySample(long ManagedHeapBytes, long WorkingSetBytes);
 
-        private sealed class RecordingProgress<T> : IProgress<T>
+        private class RecordingProgress<T> : IProgress<T>
         {
             public List<T> Values { get; } = [];
 

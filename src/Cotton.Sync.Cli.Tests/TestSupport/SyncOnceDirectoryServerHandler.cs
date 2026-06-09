@@ -9,7 +9,7 @@ using Cotton.Nodes;
 
 namespace Cotton.Sync.Cli.Tests.TestSupport
 {
-    internal sealed class SyncOnceDirectoryServerHandler : HttpMessageHandler
+    internal class SyncOnceDirectoryServerHandler : HttpMessageHandler
     {
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
         private readonly string _expectedRelativePath;

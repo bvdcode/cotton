@@ -5,7 +5,7 @@ using Cotton.Sync.Desktop.Diagnostics;
 
 namespace Cotton.Sync.Desktop.Tests.Diagnostics
 {
-    public sealed class RotatingFileTraceListenerTests
+    public class RotatingFileTraceListenerTests
     {
         private string _tempDirectory = string.Empty;
 

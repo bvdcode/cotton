@@ -6,7 +6,7 @@ namespace Cotton.Sync.App.SyncPairs
     /// <summary>
     /// Contains validation errors for a set of sync-pair settings.
     /// </summary>
-    public sealed class SyncPairValidationResult
+    public class SyncPairValidationResult
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="SyncPairValidationResult" /> class.

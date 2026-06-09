@@ -5,7 +5,7 @@ using Cotton.Sync.App.LocalChanges;
 
 namespace Cotton.Sync.App.Tests.LocalChanges
 {
-    public sealed class LocalSyncRootChangeTests
+    public class LocalSyncRootChangeTests
     {
         [Test]
         public void Constructor_RejectsUnknownKind()

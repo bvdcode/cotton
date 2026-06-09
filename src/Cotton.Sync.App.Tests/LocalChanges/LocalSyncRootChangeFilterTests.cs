@@ -5,7 +5,7 @@ using Cotton.Sync.App.LocalChanges;
 
 namespace Cotton.Sync.App.Tests.LocalChanges
 {
-    public sealed class LocalSyncRootChangeFilterTests
+    public class LocalSyncRootChangeFilterTests
     {
         [Test]
         public void ShouldPublish_AllowsNormalFileUnderSyncRoot()

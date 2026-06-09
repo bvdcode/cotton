@@ -18,7 +18,7 @@ namespace Cotton.Sync.App.Runners
     /// <summary>
     /// Runs sync pair work through the headless Cotton sync engine.
     /// </summary>
-    public sealed class SyncEnginePairWork : ISyncPairWork
+    public class SyncEnginePairWork : ISyncPairWork
     {
         private readonly IAppActivityPublisher? _activityPublisher;
         private readonly IAppTransferProgressPublisher? _progressPublisher;
@@ -146,7 +146,7 @@ namespace Cotton.Sync.App.Runners
                 : result.ActionRequiredMessage.Trim();
         }
 
-        private sealed class AppActivityProgress : IProgress<CoreSyncActivity>
+        private class AppActivityProgress : IProgress<CoreSyncActivity>
         {
             private readonly IAppActivityPublisher _publisher;
             private readonly Guid _syncPairId;
@@ -164,7 +164,7 @@ namespace Cotton.Sync.App.Runners
             }
         }
 
-        private sealed class AppTransferProgressReporter : IProgress<CoreSyncTransferProgress>
+        private class AppTransferProgressReporter : IProgress<CoreSyncTransferProgress>
         {
             private readonly AppTransferProgressEstimator _estimator = new();
             private readonly IAppTransferProgressPublisher _publisher;
@@ -190,7 +190,7 @@ namespace Cotton.Sync.App.Runners
             }
         }
 
-        private sealed class AppRunProgressReporter : IProgress<CoreSyncRunProgress>
+        private class AppRunProgressReporter : IProgress<CoreSyncRunProgress>
         {
             private readonly IAppRunProgressPublisher _publisher;
             private readonly Guid _syncPairId;

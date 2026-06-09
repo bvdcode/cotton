@@ -8,7 +8,7 @@ namespace Cotton.Sync.Remote
     /// <summary>
     /// Represents one remote file discovered during a remote tree crawl.
     /// </summary>
-    public sealed class RemoteFileSnapshot
+    public class RemoteFileSnapshot
     {
         /// <summary>
         /// Gets or sets the normalized relative path.

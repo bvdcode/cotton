@@ -17,7 +17,7 @@ namespace Cotton.Sync.Desktop.ViewModels
     /// <summary>
     /// Main desktop shell view model.
     /// </summary>
-    internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposable
+    internal class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposable
     {
         private const int MaxActivityRows = 30;
         private const int MaxConflictRows = 20;

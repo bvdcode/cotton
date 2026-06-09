@@ -6,7 +6,7 @@ namespace Cotton.Sync.App.Auth
     /// <summary>
     /// Represents the authenticated desktop session exposed to the application shell.
     /// </summary>
-    public sealed class AuthSession
+    public class AuthSession
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="AuthSession" /> class.

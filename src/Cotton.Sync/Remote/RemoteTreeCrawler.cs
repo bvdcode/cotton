@@ -12,7 +12,7 @@ namespace Cotton.Sync.Remote
     /// <summary>
     /// Crawls remote Cotton folders through the SDK node API.
     /// </summary>
-    public sealed class RemoteTreeCrawler : IRemoteTreeLookupCrawler
+    public class RemoteTreeCrawler : IRemoteTreeLookupCrawler
     {
         private const int DefaultPageSize = 100;
         private const int ProgressReportItemInterval = 100;

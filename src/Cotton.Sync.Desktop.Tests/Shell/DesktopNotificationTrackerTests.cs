@@ -5,7 +5,7 @@ using Cotton.Sync.Desktop.Shell;
 
 namespace Cotton.Sync.Desktop.Tests.Shell
 {
-    public sealed class DesktopNotificationTrackerTests
+    public class DesktopNotificationTrackerTests
     {
         [Test]
         public void NotificationRequest_RejectsUnknownKind()

@@ -11,7 +11,7 @@ namespace Cotton.Sync.App.Platform
     /// <summary>
     /// Runs platform open commands through the host shell.
     /// </summary>
-    public sealed class ProcessPlatformCommandService : IPlatformCommandService
+    public class ProcessPlatformCommandService : IPlatformCommandService
     {
         private readonly ILogger<ProcessPlatformCommandService> _logger;
 

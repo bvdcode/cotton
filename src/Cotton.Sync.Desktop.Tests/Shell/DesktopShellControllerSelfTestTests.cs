@@ -15,7 +15,7 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.Desktop.Tests.Shell
 {
-    public sealed class DesktopShellControllerSelfTestTests
+    public class DesktopShellControllerSelfTestTests
     {
         private string _tempDirectory = string.Empty;
 
@@ -555,7 +555,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             return reader.ReadToEnd();
         }
 
-        private sealed class FakeAutostartService : IAutostartService
+        private class FakeAutostartService : IAutostartService
         {
             public bool IsSupported => true;
 
@@ -570,7 +570,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             }
         }
 
-        private sealed class ThrowingAutostartService : IAutostartService
+        private class ThrowingAutostartService : IAutostartService
         {
             private readonly Exception _exception;
 
@@ -592,7 +592,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             }
         }
 
-        private sealed class FakePlatformCommandService : IPlatformCommandService
+        private class FakePlatformCommandService : IPlatformCommandService
         {
             public Task OpenFolderAsync(string localPath, CancellationToken cancellationToken = default)
             {

@@ -6,7 +6,7 @@ namespace Cotton.Sync
     /// <summary>
     /// Describes one local-to-remote folder synchronization pair.
     /// </summary>
-    public sealed class SyncPair
+    public class SyncPair
     {
         /// <summary>
         /// Gets or sets the stable sync pair identifier used by the state store.

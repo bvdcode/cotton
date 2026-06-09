@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.ViewModels
 {
-    internal sealed class NotificationRowViewModel : ViewModelBase
+    internal class NotificationRowViewModel : ViewModelBase
     {
         private bool _isDashboardVisible = true;
         private string _message = string.Empty;

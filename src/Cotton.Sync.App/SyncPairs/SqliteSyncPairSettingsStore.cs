@@ -9,7 +9,7 @@ namespace Cotton.Sync.App.SyncPairs
     /// <summary>
     /// Persists sync-pair settings in a SQLite database through Entity Framework Core.
     /// </summary>
-    public sealed class SqliteSyncPairSettingsStore : ISyncPairSettingsStore
+    public class SqliteSyncPairSettingsStore : ISyncPairSettingsStore
     {
         private readonly SqliteSyncAppDbContextFactory _contextFactory;
 

@@ -9,7 +9,7 @@ using Cotton.Sync.Desktop.Shell;
 
 namespace Cotton.Sync.Desktop.Tests.Diagnostics
 {
-    public sealed class DesktopDiagnosticsExporterTests
+    public class DesktopDiagnosticsExporterTests
     {
         private string _tempDirectory = string.Empty;
 

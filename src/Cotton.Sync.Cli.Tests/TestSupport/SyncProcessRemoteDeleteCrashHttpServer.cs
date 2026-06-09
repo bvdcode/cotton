@@ -8,7 +8,7 @@ using Cotton.Nodes;
 
 namespace Cotton.Sync.Cli.Tests.TestSupport
 {
-    internal sealed class SyncProcessRemoteDeleteCrashHttpServer : SyncProcessCrashHttpServerBase
+    internal class SyncProcessRemoteDeleteCrashHttpServer : SyncProcessCrashHttpServerBase
     {
         private readonly TaskCompletionSource _fileDeleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource _releaseDeleteResponse = new(TaskCreationOptions.RunContinuationsAsynchronously);

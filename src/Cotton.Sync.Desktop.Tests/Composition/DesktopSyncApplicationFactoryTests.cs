@@ -11,7 +11,7 @@ using Cotton.Sync.Desktop.Composition;
 
 namespace Cotton.Sync.Desktop.Tests.Composition
 {
-    public sealed class DesktopSyncApplicationFactoryTests
+    public class DesktopSyncApplicationFactoryTests
     {
         private string _tempDirectory = string.Empty;
 

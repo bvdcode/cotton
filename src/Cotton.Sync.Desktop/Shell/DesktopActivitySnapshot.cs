@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-    internal sealed record DesktopActivitySnapshot(
+    internal record DesktopActivitySnapshot(
         string Kind,
         string Path,
         string Details,

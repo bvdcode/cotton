@@ -8,7 +8,7 @@ using Cotton.Sync.Remote;
 
 namespace Cotton.Sync.Tests.Remote
 {
-    public sealed class SdkRemoteDirectorySynchronizerTests
+    public class SdkRemoteDirectorySynchronizerTests
     {
         [Test]
         public async Task CreateDirectoryAsync_And_DeleteDirectoryAsync_DelegateToSdkNodeClient()
@@ -29,7 +29,7 @@ namespace Cotton.Sync.Tests.Remote
             });
         }
 
-        private sealed class FakeNodeClient : ICottonNodeClient
+        private class FakeNodeClient : ICottonNodeClient
         {
             public List<(Guid ParentId, string Name)> CreatedDirectories { get; } = [];
 

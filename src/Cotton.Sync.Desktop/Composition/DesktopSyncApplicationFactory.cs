@@ -25,7 +25,7 @@ using HeadlessSyncEngine = Cotton.Sync.SyncEngine;
 
 namespace Cotton.Sync.Desktop.Composition
 {
-    internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFactory
+    internal class DesktopSyncApplicationFactory : IDesktopSyncApplicationFactory
     {
         private static readonly TimeSpan HttpRequestTimeout = TimeSpan.FromSeconds(30);
 

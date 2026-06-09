@@ -9,7 +9,7 @@ using Cotton.Sync.App.Supervision;
 
 namespace Cotton.Sync.App.Tests.RemoteChanges
 {
-    public sealed class RealtimeRemoteChangeSyncCoordinatorTests
+    public class RealtimeRemoteChangeSyncCoordinatorTests
     {
         private static readonly TimeSpan DebounceInterval = TimeSpan.FromMilliseconds(25);
 
@@ -262,7 +262,7 @@ namespace Cotton.Sync.App.Tests.RemoteChanges
             });
         }
 
-        private sealed class FakeCottonRealtimeClient : ICottonRealtimeClient
+        private class FakeCottonRealtimeClient : ICottonRealtimeClient
         {
             public event EventHandler<CottonRealtimeEvent>? RemoteFileTreeChanged;
 
@@ -327,7 +327,7 @@ namespace Cotton.Sync.App.Tests.RemoteChanges
             }
         }
 
-        private sealed class FakeSyncSupervisor : ISyncSupervisor
+        private class FakeSyncSupervisor : ISyncSupervisor
         {
             private readonly TaskCompletionSource _syncRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
             private readonly TaskCompletionSource _releaseSyncAll = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -420,7 +420,7 @@ namespace Cotton.Sync.App.Tests.RemoteChanges
             }
         }
 
-        private sealed class FakeSessionRevocationHandler : ISessionRevocationHandler
+        private class FakeSessionRevocationHandler : ISessionRevocationHandler
         {
             private readonly TaskCompletionSource _called = new(TaskCreationOptions.RunContinuationsAsynchronously);
             private readonly TaskCompletionSource _releaseHandler = new(TaskCreationOptions.RunContinuationsAsynchronously);

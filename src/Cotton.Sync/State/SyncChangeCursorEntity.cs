@@ -10,7 +10,7 @@ namespace Cotton.Sync.State
     /// Represents one persisted remote change-feed checkpoint row.
     /// </summary>
     [Table("sync_change_cursors")]
-    public sealed class SyncChangeCursorEntity
+    public class SyncChangeCursorEntity
     {
         /// <summary>
         /// Gets or sets the sync pair identifier.

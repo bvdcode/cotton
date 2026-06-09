@@ -15,7 +15,7 @@ namespace Cotton.Sync.Remote
     /// <summary>
     /// Synchronizes remote files through Cotton SDK clients.
     /// </summary>
-    public sealed class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynchronizer
+    public class SdkRemoteFileSynchronizer : IRemoteFileTransferProgressSynchronizer
     {
         private const string DefaultContentType = "application/octet-stream";
         private const int MaximumInitialChunkCollectionCapacity = 65_536;
@@ -345,7 +345,7 @@ namespace Cotton.Sync.Remote
                 isCompleted));
         }
 
-        private sealed class DownloadTransferProgress : IProgress<long>
+        private class DownloadTransferProgress : IProgress<long>
         {
             private readonly IProgress<SyncTransferProgress> _progress;
             private readonly string _relativePath;
@@ -537,6 +537,6 @@ namespace Cotton.Sync.Remote
             return total;
         }
 
-        private sealed record UploadedChunks(List<string> ChunkHashes, string ContentHash);
+        private record UploadedChunks(List<string> ChunkHashes, string ContentHash);
     }
 }

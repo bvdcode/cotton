@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace Cotton.Sync.Desktop.Platform
 {
-    internal sealed class DesktopInstallerRuntimeMutex : IDisposable
+    internal class DesktopInstallerRuntimeMutex : IDisposable
     {
         public const string MutexName = "CottonSyncDesktop_B671C18E_1E77_437C_AB9B_5C5C9D877E18";
 

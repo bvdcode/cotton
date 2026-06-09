@@ -5,7 +5,7 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.Tests.State
 {
-    public sealed class SyncPathTests
+    public class SyncPathTests
     {
         [Test]
         public void Normalize_NormalizesSeparators()

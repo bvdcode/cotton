@@ -8,7 +8,7 @@ namespace Cotton.Sync
     /// <summary>
     /// Describes aggregate progress for one synchronization pass.
     /// </summary>
-    public sealed class SyncRunProgress
+    public class SyncRunProgress
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="SyncRunProgress" /> class.

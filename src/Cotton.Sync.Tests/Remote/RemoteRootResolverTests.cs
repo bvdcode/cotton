@@ -8,7 +8,7 @@ using Cotton.Sync.Remote;
 
 namespace Cotton.Sync.Tests.Remote
 {
-    public sealed class RemoteRootResolverTests
+    public class RemoteRootResolverTests
     {
         [Test]
         public async Task EnsureAsync_ReturnsAccountRootForEmptyPath()
@@ -100,7 +100,7 @@ namespace Cotton.Sync.Tests.Remote
             };
         }
 
-        private sealed class FakeNodeClient : ICottonNodeClient
+        private class FakeNodeClient : ICottonNodeClient
         {
             public NodeDto Root { get; set; } = new();
 

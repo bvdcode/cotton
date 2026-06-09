@@ -17,7 +17,7 @@ namespace Cotton.Sync.Desktop
     /// <summary>
     /// Avalonia application entry point.
     /// </summary>
-    public sealed partial class App : Application
+    public partial class App : Application
     {
         private DesktopSingleInstanceActivationServer? _singleInstanceActivationServer;
         private DesktopTrayController? _trayController;

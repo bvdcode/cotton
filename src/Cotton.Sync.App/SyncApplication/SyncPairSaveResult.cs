@@ -8,7 +8,7 @@ namespace Cotton.Sync.App.SyncApplication
     /// <summary>
     /// Describes the outcome of saving sync-pair settings.
     /// </summary>
-    public sealed class SyncPairSaveResult
+    public class SyncPairSaveResult
     {
         private SyncPairSaveResult(bool isSaved, SyncPairValidationResult validation)
         {

@@ -8,7 +8,7 @@ using Cotton.Sync.Local;
 
 namespace Cotton.Sync.Tests.Local
 {
-    public sealed class LocalFileScannerTests
+    public class LocalFileScannerTests
     {
         private string _root = string.Empty;
 
@@ -390,7 +390,7 @@ namespace Cotton.Sync.Tests.Local
             return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
         }
 
-        private sealed class RecordingProgress<T> : IProgress<T>
+        private class RecordingProgress<T> : IProgress<T>
         {
             public List<T> Values { get; } = [];
 

@@ -8,7 +8,7 @@ namespace Cotton.Sync.App.SyncPairs
     /// <summary>
     /// Validates sync-pair settings before they are persisted or used by the sync supervisor.
     /// </summary>
-    public sealed partial class SyncPairSettingsValidator
+    public partial class SyncPairSettingsValidator
     {
         private static readonly SyncPairMode[] SupportedModes = [SyncPairMode.FullMirror];
 
@@ -162,9 +162,9 @@ namespace Cotton.Sync.App.SyncPairs
         [GeneratedRegex(@"/+", RegexOptions.CultureInvariant)]
         private static partial Regex SlashRunRegex();
 
-        private sealed record NormalizedLocalRoot(Guid SyncPairId, NormalizedPath Path);
+        private record NormalizedLocalRoot(Guid SyncPairId, NormalizedPath Path);
 
-        private sealed record NormalizedPath(string Value, bool WindowsStyle)
+        private record NormalizedPath(string Value, bool WindowsStyle)
         {
             public bool IsSameStyle(NormalizedPath other)
             {

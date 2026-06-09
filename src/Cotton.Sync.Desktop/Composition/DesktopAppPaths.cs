@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Composition
 {
-    internal sealed class DesktopAppPaths
+    internal class DesktopAppPaths
     {
         private const string CompanyDirectoryName = "Cotton";
         private const string ProductDirectoryName = "Sync";

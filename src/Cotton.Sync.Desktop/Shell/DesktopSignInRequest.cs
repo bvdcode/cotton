@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-    internal sealed record DesktopSignInRequest(
+    internal record DesktopSignInRequest(
         string ServerUrl,
         string Username,
         string Password,

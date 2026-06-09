@@ -6,7 +6,7 @@ namespace Cotton.Sync.Desktop.ViewModels
     /// <summary>
     /// Displays one recent synchronization activity.
     /// </summary>
-    internal sealed class ActivityRowViewModel
+    internal class ActivityRowViewModel
     {
         public string Time { get; init; } = string.Empty;
 

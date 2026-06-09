@@ -9,7 +9,7 @@ namespace Cotton.Sync.App.LocalChanges
     /// <summary>
     /// Watches a local sync root through <see cref="FileSystemWatcher" />.
     /// </summary>
-    public sealed class FileSystemLocalSyncRootWatcher : ILocalSyncRootWatcher
+    public class FileSystemLocalSyncRootWatcher : ILocalSyncRootWatcher
     {
         private const int InternalBufferSizeBytes = 64 * 1024;
         private readonly Guid _syncPairId;

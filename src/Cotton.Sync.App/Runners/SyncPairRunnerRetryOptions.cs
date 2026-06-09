@@ -6,7 +6,7 @@ namespace Cotton.Sync.App.Runners
     /// <summary>
     /// Configures retry behavior for transient sync-pair failures.
     /// </summary>
-    public sealed class SyncPairRunnerRetryOptions
+    public class SyncPairRunnerRetryOptions
     {
         /// <summary>
         /// Gets or sets the default retry policy.

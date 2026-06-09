@@ -5,7 +5,7 @@ using Cotton.Sync.App.Progress;
 
 namespace Cotton.Sync.App.Tests.Progress
 {
-    public sealed class AppTransferProgressEstimatorTests
+    public class AppTransferProgressEstimatorTests
     {
         [Test]
         public void AddSample_CalculatesRollingSpeedAndRemainingTime()

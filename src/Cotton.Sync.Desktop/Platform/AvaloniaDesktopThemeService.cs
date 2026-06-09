@@ -7,7 +7,7 @@ using Cotton.Sync.App.Preferences;
 
 namespace Cotton.Sync.Desktop.Platform
 {
-    internal sealed class AvaloniaDesktopThemeService : IDesktopThemeService
+    internal class AvaloniaDesktopThemeService : IDesktopThemeService
     {
         public void Apply(AppThemeMode themeMode)
         {

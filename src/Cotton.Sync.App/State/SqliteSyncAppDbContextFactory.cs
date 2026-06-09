@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Sync.App.State
 {
-    internal sealed class SqliteSyncAppDbContextFactory
+    internal class SqliteSyncAppDbContextFactory
     {
         private static readonly ConcurrentDictionary<string, SemaphoreSlim> MigrationGates = new(StringComparer.OrdinalIgnoreCase);
 

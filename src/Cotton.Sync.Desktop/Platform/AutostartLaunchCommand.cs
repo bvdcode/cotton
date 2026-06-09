@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Cotton.Sync.Desktop.Platform
 {
-    internal sealed class AutostartLaunchCommand
+    internal class AutostartLaunchCommand
     {
         private const string StartMinimizedArgument = "--start-minimized";
         private const string PublishDirectorySegment = "/publish/";

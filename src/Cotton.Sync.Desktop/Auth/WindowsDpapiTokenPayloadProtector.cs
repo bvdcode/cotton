@@ -8,7 +8,7 @@ using System.Text;
 namespace Cotton.Sync.Desktop.Auth
 {
     [SupportedOSPlatform("windows")]
-    internal sealed class WindowsDpapiTokenPayloadProtector : ITokenPayloadProtector
+    internal class WindowsDpapiTokenPayloadProtector : ITokenPayloadProtector
     {
         private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("Cotton.Sync.Desktop.TokenStore.v1");
 

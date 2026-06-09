@@ -7,7 +7,7 @@ using Cotton.Sync.Remote;
 
 namespace Cotton.Sync.Tests.Remote
 {
-    public sealed class RemoteChangeFeedBatchTests
+    public class RemoteChangeFeedBatchTests
     {
         [Test]
         public void Constructor_RejectsNextCursorBeforeSinceCursor()

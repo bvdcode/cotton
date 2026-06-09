@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-    internal sealed record DesktopServerProbeResult(
+    internal record DesktopServerProbeResult(
         Uri ServerUrl,
         bool IsCottonServer,
         string? Product,

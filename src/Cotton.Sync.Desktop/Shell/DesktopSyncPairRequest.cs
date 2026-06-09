@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-    internal sealed record DesktopSyncPairRequest(
+    internal record DesktopSyncPairRequest(
         string LocalFolderPath,
         string RemoteFolderPath);
 }

@@ -8,7 +8,7 @@ using Cotton.Sync.Local;
 
 namespace Cotton.Sync.Desktop.Tests.Shell
 {
-    public sealed class DesktopActionRequiredMessageResolverTests
+    public class DesktopActionRequiredMessageResolverTests
     {
         [Test]
         public void FromStatus_ReturnsFirstPairError()

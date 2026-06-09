@@ -11,7 +11,7 @@ namespace Cotton.Sync.State
     /// <summary>
     /// Persists sync baselines in a SQLite database through Entity Framework Core.
     /// </summary>
-    public sealed class SqliteSyncStateStore : ISyncStateStore
+    public class SqliteSyncStateStore : ISyncStateStore
     {
         private static readonly ConcurrentDictionary<string, SemaphoreSlim> MigrationGates = new(StringComparer.OrdinalIgnoreCase);
         private static readonly ConcurrentDictionary<string, SemaphoreSlim> WriteGates = new(StringComparer.OrdinalIgnoreCase);

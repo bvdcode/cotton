@@ -9,7 +9,7 @@ namespace Cotton.Sync.Remote
     /// <summary>
     /// Represents a normalized remote change-feed item that sync code can reason about without inspecting DTO enums.
     /// </summary>
-    public sealed class RemoteChangeImpact
+    public class RemoteChangeImpact
     {
         private RemoteChangeImpact(
             SyncChangeDto change,

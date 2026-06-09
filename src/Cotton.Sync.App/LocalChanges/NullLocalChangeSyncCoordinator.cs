@@ -6,7 +6,7 @@ namespace Cotton.Sync.App.LocalChanges
     /// <summary>
     /// No-op local change coordinator used when continuous local sync is not configured.
     /// </summary>
-    public sealed class NullLocalChangeSyncCoordinator : ILocalChangeSyncCoordinator
+    public class NullLocalChangeSyncCoordinator : ILocalChangeSyncCoordinator
     {
         /// <summary>
         /// Gets the shared no-op coordinator instance.

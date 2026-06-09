@@ -13,7 +13,7 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.Cli.Tests
 {
-    public sealed class SyncCliCommandRunnerTests
+    public class SyncCliCommandRunnerTests
     {
         private string _tempDirectory = string.Empty;
 
@@ -1353,7 +1353,7 @@ namespace Cotton.Sync.Cli.Tests
             }
         }
 
-        private sealed class AppCodeAuthServerHandler : HttpMessageHandler
+        private class AppCodeAuthServerHandler : HttpMessageHandler
         {
             private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
             private readonly bool _deny;

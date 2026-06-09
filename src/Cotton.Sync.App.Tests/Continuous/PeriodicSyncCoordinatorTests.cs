@@ -7,7 +7,7 @@ using Cotton.Sync.App.Supervision;
 
 namespace Cotton.Sync.App.Tests.Continuous
 {
-    public sealed class PeriodicSyncCoordinatorTests
+    public class PeriodicSyncCoordinatorTests
     {
         [Test]
         public async Task StartAsync_RequestsImmediateSyncAllByDefault()
@@ -62,7 +62,7 @@ namespace Cotton.Sync.App.Tests.Continuous
             Assert.That(supervisor.SyncAllCallCount, Is.Zero);
         }
 
-        private sealed class FakeSyncSupervisor : ISyncSupervisor
+        private class FakeSyncSupervisor : ISyncSupervisor
         {
             private readonly TaskCompletionSource _syncRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
 

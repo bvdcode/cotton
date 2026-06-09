@@ -8,7 +8,7 @@ namespace Cotton.Sync.Remote
     /// <summary>
     /// Summarizes a remote change-feed page for checkpointing, diagnostics, and future incremental invalidation.
     /// </summary>
-    public sealed class RemoteChangeFeedSnapshot
+    public class RemoteChangeFeedSnapshot
     {
         private RemoteChangeFeedSnapshot(IReadOnlyCollection<RemoteChangeImpact> changes)
         {

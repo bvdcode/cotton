@@ -8,7 +8,7 @@ namespace Cotton.Sync.Remote
     /// <summary>
     /// Represents a crawled remote subtree.
     /// </summary>
-    public sealed class RemoteTreeSnapshot
+    public class RemoteTreeSnapshot
     {
         /// <summary>
         /// Gets or sets the root node used for the crawl.

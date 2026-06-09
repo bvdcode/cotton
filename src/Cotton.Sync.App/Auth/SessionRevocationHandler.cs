@@ -12,7 +12,7 @@ namespace Cotton.Sync.App.Auth
     /// <summary>
     /// Coordinates shutdown and local session cleanup when the server revokes the active session.
     /// </summary>
-    public sealed class SessionRevocationHandler : ISessionRevocationHandler
+    public class SessionRevocationHandler : ISessionRevocationHandler
     {
         private readonly IAuthFlow _authFlow;
         private readonly ILocalChangeSyncCoordinator _localChanges;

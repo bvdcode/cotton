@@ -10,7 +10,7 @@ namespace Cotton.Sync.App.SyncPairs
     /// <summary>
     /// Checks local sync roots using the host file system.
     /// </summary>
-    public sealed class FileSystemLocalSyncRootProbe : ILocalSyncRootProbe
+    public class FileSystemLocalSyncRootProbe : ILocalSyncRootProbe
     {
         private readonly ILogger<FileSystemLocalSyncRootProbe> _logger;
 

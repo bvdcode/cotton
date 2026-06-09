@@ -8,7 +8,7 @@ namespace Cotton.Sync.State
     /// <summary>
     /// Entity Framework context for local synchronization state.
     /// </summary>
-    public sealed class SyncStateDbContext : DbContext
+    public class SyncStateDbContext : DbContext
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="SyncStateDbContext" /> class.

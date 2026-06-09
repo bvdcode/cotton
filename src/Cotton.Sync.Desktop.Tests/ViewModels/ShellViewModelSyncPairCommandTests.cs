@@ -15,7 +15,7 @@ using Cotton.Sync.Desktop.ViewModels;
 
 namespace Cotton.Sync.Desktop.Tests.ViewModels
 {
-    public sealed class ShellViewModelSyncPairCommandTests
+    public class ShellViewModelSyncPairCommandTests
     {
         [Test]
         public async Task ToggleSelectedSyncPairEnabledCommand_DisablesSelectedPair()
@@ -4368,7 +4368,7 @@ namespace Cotton.Sync.Desktop.Tests.ViewModels
                 OccurredAtUtc: new DateTime(2026, 6, 4, 9, 0, 6, DateTimeKind.Utc)));
         }
 
-        private sealed class FakeDesktopShellController : IDesktopShellController
+        private class FakeDesktopShellController : IDesktopShellController
         {
             private readonly DesktopShellSnapshot _snapshot;
 
@@ -4797,7 +4797,7 @@ namespace Cotton.Sync.Desktop.Tests.ViewModels
                 notifyOnSessionRestore);
         }
 
-        private sealed class FakeLocalFolderPicker : ILocalFolderPicker
+        private class FakeLocalFolderPicker : ILocalFolderPicker
         {
             private readonly Queue<string?> _selectedPaths;
 
@@ -4816,7 +4816,7 @@ namespace Cotton.Sync.Desktop.Tests.ViewModels
             }
         }
 
-        private sealed class FakeDesktopNotificationService : IDesktopNotificationService
+        private class FakeDesktopNotificationService : IDesktopNotificationService
         {
             public bool IsSupported => false;
 
@@ -4826,7 +4826,7 @@ namespace Cotton.Sync.Desktop.Tests.ViewModels
             }
         }
 
-        private sealed class CollectingDesktopNotificationService : IDesktopNotificationService
+        private class CollectingDesktopNotificationService : IDesktopNotificationService
         {
             public bool IsSupported => true;
 
@@ -4838,14 +4838,14 @@ namespace Cotton.Sync.Desktop.Tests.ViewModels
             }
         }
 
-        private sealed class FakeDesktopThemeService : IDesktopThemeService
+        private class FakeDesktopThemeService : IDesktopThemeService
         {
             public void Apply(AppThemeMode themeMode)
             {
             }
         }
 
-        private sealed class InlineDesktopUiDispatcher : IDesktopUiDispatcher
+        private class InlineDesktopUiDispatcher : IDesktopUiDispatcher
         {
             public bool CheckAccess()
             {
@@ -4865,7 +4865,7 @@ namespace Cotton.Sync.Desktop.Tests.ViewModels
             }
         }
 
-        private sealed class QueuedDesktopUiDispatcher : IDesktopUiDispatcher
+        private class QueuedDesktopUiDispatcher : IDesktopUiDispatcher
         {
             private readonly Queue<Action> _actions = [];
 

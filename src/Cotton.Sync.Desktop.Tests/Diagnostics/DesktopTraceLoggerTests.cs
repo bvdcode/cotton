@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cotton.Sync.Desktop.Tests.Diagnostics
 {
-    public sealed class DesktopTraceLoggerTests
+    public class DesktopTraceLoggerTests
     {
         [Test]
         public void Format_IncludesLevelCategoryEventAndException()
@@ -56,7 +56,7 @@ namespace Cotton.Sync.Desktop.Tests.Diagnostics
             }
         }
 
-        private sealed class CollectingTraceListener : TraceListener
+        private class CollectingTraceListener : TraceListener
         {
             public string Output { get; private set; } = string.Empty;
 

@@ -6,7 +6,7 @@ namespace Cotton.Sync.State
     /// <summary>
     /// Represents the durable remote change-feed checkpoint for one sync pair.
     /// </summary>
-    public sealed class SyncChangeCursor
+    public class SyncChangeCursor
     {
         /// <summary>
         /// Gets or sets the sync pair identifier.

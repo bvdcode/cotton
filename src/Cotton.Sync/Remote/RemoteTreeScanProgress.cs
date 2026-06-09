@@ -8,7 +8,7 @@ namespace Cotton.Sync.Remote
     /// <summary>
     /// Describes progress while scanning a remote Cotton folder tree.
     /// </summary>
-    public sealed class RemoteTreeScanProgress
+    public class RemoteTreeScanProgress
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="RemoteTreeScanProgress" /> class.

@@ -9,7 +9,7 @@ using Cotton.Sync.Remote;
 
 namespace Cotton.Sync.App.Tests.Runners
 {
-    public sealed class RemoteChangeAwareSyncPairWorkTests
+    public class RemoteChangeAwareSyncPairWorkTests
     {
         [Test]
         public async Task RunOnceAsync_AcknowledgesRemoteBatchAfterInnerWorkSucceeds()
@@ -185,7 +185,7 @@ namespace Cotton.Sync.App.Tests.Runners
             };
         }
 
-        private sealed class FakeSyncPairWork : ISyncPairWork
+        private class FakeSyncPairWork : ISyncPairWork
         {
             public int RunCallCount { get; private set; }
 
@@ -203,7 +203,7 @@ namespace Cotton.Sync.App.Tests.Runners
             }
         }
 
-        private sealed class FakeRemoteChangeFeedReader : IRemoteChangeFeedReader
+        private class FakeRemoteChangeFeedReader : IRemoteChangeFeedReader
         {
             private readonly Queue<RemoteChangeFeedBatch> _batches;
 

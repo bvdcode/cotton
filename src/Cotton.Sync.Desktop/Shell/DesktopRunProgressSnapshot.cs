@@ -3,7 +3,7 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-    internal sealed record DesktopRunProgressSnapshot(
+    internal record DesktopRunProgressSnapshot(
         Guid SyncPairId,
         SyncRunProgressStage Stage,
         int FilesCompleted,

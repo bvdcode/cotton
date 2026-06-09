@@ -10,7 +10,7 @@ namespace Cotton.Sync.App.LocalChanges
     /// <summary>
     /// Creates filesystem watchers for local sync roots.
     /// </summary>
-    public sealed class FileSystemLocalSyncRootWatcherFactory : ILocalSyncRootWatcherFactory
+    public class FileSystemLocalSyncRootWatcherFactory : ILocalSyncRootWatcherFactory
     {
         private readonly ILoggerFactory _loggerFactory;
 

@@ -8,7 +8,7 @@ namespace Cotton.Sync.App.Progress
     /// <summary>
     /// Describes live transfer progress for one sync pair.
     /// </summary>
-    public sealed class AppTransferProgress
+    public class AppTransferProgress
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="AppTransferProgress" /> class.

@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Cotton.Sync.Desktop.Diagnostics
 {
-    internal sealed class RotatingFileTraceListener : TraceListener
+    internal class RotatingFileTraceListener : TraceListener
     {
         private const int DefaultRetainedFileCount = 3;
 

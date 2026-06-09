@@ -6,7 +6,7 @@ namespace Cotton.Sync.App.Auth
     /// <summary>
     /// Publishes session revocation events to in-process subscribers.
     /// </summary>
-    public sealed class InMemorySessionRevocationPublisher : ISessionRevocationPublisher
+    public class InMemorySessionRevocationPublisher : ISessionRevocationPublisher
     {
         private readonly object _gate = new();
         private readonly List<IObserver<SessionRevocationEvent>> _observers = [];
@@ -47,7 +47,7 @@ namespace Cotton.Sync.App.Auth
             }
         }
 
-        private sealed class Subscription : IDisposable
+        private class Subscription : IDisposable
         {
             private readonly InMemorySessionRevocationPublisher _publisher;
             private IObserver<SessionRevocationEvent>? _observer;
