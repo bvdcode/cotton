@@ -315,28 +315,5 @@ namespace Cotton.Sync.App.RemoteChanges
 
             await Task.WhenAll(runners).WaitAsync(cancellationToken).ConfigureAwait(false);
         }
-
-        private class PendingRemoteSyncRequest
-        {
-            public PendingRemoteSyncRequest(CancellationTokenSource cancellation, string methodName)
-            {
-                Cancellation = cancellation;
-                MethodName = methodName;
-            }
-
-            public CancellationTokenSource Cancellation { get; }
-
-            public string MethodName { get; private set; }
-
-            public int ChangeVersion { get; private set; }
-
-            public Task? Runner { get; set; }
-
-            public void RecordChange(string methodName)
-            {
-                MethodName = methodName;
-                ChangeVersion++;
-            }
-        }
     }
 }

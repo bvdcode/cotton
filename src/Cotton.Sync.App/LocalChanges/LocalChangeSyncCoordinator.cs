@@ -266,28 +266,5 @@ namespace Cotton.Sync.App.LocalChanges
 
             await Task.WhenAll(runners).WaitAsync(cancellationToken).ConfigureAwait(false);
         }
-
-        private class PendingLocalSyncRequest
-        {
-            public PendingLocalSyncRequest(CancellationTokenSource cancellation, string changedPath)
-            {
-                Cancellation = cancellation;
-                ChangedPath = changedPath;
-            }
-
-            public CancellationTokenSource Cancellation { get; }
-
-            public string ChangedPath { get; private set; }
-
-            public int ChangeVersion { get; private set; }
-
-            public Task? Runner { get; set; }
-
-            public void RecordChange(string changedPath)
-            {
-                ChangedPath = changedPath;
-                ChangeVersion++;
-            }
-        }
     }
 }
