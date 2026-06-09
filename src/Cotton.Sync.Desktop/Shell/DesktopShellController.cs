@@ -1143,11 +1143,11 @@ namespace Cotton.Sync.Desktop.Shell
             _statusSubscription?.Dispose();
             _transferProgressSubscription?.Dispose();
             _runProgressSubscription?.Dispose();
-            _statusSubscription = host.StatusPublisher.Subscribe(new StatusObserver(this));
-            _activitySubscription = host.ActivityPublisher.Subscribe(new ActivityObserver(this));
-            _sessionRevocationSubscription = host.SessionRevocationPublisher.Subscribe(new SessionRevocationObserver(this));
-            _transferProgressSubscription = host.TransferProgressPublisher.Subscribe(new TransferProgressObserver(this));
-            _runProgressSubscription = host.RunProgressPublisher.Subscribe(new RunProgressObserver(this));
+            _statusSubscription = host.StatusPublisher.Subscribe(new DesktopShellObserver<SyncAppStatus>(OnStatusChanged));
+            _activitySubscription = host.ActivityPublisher.Subscribe(new DesktopShellObserver<AppSyncActivity>(OnActivityReported));
+            _sessionRevocationSubscription = host.SessionRevocationPublisher.Subscribe(new DesktopShellObserver<SessionRevocationEvent>(OnSessionRevoked));
+            _transferProgressSubscription = host.TransferProgressPublisher.Subscribe(new DesktopShellObserver<AppTransferProgress>(OnTransferProgressChanged));
+            _runProgressSubscription = host.RunProgressPublisher.Subscribe(new DesktopShellObserver<AppRunProgress>(OnRunProgressChanged));
             if (previous is not null)
             {
                 await StopAndDisposeHostAsync(previous).ConfigureAwait(false);
@@ -1402,124 +1402,5 @@ namespace Cotton.Sync.Desktop.Shell
                 + ". Configure Windows DPAPI or Linux Secret Service before signing in.";
         }
 
-        private class StatusObserver : IObserver<SyncAppStatus>
-        {
-            private readonly DesktopShellController _controller;
-
-            public StatusObserver(DesktopShellController controller)
-            {
-                _controller = controller;
-            }
-
-            public void OnCompleted()
-            {
-            }
-
-            public void OnError(Exception error)
-            {
-                Trace.TraceError(error.ToString());
-            }
-
-            public void OnNext(SyncAppStatus value)
-            {
-                _controller.OnStatusChanged(value);
-            }
-        }
-
-        private class ActivityObserver : IObserver<AppSyncActivity>
-        {
-            private readonly DesktopShellController _controller;
-
-            public ActivityObserver(DesktopShellController controller)
-            {
-                _controller = controller;
-            }
-
-            public void OnCompleted()
-            {
-            }
-
-            public void OnError(Exception error)
-            {
-                Trace.TraceError(error.ToString());
-            }
-
-            public void OnNext(AppSyncActivity value)
-            {
-                _controller.OnActivityReported(value);
-            }
-        }
-
-        private class SessionRevocationObserver : IObserver<SessionRevocationEvent>
-        {
-            private readonly DesktopShellController _controller;
-
-            public SessionRevocationObserver(DesktopShellController controller)
-            {
-                _controller = controller;
-            }
-
-            public void OnCompleted()
-            {
-            }
-
-            public void OnError(Exception error)
-            {
-                Trace.TraceError(error.ToString());
-            }
-
-            public void OnNext(SessionRevocationEvent value)
-            {
-                _controller.OnSessionRevoked(value);
-            }
-        }
-
-        private class TransferProgressObserver : IObserver<AppTransferProgress>
-        {
-            private readonly DesktopShellController _controller;
-
-            public TransferProgressObserver(DesktopShellController controller)
-            {
-                _controller = controller;
-            }
-
-            public void OnCompleted()
-            {
-            }
-
-            public void OnError(Exception error)
-            {
-                Trace.TraceError(error.ToString());
-            }
-
-            public void OnNext(AppTransferProgress value)
-            {
-                _controller.OnTransferProgressChanged(value);
-            }
-        }
-
-        private class RunProgressObserver : IObserver<AppRunProgress>
-        {
-            private readonly DesktopShellController _controller;
-
-            public RunProgressObserver(DesktopShellController controller)
-            {
-                _controller = controller;
-            }
-
-            public void OnCompleted()
-            {
-            }
-
-            public void OnError(Exception error)
-            {
-                Trace.TraceError(error.ToString());
-            }
-
-            public void OnNext(AppRunProgress value)
-            {
-                _controller.OnRunProgressChanged(value);
-            }
-        }
     }
 }
