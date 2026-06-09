@@ -59,6 +59,45 @@ describe("renderNotificationText", () => {
     );
   });
 
+  it("derives local network location for legacy metadata without location", () => {
+    const result = renderNotificationText(
+      createNotification({
+        "i18n.titleKey": "notifications:server.successfulLogin.title",
+        "i18n.contentKey":
+          "notifications:server.successfulLogin.content.withDevice",
+        device: "Windows PC",
+        city: "Unknown",
+        region: "Unknown",
+        country: "Unknown",
+        ip: "10.0.0.101",
+      }),
+      i18n.t,
+    );
+
+    expect(result.content).toBe(
+      "Your account was accessed from Windows PC in local network (10.0.0.101). If this wasn't you, please secure your account immediately.",
+    );
+  });
+
+  it("derives formatted location for legacy metadata with geo fields", () => {
+    const result = renderNotificationText(
+      createNotification({
+        "i18n.titleKey": "notifications:server.successfulLogin.title",
+        "i18n.contentKey":
+          "notifications:server.successfulLogin.content.withoutDevice",
+        city: "Seattle",
+        region: "Washington",
+        country: "United States",
+        ip: "8.8.8.8",
+      }),
+      i18n.t,
+    );
+
+    expect(result.content).toBe(
+      "Your account was accessed from Seattle, Washington, United States (8.8.8.8). If this wasn't you, please secure your account immediately.",
+    );
+  });
+
   it("keeps fallback text when the template key is unknown", () => {
     const result = renderNotificationText(
       createNotification({
