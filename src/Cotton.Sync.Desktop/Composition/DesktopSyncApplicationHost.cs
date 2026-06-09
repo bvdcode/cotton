@@ -78,6 +78,11 @@ internal sealed class DesktopSyncApplicationHost : IDisposable, IAsyncDisposable
             return;
         }
 
+        if (_asyncResource is not null)
+        {
+            _asyncResource.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+
         _httpClient.Dispose();
         _disposed = true;
     }

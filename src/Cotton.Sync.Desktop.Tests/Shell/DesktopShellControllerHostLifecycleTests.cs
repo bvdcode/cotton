@@ -107,6 +107,17 @@ public sealed class DesktopShellControllerHostLifecycleTests
     }
 
     [Test]
+    public void HostDispose_DisposesAsyncResource()
+    {
+        FakeDesktopApplicationHost host = FakeDesktopApplicationHost.Create(new Uri("https://cotton.example.test/"));
+
+        host.Host.Dispose();
+        host.Host.Dispose();
+
+        Assert.That(host.AsyncResource.DisposeAsyncCalls, Is.EqualTo(1));
+    }
+
+    [Test]
     public async Task Dispose_StopsActiveRestoredHost()
     {
         DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
