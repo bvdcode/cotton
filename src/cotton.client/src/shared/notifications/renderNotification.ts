@@ -8,6 +8,8 @@ const PARAMETER_PREFIX = "i18n.param.";
 const UNKNOWN_GEO_LABEL = "Unknown";
 const UNKNOWN_LOCATION_LABEL = "unknown location";
 const LOCAL_NETWORK_LOCATION_LABEL = "local network";
+const LOCAL_NETWORK_LOCATION_KEY = "notifications:server.location.localNetwork";
+const UNKNOWN_LOCATION_KEY = "notifications:server.location.unknown";
 
 export interface RenderedNotificationText {
   title: string;
@@ -58,24 +60,44 @@ const isKnownGeoField = (value: string | undefined): value is string =>
   Boolean(value?.trim()) &&
   value!.trim().toLowerCase() !== UNKNOWN_GEO_LABEL.toLowerCase();
 
-const deriveLocationParam = (params: Record<string, string>): string => {
+const translateLocationParam = (value: string, t: TFunction): string => {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === LOCAL_NETWORK_LOCATION_LABEL) {
+    return String(t(LOCAL_NETWORK_LOCATION_KEY));
+  }
+
+  if (
+    normalized === UNKNOWN_LOCATION_LABEL ||
+    normalized === UNKNOWN_GEO_LABEL.toLowerCase()
+  ) {
+    return String(t(UNKNOWN_LOCATION_KEY));
+  }
+
+  return value;
+};
+
+const deriveLocationParam = (
+  params: Record<string, string>,
+  t: TFunction,
+): string => {
   if (params.location?.trim()) {
-    return params.location;
+    return translateLocationParam(params.location, t);
   }
 
   if (isLocalNetworkIp(params.ip)) {
-    return LOCAL_NETWORK_LOCATION_LABEL;
+    return String(t(LOCAL_NETWORK_LOCATION_KEY));
   }
 
   const parts = [params.city, params.region, params.country]
     .filter(isKnownGeoField)
     .map((part) => part.trim());
 
-  return parts.length > 0 ? parts.join(", ") : UNKNOWN_LOCATION_LABEL;
+  return parts.length > 0 ? parts.join(", ") : String(t(UNKNOWN_LOCATION_KEY));
 };
 
 const collectTemplateParams = (
   metadata: Record<string, string>,
+  t: TFunction,
 ): Record<string, string> => {
   const params: Record<string, string> = {};
 
@@ -88,7 +110,7 @@ const collectTemplateParams = (
     params[paramKey] = value;
   }
 
-  params.location = deriveLocationParam(params);
+  params.location = deriveLocationParam(params, t);
 
   return params;
 };
@@ -102,7 +124,7 @@ const renderTemplate = (
     return null;
   }
 
-  return String(t(key, collectTemplateParams(metadata)));
+  return String(t(key, collectTemplateParams(metadata, t)));
 };
 
 export const renderNotificationText = (

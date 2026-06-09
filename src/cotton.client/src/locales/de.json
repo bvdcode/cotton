@@ -1381,6 +1381,10 @@
       "empty": "Keine Benachrichtigungen"
     },
     "server": {
+      "location": {
+        "localNetwork": "dem lokalen Netzwerk",
+        "unknown": "einem unbekannten Standort"
+      },
       "failedLoginAttempt": {
         "title": "Fehlgeschlagener Anmeldeversuch",
         "content": {

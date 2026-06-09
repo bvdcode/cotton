@@ -1394,6 +1394,10 @@
       "empty": "暂无通知"
     },
     "server": {
+      "location": {
+        "localNetwork": "\u672c\u5730\u7f51\u7edc",
+        "unknown": "\u672a\u77e5\u4f4d\u7f6e"
+      },
       "failedLoginAttempt": {
         "title": "登录尝试失败",
         "content": {

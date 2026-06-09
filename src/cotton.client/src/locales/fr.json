@@ -1385,6 +1385,10 @@
       "empty": "Aucune notification"
     },
     "server": {
+      "location": {
+        "localNetwork": "un r\u00e9seau local",
+        "unknown": "un emplacement inconnu"
+      },
       "failedLoginAttempt": {
         "title": "Tentative de connexion échouée",
         "content": {

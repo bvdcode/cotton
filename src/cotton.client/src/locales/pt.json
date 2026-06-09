@@ -1388,6 +1388,10 @@
       "empty": "Sem notificações"
     },
     "server": {
+      "location": {
+        "localNetwork": "rede local",
+        "unknown": "localiza\u00e7\u00e3o desconhecida"
+      },
       "failedLoginAttempt": {
         "title": "Tentativa de início de sessão falhada",
         "content": {

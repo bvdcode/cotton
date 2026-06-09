@@ -1389,6 +1389,10 @@
       "empty": "Brak powiadomień"
     },
     "server": {
+      "location": {
+        "localNetwork": "sieci lokalnej",
+        "unknown": "nieznanej lokalizacji"
+      },
       "failedLoginAttempt": {
         "title": "Nieudana próba logowania",
         "content": {

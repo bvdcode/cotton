@@ -1387,6 +1387,10 @@
       "empty": "Nessuna notifica"
     },
     "server": {
+      "location": {
+        "localNetwork": "rete locale",
+        "unknown": "posizione sconosciuta"
+      },
       "failedLoginAttempt": {
         "title": "Tentativo di accesso non riuscito",
         "content": {

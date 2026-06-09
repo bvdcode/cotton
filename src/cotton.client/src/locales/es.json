@@ -1384,6 +1384,10 @@
       "empty": "No hay notificaciones"
     },
     "server": {
+      "location": {
+        "localNetwork": "la red local",
+        "unknown": "una ubicaci\u00f3n desconocida"
+      },
       "failedLoginAttempt": {
         "title": "Intento de inicio de sesión fallido",
         "content": {

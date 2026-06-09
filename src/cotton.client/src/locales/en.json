@@ -1180,6 +1180,10 @@
       "empty": "No notifications"
     },
     "server": {
+      "location": {
+        "localNetwork": "local network",
+        "unknown": "unknown location"
+      },
       "failedLoginAttempt": {
         "title": "Failed login attempt",
         "content": {

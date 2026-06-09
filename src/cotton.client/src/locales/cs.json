@@ -1386,6 +1386,10 @@
       "empty": "Žádná oznámení"
     },
     "server": {
+      "location": {
+        "localNetwork": "m\u00edstn\u00ed s\u00edti",
+        "unknown": "nezn\u00e1m\u00e9ho um\u00edst\u011bn\u00ed"
+      },
       "failedLoginAttempt": {
         "title": "Neúspěšný pokus o přihlášení",
         "content": {
