@@ -22,6 +22,7 @@ Release can be considered only when every item in this section is checked.
 - [ ] Desktop build passes.
   Partial 2026-06-06: local `dotnet build src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj --configuration Release --no-restore` passed with 0 warnings and 0 errors, and `Cotton.Sync.Desktop.Tests` passed 387/387 after the aggregate transfer-progress change. Keep unchecked until clean-machine package smoke is complete.
   Partial 2026-06-08: refreshed the desktop build after app-code browser login was integrated into the sign-in UI. `dotnet build src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj --configuration Release --no-restore` passed with 0 warnings and 0 errors. Keep unchecked until clean-machine package smoke is complete.
+  Partial 2026-06-09: refreshed Desktop Release build on the current branch. `dotnet build src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj --configuration Release --no-restore` passed with 0 warnings and 0 errors. Keep unchecked until clean-machine package smoke is complete.
 - [ ] CLI build passes.
   Partial 2026-06-06: local `dotnet build src/Cotton.Sync.Cli/Cotton.Sync.Cli.csproj --configuration Release --no-restore` passed with 0 warnings and 0 errors. Keep unchecked until the final release gate is re-run.
   Partial 2026-06-08: refreshed the CLI build after app-code browser login and `sync-once --browser-login` integration. `dotnet build src/Cotton.Sync.Cli/Cotton.Sync.Cli.csproj --configuration Release --no-restore` passed with 0 warnings and 0 errors. Keep unchecked until the final release gate is re-run.
