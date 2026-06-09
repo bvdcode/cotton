@@ -129,6 +129,82 @@ namespace Cotton.Sync.App.Tests.Auth
         }
 
         [Test]
+        public async Task SignInAsync_RetriesTransientUserLookupFailureAfterApproval()
+        {
+            var delays = new List<TimeSpan>();
+            var authClient = new FakeCottonAuthClient();
+            authClient.PollResults.Enqueue(new AppCodePollResult
+            {
+                Status = AppCodePollStatus.Approved,
+                Tokens = new TokenPairDto { AccessToken = "access", RefreshToken = "refresh" },
+            });
+            authClient.MeExceptions.Enqueue(new IOException("Temporary user lookup failure."));
+            var flow = new AppCodeBrowserAuthFlow(
+                authClient,
+                new FakePlatformCommandService(),
+                (delay, _) =>
+                {
+                    delays.Add(delay);
+                    return Task.CompletedTask;
+                });
+
+            AuthSession session = await flow.SignInAsync(new AppCodeBrowserSignInRequest
+            {
+                ApplicationName = "Cotton Sync Desktop",
+            });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(authClient.PollCallCount, Is.EqualTo(1));
+                Assert.That(authClient.MeCallCount, Is.EqualTo(2));
+                Assert.That(session.Email, Is.EqualTo("browser@example.test"));
+                Assert.That(delays, Is.EqualTo(new[] { authClient.Session.PollInterval }));
+            });
+        }
+
+        [Test]
+        public void SignInAsync_StopsTransientUserLookupRetriesWhenSessionExpires()
+        {
+            DateTime currentTime = DateTime.UtcNow;
+            var delays = new List<TimeSpan>();
+            var authClient = new FakeCottonAuthClient();
+            authClient.Session.ExpiresAt = currentTime.AddSeconds(1);
+            authClient.PollResults.Enqueue(new AppCodePollResult
+            {
+                Status = AppCodePollStatus.Approved,
+                Tokens = new TokenPairDto { AccessToken = "access", RefreshToken = "refresh" },
+            });
+            authClient.MeExceptions.Enqueue(new IOException("Temporary user lookup failure."));
+            authClient.MeExceptions.Enqueue(new IOException("Still unavailable."));
+            var flow = new AppCodeBrowserAuthFlow(
+                authClient,
+                new FakePlatformCommandService(),
+                (delay, _) =>
+                {
+                    delays.Add(delay);
+                    currentTime = currentTime.Add(delay).AddMilliseconds(1);
+                    return Task.CompletedTask;
+                },
+                utcNow: () => currentTime);
+
+            AppCodeBrowserSignInException? exception = Assert.ThrowsAsync<AppCodeBrowserSignInException>(
+                async () => await flow.SignInAsync(new AppCodeBrowserSignInRequest
+                {
+                    ApplicationName = "Cotton Sync Desktop",
+                }));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exception, Is.Not.Null);
+                Assert.That(exception!.Status, Is.EqualTo(AppCodePollStatus.Expired));
+                Assert.That(exception.Error, Is.EqualTo("expired"));
+                Assert.That(authClient.PollCallCount, Is.EqualTo(1));
+                Assert.That(authClient.MeCallCount, Is.EqualTo(2));
+                Assert.That(delays, Is.EqualTo(new[] { authClient.Session.PollInterval }));
+            });
+        }
+
+        [Test]
         public void SignInAsync_StopsTransientPollRetriesWhenSessionExpires()
         {
             DateTime currentTime = DateTime.UtcNow;
@@ -231,6 +307,8 @@ namespace Cotton.Sync.App.Tests.Auth
 
             public Queue<AppCodePollResult> PollResults { get; } = new();
 
+            public Queue<Exception> MeExceptions { get; } = new();
+
             public int StartCallCount { get; private set; }
 
             public int PollCallCount { get; private set; }
@@ -291,6 +369,11 @@ namespace Cotton.Sync.App.Tests.Auth
             public Task<UserDto> MeAsync(CancellationToken cancellationToken = default)
             {
                 MeCallCount++;
+                if (MeExceptions.TryDequeue(out Exception? exception))
+                {
+                    throw exception;
+                }
+
                 return Task.FromResult(CurrentUser);
             }
         }

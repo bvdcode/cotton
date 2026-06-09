@@ -74,7 +74,7 @@ namespace Cotton.Sync.App.Auth
                 }
                 if (result.Status == AppCodePollStatus.Approved)
                 {
-                    UserDto user = await _authClient.MeAsync(cancellationToken).ConfigureAwait(false);
+                    UserDto user = await GetCurrentUserWithRetryAsync(session, cancellationToken).ConfigureAwait(false);
                     return ToSession(user);
                 }
 
@@ -86,6 +86,26 @@ namespace Cotton.Sync.App.Auth
 
                 await _delayAsync(GetRetryDelay(result.RetryAfter ?? session.PollInterval), cancellationToken)
                     .ConfigureAwait(false);
+            }
+        }
+
+        private async Task<UserDto> GetCurrentUserWithRetryAsync(
+            AppCodeAuthorizationSession session,
+            CancellationToken cancellationToken)
+        {
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    return await _authClient.MeAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception exception) when (IsRetriablePollException(exception, cancellationToken))
+                {
+                    ThrowIfSessionExpired(session);
+                    _logger.LogWarning(exception, "Browser sign-in user lookup failed transiently. Retrying.");
+                    await _delayAsync(GetRetryDelay(session.PollInterval), cancellationToken).ConfigureAwait(false);
+                }
             }
         }
 
