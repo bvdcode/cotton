@@ -82,7 +82,7 @@ namespace Cotton.Server.Extensions
                 return UnknownLocationLabel;
             }
 
-            string[] parts = [ipInfo.City, ipInfo.Region, ipInfo.Country]
+            string[] parts = new[] { ipInfo.City, ipInfo.Region, ipInfo.Country }
                 .Where(IsKnownGeoField)
                 .Select(value => value!.Trim())
                 .ToArray();

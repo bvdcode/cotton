@@ -55,7 +55,8 @@ public class NetworkAddressClassifierTests
             IPAddress.Parse("10.0.0.101"),
             new StringValues("Windows"));
 
-        SentNotification sent = Assert.Single(notifications.Sent);
+        Assert.That(notifications.Sent, Has.Count.EqualTo(1));
+        SentNotification sent = notifications.Sent.Single();
         Assert.Multiple(() =>
         {
             Assert.That(geoLookup.LookupCount, Is.Zero);
