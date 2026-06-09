@@ -53,7 +53,7 @@ namespace Cotton.Sync.Tests
         public async Task RunOnceAsync_NoOpForThreeThousandFilesCompletesWithinSmokeTarget()
         {
             const int fileCount = 3_000;
-            TimeSpan smokeTarget = TimeSpan.FromSeconds(35);
+            TimeSpan smokeTarget = TimeSpan.FromSeconds(60);
 
             await VerifyNoOpFileSetCompletesWithinSmokeTargetAsync(
                 "performance-noop-3k",

@@ -98,7 +98,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             string foldersHeader = GetSlice(
                 mainWindowXaml,
                 "<TextBlock Text=\"Folders\"",
-                "<Grid Grid.Row=\"1\"\n                    MinHeight=\"0\">");
+                "<Grid Grid.Row=\"1\"");
 
             Assert.Multiple(() =>
             {
@@ -325,11 +325,13 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             {
                 Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"Auto\" />"));
                 Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"*\" MinHeight=\"132\" />"));
-                Assert.That(dashboardView, Does.Contain("<Grid Grid.Row=\"1\"\n            RowDefinitions=\"*,Auto\""));
+                Assert.That(dashboardView, Does.Contain("<Grid Grid.Row=\"1\""));
+                Assert.That(dashboardView, Does.Contain("RowDefinitions=\"*,Auto\""));
                 Assert.That(dashboardView, Does.Contain("<StackPanel Grid.Row=\"0\""));
                 Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding IsDashboardChromeVisible}\""));
-                Assert.That(dashboardView, Does.Contain("<Border Grid.Row=\"0\"\n                Padding=\"10\""));
-                Assert.That(dashboardView, Does.Contain("<Border Grid.Row=\"1\"\n                Padding=\"10\""));
+                Assert.That(dashboardView, Does.Contain("<Border Grid.Row=\"0\""));
+                Assert.That(dashboardView, Does.Contain("<Border Grid.Row=\"1\""));
+                Assert.That(dashboardView, Does.Contain("Padding=\"10\""));
                 Assert.That(dashboardView, Does.Contain("MaxHeight=\"150\""));
                 Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding IsActivityVisible}\""));
                 Assert.That(dashboardView, Does.Contain("VerticalScrollBarVisibility=\"Auto\""));
@@ -541,8 +543,12 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
             string wizardError = GetSlice(
                 mainWindowXaml,
+                "IsVisible=\"{Binding IsAddSyncPairWizardVisible}\"",
+                "<ScrollViewer Grid.Row=\"2\"");
+            wizardError = GetSlice(
+                wizardError,
                 "ToolTip.Tip=\"{Binding ActionRequiredMessage}\"",
-                "<Grid Grid.Row=\"2\">");
+                "</Border>");
 
             Assert.Multiple(() =>
             {
@@ -613,7 +619,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             string notificationsView = GetSlice(
                 mainWindowXaml,
                 "IsVisible=\"{Binding HasDashboardNotifications}\"",
-                "<Border Padding=\"10\"\n                MaxHeight=\"116\"");
+                "IsVisible=\"{Binding HasConflicts}\"");
 
             Assert.Multiple(() =>
             {
@@ -636,7 +642,8 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             {
                 Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"Auto\" />"));
                 Assert.That(dashboardView, Does.Contain("<RowDefinition Height=\"*\" MinHeight=\"132\" />"));
-                Assert.That(dashboardView, Does.Contain("<Grid Grid.Row=\"1\"\n            RowDefinitions=\"*,Auto\""));
+                Assert.That(dashboardView, Does.Contain("<Grid Grid.Row=\"1\""));
+                Assert.That(dashboardView, Does.Contain("RowDefinitions=\"*,Auto\""));
                 Assert.That(dashboardView, Does.Contain("IsVisible=\"{Binding IsActivityVisible}\""));
                 Assert.That(dashboardView, Does.Not.Contain("Height=\"Auto\" MaxHeight=\"236\""));
                 Assert.That(dashboardView, Does.Not.Contain("Height=\"2*\""));

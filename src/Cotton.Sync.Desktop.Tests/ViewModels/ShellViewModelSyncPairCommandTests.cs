@@ -2955,7 +2955,7 @@ namespace Cotton.Sync.Desktop.Tests.ViewModels
             Assert.That(viewModel.SelectedConflict?.Path, Is.EqualTo("Reports/q1.txt"));
             await ExecuteAsync(viewModel.OpenConflictCommand, requestedConflict);
 
-            Assert.That(controller.OpenedFolderPath, Is.EqualTo("/home/vadim/Documents/Finance"));
+            Assert.That(controller.OpenedFolderPath, Is.EqualTo(Path.GetFullPath("/home/vadim/Documents/Finance")));
         }
 
         [Test]
@@ -2974,7 +2974,7 @@ namespace Cotton.Sync.Desktop.Tests.ViewModels
 
             await ExecuteAsync(viewModel.OpenConflictCommand, viewModel.Conflicts.Single());
 
-            Assert.That(controller.OpenedFolderPath, Is.EqualTo("/home/vadim/Documents"));
+            Assert.That(controller.OpenedFolderPath, Is.EqualTo(Path.GetFullPath("/home/vadim/Documents")));
         }
 
         [Test]
