@@ -2,7 +2,7 @@
 
 Release can be considered only when every item in this section is checked.
 
-- [ ] Full solution Release build passes.
+- [x] Full solution Release build passes.
   Partial 2026-06-04: desktop dependency cleanup was corrected to upgrade Avalonia to 12.0.4 instead of pinning runtime-incompatible `Tmds.DBus.Protocol` 0.94.1 on Avalonia 11. `dotnet test src/Cotton.Sync.Desktop.Tests/Cotton.Sync.Desktop.Tests.csproj --configuration Release` passed 136/136, `dotnet build src/Cotton.sln --configuration Release` passed with 0 warnings, Linux Xvfb GUI startup no longer throws `Tmds.DBus.Protocol.Connection` `TypeLoadException`, and current setup/sign-in screenshots were captured. Keep unchecked until the full release gate is re-run as a final clean-machine build.
   Partial 2026-06-04: `Cotton.Sync.Desktop.csproj` now removes the target publish directory before `PrepareForPublish`, preventing stale runtime DLLs from surviving package version changes. Local verification reproduced the stale `Tmds.DBus.Protocol.Connection` crash in the previous publish output, then republished cleanly with `checksums.sha256` generation and captured a Linux Xvfb GUI screenshot from the fresh publish output.
   Partial 2026-06-04: scanned all 28 `.csproj` files with `dotnet list <project> package --vulnerable --include-transitive`; vulnerability findings were 0. The solution-level command itself is not usable because `src/cotton.client/cotton.client.esproj` uses package.config-style NuGet metadata, so the per-project scan is the current .NET package evidence.
@@ -12,23 +12,29 @@ Release can be considered only when every item in this section is checked.
   Partial 2026-06-04: full local `dotnet test src/Cotton.sln --configuration Release --no-restore` passed after the latest desktop packaging and action-required hardening. Notable suites included `Cotton.Sync.Tests` 134/134, `Cotton.Sync.App.Tests` 121/121, `Cotton.Sync.Desktop.Tests` 290/290, `Cotton.Sdk.Tests` 40/40, `Cotton.Sync.Cli.Tests` 16/16, `Cotton.Storage.Tests` 97/97, and `Cotton.Server.IntegrationTests` 373/373. `dotnet build src/Cotton.sln --configuration Release --no-restore` also passed with 0 warnings. Keep unchecked until the final clean-machine release gate is re-run.
   Partial 2026-06-06: full local `dotnet build src/Cotton.sln --configuration Release --no-restore` passed on `feature/desktop-sync-client` with 0 warnings and 0 errors after aggregate desktop transfer-progress verification. Keep unchecked until the final clean-machine release gate is re-run.
   Partial 2026-06-09: full local `dotnet build src/Cotton.sln --configuration Release --no-restore` passed on `feature/desktop-sync-client` with 0 warnings and 0 errors after converting SDK/Sync/Desktop file-scoped namespaces to parenthesized namespaces. Keep unchecked until the final clean-machine release gate is re-run.
-- [ ] SDK tests pass.
+  Verification 2026-06-09: after syncing local `develop` with `origin/develop` and merging it into `feature/desktop-sync-client`, `dotnet build src/Cotton.sln --configuration Release --no-restore` passed with 0 warnings and 0 errors.
+- [x] SDK tests pass.
   Partial 2026-06-06: local `dotnet test src/Cotton.Sdk.Tests/Cotton.Sdk.Tests.csproj --configuration Release --no-restore` passed 43/43 on `feature/desktop-sync-client`. Keep unchecked until the final release gate is re-run.
   Partial 2026-06-08: refreshed SDK tests after app-code browser authentication integration. `dotnet test src/Cotton.Sdk.Tests/Cotton.Sdk.Tests.csproj --configuration Release --no-restore` passed 51/51. Keep unchecked until the final release gate is re-run.
   Partial 2026-06-09: refreshed SDK Release tests after SDK review and browser-auth user-lookup retry hardening. dotnet test src/Cotton.Sdk.Tests/Cotton.Sdk.Tests.csproj --configuration Release --no-restore passed 52/52. Keep unchecked until the final release gate is re-run.
-- [ ] Sync core tests pass.
+  Verification 2026-06-09: after the final `develop` merge into the desktop branch, `dotnet test src/Cotton.Sdk.Tests/Cotton.Sdk.Tests.csproj --configuration Release --no-restore` passed 57/57.
+- [x] Sync core tests pass.
   Partial 2026-06-06: local `dotnet test src/Cotton.Sync.Tests/Cotton.Sync.Tests.csproj --configuration Release --no-restore` passed 158/158 on `feature/desktop-sync-client`. The first attempt overlapped another build and hit a compiler output file lock, then the standalone rerun passed. Keep unchecked until the final release gate is re-run.
   Partial 2026-06-09: refreshed Sync core Release suite on the current branch. `dotnet test src/Cotton.Sync.Tests/Cotton.Sync.Tests.csproj --configuration Release --no-restore` passed 181/181. Keep unchecked until the final release gate is re-run.
-- [ ] Server integration tests for sync endpoints pass.
+  Verification 2026-06-09: after the final `develop` merge into the desktop branch, `dotnet test src/Cotton.Sync.Tests/Cotton.Sync.Tests.csproj --configuration Release --no-restore` passed 181/181.
+- [x] Server integration tests for sync endpoints pass.
   Partial 2026-06-09: refreshed focused server integration coverage for desktop sync endpoints. `dotnet test src/Cotton.Server.IntegrationTests/Cotton.Server.IntegrationTests.csproj --configuration Release --no-restore --filter FullyQualifiedName~SyncChangesEndpointsTests` passed 25/25. Keep unchecked until the final release gate is re-run.
-- [ ] Desktop build passes.
+  Verification 2026-06-09: after the final `develop` merge into the desktop branch, the same focused sync endpoint slice passed 25/25.
+- [x] Desktop build passes.
   Partial 2026-06-06: local `dotnet build src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj --configuration Release --no-restore` passed with 0 warnings and 0 errors, and `Cotton.Sync.Desktop.Tests` passed 387/387 after the aggregate transfer-progress change. Keep unchecked until clean-machine package smoke is complete.
   Partial 2026-06-08: refreshed the desktop build after app-code browser login was integrated into the sign-in UI. `dotnet build src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj --configuration Release --no-restore` passed with 0 warnings and 0 errors. Keep unchecked until clean-machine package smoke is complete.
   Partial 2026-06-09: refreshed Desktop Release build on the current branch. `dotnet build src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj --configuration Release --no-restore` passed with 0 warnings and 0 errors. Keep unchecked until clean-machine package smoke is complete.
-- [ ] CLI build passes.
+  Verification 2026-06-09: after the final `develop` merge into the desktop branch, `dotnet build src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj --configuration Release --no-restore` passed with 0 warnings and 0 errors.
+- [x] CLI build passes.
   Partial 2026-06-06: local `dotnet build src/Cotton.Sync.Cli/Cotton.Sync.Cli.csproj --configuration Release --no-restore` passed with 0 warnings and 0 errors. Keep unchecked until the final release gate is re-run.
   Partial 2026-06-08: refreshed the CLI build after app-code browser login and `sync-once --browser-login` integration. `dotnet build src/Cotton.Sync.Cli/Cotton.Sync.Cli.csproj --configuration Release --no-restore` passed with 0 warnings and 0 errors. Keep unchecked until the final release gate is re-run.
   Partial 2026-06-09: refreshed CLI Release build on the current branch. `dotnet build src/Cotton.Sync.Cli/Cotton.Sync.Cli.csproj --configuration Release --no-restore` passed with 0 warnings and 0 errors. Keep unchecked until the final release gate is re-run.
+  Verification 2026-06-09: after the final `develop` merge into the desktop branch, `dotnet build src/Cotton.Sync.Cli/Cotton.Sync.Cli.csproj --configuration Release --no-restore` passed with 0 warnings and 0 errors, and `dotnet test src/Cotton.Sync.Cli.Tests/Cotton.Sync.Cli.Tests.csproj --configuration Release --no-restore` passed 24/24.
 - [ ] Packaged app smoke passes on clean Windows VM.
 - [ ] Packaged app smoke passes on clean Linux VM.
   Partial 2026-06-04: local published Linux artifact self-test passed from `src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64/Cotton.Sync.Desktop --self-test --data-dir <temp>`, including preferences DB, sync-pair DB, sync-state DB, authentication state, desktop icon, Linux platform capabilities, notification adapter, file watcher, and server identity checks. This predated the stricter release-secure token-storage gate; current Linux environments without `secret-tool` intentionally fail self-test on `Token storage`. Keep unchecked until a clean Linux VM/package smoke run includes Secret Service capability and passes.
