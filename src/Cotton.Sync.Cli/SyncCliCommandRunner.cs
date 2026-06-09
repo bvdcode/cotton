@@ -123,6 +123,8 @@ public static class SyncCliCommandRunner
                 .ConfigureAwait(false);
             string account = string.IsNullOrWhiteSpace(session.Email) ? session.Username : session.Email!;
             await output.WriteLineAsync("Signed in: " + account).ConfigureAwait(false);
+            await client.Auth.LogoutAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            await output.WriteLineAsync("Signed out.").ConfigureAwait(false);
             return 0;
         }
         catch (AppCodeBrowserSignInException exception)
@@ -246,7 +248,7 @@ public static class SyncCliCommandRunner
               auth-browser --server <url-or-host>
                   [--application-name <name>] [--application-version <version>]
                   [--device-name <name>]
-                  Starts app-code browser sign-in, prints the approval URL, and waits.
+                  Verifies app-code browser sign-in, then revokes the temporary session.
 
               state-summary --database <path> --sync-pair <id>
                   Initializes and summarizes a sync-state SQLite database for one sync pair.

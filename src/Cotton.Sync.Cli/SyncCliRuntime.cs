@@ -12,9 +12,16 @@ namespace Cotton.Sync.Cli
         SyncEngine Engine,
         ICottonCloudClient Client) : IAsyncDisposable
     {
-        public ValueTask DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
-            return Client.DisposeAsync();
+            try
+            {
+                await Client.Auth.LogoutAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                await Client.DisposeAsync().ConfigureAwait(false);
+            }
         }
     }
 }

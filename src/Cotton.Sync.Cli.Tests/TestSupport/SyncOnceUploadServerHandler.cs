@@ -111,6 +111,11 @@ internal sealed class SyncOnceUploadServerHandler : HttpMessageHandler
             });
         }
 
+        if (request.Method == HttpMethod.Post && request.PathAndQuery == "/api/v1/auth/logout?refreshToken=refresh-token")
+        {
+            return new HttpResponseMessage(HttpStatusCode.NoContent);
+        }
+
         Assert.That(request.AuthorizationParameter, Is.EqualTo("access-token"));
 
         if (request.Method == HttpMethod.Get && request.PathAndQuery == "/api/v1/layouts/nodes/" + _remoteRootId.ToString("D"))

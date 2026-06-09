@@ -82,11 +82,13 @@ public sealed class SyncCliCommandRunnerTests
             Assert.That(text, Does.Contain("Cotton Sync browser sign-in"));
             Assert.That(text, Does.Contain("Approval URL: https://cotton.test/oauth/app-code/0190a000-0000-7000-8000-000000000022"));
             Assert.That(text, Does.Contain("Signed in: browser@example.test"));
+            Assert.That(text, Does.Contain("Signed out."));
             Assert.That(handler.Requests.Select(static request => request.PathAndQuery), Is.EqualTo(new[]
             {
                 "/api/v1/oauth/app-code/start",
                 "/api/v1/oauth/app-code/poll",
                 "/api/v1/auth/me",
+                "/api/v1/auth/logout?refreshToken=refresh-token",
             }));
             Assert.That(handler.Requests[0].Body, Does.Contain("\"applicationName\":\"Cotton Sync CLI\""));
             Assert.That(handler.Requests[0].Body, Does.Contain("\"applicationVersion\":\"1.2.3\""));
@@ -590,6 +592,7 @@ public sealed class SyncCliCommandRunnerTests
                 "/api/v1/chunks/" + contentHash + "/exists",
                 "/api/v1/chunks/raw?hash=" + contentHash,
                 "/api/v1/files/from-chunks",
+                "/api/v1/auth/logout?refreshToken=refresh-token",
             }));
         });
     }
@@ -659,6 +662,7 @@ public sealed class SyncCliCommandRunnerTests
                 "/api/v1/chunks/" + contentHash + "/exists",
                 "/api/v1/chunks/raw?hash=" + contentHash,
                 "/api/v1/files/from-chunks",
+                "/api/v1/auth/logout?refreshToken=refresh-token",
             }));
         });
     }
@@ -1241,6 +1245,7 @@ public sealed class SyncCliCommandRunnerTests
                 "/api/v1/layouts/nodes/11111111-1111-1111-1111-111111111111",
                 "/api/v1/layouts/nodes/11111111-1111-1111-1111-111111111111/children?page=1&pageSize=100&depth=0",
                 "/api/v1/layouts/nodes",
+                "/api/v1/auth/logout?refreshToken=refresh-token",
             }));
         });
     }
@@ -1406,6 +1411,11 @@ public sealed class SyncCliCommandRunnerTests
                     Username = "browser",
                     Email = "browser@example.test",
                 });
+            }
+
+            if (snapshot.Method == HttpMethod.Post && snapshot.PathAndQuery == "/api/v1/auth/logout?refreshToken=refresh-token")
+            {
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
             }
 
             return new HttpResponseMessage(HttpStatusCode.NotFound)

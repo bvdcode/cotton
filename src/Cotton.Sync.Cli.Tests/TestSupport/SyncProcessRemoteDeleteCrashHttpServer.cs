@@ -62,6 +62,12 @@ internal sealed class SyncProcessRemoteDeleteCrashHttpServer : SyncProcessCrashH
             return;
         }
 
+        if (request.Method == HttpMethod.Post && request.PathAndQuery == "/api/v1/auth/logout?refreshToken=refresh-token")
+        {
+            response.StatusCode = (int)HttpStatusCode.NoContent;
+            return;
+        }
+
         if (!string.Equals(request.AuthorizationParameter, "access-token", StringComparison.Ordinal))
         {
             await WriteTextAsync(response, HttpStatusCode.Unauthorized, "Missing bearer token.", cancellationToken)
