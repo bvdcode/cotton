@@ -7,7 +7,8 @@ Cotton Sync Desktop is a polished Windows/Linux desktop application that behaves
   Verification 2026-06-09: password/TOTP auth remains implemented through `PasswordAuthFlow`, with human-readable desktop errors and Enter-submit behavior covered in the current work-order. Browser/app-code login is also integrated, while Windows browser-flow manual verification remains tracked separately.
 - [x] The user can configure one or more sync pairs: local folder to remote Cotton folder.
   Verification 2026-06-09: sync-pair settings, validation, EF persistence, remote folder picker, dashboard rows, pair enable/disable/delete, and multiple-pair UI state are implemented and covered by Phase 1/8/current-work-order evidence.
-- [ ] The application can start with the operating system.
+- [x] The application can start with the operating system.
+  Verification 2026-06-09: OS autostart is implemented through the Windows Run adapter and Linux XDG autostart adapter, with development-launch protection and packaging cleanup recorded in Phase 9/21. Manual reboot/login verification remains open in the lifecycle and release-gate items.
 - [ ] The application runs continuously in the background and is controlled from the tray.
 - [x] Local changes are uploaded automatically.
   Verification 2026-06-09: local watcher/coalescing, sync-pair queues, continuous supervisor, SDK upload pipeline, and end-to-end local-create upload evidence are recorded in Phases 6 and 12.
