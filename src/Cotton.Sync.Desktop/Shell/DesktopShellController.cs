@@ -159,7 +159,7 @@ namespace Cotton.Sync.Desktop.Shell
                 Timeout = ServerProbeTimeout,
             };
             PublicServerInfo? info = await httpClient
-                .GetFromJsonAsync<PublicServerInfo>("/api/v1/server/info", cancellationToken)
+                .GetFromJsonAsync<PublicServerInfo>(Routes.V1.Server + "/info", cancellationToken)
                 .ConfigureAwait(false);
             bool isCottonServer = string.Equals(info?.Product, Constants.ProductName, StringComparison.Ordinal);
             return new DesktopServerProbeResult(
