@@ -20,7 +20,7 @@ namespace Cotton.Sync.App.Activities
                 _observers.Add(observer);
             }
 
-            return new Subscription(this, observer);
+            return new Cotton.Sync.App.ObservableSubscription<AppSyncActivity>(Unsubscribe, observer);
         }
 
         /// <inheritdoc />
@@ -47,25 +47,5 @@ namespace Cotton.Sync.App.Activities
             }
         }
 
-        private class Subscription : IDisposable
-        {
-            private readonly InMemoryAppActivityPublisher _publisher;
-            private IObserver<AppSyncActivity>? _observer;
-
-            public Subscription(InMemoryAppActivityPublisher publisher, IObserver<AppSyncActivity> observer)
-            {
-                _publisher = publisher;
-                _observer = observer;
-            }
-
-            public void Dispose()
-            {
-                IObserver<AppSyncActivity>? observer = Interlocked.Exchange(ref _observer, null);
-                if (observer is not null)
-                {
-                    _publisher.Unsubscribe(observer);
-                }
-            }
-        }
     }
 }

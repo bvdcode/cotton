@@ -44,7 +44,7 @@ namespace Cotton.Sync.App.Status
             }
 
             observer.OnNext(current);
-            return new Subscription(this, observer);
+            return new Cotton.Sync.App.ObservableSubscription<SyncAppStatus>(Unsubscribe, observer);
         }
 
         /// <inheritdoc />
@@ -72,28 +72,5 @@ namespace Cotton.Sync.App.Status
             }
         }
 
-        private class Subscription : IDisposable
-        {
-            private readonly IObserver<SyncAppStatus> _observer;
-            private readonly InMemoryAppStatusPublisher _publisher;
-            private bool _disposed;
-
-            public Subscription(InMemoryAppStatusPublisher publisher, IObserver<SyncAppStatus> observer)
-            {
-                _publisher = publisher;
-                _observer = observer;
-            }
-
-            public void Dispose()
-            {
-                if (_disposed)
-                {
-                    return;
-                }
-
-                _publisher.Unsubscribe(_observer);
-                _disposed = true;
-            }
-        }
     }
 }

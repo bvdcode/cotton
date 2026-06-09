@@ -20,7 +20,7 @@ namespace Cotton.Sync.App.Progress
                 _observers.Add(observer);
             }
 
-            return new Subscription(this, observer);
+            return new Cotton.Sync.App.ObservableSubscription<AppRunProgress>(Unsubscribe, observer);
         }
 
         /// <inheritdoc />
@@ -47,25 +47,5 @@ namespace Cotton.Sync.App.Progress
             }
         }
 
-        private class Subscription : IDisposable
-        {
-            private readonly InMemoryAppRunProgressPublisher _publisher;
-            private IObserver<AppRunProgress>? _observer;
-
-            public Subscription(InMemoryAppRunProgressPublisher publisher, IObserver<AppRunProgress> observer)
-            {
-                _publisher = publisher;
-                _observer = observer;
-            }
-
-            public void Dispose()
-            {
-                IObserver<AppRunProgress>? observer = Interlocked.Exchange(ref _observer, null);
-                if (observer is not null)
-                {
-                    _publisher.Unsubscribe(observer);
-                }
-            }
-        }
     }
 }

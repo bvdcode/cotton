@@ -20,7 +20,7 @@ namespace Cotton.Sync.App.Auth
                 _observers.Add(observer);
             }
 
-            return new Subscription(this, observer);
+            return new Cotton.Sync.App.ObservableSubscription<SessionRevocationEvent>(Unsubscribe, observer);
         }
 
         /// <inheritdoc />
@@ -47,25 +47,5 @@ namespace Cotton.Sync.App.Auth
             }
         }
 
-        private class Subscription : IDisposable
-        {
-            private readonly InMemorySessionRevocationPublisher _publisher;
-            private IObserver<SessionRevocationEvent>? _observer;
-
-            public Subscription(InMemorySessionRevocationPublisher publisher, IObserver<SessionRevocationEvent> observer)
-            {
-                _publisher = publisher;
-                _observer = observer;
-            }
-
-            public void Dispose()
-            {
-                IObserver<SessionRevocationEvent>? observer = Interlocked.Exchange(ref _observer, null);
-                if (observer is not null)
-                {
-                    _publisher.Unsubscribe(observer);
-                }
-            }
-        }
     }
 }
