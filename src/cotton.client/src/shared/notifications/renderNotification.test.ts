@@ -142,6 +142,25 @@ describe("renderNotificationText", () => {
     });
   });
 
+  it("renders database integrity failure template from metadata", () => {
+    const result = renderNotificationText(
+      createNotification({
+        "i18n.titleKey": "notifications:server.databaseIntegrityFailure.title",
+        "i18n.contentKey":
+          "notifications:server.databaseIntegrityFailure.content",
+        entityName: "RefreshToken",
+        entityKey: "token-1",
+        boundary: "auth",
+        detectedAtUtcDisplay: "2026-06-09 22:10:00",
+      }),
+      i18n.t,
+    );
+
+    expect(result.title).toBe("Database integrity issue detected");
+    expect(result.content).toContain("Entity: RefreshToken");
+    expect(result.content).toContain("Detected (UTC): 2026-06-09 22:10:00");
+  });
+
   it("keeps fallback text when the template key is unknown", () => {
     const result = renderNotificationText(
       createNotification({

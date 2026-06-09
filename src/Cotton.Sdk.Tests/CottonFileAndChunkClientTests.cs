@@ -46,7 +46,8 @@ namespace Cotton.Sdk.Tests
             {
                 BaseAddress = new Uri("https://cotton.test"),
             });
-            using var stream = new MemoryStream(Encoding.UTF8.GetBytes("chunk"));
+            using var stream = new MemoryStream(Encoding.UTF8.GetBytes("prefixchunk"));
+            stream.Position = Encoding.UTF8.GetByteCount("prefix");
 
             await client.Chunks.UploadRawAsync("abc123", stream);
 
@@ -62,6 +63,7 @@ namespace Cotton.Sdk.Tests
                 }));
                 Assert.That(handler.Requests[0].AuthorizationParameter, Is.EqualTo("old-access"));
                 Assert.That(handler.Requests[2].AuthorizationParameter, Is.EqualTo("new-access"));
+                Assert.That(Encoding.UTF8.GetString(handler.Requests[0].RawBody), Is.EqualTo("chunk"));
                 Assert.That(Encoding.UTF8.GetString(handler.Requests[2].RawBody), Is.EqualTo("chunk"));
             });
         }

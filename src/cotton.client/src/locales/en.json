@@ -1263,6 +1263,10 @@
       "databaseRestoreCompleted": {
         "title": "Database restored automatically",
         "content": "Automatic database restore completed successfully.\n\nBackup ID: {{backupId}}\nSource database: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup created (UTC): {{backupCreatedUtc}} UTC\nBackup created ({{serverTimezone}}): {{backupCreatedLocal}}\nRestore completed (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestore completed ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+      },
+      "databaseIntegrityFailure": {
+        "title": "Database integrity issue detected",
+        "content": "Cotton rejected a protected database row because its integrity signature did not match.\n\nEntity: {{entityName}}\nRow: {{entityKey}}\nBoundary: {{boundary}}\nDetected (UTC): {{detectedAtUtcDisplay}}\n\nIf you edited PostgreSQL manually, restore the row from a trusted backup or re-apply the change through Cotton."
       }
     }
   },

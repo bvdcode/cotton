@@ -1469,6 +1469,10 @@
       "databaseRestoreCompleted": {
         "title": "Database automatisch hersteld",
         "content": "Automatisch databaseherstel is succesvol voltooid.\n\nBackup-ID: {{backupId}}\nBrondatabase: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup gemaakt (UTC): {{backupCreatedUtc}} UTC\nBackup gemaakt ({{serverTimezone}}): {{backupCreatedLocal}}\nHerstel voltooid (UTC): {{restoreCompletedUtcDisplay}} UTC\nHerstel voltooid ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+      },
+      "databaseIntegrityFailure": {
+        "title": "Probleem met database-integriteit gedetecteerd",
+        "content": "Cotton heeft een beschermde databaserij geweigerd omdat de integriteitshandtekening niet overeenkwam.\n\nEntiteit: {{entityName}}\nRij: {{entityKey}}\nGrens: {{boundary}}\nGedetecteerd (UTC): {{detectedAtUtcDisplay}}\n\nAls je PostgreSQL handmatig hebt aangepast, herstel de rij dan vanuit een vertrouwde back-up of pas de wijziging opnieuw toe via Cotton."
       }
     }
   },
