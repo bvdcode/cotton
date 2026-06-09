@@ -1390,57 +1390,57 @@
       "failedLoginAttempt": {
         "title": "Tentativo di accesso non riuscito",
         "content": {
-          "withDevice": "Qualcuno ha provato ad accedere al tuo account '{{username}}', ma il tentativo non è riuscito. Il tentativo è stato effettuato da {{device}} a {{city}}, {{region}}, {{country}} ({{ip}}).",
-          "withoutDevice": "Qualcuno ha provato ad accedere al tuo account '{{username}}', ma il tentativo non è riuscito. Il tentativo è stato effettuato da {{city}}, {{region}}, {{country}} ({{ip}})."
+          "withDevice": "Qualcuno ha provato ad accedere al tuo account '{{username}}', ma il tentativo non è riuscito. Il tentativo è stato effettuato da {{device}} a {{location}} ({{ip}}).",
+          "withoutDevice": "Qualcuno ha provato ad accedere al tuo account '{{username}}', ma il tentativo non è riuscito. Il tentativo è stato effettuato da {{location}} ({{ip}})."
         }
       },
       "successfulLogin": {
         "title": "Nuovo accesso al tuo account",
         "content": {
-          "withDevice": "È stato effettuato un accesso al tuo account da {{device}} a {{city}}, {{region}}, {{country}} ({{ip}}). Se non eri tu, proteggi subito l’account.",
-          "withoutDevice": "È stato effettuato un accesso al tuo account da {{city}}, {{region}}, {{country}} ({{ip}}). Se non eri tu, proteggi subito l’account."
+          "withDevice": "È stato effettuato un accesso al tuo account da {{device}} a {{location}} ({{ip}}). Se non eri tu, proteggi subito l’account.",
+          "withoutDevice": "È stato effettuato un accesso al tuo account da {{location}} ({{ip}}). Se non eri tu, proteggi subito l’account."
         }
       },
       "otpDisabled": {
         "title": "Autenticazione a due fattori disattivata",
         "content": {
-          "withDevice": "L’autenticazione a due fattori è stata disattivata per il tuo account da {{device}} a {{city}}, {{region}}, {{country}} ({{ip}}). Ora l’account è meno sicuro. Se non eri tu, proteggilo subito.",
-          "withoutDevice": "L’autenticazione a due fattori è stata disattivata per il tuo account da {{city}}, {{region}}, {{country}} ({{ip}}). Ora l’account è meno sicuro. Se non eri tu, proteggilo subito."
+          "withDevice": "L’autenticazione a due fattori è stata disattivata per il tuo account da {{device}} a {{location}} ({{ip}}). Ora l’account è meno sicuro. Se non eri tu, proteggilo subito.",
+          "withoutDevice": "L’autenticazione a due fattori è stata disattivata per il tuo account da {{location}} ({{ip}}). Ora l’account è meno sicuro. Se non eri tu, proteggilo subito."
         }
       },
       "otpEnabled": {
         "title": "Autenticazione a due fattori attivata",
         "content": {
-          "withDevice": "L’autenticazione a due fattori è stata attivata per il tuo account da {{device}} a {{city}}, {{region}}, {{country}} ({{ip}}). Ora l’account è più sicuro.",
-          "withoutDevice": "L’autenticazione a due fattori è stata attivata per il tuo account da {{city}}, {{region}}, {{country}} ({{ip}}). Ora l’account è più sicuro."
+          "withDevice": "L’autenticazione a due fattori è stata attivata per il tuo account da {{device}} a {{location}} ({{ip}}). Ora l’account è più sicuro.",
+          "withoutDevice": "L’autenticazione a due fattori è stata attivata per il tuo account da {{location}} ({{ip}}). Ora l’account è più sicuro."
         }
       },
       "totpFailedAttempt": {
         "title": "Codice di autenticazione non valido",
         "content": {
-          "withDevice": "È stato inserito un codice di autenticazione a due fattori non valido (tentativi falliti: {{totpFailedAttempts}}). Il tentativo è stato effettuato da {{device}} a {{city}}, {{region}}, {{country}} ({{ip}}). Se non eri tu, l’account potrebbe essere sotto attacco.",
-          "withoutDevice": "È stato inserito un codice di autenticazione a due fattori non valido (tentativi falliti: {{totpFailedAttempts}}). Il tentativo è stato effettuato da {{city}}, {{region}}, {{country}} ({{ip}}). Se non eri tu, l’account potrebbe essere sotto attacco."
+          "withDevice": "È stato inserito un codice di autenticazione a due fattori non valido (tentativi falliti: {{totpFailedAttempts}}). Il tentativo è stato effettuato da {{device}} a {{location}} ({{ip}}). Se non eri tu, l’account potrebbe essere sotto attacco.",
+          "withoutDevice": "È stato inserito un codice di autenticazione a due fattori non valido (tentativi falliti: {{totpFailedAttempts}}). Il tentativo è stato effettuato da {{location}} ({{ip}}). Se non eri tu, l’account potrebbe essere sotto attacco."
         }
       },
       "totpLockout": {
         "title": "Account temporaneamente bloccato",
         "content": {
-          "withDevice": "Il tuo account è stato temporaneamente bloccato dopo {{maxFailedAttempts}} tentativi di autenticazione falliti. L’ultimo tentativo è stato effettuato da {{device}} a {{city}}, {{region}}, {{country}} ({{ip}}). Attendi prima di riprovare.",
-          "withoutDevice": "Il tuo account è stato temporaneamente bloccato dopo {{maxFailedAttempts}} tentativi di autenticazione falliti. L’ultimo tentativo è stato effettuato da {{city}}, {{region}}, {{country}} ({{ip}}). Attendi prima di riprovare."
+          "withDevice": "Il tuo account è stato temporaneamente bloccato dopo {{maxFailedAttempts}} tentativi di autenticazione falliti. L’ultimo tentativo è stato effettuato da {{device}} a {{location}} ({{ip}}). Attendi prima di riprovare.",
+          "withoutDevice": "Il tuo account è stato temporaneamente bloccato dopo {{maxFailedAttempts}} tentativi di autenticazione falliti. L’ultimo tentativo è stato effettuato da {{location}} ({{ip}}). Attendi prima di riprovare."
         }
       },
       "webDavTokenReset": {
         "title": "Token di accesso WebDAV modificato",
         "content": {
-          "withDevice": "Il tuo token di accesso WebDAV è stato reimpostato da {{device}} a {{city}}, {{region}}, {{country}} ({{ip}}). Aggiorna il token nel client WebDAV.",
-          "withoutDevice": "Il tuo token di accesso WebDAV è stato reimpostato da {{city}}, {{region}}, {{country}} ({{ip}}). Aggiorna il token nel client WebDAV."
+          "withDevice": "Il tuo token di accesso WebDAV è stato reimpostato da {{device}} a {{location}} ({{ip}}). Aggiorna il token nel client WebDAV.",
+          "withoutDevice": "Il tuo token di accesso WebDAV è stato reimpostato da {{location}} ({{ip}}). Aggiorna il token nel client WebDAV."
         }
       },
       "sharedFileDownloaded": {
         "title": "File condiviso scaricato",
         "content": {
-          "withDevice": "Il tuo file condiviso '{{fileName}}' è stato scaricato da {{device}} a {{city}}, {{region}}, {{country}} ({{ip}}).",
-          "withoutDevice": "Il tuo file condiviso '{{fileName}}' è stato scaricato da {{city}}, {{region}}, {{country}} ({{ip}})."
+          "withDevice": "Il tuo file condiviso '{{fileName}}' è stato scaricato da {{device}} a {{location}} ({{ip}}).",
+          "withoutDevice": "Il tuo file condiviso '{{fileName}}' è stato scaricato da {{location}} ({{ip}})."
         }
       },
       "uploadHashMismatch": {

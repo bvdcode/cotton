@@ -1,6 +1,7 @@
 import {
   Badge,
   Box,
+  CircularProgress,
   Divider,
   IconButton,
   List,
@@ -59,12 +60,12 @@ export const NotificationsMenu = () => {
   );
   const notificationsQuery = useNotificationsQuery({
     unreadOnly: showOnlyUnread,
-    enabled: open,
   });
   const {
     data: notificationsData,
     fetchNextPage: fetchNextNotificationsPage,
     hasNextPage,
+    isPending: notificationsPending,
     isFetchingNextPage,
     refetch: refetchNotifications,
   } = notificationsQuery;
@@ -321,6 +322,17 @@ export const NotificationsMenu = () => {
                 </ListItem>
               );
             })
+          ) : notificationsPending ? (
+            <ListItem sx={{ px: 2, py: 1.5 }}>
+              <Box
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                width="100%"
+              >
+                <CircularProgress size={18} />
+              </Box>
+            </ListItem>
           ) : (
             <ListItem sx={{ px: 2 }}>
               <ListItemText

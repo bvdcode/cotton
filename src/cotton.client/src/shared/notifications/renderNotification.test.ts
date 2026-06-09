@@ -40,6 +40,25 @@ describe("renderNotificationText", () => {
     expect(result.content).toContain("report.xlsx");
   });
 
+  it("renders notification location from the location metadata parameter", () => {
+    const result = renderNotificationText(
+      createNotification({
+        "i18n.titleKey": "notifications:server.sharedFileDownloaded.title",
+        "i18n.contentKey":
+          "notifications:server.sharedFileDownloaded.content.withDevice",
+        fileName: "report.xlsx",
+        device: "Windows PC",
+        location: "local network",
+        ip: "10.0.0.101",
+      }),
+      i18n.t,
+    );
+
+    expect(result.content).toBe(
+      "Your shared file 'report.xlsx' was downloaded from Windows PC in local network (10.0.0.101).",
+    );
+  });
+
   it("keeps fallback text when the template key is unknown", () => {
     const result = renderNotificationText(
       createNotification({

@@ -1388,57 +1388,57 @@
       "failedLoginAttempt": {
         "title": "Tentative de connexion échouée",
         "content": {
-          "withDevice": "Quelqu’un a tenté de se connecter à votre compte '{{username}}', mais la tentative a échoué. La tentative venait de {{device}} à {{city}}, {{region}}, {{country}} ({{ip}}).",
-          "withoutDevice": "Quelqu’un a tenté de se connecter à votre compte '{{username}}', mais la tentative a échoué. La tentative venait de {{city}}, {{region}}, {{country}} ({{ip}})."
+          "withDevice": "Quelqu’un a tenté de se connecter à votre compte '{{username}}', mais la tentative a échoué. La tentative venait de {{device}} à {{location}} ({{ip}}).",
+          "withoutDevice": "Quelqu’un a tenté de se connecter à votre compte '{{username}}', mais la tentative a échoué. La tentative venait de {{location}} ({{ip}})."
         }
       },
       "successfulLogin": {
         "title": "Nouvelle connexion à votre compte",
         "content": {
-          "withDevice": "Votre compte a été consulté depuis {{device}} à {{city}}, {{region}}, {{country}} ({{ip}}). Si ce n’était pas vous, sécurisez immédiatement votre compte.",
-          "withoutDevice": "Votre compte a été consulté depuis {{city}}, {{region}}, {{country}} ({{ip}}). Si ce n’était pas vous, sécurisez immédiatement votre compte."
+          "withDevice": "Votre compte a été consulté depuis {{device}} à {{location}} ({{ip}}). Si ce n’était pas vous, sécurisez immédiatement votre compte.",
+          "withoutDevice": "Votre compte a été consulté depuis {{location}} ({{ip}}). Si ce n’était pas vous, sécurisez immédiatement votre compte."
         }
       },
       "otpDisabled": {
         "title": "Authentification à deux facteurs désactivée",
         "content": {
-          "withDevice": "L’authentification à deux facteurs a été désactivée pour votre compte depuis {{device}} à {{city}}, {{region}}, {{country}} ({{ip}}). Votre compte est maintenant moins sécurisé. Si ce n’était pas vous, sécurisez-le immédiatement.",
-          "withoutDevice": "L’authentification à deux facteurs a été désactivée pour votre compte depuis {{city}}, {{region}}, {{country}} ({{ip}}). Votre compte est maintenant moins sécurisé. Si ce n’était pas vous, sécurisez-le immédiatement."
+          "withDevice": "L’authentification à deux facteurs a été désactivée pour votre compte depuis {{device}} à {{location}} ({{ip}}). Votre compte est maintenant moins sécurisé. Si ce n’était pas vous, sécurisez-le immédiatement.",
+          "withoutDevice": "L’authentification à deux facteurs a été désactivée pour votre compte depuis {{location}} ({{ip}}). Votre compte est maintenant moins sécurisé. Si ce n’était pas vous, sécurisez-le immédiatement."
         }
       },
       "otpEnabled": {
         "title": "Authentification à deux facteurs activée",
         "content": {
-          "withDevice": "L’authentification à deux facteurs a été activée pour votre compte depuis {{device}} à {{city}}, {{region}}, {{country}} ({{ip}}). Votre compte est maintenant mieux sécurisé.",
-          "withoutDevice": "L’authentification à deux facteurs a été activée pour votre compte depuis {{city}}, {{region}}, {{country}} ({{ip}}). Votre compte est maintenant mieux sécurisé."
+          "withDevice": "L’authentification à deux facteurs a été activée pour votre compte depuis {{device}} à {{location}} ({{ip}}). Votre compte est maintenant mieux sécurisé.",
+          "withoutDevice": "L’authentification à deux facteurs a été activée pour votre compte depuis {{location}} ({{ip}}). Votre compte est maintenant mieux sécurisé."
         }
       },
       "totpFailedAttempt": {
         "title": "Code d’authentification invalide",
         "content": {
-          "withDevice": "Un code d’authentification à deux facteurs invalide a été saisi (tentatives échouées : {{totpFailedAttempts}}). La tentative venait de {{device}} à {{city}}, {{region}}, {{country}} ({{ip}}). Si ce n’était pas vous, votre compte est peut-être attaqué.",
-          "withoutDevice": "Un code d’authentification à deux facteurs invalide a été saisi (tentatives échouées : {{totpFailedAttempts}}). La tentative venait de {{city}}, {{region}}, {{country}} ({{ip}}). Si ce n’était pas vous, votre compte est peut-être attaqué."
+          "withDevice": "Un code d’authentification à deux facteurs invalide a été saisi (tentatives échouées : {{totpFailedAttempts}}). La tentative venait de {{device}} à {{location}} ({{ip}}). Si ce n’était pas vous, votre compte est peut-être attaqué.",
+          "withoutDevice": "Un code d’authentification à deux facteurs invalide a été saisi (tentatives échouées : {{totpFailedAttempts}}). La tentative venait de {{location}} ({{ip}}). Si ce n’était pas vous, votre compte est peut-être attaqué."
         }
       },
       "totpLockout": {
         "title": "Compte temporairement verrouillé",
         "content": {
-          "withDevice": "Votre compte a été temporairement verrouillé après {{maxFailedAttempts}} tentatives d’authentification échouées. La dernière tentative venait de {{device}} à {{city}}, {{region}}, {{country}} ({{ip}}). Veuillez attendre avant de réessayer.",
-          "withoutDevice": "Votre compte a été temporairement verrouillé après {{maxFailedAttempts}} tentatives d’authentification échouées. La dernière tentative venait de {{city}}, {{region}}, {{country}} ({{ip}}). Veuillez attendre avant de réessayer."
+          "withDevice": "Votre compte a été temporairement verrouillé après {{maxFailedAttempts}} tentatives d’authentification échouées. La dernière tentative venait de {{device}} à {{location}} ({{ip}}). Veuillez attendre avant de réessayer.",
+          "withoutDevice": "Votre compte a été temporairement verrouillé après {{maxFailedAttempts}} tentatives d’authentification échouées. La dernière tentative venait de {{location}} ({{ip}}). Veuillez attendre avant de réessayer."
         }
       },
       "webDavTokenReset": {
         "title": "Jeton d’accès WebDAV modifié",
         "content": {
-          "withDevice": "Votre jeton d’accès WebDAV a été réinitialisé depuis {{device}} à {{city}}, {{region}}, {{country}} ({{ip}}). Mettez à jour le jeton dans votre client WebDAV.",
-          "withoutDevice": "Votre jeton d’accès WebDAV a été réinitialisé depuis {{city}}, {{region}}, {{country}} ({{ip}}). Mettez à jour le jeton dans votre client WebDAV."
+          "withDevice": "Votre jeton d’accès WebDAV a été réinitialisé depuis {{device}} à {{location}} ({{ip}}). Mettez à jour le jeton dans votre client WebDAV.",
+          "withoutDevice": "Votre jeton d’accès WebDAV a été réinitialisé depuis {{location}} ({{ip}}). Mettez à jour le jeton dans votre client WebDAV."
         }
       },
       "sharedFileDownloaded": {
         "title": "Fichier partagé téléchargé",
         "content": {
-          "withDevice": "Votre fichier partagé '{{fileName}}' a été téléchargé depuis {{device}} à {{city}}, {{region}}, {{country}} ({{ip}}).",
-          "withoutDevice": "Votre fichier partagé '{{fileName}}' a été téléchargé depuis {{city}}, {{region}}, {{country}} ({{ip}})."
+          "withDevice": "Votre fichier partagé '{{fileName}}' a été téléchargé depuis {{device}} à {{location}} ({{ip}}).",
+          "withoutDevice": "Votre fichier partagé '{{fileName}}' a été téléchargé depuis {{location}} ({{ip}})."
         }
       },
       "uploadHashMismatch": {

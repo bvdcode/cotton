@@ -4,6 +4,7 @@
 using Cotton.Database.Models.Enums;
 using Cotton.Localization;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Models;
 using Cotton.Server.Services;
 using EasyExtensions.Helpers;
 using Microsoft.Extensions.Primitives;
@@ -17,11 +18,16 @@ namespace Cotton.Server.Extensions
     /// </summary>
     public static class NotificationsProviderExtensions
     {
+        private const string UnknownGeoLabel = "Unknown";
+        private const string UnknownLocationLabel = "unknown location";
+        private const string LocalNetworkLocationLabel = "local network";
+
         private record ClientNotificationContext(
             string Ip,
             string UserAgent,
             string DeviceName,
             bool HasDevice,
+            string Location,
             string Country,
             string Region,
             string City);
@@ -34,13 +40,19 @@ namespace Cotton.Server.Extensions
             string ip = ipAddress.ToString();
             UserAgentDeviceInfo device = UserAgentHelpers.GetDeviceInfo(userAgent);
             string deviceName = device.FriendlyName ?? device.Type.ToString();
-            var ipInfo = await geoLookup.TryLookupAsync(ipAddress);
+            bool isLocalNetwork = NetworkAddressClassifier.IsLocalNetworkAddress(ipAddress);
+            GeoLookupResult? ipInfo = isLocalNetwork
+                ? null
+                : await geoLookup.TryLookupAsync(ipAddress);
 
             return new ClientNotificationContext(
                 Ip: ip,
                 UserAgent: userAgent.ToString(),
                 DeviceName: deviceName,
                 HasDevice: HasKnownDevice(deviceName),
+                Location: isLocalNetwork
+                    ? LocalNetworkLocationLabel
+                    : FormatGeoLocation(ipInfo),
                 Country: NormalizeGeoField(ipInfo?.Country),
                 Region: NormalizeGeoField(ipInfo?.Region),
                 City: NormalizeGeoField(ipInfo?.City));
@@ -54,7 +66,30 @@ namespace Cotton.Server.Extensions
 
         private static string NormalizeGeoField(string? value)
         {
-            return string.IsNullOrWhiteSpace(value) ? "Unknown" : value;
+            return string.IsNullOrWhiteSpace(value) ? UnknownGeoLabel : value;
+        }
+
+        private static bool IsKnownGeoField(string? value)
+        {
+            return !string.IsNullOrWhiteSpace(value)
+                && !string.Equals(value.Trim(), UnknownGeoLabel, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string FormatGeoLocation(GeoLookupResult? ipInfo)
+        {
+            if (ipInfo is null)
+            {
+                return UnknownLocationLabel;
+            }
+
+            string[] parts = [ipInfo.City, ipInfo.Region, ipInfo.Country]
+                .Where(IsKnownGeoField)
+                .Select(value => value!.Trim())
+                .ToArray();
+
+            return parts.Length == 0
+                ? UnknownLocationLabel
+                : string.Join(", ", parts);
         }
 
         private static Dictionary<string, string> CreateBaseMetadata(ClientNotificationContext context)
@@ -64,6 +99,7 @@ namespace Cotton.Server.Extensions
                 ["ip"] = context.Ip,
                 ["userAgent"] = context.UserAgent,
                 ["device"] = context.DeviceName,
+                ["location"] = context.Location,
                 ["country"] = context.Country,
                 ["region"] = context.Region,
                 ["city"] = context.City
@@ -111,15 +147,11 @@ namespace Cotton.Server.Extensions
                         username,
                         context.Ip,
                         context.DeviceName,
-                        context.Country,
-                        context.Region,
-                        context.City)
+                        context.Location)
                     : NotificationTemplates.FailedLoginAttemptContentNoDevice(
                         username,
                         context.Ip,
-                        context.Country,
-                        context.Region,
-                        context.City),
+                        context.Location),
                 priority: NotificationPriority.High,
                 metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.FailedLoginAttemptTitle, contentKey));
         }
@@ -149,14 +181,10 @@ namespace Cotton.Server.Extensions
                     ? NotificationTemplates.OtpDisabledContent(
                         context.Ip,
                         context.DeviceName,
-                        context.Country,
-                        context.Region,
-                        context.City)
+                        context.Location)
                     : NotificationTemplates.OtpDisabledContentNoDevice(
                         context.Ip,
-                        context.Country,
-                        context.Region,
-                        context.City),
+                        context.Location),
                 priority: NotificationPriority.High,
                 metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.OtpDisabledTitle, contentKey));
         }
@@ -186,14 +214,10 @@ namespace Cotton.Server.Extensions
                     ? NotificationTemplates.OtpEnabledContent(
                         context.Ip,
                         context.DeviceName,
-                        context.Country,
-                        context.Region,
-                        context.City)
+                        context.Location)
                     : NotificationTemplates.OtpEnabledContentNoDevice(
                         context.Ip,
-                        context.Country,
-                        context.Region,
-                        context.City),
+                        context.Location),
                 priority: NotificationPriority.Medium,
                 metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.OtpEnabledTitle, contentKey));
         }
@@ -223,14 +247,10 @@ namespace Cotton.Server.Extensions
                     ? NotificationTemplates.SuccessfulLoginContent(
                         context.Ip,
                         context.DeviceName,
-                        context.Country,
-                        context.Region,
-                        context.City)
+                        context.Location)
                     : NotificationTemplates.SuccessfulLoginContentNoDevice(
                         context.Ip,
-                        context.Country,
-                        context.Region,
-                        context.City),
+                        context.Location),
                 priority: NotificationPriority.None,
                 metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.SuccessfulLoginTitle, contentKey));
         }
@@ -263,15 +283,11 @@ namespace Cotton.Server.Extensions
                         totpFailedAttempts,
                         context.Ip,
                         context.DeviceName,
-                        context.Country,
-                        context.Region,
-                        context.City)
+                        context.Location)
                     : NotificationTemplates.TotpFailedAttemptContentNoDevice(
                         totpFailedAttempts,
                         context.Ip,
-                        context.Country,
-                        context.Region,
-                        context.City),
+                        context.Location),
                 priority: NotificationPriority.Medium,
                 metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.TotpFailedAttemptTitle, contentKey));
         }
@@ -304,15 +320,11 @@ namespace Cotton.Server.Extensions
                         maxFailedAttempts,
                         context.Ip,
                         context.DeviceName,
-                        context.Country,
-                        context.Region,
-                        context.City)
+                        context.Location)
                     : NotificationTemplates.TotpLockoutContentNoDevice(
                         maxFailedAttempts,
                         context.Ip,
-                        context.Country,
-                        context.Region,
-                        context.City),
+                        context.Location),
                 priority: NotificationPriority.High,
                 metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.TotpLockoutTitle, contentKey));
         }
@@ -342,14 +354,10 @@ namespace Cotton.Server.Extensions
                     ? NotificationTemplates.WebDavTokenResetContent(
                         context.Ip,
                         context.DeviceName,
-                        context.Country,
-                        context.Region,
-                        context.City)
+                        context.Location)
                     : NotificationTemplates.WebDavTokenResetContentNoDevice(
                         context.Ip,
-                        context.Country,
-                        context.Region,
-                        context.City),
+                        context.Location),
                 priority: NotificationPriority.Medium,
                 metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.WebDavTokenResetTitle, contentKey));
         }
@@ -382,15 +390,11 @@ namespace Cotton.Server.Extensions
                         fileName,
                         context.Ip,
                         context.DeviceName,
-                        context.Country,
-                        context.Region,
-                        context.City)
+                        context.Location)
                     : NotificationTemplates.SharedFileDownloadedContentNoDevice(
                         fileName,
                         context.Ip,
-                        context.Country,
-                        context.Region,
-                        context.City),
+                        context.Location),
                 priority: NotificationPriority.None,
                 metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.SharedFileDownloadedTitle, contentKey));
         }
