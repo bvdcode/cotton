@@ -3417,6 +3417,42 @@
       "failed": "Nie udało się zweryfikować adresu e-mail. Spróbuj ponownie."
     }
   },
+  "appCodeApproval": {
+    "title": "Logowanie aplikacji",
+    "loading": "Proszę czekać, trwa ładowanie szczegółów logowania...",
+    "request": {
+      "version": "Wersja {{version}}",
+      "versionWithDevice": "Wersja {{version}} na {{deviceName}}",
+      "origin": "Żądanie z {{origin}}"
+    },
+    "access": {
+      "title": "Ta aplikacja będzie mogła:",
+      "bullets": {
+        "files": "Uzyskiwać dostęp do Twoich plików i folderów Cotton Cloud.",
+        "content": "Przesyłać, pobierać, zmieniać nazwy, przenosić i usuwać zawartość.",
+        "profile": "Odczytywać podstawowe informacje profilu konta.",
+        "session": "Pozostać zalogowana, dopóki nie cofniesz sesji aplikacji."
+      }
+    },
+    "actions": {
+      "allow": "Zezwól",
+      "deny": "Odmów"
+    },
+    "approved": {
+      "title": "Dostęp przyznany",
+      "message": "Możesz wrócić do aplikacji."
+    },
+    "denied": {
+      "title": "Żądanie odrzucone",
+      "message": "Aplikacja nie została zalogowana."
+    },
+    "errors": {
+      "missingRequest": "Brakuje żądania logowania.",
+      "unavailable": "To żądanie logowania nie jest już dostępne.",
+      "approveFailed": "Nie udało się zatwierdzić logowania.",
+      "denyFailed": "Nie udało się odrzucić logowania."
+    }
+  },
   "unlock": {
     "title": "Odblokuj Cotton",
     "caption": "Serwer oczekuje na klucz główny przed uruchomieniem aplikacji.",

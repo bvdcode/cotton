@@ -3376,6 +3376,42 @@
       "failed": "Falha ao verificar o e-mail. Tente novamente."
     }
   },
+  "appCodeApproval": {
+    "title": "Login do aplicativo",
+    "loading": "Aguarde, carregando detalhes do login...",
+    "request": {
+      "version": "Versão {{version}}",
+      "versionWithDevice": "Versão {{version}} em {{deviceName}}",
+      "origin": "Solicitação de {{origin}}"
+    },
+    "access": {
+      "title": "Este aplicativo poderá:",
+      "bullets": {
+        "files": "Acessar seus arquivos e pastas do Cotton Cloud.",
+        "content": "Enviar, baixar, renomear, mover e excluir conteúdo.",
+        "profile": "Ler informações básicas do perfil da conta.",
+        "session": "Permanecer conectado até que você revogue a sessão do aplicativo."
+      }
+    },
+    "actions": {
+      "allow": "Permitir",
+      "deny": "Negar"
+    },
+    "approved": {
+      "title": "Acesso concedido",
+      "message": "Você pode voltar ao aplicativo."
+    },
+    "denied": {
+      "title": "Solicitação negada",
+      "message": "O aplicativo não entrou na conta."
+    },
+    "errors": {
+      "missingRequest": "A solicitação de login está ausente.",
+      "unavailable": "Esta solicitação de login não está mais disponível.",
+      "approveFailed": "Falha ao aprovar o login.",
+      "denyFailed": "Falha ao negar o login."
+    }
+  },
   "unlock": {
     "title": "Desbloquear o Cotton",
     "caption": "O servidor está aguardando a chave-mestra antes de iniciar o aplicativo.",

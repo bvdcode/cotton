@@ -3375,6 +3375,42 @@
       "failed": "Impossibile verificare l'email. Riprovi."
     }
   },
+  "appCodeApproval": {
+    "title": "Accesso dell'applicazione",
+    "loading": "Attendere, caricamento dei dettagli di accesso...",
+    "request": {
+      "version": "Versione {{version}}",
+      "versionWithDevice": "Versione {{version}} su {{deviceName}}",
+      "origin": "Richiesta da {{origin}}"
+    },
+    "access": {
+      "title": "Questa applicazione potrà:",
+      "bullets": {
+        "files": "Accedere ai Suoi file e cartelle Cotton Cloud.",
+        "content": "Caricare, scaricare, rinominare, spostare ed eliminare contenuti.",
+        "profile": "Leggere le informazioni di base del profilo dell'account.",
+        "session": "Rimanere connessa finché non revocherà la sessione dell'applicazione."
+      }
+    },
+    "actions": {
+      "allow": "Consenti",
+      "deny": "Nega"
+    },
+    "approved": {
+      "title": "Accesso consentito",
+      "message": "Può tornare all'applicazione."
+    },
+    "denied": {
+      "title": "Richiesta negata",
+      "message": "L'applicazione non ha effettuato l'accesso."
+    },
+    "errors": {
+      "missingRequest": "La richiesta di accesso è mancante.",
+      "unavailable": "Questa richiesta di accesso non è più disponibile.",
+      "approveFailed": "Impossibile approvare l'accesso.",
+      "denyFailed": "Impossibile negare l'accesso."
+    }
+  },
   "unlock": {
     "title": "Sblocca Cotton",
     "caption": "Il server attende la chiave master prima di avviare l'app.",

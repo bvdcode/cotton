@@ -3382,6 +3382,42 @@
       "failed": "邮箱验证失败，请重试。"
     }
   },
+  "appCodeApproval": {
+    "title": "应用登录",
+    "loading": "请稍候，正在加载登录详情……",
+    "request": {
+      "version": "版本 {{version}}",
+      "versionWithDevice": "版本 {{version}}，设备 {{deviceName}}",
+      "origin": "请求来源 {{origin}}"
+    },
+    "access": {
+      "title": "此应用将能够：",
+      "bullets": {
+        "files": "访问您的 Cotton Cloud 文件和文件夹。",
+        "content": "上传、下载、重命名、移动和删除内容。",
+        "profile": "读取账户的基本个人资料信息。",
+        "session": "保持登录，直到您撤销此应用会话。"
+      }
+    },
+    "actions": {
+      "allow": "允许",
+      "deny": "拒绝"
+    },
+    "approved": {
+      "title": "已授予访问权限",
+      "message": "您可以返回应用。"
+    },
+    "denied": {
+      "title": "请求已拒绝",
+      "message": "应用未登录。"
+    },
+    "errors": {
+      "missingRequest": "缺少登录请求。",
+      "unavailable": "此登录请求不再可用。",
+      "approveFailed": "无法批准登录。",
+      "denyFailed": "无法拒绝登录。"
+    }
+  },
   "unlock": {
     "title": "解锁 Cotton",
     "caption": "服务器正在等待主密钥以启动应用。",

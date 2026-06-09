@@ -18,6 +18,7 @@ import {
   RadioButtonChecked,
   VerifiedUserOutlined,
 } from "@mui/icons-material";
+import { useTranslation } from "react-i18next";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import {
@@ -34,14 +35,11 @@ type ViewState =
   | { kind: "denied"; details: AppCodeDetails }
   | { kind: "error"; message: string };
 
-const ACCESS_BULLETS = [
-  "Access your Cotton Cloud files and folders.",
-  "Upload, download, rename, move, and delete content.",
-  "Read basic account profile information.",
-  "Stay signed in until you revoke the application session.",
-];
+const ACCESS_BULLET_KEYS = ["files", "content", "profile", "session"] as const;
 
 export const AppCodeApprovalPage = () => {
+  const { t } = useTranslation("appCodeApproval");
+  const { t: tCommon } = useTranslation("common");
   const { id } = useParams<{ id: string }>();
   const [state, setState] = useState<ViewState>({ kind: "loading" });
   const [submitting, setSubmitting] = useState(false);
@@ -51,7 +49,7 @@ export const AppCodeApprovalPage = () => {
 
     const loadDetails = async () => {
       if (!id) {
-        setState({ kind: "error", message: "Sign-in request is missing." });
+        setState({ kind: "error", message: t("errors.missingRequest") });
         return;
       }
 
@@ -67,7 +65,7 @@ export const AppCodeApprovalPage = () => {
             kind: "error",
             message:
               getApiErrorMessage(error) ??
-              "This sign-in request is no longer available.",
+              t("errors.unavailable"),
           });
         }
       }
@@ -78,7 +76,7 @@ export const AppCodeApprovalPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, t]);
 
   const approve = useCallback(async () => {
     if (!id || state.kind !== "ready") return;
@@ -89,12 +87,12 @@ export const AppCodeApprovalPage = () => {
     } catch (error) {
       setState({
         kind: "error",
-        message: getApiErrorMessage(error) ?? "Failed to approve sign-in.",
+        message: getApiErrorMessage(error) ?? t("errors.approveFailed"),
       });
     } finally {
       setSubmitting(false);
     }
-  }, [id, state]);
+  }, [id, state, t]);
 
   const deny = useCallback(async () => {
     if (!id || state.kind !== "ready") return;
@@ -105,17 +103,17 @@ export const AppCodeApprovalPage = () => {
     } catch (error) {
       setState({
         kind: "error",
-        message: getApiErrorMessage(error) ?? "Failed to deny sign-in.",
+        message: getApiErrorMessage(error) ?? t("errors.denyFailed"),
       });
     } finally {
       setSubmitting(false);
     }
-  }, [id, state]);
+  }, [id, state, t]);
 
   return (
     <AuthActionShell
-      title="Application sign-in"
-      logoAlt="Cotton Cloud"
+      title={t("title")}
+      logoAlt={tCommon("app.logoAlt")}
       maxWidth="sm"
     >
       {state.kind === "loading" && <LoadingState />}
@@ -132,30 +130,34 @@ export const AppCodeApprovalPage = () => {
         <FinalState
           severity="success"
           icon={<CheckCircleOutline color="success" />}
-          title="Access granted"
-          message="You can return to the application."
+          title={t("approved.title")}
+          message={t("approved.message")}
         />
       )}
       {state.kind === "denied" && (
         <FinalState
           severity="info"
           icon={<Close color="info" />}
-          title="Request denied"
-          message="The application was not signed in."
+          title={t("denied.title")}
+          message={t("denied.message")}
         />
       )}
     </AuthActionShell>
   );
 };
 
-const LoadingState = () => (
-  <Box display="flex" alignItems="center" gap={2} mt={3}>
-    <CircularProgress size={24} />
-    <Typography color="text.secondary">
-      Please wait, loading sign-in details...
-    </Typography>
-  </Box>
-);
+const LoadingState = () => {
+  const { t } = useTranslation("appCodeApproval");
+
+  return (
+    <Box display="flex" alignItems="center" gap={2} mt={3}>
+      <CircularProgress size={24} />
+      <Typography color="text.secondary">
+        {t("loading")}
+      </Typography>
+    </Box>
+  );
+};
 
 const createLoadedState = (details: AppCodeDetails): ViewState => {
   if (details.status === "approved") {
@@ -191,68 +193,76 @@ const ApprovalState = ({
   submitting,
   onApprove,
   onDeny,
-}: ApprovalStateProps) => (
-  <Stack spacing={3} sx={{ mt: 3 }}>
-    <Stack spacing={0.75}>
-      <Box display="flex" alignItems="center" gap={1}>
-        <LoginOutlined color="primary" />
-        <Typography variant="h6" component="h2">
-          {details.applicationName}
+}: ApprovalStateProps) => {
+  const { t } = useTranslation("appCodeApproval");
+
+  return (
+    <Stack spacing={3} sx={{ mt: 3 }}>
+      <Stack spacing={0.75}>
+        <Box display="flex" alignItems="center" gap={1}>
+          <LoginOutlined color="primary" />
+          <Typography variant="h6" component="h2">
+            {details.applicationName}
+          </Typography>
+        </Box>
+        <Typography color="text.secondary">
+          {details.deviceName
+            ? t("request.versionWithDevice", {
+                version: details.applicationVersion,
+                deviceName: details.deviceName,
+              })
+            : t("request.version", { version: details.applicationVersion })}
         </Typography>
-      </Box>
-      <Typography color="text.secondary">
-        Version {details.applicationVersion}
-        {details.deviceName ? ` on ${details.deviceName}` : ""}
-      </Typography>
-      <Typography color="text.secondary">
-        Request from {details.origin}
-      </Typography>
-    </Stack>
-
-    <Divider />
-
-    <Box>
-      <Box display="flex" alignItems="center" gap={1} mb={1}>
-        <VerifiedUserOutlined color="primary" fontSize="small" />
-        <Typography variant="subtitle1">
-          This application will be able to:
+        <Typography color="text.secondary">
+          {t("request.origin", { origin: details.origin })}
         </Typography>
-      </Box>
-      <List dense disablePadding>
-        {ACCESS_BULLETS.map((item) => (
-          <ListItem key={item} disableGutters>
-            <ListItemIcon sx={{ minWidth: 30 }}>
-              <RadioButtonChecked color="primary" sx={{ fontSize: 12 }} />
-            </ListItemIcon>
-            <ListItemText primary={item} />
-          </ListItem>
-        ))}
-      </List>
-    </Box>
+      </Stack>
 
-    <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-      <Button
-        variant="contained"
-        startIcon={<CheckCircleOutline />}
-        onClick={onApprove}
-        disabled={submitting}
-        fullWidth
-      >
-        Allow
-      </Button>
-      <Button
-        variant="outlined"
-        color="inherit"
-        startIcon={<Close />}
-        onClick={onDeny}
-        disabled={submitting}
-        fullWidth
-      >
-        Deny
-      </Button>
+      <Divider />
+
+      <Box>
+        <Box display="flex" alignItems="center" gap={1} mb={1}>
+          <VerifiedUserOutlined color="primary" fontSize="small" />
+          <Typography variant="subtitle1">
+            {t("access.title")}
+          </Typography>
+        </Box>
+        <List dense disablePadding>
+          {ACCESS_BULLET_KEYS.map((key) => (
+            <ListItem key={key} disableGutters>
+              <ListItemIcon sx={{ minWidth: 30 }}>
+                <RadioButtonChecked color="primary" sx={{ fontSize: 12 }} />
+              </ListItemIcon>
+              <ListItemText primary={t(`access.bullets.${key}`)} />
+            </ListItem>
+          ))}
+        </List>
+      </Box>
+
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+        <Button
+          variant="contained"
+          startIcon={<CheckCircleOutline />}
+          onClick={onApprove}
+          disabled={submitting}
+          fullWidth
+        >
+          {t("actions.allow")}
+        </Button>
+        <Button
+          variant="outlined"
+          color="inherit"
+          startIcon={<Close />}
+          onClick={onDeny}
+          disabled={submitting}
+          fullWidth
+        >
+          {t("actions.deny")}
+        </Button>
+      </Stack>
     </Stack>
-  </Stack>
-);
+  );
+};
 
 type FinalStateProps = {
   icon: ReactNode;
