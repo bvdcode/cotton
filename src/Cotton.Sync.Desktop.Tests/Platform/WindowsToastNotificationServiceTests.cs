@@ -60,6 +60,7 @@ namespace Cotton.Sync.Desktop.Tests.Platform
             {
                 Assert.That(command, Does.Contain("$imageNode.SetAttribute('placement', 'appLogoOverride')"));
                 Assert.That(command, Does.Contain("$imageNode.SetAttribute('src', '" + expectedIconUri + "')"));
+                Assert.That(command, Does.Not.Contain("$bindingNode = $xml.GetElementsByTagName('binding').Item(0)"));
                 Assert.That(command, Does.Contain("$null = $bindingNode.AppendChild($imageNode)"));
                 Assert.That(command, Does.Contain("$null = $bindingNode.AppendChild($titleNode)"));
                 Assert.That(command, Does.Contain("$null = $bindingNode.AppendChild($messageNode)"));

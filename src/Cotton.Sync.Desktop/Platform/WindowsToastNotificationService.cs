@@ -92,7 +92,6 @@ namespace Cotton.Sync.Desktop.Platform
                 string iconUriLiteral = ToPowerShellSingleQuotedLiteral(iconUri);
                 lines.AddRange(
                 [
-                    "$bindingNode = $xml.GetElementsByTagName('binding').Item(0)",
                     "$imageNode = $xml.CreateElement('image')",
                     "$imageNode.SetAttribute('placement', 'appLogoOverride')",
                     $"$imageNode.SetAttribute('src', {iconUriLiteral})",
