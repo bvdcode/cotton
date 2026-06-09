@@ -8,6 +8,7 @@ using Cotton.Server.Abstractions;
 using EasyExtensions.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Threading.Channels;
 
 namespace Cotton.Server.Services.DatabaseIntegrity;
@@ -117,7 +118,10 @@ public sealed class DatabaseIntegrityFailureReporter(
                 ["entityName"] = failure.EntityName,
                 ["entityKey"] = failure.EntityKey,
                 ["boundary"] = failure.Boundary,
-                ["detectedAtUtc"] = failure.DetectedAtUtc.ToString("O")
+                ["detectedAtUtc"] = failure.DetectedAtUtc.ToString("O"),
+                ["detectedAtUtcDisplay"] = failure.DetectedAtUtc.ToString(
+                    "yyyy-MM-dd HH:mm:ss",
+                    CultureInfo.InvariantCulture)
             });
         string content = NotificationTemplates.DatabaseIntegrityFailureContent(
             failure.EntityName,

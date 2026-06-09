@@ -1464,6 +1464,10 @@
       "databaseRestoreCompleted": {
         "title": "Datenbank automatisch wiederhergestellt",
         "content": "Die automatische Datenbankwiederherstellung wurde erfolgreich abgeschlossen.\n\nBackup-ID: {{backupId}}\nQuelldatenbank: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup erstellt (UTC): {{backupCreatedUtc}} UTC\nBackup erstellt ({{serverTimezone}}): {{backupCreatedLocal}}\nWiederherstellung abgeschlossen (UTC): {{restoreCompletedUtcDisplay}} UTC\nWiederherstellung abgeschlossen ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+      },
+      "databaseIntegrityFailure": {
+        "title": "Datenbankintegritätsproblem erkannt",
+        "content": "Cotton hat eine geschützte Datenbankzeile abgelehnt, weil ihre Integritätssignatur nicht übereinstimmt.\n\nEntität: {{entityName}}\nZeile: {{entityKey}}\nGrenze: {{boundary}}\nErkannt (UTC): {{detectedAtUtcDisplay}}\n\nWenn du PostgreSQL manuell bearbeitet hast, stelle die Zeile aus einem vertrauenswürdigen Backup wieder her oder wende die Änderung erneut über Cotton an."
       }
     }
   },

@@ -1467,6 +1467,10 @@
       "databaseRestoreCompleted": {
         "title": "Base de datos restaurada automáticamente",
         "content": "La restauración automática de la base de datos se completó correctamente.\n\nID de copia: {{backupId}}\nBase de datos de origen: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nCopia creada (UTC): {{backupCreatedUtc}} UTC\nCopia creada ({{serverTimezone}}): {{backupCreatedLocal}}\nRestauración completada (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestauración completada ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+      },
+      "databaseIntegrityFailure": {
+        "title": "Se detectó un problema de integridad de la base de datos",
+        "content": "Cotton rechazó una fila protegida de la base de datos porque su firma de integridad no coincidía.\n\nEntidad: {{entityName}}\nFila: {{entityKey}}\nLímite: {{boundary}}\nDetectado (UTC): {{detectedAtUtcDisplay}}\n\nSi editaste PostgreSQL manualmente, restaura la fila desde una copia de seguridad confiable o vuelve a aplicar el cambio mediante Cotton."
       }
     }
   },

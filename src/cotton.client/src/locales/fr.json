@@ -1468,6 +1468,10 @@
       "databaseRestoreCompleted": {
         "title": "Base de données restaurée automatiquement",
         "content": "La restauration automatique de la base de données s’est terminée avec succès.\n\nID de sauvegarde : {{backupId}}\nBase source : {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nSauvegarde créée (UTC) : {{backupCreatedUtc}} UTC\nSauvegarde créée ({{serverTimezone}}) : {{backupCreatedLocal}}\nRestauration terminée (UTC) : {{restoreCompletedUtcDisplay}} UTC\nRestauration terminée ({{serverTimezone}}) : {{restoreCompletedLocalDisplay}}"
+      },
+      "databaseIntegrityFailure": {
+        "title": "Problème d’intégrité de base de données détecté",
+        "content": "Cotton a rejeté une ligne de base de données protégée, car sa signature d’intégrité ne correspondait pas.\n\nEntité : {{entityName}}\nLigne : {{entityKey}}\nLimite : {{boundary}}\nDétecté (UTC) : {{detectedAtUtcDisplay}}\n\nSi vous avez modifié PostgreSQL manuellement, restaurez la ligne depuis une sauvegarde fiable ou réappliquez le changement via Cotton."
       }
     }
   },

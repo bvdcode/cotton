@@ -1470,6 +1470,10 @@
       "databaseRestoreCompleted": {
         "title": "Database ripristinato automaticamente",
         "content": "Il ripristino automatico del database è stato completato correttamente.\n\nID backup: {{backupId}}\nDatabase origine: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup creato (UTC): {{backupCreatedUtc}} UTC\nBackup creato ({{serverTimezone}}): {{backupCreatedLocal}}\nRipristino completato (UTC): {{restoreCompletedUtcDisplay}} UTC\nRipristino completato ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+      },
+      "databaseIntegrityFailure": {
+        "title": "Rilevato problema di integrità del database",
+        "content": "Cotton ha rifiutato una riga protetta del database perché la sua firma di integrità non corrispondeva.\n\nEntità: {{entityName}}\nRiga: {{entityKey}}\nConfine: {{boundary}}\nRilevato (UTC): {{detectedAtUtcDisplay}}\n\nSe hai modificato PostgreSQL manualmente, ripristina la riga da un backup attendibile o riapplica la modifica tramite Cotton."
       }
     }
   },

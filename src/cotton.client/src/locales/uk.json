@@ -1475,6 +1475,10 @@
       "databaseRestoreCompleted": {
         "title": "Базу даних автоматично відновлено",
         "content": "Автоматичне відновлення бази даних успішно завершено.\n\nID резервної копії: {{backupId}}\nВихідна база даних: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nРезервну копію створено (UTC): {{backupCreatedUtc}} UTC\nРезервну копію створено ({{serverTimezone}}): {{backupCreatedLocal}}\nВідновлення завершено (UTC): {{restoreCompletedUtcDisplay}} UTC\nВідновлення завершено ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+      },
+      "databaseIntegrityFailure": {
+        "title": "Виявлено проблему цілісності бази даних",
+        "content": "Cotton відхилив захищений рядок бази даних, оскільки його підпис цілісності не збігся.\n\nСутність: {{entityName}}\nРядок: {{entityKey}}\nМежа: {{boundary}}\nВиявлено (UTC): {{detectedAtUtcDisplay}}\n\nЯкщо ви редагували PostgreSQL вручну, відновіть рядок із довіреної резервної копії або повторно застосуйте зміну через Cotton."
       }
     }
   },

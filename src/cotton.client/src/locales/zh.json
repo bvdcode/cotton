@@ -1477,6 +1477,10 @@
       "databaseRestoreCompleted": {
         "title": "数据库已自动恢复",
         "content": "数据库自动恢复已成功完成。\n\n备份 ID：{{backupId}}\n源数据库：{{sourceDatabase}}（{{sourceHost}}:{{sourcePort}}）\n\n备份创建时间（UTC）：{{backupCreatedUtc}} UTC\n备份创建时间（{{serverTimezone}}）：{{backupCreatedLocal}}\n恢复完成时间（UTC）：{{restoreCompletedUtcDisplay}} UTC\n恢复完成时间（{{serverTimezone}}）：{{restoreCompletedLocalDisplay}}"
+      },
+      "databaseIntegrityFailure": {
+        "title": "检测到数据库完整性问题",
+        "content": "Cotton 拒绝了一行受保护的数据库记录，因为它的完整性签名不匹配。\n\n实体：{{entityName}}\n行：{{entityKey}}\n边界：{{boundary}}\n检测时间 (UTC)：{{detectedAtUtcDisplay}}\n\n如果你手动编辑了 PostgreSQL，请从可信备份恢复该行，或通过 Cotton 重新应用更改。"
       }
     }
   },

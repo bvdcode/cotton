@@ -1472,6 +1472,10 @@
       "databaseRestoreCompleted": {
         "title": "Baza danych została automatycznie przywrócona",
         "content": "Automatyczne przywracanie bazy danych zakończyło się pomyślnie.\n\nID kopii zapasowej: {{backupId}}\nBaza źródłowa: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nKopia utworzona (UTC): {{backupCreatedUtc}} UTC\nKopia utworzona ({{serverTimezone}}): {{backupCreatedLocal}}\nPrzywracanie zakończone (UTC): {{restoreCompletedUtcDisplay}} UTC\nPrzywracanie zakończone ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+      },
+      "databaseIntegrityFailure": {
+        "title": "Wykryto problem integralności bazy danych",
+        "content": "Cotton odrzucił chroniony wiersz bazy danych, ponieważ jego podpis integralności się nie zgadzał.\n\nEncja: {{entityName}}\nWiersz: {{entityKey}}\nGranica: {{boundary}}\nWykryto (UTC): {{detectedAtUtcDisplay}}\n\nJeśli PostgreSQL był edytowany ręcznie, przywróć wiersz z zaufanej kopii zapasowej albo ponownie zastosuj zmianę przez Cotton."
       }
     }
   },

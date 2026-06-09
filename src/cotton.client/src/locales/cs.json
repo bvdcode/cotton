@@ -1469,6 +1469,10 @@
       "databaseRestoreCompleted": {
         "title": "Databáze byla automaticky obnovena",
         "content": "Automatická obnova databáze byla úspěšně dokončena.\n\nID zálohy: {{backupId}}\nZdrojová databáze: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nZáloha vytvořena (UTC): {{backupCreatedUtc}} UTC\nZáloha vytvořena ({{serverTimezone}}): {{backupCreatedLocal}}\nObnova dokončena (UTC): {{restoreCompletedUtcDisplay}} UTC\nObnova dokončena ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+      },
+      "databaseIntegrityFailure": {
+        "title": "Zjištěn problém s integritou databáze",
+        "content": "Cotton odmítl chráněný databázový řádek, protože jeho podpis integrity neodpovídal.\n\nEntita: {{entityName}}\nŘádek: {{entityKey}}\nHranice: {{boundary}}\nZjištěno (UTC): {{detectedAtUtcDisplay}}\n\nPokud jste PostgreSQL upravovali ručně, obnovte řádek z důvěryhodné zálohy nebo změnu proveďte znovu přes Cotton."
       }
     }
   },

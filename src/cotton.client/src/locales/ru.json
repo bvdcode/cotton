@@ -3577,6 +3577,10 @@
       "databaseRestoreCompleted": {
         "title": "База данных восстановлена автоматически",
         "content": "Автоматическое восстановление базы данных успешно завершено.\n\nID бэкапа: {{backupId}}\nИсходная база: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nБэкап создан (UTC): {{backupCreatedUtc}} UTC\nБэкап создан ({{serverTimezone}}): {{backupCreatedLocal}}\nВосстановление завершено (UTC): {{restoreCompletedUtcDisplay}} UTC\nВосстановление завершено ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+      },
+      "databaseIntegrityFailure": {
+        "title": "Обнаружена проблема целостности базы данных",
+        "content": "Cotton отклонил защищенную строку базы данных, потому что ее подпись целостности не совпала.\n\nСущность: {{entityName}}\nСтрока: {{entityKey}}\nГраница: {{boundary}}\nОбнаружено (UTC): {{detectedAtUtcDisplay}}\n\nЕсли вы редактировали PostgreSQL вручную, восстановите строку из доверенной резервной копии или повторите изменение через Cotton."
       }
     }
   },
