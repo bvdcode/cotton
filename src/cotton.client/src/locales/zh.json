@@ -1394,6 +1394,10 @@
       "empty": "暂无通知"
     },
     "server": {
+      "location": {
+        "localNetwork": "\u672c\u5730\u7f51\u7edc",
+        "unknown": "\u672a\u77e5\u4f4d\u7f6e"
+      },
       "failedLoginAttempt": {
         "title": "登录尝试失败",
         "content": {
@@ -1461,6 +1465,10 @@
       "appUpdateAvailable": {
         "title": "Cotton 服务器更新可用",
         "content": "当前服务器版本：{{currentVersion}}\n可用服务器版本：{{latestVersion}}\n\n发行说明：\n{{releaseNotes}}\n\n完整发行页：{{releaseUrl}}"
+      },
+      "appCodeApproval": {
+        "title": "应用登录已批准",
+        "content": "应用 {{applicationName}} {{applicationVersion}} 已从 {{origin}} 登录。"
       },
       "storagePressure": {
         "title": "存储可用空间不足",

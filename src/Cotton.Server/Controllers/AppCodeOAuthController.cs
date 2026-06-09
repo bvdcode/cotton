@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Localization;
 using Cotton.Auth;
 using Cotton;
 using Cotton.Server.Auth;
@@ -287,18 +288,27 @@ public class AppCodeOAuthController(
     {
         try
         {
+            var metadata = new Dictionary<string, string>
+            {
+                ["applicationName"] = state.ApplicationName,
+                ["applicationVersion"] = state.ApplicationVersion,
+                ["origin"] = state.Origin,
+                ["requestId"] = state.ApprovalId.ToString("D"),
+            };
+            Dictionary<string, string> templateMetadata = NotificationTemplateMetadata.Create(
+                NotificationTemplateKeys.AppCodeApprovalTitle,
+                NotificationTemplateKeys.AppCodeApprovalContent,
+                metadata);
+
             await _notifications.SendNotificationAsync(
                 userId,
-                "Application sign-in approved",
-                $"{state.ApplicationName} {state.ApplicationVersion} signed in from {state.Origin}.",
+                NotificationTemplates.AppCodeApprovalTitle,
+                NotificationTemplates.AppCodeApprovalContent(
+                    state.ApplicationName,
+                    state.ApplicationVersion,
+                    state.Origin),
                 NotificationPriority.Medium,
-                new Dictionary<string, string>
-                {
-                    ["applicationName"] = state.ApplicationName,
-                    ["applicationVersion"] = state.ApplicationVersion,
-                    ["origin"] = state.Origin,
-                    ["requestId"] = state.ApprovalId.ToString("D"),
-                });
+                templateMetadata);
         }
         catch (Exception ex)
         {

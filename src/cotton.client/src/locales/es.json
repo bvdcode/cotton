@@ -1384,60 +1384,64 @@
       "empty": "No hay notificaciones"
     },
     "server": {
+      "location": {
+        "localNetwork": "la red local",
+        "unknown": "una ubicaci\u00f3n desconocida"
+      },
       "failedLoginAttempt": {
         "title": "Intento de inicio de sesión fallido",
         "content": {
-          "withDevice": "Alguien intentó iniciar sesión en tu cuenta '{{username}}', pero falló. El intento se hizo desde {{device}} en {{city}}, {{region}}, {{country}} ({{ip}}).",
-          "withoutDevice": "Alguien intentó iniciar sesión en tu cuenta '{{username}}', pero falló. El intento se hizo desde {{city}}, {{region}}, {{country}} ({{ip}})."
+          "withDevice": "Alguien intentó iniciar sesión en tu cuenta '{{username}}', pero falló. El intento se hizo desde {{device}} en {{location}} ({{ip}}).",
+          "withoutDevice": "Alguien intentó iniciar sesión en tu cuenta '{{username}}', pero falló. El intento se hizo desde {{location}} ({{ip}})."
         }
       },
       "successfulLogin": {
         "title": "Nuevo inicio de sesión en tu cuenta",
         "content": {
-          "withDevice": "Se accedió a tu cuenta desde {{device}} en {{city}}, {{region}}, {{country}} ({{ip}}). Si no fuiste tú, protege tu cuenta de inmediato.",
-          "withoutDevice": "Se accedió a tu cuenta desde {{city}}, {{region}}, {{country}} ({{ip}}). Si no fuiste tú, protege tu cuenta de inmediato."
+          "withDevice": "Se accedió a tu cuenta desde {{device}} en {{location}} ({{ip}}). Si no fuiste tú, protege tu cuenta de inmediato.",
+          "withoutDevice": "Se accedió a tu cuenta desde {{location}} ({{ip}}). Si no fuiste tú, protege tu cuenta de inmediato."
         }
       },
       "otpDisabled": {
         "title": "Autenticación de dos factores desactivada",
         "content": {
-          "withDevice": "La autenticación de dos factores se desactivó para tu cuenta desde {{device}} en {{city}}, {{region}}, {{country}} ({{ip}}). Tu cuenta ahora es menos segura. Si no fuiste tú, protégela de inmediato.",
-          "withoutDevice": "La autenticación de dos factores se desactivó para tu cuenta desde {{city}}, {{region}}, {{country}} ({{ip}}). Tu cuenta ahora es menos segura. Si no fuiste tú, protégela de inmediato."
+          "withDevice": "La autenticación de dos factores se desactivó para tu cuenta desde {{device}} en {{location}} ({{ip}}). Tu cuenta ahora es menos segura. Si no fuiste tú, protégela de inmediato.",
+          "withoutDevice": "La autenticación de dos factores se desactivó para tu cuenta desde {{location}} ({{ip}}). Tu cuenta ahora es menos segura. Si no fuiste tú, protégela de inmediato."
         }
       },
       "otpEnabled": {
         "title": "Autenticación de dos factores activada",
         "content": {
-          "withDevice": "La autenticación de dos factores se activó para tu cuenta desde {{device}} en {{city}}, {{region}}, {{country}} ({{ip}}). Tu cuenta ahora es más segura.",
-          "withoutDevice": "La autenticación de dos factores se activó para tu cuenta desde {{city}}, {{region}}, {{country}} ({{ip}}). Tu cuenta ahora es más segura."
+          "withDevice": "La autenticación de dos factores se activó para tu cuenta desde {{device}} en {{location}} ({{ip}}). Tu cuenta ahora es más segura.",
+          "withoutDevice": "La autenticación de dos factores se activó para tu cuenta desde {{location}} ({{ip}}). Tu cuenta ahora es más segura."
         }
       },
       "totpFailedAttempt": {
         "title": "Código de autenticación no válido",
         "content": {
-          "withDevice": "Se introdujo un código de autenticación de dos factores no válido (intentos fallidos: {{totpFailedAttempts}}). El intento se hizo desde {{device}} en {{city}}, {{region}}, {{country}} ({{ip}}). Si no fuiste tú, tu cuenta puede estar bajo ataque.",
-          "withoutDevice": "Se introdujo un código de autenticación de dos factores no válido (intentos fallidos: {{totpFailedAttempts}}). El intento se hizo desde {{city}}, {{region}}, {{country}} ({{ip}}). Si no fuiste tú, tu cuenta puede estar bajo ataque."
+          "withDevice": "Se introdujo un código de autenticación de dos factores no válido (intentos fallidos: {{totpFailedAttempts}}). El intento se hizo desde {{device}} en {{location}} ({{ip}}). Si no fuiste tú, tu cuenta puede estar bajo ataque.",
+          "withoutDevice": "Se introdujo un código de autenticación de dos factores no válido (intentos fallidos: {{totpFailedAttempts}}). El intento se hizo desde {{location}} ({{ip}}). Si no fuiste tú, tu cuenta puede estar bajo ataque."
         }
       },
       "totpLockout": {
         "title": "Cuenta bloqueada temporalmente",
         "content": {
-          "withDevice": "Tu cuenta se bloqueó temporalmente por {{maxFailedAttempts}} intentos de autenticación fallidos. El último intento fue desde {{device}} en {{city}}, {{region}}, {{country}} ({{ip}}). Espera antes de volver a intentarlo.",
-          "withoutDevice": "Tu cuenta se bloqueó temporalmente por {{maxFailedAttempts}} intentos de autenticación fallidos. El último intento fue desde {{city}}, {{region}}, {{country}} ({{ip}}). Espera antes de volver a intentarlo."
+          "withDevice": "Tu cuenta se bloqueó temporalmente por {{maxFailedAttempts}} intentos de autenticación fallidos. El último intento fue desde {{device}} en {{location}} ({{ip}}). Espera antes de volver a intentarlo.",
+          "withoutDevice": "Tu cuenta se bloqueó temporalmente por {{maxFailedAttempts}} intentos de autenticación fallidos. El último intento fue desde {{location}} ({{ip}}). Espera antes de volver a intentarlo."
         }
       },
       "webDavTokenReset": {
         "title": "Token de acceso WebDAV cambiado",
         "content": {
-          "withDevice": "Tu token de acceso WebDAV se restableció desde {{device}} en {{city}}, {{region}}, {{country}} ({{ip}}). Actualiza el token en tu cliente WebDAV.",
-          "withoutDevice": "Tu token de acceso WebDAV se restableció desde {{city}}, {{region}}, {{country}} ({{ip}}). Actualiza el token en tu cliente WebDAV."
+          "withDevice": "Tu token de acceso WebDAV se restableció desde {{device}} en {{location}} ({{ip}}). Actualiza el token en tu cliente WebDAV.",
+          "withoutDevice": "Tu token de acceso WebDAV se restableció desde {{location}} ({{ip}}). Actualiza el token en tu cliente WebDAV."
         }
       },
       "sharedFileDownloaded": {
         "title": "Archivo compartido descargado",
         "content": {
-          "withDevice": "Tu archivo compartido '{{fileName}}' se descargó desde {{device}} en {{city}}, {{region}}, {{country}} ({{ip}}).",
-          "withoutDevice": "Tu archivo compartido '{{fileName}}' se descargó desde {{city}}, {{region}}, {{country}} ({{ip}})."
+          "withDevice": "Tu archivo compartido '{{fileName}}' se descargó desde {{device}} en {{location}} ({{ip}}).",
+          "withoutDevice": "Tu archivo compartido '{{fileName}}' se descargó desde {{location}} ({{ip}})."
         }
       },
       "uploadHashMismatch": {
@@ -1451,6 +1455,10 @@
       "appUpdateAvailable": {
         "title": "Actualización del servidor Cotton disponible",
         "content": "Versión actual del servidor: {{currentVersion}}\nVersión disponible del servidor: {{latestVersion}}\n\nNotas de la versión:\n{{releaseNotes}}\n\nVersión completa: {{releaseUrl}}"
+      },
+      "appCodeApproval": {
+        "title": "Inicio de sesión de la aplicación aprobado",
+        "content": "La aplicación {{applicationName}} {{applicationVersion}} inició sesión desde {{origin}}."
       },
       "storagePressure": {
         "title": "El almacenamiento se está quedando sin espacio libre",

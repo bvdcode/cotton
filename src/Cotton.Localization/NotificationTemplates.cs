@@ -15,12 +15,10 @@ namespace Cotton.Localization
         public static string FailedLoginAttemptContentNoDevice(
             string username,
             string ipAddress,
-            string country,
-            string region,
-            string city)
+            string location)
         {
             return $"Someone tried to log in to your account '{username}' but failed. " +
-                   $"The attempt was made from {city}, {region}, {country} ({ipAddress}).";
+                   $"The attempt was made from {location} ({ipAddress}).";
         }
 
         /// <summary>Builds failed login notification content with device details.</summary>
@@ -28,12 +26,10 @@ namespace Cotton.Localization
             string username,
             string ipAddress,
             string device,
-            string country,
-            string region,
-            string city)
+            string location)
         {
             return $"Someone tried to log in to your account '{username}' but failed. " +
-                   $"The attempt was made from {device} in {city}, {region}, {country} ({ipAddress}).";
+                   $"The attempt was made from {device} in {location} ({ipAddress}).";
         }
 
         /// <summary>Title for a successful login notification.</summary>
@@ -42,11 +38,9 @@ namespace Cotton.Localization
         /// <summary>Builds successful login notification content when no device name is known.</summary>
         public static string SuccessfulLoginContentNoDevice(
             string ipAddress,
-            string country,
-            string region,
-            string city)
+            string location)
         {
-            return $"Your account was accessed from {city}, {region}, {country} ({ipAddress}). " +
+            return $"Your account was accessed from {location} ({ipAddress}). " +
                    $"If this wasn't you, please secure your account immediately.";
         }
 
@@ -54,11 +48,9 @@ namespace Cotton.Localization
         public static string SuccessfulLoginContent(
             string ipAddress,
             string device,
-            string country,
-            string region,
-            string city)
+            string location)
         {
-            return $"Your account was accessed from {device} in {city}, {region}, {country} ({ipAddress}). " +
+            return $"Your account was accessed from {device} in {location} ({ipAddress}). " +
                    $"If this wasn't you, please secure your account immediately.";
         }
 
@@ -68,12 +60,10 @@ namespace Cotton.Localization
         /// <summary>Builds two-factor disabled notification content when no device name is known.</summary>
         public static string OtpDisabledContentNoDevice(
             string ipAddress,
-            string country,
-            string region,
-            string city)
+            string location)
         {
             return $"Two-factor authentication has been disabled for your account " +
-                   $"from {city}, {region}, {country} ({ipAddress}). " +
+                   $"from {location} ({ipAddress}). " +
                    $"Your account is less secure now. If this wasn't you, please secure your account immediately.";
         }
 
@@ -81,12 +71,10 @@ namespace Cotton.Localization
         public static string OtpDisabledContent(
             string ipAddress,
             string device,
-            string country,
-            string region,
-            string city)
+            string location)
         {
             return $"Two-factor authentication has been disabled for your account from {device} " +
-                   $"in {city}, {region}, {country} ({ipAddress}). " +
+                   $"in {location} ({ipAddress}). " +
                    $"Your account is less secure now. If this wasn't you, please secure your account immediately.";
         }
 
@@ -96,12 +84,10 @@ namespace Cotton.Localization
         /// <summary>Builds two-factor enabled notification content when no device name is known.</summary>
         public static string OtpEnabledContentNoDevice(
             string ipAddress,
-            string country,
-            string region,
-            string city)
+            string location)
         {
             return $"Two-factor authentication has been enabled for your account " +
-                   $"from {city}, {region}, {country} ({ipAddress}). " +
+                   $"from {location} ({ipAddress}). " +
                    $"Your account is now more secure.";
         }
 
@@ -109,12 +95,10 @@ namespace Cotton.Localization
         public static string OtpEnabledContent(
             string ipAddress,
             string device,
-            string country,
-            string region,
-            string city)
+            string location)
         {
             return $"Two-factor authentication has been enabled for your account from {device} " +
-                   $"in {city}, {region}, {country} ({ipAddress}). " +
+                   $"in {location} ({ipAddress}). " +
                    $"Your account is now more secure.";
         }
 
@@ -125,12 +109,10 @@ namespace Cotton.Localization
         public static string TotpFailedAttemptContentNoDevice(
             int failedAttempts,
             string ipAddress,
-            string country,
-            string region,
-            string city)
+            string location)
         {
             return $"An invalid two-factor authentication code was entered ({failedAttempts} failed attempt(s)). " +
-                   $"The attempt was made from {city}, {region}, {country} ({ipAddress}). " +
+                   $"The attempt was made from {location} ({ipAddress}). " +
                    $"If this wasn't you, your account may be under attack.";
         }
 
@@ -139,12 +121,10 @@ namespace Cotton.Localization
             int failedAttempts,
             string ipAddress,
             string device,
-            string country,
-            string region,
-            string city)
+            string location)
         {
             return $"An invalid two-factor authentication code was entered ({failedAttempts} failed attempt(s)). " +
-                   $"The attempt was made from {device} in {city}, {region}, {country} ({ipAddress}). " +
+                   $"The attempt was made from {device} in {location} ({ipAddress}). " +
                    $"If this wasn't you, your account may be under attack.";
         }
 
@@ -155,12 +135,10 @@ namespace Cotton.Localization
         public static string TotpLockoutContentNoDevice(
             int maxFailedAttempts,
             string ipAddress,
-            string country,
-            string region,
-            string city)
+            string location)
         {
             return $"Your account has been temporarily locked due to {maxFailedAttempts} failed authentication attempts. " +
-                   $"The last attempt was from {city}, {region}, {country} ({ipAddress}). " +
+                   $"The last attempt was from {location} ({ipAddress}). " +
                    $"Please wait before trying again.";
         }
 
@@ -169,12 +147,10 @@ namespace Cotton.Localization
             int maxFailedAttempts,
             string ipAddress,
             string device,
-            string country,
-            string region,
-            string city)
+            string location)
         {
             return $"Your account has been temporarily locked due to {maxFailedAttempts} failed authentication attempts. " +
-                   $"The last attempt was from {device} in {city}, {region}, {country} ({ipAddress}). " +
+                   $"The last attempt was from {device} in {location} ({ipAddress}). " +
                    $"Please wait before trying again.";
         }
 
@@ -184,12 +160,10 @@ namespace Cotton.Localization
         /// <summary>Builds WebDAV token reset content when no device name is known.</summary>
         public static string WebDavTokenResetContentNoDevice(
             string ipAddress,
-            string country,
-            string region,
-            string city)
+            string location)
         {
             return $"Your WebDAV access token has been reset " +
-                   $"from {city}, {region}, {country} ({ipAddress}). " +
+                   $"from {location} ({ipAddress}). " +
                    $"You will need to update your WebDAV client with the new token.";
         }
 
@@ -197,12 +171,10 @@ namespace Cotton.Localization
         public static string WebDavTokenResetContent(
             string ipAddress,
             string device,
-            string country,
-            string region,
-            string city)
+            string location)
         {
             return $"Your WebDAV access token has been reset from {device} " +
-                   $"in {city}, {region}, {country} ({ipAddress}). " +
+                   $"in {location} ({ipAddress}). " +
                    $"You will need to update your WebDAV client with the new token.";
         }
 
@@ -213,12 +185,10 @@ namespace Cotton.Localization
         public static string SharedFileDownloadedContentNoDevice(
             string fileName,
             string ipAddress,
-            string country,
-            string region,
-            string city)
+            string location)
         {
             return $"Your shared file '{fileName}' was downloaded " +
-                   $"from {city}, {region}, {country} ({ipAddress}).";
+                   $"from {location} ({ipAddress}).";
         }
 
         /// <summary>Builds shared file download content with device details.</summary>
@@ -226,12 +196,10 @@ namespace Cotton.Localization
             string fileName,
             string ipAddress,
             string device,
-            string country,
-            string region,
-            string city)
+            string location)
         {
             return $"Your shared file '{fileName}' was downloaded from {device} " +
-                   $"in {city}, {region}, {country} ({ipAddress}).";
+                   $"in {location} ({ipAddress}).";
         }
 
         /// <summary>Title for an upload hash mismatch notification.</summary>
@@ -284,6 +252,18 @@ namespace Cotton.Localization
                 $"Release notes:\n" +
                 FormatReleaseNotes(releaseNotes) +
                 $"\n\nFull release: {releaseUrl}";
+        }
+
+        /// <summary>Title for app-code approval notifications.</summary>
+        public static string AppCodeApprovalTitle => "Application sign-in approved";
+
+        /// <summary>Builds app-code approval notification content.</summary>
+        public static string AppCodeApprovalContent(
+            string applicationName,
+            string applicationVersion,
+            string origin)
+        {
+            return $"{applicationName} {applicationVersion} signed in from {origin}.";
         }
 
         /// <summary>Normalizes and truncates release notes for notification display.</summary>

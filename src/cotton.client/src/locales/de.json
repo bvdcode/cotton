@@ -1381,60 +1381,64 @@
       "empty": "Keine Benachrichtigungen"
     },
     "server": {
+      "location": {
+        "localNetwork": "dem lokalen Netzwerk",
+        "unknown": "einem unbekannten Standort"
+      },
       "failedLoginAttempt": {
         "title": "Fehlgeschlagener Anmeldeversuch",
         "content": {
-          "withDevice": "Jemand hat versucht, sich bei deinem Konto '{{username}}' anzumelden, aber der Versuch ist fehlgeschlagen. Der Versuch kam von {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}).",
-          "withoutDevice": "Jemand hat versucht, sich bei deinem Konto '{{username}}' anzumelden, aber der Versuch ist fehlgeschlagen. Der Versuch kam aus {{city}}, {{region}}, {{country}} ({{ip}})."
+          "withDevice": "Jemand hat versucht, sich bei deinem Konto '{{username}}' anzumelden, aber der Versuch ist fehlgeschlagen. Der Versuch kam von {{device}} in {{location}} ({{ip}}).",
+          "withoutDevice": "Jemand hat versucht, sich bei deinem Konto '{{username}}' anzumelden, aber der Versuch ist fehlgeschlagen. Der Versuch kam aus {{location}} ({{ip}})."
         }
       },
       "successfulLogin": {
         "title": "Neue Anmeldung bei deinem Konto",
         "content": {
-          "withDevice": "Auf dein Konto wurde von {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}) zugegriffen. Wenn du das nicht warst, sichere dein Konto sofort.",
-          "withoutDevice": "Auf dein Konto wurde aus {{city}}, {{region}}, {{country}} ({{ip}}) zugegriffen. Wenn du das nicht warst, sichere dein Konto sofort."
+          "withDevice": "Auf dein Konto wurde von {{device}} in {{location}} ({{ip}}) zugegriffen. Wenn du das nicht warst, sichere dein Konto sofort.",
+          "withoutDevice": "Auf dein Konto wurde aus {{location}} ({{ip}}) zugegriffen. Wenn du das nicht warst, sichere dein Konto sofort."
         }
       },
       "otpDisabled": {
         "title": "Zwei-Faktor-Authentifizierung deaktiviert",
         "content": {
-          "withDevice": "Die Zwei-Faktor-Authentifizierung wurde für dein Konto von {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}) deaktiviert. Dein Konto ist jetzt weniger geschützt. Wenn du das nicht warst, sichere dein Konto sofort.",
-          "withoutDevice": "Die Zwei-Faktor-Authentifizierung wurde für dein Konto aus {{city}}, {{region}}, {{country}} ({{ip}}) deaktiviert. Dein Konto ist jetzt weniger geschützt. Wenn du das nicht warst, sichere dein Konto sofort."
+          "withDevice": "Die Zwei-Faktor-Authentifizierung wurde für dein Konto von {{device}} in {{location}} ({{ip}}) deaktiviert. Dein Konto ist jetzt weniger geschützt. Wenn du das nicht warst, sichere dein Konto sofort.",
+          "withoutDevice": "Die Zwei-Faktor-Authentifizierung wurde für dein Konto aus {{location}} ({{ip}}) deaktiviert. Dein Konto ist jetzt weniger geschützt. Wenn du das nicht warst, sichere dein Konto sofort."
         }
       },
       "otpEnabled": {
         "title": "Zwei-Faktor-Authentifizierung aktiviert",
         "content": {
-          "withDevice": "Die Zwei-Faktor-Authentifizierung wurde für dein Konto von {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}) aktiviert. Dein Konto ist jetzt besser geschützt.",
-          "withoutDevice": "Die Zwei-Faktor-Authentifizierung wurde für dein Konto aus {{city}}, {{region}}, {{country}} ({{ip}}) aktiviert. Dein Konto ist jetzt besser geschützt."
+          "withDevice": "Die Zwei-Faktor-Authentifizierung wurde für dein Konto von {{device}} in {{location}} ({{ip}}) aktiviert. Dein Konto ist jetzt besser geschützt.",
+          "withoutDevice": "Die Zwei-Faktor-Authentifizierung wurde für dein Konto aus {{location}} ({{ip}}) aktiviert. Dein Konto ist jetzt besser geschützt."
         }
       },
       "totpFailedAttempt": {
         "title": "Ungültiger Authentifizierungscode",
         "content": {
-          "withDevice": "Ein ungültiger Zwei-Faktor-Code wurde eingegeben (fehlgeschlagene Versuche: {{totpFailedAttempts}}). Der Versuch kam von {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}). Wenn du das nicht warst, könnte dein Konto angegriffen werden.",
-          "withoutDevice": "Ein ungültiger Zwei-Faktor-Code wurde eingegeben (fehlgeschlagene Versuche: {{totpFailedAttempts}}). Der Versuch kam aus {{city}}, {{region}}, {{country}} ({{ip}}). Wenn du das nicht warst, könnte dein Konto angegriffen werden."
+          "withDevice": "Ein ungültiger Zwei-Faktor-Code wurde eingegeben (fehlgeschlagene Versuche: {{totpFailedAttempts}}). Der Versuch kam von {{device}} in {{location}} ({{ip}}). Wenn du das nicht warst, könnte dein Konto angegriffen werden.",
+          "withoutDevice": "Ein ungültiger Zwei-Faktor-Code wurde eingegeben (fehlgeschlagene Versuche: {{totpFailedAttempts}}). Der Versuch kam aus {{location}} ({{ip}}). Wenn du das nicht warst, könnte dein Konto angegriffen werden."
         }
       },
       "totpLockout": {
         "title": "Konto vorübergehend gesperrt",
         "content": {
-          "withDevice": "Dein Konto wurde wegen {{maxFailedAttempts}} fehlgeschlagener Authentifizierungsversuche vorübergehend gesperrt. Der letzte Versuch kam von {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}). Bitte warte, bevor du es erneut versuchst.",
-          "withoutDevice": "Dein Konto wurde wegen {{maxFailedAttempts}} fehlgeschlagener Authentifizierungsversuche vorübergehend gesperrt. Der letzte Versuch kam aus {{city}}, {{region}}, {{country}} ({{ip}}). Bitte warte, bevor du es erneut versuchst."
+          "withDevice": "Dein Konto wurde wegen {{maxFailedAttempts}} fehlgeschlagener Authentifizierungsversuche vorübergehend gesperrt. Der letzte Versuch kam von {{device}} in {{location}} ({{ip}}). Bitte warte, bevor du es erneut versuchst.",
+          "withoutDevice": "Dein Konto wurde wegen {{maxFailedAttempts}} fehlgeschlagener Authentifizierungsversuche vorübergehend gesperrt. Der letzte Versuch kam aus {{location}} ({{ip}}). Bitte warte, bevor du es erneut versuchst."
         }
       },
       "webDavTokenReset": {
         "title": "WebDAV-Zugriffstoken geändert",
         "content": {
-          "withDevice": "Dein WebDAV-Zugriffstoken wurde von {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}) zurückgesetzt. Aktualisiere den Token in deinem WebDAV-Client.",
-          "withoutDevice": "Dein WebDAV-Zugriffstoken wurde aus {{city}}, {{region}}, {{country}} ({{ip}}) zurückgesetzt. Aktualisiere den Token in deinem WebDAV-Client."
+          "withDevice": "Dein WebDAV-Zugriffstoken wurde von {{device}} in {{location}} ({{ip}}) zurückgesetzt. Aktualisiere den Token in deinem WebDAV-Client.",
+          "withoutDevice": "Dein WebDAV-Zugriffstoken wurde aus {{location}} ({{ip}}) zurückgesetzt. Aktualisiere den Token in deinem WebDAV-Client."
         }
       },
       "sharedFileDownloaded": {
         "title": "Freigegebene Datei heruntergeladen",
         "content": {
-          "withDevice": "Deine freigegebene Datei '{{fileName}}' wurde von {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}) heruntergeladen.",
-          "withoutDevice": "Deine freigegebene Datei '{{fileName}}' wurde aus {{city}}, {{region}}, {{country}} ({{ip}}) heruntergeladen."
+          "withDevice": "Deine freigegebene Datei '{{fileName}}' wurde von {{device}} in {{location}} ({{ip}}) heruntergeladen.",
+          "withoutDevice": "Deine freigegebene Datei '{{fileName}}' wurde aus {{location}} ({{ip}}) heruntergeladen."
         }
       },
       "uploadHashMismatch": {
@@ -1448,6 +1452,10 @@
       "appUpdateAvailable": {
         "title": "Cotton-Serverupdate verfügbar",
         "content": "Aktuelle Serverversion: {{currentVersion}}\nVerfügbare Serverversion: {{latestVersion}}\n\nVersionshinweise:\n{{releaseNotes}}\n\nVollständiges Release: {{releaseUrl}}"
+      },
+      "appCodeApproval": {
+        "title": "App-Anmeldung genehmigt",
+        "content": "Die Anwendung {{applicationName}} {{applicationVersion}} hat sich von {{origin}} angemeldet."
       },
       "storagePressure": {
         "title": "Dem Speicher geht der freie Platz aus",
