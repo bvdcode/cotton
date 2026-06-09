@@ -345,36 +345,6 @@ namespace Cotton.Sync.Remote
                 isCompleted));
         }
 
-        private class DownloadTransferProgress : IProgress<long>
-        {
-            private readonly IProgress<SyncTransferProgress> _progress;
-            private readonly string _relativePath;
-            private readonly long? _totalBytes;
-
-            public DownloadTransferProgress(
-                IProgress<SyncTransferProgress> progress,
-                string relativePath,
-                long? totalBytes)
-            {
-                _progress = progress;
-                _relativePath = relativePath;
-                _totalBytes = totalBytes;
-            }
-
-            public long LastTransferredBytes { get; private set; }
-
-            public void Report(long transferredBytes)
-            {
-                LastTransferredBytes = transferredBytes;
-                ReportTransfer(
-                    _progress,
-                    SyncTransferDirection.Download,
-                    _relativePath,
-                    transferredBytes,
-                    _totalBytes);
-            }
-        }
-
         private async Task UploadChunkIfMissingAsync(
             string hash,
             ReadOnlyMemory<byte> content,
@@ -537,6 +507,5 @@ namespace Cotton.Sync.Remote
             return total;
         }
 
-        private record UploadedChunks(List<string> ChunkHashes, string ContentHash);
     }
 }

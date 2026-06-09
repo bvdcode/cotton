@@ -149,7 +149,7 @@ namespace Cotton.Sync.Local
             int filesScanned = 0;
             progress?.Report(new LocalTreeScanProgress(filesScanned, directoriesScanned, currentPath: null));
             var pendingDirectories = new Stack<LocalDirectoryScanFrame>();
-            pendingDirectories.Push(new LocalDirectoryScanFrame(fullRoot));
+            pendingDirectories.Push(new LocalDirectoryScanFrame(fullRoot, ChildEnumerationOptions));
             try
             {
                 while (pendingDirectories.Count > 0)
@@ -171,7 +171,7 @@ namespace Cotton.Sync.Local
                         addDirectory(directory);
                         directoriesScanned++;
                         ReportDirectoryScanProgress(progress, filesScanned, directoriesScanned, directory.RelativePath);
-                        pendingDirectories.Push(new LocalDirectoryScanFrame(directory.FullPath));
+                        pendingDirectories.Push(new LocalDirectoryScanFrame(directory.FullPath, ChildEnumerationOptions));
                         continue;
                     }
 
@@ -454,65 +454,6 @@ namespace Cotton.Sync.Local
                 processedBytes,
                 totalBytes,
                 isCompleted));
-        }
-
-        private readonly record struct LocalFileMetadata(long Length, DateTime LastWriteUtc);
-
-        private class LocalDirectoryScanFrame : IDisposable
-        {
-            private readonly IEnumerator<string> _directoryEnumerator;
-            private IEnumerator<string>? _fileEnumerator;
-            private bool _filesDrained;
-
-            public LocalDirectoryScanFrame(string directoryPath)
-            {
-                DirectoryPath = directoryPath;
-                _directoryEnumerator = Directory
-                    .EnumerateDirectories(directoryPath, "*", ChildEnumerationOptions)
-                    .GetEnumerator();
-            }
-
-            public string DirectoryPath { get; }
-
-            public bool TryReadNextDirectoryPath(out string? directoryPath)
-            {
-                if (_directoryEnumerator.MoveNext())
-                {
-                    directoryPath = _directoryEnumerator.Current;
-                    return true;
-                }
-
-                directoryPath = null;
-                return false;
-            }
-
-            public bool TryReadNextFilePath(out string? filePath)
-            {
-                if (_filesDrained)
-                {
-                    filePath = null;
-                    return false;
-                }
-
-                _fileEnumerator ??= Directory
-                    .EnumerateFiles(DirectoryPath, "*", ChildEnumerationOptions)
-                    .GetEnumerator();
-                if (_fileEnumerator.MoveNext())
-                {
-                    filePath = _fileEnumerator.Current;
-                    return true;
-                }
-
-                _filesDrained = true;
-                filePath = null;
-                return false;
-            }
-
-            public void Dispose()
-            {
-                _directoryEnumerator.Dispose();
-                _fileEnumerator?.Dispose();
-            }
         }
     }
 }

@@ -2058,7 +2058,8 @@ namespace Cotton.Sync
             long bytesCompleted = 0,
             long? bytesTotal = null)
         {
-            options.RunProgress?.Report(new SyncRunProgress(
+            SyncRunProgressReporter.Report(
+                options,
                 stage,
                 filesCompleted,
                 filesTotal,
@@ -2066,7 +2067,7 @@ namespace Cotton.Sync
                 startedAtUtc,
                 isCompleted,
                 bytesCompleted,
-                bytesTotal));
+                bytesTotal);
         }
 
         private static void ReportItemRunProgress(
@@ -2119,188 +2120,6 @@ namespace Cotton.Sync
             return itemsTotal <= RunProgressDetailedItemLimit
                 ? RunProgressDetailedItemInterval
                 : RunProgressSparseItemInterval;
-        }
-
-        private enum SyncDeleteDirection
-        {
-            None,
-            Local,
-            Remote,
-        }
-
-        private class DirectoryContentIndex
-        {
-            private readonly HashSet<string> _directoryKeysWithChildren;
-
-            private DirectoryContentIndex(HashSet<string> directoryKeysWithChildren)
-            {
-                _directoryKeysWithChildren = directoryKeysWithChildren;
-            }
-
-            public static DirectoryContentIndex Empty { get; } = new([]);
-
-            public static DirectoryContentIndex Create(IEnumerable<string> directoryKeys, IEnumerable<string> fileKeys)
-            {
-                var directoryKeysWithChildren = new HashSet<string>(PathComparer);
-                AddAncestorDirectoryKeys(directoryKeysWithChildren, directoryKeys);
-                AddAncestorDirectoryKeys(directoryKeysWithChildren, fileKeys);
-                return new DirectoryContentIndex(directoryKeysWithChildren);
-            }
-
-            public bool HasChildren(string relativePath)
-            {
-                return _directoryKeysWithChildren.Contains(SyncPath.ToKey(relativePath));
-            }
-
-            private static void AddAncestorDirectoryKeys(HashSet<string> directoryKeysWithChildren, IEnumerable<string> childKeys)
-            {
-                foreach (string childKey in childKeys)
-                {
-                    AddAncestorDirectoryKeys(directoryKeysWithChildren, childKey);
-                }
-            }
-
-            private static void AddAncestorDirectoryKeys(HashSet<string> directoryKeysWithChildren, string childKey)
-            {
-                string currentKey = childKey;
-                while (!string.IsNullOrEmpty(currentKey))
-                {
-                    int separatorIndex = currentKey.LastIndexOf('/');
-                    if (separatorIndex < 0)
-                    {
-                        break;
-                    }
-
-                    string parentKey = currentKey[..separatorIndex];
-                    directoryKeysWithChildren.Add(parentKey);
-                    currentKey = parentKey;
-                }
-            }
-        }
-
-        private class LocalTreeScanProgressReporter : IProgress<LocalTreeScanProgress>
-        {
-            private readonly SyncRunOptions _options;
-            private readonly DateTime _startedAtUtc;
-
-            public LocalTreeScanProgressReporter(SyncRunOptions options, DateTime startedAtUtc)
-            {
-                _options = options;
-                _startedAtUtc = startedAtUtc;
-            }
-
-            public void Report(LocalTreeScanProgress value)
-            {
-                ArgumentNullException.ThrowIfNull(value);
-                ReportRunProgress(
-                    _options,
-                    SyncRunProgressStage.ScanningLocal,
-                    value.FilesScanned,
-                    filesTotal: null,
-                    value.CurrentPath,
-                    _startedAtUtc);
-            }
-        }
-
-        private class RemoteTreeScanProgressReporter : IProgress<RemoteTreeScanProgress>
-        {
-            private readonly SyncRunOptions _options;
-            private readonly DateTime _startedAtUtc;
-
-            public RemoteTreeScanProgressReporter(SyncRunOptions options, DateTime startedAtUtc)
-            {
-                _options = options;
-                _startedAtUtc = startedAtUtc;
-            }
-
-            public void Report(RemoteTreeScanProgress value)
-            {
-                ArgumentNullException.ThrowIfNull(value);
-                ReportRunProgress(
-                    _options,
-                    SyncRunProgressStage.ScanningRemote,
-                    value.FilesScanned,
-                    filesTotal: null,
-                    value.CurrentPath,
-                    _startedAtUtc);
-            }
-        }
-
-        private class SyncTreeLookups
-        {
-            public SyncTreeLookups(
-                Dictionary<string, LocalDirectorySnapshot> localDirectoriesByPath,
-                Dictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath,
-                Dictionary<string, LocalFileSnapshot> localFilesByPath,
-                Dictionary<string, RemoteFileSnapshot> remoteFilesByPath,
-                NodeDto remoteRootNode)
-            {
-                LocalDirectoriesByPath = localDirectoriesByPath;
-                RemoteDirectoriesByPath = remoteDirectoriesByPath;
-                LocalFilesByPath = localFilesByPath;
-                RemoteFilesByPath = remoteFilesByPath;
-                RemoteRootNode = remoteRootNode;
-            }
-
-            public Dictionary<string, LocalDirectorySnapshot> LocalDirectoriesByPath { get; }
-
-            public Dictionary<string, RemoteDirectorySnapshot> RemoteDirectoriesByPath { get; }
-
-            public Dictionary<string, LocalFileSnapshot> LocalFilesByPath { get; }
-
-            public Dictionary<string, RemoteFileSnapshot> RemoteFilesByPath { get; }
-
-            public NodeDto RemoteRootNode { get; }
-        }
-
-        private class SyncDeleteGuard
-        {
-            private readonly int _maximumLocalDeletes;
-            private readonly int _maximumRemoteDeletes;
-            private readonly int _plannedLocalDeletes;
-            private readonly int _plannedRemoteDeletes;
-
-            public SyncDeleteGuard(SyncRunOptions options, int plannedLocalDeletes, int plannedRemoteDeletes)
-            {
-                _maximumLocalDeletes = options.MaximumLocalDeletesPerRun;
-                _maximumRemoteDeletes = options.MaximumRemoteDeletesPerRun;
-                _plannedLocalDeletes = plannedLocalDeletes;
-                _plannedRemoteDeletes = plannedRemoteDeletes;
-            }
-
-            public bool CanDeleteLocal(out string? details)
-            {
-                return CanDelete(
-                    _plannedLocalDeletes,
-                    _maximumLocalDeletes,
-                    "Local delete blocked by mass-delete guard.",
-                    out details);
-            }
-
-            public bool CanDeleteRemote(out string? details)
-            {
-                return CanDelete(
-                    _plannedRemoteDeletes,
-                    _maximumRemoteDeletes,
-                    "Remote delete blocked by mass-delete guard.",
-                    out details);
-            }
-
-            private static bool CanDelete(
-                int planned,
-                int maximum,
-                string blockedDetails,
-                out string? details)
-            {
-                if (planned > maximum)
-                {
-                    details = blockedDetails + " " + planned + " pending deletes exceed limit " + maximum + ".";
-                    return false;
-                }
-
-                details = null;
-                return true;
-            }
         }
     }
 }
