@@ -14,6 +14,7 @@ Release can be considered only when every item in this section is checked.
 - [ ] SDK tests pass.
   Partial 2026-06-06: local `dotnet test src/Cotton.Sdk.Tests/Cotton.Sdk.Tests.csproj --configuration Release --no-restore` passed 43/43 on `feature/desktop-sync-client`. Keep unchecked until the final release gate is re-run.
   Partial 2026-06-08: refreshed SDK tests after app-code browser authentication integration. `dotnet test src/Cotton.Sdk.Tests/Cotton.Sdk.Tests.csproj --configuration Release --no-restore` passed 51/51. Keep unchecked until the final release gate is re-run.
+  Partial 2026-06-09: refreshed SDK Release tests after SDK review and browser-auth user-lookup retry hardening. dotnet test src/Cotton.Sdk.Tests/Cotton.Sdk.Tests.csproj --configuration Release --no-restore passed 52/52. Keep unchecked until the final release gate is re-run.
 - [ ] Sync core tests pass.
   Partial 2026-06-06: local `dotnet test src/Cotton.Sync.Tests/Cotton.Sync.Tests.csproj --configuration Release --no-restore` passed 158/158 on `feature/desktop-sync-client`. The first attempt overlapped another build and hit a compiler output file lock, then the standalone rerun passed. Keep unchecked until the final release gate is re-run.
 - [ ] Server integration tests for sync endpoints pass.
