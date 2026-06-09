@@ -68,7 +68,7 @@ Do not open `[x]` sub-plans during normal work. Do not use `reference` or `futur
 
 Primary active queue:
 
-- `00-current-work-order.md` remains the first file to open. It has 5 open desktop-polish items and 1 completed verification item.
+- `00-current-work-order.md` remains the first file to open. It has 6 open items and 0 completed verification items because remote branch alignment was reopened after the 2026-06-09 `origin/develop` audit.
 - The open items are mostly code-side audited, but they are not complete until the required Windows/manual checks pass or a new implementation bug is fixed.
 - Browser-login integration is now release scope because `develop` added `/api/v1/oauth/app-code` start/approval/poll endpoints; use Phase 7 for the SDK, app-layer, CLI, and desktop implementation details.
 - Do not jump into lower-priority files while an item in this work order has an unresolved correctness or usability blocker.
@@ -122,7 +122,7 @@ Revision date: 2026-06-07.
 
 - Fully complete: 5 implementation sub-plans.
 - Newly closed by this audit: 0 sub-plans.
-- Current desktop-polish queue: 5 open, 1 done.
+- Current desktop-polish queue: 6 open, 0 done.
 - Active/manual authentication: Phase 7 has 6 open, 10 done.
 - Active/manual visual polish: Phase 8 has 7 open, 23 done.
 - Active/manual end-to-end edge cases: Phase 12 has 3 open, 21 done.
@@ -146,7 +146,7 @@ Current platform boundary:
 
 The release plan is split into focused files so the active checklist stays visible and reviewable. Keep current execution work in `00-current-work-order.md`; keep platform-specific Windows tasks in `01-windows-only-work.md`.
 
-- [ ] [Current Work Order](sdk-desktop-sync-client-plan/00-current-work-order.md) - active, 5 open, 1 done
+- [ ] [Current Work Order](sdk-desktop-sync-client-plan/00-current-work-order.md) - active, 6 open, 0 done
 - [ ] [Windows-Only Work](sdk-desktop-sync-client-plan/01-windows-only-work.md) - manual-gated, 4 open
 - [ ] [Product Target](sdk-desktop-sync-client-plan/02-product-target.md) - reference release outcome, 11 open
 - [ ] [Non-Negotiable Decisions](sdk-desktop-sync-client-plan/03-non-negotiable-decisions.md) - reference guardrails, 9 open, 1 done
