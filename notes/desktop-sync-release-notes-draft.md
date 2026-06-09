@@ -6,7 +6,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 
 - Desktop sync client built on the existing .NET stack: `Cotton.Sdk`, `Cotton.Sync`, `Cotton.Sync.App`, EF Core SQLite, and Avalonia.
 - Full-mirror sync for one or more local-to-remote sync pairs.
-- First-run setup flow with Cotton server probing, password/TOTP sign-in, remembered server URL and username, and an explicit add-folder wizard for choosing the first sync pair.
+- First-run setup flow with Cotton server probing, browser app-code approval sign-in, password/TOTP sign-in as an explicit alternate, remembered server URL and username, and an explicit add-folder wizard for choosing the first sync pair.
 - First-run windows default to the dark Cotton theme, with System/Light/Dark theme switching still available in Settings.
 - Dashboard with global status, per-folder status/current operation, current progress, activity history, action-required errors, conflict list, and direct sync-folder management.
 - Action-required sync failures use a consistent dashboard state and preserve the concrete reason in the error panel instead of mixing a generic failure state with an up-to-date progress message; add-folder/settings overlays hide background dashboard chrome so wizard errors stay readable, and missing desktop sync API errors block add-folder actions until the server check is resolved.
@@ -28,7 +28,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 - Token storage is abstracted and release-gated: Windows DPAPI and Linux Secret Service are treated as release-secure; restricted-file storage fails self-test.
 - Diagnostics include structured logging, log rotation, self-test, sync-state cursor-store verification with the concrete database path, support bundle export, and secret redaction.
 - Notifications and recent activity use the same user-readable action-required error messages as the dashboard instead of leaking raw backend/JSON parser failures, and repeated unchanged status errors are deduplicated in Activity.
-- CLI recovery support includes state summary and one-shot sync commands for headless validation, including shared server URL normalization for absolute URLs and bare Cotton hosts.
+- CLI recovery support includes state summary, one-shot sync commands for headless validation, app-code browser approval login for console sessions, and shared server URL normalization for absolute URLs and bare Cotton hosts.
 - Tray lifecycle is implemented for Windows. Linux currently uses normal window lifecycle because tray support varies by desktop environment.
 - Single-instance startup now raises the existing desktop window when the app is launched again.
 - Windows installer/uninstaller detection now uses an Inno Setup `AppMutex` backed by a Windows-only runtime mutex held by the desktop app, so install/uninstall can detect that Cotton Sync is still running before replacing or removing installed files.
@@ -47,23 +47,21 @@ Draft status: not release-ready. This document records the current desktop-sync 
 
 ## Verification Already Exercised
 
-- Full local `dotnet test src/Cotton.sln --configuration Release --no-restore` has passed after the current desktop packaging and UI hardening, including desktop 290/290 and server integration 373/373.
-- Desktop tests have passed locally, most recently `Cotton.Sync.Desktop.Tests` 312/312.
-- Sync core tests have passed locally, most recently `Cotton.Sync.Tests` 134/134.
-- Full solution Release build has passed locally with 0 warnings after the latest desktop action-required activity cleanup.
-- Server integration tests have passed locally, most recently `Cotton.Server.IntegrationTests` 373/373.
-- CLI one-shot sync has been smoke-tested against the integration-test server and covered in CLI tests with fake Cotton HTTP responses, verifying SDK file/folder upload requests and SQLite baseline creation.
-- Desktop packaging metadata tests cover publish profiles, clean publish-directory behavior, app icon metadata, Linux `.desktop` metadata, `.deb` packaging script, reusable Linux/Windows diagnostics export smoke scripts, Linux package smoke wiring, reusable Linux GUI screenshot matrix smoke with deterministic sign-in-error/add-folder/dashboard/folder-controls/settings/settings-diagnostics/error/conflict visual-smoke states, Linux archive/installed diagnostics export smoke wiring, Linux `.deb` install/upgrade smoke wiring, Windows CI smoke, Windows `.zip` artifact upload/self-test/diagnostics smoke, Windows installer script/install/diagnostics/upgrade smoke wiring, Windows shortcut AppUserModelID verification, running-app install/uninstall detection metadata, and release artifact checksum generation. The settings-diagnostics state now includes a visible exported bundle path plus `Open` action after export.
-- Local Linux publish succeeded.
-- Local Windows publish succeeded from Linux cross-publish.
-- Local `.deb` build succeeded through `dpkg-deb`; extracted package layout starts the desktop apphost and runs self-test up to the expected local token-storage failure.
-- Local Windows `.zip` build succeeded through Python `zipfile`; archive contains `Cotton.Sync.Desktop.exe` and desktop icon assets.
-- CI contains Linux publish self-test, Linux GUI screenshot capture under Xvfb with auto-detected or explicitly overridden capture size plus PNG dimension and nonblank-frame checks for first-run plus sign-in-error/add-folder/dashboard/settings/settings-diagnostics/error/conflict visual-smoke states, including visible diagnostics self-test result rows and the diagnostics export path row, Linux archive/deb extraction self-tests, Linux archive and installed/upgrade-installed `.deb` diagnostics export smoke, Linux `.deb` install/uninstall/upgrade self-tests with Secret Service setup, Windows apphost self-test, associated-icon verification for published/zip/installed/upgraded apphosts, Windows zip extraction self-test plus diagnostics export smoke, Windows installer install/uninstall/diagnostics/upgrade self-tests with Start Menu shortcut AppUserModelID verification, and Windows installer build/upload on `windows-latest`.
+- Current branch split audit against local `develop` shows no backend/shared/main-web delta; `develop..HEAD` under `src/Cotton.Server`, `src/Cotton.Shared`, `src/cotton.client`, `.github/workflows`, and `src/Cotton.sln` is limited to the desktop sync workflow and solution wiring.
+- Previous full local solution Release test/build passes have covered the whole repository after desktop packaging, UI hardening, sync-state, and backend sync-endpoint integration. Keep this as historical evidence only; the final release gate still needs one batched clean Release run.
+- Current 2026-06-09 release-gate refreshes: SDK Release tests passed 52/52, sync core Release tests passed 181/181, focused server sync endpoint integration tests passed 25/25, desktop Release build passed with 0 warnings, and CLI Release build passed with 0 warnings.
+- App-code browser authentication is implemented through shared DTOs, SDK, app layer, CLI, and desktop UI. Focused Release evidence covers transient polling retry, transient current-user lookup retry after approval, CLI browser-login slices, and desktop browser sign-in/cancel ViewModel slices. Manual Windows desktop approval remains open.
+- Desktop packaging metadata tests cover publish profiles, clean publish-directory behavior, app icon metadata, Linux `.desktop` metadata, `.deb` packaging script, reusable Linux/Windows diagnostics export smoke scripts, Linux package smoke wiring, reusable Linux GUI screenshot matrix smoke with deterministic first-run/sign-in-error/empty-dashboard/add-folder/dashboard/folder-controls/progress/settings/settings-diagnostics/error/conflict visual-smoke states, Linux archive/installed diagnostics export smoke wiring, Linux `.deb` install/upgrade smoke wiring, Windows CI smoke, Windows `.zip` artifact upload/self-test/diagnostics smoke, Windows installer script/install/diagnostics/upgrade smoke wiring, Windows shortcut AppUserModelID verification, running-app install/uninstall detection metadata, and release artifact checksum generation.
+- Current 2026-06-09 Linux publish smoke from the Release `linux-x64` publish output passed checksum verification and published apphost self-test against `app.cottoncloud.dev`, including release-secure Linux Secret Service through `secret-tool`, `notify-send` support with app name `Cotton Sync`, server identity `Cotton Cloud`, file watcher availability, and desktop sync change-feed capability status.
+- Current 2026-06-09 Linux diagnostics export smoke passed from the published apphost and verified the diagnostics zip plus `diagnostics.json` data-path metadata for app data, preferences DB, sync-state DB, and token-store paths.
+- Current 2026-06-09 Linux screenshot matrix capture passed from the published apphost under Xvfb/DBus for first-run, sign-in-error, empty-dashboard, add-folder, dashboard, folder-controls, progress, settings, settings-diagnostics, error, and conflict states. The script verified app-window dimensions, nonblank frames, and runtime health; manual visual review and Windows screenshots remain open.
+- Sync core scale evidence includes explicit Linux manual no-op smokes up to 50k matching files and initial-upload smokes up to 30k small files, plus memory-pressure reductions in activity retention, baseline loading, scan lookups, reconciliation keys, delete planning, progress sampling, and dashboard snapshot loading. Windows packaged GUI 30k/50k runs remain open.
+- CLI soak tooling records elapsed time, CPU usage, process and managed memory growth/peaks, iteration timing, sync errors, activity totals, and final convergence. Actual 24-hour one-client and two-client soak runs remain open.
 
 ## Known Release Gates Still Open
 
-- Clean Windows VM: install/launch, portable archive smoke, taskbar icon, tray behavior, autostart after reboot, notifications, DPAPI token storage, sign-in, sync, diagnostics export.
-- Clean Linux VM: `.deb` install, portable archive smoke, Secret Service token storage, autostart after login, notifications, normal-window lifecycle, tested desktop environment record.
+- Clean Windows VM: install/launch, portable archive smoke, taskbar icon, tray behavior, autostart after reboot, notifications, DPAPI token storage, browser approval sign-in, password/TOTP sign-in, sync, diagnostics export.
+- Clean Linux VM: `.deb` install, portable archive smoke, Secret Service token storage, browser approval sign-in, autostart after login, notifications, normal-window lifecycle, tested desktop environment record.
 - Full screenshot review: onboarding, dashboard, settings, conflict state, and error/action-required state.
 - Long-running soak: at least 24 hours with one client and 24 hours with two clients.
 - True clean-machine package uninstall and upgrade behavior.
@@ -76,7 +74,7 @@ Draft status: not release-ready. This document records the current desktop-sync 
 - Selective sync.
 - Bandwidth limits.
 - Multiple accounts.
-- Browser-based OAuth/PKCE desktop login.
+- External-provider OAuth/PKCE login beyond the Cotton app-code browser approval flow.
 - Auto-update implementation.
 - File manager overlay icons.
 - macOS and mobile support.
