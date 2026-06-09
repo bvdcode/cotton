@@ -2,9 +2,54 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Nodes;
+using System.Text.Json.Serialization;
 
 namespace Cotton.Files
 {
+    /// <summary>
+    /// Lists the supported restore status values.
+    /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public enum RestoreStatus
+    {
+        /// <summary>
+        /// Represents the restored option.
+        /// </summary>
+        Restored = 0,
+
+        /// <summary>
+        /// Represents the parent missing option.
+        /// </summary>
+        ParentMissing = 1,
+
+        /// <summary>
+        /// Represents the conflict option.
+        /// </summary>
+        Conflict = 2,
+
+        /// <summary>
+        /// Represents the not restorable option.
+        /// </summary>
+        NotRestorable = 3,
+    }
+
+    /// <summary>
+    /// Lists the supported restore conflict kind values.
+    /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public enum RestoreConflictKind
+    {
+        /// <summary>
+        /// Represents the folder option.
+        /// </summary>
+        Folder = 0,
+
+        /// <summary>
+        /// Represents the file option.
+        /// </summary>
+        File = 1,
+    }
+
     /// <summary>
     /// Represents the restore outcome API payload.
     /// </summary>

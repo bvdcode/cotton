@@ -1,26 +1,25 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Sdk.Realtime
+namespace Cotton.Sdk.Realtime;
+
+/// <summary>
+/// Defines realtime event categories relevant for SDK consumers.
+/// </summary>
+public enum CottonRealtimeEventKind
 {
     /// <summary>
-    /// Defines realtime event categories relevant for SDK consumers.
+    /// The event kind is not known.
     /// </summary>
-    public enum CottonRealtimeEventKind
-    {
-        /// <summary>
-        /// The event kind is not known.
-        /// </summary>
-        Unknown = 0,
+    Unknown = 0,
 
-        /// <summary>
-        /// A file or folder tree mutation occurred.
-        /// </summary>
-        RemoteFileTreeChanged = 1,
+    /// <summary>
+    /// A file or folder tree mutation occurred.
+    /// </summary>
+    RemoteFileTreeChanged = 1,
 
-        /// <summary>
-        /// The current auth session was revoked by the server.
-        /// </summary>
-        SessionRevoked = 2,
-    }
+    /// <summary>
+    /// The current auth session was revoked by the server.
+    /// </summary>
+    SessionRevoked = 2,
 }
