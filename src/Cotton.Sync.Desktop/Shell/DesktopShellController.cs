@@ -31,8 +31,8 @@ namespace Cotton.Sync.Desktop.Shell
     {
         private const string SelfTestSyncPairId = "__desktop_self_test__";
 
-        private static readonly TimeSpan SavedSessionRestoreTimeout = TimeSpan.FromSeconds(15);
-        private static readonly TimeSpan ServerProbeTimeout = TimeSpan.FromSeconds(5);
+        private static readonly TimeSpan SavedSessionRestoreTimeout = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan ServerProbeTimeout = TimeSpan.FromSeconds(30);
 
         private readonly IDesktopSyncApplicationFactory _factory;
         private readonly IPlatformCommandService _platformCommands;
@@ -43,6 +43,7 @@ namespace Cotton.Sync.Desktop.Shell
         private readonly SqliteAppPreferencesStore _preferencesStore;
         private readonly DesktopStartupOptions _startupOptions;
         private readonly TimeSpan _savedSessionRestoreTimeout;
+        private readonly TimeSpan _serverProbeTimeout;
         private readonly SqliteSyncPairSettingsStore _syncPairStore;
         private readonly TimeSpan _tokenStorageVerificationTimeout;
         private IDisposable? _activitySubscription;
@@ -63,6 +64,7 @@ namespace Cotton.Sync.Desktop.Shell
             Func<DesktopTokenStorageCapabilitySnapshot>? tokenStorageCapabilities = null,
             Func<CancellationToken, Task<DesktopTokenStorageCapabilitySnapshot>>? tokenStorageVerifier = null,
             TimeSpan? savedSessionRestoreTimeout = null,
+            TimeSpan? serverProbeTimeout = null,
             TimeSpan? tokenStorageVerificationTimeout = null)
         {
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
@@ -75,6 +77,8 @@ namespace Cotton.Sync.Desktop.Shell
             _startupOptions = startupOptions ?? DesktopStartupOptions.Empty;
             _savedSessionRestoreTimeout = savedSessionRestoreTimeout ?? SavedSessionRestoreTimeout;
             ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(_savedSessionRestoreTimeout, TimeSpan.Zero);
+            _serverProbeTimeout = serverProbeTimeout ?? ServerProbeTimeout;
+            ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(_serverProbeTimeout, TimeSpan.Zero);
             _tokenStorageVerificationTimeout = tokenStorageVerificationTimeout ?? _savedSessionRestoreTimeout;
             ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(_tokenStorageVerificationTimeout, TimeSpan.Zero);
             _tokenStorageVerifier = tokenStorageVerifier
@@ -156,11 +160,24 @@ namespace Cotton.Sync.Desktop.Shell
             using var httpClient = new HttpClient
             {
                 BaseAddress = parsedServerUrl,
-                Timeout = ServerProbeTimeout,
+                Timeout = _serverProbeTimeout,
             };
-            PublicServerInfo? info = await httpClient
-                .GetFromJsonAsync<PublicServerInfo>(Routes.V1.Server + "/info", cancellationToken)
-                .ConfigureAwait(false);
+            PublicServerInfo? info;
+            try
+            {
+                info = await httpClient
+                    .GetFromJsonAsync<PublicServerInfo>(Routes.V1.Server + "/info", cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
+            {
+                throw new TimeoutException(
+                    "Cotton server check timed out after "
+                    + _serverProbeTimeout.TotalSeconds.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)
+                    + " seconds.",
+                    exception);
+            }
+
             bool isCottonServer = string.Equals(info?.Product, Constants.ProductName, StringComparison.Ordinal);
             return new DesktopServerProbeResult(
                 parsedServerUrl,

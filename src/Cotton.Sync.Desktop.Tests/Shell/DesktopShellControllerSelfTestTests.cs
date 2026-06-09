@@ -2,6 +2,9 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.IO.Compression;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
 using System.Text.Json;
 using Cotton.Sync.App.Platform;
 using Cotton.Sync.App.Preferences;
@@ -172,6 +175,43 @@ namespace Cotton.Sync.Desktop.Tests.Shell
                     item.Details,
                     Is.EqualTo("Local sync state database is unavailable. Run diagnostics and restart Cotton Sync."));
                 Assert.That(item.Details, Does.Not.Contain("sync_change_cursors"));
+            });
+        }
+
+        [Test]
+        public async Task ExportDiagnosticsAsync_RecordsServerProbeTimeoutWithoutThrowing()
+        {
+            DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+            await using var server = new SlowServerInfoEndpoint(TimeSpan.FromSeconds(5));
+            var preferencesStore = new SqliteAppPreferencesStore(paths.AppDatabasePath);
+            await preferencesStore.InitializeAsync();
+            await preferencesStore.SaveAsync(new AppPreferences
+            {
+                RememberedServerUrl = server.BaseAddress,
+            });
+            using DesktopShellController controller = CreateController(
+                paths,
+                new SqliteSyncPairSettingsStore(paths.AppDatabasePath),
+                serverProbeTimeout: TimeSpan.FromMilliseconds(50));
+
+            string archivePath = await controller.ExportDiagnosticsAsync();
+
+            using ZipArchive archive = ZipFile.OpenRead(archivePath);
+            string diagnosticsJson = ReadEntry(archive, "diagnostics.json");
+            using JsonDocument document = JsonDocument.Parse(diagnosticsJson);
+            JsonElement serverIdentity = document.RootElement
+                .GetProperty("selfTestItems")
+                .EnumerateArray()
+                .Single(item => string.Equals(
+                    item.GetProperty("name").GetString(),
+                    "Server identity",
+                    StringComparison.Ordinal));
+            Assert.Multiple(() =>
+            {
+                Assert.That(serverIdentity.GetProperty("passed").GetBoolean(), Is.False);
+                Assert.That(
+                    serverIdentity.GetProperty("details").GetString(),
+                    Is.EqualTo("Cotton server check timed out after 0.05 seconds."));
             });
         }
 
@@ -518,7 +558,8 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             DesktopAppPaths paths,
             SqliteSyncPairSettingsStore syncPairStore,
             Func<DesktopTokenStorageCapabilitySnapshot>? tokenStorageCapabilities = null,
-            IAutostartService? autostartService = null)
+            IAutostartService? autostartService = null,
+            TimeSpan? serverProbeTimeout = null)
         {
             var loggerFactory = new DesktopTraceLoggerFactory();
             return new DesktopShellController(
@@ -528,7 +569,8 @@ namespace Cotton.Sync.Desktop.Tests.Shell
                 syncPairStore,
                 new FakePlatformCommandService(),
                 autostartService ?? new FakeAutostartService(),
-                tokenStorageCapabilities: tokenStorageCapabilities);
+                tokenStorageCapabilities: tokenStorageCapabilities,
+                serverProbeTimeout: serverProbeTimeout);
         }
 
         private SyncPairSettings CreateSyncPair(bool isEnabled)
@@ -553,6 +595,59 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             using Stream stream = entry.Open();
             using var reader = new StreamReader(stream);
             return reader.ReadToEnd();
+        }
+
+        private sealed class SlowServerInfoEndpoint : IAsyncDisposable
+        {
+            private readonly HttpListener _listener = new();
+            private readonly CancellationTokenSource _cancellation = new();
+            private readonly TimeSpan _delay;
+            private readonly Task _listenTask;
+
+            public SlowServerInfoEndpoint(TimeSpan delay)
+            {
+                _delay = delay;
+                BaseAddress = new Uri("http://127.0.0.1:" + GetFreePort().ToString(System.Globalization.CultureInfo.InvariantCulture) + "/");
+                _listener.Prefixes.Add(BaseAddress.AbsoluteUri);
+                _listener.Start();
+                _listenTask = Task.Run(HandleOneRequestAsync);
+            }
+
+            public Uri BaseAddress { get; }
+
+            public async ValueTask DisposeAsync()
+            {
+                _cancellation.Cancel();
+                _listener.Close();
+                try
+                {
+                    await _listenTask.ConfigureAwait(false);
+                }
+                catch (Exception exception) when (exception is ObjectDisposedException or HttpListenerException or OperationCanceledException)
+                {
+                }
+
+                _cancellation.Dispose();
+            }
+
+            private async Task HandleOneRequestAsync()
+            {
+                HttpListenerContext context = await _listener.GetContextAsync().WaitAsync(_cancellation.Token)
+                    .ConfigureAwait(false);
+                await Task.Delay(_delay, _cancellation.Token).ConfigureAwait(false);
+                byte[] payload = Encoding.UTF8.GetBytes("{\"product\":\"Cotton Cloud\",\"instanceIdHash\":\"test\"}");
+                context.Response.ContentType = "application/json";
+                context.Response.ContentLength64 = payload.Length;
+                await context.Response.OutputStream.WriteAsync(payload, _cancellation.Token).ConfigureAwait(false);
+                context.Response.Close();
+            }
+
+            private static int GetFreePort()
+            {
+                using var listener = new TcpListener(IPAddress.Loopback, 0);
+                listener.Start();
+                return ((IPEndPoint)listener.LocalEndpoint).Port;
+            }
         }
 
         private class FakeAutostartService : IAutostartService
