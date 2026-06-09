@@ -50,4 +50,5 @@
   Verification 2026-06-08: focused `Cotton.Sync.Desktop.Tests` filter `SignInWithBrowserCommand` passed 2/2, proving the login screen can sign in through the verified server without username/password and can cancel a pending browser approval without leaving the UI busy. `dotnet build src/Cotton.Sync.Desktop/Cotton.Sync.Desktop.csproj --no-restore` passed with 0 warnings.
   Verification: focused desktop view-model/controller tests plus Windows manual browser-approval smoke.
 - [ ] Add manual verification on Windows secure storage.
-- [ ] Add manual verification on Linux secure storage.
+- [x] Add manual verification on Linux secure storage.
+  Verification 2026-06-09: refreshed published Linux self-test evidence proves release-secure Linux Secret Service token storage in the current branch. The linux-x64 published `Cotton.Sync.Desktop --self-test --server app.cottoncloud.dev --data-dir /tmp/cotton-sync-published-selftest-20260609` passed and reported release-secure Linux Secret Service through `secret-tool`; this closes the Linux secure-storage verification item while clean Linux VM package smoke remains tracked in phase 14/21.

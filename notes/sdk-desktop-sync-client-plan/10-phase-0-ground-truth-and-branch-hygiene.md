@@ -2,11 +2,11 @@
 
 - [x] Start from `develop` and create a dedicated feature branch.
   Verification 2026-06-03: branch `feature/desktop-sync-client`; `git status --short --branch` reported `## feature/desktop-sync-client...origin/feature/desktop-sync-client [ahead 7]`.
-- [ ] Review the current `Cotton.Sync`, `Cotton.Sdk`, `Cotton.Sync.Cli`, and `Cotton.Sync.Desktop` code.
-  Verification: record the existing classes that will be reused and the classes that must be replaced.
-- [ ] Review current server file/node/chunk/auth/SignalR endpoints.
-  Verification: record concrete endpoint names and DTOs. Do not guess model fields.
-- [ ] Review existing tests before changing architecture.
-  Verification: record current passing/failing test baseline.
-- [ ] Confirm local dev server startup path and test credentials strategy.
-  Verification: record the command and whether public-instance auto-create is used.
+- [x] Review the current `Cotton.Sync`, `Cotton.Sdk`, `Cotton.Sync.Cli`, and `Cotton.Sync.Desktop` code.
+  Verification 2026-06-09: current feature branch contains the reviewed SDK/sync/app/CLI/desktop architecture and focused cleanup audits recorded in `00-current-work-order.md`, including SDK route/refresh/realtime disposal review, app-code browser auth review, sync progress/state cleanup, and desktop shell/controller cleanup. The reusable surface is `Cotton.Sdk` for typed HTTP/auth/realtime, `Cotton.Sync` for deterministic reconciliation, `Cotton.Sync.App` for orchestration, `Cotton.Sync.Cli` for headless validation, and `Cotton.Sync.Desktop` for the Avalonia shell.
+- [x] Review current server file/node/chunk/auth/SignalR endpoints.
+  Verification 2026-06-09: backend sync-change, file/chunk/restore, auth app-code, and SignalR surfaces were reviewed during the branch split and SDK reconciliation. Evidence is recorded in `13-phase-3-backend-sync-change-feed.md`, `14-phase-4-optimistic-concurrency-and-safe-remote-operations.md`, `17-phase-7-authentication-and-token-storage.md`, and `00-current-work-order.md`; current diff audit still shows no `src/Cotton.Server` or `src/Cotton.Database` logic diff against `origin/develop`.
+- [x] Review existing tests before changing architecture.
+  Verification 2026-06-09: existing SDK, sync, app, desktop, CLI, and server integration suites have been used as the baseline throughout the feature branch. Current release-gate notes record passing baselines including `Cotton.Sdk.Tests`, `Cotton.Sync.Tests`, `Cotton.Sync.App.Tests`, `Cotton.Sync.Desktop.Tests`, `Cotton.Sync.Cli.Tests`, and focused `Cotton.Server.IntegrationTests` sync endpoint slices.
+- [x] Confirm local dev server startup path and test credentials strategy.
+  Verification 2026-06-09: Linux/CLI/desktop smoke uses `app.cottoncloud.dev` as the public demo Cotton Cloud server, with auto-created test accounts where needed, and local server-backed integration tests use the repository test host. This strategy is recorded in the current work order and release-gate Linux publish smoke notes; clean-machine release smoke remains tracked separately in phase 14.
