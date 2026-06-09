@@ -4,14 +4,10 @@
 using Cotton.Sync.App.Activities;
 using Cotton.Sync.App.Progress;
 using Cotton.Sync.App.SyncPairs;
-using CoreSyncActivity = Cotton.Sync.SyncActivity;
-using CoreSyncActivityKind = Cotton.Sync.SyncActivityKind;
 using CoreSyncEngine = Cotton.Sync.ISyncEngine;
 using CoreSyncPair = Cotton.Sync.SyncPair;
-using CoreSyncRunProgress = Cotton.Sync.SyncRunProgress;
 using CoreSyncRunOptions = Cotton.Sync.SyncRunOptions;
 using CoreSyncRunResult = Cotton.Sync.SyncRunResult;
-using CoreSyncTransferProgress = Cotton.Sync.SyncTransferProgress;
 
 namespace Cotton.Sync.App.Runners
 {
@@ -48,7 +44,7 @@ namespace Cotton.Sync.App.Runners
                 ? null
                 : new CoreSyncRunOptions
                 {
-                    ActivityProgress = _activityPublisher is null ? null : new AppActivityProgress(syncPair.Id, _activityPublisher),
+                    ActivityProgress = _activityPublisher is null ? null : new AppActivityProgressReporter(syncPair.Id, _activityPublisher),
                     TransferProgress = _progressPublisher is null ? null : new AppTransferProgressReporter(syncPair.Id, _progressPublisher),
                     RunProgress = _runProgressPublisher is null ? null : new AppRunProgressReporter(syncPair.Id, _runProgressPublisher),
                 };
@@ -71,141 +67,11 @@ namespace Cotton.Sync.App.Runners
             };
         }
 
-        private static AppSyncActivity ToAppActivity(
-            Guid syncPairId,
-            CoreSyncActivity activity)
-        {
-            string relativePath = activity.RelativePath.Trim();
-            string message = CreateMessage(activity.Kind, relativePath, activity.Details);
-            return new AppSyncActivity(
-                Guid.NewGuid(),
-                syncPairId,
-                activity.Kind,
-                string.IsNullOrWhiteSpace(relativePath) ? null : relativePath,
-                message,
-                DateTime.UtcNow);
-        }
-
-        private static AppTransferProgress ToAppProgress(
-            Guid syncPairId,
-            CoreSyncTransferProgress progress,
-            AppTransferProgressEstimate estimate)
-        {
-            return new AppTransferProgress(
-                syncPairId,
-                progress.Direction,
-                progress.RelativePath,
-                progress.TransferredBytes,
-                progress.TotalBytes,
-                progress.IsCompleted,
-                progress.OccurredAtUtc,
-                estimate.SpeedBytesPerSecond,
-                estimate.EstimatedTimeRemaining);
-        }
-
-        private static AppRunProgress ToAppRunProgress(
-            Guid syncPairId,
-            CoreSyncRunProgress progress)
-        {
-            return new AppRunProgress(
-                syncPairId,
-                progress.Stage,
-                progress.FilesCompleted,
-                progress.FilesTotal,
-                progress.CurrentPath,
-                progress.StartedAtUtc,
-                progress.IsCompleted,
-                progress.OccurredAtUtc,
-                progress.BytesCompleted,
-                progress.BytesTotal);
-        }
-
-        private static string CreateMessage(CoreSyncActivityKind kind, string relativePath, string? details)
-        {
-            string item = string.IsNullOrWhiteSpace(relativePath) ? "item" : relativePath;
-            string action = kind switch
-            {
-                CoreSyncActivityKind.Uploaded => "Uploaded",
-                CoreSyncActivityKind.Downloaded => "Downloaded",
-                CoreSyncActivityKind.DeletedLocal => "Deleted local copy",
-                CoreSyncActivityKind.DeletedRemote => "Deleted remote copy",
-                CoreSyncActivityKind.Conflict => "Created conflict copy",
-                CoreSyncActivityKind.Skipped => "Skipped",
-                _ => "Processed",
-            };
-            string message = action + " " + item;
-            return string.IsNullOrWhiteSpace(details)
-                ? message
-                : message + ": " + details.Trim();
-        }
-
         private static string CreateActionRequiredMessage(CoreSyncRunResult result)
         {
             return string.IsNullOrWhiteSpace(result.ActionRequiredMessage)
                 ? "Sync requires your attention before it can continue."
                 : result.ActionRequiredMessage.Trim();
-        }
-
-        private class AppActivityProgress : IProgress<CoreSyncActivity>
-        {
-            private readonly IAppActivityPublisher _publisher;
-            private readonly Guid _syncPairId;
-
-            public AppActivityProgress(Guid syncPairId, IAppActivityPublisher publisher)
-            {
-                _syncPairId = syncPairId;
-                _publisher = publisher;
-            }
-
-            public void Report(CoreSyncActivity value)
-            {
-                ArgumentNullException.ThrowIfNull(value);
-                _publisher.Publish(ToAppActivity(_syncPairId, value));
-            }
-        }
-
-        private class AppTransferProgressReporter : IProgress<CoreSyncTransferProgress>
-        {
-            private readonly AppTransferProgressEstimator _estimator = new();
-            private readonly IAppTransferProgressPublisher _publisher;
-            private readonly Guid _syncPairId;
-
-            public AppTransferProgressReporter(Guid syncPairId, IAppTransferProgressPublisher publisher)
-            {
-                _syncPairId = syncPairId;
-                _publisher = publisher;
-            }
-
-            public void Report(CoreSyncTransferProgress value)
-            {
-                ArgumentNullException.ThrowIfNull(value);
-                AppTransferProgressEstimate estimate = _estimator.AddSample(
-                    value.Direction,
-                    value.RelativePath,
-                    value.TransferredBytes,
-                    value.TotalBytes,
-                    value.IsCompleted,
-                    value.OccurredAtUtc);
-                _publisher.Publish(ToAppProgress(_syncPairId, value, estimate));
-            }
-        }
-
-        private class AppRunProgressReporter : IProgress<CoreSyncRunProgress>
-        {
-            private readonly IAppRunProgressPublisher _publisher;
-            private readonly Guid _syncPairId;
-
-            public AppRunProgressReporter(Guid syncPairId, IAppRunProgressPublisher publisher)
-            {
-                _syncPairId = syncPairId;
-                _publisher = publisher;
-            }
-
-            public void Report(CoreSyncRunProgress value)
-            {
-                ArgumentNullException.ThrowIfNull(value);
-                _publisher.Publish(ToAppRunProgress(_syncPairId, value));
-            }
         }
     }
 }
