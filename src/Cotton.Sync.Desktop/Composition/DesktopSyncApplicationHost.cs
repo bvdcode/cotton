@@ -78,13 +78,18 @@ internal sealed class DesktopSyncApplicationHost : IDisposable, IAsyncDisposable
             return;
         }
 
-        if (_asyncResource is not null)
+        try
         {
-            _asyncResource.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            if (_asyncResource is not null)
+            {
+                _asyncResource.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            }
         }
-
-        _httpClient.Dispose();
-        _disposed = true;
+        finally
+        {
+            _httpClient.Dispose();
+            _disposed = true;
+        }
     }
 
     public async ValueTask DisposeAsync()
@@ -94,12 +99,17 @@ internal sealed class DesktopSyncApplicationHost : IDisposable, IAsyncDisposable
             return;
         }
 
-        if (_asyncResource is not null)
+        try
         {
-            await _asyncResource.DisposeAsync().ConfigureAwait(false);
+            if (_asyncResource is not null)
+            {
+                await _asyncResource.DisposeAsync().ConfigureAwait(false);
+            }
         }
-
-        _httpClient.Dispose();
-        _disposed = true;
+        finally
+        {
+            _httpClient.Dispose();
+            _disposed = true;
+        }
     }
 }

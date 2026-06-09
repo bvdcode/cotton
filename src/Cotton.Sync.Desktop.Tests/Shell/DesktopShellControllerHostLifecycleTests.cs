@@ -118,6 +118,39 @@ public sealed class DesktopShellControllerHostLifecycleTests
     }
 
     [Test]
+    public void HostDispose_DoesNotRetryAsyncResourceWhenDisposeFails()
+    {
+        FakeDesktopApplicationHost host = FakeDesktopApplicationHost.Create(new Uri("https://cotton.example.test/"));
+        host.AsyncResource.DisposeException = new InvalidOperationException("dispose failed");
+
+        InvalidOperationException? exception = Assert.Throws<InvalidOperationException>(host.Host.Dispose);
+        host.Host.Dispose();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception?.Message, Is.EqualTo("dispose failed"));
+            Assert.That(host.AsyncResource.DisposeAsyncCalls, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task HostDisposeAsync_DoesNotRetryAsyncResourceWhenDisposeFails()
+    {
+        FakeDesktopApplicationHost host = FakeDesktopApplicationHost.Create(new Uri("https://cotton.example.test/"));
+        host.AsyncResource.DisposeException = new InvalidOperationException("dispose failed");
+
+        InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await host.Host.DisposeAsync());
+        await host.Host.DisposeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception?.Message, Is.EqualTo("dispose failed"));
+            Assert.That(host.AsyncResource.DisposeAsyncCalls, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
     public async Task Dispose_StopsActiveRestoredHost()
     {
         DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
@@ -727,9 +760,16 @@ public sealed class DesktopShellControllerHostLifecycleTests
     {
         public int DisposeAsyncCalls { get; private set; }
 
+        public Exception? DisposeException { get; set; }
+
         public ValueTask DisposeAsync()
         {
             DisposeAsyncCalls++;
+            if (DisposeException is not null)
+            {
+                throw DisposeException;
+            }
+
             return ValueTask.CompletedTask;
         }
     }
