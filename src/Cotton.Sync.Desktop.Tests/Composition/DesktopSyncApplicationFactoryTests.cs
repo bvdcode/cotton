@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using System.Reflection;
+using Cotton.Sdk;
 using Cotton.Sync.App.Continuous;
 using Cotton.Sync.App.LocalChanges;
 using Cotton.Sync.App.RemoteChanges;
@@ -28,6 +29,19 @@ public sealed class DesktopSyncApplicationFactoryTests
         {
             Directory.Delete(_tempDirectory, recursive: true);
         }
+    }
+
+    [Test]
+    public async Task Create_TransfersCottonClientOwnershipToHost()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        var factory = new DesktopSyncApplicationFactory(paths);
+
+        await using DesktopSyncApplicationHost host = factory.Create(new Uri("https://cotton.example.test/"));
+
+        object asyncResource = GetPrivateFieldValue(host, "_asyncResource");
+
+        Assert.That(asyncResource, Is.TypeOf<CottonCloudClient>());
     }
 
     [Test]
