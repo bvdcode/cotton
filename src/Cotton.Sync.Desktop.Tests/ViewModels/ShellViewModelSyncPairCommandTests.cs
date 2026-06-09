@@ -3605,6 +3605,46 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task ServerProbe_IgnoresStaleFailureAfterServerUrlChanges()
+    {
+        var staleProbe = new TaskCompletionSource<DesktopServerProbeResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var controller = new FakeDesktopShellController(CreateSignedOutSnapshot())
+        {
+            IgnoreServerProbeCancellation = true,
+        };
+        controller.ServerProbeCompletionsByUrl["first.cottoncloud.dev"] = staleProbe;
+        controller.ServerProbeResultsByUrl["app.cottoncloud.dev"] = new DesktopServerProbeResult(
+            new Uri("https://app.cottoncloud.dev/"),
+            true,
+            "Cotton Cloud",
+            "instance-hash");
+        using ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+
+        viewModel.ServerUrl = "first.cottoncloud.dev";
+        await WaitForAsync(() => controller.ProbedServerUrls.Contains("first.cottoncloud.dev"));
+        viewModel.ServerUrl = "app.cottoncloud.dev";
+        await WaitForAsync(() => viewModel.IsServerVerified);
+
+        staleProbe.SetException(new System.Net.Http.HttpRequestException("stale probe failed"));
+        await Task.Delay(50);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(controller.ProbedServerUrls, Is.EqualTo(new[]
+            {
+                "first.cottoncloud.dev",
+                "app.cottoncloud.dev",
+            }));
+            Assert.That(viewModel.ServerUrl, Is.EqualTo("https://app.cottoncloud.dev/"));
+            Assert.That(viewModel.IsServerVerified, Is.True);
+            Assert.That(viewModel.IsServerProbeFailed, Is.False);
+            Assert.That(viewModel.ServerProbeStatus, Is.EqualTo("Cotton Cloud"));
+            Assert.That(viewModel.IsSignInStepVisible, Is.True);
+        });
+    }
+
+    [Test]
     public async Task SetupFlow_StartsWithServerStepUntilCottonServerIsVerified()
     {
         using ShellViewModel viewModel = CreateViewModel(new FakeDesktopShellController(CreateSignedOutSnapshot()));
@@ -4375,6 +4415,12 @@ public sealed class ShellViewModelSyncPairCommandTests
 
         public DesktopServerProbeResult? ServerProbeResult { get; set; }
 
+        public bool IgnoreServerProbeCancellation { get; set; }
+
+        public Dictionary<string, DesktopServerProbeResult> ServerProbeResultsByUrl { get; } = [];
+
+        public Dictionary<string, TaskCompletionSource<DesktopServerProbeResult>> ServerProbeCompletionsByUrl { get; } = [];
+
         public DesktopSignInRequest? SignInRequest { get; private set; }
 
         public string? BrowserSignInServerUrl { get; private set; }
@@ -4520,13 +4566,29 @@ public sealed class ShellViewModelSyncPairCommandTests
             return Task.CompletedTask;
         }
 
-        public Task<DesktopServerProbeResult> ProbeServerAsync(
+        public async Task<DesktopServerProbeResult> ProbeServerAsync(
             string serverUrl,
             CancellationToken cancellationToken = default)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            if (!IgnoreServerProbeCancellation)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
             ProbedServerUrls.Add(serverUrl);
-            return Task.FromResult(ServerProbeResult ?? throw new NotSupportedException());
+            if (ServerProbeCompletionsByUrl.TryGetValue(serverUrl, out TaskCompletionSource<DesktopServerProbeResult>? completion))
+            {
+                return IgnoreServerProbeCancellation
+                    ? await completion.Task.ConfigureAwait(false)
+                    : await completion.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            if (ServerProbeResultsByUrl.TryGetValue(serverUrl, out DesktopServerProbeResult? result))
+            {
+                return result;
+            }
+
+            return ServerProbeResult ?? throw new NotSupportedException();
         }
 
         public Task<AuthSession> SignInAsync(

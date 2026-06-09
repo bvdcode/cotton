@@ -2606,15 +2606,26 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         return IsSignInStepVisible ? "Sign-in failed" : "Action required";
     }
 
-    private async Task ProbeServerAfterDelayAsync(string serverUrl, CancellationToken cancellationToken)
+    private async Task ProbeServerAfterDelayAsync(
+        string serverUrl,
+        CancellationTokenSource probeCancellation)
     {
+        CancellationToken cancellationToken = probeCancellation.Token;
         try
         {
             await Task.Delay(TimeSpan.FromMilliseconds(450), cancellationToken).ConfigureAwait(false);
             DesktopServerProbeResult result = await _controller.ProbeServerAsync(serverUrl, cancellationToken)
                 .ConfigureAwait(false);
             await _uiDispatcher.InvokeAsync(
-                () => ApplyServerProbeResult(result),
+                () =>
+                {
+                    if (!IsCurrentServerProbe(serverUrl, probeCancellation))
+                    {
+                        return;
+                    }
+
+                    ApplyServerProbeResult(result);
+                },
                 cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -2624,7 +2635,15 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         {
             Trace.TraceWarning("Failed to probe Cotton server {0}: {1}", serverUrl, exception);
             await _uiDispatcher.InvokeAsync(
-                ApplyServerProbeFailure,
+                () =>
+                {
+                    if (!IsCurrentServerProbe(serverUrl, probeCancellation))
+                    {
+                        return;
+                    }
+
+                    ApplyServerProbeFailure();
+                },
                 CancellationToken.None).ConfigureAwait(false);
         }
     }
@@ -2709,7 +2728,14 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         IsServerVerified = false;
         IsServerProbeFailed = false;
         ServerProbeStatus = "Checking server";
-        _ = ProbeServerAfterDelayAsync(normalized, _serverProbeCancellation.Token);
+        _ = ProbeServerAfterDelayAsync(normalized, _serverProbeCancellation);
+    }
+
+    private bool IsCurrentServerProbe(string serverUrl, CancellationTokenSource probeCancellation)
+    {
+        return ReferenceEquals(_serverProbeCancellation, probeCancellation)
+            && !probeCancellation.IsCancellationRequested
+            && string.Equals(ServerUrl.Trim(), serverUrl, StringComparison.Ordinal);
     }
 
     private void OnSyncPairsChanged(object? sender, NotifyCollectionChangedEventArgs e)
