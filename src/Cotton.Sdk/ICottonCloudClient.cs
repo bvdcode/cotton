@@ -9,45 +9,46 @@ using Cotton.Sdk.Realtime;
 using Cotton.Sdk.Settings;
 using Cotton.Sdk.Sync;
 
-namespace Cotton.Sdk;
-
-/// <summary>
-/// Provides typed access to Cotton Cloud API groups.
-/// </summary>
-public interface ICottonCloudClient : IAsyncDisposable
+namespace Cotton.Sdk
 {
     /// <summary>
-    /// Gets authentication operations.
+    /// Provides typed access to Cotton Cloud API groups.
     /// </summary>
-    ICottonAuthClient Auth { get; }
+    public interface ICottonCloudClient : IAsyncDisposable
+    {
+        /// <summary>
+        /// Gets authentication operations.
+        /// </summary>
+        ICottonAuthClient Auth { get; }
 
-    /// <summary>
-    /// Gets client settings operations.
-    /// </summary>
-    ICottonSettingsClient Settings { get; }
+        /// <summary>
+        /// Gets client settings operations.
+        /// </summary>
+        ICottonSettingsClient Settings { get; }
 
-    /// <summary>
-    /// Gets chunk operations.
-    /// </summary>
-    ICottonChunkClient Chunks { get; }
+        /// <summary>
+        /// Gets chunk operations.
+        /// </summary>
+        ICottonChunkClient Chunks { get; }
 
-    /// <summary>
-    /// Gets file operations.
-    /// </summary>
-    ICottonFileClient Files { get; }
+        /// <summary>
+        /// Gets file operations.
+        /// </summary>
+        ICottonFileClient Files { get; }
 
-    /// <summary>
-    /// Gets node operations.
-    /// </summary>
-    ICottonNodeClient Nodes { get; }
+        /// <summary>
+        /// Gets node operations.
+        /// </summary>
+        ICottonNodeClient Nodes { get; }
 
-    /// <summary>
-    /// Gets synchronization feed operations.
-    /// </summary>
-    ICottonSyncClient Sync { get; }
+        /// <summary>
+        /// Gets synchronization feed operations.
+        /// </summary>
+        ICottonSyncClient Sync { get; }
 
-    /// <summary>
-    /// Gets realtime event hub operations.
-    /// </summary>
-    ICottonRealtimeClient Realtime { get; }
+        /// <summary>
+        /// Gets realtime event hub operations.
+        /// </summary>
+        ICottonRealtimeClient Realtime { get; }
+    }
 }

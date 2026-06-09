@@ -1,37 +1,38 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton;
 using Cotton.Sync;
 using Cotton.Sdk.Internal;
 
-namespace Cotton.Sdk.Sync;
-
-/// <summary>
-/// Provides durable synchronization feed operations.
-/// </summary>
-public sealed class CottonSyncClient : ICottonSyncClient
+namespace Cotton.Sdk.Sync
 {
-    private readonly CottonHttpTransport _transport;
-
-    internal CottonSyncClient(CottonHttpTransport transport)
+    /// <summary>
+    /// Provides durable synchronization feed operations.
+    /// </summary>
+    public class CottonSyncClient : ICottonSyncClient
     {
-        _transport = transport;
-    }
+        private readonly CottonHttpTransport _transport;
 
-    /// <inheritdoc />
-    public Task<SyncChangesResponseDto> GetChangesAsync(
-        long sinceCursor = 0,
-        int limit = 500,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentOutOfRangeException.ThrowIfNegative(sinceCursor);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(limit);
+        internal CottonSyncClient(CottonHttpTransport transport)
+        {
+            _transport = transport;
+        }
 
-        string path = $"{Routes.V1.Sync}/changes?since={sinceCursor}&limit={limit}";
-        return _transport.SendJsonAsync<SyncChangesResponseDto>(
-            HttpMethod.Get,
-            path,
-            cancellationToken: cancellationToken);
+        /// <inheritdoc />
+        public Task<SyncChangesResponseDto> GetChangesAsync(
+            long sinceCursor = 0,
+            int limit = 500,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(sinceCursor);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(limit);
+
+            string path = $"{Routes.V1.Sync}/changes?since={sinceCursor}&limit={limit}";
+            return _transport.SendJsonAsync<SyncChangesResponseDto>(
+                HttpMethod.Get,
+                path,
+                cancellationToken: cancellationToken);
+        }
     }
 }

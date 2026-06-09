@@ -5,28 +5,29 @@ using Cotton;
 using Cotton.Settings;
 using Cotton.Sdk.Internal;
 
-namespace Cotton.Sdk.Settings;
-
-/// <summary>
-/// Provides client-visible Cotton server settings.
-/// </summary>
-public sealed class CottonSettingsClient : ICottonSettingsClient
+namespace Cotton.Sdk.Settings
 {
-    private readonly CottonHttpTransport _transport;
-
-    internal CottonSettingsClient(CottonHttpTransport transport)
-    {
-        _transport = transport;
-    }
-
     /// <summary>
-    /// Gets settings required by SDK file transfer operations.
+    /// Provides client-visible Cotton server settings.
     /// </summary>
-    public Task<ClientSettingsDto> GetAsync(CancellationToken cancellationToken = default)
+    public class CottonSettingsClient : ICottonSettingsClient
     {
-        return _transport.SendJsonAsync<ClientSettingsDto>(
-            HttpMethod.Get,
-            Routes.V1.Settings,
-            cancellationToken: cancellationToken);
+        private readonly CottonHttpTransport _transport;
+
+        internal CottonSettingsClient(CottonHttpTransport transport)
+        {
+            _transport = transport;
+        }
+
+        /// <summary>
+        /// Gets settings required by SDK file transfer operations.
+        /// </summary>
+        public Task<ClientSettingsDto> GetAsync(CancellationToken cancellationToken = default)
+        {
+            return _transport.SendJsonAsync<ClientSettingsDto>(
+                HttpMethod.Get,
+                Routes.V1.Settings,
+                cancellationToken: cancellationToken);
+        }
     }
 }
