@@ -62,15 +62,4 @@ namespace Cotton.Sdk.Tests.Fakes
 
             return _responses.Dequeue()(request);
         }
-    }
-
-    internal record HttpRequestMessageSnapshot(
-        HttpMethod Method,
-        string PathAndQuery,
-        string? AuthorizationScheme,
-        string? AuthorizationParameter,
-        IReadOnlyDictionary<string, string> Headers,
-        string? ContentType,
-        string Body,
-        byte[] RawBody);
-}
+    }}
