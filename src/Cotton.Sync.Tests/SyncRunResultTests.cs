@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Tests
 {
-
     public sealed class SyncRunResultTests
     {
         [Test]

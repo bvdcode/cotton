@@ -5,7 +5,6 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.Local
 {
-
     /// <summary>
     /// Identifies local files that should not enter the synchronization model.
     /// </summary>

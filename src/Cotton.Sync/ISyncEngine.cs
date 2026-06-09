@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync
 {
-
     /// <summary>
     /// Runs synchronization passes for configured folder pairs.
     /// </summary>

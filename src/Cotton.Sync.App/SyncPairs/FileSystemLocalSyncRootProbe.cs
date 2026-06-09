@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Sync.App.SyncPairs
 {
-
     /// <summary>
     /// Checks local sync roots using the host file system.
     /// </summary>

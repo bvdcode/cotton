@@ -14,7 +14,6 @@ using Cotton.Sync.Desktop.Startup;
 
 namespace Cotton.Sync.Desktop.ViewModels
 {
-
     /// <summary>
     /// Main desktop shell view model.
     /// </summary>

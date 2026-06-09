@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Composition
 {
-
     internal interface IDesktopSyncApplicationFactory
     {
         DesktopSyncApplicationHost Create(Uri serverUrl);

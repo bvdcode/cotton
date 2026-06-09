@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Sync.App.Preferences
 {
-
     /// <summary>
     /// Persists application preferences in a SQLite database through Entity Framework Core.
     /// </summary>

@@ -7,7 +7,6 @@ using System.Text;
 
 namespace Cotton.Sync.Desktop.Platform
 {
-
     internal sealed class WindowsToastNotificationService : IDesktopNotificationService
     {
         private readonly string _powerShellPath;

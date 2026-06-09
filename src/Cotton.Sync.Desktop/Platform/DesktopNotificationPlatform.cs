@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Platform
 {
-
     internal enum DesktopNotificationPlatform
     {
         Unsupported,

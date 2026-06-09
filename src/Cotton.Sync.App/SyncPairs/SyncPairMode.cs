@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.SyncPairs
 {
-
     /// <summary>
     /// Defines how a local folder is synchronized with a remote Cotton folder.
     /// </summary>

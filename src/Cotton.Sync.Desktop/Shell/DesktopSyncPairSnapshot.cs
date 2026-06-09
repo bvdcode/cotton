@@ -5,7 +5,6 @@ using Cotton.Sync.App.SyncPairs;
 
 namespace Cotton.Sync.Desktop.Shell
 {
-
     internal sealed record DesktopSyncPairSnapshot(
         Guid Id,
         string DisplayName,

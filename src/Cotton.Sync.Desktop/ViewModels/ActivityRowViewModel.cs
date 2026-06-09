@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.ViewModels
 {
-
     /// <summary>
     /// Displays one recent synchronization activity.
     /// </summary>

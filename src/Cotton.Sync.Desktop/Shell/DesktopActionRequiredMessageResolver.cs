@@ -7,7 +7,6 @@ using Cotton.Sync.Local;
 
 namespace Cotton.Sync.Desktop.Shell
 {
-
     internal static class DesktopActionRequiredMessageResolver
     {
         internal const string MissingDesktopSyncChangesApiMessage =

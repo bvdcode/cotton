@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Local
 {
-
     /// <summary>
     /// Scans a local tree into path lookups without retaining an intermediate tree list.
     /// </summary>

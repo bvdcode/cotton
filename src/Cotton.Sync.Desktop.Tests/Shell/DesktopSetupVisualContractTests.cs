@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Tests.Shell
 {
-
     public sealed class DesktopSetupVisualContractTests
     {
         [Test]

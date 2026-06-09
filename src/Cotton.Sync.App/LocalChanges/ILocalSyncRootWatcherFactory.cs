@@ -5,7 +5,6 @@ using Cotton.Sync.App.SyncPairs;
 
 namespace Cotton.Sync.App.LocalChanges
 {
-
     /// <summary>
     /// Creates local filesystem watchers for sync roots.
     /// </summary>

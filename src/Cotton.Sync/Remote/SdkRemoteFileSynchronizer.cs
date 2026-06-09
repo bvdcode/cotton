@@ -12,7 +12,6 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Synchronizes remote files through Cotton SDK clients.
     /// </summary>

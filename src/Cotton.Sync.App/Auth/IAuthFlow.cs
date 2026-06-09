@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.Auth
 {
-
     /// <summary>
     /// Coordinates desktop authentication flows.
     /// </summary>

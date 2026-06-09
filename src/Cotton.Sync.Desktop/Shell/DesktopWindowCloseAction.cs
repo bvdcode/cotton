@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-
     internal enum DesktopWindowCloseAction
     {
         Close = 0,

@@ -8,7 +8,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Sync.State
 {
-
     /// <summary>
     /// Persists sync baselines in a SQLite database through Entity Framework Core.
     /// </summary>

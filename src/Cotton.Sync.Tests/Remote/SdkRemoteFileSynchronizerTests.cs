@@ -20,7 +20,6 @@ using Cotton.Sync.Remote;
 
 namespace Cotton.Sync.Tests.Remote
 {
-
     public sealed class SdkRemoteFileSynchronizerTests
     {
         private readonly Guid _rootNodeId = Guid.Parse("11111111-1111-1111-1111-111111111111");

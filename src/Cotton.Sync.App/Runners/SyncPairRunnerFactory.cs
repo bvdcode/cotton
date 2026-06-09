@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Sync.App.Runners
 {
-
     /// <summary>
     /// Creates sync pair runners using a shared sync-work adapter.
     /// </summary>

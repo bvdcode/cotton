@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Tests.Startup
 {
-
     public sealed class DesktopSingleInstanceStartupContractTests
     {
         [Test]

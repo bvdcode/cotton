@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync
 {
-
     /// <summary>
     /// Describes one local-to-remote folder synchronization pair.
     /// </summary>

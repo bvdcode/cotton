@@ -6,7 +6,6 @@ using System.Runtime.InteropServices;
 
 namespace Cotton.Sync.Desktop.Platform
 {
-
     internal static class DesktopAppIdentity
     {
         public const string AppUserModelId = "Cotton.Sync.Desktop";

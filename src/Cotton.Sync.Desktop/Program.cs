@@ -9,7 +9,6 @@ using Cotton.Sync.Desktop.Startup;
 
 namespace Cotton.Sync.Desktop
 {
-
     internal static class Program
     {
         [STAThread]

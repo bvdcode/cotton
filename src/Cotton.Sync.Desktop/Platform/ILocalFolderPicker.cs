@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Platform
 {
-
     internal interface ILocalFolderPicker
     {
         Task<string?> PickFolderAsync(CancellationToken cancellationToken = default);

@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Cotton.Sdk.Tests.Fakes
 {
-
     internal sealed class RecordingLoggerFactory : ILoggerFactory
     {
         public List<RecordingLogEntry> Entries { get; } = [];

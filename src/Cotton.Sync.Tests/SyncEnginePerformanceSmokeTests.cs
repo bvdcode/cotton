@@ -12,7 +12,6 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.Tests
 {
-
     public sealed class SyncEnginePerformanceSmokeTests
     {
         private const long MiB = 1024L * 1024L;

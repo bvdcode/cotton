@@ -5,7 +5,6 @@ using Cotton.Sync.App.State;
 
 namespace Cotton.Sync.App.Status
 {
-
     /// <summary>
     /// Describes the current user-visible desktop sync application status.
     /// </summary>

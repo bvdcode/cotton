@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Cli
 {
-
     internal static class SyncCliFormat
     {
         public static string FormatActivityDetails(string? details)

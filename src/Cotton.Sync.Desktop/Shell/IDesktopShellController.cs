@@ -7,7 +7,6 @@ using Cotton.Sync.App.SyncPairs;
 
 namespace Cotton.Sync.Desktop.Shell
 {
-
     internal interface IDesktopShellController : IDisposable, IAsyncDisposable
     {
         event EventHandler<DesktopSyncStatusSnapshot>? StatusChanged;

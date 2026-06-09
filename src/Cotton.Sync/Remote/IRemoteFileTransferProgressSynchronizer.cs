@@ -6,7 +6,6 @@ using Cotton.Sync.Local;
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Performs remote file transfers with byte-level progress reporting.
     /// </summary>

@@ -5,7 +5,6 @@ using System.Text.RegularExpressions;
 
 namespace Cotton.Sync.App.SyncPairs
 {
-
     /// <summary>
     /// Validates sync-pair settings before they are persisted or used by the sync supervisor.
     /// </summary>

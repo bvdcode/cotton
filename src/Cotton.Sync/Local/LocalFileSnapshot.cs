@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Local
 {
-
     /// <summary>
     /// Represents one local file discovered by the sync scanner.
     /// </summary>

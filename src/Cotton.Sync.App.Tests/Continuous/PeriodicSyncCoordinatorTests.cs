@@ -7,7 +7,6 @@ using Cotton.Sync.App.Supervision;
 
 namespace Cotton.Sync.App.Tests.Continuous
 {
-
     public sealed class PeriodicSyncCoordinatorTests
     {
         [Test]

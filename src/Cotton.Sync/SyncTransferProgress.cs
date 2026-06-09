@@ -5,7 +5,6 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync
 {
-
     /// <summary>
     /// Describes live progress for one file transfer.
     /// </summary>

@@ -6,7 +6,6 @@ using Cotton.Sync.Desktop.Composition;
 
 namespace Cotton.Sync.Desktop.Diagnostics
 {
-
     internal static class DesktopTraceLogging
     {
         private const long MaxLogFileSizeBytes = 5L * 1024L * 1024L;

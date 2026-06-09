@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.Auth
 {
-
     /// <summary>
     /// Publishes server-driven authentication session revocation events.
     /// </summary>

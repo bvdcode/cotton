@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.Auth
 {
-
     /// <summary>
     /// Represents the authenticated desktop session exposed to the application shell.
     /// </summary>

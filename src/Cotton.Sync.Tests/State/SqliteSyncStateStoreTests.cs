@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Sync.Tests.State
 {
-
     public sealed class SqliteSyncStateStoreTests
     {
         private string _tempDirectory = string.Empty;

@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.Platform
 {
-
     /// <summary>
     /// Runs host platform commands requested by the application layer.
     /// </summary>

@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.SyncPairs
 {
-
     /// <summary>
     /// Validates sync-pair prerequisites that require local or remote I/O.
     /// </summary>

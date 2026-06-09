@@ -15,7 +15,6 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.App.Tests.SyncApplication
 {
-
     public sealed class SyncApplicationServiceTests
     {
         [Test]

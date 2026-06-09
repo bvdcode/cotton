@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-
     internal static class DesktopTrayIconAssetResolver
     {
         public static Uri Resolve(DesktopTrayStatusKind kind)

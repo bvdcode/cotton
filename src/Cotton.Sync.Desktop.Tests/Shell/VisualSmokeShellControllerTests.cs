@@ -6,7 +6,6 @@ using Cotton.Sync.Desktop.Startup;
 
 namespace Cotton.Sync.Desktop.Tests.Shell
 {
-
     public sealed class VisualSmokeShellControllerTests
     {
         [Test]

@@ -6,7 +6,6 @@ using Cotton.Sync.Local;
 
 namespace Cotton.Sync.Tests.Local
 {
-
     public sealed class AtomicLocalFileSyncWriterTests
     {
         private string _root = string.Empty;

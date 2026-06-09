@@ -7,7 +7,6 @@ using Cotton.Sync.Desktop.Platform;
 
 namespace Cotton.Sync.Desktop.Tests.Packaging
 {
-
     public sealed class DesktopPackagingMetadataTests
     {
         [Test]

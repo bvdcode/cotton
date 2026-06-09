@@ -5,7 +5,6 @@ using Cotton.Sync.App.LocalChanges;
 
 namespace Cotton.Sync.App.Tests.LocalChanges
 {
-
     public sealed class FileSystemLocalSyncRootWatcherTests
     {
         private string _root = string.Empty;

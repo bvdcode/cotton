@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync
 {
-
     /// <summary>
     /// Defines the current stage of one synchronization pass.
     /// </summary>

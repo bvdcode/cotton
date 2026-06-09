@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Cotton.Sync.Desktop.Diagnostics
 {
-
     internal static class DesktopTraceLogFormatter
     {
         public static string Format(

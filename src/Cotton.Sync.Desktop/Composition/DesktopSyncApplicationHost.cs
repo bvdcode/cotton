@@ -13,7 +13,6 @@ using Cotton.Sdk.Sync;
 
 namespace Cotton.Sync.Desktop.Composition
 {
-
     internal sealed class DesktopSyncApplicationHost : IDisposable, IAsyncDisposable
     {
         private readonly HttpClient _httpClient;

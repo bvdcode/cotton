@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Sync.App.RemoteChanges
 {
-
     /// <summary>
     /// Listens to remote realtime events and requests debounced sync passes.
     /// </summary>

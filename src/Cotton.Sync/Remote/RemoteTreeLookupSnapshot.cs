@@ -5,7 +5,6 @@ using Cotton.Nodes;
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Represents remote scan results keyed by normalized relative path.
     /// </summary>

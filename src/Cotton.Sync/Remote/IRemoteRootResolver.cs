@@ -5,7 +5,6 @@ using Cotton.Nodes;
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Resolves or creates a remote folder path for synchronization.
     /// </summary>

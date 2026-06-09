@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.SyncPairs
 {
-
     /// <summary>
     /// Checks whether a local sync root can be used by the desktop client.
     /// </summary>

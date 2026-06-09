@@ -7,7 +7,6 @@ using Cotton.Sdk.Auth;
 
 namespace Cotton.Sync.App.Tests.Auth
 {
-
     public sealed class PasswordAuthFlowTests
     {
         [Test]

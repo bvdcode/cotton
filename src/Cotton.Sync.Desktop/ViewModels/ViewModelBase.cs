@@ -6,7 +6,6 @@ using System.Runtime.CompilerServices;
 
 namespace Cotton.Sync.Desktop.ViewModels
 {
-
     /// <summary>
     /// Base type for desktop view models.
     /// </summary>

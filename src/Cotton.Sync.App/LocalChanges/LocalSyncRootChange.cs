@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.LocalChanges
 {
-
     /// <summary>
     /// Represents a local filesystem change under a configured sync root.
     /// </summary>

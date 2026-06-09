@@ -9,7 +9,6 @@ using System.Text.Json;
 
 namespace Cotton.Sync.Cli.Tests.TestSupport
 {
-
     internal abstract class SyncProcessCrashHttpServerBase : IAsyncDisposable
     {
         protected static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);

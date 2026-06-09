@@ -5,7 +5,6 @@ using System.Diagnostics;
 
 namespace Cotton.Sync.Cli
 {
-
     internal static class SyncCliSoakCommandRunner
     {
         public static async Task<int> RunAsync(

@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.LocalChanges
 {
-
     /// <summary>
     /// No-op local change coordinator used when continuous local sync is not configured.
     /// </summary>

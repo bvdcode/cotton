@@ -6,7 +6,6 @@ using Cotton.Sdk.Nodes;
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Performs remote directory mutations through the Cotton SDK node API.
     /// </summary>

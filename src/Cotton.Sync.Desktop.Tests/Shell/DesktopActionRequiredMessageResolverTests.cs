@@ -8,7 +8,6 @@ using Cotton.Sync.Local;
 
 namespace Cotton.Sync.Desktop.Tests.Shell
 {
-
     public sealed class DesktopActionRequiredMessageResolverTests
     {
         [Test]

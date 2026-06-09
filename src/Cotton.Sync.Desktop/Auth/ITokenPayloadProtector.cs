@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Auth
 {
-
     internal interface ITokenPayloadProtector
     {
         string Scheme { get; }

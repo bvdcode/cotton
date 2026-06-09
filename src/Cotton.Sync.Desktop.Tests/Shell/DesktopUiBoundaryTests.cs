@@ -10,7 +10,6 @@ using CoreSyncEngine = Cotton.Sync.SyncEngine;
 
 namespace Cotton.Sync.Desktop.Tests.Shell
 {
-
     public sealed class DesktopUiBoundaryTests
     {
         [Test]

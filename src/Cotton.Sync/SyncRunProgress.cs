@@ -5,7 +5,6 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync
 {
-
     /// <summary>
     /// Describes aggregate progress for one synchronization pass.
     /// </summary>

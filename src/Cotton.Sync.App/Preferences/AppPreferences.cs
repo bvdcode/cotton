@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.Preferences
 {
-
     /// <summary>
     /// Stores durable desktop sync-client preferences that are not sync-pair specific.
     /// </summary>

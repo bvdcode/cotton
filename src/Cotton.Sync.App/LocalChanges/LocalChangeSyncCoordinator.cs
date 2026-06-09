@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Sync.App.LocalChanges
 {
-
     /// <summary>
     /// Watches local sync roots and requests debounced sync passes.
     /// </summary>

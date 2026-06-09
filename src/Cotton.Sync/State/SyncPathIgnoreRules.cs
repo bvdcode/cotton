@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.State
 {
-
     /// <summary>
     /// Identifies paths that should not enter the synchronization model.
     /// </summary>

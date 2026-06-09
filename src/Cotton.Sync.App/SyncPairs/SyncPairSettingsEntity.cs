@@ -6,7 +6,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cotton.Sync.App.SyncPairs
 {
-
     [Table("sync_pair_settings")]
     internal sealed class SyncPairSettingsEntity
     {

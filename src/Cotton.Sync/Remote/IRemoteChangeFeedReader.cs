@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Reads durable remote change-feed pages and advances checkpoints after successful processing.
     /// </summary>

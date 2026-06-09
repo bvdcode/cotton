@@ -5,7 +5,6 @@ using Cotton.Sync.App.SyncPairs;
 
 namespace Cotton.Sync.App.SyncApplication
 {
-
     /// <summary>
     /// Describes the outcome of saving sync-pair settings.
     /// </summary>

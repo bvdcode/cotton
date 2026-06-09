@@ -9,7 +9,6 @@ using Cotton.Sync.App.Supervision;
 
 namespace Cotton.Sync.App.Tests.RemoteChanges
 {
-
     public sealed class RealtimeRemoteChangeSyncCoordinatorTests
     {
         private static readonly TimeSpan DebounceInterval = TimeSpan.FromMilliseconds(25);

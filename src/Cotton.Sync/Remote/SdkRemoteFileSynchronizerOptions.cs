@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Defines SDK-backed remote file synchronization transfer options.
     /// </summary>

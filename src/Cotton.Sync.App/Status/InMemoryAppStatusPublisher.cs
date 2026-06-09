@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.Status
 {
-
     /// <summary>
     /// Stores the latest application status and publishes snapshots to subscribers.
     /// </summary>

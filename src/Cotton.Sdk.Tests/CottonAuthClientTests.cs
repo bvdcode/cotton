@@ -9,7 +9,6 @@ using Cotton.Sdk.Tests.Fakes;
 
 namespace Cotton.Sdk.Tests
 {
-
     public sealed class CottonAuthClientTests
     {
         [Test]

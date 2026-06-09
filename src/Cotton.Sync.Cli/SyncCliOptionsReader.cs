@@ -6,7 +6,6 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.Cli
 {
-
     internal static class SyncCliOptionsReader
     {
         public static SyncCliConnectionOptions? ReadConnectionOptions(

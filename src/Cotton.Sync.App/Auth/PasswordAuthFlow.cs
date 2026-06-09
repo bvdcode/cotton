@@ -6,7 +6,6 @@ using Cotton.Sdk.Auth;
 
 namespace Cotton.Sync.App.Auth
 {
-
     /// <summary>
     /// Implements username/password desktop authentication through the Cotton SDK.
     /// </summary>

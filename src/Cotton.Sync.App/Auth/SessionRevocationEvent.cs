@@ -5,7 +5,6 @@ using Cotton.Sync.App.State;
 
 namespace Cotton.Sync.App.Auth
 {
-
     /// <summary>
     /// Describes a server-driven authentication session revocation event.
     /// </summary>

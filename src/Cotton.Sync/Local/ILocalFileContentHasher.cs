@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Local
 {
-
     /// <summary>
     /// Computes content hashes for local file snapshots when reconciliation needs them.
     /// </summary>

@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Local
 {
-
     /// <summary>
     /// Scans local directories and file metadata while reporting scan progress.
     /// </summary>

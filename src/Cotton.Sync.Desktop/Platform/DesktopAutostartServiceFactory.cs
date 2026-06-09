@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Platform
 {
-
     internal static class DesktopAutostartServiceFactory
     {
         public static IAutostartService CreateDefault()

@@ -8,7 +8,6 @@ using Cotton.Sync.Desktop.Auth;
 
 namespace Cotton.Sync.Desktop.Tests.Auth
 {
-
     public sealed class FileCottonTokenStoreTests
     {
         private const string TestTokenPayloadScheme = "test-file-store-v1";

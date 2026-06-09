@@ -5,7 +5,6 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Describes progress while scanning a remote Cotton folder tree.
     /// </summary>

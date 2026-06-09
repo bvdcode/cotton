@@ -6,7 +6,6 @@ using Cotton.Sync.Local;
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Performs remote file mutations and transfers for the synchronization engine.
     /// </summary>

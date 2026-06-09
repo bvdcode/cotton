@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.State
 {
-
     internal static class UtcDateTime
     {
         public static DateTime Normalize(DateTime value)

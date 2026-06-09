@@ -10,7 +10,6 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.Tests.Remote
 {
-
     public sealed class RemoteChangeFeedReaderTests
     {
         private string _tempDirectory = string.Empty;

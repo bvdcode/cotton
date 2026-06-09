@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.State
 {
-
     /// <summary>
     /// Defines the kind of remote/local entry tracked by the sync state store.
     /// </summary>

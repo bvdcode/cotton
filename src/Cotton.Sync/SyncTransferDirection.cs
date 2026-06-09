@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync
 {
-
     /// <summary>
     /// Defines the direction of a file transfer.
     /// </summary>

@@ -5,7 +5,6 @@ using Cotton.Sync.App.Platform;
 
 namespace Cotton.Sync.App.Tests.Platform
 {
-
     public sealed class ProcessPlatformCommandServiceTests
     {
         [Test]

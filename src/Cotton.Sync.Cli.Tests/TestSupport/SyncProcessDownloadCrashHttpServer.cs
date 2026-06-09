@@ -8,7 +8,6 @@ using Cotton.Nodes;
 
 namespace Cotton.Sync.Cli.Tests.TestSupport
 {
-
     internal sealed class SyncProcessDownloadCrashHttpServer : SyncProcessCrashHttpServerBase
     {
         private readonly byte[] _content;

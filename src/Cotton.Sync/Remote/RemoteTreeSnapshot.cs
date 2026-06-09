@@ -5,7 +5,6 @@ using Cotton.Nodes;
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Represents a crawled remote subtree.
     /// </summary>

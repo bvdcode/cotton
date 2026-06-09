@@ -15,7 +15,6 @@ using Cotton.Sync.Desktop.ViewModels;
 
 namespace Cotton.Sync.Desktop
 {
-
     /// <summary>
     /// Main desktop synchronization shell window.
     /// </summary>

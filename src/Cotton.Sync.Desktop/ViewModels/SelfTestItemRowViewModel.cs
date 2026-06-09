@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.ViewModels
 {
-
     internal sealed class SelfTestItemRowViewModel : ViewModelBase
     {
         private string _details = string.Empty;

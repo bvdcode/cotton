@@ -7,7 +7,6 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.Local
 {
-
     /// <summary>
     /// Writes synchronized local files through temporary files under the sync metadata folder.
     /// </summary>

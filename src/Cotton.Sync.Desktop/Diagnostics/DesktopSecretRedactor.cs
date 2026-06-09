@@ -5,7 +5,6 @@ using System.Text.RegularExpressions;
 
 namespace Cotton.Sync.Desktop.Diagnostics
 {
-
     internal static partial class DesktopSecretRedactor
     {
         private const string RedactedValue = "$1[redacted]$3";

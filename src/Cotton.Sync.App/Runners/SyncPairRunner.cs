@@ -11,7 +11,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Sync.App.Runners
 {
-
     /// <summary>
     /// Manages runtime state and one-shot synchronization requests for one sync pair.
     /// </summary>

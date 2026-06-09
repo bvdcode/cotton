@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Sync.App.Platform
 {
-
     /// <summary>
     /// Runs platform open commands through the host shell.
     /// </summary>

@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.Auth
 {
-
     /// <summary>
     /// No-op session revocation handler.
     /// </summary>

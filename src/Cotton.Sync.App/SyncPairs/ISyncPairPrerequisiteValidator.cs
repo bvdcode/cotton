@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.SyncPairs
 {
-
     /// <summary>
     /// Performs asynchronous sync-pair checks that require I/O.
     /// </summary>

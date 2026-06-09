@@ -6,7 +6,6 @@ using System.IO.Pipes;
 
 namespace Cotton.Sync.Desktop.Platform
 {
-
     internal sealed class DesktopSingleInstanceActivationServer : IDisposable
     {
         private readonly Action _showWindow;

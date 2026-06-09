@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Describes the semantic action represented by a remote change-feed item.
     /// </summary>

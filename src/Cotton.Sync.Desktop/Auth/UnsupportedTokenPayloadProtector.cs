@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Auth
 {
-
     internal class UnsupportedTokenPayloadProtector : ITokenPayloadProtector
     {
         public UnsupportedTokenPayloadProtector(string scheme, string details)

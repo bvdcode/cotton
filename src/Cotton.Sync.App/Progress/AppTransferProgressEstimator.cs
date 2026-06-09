@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.Progress
 {
-
     /// <summary>
     /// Calculates rolling speed and remaining-time estimates for one sync-pair transfer stream.
     /// </summary>

@@ -5,7 +5,6 @@ using Cotton.Sync.Desktop.Platform;
 
 namespace Cotton.Sync.Desktop.Tests.Platform
 {
-
     public sealed class DesktopNotificationServiceFactoryTests
     {
         private string _tempDirectory = string.Empty;

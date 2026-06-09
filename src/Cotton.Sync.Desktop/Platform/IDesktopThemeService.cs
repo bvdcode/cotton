@@ -5,7 +5,6 @@ using Cotton.Sync.App.Preferences;
 
 namespace Cotton.Sync.Desktop.Platform
 {
-
     internal interface IDesktopThemeService
     {
         void Apply(AppThemeMode themeMode);

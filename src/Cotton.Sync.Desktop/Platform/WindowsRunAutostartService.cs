@@ -5,7 +5,6 @@ using System.Runtime.Versioning;
 
 namespace Cotton.Sync.Desktop.Platform
 {
-
     internal sealed class WindowsRunAutostartService : IAutostartService
     {
         private const string ValueName = "Cotton Sync";

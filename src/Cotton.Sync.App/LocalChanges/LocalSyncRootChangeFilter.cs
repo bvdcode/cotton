@@ -5,7 +5,6 @@ using Cotton.Sync.Local;
 
 namespace Cotton.Sync.App.LocalChanges
 {
-
     /// <summary>
     /// Applies the sync scanner ignore policy to filesystem watcher events.
     /// </summary>

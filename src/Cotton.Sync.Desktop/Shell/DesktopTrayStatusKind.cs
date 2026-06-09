@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-
     internal enum DesktopTrayStatusKind
     {
         Unknown = 0,

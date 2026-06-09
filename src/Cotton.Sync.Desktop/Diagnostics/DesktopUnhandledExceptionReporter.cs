@@ -5,7 +5,6 @@ using System.Diagnostics;
 
 namespace Cotton.Sync.Desktop.Diagnostics
 {
-
     internal static class DesktopUnhandledExceptionReporter
     {
         private static int s_isInstalled;

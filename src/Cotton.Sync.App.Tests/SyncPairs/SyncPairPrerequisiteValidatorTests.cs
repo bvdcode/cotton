@@ -5,7 +5,6 @@ using Cotton.Sync.App.SyncPairs;
 
 namespace Cotton.Sync.App.Tests.SyncPairs
 {
-
     public sealed class SyncPairPrerequisiteValidatorTests
     {
         private string _tempDirectory = string.Empty;

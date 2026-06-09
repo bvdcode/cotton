@@ -7,7 +7,6 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.Local
 {
-
     /// <summary>
     /// Scans a local folder and hashes files for synchronization.
     /// </summary>

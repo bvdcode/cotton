@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Local
 {
-
     /// <summary>
     /// Represents local scan results keyed by normalized relative path.
     /// </summary>

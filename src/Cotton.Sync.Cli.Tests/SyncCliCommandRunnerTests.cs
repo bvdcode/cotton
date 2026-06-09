@@ -13,7 +13,6 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.Cli.Tests
 {
-
     public sealed class SyncCliCommandRunnerTests
     {
         private string _tempDirectory = string.Empty;

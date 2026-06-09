@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Auth
 {
-
     internal sealed record DesktopTokenStorageCapabilitySnapshot(
         string Scheme,
         bool IsReleaseSecure,

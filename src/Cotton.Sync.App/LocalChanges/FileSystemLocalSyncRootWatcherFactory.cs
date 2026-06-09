@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Sync.App.LocalChanges
 {
-
     /// <summary>
     /// Creates filesystem watchers for local sync roots.
     /// </summary>

@@ -5,7 +5,6 @@ using Cotton.Sync.App.SyncPairs;
 
 namespace Cotton.Sync.App.Runners
 {
-
     /// <summary>
     /// Runs one deterministic synchronization pass for a sync pair.
     /// </summary>

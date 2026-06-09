@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.SyncPairs
 {
-
     /// <summary>
     /// Represents one configured local-to-remote synchronization pair.
     /// </summary>

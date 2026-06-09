@@ -6,7 +6,6 @@ using System.Text;
 
 namespace Cotton.Sync.Desktop.Platform
 {
-
     internal sealed class AutostartLaunchCommand
     {
         private const string StartMinimizedArgument = "--start-minimized";

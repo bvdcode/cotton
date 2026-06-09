@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-
     internal static class DesktopTrayStatusResolver
     {
         private const string ToolTipPrefix = "Cotton Sync";

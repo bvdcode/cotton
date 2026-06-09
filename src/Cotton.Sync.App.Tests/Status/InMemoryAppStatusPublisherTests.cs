@@ -5,7 +5,6 @@ using Cotton.Sync.App.Status;
 
 namespace Cotton.Sync.App.Tests.Status
 {
-
     public sealed class InMemoryAppStatusPublisherTests
     {
         [Test]

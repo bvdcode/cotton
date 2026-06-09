@@ -5,7 +5,6 @@ using Cotton.Sdk.Realtime;
 
 namespace Cotton.Sdk.Tests
 {
-
     public sealed class CottonRealtimeClientTests
     {
         [Test]

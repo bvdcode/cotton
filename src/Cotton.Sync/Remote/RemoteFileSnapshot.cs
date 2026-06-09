@@ -5,7 +5,6 @@ using Cotton.Files;
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Represents one remote file discovered during a remote tree crawl.
     /// </summary>

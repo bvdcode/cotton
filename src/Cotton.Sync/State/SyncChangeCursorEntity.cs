@@ -6,7 +6,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cotton.Sync.State
 {
-
     /// <summary>
     /// Represents one persisted remote change-feed checkpoint row.
     /// </summary>

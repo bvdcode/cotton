@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync
 {
-
     /// <summary>
     /// Represents a sync path collision that cannot be reconciled safely on case-insensitive file systems.
     /// </summary>

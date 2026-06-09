@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Platform
 {
-
     internal static class DesktopNotificationServiceFactory
     {
         private const string NotifySendCommandName = "notify-send";

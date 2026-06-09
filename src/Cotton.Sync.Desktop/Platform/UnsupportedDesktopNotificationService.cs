@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Platform
 {
-
     internal sealed class UnsupportedDesktopNotificationService : IDesktopNotificationService
     {
         public bool IsSupported => false;

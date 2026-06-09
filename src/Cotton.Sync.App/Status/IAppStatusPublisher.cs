@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.Status
 {
-
     /// <summary>
     /// Publishes application status snapshots to UI and command surfaces.
     /// </summary>

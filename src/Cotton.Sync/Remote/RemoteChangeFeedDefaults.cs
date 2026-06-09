@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Provides shared remote change-feed defaults.
     /// </summary>

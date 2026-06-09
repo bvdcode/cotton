@@ -14,7 +14,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Cotton.Sync.Tests
 {
-
     public sealed class SyncEngineTests
     {
         private readonly Guid _remoteRootNodeId = Guid.Parse("11111111-1111-1111-1111-111111111111");

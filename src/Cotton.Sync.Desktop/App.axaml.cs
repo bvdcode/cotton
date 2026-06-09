@@ -14,7 +14,6 @@ using Cotton.Sync.Desktop.Startup;
 
 namespace Cotton.Sync.Desktop
 {
-
     /// <summary>
     /// Avalonia application entry point.
     /// </summary>

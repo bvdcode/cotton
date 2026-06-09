@@ -7,7 +7,6 @@ using Cotton.Sync.Remote;
 
 namespace Cotton.Sync.Tests.Remote
 {
-
     public sealed class RemoteChangeFeedSnapshotTests
     {
         [Test]

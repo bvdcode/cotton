@@ -9,7 +9,6 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Crawls remote Cotton folders through the SDK node API.
     /// </summary>

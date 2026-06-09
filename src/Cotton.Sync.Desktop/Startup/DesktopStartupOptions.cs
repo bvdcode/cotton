@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Startup
 {
-
     internal sealed class DesktopStartupOptions
     {
         private DesktopStartupOptions(

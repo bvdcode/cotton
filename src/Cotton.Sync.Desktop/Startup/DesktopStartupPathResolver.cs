@@ -5,7 +5,6 @@ using Cotton.Sync.Desktop.Composition;
 
 namespace Cotton.Sync.Desktop.Startup
 {
-
     internal static class DesktopStartupPathResolver
     {
         public static DesktopAppPaths Resolve(DesktopStartupOptions startupOptions)

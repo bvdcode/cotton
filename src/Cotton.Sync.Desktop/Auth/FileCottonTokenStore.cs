@@ -9,7 +9,6 @@ using Cotton.Sdk.Auth;
 
 namespace Cotton.Sync.Desktop.Auth
 {
-
     internal sealed class FileCottonTokenStore : ICottonTokenStore
     {
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)

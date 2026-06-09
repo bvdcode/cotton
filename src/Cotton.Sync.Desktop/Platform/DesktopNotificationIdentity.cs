@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Platform
 {
-
     internal static class DesktopNotificationIdentity
     {
         public const string AppName = "Cotton Sync";

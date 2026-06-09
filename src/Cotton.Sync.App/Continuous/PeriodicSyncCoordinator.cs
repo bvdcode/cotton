@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Sync.App.Continuous
 {
-
     /// <summary>
     /// Requests periodic full reconciliation as a safety fallback.
     /// </summary>

@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.State
 {
-
     /// <summary>
     /// Represents a relative sync path that cannot be synchronized safely across supported platforms.
     /// </summary>

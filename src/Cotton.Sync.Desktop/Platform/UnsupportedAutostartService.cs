@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Platform
 {
-
     internal sealed class UnsupportedAutostartService : IAutostartService
     {
         public bool IsSupported => false;

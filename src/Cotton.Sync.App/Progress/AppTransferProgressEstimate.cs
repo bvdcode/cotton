@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.Progress
 {
-
     /// <summary>
     /// Contains calculated transfer speed and remaining-time estimates.
     /// </summary>

@@ -5,7 +5,6 @@ using Cotton.Sync.App.SyncPairs;
 
 namespace Cotton.Sync.App.Tests.SyncPairs
 {
-
     public sealed class SyncPairSettingsValidatorTests
     {
         private readonly SyncPairSettingsValidator _validator = new();

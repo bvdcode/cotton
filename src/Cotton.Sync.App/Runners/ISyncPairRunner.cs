@@ -5,7 +5,6 @@ using Cotton.Sync.App.Status;
 
 namespace Cotton.Sync.App.Runners
 {
-
     /// <summary>
     /// Controls runtime lifecycle for one configured sync pair.
     /// </summary>

@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.Activities
 {
-
     /// <summary>
     /// Publishes live activity entries to in-process subscribers.
     /// </summary>

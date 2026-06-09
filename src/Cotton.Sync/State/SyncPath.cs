@@ -5,7 +5,6 @@ using System.Text;
 
 namespace Cotton.Sync.State
 {
-
     /// <summary>
     /// Normalizes relative paths used by the sync state store.
     /// </summary>

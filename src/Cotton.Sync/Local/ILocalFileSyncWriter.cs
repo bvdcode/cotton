@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Local
 {
-
     /// <summary>
     /// Writes and deletes local files for the synchronization engine.
     /// </summary>

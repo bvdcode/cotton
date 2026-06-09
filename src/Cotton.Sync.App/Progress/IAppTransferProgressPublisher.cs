@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.Progress
 {
-
     /// <summary>
     /// Publishes live transfer progress to in-process subscribers.
     /// </summary>

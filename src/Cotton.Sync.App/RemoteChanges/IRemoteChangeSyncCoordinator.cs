@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.RemoteChanges
 {
-
     /// <summary>
     /// Coordinates remote realtime changes with sync requests.
     /// </summary>

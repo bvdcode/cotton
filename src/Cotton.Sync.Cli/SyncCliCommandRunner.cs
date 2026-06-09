@@ -8,7 +8,6 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.Cli
 {
-
     /// <summary>
     /// Runs Cotton Sync CLI commands.
     /// </summary>

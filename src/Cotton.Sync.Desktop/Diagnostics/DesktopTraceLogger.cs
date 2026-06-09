@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Cotton.Sync.Desktop.Diagnostics
 {
-
     internal sealed class DesktopTraceLogger : ILogger
     {
         private readonly string _categoryName;

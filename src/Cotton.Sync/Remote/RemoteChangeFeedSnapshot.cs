@@ -5,7 +5,6 @@ using Cotton.Sync;
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Summarizes a remote change-feed page for checkpointing, diagnostics, and future incremental invalidation.
     /// </summary>

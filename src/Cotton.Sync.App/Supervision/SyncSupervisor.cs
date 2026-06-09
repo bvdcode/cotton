@@ -11,7 +11,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Sync.App.Supervision
 {
-
     /// <summary>
     /// Coordinates sync pair runners and publishes aggregate application status.
     /// </summary>

@@ -5,7 +5,6 @@ using Cotton.Sync.App.Status;
 
 namespace Cotton.Sync.App.Supervision
 {
-
     /// <summary>
     /// Coordinates runtime sync pair runners.
     /// </summary>

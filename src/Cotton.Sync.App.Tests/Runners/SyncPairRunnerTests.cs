@@ -9,7 +9,6 @@ using Cotton.Sync.Local;
 
 namespace Cotton.Sync.App.Tests.Runners
 {
-
     public sealed class SyncPairRunnerTests
     {
         [Test]

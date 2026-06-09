@@ -5,7 +5,6 @@ using System.Reflection;
 
 namespace Cotton.Sync.Desktop.Shell
 {
-
     internal static class DesktopAppVersion
     {
         public static string Current => Resolve(typeof(DesktopAppVersion).Assembly);

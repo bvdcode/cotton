@@ -10,7 +10,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Cotton.Sdk.Tests
 {
-
     public sealed class CottonHttpTransportTests
     {
         [Test]

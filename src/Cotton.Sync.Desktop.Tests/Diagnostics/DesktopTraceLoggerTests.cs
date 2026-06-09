@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Cotton.Sync.Desktop.Tests.Diagnostics
 {
-
     public sealed class DesktopTraceLoggerTests
     {
         [Test]

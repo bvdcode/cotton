@@ -12,7 +12,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Sync
 {
-
     /// <summary>
     /// Reconciles local and remote file snapshots for one synchronization pair.
     /// </summary>

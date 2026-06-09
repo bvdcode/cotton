@@ -5,7 +5,6 @@ using Cotton.Sync.Desktop.Diagnostics;
 
 namespace Cotton.Sync.Desktop.Tests.Diagnostics
 {
-
     public sealed class DesktopSecretRedactorTests
     {
         [Test]

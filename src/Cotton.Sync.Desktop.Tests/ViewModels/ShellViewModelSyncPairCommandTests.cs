@@ -15,7 +15,6 @@ using Cotton.Sync.Desktop.ViewModels;
 
 namespace Cotton.Sync.Desktop.Tests.ViewModels
 {
-
     public sealed class ShellViewModelSyncPairCommandTests
     {
         [Test]

@@ -8,7 +8,6 @@ using Cotton.Sync.App.Tests.TestSupport;
 
 namespace Cotton.Sync.App.Tests.Activities
 {
-
     public sealed class AppSyncActivityTests
     {
         [Test]

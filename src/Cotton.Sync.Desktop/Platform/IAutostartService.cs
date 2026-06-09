@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Platform
 {
-
     internal interface IAutostartService
     {
         bool IsSupported { get; }

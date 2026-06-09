@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Auth
 {
-
     internal interface IDeletableTokenPayloadProtector
     {
         Task DeleteAsync(byte[] protectedPayload, CancellationToken cancellationToken = default);

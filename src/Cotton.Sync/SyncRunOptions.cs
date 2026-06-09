@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync
 {
-
     /// <summary>
     /// Defines options for one synchronization pass.
     /// </summary>

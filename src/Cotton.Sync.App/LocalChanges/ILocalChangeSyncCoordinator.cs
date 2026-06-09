@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.LocalChanges
 {
-
     /// <summary>
     /// Coordinates local filesystem changes with sync requests.
     /// </summary>

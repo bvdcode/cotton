@@ -10,7 +10,6 @@ using Cotton.Sdk.Tests.Fakes;
 
 namespace Cotton.Sdk.Tests
 {
-
     public sealed class CottonFileAndChunkClientTests
     {
         private const string IfMatchHeaderName = "If-Match";

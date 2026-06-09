@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.Runners
 {
-
     /// <summary>
     /// Configures retry behavior for transient sync-pair failures.
     /// </summary>

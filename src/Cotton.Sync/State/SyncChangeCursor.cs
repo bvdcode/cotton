@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.State
 {
-
     /// <summary>
     /// Represents the durable remote change-feed checkpoint for one sync pair.
     /// </summary>

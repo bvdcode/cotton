@@ -5,7 +5,6 @@ using Cotton.Nodes;
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Performs remote directory mutations for the synchronization engine.
     /// </summary>

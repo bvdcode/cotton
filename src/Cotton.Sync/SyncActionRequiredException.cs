@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync
 {
-
     /// <summary>
     /// Represents a sync pass that was blocked by a safety condition requiring user review.
     /// </summary>

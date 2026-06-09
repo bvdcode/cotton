@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Sync.App.Auth
 {
-
     /// <summary>
     /// Coordinates shutdown and local session cleanup when the server revokes the active session.
     /// </summary>

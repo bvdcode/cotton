@@ -3,7 +3,6 @@
 
 namespace Cotton.Sdk.Tests
 {
-
     public sealed class CottonServerUrlTests
     {
         [TestCase("app.cottoncloud.dev", "https://app.cottoncloud.dev/")]

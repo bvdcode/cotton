@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.ViewModels
 {
-
     internal sealed class RemoteFolderRowViewModel : ViewModelBase
     {
         public Guid Id { get; init; }

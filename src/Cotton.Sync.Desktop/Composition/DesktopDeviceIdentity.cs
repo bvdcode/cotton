@@ -7,7 +7,6 @@ using Cotton;
 
 namespace Cotton.Sync.Desktop.Composition
 {
-
     internal static class DesktopDeviceIdentity
     {
         public static string CreateUserAgent()

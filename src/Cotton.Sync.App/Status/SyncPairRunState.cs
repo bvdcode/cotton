@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.Status
 {
-
     /// <summary>
     /// Represents the current runtime state of one sync pair.
     /// </summary>

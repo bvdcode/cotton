@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Local
 {
-
     /// <summary>
     /// Represents a local file or directory that cannot be read because permission was denied.
     /// </summary>

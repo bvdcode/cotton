@@ -10,7 +10,6 @@ using Cotton.Sync.App.Tests.TestSupport;
 
 namespace Cotton.Sync.App.Tests.Auth
 {
-
     public sealed class SessionRevocationHandlerTests
     {
         [Test]

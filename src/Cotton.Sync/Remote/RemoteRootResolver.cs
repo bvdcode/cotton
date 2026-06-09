@@ -6,7 +6,6 @@ using Cotton.Sdk.Nodes;
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Resolves or creates remote folder roots through the SDK node API.
     /// </summary>

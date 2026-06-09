@@ -5,7 +5,6 @@ using Cotton.Nodes;
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Represents one remote directory discovered during a remote tree crawl.
     /// </summary>

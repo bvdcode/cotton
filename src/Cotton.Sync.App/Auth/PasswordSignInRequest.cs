@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.Auth
 {
-
     /// <summary>
     /// Describes a username/password desktop sign-in attempt.
     /// </summary>

@@ -15,7 +15,6 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.Desktop.Tests.Shell
 {
-
     public sealed class DesktopShellControllerSelfTestTests
     {
         private string _tempDirectory = string.Empty;

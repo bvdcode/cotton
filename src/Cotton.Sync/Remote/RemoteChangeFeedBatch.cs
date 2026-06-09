@@ -5,7 +5,6 @@ using Cotton.Sync;
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Represents one durable remote change-feed page read for a sync pair.
     /// </summary>

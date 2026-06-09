@@ -5,7 +5,6 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.Local
 {
-
     /// <summary>
     /// Describes progress while scanning a local folder tree.
     /// </summary>

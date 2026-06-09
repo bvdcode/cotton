@@ -5,7 +5,6 @@ using Cotton.Sync.Desktop.Platform;
 
 namespace Cotton.Sync.Desktop.Auth
 {
-
     internal static class DesktopTokenPayloadProtectorFactory
     {
         private const string SecretToolCommandName = "secret-tool";

@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.ViewModels
 {
-
     internal interface IDesktopUiDispatcher
     {
         bool CheckAccess();

@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore.Design;
 
 namespace Cotton.Sync.State
 {
-
     /// <summary>
     /// Creates a design-time synchronization state context for EF Core tooling.
     /// </summary>

@@ -5,7 +5,6 @@ using System.Text;
 
 namespace Cotton.Sync.Desktop.Platform
 {
-
     internal sealed class XdgAutostartService : IAutostartService
     {
         private const string DesktopFileName = "cotton-sync.desktop";

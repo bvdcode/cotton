@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.State
 {
-
     /// <summary>
     /// Persists sync baselines for one or more sync pairs.
     /// </summary>

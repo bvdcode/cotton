@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-
     internal enum DesktopNotificationKind
     {
         Unknown = 0,

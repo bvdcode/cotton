@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync
 {
-
     /// <summary>
     /// Contains the activities emitted by one synchronization pass.
     /// </summary>

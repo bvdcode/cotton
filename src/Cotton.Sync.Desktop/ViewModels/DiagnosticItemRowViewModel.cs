@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.ViewModels
 {
-
     internal sealed class DiagnosticItemRowViewModel : ViewModelBase
     {
         private string _label = string.Empty;

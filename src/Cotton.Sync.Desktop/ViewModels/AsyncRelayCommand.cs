@@ -6,7 +6,6 @@ using System.Windows.Input;
 
 namespace Cotton.Sync.Desktop.ViewModels
 {
-
     /// <summary>
     /// Runs an asynchronous view-model command.
     /// </summary>

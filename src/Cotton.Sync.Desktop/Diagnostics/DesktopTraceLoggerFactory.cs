@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Cotton.Sync.Desktop.Diagnostics
 {
-
     internal sealed class DesktopTraceLoggerFactory : ILoggerFactory
     {
         public ILogger CreateLogger(string categoryName)

@@ -7,7 +7,6 @@ using Cotton.Sync.Desktop.Startup;
 
 namespace Cotton.Sync.Desktop.Tests.Startup
 {
-
     public sealed class DesktopCommandLineRunnerTests
     {
         private string _tempDirectory = string.Empty;

@@ -5,7 +5,6 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync
 {
-
     internal static class SyncPathLookup
     {
         public static void Add<T>(

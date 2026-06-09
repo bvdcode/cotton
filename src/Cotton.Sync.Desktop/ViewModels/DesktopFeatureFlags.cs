@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.ViewModels
 {
-
     internal sealed record DesktopFeatureFlags(bool ShowFutureSyncModes)
     {
         private const string ShowFutureSyncModesVariable = "COTTON_SYNC_DESKTOP_SHOW_FUTURE_MODES";

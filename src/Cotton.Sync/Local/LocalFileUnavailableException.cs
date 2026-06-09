@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Local
 {
-
     /// <summary>
     /// Represents a local file that could not be scanned safely.
     /// </summary>

@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-
     internal sealed record DesktopDataPathSnapshot(
         string DataDirectory,
         string AppDatabasePath,

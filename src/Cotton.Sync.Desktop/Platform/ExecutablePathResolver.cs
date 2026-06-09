@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Platform
 {
-
     internal static class ExecutablePathResolver
     {
         public static string? Resolve(string commandName, string? pathValue)

@@ -8,7 +8,6 @@ using Cotton.Sync.Local;
 
 namespace Cotton.Sync.Tests.Local
 {
-
     public sealed class LocalFileScannerTests
     {
         private string _root = string.Empty;

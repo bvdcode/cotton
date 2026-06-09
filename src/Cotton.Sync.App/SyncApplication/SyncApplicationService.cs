@@ -15,7 +15,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Sync.App.SyncApplication
 {
-
     /// <summary>
     /// Provides high-level sync-client commands over validated application state.
     /// </summary>

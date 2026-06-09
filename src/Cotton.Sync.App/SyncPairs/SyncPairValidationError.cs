@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.SyncPairs
 {
-
     /// <summary>
     /// Describes one validation error for a sync-pair configuration.
     /// </summary>

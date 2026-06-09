@@ -5,7 +5,6 @@ using Cotton.Sync.Desktop.Platform;
 
 namespace Cotton.Sync.Desktop.Tests.Platform
 {
-
     public sealed class DesktopPlatformCapabilitiesTests
     {
         [Test]

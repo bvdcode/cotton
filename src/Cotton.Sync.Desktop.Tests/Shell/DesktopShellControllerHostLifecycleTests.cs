@@ -28,7 +28,6 @@ using Cotton.Sync.Remote;
 
 namespace Cotton.Sync.Desktop.Tests.Shell
 {
-
     public sealed class DesktopShellControllerHostLifecycleTests
     {
         private string _tempDirectory = string.Empty;

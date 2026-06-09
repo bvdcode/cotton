@@ -5,7 +5,6 @@ using Cotton.Sync.App.State;
 
 namespace Cotton.Sync.App.Activities
 {
-
     /// <summary>
     /// Represents one recent sync activity entry.
     /// </summary>

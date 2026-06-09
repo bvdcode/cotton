@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.Preferences
 {
-
     /// <summary>
     /// Defines the desktop theme preference.
     /// </summary>

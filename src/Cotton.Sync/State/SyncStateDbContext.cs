@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Sync.State
 {
-
     /// <summary>
     /// Entity Framework context for local synchronization state.
     /// </summary>

@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Platform
 {
-
     internal interface IWindowsRunRegistry
     {
         string? GetValue(string valueName);

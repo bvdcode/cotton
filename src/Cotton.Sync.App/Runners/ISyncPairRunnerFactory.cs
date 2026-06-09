@@ -5,7 +5,6 @@ using Cotton.Sync.App.SyncPairs;
 
 namespace Cotton.Sync.App.Runners
 {
-
     /// <summary>
     /// Creates runtime runners for configured sync pairs.
     /// </summary>

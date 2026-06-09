@@ -8,7 +8,6 @@ using System.Text;
 
 namespace Cotton.Sync.Desktop.Platform
 {
-
     internal static class DesktopSingleInstanceActivation
     {
         private const string PipePrefix = "cotton-sync-";

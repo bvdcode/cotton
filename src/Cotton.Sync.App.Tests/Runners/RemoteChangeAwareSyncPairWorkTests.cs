@@ -9,7 +9,6 @@ using Cotton.Sync.Remote;
 
 namespace Cotton.Sync.App.Tests.Runners
 {
-
     public sealed class RemoteChangeAwareSyncPairWorkTests
     {
         [Test]

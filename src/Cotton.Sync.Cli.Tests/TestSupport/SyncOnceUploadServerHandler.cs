@@ -11,7 +11,6 @@ using Cotton.Settings;
 
 namespace Cotton.Sync.Cli.Tests.TestSupport
 {
-
     internal sealed class SyncOnceUploadServerHandler : HttpMessageHandler
     {
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);

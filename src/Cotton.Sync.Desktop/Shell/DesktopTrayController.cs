@@ -10,7 +10,6 @@ using Cotton.Sync.Desktop.ViewModels;
 
 namespace Cotton.Sync.Desktop.Shell
 {
-
     internal sealed class DesktopTrayController : IDisposable
     {
         private readonly IClassicDesktopStyleApplicationLifetime _lifetime;

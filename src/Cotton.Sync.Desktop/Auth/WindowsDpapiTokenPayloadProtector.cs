@@ -7,7 +7,6 @@ using System.Text;
 
 namespace Cotton.Sync.Desktop.Auth
 {
-
     [SupportedOSPlatform("windows")]
     internal sealed class WindowsDpapiTokenPayloadProtector : ITokenPayloadProtector
     {

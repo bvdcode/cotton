@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Crawls remote Cotton folders into a snapshot usable by the sync engine.
     /// </summary>

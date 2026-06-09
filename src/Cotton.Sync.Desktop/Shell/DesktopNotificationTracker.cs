@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-
     internal sealed class DesktopNotificationTracker
     {
         private readonly HashSet<Guid> _initialSyncCompleted = [];

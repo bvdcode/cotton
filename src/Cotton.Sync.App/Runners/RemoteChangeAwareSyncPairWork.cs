@@ -6,7 +6,6 @@ using Cotton.Sync.Remote;
 
 namespace Cotton.Sync.App.Runners
 {
-
     /// <summary>
     /// Wraps sync pair work with durable remote change-feed checkpoint handling.
     /// </summary>

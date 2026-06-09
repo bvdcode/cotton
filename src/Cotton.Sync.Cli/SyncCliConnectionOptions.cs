@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Cli
 {
-
     internal record SyncCliConnectionOptions(
         Uri ServerUri,
         string? Username,

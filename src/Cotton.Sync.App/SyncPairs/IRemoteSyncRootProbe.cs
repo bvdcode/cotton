@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.SyncPairs
 {
-
     /// <summary>
     /// Checks whether a remote Cotton root node can be used by a sync pair.
     /// </summary>

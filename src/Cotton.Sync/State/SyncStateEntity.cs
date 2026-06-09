@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Sync.State
 {
-
     /// <summary>
     /// Represents one persisted synchronization baseline row.
     /// </summary>

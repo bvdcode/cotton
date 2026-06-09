@@ -23,7 +23,6 @@ using CoreSyncActionRequiredException = Cotton.Sync.SyncActionRequiredException;
 
 namespace Cotton.Sync.App.Tests.Runners
 {
-
     public sealed class SyncEnginePairWorkTests
     {
         [Test]

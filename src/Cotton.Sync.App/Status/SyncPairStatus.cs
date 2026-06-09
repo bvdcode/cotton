@@ -5,7 +5,6 @@ using Cotton.Sync.App.State;
 
 namespace Cotton.Sync.App.Status
 {
-
     /// <summary>
     /// Describes current user-visible status for one sync pair.
     /// </summary>

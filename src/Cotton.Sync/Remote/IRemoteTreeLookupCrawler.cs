@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Crawls remote Cotton folders into path lookups without retaining an intermediate tree list.
     /// </summary>

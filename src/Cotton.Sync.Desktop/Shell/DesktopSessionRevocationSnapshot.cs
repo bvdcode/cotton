@@ -3,6 +3,5 @@
 
 namespace Cotton.Sync.Desktop.Shell
 {
-
     internal sealed record DesktopSessionRevocationSnapshot(DateTime OccurredAtUtc);
 }

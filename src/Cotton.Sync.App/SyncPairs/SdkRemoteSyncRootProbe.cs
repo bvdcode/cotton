@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Sync.App.SyncPairs
 {
-
     /// <summary>
     /// Checks remote sync roots through the Cotton SDK.
     /// </summary>

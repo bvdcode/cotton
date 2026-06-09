@@ -27,7 +27,6 @@ using AppTransferProgress = Cotton.Sync.App.Progress.AppTransferProgress;
 
 namespace Cotton.Sync.Desktop.Shell
 {
-
     internal sealed class DesktopShellController : IDesktopShellController
     {
         private const string SelfTestSyncPairId = "__desktop_self_test__";

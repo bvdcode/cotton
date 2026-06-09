@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Describes the remote entity kind targeted by a change-feed item.
     /// </summary>

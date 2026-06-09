@@ -7,7 +7,6 @@ using Cotton.Sync.App.SyncPairs;
 
 namespace Cotton.Sync.App.SyncApplication
 {
-
     /// <summary>
     /// Coordinates high-level sync-client application commands.
     /// </summary>

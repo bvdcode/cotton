@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore.Design;
 
 namespace Cotton.Sync.App.State
 {
-
     internal sealed class SyncAppDbContextDesignTimeFactory : IDesignTimeDbContextFactory<SyncAppDbContext>
     {
         public SyncAppDbContext CreateDbContext(string[] args)

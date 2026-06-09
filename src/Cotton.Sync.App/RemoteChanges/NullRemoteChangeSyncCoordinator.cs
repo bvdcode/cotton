@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.RemoteChanges
 {
-
     /// <summary>
     /// No-op remote change coordinator used when realtime sync is not configured.
     /// </summary>

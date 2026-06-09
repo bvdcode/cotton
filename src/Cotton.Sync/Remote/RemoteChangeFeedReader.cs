@@ -7,7 +7,6 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Reads durable remote changes through the SDK and stores per-pair checkpoints.
     /// </summary>

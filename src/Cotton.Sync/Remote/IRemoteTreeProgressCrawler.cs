@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Crawls remote Cotton folders while reporting remote scan progress.
     /// </summary>

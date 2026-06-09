@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.Desktop.Platform
 {
-
     internal static class DesktopPlatformCapabilities
     {
         public static bool IsAutostartSupported => OperatingSystem.IsWindows() || OperatingSystem.IsLinux();

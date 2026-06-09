@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.Continuous
 {
-
     /// <summary>
     /// No-op periodic sync coordinator used when periodic safety sync is not configured.
     /// </summary>

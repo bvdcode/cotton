@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.Continuous
 {
-
     /// <summary>
     /// Coordinates periodic safety reconciliation requests.
     /// </summary>

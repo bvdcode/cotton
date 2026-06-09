@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync.App.Activities
 {
-
     /// <summary>
     /// Publishes live synchronization activity entries to UI and command surfaces.
     /// </summary>

@@ -5,7 +5,6 @@ using Cotton.Sync.State;
 
 namespace Cotton.Sync.Tests.State
 {
-
     public sealed class SyncPathTests
     {
         [Test]

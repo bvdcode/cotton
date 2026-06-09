@@ -8,7 +8,6 @@ using Cotton.Sync.App.SyncPairs;
 
 namespace Cotton.Sync.App.Tests.Supervision
 {
-
     public sealed class SyncSupervisorTests
     {
         [Test]

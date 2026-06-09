@@ -5,7 +5,6 @@ using Cotton.Sdk;
 
 namespace Cotton.Sync.Desktop.Startup
 {
-
     internal static class DesktopServerUrl
     {
         public static Uri? NormalizeOptional(string? value)

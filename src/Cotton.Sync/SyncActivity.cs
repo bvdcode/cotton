@@ -3,7 +3,6 @@
 
 namespace Cotton.Sync
 {
-
     /// <summary>
     /// Represents one synchronization action or decision.
     /// </summary>

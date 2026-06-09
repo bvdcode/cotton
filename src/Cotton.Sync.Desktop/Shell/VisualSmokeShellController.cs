@@ -9,7 +9,6 @@ using Cotton.Sync.Desktop.Startup;
 
 namespace Cotton.Sync.Desktop.Shell
 {
-
     internal sealed class VisualSmokeShellController : IDesktopShellController
     {
         private static readonly Guid DocumentsPairId = Guid.Parse("8e40c25d-7a6d-4a8c-92cf-f7b5422a7e78");

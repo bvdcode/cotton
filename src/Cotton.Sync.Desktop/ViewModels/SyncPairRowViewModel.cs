@@ -5,7 +5,6 @@ using Cotton.Sync.App.SyncPairs;
 
 namespace Cotton.Sync.Desktop.ViewModels
 {
-
     /// <summary>
     /// Displays one configured synchronization pair.
     /// </summary>

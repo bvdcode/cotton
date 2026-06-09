@@ -7,7 +7,6 @@ using System.Security.Cryptography;
 
 namespace Cotton.Sync.Desktop.Auth
 {
-
     internal static class DesktopTokenStorageCapabilities
     {
         private static readonly byte[] ProbePayload = "Cotton.Sync.Desktop.TokenStorageProbe.v1"u8.ToArray();

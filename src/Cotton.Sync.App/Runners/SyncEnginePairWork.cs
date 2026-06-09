@@ -15,7 +15,6 @@ using CoreSyncTransferProgress = Cotton.Sync.SyncTransferProgress;
 
 namespace Cotton.Sync.App.Runners
 {
-
     /// <summary>
     /// Runs sync pair work through the headless Cotton sync engine.
     /// </summary>

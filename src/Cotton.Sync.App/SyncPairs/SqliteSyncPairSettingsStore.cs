@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Sync.App.SyncPairs
 {
-
     /// <summary>
     /// Persists sync-pair settings in a SQLite database through Entity Framework Core.
     /// </summary>

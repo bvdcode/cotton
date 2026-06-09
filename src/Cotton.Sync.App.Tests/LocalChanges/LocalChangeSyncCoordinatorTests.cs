@@ -8,7 +8,6 @@ using Cotton.Sync.App.SyncPairs;
 
 namespace Cotton.Sync.App.Tests.LocalChanges
 {
-
     public sealed class LocalChangeSyncCoordinatorTests
     {
         private static readonly TimeSpan DebounceInterval = TimeSpan.FromMilliseconds(25);

@@ -6,7 +6,6 @@ using Cotton.Models.Enums;
 
 namespace Cotton.Sync.Remote
 {
-
     /// <summary>
     /// Represents a normalized remote change-feed item that sync code can reason about without inspecting DTO enums.
     /// </summary>
