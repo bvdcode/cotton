@@ -3,15 +3,17 @@
 
 using Cotton.Sync.Desktop.Composition;
 
-namespace Cotton.Sync.Desktop.Startup;
-
-internal static class DesktopStartupPathResolver
+namespace Cotton.Sync.Desktop.Startup
 {
-    public static DesktopAppPaths Resolve(DesktopStartupOptions startupOptions)
+
+    internal static class DesktopStartupPathResolver
     {
-        ArgumentNullException.ThrowIfNull(startupOptions);
-        return startupOptions.DataDirectory is null
-            ? DesktopAppPaths.CreateDefault()
-            : DesktopAppPaths.CreateForDataDirectory(startupOptions.DataDirectory);
+        public static DesktopAppPaths Resolve(DesktopStartupOptions startupOptions)
+        {
+            ArgumentNullException.ThrowIfNull(startupOptions);
+            return startupOptions.DataDirectory is null
+                ? DesktopAppPaths.CreateDefault()
+                : DesktopAppPaths.CreateForDataDirectory(startupOptions.DataDirectory);
+        }
     }
 }

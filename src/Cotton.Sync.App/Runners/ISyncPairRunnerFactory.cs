@@ -3,15 +3,17 @@
 
 using Cotton.Sync.App.SyncPairs;
 
-namespace Cotton.Sync.App.Runners;
-
-/// <summary>
-/// Creates runtime runners for configured sync pairs.
-/// </summary>
-public interface ISyncPairRunnerFactory
+namespace Cotton.Sync.App.Runners
 {
+
     /// <summary>
-    /// Creates a runner for a sync pair.
+    /// Creates runtime runners for configured sync pairs.
     /// </summary>
-    ISyncPairRunner Create(SyncPairSettings syncPair);
+    public interface ISyncPairRunnerFactory
+    {
+        /// <summary>
+        /// Creates a runner for a sync pair.
+        /// </summary>
+        ISyncPairRunner Create(SyncPairSettings syncPair);
+    }
 }

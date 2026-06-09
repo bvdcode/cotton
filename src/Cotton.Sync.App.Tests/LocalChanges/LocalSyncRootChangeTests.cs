@@ -3,16 +3,18 @@
 
 using Cotton.Sync.App.LocalChanges;
 
-namespace Cotton.Sync.App.Tests.LocalChanges;
-
-public sealed class LocalSyncRootChangeTests
+namespace Cotton.Sync.App.Tests.LocalChanges
 {
-    [Test]
-    public void Constructor_RejectsUnknownKind()
+
+    public sealed class LocalSyncRootChangeTests
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => new LocalSyncRootChange(
-            Guid.NewGuid(),
-            "/tmp/report.txt",
-            LocalSyncRootChangeKind.Unknown));
+        [Test]
+        public void Constructor_RejectsUnknownKind()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new LocalSyncRootChange(
+                Guid.NewGuid(),
+                "/tmp/report.txt",
+                LocalSyncRootChangeKind.Unknown));
+        }
     }
 }

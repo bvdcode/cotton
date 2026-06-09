@@ -3,28 +3,30 @@
 
 using Microsoft.EntityFrameworkCore;
 
-namespace Cotton.Sync.State;
-
-/// <summary>
-/// Entity Framework context for local synchronization state.
-/// </summary>
-public sealed class SyncStateDbContext : DbContext
+namespace Cotton.Sync.State
 {
+
     /// <summary>
-    /// Initializes a new instance of the <see cref="SyncStateDbContext" /> class.
+    /// Entity Framework context for local synchronization state.
     /// </summary>
-    public SyncStateDbContext(DbContextOptions<SyncStateDbContext> options)
-        : base(options)
+    public sealed class SyncStateDbContext : DbContext
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SyncStateDbContext" /> class.
+        /// </summary>
+        public SyncStateDbContext(DbContextOptions<SyncStateDbContext> options)
+            : base(options)
+        {
+        }
+
+        /// <summary>
+        /// Gets persisted synchronization baseline entries.
+        /// </summary>
+        public DbSet<SyncStateEntity> SyncEntries => Set<SyncStateEntity>();
+
+        /// <summary>
+        /// Gets persisted remote change-feed checkpoints.
+        /// </summary>
+        public DbSet<SyncChangeCursorEntity> SyncChangeCursors => Set<SyncChangeCursorEntity>();
     }
-
-    /// <summary>
-    /// Gets persisted synchronization baseline entries.
-    /// </summary>
-    public DbSet<SyncStateEntity> SyncEntries => Set<SyncStateEntity>();
-
-    /// <summary>
-    /// Gets persisted remote change-feed checkpoints.
-    /// </summary>
-    public DbSet<SyncChangeCursorEntity> SyncChangeCursors => Set<SyncChangeCursorEntity>();
 }

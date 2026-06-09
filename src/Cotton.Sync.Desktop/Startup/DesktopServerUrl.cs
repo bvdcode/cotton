@@ -3,17 +3,19 @@
 
 using Cotton.Sdk;
 
-namespace Cotton.Sync.Desktop.Startup;
-
-internal static class DesktopServerUrl
+namespace Cotton.Sync.Desktop.Startup
 {
-    public static Uri? NormalizeOptional(string? value)
-    {
-        return CottonServerUrl.NormalizeOptional(value);
-    }
 
-    public static Uri NormalizeRequired(string value, string parameterName)
+    internal static class DesktopServerUrl
     {
-        return CottonServerUrl.NormalizeRequired(value, parameterName);
+        public static Uri? NormalizeOptional(string? value)
+        {
+            return CottonServerUrl.NormalizeOptional(value);
+        }
+
+        public static Uri NormalizeRequired(string value, string parameterName)
+        {
+            return CottonServerUrl.NormalizeRequired(value, parameterName);
+        }
     }
 }

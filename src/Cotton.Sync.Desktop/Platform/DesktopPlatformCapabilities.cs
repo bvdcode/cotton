@@ -1,63 +1,65 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Sync.Desktop.Platform;
-
-internal static class DesktopPlatformCapabilities
+namespace Cotton.Sync.Desktop.Platform
 {
-    public static bool IsAutostartSupported => OperatingSystem.IsWindows() || OperatingSystem.IsLinux();
 
-    public static bool IsTrayLifecycleSupported => OperatingSystem.IsWindows();
-
-    public static DesktopPlatformCapabilitySnapshot CreateSnapshot()
+    internal static class DesktopPlatformCapabilities
     {
-        return new DesktopPlatformCapabilitySnapshot(
-            ResolveOperatingSystemName(),
-            NormalizeEnvironmentValue(Environment.GetEnvironmentVariable("XDG_SESSION_TYPE")),
-            NormalizeEnvironmentValue(Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP")),
-            IsAutostartSupported,
-            IsTrayLifecycleSupported,
-            ResolveTrayLifecycleDetails());
-    }
+        public static bool IsAutostartSupported => OperatingSystem.IsWindows() || OperatingSystem.IsLinux();
 
-    private static string ResolveOperatingSystemName()
-    {
-        if (OperatingSystem.IsWindows())
+        public static bool IsTrayLifecycleSupported => OperatingSystem.IsWindows();
+
+        public static DesktopPlatformCapabilitySnapshot CreateSnapshot()
         {
-            return "Windows";
+            return new DesktopPlatformCapabilitySnapshot(
+                ResolveOperatingSystemName(),
+                NormalizeEnvironmentValue(Environment.GetEnvironmentVariable("XDG_SESSION_TYPE")),
+                NormalizeEnvironmentValue(Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP")),
+                IsAutostartSupported,
+                IsTrayLifecycleSupported,
+                ResolveTrayLifecycleDetails());
         }
 
-        if (OperatingSystem.IsLinux())
+        private static string ResolveOperatingSystemName()
         {
-            return "Linux";
+            if (OperatingSystem.IsWindows())
+            {
+                return "Windows";
+            }
+
+            if (OperatingSystem.IsLinux())
+            {
+                return "Linux";
+            }
+
+            if (OperatingSystem.IsMacOS())
+            {
+                return "macOS";
+            }
+
+            return "Unknown";
         }
 
-        if (OperatingSystem.IsMacOS())
+        private static string ResolveTrayLifecycleDetails()
         {
-            return "macOS";
+            if (OperatingSystem.IsWindows())
+            {
+                return "Supported on Windows through the native tray lifecycle.";
+            }
+
+            if (OperatingSystem.IsLinux())
+            {
+                return "Linux tray availability varies by desktop environment, so Cotton Sync uses normal window lifecycle until a native Linux tray adapter is verified.";
+            }
+
+            return "Tray lifecycle is not supported on this platform yet.";
         }
 
-        return "Unknown";
-    }
-
-    private static string ResolveTrayLifecycleDetails()
-    {
-        if (OperatingSystem.IsWindows())
+        private static string NormalizeEnvironmentValue(string? value)
         {
-            return "Supported on Windows through the native tray lifecycle.";
+            string? normalized = value?.Trim();
+            return string.IsNullOrEmpty(normalized) ? "Not reported" : normalized;
         }
-
-        if (OperatingSystem.IsLinux())
-        {
-            return "Linux tray availability varies by desktop environment, so Cotton Sync uses normal window lifecycle until a native Linux tray adapter is verified.";
-        }
-
-        return "Tray lifecycle is not supported on this platform yet.";
-    }
-
-    private static string NormalizeEnvironmentValue(string? value)
-    {
-        string? normalized = value?.Trim();
-        return string.IsNullOrEmpty(normalized) ? "Not reported" : normalized;
     }
 }

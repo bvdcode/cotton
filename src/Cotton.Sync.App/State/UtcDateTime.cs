@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Sync.App.State;
-
-internal static class UtcDateTime
+namespace Cotton.Sync.App.State
 {
-    public static DateTime Normalize(DateTime value)
+
+    internal static class UtcDateTime
     {
-        return value.Kind switch
+        public static DateTime Normalize(DateTime value)
         {
-            DateTimeKind.Utc => value,
-            DateTimeKind.Unspecified => DateTime.SpecifyKind(value, DateTimeKind.Utc),
-            _ => value.ToUniversalTime(),
-        };
+            return value.Kind switch
+            {
+                DateTimeKind.Utc => value,
+                DateTimeKind.Unspecified => DateTime.SpecifyKind(value, DateTimeKind.Utc),
+                _ => value.ToUniversalTime(),
+            };
+        }
     }
 }

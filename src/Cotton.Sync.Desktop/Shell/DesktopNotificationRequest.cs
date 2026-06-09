@@ -1,35 +1,37 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Sync.Desktop.Shell;
-
-internal sealed record DesktopNotificationRequest
+namespace Cotton.Sync.Desktop.Shell
 {
-    public DesktopNotificationRequest(
-        DesktopNotificationKind kind,
-        Guid syncPairId,
-        string title,
-        string message)
+
+    internal sealed record DesktopNotificationRequest
     {
-        if (kind == DesktopNotificationKind.Unknown)
+        public DesktopNotificationRequest(
+            DesktopNotificationKind kind,
+            Guid syncPairId,
+            string title,
+            string message)
         {
-            throw new ArgumentOutOfRangeException(nameof(kind), "Desktop notification kind must be known.");
+            if (kind == DesktopNotificationKind.Unknown)
+            {
+                throw new ArgumentOutOfRangeException(nameof(kind), "Desktop notification kind must be known.");
+            }
+
+            ArgumentException.ThrowIfNullOrWhiteSpace(title);
+            ArgumentException.ThrowIfNullOrWhiteSpace(message);
+
+            Kind = kind;
+            SyncPairId = syncPairId;
+            Title = DesktopUserMessageFormatter.Compact(title, DesktopUserMessageFormatter.TitleMaxLength);
+            Message = DesktopUserMessageFormatter.Compact(message);
         }
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(title);
-        ArgumentException.ThrowIfNullOrWhiteSpace(message);
+        public DesktopNotificationKind Kind { get; }
 
-        Kind = kind;
-        SyncPairId = syncPairId;
-        Title = DesktopUserMessageFormatter.Compact(title, DesktopUserMessageFormatter.TitleMaxLength);
-        Message = DesktopUserMessageFormatter.Compact(message);
+        public Guid SyncPairId { get; }
+
+        public string Title { get; }
+
+        public string Message { get; }
     }
-
-    public DesktopNotificationKind Kind { get; }
-
-    public Guid SyncPairId { get; }
-
-    public string Title { get; }
-
-    public string Message { get; }
 }

@@ -4,39 +4,41 @@
 using System.Globalization;
 using Microsoft.Extensions.Logging;
 
-namespace Cotton.Sync.Desktop.Diagnostics;
-
-internal static class DesktopTraceLogFormatter
+namespace Cotton.Sync.Desktop.Diagnostics
 {
-    public static string Format(
-        string categoryName,
-        LogLevel logLevel,
-        EventId eventId,
-        string message,
-        Exception? exception)
-    {
-        string eventText = eventId.Id == 0 && string.IsNullOrWhiteSpace(eventId.Name)
-            ? string.Empty
-            : " event=" + FormatEvent(eventId);
-        string formatted = DateTimeOffset.Now.ToString("O", CultureInfo.InvariantCulture)
-            + " "
-            + logLevel
-            + " ["
-            + categoryName
-            + "]"
-            + eventText
-            + " "
-            + message;
-        return exception is null ? formatted : formatted + Environment.NewLine + exception;
-    }
 
-    private static string FormatEvent(EventId eventId)
+    internal static class DesktopTraceLogFormatter
     {
-        if (string.IsNullOrWhiteSpace(eventId.Name))
+        public static string Format(
+            string categoryName,
+            LogLevel logLevel,
+            EventId eventId,
+            string message,
+            Exception? exception)
         {
-            return eventId.Id.ToString(CultureInfo.InvariantCulture);
+            string eventText = eventId.Id == 0 && string.IsNullOrWhiteSpace(eventId.Name)
+                ? string.Empty
+                : " event=" + FormatEvent(eventId);
+            string formatted = DateTimeOffset.Now.ToString("O", CultureInfo.InvariantCulture)
+                + " "
+                + logLevel
+                + " ["
+                + categoryName
+                + "]"
+                + eventText
+                + " "
+                + message;
+            return exception is null ? formatted : formatted + Environment.NewLine + exception;
         }
 
-        return eventId.Id.ToString(CultureInfo.InvariantCulture) + ":" + eventId.Name;
+        private static string FormatEvent(EventId eventId)
+        {
+            if (string.IsNullOrWhiteSpace(eventId.Name))
+            {
+                return eventId.Id.ToString(CultureInfo.InvariantCulture);
+            }
+
+            return eventId.Id.ToString(CultureInfo.InvariantCulture) + ":" + eventId.Name;
+        }
     }
 }

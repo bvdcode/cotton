@@ -5,196 +5,198 @@ using Cotton.Sync;
 using Cotton.Models.Enums;
 using Cotton.Sync.Remote;
 
-namespace Cotton.Sync.Tests.Remote;
-
-public sealed class RemoteChangeFeedSnapshotTests
+namespace Cotton.Sync.Tests.Remote
 {
-    [Test]
-    public void FromChanges_SummarizesAffectedEntitiesAndActions()
+
+    public sealed class RemoteChangeFeedSnapshotTests
     {
-        Guid folderId = Guid.NewGuid();
-        Guid parentId = Guid.NewGuid();
-        Guid previousParentId = Guid.NewGuid();
-        Guid fileId = Guid.NewGuid();
-        Guid layoutId = Guid.NewGuid();
-        var changes = new[]
+        [Test]
+        public void FromChanges_SummarizesAffectedEntitiesAndActions()
         {
-            new SyncChangeDto
+            Guid folderId = Guid.NewGuid();
+            Guid parentId = Guid.NewGuid();
+            Guid previousParentId = Guid.NewGuid();
+            Guid fileId = Guid.NewGuid();
+            Guid layoutId = Guid.NewGuid();
+            var changes = new[]
             {
-                Id = 11,
-                Kind = SyncChangeKind.FileContentUpdated,
-                LayoutId = layoutId,
-                ItemId = fileId,
-                ParentNodeId = parentId,
-                FileManifestId = Guid.NewGuid(),
+                new SyncChangeDto
+                {
+                    Id = 11,
+                    Kind = SyncChangeKind.FileContentUpdated,
+                    LayoutId = layoutId,
+                    ItemId = fileId,
+                    ParentNodeId = parentId,
+                    FileManifestId = Guid.NewGuid(),
+                    Name = "report.txt",
+                    CreatedAt = DateTime.UtcNow,
+                },
+                new SyncChangeDto
+                {
+                    Id = 12,
+                    Kind = SyncChangeKind.FolderDeleted,
+                    LayoutId = layoutId,
+                    ItemId = folderId,
+                    ParentNodeId = parentId,
+                    PreviousParentNodeId = previousParentId,
+                    Name = "Archive",
+                    CreatedAt = DateTime.UtcNow,
+                },
+            };
+
+            RemoteChangeFeedSnapshot snapshot = RemoteChangeFeedSnapshot.FromChanges(changes);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(snapshot.IsEmpty, Is.False);
+                Assert.That(snapshot.FirstCursor, Is.EqualTo(11));
+                Assert.That(snapshot.LastCursor, Is.EqualTo(12));
+                Assert.That(snapshot.ContainsFileChanges, Is.True);
+                Assert.That(snapshot.ContainsFolderChanges, Is.True);
+                Assert.That(snapshot.ContainsContentChanges, Is.True);
+                Assert.That(snapshot.ContainsDeletes, Is.True);
+                Assert.That(snapshot.ContainsMovesOrRenames, Is.False);
+                Assert.That(snapshot.RequiresRemoteTreeRefresh, Is.True);
+                Assert.That(snapshot.AffectedNodeIds, Is.EquivalentTo(new[] { parentId, folderId, previousParentId }));
+                Assert.That(snapshot.AffectedNodeFileIds, Is.EquivalentTo(new[] { fileId }));
+            });
+        }
+
+        [TestCase(SyncChangeKind.FileCreated, RemoteChangeTargetKind.File, RemoteChangeAction.Created)]
+        [TestCase(SyncChangeKind.FileContentUpdated, RemoteChangeTargetKind.File, RemoteChangeAction.ContentUpdated)]
+        [TestCase(SyncChangeKind.FileRenamed, RemoteChangeTargetKind.File, RemoteChangeAction.Renamed)]
+        [TestCase(SyncChangeKind.FileMoved, RemoteChangeTargetKind.File, RemoteChangeAction.Moved)]
+        [TestCase(SyncChangeKind.FileDeleted, RemoteChangeTargetKind.File, RemoteChangeAction.Deleted)]
+        [TestCase(SyncChangeKind.FileRestored, RemoteChangeTargetKind.File, RemoteChangeAction.Restored)]
+        [TestCase(SyncChangeKind.FolderCreated, RemoteChangeTargetKind.Folder, RemoteChangeAction.Created)]
+        [TestCase(SyncChangeKind.FolderRenamed, RemoteChangeTargetKind.Folder, RemoteChangeAction.Renamed)]
+        [TestCase(SyncChangeKind.FolderMoved, RemoteChangeTargetKind.Folder, RemoteChangeAction.Moved)]
+        [TestCase(SyncChangeKind.FolderDeleted, RemoteChangeTargetKind.Folder, RemoteChangeAction.Deleted)]
+        [TestCase(SyncChangeKind.FolderRestored, RemoteChangeTargetKind.Folder, RemoteChangeAction.Restored)]
+        public void FromDto_MapsWireKindToNormalizedImpact(
+            SyncChangeKind kind,
+            RemoteChangeTargetKind targetKind,
+            RemoteChangeAction action)
+        {
+            SyncChangeDto change = CreateValidFileChange(kind);
+
+            RemoteChangeImpact impact = RemoteChangeImpact.FromDto(change);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(impact.TargetKind, Is.EqualTo(targetKind));
+                Assert.That(impact.Action, Is.EqualTo(action));
+            });
+        }
+
+        [Test]
+        public void FromChanges_RejectsNonPositiveCursor()
+        {
+            var changes = new[]
+            {
+                new SyncChangeDto
+                {
+                    Id = -1,
+                    Kind = SyncChangeKind.FileCreated,
+                },
+            };
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => RemoteChangeFeedSnapshot.FromChanges(changes));
+        }
+
+        [Test]
+        public void FromChanges_RejectsDefaultCursor()
+        {
+            var changes = new[]
+            {
+                new SyncChangeDto
+                {
+                    Kind = SyncChangeKind.FileCreated,
+                },
+            };
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => RemoteChangeFeedSnapshot.FromChanges(changes));
+        }
+
+        [Test]
+        public void FromChanges_RejectsNonIncreasingCursors()
+        {
+            Assert.Multiple(() =>
+            {
+                Assert.Throws<ArgumentException>(
+                    () => RemoteChangeFeedSnapshot.FromChanges(
+                    [
+                        CreateValidFileChange(id: 12),
+                        CreateValidFileChange(id: 11),
+                    ]));
+
+                Assert.Throws<ArgumentException>(
+                    () => RemoteChangeFeedSnapshot.FromChanges(
+                    [
+                        CreateValidFileChange(id: 12),
+                        CreateValidFileChange(id: 12),
+                    ]));
+            });
+        }
+
+        [Test]
+        public void FromDto_RejectsUnknownWireKind()
+        {
+            SyncChangeDto change = CreateValidFileChange(SyncChangeKind.Unknown);
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => RemoteChangeImpact.FromDto(change));
+        }
+
+        [Test]
+        public void FromDto_RejectsMissingRequiredFields()
+        {
+            Assert.Multiple(() =>
+            {
+                SyncChangeDto missingLayout = CreateValidFileChange();
+                missingLayout.LayoutId = Guid.Empty;
+                Assert.Throws<ArgumentException>(() => RemoteChangeImpact.FromDto(missingLayout));
+
+                SyncChangeDto missingItem = CreateValidFileChange();
+                missingItem.ItemId = Guid.Empty;
+                Assert.Throws<ArgumentException>(() => RemoteChangeImpact.FromDto(missingItem));
+
+                SyncChangeDto missingParent = CreateValidFileChange();
+                missingParent.ParentNodeId = Guid.Empty;
+                Assert.Throws<ArgumentException>(() => RemoteChangeImpact.FromDto(missingParent));
+
+                SyncChangeDto missingName = CreateValidFileChange();
+                missingName.Name = string.Empty;
+                Assert.Throws<ArgumentException>(() => RemoteChangeImpact.FromDto(missingName));
+            });
+        }
+
+        [Test]
+        public void Empty_ReturnsReusableEmptySnapshot()
+        {
+            RemoteChangeFeedSnapshot snapshot = RemoteChangeFeedSnapshot.FromChanges(Array.Empty<SyncChangeDto>());
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(snapshot, Is.SameAs(RemoteChangeFeedSnapshot.Empty));
+                Assert.That(snapshot.IsEmpty, Is.True);
+                Assert.That(snapshot.RequiresRemoteTreeRefresh, Is.False);
+                Assert.That(snapshot.AffectedNodeIds, Is.Empty);
+                Assert.That(snapshot.AffectedNodeFileIds, Is.Empty);
+            });
+        }
+
+        private static SyncChangeDto CreateValidFileChange(SyncChangeKind kind = SyncChangeKind.FileCreated, long id = 1)
+        {
+            return new SyncChangeDto
+            {
+                Id = id,
+                Kind = kind,
+                LayoutId = Guid.NewGuid(),
+                ItemId = Guid.NewGuid(),
+                ParentNodeId = Guid.NewGuid(),
                 Name = "report.txt",
                 CreatedAt = DateTime.UtcNow,
-            },
-            new SyncChangeDto
-            {
-                Id = 12,
-                Kind = SyncChangeKind.FolderDeleted,
-                LayoutId = layoutId,
-                ItemId = folderId,
-                ParentNodeId = parentId,
-                PreviousParentNodeId = previousParentId,
-                Name = "Archive",
-                CreatedAt = DateTime.UtcNow,
-            },
-        };
-
-        RemoteChangeFeedSnapshot snapshot = RemoteChangeFeedSnapshot.FromChanges(changes);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(snapshot.IsEmpty, Is.False);
-            Assert.That(snapshot.FirstCursor, Is.EqualTo(11));
-            Assert.That(snapshot.LastCursor, Is.EqualTo(12));
-            Assert.That(snapshot.ContainsFileChanges, Is.True);
-            Assert.That(snapshot.ContainsFolderChanges, Is.True);
-            Assert.That(snapshot.ContainsContentChanges, Is.True);
-            Assert.That(snapshot.ContainsDeletes, Is.True);
-            Assert.That(snapshot.ContainsMovesOrRenames, Is.False);
-            Assert.That(snapshot.RequiresRemoteTreeRefresh, Is.True);
-            Assert.That(snapshot.AffectedNodeIds, Is.EquivalentTo(new[] { parentId, folderId, previousParentId }));
-            Assert.That(snapshot.AffectedNodeFileIds, Is.EquivalentTo(new[] { fileId }));
-        });
-    }
-
-    [TestCase(SyncChangeKind.FileCreated, RemoteChangeTargetKind.File, RemoteChangeAction.Created)]
-    [TestCase(SyncChangeKind.FileContentUpdated, RemoteChangeTargetKind.File, RemoteChangeAction.ContentUpdated)]
-    [TestCase(SyncChangeKind.FileRenamed, RemoteChangeTargetKind.File, RemoteChangeAction.Renamed)]
-    [TestCase(SyncChangeKind.FileMoved, RemoteChangeTargetKind.File, RemoteChangeAction.Moved)]
-    [TestCase(SyncChangeKind.FileDeleted, RemoteChangeTargetKind.File, RemoteChangeAction.Deleted)]
-    [TestCase(SyncChangeKind.FileRestored, RemoteChangeTargetKind.File, RemoteChangeAction.Restored)]
-    [TestCase(SyncChangeKind.FolderCreated, RemoteChangeTargetKind.Folder, RemoteChangeAction.Created)]
-    [TestCase(SyncChangeKind.FolderRenamed, RemoteChangeTargetKind.Folder, RemoteChangeAction.Renamed)]
-    [TestCase(SyncChangeKind.FolderMoved, RemoteChangeTargetKind.Folder, RemoteChangeAction.Moved)]
-    [TestCase(SyncChangeKind.FolderDeleted, RemoteChangeTargetKind.Folder, RemoteChangeAction.Deleted)]
-    [TestCase(SyncChangeKind.FolderRestored, RemoteChangeTargetKind.Folder, RemoteChangeAction.Restored)]
-    public void FromDto_MapsWireKindToNormalizedImpact(
-        SyncChangeKind kind,
-        RemoteChangeTargetKind targetKind,
-        RemoteChangeAction action)
-    {
-        SyncChangeDto change = CreateValidFileChange(kind);
-
-        RemoteChangeImpact impact = RemoteChangeImpact.FromDto(change);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(impact.TargetKind, Is.EqualTo(targetKind));
-            Assert.That(impact.Action, Is.EqualTo(action));
-        });
-    }
-
-    [Test]
-    public void FromChanges_RejectsNonPositiveCursor()
-    {
-        var changes = new[]
-        {
-            new SyncChangeDto
-            {
-                Id = -1,
-                Kind = SyncChangeKind.FileCreated,
-            },
-        };
-
-        Assert.Throws<ArgumentOutOfRangeException>(() => RemoteChangeFeedSnapshot.FromChanges(changes));
-    }
-
-    [Test]
-    public void FromChanges_RejectsDefaultCursor()
-    {
-        var changes = new[]
-        {
-            new SyncChangeDto
-            {
-                Kind = SyncChangeKind.FileCreated,
-            },
-        };
-
-        Assert.Throws<ArgumentOutOfRangeException>(() => RemoteChangeFeedSnapshot.FromChanges(changes));
-    }
-
-    [Test]
-    public void FromChanges_RejectsNonIncreasingCursors()
-    {
-        Assert.Multiple(() =>
-        {
-            Assert.Throws<ArgumentException>(
-                () => RemoteChangeFeedSnapshot.FromChanges(
-                [
-                    CreateValidFileChange(id: 12),
-                    CreateValidFileChange(id: 11),
-                ]));
-
-            Assert.Throws<ArgumentException>(
-                () => RemoteChangeFeedSnapshot.FromChanges(
-                [
-                    CreateValidFileChange(id: 12),
-                    CreateValidFileChange(id: 12),
-                ]));
-        });
-    }
-
-    [Test]
-    public void FromDto_RejectsUnknownWireKind()
-    {
-        SyncChangeDto change = CreateValidFileChange(SyncChangeKind.Unknown);
-
-        Assert.Throws<ArgumentOutOfRangeException>(() => RemoteChangeImpact.FromDto(change));
-    }
-
-    [Test]
-    public void FromDto_RejectsMissingRequiredFields()
-    {
-        Assert.Multiple(() =>
-        {
-            SyncChangeDto missingLayout = CreateValidFileChange();
-            missingLayout.LayoutId = Guid.Empty;
-            Assert.Throws<ArgumentException>(() => RemoteChangeImpact.FromDto(missingLayout));
-
-            SyncChangeDto missingItem = CreateValidFileChange();
-            missingItem.ItemId = Guid.Empty;
-            Assert.Throws<ArgumentException>(() => RemoteChangeImpact.FromDto(missingItem));
-
-            SyncChangeDto missingParent = CreateValidFileChange();
-            missingParent.ParentNodeId = Guid.Empty;
-            Assert.Throws<ArgumentException>(() => RemoteChangeImpact.FromDto(missingParent));
-
-            SyncChangeDto missingName = CreateValidFileChange();
-            missingName.Name = string.Empty;
-            Assert.Throws<ArgumentException>(() => RemoteChangeImpact.FromDto(missingName));
-        });
-    }
-
-    [Test]
-    public void Empty_ReturnsReusableEmptySnapshot()
-    {
-        RemoteChangeFeedSnapshot snapshot = RemoteChangeFeedSnapshot.FromChanges(Array.Empty<SyncChangeDto>());
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(snapshot, Is.SameAs(RemoteChangeFeedSnapshot.Empty));
-            Assert.That(snapshot.IsEmpty, Is.True);
-            Assert.That(snapshot.RequiresRemoteTreeRefresh, Is.False);
-            Assert.That(snapshot.AffectedNodeIds, Is.Empty);
-            Assert.That(snapshot.AffectedNodeFileIds, Is.Empty);
-        });
-    }
-
-    private static SyncChangeDto CreateValidFileChange(SyncChangeKind kind = SyncChangeKind.FileCreated, long id = 1)
-    {
-        return new SyncChangeDto
-        {
-            Id = id,
-            Kind = kind,
-            LayoutId = Guid.NewGuid(),
-            ItemId = Guid.NewGuid(),
-            ParentNodeId = Guid.NewGuid(),
-            Name = "report.txt",
-            CreatedAt = DateTime.UtcNow,
-        };
+            };
+        }
     }
 }

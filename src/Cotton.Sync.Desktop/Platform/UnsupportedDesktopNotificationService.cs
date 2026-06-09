@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Sync.Desktop.Platform;
-
-internal sealed class UnsupportedDesktopNotificationService : IDesktopNotificationService
+namespace Cotton.Sync.Desktop.Platform
 {
-    public bool IsSupported => false;
 
-    public void Show(string title, string message)
+    internal sealed class UnsupportedDesktopNotificationService : IDesktopNotificationService
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(title);
-        ArgumentException.ThrowIfNullOrWhiteSpace(message);
+        public bool IsSupported => false;
+
+        public void Show(string title, string message)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(title);
+            ArgumentException.ThrowIfNullOrWhiteSpace(message);
+        }
     }
 }

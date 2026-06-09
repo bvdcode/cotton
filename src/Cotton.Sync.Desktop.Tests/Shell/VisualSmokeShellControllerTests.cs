@@ -4,103 +4,105 @@
 using Cotton.Sync.Desktop.Shell;
 using Cotton.Sync.Desktop.Startup;
 
-namespace Cotton.Sync.Desktop.Tests.Shell;
-
-public sealed class VisualSmokeShellControllerTests
+namespace Cotton.Sync.Desktop.Tests.Shell
 {
-    [Test]
-    public async Task LoadAsync_ReturnsSignedInDashboardSnapshot()
+
+    public sealed class VisualSmokeShellControllerTests
     {
-        using VisualSmokeShellController controller = VisualSmokeShellController.Create(DesktopVisualSmokeScenario.Dashboard);
-
-        DesktopShellSnapshot snapshot = await controller.LoadAsync();
-
-        Assert.Multiple(() =>
+        [Test]
+        public async Task LoadAsync_ReturnsSignedInDashboardSnapshot()
         {
-            Assert.That(snapshot.IsSignedIn, Is.True);
-            Assert.That(snapshot.ServerUrl, Is.EqualTo(new Uri("https://app.cottoncloud.dev/")));
-            Assert.That(snapshot.AccountName, Is.EqualTo("qa@cottoncloud.dev"));
-            Assert.That(snapshot.SyncPairs, Has.Count.EqualTo(2));
-            Assert.That(snapshot.SyncPairs[0].Status, Is.EqualTo("Idle"));
-            Assert.That(snapshot.SyncPairs[0].LastSyncedAtUtc, Is.Not.Null);
-        });
-    }
+            using VisualSmokeShellController controller = VisualSmokeShellController.Create(DesktopVisualSmokeScenario.Dashboard);
 
-    [Test]
-    public async Task LoadAsync_ReturnsErrorPairForErrorScenario()
-    {
-        using VisualSmokeShellController controller = VisualSmokeShellController.Create(DesktopVisualSmokeScenario.Error);
+            DesktopShellSnapshot snapshot = await controller.LoadAsync();
 
-        DesktopShellSnapshot snapshot = await controller.LoadAsync();
+            Assert.Multiple(() =>
+            {
+                Assert.That(snapshot.IsSignedIn, Is.True);
+                Assert.That(snapshot.ServerUrl, Is.EqualTo(new Uri("https://app.cottoncloud.dev/")));
+                Assert.That(snapshot.AccountName, Is.EqualTo("qa@cottoncloud.dev"));
+                Assert.That(snapshot.SyncPairs, Has.Count.EqualTo(2));
+                Assert.That(snapshot.SyncPairs[0].Status, Is.EqualTo("Idle"));
+                Assert.That(snapshot.SyncPairs[0].LastSyncedAtUtc, Is.Not.Null);
+            });
+        }
 
-        Assert.Multiple(() =>
+        [Test]
+        public async Task LoadAsync_ReturnsErrorPairForErrorScenario()
         {
-            Assert.That(snapshot.SyncPairs[0].Status, Is.EqualTo("Error"));
-            Assert.That(
-                snapshot.SyncPairs[0].LastError,
-                Is.EqualTo(DesktopActionRequiredMessageResolver.MissingDesktopSyncChangesApiMessage));
-        });
-    }
+            using VisualSmokeShellController controller = VisualSmokeShellController.Create(DesktopVisualSmokeScenario.Error);
 
-    [Test]
-    public async Task LoadAsync_ReturnsSyncingPairForProgressScenario()
-    {
-        using VisualSmokeShellController controller = VisualSmokeShellController.Create(DesktopVisualSmokeScenario.Progress);
+            DesktopShellSnapshot snapshot = await controller.LoadAsync();
 
-        DesktopShellSnapshot snapshot = await controller.LoadAsync();
+            Assert.Multiple(() =>
+            {
+                Assert.That(snapshot.SyncPairs[0].Status, Is.EqualTo("Error"));
+                Assert.That(
+                    snapshot.SyncPairs[0].LastError,
+                    Is.EqualTo(DesktopActionRequiredMessageResolver.MissingDesktopSyncChangesApiMessage));
+            });
+        }
 
-        Assert.Multiple(() =>
+        [Test]
+        public async Task LoadAsync_ReturnsSyncingPairForProgressScenario()
         {
-            Assert.That(snapshot.IsSignedIn, Is.True);
-            Assert.That(snapshot.SyncPairs, Has.Count.EqualTo(2));
-            Assert.That(snapshot.SyncPairs[0].Status, Is.EqualTo("Syncing"));
-            Assert.That(snapshot.SyncPairs[0].LastError, Is.Null);
-        });
-    }
+            using VisualSmokeShellController controller = VisualSmokeShellController.Create(DesktopVisualSmokeScenario.Progress);
 
-    [Test]
-    public async Task LoadAsync_ReturnsSignedInEmptyDashboardForAddFolderScenario()
-    {
-        using VisualSmokeShellController controller = VisualSmokeShellController.Create(DesktopVisualSmokeScenario.AddFolder);
+            DesktopShellSnapshot snapshot = await controller.LoadAsync();
 
-        DesktopShellSnapshot snapshot = await controller.LoadAsync();
+            Assert.Multiple(() =>
+            {
+                Assert.That(snapshot.IsSignedIn, Is.True);
+                Assert.That(snapshot.SyncPairs, Has.Count.EqualTo(2));
+                Assert.That(snapshot.SyncPairs[0].Status, Is.EqualTo("Syncing"));
+                Assert.That(snapshot.SyncPairs[0].LastError, Is.Null);
+            });
+        }
 
-        Assert.Multiple(() =>
+        [Test]
+        public async Task LoadAsync_ReturnsSignedInEmptyDashboardForAddFolderScenario()
         {
-            Assert.That(snapshot.IsSignedIn, Is.True);
-            Assert.That(snapshot.SyncPairs, Is.Empty);
-            Assert.That(snapshot.AccountName, Is.EqualTo("qa@cottoncloud.dev"));
-        });
-    }
+            using VisualSmokeShellController controller = VisualSmokeShellController.Create(DesktopVisualSmokeScenario.AddFolder);
 
-    [Test]
-    public async Task LoadAsync_ReturnsSignedInEmptyDashboardForEmptyDashboardScenario()
-    {
-        using VisualSmokeShellController controller = VisualSmokeShellController.Create(DesktopVisualSmokeScenario.EmptyDashboard);
+            DesktopShellSnapshot snapshot = await controller.LoadAsync();
 
-        DesktopShellSnapshot snapshot = await controller.LoadAsync();
+            Assert.Multiple(() =>
+            {
+                Assert.That(snapshot.IsSignedIn, Is.True);
+                Assert.That(snapshot.SyncPairs, Is.Empty);
+                Assert.That(snapshot.AccountName, Is.EqualTo("qa@cottoncloud.dev"));
+            });
+        }
 
-        Assert.Multiple(() =>
+        [Test]
+        public async Task LoadAsync_ReturnsSignedInEmptyDashboardForEmptyDashboardScenario()
         {
-            Assert.That(snapshot.IsSignedIn, Is.True);
-            Assert.That(snapshot.SyncPairs, Is.Empty);
-            Assert.That(snapshot.AccountName, Is.EqualTo("qa@cottoncloud.dev"));
-        });
-    }
+            using VisualSmokeShellController controller = VisualSmokeShellController.Create(DesktopVisualSmokeScenario.EmptyDashboard);
 
-    [Test]
-    public async Task LoadAsync_ReturnsSignedOutSetupSnapshotForSignInErrorScenario()
-    {
-        using VisualSmokeShellController controller = VisualSmokeShellController.Create(DesktopVisualSmokeScenario.SignInError);
+            DesktopShellSnapshot snapshot = await controller.LoadAsync();
 
-        DesktopShellSnapshot snapshot = await controller.LoadAsync();
+            Assert.Multiple(() =>
+            {
+                Assert.That(snapshot.IsSignedIn, Is.True);
+                Assert.That(snapshot.SyncPairs, Is.Empty);
+                Assert.That(snapshot.AccountName, Is.EqualTo("qa@cottoncloud.dev"));
+            });
+        }
 
-        Assert.Multiple(() =>
+        [Test]
+        public async Task LoadAsync_ReturnsSignedOutSetupSnapshotForSignInErrorScenario()
         {
-            Assert.That(snapshot.IsSignedIn, Is.False);
-            Assert.That(snapshot.SyncPairs, Is.Empty);
-            Assert.That(snapshot.ServerUrl, Is.EqualTo(new Uri("https://app.cottoncloud.dev/")));
-            Assert.That(snapshot.RememberedUsername, Is.EqualTo("qa@cottoncloud.dev"));
-        });
+            using VisualSmokeShellController controller = VisualSmokeShellController.Create(DesktopVisualSmokeScenario.SignInError);
+
+            DesktopShellSnapshot snapshot = await controller.LoadAsync();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(snapshot.IsSignedIn, Is.False);
+                Assert.That(snapshot.SyncPairs, Is.Empty);
+                Assert.That(snapshot.ServerUrl, Is.EqualTo(new Uri("https://app.cottoncloud.dev/")));
+                Assert.That(snapshot.RememberedUsername, Is.EqualTo("qa@cottoncloud.dev"));
+            });
+        }
     }
 }

@@ -1,18 +1,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Sync.Desktop.Startup;
-
-internal enum DesktopVisualSmokeScenario
+namespace Cotton.Sync.Desktop.Startup
 {
-    SignInError,
-    AddFolder,
-    EmptyDashboard,
-    Dashboard,
-    FolderControls,
-    Progress,
-    Settings,
-    SettingsDiagnostics,
-    Error,
-    Conflict,
+
+    internal enum DesktopVisualSmokeScenario
+    {
+        SignInError,
+        AddFolder,
+        EmptyDashboard,
+        Dashboard,
+        FolderControls,
+        Progress,
+        Settings,
+        SettingsDiagnostics,
+        Error,
+        Conflict,
+    }
 }

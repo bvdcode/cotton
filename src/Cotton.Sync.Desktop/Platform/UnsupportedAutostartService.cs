@@ -1,26 +1,28 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Sync.Desktop.Platform;
-
-internal sealed class UnsupportedAutostartService : IAutostartService
+namespace Cotton.Sync.Desktop.Platform
 {
-    public bool IsSupported => false;
 
-    public Task<bool> IsEnabledAsync(CancellationToken cancellationToken = default)
+    internal sealed class UnsupportedAutostartService : IAutostartService
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        return Task.FromResult(false);
-    }
+        public bool IsSupported => false;
 
-    public Task SetEnabledAsync(bool enabled, CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        if (enabled)
+        public Task<bool> IsEnabledAsync(CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException("Autostart is not supported on this platform yet.");
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(false);
         }
 
-        return Task.CompletedTask;
+        public Task SetEnabledAsync(bool enabled, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (enabled)
+            {
+                throw new NotSupportedException("Autostart is not supported on this platform yet.");
+            }
+
+            return Task.CompletedTask;
+        }
     }
 }

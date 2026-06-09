@@ -3,39 +3,41 @@
 
 using System.Diagnostics;
 
-namespace Cotton.Sync.Desktop.Platform;
-
-internal sealed class DesktopInstallerRuntimeMutex : IDisposable
+namespace Cotton.Sync.Desktop.Platform
 {
-    public const string MutexName = "CottonSyncDesktop_B671C18E_1E77_437C_AB9B_5C5C9D877E18";
 
-    private readonly Mutex? _mutex;
-
-    private DesktopInstallerRuntimeMutex(Mutex? mutex)
+    internal sealed class DesktopInstallerRuntimeMutex : IDisposable
     {
-        _mutex = mutex;
-    }
+        public const string MutexName = "CottonSyncDesktop_B671C18E_1E77_437C_AB9B_5C5C9D877E18";
 
-    public static DesktopInstallerRuntimeMutex CreateForCurrentPlatform()
-    {
-        if (!OperatingSystem.IsWindows())
+        private readonly Mutex? _mutex;
+
+        private DesktopInstallerRuntimeMutex(Mutex? mutex)
         {
-            return new DesktopInstallerRuntimeMutex(null);
+            _mutex = mutex;
         }
 
-        try
+        public static DesktopInstallerRuntimeMutex CreateForCurrentPlatform()
         {
-            return new DesktopInstallerRuntimeMutex(new Mutex(initiallyOwned: false, MutexName));
-        }
-        catch (Exception exception) when (exception is UnauthorizedAccessException or IOException or ApplicationException)
-        {
-            Trace.TraceWarning("Cotton Sync installer mutex could not be created: {0}", exception.Message);
-            return new DesktopInstallerRuntimeMutex(null);
-        }
-    }
+            if (!OperatingSystem.IsWindows())
+            {
+                return new DesktopInstallerRuntimeMutex(null);
+            }
 
-    public void Dispose()
-    {
-        _mutex?.Dispose();
+            try
+            {
+                return new DesktopInstallerRuntimeMutex(new Mutex(initiallyOwned: false, MutexName));
+            }
+            catch (Exception exception) when (exception is UnauthorizedAccessException or IOException or ApplicationException)
+            {
+                Trace.TraceWarning("Cotton Sync installer mutex could not be created: {0}", exception.Message);
+                return new DesktopInstallerRuntimeMutex(null);
+            }
+        }
+
+        public void Dispose()
+        {
+            _mutex?.Dispose();
+        }
     }
 }

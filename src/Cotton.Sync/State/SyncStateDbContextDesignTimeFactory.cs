@@ -4,19 +4,21 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace Cotton.Sync.State;
-
-/// <summary>
-/// Creates a design-time synchronization state context for EF Core tooling.
-/// </summary>
-public sealed class SyncStateDbContextDesignTimeFactory : IDesignTimeDbContextFactory<SyncStateDbContext>
+namespace Cotton.Sync.State
 {
-    /// <inheritdoc />
-    public SyncStateDbContext CreateDbContext(string[] args)
+
+    /// <summary>
+    /// Creates a design-time synchronization state context for EF Core tooling.
+    /// </summary>
+    public sealed class SyncStateDbContextDesignTimeFactory : IDesignTimeDbContextFactory<SyncStateDbContext>
     {
-        var options = new DbContextOptionsBuilder<SyncStateDbContext>()
-            .UseSqlite("Data Source=cotton-sync-design-time.sqlite")
-            .Options;
-        return new SyncStateDbContext(options);
+        /// <inheritdoc />
+        public SyncStateDbContext CreateDbContext(string[] args)
+        {
+            var options = new DbContextOptionsBuilder<SyncStateDbContext>()
+                .UseSqlite("Data Source=cotton-sync-design-time.sqlite")
+                .Options;
+            return new SyncStateDbContext(options);
+        }
     }
 }

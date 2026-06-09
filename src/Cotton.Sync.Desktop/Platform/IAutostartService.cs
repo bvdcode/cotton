@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Sync.Desktop.Platform;
-
-internal interface IAutostartService
+namespace Cotton.Sync.Desktop.Platform
 {
-    bool IsSupported { get; }
 
-    Task<bool> IsEnabledAsync(CancellationToken cancellationToken = default);
+    internal interface IAutostartService
+    {
+        bool IsSupported { get; }
 
-    Task SetEnabledAsync(bool enabled, CancellationToken cancellationToken = default);
+        Task<bool> IsEnabledAsync(CancellationToken cancellationToken = default);
+
+        Task SetEnabledAsync(bool enabled, CancellationToken cancellationToken = default);
+    }
 }

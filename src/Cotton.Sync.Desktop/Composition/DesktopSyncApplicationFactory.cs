@@ -23,120 +23,122 @@ using Cotton.Sync.State;
 using Microsoft.Extensions.Logging;
 using HeadlessSyncEngine = Cotton.Sync.SyncEngine;
 
-namespace Cotton.Sync.Desktop.Composition;
-
-internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFactory
+namespace Cotton.Sync.Desktop.Composition
 {
-    private static readonly TimeSpan HttpRequestTimeout = TimeSpan.FromSeconds(30);
 
-    private readonly ILoggerFactory _loggerFactory;
-    private readonly DesktopAppPaths _paths;
-
-    public DesktopSyncApplicationFactory(DesktopAppPaths paths, ILoggerFactory? loggerFactory = null)
+    internal sealed class DesktopSyncApplicationFactory : IDesktopSyncApplicationFactory
     {
-        _paths = paths ?? throw new ArgumentNullException(nameof(paths));
-        _loggerFactory = loggerFactory ?? new DesktopTraceLoggerFactory();
-    }
+        private static readonly TimeSpan HttpRequestTimeout = TimeSpan.FromSeconds(30);
 
-    public DesktopSyncApplicationHost Create(Uri serverUrl)
-    {
-        ArgumentNullException.ThrowIfNull(serverUrl);
+        private readonly ILoggerFactory _loggerFactory;
+        private readonly DesktopAppPaths _paths;
 
-        var httpClient = new HttpClient
+        public DesktopSyncApplicationFactory(DesktopAppPaths paths, ILoggerFactory? loggerFactory = null)
         {
-            Timeout = HttpRequestTimeout,
-        };
-        var tokenStore = new FileCottonTokenStore(_paths.TokenStorePath);
-        var sdkOptions = new CottonSdkOptions
+            _paths = paths ?? throw new ArgumentNullException(nameof(paths));
+            _loggerFactory = loggerFactory ?? new DesktopTraceLoggerFactory();
+        }
+
+        public DesktopSyncApplicationHost Create(Uri serverUrl)
         {
-            BaseAddress = serverUrl,
-            UserAgent = DesktopDeviceIdentity.CreateUserAgent(),
-            DeviceName = DesktopDeviceIdentity.CreateDeviceName(),
-        };
-        var cottonClient = new CottonCloudClient(httpClient, tokenStore, sdkOptions, _loggerFactory);
+            ArgumentNullException.ThrowIfNull(serverUrl);
 
-        var syncPairStore = new SqliteSyncPairSettingsStore(_paths.AppDatabasePath);
-        var preferencesStore = new SqliteAppPreferencesStore(_paths.AppDatabasePath);
-        var stateStore = new SqliteSyncStateStore(_paths.SyncStateDatabasePath);
+            var httpClient = new HttpClient
+            {
+                Timeout = HttpRequestTimeout,
+            };
+            var tokenStore = new FileCottonTokenStore(_paths.TokenStorePath);
+            var sdkOptions = new CottonSdkOptions
+            {
+                BaseAddress = serverUrl,
+                UserAgent = DesktopDeviceIdentity.CreateUserAgent(),
+                DeviceName = DesktopDeviceIdentity.CreateDeviceName(),
+            };
+            var cottonClient = new CottonCloudClient(httpClient, tokenStore, sdkOptions, _loggerFactory);
 
-        var remoteTreeCrawler = new RemoteTreeCrawler(cottonClient.Nodes);
-        var remoteFileSynchronizer = new SdkRemoteFileSynchronizer(cottonClient);
-        var remoteDirectorySynchronizer = new SdkRemoteDirectorySynchronizer(cottonClient.Nodes);
-        var remoteChangeFeed = new RemoteChangeFeedReader(cottonClient.Sync, stateStore);
-        var syncEngine = new HeadlessSyncEngine(
-            new LocalFileScanner(),
-            remoteTreeCrawler,
-            remoteFileSynchronizer,
-            stateStore,
-            remoteDirectories: remoteDirectorySynchronizer,
-            logger: _loggerFactory.CreateLogger<HeadlessSyncEngine>());
-        var activityPublisher = new InMemoryAppActivityPublisher();
-        var sessionRevocationPublisher = new InMemorySessionRevocationPublisher();
-        var transferProgressPublisher = new InMemoryAppTransferProgressPublisher();
-        var runProgressPublisher = new InMemoryAppRunProgressPublisher();
-        ISyncPairWork pairWork = new RemoteChangeAwareSyncPairWork(
-            new SyncEnginePairWork(syncEngine, activityPublisher, transferProgressPublisher, runProgressPublisher),
-            remoteChangeFeed);
-        var runnerFactory = new SyncPairRunnerFactory(pairWork, loggerFactory: _loggerFactory);
-        var statusPublisher = new InMemoryAppStatusPublisher();
-        var supervisor = new SyncSupervisor(syncPairStore, runnerFactory, statusPublisher);
-        var localChanges = new LocalChangeSyncCoordinator(
-            syncPairStore,
-            supervisor,
-            new FileSystemLocalSyncRootWatcherFactory(_loggerFactory),
-            logger: _loggerFactory.CreateLogger<LocalChangeSyncCoordinator>());
-        var periodicSync = new PeriodicSyncCoordinator(
-            supervisor,
-            logger: _loggerFactory.CreateLogger<PeriodicSyncCoordinator>());
-        var platformCommands = new ProcessPlatformCommandService(
-            _loggerFactory.CreateLogger<ProcessPlatformCommandService>());
-        var authFlow = new PasswordAuthFlow(cottonClient.Auth);
-        var appCodeBrowserAuthFlow = new AppCodeBrowserAuthFlow(cottonClient.Auth, platformCommands);
-        var sessionRevocationHandler = new SessionRevocationHandler(
-            authFlow,
-            localChanges,
-            periodicSync,
-            supervisor,
-            sessionRevocationPublisher,
-            _loggerFactory.CreateLogger<SessionRevocationHandler>());
-        var remoteChanges = new RealtimeRemoteChangeSyncCoordinator(
-            cottonClient.Realtime,
-            supervisor,
-            sessionRevocationHandler: sessionRevocationHandler,
-            logger: _loggerFactory.CreateLogger<RealtimeRemoteChangeSyncCoordinator>());
-        var prerequisites = new SyncPairPrerequisiteValidator(
-            new FileSystemLocalSyncRootProbe(_loggerFactory.CreateLogger<FileSystemLocalSyncRootProbe>()),
-            new SdkRemoteSyncRootProbe(
+            var syncPairStore = new SqliteSyncPairSettingsStore(_paths.AppDatabasePath);
+            var preferencesStore = new SqliteAppPreferencesStore(_paths.AppDatabasePath);
+            var stateStore = new SqliteSyncStateStore(_paths.SyncStateDatabasePath);
+
+            var remoteTreeCrawler = new RemoteTreeCrawler(cottonClient.Nodes);
+            var remoteFileSynchronizer = new SdkRemoteFileSynchronizer(cottonClient);
+            var remoteDirectorySynchronizer = new SdkRemoteDirectorySynchronizer(cottonClient.Nodes);
+            var remoteChangeFeed = new RemoteChangeFeedReader(cottonClient.Sync, stateStore);
+            var syncEngine = new HeadlessSyncEngine(
+                new LocalFileScanner(),
+                remoteTreeCrawler,
+                remoteFileSynchronizer,
+                stateStore,
+                remoteDirectories: remoteDirectorySynchronizer,
+                logger: _loggerFactory.CreateLogger<HeadlessSyncEngine>());
+            var activityPublisher = new InMemoryAppActivityPublisher();
+            var sessionRevocationPublisher = new InMemorySessionRevocationPublisher();
+            var transferProgressPublisher = new InMemoryAppTransferProgressPublisher();
+            var runProgressPublisher = new InMemoryAppRunProgressPublisher();
+            ISyncPairWork pairWork = new RemoteChangeAwareSyncPairWork(
+                new SyncEnginePairWork(syncEngine, activityPublisher, transferProgressPublisher, runProgressPublisher),
+                remoteChangeFeed);
+            var runnerFactory = new SyncPairRunnerFactory(pairWork, loggerFactory: _loggerFactory);
+            var statusPublisher = new InMemoryAppStatusPublisher();
+            var supervisor = new SyncSupervisor(syncPairStore, runnerFactory, statusPublisher);
+            var localChanges = new LocalChangeSyncCoordinator(
+                syncPairStore,
+                supervisor,
+                new FileSystemLocalSyncRootWatcherFactory(_loggerFactory),
+                logger: _loggerFactory.CreateLogger<LocalChangeSyncCoordinator>());
+            var periodicSync = new PeriodicSyncCoordinator(
+                supervisor,
+                logger: _loggerFactory.CreateLogger<PeriodicSyncCoordinator>());
+            var platformCommands = new ProcessPlatformCommandService(
+                _loggerFactory.CreateLogger<ProcessPlatformCommandService>());
+            var authFlow = new PasswordAuthFlow(cottonClient.Auth);
+            var appCodeBrowserAuthFlow = new AppCodeBrowserAuthFlow(cottonClient.Auth, platformCommands);
+            var sessionRevocationHandler = new SessionRevocationHandler(
+                authFlow,
+                localChanges,
+                periodicSync,
+                supervisor,
+                sessionRevocationPublisher,
+                _loggerFactory.CreateLogger<SessionRevocationHandler>());
+            var remoteChanges = new RealtimeRemoteChangeSyncCoordinator(
+                cottonClient.Realtime,
+                supervisor,
+                sessionRevocationHandler: sessionRevocationHandler,
+                logger: _loggerFactory.CreateLogger<RealtimeRemoteChangeSyncCoordinator>());
+            var prerequisites = new SyncPairPrerequisiteValidator(
+                new FileSystemLocalSyncRootProbe(_loggerFactory.CreateLogger<FileSystemLocalSyncRootProbe>()),
+                new SdkRemoteSyncRootProbe(
+                    cottonClient.Nodes,
+                    _loggerFactory.CreateLogger<SdkRemoteSyncRootProbe>()));
+            var appService = new SyncApplicationService(
+                syncPairStore,
+                prerequisites,
+                preferencesStore,
+                authFlow,
+                appCodeBrowserAuthFlow,
+                supervisor,
+                platformCommands,
+                localChanges,
+                remoteChanges,
+                periodicSync,
+                stateStore,
+                logger: _loggerFactory.CreateLogger<SyncApplicationService>());
+            var remoteRootResolver = new RemoteRootResolver(cottonClient.Nodes);
+
+            return new DesktopSyncApplicationHost(
+                appService,
+                remoteRootResolver,
+                statusPublisher,
+                activityPublisher,
+                sessionRevocationPublisher,
+                transferProgressPublisher,
+                runProgressPublisher,
+                tokenStore,
                 cottonClient.Nodes,
-                _loggerFactory.CreateLogger<SdkRemoteSyncRootProbe>()));
-        var appService = new SyncApplicationService(
-            syncPairStore,
-            prerequisites,
-            preferencesStore,
-            authFlow,
-            appCodeBrowserAuthFlow,
-            supervisor,
-            platformCommands,
-            localChanges,
-            remoteChanges,
-            periodicSync,
-            stateStore,
-            logger: _loggerFactory.CreateLogger<SyncApplicationService>());
-        var remoteRootResolver = new RemoteRootResolver(cottonClient.Nodes);
-
-        return new DesktopSyncApplicationHost(
-            appService,
-            remoteRootResolver,
-            statusPublisher,
-            activityPublisher,
-            sessionRevocationPublisher,
-            transferProgressPublisher,
-            runProgressPublisher,
-            tokenStore,
-            cottonClient.Nodes,
-            cottonClient.Sync,
-            httpClient,
-            serverUrl,
-            cottonClient);
+                cottonClient.Sync,
+                httpClient,
+                serverUrl,
+                cottonClient);
+        }
     }
 }

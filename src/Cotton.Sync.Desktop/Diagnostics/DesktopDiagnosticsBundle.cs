@@ -3,13 +3,15 @@
 
 using Cotton.Sync.Desktop.Shell;
 
-namespace Cotton.Sync.Desktop.Diagnostics;
+namespace Cotton.Sync.Desktop.Diagnostics
+{
 
-internal sealed record DesktopDiagnosticsBundle(
-    DateTimeOffset CreatedAtUtc,
-    string AppVersion,
-    string? ServerUrl,
-    string AccountName,
-    DesktopDataPathSnapshot DataPaths,
-    IReadOnlyList<DesktopSyncPairSnapshot> SyncPairs,
-    IReadOnlyList<DesktopSelfTestItemSnapshot> SelfTestItems);
+    internal sealed record DesktopDiagnosticsBundle(
+        DateTimeOffset CreatedAtUtc,
+        string AppVersion,
+        string? ServerUrl,
+        string AccountName,
+        DesktopDataPathSnapshot DataPaths,
+        IReadOnlyList<DesktopSyncPairSnapshot> SyncPairs,
+        IReadOnlyList<DesktopSelfTestItemSnapshot> SelfTestItems);
+}

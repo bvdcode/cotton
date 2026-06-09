@@ -3,21 +3,23 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Cotton.Sync.Desktop.Diagnostics;
-
-internal sealed class DesktopTraceLoggerFactory : ILoggerFactory
+namespace Cotton.Sync.Desktop.Diagnostics
 {
-    public ILogger CreateLogger(string categoryName)
-    {
-        return new DesktopTraceLogger(categoryName);
-    }
 
-    public void AddProvider(ILoggerProvider provider)
+    internal sealed class DesktopTraceLoggerFactory : ILoggerFactory
     {
-        ArgumentNullException.ThrowIfNull(provider);
-    }
+        public ILogger CreateLogger(string categoryName)
+        {
+            return new DesktopTraceLogger(categoryName);
+        }
 
-    public void Dispose()
-    {
+        public void AddProvider(ILoggerProvider provider)
+        {
+            ArgumentNullException.ThrowIfNull(provider);
+        }
+
+        public void Dispose()
+        {
+        }
     }
 }

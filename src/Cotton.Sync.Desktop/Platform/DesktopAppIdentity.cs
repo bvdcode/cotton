@@ -4,33 +4,35 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace Cotton.Sync.Desktop.Platform;
-
-internal static class DesktopAppIdentity
+namespace Cotton.Sync.Desktop.Platform
 {
-    public const string AppUserModelId = "Cotton.Sync.Desktop";
 
-    public static void ApplyToCurrentProcess()
+    internal static class DesktopAppIdentity
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
+        public const string AppUserModelId = "Cotton.Sync.Desktop";
 
-        try
+        public static void ApplyToCurrentProcess()
         {
-            int result = SetCurrentProcessExplicitAppUserModelID(AppUserModelId);
-            if (result != 0)
+            if (!OperatingSystem.IsWindows())
             {
-                Trace.TraceWarning("Failed to set Cotton Sync AppUserModelID. HRESULT: 0x{0:X8}", result);
+                return;
+            }
+
+            try
+            {
+                int result = SetCurrentProcessExplicitAppUserModelID(AppUserModelId);
+                if (result != 0)
+                {
+                    Trace.TraceWarning("Failed to set Cotton Sync AppUserModelID. HRESULT: 0x{0:X8}", result);
+                }
+            }
+            catch (Exception exception) when (exception is EntryPointNotFoundException or DllNotFoundException)
+            {
+                Trace.TraceWarning("Failed to set Cotton Sync AppUserModelID: {0}", exception);
             }
         }
-        catch (Exception exception) when (exception is EntryPointNotFoundException or DllNotFoundException)
-        {
-            Trace.TraceWarning("Failed to set Cotton Sync AppUserModelID: {0}", exception);
-        }
-    }
 
-    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
-    private static extern int SetCurrentProcessExplicitAppUserModelID(string appId);
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+        private static extern int SetCurrentProcessExplicitAppUserModelID(string appId);
+    }
 }

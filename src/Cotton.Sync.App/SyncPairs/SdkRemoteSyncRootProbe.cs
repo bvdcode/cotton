@@ -7,42 +7,44 @@ using Cotton.Sdk.Nodes;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Cotton.Sync.App.SyncPairs;
-
-/// <summary>
-/// Checks remote sync roots through the Cotton SDK.
-/// </summary>
-public sealed class SdkRemoteSyncRootProbe : IRemoteSyncRootProbe
+namespace Cotton.Sync.App.SyncPairs
 {
-    private readonly ILogger<SdkRemoteSyncRootProbe> _logger;
-    private readonly ICottonNodeClient _nodes;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SdkRemoteSyncRootProbe" /> class.
+    /// Checks remote sync roots through the Cotton SDK.
     /// </summary>
-    public SdkRemoteSyncRootProbe(
-        ICottonNodeClient nodes,
-        ILogger<SdkRemoteSyncRootProbe>? logger = null)
+    public sealed class SdkRemoteSyncRootProbe : IRemoteSyncRootProbe
     {
-        _nodes = nodes ?? throw new ArgumentNullException(nameof(nodes));
-        _logger = logger ?? NullLogger<SdkRemoteSyncRootProbe>.Instance;
-    }
+        private readonly ILogger<SdkRemoteSyncRootProbe> _logger;
+        private readonly ICottonNodeClient _nodes;
 
-    /// <inheritdoc />
-    public async Task<bool> ExistsAsync(Guid remoteRootNodeId, CancellationToken cancellationToken = default)
-    {
-        try
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SdkRemoteSyncRootProbe" /> class.
+        /// </summary>
+        public SdkRemoteSyncRootProbe(
+            ICottonNodeClient nodes,
+            ILogger<SdkRemoteSyncRootProbe>? logger = null)
         {
-            _ = await _nodes.GetAsync(remoteRootNodeId, cancellationToken).ConfigureAwait(false);
-            return true;
+            _nodes = nodes ?? throw new ArgumentNullException(nameof(nodes));
+            _logger = logger ?? NullLogger<SdkRemoteSyncRootProbe>.Instance;
         }
-        catch (CottonApiException exception) when (exception.StatusCode == HttpStatusCode.NotFound)
+
+        /// <inheritdoc />
+        public async Task<bool> ExistsAsync(Guid remoteRootNodeId, CancellationToken cancellationToken = default)
         {
-            _logger.LogWarning(
-                exception,
-                "Remote sync root is unavailable: {RemoteRootNodeId}",
-                remoteRootNodeId);
-            return false;
+            try
+            {
+                _ = await _nodes.GetAsync(remoteRootNodeId, cancellationToken).ConfigureAwait(false);
+                return true;
+            }
+            catch (CottonApiException exception) when (exception.StatusCode == HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning(
+                    exception,
+                    "Remote sync root is unavailable: {RemoteRootNodeId}",
+                    remoteRootNodeId);
+                return false;
+            }
         }
     }
 }

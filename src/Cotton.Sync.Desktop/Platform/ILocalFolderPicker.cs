@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Sync.Desktop.Platform;
-
-internal interface ILocalFolderPicker
+namespace Cotton.Sync.Desktop.Platform
 {
-    Task<string?> PickFolderAsync(CancellationToken cancellationToken = default);
+
+    internal interface ILocalFolderPicker
+    {
+        Task<string?> PickFolderAsync(CancellationToken cancellationToken = default);
+    }
 }

@@ -3,23 +3,25 @@
 
 using Cotton.Sync.App.SyncPairs;
 
-namespace Cotton.Sync.Desktop.Shell;
-
-internal sealed class SyncPairValidationException : Exception
+namespace Cotton.Sync.Desktop.Shell
 {
-    public SyncPairValidationException(IReadOnlyList<SyncPairValidationError> errors)
-        : base(CreateMessage(errors))
-    {
-        Errors = errors ?? throw new ArgumentNullException(nameof(errors));
-    }
 
-    public IReadOnlyList<SyncPairValidationError> Errors { get; }
-
-    private static string CreateMessage(IReadOnlyList<SyncPairValidationError> errors)
+    internal sealed class SyncPairValidationException : Exception
     {
-        ArgumentNullException.ThrowIfNull(errors);
-        return errors.Count == 0
-            ? "Sync pair validation failed."
-            : string.Join(Environment.NewLine, errors.Select(static error => error.Message));
+        public SyncPairValidationException(IReadOnlyList<SyncPairValidationError> errors)
+            : base(CreateMessage(errors))
+        {
+            Errors = errors ?? throw new ArgumentNullException(nameof(errors));
+        }
+
+        public IReadOnlyList<SyncPairValidationError> Errors { get; }
+
+        private static string CreateMessage(IReadOnlyList<SyncPairValidationError> errors)
+        {
+            ArgumentNullException.ThrowIfNull(errors);
+            return errors.Count == 0
+                ? "Sync pair validation failed."
+                : string.Join(Environment.NewLine, errors.Select(static error => error.Message));
+        }
     }
 }

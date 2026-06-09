@@ -3,15 +3,17 @@
 
 using Cotton.Sync.App.SyncPairs;
 
-namespace Cotton.Sync.App.Runners;
-
-/// <summary>
-/// Runs one deterministic synchronization pass for a sync pair.
-/// </summary>
-public interface ISyncPairWork
+namespace Cotton.Sync.App.Runners
 {
+
     /// <summary>
-    /// Runs one synchronization pass.
+    /// Runs one deterministic synchronization pass for a sync pair.
     /// </summary>
-    Task RunOnceAsync(SyncPairSettings syncPair, CancellationToken cancellationToken = default);
+    public interface ISyncPairWork
+    {
+        /// <summary>
+        /// Runs one synchronization pass.
+        /// </summary>
+        Task RunOnceAsync(SyncPairSettings syncPair, CancellationToken cancellationToken = default);
+    }
 }

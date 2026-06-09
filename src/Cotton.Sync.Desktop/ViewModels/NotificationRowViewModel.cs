@@ -1,29 +1,31 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Sync.Desktop.ViewModels;
-
-internal sealed class NotificationRowViewModel : ViewModelBase
+namespace Cotton.Sync.Desktop.ViewModels
 {
-    private bool _isDashboardVisible = true;
-    private string _message = string.Empty;
-    private string _title = string.Empty;
 
-    public string Title
+    internal sealed class NotificationRowViewModel : ViewModelBase
     {
-        get => _title;
-        set => SetProperty(ref _title, value);
-    }
+        private bool _isDashboardVisible = true;
+        private string _message = string.Empty;
+        private string _title = string.Empty;
 
-    public string Message
-    {
-        get => _message;
-        set => SetProperty(ref _message, value);
-    }
+        public string Title
+        {
+            get => _title;
+            set => SetProperty(ref _title, value);
+        }
 
-    public bool IsDashboardVisible
-    {
-        get => _isDashboardVisible;
-        set => SetProperty(ref _isDashboardVisible, value);
+        public string Message
+        {
+            get => _message;
+            set => SetProperty(ref _message, value);
+        }
+
+        public bool IsDashboardVisible
+        {
+            get => _isDashboardVisible;
+            set => SetProperty(ref _isDashboardVisible, value);
+        }
     }
 }

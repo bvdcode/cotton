@@ -5,29 +5,31 @@ using Avalonia;
 using Avalonia.Styling;
 using Cotton.Sync.App.Preferences;
 
-namespace Cotton.Sync.Desktop.Platform;
-
-internal sealed class AvaloniaDesktopThemeService : IDesktopThemeService
+namespace Cotton.Sync.Desktop.Platform
 {
-    public void Apply(AppThemeMode themeMode)
+
+    internal sealed class AvaloniaDesktopThemeService : IDesktopThemeService
     {
-        Application? application = Application.Current;
-        if (application is null)
+        public void Apply(AppThemeMode themeMode)
         {
-            return;
+            Application? application = Application.Current;
+            if (application is null)
+            {
+                return;
+            }
+
+            application.RequestedThemeVariant = ToThemeVariant(themeMode);
         }
 
-        application.RequestedThemeVariant = ToThemeVariant(themeMode);
-    }
-
-    internal static ThemeVariant ToThemeVariant(AppThemeMode themeMode)
-    {
-        return themeMode switch
+        internal static ThemeVariant ToThemeVariant(AppThemeMode themeMode)
         {
-            AppThemeMode.System => ThemeVariant.Default,
-            AppThemeMode.Light => ThemeVariant.Light,
-            AppThemeMode.Dark => ThemeVariant.Dark,
-            _ => throw new ArgumentOutOfRangeException(nameof(themeMode), themeMode, "Unsupported desktop theme mode."),
-        };
+            return themeMode switch
+            {
+                AppThemeMode.System => ThemeVariant.Default,
+                AppThemeMode.Light => ThemeVariant.Light,
+                AppThemeMode.Dark => ThemeVariant.Dark,
+                _ => throw new ArgumentOutOfRangeException(nameof(themeMode), themeMode, "Unsupported desktop theme mode."),
+            };
+        }
     }
 }

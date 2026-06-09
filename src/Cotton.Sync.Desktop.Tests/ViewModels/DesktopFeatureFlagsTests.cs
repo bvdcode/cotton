@@ -3,30 +3,32 @@
 
 using Cotton.Sync.Desktop.ViewModels;
 
-namespace Cotton.Sync.Desktop.Tests.ViewModels;
-
-public sealed class DesktopFeatureFlagsTests
+namespace Cotton.Sync.Desktop.Tests.ViewModels
 {
-    [TestCase("1")]
-    [TestCase("true")]
-    [TestCase("TRUE")]
-    [TestCase("yes")]
-    public void FromEnvironment_EnablesFutureSyncModesForTruthyValues(string value)
+
+    public sealed class DesktopFeatureFlagsTests
     {
-        DesktopFeatureFlags flags = DesktopFeatureFlags.FromEnvironment(_ => value);
+        [TestCase("1")]
+        [TestCase("true")]
+        [TestCase("TRUE")]
+        [TestCase("yes")]
+        public void FromEnvironment_EnablesFutureSyncModesForTruthyValues(string value)
+        {
+            DesktopFeatureFlags flags = DesktopFeatureFlags.FromEnvironment(_ => value);
 
-        Assert.That(flags.ShowFutureSyncModes, Is.True);
-    }
+            Assert.That(flags.ShowFutureSyncModes, Is.True);
+        }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("0")]
-    [TestCase("false")]
-    [TestCase("no")]
-    public void FromEnvironment_DisablesFutureSyncModesForOtherValues(string? value)
-    {
-        DesktopFeatureFlags flags = DesktopFeatureFlags.FromEnvironment(_ => value);
+        [TestCase(null)]
+        [TestCase("")]
+        [TestCase("0")]
+        [TestCase("false")]
+        [TestCase("no")]
+        public void FromEnvironment_DisablesFutureSyncModesForOtherValues(string? value)
+        {
+            DesktopFeatureFlags flags = DesktopFeatureFlags.FromEnvironment(_ => value);
 
-        Assert.That(flags.ShowFutureSyncModes, Is.False);
+            Assert.That(flags.ShowFutureSyncModes, Is.False);
+        }
     }
 }

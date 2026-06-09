@@ -3,15 +3,17 @@
 
 using Cotton.Nodes;
 
-namespace Cotton.Sync.Remote;
-
-/// <summary>
-/// Resolves or creates a remote folder path for synchronization.
-/// </summary>
-public interface IRemoteRootResolver
+namespace Cotton.Sync.Remote
 {
+
     /// <summary>
-    /// Resolves the account root or creates missing folders along the specified path.
+    /// Resolves or creates a remote folder path for synchronization.
     /// </summary>
-    Task<NodeDto> EnsureAsync(string? remotePath = null, CancellationToken cancellationToken = default);
+    public interface IRemoteRootResolver
+    {
+        /// <summary>
+        /// Resolves the account root or creates missing folders along the specified path.
+        /// </summary>
+        Task<NodeDto> EnsureAsync(string? remotePath = null, CancellationToken cancellationToken = default);
+    }
 }

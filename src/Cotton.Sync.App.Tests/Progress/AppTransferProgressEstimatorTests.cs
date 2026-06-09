@@ -3,389 +3,391 @@
 
 using Cotton.Sync.App.Progress;
 
-namespace Cotton.Sync.App.Tests.Progress;
-
-public sealed class AppTransferProgressEstimatorTests
+namespace Cotton.Sync.App.Tests.Progress
 {
-    [Test]
-    public void AddSample_CalculatesRollingSpeedAndRemainingTime()
+
+    public sealed class AppTransferProgressEstimatorTests
     {
-        var estimator = new AppTransferProgressEstimator();
-        DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
-
-        AppTransferProgressEstimate first = estimator.AddSample(
-            SyncTransferDirection.Upload,
-            "Reports/file.bin",
-            transferredBytes: 0,
-            totalBytes: 10_000,
-            isCompleted: false,
-            startedAtUtc);
-        AppTransferProgressEstimate second = estimator.AddSample(
-            SyncTransferDirection.Upload,
-            "Reports/file.bin",
-            transferredBytes: 2_000,
-            totalBytes: 10_000,
-            isCompleted: false,
-            startedAtUtc.AddSeconds(2));
-
-        Assert.Multiple(() =>
+        [Test]
+        public void AddSample_CalculatesRollingSpeedAndRemainingTime()
         {
-            Assert.That(first.SpeedBytesPerSecond, Is.Null);
-            Assert.That(first.EstimatedTimeRemaining, Is.Null);
-            Assert.That(second.SpeedBytesPerSecond, Is.EqualTo(1_000).Within(0.01));
-            Assert.That(second.EstimatedTimeRemaining, Is.EqualTo(TimeSpan.FromSeconds(8)));
-        });
-    }
+            var estimator = new AppTransferProgressEstimator();
+            DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
 
-    [Test]
-    public void AddSample_UsesTenSecondRollingWindowInsteadOfWholeTransferDuration()
-    {
-        var estimator = new AppTransferProgressEstimator();
-        DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
+            AppTransferProgressEstimate first = estimator.AddSample(
+                SyncTransferDirection.Upload,
+                "Reports/file.bin",
+                transferredBytes: 0,
+                totalBytes: 10_000,
+                isCompleted: false,
+                startedAtUtc);
+            AppTransferProgressEstimate second = estimator.AddSample(
+                SyncTransferDirection.Upload,
+                "Reports/file.bin",
+                transferredBytes: 2_000,
+                totalBytes: 10_000,
+                isCompleted: false,
+                startedAtUtc.AddSeconds(2));
 
-        _ = estimator.AddSample(
-            SyncTransferDirection.Download,
-            "Reports/file.bin",
-            transferredBytes: 0,
-            totalBytes: 100_000,
-            isCompleted: false,
-            startedAtUtc);
-        _ = estimator.AddSample(
-            SyncTransferDirection.Download,
-            "Reports/file.bin",
-            transferredBytes: 1_000,
-            totalBytes: 100_000,
-            isCompleted: false,
-            startedAtUtc.AddSeconds(11));
-        AppTransferProgressEstimate latest = estimator.AddSample(
-            SyncTransferDirection.Download,
-            "Reports/file.bin",
-            transferredBytes: 7_000,
-            totalBytes: 100_000,
-            isCompleted: false,
-            startedAtUtc.AddSeconds(13));
+            Assert.Multiple(() =>
+            {
+                Assert.That(first.SpeedBytesPerSecond, Is.Null);
+                Assert.That(first.EstimatedTimeRemaining, Is.Null);
+                Assert.That(second.SpeedBytesPerSecond, Is.EqualTo(1_000).Within(0.01));
+                Assert.That(second.EstimatedTimeRemaining, Is.EqualTo(TimeSpan.FromSeconds(8)));
+            });
+        }
 
-        Assert.Multiple(() =>
+        [Test]
+        public void AddSample_UsesTenSecondRollingWindowInsteadOfWholeTransferDuration()
         {
-            Assert.That(latest.SpeedBytesPerSecond, Is.EqualTo(3_000).Within(0.01));
-            Assert.That(latest.EstimatedTimeRemaining, Is.EqualTo(TimeSpan.FromSeconds(31)));
-        });
-    }
+            var estimator = new AppTransferProgressEstimator();
+            DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
 
-    [Test]
-    public void AddSample_DoesNotAverageRepeatedIdleZeroSamplesIntoSpeed()
-    {
-        var estimator = new AppTransferProgressEstimator();
-        DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
+            _ = estimator.AddSample(
+                SyncTransferDirection.Download,
+                "Reports/file.bin",
+                transferredBytes: 0,
+                totalBytes: 100_000,
+                isCompleted: false,
+                startedAtUtc);
+            _ = estimator.AddSample(
+                SyncTransferDirection.Download,
+                "Reports/file.bin",
+                transferredBytes: 1_000,
+                totalBytes: 100_000,
+                isCompleted: false,
+                startedAtUtc.AddSeconds(11));
+            AppTransferProgressEstimate latest = estimator.AddSample(
+                SyncTransferDirection.Download,
+                "Reports/file.bin",
+                transferredBytes: 7_000,
+                totalBytes: 100_000,
+                isCompleted: false,
+                startedAtUtc.AddSeconds(13));
 
-        _ = estimator.AddSample(
-            SyncTransferDirection.Download,
-            "Videos/file.bin",
-            transferredBytes: 0,
-            totalBytes: 20_000,
-            isCompleted: false,
-            startedAtUtc);
-        _ = estimator.AddSample(
-            SyncTransferDirection.Download,
-            "Videos/file.bin",
-            transferredBytes: 0,
-            totalBytes: 20_000,
-            isCompleted: false,
-            startedAtUtc.AddSeconds(10));
-        AppTransferProgressEstimate estimate = estimator.AddSample(
-            SyncTransferDirection.Download,
-            "Videos/file.bin",
-            transferredBytes: 10_000,
-            totalBytes: 20_000,
-            isCompleted: false,
-            startedAtUtc.AddSeconds(11));
+            Assert.Multiple(() =>
+            {
+                Assert.That(latest.SpeedBytesPerSecond, Is.EqualTo(3_000).Within(0.01));
+                Assert.That(latest.EstimatedTimeRemaining, Is.EqualTo(TimeSpan.FromSeconds(31)));
+            });
+        }
 
-        Assert.Multiple(() =>
+        [Test]
+        public void AddSample_DoesNotAverageRepeatedIdleZeroSamplesIntoSpeed()
         {
-            Assert.That(estimate.SpeedBytesPerSecond, Is.EqualTo(10_000).Within(0.01));
-            Assert.That(estimate.EstimatedTimeRemaining, Is.EqualTo(TimeSpan.FromSeconds(1)));
-        });
-    }
+            var estimator = new AppTransferProgressEstimator();
+            DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
 
-    [Test]
-    public void AddSample_UsesFirstProgressAfterStaleZeroAsBaseline()
-    {
-        var estimator = new AppTransferProgressEstimator();
-        DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
+            _ = estimator.AddSample(
+                SyncTransferDirection.Download,
+                "Videos/file.bin",
+                transferredBytes: 0,
+                totalBytes: 20_000,
+                isCompleted: false,
+                startedAtUtc);
+            _ = estimator.AddSample(
+                SyncTransferDirection.Download,
+                "Videos/file.bin",
+                transferredBytes: 0,
+                totalBytes: 20_000,
+                isCompleted: false,
+                startedAtUtc.AddSeconds(10));
+            AppTransferProgressEstimate estimate = estimator.AddSample(
+                SyncTransferDirection.Download,
+                "Videos/file.bin",
+                transferredBytes: 10_000,
+                totalBytes: 20_000,
+                isCompleted: false,
+                startedAtUtc.AddSeconds(11));
 
-        _ = estimator.AddSample(
-            SyncTransferDirection.Download,
-            "Videos/file.bin",
-            transferredBytes: 0,
-            totalBytes: 20_000,
-            isCompleted: false,
-            startedAtUtc);
-        AppTransferProgressEstimate firstProgress = estimator.AddSample(
-            SyncTransferDirection.Download,
-            "Videos/file.bin",
-            transferredBytes: 10_000,
-            totalBytes: 20_000,
-            isCompleted: false,
-            startedAtUtc.AddSeconds(10));
-        AppTransferProgressEstimate secondProgress = estimator.AddSample(
-            SyncTransferDirection.Download,
-            "Videos/file.bin",
-            transferredBytes: 15_000,
-            totalBytes: 20_000,
-            isCompleted: false,
-            startedAtUtc.AddSeconds(11));
+            Assert.Multiple(() =>
+            {
+                Assert.That(estimate.SpeedBytesPerSecond, Is.EqualTo(10_000).Within(0.01));
+                Assert.That(estimate.EstimatedTimeRemaining, Is.EqualTo(TimeSpan.FromSeconds(1)));
+            });
+        }
 
-        Assert.Multiple(() =>
+        [Test]
+        public void AddSample_UsesFirstProgressAfterStaleZeroAsBaseline()
         {
-            Assert.That(firstProgress.SpeedBytesPerSecond, Is.Null);
-            Assert.That(firstProgress.EstimatedTimeRemaining, Is.Null);
-            Assert.That(secondProgress.SpeedBytesPerSecond, Is.EqualTo(5_000).Within(0.01));
-            Assert.That(secondProgress.EstimatedTimeRemaining, Is.EqualTo(TimeSpan.FromSeconds(1)));
-        });
-    }
+            var estimator = new AppTransferProgressEstimator();
+            DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
 
-    [Test]
-    public void AddSample_WaitsForMeaningfulLargeFileProgressBeforeEstimating()
-    {
-        var estimator = new AppTransferProgressEstimator();
-        DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
-        const long totalBytes = 10L * 1024 * 1024 * 1024;
+            _ = estimator.AddSample(
+                SyncTransferDirection.Download,
+                "Videos/file.bin",
+                transferredBytes: 0,
+                totalBytes: 20_000,
+                isCompleted: false,
+                startedAtUtc);
+            AppTransferProgressEstimate firstProgress = estimator.AddSample(
+                SyncTransferDirection.Download,
+                "Videos/file.bin",
+                transferredBytes: 10_000,
+                totalBytes: 20_000,
+                isCompleted: false,
+                startedAtUtc.AddSeconds(10));
+            AppTransferProgressEstimate secondProgress = estimator.AddSample(
+                SyncTransferDirection.Download,
+                "Videos/file.bin",
+                transferredBytes: 15_000,
+                totalBytes: 20_000,
+                isCompleted: false,
+                startedAtUtc.AddSeconds(11));
 
-        _ = estimator.AddSample(
-            SyncTransferDirection.Download,
-            "Videos/large.bin",
-            transferredBytes: 0,
-            totalBytes,
-            isCompleted: false,
-            startedAtUtc);
-        AppTransferProgressEstimate tinyFirstDelta = estimator.AddSample(
-            SyncTransferDirection.Download,
-            "Videos/large.bin",
-            transferredBytes: 8 * 1024,
-            totalBytes,
-            isCompleted: false,
-            startedAtUtc.AddSeconds(1));
-        AppTransferProgressEstimate meaningfulDelta = estimator.AddSample(
-            SyncTransferDirection.Download,
-            "Videos/large.bin",
-            transferredBytes: 2L * 1024 * 1024,
-            totalBytes,
-            isCompleted: false,
-            startedAtUtc.AddSeconds(2));
+            Assert.Multiple(() =>
+            {
+                Assert.That(firstProgress.SpeedBytesPerSecond, Is.Null);
+                Assert.That(firstProgress.EstimatedTimeRemaining, Is.Null);
+                Assert.That(secondProgress.SpeedBytesPerSecond, Is.EqualTo(5_000).Within(0.01));
+                Assert.That(secondProgress.EstimatedTimeRemaining, Is.EqualTo(TimeSpan.FromSeconds(1)));
+            });
+        }
 
-        Assert.Multiple(() =>
+        [Test]
+        public void AddSample_WaitsForMeaningfulLargeFileProgressBeforeEstimating()
         {
-            Assert.That(tinyFirstDelta.SpeedBytesPerSecond, Is.Null);
-            Assert.That(tinyFirstDelta.EstimatedTimeRemaining, Is.Null);
-            Assert.That(meaningfulDelta.SpeedBytesPerSecond, Is.EqualTo(1024 * 1024).Within(1));
-            Assert.That(meaningfulDelta.EstimatedTimeRemaining, Is.EqualTo(TimeSpan.FromSeconds(10238)));
-        });
-    }
+            var estimator = new AppTransferProgressEstimator();
+            DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
+            const long totalBytes = 10L * 1024 * 1024 * 1024;
 
-    [Test]
-    public void AddSample_SmoothsRemainingTimePrediction()
-    {
-        var estimator = new AppTransferProgressEstimator();
-        DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
+            _ = estimator.AddSample(
+                SyncTransferDirection.Download,
+                "Videos/large.bin",
+                transferredBytes: 0,
+                totalBytes,
+                isCompleted: false,
+                startedAtUtc);
+            AppTransferProgressEstimate tinyFirstDelta = estimator.AddSample(
+                SyncTransferDirection.Download,
+                "Videos/large.bin",
+                transferredBytes: 8 * 1024,
+                totalBytes,
+                isCompleted: false,
+                startedAtUtc.AddSeconds(1));
+            AppTransferProgressEstimate meaningfulDelta = estimator.AddSample(
+                SyncTransferDirection.Download,
+                "Videos/large.bin",
+                transferredBytes: 2L * 1024 * 1024,
+                totalBytes,
+                isCompleted: false,
+                startedAtUtc.AddSeconds(2));
 
-        _ = estimator.AddSample(
-            SyncTransferDirection.Upload,
-            "Reports/file.bin",
-            transferredBytes: 0,
-            totalBytes: 1_000,
-            isCompleted: false,
-            startedAtUtc);
-        AppTransferProgressEstimate stableEstimate = estimator.AddSample(
-            SyncTransferDirection.Upload,
-            "Reports/file.bin",
-            transferredBytes: 100,
-            totalBytes: 1_000,
-            isCompleted: false,
-            startedAtUtc.AddSeconds(1));
-        AppTransferProgressEstimate smoothedEstimate = estimator.AddSample(
-            SyncTransferDirection.Upload,
-            "Reports/file.bin",
-            transferredBytes: 150,
-            totalBytes: 1_000,
-            isCompleted: false,
-            startedAtUtc.AddSeconds(2));
+            Assert.Multiple(() =>
+            {
+                Assert.That(tinyFirstDelta.SpeedBytesPerSecond, Is.Null);
+                Assert.That(tinyFirstDelta.EstimatedTimeRemaining, Is.Null);
+                Assert.That(meaningfulDelta.SpeedBytesPerSecond, Is.EqualTo(1024 * 1024).Within(1));
+                Assert.That(meaningfulDelta.EstimatedTimeRemaining, Is.EqualTo(TimeSpan.FromSeconds(10238)));
+            });
+        }
 
-        Assert.Multiple(() =>
+        [Test]
+        public void AddSample_SmoothsRemainingTimePrediction()
         {
-            Assert.That(stableEstimate.EstimatedTimeRemaining, Is.EqualTo(TimeSpan.FromSeconds(9)));
-            Assert.That(smoothedEstimate.SpeedBytesPerSecond, Is.EqualTo(97.62).Within(0.01));
-            Assert.That(smoothedEstimate.EstimatedTimeRemaining?.TotalSeconds, Is.GreaterThan(8));
-            Assert.That(smoothedEstimate.EstimatedTimeRemaining?.TotalSeconds, Is.LessThan(8.2));
-        });
-    }
+            var estimator = new AppTransferProgressEstimator();
+            DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
 
-    [Test]
-    public void AddSample_DampensFrequentSpeedChangesWithTenSecondTimeConstant()
-    {
-        var estimator = new AppTransferProgressEstimator();
-        DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
+            _ = estimator.AddSample(
+                SyncTransferDirection.Upload,
+                "Reports/file.bin",
+                transferredBytes: 0,
+                totalBytes: 1_000,
+                isCompleted: false,
+                startedAtUtc);
+            AppTransferProgressEstimate stableEstimate = estimator.AddSample(
+                SyncTransferDirection.Upload,
+                "Reports/file.bin",
+                transferredBytes: 100,
+                totalBytes: 1_000,
+                isCompleted: false,
+                startedAtUtc.AddSeconds(1));
+            AppTransferProgressEstimate smoothedEstimate = estimator.AddSample(
+                SyncTransferDirection.Upload,
+                "Reports/file.bin",
+                transferredBytes: 150,
+                totalBytes: 1_000,
+                isCompleted: false,
+                startedAtUtc.AddSeconds(2));
 
-        _ = estimator.AddSample(
-            SyncTransferDirection.Upload,
-            "Reports/file.bin",
-            transferredBytes: 0,
-            totalBytes: 1_000_000,
-            isCompleted: false,
-            startedAtUtc);
-        AppTransferProgressEstimate stableEstimate = estimator.AddSample(
-            SyncTransferDirection.Upload,
-            "Reports/file.bin",
-            transferredBytes: 100_000,
-            totalBytes: 1_000_000,
-            isCompleted: false,
-            startedAtUtc.AddSeconds(1));
-        AppTransferProgressEstimate frequentEstimate = estimator.AddSample(
-            SyncTransferDirection.Upload,
-            "Reports/file.bin",
-            transferredBytes: 130_000,
-            totalBytes: 1_000_000,
-            isCompleted: false,
-            startedAtUtc.AddMilliseconds(1100));
+            Assert.Multiple(() =>
+            {
+                Assert.That(stableEstimate.EstimatedTimeRemaining, Is.EqualTo(TimeSpan.FromSeconds(9)));
+                Assert.That(smoothedEstimate.SpeedBytesPerSecond, Is.EqualTo(97.62).Within(0.01));
+                Assert.That(smoothedEstimate.EstimatedTimeRemaining?.TotalSeconds, Is.GreaterThan(8));
+                Assert.That(smoothedEstimate.EstimatedTimeRemaining?.TotalSeconds, Is.LessThan(8.2));
+            });
+        }
 
-        Assert.Multiple(() =>
+        [Test]
+        public void AddSample_DampensFrequentSpeedChangesWithTenSecondTimeConstant()
         {
-            Assert.That(stableEstimate.SpeedBytesPerSecond, Is.EqualTo(100_000).Within(0.01));
-            Assert.That(frequentEstimate.SpeedBytesPerSecond, Is.EqualTo(100_181).Within(1));
-        });
-    }
+            var estimator = new AppTransferProgressEstimator();
+            DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
 
-    [Test]
-    public void AddSample_DampensSharpRemainingTimeIncrease()
-    {
-        var estimator = new AppTransferProgressEstimator();
-        DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
+            _ = estimator.AddSample(
+                SyncTransferDirection.Upload,
+                "Reports/file.bin",
+                transferredBytes: 0,
+                totalBytes: 1_000_000,
+                isCompleted: false,
+                startedAtUtc);
+            AppTransferProgressEstimate stableEstimate = estimator.AddSample(
+                SyncTransferDirection.Upload,
+                "Reports/file.bin",
+                transferredBytes: 100_000,
+                totalBytes: 1_000_000,
+                isCompleted: false,
+                startedAtUtc.AddSeconds(1));
+            AppTransferProgressEstimate frequentEstimate = estimator.AddSample(
+                SyncTransferDirection.Upload,
+                "Reports/file.bin",
+                transferredBytes: 130_000,
+                totalBytes: 1_000_000,
+                isCompleted: false,
+                startedAtUtc.AddMilliseconds(1100));
 
-        _ = estimator.AddSample(
-            SyncTransferDirection.Upload,
-            "Reports/file.bin",
-            transferredBytes: 0,
-            totalBytes: 1_000,
-            isCompleted: false,
-            startedAtUtc);
-        AppTransferProgressEstimate stableEstimate = estimator.AddSample(
-            SyncTransferDirection.Upload,
-            "Reports/file.bin",
-            transferredBytes: 100,
-            totalBytes: 1_000,
-            isCompleted: false,
-            startedAtUtc.AddSeconds(1));
-        AppTransferProgressEstimate slowEstimate = estimator.AddSample(
-            SyncTransferDirection.Upload,
-            "Reports/file.bin",
-            transferredBytes: 101,
-            totalBytes: 1_000,
-            isCompleted: false,
-            startedAtUtc.AddSeconds(2));
+            Assert.Multiple(() =>
+            {
+                Assert.That(stableEstimate.SpeedBytesPerSecond, Is.EqualTo(100_000).Within(0.01));
+                Assert.That(frequentEstimate.SpeedBytesPerSecond, Is.EqualTo(100_181).Within(1));
+            });
+        }
 
-        Assert.Multiple(() =>
+        [Test]
+        public void AddSample_DampensSharpRemainingTimeIncrease()
         {
-            Assert.That(stableEstimate.EstimatedTimeRemaining, Is.EqualTo(TimeSpan.FromSeconds(9)));
-            Assert.That(slowEstimate.EstimatedTimeRemaining?.TotalSeconds, Is.GreaterThan(8));
-            Assert.That(slowEstimate.EstimatedTimeRemaining?.TotalSeconds, Is.LessThan(10));
-        });
-    }
+            var estimator = new AppTransferProgressEstimator();
+            DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
 
-    [Test]
-    public void AddSample_DampensSharpRemainingTimeDecrease()
-    {
-        var estimator = new AppTransferProgressEstimator();
-        DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
+            _ = estimator.AddSample(
+                SyncTransferDirection.Upload,
+                "Reports/file.bin",
+                transferredBytes: 0,
+                totalBytes: 1_000,
+                isCompleted: false,
+                startedAtUtc);
+            AppTransferProgressEstimate stableEstimate = estimator.AddSample(
+                SyncTransferDirection.Upload,
+                "Reports/file.bin",
+                transferredBytes: 100,
+                totalBytes: 1_000,
+                isCompleted: false,
+                startedAtUtc.AddSeconds(1));
+            AppTransferProgressEstimate slowEstimate = estimator.AddSample(
+                SyncTransferDirection.Upload,
+                "Reports/file.bin",
+                transferredBytes: 101,
+                totalBytes: 1_000,
+                isCompleted: false,
+                startedAtUtc.AddSeconds(2));
 
-        _ = estimator.AddSample(
-            SyncTransferDirection.Upload,
-            "Reports/file.bin",
-            transferredBytes: 0,
-            totalBytes: 1_000,
-            isCompleted: false,
-            startedAtUtc);
-        AppTransferProgressEstimate stableEstimate = estimator.AddSample(
-            SyncTransferDirection.Upload,
-            "Reports/file.bin",
-            transferredBytes: 100,
-            totalBytes: 1_000,
-            isCompleted: false,
-            startedAtUtc.AddSeconds(1));
-        AppTransferProgressEstimate fastEstimate = estimator.AddSample(
-            SyncTransferDirection.Upload,
-            "Reports/file.bin",
-            transferredBytes: 400,
-            totalBytes: 1_000,
-            isCompleted: false,
-            startedAtUtc.AddSeconds(2));
+            Assert.Multiple(() =>
+            {
+                Assert.That(stableEstimate.EstimatedTimeRemaining, Is.EqualTo(TimeSpan.FromSeconds(9)));
+                Assert.That(slowEstimate.EstimatedTimeRemaining?.TotalSeconds, Is.GreaterThan(8));
+                Assert.That(slowEstimate.EstimatedTimeRemaining?.TotalSeconds, Is.LessThan(10));
+            });
+        }
 
-        Assert.Multiple(() =>
+        [Test]
+        public void AddSample_DampensSharpRemainingTimeDecrease()
         {
-            Assert.That(stableEstimate.EstimatedTimeRemaining, Is.EqualTo(TimeSpan.FromSeconds(9)));
-            Assert.That(fastEstimate.EstimatedTimeRemaining?.TotalSeconds, Is.GreaterThan(3));
-            Assert.That(fastEstimate.EstimatedTimeRemaining?.TotalSeconds, Is.LessThan(8));
-        });
-    }
+            var estimator = new AppTransferProgressEstimator();
+            DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
 
-    [Test]
-    public void AddSample_ResetsWhenTransferChanges()
-    {
-        var estimator = new AppTransferProgressEstimator();
-        DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
+            _ = estimator.AddSample(
+                SyncTransferDirection.Upload,
+                "Reports/file.bin",
+                transferredBytes: 0,
+                totalBytes: 1_000,
+                isCompleted: false,
+                startedAtUtc);
+            AppTransferProgressEstimate stableEstimate = estimator.AddSample(
+                SyncTransferDirection.Upload,
+                "Reports/file.bin",
+                transferredBytes: 100,
+                totalBytes: 1_000,
+                isCompleted: false,
+                startedAtUtc.AddSeconds(1));
+            AppTransferProgressEstimate fastEstimate = estimator.AddSample(
+                SyncTransferDirection.Upload,
+                "Reports/file.bin",
+                transferredBytes: 400,
+                totalBytes: 1_000,
+                isCompleted: false,
+                startedAtUtc.AddSeconds(2));
 
-        _ = estimator.AddSample(
-            SyncTransferDirection.Upload,
-            "Reports/first.bin",
-            transferredBytes: 0,
-            totalBytes: 10_000,
-            isCompleted: false,
-            startedAtUtc);
-        _ = estimator.AddSample(
-            SyncTransferDirection.Upload,
-            "Reports/first.bin",
-            transferredBytes: 5_000,
-            totalBytes: 10_000,
-            isCompleted: false,
-            startedAtUtc.AddSeconds(1));
-        AppTransferProgressEstimate nextTransfer = estimator.AddSample(
-            SyncTransferDirection.Upload,
-            "Reports/second.bin",
-            transferredBytes: 2_000,
-            totalBytes: 10_000,
-            isCompleted: false,
-            startedAtUtc.AddSeconds(2));
+            Assert.Multiple(() =>
+            {
+                Assert.That(stableEstimate.EstimatedTimeRemaining, Is.EqualTo(TimeSpan.FromSeconds(9)));
+                Assert.That(fastEstimate.EstimatedTimeRemaining?.TotalSeconds, Is.GreaterThan(3));
+                Assert.That(fastEstimate.EstimatedTimeRemaining?.TotalSeconds, Is.LessThan(8));
+            });
+        }
 
-        Assert.Multiple(() =>
+        [Test]
+        public void AddSample_ResetsWhenTransferChanges()
         {
-            Assert.That(nextTransfer.SpeedBytesPerSecond, Is.Null);
-            Assert.That(nextTransfer.EstimatedTimeRemaining, Is.Null);
-        });
-    }
+            var estimator = new AppTransferProgressEstimator();
+            DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
 
-    [Test]
-    public void AddSample_DoesNotReportSpeedForCompletionSample()
-    {
-        var estimator = new AppTransferProgressEstimator();
-        DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
+            _ = estimator.AddSample(
+                SyncTransferDirection.Upload,
+                "Reports/first.bin",
+                transferredBytes: 0,
+                totalBytes: 10_000,
+                isCompleted: false,
+                startedAtUtc);
+            _ = estimator.AddSample(
+                SyncTransferDirection.Upload,
+                "Reports/first.bin",
+                transferredBytes: 5_000,
+                totalBytes: 10_000,
+                isCompleted: false,
+                startedAtUtc.AddSeconds(1));
+            AppTransferProgressEstimate nextTransfer = estimator.AddSample(
+                SyncTransferDirection.Upload,
+                "Reports/second.bin",
+                transferredBytes: 2_000,
+                totalBytes: 10_000,
+                isCompleted: false,
+                startedAtUtc.AddSeconds(2));
 
-        _ = estimator.AddSample(
-            SyncTransferDirection.Upload,
-            "Reports/file.bin",
-            transferredBytes: 0,
-            totalBytes: 10_000,
-            isCompleted: false,
-            startedAtUtc);
-        AppTransferProgressEstimate completed = estimator.AddSample(
-            SyncTransferDirection.Upload,
-            "Reports/file.bin",
-            transferredBytes: 10_000,
-            totalBytes: 10_000,
-            isCompleted: true,
-            startedAtUtc.AddSeconds(2));
+            Assert.Multiple(() =>
+            {
+                Assert.That(nextTransfer.SpeedBytesPerSecond, Is.Null);
+                Assert.That(nextTransfer.EstimatedTimeRemaining, Is.Null);
+            });
+        }
 
-        Assert.Multiple(() =>
+        [Test]
+        public void AddSample_DoesNotReportSpeedForCompletionSample()
         {
-            Assert.That(completed.SpeedBytesPerSecond, Is.Null);
-            Assert.That(completed.EstimatedTimeRemaining, Is.Null);
-        });
+            var estimator = new AppTransferProgressEstimator();
+            DateTime startedAtUtc = new(2026, 6, 4, 9, 0, 0, DateTimeKind.Utc);
+
+            _ = estimator.AddSample(
+                SyncTransferDirection.Upload,
+                "Reports/file.bin",
+                transferredBytes: 0,
+                totalBytes: 10_000,
+                isCompleted: false,
+                startedAtUtc);
+            AppTransferProgressEstimate completed = estimator.AddSample(
+                SyncTransferDirection.Upload,
+                "Reports/file.bin",
+                transferredBytes: 10_000,
+                totalBytes: 10_000,
+                isCompleted: true,
+                startedAtUtc.AddSeconds(2));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(completed.SpeedBytesPerSecond, Is.Null);
+                Assert.That(completed.EstimatedTimeRemaining, Is.Null);
+            });
+        }
     }
 }

@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Sync.Desktop.Auth;
-
-internal interface ITokenPayloadProtector
+namespace Cotton.Sync.Desktop.Auth
 {
-    string Scheme { get; }
 
-    Task<byte[]> ProtectAsync(byte[] plaintext, CancellationToken cancellationToken = default);
+    internal interface ITokenPayloadProtector
+    {
+        string Scheme { get; }
 
-    Task<byte[]> UnprotectAsync(byte[] protectedPayload, CancellationToken cancellationToken = default);
+        Task<byte[]> ProtectAsync(byte[] plaintext, CancellationToken cancellationToken = default);
+
+        Task<byte[]> UnprotectAsync(byte[] protectedPayload, CancellationToken cancellationToken = default);
+    }
 }

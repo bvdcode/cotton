@@ -1,34 +1,36 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Sync.Desktop.Shell;
-
-internal sealed class DesktopWindowLifecyclePolicy
+namespace Cotton.Sync.Desktop.Shell
 {
-    private readonly bool _canHideToTray;
-    private readonly bool _hideAfterSessionRestore;
-    private bool _isQuitRequested;
 
-    public DesktopWindowLifecyclePolicy(bool hideAfterSessionRestore, bool canHideToTray)
+    internal sealed class DesktopWindowLifecyclePolicy
     {
-        _canHideToTray = canHideToTray;
-        _hideAfterSessionRestore = hideAfterSessionRestore && canHideToTray;
-    }
+        private readonly bool _canHideToTray;
+        private readonly bool _hideAfterSessionRestore;
+        private bool _isQuitRequested;
 
-    public bool ShouldHideAfterSessionRestore(bool isDashboardVisible)
-    {
-        return _hideAfterSessionRestore && isDashboardVisible;
-    }
+        public DesktopWindowLifecyclePolicy(bool hideAfterSessionRestore, bool canHideToTray)
+        {
+            _canHideToTray = canHideToTray;
+            _hideAfterSessionRestore = hideAfterSessionRestore && canHideToTray;
+        }
 
-    public DesktopWindowCloseAction ResolveCloseAction()
-    {
-        return _isQuitRequested || !_canHideToTray
-            ? DesktopWindowCloseAction.Close
-            : DesktopWindowCloseAction.HideToTray;
-    }
+        public bool ShouldHideAfterSessionRestore(bool isDashboardVisible)
+        {
+            return _hideAfterSessionRestore && isDashboardVisible;
+        }
 
-    public void RequestQuit()
-    {
-        _isQuitRequested = true;
+        public DesktopWindowCloseAction ResolveCloseAction()
+        {
+            return _isQuitRequested || !_canHideToTray
+                ? DesktopWindowCloseAction.Close
+                : DesktopWindowCloseAction.HideToTray;
+        }
+
+        public void RequestQuit()
+        {
+            _isQuitRequested = true;
+        }
     }
 }

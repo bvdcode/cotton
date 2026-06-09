@@ -7,81 +7,83 @@ using Cotton.Sync.App.Supervision;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Cotton.Sync.App.Auth;
-
-/// <summary>
-/// Coordinates shutdown and local session cleanup when the server revokes the active session.
-/// </summary>
-public sealed class SessionRevocationHandler : ISessionRevocationHandler
+namespace Cotton.Sync.App.Auth
 {
-    private readonly IAuthFlow _authFlow;
-    private readonly ILocalChangeSyncCoordinator _localChanges;
-    private readonly ILogger<SessionRevocationHandler> _logger;
-    private readonly IPeriodicSyncCoordinator _periodicSync;
-    private readonly ISessionRevocationPublisher? _sessionRevocations;
-    private readonly ISyncSupervisor _supervisor;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SessionRevocationHandler" /> class.
+    /// Coordinates shutdown and local session cleanup when the server revokes the active session.
     /// </summary>
-    public SessionRevocationHandler(
-        IAuthFlow authFlow,
-        ILocalChangeSyncCoordinator localChanges,
-        IPeriodicSyncCoordinator periodicSync,
-        ISyncSupervisor supervisor,
-        ISessionRevocationPublisher? sessionRevocations = null,
-        ILogger<SessionRevocationHandler>? logger = null)
+    public sealed class SessionRevocationHandler : ISessionRevocationHandler
     {
-        _authFlow = authFlow ?? throw new ArgumentNullException(nameof(authFlow));
-        _localChanges = localChanges ?? throw new ArgumentNullException(nameof(localChanges));
-        _periodicSync = periodicSync ?? throw new ArgumentNullException(nameof(periodicSync));
-        _supervisor = supervisor ?? throw new ArgumentNullException(nameof(supervisor));
-        _sessionRevocations = sessionRevocations;
-        _logger = logger ?? NullLogger<SessionRevocationHandler>.Instance;
-    }
+        private readonly IAuthFlow _authFlow;
+        private readonly ILocalChangeSyncCoordinator _localChanges;
+        private readonly ILogger<SessionRevocationHandler> _logger;
+        private readonly IPeriodicSyncCoordinator _periodicSync;
+        private readonly ISessionRevocationPublisher? _sessionRevocations;
+        private readonly ISyncSupervisor _supervisor;
 
-    /// <inheritdoc />
-    public async Task HandleSessionRevokedAsync(CancellationToken cancellationToken = default)
-    {
-        _logger.LogWarning("Authentication session was revoked by the server.");
-        await ExecuteStepAsync(
-            "periodic sync coordinator",
-            token => _periodicSync.StopAsync(token),
-            cancellationToken).ConfigureAwait(false);
-        await ExecuteStepAsync(
-            "local change coordinator",
-            token => _localChanges.StopAsync(token),
-            cancellationToken).ConfigureAwait(false);
-        await ExecuteStepAsync(
-            "authentication flow",
-            token => _authFlow.SignOutAsync(token),
-            cancellationToken).ConfigureAwait(false);
-        await ExecuteStepAsync(
-            "sync supervisor",
-            token => _supervisor.StopAsync(token),
-            cancellationToken).ConfigureAwait(false);
-        _sessionRevocations?.Publish(new SessionRevocationEvent(DateTime.UtcNow));
-    }
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SessionRevocationHandler" /> class.
+        /// </summary>
+        public SessionRevocationHandler(
+            IAuthFlow authFlow,
+            ILocalChangeSyncCoordinator localChanges,
+            IPeriodicSyncCoordinator periodicSync,
+            ISyncSupervisor supervisor,
+            ISessionRevocationPublisher? sessionRevocations = null,
+            ILogger<SessionRevocationHandler>? logger = null)
+        {
+            _authFlow = authFlow ?? throw new ArgumentNullException(nameof(authFlow));
+            _localChanges = localChanges ?? throw new ArgumentNullException(nameof(localChanges));
+            _periodicSync = periodicSync ?? throw new ArgumentNullException(nameof(periodicSync));
+            _supervisor = supervisor ?? throw new ArgumentNullException(nameof(supervisor));
+            _sessionRevocations = sessionRevocations;
+            _logger = logger ?? NullLogger<SessionRevocationHandler>.Instance;
+        }
 
-    private async Task ExecuteStepAsync(
-        string stepName,
-        Func<CancellationToken, Task> step,
-        CancellationToken cancellationToken)
-    {
-        try
+        /// <inheritdoc />
+        public async Task HandleSessionRevokedAsync(CancellationToken cancellationToken = default)
         {
-            await step(cancellationToken).ConfigureAwait(false);
+            _logger.LogWarning("Authentication session was revoked by the server.");
+            await ExecuteStepAsync(
+                "periodic sync coordinator",
+                token => _periodicSync.StopAsync(token),
+                cancellationToken).ConfigureAwait(false);
+            await ExecuteStepAsync(
+                "local change coordinator",
+                token => _localChanges.StopAsync(token),
+                cancellationToken).ConfigureAwait(false);
+            await ExecuteStepAsync(
+                "authentication flow",
+                token => _authFlow.SignOutAsync(token),
+                cancellationToken).ConfigureAwait(false);
+            await ExecuteStepAsync(
+                "sync supervisor",
+                token => _supervisor.StopAsync(token),
+                cancellationToken).ConfigureAwait(false);
+            _sessionRevocations?.Publish(new SessionRevocationEvent(DateTime.UtcNow));
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+
+        private async Task ExecuteStepAsync(
+            string stepName,
+            Func<CancellationToken, Task> step,
+            CancellationToken cancellationToken)
         {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(
-                exception,
-                "Failed to complete session revocation step {StepName}.",
-                stepName);
+            try
+            {
+                await step(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Failed to complete session revocation step {StepName}.",
+                    stepName);
+            }
         }
     }
 }

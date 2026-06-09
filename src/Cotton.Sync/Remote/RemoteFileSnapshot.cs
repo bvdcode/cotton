@@ -3,20 +3,22 @@
 
 using Cotton.Files;
 
-namespace Cotton.Sync.Remote;
-
-/// <summary>
-/// Represents one remote file discovered during a remote tree crawl.
-/// </summary>
-public sealed class RemoteFileSnapshot
+namespace Cotton.Sync.Remote
 {
-    /// <summary>
-    /// Gets or sets the normalized relative path.
-    /// </summary>
-    public string RelativePath { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the remote file DTO.
+    /// Represents one remote file discovered during a remote tree crawl.
     /// </summary>
-    public NodeFileManifestDto File { get; set; } = new();
+    public sealed class RemoteFileSnapshot
+    {
+        /// <summary>
+        /// Gets or sets the normalized relative path.
+        /// </summary>
+        public string RelativePath { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Gets or sets the remote file DTO.
+        /// </summary>
+        public NodeFileManifestDto File { get; set; } = new();
+    }
 }

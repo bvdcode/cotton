@@ -3,27 +3,29 @@
 
 using Avalonia.Threading;
 
-namespace Cotton.Sync.Desktop.ViewModels;
-
-internal sealed class AvaloniaDesktopUiDispatcher : IDesktopUiDispatcher
+namespace Cotton.Sync.Desktop.ViewModels
 {
-    public bool CheckAccess()
-    {
-        return Dispatcher.UIThread.CheckAccess();
-    }
 
-    public void Post(Action action)
+    internal sealed class AvaloniaDesktopUiDispatcher : IDesktopUiDispatcher
     {
-        ArgumentNullException.ThrowIfNull(action);
-        Dispatcher.UIThread.Post(action);
-    }
+        public bool CheckAccess()
+        {
+            return Dispatcher.UIThread.CheckAccess();
+        }
 
-    public async Task InvokeAsync(Action action, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(action);
-        await Dispatcher.UIThread.InvokeAsync(
-            action,
-            DispatcherPriority.Normal,
-            cancellationToken);
+        public void Post(Action action)
+        {
+            ArgumentNullException.ThrowIfNull(action);
+            Dispatcher.UIThread.Post(action);
+        }
+
+        public async Task InvokeAsync(Action action, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(action);
+            await Dispatcher.UIThread.InvokeAsync(
+                action,
+                DispatcherPriority.Normal,
+                cancellationToken);
+        }
     }
 }

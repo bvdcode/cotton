@@ -5,30 +5,32 @@ using Cotton.Sync.App.SyncPairs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Cotton.Sync.App.LocalChanges;
-
-/// <summary>
-/// Creates filesystem watchers for local sync roots.
-/// </summary>
-public sealed class FileSystemLocalSyncRootWatcherFactory : ILocalSyncRootWatcherFactory
+namespace Cotton.Sync.App.LocalChanges
 {
-    private readonly ILoggerFactory _loggerFactory;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="FileSystemLocalSyncRootWatcherFactory" /> class.
+    /// Creates filesystem watchers for local sync roots.
     /// </summary>
-    public FileSystemLocalSyncRootWatcherFactory(ILoggerFactory? loggerFactory = null)
+    public sealed class FileSystemLocalSyncRootWatcherFactory : ILocalSyncRootWatcherFactory
     {
-        _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
-    }
+        private readonly ILoggerFactory _loggerFactory;
 
-    /// <inheritdoc />
-    public ILocalSyncRootWatcher Create(SyncPairSettings syncPair)
-    {
-        ArgumentNullException.ThrowIfNull(syncPair);
-        return new FileSystemLocalSyncRootWatcher(
-            syncPair.Id,
-            syncPair.LocalRootPath,
-            _loggerFactory.CreateLogger<FileSystemLocalSyncRootWatcher>());
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FileSystemLocalSyncRootWatcherFactory" /> class.
+        /// </summary>
+        public FileSystemLocalSyncRootWatcherFactory(ILoggerFactory? loggerFactory = null)
+        {
+            _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+        }
+
+        /// <inheritdoc />
+        public ILocalSyncRootWatcher Create(SyncPairSettings syncPair)
+        {
+            ArgumentNullException.ThrowIfNull(syncPair);
+            return new FileSystemLocalSyncRootWatcher(
+                syncPair.Id,
+                syncPair.LocalRootPath,
+                _loggerFactory.CreateLogger<FileSystemLocalSyncRootWatcher>());
+        }
     }
 }

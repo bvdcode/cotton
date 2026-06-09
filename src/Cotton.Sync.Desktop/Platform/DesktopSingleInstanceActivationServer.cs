@@ -4,98 +4,100 @@
 using System.Diagnostics;
 using System.IO.Pipes;
 
-namespace Cotton.Sync.Desktop.Platform;
-
-internal sealed class DesktopSingleInstanceActivationServer : IDisposable
+namespace Cotton.Sync.Desktop.Platform
 {
-    private readonly Action _showWindow;
-    private readonly CancellationTokenSource _shutdown = new();
-    private readonly Task _listenTask;
-    private readonly string _pipeName;
-    private bool _disposed;
 
-    private DesktopSingleInstanceActivationServer(string pipeName, Action showWindow)
+    internal sealed class DesktopSingleInstanceActivationServer : IDisposable
     {
-        _pipeName = pipeName;
-        _showWindow = showWindow;
-        _listenTask = ListenAsync(_shutdown.Token);
-    }
+        private readonly Action _showWindow;
+        private readonly CancellationTokenSource _shutdown = new();
+        private readonly Task _listenTask;
+        private readonly string _pipeName;
+        private bool _disposed;
 
-    public static DesktopSingleInstanceActivationServer Start(string pipeName, Action showWindow)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(pipeName);
-        ArgumentNullException.ThrowIfNull(showWindow);
-        return new DesktopSingleInstanceActivationServer(pipeName, showWindow);
-    }
-
-    public void Dispose()
-    {
-        if (_disposed)
+        private DesktopSingleInstanceActivationServer(string pipeName, Action showWindow)
         {
-            return;
+            _pipeName = pipeName;
+            _showWindow = showWindow;
+            _listenTask = ListenAsync(_shutdown.Token);
         }
 
-        _shutdown.Cancel();
-        try
+        public static DesktopSingleInstanceActivationServer Start(string pipeName, Action showWindow)
         {
-            _listenTask.GetAwaiter().GetResult();
+            ArgumentException.ThrowIfNullOrWhiteSpace(pipeName);
+            ArgumentNullException.ThrowIfNull(showWindow);
+            return new DesktopSingleInstanceActivationServer(pipeName, showWindow);
         }
-        catch (OperationCanceledException)
-        {
-            Trace.TraceInformation("Cotton Sync single-instance activation listener stopped.");
-        }
-        finally
-        {
-            _shutdown.Dispose();
-            _disposed = true;
-        }
-    }
 
-    private async Task ListenAsync(CancellationToken cancellationToken)
-    {
-        while (!cancellationToken.IsCancellationRequested)
+        public void Dispose()
         {
-            try
-            {
-                await using NamedPipeServerStream pipe = CreatePipe();
-                await pipe.WaitForConnectionAsync(cancellationToken).ConfigureAwait(false);
-                using var reader = new StreamReader(pipe);
-                string? command = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
-                if (DesktopSingleInstanceActivation.IsShowCommand(command))
-                {
-                    ShowWindow();
-                }
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            if (_disposed)
             {
                 return;
             }
-            catch (Exception exception) when (exception is IOException or ObjectDisposedException)
+
+            _shutdown.Cancel();
+            try
             {
-                Trace.TraceWarning("Cotton Sync single-instance activation listener failed: {0}", exception.Message);
+                _listenTask.GetAwaiter().GetResult();
+            }
+            catch (OperationCanceledException)
+            {
+                Trace.TraceInformation("Cotton Sync single-instance activation listener stopped.");
+            }
+            finally
+            {
+                _shutdown.Dispose();
+                _disposed = true;
             }
         }
-    }
 
-    private NamedPipeServerStream CreatePipe()
-    {
-        return new NamedPipeServerStream(
-            _pipeName,
-            PipeDirection.In,
-            maxNumberOfServerInstances: 1,
-            PipeTransmissionMode.Byte,
-            PipeOptions.Asynchronous);
-    }
-
-    private void ShowWindow()
-    {
-        try
+        private async Task ListenAsync(CancellationToken cancellationToken)
         {
-            _showWindow();
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                try
+                {
+                    await using NamedPipeServerStream pipe = CreatePipe();
+                    await pipe.WaitForConnectionAsync(cancellationToken).ConfigureAwait(false);
+                    using var reader = new StreamReader(pipe);
+                    string? command = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
+                    if (DesktopSingleInstanceActivation.IsShowCommand(command))
+                    {
+                        ShowWindow();
+                    }
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+                catch (Exception exception) when (exception is IOException or ObjectDisposedException)
+                {
+                    Trace.TraceWarning("Cotton Sync single-instance activation listener failed: {0}", exception.Message);
+                }
+            }
         }
-        catch (Exception exception)
+
+        private NamedPipeServerStream CreatePipe()
         {
-            Trace.TraceError("Cotton Sync single-instance activation action failed: {0}", exception);
+            return new NamedPipeServerStream(
+                _pipeName,
+                PipeDirection.In,
+                maxNumberOfServerInstances: 1,
+                PipeTransmissionMode.Byte,
+                PipeOptions.Asynchronous);
+        }
+
+        private void ShowWindow()
+        {
+            try
+            {
+                _showWindow();
+            }
+            catch (Exception exception)
+            {
+                Trace.TraceError("Cotton Sync single-instance activation action failed: {0}", exception);
+            }
         }
     }
 }

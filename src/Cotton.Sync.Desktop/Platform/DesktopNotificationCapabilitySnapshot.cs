@@ -1,45 +1,47 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Sync.Desktop.Platform;
-
-internal sealed record DesktopNotificationCapabilitySnapshot(
-    DesktopNotificationPlatform Platform,
-    string AdapterName,
-    bool IsSupported,
-    string AppName,
-    string? AppUserModelId,
-    string? ExecutablePath,
-    string? IconPath,
-    string? PlatformDetails = null)
+namespace Cotton.Sync.Desktop.Platform
 {
-    public string Details
+
+    internal sealed record DesktopNotificationCapabilitySnapshot(
+        DesktopNotificationPlatform Platform,
+        string AdapterName,
+        bool IsSupported,
+        string AppName,
+        string? AppUserModelId,
+        string? ExecutablePath,
+        string? IconPath,
+        string? PlatformDetails = null)
     {
-        get
+        public string Details
         {
-            List<string> parts =
-            [
-                IsSupported ? "Supported" : "Not available on this platform",
-                "adapter: " + AdapterName,
-                "app name: " + AppName
-            ];
-            if (!string.IsNullOrWhiteSpace(AppUserModelId))
+            get
             {
-                parts.Add("AppUserModelID: " + AppUserModelId);
-            }
+                List<string> parts =
+                [
+                    IsSupported ? "Supported" : "Not available on this platform",
+                    "adapter: " + AdapterName,
+                    "app name: " + AppName
+                ];
+                if (!string.IsNullOrWhiteSpace(AppUserModelId))
+                {
+                    parts.Add("AppUserModelID: " + AppUserModelId);
+                }
 
-            if (!string.IsNullOrWhiteSpace(ExecutablePath))
-            {
-                parts.Add("executable: " + ExecutablePath);
-            }
+                if (!string.IsNullOrWhiteSpace(ExecutablePath))
+                {
+                    parts.Add("executable: " + ExecutablePath);
+                }
 
-            parts.Add(IconPath is null ? "icon: missing" : "icon: " + IconPath);
-            if (!string.IsNullOrWhiteSpace(PlatformDetails))
-            {
-                parts.Add(PlatformDetails);
-            }
+                parts.Add(IconPath is null ? "icon: missing" : "icon: " + IconPath);
+                if (!string.IsNullOrWhiteSpace(PlatformDetails))
+                {
+                    parts.Add(PlatformDetails);
+                }
 
-            return string.Join("; ", parts);
+                return string.Join("; ", parts);
+            }
         }
     }
 }

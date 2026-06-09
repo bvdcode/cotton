@@ -7,103 +7,105 @@ using System.Text.Json;
 using Cotton.Auth;
 using Cotton.Nodes;
 
-namespace Cotton.Sync.Cli.Tests.TestSupport;
-
-internal sealed class SyncOnceDirectoryServerHandler : HttpMessageHandler
+namespace Cotton.Sync.Cli.Tests.TestSupport
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private readonly string _expectedRelativePath;
-    private readonly Guid _remoteRootId;
 
-    public SyncOnceDirectoryServerHandler(Guid remoteRootId, string expectedRelativePath)
+    internal sealed class SyncOnceDirectoryServerHandler : HttpMessageHandler
     {
-        _remoteRootId = remoteRootId;
-        _expectedRelativePath = expectedRelativePath;
-    }
+        private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+        private readonly string _expectedRelativePath;
+        private readonly Guid _remoteRootId;
 
-    public Guid CreatedDirectoryId { get; } = Guid.Parse("55555555-5555-5555-5555-555555555555");
-
-    public List<HttpRequestSnapshot> Requests { get; } = [];
-
-    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-    {
-        byte[] rawBody = request.Content is null
-            ? []
-            : await request.Content.ReadAsByteArrayAsync(cancellationToken);
-        var snapshot = new HttpRequestSnapshot(
-            request.Method,
-            request.RequestUri?.PathAndQuery ?? string.Empty,
-            request.Headers.Authorization?.Parameter,
-            Encoding.UTF8.GetString(rawBody),
-            rawBody);
-        Requests.Add(snapshot);
-        return CreateResponse(snapshot);
-    }
-
-    private HttpResponseMessage CreateResponse(HttpRequestSnapshot request)
-    {
-        if (request.Method == HttpMethod.Post && request.PathAndQuery == "/api/v1/auth/login")
+        public SyncOnceDirectoryServerHandler(Guid remoteRootId, string expectedRelativePath)
         {
-            return Json(HttpStatusCode.OK, new TokenPairDto
+            _remoteRootId = remoteRootId;
+            _expectedRelativePath = expectedRelativePath;
+        }
+
+        public Guid CreatedDirectoryId { get; } = Guid.Parse("55555555-5555-5555-5555-555555555555");
+
+        public List<HttpRequestSnapshot> Requests { get; } = [];
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            byte[] rawBody = request.Content is null
+                ? []
+                : await request.Content.ReadAsByteArrayAsync(cancellationToken);
+            var snapshot = new HttpRequestSnapshot(
+                request.Method,
+                request.RequestUri?.PathAndQuery ?? string.Empty,
+                request.Headers.Authorization?.Parameter,
+                Encoding.UTF8.GetString(rawBody),
+                rawBody);
+            Requests.Add(snapshot);
+            return CreateResponse(snapshot);
+        }
+
+        private HttpResponseMessage CreateResponse(HttpRequestSnapshot request)
+        {
+            if (request.Method == HttpMethod.Post && request.PathAndQuery == "/api/v1/auth/login")
             {
-                AccessToken = "access-token",
-                RefreshToken = "refresh-token",
-            });
-        }
+                return Json(HttpStatusCode.OK, new TokenPairDto
+                {
+                    AccessToken = "access-token",
+                    RefreshToken = "refresh-token",
+                });
+            }
 
-        if (request.Method == HttpMethod.Post && request.PathAndQuery == "/api/v1/auth/logout?refreshToken=refresh-token")
-        {
-            return new HttpResponseMessage(HttpStatusCode.NoContent);
-        }
-
-        Assert.That(request.AuthorizationParameter, Is.EqualTo("access-token"));
-
-        if (request.Method == HttpMethod.Get && request.PathAndQuery == "/api/v1/layouts/nodes/" + _remoteRootId.ToString("D"))
-        {
-            return Json(HttpStatusCode.OK, new NodeDto
+            if (request.Method == HttpMethod.Post && request.PathAndQuery == "/api/v1/auth/logout?refreshToken=refresh-token")
             {
-                Id = _remoteRootId,
-                LayoutId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                ParentId = null,
-                Name = "root",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-            });
-        }
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            }
 
-        if (request.Method == HttpMethod.Get
-            && request.PathAndQuery == "/api/v1/layouts/nodes/" + _remoteRootId.ToString("D") + "/children?page=1&pageSize=100&depth=0")
-        {
-            return Json(HttpStatusCode.OK, new NodeContentDto
+            Assert.That(request.AuthorizationParameter, Is.EqualTo("access-token"));
+
+            if (request.Method == HttpMethod.Get && request.PathAndQuery == "/api/v1/layouts/nodes/" + _remoteRootId.ToString("D"))
             {
-                Id = _remoteRootId,
-                TotalCount = 0,
-            });
-        }
+                return Json(HttpStatusCode.OK, new NodeDto
+                {
+                    Id = _remoteRootId,
+                    LayoutId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                    ParentId = null,
+                    Name = "root",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                });
+            }
 
-        if (request.Method == HttpMethod.Put && request.PathAndQuery == "/api/v1/layouts/nodes")
-        {
-            Assert.That(request.Body, Does.Contain("\"parentId\":\"" + _remoteRootId.ToString("D") + "\""));
-            Assert.That(request.Body, Does.Contain("\"name\":\"" + Path.GetFileName(_expectedRelativePath) + "\""));
-            return Json(HttpStatusCode.OK, new NodeDto
+            if (request.Method == HttpMethod.Get
+                && request.PathAndQuery == "/api/v1/layouts/nodes/" + _remoteRootId.ToString("D") + "/children?page=1&pageSize=100&depth=0")
             {
-                Id = CreatedDirectoryId,
-                LayoutId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                ParentId = _remoteRootId,
-                Name = Path.GetFileName(_expectedRelativePath),
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-            });
+                return Json(HttpStatusCode.OK, new NodeContentDto
+                {
+                    Id = _remoteRootId,
+                    TotalCount = 0,
+                });
+            }
+
+            if (request.Method == HttpMethod.Put && request.PathAndQuery == "/api/v1/layouts/nodes")
+            {
+                Assert.That(request.Body, Does.Contain("\"parentId\":\"" + _remoteRootId.ToString("D") + "\""));
+                Assert.That(request.Body, Does.Contain("\"name\":\"" + Path.GetFileName(_expectedRelativePath) + "\""));
+                return Json(HttpStatusCode.OK, new NodeDto
+                {
+                    Id = CreatedDirectoryId,
+                    LayoutId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                    ParentId = _remoteRootId,
+                    Name = Path.GetFileName(_expectedRelativePath),
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                });
+            }
+
+            throw new InvalidOperationException("Unexpected request: " + request.Method + " " + request.PathAndQuery);
         }
 
-        throw new InvalidOperationException("Unexpected request: " + request.Method + " " + request.PathAndQuery);
-    }
-
-    private static HttpResponseMessage Json(HttpStatusCode statusCode, object payload)
-    {
-        return new HttpResponseMessage(statusCode)
+        private static HttpResponseMessage Json(HttpStatusCode statusCode, object payload)
         {
-            Content = new StringContent(JsonSerializer.Serialize(payload, JsonOptions), Encoding.UTF8, "application/json"),
-        };
+            return new HttpResponseMessage(statusCode)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(payload, JsonOptions), Encoding.UTF8, "application/json"),
+            };
+        }
     }
 }

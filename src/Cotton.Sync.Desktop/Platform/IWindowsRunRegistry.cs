@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Sync.Desktop.Platform;
-
-internal interface IWindowsRunRegistry
+namespace Cotton.Sync.Desktop.Platform
 {
-    string? GetValue(string valueName);
 
-    void SetValue(string valueName, string value);
+    internal interface IWindowsRunRegistry
+    {
+        string? GetValue(string valueName);
 
-    void DeleteValue(string valueName);
+        void SetValue(string valueName, string value);
+
+        void DeleteValue(string valueName);
+    }
 }

@@ -3,9 +3,11 @@
 
 using Cotton.Sync.App.Preferences;
 
-namespace Cotton.Sync.Desktop.Platform;
-
-internal interface IDesktopThemeService
+namespace Cotton.Sync.Desktop.Platform
 {
-    void Apply(AppThemeMode themeMode);
+
+    internal interface IDesktopThemeService
+    {
+        void Apply(AppThemeMode themeMode);
+    }
 }

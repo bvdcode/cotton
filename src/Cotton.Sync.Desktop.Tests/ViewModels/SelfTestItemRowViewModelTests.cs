@@ -3,27 +3,29 @@
 
 using Cotton.Sync.Desktop.ViewModels;
 
-namespace Cotton.Sync.Desktop.Tests.ViewModels;
-
-public sealed class SelfTestItemRowViewModelTests
+namespace Cotton.Sync.Desktop.Tests.ViewModels
 {
-    [Test]
-    public void ResultState_TracksPassAndFailure()
+
+    public sealed class SelfTestItemRowViewModelTests
     {
-        var row = new SelfTestItemRowViewModel();
-
-        Assert.Multiple(() =>
+        [Test]
+        public void ResultState_TracksPassAndFailure()
         {
-            Assert.That(row.ResultText, Is.EqualTo("Issue"));
-            Assert.That(row.IsFailed, Is.True);
-        });
+            var row = new SelfTestItemRowViewModel();
 
-        row.Passed = true;
+            Assert.Multiple(() =>
+            {
+                Assert.That(row.ResultText, Is.EqualTo("Issue"));
+                Assert.That(row.IsFailed, Is.True);
+            });
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(row.ResultText, Is.EqualTo("OK"));
-            Assert.That(row.IsFailed, Is.False);
-        });
+            row.Passed = true;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(row.ResultText, Is.EqualTo("OK"));
+                Assert.That(row.IsFailed, Is.False);
+            });
+        }
     }
 }

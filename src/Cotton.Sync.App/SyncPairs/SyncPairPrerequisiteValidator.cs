@@ -1,50 +1,52 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Sync.App.SyncPairs;
-
-/// <summary>
-/// Validates sync-pair prerequisites that require local or remote I/O.
-/// </summary>
-public sealed class SyncPairPrerequisiteValidator : ISyncPairPrerequisiteValidator
+namespace Cotton.Sync.App.SyncPairs
 {
-    private readonly ILocalSyncRootProbe _localRoots;
-    private readonly IRemoteSyncRootProbe _remoteRoots;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SyncPairPrerequisiteValidator" /> class.
+    /// Validates sync-pair prerequisites that require local or remote I/O.
     /// </summary>
-    public SyncPairPrerequisiteValidator(ILocalSyncRootProbe localRoots, IRemoteSyncRootProbe remoteRoots)
+    public sealed class SyncPairPrerequisiteValidator : ISyncPairPrerequisiteValidator
     {
-        _localRoots = localRoots ?? throw new ArgumentNullException(nameof(localRoots));
-        _remoteRoots = remoteRoots ?? throw new ArgumentNullException(nameof(remoteRoots));
-    }
+        private readonly ILocalSyncRootProbe _localRoots;
+        private readonly IRemoteSyncRootProbe _remoteRoots;
 
-    /// <inheritdoc />
-    public async Task<IReadOnlyList<SyncPairValidationError>> ValidateAsync(
-        SyncPairSettings syncPair,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(syncPair);
-        var errors = new List<SyncPairValidationError>();
-        if (!await _localRoots.CanUseAsync(syncPair.LocalRootPath, cancellationToken).ConfigureAwait(false))
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SyncPairPrerequisiteValidator" /> class.
+        /// </summary>
+        public SyncPairPrerequisiteValidator(ILocalSyncRootProbe localRoots, IRemoteSyncRootProbe remoteRoots)
         {
-            errors.Add(new SyncPairValidationError(
-                SyncPairValidationIssue.LocalRootUnavailable,
-                syncPair.Id,
-                null,
-                "The local sync root does not exist and cannot be created or accessed."));
+            _localRoots = localRoots ?? throw new ArgumentNullException(nameof(localRoots));
+            _remoteRoots = remoteRoots ?? throw new ArgumentNullException(nameof(remoteRoots));
         }
 
-        if (!await _remoteRoots.ExistsAsync(syncPair.RemoteRootNodeId, cancellationToken).ConfigureAwait(false))
+        /// <inheritdoc />
+        public async Task<IReadOnlyList<SyncPairValidationError>> ValidateAsync(
+            SyncPairSettings syncPair,
+            CancellationToken cancellationToken = default)
         {
-            errors.Add(new SyncPairValidationError(
-                SyncPairValidationIssue.RemoteRootUnavailable,
-                syncPair.Id,
-                null,
-                "The remote sync root cannot be resolved."));
-        }
+            ArgumentNullException.ThrowIfNull(syncPair);
+            var errors = new List<SyncPairValidationError>();
+            if (!await _localRoots.CanUseAsync(syncPair.LocalRootPath, cancellationToken).ConfigureAwait(false))
+            {
+                errors.Add(new SyncPairValidationError(
+                    SyncPairValidationIssue.LocalRootUnavailable,
+                    syncPair.Id,
+                    null,
+                    "The local sync root does not exist and cannot be created or accessed."));
+            }
 
-        return errors;
+            if (!await _remoteRoots.ExistsAsync(syncPair.RemoteRootNodeId, cancellationToken).ConfigureAwait(false))
+            {
+                errors.Add(new SyncPairValidationError(
+                    SyncPairValidationIssue.RemoteRootUnavailable,
+                    syncPair.Id,
+                    null,
+                    "The remote sync root cannot be resolved."));
+            }
+
+            return errors;
+        }
     }
 }

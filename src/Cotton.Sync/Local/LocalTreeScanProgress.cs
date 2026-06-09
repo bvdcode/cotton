@@ -3,37 +3,39 @@
 
 using Cotton.Sync.State;
 
-namespace Cotton.Sync.Local;
-
-/// <summary>
-/// Describes progress while scanning a local folder tree.
-/// </summary>
-public sealed class LocalTreeScanProgress
+namespace Cotton.Sync.Local
 {
+
     /// <summary>
-    /// Initializes a new instance of the <see cref="LocalTreeScanProgress" /> class.
+    /// Describes progress while scanning a local folder tree.
     /// </summary>
-    public LocalTreeScanProgress(int filesScanned, int directoriesScanned, string? currentPath)
+    public sealed class LocalTreeScanProgress
     {
-        ArgumentOutOfRangeException.ThrowIfNegative(filesScanned);
-        ArgumentOutOfRangeException.ThrowIfNegative(directoriesScanned);
-        FilesScanned = filesScanned;
-        DirectoriesScanned = directoriesScanned;
-        CurrentPath = string.IsNullOrWhiteSpace(currentPath) ? string.Empty : SyncPath.Normalize(currentPath);
+        /// <summary>
+        /// Initializes a new instance of the <see cref="LocalTreeScanProgress" /> class.
+        /// </summary>
+        public LocalTreeScanProgress(int filesScanned, int directoriesScanned, string? currentPath)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(filesScanned);
+            ArgumentOutOfRangeException.ThrowIfNegative(directoriesScanned);
+            FilesScanned = filesScanned;
+            DirectoriesScanned = directoriesScanned;
+            CurrentPath = string.IsNullOrWhiteSpace(currentPath) ? string.Empty : SyncPath.Normalize(currentPath);
+        }
+
+        /// <summary>
+        /// Gets the number of file entries discovered so far.
+        /// </summary>
+        public int FilesScanned { get; }
+
+        /// <summary>
+        /// Gets the number of directory entries discovered so far.
+        /// </summary>
+        public int DirectoriesScanned { get; }
+
+        /// <summary>
+        /// Gets the most recent discovered path when available.
+        /// </summary>
+        public string CurrentPath { get; }
     }
-
-    /// <summary>
-    /// Gets the number of file entries discovered so far.
-    /// </summary>
-    public int FilesScanned { get; }
-
-    /// <summary>
-    /// Gets the number of directory entries discovered so far.
-    /// </summary>
-    public int DirectoriesScanned { get; }
-
-    /// <summary>
-    /// Gets the most recent discovered path when available.
-    /// </summary>
-    public string CurrentPath { get; }
 }

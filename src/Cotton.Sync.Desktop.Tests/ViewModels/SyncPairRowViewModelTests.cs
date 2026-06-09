@@ -3,56 +3,58 @@
 
 using Cotton.Sync.Desktop.ViewModels;
 
-namespace Cotton.Sync.Desktop.Tests.ViewModels;
-
-public sealed class SyncPairRowViewModelTests
+namespace Cotton.Sync.Desktop.Tests.ViewModels
 {
-    [Test]
-    public void StatusIndicator_UsesBrandDotForEnabledIdleAndClassifiesVisibleStates()
+
+    public sealed class SyncPairRowViewModelTests
     {
-        var row = new SyncPairRowViewModel
+        [Test]
+        public void StatusIndicator_UsesBrandDotForEnabledIdleAndClassifiesVisibleStates()
         {
-            DisplayName = "Videos",
-            Status = " idle ",
-        };
+            var row = new SyncPairRowViewModel
+            {
+                DisplayName = "Videos",
+                Status = " idle ",
+            };
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(row.DisplayStatus, Is.Empty);
-            Assert.That(row.HasDisplayStatus, Is.False);
-            Assert.That(row.IsStatusIndicatorVisible, Is.True);
-            Assert.That(row.IsStatusActive, Is.True);
-            Assert.That(row.StatusIndicatorToolTip, Is.EqualTo("Sync enabled"));
-        });
+            Assert.Multiple(() =>
+            {
+                Assert.That(row.DisplayStatus, Is.Empty);
+                Assert.That(row.HasDisplayStatus, Is.False);
+                Assert.That(row.IsStatusIndicatorVisible, Is.True);
+                Assert.That(row.IsStatusActive, Is.True);
+                Assert.That(row.StatusIndicatorToolTip, Is.EqualTo("Sync enabled"));
+            });
 
-        row.Status = " Syncing ";
+            row.Status = " Syncing ";
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(row.DisplayStatus, Is.EqualTo("Syncing"));
-            Assert.That(row.HasDisplayStatus, Is.True);
-            Assert.That(row.IsStatusIndicatorVisible, Is.True);
-            Assert.That(row.IsStatusActive, Is.True);
-            Assert.That(row.IsStatusPaused, Is.False);
-            Assert.That(row.IsStatusAttention, Is.False);
-        });
+            Assert.Multiple(() =>
+            {
+                Assert.That(row.DisplayStatus, Is.EqualTo("Syncing"));
+                Assert.That(row.HasDisplayStatus, Is.True);
+                Assert.That(row.IsStatusIndicatorVisible, Is.True);
+                Assert.That(row.IsStatusActive, Is.True);
+                Assert.That(row.IsStatusPaused, Is.False);
+                Assert.That(row.IsStatusAttention, Is.False);
+            });
 
-        row.Status = "Paused";
+            row.Status = "Paused";
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(row.DisplayStatus, Is.EqualTo("Paused"));
-            Assert.That(row.IsStatusActive, Is.False);
-            Assert.That(row.IsStatusPaused, Is.True);
-            Assert.That(row.IsStatusAttention, Is.False);
-        });
+            Assert.Multiple(() =>
+            {
+                Assert.That(row.DisplayStatus, Is.EqualTo("Paused"));
+                Assert.That(row.IsStatusActive, Is.False);
+                Assert.That(row.IsStatusPaused, Is.True);
+                Assert.That(row.IsStatusAttention, Is.False);
+            });
 
-        row.Status = "Error";
+            row.Status = "Error";
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(row.DisplayStatus, Is.EqualTo("Error"));
-            Assert.That(row.IsStatusAttention, Is.True);
-        });
+            Assert.Multiple(() =>
+            {
+                Assert.That(row.DisplayStatus, Is.EqualTo("Error"));
+                Assert.That(row.IsStatusAttention, Is.True);
+            });
+        }
     }
 }

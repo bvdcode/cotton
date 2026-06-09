@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Sync.Desktop.ViewModels;
-
-internal interface IDesktopUiDispatcher
+namespace Cotton.Sync.Desktop.ViewModels
 {
-    bool CheckAccess();
 
-    void Post(Action action);
+    internal interface IDesktopUiDispatcher
+    {
+        bool CheckAccess();
 
-    Task InvokeAsync(Action action, CancellationToken cancellationToken = default);
+        void Post(Action action);
+
+        Task InvokeAsync(Action action, CancellationToken cancellationToken = default);
+    }
 }

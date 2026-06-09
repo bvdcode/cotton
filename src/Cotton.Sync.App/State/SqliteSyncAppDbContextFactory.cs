@@ -5,57 +5,59 @@ using System.Data.Common;
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 
-namespace Cotton.Sync.App.State;
-
-internal sealed class SqliteSyncAppDbContextFactory
+namespace Cotton.Sync.App.State
 {
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> MigrationGates = new(StringComparer.OrdinalIgnoreCase);
 
-    private readonly string _databasePath;
-
-    public SqliteSyncAppDbContextFactory(string databasePath)
+    internal sealed class SqliteSyncAppDbContextFactory
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
-        _databasePath = databasePath;
-    }
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> MigrationGates = new(StringComparer.OrdinalIgnoreCase);
 
-    public SyncAppDbContext Create()
-    {
-        var connectionString = new DbConnectionStringBuilder
+        private readonly string _databasePath;
+
+        public SqliteSyncAppDbContextFactory(string databasePath)
         {
-            ["Data Source"] = _databasePath,
-            ["Pooling"] = false,
-        }.ToString();
-        DbContextOptions<SyncAppDbContext> options = new DbContextOptionsBuilder<SyncAppDbContext>()
-            .UseSqlite(connectionString)
-            .Options;
-        return new SyncAppDbContext(options);
-    }
-
-    public void EnsureDirectoryExists()
-    {
-        string? directory = Path.GetDirectoryName(_databasePath);
-        if (!string.IsNullOrEmpty(directory))
-        {
-            Directory.CreateDirectory(directory);
+            ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
+            _databasePath = databasePath;
         }
-    }
 
-    public async Task MigrateAsync(CancellationToken cancellationToken)
-    {
-        EnsureDirectoryExists();
-        SemaphoreSlim gate = MigrationGates.GetOrAdd(
-            Path.GetFullPath(_databasePath),
-            static _ => new SemaphoreSlim(1, 1));
-        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
+        public SyncAppDbContext Create()
         {
-            await using SyncAppDbContext context = Create();
-            await context.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
+            var connectionString = new DbConnectionStringBuilder
+            {
+                ["Data Source"] = _databasePath,
+                ["Pooling"] = false,
+            }.ToString();
+            DbContextOptions<SyncAppDbContext> options = new DbContextOptionsBuilder<SyncAppDbContext>()
+                .UseSqlite(connectionString)
+                .Options;
+            return new SyncAppDbContext(options);
         }
-        finally
+
+        public void EnsureDirectoryExists()
         {
-            gate.Release();
+            string? directory = Path.GetDirectoryName(_databasePath);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+        }
+
+        public async Task MigrateAsync(CancellationToken cancellationToken)
+        {
+            EnsureDirectoryExists();
+            SemaphoreSlim gate = MigrationGates.GetOrAdd(
+                Path.GetFullPath(_databasePath),
+                static _ => new SemaphoreSlim(1, 1));
+            await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await using SyncAppDbContext context = Create();
+                await context.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                gate.Release();
+            }
         }
     }
 }

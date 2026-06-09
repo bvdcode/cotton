@@ -9,66 +9,68 @@ using Cotton.Sync.App.RemoteChanges;
 using Cotton.Sync.App.SyncApplication;
 using Cotton.Sync.Desktop.Composition;
 
-namespace Cotton.Sync.Desktop.Tests.Composition;
-
-public sealed class DesktopSyncApplicationFactoryTests
+namespace Cotton.Sync.Desktop.Tests.Composition
 {
-    private string _tempDirectory = string.Empty;
 
-    [SetUp]
-    public void SetUp()
+    public sealed class DesktopSyncApplicationFactoryTests
     {
-        _tempDirectory = Path.Combine(Path.GetTempPath(), "cotton-desktop-composition-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(_tempDirectory);
-    }
+        private string _tempDirectory = string.Empty;
 
-    [TearDown]
-    public void TearDown()
-    {
-        if (Directory.Exists(_tempDirectory))
+        [SetUp]
+        public void SetUp()
         {
-            Directory.Delete(_tempDirectory, recursive: true);
+            _tempDirectory = Path.Combine(Path.GetTempPath(), "cotton-desktop-composition-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(_tempDirectory);
         }
-    }
 
-    [Test]
-    public async Task Create_TransfersCottonClientOwnershipToHost()
-    {
-        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
-        var factory = new DesktopSyncApplicationFactory(paths);
-
-        await using DesktopSyncApplicationHost host = factory.Create(new Uri("https://cotton.example.test/"));
-
-        object asyncResource = GetPrivateFieldValue(host, "_asyncResource");
-
-        Assert.That(asyncResource, Is.TypeOf<CottonCloudClient>());
-    }
-
-    [Test]
-    public async Task Create_WiresContinuousSyncCoordinators()
-    {
-        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
-        var factory = new DesktopSyncApplicationFactory(paths);
-
-        await using DesktopSyncApplicationHost host = factory.Create(new Uri("https://cotton.example.test/"));
-
-        Assert.That(host.App, Is.TypeOf<SyncApplicationService>());
-        object localChanges = GetPrivateFieldValue(host.App, "_localChanges");
-        object remoteChanges = GetPrivateFieldValue(host.App, "_remoteChanges");
-        object periodicSync = GetPrivateFieldValue(host.App, "_periodicSync");
-
-        Assert.Multiple(() =>
+        [TearDown]
+        public void TearDown()
         {
-            Assert.That(localChanges, Is.TypeOf<LocalChangeSyncCoordinator>());
-            Assert.That(remoteChanges, Is.TypeOf<RealtimeRemoteChangeSyncCoordinator>());
-            Assert.That(periodicSync, Is.TypeOf<PeriodicSyncCoordinator>());
-        });
-    }
+            if (Directory.Exists(_tempDirectory))
+            {
+                Directory.Delete(_tempDirectory, recursive: true);
+            }
+        }
 
-    private static object GetPrivateFieldValue(object instance, string fieldName)
-    {
-        FieldInfo? field = instance.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.That(field, Is.Not.Null, fieldName);
-        return field!.GetValue(instance) ?? throw new InvalidOperationException(fieldName);
+        [Test]
+        public async Task Create_TransfersCottonClientOwnershipToHost()
+        {
+            DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+            var factory = new DesktopSyncApplicationFactory(paths);
+
+            await using DesktopSyncApplicationHost host = factory.Create(new Uri("https://cotton.example.test/"));
+
+            object asyncResource = GetPrivateFieldValue(host, "_asyncResource");
+
+            Assert.That(asyncResource, Is.TypeOf<CottonCloudClient>());
+        }
+
+        [Test]
+        public async Task Create_WiresContinuousSyncCoordinators()
+        {
+            DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+            var factory = new DesktopSyncApplicationFactory(paths);
+
+            await using DesktopSyncApplicationHost host = factory.Create(new Uri("https://cotton.example.test/"));
+
+            Assert.That(host.App, Is.TypeOf<SyncApplicationService>());
+            object localChanges = GetPrivateFieldValue(host.App, "_localChanges");
+            object remoteChanges = GetPrivateFieldValue(host.App, "_remoteChanges");
+            object periodicSync = GetPrivateFieldValue(host.App, "_periodicSync");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(localChanges, Is.TypeOf<LocalChangeSyncCoordinator>());
+                Assert.That(remoteChanges, Is.TypeOf<RealtimeRemoteChangeSyncCoordinator>());
+                Assert.That(periodicSync, Is.TypeOf<PeriodicSyncCoordinator>());
+            });
+        }
+
+        private static object GetPrivateFieldValue(object instance, string fieldName)
+        {
+            FieldInfo? field = instance.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(field, Is.Not.Null, fieldName);
+            return field!.GetValue(instance) ?? throw new InvalidOperationException(fieldName);
+        }
     }
 }

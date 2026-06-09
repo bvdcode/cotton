@@ -3,18 +3,20 @@
 
 using System.Reflection;
 
-namespace Cotton.Sync.Desktop.Shell;
-
-internal static class DesktopAppVersion
+namespace Cotton.Sync.Desktop.Shell
 {
-    public static string Current => Resolve(typeof(DesktopAppVersion).Assembly);
 
-    internal static string Resolve(Assembly assembly)
+    internal static class DesktopAppVersion
     {
-        ArgumentNullException.ThrowIfNull(assembly);
-        string? informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-        return string.IsNullOrWhiteSpace(informationalVersion)
-            ? assembly.GetName().Version?.ToString() ?? "unknown"
-            : informationalVersion;
+        public static string Current => Resolve(typeof(DesktopAppVersion).Assembly);
+
+        internal static string Resolve(Assembly assembly)
+        {
+            ArgumentNullException.ThrowIfNull(assembly);
+            string? informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            return string.IsNullOrWhiteSpace(informationalVersion)
+                ? assembly.GetName().Version?.ToString() ?? "unknown"
+                : informationalVersion;
+        }
     }
 }

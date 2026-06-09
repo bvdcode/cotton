@@ -3,8 +3,10 @@
 
 using Cotton.Sync.State;
 
-namespace Cotton.Sync.Cli;
+namespace Cotton.Sync.Cli
+{
 
-internal record SyncCliPassResult(
-    SyncRunResult Result,
-    IReadOnlyList<SyncStateEntry> StateEntries);
+    internal record SyncCliPassResult(
+        SyncRunResult Result,
+        IReadOnlyList<SyncStateEntry> StateEntries);
+}

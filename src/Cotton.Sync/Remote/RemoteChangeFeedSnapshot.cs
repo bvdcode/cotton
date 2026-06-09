@@ -3,139 +3,141 @@
 
 using Cotton.Sync;
 
-namespace Cotton.Sync.Remote;
-
-/// <summary>
-/// Summarizes a remote change-feed page for checkpointing, diagnostics, and future incremental invalidation.
-/// </summary>
-public sealed class RemoteChangeFeedSnapshot
+namespace Cotton.Sync.Remote
 {
-    private RemoteChangeFeedSnapshot(IReadOnlyCollection<RemoteChangeImpact> changes)
+
+    /// <summary>
+    /// Summarizes a remote change-feed page for checkpointing, diagnostics, and future incremental invalidation.
+    /// </summary>
+    public sealed class RemoteChangeFeedSnapshot
     {
-        Changes = changes.ToArray();
-        EnsureStrictlyIncreasingCursors(Changes);
-        IsEmpty = Changes.Count == 0;
-        FirstCursor = IsEmpty ? null : Changes[0].Cursor;
-        LastCursor = IsEmpty ? null : Changes[^1].Cursor;
-        ContainsFileChanges = Changes.Any(change => change.TargetKind == RemoteChangeTargetKind.File);
-        ContainsFolderChanges = Changes.Any(change => change.TargetKind == RemoteChangeTargetKind.Folder);
-        ContainsContentChanges = Changes.Any(change => change.Action == RemoteChangeAction.ContentUpdated);
-        ContainsDeletes = Changes.Any(change => change.Action == RemoteChangeAction.Deleted);
-        ContainsRestores = Changes.Any(change => change.Action == RemoteChangeAction.Restored);
-        ContainsMovesOrRenames = Changes.Any(change =>
-            change.Action is RemoteChangeAction.Moved or RemoteChangeAction.Renamed);
-        RequiresRemoteTreeRefresh = !IsEmpty;
-        AffectedNodeIds = Changes
-            .SelectMany(change => change.EnumerateAffectedNodeIds())
-            .Distinct()
-            .ToArray();
-        AffectedNodeFileIds = Changes
-            .SelectMany(change => change.EnumerateAffectedNodeFileIds())
-            .Distinct()
-            .ToArray();
-    }
-
-    /// <summary>
-    /// Gets a shared empty snapshot.
-    /// </summary>
-    public static RemoteChangeFeedSnapshot Empty { get; } = new(Array.Empty<RemoteChangeImpact>());
-
-    /// <summary>
-    /// Gets normalized remote changes in server feed order.
-    /// </summary>
-    public IReadOnlyList<RemoteChangeImpact> Changes { get; }
-
-    /// <summary>
-    /// Gets a value indicating whether this snapshot contains no changes.
-    /// </summary>
-    public bool IsEmpty { get; }
-
-    /// <summary>
-    /// Gets the first cursor in this snapshot, when any change exists.
-    /// </summary>
-    public long? FirstCursor { get; }
-
-    /// <summary>
-    /// Gets the last cursor in this snapshot, when any change exists.
-    /// </summary>
-    public long? LastCursor { get; }
-
-    /// <summary>
-    /// Gets a value indicating whether this snapshot contains at least one file mutation.
-    /// </summary>
-    public bool ContainsFileChanges { get; }
-
-    /// <summary>
-    /// Gets a value indicating whether this snapshot contains at least one folder mutation.
-    /// </summary>
-    public bool ContainsFolderChanges { get; }
-
-    /// <summary>
-    /// Gets a value indicating whether this snapshot contains at least one file content mutation.
-    /// </summary>
-    public bool ContainsContentChanges { get; }
-
-    /// <summary>
-    /// Gets a value indicating whether this snapshot contains at least one delete mutation.
-    /// </summary>
-    public bool ContainsDeletes { get; }
-
-    /// <summary>
-    /// Gets a value indicating whether this snapshot contains at least one restore mutation.
-    /// </summary>
-    public bool ContainsRestores { get; }
-
-    /// <summary>
-    /// Gets a value indicating whether this snapshot contains at least one move or rename mutation.
-    /// </summary>
-    public bool ContainsMovesOrRenames { get; }
-
-    /// <summary>
-    /// Gets a value indicating whether the local cached remote tree should be refreshed before decisions are made.
-    /// </summary>
-    public bool RequiresRemoteTreeRefresh { get; }
-
-    /// <summary>
-    /// Gets folder node identifiers affected by the changes.
-    /// </summary>
-    public IReadOnlyList<Guid> AffectedNodeIds { get; }
-
-    /// <summary>
-    /// Gets file entry identifiers affected by the changes.
-    /// </summary>
-    public IReadOnlyList<Guid> AffectedNodeFileIds { get; }
-
-    /// <summary>
-    /// Creates a snapshot from sync change DTOs.
-    /// </summary>
-    public static RemoteChangeFeedSnapshot FromChanges(IReadOnlyCollection<SyncChangeDto> changes)
-    {
-        ArgumentNullException.ThrowIfNull(changes);
-        if (changes.Count == 0)
+        private RemoteChangeFeedSnapshot(IReadOnlyCollection<RemoteChangeImpact> changes)
         {
-            return Empty;
+            Changes = changes.ToArray();
+            EnsureStrictlyIncreasingCursors(Changes);
+            IsEmpty = Changes.Count == 0;
+            FirstCursor = IsEmpty ? null : Changes[0].Cursor;
+            LastCursor = IsEmpty ? null : Changes[^1].Cursor;
+            ContainsFileChanges = Changes.Any(change => change.TargetKind == RemoteChangeTargetKind.File);
+            ContainsFolderChanges = Changes.Any(change => change.TargetKind == RemoteChangeTargetKind.Folder);
+            ContainsContentChanges = Changes.Any(change => change.Action == RemoteChangeAction.ContentUpdated);
+            ContainsDeletes = Changes.Any(change => change.Action == RemoteChangeAction.Deleted);
+            ContainsRestores = Changes.Any(change => change.Action == RemoteChangeAction.Restored);
+            ContainsMovesOrRenames = Changes.Any(change =>
+                change.Action is RemoteChangeAction.Moved or RemoteChangeAction.Renamed);
+            RequiresRemoteTreeRefresh = !IsEmpty;
+            AffectedNodeIds = Changes
+                .SelectMany(change => change.EnumerateAffectedNodeIds())
+                .Distinct()
+                .ToArray();
+            AffectedNodeFileIds = Changes
+                .SelectMany(change => change.EnumerateAffectedNodeFileIds())
+                .Distinct()
+                .ToArray();
         }
 
-        return new RemoteChangeFeedSnapshot(changes.Select(RemoteChangeImpact.FromDto).ToArray());
-    }
+        /// <summary>
+        /// Gets a shared empty snapshot.
+        /// </summary>
+        public static RemoteChangeFeedSnapshot Empty { get; } = new(Array.Empty<RemoteChangeImpact>());
 
-    private static void EnsureStrictlyIncreasingCursors(IReadOnlyList<RemoteChangeImpact> changes)
-    {
-        if (changes.Count < 2)
-        {
-            return;
-        }
+        /// <summary>
+        /// Gets normalized remote changes in server feed order.
+        /// </summary>
+        public IReadOnlyList<RemoteChangeImpact> Changes { get; }
 
-        long previousCursor = changes[0].Cursor;
-        for (int index = 1; index < changes.Count; index++)
+        /// <summary>
+        /// Gets a value indicating whether this snapshot contains no changes.
+        /// </summary>
+        public bool IsEmpty { get; }
+
+        /// <summary>
+        /// Gets the first cursor in this snapshot, when any change exists.
+        /// </summary>
+        public long? FirstCursor { get; }
+
+        /// <summary>
+        /// Gets the last cursor in this snapshot, when any change exists.
+        /// </summary>
+        public long? LastCursor { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether this snapshot contains at least one file mutation.
+        /// </summary>
+        public bool ContainsFileChanges { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether this snapshot contains at least one folder mutation.
+        /// </summary>
+        public bool ContainsFolderChanges { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether this snapshot contains at least one file content mutation.
+        /// </summary>
+        public bool ContainsContentChanges { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether this snapshot contains at least one delete mutation.
+        /// </summary>
+        public bool ContainsDeletes { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether this snapshot contains at least one restore mutation.
+        /// </summary>
+        public bool ContainsRestores { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether this snapshot contains at least one move or rename mutation.
+        /// </summary>
+        public bool ContainsMovesOrRenames { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the local cached remote tree should be refreshed before decisions are made.
+        /// </summary>
+        public bool RequiresRemoteTreeRefresh { get; }
+
+        /// <summary>
+        /// Gets folder node identifiers affected by the changes.
+        /// </summary>
+        public IReadOnlyList<Guid> AffectedNodeIds { get; }
+
+        /// <summary>
+        /// Gets file entry identifiers affected by the changes.
+        /// </summary>
+        public IReadOnlyList<Guid> AffectedNodeFileIds { get; }
+
+        /// <summary>
+        /// Creates a snapshot from sync change DTOs.
+        /// </summary>
+        public static RemoteChangeFeedSnapshot FromChanges(IReadOnlyCollection<SyncChangeDto> changes)
         {
-            long cursor = changes[index].Cursor;
-            if (cursor <= previousCursor)
+            ArgumentNullException.ThrowIfNull(changes);
+            if (changes.Count == 0)
             {
-                throw new ArgumentException("Remote change cursors must be strictly increasing.", nameof(changes));
+                return Empty;
             }
 
-            previousCursor = cursor;
+            return new RemoteChangeFeedSnapshot(changes.Select(RemoteChangeImpact.FromDto).ToArray());
+        }
+
+        private static void EnsureStrictlyIncreasingCursors(IReadOnlyList<RemoteChangeImpact> changes)
+        {
+            if (changes.Count < 2)
+            {
+                return;
+            }
+
+            long previousCursor = changes[0].Cursor;
+            for (int index = 1; index < changes.Count; index++)
+            {
+                long cursor = changes[index].Cursor;
+                if (cursor <= previousCursor)
+                {
+                    throw new ArgumentException("Remote change cursors must be strictly increasing.", nameof(changes));
+                }
+
+                previousCursor = cursor;
+            }
         }
     }
 }

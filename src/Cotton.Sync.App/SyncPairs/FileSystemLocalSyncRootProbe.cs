@@ -5,54 +5,56 @@ using Cotton.Sync.State;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Cotton.Sync.App.SyncPairs;
-
-/// <summary>
-/// Checks local sync roots using the host file system.
-/// </summary>
-public sealed class FileSystemLocalSyncRootProbe : ILocalSyncRootProbe
+namespace Cotton.Sync.App.SyncPairs
 {
-    private readonly ILogger<FileSystemLocalSyncRootProbe> _logger;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="FileSystemLocalSyncRootProbe" /> class.
+    /// Checks local sync roots using the host file system.
     /// </summary>
-    public FileSystemLocalSyncRootProbe(ILogger<FileSystemLocalSyncRootProbe>? logger = null)
+    public sealed class FileSystemLocalSyncRootProbe : ILocalSyncRootProbe
     {
-        _logger = logger ?? NullLogger<FileSystemLocalSyncRootProbe>.Instance;
-    }
+        private readonly ILogger<FileSystemLocalSyncRootProbe> _logger;
 
-    /// <inheritdoc />
-    public Task<bool> CanUseAsync(string localRootPath, CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        if (string.IsNullOrWhiteSpace(localRootPath))
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FileSystemLocalSyncRootProbe" /> class.
+        /// </summary>
+        public FileSystemLocalSyncRootProbe(ILogger<FileSystemLocalSyncRootProbe>? logger = null)
         {
-            return Task.FromResult(false);
+            _logger = logger ?? NullLogger<FileSystemLocalSyncRootProbe>.Instance;
         }
 
-        try
+        /// <inheritdoc />
+        public Task<bool> CanUseAsync(string localRootPath, CancellationToken cancellationToken = default)
         {
-            DirectoryInfo directory = Directory.CreateDirectory(localRootPath);
-            SyncMetadataDirectory.HideIfExists(directory.FullName);
-            bool canUse = directory.Exists;
-            return Task.FromResult(canUse);
-        }
-        catch (Exception exception) when (IsExpectedFileSystemFailure(exception))
-        {
-            _logger.LogWarning(
-                exception,
-                "Local sync root is unavailable: {LocalRootPath}",
-                localRootPath);
-            return Task.FromResult(false);
-        }
-    }
+            cancellationToken.ThrowIfCancellationRequested();
+            if (string.IsNullOrWhiteSpace(localRootPath))
+            {
+                return Task.FromResult(false);
+            }
 
-    private static bool IsExpectedFileSystemFailure(Exception exception)
-    {
-        return exception is ArgumentException
-            or IOException
-            or NotSupportedException
-            or UnauthorizedAccessException;
+            try
+            {
+                DirectoryInfo directory = Directory.CreateDirectory(localRootPath);
+                SyncMetadataDirectory.HideIfExists(directory.FullName);
+                bool canUse = directory.Exists;
+                return Task.FromResult(canUse);
+            }
+            catch (Exception exception) when (IsExpectedFileSystemFailure(exception))
+            {
+                _logger.LogWarning(
+                    exception,
+                    "Local sync root is unavailable: {LocalRootPath}",
+                    localRootPath);
+                return Task.FromResult(false);
+            }
+        }
+
+        private static bool IsExpectedFileSystemFailure(Exception exception)
+        {
+            return exception is ArgumentException
+                or IOException
+                or NotSupportedException
+                or UnauthorizedAccessException;
+        }
     }
 }

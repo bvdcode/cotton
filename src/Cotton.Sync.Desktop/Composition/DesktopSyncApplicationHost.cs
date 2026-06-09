@@ -11,105 +11,107 @@ using Cotton.Sdk.Auth;
 using Cotton.Sdk.Nodes;
 using Cotton.Sdk.Sync;
 
-namespace Cotton.Sync.Desktop.Composition;
-
-internal sealed class DesktopSyncApplicationHost : IDisposable, IAsyncDisposable
+namespace Cotton.Sync.Desktop.Composition
 {
-    private readonly HttpClient _httpClient;
-    private readonly IAsyncDisposable? _asyncResource;
-    private bool _disposed;
 
-    public DesktopSyncApplicationHost(
-        ISyncApplicationService app,
-        IRemoteRootResolver remoteRootResolver,
-        IAppStatusPublisher statusPublisher,
-        IAppActivityPublisher activityPublisher,
-        ISessionRevocationPublisher sessionRevocationPublisher,
-        IAppTransferProgressPublisher transferProgressPublisher,
-        IAppRunProgressPublisher runProgressPublisher,
-        ICottonTokenStore tokenStore,
-        ICottonNodeClient nodes,
-        ICottonSyncClient sync,
-        HttpClient httpClient,
-        Uri serverUrl,
-        IAsyncDisposable? asyncResource = null)
+    internal sealed class DesktopSyncApplicationHost : IDisposable, IAsyncDisposable
     {
-        App = app ?? throw new ArgumentNullException(nameof(app));
-        RemoteRootResolver = remoteRootResolver ?? throw new ArgumentNullException(nameof(remoteRootResolver));
-        StatusPublisher = statusPublisher ?? throw new ArgumentNullException(nameof(statusPublisher));
-        ActivityPublisher = activityPublisher ?? throw new ArgumentNullException(nameof(activityPublisher));
-        SessionRevocationPublisher = sessionRevocationPublisher ?? throw new ArgumentNullException(nameof(sessionRevocationPublisher));
-        TransferProgressPublisher = transferProgressPublisher ?? throw new ArgumentNullException(nameof(transferProgressPublisher));
-        RunProgressPublisher = runProgressPublisher ?? throw new ArgumentNullException(nameof(runProgressPublisher));
-        TokenStore = tokenStore ?? throw new ArgumentNullException(nameof(tokenStore));
-        Nodes = nodes ?? throw new ArgumentNullException(nameof(nodes));
-        Sync = sync ?? throw new ArgumentNullException(nameof(sync));
-        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-        _asyncResource = asyncResource;
-        ServerUrl = serverUrl ?? throw new ArgumentNullException(nameof(serverUrl));
-    }
+        private readonly HttpClient _httpClient;
+        private readonly IAsyncDisposable? _asyncResource;
+        private bool _disposed;
 
-    public ISyncApplicationService App { get; }
-
-    public IRemoteRootResolver RemoteRootResolver { get; }
-
-    public IAppStatusPublisher StatusPublisher { get; }
-
-    public IAppActivityPublisher ActivityPublisher { get; }
-
-    public ISessionRevocationPublisher SessionRevocationPublisher { get; }
-
-    public IAppTransferProgressPublisher TransferProgressPublisher { get; }
-
-    public IAppRunProgressPublisher RunProgressPublisher { get; }
-
-    public ICottonTokenStore TokenStore { get; }
-
-    public ICottonNodeClient Nodes { get; }
-
-    public ICottonSyncClient Sync { get; }
-
-    public Uri ServerUrl { get; }
-
-    public void Dispose()
-    {
-        if (_disposed)
+        public DesktopSyncApplicationHost(
+            ISyncApplicationService app,
+            IRemoteRootResolver remoteRootResolver,
+            IAppStatusPublisher statusPublisher,
+            IAppActivityPublisher activityPublisher,
+            ISessionRevocationPublisher sessionRevocationPublisher,
+            IAppTransferProgressPublisher transferProgressPublisher,
+            IAppRunProgressPublisher runProgressPublisher,
+            ICottonTokenStore tokenStore,
+            ICottonNodeClient nodes,
+            ICottonSyncClient sync,
+            HttpClient httpClient,
+            Uri serverUrl,
+            IAsyncDisposable? asyncResource = null)
         {
-            return;
+            App = app ?? throw new ArgumentNullException(nameof(app));
+            RemoteRootResolver = remoteRootResolver ?? throw new ArgumentNullException(nameof(remoteRootResolver));
+            StatusPublisher = statusPublisher ?? throw new ArgumentNullException(nameof(statusPublisher));
+            ActivityPublisher = activityPublisher ?? throw new ArgumentNullException(nameof(activityPublisher));
+            SessionRevocationPublisher = sessionRevocationPublisher ?? throw new ArgumentNullException(nameof(sessionRevocationPublisher));
+            TransferProgressPublisher = transferProgressPublisher ?? throw new ArgumentNullException(nameof(transferProgressPublisher));
+            RunProgressPublisher = runProgressPublisher ?? throw new ArgumentNullException(nameof(runProgressPublisher));
+            TokenStore = tokenStore ?? throw new ArgumentNullException(nameof(tokenStore));
+            Nodes = nodes ?? throw new ArgumentNullException(nameof(nodes));
+            Sync = sync ?? throw new ArgumentNullException(nameof(sync));
+            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+            _asyncResource = asyncResource;
+            ServerUrl = serverUrl ?? throw new ArgumentNullException(nameof(serverUrl));
         }
 
-        try
+        public ISyncApplicationService App { get; }
+
+        public IRemoteRootResolver RemoteRootResolver { get; }
+
+        public IAppStatusPublisher StatusPublisher { get; }
+
+        public IAppActivityPublisher ActivityPublisher { get; }
+
+        public ISessionRevocationPublisher SessionRevocationPublisher { get; }
+
+        public IAppTransferProgressPublisher TransferProgressPublisher { get; }
+
+        public IAppRunProgressPublisher RunProgressPublisher { get; }
+
+        public ICottonTokenStore TokenStore { get; }
+
+        public ICottonNodeClient Nodes { get; }
+
+        public ICottonSyncClient Sync { get; }
+
+        public Uri ServerUrl { get; }
+
+        public void Dispose()
         {
-            if (_asyncResource is not null)
+            if (_disposed)
             {
-                _asyncResource.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                return;
+            }
+
+            try
+            {
+                if (_asyncResource is not null)
+                {
+                    _asyncResource.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                }
+            }
+            finally
+            {
+                _httpClient.Dispose();
+                _disposed = true;
             }
         }
-        finally
-        {
-            _httpClient.Dispose();
-            _disposed = true;
-        }
-    }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (_disposed)
+        public async ValueTask DisposeAsync()
         {
-            return;
-        }
-
-        try
-        {
-            if (_asyncResource is not null)
+            if (_disposed)
             {
-                await _asyncResource.DisposeAsync().ConfigureAwait(false);
+                return;
             }
-        }
-        finally
-        {
-            _httpClient.Dispose();
-            _disposed = true;
+
+            try
+            {
+                if (_asyncResource is not null)
+                {
+                    await _asyncResource.DisposeAsync().ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                _httpClient.Dispose();
+                _disposed = true;
+            }
         }
     }
 }

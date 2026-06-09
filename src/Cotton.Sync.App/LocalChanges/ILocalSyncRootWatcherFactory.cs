@@ -3,15 +3,17 @@
 
 using Cotton.Sync.App.SyncPairs;
 
-namespace Cotton.Sync.App.LocalChanges;
-
-/// <summary>
-/// Creates local filesystem watchers for sync roots.
-/// </summary>
-public interface ILocalSyncRootWatcherFactory
+namespace Cotton.Sync.App.LocalChanges
 {
+
     /// <summary>
-    /// Creates a watcher for the provided sync pair.
+    /// Creates local filesystem watchers for sync roots.
     /// </summary>
-    ILocalSyncRootWatcher Create(SyncPairSettings syncPair);
+    public interface ILocalSyncRootWatcherFactory
+    {
+        /// <summary>
+        /// Creates a watcher for the provided sync pair.
+        /// </summary>
+        ILocalSyncRootWatcher Create(SyncPairSettings syncPair);
+    }
 }

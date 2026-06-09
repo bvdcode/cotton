@@ -3,58 +3,60 @@
 
 using System.Diagnostics;
 
-namespace Cotton.Sync.Desktop.Platform;
-
-internal sealed class DesktopSingleInstanceGuard : IDisposable
+namespace Cotton.Sync.Desktop.Platform
 {
-    private readonly FileStream _lockStream;
-    private bool _disposed;
 
-    private DesktopSingleInstanceGuard(FileStream lockStream)
+    internal sealed class DesktopSingleInstanceGuard : IDisposable
     {
-        _lockStream = lockStream;
-    }
+        private readonly FileStream _lockStream;
+        private bool _disposed;
 
-    public static DesktopSingleInstanceGuard? TryAcquire(string lockFilePath)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(lockFilePath);
-        string? directory = Path.GetDirectoryName(lockFilePath);
-        if (!string.IsNullOrWhiteSpace(directory))
+        private DesktopSingleInstanceGuard(FileStream lockStream)
         {
-            Directory.CreateDirectory(directory);
+            _lockStream = lockStream;
         }
 
-        try
+        public static DesktopSingleInstanceGuard? TryAcquire(string lockFilePath)
         {
-            FileStream stream = File.Open(lockFilePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-            WriteCurrentProcessId(stream);
-            return new DesktopSingleInstanceGuard(stream);
+            ArgumentException.ThrowIfNullOrWhiteSpace(lockFilePath);
+            string? directory = Path.GetDirectoryName(lockFilePath);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            try
+            {
+                FileStream stream = File.Open(lockFilePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+                WriteCurrentProcessId(stream);
+                return new DesktopSingleInstanceGuard(stream);
+            }
+            catch (IOException exception)
+            {
+                Trace.TraceWarning("Cotton Sync single-instance lock is already held: {0}", exception.Message);
+                return null;
+            }
         }
-        catch (IOException exception)
+
+        public void Dispose()
         {
-            Trace.TraceWarning("Cotton Sync single-instance lock is already held: {0}", exception.Message);
-            return null;
-        }
-    }
+            if (_disposed)
+            {
+                return;
+            }
 
-    public void Dispose()
-    {
-        if (_disposed)
+            _lockStream.Dispose();
+            _disposed = true;
+        }
+
+        private static void WriteCurrentProcessId(FileStream stream)
         {
-            return;
+            stream.SetLength(0);
+            using var writer = new StreamWriter(stream, leaveOpen: true);
+            writer.Write(Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            writer.Flush();
+            stream.Flush();
+            stream.Position = 0;
         }
-
-        _lockStream.Dispose();
-        _disposed = true;
-    }
-
-    private static void WriteCurrentProcessId(FileStream stream)
-    {
-        stream.SetLength(0);
-        using var writer = new StreamWriter(stream, leaveOpen: true);
-        writer.Write(Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        writer.Flush();
-        stream.Flush();
-        stream.Position = 0;
     }
 }

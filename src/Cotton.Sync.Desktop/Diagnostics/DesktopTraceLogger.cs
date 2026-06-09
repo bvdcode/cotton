@@ -4,51 +4,53 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 
-namespace Cotton.Sync.Desktop.Diagnostics;
-
-internal sealed class DesktopTraceLogger : ILogger
+namespace Cotton.Sync.Desktop.Diagnostics
 {
-    private readonly string _categoryName;
 
-    public DesktopTraceLogger(string categoryName)
+    internal sealed class DesktopTraceLogger : ILogger
     {
-        _categoryName = string.IsNullOrWhiteSpace(categoryName) ? "Cotton.Sync.Desktop" : categoryName;
-    }
+        private readonly string _categoryName;
 
-    public IDisposable? BeginScope<TState>(TState state)
-        where TState : notnull
-    {
-        return NullScope.Instance;
-    }
-
-    public bool IsEnabled(LogLevel logLevel)
-    {
-        return logLevel != LogLevel.None;
-    }
-
-    public void Log<TState>(
-        LogLevel logLevel,
-        EventId eventId,
-        TState state,
-        Exception? exception,
-        Func<TState, Exception?, string> formatter)
-    {
-        ArgumentNullException.ThrowIfNull(formatter);
-        if (!IsEnabled(logLevel))
+        public DesktopTraceLogger(string categoryName)
         {
-            return;
+            _categoryName = string.IsNullOrWhiteSpace(categoryName) ? "Cotton.Sync.Desktop" : categoryName;
         }
 
-        string message = DesktopTraceLogFormatter.Format(_categoryName, logLevel, eventId, formatter(state, exception), exception);
-        Trace.WriteLine(DesktopSecretRedactor.Redact(message));
-    }
-
-    private sealed class NullScope : IDisposable
-    {
-        public static readonly NullScope Instance = new();
-
-        public void Dispose()
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull
         {
+            return NullScope.Instance;
+        }
+
+        public bool IsEnabled(LogLevel logLevel)
+        {
+            return logLevel != LogLevel.None;
+        }
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            ArgumentNullException.ThrowIfNull(formatter);
+            if (!IsEnabled(logLevel))
+            {
+                return;
+            }
+
+            string message = DesktopTraceLogFormatter.Format(_categoryName, logLevel, eventId, formatter(state, exception), exception);
+            Trace.WriteLine(DesktopSecretRedactor.Redact(message));
+        }
+
+        private sealed class NullScope : IDisposable
+        {
+            public static readonly NullScope Instance = new();
+
+            public void Dispose()
+            {
+            }
         }
     }
 }

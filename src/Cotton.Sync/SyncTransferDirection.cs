@@ -1,30 +1,32 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-namespace Cotton.Sync;
-
-/// <summary>
-/// Defines the direction of a file transfer.
-/// </summary>
-public enum SyncTransferDirection
+namespace Cotton.Sync
 {
-    /// <summary>
-    /// The transfer direction is not known.
-    /// </summary>
-    Unknown = 0,
 
     /// <summary>
-    /// Local content is being uploaded to Cotton Cloud.
+    /// Defines the direction of a file transfer.
     /// </summary>
-    Upload = 1,
+    public enum SyncTransferDirection
+    {
+        /// <summary>
+        /// The transfer direction is not known.
+        /// </summary>
+        Unknown = 0,
 
-    /// <summary>
-    /// Remote content is being downloaded to the local sync folder.
-    /// </summary>
-    Download = 2,
+        /// <summary>
+        /// Local content is being uploaded to Cotton Cloud.
+        /// </summary>
+        Upload = 1,
 
-    /// <summary>
-    /// Local content is being hashed before reconciliation can continue.
-    /// </summary>
-    Hash = 3,
+        /// <summary>
+        /// Remote content is being downloaded to the local sync folder.
+        /// </summary>
+        Download = 2,
+
+        /// <summary>
+        /// Local content is being hashed before reconciliation can continue.
+        /// </summary>
+        Hash = 3,
+    }
 }

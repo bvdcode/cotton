@@ -5,16 +5,18 @@ using Cotton.Sync.App.Preferences;
 using Cotton.Sync.App.SyncPairs;
 using Microsoft.EntityFrameworkCore;
 
-namespace Cotton.Sync.App.State;
-
-internal sealed class SyncAppDbContext : DbContext
+namespace Cotton.Sync.App.State
 {
-    public SyncAppDbContext(DbContextOptions<SyncAppDbContext> options)
-        : base(options)
+
+    internal sealed class SyncAppDbContext : DbContext
     {
+        public SyncAppDbContext(DbContextOptions<SyncAppDbContext> options)
+            : base(options)
+        {
+        }
+
+        public DbSet<AppPreferencesEntity> AppPreferences => Set<AppPreferencesEntity>();
+
+        public DbSet<SyncPairSettingsEntity> SyncPairSettings => Set<SyncPairSettingsEntity>();
     }
-
-    public DbSet<AppPreferencesEntity> AppPreferences => Set<AppPreferencesEntity>();
-
-    public DbSet<SyncPairSettingsEntity> SyncPairSettings => Set<SyncPairSettingsEntity>();
 }

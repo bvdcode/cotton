@@ -3,26 +3,28 @@
 
 using Cotton.Nodes;
 
-namespace Cotton.Sync.Remote;
-
-/// <summary>
-/// Performs remote directory mutations for the synchronization engine.
-/// </summary>
-public interface IRemoteDirectorySynchronizer
+namespace Cotton.Sync.Remote
 {
-    /// <summary>
-    /// Creates a remote child directory under the specified parent node.
-    /// </summary>
-    Task<NodeDto> CreateDirectoryAsync(
-        Guid parentNodeId,
-        string name,
-        CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Deletes a remote directory entry.
+    /// Performs remote directory mutations for the synchronization engine.
     /// </summary>
-    Task DeleteDirectoryAsync(
-        Guid nodeId,
-        bool skipTrash = false,
-        CancellationToken cancellationToken = default);
+    public interface IRemoteDirectorySynchronizer
+    {
+        /// <summary>
+        /// Creates a remote child directory under the specified parent node.
+        /// </summary>
+        Task<NodeDto> CreateDirectoryAsync(
+            Guid parentNodeId,
+            string name,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Deletes a remote directory entry.
+        /// </summary>
+        Task DeleteDirectoryAsync(
+            Guid nodeId,
+            bool skipTrash = false,
+            CancellationToken cancellationToken = default);
+    }
 }

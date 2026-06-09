@@ -3,71 +3,73 @@
 
 using Cotton.Sync.Desktop.Auth;
 
-namespace Cotton.Sync.Desktop.Tests.Auth;
-
-public sealed class DesktopTokenPayloadProtectorFactoryTests
+namespace Cotton.Sync.Desktop.Tests.Auth
 {
-    private string _tempDirectory = string.Empty;
 
-    [SetUp]
-    public void SetUp()
+    public sealed class DesktopTokenPayloadProtectorFactoryTests
     {
-        _tempDirectory = Path.Combine(Path.GetTempPath(), "cotton-secret-tool-path-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(_tempDirectory);
-    }
+        private string _tempDirectory = string.Empty;
 
-    [TearDown]
-    public void TearDown()
-    {
-        if (Directory.Exists(_tempDirectory))
+        [SetUp]
+        public void SetUp()
         {
-            Directory.Delete(_tempDirectory, recursive: true);
+            _tempDirectory = Path.Combine(Path.GetTempPath(), "cotton-secret-tool-path-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(_tempDirectory);
         }
-    }
 
-    [Test]
-    public void CreateLinuxDefault_ReturnsSecretServiceProtectorWhenSecretToolExists()
-    {
-        string secretToolPath = Path.Combine(_tempDirectory, "secret-tool");
-        File.WriteAllText(secretToolPath, string.Empty);
-
-        ITokenPayloadProtector protector = DesktopTokenPayloadProtectorFactory.CreateLinuxDefault(_tempDirectory);
-
-        Assert.Multiple(() =>
+        [TearDown]
+        public void TearDown()
         {
-            Assert.That(protector, Is.TypeOf<LinuxSecretServiceTokenPayloadProtector>());
-            Assert.That(protector.Scheme, Is.EqualTo("linux-secret-service-v1"));
-        });
-    }
+            if (Directory.Exists(_tempDirectory))
+            {
+                Directory.Delete(_tempDirectory, recursive: true);
+            }
+        }
 
-    [Test]
-    public void CreateLinuxDefault_ReturnsUnsupportedProtectorWhenSecretToolIsMissing()
-    {
-        ITokenPayloadProtector protector = DesktopTokenPayloadProtectorFactory.CreateLinuxDefault(_tempDirectory);
-
-        Assert.Multiple(() =>
+        [Test]
+        public void CreateLinuxDefault_ReturnsSecretServiceProtectorWhenSecretToolExists()
         {
-            Assert.That(protector, Is.TypeOf<UnsupportedTokenPayloadProtector>());
-            Assert.That(protector.Scheme, Is.EqualTo("linux-secret-service-unavailable-v1"));
-        });
-    }
+            string secretToolPath = Path.Combine(_tempDirectory, "secret-tool");
+            File.WriteAllText(secretToolPath, string.Empty);
 
-    [Test]
-    public void ResolveExecutablePath_ReturnsCommandFromPath()
-    {
-        string secretToolPath = Path.Combine(_tempDirectory, "secret-tool");
-        File.WriteAllText(secretToolPath, string.Empty);
+            ITokenPayloadProtector protector = DesktopTokenPayloadProtectorFactory.CreateLinuxDefault(_tempDirectory);
 
-        string? result = DesktopTokenPayloadProtectorFactory.ResolveExecutablePath("secret-tool", _tempDirectory);
+            Assert.Multiple(() =>
+            {
+                Assert.That(protector, Is.TypeOf<LinuxSecretServiceTokenPayloadProtector>());
+                Assert.That(protector.Scheme, Is.EqualTo("linux-secret-service-v1"));
+            });
+        }
 
-        Assert.That(result, Is.EqualTo(secretToolPath));
-    }
+        [Test]
+        public void CreateLinuxDefault_ReturnsUnsupportedProtectorWhenSecretToolIsMissing()
+        {
+            ITokenPayloadProtector protector = DesktopTokenPayloadProtectorFactory.CreateLinuxDefault(_tempDirectory);
 
-    [Test]
-    public void ResolveExecutablePath_ReturnsNullWhenCommandIsMissing()
-    {
-        string? result = DesktopTokenPayloadProtectorFactory.ResolveExecutablePath("secret-tool", _tempDirectory);
+            Assert.Multiple(() =>
+            {
+                Assert.That(protector, Is.TypeOf<UnsupportedTokenPayloadProtector>());
+                Assert.That(protector.Scheme, Is.EqualTo("linux-secret-service-unavailable-v1"));
+            });
+        }
 
-        Assert.That(result, Is.Null);
+        [Test]
+        public void ResolveExecutablePath_ReturnsCommandFromPath()
+        {
+            string secretToolPath = Path.Combine(_tempDirectory, "secret-tool");
+            File.WriteAllText(secretToolPath, string.Empty);
+
+            string? result = DesktopTokenPayloadProtectorFactory.ResolveExecutablePath("secret-tool", _tempDirectory);
+
+            Assert.That(result, Is.EqualTo(secretToolPath));
+        }
+
+        [Test]
+        public void ResolveExecutablePath_ReturnsNullWhenCommandIsMissing()
+        {
+            string? result = DesktopTokenPayloadProtectorFactory.ResolveExecutablePath("secret-tool", _tempDirectory);
+
+            Assert.That(result, Is.Null);
+        }
     }
 }

@@ -3,15 +3,17 @@
 
 using Cotton.Sync.State;
 
-namespace Cotton.Sync.Local;
-
-/// <summary>
-/// Identifies local files that should not enter the synchronization model.
-/// </summary>
-public static class LocalFileIgnoreRules
+namespace Cotton.Sync.Local
 {
+
     /// <summary>
-    /// Returns whether the relative path should be skipped by local scanning.
+    /// Identifies local files that should not enter the synchronization model.
     /// </summary>
-    public static bool ShouldIgnore(string relativePath) => SyncPathIgnoreRules.ShouldIgnore(relativePath);
+    public static class LocalFileIgnoreRules
+    {
+        /// <summary>
+        /// Returns whether the relative path should be skipped by local scanning.
+        /// </summary>
+        public static bool ShouldIgnore(string relativePath) => SyncPathIgnoreRules.ShouldIgnore(relativePath);
+    }
 }

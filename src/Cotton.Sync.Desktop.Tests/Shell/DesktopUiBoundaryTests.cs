@@ -8,52 +8,54 @@ using Cotton.Sync.Desktop.Shell;
 using Cotton.Sync.Desktop.ViewModels;
 using CoreSyncEngine = Cotton.Sync.SyncEngine;
 
-namespace Cotton.Sync.Desktop.Tests.Shell;
-
-public sealed class DesktopUiBoundaryTests
+namespace Cotton.Sync.Desktop.Tests.Shell
 {
-    [Test]
-    public void ShellViewModel_UsesDesktopShellAbstractionsInsteadOfSyncEngine()
+
+    public sealed class DesktopUiBoundaryTests
     {
-        ConstructorInfo constructor = typeof(ShellViewModel)
-            .GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic)
-            .Single();
-        Type[] parameterTypes = constructor.GetParameters()
-            .Select(static parameter => parameter.ParameterType)
-            .ToArray();
-
-        Assert.Multiple(() =>
+        [Test]
+        public void ShellViewModel_UsesDesktopShellAbstractionsInsteadOfSyncEngine()
         {
-            Assert.That(parameterTypes, Does.Contain(typeof(IDesktopShellController)));
-            Assert.That(parameterTypes, Does.Contain(typeof(ILocalFolderPicker)));
-            Assert.That(parameterTypes, Does.Contain(typeof(IDesktopNotificationService)));
-            Assert.That(parameterTypes, Does.Contain(typeof(IDesktopThemeService)));
-            Assert.That(parameterTypes, Does.Not.Contain(typeof(CoreSyncEngine)));
-            Assert.That(parameterTypes, Does.Not.Contain(typeof(SyncEnginePairWork)));
-        });
-    }
-
-    [Test]
-    public void UiShellTypes_DoNotStoreSyncEngineDependencies()
-    {
-        Type[] forbiddenTypes = [typeof(CoreSyncEngine), typeof(SyncEnginePairWork)];
-        Type[] uiTypes = [typeof(MainWindow), typeof(ShellViewModel)];
-
-        foreach (Type uiType in uiTypes)
-        {
-            Type[] dependencyTypes = uiType
-                .GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
-                .Select(static field => field.FieldType)
-                .Concat(uiType
-                    .GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
-                    .SelectMany(static constructor => constructor.GetParameters())
-                    .Select(static parameter => parameter.ParameterType))
+            ConstructorInfo constructor = typeof(ShellViewModel)
+                .GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic)
+                .Single();
+            Type[] parameterTypes = constructor.GetParameters()
+                .Select(static parameter => parameter.ParameterType)
                 .ToArray();
 
-            Assert.That(
-                dependencyTypes.Intersect(forbiddenTypes).ToArray(),
-                Is.Empty,
-                uiType.FullName + " must depend on desktop/app abstractions instead of sync engine internals.");
+            Assert.Multiple(() =>
+            {
+                Assert.That(parameterTypes, Does.Contain(typeof(IDesktopShellController)));
+                Assert.That(parameterTypes, Does.Contain(typeof(ILocalFolderPicker)));
+                Assert.That(parameterTypes, Does.Contain(typeof(IDesktopNotificationService)));
+                Assert.That(parameterTypes, Does.Contain(typeof(IDesktopThemeService)));
+                Assert.That(parameterTypes, Does.Not.Contain(typeof(CoreSyncEngine)));
+                Assert.That(parameterTypes, Does.Not.Contain(typeof(SyncEnginePairWork)));
+            });
+        }
+
+        [Test]
+        public void UiShellTypes_DoNotStoreSyncEngineDependencies()
+        {
+            Type[] forbiddenTypes = [typeof(CoreSyncEngine), typeof(SyncEnginePairWork)];
+            Type[] uiTypes = [typeof(MainWindow), typeof(ShellViewModel)];
+
+            foreach (Type uiType in uiTypes)
+            {
+                Type[] dependencyTypes = uiType
+                    .GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+                    .Select(static field => field.FieldType)
+                    .Concat(uiType
+                        .GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+                        .SelectMany(static constructor => constructor.GetParameters())
+                        .Select(static parameter => parameter.ParameterType))
+                    .ToArray();
+
+                Assert.That(
+                    dependencyTypes.Intersect(forbiddenTypes).ToArray(),
+                    Is.Empty,
+                    uiType.FullName + " must depend on desktop/app abstractions instead of sync engine internals.");
+            }
         }
     }
 }

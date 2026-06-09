@@ -3,66 +3,68 @@
 
 using Cotton.Sync.Desktop.Platform;
 
-namespace Cotton.Sync.Desktop.Tests.Platform;
-
-public sealed class DesktopSingleInstanceGuardTests
+namespace Cotton.Sync.Desktop.Tests.Platform
 {
-    private string _tempDirectory = string.Empty;
 
-    [SetUp]
-    public void SetUp()
+    public sealed class DesktopSingleInstanceGuardTests
     {
-        _tempDirectory = Path.Combine(Path.GetTempPath(), "cotton-single-instance-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(_tempDirectory);
-    }
+        private string _tempDirectory = string.Empty;
 
-    [TearDown]
-    public void TearDown()
-    {
-        if (Directory.Exists(_tempDirectory))
+        [SetUp]
+        public void SetUp()
         {
-            Directory.Delete(_tempDirectory, recursive: true);
-        }
-    }
-
-    [Test]
-    public void TryAcquire_ReturnsGuardForFreeLock()
-    {
-        using DesktopSingleInstanceGuard? guard = DesktopSingleInstanceGuard.TryAcquire(LockFilePath());
-
-        Assert.That(guard, Is.Not.Null);
-    }
-
-    [Test]
-    public void TryAcquire_ReturnsNullWhenLockAlreadyHeld()
-    {
-        using DesktopSingleInstanceGuard? first = DesktopSingleInstanceGuard.TryAcquire(LockFilePath());
-
-        using DesktopSingleInstanceGuard? second = DesktopSingleInstanceGuard.TryAcquire(LockFilePath());
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(first, Is.Not.Null);
-            Assert.That(second, Is.Null);
-        });
-    }
-
-    [Test]
-    public void TryAcquire_AllowsAcquireAfterGuardDisposed()
-    {
-        string lockFilePath = LockFilePath();
-        using (DesktopSingleInstanceGuard? first = DesktopSingleInstanceGuard.TryAcquire(lockFilePath))
-        {
-            Assert.That(first, Is.Not.Null);
+            _tempDirectory = Path.Combine(Path.GetTempPath(), "cotton-single-instance-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(_tempDirectory);
         }
 
-        using DesktopSingleInstanceGuard? second = DesktopSingleInstanceGuard.TryAcquire(lockFilePath);
+        [TearDown]
+        public void TearDown()
+        {
+            if (Directory.Exists(_tempDirectory))
+            {
+                Directory.Delete(_tempDirectory, recursive: true);
+            }
+        }
 
-        Assert.That(second, Is.Not.Null);
-    }
+        [Test]
+        public void TryAcquire_ReturnsGuardForFreeLock()
+        {
+            using DesktopSingleInstanceGuard? guard = DesktopSingleInstanceGuard.TryAcquire(LockFilePath());
 
-    private string LockFilePath()
-    {
-        return Path.Combine(_tempDirectory, "cotton-sync.lock");
+            Assert.That(guard, Is.Not.Null);
+        }
+
+        [Test]
+        public void TryAcquire_ReturnsNullWhenLockAlreadyHeld()
+        {
+            using DesktopSingleInstanceGuard? first = DesktopSingleInstanceGuard.TryAcquire(LockFilePath());
+
+            using DesktopSingleInstanceGuard? second = DesktopSingleInstanceGuard.TryAcquire(LockFilePath());
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(first, Is.Not.Null);
+                Assert.That(second, Is.Null);
+            });
+        }
+
+        [Test]
+        public void TryAcquire_AllowsAcquireAfterGuardDisposed()
+        {
+            string lockFilePath = LockFilePath();
+            using (DesktopSingleInstanceGuard? first = DesktopSingleInstanceGuard.TryAcquire(lockFilePath))
+            {
+                Assert.That(first, Is.Not.Null);
+            }
+
+            using DesktopSingleInstanceGuard? second = DesktopSingleInstanceGuard.TryAcquire(lockFilePath);
+
+            Assert.That(second, Is.Not.Null);
+        }
+
+        private string LockFilePath()
+        {
+            return Path.Combine(_tempDirectory, "cotton-sync.lock");
+        }
     }
 }

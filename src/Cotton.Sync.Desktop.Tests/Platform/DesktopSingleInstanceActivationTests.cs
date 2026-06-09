@@ -3,76 +3,78 @@
 
 using Cotton.Sync.Desktop.Platform;
 
-namespace Cotton.Sync.Desktop.Tests.Platform;
-
-public sealed class DesktopSingleInstanceActivationTests
+namespace Cotton.Sync.Desktop.Tests.Platform
 {
-    private string _tempDirectory = string.Empty;
 
-    [SetUp]
-    public void SetUp()
+    public sealed class DesktopSingleInstanceActivationTests
     {
-        _tempDirectory = Path.Combine(Path.GetTempPath(), "cotton-single-instance-activation-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(_tempDirectory);
-    }
+        private string _tempDirectory = string.Empty;
 
-    [TearDown]
-    public void TearDown()
-    {
-        if (Directory.Exists(_tempDirectory))
+        [SetUp]
+        public void SetUp()
         {
-            Directory.Delete(_tempDirectory, recursive: true);
+            _tempDirectory = Path.Combine(Path.GetTempPath(), "cotton-single-instance-activation-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(_tempDirectory);
         }
-    }
 
-    [Test]
-    public void CreatePipeName_ReturnsStableSafeNameForLockPath()
-    {
-        string lockFilePath = LockFilePath();
-
-        string first = DesktopSingleInstanceActivation.CreatePipeName(lockFilePath);
-        string second = DesktopSingleInstanceActivation.CreatePipeName(lockFilePath);
-
-        Assert.Multiple(() =>
+        [TearDown]
+        public void TearDown()
         {
-            Assert.That(first, Is.EqualTo(second));
-            Assert.That(first, Does.StartWith("cotton-sync-"));
-            Assert.That(first, Does.Not.Contain(Path.DirectorySeparatorChar.ToString()));
-            Assert.That(first, Does.Not.Contain(Path.AltDirectorySeparatorChar.ToString()));
-        });
-    }
+            if (Directory.Exists(_tempDirectory))
+            {
+                Directory.Delete(_tempDirectory, recursive: true);
+            }
+        }
 
-    [Test]
-    public async Task TryRequestShowAsync_NotifiesRunningServer()
-    {
-        using var activated = new ManualResetEventSlim(initialState: false);
-        using DesktopSingleInstanceActivationServer server = DesktopSingleInstanceActivation.StartServer(
-            LockFilePath(),
-            () => activated.Set());
-
-        bool requested = await DesktopSingleInstanceActivation.TryRequestShowAsync(
-            LockFilePath(),
-            TimeSpan.FromSeconds(2));
-
-        Assert.Multiple(() =>
+        [Test]
+        public void CreatePipeName_ReturnsStableSafeNameForLockPath()
         {
-            Assert.That(requested, Is.True);
-            Assert.That(activated.Wait(TimeSpan.FromSeconds(2)), Is.True);
-        });
-    }
+            string lockFilePath = LockFilePath();
 
-    [Test]
-    public async Task TryRequestShowAsync_ReturnsFalseWhenNoServerIsListening()
-    {
-        bool requested = await DesktopSingleInstanceActivation.TryRequestShowAsync(
-            LockFilePath(),
-            TimeSpan.FromMilliseconds(100));
+            string first = DesktopSingleInstanceActivation.CreatePipeName(lockFilePath);
+            string second = DesktopSingleInstanceActivation.CreatePipeName(lockFilePath);
 
-        Assert.That(requested, Is.False);
-    }
+            Assert.Multiple(() =>
+            {
+                Assert.That(first, Is.EqualTo(second));
+                Assert.That(first, Does.StartWith("cotton-sync-"));
+                Assert.That(first, Does.Not.Contain(Path.DirectorySeparatorChar.ToString()));
+                Assert.That(first, Does.Not.Contain(Path.AltDirectorySeparatorChar.ToString()));
+            });
+        }
 
-    private string LockFilePath()
-    {
-        return Path.Combine(_tempDirectory, "cotton-sync.lock");
+        [Test]
+        public async Task TryRequestShowAsync_NotifiesRunningServer()
+        {
+            using var activated = new ManualResetEventSlim(initialState: false);
+            using DesktopSingleInstanceActivationServer server = DesktopSingleInstanceActivation.StartServer(
+                LockFilePath(),
+                () => activated.Set());
+
+            bool requested = await DesktopSingleInstanceActivation.TryRequestShowAsync(
+                LockFilePath(),
+                TimeSpan.FromSeconds(2));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(requested, Is.True);
+                Assert.That(activated.Wait(TimeSpan.FromSeconds(2)), Is.True);
+            });
+        }
+
+        [Test]
+        public async Task TryRequestShowAsync_ReturnsFalseWhenNoServerIsListening()
+        {
+            bool requested = await DesktopSingleInstanceActivation.TryRequestShowAsync(
+                LockFilePath(),
+                TimeSpan.FromMilliseconds(100));
+
+            Assert.That(requested, Is.False);
+        }
+
+        private string LockFilePath()
+        {
+            return Path.Combine(_tempDirectory, "cotton-sync.lock");
+        }
     }
 }
