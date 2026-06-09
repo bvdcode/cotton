@@ -426,9 +426,5 @@ namespace Cotton.Sync.App.SyncApplication
                 }
             }
         }
-
-        private record StartedSyncComponent(
-            string Name,
-            Func<CancellationToken, Task> StopAsync);
     }
 }

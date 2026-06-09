@@ -161,43 +161,5 @@ namespace Cotton.Sync.App.SyncPairs
 
         [GeneratedRegex(@"/+", RegexOptions.CultureInvariant)]
         private static partial Regex SlashRunRegex();
-
-        private record NormalizedLocalRoot(Guid SyncPairId, NormalizedPath Path);
-
-        private record NormalizedPath(string Value, bool WindowsStyle)
-        {
-            public bool IsSameStyle(NormalizedPath other)
-            {
-                return WindowsStyle == other.WindowsStyle;
-            }
-
-            public bool Overlaps(NormalizedPath other)
-            {
-                StringComparison comparison = WindowsStyle ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-                return IsSamePath(other, comparison)
-                    || IsParentOf(other, comparison)
-                    || other.IsParentOf(this, comparison);
-            }
-
-            public bool IsSamePath(NormalizedPath other)
-            {
-                StringComparison comparison = WindowsStyle ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-                return IsSamePath(other, comparison);
-            }
-
-            private bool IsSamePath(NormalizedPath other, StringComparison comparison)
-            {
-                return string.Equals(Value, other.Value, comparison);
-            }
-
-            private bool IsParentOf(NormalizedPath child, StringComparison comparison)
-            {
-                char separator = WindowsStyle ? '\\' : '/';
-                string prefix = Value.EndsWith(separator)
-                    ? Value
-                    : Value + separator;
-                return child.Value.StartsWith(prefix, comparison);
-            }
-        }
     }
 }
