@@ -6,6 +6,12 @@
     "enterQueryHint": "Start typing to search...",
     "noResults": "No files or folders found",
     "open": "Search",
+    "history": {
+      "title": "Recent searches",
+      "clear": "Clear",
+      "remove": "Remove",
+      "removeQuery": "Remove \"{{query}}\" from search history"
+    },
     "modal": {
       "placeholder": "Search files, folders, settings...",
       "resultsCount": "{{count}} results"
@@ -1174,60 +1180,64 @@
       "empty": "No notifications"
     },
     "server": {
+      "location": {
+        "localNetwork": "local network",
+        "unknown": "unknown location"
+      },
       "failedLoginAttempt": {
         "title": "Failed login attempt",
         "content": {
-          "withDevice": "Someone tried to log in to your account '{{username}}' but failed. The attempt was made from {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}).",
-          "withoutDevice": "Someone tried to log in to your account '{{username}}' but failed. The attempt was made from {{city}}, {{region}}, {{country}} ({{ip}})."
+          "withDevice": "Someone tried to log in to your account '{{username}}' but failed. The attempt was made from {{device}} in {{location}} ({{ip}}).",
+          "withoutDevice": "Someone tried to log in to your account '{{username}}' but failed. The attempt was made from {{location}} ({{ip}})."
         }
       },
       "successfulLogin": {
         "title": "New login to your account",
         "content": {
-          "withDevice": "Your account was accessed from {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}). If this wasn't you, please secure your account immediately.",
-          "withoutDevice": "Your account was accessed from {{city}}, {{region}}, {{country}} ({{ip}}). If this wasn't you, please secure your account immediately."
+          "withDevice": "Your account was accessed from {{device}} in {{location}} ({{ip}}). If this wasn't you, please secure your account immediately.",
+          "withoutDevice": "Your account was accessed from {{location}} ({{ip}}). If this wasn't you, please secure your account immediately."
         }
       },
       "otpDisabled": {
         "title": "Two-factor authentication disabled",
         "content": {
-          "withDevice": "Two-factor authentication has been disabled for your account from {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}). Your account is less secure now. If this wasn't you, please secure your account immediately.",
-          "withoutDevice": "Two-factor authentication has been disabled for your account from {{city}}, {{region}}, {{country}} ({{ip}}). Your account is less secure now. If this wasn't you, please secure your account immediately."
+          "withDevice": "Two-factor authentication has been disabled for your account from {{device}} in {{location}} ({{ip}}). Your account is less secure now. If this wasn't you, please secure your account immediately.",
+          "withoutDevice": "Two-factor authentication has been disabled for your account from {{location}} ({{ip}}). Your account is less secure now. If this wasn't you, please secure your account immediately."
         }
       },
       "otpEnabled": {
         "title": "Two-factor authentication activated",
         "content": {
-          "withDevice": "Two-factor authentication has been enabled for your account from {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}). Your account is now more secure.",
-          "withoutDevice": "Two-factor authentication has been enabled for your account from {{city}}, {{region}}, {{country}} ({{ip}}). Your account is now more secure."
+          "withDevice": "Two-factor authentication has been enabled for your account from {{device}} in {{location}} ({{ip}}). Your account is now more secure.",
+          "withoutDevice": "Two-factor authentication has been enabled for your account from {{location}} ({{ip}}). Your account is now more secure."
         }
       },
       "totpFailedAttempt": {
         "title": "Invalid authentication code",
         "content": {
-          "withDevice": "An invalid two-factor authentication code was entered ({{totpFailedAttempts}} failed attempt(s)). The attempt was made from {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}). If this wasn't you, your account may be under attack.",
-          "withoutDevice": "An invalid two-factor authentication code was entered ({{totpFailedAttempts}} failed attempt(s)). The attempt was made from {{city}}, {{region}}, {{country}} ({{ip}}). If this wasn't you, your account may be under attack."
+          "withDevice": "An invalid two-factor authentication code was entered ({{totpFailedAttempts}} failed attempt(s)). The attempt was made from {{device}} in {{location}} ({{ip}}). If this wasn't you, your account may be under attack.",
+          "withoutDevice": "An invalid two-factor authentication code was entered ({{totpFailedAttempts}} failed attempt(s)). The attempt was made from {{location}} ({{ip}}). If this wasn't you, your account may be under attack."
         }
       },
       "totpLockout": {
         "title": "Account temporarily locked",
         "content": {
-          "withDevice": "Your account has been temporarily locked due to {{maxFailedAttempts}} failed authentication attempts. The last attempt was from {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}). Please wait before trying again.",
-          "withoutDevice": "Your account has been temporarily locked due to {{maxFailedAttempts}} failed authentication attempts. The last attempt was from {{city}}, {{region}}, {{country}} ({{ip}}). Please wait before trying again."
+          "withDevice": "Your account has been temporarily locked due to {{maxFailedAttempts}} failed authentication attempts. The last attempt was from {{device}} in {{location}} ({{ip}}). Please wait before trying again.",
+          "withoutDevice": "Your account has been temporarily locked due to {{maxFailedAttempts}} failed authentication attempts. The last attempt was from {{location}} ({{ip}}). Please wait before trying again."
         }
       },
       "webDavTokenReset": {
         "title": "WebDAV access token changed",
         "content": {
-          "withDevice": "Your WebDAV access token has been reset from {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}). You will need to update your WebDAV client with the new token.",
-          "withoutDevice": "Your WebDAV access token has been reset from {{city}}, {{region}}, {{country}} ({{ip}}). You will need to update your WebDAV client with the new token."
+          "withDevice": "Your WebDAV access token has been reset from {{device}} in {{location}} ({{ip}}). You will need to update your WebDAV client with the new token.",
+          "withoutDevice": "Your WebDAV access token has been reset from {{location}} ({{ip}}). You will need to update your WebDAV client with the new token."
         }
       },
       "sharedFileDownloaded": {
         "title": "Shared file downloaded",
         "content": {
-          "withDevice": "Your shared file '{{fileName}}' was downloaded from {{device}} in {{city}}, {{region}}, {{country}} ({{ip}}).",
-          "withoutDevice": "Your shared file '{{fileName}}' was downloaded from {{city}}, {{region}}, {{country}} ({{ip}})."
+          "withDevice": "Your shared file '{{fileName}}' was downloaded from {{device}} in {{location}} ({{ip}}).",
+          "withoutDevice": "Your shared file '{{fileName}}' was downloaded from {{location}} ({{ip}})."
         }
       },
       "uploadHashMismatch": {
@@ -1242,6 +1252,10 @@
         "title": "Cotton server update available",
         "content": "Current server version: {{currentVersion}}\nAvailable server version: {{latestVersion}}\n\nRelease notes:\n{{releaseNotes}}\n\nFull release: {{releaseUrl}}"
       },
+      "appCodeApproval": {
+        "title": "Application sign-in approved",
+        "content": "{{applicationName}} {{applicationVersion}} signed in from {{origin}}."
+      },
       "storagePressure": {
         "title": "Storage is running out of free space",
         "content": "Cotton paused new storage writes because the local storage reserve would be crossed. Free space: {{availableSpace}} ({{availablePercent}}%). Required reserve: {{requiredReserve}}. Storage root: {{rootPath}}. Free disk space or expand the volume, then retry the upload."
@@ -1249,6 +1263,10 @@
       "databaseRestoreCompleted": {
         "title": "Database restored automatically",
         "content": "Automatic database restore completed successfully.\n\nBackup ID: {{backupId}}\nSource database: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup created (UTC): {{backupCreatedUtc}} UTC\nBackup created ({{serverTimezone}}): {{backupCreatedLocal}}\nRestore completed (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestore completed ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+      },
+      "databaseIntegrityFailure": {
+        "title": "Database integrity issue detected",
+        "content": "Cotton rejected a protected database row because its integrity signature did not match.\n\nEntity: {{entityName}}\nRow: {{entityKey}}\nBoundary: {{boundary}}\nDetected (UTC): {{detectedAtUtcDisplay}}\n\nIf you edited PostgreSQL manually, restore the row from a trusted backup or re-apply the change through Cotton."
       }
     }
   },

@@ -66,10 +66,15 @@ export const useSearchPagination = ({
   const [searchDataState, setSearchDataState] = useState<SearchDataState>(() =>
     createEmptySearchDataState(activeSearchKey),
   );
+  const isInitialSearchPending =
+    activeSearchKey.length > 0 && searchDataState.key !== activeSearchKey;
   const searchData =
     searchDataState.key === activeSearchKey
       ? searchDataState
-      : createEmptySearchDataState(activeSearchKey);
+      : {
+          ...createEmptySearchDataState(activeSearchKey),
+          loadingInitial: isInitialSearchPending,
+        };
 
   useEffect(() => {
     if (!trimmedQuery) {

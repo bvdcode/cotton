@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Authors>Vadim Belov</Authors>
+    <Company>bvdcode</Company>
+    <Product>Cotton</Product>
+    <Description>Typed HTTP SDK for Cotton Cloud APIs.</Description>
+    <PackageId>Cotton.Sdk</PackageId>
+    <PackageTags>Cloud,Storage,SDK,HTTP</PackageTags>
+    <PackageProjectUrl>https://github.com/bvdcode/cotton</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/bvdcode/cotton</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.8" />
+    <ProjectReference Include="../Cotton.Shared/Cotton.csproj" />
+  </ItemGroup>
+
+</Project>

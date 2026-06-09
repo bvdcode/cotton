@@ -6,6 +6,12 @@
     "enterQueryHint": "Comece a digitar para pesquisar...",
     "noResults": "Nenhum arquivo ou pasta encontrado",
     "open": "Pesquisar",
+    "history": {
+      "title": "Pesquisas recentes",
+      "clear": "Limpar",
+      "remove": "Remover",
+      "removeQuery": "Remover \"{{query}}\" do histórico de pesquisa"
+    },
     "modal": {
       "placeholder": "Pesquisar arquivos, pastas, configurações...",
       "resultsCount": "{{count}} resultados"
@@ -1382,60 +1388,64 @@
       "empty": "Sem notificações"
     },
     "server": {
+      "location": {
+        "localNetwork": "rede local",
+        "unknown": "localiza\u00e7\u00e3o desconhecida"
+      },
       "failedLoginAttempt": {
         "title": "Tentativa de início de sessão falhada",
         "content": {
-          "withDevice": "Alguém tentou iniciar sessão na sua conta '{{username}}', mas falhou. A tentativa foi feita a partir de {{device}} em {{city}}, {{region}}, {{country}} ({{ip}}).",
-          "withoutDevice": "Alguém tentou iniciar sessão na sua conta '{{username}}', mas falhou. A tentativa foi feita a partir de {{city}}, {{region}}, {{country}} ({{ip}})."
+          "withDevice": "Alguém tentou iniciar sessão na sua conta '{{username}}', mas falhou. A tentativa foi feita a partir de {{device}} em {{location}} ({{ip}}).",
+          "withoutDevice": "Alguém tentou iniciar sessão na sua conta '{{username}}', mas falhou. A tentativa foi feita a partir de {{location}} ({{ip}})."
         }
       },
       "successfulLogin": {
         "title": "Novo início de sessão na sua conta",
         "content": {
-          "withDevice": "A sua conta foi acedida a partir de {{device}} em {{city}}, {{region}}, {{country}} ({{ip}}). Se não foi você, proteja a sua conta imediatamente.",
-          "withoutDevice": "A sua conta foi acedida a partir de {{city}}, {{region}}, {{country}} ({{ip}}). Se não foi você, proteja a sua conta imediatamente."
+          "withDevice": "A sua conta foi acedida a partir de {{device}} em {{location}} ({{ip}}). Se não foi você, proteja a sua conta imediatamente.",
+          "withoutDevice": "A sua conta foi acedida a partir de {{location}} ({{ip}}). Se não foi você, proteja a sua conta imediatamente."
         }
       },
       "otpDisabled": {
         "title": "Autenticação de dois fatores desativada",
         "content": {
-          "withDevice": "A autenticação de dois fatores foi desativada para a sua conta a partir de {{device}} em {{city}}, {{region}}, {{country}} ({{ip}}). A sua conta está agora menos segura. Se não foi você, proteja-a imediatamente.",
-          "withoutDevice": "A autenticação de dois fatores foi desativada para a sua conta a partir de {{city}}, {{region}}, {{country}} ({{ip}}). A sua conta está agora menos segura. Se não foi você, proteja-a imediatamente."
+          "withDevice": "A autenticação de dois fatores foi desativada para a sua conta a partir de {{device}} em {{location}} ({{ip}}). A sua conta está agora menos segura. Se não foi você, proteja-a imediatamente.",
+          "withoutDevice": "A autenticação de dois fatores foi desativada para a sua conta a partir de {{location}} ({{ip}}). A sua conta está agora menos segura. Se não foi você, proteja-a imediatamente."
         }
       },
       "otpEnabled": {
         "title": "Autenticação de dois fatores ativada",
         "content": {
-          "withDevice": "A autenticação de dois fatores foi ativada para a sua conta a partir de {{device}} em {{city}}, {{region}}, {{country}} ({{ip}}). A sua conta está agora mais segura.",
-          "withoutDevice": "A autenticação de dois fatores foi ativada para a sua conta a partir de {{city}}, {{region}}, {{country}} ({{ip}}). A sua conta está agora mais segura."
+          "withDevice": "A autenticação de dois fatores foi ativada para a sua conta a partir de {{device}} em {{location}} ({{ip}}). A sua conta está agora mais segura.",
+          "withoutDevice": "A autenticação de dois fatores foi ativada para a sua conta a partir de {{location}} ({{ip}}). A sua conta está agora mais segura."
         }
       },
       "totpFailedAttempt": {
         "title": "Código de autenticação inválido",
         "content": {
-          "withDevice": "Foi introduzido um código de autenticação de dois fatores inválido (tentativas falhadas: {{totpFailedAttempts}}). A tentativa foi feita a partir de {{device}} em {{city}}, {{region}}, {{country}} ({{ip}}). Se não foi você, a sua conta pode estar sob ataque.",
-          "withoutDevice": "Foi introduzido um código de autenticação de dois fatores inválido (tentativas falhadas: {{totpFailedAttempts}}). A tentativa foi feita a partir de {{city}}, {{region}}, {{country}} ({{ip}}). Se não foi você, a sua conta pode estar sob ataque."
+          "withDevice": "Foi introduzido um código de autenticação de dois fatores inválido (tentativas falhadas: {{totpFailedAttempts}}). A tentativa foi feita a partir de {{device}} em {{location}} ({{ip}}). Se não foi você, a sua conta pode estar sob ataque.",
+          "withoutDevice": "Foi introduzido um código de autenticação de dois fatores inválido (tentativas falhadas: {{totpFailedAttempts}}). A tentativa foi feita a partir de {{location}} ({{ip}}). Se não foi você, a sua conta pode estar sob ataque."
         }
       },
       "totpLockout": {
         "title": "Conta temporariamente bloqueada",
         "content": {
-          "withDevice": "A sua conta foi temporariamente bloqueada após {{maxFailedAttempts}} tentativas de autenticação falhadas. A última tentativa veio de {{device}} em {{city}}, {{region}}, {{country}} ({{ip}}). Aguarde antes de tentar novamente.",
-          "withoutDevice": "A sua conta foi temporariamente bloqueada após {{maxFailedAttempts}} tentativas de autenticação falhadas. A última tentativa veio de {{city}}, {{region}}, {{country}} ({{ip}}). Aguarde antes de tentar novamente."
+          "withDevice": "A sua conta foi temporariamente bloqueada após {{maxFailedAttempts}} tentativas de autenticação falhadas. A última tentativa veio de {{device}} em {{location}} ({{ip}}). Aguarde antes de tentar novamente.",
+          "withoutDevice": "A sua conta foi temporariamente bloqueada após {{maxFailedAttempts}} tentativas de autenticação falhadas. A última tentativa veio de {{location}} ({{ip}}). Aguarde antes de tentar novamente."
         }
       },
       "webDavTokenReset": {
         "title": "Token de acesso WebDAV alterado",
         "content": {
-          "withDevice": "O seu token de acesso WebDAV foi reposto a partir de {{device}} em {{city}}, {{region}}, {{country}} ({{ip}}). Atualize o token no seu cliente WebDAV.",
-          "withoutDevice": "O seu token de acesso WebDAV foi reposto a partir de {{city}}, {{region}}, {{country}} ({{ip}}). Atualize o token no seu cliente WebDAV."
+          "withDevice": "O seu token de acesso WebDAV foi reposto a partir de {{device}} em {{location}} ({{ip}}). Atualize o token no seu cliente WebDAV.",
+          "withoutDevice": "O seu token de acesso WebDAV foi reposto a partir de {{location}} ({{ip}}). Atualize o token no seu cliente WebDAV."
         }
       },
       "sharedFileDownloaded": {
         "title": "Ficheiro partilhado transferido",
         "content": {
-          "withDevice": "O seu ficheiro partilhado '{{fileName}}' foi transferido a partir de {{device}} em {{city}}, {{region}}, {{country}} ({{ip}}).",
-          "withoutDevice": "O seu ficheiro partilhado '{{fileName}}' foi transferido a partir de {{city}}, {{region}}, {{country}} ({{ip}})."
+          "withDevice": "O seu ficheiro partilhado '{{fileName}}' foi transferido a partir de {{device}} em {{location}} ({{ip}}).",
+          "withoutDevice": "O seu ficheiro partilhado '{{fileName}}' foi transferido a partir de {{location}} ({{ip}})."
         }
       },
       "uploadHashMismatch": {
@@ -1450,6 +1460,10 @@
         "title": "Atualização do servidor Cotton disponível",
         "content": "Versão atual do servidor: {{currentVersion}}\nVersão disponível do servidor: {{latestVersion}}\n\nNotas de lançamento:\n{{releaseNotes}}\n\nLançamento completo: {{releaseUrl}}"
       },
+      "appCodeApproval": {
+        "title": "Entrada do aplicativo aprovada",
+        "content": "O aplicativo {{applicationName}} {{applicationVersion}} iniciou sessão a partir de {{origin}}."
+      },
       "storagePressure": {
         "title": "O armazenamento está a ficar sem espaço livre",
         "content": "O Cotton pausou novas escritas no armazenamento porque a reserva local de espaço seria ultrapassada. Espaço livre: {{availableSpace}} ({{availablePercent}}%). Reserva necessária: {{requiredReserve}}. Raiz do armazenamento: {{rootPath}}. Liberte espaço ou expanda o volume e tente novamente o carregamento."
@@ -1457,6 +1471,10 @@
       "databaseRestoreCompleted": {
         "title": "Base de dados restaurada automaticamente",
         "content": "A restauração automática da base de dados foi concluída com sucesso.\n\nID da cópia: {{backupId}}\nBase de dados de origem: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nCópia criada (UTC): {{backupCreatedUtc}} UTC\nCópia criada ({{serverTimezone}}): {{backupCreatedLocal}}\nRestauração concluída (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestauração concluída ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+      },
+      "databaseIntegrityFailure": {
+        "title": "Problema de integridade do banco de dados detectado",
+        "content": "O Cotton rejeitou uma linha protegida do banco de dados porque a assinatura de integridade não correspondeu.\n\nEntidade: {{entityName}}\nLinha: {{entityKey}}\nLimite: {{boundary}}\nDetectado (UTC): {{detectedAtUtcDisplay}}\n\nSe você editou o PostgreSQL manualmente, restaure a linha a partir de um backup confiável ou reaplique a alteração pelo Cotton."
       }
     }
   },

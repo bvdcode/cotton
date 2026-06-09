@@ -6,6 +6,12 @@
     "enterQueryHint": "开始输入即可搜索……",
     "noResults": "未找到任何文件或文件夹",
     "open": "搜索",
+    "history": {
+      "title": "最近搜索",
+      "clear": "清除",
+      "remove": "移除",
+      "removeQuery": "从搜索历史中移除“{{query}}”"
+    },
     "modal": {
       "placeholder": "搜索文件、文件夹、设置……",
       "resultsCount": "{{count}} 项结果"
@@ -1388,6 +1394,10 @@
       "empty": "暂无通知"
     },
     "server": {
+      "location": {
+        "localNetwork": "\u672c\u5730\u7f51\u7edc",
+        "unknown": "\u672a\u77e5\u4f4d\u7f6e"
+      },
       "failedLoginAttempt": {
         "title": "登录尝试失败",
         "content": {
@@ -1456,6 +1466,10 @@
         "title": "Cotton 服务器更新可用",
         "content": "当前服务器版本：{{currentVersion}}\n可用服务器版本：{{latestVersion}}\n\n发行说明：\n{{releaseNotes}}\n\n完整发行页：{{releaseUrl}}"
       },
+      "appCodeApproval": {
+        "title": "应用登录已批准",
+        "content": "应用 {{applicationName}} {{applicationVersion}} 已从 {{origin}} 登录。"
+      },
       "storagePressure": {
         "title": "存储可用空间不足",
         "content": "Cotton 已暂停新的存储写入，因为本地存储预留空间将被突破。可用空间：{{availableSpace}}（{{availablePercent}}%）。所需预留：{{requiredReserve}}。存储根目录：{{rootPath}}。请释放磁盘空间或扩容后重试上传。"
@@ -1463,6 +1477,10 @@
       "databaseRestoreCompleted": {
         "title": "数据库已自动恢复",
         "content": "数据库自动恢复已成功完成。\n\n备份 ID：{{backupId}}\n源数据库：{{sourceDatabase}}（{{sourceHost}}:{{sourcePort}}）\n\n备份创建时间（UTC）：{{backupCreatedUtc}} UTC\n备份创建时间（{{serverTimezone}}）：{{backupCreatedLocal}}\n恢复完成时间（UTC）：{{restoreCompletedUtcDisplay}} UTC\n恢复完成时间（{{serverTimezone}}）：{{restoreCompletedLocalDisplay}}"
+      },
+      "databaseIntegrityFailure": {
+        "title": "检测到数据库完整性问题",
+        "content": "Cotton 拒绝了一行受保护的数据库记录，因为它的完整性签名不匹配。\n\n实体：{{entityName}}\n行：{{entityKey}}\n边界：{{boundary}}\n检测时间 (UTC)：{{detectedAtUtcDisplay}}\n\n如果你手动编辑了 PostgreSQL，请从可信备份恢复该行，或通过 Cotton 重新应用更改。"
       }
     }
   },
