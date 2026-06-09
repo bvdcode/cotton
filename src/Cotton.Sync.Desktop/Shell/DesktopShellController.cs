@@ -42,7 +42,9 @@ internal sealed class DesktopShellController : IDesktopShellController
     private readonly DesktopAppPaths _paths;
     private readonly SqliteAppPreferencesStore _preferencesStore;
     private readonly DesktopStartupOptions _startupOptions;
+    private readonly TimeSpan _savedSessionRestoreTimeout;
     private readonly SqliteSyncPairSettingsStore _syncPairStore;
+    private readonly TimeSpan _tokenStorageVerificationTimeout;
     private IDisposable? _activitySubscription;
     private DesktopSyncApplicationHost? _host;
     private IDisposable? _runProgressSubscription;
@@ -59,7 +61,9 @@ internal sealed class DesktopShellController : IDesktopShellController
         IAutostartService autostartService,
         DesktopStartupOptions? startupOptions = null,
         Func<DesktopTokenStorageCapabilitySnapshot>? tokenStorageCapabilities = null,
-        Func<CancellationToken, Task<DesktopTokenStorageCapabilitySnapshot>>? tokenStorageVerifier = null)
+        Func<CancellationToken, Task<DesktopTokenStorageCapabilitySnapshot>>? tokenStorageVerifier = null,
+        TimeSpan? savedSessionRestoreTimeout = null,
+        TimeSpan? tokenStorageVerificationTimeout = null)
     {
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         _factory = factory ?? throw new ArgumentNullException(nameof(factory));
@@ -69,6 +73,10 @@ internal sealed class DesktopShellController : IDesktopShellController
         _autostartService = autostartService ?? throw new ArgumentNullException(nameof(autostartService));
         _diagnosticsExporter = new DesktopDiagnosticsExporter();
         _startupOptions = startupOptions ?? DesktopStartupOptions.Empty;
+        _savedSessionRestoreTimeout = savedSessionRestoreTimeout ?? SavedSessionRestoreTimeout;
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(_savedSessionRestoreTimeout, TimeSpan.Zero);
+        _tokenStorageVerificationTimeout = tokenStorageVerificationTimeout ?? _savedSessionRestoreTimeout;
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(_tokenStorageVerificationTimeout, TimeSpan.Zero);
         _tokenStorageVerifier = tokenStorageVerifier
             ?? (tokenStorageCapabilities is null
                 ? DesktopTokenStorageCapabilities.CreateVerifiedSnapshotAsync
@@ -1275,7 +1283,7 @@ internal sealed class DesktopShellController : IDesktopShellController
 
             using CancellationTokenSource restoreCancellation =
                 CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            restoreCancellation.CancelAfter(SavedSessionRestoreTimeout);
+            restoreCancellation.CancelAfter(_savedSessionRestoreTimeout);
             AuthSession session = await host.App.RestoreSessionAsync(restoreCancellation.Token)
                 .WaitAsync(restoreCancellation.Token)
                 .ConfigureAwait(false);
@@ -1300,7 +1308,7 @@ internal sealed class DesktopShellController : IDesktopShellController
             Trace.TraceWarning(
                 "Timed out restoring desktop session for {0} after {1} seconds.",
                 serverUrl,
-                SavedSessionRestoreTimeout.TotalSeconds);
+                _savedSessionRestoreTimeout.TotalSeconds);
             await host.DisposeAsync().ConfigureAwait(false);
             throw new TimeoutException("Saved session could not be restored. Check connection to Cotton Cloud and retry.");
         }
@@ -1358,8 +1366,24 @@ internal sealed class DesktopShellController : IDesktopShellController
 
     private async Task<bool> CanUseStoredSessionAsync(CancellationToken cancellationToken)
     {
-        DesktopTokenStorageCapabilitySnapshot tokenStorage = await _tokenStorageVerifier(cancellationToken)
-            .ConfigureAwait(false);
+        DesktopTokenStorageCapabilitySnapshot tokenStorage;
+        using CancellationTokenSource verificationCancellation =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        verificationCancellation.CancelAfter(_tokenStorageVerificationTimeout);
+        try
+        {
+            tokenStorage = await _tokenStorageVerifier(verificationCancellation.Token)
+                .WaitAsync(verificationCancellation.Token)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            Trace.TraceWarning(
+                "Skipping desktop session restore because token storage verification timed out after {0} seconds.",
+                _tokenStorageVerificationTimeout.TotalSeconds);
+            return false;
+        }
+
         if (tokenStorage.IsReleaseSecure)
         {
             return true;

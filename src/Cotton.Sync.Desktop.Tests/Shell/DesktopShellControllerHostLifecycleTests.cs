@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Diagnostics;
 using System.Net;
 using Cotton.Auth;
 using Cotton.Files;
@@ -286,6 +287,41 @@ public sealed class DesktopShellControllerHostLifecycleTests
             Assert.That(snapshot.StartupErrorMessage, Is.Not.Empty);
             Assert.That(host.TokenStore.ClearAsyncCalls, Is.Zero);
             Assert.That(host.AsyncResource.DisposeAsyncCalls, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task LoadAsync_BoundsTokenStorageVerificationBeforeSessionRestore()
+    {
+        DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+        Uri serverUrl = new("https://cotton.example.test/");
+        var preferencesStore = new SqliteAppPreferencesStore(paths.AppDatabasePath);
+        await preferencesStore.InitializeAsync();
+        await preferencesStore.SaveAsync(new AppPreferences
+        {
+            RememberedServerUrl = serverUrl,
+        });
+        var factory = new QueueingDesktopSyncApplicationFactory(
+            FakeDesktopApplicationHost.Create(serverUrl).Host);
+        using DesktopShellController controller = CreateController(
+            paths,
+            factory,
+            tokenStorageVerifier: async cancellationToken =>
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
+                return CreateSecureTokenStorage();
+            },
+            tokenStorageVerificationTimeout: TimeSpan.FromMilliseconds(50));
+        Stopwatch stopwatch = Stopwatch.StartNew();
+
+        DesktopShellSnapshot snapshot = await controller.LoadAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(stopwatch.Elapsed, Is.LessThan(TimeSpan.FromSeconds(2)));
+            Assert.That(snapshot.IsSignedIn, Is.False);
+            Assert.That(snapshot.ServerUrl, Is.EqualTo(serverUrl));
+            Assert.That(factory.CreatedServerUrls, Is.Empty);
         });
     }
 
@@ -650,6 +686,8 @@ public sealed class DesktopShellControllerHostLifecycleTests
         DesktopAppPaths paths,
         IDesktopSyncApplicationFactory factory,
         Func<DesktopTokenStorageCapabilitySnapshot>? tokenStorageCapabilities = null,
+        Func<CancellationToken, Task<DesktopTokenStorageCapabilitySnapshot>>? tokenStorageVerifier = null,
+        TimeSpan? tokenStorageVerificationTimeout = null,
         IAutostartService? autostartService = null,
         SqliteSyncPairSettingsStore? syncPairStore = null)
     {
@@ -660,7 +698,9 @@ public sealed class DesktopShellControllerHostLifecycleTests
             syncPairStore ?? new SqliteSyncPairSettingsStore(paths.AppDatabasePath),
             new FakePlatformCommandService(),
             autostartService ?? new FakeAutostartService(),
-            tokenStorageCapabilities: tokenStorageCapabilities ?? CreateSecureTokenStorage);
+            tokenStorageCapabilities: tokenStorageCapabilities ?? CreateSecureTokenStorage,
+            tokenStorageVerifier: tokenStorageVerifier,
+            tokenStorageVerificationTimeout: tokenStorageVerificationTimeout);
     }
 
     private static SyncPairSettings CreateSyncPair(bool isEnabled)
