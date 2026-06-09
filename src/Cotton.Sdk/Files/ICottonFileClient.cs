@@ -59,7 +59,7 @@ namespace Cotton.Sdk.Files
         /// <summary>
         /// Restores a trashed file entry.
         /// </summary>
-        Task<NodeFileManifestDto> RestoreAsync(Guid nodeFileId, RestoreItemRequestDto? request = null, CancellationToken cancellationToken = default);
+        Task<RestoreOutcomeDto> RestoreAsync(Guid nodeFileId, RestoreItemRequestDto? request = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Lists file versions.

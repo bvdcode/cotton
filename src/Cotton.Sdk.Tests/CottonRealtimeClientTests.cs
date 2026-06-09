@@ -16,6 +16,14 @@ public sealed class CottonRealtimeClientTests
     }
 
     [Test]
+    public void CreateUri_PreservesBaseAddressPath()
+    {
+        Uri uri = CottonRealtimeHubEndpoint.CreateUri(new Uri("https://app.cottoncloud.dev/cloud"));
+
+        Assert.That(uri, Is.EqualTo(new Uri("https://app.cottoncloud.dev/cloud/api/v1/hub/events")));
+    }
+
+    [Test]
     public void RemoteFileTreeChanged_IncludesServerMutationMethods()
     {
         Assert.That(

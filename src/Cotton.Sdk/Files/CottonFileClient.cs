@@ -124,12 +124,12 @@ namespace Cotton.Sdk.Files
         /// <summary>
         /// Restores a trashed file entry.
         /// </summary>
-        public Task<NodeFileManifestDto> RestoreAsync(
+        public Task<RestoreOutcomeDto> RestoreAsync(
             Guid nodeFileId,
             RestoreItemRequestDto? request = null,
             CancellationToken cancellationToken = default)
         {
-            return _transport.SendJsonAsync<NodeFileManifestDto>(
+            return _transport.SendJsonAsync<RestoreOutcomeDto>(
                 HttpMethod.Post,
                 $"{Routes.V1.Files}/{nodeFileId}/restore",
                 request ?? new RestoreItemRequestDto(),

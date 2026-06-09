@@ -127,12 +127,12 @@ namespace Cotton.Sdk.Nodes
         /// <summary>
         /// Restores a trashed node.
         /// </summary>
-        public Task<NodeDto> RestoreAsync(
+        public Task<RestoreOutcomeDto> RestoreAsync(
             Guid nodeId,
             RestoreItemRequestDto? request = null,
             CancellationToken cancellationToken = default)
         {
-            return _transport.SendJsonAsync<NodeDto>(
+            return _transport.SendJsonAsync<RestoreOutcomeDto>(
                 HttpMethod.Post,
                 $"{Routes.V1.Layouts}/nodes/{nodeId}/restore",
                 request ?? new RestoreItemRequestDto(),

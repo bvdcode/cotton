@@ -54,7 +54,7 @@ namespace Cotton.Sdk.Nodes
         /// <summary>
         /// Restores a trashed node.
         /// </summary>
-        Task<NodeDto> RestoreAsync(Guid nodeId, RestoreItemRequestDto? request = null, CancellationToken cancellationToken = default);
+        Task<RestoreOutcomeDto> RestoreAsync(Guid nodeId, RestoreItemRequestDto? request = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets ancestor nodes for a node.

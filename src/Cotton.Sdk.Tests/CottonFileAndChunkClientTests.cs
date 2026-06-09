@@ -202,6 +202,41 @@ public sealed class CottonFileAndChunkClientTests
     }
 
     [Test]
+    public async Task RestoreAsync_MapsRestoreOutcome()
+    {
+        Guid nodeId = Guid.NewGuid();
+        Guid fileId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var handler = new QueuedHttpMessageHandler();
+        handler.EnqueueJson(HttpStatusCode.OK, new
+        {
+            status = "Restored",
+            originalParentPath = "/Archive",
+            restoredFile = FileManifestPayload(fileId, nodeId, "restored.txt", "restored-hash"),
+        });
+        var client = await CreateAuthorizedClientAsync(handler);
+
+        RestoreOutcomeDto outcome = await client.Files.RestoreAsync(
+            fileId,
+            new RestoreItemRequestDto
+            {
+                CreateMissingParents = true,
+                Overwrite = true,
+            });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(outcome.Status, Is.EqualTo(RestoreStatus.Restored));
+            Assert.That(outcome.OriginalParentPath, Is.EqualTo("/Archive"));
+            Assert.That(outcome.RestoredFile?.Id, Is.EqualTo(fileId));
+            Assert.That(outcome.RestoredFile?.Name, Is.EqualTo("restored.txt"));
+            Assert.That(handler.Requests[0].Method, Is.EqualTo(HttpMethod.Post));
+            Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/files/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/restore"));
+            Assert.That(handler.Requests[0].Body, Does.Contain("\"createMissingParents\":true"));
+            Assert.That(handler.Requests[0].Body, Does.Contain("\"overwrite\":true"));
+        });
+    }
+
+    [Test]
     public async Task DownloadContentAsync_CopiesResponseBodyAndReportsProgress()
     {
         var handler = new QueuedHttpMessageHandler();

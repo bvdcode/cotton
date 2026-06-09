@@ -3,6 +3,7 @@
 
 using System.Net;
 using Cotton.Auth;
+using Cotton.Files;
 using Cotton.Sdk.Auth;
 using Cotton.Sdk.Tests.Fakes;
 
@@ -62,6 +63,32 @@ public sealed class CottonNodeClientTests
             Assert.That(handler.Requests[0].Method, Is.EqualTo(HttpMethod.Put));
             Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/layouts/nodes"));
             Assert.That(handler.Requests[0].Body, Does.Contain("\"name\":\"reports\""));
+        });
+    }
+
+    [Test]
+    public async Task RestoreAsync_MapsNonSuccessRestoreOutcome()
+    {
+        Guid nodeId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var handler = new QueuedHttpMessageHandler();
+        handler.EnqueueJson(HttpStatusCode.OK, new
+        {
+            status = "ParentMissing",
+            originalParentPath = "/Projects/Old",
+            missingPath = "/Projects",
+        });
+        var client = await CreateAuthorizedClientAsync(handler);
+
+        RestoreOutcomeDto outcome = await client.Nodes.RestoreAsync(nodeId);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(outcome.Status, Is.EqualTo(RestoreStatus.ParentMissing));
+            Assert.That(outcome.OriginalParentPath, Is.EqualTo("/Projects/Old"));
+            Assert.That(outcome.MissingPath, Is.EqualTo("/Projects"));
+            Assert.That(outcome.RestoredNode, Is.Null);
+            Assert.That(handler.Requests[0].Method, Is.EqualTo(HttpMethod.Post));
+            Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/layouts/nodes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/restore"));
         });
     }
 

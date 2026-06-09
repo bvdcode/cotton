@@ -263,7 +263,7 @@ namespace Cotton.Sdk.Internal
             IReadOnlyDictionary<string, string>? headers,
             CancellationToken cancellationToken)
         {
-            var request = new HttpRequestMessage(method, path);
+            var request = new HttpRequestMessage(method, CottonRouteUri.Create(BaseAddress, path));
             ApplyDefaultHeaders(request);
             if (body is not null)
             {
@@ -363,7 +363,7 @@ namespace Cotton.Sdk.Internal
                 }
 
                 string path = Routes.V1.Auth + "/refresh?refreshToken=" + Uri.EscapeDataString(tokens.RefreshToken);
-                using HttpRequestMessage request = new(HttpMethod.Post, path);
+                using HttpRequestMessage request = new(HttpMethod.Post, CottonRouteUri.Create(BaseAddress, path));
                 ApplyDefaultHeaders(request);
                 using HttpResponseMessage response = await SendHttpAsync(
                     request,
