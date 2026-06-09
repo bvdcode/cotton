@@ -1387,7 +1387,7 @@ public sealed class SyncCliCommandRunnerTests
                     approvalId = Guid.Parse("0190a000-0000-7000-8000-000000000022"),
                     approvalUrl = "/oauth/app-code/0190a000-0000-7000-8000-000000000022",
                     pollToken = "poll-token",
-                    expiresAt = new DateTime(2026, 6, 8, 12, 0, 0, DateTimeKind.Utc),
+                    expiresAt = DateTime.UtcNow.AddMinutes(10),
                     pollIntervalSeconds = 1,
                 });
             }

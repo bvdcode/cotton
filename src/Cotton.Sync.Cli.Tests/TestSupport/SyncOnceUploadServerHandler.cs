@@ -82,7 +82,7 @@ internal sealed class SyncOnceUploadServerHandler : HttpMessageHandler
                 approvalId = "0190a000-0000-7000-8000-000000000022",
                 approvalUrl = "/oauth/app-code/0190a000-0000-7000-8000-000000000022",
                 pollToken = "poll-token",
-                expiresAt = new DateTimeOffset(2026, 6, 8, 12, 0, 0, TimeSpan.Zero),
+                expiresAt = DateTimeOffset.UtcNow.AddMinutes(10),
                 pollIntervalSeconds = 1,
             });
         }
