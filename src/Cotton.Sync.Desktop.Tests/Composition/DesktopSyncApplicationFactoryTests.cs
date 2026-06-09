@@ -68,7 +68,7 @@ namespace Cotton.Sync.Desktop.Tests.Composition
         }
 
         [Test]
-        public void DesktopHttpClientFactory_PrefersIpv4ForDualStackHosts()
+        public void DesktopHttpClientFactory_KeepsDnsOrderForDualStackFallback()
         {
             IPAddress[] addresses =
             [
@@ -80,9 +80,9 @@ namespace Cotton.Sync.Desktop.Tests.Composition
 
             Assert.Multiple(() =>
             {
-                Assert.That(ordered[0].AddressFamily, Is.EqualTo(AddressFamily.InterNetwork));
-                Assert.That(ordered[0], Is.EqualTo(IPAddress.Parse("10.0.0.10")));
-                Assert.That(ordered[1].AddressFamily, Is.EqualTo(AddressFamily.InterNetworkV6));
+                Assert.That(ordered[0].AddressFamily, Is.EqualTo(AddressFamily.InterNetworkV6));
+                Assert.That(ordered[0], Is.EqualTo(IPAddress.Parse("2600:8801:fb00:36:6e1f:f7ff:fe3f:b0db")));
+                Assert.That(ordered[1].AddressFamily, Is.EqualTo(AddressFamily.InterNetwork));
             });
         }
 

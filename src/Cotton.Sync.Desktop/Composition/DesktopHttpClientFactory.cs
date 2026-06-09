@@ -8,6 +8,8 @@ namespace Cotton.Sync.Desktop.Composition
 {
     internal static class DesktopHttpClientFactory
     {
+        private static readonly TimeSpan ConnectFallbackDelay = TimeSpan.FromMilliseconds(250);
+
         public static HttpClient Create(TimeSpan timeout)
         {
             ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(timeout, TimeSpan.Zero);
@@ -33,29 +35,48 @@ namespace Cotton.Sync.Desktop.Composition
                     context.DnsEndPoint.Host,
                     cancellationToken)
                 .ConfigureAwait(false);
+            IReadOnlyList<IPAddress> orderedAddresses = OrderAddressesForConnect(addresses);
             Exception? lastException = null;
-            foreach (IPAddress address in OrderAddressesForConnect(addresses))
+            var attempts = new List<ConnectAttempt>();
+            try
             {
-                var socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
+                foreach (IPAddress address in orderedAddresses)
                 {
-                    NoDelay = true,
-                };
-                try
-                {
-                    await socket.ConnectAsync(
-                            new IPEndPoint(address, context.DnsEndPoint.Port),
-                            cancellationToken)
-                        .ConfigureAwait(false);
-                    return new NetworkStream(socket, ownsSocket: true);
-                }
-                catch (Exception exception) when (exception is SocketException or OperationCanceledException)
-                {
-                    socket.Dispose();
-                    lastException = exception;
-                    if (exception is OperationCanceledException)
+                    attempts.Add(StartConnectAttempt(address, context.DnsEndPoint.Port, cancellationToken));
+                    Task<ConnectAttempt> completedAttempt = WaitForCompletedConnectAsync(attempts, cancellationToken);
+                    Task delay = Task.Delay(ConnectFallbackDelay, cancellationToken);
+                    Task completed = await Task.WhenAny(completedAttempt, delay).ConfigureAwait(false);
+                    if (completed == completedAttempt)
                     {
-                        throw;
+                        ConnectAttempt attempt = completedAttempt.Result;
+                        if (attempt.ConnectTask.IsCompletedSuccessfully)
+                        {
+                            return attempt.CreateStream();
+                        }
+
+                        lastException = attempt.ConnectTask.Exception?.GetBaseException();
+                        attempt.Dispose();
                     }
+                }
+
+                while (attempts.Count > 0)
+                {
+                    ConnectAttempt completedAttempt = await WaitForCompletedConnectAsync(attempts, cancellationToken)
+                        .ConfigureAwait(false);
+                    if (completedAttempt.ConnectTask.IsCompletedSuccessfully)
+                    {
+                        return completedAttempt.CreateStream();
+                    }
+
+                    lastException = completedAttempt.ConnectTask.Exception?.GetBaseException();
+                    completedAttempt.Dispose();
+                }
+            }
+            finally
+            {
+                foreach (ConnectAttempt attempt in attempts)
+                {
+                    attempt.Dispose();
                 }
             }
 
@@ -66,8 +87,67 @@ namespace Cotton.Sync.Desktop.Composition
         {
             ArgumentNullException.ThrowIfNull(addresses);
             return addresses
-                .OrderBy(static address => address.AddressFamily == AddressFamily.InterNetwork ? 0 : 1)
+                .Where(static address => address.AddressFamily is AddressFamily.InterNetwork or AddressFamily.InterNetworkV6)
                 .ToArray();
+        }
+
+        private static ConnectAttempt StartConnectAttempt(
+            IPAddress address,
+            int port,
+            CancellationToken cancellationToken)
+        {
+            var socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
+            {
+                NoDelay = true,
+            };
+            return new ConnectAttempt(
+                address,
+                socket,
+                socket.ConnectAsync(new IPEndPoint(address, port), cancellationToken).AsTask());
+        }
+
+        private static async Task<ConnectAttempt> WaitForCompletedConnectAsync(
+            List<ConnectAttempt> attempts,
+            CancellationToken cancellationToken)
+        {
+            Task completedTask = await Task.WhenAny(attempts.Select(static attempt => attempt.ConnectTask))
+                .WaitAsync(cancellationToken)
+                .ConfigureAwait(false);
+            ConnectAttempt completedAttempt = attempts.Single(attempt => ReferenceEquals(attempt.ConnectTask, completedTask));
+            attempts.Remove(completedAttempt);
+            return completedAttempt;
+        }
+
+        private sealed class ConnectAttempt : IDisposable
+        {
+            private bool _completed;
+
+            public ConnectAttempt(IPAddress address, Socket socket, Task connectTask)
+            {
+                Address = address;
+                Socket = socket;
+                ConnectTask = connectTask;
+            }
+
+            public IPAddress Address { get; }
+
+            public Socket Socket { get; }
+
+            public Task ConnectTask { get; }
+
+            public NetworkStream CreateStream()
+            {
+                _completed = true;
+                return new NetworkStream(Socket, ownsSocket: true);
+            }
+
+            public void Dispose()
+            {
+                if (!_completed)
+                {
+                    Socket.Dispose();
+                }
+            }
         }
     }
 }
