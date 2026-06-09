@@ -1457,6 +1457,10 @@
         "title": "Mise à jour du serveur Cotton disponible",
         "content": "Version actuelle du serveur : {{currentVersion}}\nVersion disponible du serveur : {{latestVersion}}\n\nNotes de version :\n{{releaseNotes}}\n\nVersion complète : {{releaseUrl}}"
       },
+      "appCodeApproval": {
+        "title": "Connexion de l’application approuvée",
+        "content": "L’application {{applicationName}} {{applicationVersion}} s’est connectée depuis {{origin}}."
+      },
       "storagePressure": {
         "title": "Le stockage manque d’espace libre",
         "content": "Cotton a suspendu les nouvelles écritures, car la réserve locale de stockage serait dépassée. Espace libre : {{availableSpace}} ({{availablePercent}} %). Réserve requise : {{requiredReserve}}. Racine du stockage : {{rootPath}}. Libérez de l’espace ou agrandissez le volume, puis réessayez le téléversement."

@@ -254,6 +254,18 @@ namespace Cotton.Localization
                 $"\n\nFull release: {releaseUrl}";
         }
 
+        /// <summary>Title for app-code approval notifications.</summary>
+        public static string AppCodeApprovalTitle => "Application sign-in approved";
+
+        /// <summary>Builds app-code approval notification content.</summary>
+        public static string AppCodeApprovalContent(
+            string applicationName,
+            string applicationVersion,
+            string origin)
+        {
+            return $"{applicationName} {applicationVersion} signed in from {origin}.";
+        }
+
         /// <summary>Normalizes and truncates release notes for notification display.</summary>
         public static string FormatReleaseNotes(string? releaseNotes)
         {

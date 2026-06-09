@@ -1461,6 +1461,10 @@
         "title": "Dostępna aktualizacja serwera Cotton",
         "content": "Bieżąca wersja serwera: {{currentVersion}}\nDostępna wersja serwera: {{latestVersion}}\n\nInformacje o wydaniu:\n{{releaseNotes}}\n\nPełne wydanie: {{releaseUrl}}"
       },
+      "appCodeApproval": {
+        "title": "Logowanie aplikacji zatwierdzone",
+        "content": "Aplikacja {{applicationName}} {{applicationVersion}} zalogowała się z {{origin}}."
+      },
       "storagePressure": {
         "title": "W magazynie kończy się wolne miejsce",
         "content": "Cotton wstrzymał nowe zapisy do magazynu, ponieważ zostałaby przekroczona lokalna rezerwa wolnego miejsca. Wolne miejsce: {{availableSpace}} ({{availablePercent}}%). Wymagana rezerwa: {{requiredReserve}}. Katalog główny magazynu: {{rootPath}}. Zwolnij miejsce albo powiększ wolumen, a następnie ponów przesyłanie."

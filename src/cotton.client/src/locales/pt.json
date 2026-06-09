@@ -1460,6 +1460,10 @@
         "title": "Atualização do servidor Cotton disponível",
         "content": "Versão atual do servidor: {{currentVersion}}\nVersão disponível do servidor: {{latestVersion}}\n\nNotas de lançamento:\n{{releaseNotes}}\n\nLançamento completo: {{releaseUrl}}"
       },
+      "appCodeApproval": {
+        "title": "Entrada do aplicativo aprovada",
+        "content": "O aplicativo {{applicationName}} {{applicationVersion}} iniciou sessão a partir de {{origin}}."
+      },
       "storagePressure": {
         "title": "O armazenamento está a ficar sem espaço livre",
         "content": "O Cotton pausou novas escritas no armazenamento porque a reserva local de espaço seria ultrapassada. Espaço livre: {{availableSpace}} ({{availablePercent}}%). Reserva necessária: {{requiredReserve}}. Raiz do armazenamento: {{rootPath}}. Liberte espaço ou expanda o volume e tente novamente o carregamento."

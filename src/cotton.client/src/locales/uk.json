@@ -1464,6 +1464,10 @@
         "title": "Доступне оновлення сервера Cotton",
         "content": "Поточна версія сервера: {{currentVersion}}\nДоступна версія сервера: {{latestVersion}}\n\nНотатки до релізу:\n{{releaseNotes}}\n\nПовний реліз: {{releaseUrl}}"
       },
+      "appCodeApproval": {
+        "title": "Вхід застосунку підтверджено",
+        "content": "Застосунок {{applicationName}} {{applicationVersion}} увійшов із {{origin}}."
+      },
       "storagePressure": {
         "title": "У сховищі закінчується вільне місце",
         "content": "Cotton призупинив нові записи в сховище, бо буде порушено резерв вільного місця. Вільно: {{availableSpace}} ({{availablePercent}}%). Потрібний резерв: {{requiredReserve}}. Корінь сховища: {{rootPath}}. Звільніть місце або розширте том, а потім повторіть завантаження."

@@ -1466,6 +1466,10 @@
         "title": "Cotton 服务器更新可用",
         "content": "当前服务器版本：{{currentVersion}}\n可用服务器版本：{{latestVersion}}\n\n发行说明：\n{{releaseNotes}}\n\n完整发行页：{{releaseUrl}}"
       },
+      "appCodeApproval": {
+        "title": "应用登录已批准",
+        "content": "应用 {{applicationName}} {{applicationVersion}} 已从 {{origin}} 登录。"
+      },
       "storagePressure": {
         "title": "存储可用空间不足",
         "content": "Cotton 已暂停新的存储写入，因为本地存储预留空间将被突破。可用空间：{{availableSpace}}（{{availablePercent}}%）。所需预留：{{requiredReserve}}。存储根目录：{{rootPath}}。请释放磁盘空间或扩容后重试上传。"

@@ -1458,6 +1458,10 @@
         "title": "Je dostupná aktualizace serveru Cotton",
         "content": "Aktuální verze serveru: {{currentVersion}}\nDostupná verze serveru: {{latestVersion}}\n\nPoznámky k vydání:\n{{releaseNotes}}\n\nCelé vydání: {{releaseUrl}}"
       },
+      "appCodeApproval": {
+        "title": "Přihlášení aplikace schváleno",
+        "content": "Aplikace {{applicationName}} {{applicationVersion}} se přihlásila z {{origin}}."
+      },
       "storagePressure": {
         "title": "V úložišti dochází volné místo",
         "content": "Cotton pozastavil nové zápisy do úložiště, protože by byla překročena rezerva volného místa. Volné místo: {{availableSpace}} ({{availablePercent}} %). Požadovaná rezerva: {{requiredReserve}}. Kořen úložiště: {{rootPath}}. Uvolněte místo nebo rozšiřte svazek a potom nahrání zopakujte."

@@ -3566,6 +3566,10 @@
         "title": "Доступно обновление сервера Cotton",
         "content": "Текущая версия сервера: {{currentVersion}}\nДоступная версия сервера: {{latestVersion}}\n\nЗаметки релиза:\n{{releaseNotes}}\n\nПолный релиз: {{releaseUrl}}"
       },
+      "appCodeApproval": {
+        "title": "Вход приложения подтвержден",
+        "content": "Приложение {{applicationName}} {{applicationVersion}} вошло из {{origin}}."
+      },
       "storagePressure": {
         "title": "В хранилище заканчивается свободное место",
         "content": "Cotton приостановил новые записи в хранилище, потому что будет нарушен резерв свободного места. Свободно: {{availableSpace}} ({{availablePercent}}%). Требуемый резерв: {{requiredReserve}}. Корень хранилища: {{rootPath}}. Освободите место или расширьте диск, затем повторите загрузку."

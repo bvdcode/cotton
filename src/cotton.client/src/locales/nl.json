@@ -1458,6 +1458,10 @@
         "title": "Cotton-serverupdate beschikbaar",
         "content": "Huidige serverversie: {{currentVersion}}\nBeschikbare serverversie: {{latestVersion}}\n\nRelease-opmerkingen:\n{{releaseNotes}}\n\nVolledige release: {{releaseUrl}}"
       },
+      "appCodeApproval": {
+        "title": "Aanmelding van toepassing goedgekeurd",
+        "content": "De toepassing {{applicationName}} {{applicationVersion}} heeft zich aangemeld vanaf {{origin}}."
+      },
       "storagePressure": {
         "title": "Opslag heeft bijna geen vrije ruimte meer",
         "content": "Cotton heeft nieuwe schrijfacties naar opslag gepauzeerd omdat de lokale opslagreserve zou worden overschreden. Vrije ruimte: {{availableSpace}} ({{availablePercent}}%). Vereiste reserve: {{requiredReserve}}. Opslagroot: {{rootPath}}. Maak ruimte vrij of breid het volume uit en probeer de upload opnieuw."

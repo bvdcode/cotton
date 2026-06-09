@@ -124,6 +124,24 @@ describe("renderNotificationText", () => {
     );
   });
 
+  it("renders app-code approval template from metadata", () => {
+    const result = renderNotificationText(
+      createNotification({
+        "i18n.titleKey": "notifications:server.appCodeApproval.title",
+        "i18n.contentKey": "notifications:server.appCodeApproval.content",
+        applicationName: "Cotton Desktop",
+        applicationVersion: "1.2.3",
+        origin: "10.0.0.101",
+      }),
+      i18n.t,
+    );
+
+    expect(result).toEqual({
+      title: "Application sign-in approved",
+      content: "Cotton Desktop 1.2.3 signed in from 10.0.0.101.",
+    });
+  });
+
   it("keeps fallback text when the template key is unknown", () => {
     const result = renderNotificationText(
       createNotification({

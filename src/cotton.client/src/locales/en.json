@@ -1252,6 +1252,10 @@
         "title": "Cotton server update available",
         "content": "Current server version: {{currentVersion}}\nAvailable server version: {{latestVersion}}\n\nRelease notes:\n{{releaseNotes}}\n\nFull release: {{releaseUrl}}"
       },
+      "appCodeApproval": {
+        "title": "Application sign-in approved",
+        "content": "{{applicationName}} {{applicationVersion}} signed in from {{origin}}."
+      },
       "storagePressure": {
         "title": "Storage is running out of free space",
         "content": "Cotton paused new storage writes because the local storage reserve would be crossed. Free space: {{availableSpace}} ({{availablePercent}}%). Required reserve: {{requiredReserve}}. Storage root: {{rootPath}}. Free disk space or expand the volume, then retry the upload."

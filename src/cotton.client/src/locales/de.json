@@ -1453,6 +1453,10 @@
         "title": "Cotton-Serverupdate verfügbar",
         "content": "Aktuelle Serverversion: {{currentVersion}}\nVerfügbare Serverversion: {{latestVersion}}\n\nVersionshinweise:\n{{releaseNotes}}\n\nVollständiges Release: {{releaseUrl}}"
       },
+      "appCodeApproval": {
+        "title": "App-Anmeldung genehmigt",
+        "content": "Die Anwendung {{applicationName}} {{applicationVersion}} hat sich von {{origin}} angemeldet."
+      },
       "storagePressure": {
         "title": "Dem Speicher geht der freie Platz aus",
         "content": "Cotton hat neue Schreibvorgänge angehalten, weil die lokale Speicherreserve unterschritten würde. Freier Speicher: {{availableSpace}} ({{availablePercent}} %). Erforderliche Reserve: {{requiredReserve}}. Speicherwurzel: {{rootPath}}. Gib Speicher frei oder erweitere das Volume und versuche den Upload erneut."

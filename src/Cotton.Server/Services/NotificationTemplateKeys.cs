@@ -46,6 +46,9 @@ namespace Cotton.Server.Services
         public const string AppUpdateAvailableTitle = "notifications:server.appUpdateAvailable.title";
         public const string AppUpdateAvailableContent = "notifications:server.appUpdateAvailable.content";
 
+        public const string AppCodeApprovalTitle = "notifications:server.appCodeApproval.title";
+        public const string AppCodeApprovalContent = "notifications:server.appCodeApproval.content";
+
         public const string StoragePressureTitle = "notifications:server.storagePressure.title";
         public const string StoragePressureContent = "notifications:server.storagePressure.content";
 
