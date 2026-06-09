@@ -3858,6 +3858,39 @@ public sealed class ShellViewModelSyncPairCommandTests
     }
 
     [Test]
+    public async Task DisposeAsync_CancelsPendingBrowserSignIn()
+    {
+        var controller = new FakeDesktopShellController(CreateSignedOutSnapshot())
+        {
+            ServerProbeResult = new DesktopServerProbeResult(
+                new Uri("https://app.cottoncloud.dev/"),
+                true,
+                "Cotton Cloud",
+                "instance-hash"),
+            BrowserSignInCompletion = new TaskCompletionSource<AuthSession>(
+                TaskCreationOptions.RunContinuationsAsynchronously),
+        };
+        ShellViewModel viewModel = CreateViewModel(controller);
+        await viewModel.InitializeAsync();
+        viewModel.ServerUrl = "app.cottoncloud.dev";
+        await WaitForAsync(() => viewModel.IsSignInStepVisible);
+
+        viewModel.SignInWithBrowserCommand.Execute(null);
+        await WaitForAsync(() => viewModel.IsBrowserSignInPending);
+
+        await viewModel.DisposeAsync();
+        await WaitForAsync(() => controller.BrowserSignInCompletion.Task.IsCanceled);
+        await WaitForAsync(() => !viewModel.SignInWithBrowserCommand.IsRunning);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(controller.BrowserSignInCompletion.Task.IsCanceled, Is.True);
+            Assert.That(viewModel.IsBrowserSignInPending, Is.False);
+            Assert.That(viewModel.IsBusy, Is.False);
+        });
+    }
+
+    [Test]
     public async Task SignInCommand_DoesNotShowNativeNotificationWhenDisabled()
     {
         var controller = new FakeDesktopShellController(CreateSignedOutSnapshot(enableNotifications: false))

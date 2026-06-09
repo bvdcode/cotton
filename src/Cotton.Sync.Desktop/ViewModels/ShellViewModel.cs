@@ -1354,7 +1354,10 @@ internal sealed class ShellViewModel : ViewModelBase, IDisposable, IAsyncDisposa
         Notifications.CollectionChanged -= OnNotificationsChanged;
         _serverProbeCancellation?.Cancel();
         _serverProbeCancellation?.Dispose();
+        _serverProbeCancellation = null;
         _browserSignInCancellation?.Cancel();
+        _browserSignInCancellation?.Dispose();
+        _browserSignInCancellation = null;
     }
 
     public async Task InitializeAsync()
