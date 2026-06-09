@@ -6,6 +6,12 @@
     "enterQueryHint": "Start typing to search...",
     "noResults": "No files or folders found",
     "open": "Search",
+    "history": {
+      "title": "Recent searches",
+      "clear": "Clear",
+      "remove": "Remove",
+      "removeQuery": "Remove \"{{query}}\" from search history"
+    },
     "modal": {
       "placeholder": "Search files, folders, settings...",
       "resultsCount": "{{count}} results"

@@ -6,6 +6,12 @@
     "enterQueryHint": "Začněte psát pro vyhledávání...",
     "noResults": "Žádné soubory ani složky nebyly nalezeny",
     "open": "Hledat",
+    "history": {
+      "title": "Nedávná hledání",
+      "clear": "Vymazat",
+      "remove": "Odebrat",
+      "removeQuery": "Odebrat „{{query}}“ z historie hledání"
+    },
     "modal": {
       "placeholder": "Hledat soubory, složky, nastavení...",
       "resultsCount": "{{count}} výsledků"

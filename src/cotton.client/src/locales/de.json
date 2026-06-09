@@ -6,6 +6,12 @@
     "enterQueryHint": "Tippen, um zu suchen...",
     "noResults": "Keine Dateien oder Ordner gefunden",
     "open": "Suche",
+    "history": {
+      "title": "Letzte Suchanfragen",
+      "clear": "Leeren",
+      "remove": "Entfernen",
+      "removeQuery": "\"{{query}}\" aus dem Suchverlauf entfernen"
+    },
     "modal": {
       "placeholder": "Dateien, Ordner, Einstellungen suchen...",
       "resultsCount": "{{count}} Ergebnisse"

@@ -6,6 +6,12 @@
     "enterQueryHint": "Empieza a escribir para buscar...",
     "noResults": "No se encontraron archivos ni carpetas",
     "open": "Buscar",
+    "history": {
+      "title": "Búsquedas recientes",
+      "clear": "Borrar",
+      "remove": "Eliminar",
+      "removeQuery": "Eliminar \"{{query}}\" del historial de búsqueda"
+    },
     "modal": {
       "placeholder": "Buscar archivos, carpetas, ajustes...",
       "resultsCount": "{{count}} resultados"

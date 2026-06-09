@@ -6,6 +6,12 @@
     "enterQueryHint": "Comece a digitar para pesquisar...",
     "noResults": "Nenhum arquivo ou pasta encontrado",
     "open": "Pesquisar",
+    "history": {
+      "title": "Pesquisas recentes",
+      "clear": "Limpar",
+      "remove": "Remover",
+      "removeQuery": "Remover \"{{query}}\" do histórico de pesquisa"
+    },
     "modal": {
       "placeholder": "Pesquisar arquivos, pastas, configurações...",
       "resultsCount": "{{count}} resultados"

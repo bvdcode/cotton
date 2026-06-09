@@ -24,6 +24,8 @@ export const USER_PREFERENCE_KEYS = {
   galleryPreferPreview: "galleryPreferPreview",
 
   clientEncryptionLockOnRefresh: "clientEncryptionLockOnRefresh",
+
+  searchHistory: "searchHistory",
 } as const;
 
 const DEFAULT_SHARE_LINK_EXPIRE_AFTER_MINUTES = 60 * 24 * 30;
