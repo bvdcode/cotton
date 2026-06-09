@@ -27,7 +27,13 @@ function Get-IconBitmapHash {
     try {
         $bitmap.Save($stream, [System.Drawing.Imaging.ImageFormat]::Png)
         $bytes = $stream.ToArray()
-        return [System.Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData($bytes))
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            return [System.BitConverter]::ToString($sha256.ComputeHash($bytes)).Replace("-", "")
+        }
+        finally {
+            $sha256.Dispose()
+        }
     }
     finally {
         $stream.Dispose()
@@ -37,15 +43,19 @@ function Get-IconBitmapHash {
 
 $resolvedExecutable = (Resolve-Path -LiteralPath $AppExecutable).Path
 $resolvedIcon = (Resolve-Path -LiteralPath $ExpectedIcon).Path
-$associatedIcon = [System.Drawing.Icon]::ExtractAssociatedIcon($resolvedExecutable)
-if ($null -eq $associatedIcon) {
+$actualAssociatedIcon = [System.Drawing.Icon]::ExtractAssociatedIcon($resolvedExecutable)
+if ($null -eq $actualAssociatedIcon) {
     throw "Desktop executable has no associated icon: $resolvedExecutable"
 }
 
-$expectedIcon = [System.Drawing.Icon]::new($resolvedIcon, 32, 32)
+$expectedDesktopIcon = [System.Drawing.Icon]::ExtractAssociatedIcon($resolvedIcon)
+if ($null -eq $expectedDesktopIcon) {
+    throw "Expected desktop icon could not be loaded: $resolvedIcon"
+}
+
 try {
-    $actualHash = Get-IconBitmapHash -Icon $associatedIcon
-    $expectedHash = Get-IconBitmapHash -Icon $expectedIcon
+    $actualHash = Get-IconBitmapHash -Icon $actualAssociatedIcon
+    $expectedHash = Get-IconBitmapHash -Icon $expectedDesktopIcon
     if ($actualHash -ne $expectedHash) {
         throw "Desktop executable associated icon does not match $resolvedIcon."
     }
@@ -53,6 +63,6 @@ try {
     Write-Host "Verified Windows associated icon: $resolvedExecutable"
 }
 finally {
-    $associatedIcon.Dispose()
-    $expectedIcon.Dispose()
+    $actualAssociatedIcon.Dispose()
+    $expectedDesktopIcon.Dispose()
 }
