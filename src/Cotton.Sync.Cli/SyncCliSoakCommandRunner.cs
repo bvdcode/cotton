@@ -54,12 +54,25 @@ internal static class SyncCliSoakCommandRunner
 
         using HttpClient? ownedHttpClient = injectedHttpClient is null ? new HttpClient() : null;
         HttpClient httpClient = injectedHttpClient ?? ownedHttpClient!;
-        SyncCliRuntime runtime = await SyncCliRuntimeFactory.CreateAsync(options, httpClient, cancellationToken)
+        await using SyncCliRuntime runtime = await SyncCliRuntimeFactory.CreateAsync(options, httpClient, cancellationToken)
             .ConfigureAwait(false);
-        SyncCliRuntime? secondRuntime = secondClientOptions is null
-            ? null
-            : await SyncCliRuntimeFactory.CreateAsync(secondClientOptions, httpClient, cancellationToken)
-                .ConfigureAwait(false);
+        if (secondClientOptions is null)
+        {
+            return await RunLoopAsync(
+                options,
+                runtime,
+                secondClientOptions,
+                null,
+                output,
+                iterations,
+                durationSeconds,
+                intervalSeconds ?? 30,
+                normalizedProbeFile,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        await using SyncCliRuntime secondRuntime = await SyncCliRuntimeFactory.CreateAsync(secondClientOptions, httpClient, cancellationToken)
+            .ConfigureAwait(false);
         return await RunLoopAsync(
             options,
             runtime,

@@ -422,6 +422,11 @@ public sealed class SdkRemoteFileSynchronizerTests
         public ICottonSyncClient Sync => throw new NotSupportedException();
 
         public ICottonRealtimeClient Realtime => throw new NotSupportedException();
+
+        public ValueTask DisposeAsync()
+        {
+            return ValueTask.CompletedTask;
+        }
     }
 
     private sealed class FakeSettingsClient : ICottonSettingsClient

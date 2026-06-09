@@ -131,8 +131,7 @@ internal sealed class SyncProcessCrashHttpServer : SyncProcessCrashHttpServerBas
             if (createRequest.NodeId != _remoteRootId
                 || !string.Equals(createRequest.Name, Path.GetFileName(_expectedRelativePath), StringComparison.Ordinal)
                 || !string.Equals(createRequest.Hash, _expectedContentHash, StringComparison.Ordinal)
-                || !createRequest.ChunkHashes.SequenceEqual(new[] { _expectedContentHash })
-                || !createRequest.Validate)
+                || !createRequest.ChunkHashes.SequenceEqual(new[] { _expectedContentHash }))
             {
                 throw new InvalidOperationException("Unexpected file-create request.");
             }

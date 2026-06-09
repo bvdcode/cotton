@@ -20,16 +20,29 @@ internal static class SyncCliRuntimeFactory
         CancellationToken cancellationToken)
     {
         CottonCloudClient client = CreateClient(options, httpClient);
-        await client.Auth.LoginAsync(
-            new LoginRequestDto
+        bool clientOwnedByRuntime = false;
+        try
+        {
+            await client.Auth.LoginAsync(
+                new LoginRequestDto
+                {
+                    Username = options.Username!,
+                    Password = options.Password!,
+                    TwoFactorCode = options.TwoFactorCode,
+                    TrustDevice = true,
+                },
+                cancellationToken).ConfigureAwait(false);
+            SyncCliRuntime runtime = await CreateAuthenticatedAsync(options, client, cancellationToken).ConfigureAwait(false);
+            clientOwnedByRuntime = true;
+            return runtime;
+        }
+        finally
+        {
+            if (!clientOwnedByRuntime)
             {
-                Username = options.Username!,
-                Password = options.Password!,
-                TwoFactorCode = options.TwoFactorCode,
-                TrustDevice = true,
-            },
-            cancellationToken).ConfigureAwait(false);
-        return await CreateAuthenticatedAsync(options, client, cancellationToken).ConfigureAwait(false);
+                await client.DisposeAsync().ConfigureAwait(false);
+            }
+        }
     }
 
     public static async Task<SyncCliRuntime> CreateWithBrowserAuthAsync(
@@ -39,17 +52,30 @@ internal static class SyncCliRuntimeFactory
         CancellationToken cancellationToken)
     {
         CottonCloudClient client = CreateClient(options, httpClient);
-        var authFlow = new AppCodeBrowserAuthFlow(client.Auth, platformCommands);
-        await authFlow
-            .SignInAsync(
-                new AppCodeBrowserSignInRequest
-                {
-                    ApplicationName = "Cotton Sync CLI",
-                    DeviceName = "Cotton Sync CLI",
-                },
-                cancellationToken)
-            .ConfigureAwait(false);
-        return await CreateAuthenticatedAsync(options, client, cancellationToken).ConfigureAwait(false);
+        bool clientOwnedByRuntime = false;
+        try
+        {
+            var authFlow = new AppCodeBrowserAuthFlow(client.Auth, platformCommands);
+            await authFlow
+                .SignInAsync(
+                    new AppCodeBrowserSignInRequest
+                    {
+                        ApplicationName = "Cotton Sync CLI",
+                        DeviceName = "Cotton Sync CLI",
+                    },
+                    cancellationToken)
+                .ConfigureAwait(false);
+            SyncCliRuntime runtime = await CreateAuthenticatedAsync(options, client, cancellationToken).ConfigureAwait(false);
+            clientOwnedByRuntime = true;
+            return runtime;
+        }
+        finally
+        {
+            if (!clientOwnedByRuntime)
+            {
+                await client.DisposeAsync().ConfigureAwait(false);
+            }
+        }
     }
 
     private static CottonCloudClient CreateClient(SyncCliConnectionOptions options, HttpClient httpClient)
@@ -84,7 +110,7 @@ internal static class SyncCliRuntimeFactory
             LocalRootPath = options.LocalRoot,
             RemoteRootNodeId = options.RemoteRootNodeId,
         };
-        return new SyncCliRuntime(syncPair, stateStore, engine);
+        return new SyncCliRuntime(syncPair, stateStore, engine, client);
     }
 
     public static async Task<SyncCliPassResult> RunSinglePassAsync(

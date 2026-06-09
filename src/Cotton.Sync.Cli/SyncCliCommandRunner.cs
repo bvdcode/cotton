@@ -94,7 +94,7 @@ public static class SyncCliCommandRunner
 
         using HttpClient? ownedHttpClient = injectedHttpClient is null ? new HttpClient() : null;
         HttpClient httpClient = injectedHttpClient ?? ownedHttpClient!;
-        var client = new CottonCloudClient(
+        await using var client = new CottonCloudClient(
             httpClient,
             new InMemoryCottonTokenStore(),
             new CottonSdkOptions
@@ -188,10 +188,10 @@ public static class SyncCliCommandRunner
 
         using HttpClient? ownedHttpClient = injectedHttpClient is null ? new HttpClient() : null;
         HttpClient httpClient = injectedHttpClient ?? ownedHttpClient!;
-        SyncCliRuntime runtime;
+        SyncCliPassResult pass;
         try
         {
-            runtime = options.UseBrowserLogin
+            await using SyncCliRuntime runtime = options.UseBrowserLogin
                 ? await SyncCliRuntimeFactory
                     .CreateWithBrowserAuthAsync(
                         options,
@@ -201,6 +201,8 @@ public static class SyncCliCommandRunner
                     .ConfigureAwait(false)
                 : await SyncCliRuntimeFactory.CreateAsync(options, httpClient, cancellationToken)
                     .ConfigureAwait(false);
+            pass = await SyncCliRuntimeFactory.RunSinglePassAsync(runtime, cancellationToken)
+                .ConfigureAwait(false);
         }
         catch (AppCodeBrowserSignInException exception)
         {
@@ -212,9 +214,6 @@ public static class SyncCliCommandRunner
 
             return 1;
         }
-
-        SyncCliPassResult pass = await SyncCliRuntimeFactory.RunSinglePassAsync(runtime, cancellationToken)
-            .ConfigureAwait(false);
 
         await output.WriteLineAsync("Cotton Sync one-shot run").ConfigureAwait(false);
         await output.WriteLineAsync("Sync pair: " + options.SyncPairId).ConfigureAwait(false);
