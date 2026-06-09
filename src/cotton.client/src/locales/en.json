@@ -3162,6 +3162,42 @@
       "failed": "Failed to verify email. Please try again."
     }
   },
+  "appCodeApproval": {
+    "title": "Application sign-in",
+    "loading": "Please wait, loading sign-in details...",
+    "request": {
+      "version": "Version {{version}}",
+      "versionWithDevice": "Version {{version}} on {{deviceName}}",
+      "origin": "Request from {{origin}}"
+    },
+    "access": {
+      "title": "This application will be able to:",
+      "bullets": {
+        "files": "Access your Cotton Cloud files and folders.",
+        "content": "Upload, download, rename, move, and delete content.",
+        "profile": "Read basic account profile information.",
+        "session": "Stay signed in until you revoke the application session."
+      }
+    },
+    "actions": {
+      "allow": "Allow",
+      "deny": "Deny"
+    },
+    "approved": {
+      "title": "Access granted",
+      "message": "You can return to the application."
+    },
+    "denied": {
+      "title": "Request denied",
+      "message": "The application was not signed in."
+    },
+    "errors": {
+      "missingRequest": "Sign-in request is missing.",
+      "unavailable": "This sign-in request is no longer available.",
+      "approveFailed": "Failed to approve sign-in.",
+      "denyFailed": "Failed to deny sign-in."
+    }
+  },
   "unlock": {
     "title": "Unlock Cotton",
     "caption": "The server is waiting for the master key before starting the app.",
