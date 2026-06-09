@@ -167,4 +167,4 @@ The release plan is split into focused files so the active checklist stays visib
 - [ ] [Phase 13 - Performance And Soak](sdk-desktop-sync-client-plan/23-phase-13-performance-and-soak.md) - active/manual-gated performance and soak, 5 open, 8 done
 - [ ] [Phase 14 - Release Readiness Gate](sdk-desktop-sync-client-plan/24-phase-14-release-readiness-gate.md) - final release gate, 20 open
 - [ ] [Future Platform Features](sdk-desktop-sync-client-plan/30-future-platform-features.md) - future, not release-blocking, 10 open
-- [ ] [Working Rules For This Plan](sdk-desktop-sync-client-plan/99-working-rules-for-this-plan.md) - reference operating rules, 6 open
+- [ ] [Working Rules For This Plan](sdk-desktop-sync-client-plan/99-working-rules-for-this-plan.md) - reference operating rules, 7 open
