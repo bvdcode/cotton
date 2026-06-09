@@ -92,7 +92,7 @@ public sealed class SdkRemoteDirectorySynchronizerTests
             return Task.CompletedTask;
         }
 
-        public Task<NodeDto> RestoreAsync(
+        public Task<RestoreOutcomeDto> RestoreAsync(
             Guid nodeId,
             RestoreItemRequestDto? request = null,
             CancellationToken cancellationToken = default)

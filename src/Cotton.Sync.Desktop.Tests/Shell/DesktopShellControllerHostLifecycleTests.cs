@@ -1061,7 +1061,7 @@ public sealed class DesktopShellControllerHostLifecycleTests
             throw new NotSupportedException();
         }
 
-        public Task<NodeDto> RestoreAsync(
+        public Task<RestoreOutcomeDto> RestoreAsync(
             Guid nodeId,
             RestoreItemRequestDto? request = null,
             CancellationToken cancellationToken = default)

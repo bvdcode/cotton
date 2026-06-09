@@ -334,7 +334,7 @@ public sealed class RemoteTreeCrawlerTests
             throw new NotSupportedException();
         }
 
-        public Task<NodeDto> RestoreAsync(Guid nodeId, RestoreItemRequestDto? request = null, CancellationToken cancellationToken = default)
+        public Task<RestoreOutcomeDto> RestoreAsync(Guid nodeId, RestoreItemRequestDto? request = null, CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
         }

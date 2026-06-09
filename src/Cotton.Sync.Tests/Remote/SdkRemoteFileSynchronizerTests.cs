@@ -640,7 +640,7 @@ public sealed class SdkRemoteFileSynchronizerTests
             return Task.CompletedTask;
         }
 
-        public Task<NodeFileManifestDto> RestoreAsync(
+        public Task<RestoreOutcomeDto> RestoreAsync(
             Guid nodeFileId,
             RestoreItemRequestDto? request = null,
             CancellationToken cancellationToken = default)
@@ -753,7 +753,7 @@ public sealed class SdkRemoteFileSynchronizerTests
             throw new NotSupportedException();
         }
 
-        public Task<NodeDto> RestoreAsync(Guid nodeId, RestoreItemRequestDto? request = null, CancellationToken cancellationToken = default)
+        public Task<RestoreOutcomeDto> RestoreAsync(Guid nodeId, RestoreItemRequestDto? request = null, CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
         }
