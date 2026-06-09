@@ -226,6 +226,10 @@ public sealed class DesktopPackagingMetadataTests
         {
             Assert.That(smokeScript, Does.Contain("Usage: $0 <app-executable> <data-dir>"));
             Assert.That(smokeScript, Does.Contain("--export-diagnostics --data-dir"));
+            Assert.That(smokeScript, Does.Contain("command -v timeout"));
+            Assert.That(smokeScript, Does.Contain("COTTON_SYNC_DIAGNOSTICS_TIMEOUT"));
+            Assert.That(smokeScript, Does.Contain("Diagnostics export timed out after"));
+            Assert.That(smokeScript, Does.Contain("Diagnostics export exited with code"));
             Assert.That(smokeScript, Does.Contain("sed -n 's/^Bundle: //p'"));
             Assert.That(smokeScript, Does.Contain("Diagnostics bundle path was not reported."));
             Assert.That(smokeScript, Does.Contain("Diagnostics bundle was not created at $bundle_path."));

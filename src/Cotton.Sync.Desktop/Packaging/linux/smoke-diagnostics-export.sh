@@ -15,11 +15,25 @@ if [ ! -x "$app_executable" ]; then
 fi
 
 command -v python3 >/dev/null
+command -v timeout >/dev/null
 
 mkdir -p "$data_dir"
 
-diagnostics_output="$("$app_executable" --export-diagnostics --data-dir "$data_dir")"
+diagnostics_timeout="${COTTON_SYNC_DIAGNOSTICS_TIMEOUT:-120s}"
+set +e
+diagnostics_output="$(timeout "$diagnostics_timeout" "$app_executable" --export-diagnostics --data-dir "$data_dir" 2>&1)"
+diagnostics_exit_code="$?"
+set -e
 printf '%s\n' "$diagnostics_output"
+if [ "$diagnostics_exit_code" -eq 124 ]; then
+  echo "Diagnostics export timed out after $diagnostics_timeout." >&2
+  exit 1
+fi
+
+if [ "$diagnostics_exit_code" -ne 0 ]; then
+  echo "Diagnostics export exited with code $diagnostics_exit_code." >&2
+  exit 1
+fi
 
 bundle_path="$(printf '%s\n' "$diagnostics_output" | sed -n 's/^Bundle: //p' | head -n 1)"
 if [ -z "$bundle_path" ]; then
