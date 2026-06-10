@@ -291,6 +291,39 @@ namespace Cotton.Sync.Desktop.Tests.Shell
         }
 
         [Test]
+        public async Task LoadAsync_RetriesTransientSessionRestoreFailureAndKeepsStoredSession()
+        {
+            DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+            Uri serverUrl = new("https://cotton.example.test/");
+            var preferencesStore = new SqliteAppPreferencesStore(paths.AppDatabasePath);
+            await preferencesStore.InitializeAsync();
+            await preferencesStore.SaveAsync(new AppPreferences
+            {
+                RememberedServerUrl = serverUrl,
+            });
+            FakeDesktopApplicationHost host = FakeDesktopApplicationHost.Create(serverUrl);
+            host.App.RestoreSessionExceptions.Enqueue(new HttpRequestException(
+                "Firewall blocked first restore request.",
+                new System.Net.Sockets.SocketException(10013)));
+            var factory = new QueueingDesktopSyncApplicationFactory(host.Host);
+            using DesktopShellController controller = CreateController(
+                paths,
+                factory,
+                savedSessionRestoreRetryBaseDelay: TimeSpan.Zero);
+
+            DesktopShellSnapshot snapshot = await controller.LoadAsync();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(snapshot.IsSignedIn, Is.True);
+                Assert.That(snapshot.StartupErrorMessage, Is.Null);
+                Assert.That(host.App.RestoreSessionCalls, Is.EqualTo(2));
+                Assert.That(host.TokenStore.ClearAsyncCalls, Is.Zero);
+                Assert.That(host.AsyncResource.DisposeAsyncCalls, Is.Zero);
+            });
+        }
+
+        [Test]
         public async Task LoadAsync_BoundsTokenStorageVerificationBeforeSessionRestore()
         {
             DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
@@ -717,6 +750,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             Func<DesktopTokenStorageCapabilitySnapshot>? tokenStorageCapabilities = null,
             Func<CancellationToken, Task<DesktopTokenStorageCapabilitySnapshot>>? tokenStorageVerifier = null,
             TimeSpan? tokenStorageVerificationTimeout = null,
+            TimeSpan? savedSessionRestoreRetryBaseDelay = null,
             IAutostartService? autostartService = null,
             SqliteSyncPairSettingsStore? syncPairStore = null)
         {
@@ -729,6 +763,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
                 autostartService ?? new FakeAutostartService(),
                 tokenStorageCapabilities: tokenStorageCapabilities ?? CreateSecureTokenStorage,
                 tokenStorageVerifier: tokenStorageVerifier,
+                savedSessionRestoreRetryBaseDelay: savedSessionRestoreRetryBaseDelay,
                 tokenStorageVerificationTimeout: tokenStorageVerificationTimeout);
         }
 
@@ -865,6 +900,8 @@ namespace Cotton.Sync.Desktop.Tests.Shell
 
             public Exception? RestoreSessionException { get; set; }
 
+            public Queue<Exception> RestoreSessionExceptions { get; } = [];
+
             public Task<AuthSession> SignInAsync(
                 PasswordSignInRequest request,
                 CancellationToken cancellationToken = default)
@@ -882,6 +919,11 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             public Task<AuthSession> RestoreSessionAsync(CancellationToken cancellationToken = default)
             {
                 RestoreSessionCalls++;
+                if (RestoreSessionExceptions.TryDequeue(out Exception? queuedException))
+                {
+                    throw queuedException;
+                }
+
                 if (RestoreSessionException is not null)
                 {
                     throw RestoreSessionException;

@@ -32,7 +32,9 @@ namespace Cotton.Sync.Desktop.Shell
         private const string SelfTestSyncPairId = "__desktop_self_test__";
 
         private static readonly TimeSpan SavedSessionRestoreTimeout = TimeSpan.FromSeconds(15);
+        private static readonly TimeSpan SavedSessionRestoreRetryBaseDelay = TimeSpan.FromSeconds(1);
         private static readonly TimeSpan ServerProbeTimeout = TimeSpan.FromSeconds(5);
+        private const int SavedSessionRestoreMaxAttempts = 3;
 
         private readonly IDesktopSyncApplicationFactory _factory;
         private readonly IPlatformCommandService _platformCommands;
@@ -43,6 +45,7 @@ namespace Cotton.Sync.Desktop.Shell
         private readonly SqliteAppPreferencesStore _preferencesStore;
         private readonly DesktopStartupOptions _startupOptions;
         private readonly TimeSpan _savedSessionRestoreTimeout;
+        private readonly TimeSpan _savedSessionRestoreRetryBaseDelay;
         private readonly TimeSpan _serverProbeTimeout;
         private readonly SqliteSyncPairSettingsStore _syncPairStore;
         private readonly TimeSpan _tokenStorageVerificationTimeout;
@@ -64,6 +67,7 @@ namespace Cotton.Sync.Desktop.Shell
             Func<DesktopTokenStorageCapabilitySnapshot>? tokenStorageCapabilities = null,
             Func<CancellationToken, Task<DesktopTokenStorageCapabilitySnapshot>>? tokenStorageVerifier = null,
             TimeSpan? savedSessionRestoreTimeout = null,
+            TimeSpan? savedSessionRestoreRetryBaseDelay = null,
             TimeSpan? serverProbeTimeout = null,
             TimeSpan? tokenStorageVerificationTimeout = null)
         {
@@ -77,6 +81,8 @@ namespace Cotton.Sync.Desktop.Shell
             _startupOptions = startupOptions ?? DesktopStartupOptions.Empty;
             _savedSessionRestoreTimeout = savedSessionRestoreTimeout ?? SavedSessionRestoreTimeout;
             ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(_savedSessionRestoreTimeout, TimeSpan.Zero);
+            _savedSessionRestoreRetryBaseDelay = savedSessionRestoreRetryBaseDelay ?? SavedSessionRestoreRetryBaseDelay;
+            ArgumentOutOfRangeException.ThrowIfLessThan(_savedSessionRestoreRetryBaseDelay, TimeSpan.Zero);
             _serverProbeTimeout = serverProbeTimeout ?? ServerProbeTimeout;
             ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(_serverProbeTimeout, TimeSpan.Zero);
             _tokenStorageVerificationTimeout = tokenStorageVerificationTimeout ?? _savedSessionRestoreTimeout;
@@ -1305,8 +1311,10 @@ namespace Cotton.Sync.Desktop.Shell
                 using CancellationTokenSource restoreCancellation =
                     CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 restoreCancellation.CancelAfter(_savedSessionRestoreTimeout);
-                AuthSession session = await host.App.RestoreSessionAsync(restoreCancellation.Token)
-                    .WaitAsync(restoreCancellation.Token)
+                AuthSession session = await RestoreSessionWithRetryAsync(
+                        host,
+                        serverUrl,
+                        restoreCancellation.Token)
                     .ConfigureAwait(false);
                 await ReplaceHostAsync(host, cancellationToken).ConfigureAwait(false);
                 StartRestoredSessionSyncInBackground(host);
@@ -1339,6 +1347,56 @@ namespace Cotton.Sync.Desktop.Shell
                 await host.DisposeAsync().ConfigureAwait(false);
                 throw;
             }
+        }
+
+        private async Task<AuthSession> RestoreSessionWithRetryAsync(
+            DesktopSyncApplicationHost host,
+            Uri serverUrl,
+            CancellationToken cancellationToken)
+        {
+            for (int attempt = 1; attempt <= SavedSessionRestoreMaxAttempts; attempt++)
+            {
+                try
+                {
+                    return await host.App.RestoreSessionAsync(cancellationToken)
+                        .WaitAsync(cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                catch (Exception exception) when (IsTransientSessionRestoreFailure(exception, cancellationToken))
+                {
+                    if (attempt == SavedSessionRestoreMaxAttempts)
+                    {
+                        Trace.TraceWarning(
+                            "Failed to restore desktop session because the server is unreachable after {0} attempts: {1}",
+                            SavedSessionRestoreMaxAttempts,
+                            serverUrl);
+                        throw;
+                    }
+
+                    TimeSpan delay = TimeSpan.FromTicks(_savedSessionRestoreRetryBaseDelay.Ticks * attempt);
+                    Trace.TraceWarning(
+                        "Desktop session restore attempt {0} failed transiently for {1}. Retrying after {2} seconds.",
+                        attempt,
+                        serverUrl,
+                        delay.TotalSeconds.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture));
+                    await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            throw new InvalidOperationException("Desktop session restore retry loop exited unexpectedly.");
+        }
+
+        private static bool IsTransientSessionRestoreFailure(Exception exception, CancellationToken cancellationToken)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return false;
+            }
+
+            return exception is HttpRequestException
+                or IOException
+                or TimeoutException
+                or TaskCanceledException;
         }
 
         private static bool IsAuthSessionRejected(Cotton.Sdk.CottonApiException exception)
