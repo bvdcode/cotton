@@ -326,7 +326,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
         }
 
         [Test]
-        public async Task LoadAsync_DoesNotApplyDefaultAutostartBeforeSessionExists()
+        public async Task LoadAsync_AppliesDefaultAutostartBeforeSessionExists()
         {
             DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
             var factory = new QueueingDesktopSyncApplicationFactory();
@@ -341,6 +341,35 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             Assert.Multiple(() =>
             {
                 Assert.That(snapshot.StartWithOperatingSystem, Is.True);
+                Assert.That(autostartService.IsEnabledCalls, Is.EqualTo(2));
+                Assert.That(autostartService.SetEnabledCalls, Is.EqualTo(1));
+                Assert.That(autostartService.LastSetEnabled, Is.True);
+            });
+        }
+
+        [Test]
+        public async Task LoadAsync_DoesNotReenableAutostartWhenPreferenceIsDisabled()
+        {
+            DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+            var preferencesStore = new SqliteAppPreferencesStore(paths.AppDatabasePath);
+            await preferencesStore.InitializeAsync();
+            await preferencesStore.SaveAsync(new AppPreferences
+            {
+                StartWithOperatingSystem = false,
+            });
+
+            var factory = new QueueingDesktopSyncApplicationFactory();
+            var autostartService = new FakeAutostartService();
+            using DesktopShellController controller = CreateController(
+                paths,
+                factory,
+                autostartService: autostartService);
+
+            DesktopShellSnapshot snapshot = await controller.LoadAsync();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(snapshot.StartWithOperatingSystem, Is.False);
                 Assert.That(autostartService.IsEnabledCalls, Is.EqualTo(1));
                 Assert.That(autostartService.SetEnabledCalls, Is.Zero);
             });
@@ -1104,7 +1133,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             public Task<bool> IsEnabledAsync(CancellationToken cancellationToken = default)
             {
                 IsEnabledCalls++;
-                return Task.FromResult(false);
+                return Task.FromResult(LastSetEnabled == true);
             }
 
             public Task SetEnabledAsync(bool enabled, CancellationToken cancellationToken = default)

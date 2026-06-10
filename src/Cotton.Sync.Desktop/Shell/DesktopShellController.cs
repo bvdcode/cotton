@@ -106,6 +106,15 @@ namespace Cotton.Sync.Desktop.Shell
             bool startWithOperatingSystem = await ResolveStartWithOperatingSystemAsync(
                 preferences,
                 cancellationToken).ConfigureAwait(false);
+            bool appliedAutostart = await TryApplyPreferredAutostartAsync(
+                preferences,
+                cancellationToken).ConfigureAwait(false);
+            if (appliedAutostart)
+            {
+                startWithOperatingSystem = true;
+                await _preferencesStore.SaveAsync(preferences, cancellationToken).ConfigureAwait(false);
+            }
+
             IReadOnlyList<SyncPairSettings> syncPairs = await _syncPairStore.ListAsync(cancellationToken).ConfigureAwait(false);
             Uri? serverUrl = _startupOptions.ServerUrl ?? preferences.RememberedServerUrl;
             string? startupErrorMessage = null;
@@ -122,17 +131,6 @@ namespace Cotton.Sync.Desktop.Shell
                     startupErrorMessage = DesktopActionRequiredMessageResolver.FromException(exception);
                 }
             }
-
-            if (session is not null)
-            {
-                bool applied = await TryApplyPreferredAutostartAsync(preferences, cancellationToken).ConfigureAwait(false);
-                if (applied)
-                {
-                    startWithOperatingSystem = true;
-                    await _preferencesStore.SaveAsync(preferences, cancellationToken).ConfigureAwait(false);
-                }
-            }
-
             DesktopPlatformCapabilitySnapshot platformCapabilities = DesktopPlatformCapabilities.CreateSnapshot();
             IReadOnlyList<DesktopSyncPairSnapshot> syncPairSnapshots = await BuildSyncPairSnapshotsAsync(
                 syncPairs,
