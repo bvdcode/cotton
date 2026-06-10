@@ -115,13 +115,13 @@ namespace Cotton.Sync.App.RemoteChanges
             lock (_pendingGate)
             {
                 pendingSyncs = _pendingRequests.ToList();
+                foreach (PendingRemoteSyncRequest pendingSync in pendingSyncs)
+                {
+                    pendingSync.Cancellation.Cancel();
+                }
+
                 _pendingSync = null;
                 _pendingRequests.Clear();
-            }
-
-            foreach (PendingRemoteSyncRequest pendingSync in pendingSyncs)
-            {
-                pendingSync.Cancellation.Cancel();
             }
 
             await WaitForPendingSyncsAsync(pendingSyncs, cancellationToken).ConfigureAwait(false);
@@ -292,11 +292,10 @@ namespace Cotton.Sync.App.RemoteChanges
             {
                 _pendingSync = null;
                 pendingSyncs = _pendingRequests.ToList();
-            }
-
-            foreach (PendingRemoteSyncRequest pendingSync in pendingSyncs)
-            {
-                pendingSync.Cancellation.Cancel();
+                foreach (PendingRemoteSyncRequest pendingSync in pendingSyncs)
+                {
+                    pendingSync.Cancellation.Cancel();
+                }
             }
         }
 
