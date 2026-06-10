@@ -13,9 +13,11 @@ namespace Cotton.Sync.Desktop.Shell
         {
             ArgumentNullException.ThrowIfNull(assembly);
             string? informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-            return string.IsNullOrWhiteSpace(informationalVersion)
+            string resolved = string.IsNullOrWhiteSpace(informationalVersion)
                 ? assembly.GetName().Version?.ToString() ?? "unknown"
                 : informationalVersion;
+            int metadataStart = resolved.IndexOf('+', StringComparison.Ordinal);
+            return metadataStart > 0 ? resolved[..metadataStart] : resolved;
         }
     }
 }

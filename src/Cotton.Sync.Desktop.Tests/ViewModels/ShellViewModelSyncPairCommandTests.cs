@@ -4295,15 +4295,17 @@ namespace Cotton.Sync.Desktop.Tests.ViewModels
         }
 
         [Test]
-        public void AppVersion_UsesInformationalVersion()
+        public void AppVersion_UsesInformationalVersionWithoutBuildMetadata()
         {
             using ShellViewModel viewModel = CreateViewModel(new FakeDesktopShellController(CreateSignedOutSnapshot()));
             string informationalVersion = typeof(ShellViewModel)
                 .Assembly
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()!
                 .InformationalVersion;
+            int metadataStart = informationalVersion.IndexOf('+', StringComparison.Ordinal);
+            string expected = metadataStart > 0 ? informationalVersion[..metadataStart] : informationalVersion;
 
-            Assert.That(viewModel.AppVersion, Is.EqualTo(informationalVersion));
+            Assert.That(viewModel.AppVersion, Is.EqualTo(expected));
         }
 
         private static async Task ExecuteAsync(AsyncRelayCommand command, object? parameter = null)
