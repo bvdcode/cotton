@@ -100,6 +100,68 @@ namespace Cotton.Sync.App.Tests.LocalChanges
         }
 
         [Test]
+        public async Task LocalChangeStorm_AboveScopedLimitDoesNotKeepEveryChangedPath()
+        {
+            const int ChangeCount = 60_000;
+            SyncPairSettings syncPair = CreatePair(isEnabled: true);
+            var watcherFactory = new FakeWatcherFactory();
+            var supervisor = new FakeSyncSupervisor();
+            var coordinator = new LocalChangeSyncCoordinator(
+                new FakeSyncPairSettingsStore([syncPair]),
+                supervisor,
+                watcherFactory,
+                TimeSpan.FromSeconds(5));
+            await coordinator.StartAsync();
+
+            for (int index = 0; index < ChangeCount; index++)
+            {
+                watcherFactory.CreatedWatchers[syncPair.Id].Raise($"/home/user/Cotton/storm/file-{index}.txt");
+            }
+
+            int pendingRequestCount = coordinator.PendingRequestCount;
+            int pendingChangedPathCount = coordinator.PendingChangedPathCount;
+            await coordinator.StopAsync();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(pendingRequestCount, Is.EqualTo(1));
+                Assert.That(pendingChangedPathCount, Is.Zero);
+                Assert.That(supervisor.SyncNowCallCount, Is.Zero);
+            });
+        }
+
+        [Test]
+        public async Task LocalChangeStorm_AboveScopedLimitRequestsOneFullSync()
+        {
+            int changeCount = PendingLocalSyncRequest.MaxScopedChangedPaths + 2_000;
+            SyncPairSettings syncPair = CreatePair(isEnabled: true);
+            var watcherFactory = new FakeWatcherFactory();
+            var supervisor = new FakeSyncSupervisor();
+            var coordinator = new LocalChangeSyncCoordinator(
+                new FakeSyncPairSettingsStore([syncPair]),
+                supervisor,
+                watcherFactory,
+                DebounceInterval);
+            await coordinator.StartAsync();
+
+            for (int index = 0; index < changeCount; index++)
+            {
+                watcherFactory.CreatedWatchers[syncPair.Id].Raise($"/home/user/Cotton/storm/file-{index}.txt");
+            }
+
+            bool observed = await supervisor.WaitForSyncAsync(TimeSpan.FromSeconds(2));
+            await coordinator.StopAsync();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(observed, Is.True);
+                Assert.That(supervisor.SyncNowCallCount, Is.EqualTo(1));
+                Assert.That(supervisor.LastRequest?.IsFull, Is.True);
+                Assert.That(supervisor.LastRequest?.LocalChangedPaths, Is.Empty);
+            });
+        }
+
+        [Test]
         public async Task StartAsync_DoesNotWatchDisabledPairs()
         {
             SyncPairSettings syncPair = CreatePair(isEnabled: false);

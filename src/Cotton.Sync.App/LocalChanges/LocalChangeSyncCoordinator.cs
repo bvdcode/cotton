@@ -40,6 +40,17 @@ namespace Cotton.Sync.App.LocalChanges
             }
         }
 
+        internal int PendingChangedPathCount
+        {
+            get
+            {
+                lock (_pendingGate)
+                {
+                    return _pendingRequests.Sum(static request => request.ChangedPaths.Count);
+                }
+            }
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="LocalChangeSyncCoordinator" /> class.
         /// </summary>
