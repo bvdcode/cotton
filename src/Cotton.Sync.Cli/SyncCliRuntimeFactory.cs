@@ -61,6 +61,7 @@ namespace Cotton.Sync.Cli
                         new AppCodeBrowserSignInRequest
                         {
                             ApplicationName = "Cotton Sync CLI",
+                            ApplicationVersion = SyncCliAppVersion.Current,
                             DeviceName = "Cotton Sync CLI",
                         },
                         cancellationToken)

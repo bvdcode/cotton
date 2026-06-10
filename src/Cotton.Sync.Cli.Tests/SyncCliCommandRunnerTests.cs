@@ -122,12 +122,48 @@ namespace Cotton.Sync.Cli.Tests
                 Assert.That(output.ToString(), Does.Contain("Approval URL: https://cotton.test/oauth/app-code/0190a000-0000-7000-8000-000000000022"));
                 Assert.That(error.ToString(), Does.Contain("Browser sign-in was denied."));
                 Assert.That(error.ToString(), Does.Contain("denied"));
+                Assert.That(ReadStartRequestProperty(handler.Requests[0].Body, "applicationVersion"), Is.EqualTo(SyncCliAppVersion.Current));
                 Assert.That(handler.Requests.Select(static request => request.PathAndQuery), Is.EqualTo(new[]
                 {
                     "/api/v1/oauth/app-code/start",
                     "/api/v1/oauth/app-code/poll",
                 }));
             });
+        }
+
+        [Test]
+        public async Task AuthBrowser_DefaultStartRequestUsesCliVersion()
+        {
+            var handler = new AppCodeAuthServerHandler(deny: true);
+            using var httpClient = new HttpClient(handler);
+            using var output = new StringWriter();
+            using var error = new StringWriter();
+
+            int exitCode = await SyncCliCommandRunner.RunAsync(
+                [
+                    "auth-browser",
+                    "--server",
+                    "https://cotton.test/",
+                ],
+                output,
+                error,
+                httpClient);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(1));
+                Assert.That(ReadStartRequestProperty(handler.Requests[0].Body, "applicationName"), Is.EqualTo("Cotton Sync CLI"));
+                Assert.That(ReadStartRequestProperty(handler.Requests[0].Body, "applicationVersion"), Is.EqualTo(SyncCliAppVersion.Current));
+                Assert.That(ReadStartRequestProperty(handler.Requests[0].Body, "deviceName"), Is.EqualTo("Cotton Sync CLI"));
+                Assert.That(handler.Requests[0].Body, Does.Not.Contain("Unknown version"));
+            });
+        }
+
+        [Test]
+        public void SyncCliAppVersion_CurrentDoesNotExposeBuildMetadata()
+        {
+            Assert.That(SyncCliAppVersion.Current, Does.Not.Contain("+"));
+            Assert.That(SyncCliAppVersion.Current, Is.Not.EqualTo("unknown"));
         }
 
         [Test]
@@ -1579,6 +1615,14 @@ namespace Cotton.Sync.Cli.Tests
                         "application/json"),
                 };
             }
+        }
+
+        private static string? ReadStartRequestProperty(string body, string propertyName)
+        {
+            using JsonDocument document = JsonDocument.Parse(body);
+            return document.RootElement.TryGetProperty(propertyName, out JsonElement property)
+                ? property.GetString()
+                : null;
         }
 
     }

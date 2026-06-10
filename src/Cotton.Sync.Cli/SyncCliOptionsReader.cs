@@ -109,7 +109,7 @@ namespace Cotton.Sync.Cli
             return new SyncCliBrowserAuthOptions(
                 serverUri,
                 applicationName,
-                NormalizeOptional(ReadOption(args, "--application-version")),
+                NormalizeOptional(ReadOption(args, "--application-version")) ?? SyncCliAppVersion.Current,
                 NormalizeOptional(ReadOption(args, "--device-name")) ?? "Cotton Sync CLI",
                 timeoutSeconds);
         }
