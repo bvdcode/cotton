@@ -194,6 +194,58 @@ namespace Cotton.Sync.Tests
         }
 
         [Test]
+        public async Task RunOnceAsync_WithLocalChangedPathUsesScopedScanners()
+        {
+            WriteFile("changed.txt", "local");
+            var scanner = new LocalFileScanner();
+            var crawler = new PathOnlyRemoteTreeCrawler(EmptyRemoteTree());
+            var remoteFiles = new FakeRemoteFileSynchronizer
+            {
+                EmptyLocalHashUploadContentHash = "uploaded-content-hash",
+            };
+            var stateStore = new SqliteSyncStateStore(_databasePath);
+            var engine = new SyncEngine(scanner, crawler, remoteFiles, stateStore);
+
+            SyncRunResult result = await engine.RunOnceAsync(
+                Pair(),
+                new SyncRunOptions { Scope = SyncRunScope.ForLocalChangedPaths(["changed.txt"]) });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.Activities.Select(activity => activity.RelativePath), Is.EqualTo(new[] { "changed.txt" }));
+                Assert.That(remoteFiles.Uploads, Has.Count.EqualTo(1));
+                Assert.That(crawler.PathCrawlCalls, Is.EqualTo(1));
+                Assert.That(crawler.FullCrawlCalls, Is.Zero);
+            });
+        }
+
+        [Test]
+        public async Task RunOnceAsync_WithNestedLocalChangedFileDoesNotScanSiblingFiles()
+        {
+            WriteFile("Project/changed.txt", "local");
+            WriteFile("Project/sibling.txt", "sibling");
+            var scanner = new LocalFileScanner();
+            var crawler = new PathOnlyRemoteTreeCrawler(EmptyRemoteTree());
+            var remoteFiles = new FakeRemoteFileSynchronizer
+            {
+                EmptyLocalHashUploadContentHash = "uploaded-content-hash",
+            };
+            var stateStore = new SqliteSyncStateStore(_databasePath);
+            var engine = new SyncEngine(scanner, crawler, remoteFiles, stateStore);
+
+            SyncRunResult result = await engine.RunOnceAsync(
+                Pair(),
+                new SyncRunOptions { Scope = SyncRunScope.ForLocalChangedPaths(["Project/changed.txt"]) });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.Activities.Select(activity => activity.RelativePath), Is.EqualTo(new[] { "Project/changed.txt" }));
+                Assert.That(remoteFiles.Uploads.Select(upload => upload.RelativePath), Is.EqualTo(new[] { "Project/changed.txt" }));
+                Assert.That(crawler.FullCrawlCalls, Is.Zero);
+            });
+        }
+
+        [Test]
         public async Task RunOnceAsync_HashesMetadataSnapshotWhenBaselineNeedsComparison()
         {
             const string baselineHash = "precomputed-content-hash";
@@ -225,6 +277,7 @@ namespace Cotton.Sync.Tests
         public async Task RunOnceAsync_ReusesBaselineHashWhenMetadataIsUnchanged()
         {
             const string baselineHash = "existing-content-hash";
+            var baselineSyncedAtUtc = new DateTime(2026, 6, 6, 8, 1, 0, DateTimeKind.Utc);
             var local = new LocalFileSnapshot
             {
                 RelativePath = "Docs/existing.bin",
@@ -250,7 +303,7 @@ namespace Cotton.Sync.Tests
                 RemoteFileId = remote.Id,
                 RemoteContentHash = remote.ContentHash,
                 RemoteETag = remote.ETag,
-                SyncedAtUtc = new DateTime(2026, 6, 6, 8, 1, 0, DateTimeKind.Utc),
+                SyncedAtUtc = baselineSyncedAtUtc,
             });
 
             SyncRunResult result = await engine.RunOnceAsync(Pair());
@@ -264,6 +317,7 @@ namespace Cotton.Sync.Tests
                 Assert.That(local.ContentHash, Is.EqualTo(baselineHash));
                 Assert.That(entry, Is.Not.Null);
                 Assert.That(entry!.LocalSizeBytes, Is.EqualTo(local.SizeBytes));
+                Assert.That(entry.SyncedAtUtc, Is.EqualTo(baselineSyncedAtUtc));
             });
         }
 
@@ -2474,6 +2528,56 @@ namespace Cotton.Sync.Tests
                 foreach (RemoteFileSnapshot file in _snapshot.Files)
                 {
                     snapshot.FilesByPath.Add(SyncPath.ToKey(file.RelativePath), file);
+                }
+
+                return Task.FromResult(snapshot);
+            }
+        }
+
+        private class PathOnlyRemoteTreeCrawler : IRemoteTreeCrawler, IRemotePathLookupCrawler
+        {
+            private readonly RemoteTreeSnapshot _snapshot;
+
+            public PathOnlyRemoteTreeCrawler(RemoteTreeSnapshot snapshot)
+            {
+                _snapshot = snapshot;
+            }
+
+            public int FullCrawlCalls { get; private set; }
+
+            public int PathCrawlCalls { get; private set; }
+
+            public Task<RemoteTreeSnapshot> CrawlAsync(Guid rootNodeId, CancellationToken cancellationToken = default)
+            {
+                FullCrawlCalls++;
+                return Task.FromResult(_snapshot);
+            }
+
+            public Task<RemoteTreeLookupSnapshot> CrawlPathLookupsAsync(
+                Guid rootNodeId,
+                IReadOnlyCollection<string> relativePaths,
+                IProgress<RemoteTreeScanProgress>? progress,
+                CancellationToken cancellationToken = default)
+            {
+                PathCrawlCalls++;
+                var snapshot = new RemoteTreeLookupSnapshot
+                {
+                    RootNode = _snapshot.RootNode,
+                };
+                foreach (RemoteDirectorySnapshot directory in _snapshot.Directories)
+                {
+                    if (relativePaths.Contains(directory.RelativePath, StringComparer.OrdinalIgnoreCase))
+                    {
+                        snapshot.DirectoriesByPath[SyncPath.ToKey(directory.RelativePath)] = directory;
+                    }
+                }
+
+                foreach (RemoteFileSnapshot file in _snapshot.Files)
+                {
+                    if (relativePaths.Contains(file.RelativePath, StringComparer.OrdinalIgnoreCase))
+                    {
+                        snapshot.FilesByPath[SyncPath.ToKey(file.RelativePath)] = file;
+                    }
                 }
 
                 return Task.FromResult(snapshot);

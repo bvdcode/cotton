@@ -54,6 +54,23 @@ namespace Cotton.Sync.App.Tests.Runners
         }
 
         [Test]
+        public async Task RunOnceAsync_MapsScopedRequestToCoreScope()
+        {
+            var engine = new FakeSyncEngine();
+            var work = new SyncEnginePairWork(engine);
+            SyncPairSettings syncPair = CreateSyncPair(Guid.NewGuid());
+
+            await work.RunOnceAsync(syncPair, SyncRunRequest.ForLocalChangedPaths(["Docs/report.txt"]));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(engine.LastOptions, Is.Not.Null);
+                Assert.That(engine.LastOptions!.Scope.IsFull, Is.False);
+                Assert.That(engine.LastOptions.Scope.LocalChangedPaths, Is.EqualTo(new[] { "Docs/report.txt" }));
+            });
+        }
+
+        [Test]
         public async Task RunOnceAsync_PublishesCoreSyncActivities()
         {
             Guid syncPairId = Guid.NewGuid();

@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Sync.App.Supervision;
+using Cotton.Sync.App.Runners;
 using Cotton.Sync.App.SyncPairs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -25,6 +26,7 @@ namespace Cotton.Sync.App.LocalChanges
         private readonly Dictionary<Guid, PendingLocalSyncRequest> _pendingSyncs = [];
         private readonly HashSet<PendingLocalSyncRequest> _pendingRequests = [];
         private readonly Dictionary<Guid, ILocalSyncRootWatcher> _watchers = [];
+        private readonly Dictionary<Guid, string> _localRootPaths = [];
         private CancellationTokenSource? _lifetime;
 
         internal int PendingRequestCount
@@ -77,6 +79,7 @@ namespace Cotton.Sync.App.LocalChanges
                         ILocalSyncRootWatcher watcher = _watcherFactory.Create(syncPair);
                         watcher.Changed += OnLocalChange;
                         _watchers[syncPair.Id] = watcher;
+                        _localRootPaths[syncPair.Id] = syncPair.LocalRootPath;
                         await watcher.StartAsync(cancellationToken).ConfigureAwait(false);
                     }
                 }
@@ -117,13 +120,13 @@ namespace Cotton.Sync.App.LocalChanges
             lock (_pendingGate)
             {
                 pendingSyncs = _pendingRequests.ToList();
+                foreach (PendingLocalSyncRequest pendingSync in pendingSyncs)
+                {
+                    pendingSync.Cancellation.Cancel();
+                }
+
                 _pendingSyncs.Clear();
                 _pendingRequests.Clear();
-            }
-
-            foreach (PendingLocalSyncRequest pendingSync in pendingSyncs)
-            {
-                pendingSync.Cancellation.Cancel();
             }
 
             await WaitForPendingSyncsAsync(pendingSyncs, cancellationToken).ConfigureAwait(false);
@@ -136,6 +139,7 @@ namespace Cotton.Sync.App.LocalChanges
             }
 
             _watchers.Clear();
+            _localRootPaths.Clear();
         }
 
         private void OnLocalChange(object? sender, LocalSyncRootChange change)
@@ -150,13 +154,14 @@ namespace Cotton.Sync.App.LocalChanges
             {
                 if (_pendingSyncs.TryGetValue(change.SyncPairId, out PendingLocalSyncRequest? pendingSync))
                 {
-                    pendingSync.RecordChange(change.FullPath);
+                    pendingSync.RecordChange(change.FullPath, RequiresFullSync(change.Kind));
                     return;
                 }
 
                 var next = new PendingLocalSyncRequest(
                     CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token),
                     change.FullPath);
+                next.RecordChange(change.FullPath, RequiresFullSync(change.Kind));
                 _pendingSyncs.Add(change.SyncPairId, next);
                 _pendingRequests.Add(next);
                 next.Runner = RunDebouncedSyncAsync(change.SyncPairId, next);
@@ -183,7 +188,8 @@ namespace Cotton.Sync.App.LocalChanges
                     "Requesting local-change sync for {SyncPairId} after change at {ChangedPath}.",
                     syncPairId,
                     changedPath);
-                await _supervisor.SyncNowAsync(syncPairId, request.Cancellation.Token).ConfigureAwait(false);
+                SyncRunRequest syncRequest = CreateSyncRunRequest(syncPairId, request);
+                await _supervisor.SyncNowAsync(syncPairId, syncRequest, request.Cancellation.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (request.Cancellation.IsCancellationRequested)
             {
@@ -265,6 +271,62 @@ namespace Cotton.Sync.App.LocalChanges
             }
 
             await Task.WhenAll(runners).WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        private SyncRunRequest CreateSyncRunRequest(Guid syncPairId, PendingLocalSyncRequest request)
+        {
+            if (request.RequiresFullSync || !_localRootPaths.TryGetValue(syncPairId, out string? localRootPath))
+            {
+                return SyncRunRequest.Full;
+            }
+
+            List<string> relativePaths = [];
+            foreach (string changedPath in request.ChangedPaths)
+            {
+                if (TryGetRelativePath(localRootPath, changedPath, out string relativePath))
+                {
+                    relativePaths.Add(relativePath);
+                }
+            }
+
+            return SyncRunRequest.ForLocalChangedPaths(relativePaths);
+        }
+
+        private static bool RequiresFullSync(LocalSyncRootChangeKind kind)
+        {
+            return kind is LocalSyncRootChangeKind.Deleted
+                or LocalSyncRootChangeKind.Renamed
+                or LocalSyncRootChangeKind.Error;
+        }
+
+        private static bool TryGetRelativePath(string localRootPath, string fullPath, out string relativePath)
+        {
+            try
+            {
+                string fullRoot = Path.GetFullPath(localRootPath);
+                string fullChangedPath = Path.GetFullPath(fullPath);
+                string rootWithSeparator = fullRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                    + Path.DirectorySeparatorChar;
+                if (!fullChangedPath.Equals(fullRoot, StringComparison.OrdinalIgnoreCase)
+                    && !fullChangedPath.StartsWith(rootWithSeparator, StringComparison.OrdinalIgnoreCase))
+                {
+                    relativePath = string.Empty;
+                    return false;
+                }
+
+                relativePath = Path.GetRelativePath(fullRoot, fullChangedPath).Replace('\\', '/');
+                return !string.IsNullOrWhiteSpace(relativePath) && relativePath != ".";
+            }
+            catch (ArgumentException)
+            {
+                relativePath = string.Empty;
+                return false;
+            }
+            catch (NotSupportedException)
+            {
+                relativePath = string.Empty;
+                return false;
+            }
         }
     }
 }

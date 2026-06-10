@@ -25,7 +25,8 @@ namespace Cotton.Sync.App.Runners
         private readonly ISyncPairWork _work;
         private CancellationTokenSource? _activeSyncCancellation;
         private bool _isSyncInProgress;
-        private bool _pendingSyncRequested;
+        private SyncRunRequest? _activeSyncRequest;
+        private SyncRunRequest? _pendingSyncRequest;
         private bool _syncRequestsBlocked;
         private DateTime? _lastSuccessfulSyncAtUtc;
         private SyncPairStatus _status;
@@ -124,7 +125,14 @@ namespace Cotton.Sync.App.Runners
         /// <inheritdoc />
         public async Task SyncNowAsync(CancellationToken cancellationToken = default)
         {
-            if (!TryStartSyncLoop())
+            await SyncNowAsync(SyncRunRequest.Full, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task SyncNowAsync(SyncRunRequest request, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+            if (!TryStartSyncLoop(request))
             {
                 return;
             }
@@ -134,7 +142,8 @@ namespace Cotton.Sync.App.Runners
                 bool runAgain;
                 do
                 {
-                    await RunSingleSyncAsync(cancellationToken).ConfigureAwait(false);
+                    SyncRunRequest activeRequest = GetActiveSyncRequest();
+                    await RunSingleSyncAsync(activeRequest, cancellationToken).ConfigureAwait(false);
                     runAgain = CompleteSyncPassOrTakeQueued();
                 }
                 while (runAgain);
@@ -146,7 +155,7 @@ namespace Cotton.Sync.App.Runners
             }
         }
 
-        private async Task RunSingleSyncAsync(CancellationToken cancellationToken)
+        private async Task RunSingleSyncAsync(SyncRunRequest request, CancellationToken cancellationToken)
         {
             await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
@@ -167,7 +176,7 @@ namespace Cotton.Sync.App.Runners
                 try
                 {
                     SetState(SyncPairRunState.Syncing);
-                    await RunWorkWithRetryAsync(syncCancellation.Token).ConfigureAwait(false);
+                    await RunWorkWithRetryAsync(request, syncCancellation.Token).ConfigureAwait(false);
                     SetState(SyncPairRunState.Idle, lastSuccessfulSyncAtUtc: DateTime.UtcNow);
                 }
                 catch (OperationCanceledException exception) when (syncCancellation.Token.IsCancellationRequested)
@@ -201,7 +210,7 @@ namespace Cotton.Sync.App.Runners
             }
         }
 
-        private bool TryStartSyncLoop()
+        private bool TryStartSyncLoop(SyncRunRequest request)
         {
             lock (_syncRequestGate)
             {
@@ -212,13 +221,24 @@ namespace Cotton.Sync.App.Runners
 
                 if (_isSyncInProgress)
                 {
-                    _pendingSyncRequested = true;
+                    _pendingSyncRequest = _pendingSyncRequest is null
+                        ? request
+                        : _pendingSyncRequest.Merge(request);
                     return false;
                 }
 
                 _isSyncInProgress = true;
-                _pendingSyncRequested = false;
+                _activeSyncRequest = request;
+                _pendingSyncRequest = null;
                 return true;
+            }
+        }
+
+        private SyncRunRequest GetActiveSyncRequest()
+        {
+            lock (_syncRequestGate)
+            {
+                return _activeSyncRequest ?? SyncRunRequest.Full;
             }
         }
 
@@ -226,13 +246,15 @@ namespace Cotton.Sync.App.Runners
         {
             lock (_syncRequestGate)
             {
-                if (_pendingSyncRequested)
+                if (_pendingSyncRequest is not null)
                 {
-                    _pendingSyncRequested = false;
+                    _activeSyncRequest = _pendingSyncRequest;
+                    _pendingSyncRequest = null;
                     return true;
                 }
 
                 _isSyncInProgress = false;
+                _activeSyncRequest = null;
                 return false;
             }
         }
@@ -242,17 +264,18 @@ namespace Cotton.Sync.App.Runners
             lock (_syncRequestGate)
             {
                 _isSyncInProgress = false;
-                _pendingSyncRequested = false;
+                _activeSyncRequest = null;
+                _pendingSyncRequest = null;
             }
         }
 
-        private async Task RunWorkWithRetryAsync(CancellationToken cancellationToken)
+        private async Task RunWorkWithRetryAsync(SyncRunRequest request, CancellationToken cancellationToken)
         {
             for (int attempt = 1; attempt <= _retryOptions.MaxAttempts; attempt++)
             {
                 try
                 {
-                    await _work.RunOnceAsync(_syncPair, cancellationToken).ConfigureAwait(false);
+                    await _work.RunOnceAsync(_syncPair, request, cancellationToken).ConfigureAwait(false);
                     return;
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -344,7 +367,7 @@ namespace Cotton.Sync.App.Runners
                 _syncRequestsBlocked = isBlocked;
                 if (isBlocked)
                 {
-                    _pendingSyncRequested = false;
+                    _pendingSyncRequest = null;
                 }
             }
         }

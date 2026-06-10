@@ -9,19 +9,26 @@ namespace Cotton.Sync.App.LocalChanges
         {
             Cancellation = cancellation;
             ChangedPath = changedPath;
+            ChangedPaths.Add(changedPath);
         }
 
         public CancellationTokenSource Cancellation { get; }
 
         public string ChangedPath { get; private set; }
 
+        public HashSet<string> ChangedPaths { get; } = new(StringComparer.OrdinalIgnoreCase);
+
         public int ChangeVersion { get; private set; }
+
+        public bool RequiresFullSync { get; private set; }
 
         public Task? Runner { get; set; }
 
-        public void RecordChange(string changedPath)
+        public void RecordChange(string changedPath, bool requiresFullSync)
         {
             ChangedPath = changedPath;
+            ChangedPaths.Add(changedPath);
+            RequiresFullSync |= requiresFullSync;
             ChangeVersion++;
         }
     }

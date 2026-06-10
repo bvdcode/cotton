@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Sync.App.LocalChanges;
+using Cotton.Sync.App.Runners;
 using Cotton.Sync.App.Status;
 using Cotton.Sync.App.Supervision;
 using Cotton.Sync.App.SyncPairs;
@@ -37,6 +38,35 @@ namespace Cotton.Sync.App.Tests.LocalChanges
                 Assert.That(observed, Is.True);
                 Assert.That(supervisor.SyncNowCallCount, Is.EqualTo(1));
                 Assert.That(supervisor.LastSyncNowPairId, Is.EqualTo(syncPair.Id));
+                Assert.That(supervisor.LastRequest?.IsFull, Is.False);
+                Assert.That(supervisor.LastRequest?.LocalChangedPaths, Is.EqualTo(new[] { "a.txt", "b.txt" }));
+            });
+        }
+
+        [Test]
+        public async Task DeletedLocalChange_RequestsFullSync()
+        {
+            SyncPairSettings syncPair = CreatePair(isEnabled: true);
+            var watcherFactory = new FakeWatcherFactory();
+            var supervisor = new FakeSyncSupervisor();
+            var coordinator = new LocalChangeSyncCoordinator(
+                new FakeSyncPairSettingsStore([syncPair]),
+                supervisor,
+                watcherFactory,
+                DebounceInterval);
+            await coordinator.StartAsync();
+
+            watcherFactory.CreatedWatchers[syncPair.Id].Raise(
+                "/home/user/Cotton/deleted.txt",
+                LocalSyncRootChangeKind.Deleted);
+
+            bool observed = await supervisor.WaitForSyncAsync(TimeSpan.FromSeconds(2));
+            await coordinator.StopAsync();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(observed, Is.True);
+                Assert.That(supervisor.LastRequest?.IsFull, Is.True);
             });
         }
 
@@ -229,12 +259,12 @@ namespace Cotton.Sync.App.Tests.LocalChanges
                 return ValueTask.CompletedTask;
             }
 
-            public void Raise(string fullPath)
+            public void Raise(string fullPath, LocalSyncRootChangeKind kind = LocalSyncRootChangeKind.Changed)
             {
                 Changed?.Invoke(this, new LocalSyncRootChange(
                     _syncPairId,
                     fullPath,
-                    LocalSyncRootChangeKind.Changed));
+                    kind));
             }
 
             public Task StartAsync(CancellationToken cancellationToken = default)
@@ -306,6 +336,8 @@ namespace Cotton.Sync.App.Tests.LocalChanges
 
             public Guid? LastSyncNowPairId { get; private set; }
 
+            public SyncRunRequest? LastRequest { get; private set; }
+
             public Task PauseAllAsync(CancellationToken cancellationToken = default)
             {
                 return Task.CompletedTask;
@@ -348,9 +380,15 @@ namespace Cotton.Sync.App.Tests.LocalChanges
 
             public Task SyncNowAsync(Guid syncPairId, CancellationToken cancellationToken = default)
             {
+                return SyncNowAsync(syncPairId, SyncRunRequest.Full, cancellationToken);
+            }
+
+            public Task SyncNowAsync(Guid syncPairId, SyncRunRequest request, CancellationToken cancellationToken = default)
+            {
                 cancellationToken.ThrowIfCancellationRequested();
                 SyncNowCallCount++;
                 LastSyncNowPairId = syncPairId;
+                LastRequest = request;
                 _syncRequested.TrySetResult();
                 return BlockSyncNow
                     ? _releaseSyncNow.Task

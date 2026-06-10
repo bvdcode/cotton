@@ -41,6 +41,14 @@ namespace Cotton.Sync.App.Runners
         Task SyncNowAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Requests an immediate synchronization pass with an explicit sync surface.
+        /// </summary>
+        Task SyncNowAsync(SyncRunRequest request, CancellationToken cancellationToken = default)
+        {
+            return SyncNowAsync(cancellationToken);
+        }
+
+        /// <summary>
         /// Stops the runner.
         /// </summary>
         Task StopAsync(CancellationToken cancellationToken = default);

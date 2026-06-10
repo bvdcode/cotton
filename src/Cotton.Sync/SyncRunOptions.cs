@@ -12,6 +12,11 @@ namespace Cotton.Sync
         private const int DefaultMaximumStoredResultActivities = 1_000;
 
         /// <summary>
+        /// Gets or sets the filesystem surface reconciled by this pass.
+        /// </summary>
+        public SyncRunScope Scope { get; set; } = SyncRunScope.Full;
+
+        /// <summary>
         /// Gets or sets a value indicating whether remote file deletes bypass trash.
         /// </summary>
         public bool DeleteRemotePermanently { get; set; }

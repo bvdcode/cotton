@@ -16,6 +16,7 @@ namespace Cotton.Sync.Local
         ILocalFileMetadataTreeScanner,
         ILocalFileMetadataTreeProgressScanner,
         ILocalFileMetadataTreeLookupScanner,
+        ILocalFileMetadataPathLookupScanner,
         ILocalFileContentHashProgressHasher
     {
         private static readonly StringComparer PathComparer = StringComparer.OrdinalIgnoreCase;
@@ -103,6 +104,98 @@ namespace Cotton.Sync.Local
         }
 
         /// <inheritdoc />
+        public async Task<LocalTreeLookupSnapshot> ScanPathMetadataLookupsAsync(
+            string rootPath,
+            IReadOnlyCollection<string> relativePaths,
+            IProgress<LocalTreeScanProgress>? progress,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
+            ArgumentNullException.ThrowIfNull(relativePaths);
+            string fullRoot = Path.GetFullPath(rootPath);
+            if (!Directory.Exists(fullRoot))
+            {
+                throw new DirectoryNotFoundException($"Local sync root was not found: {fullRoot}");
+            }
+
+            var tree = new LocalTreeLookupSnapshot();
+            var targetKeys = new HashSet<string>(
+                relativePaths.Select(path => SyncPath.ToKey(SyncPath.Normalize(path))),
+                StringComparer.OrdinalIgnoreCase);
+            int filesScanned = 0;
+            int directoriesScanned = 0;
+            progress?.Report(new LocalTreeScanProgress(filesScanned, directoriesScanned, currentPath: null));
+            foreach (string relativePath in ExpandAncestors(relativePaths))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (string.IsNullOrWhiteSpace(relativePath) || LocalFileIgnoreRules.ShouldIgnore(relativePath))
+                {
+                    continue;
+                }
+
+                string normalizedPath = SyncPath.Normalize(relativePath);
+                string fullPath = GetScopedFullPath(fullRoot, normalizedPath);
+                if (File.Exists(fullPath))
+                {
+                    var file = new FileInfo(fullPath);
+                    if ((file.Attributes & FileAttributes.ReparsePoint) != 0)
+                    {
+                        continue;
+                    }
+
+                    AddFile(tree, await CreateSnapshotAsync(file, normalizedPath, computeHash: false, cancellationToken).ConfigureAwait(false));
+                    filesScanned++;
+                    ReportScanProgress(progress, filesScanned, directoriesScanned, normalizedPath);
+                    continue;
+                }
+
+                if (!Directory.Exists(fullPath))
+                {
+                    continue;
+                }
+
+                var directoryInfo = new DirectoryInfo(fullPath);
+                if ((directoryInfo.Attributes & FileAttributes.ReparsePoint) != 0)
+                {
+                    continue;
+                }
+
+                AddDirectory(tree, new LocalDirectorySnapshot
+                {
+                    RelativePath = normalizedPath,
+                    FullPath = directoryInfo.FullName,
+                });
+                directoriesScanned++;
+                ReportDirectoryScanProgress(progress, filesScanned, directoriesScanned, normalizedPath);
+                if (!targetKeys.Contains(SyncPath.ToKey(normalizedPath)))
+                {
+                    continue;
+                }
+
+                await ScanTreeCoreAsync(
+                        fullRoot,
+                        directoryInfo.FullName,
+                        computeHashes: false,
+                        progress,
+                        directory =>
+                        {
+                            AddDirectory(tree, directory);
+                            directoriesScanned++;
+                        },
+                        file =>
+                        {
+                            AddFile(tree, file);
+                            filesScanned++;
+                        },
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            progress?.Report(new LocalTreeScanProgress(filesScanned, directoriesScanned, currentPath: null));
+            return tree;
+        }
+
+        /// <inheritdoc />
         public async Task<string> ComputeContentHashAsync(
             LocalFileSnapshot localFile,
             CancellationToken cancellationToken = default)
@@ -136,7 +229,28 @@ namespace Cotton.Sync.Local
             Action<LocalFileSnapshot> addFile,
             CancellationToken cancellationToken)
         {
+            await ScanTreeCoreAsync(
+                    rootPath,
+                    Path.GetFullPath(rootPath),
+                    computeHashes,
+                    progress,
+                    addDirectory,
+                    addFile,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        private static async Task ScanTreeCoreAsync(
+            string rootPath,
+            string scanRootPath,
+            bool computeHashes,
+            IProgress<LocalTreeScanProgress>? progress,
+            Action<LocalDirectorySnapshot> addDirectory,
+            Action<LocalFileSnapshot> addFile,
+            CancellationToken cancellationToken)
+        {
             ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
+            ArgumentException.ThrowIfNullOrWhiteSpace(scanRootPath);
             ArgumentNullException.ThrowIfNull(addDirectory);
             ArgumentNullException.ThrowIfNull(addFile);
             string fullRoot = Path.GetFullPath(rootPath);
@@ -145,11 +259,13 @@ namespace Cotton.Sync.Local
                 throw new DirectoryNotFoundException($"Local sync root was not found: {fullRoot}");
             }
 
+            string fullScanRoot = Path.GetFullPath(scanRootPath);
+            EnsurePathUnderRoot(fullRoot, fullScanRoot);
             int directoriesScanned = 0;
             int filesScanned = 0;
             progress?.Report(new LocalTreeScanProgress(filesScanned, directoriesScanned, currentPath: null));
             var pendingDirectories = new Stack<LocalDirectoryScanFrame>();
-            pendingDirectories.Push(new LocalDirectoryScanFrame(fullRoot, ChildEnumerationOptions));
+            pendingDirectories.Push(new LocalDirectoryScanFrame(fullScanRoot, ChildEnumerationOptions));
             try
             {
                 while (pendingDirectories.Count > 0)
@@ -294,6 +410,55 @@ namespace Cotton.Sync.Local
         {
             string relative = Path.GetRelativePath(rootPath, filePath).Replace('\\', '/');
             return SyncPath.Normalize(relative);
+        }
+
+        private static IEnumerable<string> ExpandAncestors(IEnumerable<string> relativePaths)
+        {
+            var yielded = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string relativePath in relativePaths)
+            {
+                string normalizedPath = SyncPath.Normalize(relativePath);
+                string[] segments = normalizedPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                string current = string.Empty;
+                for (int index = 0; index < segments.Length; index++)
+                {
+                    current = string.IsNullOrEmpty(current) ? segments[index] : current + "/" + segments[index];
+                    if (yielded.Add(current))
+                    {
+                        yield return current;
+                    }
+                }
+            }
+        }
+
+        private static string GetScopedFullPath(string fullRoot, string relativePath)
+        {
+            string fullPath = Path.GetFullPath(Path.Combine(fullRoot, relativePath.Replace('/', Path.DirectorySeparatorChar)));
+            EnsurePathUnderRoot(fullRoot, fullPath);
+            return fullPath;
+        }
+
+        private static void EnsurePathUnderRoot(string fullRoot, string fullPath)
+        {
+            string rootWithSeparator = fullRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                + Path.DirectorySeparatorChar;
+            if (!fullPath.Equals(fullRoot, StringComparison.OrdinalIgnoreCase)
+                && !fullPath.StartsWith(rootWithSeparator, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("Scoped local path must stay under the sync root.", nameof(fullPath));
+            }
+        }
+
+        private static void AddDirectory(LocalTreeLookupSnapshot tree, LocalDirectorySnapshot directory)
+        {
+            string key = SyncPath.ToKey(directory.RelativePath);
+            tree.DirectoriesByPath.TryAdd(key, directory);
+        }
+
+        private static void AddFile(LocalTreeLookupSnapshot tree, LocalFileSnapshot file)
+        {
+            string key = SyncPath.ToKey(file.RelativePath);
+            tree.FilesByPath.TryAdd(key, file);
         }
 
         private static async Task<LocalFileSnapshot> CreateSnapshotAsync(

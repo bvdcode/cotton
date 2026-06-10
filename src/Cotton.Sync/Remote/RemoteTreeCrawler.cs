@@ -12,7 +12,7 @@ namespace Cotton.Sync.Remote
     /// <summary>
     /// Crawls remote Cotton folders through the SDK node API.
     /// </summary>
-    public class RemoteTreeCrawler : IRemoteTreeLookupCrawler
+    public class RemoteTreeCrawler : IRemoteTreeLookupCrawler, IRemotePathLookupCrawler
     {
         private const int DefaultPageSize = 100;
         private const int ProgressReportItemInterval = 100;
@@ -72,18 +72,96 @@ namespace Cotton.Sync.Remote
             return snapshot;
         }
 
+        /// <inheritdoc />
+        public async Task<RemoteTreeLookupSnapshot> CrawlPathLookupsAsync(
+            Guid rootNodeId,
+            IReadOnlyCollection<string> relativePaths,
+            IProgress<RemoteTreeScanProgress>? progress,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(relativePaths);
+            var snapshot = new RemoteTreeLookupSnapshot
+            {
+                RootNode = await _nodes.GetAsync(rootNodeId, cancellationToken).ConfigureAwait(false),
+            };
+            int directoriesScanned = 0;
+            int filesScanned = 0;
+            progress?.Report(new RemoteTreeScanProgress(filesScanned, directoriesScanned, currentPath: null));
+            foreach (string relativePath in relativePaths)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                string normalizedPath = SyncPath.Normalize(relativePath);
+                if (string.IsNullOrWhiteSpace(normalizedPath) || SyncPathIgnoreRules.ShouldIgnore(normalizedPath))
+                {
+                    continue;
+                }
+
+                RemotePathResolution resolution = await ResolvePathAsync(
+                        snapshot.RootNode,
+                        normalizedPath,
+                        directory =>
+                        {
+                            if (TryAddDirectory(snapshot, directory))
+                            {
+                                directoriesScanned++;
+                                ReportDirectoryScanProgress(progress, filesScanned, directoriesScanned, directory.RelativePath);
+                            }
+                        },
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                if (resolution.File is not null)
+                {
+                    if (TryAddFile(snapshot, resolution.File))
+                    {
+                        filesScanned++;
+                        ReportScanProgress(progress, filesScanned, directoriesScanned, resolution.File.RelativePath);
+                    }
+
+                    continue;
+                }
+
+                if (resolution.Directory is not null)
+                {
+                    await CrawlCoreAsync(
+                            resolution.Directory.Node.Id,
+                            progress,
+                            directory =>
+                            {
+                                if (TryAddDirectory(snapshot, directory))
+                                {
+                                    directoriesScanned++;
+                                }
+                            },
+                            file =>
+                            {
+                                if (TryAddFile(snapshot, file))
+                                {
+                                    filesScanned++;
+                                }
+                            },
+                            cancellationToken,
+                            resolution.Directory.RelativePath)
+                        .ConfigureAwait(false);
+                }
+            }
+
+            progress?.Report(new RemoteTreeScanProgress(filesScanned, directoriesScanned, currentPath: null));
+            return snapshot;
+        }
+
         private async Task<NodeDto> CrawlCoreAsync(
             Guid rootNodeId,
             IProgress<RemoteTreeScanProgress>? progress,
             Action<RemoteDirectorySnapshot> addDirectory,
             Action<RemoteFileSnapshot> addFile,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            string rootRelativePath = "")
         {
             ArgumentNullException.ThrowIfNull(addDirectory);
             ArgumentNullException.ThrowIfNull(addFile);
             NodeDto root = await _nodes.GetAsync(rootNodeId, cancellationToken).ConfigureAwait(false);
             var pending = new Stack<RemoteCrawlFrame>();
-            pending.Push(new RemoteCrawlFrame(root, string.Empty, Page: 1, Loaded: 0));
+            pending.Push(new RemoteCrawlFrame(root, rootRelativePath, Page: 1, Loaded: 0));
             int directoriesScanned = 0;
             int filesScanned = 0;
             progress?.Report(new RemoteTreeScanProgress(filesScanned, directoriesScanned, currentPath: null));
@@ -151,6 +229,107 @@ namespace Cotton.Sync.Remote
             return root;
         }
 
+        private async Task<RemotePathResolution> ResolvePathAsync(
+            NodeDto root,
+            string relativePath,
+            Action<RemoteDirectorySnapshot> addDirectory,
+            CancellationToken cancellationToken)
+        {
+            string[] segments = relativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            NodeDto currentNode = root;
+            string currentPath = string.Empty;
+            for (int index = 0; index < segments.Length; index++)
+            {
+                string segment = segments[index];
+                NodeContentDto children = await FindChildPageContainingAsync(currentNode.Id, segment, cancellationToken).ConfigureAwait(false);
+                NodeDto? childDirectory = children.Nodes.FirstOrDefault(node => string.Equals(node.Name, segment, StringComparison.OrdinalIgnoreCase));
+                bool isLast = index == segments.Length - 1;
+                if (isLast)
+                {
+                    string childPath = string.IsNullOrEmpty(currentPath) ? segment : currentPath + "/" + segment;
+                    if (childDirectory is not null)
+                    {
+                        var directory = new RemoteDirectorySnapshot
+                        {
+                            RelativePath = childPath,
+                            Node = childDirectory,
+                        };
+                        addDirectory(directory);
+                        return RemotePathResolution.ForDirectory(directory);
+                    }
+
+                    NodeFileManifestDto? file = children.Files.FirstOrDefault(item => string.Equals(item.Name, segment, StringComparison.OrdinalIgnoreCase));
+                    if (file is not null)
+                    {
+                        return RemotePathResolution.ForFile(new RemoteFileSnapshot
+                        {
+                            RelativePath = childPath,
+                            File = file,
+                        });
+                    }
+
+                    return RemotePathResolution.NotFound;
+                }
+
+                if (childDirectory is null)
+                {
+                    return RemotePathResolution.NotFound;
+                }
+
+                currentPath = string.IsNullOrEmpty(currentPath) ? segment : currentPath + "/" + segment;
+                addDirectory(new RemoteDirectorySnapshot
+                {
+                    RelativePath = currentPath,
+                    Node = childDirectory,
+                });
+                currentNode = childDirectory;
+            }
+
+            return RemotePathResolution.NotFound;
+        }
+
+        private async Task<NodeContentDto> FindChildPageContainingAsync(
+            Guid parentNodeId,
+            string name,
+            CancellationToken cancellationToken)
+        {
+            int page = 1;
+            int loaded = 0;
+            while (true)
+            {
+                NodeContentDto children = await _nodes.GetChildrenAsync(
+                    parentNodeId,
+                    page,
+                    _pageSize,
+                    depth: 0,
+                    cancellationToken).ConfigureAwait(false);
+                if (children.Nodes.Any(node => string.Equals(node.Name, name, StringComparison.OrdinalIgnoreCase))
+                    || children.Files.Any(file => string.Equals(file.Name, name, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return children;
+                }
+
+                int count = children.Nodes.Count + children.Files.Count;
+                loaded += count;
+                if (count == 0 || loaded >= children.TotalCount)
+                {
+                    return children;
+                }
+
+                page++;
+            }
+        }
+
+        private static bool TryAddDirectory(RemoteTreeLookupSnapshot snapshot, RemoteDirectorySnapshot directory)
+        {
+            return snapshot.DirectoriesByPath.TryAdd(SyncPath.ToKey(directory.RelativePath), directory);
+        }
+
+        private static bool TryAddFile(RemoteTreeLookupSnapshot snapshot, RemoteFileSnapshot file)
+        {
+            return snapshot.FilesByPath.TryAdd(SyncPath.ToKey(file.RelativePath), file);
+        }
+
         private static void ReportScanProgress(
             IProgress<RemoteTreeScanProgress>? progress,
             int filesScanned,
@@ -194,5 +373,20 @@ namespace Cotton.Sync.Remote
         }
 
         private readonly record struct RemoteCrawlFrame(NodeDto Node, string ParentPath, int Page, int Loaded);
+
+        private sealed record RemotePathResolution(RemoteDirectorySnapshot? Directory, RemoteFileSnapshot? File)
+        {
+            public static RemotePathResolution NotFound { get; } = new(null, null);
+
+            public static RemotePathResolution ForDirectory(RemoteDirectorySnapshot directory)
+            {
+                return new RemotePathResolution(directory, null);
+            }
+
+            public static RemotePathResolution ForFile(RemoteFileSnapshot file)
+            {
+                return new RemotePathResolution(null, file);
+            }
+        }
     }
 }

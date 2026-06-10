@@ -112,6 +112,13 @@ namespace Cotton.Sync.App.Supervision
         /// <inheritdoc />
         public async Task SyncNowAsync(Guid syncPairId, CancellationToken cancellationToken = default)
         {
+            await SyncNowAsync(syncPairId, SyncRunRequest.Full, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task SyncNowAsync(Guid syncPairId, SyncRunRequest request, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(request);
             ISyncPairRunner runner;
             await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
@@ -123,7 +130,7 @@ namespace Cotton.Sync.App.Supervision
                 _operationGate.Release();
             }
 
-            await runner.SyncNowAsync(cancellationToken).ConfigureAwait(false);
+            await runner.SyncNowAsync(request, cancellationToken).ConfigureAwait(false);
 
             _statusPublisher.Publish(CreateAppStatusSnapshot());
         }

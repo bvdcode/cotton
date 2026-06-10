@@ -8,6 +8,7 @@ using CoreSyncEngine = Cotton.Sync.ISyncEngine;
 using CoreSyncPair = Cotton.Sync.SyncPair;
 using CoreSyncRunOptions = Cotton.Sync.SyncRunOptions;
 using CoreSyncRunResult = Cotton.Sync.SyncRunResult;
+using CoreSyncRunScope = Cotton.Sync.SyncRunScope;
 
 namespace Cotton.Sync.App.Runners
 {
@@ -39,15 +40,18 @@ namespace Cotton.Sync.App.Runners
         /// <inheritdoc />
         public async Task RunOnceAsync(SyncPairSettings syncPair, CancellationToken cancellationToken = default)
         {
+            await RunOnceAsync(syncPair, SyncRunRequest.Full, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task RunOnceAsync(SyncPairSettings syncPair, SyncRunRequest request, CancellationToken cancellationToken = default)
+        {
             ArgumentNullException.ThrowIfNull(syncPair);
+            ArgumentNullException.ThrowIfNull(request);
             CoreSyncRunOptions? options = _activityPublisher is null && _progressPublisher is null && _runProgressPublisher is null
+                    && request.IsFull
                 ? null
-                : new CoreSyncRunOptions
-                {
-                    ActivityProgress = _activityPublisher is null ? null : new AppActivityProgressReporter(syncPair.Id, _activityPublisher),
-                    TransferProgress = _progressPublisher is null ? null : new AppTransferProgressReporter(syncPair.Id, _progressPublisher),
-                    RunProgress = _runProgressPublisher is null ? null : new AppRunProgressReporter(syncPair.Id, _runProgressPublisher),
-                };
+                : CreateOptions(syncPair, request);
             CoreSyncRunResult result = await _syncEngine
                 .RunOnceAsync(ToCorePair(syncPair), options, cancellationToken)
                 .ConfigureAwait(false);
@@ -55,6 +59,19 @@ namespace Cotton.Sync.App.Runners
             {
                 throw new SyncActionRequiredException(CreateActionRequiredMessage(result));
             }
+        }
+
+        private CoreSyncRunOptions CreateOptions(SyncPairSettings syncPair, SyncRunRequest request)
+        {
+            return new CoreSyncRunOptions
+            {
+                Scope = request.IsFull
+                    ? CoreSyncRunScope.Full
+                    : CoreSyncRunScope.ForLocalChangedPaths(request.LocalChangedPaths),
+                ActivityProgress = _activityPublisher is null ? null : new AppActivityProgressReporter(syncPair.Id, _activityPublisher),
+                TransferProgress = _progressPublisher is null ? null : new AppTransferProgressReporter(syncPair.Id, _progressPublisher),
+                RunProgress = _runProgressPublisher is null ? null : new AppRunProgressReporter(syncPair.Id, _runProgressPublisher),
+            };
         }
 
         private static CoreSyncPair ToCorePair(SyncPairSettings syncPair)

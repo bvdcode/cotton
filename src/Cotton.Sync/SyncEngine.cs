@@ -27,10 +27,12 @@ namespace Cotton.Sync
         private readonly ILocalFileContentHashProgressHasher? _localContentHashProgressHasher;
         private readonly ILocalFileMetadataTreeScanner? _localMetadataTreeScanner;
         private readonly ILocalFileMetadataTreeLookupScanner? _localMetadataTreeLookupScanner;
+        private readonly ILocalFileMetadataPathLookupScanner? _localMetadataPathLookupScanner;
         private readonly ILocalTreeScanner? _localTreeScanner;
         private readonly IRemoteDirectorySynchronizer? _remoteDirectories;
         private readonly IRemoteTreeCrawler _remoteCrawler;
         private readonly IRemoteTreeLookupCrawler? _remoteLookupCrawler;
+        private readonly IRemotePathLookupCrawler? _remotePathLookupCrawler;
         private readonly IRemoteFileSynchronizer _remoteFiles;
         private readonly ISyncStateStore _stateStore;
         private readonly ILocalFileSyncWriter _localWriter;
@@ -53,9 +55,11 @@ namespace Cotton.Sync
             _localContentHashProgressHasher = localScanner as ILocalFileContentHashProgressHasher;
             _localMetadataTreeScanner = localScanner as ILocalFileMetadataTreeScanner;
             _localMetadataTreeLookupScanner = localScanner as ILocalFileMetadataTreeLookupScanner;
+            _localMetadataPathLookupScanner = localScanner as ILocalFileMetadataPathLookupScanner;
             _localTreeScanner = localScanner as ILocalTreeScanner;
             _remoteCrawler = remoteCrawler ?? throw new ArgumentNullException(nameof(remoteCrawler));
             _remoteLookupCrawler = remoteCrawler as IRemoteTreeLookupCrawler;
+            _remotePathLookupCrawler = remoteCrawler as IRemotePathLookupCrawler;
             _remoteFiles = remoteFiles ?? throw new ArgumentNullException(nameof(remoteFiles));
             _stateStore = stateStore ?? throw new ArgumentNullException(nameof(stateStore));
             _localWriter = localWriter ?? new AtomicLocalFileSyncWriter();
@@ -83,7 +87,7 @@ namespace Cotton.Sync
             SyncTreeLookups treeLookups = await ScanTreesAndBuildLookupsAsync(syncPair, options, startedAtUtc, cancellationToken)
                 .ConfigureAwait(false);
             (Dictionary<string, SyncStateEntry> directoryStateByPath, Dictionary<string, SyncStateEntry> stateByPath) =
-                await LoadStateByPathAsync(syncPair.SyncPairId, cancellationToken).ConfigureAwait(false);
+                await LoadStateByPathAsync(syncPair.SyncPairId, options, treeLookups, cancellationToken).ConfigureAwait(false);
             var result = new SyncRunResult();
 
             Dictionary<string, LocalDirectorySnapshot> localDirectoriesByPath = treeLookups.LocalDirectoriesByPath;
@@ -252,6 +256,12 @@ namespace Cotton.Sync
             DateTime startedAtUtc,
             CancellationToken cancellationToken)
         {
+            if (!options.Scope.IsFull && options.Scope.LocalChangedPaths.Count > 0)
+            {
+                return await ScanScopedTreesAndBuildLookupsAsync(syncPair, options, startedAtUtc, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
             LocalTreeLookupSnapshot? localTreeLookups = await ScanLocalTreeLookupsAsync(
                     syncPair.LocalRootPath,
                     options,
@@ -304,7 +314,75 @@ namespace Cotton.Sync
                 remoteTreeLookups?.RootNode ?? remoteTree!.RootNode);
         }
 
+        private async Task<SyncTreeLookups> ScanScopedTreesAndBuildLookupsAsync(
+            SyncPair syncPair,
+            SyncRunOptions options,
+            DateTime startedAtUtc,
+            CancellationToken cancellationToken)
+        {
+            if (_localMetadataPathLookupScanner is null || _localContentHasher is null || _remotePathLookupCrawler is null)
+            {
+                SyncRunOptions fullOptions = CloneAsFullScope(options);
+                return await ScanTreesAndBuildLookupsAsync(syncPair, fullOptions, startedAtUtc, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            IReadOnlyList<string> scopedPaths = BuildScopedRelativePaths(options.Scope.LocalChangedPaths);
+            ReportRunProgress(options, SyncRunProgressStage.ScanningLocal, 0, scopedPaths.Count, null, startedAtUtc);
+            LocalTreeLookupSnapshot localTreeLookups = await _localMetadataPathLookupScanner
+                .ScanPathMetadataLookupsAsync(
+                    syncPair.LocalRootPath,
+                    scopedPaths,
+                    new LocalTreeScanProgressReporter(options, startedAtUtc),
+                    cancellationToken)
+                .ConfigureAwait(false);
+            ReportRunProgress(options, SyncRunProgressStage.ScanningRemote, 0, scopedPaths.Count, null, startedAtUtc);
+            RemoteTreeLookupSnapshot remoteTreeLookups = await _remotePathLookupCrawler
+                .CrawlPathLookupsAsync(
+                    syncPair.RemoteRootNodeId,
+                    scopedPaths,
+                    new RemoteTreeScanProgressReporter(options, startedAtUtc),
+                    cancellationToken)
+                .ConfigureAwait(false);
+            ThrowIfPathKindCollisions(
+                localTreeLookups.DirectoriesByPath,
+                localTreeLookups.FilesByPath,
+                directory => directory.RelativePath,
+                file => file.RelativePath);
+            ThrowIfPathKindCollisions(
+                remoteTreeLookups.DirectoriesByPath,
+                remoteTreeLookups.FilesByPath,
+                directory => directory.RelativePath,
+                file => file.RelativePath);
+            return new SyncTreeLookups(
+                localTreeLookups.DirectoriesByPath,
+                remoteTreeLookups.DirectoriesByPath,
+                localTreeLookups.FilesByPath,
+                remoteTreeLookups.FilesByPath,
+                remoteTreeLookups.RootNode);
+        }
+
         private async Task<(Dictionary<string, SyncStateEntry> DirectoryStateByPath, Dictionary<string, SyncStateEntry> FileStateByPath)> LoadStateByPathAsync(
+            string syncPairId,
+            SyncRunOptions options,
+            SyncTreeLookups treeLookups,
+            CancellationToken cancellationToken)
+        {
+            if (options.Scope.IsFull)
+            {
+                return await LoadAllStateByPathAsync(syncPairId, cancellationToken).ConfigureAwait(false);
+            }
+
+            List<string> keys = BuildUniquePathKeyList(
+                treeLookups.LocalDirectoriesByPath.Keys,
+                treeLookups.RemoteDirectoriesByPath.Keys,
+                treeLookups.LocalFilesByPath.Keys,
+                treeLookups.RemoteFilesByPath.Keys,
+                BuildScopedPathKeys(options.Scope.LocalChangedPaths));
+            return await LoadStateByPathAsync(syncPairId, keys, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task<(Dictionary<string, SyncStateEntry> DirectoryStateByPath, Dictionary<string, SyncStateEntry> FileStateByPath)> LoadAllStateByPathAsync(
             string syncPairId,
             CancellationToken cancellationToken)
         {
@@ -328,6 +406,44 @@ namespace Cotton.Sync
                         break;
                     case SyncEntryKind.File:
                         fileStateByPath.Add(key, entry);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(entry), entry.Kind, "Unknown sync state entry kind.");
+                }
+            }
+
+            return (directoryStateByPath, fileStateByPath);
+        }
+
+        private async Task<(Dictionary<string, SyncStateEntry> DirectoryStateByPath, Dictionary<string, SyncStateEntry> FileStateByPath)> LoadStateByPathAsync(
+            string syncPairId,
+            IEnumerable<string> keys,
+            CancellationToken cancellationToken)
+        {
+            var directoryStateByPath = new Dictionary<string, SyncStateEntry>(PathComparer);
+            var fileStateByPath = new Dictionary<string, SyncStateEntry>(PathComparer);
+            foreach (string key in keys.Distinct(PathComparer))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (string.IsNullOrWhiteSpace(key) || SyncPathIgnoreRules.ShouldIgnore(key))
+                {
+                    continue;
+                }
+
+                SyncStateEntry? entry = await _stateStore.GetAsync(syncPairId, key, cancellationToken).ConfigureAwait(false);
+                if (entry is null)
+                {
+                    continue;
+                }
+
+                string stateKey = SyncPath.ToKey(entry.RelativePath);
+                switch (entry.Kind)
+                {
+                    case SyncEntryKind.Directory:
+                        directoryStateByPath[stateKey] = entry;
+                        break;
+                    case SyncEntryKind.File:
+                        fileStateByPath[stateKey] = entry;
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(entry), entry.Kind, "Unknown sync state entry kind.");
@@ -753,8 +869,12 @@ namespace Cotton.Sync
 
             if (local is not null && remote is not null && ContentMatches(local.ContentHash, remote.File.ContentHash))
             {
-                await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, local.SizeBytes, remote.File), cancellationToken)
-                    .ConfigureAwait(false);
+                if (!BaselineMatchesCurrentFile(syncPair, relativePath, state, local, remote.File))
+                {
+                    await _stateStore.UpsertAsync(BuildBaseline(syncPair, relativePath, local.ContentHash, local.LastWriteUtc, local.SizeBytes, remote.File), cancellationToken)
+                        .ConfigureAwait(false);
+                }
+
                 return;
             }
 
@@ -1232,8 +1352,33 @@ namespace Cotton.Sync
             return state.RemoteFileId.HasValue && remoteFile.Id == state.RemoteFileId.Value;
         }
 
+        private static bool BaselineMatchesCurrentFile(
+            SyncPair syncPair,
+            string relativePath,
+            SyncStateEntry state,
+            LocalFileSnapshot local,
+            NodeFileManifestDto remoteFile)
+        {
+            return state.Kind == SyncEntryKind.File
+                && string.Equals(state.SyncPairId, syncPair.SyncPairId, StringComparison.Ordinal)
+                && PathComparer.Equals(SyncPath.ToKey(state.RelativePath), SyncPath.ToKey(relativePath))
+                && ContentMatches(state.LocalContentHash, local.ContentHash)
+                && NullableUtcEquals(state.LocalLastWriteUtc, local.LastWriteUtc)
+                && state.LocalSizeBytes == local.SizeBytes
+                && state.RemoteFileId == remoteFile.Id
+                && state.RemoteNodeId == remoteFile.NodeId
+                && ContentMatches(state.RemoteContentHash, remoteFile.ContentHash)
+                && string.Equals(state.RemoteETag, remoteFile.ETag, StringComparison.Ordinal);
+        }
+
+        private static bool NullableUtcEquals(DateTime? left, DateTime? right)
+        {
+            return left?.ToUniversalTime() == right?.ToUniversalTime();
+        }
+
         private static void ValidateOptions(SyncRunOptions options)
         {
+            ArgumentNullException.ThrowIfNull(options.Scope);
             if (options.MaximumLocalDeletesPerRun < 0)
             {
                 throw new ArgumentOutOfRangeException(
@@ -1789,6 +1934,21 @@ namespace Cotton.Sync
                 && string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
         }
 
+        private static SyncRunOptions CloneAsFullScope(SyncRunOptions options)
+        {
+            return new SyncRunOptions
+            {
+                Scope = SyncRunScope.Full,
+                DeleteRemotePermanently = options.DeleteRemotePermanently,
+                MaximumLocalDeletesPerRun = options.MaximumLocalDeletesPerRun,
+                MaximumRemoteDeletesPerRun = options.MaximumRemoteDeletesPerRun,
+                MaximumStoredResultActivities = options.MaximumStoredResultActivities,
+                ActivityProgress = options.ActivityProgress,
+                TransferProgress = options.TransferProgress,
+                RunProgress = options.RunProgress,
+            };
+        }
+
         private static bool IsRemotePreconditionFailed(HttpRequestException exception)
         {
             return exception.StatusCode == HttpStatusCode.PreconditionFailed;
@@ -1850,6 +2010,52 @@ namespace Cotton.Sync
                     : StringComparer.OrdinalIgnoreCase.Compare(left, right);
             });
             return keys;
+        }
+
+        private static IReadOnlyList<string> BuildScopedRelativePaths(IEnumerable<string> relativePaths)
+        {
+            var yielded = new HashSet<string>(PathComparer);
+            var paths = new List<string>();
+            foreach (string relativePath in relativePaths)
+            {
+                string normalizedPath = SyncPath.Normalize(relativePath);
+                if (string.IsNullOrWhiteSpace(normalizedPath) || SyncPathIgnoreRules.ShouldIgnore(normalizedPath))
+                {
+                    continue;
+                }
+
+                if (yielded.Add(SyncPath.ToKey(normalizedPath)))
+                {
+                    paths.Add(normalizedPath);
+                }
+            }
+
+            return paths;
+        }
+
+        private static IEnumerable<string> BuildScopedPathKeys(IEnumerable<string> relativePaths)
+        {
+            var yielded = new HashSet<string>(PathComparer);
+            foreach (string relativePath in relativePaths)
+            {
+                string normalizedPath = SyncPath.Normalize(relativePath);
+                if (string.IsNullOrWhiteSpace(normalizedPath) || SyncPathIgnoreRules.ShouldIgnore(normalizedPath))
+                {
+                    continue;
+                }
+
+                string[] segments = normalizedPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                string current = string.Empty;
+                for (int index = 0; index < segments.Length; index++)
+                {
+                    current = string.IsNullOrEmpty(current) ? segments[index] : current + "/" + segments[index];
+                    string key = SyncPath.ToKey(current);
+                    if (yielded.Add(key))
+                    {
+                        yield return key;
+                    }
+                }
+            }
         }
 
         private static List<string> BuildUniquePathKeyList(params IEnumerable<string>[] keySets)

@@ -2,6 +2,7 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Sync.App.Status;
+using Cotton.Sync.App.Runners;
 
 namespace Cotton.Sync.App.Supervision
 {
@@ -34,6 +35,14 @@ namespace Cotton.Sync.App.Supervision
         /// Requests one sync pass for a runner.
         /// </summary>
         Task SyncNowAsync(Guid syncPairId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Requests one sync pass for a runner with an explicit sync surface.
+        /// </summary>
+        Task SyncNowAsync(Guid syncPairId, SyncRunRequest request, CancellationToken cancellationToken = default)
+        {
+            return SyncNowAsync(syncPairId, cancellationToken);
+        }
 
         /// <summary>
         /// Pauses every runner.
