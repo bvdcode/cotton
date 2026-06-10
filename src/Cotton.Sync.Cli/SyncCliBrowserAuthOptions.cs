@@ -7,5 +7,6 @@ namespace Cotton.Sync.Cli
         Uri ServerUri,
         string ApplicationName,
         string? ApplicationVersion,
-        string? DeviceName);
+        string? DeviceName,
+        int? TimeoutSeconds);
 }

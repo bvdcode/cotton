@@ -81,6 +81,8 @@ namespace Cotton.Sync.Cli.Tests
                 Assert.That(error.ToString(), Is.Empty);
                 Assert.That(text, Does.Contain("Cotton Sync browser sign-in"));
                 Assert.That(text, Does.Contain("Approval URL: https://cotton.test/oauth/app-code/0190a000-0000-7000-8000-000000000022"));
+                Assert.That(text, Does.Contain("Open this URL in your browser to approve sign-in."));
+                Assert.That(text, Does.Contain("Waiting for browser approval..."));
                 Assert.That(text, Does.Contain("Signed in: browser@example.test"));
                 Assert.That(text, Does.Contain("Signed out."));
                 Assert.That(handler.Requests.Select(static request => request.PathAndQuery), Is.EqualTo(new[]
@@ -125,6 +127,104 @@ namespace Cotton.Sync.Cli.Tests
                     "/api/v1/oauth/app-code/start",
                     "/api/v1/oauth/app-code/poll",
                 }));
+            });
+        }
+
+        [Test]
+        public async Task AuthBrowser_ReturnsFailureWhenApprovalTimesOut()
+        {
+            var handler = new AppCodeAuthServerHandler(alwaysPending: true);
+            using var httpClient = new HttpClient(handler);
+            using var output = new StringWriter();
+            using var error = new StringWriter();
+
+            int exitCode = await SyncCliCommandRunner.RunAsync(
+                [
+                    "auth-browser",
+                    "--server",
+                    "https://cotton.test/",
+                    "--timeout-seconds",
+                    "1",
+                ],
+                output,
+                error,
+                httpClient);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(1));
+                Assert.That(output.ToString(), Does.Contain("Open this URL in your browser to approve sign-in."));
+                Assert.That(output.ToString(), Does.Contain("Waiting for browser approval..."));
+                Assert.That(error.ToString(), Does.Contain("Browser sign-in timed out"));
+            });
+        }
+
+        [Test]
+        public async Task AuthBrowser_ReturnsErrorForInvalidTimeout()
+        {
+            using var output = new StringWriter();
+            using var error = new StringWriter();
+
+            int exitCode = await SyncCliCommandRunner.RunAsync(
+                [
+                    "auth-browser",
+                    "--server",
+                    "https://cotton.test/",
+                    "--timeout-seconds",
+                    "0",
+                ],
+                output,
+                error);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(2));
+                Assert.That(output.ToString(), Is.Empty);
+                Assert.That(error.ToString(), Does.Contain("--timeout-seconds must be a positive integer."));
+            });
+        }
+
+        [Test]
+        public async Task AuthBrowser_ReturnsFailureWithoutStackTraceWhenStartNetworkFails()
+        {
+            var handler = new AppCodeAuthServerHandler(startException: new HttpRequestException("firewall blocked"));
+            using var httpClient = new HttpClient(handler);
+            using var output = new StringWriter();
+            using var error = new StringWriter();
+
+            int exitCode = await SyncCliCommandRunner.RunAsync(
+                [
+                    "auth-browser",
+                    "--server",
+                    "https://cotton.test/",
+                ],
+                output,
+                error,
+                httpClient);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(1));
+                Assert.That(output.ToString(), Does.Contain("Cotton Sync browser sign-in"));
+                Assert.That(output.ToString(), Does.Not.Contain("Approval URL:"));
+                Assert.That(error.ToString(), Does.Contain("Check network or firewall"));
+                Assert.That(error.ToString(), Does.Not.Contain("HttpRequestException"));
+                Assert.That(handler.Requests, Has.Count.EqualTo(3));
+            });
+        }
+
+        [Test]
+        public async Task AuthBrowser_HelpMentionsTimeout()
+        {
+            using var output = new StringWriter();
+            using var error = new StringWriter();
+
+            int exitCode = await SyncCliCommandRunner.RunAsync([], output, error);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(0));
+                Assert.That(output.ToString(), Does.Contain("--timeout-seconds"));
             });
         }
 
@@ -527,6 +627,32 @@ namespace Cotton.Sync.Cli.Tests
         }
 
         [Test]
+        public async Task StateSummary_ReturnsReadableErrorForCorruptDatabase()
+        {
+            string databasePath = Path.Combine(_tempDirectory, "corrupt-sync-state.db");
+            string syncPairId = Guid.NewGuid().ToString("D");
+            await File.WriteAllTextAsync(databasePath, "not a sqlite database");
+            using var output = new StringWriter();
+            using var error = new StringWriter();
+
+            int exitCode = await SyncCliCommandRunner.RunAsync(
+                ["state-summary", "--database", databasePath, "--sync-pair", syncPairId],
+                output,
+                error);
+
+            string errorText = error.ToString();
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(2));
+                Assert.That(output.ToString(), Is.Empty);
+                Assert.That(errorText, Does.Contain("state-summary could not read the sync-state database"));
+                Assert.That(errorText, Does.Contain("not a Cotton Sync state database"));
+                Assert.That(errorText, Does.Not.Contain("Unhandled exception"));
+                Assert.That(errorText, Does.Not.Contain("   at "));
+            });
+        }
+
+        [Test]
         public async Task SyncOnce_UploadsLocalFileAndPersistsBaseline()
         {
             string localRoot = Path.Combine(_tempDirectory, "local");
@@ -647,6 +773,8 @@ namespace Cotton.Sync.Cli.Tests
                 Assert.That(exitCode, Is.EqualTo(0));
                 Assert.That(error.ToString(), Is.Empty);
                 Assert.That(text, Does.Contain("Approval URL: https://cotton.test/oauth/app-code/0190a000-0000-7000-8000-000000000022"));
+                Assert.That(text, Does.Contain("Open this URL in your browser to approve sign-in."));
+                Assert.That(text, Does.Contain("Waiting for browser approval..."));
                 Assert.That(text, Does.Contain("Cotton Sync one-shot run"));
                 Assert.That(text, Does.Contain("Uploaded hello-browser.txt"));
                 Assert.That(entry, Is.Not.Null);
@@ -1356,12 +1484,19 @@ namespace Cotton.Sync.Cli.Tests
         private class AppCodeAuthServerHandler : HttpMessageHandler
         {
             private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+            private readonly bool _alwaysPending;
             private readonly bool _deny;
+            private readonly Exception? _startException;
             private int _pollCount;
 
-            public AppCodeAuthServerHandler(bool deny = false)
+            public AppCodeAuthServerHandler(
+                bool deny = false,
+                bool alwaysPending = false,
+                Exception? startException = null)
             {
                 _deny = deny;
+                _alwaysPending = alwaysPending;
+                _startException = startException;
             }
 
             public List<HttpRequestSnapshot> Requests { get; } = [];
@@ -1382,6 +1517,11 @@ namespace Cotton.Sync.Cli.Tests
 
                 if (snapshot.Method == HttpMethod.Post && snapshot.PathAndQuery == "/api/v1/oauth/app-code/start")
                 {
+                    if (_startException is not null)
+                    {
+                        throw _startException;
+                    }
+
                     return Json(HttpStatusCode.OK, new
                     {
                         approvalId = Guid.Parse("0190a000-0000-7000-8000-000000000022"),
@@ -1396,6 +1536,11 @@ namespace Cotton.Sync.Cli.Tests
                 {
                     Assert.That(snapshot.Body, Does.Contain("\"pollToken\":\"poll-token\""));
                     _pollCount++;
+                    if (_alwaysPending)
+                    {
+                        return Json(HttpStatusCode.Accepted, new { error = "pending", retryAfterSeconds = 1 });
+                    }
+
                     return _deny
                         ? Json(HttpStatusCode.Forbidden, new { error = "denied" })
                         : Json(HttpStatusCode.OK, new { accessToken = "access-token", refreshToken = "refresh-token" });

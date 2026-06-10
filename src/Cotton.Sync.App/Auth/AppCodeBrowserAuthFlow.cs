@@ -15,6 +15,7 @@ namespace Cotton.Sync.App.Auth
     public class AppCodeBrowserAuthFlow : IAppCodeBrowserAuthFlow
     {
         private static readonly TimeSpan DefaultPollDelay = TimeSpan.FromSeconds(2);
+        private const int StartSessionMaxAttempts = 3;
 
         private readonly ICottonAuthClient _authClient;
         private readonly Func<TimeSpan, CancellationToken, Task> _delayAsync;
@@ -50,8 +51,7 @@ namespace Cotton.Sync.App.Auth
                 throw new ArgumentException("Application name is required.", nameof(request));
             }
 
-            AppCodeAuthorizationSession session = await _authClient
-                .StartAppCodeAsync(ToStartRequest(request), cancellationToken)
+            AppCodeAuthorizationSession session = await StartSessionWithRetryAsync(request, cancellationToken)
                 .ConfigureAwait(false);
             await _platformCommands.OpenWebAsync(session.ApprovalUri, cancellationToken).ConfigureAwait(false);
 
@@ -66,7 +66,7 @@ namespace Cotton.Sync.App.Auth
                         .PollAppCodeAsync(session.PollToken, cancellationToken)
                         .ConfigureAwait(false);
                 }
-                catch (Exception exception) when (IsRetriablePollException(exception, cancellationToken))
+                catch (Exception exception) when (IsRetriableAuthException(exception, cancellationToken))
                 {
                     _logger.LogWarning(exception, "Browser sign-in polling failed transiently. Retrying.");
                     await _delayAsync(GetRetryDelay(session.PollInterval), cancellationToken).ConfigureAwait(false);
@@ -89,6 +89,41 @@ namespace Cotton.Sync.App.Auth
             }
         }
 
+        private async Task<AppCodeAuthorizationSession> StartSessionWithRetryAsync(
+            AppCodeBrowserSignInRequest request,
+            CancellationToken cancellationToken)
+        {
+            AppCodeStartRequestDto startRequest = ToStartRequest(request);
+            for (int attempt = 1; attempt <= StartSessionMaxAttempts; attempt++)
+            {
+                try
+                {
+                    return await _authClient.StartAppCodeAsync(startRequest, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception exception) when (IsRetriableAuthException(exception, cancellationToken))
+                {
+                    if (attempt == StartSessionMaxAttempts)
+                    {
+                        throw new AppCodeBrowserSignInException(
+                            AppCodePollStatus.Unknown,
+                            "Browser sign-in could not contact the server. Check network or firewall access and retry.",
+                            "network_unavailable");
+                    }
+
+                    TimeSpan delay = TimeSpan.FromSeconds(attempt);
+                    _logger.LogWarning(
+                        exception,
+                        "Browser sign-in start failed transiently. Retrying attempt {NextAttempt} of {MaxAttempts} after {Delay}.",
+                        attempt + 1,
+                        StartSessionMaxAttempts,
+                        delay);
+                    await _delayAsync(delay, cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            throw new InvalidOperationException("Browser sign-in start retry loop exited unexpectedly.");
+        }
+
         private async Task<UserDto> GetCurrentUserWithRetryAsync(
             AppCodeAuthorizationSession session,
             CancellationToken cancellationToken)
@@ -100,7 +135,7 @@ namespace Cotton.Sync.App.Auth
                 {
                     return await _authClient.MeAsync(cancellationToken).ConfigureAwait(false);
                 }
-                catch (Exception exception) when (IsRetriablePollException(exception, cancellationToken))
+                catch (Exception exception) when (IsRetriableAuthException(exception, cancellationToken))
                 {
                     ThrowIfSessionExpired(session);
                     _logger.LogWarning(exception, "Browser sign-in user lookup failed transiently. Retrying.");
@@ -127,7 +162,7 @@ namespace Cotton.Sync.App.Auth
             return delay <= TimeSpan.Zero ? DefaultPollDelay : delay;
         }
 
-        private static bool IsRetriablePollException(Exception exception, CancellationToken cancellationToken)
+        private static bool IsRetriableAuthException(Exception exception, CancellationToken cancellationToken)
         {
             if (cancellationToken.IsCancellationRequested)
             {

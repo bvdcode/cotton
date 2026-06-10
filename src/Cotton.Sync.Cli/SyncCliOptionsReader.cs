@@ -101,11 +101,17 @@ namespace Cotton.Sync.Cli
                 return null;
             }
 
+            if (!TryReadOptionalPositiveInt(args, "--timeout-seconds", error, out int? timeoutSeconds))
+            {
+                return null;
+            }
+
             return new SyncCliBrowserAuthOptions(
                 serverUri,
                 applicationName,
                 NormalizeOptional(ReadOption(args, "--application-version")),
-                NormalizeOptional(ReadOption(args, "--device-name")) ?? "Cotton Sync CLI");
+                NormalizeOptional(ReadOption(args, "--device-name")) ?? "Cotton Sync CLI",
+                timeoutSeconds);
         }
 
         public static bool TryReadOptionalPositiveInt(

@@ -129,6 +129,78 @@ namespace Cotton.Sync.App.Tests.Auth
         }
 
         [Test]
+        public async Task SignInAsync_RetriesTransientStartFailureAndContinues()
+        {
+            var delays = new List<TimeSpan>();
+            var authClient = new FakeCottonAuthClient();
+            authClient.StartExceptions.Enqueue(new HttpRequestException("Firewall blocked first request."));
+            authClient.PollResults.Enqueue(new AppCodePollResult
+            {
+                Status = AppCodePollStatus.Approved,
+                Tokens = new TokenPairDto { AccessToken = "access", RefreshToken = "refresh" },
+            });
+            var platformCommands = new FakePlatformCommandService();
+            var flow = new AppCodeBrowserAuthFlow(
+                authClient,
+                platformCommands,
+                (delay, _) =>
+                {
+                    delays.Add(delay);
+                    return Task.CompletedTask;
+                });
+
+            AuthSession session = await flow.SignInAsync(new AppCodeBrowserSignInRequest
+            {
+                ApplicationName = "Cotton Sync Desktop",
+            });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(authClient.StartCallCount, Is.EqualTo(2));
+                Assert.That(platformCommands.OpenWebCallCount, Is.EqualTo(1));
+                Assert.That(authClient.PollCallCount, Is.EqualTo(1));
+                Assert.That(session.Email, Is.EqualTo("browser@example.test"));
+                Assert.That(delays, Is.EqualTo(new[] { TimeSpan.FromSeconds(1) }));
+            });
+        }
+
+        [Test]
+        public void SignInAsync_ConvertsPersistentStartFailureToBrowserSignInException()
+        {
+            var delays = new List<TimeSpan>();
+            var authClient = new FakeCottonAuthClient();
+            authClient.StartExceptions.Enqueue(new HttpRequestException("network blocked 1"));
+            authClient.StartExceptions.Enqueue(new HttpRequestException("network blocked 2"));
+            authClient.StartExceptions.Enqueue(new HttpRequestException("network blocked 3"));
+            var platformCommands = new FakePlatformCommandService();
+            var flow = new AppCodeBrowserAuthFlow(
+                authClient,
+                platformCommands,
+                (delay, _) =>
+                {
+                    delays.Add(delay);
+                    return Task.CompletedTask;
+                });
+
+            AppCodeBrowserSignInException? exception = Assert.ThrowsAsync<AppCodeBrowserSignInException>(
+                async () => await flow.SignInAsync(new AppCodeBrowserSignInRequest
+                {
+                    ApplicationName = "Cotton Sync Desktop",
+                }));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exception, Is.Not.Null);
+                Assert.That(exception!.Status, Is.EqualTo(AppCodePollStatus.Unknown));
+                Assert.That(exception.Error, Is.EqualTo("network_unavailable"));
+                Assert.That(exception.Message, Does.Contain("Check network or firewall"));
+                Assert.That(authClient.StartCallCount, Is.EqualTo(3));
+                Assert.That(platformCommands.OpenWebCallCount, Is.Zero);
+                Assert.That(delays, Is.EqualTo(new[] { TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2) }));
+            });
+        }
+
+        [Test]
         public async Task SignInAsync_RetriesTransientUserLookupFailureAfterApproval()
         {
             var delays = new List<TimeSpan>();
@@ -305,6 +377,8 @@ namespace Cotton.Sync.App.Tests.Auth
 
             public Queue<Exception> PollExceptions { get; } = new();
 
+            public Queue<Exception> StartExceptions { get; } = new();
+
             public Queue<AppCodePollResult> PollResults { get; } = new();
 
             public Queue<Exception> MeExceptions { get; } = new();
@@ -337,6 +411,11 @@ namespace Cotton.Sync.App.Tests.Auth
             {
                 StartCallCount++;
                 LastStartRequest = request;
+                if (StartExceptions.TryDequeue(out Exception? exception))
+                {
+                    throw exception;
+                }
+
                 return Task.FromResult(Session);
             }
 

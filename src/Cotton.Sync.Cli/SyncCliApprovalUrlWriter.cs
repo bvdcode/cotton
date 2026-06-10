@@ -24,6 +24,8 @@ namespace Cotton.Sync.Cli
             cancellationToken.ThrowIfCancellationRequested();
             ArgumentNullException.ThrowIfNull(url);
             await _output.WriteLineAsync("Approval URL: " + url.AbsoluteUri).ConfigureAwait(false);
+            await _output.WriteLineAsync("Open this URL in your browser to approve sign-in.").ConfigureAwait(false);
+            await _output.WriteLineAsync("Waiting for browser approval...").ConfigureAwait(false);
         }
     }
 }

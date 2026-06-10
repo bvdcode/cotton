@@ -109,6 +109,13 @@ namespace Cotton.Sync.Cli
                 new SyncCliApprovalUrlWriter(output));
 
             await output.WriteLineAsync("Cotton Sync browser sign-in").ConfigureAwait(false);
+            using CancellationTokenSource? timeoutCancellation = options.TimeoutSeconds.HasValue
+                ? new CancellationTokenSource(TimeSpan.FromSeconds(options.TimeoutSeconds.Value))
+                : null;
+            using CancellationTokenSource? linkedCancellation = timeoutCancellation is null
+                ? null
+                : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCancellation.Token);
+            CancellationToken signInCancellation = linkedCancellation?.Token ?? cancellationToken;
             try
             {
                 AuthSession session = await authFlow
@@ -119,13 +126,19 @@ namespace Cotton.Sync.Cli
                             ApplicationVersion = options.ApplicationVersion,
                             DeviceName = options.DeviceName,
                         },
-                        cancellationToken)
+                        signInCancellation)
                     .ConfigureAwait(false);
                 string account = string.IsNullOrWhiteSpace(session.Email) ? session.Username : session.Email!;
                 await output.WriteLineAsync("Signed in: " + account).ConfigureAwait(false);
                 await client.Auth.LogoutAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
                 await output.WriteLineAsync("Signed out.").ConfigureAwait(false);
                 return 0;
+            }
+            catch (OperationCanceledException) when (timeoutCancellation?.IsCancellationRequested == true
+                && !cancellationToken.IsCancellationRequested)
+            {
+                await error.WriteLineAsync("Browser sign-in timed out before approval completed.").ConfigureAwait(false);
+                return 1;
             }
             catch (AppCodeBrowserSignInException exception)
             {
@@ -153,14 +166,28 @@ namespace Cotton.Sync.Cli
                 return 2;
             }
 
-            var store = new SqliteSyncStateStore(databasePath);
-            await store.InitializeAsync(cancellationToken).ConfigureAwait(false);
-            IReadOnlyList<SyncStateEntry> entries = await store
-                .LoadPairAsync(syncPairId, cancellationToken)
-                .ConfigureAwait(false);
-            SyncChangeCursor cursor = await store
-                .GetChangeCursorAsync(syncPairId, cancellationToken)
-                .ConfigureAwait(false);
+            IReadOnlyList<SyncStateEntry> entries;
+            SyncChangeCursor cursor;
+            try
+            {
+                var store = new SqliteSyncStateStore(databasePath);
+                await store.InitializeAsync(cancellationToken).ConfigureAwait(false);
+                entries = await store
+                    .LoadPairAsync(syncPairId, cancellationToken)
+                    .ConfigureAwait(false);
+                cursor = await store
+                    .GetChangeCursorAsync(syncPairId, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception exception) when (IsStateDatabaseReadException(exception))
+            {
+                await error
+                    .WriteLineAsync(
+                        "state-summary could not read the sync-state database. The file may be corrupt or not a Cotton Sync state database: "
+                        + exception.Message)
+                    .ConfigureAwait(false);
+                return 2;
+            }
 
             await output.WriteLineAsync("Cotton Sync state summary").ConfigureAwait(false);
             await output.WriteLineAsync("Database: " + databasePath).ConfigureAwait(false);
@@ -169,6 +196,26 @@ namespace Cotton.Sync.Cli
             await output.WriteLineAsync("Remote cursor: " + cursor.LastCursor.ToStringInvariant()).ConfigureAwait(false);
             await output.WriteLineAsync("Cursor updated UTC: " + SyncCliFormat.FormatUtc(cursor.UpdatedAtUtc)).ConfigureAwait(false);
             return 0;
+        }
+
+        private static bool IsStateDatabaseReadException(Exception exception)
+        {
+            if (exception is IOException or UnauthorizedAccessException)
+            {
+                return true;
+            }
+
+            for (Exception? current = exception; current is not null; current = current.InnerException)
+            {
+                string? typeName = current.GetType().FullName;
+                if (string.Equals(typeName, "Microsoft.Data.Sqlite.SqliteException", StringComparison.Ordinal)
+                    || string.Equals(typeName, "Microsoft.EntityFrameworkCore.DbUpdateException", StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static async Task<int> RunSyncOnceAsync(
@@ -247,7 +294,7 @@ namespace Cotton.Sync.Cli
                 Commands:
                   auth-browser --server <url-or-host>
                       [--application-name <name>] [--application-version <version>]
-                      [--device-name <name>]
+                      [--device-name <name>] [--timeout-seconds <seconds>]
                       Verifies app-code browser sign-in, then revokes the temporary session.
 
                   state-summary --database <path> --sync-pair <id>
