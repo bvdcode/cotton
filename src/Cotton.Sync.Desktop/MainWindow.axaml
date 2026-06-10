@@ -53,6 +53,7 @@
                     IsVisible="{Binding IsDashboardVisible}">
           <Button Classes="icon flatIcon"
                   ToolTip.Tip="Sync now"
+                  AutomationProperties.Name="Sync now"
                   IsVisible="{Binding CanSyncNow}"
                   Command="{Binding SyncNowCommand}">
             <materialIcons:MaterialIcon Kind="Refresh"
@@ -61,7 +62,8 @@
                                         Foreground="{DynamicResource CottonPrimaryBrush}" />
           </Button>
           <Button Classes="icon"
-                  ToolTip.Tip="More actions">
+                  ToolTip.Tip="More actions"
+                  AutomationProperties.Name="More actions">
             <materialIcons:MaterialIcon Kind="DotsVertical"
                                         Width="16"
                                         Height="16"
@@ -417,6 +419,7 @@
                         VerticalAlignment="Center">
               <Button Classes="icon flatIcon"
                       ToolTip.Tip="Run synchronization again"
+                      AutomationProperties.Name="Run synchronization again"
                       IsVisible="{Binding CanRetryActionRequired}"
                       Command="{Binding SyncNowCommand}">
                 <materialIcons:MaterialIcon Kind="Refresh"
@@ -426,6 +429,7 @@
               </Button>
               <Button Classes="icon"
                       ToolTip.Tip="Run desktop self-test"
+                      AutomationProperties.Name="Run desktop self-test"
                       Command="{Binding SelfTestCommand}">
                 <materialIcons:MaterialIcon Kind="CheckCircleOutline"
                                             Width="16"
@@ -490,6 +494,7 @@
               <Button Grid.Column="1"
                       Classes="icon flatIcon"
                       ToolTip.Tip="Run synchronization again"
+                      AutomationProperties.Name="Run synchronization again"
                       Command="{Binding SyncNowCommand}">
                 <materialIcons:MaterialIcon Kind="Refresh"
                                             Width="16"
@@ -525,6 +530,7 @@
                               Grid.RowSpan="2"
                               Classes="icon"
                               ToolTip.Tip="Open conflict location"
+                              AutomationProperties.Name="Open conflict location"
                               Command="{Binding $parent[Window].DataContext.OpenConflictCommand}"
                               CommandParameter="{Binding}">
                         <materialIcons:MaterialIcon Kind="ArrowTopRight"
@@ -566,6 +572,7 @@
                 <Button Grid.Column="1"
                         Classes="icon"
                         ToolTip.Tip="{Binding ActivityToggleToolTip}"
+                        AutomationProperties.Name="{Binding ActivityToggleToolTip}"
                         Command="{Binding ToggleActivityCommand}"
                         VerticalAlignment="Center">
                   <materialIcons:MaterialIcon Kind="History"
@@ -576,6 +583,7 @@
                 <Button Grid.Column="2"
                         Classes="icon primary"
                         ToolTip.Tip="Add sync folder"
+                        AutomationProperties.Name="Add sync folder"
                         Command="{Binding ShowAddSyncPairCommand}"
                         VerticalAlignment="Center">
                   <materialIcons:MaterialIcon Kind="FolderPlusOutline"
@@ -671,6 +679,7 @@
                                     Grid.RowSpan="5"
                                     Classes="icon"
                                     ToolTip.Tip="Open local folder"
+                                    AutomationProperties.Name="Open local folder"
                                     Command="{Binding $parent[Window].DataContext.OpenFolderCommand}"
                                     CommandParameter="{Binding}"
                                     VerticalAlignment="Center">
@@ -683,6 +692,7 @@
                                     Grid.RowSpan="5"
                                     Classes="icon"
                                     ToolTip.Tip="Rename or manage sync folder"
+                                    AutomationProperties.Name="Rename or manage sync folder"
                                     Command="{Binding $parent[Window].DataContext.ShowSelectedSyncPairEditorCommand}"
                                     CommandParameter="{Binding}"
                                     VerticalAlignment="Center">
@@ -711,6 +721,7 @@
                                            HorizontalAlignment="Right">
                                   <Button Classes="icon"
                                           ToolTip.Tip="Save folder name"
+                                          AutomationProperties.Name="Save folder name"
                                           Command="{Binding $parent[Window].DataContext.SaveSelectedSyncPairNameCommand}">
                                     <materialIcons:MaterialIcon Kind="ContentSaveOutline"
                                                                 Width="16"
@@ -719,6 +730,7 @@
                                   </Button>
                                   <Button Classes="icon"
                                           ToolTip.Tip="Change local folder"
+                                          AutomationProperties.Name="Change local folder"
                                           Command="{Binding $parent[Window].DataContext.ChangeSelectedSyncPairLocalFolderCommand}">
                                     <materialIcons:MaterialIcon Kind="FolderSearchOutline"
                                                                 Width="16"
@@ -727,6 +739,7 @@
                                   </Button>
                                   <Button Classes="icon"
                                           ToolTip.Tip="Change cloud folder"
+                                          AutomationProperties.Name="Change cloud folder"
                                           Command="{Binding $parent[Window].DataContext.ChangeSelectedSyncPairRemoteFolderCommand}">
                                     <materialIcons:MaterialIcon Kind="CloudSearchOutline"
                                                                 Width="16"
@@ -735,6 +748,7 @@
                                   </Button>
                                   <Button Classes="icon"
                                           ToolTip.Tip="{Binding ToggleEnabledLabel}"
+                                          AutomationProperties.Name="{Binding ToggleEnabledLabel}"
                                           Command="{Binding $parent[Window].DataContext.ToggleSelectedSyncPairEnabledCommand}">
                                     <Grid>
                                       <materialIcons:MaterialIcon Kind="FolderOffOutline"
@@ -751,6 +765,7 @@
                                   </Button>
                                   <Button Classes="icon"
                                           ToolTip.Tip="Remove sync folder"
+                                          AutomationProperties.Name="Remove sync folder"
                                           Command="{Binding $parent[Window].DataContext.RemoveSelectedSyncPairCommand}">
                                     <materialIcons:MaterialIcon Kind="TrashCanOutline"
                                                                 Width="16"
@@ -912,6 +927,7 @@
               <Button Grid.Column="1"
                       Classes="icon"
                       ToolTip.Tip="Cancel"
+                      AutomationProperties.Name="Cancel"
                       Command="{Binding CancelAddSyncPairCommand}">
                 <materialIcons:MaterialIcon Kind="CloseCircleOutline"
                                             Width="16"
@@ -1019,6 +1035,7 @@
                             ColumnSpacing="6">
                         <Button Classes="icon"
                                 ToolTip.Tip="Go to parent folder"
+                                AutomationProperties.Name="Go to parent folder"
                                 Command="{Binding RemoteFolderUpCommand}">
                           <materialIcons:MaterialIcon Kind="ArrowLeftCircleOutline"
                                                       Width="16"
@@ -1032,6 +1049,7 @@
                         <Button Grid.Column="2"
                                 Classes="icon primary"
                                 ToolTip.Tip="Create cloud folder"
+                                AutomationProperties.Name="Create cloud folder"
                                 Command="{Binding ShowCreateRemoteFolderCommand}">
                           <materialIcons:MaterialIcon Kind="FolderPlusOutline"
                                                       Width="16"
@@ -1041,6 +1059,7 @@
                         <Button Grid.Column="3"
                                 Classes="icon"
                                 ToolTip.Tip="Open cloud folder"
+                                AutomationProperties.Name="Open cloud folder"
                                 Command="{Binding OpenRemoteFolderCommand}">
                           <materialIcons:MaterialIcon Kind="ArrowRightCircleOutline"
                                                       Width="16"
@@ -1058,6 +1077,7 @@
                         <Button Grid.Column="1"
                                 Classes="icon"
                                 ToolTip.Tip="Create folder"
+                                AutomationProperties.Name="Create folder"
                                 Command="{Binding CreateRemoteFolderCommand}">
                           <materialIcons:MaterialIcon Kind="CheckCircleOutline"
                                                       Width="16"
@@ -1067,6 +1087,7 @@
                         <Button Grid.Column="2"
                                 Classes="icon"
                                 ToolTip.Tip="Cancel"
+                                AutomationProperties.Name="Cancel"
                                 Command="{Binding CancelCreateRemoteFolderCommand}">
                           <materialIcons:MaterialIcon Kind="CloseCircleOutline"
                                                       Width="16"
@@ -1216,6 +1237,7 @@
               <Button Grid.Column="1"
                       Classes="icon"
                       ToolTip.Tip="Close"
+                      AutomationProperties.Name="Close"
                       Command="{Binding CloseSettingsCommand}">
                 <materialIcons:MaterialIcon Kind="CloseCircleOutline"
                                             Width="16"

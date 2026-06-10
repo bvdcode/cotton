@@ -538,6 +538,28 @@ namespace Cotton.Sync.Desktop.Tests.Shell
         }
 
         [Test]
+        public void IconButtons_WithTooltipsExposeAutomationNames()
+        {
+            string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+            IReadOnlyList<string> missingAutomationNames = FindIconButtonTooltipsWithoutAutomationName(mainWindowXaml);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(missingAutomationNames, Is.Empty, string.Join(Environment.NewLine, missingAutomationNames));
+                Assert.That(mainWindowXaml, Does.Contain("ToolTip.Tip=\"Sync now\""));
+                Assert.That(mainWindowXaml, Does.Contain("AutomationProperties.Name=\"Sync now\""));
+                Assert.That(mainWindowXaml, Does.Contain("ToolTip.Tip=\"{Binding ActivityToggleToolTip}\""));
+                Assert.That(mainWindowXaml, Does.Contain("AutomationProperties.Name=\"{Binding ActivityToggleToolTip}\""));
+                Assert.That(mainWindowXaml, Does.Contain("ToolTip.Tip=\"{Binding ToggleEnabledLabel}\""));
+                Assert.That(mainWindowXaml, Does.Contain("AutomationProperties.Name=\"{Binding ToggleEnabledLabel}\""));
+                Assert.That(mainWindowXaml, Does.Contain("AutomationProperties.Name=\"Open conflict location\""));
+                Assert.That(mainWindowXaml, Does.Contain("AutomationProperties.Name=\"Go to parent folder\""));
+                Assert.That(mainWindowXaml, Does.Contain("AutomationProperties.Name=\"Create cloud folder\""));
+                Assert.That(mainWindowXaml, Does.Contain("AutomationProperties.Name=\"Close\""));
+            });
+        }
+
+        [Test]
         public void AddFolderWizard_WrapsActionRequiredMessage()
         {
             string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
@@ -815,6 +837,40 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             }
 
             return count;
+        }
+
+        private static IReadOnlyList<string> FindIconButtonTooltipsWithoutAutomationName(string xaml)
+        {
+            List<string> missingAutomationNames = new();
+            int currentIndex = 0;
+
+            while (currentIndex < xaml.Length)
+            {
+                int buttonStart = xaml.IndexOf("<Button", currentIndex, StringComparison.Ordinal);
+                if (buttonStart < 0)
+                {
+                    break;
+                }
+
+                int buttonEnd = xaml.IndexOf("</Button>", buttonStart, StringComparison.Ordinal);
+                if (buttonEnd < 0)
+                {
+                    break;
+                }
+
+                string buttonBlock = xaml[buttonStart..(buttonEnd + "</Button>".Length)];
+                if (buttonBlock.Contains("Classes=\"icon", StringComparison.Ordinal)
+                    && buttonBlock.Contains("ToolTip.Tip=", StringComparison.Ordinal)
+                    && !buttonBlock.Contains("AutomationProperties.Name=", StringComparison.Ordinal))
+                {
+                    int line = xaml[..buttonStart].Split('\n').Length;
+                    missingAutomationNames.Add("Icon button near line " + line + " has a tooltip but no AutomationProperties.Name.");
+                }
+
+                currentIndex = buttonEnd + "</Button>".Length;
+            }
+
+            return missingAutomationNames;
         }
     }
 }
