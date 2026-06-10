@@ -520,8 +520,13 @@ namespace Cotton.Sync.Desktop.Tests.Packaging
                 Assert.That(installerScript, Does.Contain("#define AppMutexName \"CottonSyncDesktop_B671C18E_1E77_437C_AB9B_5C5C9D877E18\""));
                 Assert.That(installerScript, Does.Contain("#define AppUserModelId \"" + DesktopAppIdentity.AppUserModelId + "\""));
                 Assert.That(installerScript, Does.Contain("AppMutex={#AppMutexName}"));
-                Assert.That(installerScript, Does.Contain("CloseApplications=yes"));
+                Assert.That(installerScript, Does.Contain("CloseApplications=force"));
                 Assert.That(installerScript, Does.Contain("RestartApplications=no"));
+                Assert.That(installerScript, Does.Contain("InitializeUninstall"));
+                Assert.That(installerScript, Does.Contain("StopInstalledAppForSilentUninstall"));
+                Assert.That(installerScript, Does.Contain("Get-CimInstance Win32_Process"));
+                Assert.That(installerScript, Does.Contain("Stop-Process -Id $_.ProcessId -Force"));
+                Assert.That(installerScript, Does.Contain("Wait-Process -Id $_.ProcessId -Timeout 5"));
                 Assert.That(installerScript, Does.Contain("Source: \"{#SourceDir}\\*\""));
                 Assert.That(installerScript, Does.Contain("recursesubdirs createallsubdirs"));
                 Assert.That(installerScript, Does.Contain("Cotton.Sync.Desktop.exe"));
