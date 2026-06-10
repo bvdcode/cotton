@@ -108,89 +108,20 @@ namespace Cotton.Sync.Tests
         [Explicit("Release-scale hot-path smoke; run manually before release on Windows.")]
         public async Task RunOnceAsync_ScopedLocalChangeInFiftyThousandFileTreeAvoidsFullTreeScan()
         {
-            const string syncPairId = "performance-scoped-change-50k";
-            const int fileCount = 50_000;
-            TimeSpan smokeTarget = TimeSpan.FromSeconds(5);
-            string changedPath = $"Docs/{(fileCount - 1) / 100:D2}/file-{fileCount - 1:D5}.txt";
-            SqliteSyncStateStore stateStore = new(_databasePath);
-            await stateStore.InitializeAsync();
-            List<RemoteFileSnapshot> remoteFiles = [];
-            List<SyncStateEntry> baselineEntries = [];
+            await VerifyScopedLocalChangeAvoidsFullTreeScanAsync(
+                "performance-scoped-change-50k",
+                fileCount: 50_000,
+                smokeTarget: TimeSpan.FromSeconds(5));
+        }
 
-            for (int index = 0; index < fileCount; index++)
-            {
-                string relativePath = $"Docs/{index / 100:D2}/file-{index:D5}.txt";
-                byte[] content = Encoding.UTF8.GetBytes("content-" + index.ToString("D5", System.Globalization.CultureInfo.InvariantCulture));
-                string hash = Hash(content);
-                WriteFile(relativePath, content);
-                NodeFileManifestDto remoteFile = RemoteFile(relativePath, hash, content.Length);
-                remoteFiles.Add(new RemoteFileSnapshot
-                {
-                    RelativePath = relativePath,
-                    File = remoteFile,
-                });
-                baselineEntries.Add(new SyncStateEntry
-                {
-                    SyncPairId = syncPairId,
-                    RelativePath = relativePath,
-                    Kind = SyncEntryKind.File,
-                    LocalContentHash = hash,
-                    LocalLastWriteUtc = File.GetLastWriteTimeUtc(FullPath(relativePath)),
-                    LocalSizeBytes = content.Length,
-                    RemoteNodeId = remoteFile.NodeId,
-                    RemoteFileId = remoteFile.Id,
-                    RemoteContentHash = remoteFile.ContentHash,
-                    RemoteETag = remoteFile.ETag,
-                    SyncedAtUtc = DateTime.UtcNow,
-                });
-            }
-
-            await stateStore.ReplacePairAsync(syncPairId, baselineEntries);
-            WriteFile(changedPath, Encoding.UTF8.GetBytes("changed-content"));
-
-            var remoteFilesClient = new RecordingRemoteFileSynchronizer();
-            var remoteCrawler = new StaticRemoteTreeCrawler(remoteFiles);
-            var runProgress = new RecordingProgress<SyncRunProgress>();
-            var engine = new SyncEngine(
-                new LocalFileScanner(),
-                remoteCrawler,
-                remoteFilesClient,
-                stateStore);
-
-            Stopwatch stopwatch = Stopwatch.StartNew();
-            remoteFilesClient.MeasurementStopwatch = stopwatch;
-            SyncRunResult result = await engine.RunOnceAsync(
-                new SyncPair
-                {
-                    SyncPairId = syncPairId,
-                    LocalRootPath = _root,
-                    RemoteRootNodeId = RemoteRootNodeId,
-                },
-                new SyncRunOptions
-                {
-                    Scope = SyncRunScope.ForLocalChangedPaths([changedPath]),
-                    RunProgress = runProgress,
-                });
-            stopwatch.Stop();
-
-            TestContext.WriteLine(
-                "Scoped local change in {0} file tree completed in {1:N0} ms; path crawls {2}; full crawls {3}; uploads {4}; first upload started after {5:N0} ms.",
-                fileCount,
-                stopwatch.Elapsed.TotalMilliseconds,
-                remoteCrawler.PathCrawlCalls,
-                remoteCrawler.FullCrawlCalls,
-                remoteFilesClient.UploadCalls,
-                remoteFilesClient.UploadStartedAt.Single().TotalMilliseconds);
-
-            Assert.Multiple(() =>
-            {
-                Assert.That(remoteCrawler.PathCrawlCalls, Is.EqualTo(1));
-                Assert.That(remoteCrawler.FullCrawlCalls, Is.Zero);
-                Assert.That(remoteFilesClient.UploadCalls, Is.EqualTo(1));
-                Assert.That(remoteFilesClient.Uploads.Single().RelativePath, Is.EqualTo(changedPath));
-                Assert.That(result.Activities.Select(activity => activity.RelativePath), Is.EqualTo(new[] { changedPath }));
-                Assert.That(stopwatch.Elapsed, Is.LessThan(smokeTarget));
-            });
+        [Test]
+        [Explicit("Release-scale hot-path smoke; run manually before release on Windows.")]
+        public async Task RunOnceAsync_ScopedLocalChangeInOneHundredThousandFileTreeAvoidsFullTreeScan()
+        {
+            await VerifyScopedLocalChangeAvoidsFullTreeScanAsync(
+                "performance-scoped-change-100k",
+                fileCount: 100_000,
+                smokeTarget: TimeSpan.FromSeconds(10));
         }
 
         [Test]
@@ -397,6 +328,93 @@ namespace Cotton.Sync.Tests
                 Assert.That(
                     afterRunMemory.ManagedHeapBytes - beforeRunMemory.ManagedHeapBytes,
                     Is.LessThan(managedHeapDeltaTargetBytes));
+            });
+        }
+
+        private async Task VerifyScopedLocalChangeAvoidsFullTreeScanAsync(
+            string syncPairId,
+            int fileCount,
+            TimeSpan smokeTarget)
+        {
+            string changedPath = $"Docs/{(fileCount - 1) / 100:D2}/file-{fileCount - 1:D5}.txt";
+            SqliteSyncStateStore stateStore = new(_databasePath);
+            await stateStore.InitializeAsync();
+            List<RemoteFileSnapshot> remoteFiles = [];
+            List<SyncStateEntry> baselineEntries = [];
+
+            for (int index = 0; index < fileCount; index++)
+            {
+                string relativePath = $"Docs/{index / 100:D2}/file-{index:D5}.txt";
+                byte[] content = Encoding.UTF8.GetBytes("content-" + index.ToString("D5", System.Globalization.CultureInfo.InvariantCulture));
+                string hash = Hash(content);
+                WriteFile(relativePath, content);
+                NodeFileManifestDto remoteFile = RemoteFile(relativePath, hash, content.Length);
+                remoteFiles.Add(new RemoteFileSnapshot
+                {
+                    RelativePath = relativePath,
+                    File = remoteFile,
+                });
+                baselineEntries.Add(new SyncStateEntry
+                {
+                    SyncPairId = syncPairId,
+                    RelativePath = relativePath,
+                    Kind = SyncEntryKind.File,
+                    LocalContentHash = hash,
+                    LocalLastWriteUtc = File.GetLastWriteTimeUtc(FullPath(relativePath)),
+                    LocalSizeBytes = content.Length,
+                    RemoteNodeId = remoteFile.NodeId,
+                    RemoteFileId = remoteFile.Id,
+                    RemoteContentHash = remoteFile.ContentHash,
+                    RemoteETag = remoteFile.ETag,
+                    SyncedAtUtc = DateTime.UtcNow,
+                });
+            }
+
+            await stateStore.ReplacePairAsync(syncPairId, baselineEntries);
+            WriteFile(changedPath, Encoding.UTF8.GetBytes("changed-content"));
+
+            var remoteFilesClient = new RecordingRemoteFileSynchronizer();
+            var remoteCrawler = new StaticRemoteTreeCrawler(remoteFiles);
+            var runProgress = new RecordingProgress<SyncRunProgress>();
+            var engine = new SyncEngine(
+                new LocalFileScanner(),
+                remoteCrawler,
+                remoteFilesClient,
+                stateStore);
+
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            remoteFilesClient.MeasurementStopwatch = stopwatch;
+            SyncRunResult result = await engine.RunOnceAsync(
+                new SyncPair
+                {
+                    SyncPairId = syncPairId,
+                    LocalRootPath = _root,
+                    RemoteRootNodeId = RemoteRootNodeId,
+                },
+                new SyncRunOptions
+                {
+                    Scope = SyncRunScope.ForLocalChangedPaths([changedPath]),
+                    RunProgress = runProgress,
+                });
+            stopwatch.Stop();
+
+            TestContext.WriteLine(
+                "Scoped local change in {0} file tree completed in {1:N0} ms; path crawls {2}; full crawls {3}; uploads {4}; first upload started after {5:N0} ms.",
+                fileCount,
+                stopwatch.Elapsed.TotalMilliseconds,
+                remoteCrawler.PathCrawlCalls,
+                remoteCrawler.FullCrawlCalls,
+                remoteFilesClient.UploadCalls,
+                remoteFilesClient.UploadStartedAt.Single().TotalMilliseconds);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(remoteCrawler.PathCrawlCalls, Is.EqualTo(1));
+                Assert.That(remoteCrawler.FullCrawlCalls, Is.Zero);
+                Assert.That(remoteFilesClient.UploadCalls, Is.EqualTo(1));
+                Assert.That(remoteFilesClient.Uploads.Single().RelativePath, Is.EqualTo(changedPath));
+                Assert.That(result.Activities.Select(activity => activity.RelativePath), Is.EqualTo(new[] { changedPath }));
+                Assert.That(stopwatch.Elapsed, Is.LessThan(smokeTarget));
             });
         }
 
