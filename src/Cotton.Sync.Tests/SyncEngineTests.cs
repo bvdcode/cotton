@@ -246,6 +246,34 @@ namespace Cotton.Sync.Tests
         }
 
         [Test]
+        public async Task RunOnceAsync_WithScopedLocalDeletedPathDeletesRemoteWithoutFullCrawl()
+        {
+            string relativePath = "Project/deleted.txt";
+            NodeFileManifestDto remote = RemoteFile(relativePath, HashText("old"));
+            var scanner = new LocalFileScanner();
+            var crawler = new PathOnlyRemoteTreeCrawler(RemoteTree(remote));
+            var remoteFiles = new FakeRemoteFileSynchronizer();
+            var stateStore = new SqliteSyncStateStore(_databasePath);
+            await InsertBaselineAsync(stateStore, relativePath, remote.ContentHash, remote);
+            var engine = new SyncEngine(scanner, crawler, remoteFiles, stateStore);
+
+            SyncRunResult result = await engine.RunOnceAsync(
+                Pair(),
+                new SyncRunOptions { Scope = SyncRunScope.ForLocalChangedPaths([relativePath]) });
+
+            SyncStateEntry? entry = await stateStore.GetAsync("pair-a", relativePath);
+            Assert.Multiple(() =>
+            {
+                Assert.That(crawler.PathCrawlCalls, Is.EqualTo(1));
+                Assert.That(crawler.FullCrawlCalls, Is.Zero);
+                Assert.That(remoteFiles.Deletes, Is.EqualTo(new[] { (remote.Id, false, remote.ETag) }));
+                Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.DeletedRemote }));
+                Assert.That(result.Activities.Select(activity => activity.RelativePath), Is.EqualTo(new[] { relativePath }));
+                Assert.That(entry, Is.Null);
+            });
+        }
+
+        [Test]
         public async Task RunOnceAsync_HashesMetadataSnapshotWhenBaselineNeedsComparison()
         {
             const string baselineHash = "precomputed-content-hash";

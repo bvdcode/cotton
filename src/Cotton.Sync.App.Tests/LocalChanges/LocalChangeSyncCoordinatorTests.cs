@@ -44,7 +44,7 @@ namespace Cotton.Sync.App.Tests.LocalChanges
         }
 
         [Test]
-        public async Task DeletedLocalChange_RequestsFullSync()
+        public async Task DeletedLocalChange_RequestsScopedSync()
         {
             SyncPairSettings syncPair = CreatePair(isEnabled: true);
             var watcherFactory = new FakeWatcherFactory();
@@ -66,7 +66,36 @@ namespace Cotton.Sync.App.Tests.LocalChanges
             Assert.Multiple(() =>
             {
                 Assert.That(observed, Is.True);
+                Assert.That(supervisor.LastRequest?.IsFull, Is.False);
+                Assert.That(supervisor.LastRequest?.LocalChangedPaths, Is.EqualTo(new[] { "deleted.txt" }));
+            });
+        }
+
+        [Test]
+        public async Task RenamedLocalChange_RequestsFullSyncUntilOldPathIsModeled()
+        {
+            SyncPairSettings syncPair = CreatePair(isEnabled: true);
+            var watcherFactory = new FakeWatcherFactory();
+            var supervisor = new FakeSyncSupervisor();
+            var coordinator = new LocalChangeSyncCoordinator(
+                new FakeSyncPairSettingsStore([syncPair]),
+                supervisor,
+                watcherFactory,
+                DebounceInterval);
+            await coordinator.StartAsync();
+
+            watcherFactory.CreatedWatchers[syncPair.Id].Raise(
+                "/home/user/Cotton/renamed.txt",
+                LocalSyncRootChangeKind.Renamed);
+
+            bool observed = await supervisor.WaitForSyncAsync(TimeSpan.FromSeconds(2));
+            await coordinator.StopAsync();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(observed, Is.True);
                 Assert.That(supervisor.LastRequest?.IsFull, Is.True);
+                Assert.That(supervisor.LastRequest?.LocalChangedPaths, Is.Empty);
             });
         }
 

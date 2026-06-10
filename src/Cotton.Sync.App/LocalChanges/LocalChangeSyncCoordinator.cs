@@ -305,8 +305,7 @@ namespace Cotton.Sync.App.LocalChanges
 
         private static bool RequiresFullSync(LocalSyncRootChangeKind kind)
         {
-            return kind is LocalSyncRootChangeKind.Deleted
-                or LocalSyncRootChangeKind.Renamed
+            return kind is LocalSyncRootChangeKind.Renamed
                 or LocalSyncRootChangeKind.Error;
         }
 
