@@ -439,7 +439,13 @@ namespace Cotton.Sync.App.Runners
 
         private static bool IsTransientNetworkFailure(Exception exception)
         {
-            return exception is HttpRequestException requestException && IsTransientStatusCode(requestException.StatusCode);
+            return exception switch
+            {
+                HttpRequestException requestException => IsTransientStatusCode(requestException.StatusCode),
+                TimeoutException => true,
+                TaskCanceledException => true,
+                _ => false,
+            };
         }
 
         private static string CreateFailureMessage(Exception exception)

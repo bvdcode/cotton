@@ -390,6 +390,28 @@ namespace Cotton.Sync.App.Tests.Runners
         }
 
         [Test]
+        public async Task SyncNowAsync_RetriesHttpTimeoutAndReturnsIdleOnRecovery()
+        {
+            var work = new FakeSyncPairWork
+            {
+                Failures =
+                [
+                    new TaskCanceledException(
+                        "The request was canceled due to the configured HttpClient.Timeout of 30 seconds elapsing."),
+                ],
+            };
+            SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true), work, NoDelayRetryOptions());
+
+            await runner.SyncNowAsync();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(work.RunCount, Is.EqualTo(2));
+                Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Idle));
+            });
+        }
+
+        [Test]
         public async Task SyncNowAsync_RetriesUnavailableLocalFileAndReturnsIdleOnRecovery()
         {
             var work = new FakeSyncPairWork
