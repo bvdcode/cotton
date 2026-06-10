@@ -41,6 +41,7 @@ namespace Cotton.Sync.Desktop.Tests.Startup
             {
                 Assert.That(report, Does.Contain("Cotton Sync Desktop self-test"));
                 Assert.That(report, Does.Contain("[OK] Preferences database"));
+                Assert.That(report, Does.Contain("[SKIP] Desktop sync change feed"));
                 Assert.That(report, Does.Contain(tokenStorageIsReleaseSecure ? "[OK] Token storage" : "[FAIL] Token storage"));
                 Assert.That(exitCode, Is.EqualTo(tokenStorageIsReleaseSecure ? 0 : 1));
                 Assert.That(report, Does.Contain(tokenStorageIsReleaseSecure ? "Result: passed" : "Result: failed"));

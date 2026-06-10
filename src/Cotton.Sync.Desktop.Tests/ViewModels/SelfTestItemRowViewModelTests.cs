@@ -25,6 +25,15 @@ namespace Cotton.Sync.Desktop.Tests.ViewModels
                 Assert.That(row.ResultText, Is.EqualTo("OK"));
                 Assert.That(row.IsFailed, Is.False);
             });
+
+            row.Passed = false;
+            row.Skipped = true;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(row.ResultText, Is.EqualTo("Skipped"));
+                Assert.That(row.IsFailed, Is.False);
+            });
         }
     }
 }

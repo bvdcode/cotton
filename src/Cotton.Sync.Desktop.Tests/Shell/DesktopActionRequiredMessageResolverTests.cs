@@ -132,6 +132,24 @@ namespace Cotton.Sync.Desktop.Tests.Shell
         }
 
         [Test]
+        public void FromStatus_ExplainsCorruptLocalStateDatabase()
+        {
+            var status = new DesktopSyncStatusSnapshot(
+            [
+                new DesktopSyncPairStatusSnapshot(
+                    Guid.NewGuid(),
+                    "Error",
+                    "SQLite Error 26: 'file is not a database'."),
+            ]);
+
+            string message = DesktopActionRequiredMessageResolver.FromStatus(status);
+
+            Assert.That(
+                message,
+                Is.EqualTo("Local Cotton Sync state appears to be corrupt. Export diagnostics, then reset the local app data or choose a fresh data directory and sign in again."));
+        }
+
+        [Test]
         public void FromStatus_NormalizesEmbeddedUploadBadRequestProblemDetails()
         {
             var status = new DesktopSyncStatusSnapshot(
@@ -202,6 +220,19 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             var result = new DesktopSelfTestSnapshot(
             [
                 new DesktopSelfTestItemSnapshot("Database", true, "Ready"),
+            ]);
+
+            string message = DesktopActionRequiredMessageResolver.FromSelfTest(result);
+
+            Assert.That(message, Is.Empty);
+        }
+
+        [Test]
+        public void FromSelfTest_ReturnsEmptyWhenSelfTestOnlySkippedChecks()
+        {
+            var result = new DesktopSelfTestSnapshot(
+            [
+                new DesktopSelfTestItemSnapshot("Desktop sync change feed", false, "Sign in to verify", Skipped: true),
             ]);
 
             string message = DesktopActionRequiredMessageResolver.FromSelfTest(result);
@@ -319,6 +350,18 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             Assert.That(
                 message,
                 Is.EqualTo("Local sync state database is unavailable. Run diagnostics and restart Cotton Sync."));
+        }
+
+        [Test]
+        public void FromException_ExplainsCorruptLocalStateDatabase()
+        {
+            var exception = new InvalidOperationException("SQLite Error 26: 'file is not a database'.");
+
+            string message = DesktopActionRequiredMessageResolver.FromException(exception);
+
+            Assert.That(
+                message,
+                Is.EqualTo("Local Cotton Sync state appears to be corrupt. Export diagnostics, then reset the local app data or choose a fresh data directory and sign in again."));
         }
 
         [Test]

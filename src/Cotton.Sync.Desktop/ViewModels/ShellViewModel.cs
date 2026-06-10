@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
+using System.Net.Sockets;
 using Cotton.Sync.App.Auth;
 using Cotton.Sync.App.Preferences;
 using Cotton.Sync.App.SyncPairs;
@@ -22,9 +23,11 @@ namespace Cotton.Sync.Desktop.ViewModels
         private const int MaxActivityRows = 30;
         private const int MaxConflictRows = 20;
         private const int MinimumRunProgressEstimateCompletedFiles = 5;
+        private const int ServerProbeMaxAttempts = 3;
         private static readonly TimeSpan TransferActivityCoalescingWindow = TimeSpan.FromMilliseconds(750);
         private static readonly TimeSpan VisibleTransferProgressUpdateInterval = TimeSpan.FromMilliseconds(100);
         private static readonly TimeSpan VisibleRunProgressUpdateInterval = TimeSpan.FromMilliseconds(100);
+        private static readonly TimeSpan ServerProbeInitialRetryDelay = TimeSpan.FromSeconds(1);
         private static readonly TimeSpan ActiveStatusRunProgressStaleThreshold = TimeSpan.FromSeconds(10);
         private static readonly TimeSpan RunTransferMetricsWindow = TimeSpan.FromSeconds(10);
         private static readonly TimeSpan MinimumRunTransferSampleDuration = TimeSpan.FromSeconds(1);
@@ -2289,8 +2292,12 @@ namespace Cotton.Sync.Desktop.ViewModels
                         Name = item.Name,
                         Details = item.Details,
                         Passed = item.Passed,
+                        Skipped = item.Skipped,
                     });
-                    AddActivity(item.Passed ? "Check" : "Warning", item.Name, item.Passed ? item.Details : "Failed: " + item.Details);
+                    AddActivity(
+                        item.Skipped ? "Info" : item.Passed ? "Check" : "Warning",
+                        item.Name,
+                        item.Skipped ? "Skipped: " + item.Details : item.Passed ? item.Details : "Failed: " + item.Details);
                 }
             }
             finally
@@ -2614,7 +2621,9 @@ namespace Cotton.Sync.Desktop.ViewModels
             try
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(450), cancellationToken).ConfigureAwait(false);
-                DesktopServerProbeResult result = await _controller.ProbeServerAsync(serverUrl, cancellationToken)
+                DesktopServerProbeResult result = await ProbeServerWithRetriesAsync(
+                        serverUrl,
+                        probeCancellation)
                     .ConfigureAwait(false);
                 await _uiDispatcher.InvokeAsync(
                     () =>
@@ -2642,18 +2651,60 @@ namespace Cotton.Sync.Desktop.ViewModels
                             return;
                         }
 
-                        ApplyServerProbeFailure();
+                        ApplyServerProbeFailure(exception);
                     },
                     CancellationToken.None).ConfigureAwait(false);
             }
         }
 
-        private void ApplyServerProbeFailure()
+        private async Task<DesktopServerProbeResult> ProbeServerWithRetriesAsync(
+            string serverUrl,
+            CancellationTokenSource probeCancellation)
+        {
+            CancellationToken cancellationToken = probeCancellation.Token;
+            Exception? lastException = null;
+
+            for (int attempt = 1; attempt <= ServerProbeMaxAttempts; attempt++)
+            {
+                try
+                {
+                    return await _controller.ProbeServerAsync(serverUrl, cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception exception) when (IsTransientServerProbeFailure(exception) && attempt < ServerProbeMaxAttempts)
+                {
+                    lastException = exception;
+                    Trace.TraceWarning("Cotton server probe attempt {0} failed for {1}: {2}", attempt, serverUrl, exception);
+                    await _uiDispatcher.InvokeAsync(
+                        () =>
+                        {
+                            if (IsCurrentServerProbe(serverUrl, probeCancellation))
+                            {
+                                ServerProbeStatus = "Connection blocked or unavailable; retrying";
+                            }
+                        },
+                        CancellationToken.None).ConfigureAwait(false);
+
+                    TimeSpan retryDelay = TimeSpan.FromMilliseconds(
+                        ServerProbeInitialRetryDelay.TotalMilliseconds * Math.Pow(2, attempt - 1));
+                    await Task.Delay(retryDelay, cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            throw lastException ?? new InvalidOperationException("Cotton server probe failed.");
+        }
+
+        private void ApplyServerProbeFailure(Exception exception)
         {
             IsServerProbeChecking = false;
             IsServerVerified = false;
             IsServerProbeFailed = true;
-            ServerProbeStatus = "Cotton server not found";
+            ServerProbeStatus = IsTransientServerProbeFailure(exception)
+                ? "Cannot reach server. Check network or firewall."
+                : "Cotton server not found";
         }
 
         private void ApplyServerProbeResult(DesktopServerProbeResult result)
@@ -2708,7 +2759,30 @@ namespace Cotton.Sync.Desktop.ViewModels
 
         private static bool HasMissingDesktopSyncChangesApiFailure(DesktopSelfTestSnapshot selfTest)
         {
-            return selfTest.Items.Any(static item => DesktopActionRequiredMessageResolver.IsMissingDesktopSyncChangesApi(item.Details));
+            return selfTest.Items.Any(static item =>
+                !item.Skipped && DesktopActionRequiredMessageResolver.IsMissingDesktopSyncChangesApi(item.Details));
+        }
+
+        private static bool IsTransientServerProbeFailure(Exception exception)
+        {
+            return exception is HttpRequestException
+                or IOException
+                or TimeoutException
+                or TaskCanceledException
+                || ContainsSocketException(exception);
+        }
+
+        private static bool ContainsSocketException(Exception exception)
+        {
+            for (Exception? current = exception; current is not null; current = current.InnerException)
+            {
+                if (current is SocketException)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void ScheduleServerProbe(string serverUrl)

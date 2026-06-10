@@ -76,7 +76,7 @@ namespace Cotton.Sync.Desktop.Startup
 
         private static string FormatSelfTestItem(DesktopSelfTestItemSnapshot item)
         {
-            string status = item.Passed ? "OK" : "FAIL";
+            string status = item.Skipped ? "SKIP" : item.Passed ? "OK" : "FAIL";
             return "[" + status + "] " + item.Name + " - " + item.Details;
         }
     }

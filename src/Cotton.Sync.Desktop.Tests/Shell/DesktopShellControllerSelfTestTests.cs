@@ -243,7 +243,11 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             {
                 Assert.That(result.Items.Select(static item => item.Name), Does.Contain("Local root: Documents"));
                 Assert.That(result.Items.Select(static item => item.Name), Does.Contain("Remote root: Documents"));
-                Assert.That(result.Items.Single(static item => item.Name == "Remote root: Documents").Details, Is.EqualTo("Sign in to verify"));
+                DesktopSelfTestItemSnapshot remoteRoot =
+                    result.Items.Single(static item => item.Name == "Remote root: Documents");
+                Assert.That(remoteRoot.Details, Is.EqualTo("Sign in to verify"));
+                Assert.That(remoteRoot.Skipped, Is.True);
+                Assert.That(result.Passed, Is.True);
             });
         }
 

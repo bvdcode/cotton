@@ -6,5 +6,6 @@ namespace Cotton.Sync.Desktop.Shell
     internal record DesktopSelfTestItemSnapshot(
         string Name,
         bool Passed,
-        string Details);
+        string Details,
+        bool Skipped = false);
 }

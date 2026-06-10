@@ -763,11 +763,19 @@ namespace Cotton.Sync.Desktop.Shell
             DesktopSyncApplicationHost? activeHost = _host;
             if (serverUrl is null)
             {
-                items.Add(new DesktopSelfTestItemSnapshot("Desktop sync change feed", true, "Not configured"));
+                items.Add(new DesktopSelfTestItemSnapshot(
+                    "Desktop sync change feed",
+                    false,
+                    "Not configured",
+                    Skipped: true));
             }
             else if (activeHost is null)
             {
-                items.Add(new DesktopSelfTestItemSnapshot("Desktop sync change feed", true, "Sign in to verify"));
+                items.Add(new DesktopSelfTestItemSnapshot(
+                    "Desktop sync change feed",
+                    false,
+                    "Sign in to verify",
+                    Skipped: true));
             }
             else
             {
@@ -788,8 +796,9 @@ namespace Cotton.Sync.Desktop.Shell
                 {
                     items.Add(new DesktopSelfTestItemSnapshot(
                         "Remote root: " + syncPair.DisplayName,
-                        true,
-                        "Sign in to verify"));
+                        false,
+                        "Sign in to verify",
+                        Skipped: true));
                 }
                 else
                 {

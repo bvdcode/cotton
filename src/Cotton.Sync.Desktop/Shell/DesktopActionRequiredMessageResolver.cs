@@ -44,6 +44,9 @@ namespace Cotton.Sync.Desktop.Shell
         private const string LocalSyncStateDatabaseUnavailableMessage =
             "Local sync state database is unavailable. Run diagnostics and restart Cotton Sync.";
 
+        private const string LocalStateDatabaseCorruptMessage =
+            "Local Cotton Sync state appears to be corrupt. Export diagnostics, then reset the local app data or choose a fresh data directory and sign in again.";
+
         public static string FromStatus(DesktopSyncStatusSnapshot status)
         {
             ArgumentNullException.ThrowIfNull(status);
@@ -74,7 +77,7 @@ namespace Cotton.Sync.Desktop.Shell
                 return string.Empty;
             }
 
-            return Normalize(selfTest.Items.FirstOrDefault(static item => !item.Passed)?.Details)
+            return Normalize(selfTest.Items.FirstOrDefault(static item => !item.Passed && !item.Skipped)?.Details)
                 ?? "Self-test failed.";
         }
 
@@ -179,6 +182,11 @@ namespace Cotton.Sync.Desktop.Shell
             if (LooksLikeLocalSyncStateDatabaseUnavailable(message))
             {
                 return LocalSyncStateDatabaseUnavailableMessage;
+            }
+
+            if (LooksLikeLocalStateDatabaseCorrupt(message))
+            {
+                return LocalStateDatabaseCorruptMessage;
             }
 
             string? apiFailureMessage = NormalizeEmbeddedApiFailureMessage(message);
@@ -391,6 +399,14 @@ namespace Cotton.Sync.Desktop.Shell
                 && message.Contains("no such table", StringComparison.OrdinalIgnoreCase)
                 && (message.Contains("sync_change_cursors", StringComparison.OrdinalIgnoreCase)
                     || message.Contains("sync_entries", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static bool LooksLikeLocalStateDatabaseCorrupt(string message)
+        {
+            return message.Contains("SQLite Error", StringComparison.OrdinalIgnoreCase)
+                && (message.Contains("file is not a database", StringComparison.OrdinalIgnoreCase)
+                    || message.Contains("database disk image is malformed", StringComparison.OrdinalIgnoreCase)
+                    || message.Contains("file is encrypted or is not a database", StringComparison.OrdinalIgnoreCase));
         }
 
         private static string? ExtractSingleQuotedPath(string message)

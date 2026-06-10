@@ -8,6 +8,7 @@ namespace Cotton.Sync.Desktop.ViewModels
         private string _details = string.Empty;
         private string _name = string.Empty;
         private bool _passed;
+        private bool _skipped;
 
         public string Name
         {
@@ -34,8 +35,21 @@ namespace Cotton.Sync.Desktop.ViewModels
             }
         }
 
-        public string ResultText => Passed ? "OK" : "Issue";
+        public bool Skipped
+        {
+            get => _skipped;
+            set
+            {
+                if (SetProperty(ref _skipped, value))
+                {
+                    OnPropertyChanged(nameof(ResultText));
+                    OnPropertyChanged(nameof(IsFailed));
+                }
+            }
+        }
 
-        public bool IsFailed => !Passed;
+        public string ResultText => Skipped ? "Skipped" : Passed ? "OK" : "Issue";
+
+        public bool IsFailed => !Passed && !Skipped;
     }
 }
