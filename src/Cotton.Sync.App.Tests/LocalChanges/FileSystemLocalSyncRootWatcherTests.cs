@@ -78,5 +78,37 @@ namespace Cotton.Sync.App.Tests.LocalChanges
 
             Assert.That(observed.Task.IsCompleted, Is.False);
         }
+
+        [Test]
+        public async Task StartAsync_PublishesRenameOldAndNewPaths()
+        {
+            Guid syncPairId = Guid.NewGuid();
+            string oldPath = Path.Combine(_root, "old-name.txt");
+            string newPath = Path.Combine(_root, "new-name.txt");
+            File.WriteAllText(oldPath, "content");
+            var watcher = new FileSystemLocalSyncRootWatcher(syncPairId, _root);
+            var observed = new TaskCompletionSource<LocalSyncRootChange>(TaskCreationOptions.RunContinuationsAsynchronously);
+            watcher.Changed += (_, change) =>
+            {
+                if (change.Kind == LocalSyncRootChangeKind.Renamed)
+                {
+                    observed.TrySetResult(change);
+                }
+            };
+
+            await watcher.StartAsync();
+            File.Move(oldPath, newPath);
+
+            LocalSyncRootChange localChange = await observed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await watcher.DisposeAsync();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(localChange.SyncPairId, Is.EqualTo(syncPairId));
+                Assert.That(localChange.OldFullPath, Is.EqualTo(oldPath));
+                Assert.That(localChange.FullPath, Is.EqualTo(newPath));
+                Assert.That(localChange.Kind, Is.EqualTo(LocalSyncRootChangeKind.Renamed));
+            });
+        }
     }
 }

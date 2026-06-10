@@ -11,7 +11,7 @@ namespace Cotton.Sync.App.LocalChanges
         /// <summary>
         /// Initializes a new instance of the <see cref="LocalSyncRootChange" /> class.
         /// </summary>
-        public LocalSyncRootChange(Guid syncPairId, string fullPath, LocalSyncRootChangeKind kind)
+        public LocalSyncRootChange(Guid syncPairId, string fullPath, LocalSyncRootChangeKind kind, string? oldFullPath = null)
         {
             ArgumentNullException.ThrowIfNull(fullPath);
             if (kind == LocalSyncRootChangeKind.Unknown)
@@ -22,6 +22,7 @@ namespace Cotton.Sync.App.LocalChanges
             SyncPairId = syncPairId;
             FullPath = fullPath;
             Kind = kind;
+            OldFullPath = oldFullPath;
         }
 
         /// <summary>
@@ -38,5 +39,10 @@ namespace Cotton.Sync.App.LocalChanges
         /// Gets the local filesystem change kind.
         /// </summary>
         public LocalSyncRootChangeKind Kind { get; }
+
+        /// <summary>
+        /// Gets the previous filesystem path for rename events, when the watcher provides one.
+        /// </summary>
+        public string? OldFullPath { get; }
     }
 }

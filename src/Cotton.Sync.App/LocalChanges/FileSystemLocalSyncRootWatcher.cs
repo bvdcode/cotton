@@ -153,7 +153,11 @@ namespace Cotton.Sync.App.LocalChanges
                 return;
             }
 
-            Changed?.Invoke(this, new LocalSyncRootChange(_syncPairId, newFullPath, LocalSyncRootChangeKind.Renamed));
+            Changed?.Invoke(this, new LocalSyncRootChange(
+                _syncPairId,
+                newFullPath,
+                LocalSyncRootChangeKind.Renamed,
+                oldFullPath));
         }
     }
 }

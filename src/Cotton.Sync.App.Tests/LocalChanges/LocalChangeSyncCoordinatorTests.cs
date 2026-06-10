@@ -72,7 +72,36 @@ namespace Cotton.Sync.App.Tests.LocalChanges
         }
 
         [Test]
-        public async Task RenamedLocalChange_RequestsFullSyncUntilOldPathIsModeled()
+        public async Task RenamedLocalChange_WithOldPathRequestsScopedSyncForOldAndNewPaths()
+        {
+            SyncPairSettings syncPair = CreatePair(isEnabled: true);
+            var watcherFactory = new FakeWatcherFactory();
+            var supervisor = new FakeSyncSupervisor();
+            var coordinator = new LocalChangeSyncCoordinator(
+                new FakeSyncPairSettingsStore([syncPair]),
+                supervisor,
+                watcherFactory,
+                DebounceInterval);
+            await coordinator.StartAsync();
+
+            watcherFactory.CreatedWatchers[syncPair.Id].RaiseRename(
+                "/home/user/Cotton/old.txt",
+                "/home/user/Cotton/renamed.txt",
+                LocalSyncRootChangeKind.Renamed);
+
+            bool observed = await supervisor.WaitForSyncAsync(TimeSpan.FromSeconds(2));
+            await coordinator.StopAsync();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(observed, Is.True);
+                Assert.That(supervisor.LastRequest?.IsFull, Is.False);
+                Assert.That(supervisor.LastRequest?.LocalChangedPaths, Is.EqualTo(new[] { "old.txt", "renamed.txt" }));
+            });
+        }
+
+        [Test]
+        public async Task RenamedLocalChange_WithoutOldPathRequestsFullSync()
         {
             SyncPairSettings syncPair = CreatePair(isEnabled: true);
             var watcherFactory = new FakeWatcherFactory();
@@ -356,6 +385,15 @@ namespace Cotton.Sync.App.Tests.LocalChanges
                     _syncPairId,
                     fullPath,
                     kind));
+            }
+
+            public void RaiseRename(string oldFullPath, string fullPath, LocalSyncRootChangeKind kind = LocalSyncRootChangeKind.Renamed)
+            {
+                Changed?.Invoke(this, new LocalSyncRootChange(
+                    _syncPairId,
+                    fullPath,
+                    kind,
+                    oldFullPath));
             }
 
             public Task StartAsync(CancellationToken cancellationToken = default)

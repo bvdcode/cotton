@@ -274,6 +274,43 @@ namespace Cotton.Sync.Tests
         }
 
         [Test]
+        public async Task RunOnceAsync_WithScopedLocalRenamePathsUploadsNewAndDeletesOldWithoutFullCrawl()
+        {
+            string oldPath = "Project/old-name.txt";
+            string newPath = "Project/new-name.txt";
+            NodeFileManifestDto oldRemote = RemoteFile(oldPath, HashText("old"));
+            WriteFile(newPath, "new");
+            string newContentHash = HashText("new");
+            var scanner = new LocalFileScanner();
+            var crawler = new PathOnlyRemoteTreeCrawler(RemoteTree(oldRemote));
+            var remoteFiles = new FakeRemoteFileSynchronizer
+            {
+                EmptyLocalHashUploadContentHash = newContentHash,
+            };
+            var stateStore = new SqliteSyncStateStore(_databasePath);
+            await InsertBaselineAsync(stateStore, oldPath, oldRemote.ContentHash, oldRemote);
+            var engine = new SyncEngine(scanner, crawler, remoteFiles, stateStore);
+
+            SyncRunResult result = await engine.RunOnceAsync(
+                Pair(),
+                new SyncRunOptions { Scope = SyncRunScope.ForLocalChangedPaths([oldPath, newPath]) });
+
+            SyncStateEntry? oldEntry = await stateStore.GetAsync("pair-a", oldPath);
+            SyncStateEntry? newEntry = await stateStore.GetAsync("pair-a", newPath);
+            Assert.Multiple(() =>
+            {
+                Assert.That(crawler.PathCrawlCalls, Is.EqualTo(1));
+                Assert.That(crawler.FullCrawlCalls, Is.Zero);
+                Assert.That(remoteFiles.Uploads.Select(upload => upload.RelativePath), Is.EqualTo(new[] { newPath }));
+                Assert.That(remoteFiles.Deletes, Is.EqualTo(new[] { (oldRemote.Id, false, oldRemote.ETag) }));
+                Assert.That(result.Activities.Select(activity => activity.RelativePath), Is.EquivalentTo(new[] { oldPath, newPath }));
+                Assert.That(result.Activities.Select(activity => activity.Kind), Is.EquivalentTo(new[] { SyncActivityKind.DeletedRemote, SyncActivityKind.Uploaded }));
+                Assert.That(oldEntry, Is.Null);
+                Assert.That(newEntry, Is.Not.Null);
+            });
+        }
+
+        [Test]
         public async Task RunOnceAsync_HashesMetadataSnapshotWhenBaselineNeedsComparison()
         {
             const string baselineHash = "precomputed-content-hash";

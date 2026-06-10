@@ -165,14 +165,14 @@ namespace Cotton.Sync.App.LocalChanges
             {
                 if (_pendingSyncs.TryGetValue(change.SyncPairId, out PendingLocalSyncRequest? pendingSync))
                 {
-                    pendingSync.RecordChange(change.FullPath, RequiresFullSync(change.Kind));
+                    RecordChange(pendingSync, change);
                     return;
                 }
 
                 var next = new PendingLocalSyncRequest(
                     CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token),
                     change.FullPath);
-                next.RecordChange(change.FullPath, RequiresFullSync(change.Kind));
+                RecordChange(next, change);
                 _pendingSyncs.Add(change.SyncPairId, next);
                 _pendingRequests.Add(next);
                 next.Runner = RunDebouncedSyncAsync(change.SyncPairId, next);
@@ -303,10 +303,20 @@ namespace Cotton.Sync.App.LocalChanges
             return SyncRunRequest.ForLocalChangedPaths(relativePaths);
         }
 
-        private static bool RequiresFullSync(LocalSyncRootChangeKind kind)
+        private static void RecordChange(PendingLocalSyncRequest pendingSync, LocalSyncRootChange change)
         {
-            return kind is LocalSyncRootChangeKind.Renamed
-                or LocalSyncRootChangeKind.Error;
+            bool requiresFullSync = RequiresFullSync(change);
+            pendingSync.RecordChange(change.FullPath, requiresFullSync);
+            if (!requiresFullSync && !string.IsNullOrWhiteSpace(change.OldFullPath))
+            {
+                pendingSync.RecordChange(change.OldFullPath, requiresFullSync: false);
+            }
+        }
+
+        private static bool RequiresFullSync(LocalSyncRootChange change)
+        {
+            return change.Kind is LocalSyncRootChangeKind.Error
+                || (change.Kind == LocalSyncRootChangeKind.Renamed && string.IsNullOrWhiteSpace(change.OldFullPath));
         }
 
         private static bool TryGetRelativePath(string localRootPath, string fullPath, out string relativePath)
