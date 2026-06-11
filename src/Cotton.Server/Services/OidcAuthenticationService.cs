@@ -13,7 +13,6 @@ using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Models.Enums;
-using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
@@ -541,7 +540,7 @@ public sealed class OidcAuthenticationService(
 
         HttpRequest request = _httpContextAccessor.HttpContext?.Request
             ?? throw new InvalidOperationException("HTTP request is required for OIDC redirects.");
-        return $"{request.Scheme}://{request.Host.Value}".TrimEnd('/');
+        return RequestBaseUrlHelpers.GetBaseUrl(request);
     }
 
     private static string NormalizeReturnUrl(string? returnUrl)
