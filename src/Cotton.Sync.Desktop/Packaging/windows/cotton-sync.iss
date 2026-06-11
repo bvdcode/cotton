@@ -64,6 +64,9 @@ Name: "{group}\Cotton Sync"; Filename: "{app}\Cotton.Sync.Desktop.exe"; IconFile
 Name: "{group}\Uninstall Cotton Sync"; Filename: "{uninstallexe}"
 Name: "{userdesktop}\Cotton Sync"; Filename: "{app}\Cotton.Sync.Desktop.exe"; IconFilename: "{app}\Cotton.Sync.Desktop.exe"; AppUserModelID: "{#AppUserModelId}"; Tasks: desktopicon
 
+[Registry]
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "Cotton Sync"; ValueData: """{app}\Cotton.Sync.Desktop.exe"" --start-minimized"; Flags: uninsdeletevalue
+
 [Run]
 Filename: "{app}\Cotton.Sync.Desktop.exe"; Description: "Launch Cotton Sync"; Flags: nowait postinstall skipifsilent
 
