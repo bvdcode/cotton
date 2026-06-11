@@ -1736,6 +1736,48 @@ namespace Cotton.Sync.Tests
             });
         }
 
+        [Test]
+        public async Task RunOnceAsync_PreservesBothVersionsWhenNearSimultaneousLocalAndRemoteEditsDiverge()
+        {
+            string relativePath = "near-simultaneous-conflict.txt";
+            Guid remoteId = Guid.NewGuid();
+            string baselineContent = "baseline";
+            DateTime baselineUtc = new(2026, 6, 2, 13, 0, 0, DateTimeKind.Utc);
+            DateTime localEditUtc = baselineUtc.AddSeconds(1);
+            DateTime remoteEditUtc = baselineUtc.AddSeconds(3);
+            WriteFile(relativePath, "local-within-window");
+            LocalFileSnapshot local = LocalFile(relativePath, "local-within-window");
+            local.LastWriteUtc = localEditUtc;
+            byte[] remoteContent = Encoding.UTF8.GetBytes("remote-within-window");
+            NodeFileManifestDto baselineRemote = RemoteFile(relativePath, HashText(baselineContent), remoteId, baselineContent.Length);
+            NodeFileManifestDto remote = RemoteFile(relativePath, Hash(remoteContent), remoteId, remoteContent.Length);
+            remote.UpdatedAt = remoteEditUtc;
+            var remoteFiles = new FakeRemoteFileSynchronizer();
+            remoteFiles.Downloads[remote.Id] = remoteContent;
+            SyncEngine engine = CreateEngine(new FakeLocalFileScanner(local), RemoteTree(remote), remoteFiles, out SqliteSyncStateStore stateStore);
+            await InsertBaselineAsync(stateStore, relativePath, HashText(baselineContent), baselineRemote);
+
+            SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+            string[] conflictFiles = Directory.GetFiles(_root, "*Cotton conflict*", SearchOption.AllDirectories);
+            SyncStateEntry? entry = await stateStore.GetAsync("pair-a", relativePath);
+            Assert.Multiple(() =>
+            {
+                Assert.That((remoteEditUtc - localEditUtc).TotalSeconds, Is.EqualTo(2));
+                Assert.That(File.ReadAllText(Path.Combine(_root, relativePath)), Is.EqualTo("local-within-window"));
+                Assert.That(conflictFiles, Has.Length.EqualTo(1));
+                Assert.That(File.ReadAllText(conflictFiles[0]), Is.EqualTo("remote-within-window"));
+                Assert.That(remoteFiles.Uploads, Is.Empty);
+                Assert.That(remoteFiles.Deletes, Is.Empty);
+                Assert.That(result.Activities.Select(x => x.Kind), Is.EqualTo(new[] { SyncActivityKind.Conflict }));
+                Assert.That(entry, Is.Not.Null);
+                Assert.That(entry!.LocalLastWriteUtc, Is.EqualTo(localEditUtc));
+                Assert.That(entry.LocalContentHash, Is.EqualTo(local.ContentHash));
+                Assert.That(entry.RemoteContentHash, Is.EqualTo(remote.ContentHash));
+                Assert.That(entry.LocalContentHash, Is.Not.EqualTo(entry.RemoteContentHash));
+            });
+        }
+
         [TestCase(MatrixFileState.Missing, MatrixFileState.Missing, 0)]
         [TestCase(MatrixFileState.Missing, MatrixFileState.Baseline, (int)SyncActivityKind.DeletedRemote)]
         [TestCase(MatrixFileState.Missing, MatrixFileState.Changed, (int)SyncActivityKind.Conflict)]
