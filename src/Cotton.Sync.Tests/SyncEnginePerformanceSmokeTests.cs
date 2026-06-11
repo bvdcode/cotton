@@ -125,6 +125,95 @@ namespace Cotton.Sync.Tests
         }
 
         [Test]
+        public async Task RunOnceAsync_ScopedLocalChangeInOneMillionLogicalEntryStateUsesOnlyScopedLookups()
+        {
+            const int logicalEntryCount = 1_000_000;
+            const string syncPairId = "performance-scoped-change-1m-logical";
+            const string changedPath = "Docs/9999/file-999999.txt";
+            string oldHash = Hash(Encoding.UTF8.GetBytes("old-content"));
+            string newHash = Hash(Encoding.UTF8.GetBytes("new-content"));
+            var localScanner = new ScopedPathOnlyLocalScanner(
+                changedPath,
+                new LocalFileSnapshot
+                {
+                    RelativePath = changedPath,
+                    FullPath = FullPath(changedPath),
+                    ContentHash = newHash,
+                    SizeBytes = 11,
+                    LastWriteUtc = new DateTime(2026, 6, 3, 13, 0, 0, DateTimeKind.Utc),
+                });
+            NodeFileManifestDto remoteFile = RemoteFile(changedPath, oldHash, sizeBytes: 11);
+            var remoteCrawler = new StaticRemoteTreeCrawler(
+            [
+                new RemoteFileSnapshot
+                {
+                    RelativePath = changedPath,
+                    File = remoteFile,
+                },
+            ]);
+            var remoteFilesClient = new RecordingRemoteFileSynchronizer();
+            var stateStore = new CountingScopedStateStore(
+                logicalEntryCount,
+                new SyncStateEntry
+                {
+                    SyncPairId = syncPairId,
+                    RelativePath = changedPath,
+                    Kind = SyncEntryKind.File,
+                    LocalContentHash = oldHash,
+                    LocalLastWriteUtc = new DateTime(2026, 6, 3, 12, 0, 0, DateTimeKind.Utc),
+                    LocalSizeBytes = 11,
+                    RemoteNodeId = remoteFile.NodeId,
+                    RemoteFileId = remoteFile.Id,
+                    RemoteContentHash = remoteFile.ContentHash,
+                    RemoteETag = remoteFile.ETag,
+                    SyncedAtUtc = new DateTime(2026, 6, 3, 12, 5, 0, DateTimeKind.Utc),
+                });
+            var engine = new SyncEngine(localScanner, remoteCrawler, remoteFilesClient, stateStore);
+
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            remoteFilesClient.MeasurementStopwatch = stopwatch;
+            SyncRunResult result = await engine.RunOnceAsync(
+                new SyncPair
+                {
+                    SyncPairId = syncPairId,
+                    LocalRootPath = _root,
+                    RemoteRootNodeId = RemoteRootNodeId,
+                },
+                new SyncRunOptions
+                {
+                    Scope = SyncRunScope.ForLocalChangedPaths([changedPath]),
+                });
+            stopwatch.Stop();
+
+            TestContext.WriteLine(
+                "Scoped local change with {0:N0} logical state entries completed in {1:N0} ms; state GetAsync calls {2}; full state loads {3}; path crawls {4}; full crawls {5}; uploads {6}; first upload started after {7:N0} ms.",
+                stateStore.LogicalEntryCount,
+                stopwatch.Elapsed.TotalMilliseconds,
+                stateStore.GetCalls,
+                stateStore.FullLoadCalls,
+                remoteCrawler.PathCrawlCalls,
+                remoteCrawler.FullCrawlCalls,
+                remoteFilesClient.UploadCalls,
+                remoteFilesClient.UploadStartedAt.Single().TotalMilliseconds);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(localScanner.FullScanCalls, Is.Zero);
+                Assert.That(localScanner.PathLookupCalls, Is.EqualTo(1));
+                Assert.That(remoteCrawler.PathCrawlCalls, Is.EqualTo(1));
+                Assert.That(remoteCrawler.FullCrawlCalls, Is.Zero);
+                Assert.That(stateStore.FullLoadCalls, Is.Zero);
+                Assert.That(stateStore.GetCalls, Is.EqualTo(3));
+                Assert.That(stateStore.UpsertCalls, Is.EqualTo(1));
+                Assert.That(remoteFilesClient.UploadCalls, Is.EqualTo(1));
+                Assert.That(remoteFilesClient.Uploads.Single().RelativePath, Is.EqualTo(changedPath));
+                Assert.That(result.Activities.Select(activity => activity.RelativePath), Is.EqualTo(new[] { changedPath }));
+                Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
+                Assert.That(stopwatch.Elapsed, Is.LessThan(TimeSpan.FromSeconds(2)));
+            });
+        }
+
+        [Test]
         public async Task RunOnceAsync_UploadsOneThousandSmallFilesWithinSmokeTarget()
         {
             await VerifyInitialUploadFileSetCompletesWithinSmokeTargetAsync(
@@ -605,6 +694,157 @@ namespace Cotton.Sync.Tests
                 }
 
                 return Task.FromResult(snapshot);
+            }
+        }
+
+        private class ScopedPathOnlyLocalScanner :
+            ILocalFileScanner,
+            ILocalFileMetadataPathLookupScanner,
+            ILocalFileContentHasher
+        {
+            private readonly string _relativePathKey;
+            private readonly LocalFileSnapshot _file;
+
+            public ScopedPathOnlyLocalScanner(string relativePath, LocalFileSnapshot file)
+            {
+                _relativePathKey = SyncPath.ToKey(relativePath);
+                _file = file;
+            }
+
+            public int FullScanCalls { get; private set; }
+
+            public int PathLookupCalls { get; private set; }
+
+            public Task<IReadOnlyList<LocalFileSnapshot>> ScanAsync(
+                string rootPath,
+                CancellationToken cancellationToken = default)
+            {
+                FullScanCalls++;
+                throw new InvalidOperationException("1M logical hot-path smoke must not run a full local scan.");
+            }
+
+            public Task<LocalTreeLookupSnapshot> ScanPathMetadataLookupsAsync(
+                string rootPath,
+                IReadOnlyCollection<string> relativePaths,
+                IProgress<LocalTreeScanProgress>? progress,
+                CancellationToken cancellationToken = default)
+            {
+                PathLookupCalls++;
+                var snapshot = new LocalTreeLookupSnapshot();
+                if (relativePaths.Select(SyncPath.ToKey).Contains(_relativePathKey, StringComparer.OrdinalIgnoreCase))
+                {
+                    snapshot.FilesByPath[_relativePathKey] = _file;
+                }
+
+                return Task.FromResult(snapshot);
+            }
+
+            public Task<string> ComputeContentHashAsync(
+                LocalFileSnapshot localFile,
+                CancellationToken cancellationToken = default)
+            {
+                return Task.FromResult(localFile.ContentHash);
+            }
+        }
+
+        private class CountingScopedStateStore : ISyncStateStore
+        {
+            private readonly Dictionary<string, SyncStateEntry> _entries = new(StringComparer.OrdinalIgnoreCase);
+
+            public CountingScopedStateStore(int logicalEntryCount, SyncStateEntry scopedEntry)
+            {
+                LogicalEntryCount = logicalEntryCount;
+                _entries[SyncPath.ToKey(scopedEntry.RelativePath)] = scopedEntry;
+            }
+
+            public int LogicalEntryCount { get; }
+
+            public int GetCalls { get; private set; }
+
+            public int FullLoadCalls { get; private set; }
+
+            public int UpsertCalls { get; private set; }
+
+            public Task InitializeAsync(CancellationToken cancellationToken = default)
+            {
+                return Task.CompletedTask;
+            }
+
+            public Task<IReadOnlyList<SyncStateEntry>> LoadPairAsync(
+                string syncPairId,
+                CancellationToken cancellationToken = default)
+            {
+                FullLoadCalls++;
+                throw new InvalidOperationException("1M logical hot-path smoke must not load the full state set.");
+            }
+
+            public async IAsyncEnumerable<SyncStateEntry> LoadPairEntriesAsync(
+                string syncPairId,
+                [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+            {
+                FullLoadCalls++;
+                await Task.CompletedTask;
+                yield break;
+            }
+
+            public Task<DateTime?> GetPairLastSyncedAtUtcAsync(
+                string syncPairId,
+                CancellationToken cancellationToken = default)
+            {
+                return Task.FromResult<DateTime?>(DateTime.UtcNow);
+            }
+
+            public Task<SyncChangeCursor> GetChangeCursorAsync(
+                string syncPairId,
+                CancellationToken cancellationToken = default)
+            {
+                return Task.FromResult(new SyncChangeCursor { SyncPairId = syncPairId });
+            }
+
+            public Task<SyncStateEntry?> GetAsync(
+                string syncPairId,
+                string relativePath,
+                CancellationToken cancellationToken = default)
+            {
+                GetCalls++;
+                _entries.TryGetValue(SyncPath.ToKey(relativePath), out SyncStateEntry? entry);
+                return Task.FromResult(entry);
+            }
+
+            public Task UpsertAsync(SyncStateEntry entry, CancellationToken cancellationToken = default)
+            {
+                UpsertCalls++;
+                _entries[SyncPath.ToKey(entry.RelativePath)] = entry;
+                return Task.CompletedTask;
+            }
+
+            public Task SaveChangeCursorAsync(SyncChangeCursor cursor, CancellationToken cancellationToken = default)
+            {
+                return Task.CompletedTask;
+            }
+
+            public Task DeleteAsync(
+                string syncPairId,
+                string relativePath,
+                CancellationToken cancellationToken = default)
+            {
+                _entries.Remove(SyncPath.ToKey(relativePath));
+                return Task.CompletedTask;
+            }
+
+            public Task DeletePairAsync(string syncPairId, CancellationToken cancellationToken = default)
+            {
+                _entries.Clear();
+                return Task.CompletedTask;
+            }
+
+            public Task ReplacePairAsync(
+                string syncPairId,
+                IReadOnlyCollection<SyncStateEntry> entries,
+                CancellationToken cancellationToken = default)
+            {
+                FullLoadCalls++;
+                throw new InvalidOperationException("1M logical hot-path smoke must not replace full state.");
             }
         }
 
