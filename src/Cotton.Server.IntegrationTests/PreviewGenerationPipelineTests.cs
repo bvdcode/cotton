@@ -33,6 +33,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
 {
     private const string PreviewRouteBase = "/api/v1/preview";
     private const string DefaultExternalFixturesDir = @"C:\Temp\cotton-tests";
+    private const int TestUploadChunkSizeBytes = 4 * 1024 * 1024;
 
     private TestAppFactory? _factory;
     private HttpClient? _client;
@@ -312,7 +313,8 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
 
         string[] files = [.. Directory
             .GetFiles(fixturesDir)
-            .Where(filePath => ResolveContentType(filePath) is not null)
+            .Where(filePath => ResolveContentType(filePath) is { } contentType
+                && CanGeneratePreviewInCurrentEnvironment(contentType))
             .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)];
 
         if (files.Length == 0)
@@ -463,43 +465,77 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
 
     private async Task<NodeFileManifestDto> UploadAndCreateFileAsync(Guid nodeId, string fileName, string contentType, byte[] content)
     {
-        string chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
+        List<string> chunkHashes = [];
 
-        using var uploadForm = new MultipartFormDataContent
+        foreach ((byte[] chunk, int index) in SplitIntoChunks(content, TestUploadChunkSizeBytes))
         {
+            string chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(chunk));
+            using var uploadForm = new MultipartFormDataContent
             {
-                new ByteArrayContent(content)
                 {
-                    Headers =
+                    new ByteArrayContent(chunk)
                     {
-                        ContentType = new MediaTypeHeaderValue("application/octet-stream")
-                    }
+                        Headers =
+                        {
+                            ContentType = new MediaTypeHeaderValue("application/octet-stream")
+                        }
+                    },
+                    "file",
+                    $"{fileName}.part{index:D4}"
                 },
-                "file",
-                fileName
-            },
-            {
-                new StringContent(chunkHashLower),
-                "hash"
-            }
-        };
+                {
+                    new StringContent(chunkHashLower),
+                    "hash"
+                }
+            };
 
-        HttpResponseMessage uploadResponse = await _client!.PostAsync("/api/v1/chunks", uploadForm);
-        uploadResponse.EnsureSuccessStatusCode();
+            HttpResponseMessage uploadResponse = await _client!.PostAsync("/api/v1/chunks", uploadForm);
+            await AssertSuccessAsync(uploadResponse, $"chunk upload {index} for fixture '{fileName}'");
+            chunkHashes.Add(chunkHashLower);
+        }
 
         var createFileRequest = new CreateFileFromChunksRequestDto
         {
-            ChunkHashes = [chunkHashLower],
+            ChunkHashes = chunkHashes,
             Name = fileName,
             ContentType = contentType,
-            Hash = chunkHashLower,
+            Hash = Hasher.ToHexStringHash(Hasher.HashData(content)),
             NodeId = nodeId,
         };
 
-        HttpResponseMessage createResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", createFileRequest);
-        createResponse.EnsureSuccessStatusCode();
+        HttpResponseMessage createResponse = await _client!.PostAsJsonAsync("/api/v1/files/from-chunks", createFileRequest);
+        await AssertSuccessAsync(createResponse, $"file create for fixture '{fileName}'");
 
         return await GetNodeFileAsync(nodeId, fileName);
+    }
+
+    private static IEnumerable<(byte[] Chunk, int Index)> SplitIntoChunks(byte[] content, int chunkSizeBytes)
+    {
+        int index = 0;
+        for (int offset = 0; offset < content.Length; offset += chunkSizeBytes)
+        {
+            int length = Math.Min(chunkSizeBytes, content.Length - offset);
+            byte[] chunk = new byte[length];
+            Buffer.BlockCopy(content, offset, chunk, 0, length);
+            yield return (chunk, index++);
+        }
+
+        if (content.Length == 0)
+        {
+            yield return ([], 0);
+        }
+    }
+
+    private static async Task AssertSuccessAsync(HttpResponseMessage response, string operation)
+    {
+        if (response.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        string body = await response.Content.ReadAsStringAsync();
+        Assert.Fail(
+            $"{operation} failed with HTTP {(int)response.StatusCode} {response.StatusCode}. Response body: {body}");
     }
 
     private async Task<NodeFileManifestDto> GetNodeFileAsync(Guid nodeId, string fileName)
@@ -604,6 +640,48 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
             ".avi" => "video/avi",
             _ => null
         };
+    }
+
+    private static bool CanGeneratePreviewInCurrentEnvironment(string contentType)
+    {
+        return IsF3dModelContentType(contentType)
+            ? IsExecutableOnPath("f3d")
+            : true;
+    }
+
+    private static bool IsF3dModelContentType(string contentType)
+    {
+        return string.Equals(contentType, "model/stl", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(contentType, "model/obj", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(contentType, "model/3mf", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsExecutableOnPath(string fileName)
+    {
+        string? pathVariable = Environment.GetEnvironmentVariable("PATH");
+        if (string.IsNullOrWhiteSpace(pathVariable))
+        {
+            return false;
+        }
+
+        string[] extensions = OperatingSystem.IsWindows()
+            ? (Environment.GetEnvironmentVariable("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD")
+                .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            : [string.Empty];
+
+        foreach (string directory in pathVariable.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            foreach (string extension in extensions)
+            {
+                string candidate = Path.Combine(directory, fileName + extension.ToLowerInvariant());
+                if (File.Exists(candidate))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private static string ResolveExternalFixturesDir()

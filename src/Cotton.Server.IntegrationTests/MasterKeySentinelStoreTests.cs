@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Autoconfig.Extensions;
+using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Backends;
@@ -23,10 +24,7 @@ namespace Cotton.Server.IntegrationTests
         [TearDown]
         public void TearDown()
         {
-            if (Directory.Exists(_storageBasePath))
-            {
-                Directory.Delete(_storageBasePath, recursive: true);
-            }
+            TestDirectoryCleanup.DeleteDirectory(_storageBasePath);
         }
 
         [Test]
