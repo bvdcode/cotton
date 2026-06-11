@@ -199,6 +199,9 @@ namespace Cotton.Sync.Desktop.Tests.Packaging
                 Assert.That(smokeScript, Does.Contain("ffprobe -v error"));
                 Assert.That(smokeScript, Does.Contain("expected app window $capture_size"));
                 Assert.That(smokeScript, Does.Contain("lavfi.signalstats.YMIN"));
+                Assert.That(smokeScript, Does.Contain("COTTON_SYNC_SCREENSHOT_CAPTURE_ATTEMPTS"));
+                Assert.That(smokeScript, Does.Contain("capture attempt $attempt produced a single-color frame; retrying."));
+                Assert.That(smokeScript, Does.Contain("All $capture_attempts screenshot capture attempt(s) were single-color frames."));
                 Assert.That(smokeScript, Does.Contain("GUI screenshot appears to be a single-color frame."));
                 Assert.That(smokeScript, Does.Contain("Captured desktop GUI screenshot"));
             });
@@ -531,6 +534,9 @@ namespace Cotton.Sync.Desktop.Tests.Packaging
                 Assert.That(installerScript, Does.Contain("Get-CimInstance Win32_Process"));
                 Assert.That(installerScript, Does.Contain("Stop-Process -Id $_.ProcessId -Force"));
                 Assert.That(installerScript, Does.Contain("Wait-Process -Id $_.ProcessId -Timeout 5"));
+                Assert.That(installerScript, Does.Contain("CheckForMutexes('{#AppMutexName}')"));
+                Assert.That(installerScript, Does.Contain("Sleep(250)"));
+                Assert.That(installerScript, Does.Contain("Silent uninstall app mutex released"));
                 Assert.That(installerScript, Does.Contain("Source: \"{#SourceDir}\\*\""));
                 Assert.That(installerScript, Does.Contain("recursesubdirs createallsubdirs"));
                 Assert.That(installerScript, Does.Contain("Cotton.Sync.Desktop.exe"));
