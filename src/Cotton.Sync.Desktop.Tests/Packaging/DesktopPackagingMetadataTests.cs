@@ -666,6 +666,25 @@ namespace Cotton.Sync.Desktop.Tests.Packaging
             });
         }
 
+        [Test]
+        public void DesktopWorkflow_UploadsReleaseArtifactChecksums()
+        {
+            string workflow = GetDesktopWorkflow();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(workflow, Does.Contain("release-checksums:"));
+                Assert.That(workflow, Does.Contain("Desktop Release Artifact Checksums"));
+                Assert.That(workflow, Does.Contain("actions/download-artifact@v4"));
+                Assert.That(workflow, Does.Contain("name: desktop-linux-x64"));
+                Assert.That(workflow, Does.Contain("name: desktop-win-x64"));
+                Assert.That(workflow, Does.Contain("name: desktop-windows-installer"));
+                Assert.That(workflow, Does.Contain("release-artifact-checksums.sha256"));
+                Assert.That(workflow, Does.Contain("name: release-artifact-checksums"));
+                Assert.That(workflow, Does.Contain("Expected 5 desktop release assets"));
+            });
+        }
+
         private static string? GetProperty(XElement propertyGroup, string name)
         {
             return propertyGroup.Element(name)?.Value;

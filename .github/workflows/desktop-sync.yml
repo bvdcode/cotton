@@ -555,3 +555,57 @@ jobs:
         with:
           name: desktop-windows-installer
           path: cotton-sync-desktop-win-x64-${{ steps.gitversion.outputs.SemVer }}-setup.exe
+
+  release-checksums:
+    name: Desktop Release Artifact Checksums
+    runs-on: ubuntu-latest
+    needs:
+      - linux
+      - windows
+    permissions:
+      contents: read
+    steps:
+      - name: Download desktop Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-linux-x64
+          path: downloaded/desktop-linux-x64
+
+      - name: Download desktop Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-win-x64
+          path: downloaded/desktop-win-x64
+
+      - name: Download desktop Windows installer artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-windows-installer
+          path: downloaded/desktop-windows-installer
+
+      - name: Generate desktop release artifact checksums
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          cp downloaded/desktop-linux-x64/* release-assets/
+          cp downloaded/desktop-win-x64/* release-assets/
+          cp downloaded/desktop-windows-installer/* release-assets/
+          asset_count="$(find release-assets -maxdepth 1 -type f ! -name '*.sha256' | wc -l | tr -d ' ')"
+          if [ "$asset_count" != "5" ]; then
+            find release-assets -maxdepth 1 -type f -print | sort
+            echo "Expected 5 desktop release assets, found $asset_count." >&2
+            exit 1
+          fi
+          (
+            cd release-assets
+            find . -maxdepth 1 -type f ! -name '*.sha256' -print0 |
+              sort -z |
+              xargs -0 -r sha256sum
+          ) > release-artifact-checksums.sha256
+          cat release-artifact-checksums.sha256
+
+      - name: Upload desktop release artifact checksums
+        uses: actions/upload-artifact@v5
+        with:
+          name: release-artifact-checksums
+          path: release-artifact-checksums.sha256
