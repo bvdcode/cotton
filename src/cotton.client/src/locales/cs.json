@@ -3432,7 +3432,8 @@
     "request": {
       "version": "Verze {{version}}",
       "versionWithDevice": "Verze {{version}} na zařízení {{deviceName}}",
-      "origin": "Požadavek z {{origin}}"
+      "origin": "Požadavek z {{origin}}",
+      "localOrigin": "tohoto zařízení"
     },
     "access": {
       "title": "Tato aplikace bude moci:",

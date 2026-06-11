@@ -3186,7 +3186,8 @@
     "request": {
       "version": "Version {{version}}",
       "versionWithDevice": "Version {{version}} on {{deviceName}}",
-      "origin": "Request from {{origin}}"
+      "origin": "Request from {{origin}}",
+      "localOrigin": "this device"
     },
     "access": {
       "title": "If you allow, this application can:",
