@@ -6,6 +6,7 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
+using Cotton.Server.Helpers;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Abstractions;
@@ -222,7 +223,7 @@ namespace Cotton.Server.Handlers.Files
 
         private static string BuildBaseAppUrl(HttpRequest httpRequest)
         {
-            return $"{httpRequest.Scheme}://{httpRequest.Host}";
+            return RequestBaseUrlHelpers.GetBaseUrl(httpRequest);
         }
 
         private static bool IsInlineMetadataRangeProbe(HttpRequest httpRequest, bool inline)

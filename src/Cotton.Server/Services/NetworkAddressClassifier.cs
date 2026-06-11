@@ -12,14 +12,14 @@ namespace Cotton.Server.Services
         {
             ArgumentNullException.ThrowIfNull(ipAddress);
 
-            if (IPAddress.IsLoopback(ipAddress))
-            {
-                return true;
-            }
-
             if (ipAddress.IsIPv4MappedToIPv6)
             {
                 ipAddress = ipAddress.MapToIPv4();
+            }
+
+            if (IPAddress.IsLoopback(ipAddress))
+            {
+                return true;
             }
 
             byte[] bytes = ipAddress.GetAddressBytes();

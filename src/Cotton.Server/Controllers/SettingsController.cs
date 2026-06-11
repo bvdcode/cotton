@@ -752,7 +752,7 @@ namespace Cotton.Server.Controllers
 
         private string GetFallbackPublicBaseUrl()
         {
-            return $"{Request.Scheme}://{Request.Host.Value}".TrimEnd('/');
+            return RequestBaseUrlHelpers.GetBaseUrl(Request);
         }
 
         private static void ThrowIfInvalid(string? error)
