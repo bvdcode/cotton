@@ -3392,7 +3392,8 @@
     "request": {
       "version": "Versie {{version}}",
       "versionWithDevice": "Versie {{version}} op {{deviceName}}",
-      "origin": "Verzoek vanaf {{origin}}"
+      "origin": "Verzoek vanaf {{origin}}",
+      "localOrigin": "dit apparaat"
     },
     "access": {
       "title": "Deze toepassing kan:",
