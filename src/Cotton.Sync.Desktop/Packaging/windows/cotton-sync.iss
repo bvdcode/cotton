@@ -83,6 +83,7 @@ var
   PowerShellPath: String;
   AppExecutablePath: String;
   Command: String;
+  Attempt: Integer;
 begin
   if not UninstallSilent then
   begin
@@ -104,6 +105,19 @@ begin
   begin
     Log('Silent uninstall pre-close command could not be started.');
   end;
+
+  for Attempt := 1 to 20 do
+  begin
+    if not CheckForMutexes('{#AppMutexName}') then
+    begin
+      Log(Format('Silent uninstall app mutex released after %d wait attempt(s).', [Attempt]));
+      exit;
+    end;
+
+    Sleep(250);
+  end;
+
+  Log('Silent uninstall app mutex was still present after waiting for process shutdown.');
 end;
 
 function InitializeUninstall(): Boolean;
