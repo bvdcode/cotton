@@ -199,6 +199,9 @@ namespace Cotton.Sync.Desktop.Tests.Packaging
                 Assert.That(smokeScript, Does.Contain("ffprobe -v error"));
                 Assert.That(smokeScript, Does.Contain("expected app window $capture_size"));
                 Assert.That(smokeScript, Does.Contain("lavfi.signalstats.YMIN"));
+                Assert.That(smokeScript, Does.Contain("COTTON_SYNC_SCREENSHOT_CAPTURE_ATTEMPTS"));
+                Assert.That(smokeScript, Does.Contain("capture attempt $attempt produced a single-color frame; retrying."));
+                Assert.That(smokeScript, Does.Contain("All $capture_attempts screenshot capture attempt(s) were single-color frames."));
                 Assert.That(smokeScript, Does.Contain("GUI screenshot appears to be a single-color frame."));
                 Assert.That(smokeScript, Does.Contain("Captured desktop GUI screenshot"));
             });

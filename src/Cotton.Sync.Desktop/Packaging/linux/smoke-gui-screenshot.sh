@@ -140,51 +140,80 @@ if [ -z "$capture_origin" ]; then
   exit 1
 fi
 
-ffmpeg \
-  -y \
-  -hide_banner \
-  -loglevel error \
-  -f x11grab \
-  -video_size "$capture_size" \
-  -i "${DISPLAY}+${capture_origin}" \
-  -frames:v 1 \
-  "$output_png"
+capture_frame() {
+  ffmpeg \
+    -y \
+    -hide_banner \
+    -loglevel error \
+    -f x11grab \
+    -video_size "$capture_size" \
+    -i "${DISPLAY}+${capture_origin}" \
+    -frames:v 1 \
+    "$output_png"
+}
 
-if ! kill -0 "$app_pid" >/dev/null 2>&1; then
-  cat "$log_file" >&2 || true
-  echo "Desktop app exited during screenshot capture." >&2
+verify_app_still_healthy() {
+  if ! kill -0 "$app_pid" >/dev/null 2>&1; then
+    cat "$log_file" >&2 || true
+    echo "Desktop app exited during screenshot capture." >&2
+    exit 1
+  fi
+
+  if grep -Eiq "Unhandled exception|TypeLoadException|MissingMethodException|FileNotFoundException|Could not load file or assembly" "$log_file"; then
+    cat "$log_file" >&2 || true
+    echo "Desktop app log contains runtime exception signatures." >&2
+    exit 1
+  fi
+}
+
+verify_screenshot_size() {
+  if [ ! -s "$output_png" ]; then
+    cat "$log_file" >&2 || true
+    echo "GUI screenshot was not created: $output_png" >&2
+    exit 1
+  fi
+
+  actual_size="$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "$output_png")"
+  if [ "$actual_size" != "$capture_size" ]; then
+    echo "GUI screenshot has unexpected size: expected app window $capture_size, got $actual_size." >&2
+    exit 1
+  fi
+}
+
+screenshot_has_visible_signal() {
+  signal_stats="$(ffmpeg -hide_banner -loglevel error -i "$output_png" -vf "signalstats,metadata=print:file=-" -frames:v 1 -f null -)"
+  y_min="$(printf '%s\n' "$signal_stats" | awk -F= '/lavfi.signalstats.YMIN=/{ print $2; exit }')"
+  y_max="$(printf '%s\n' "$signal_stats" | awk -F= '/lavfi.signalstats.YMAX=/{ print $2; exit }')"
+  if [ -z "$y_min" ] || [ -z "$y_max" ]; then
+    echo "GUI screenshot pixel statistics were not produced." >&2
+    exit 1
+  fi
+
+  [ "$y_min" != "$y_max" ]
+}
+
+capture_attempts="${COTTON_SYNC_SCREENSHOT_CAPTURE_ATTEMPTS:-6}"
+if ! printf '%s\n' "$capture_attempts" | grep -Eq '^[1-9][0-9]*$'; then
+  echo "COTTON_SYNC_SCREENSHOT_CAPTURE_ATTEMPTS must be a positive integer, got: $capture_attempts" >&2
   exit 1
 fi
 
-if grep -Eiq "Unhandled exception|TypeLoadException|MissingMethodException|FileNotFoundException|Could not load file or assembly" "$log_file"; then
-  cat "$log_file" >&2 || true
-  echo "Desktop app log contains runtime exception signatures." >&2
-  exit 1
-fi
+for attempt in $(seq 1 "$capture_attempts"); do
+  capture_frame
+  verify_app_still_healthy
+  verify_screenshot_size
 
-if [ ! -s "$output_png" ]; then
-  cat "$log_file" >&2 || true
-  echo "GUI screenshot was not created: $output_png" >&2
-  exit 1
-fi
+  if screenshot_has_visible_signal; then
+    echo "Captured desktop GUI screenshot: $output_png"
+    exit 0
+  fi
 
-actual_size="$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "$output_png")"
-if [ "$actual_size" != "$capture_size" ]; then
-  echo "GUI screenshot has unexpected size: expected app window $capture_size, got $actual_size." >&2
-  exit 1
-fi
+  if [ "$attempt" != "$capture_attempts" ]; then
+    echo "GUI screenshot capture attempt $attempt produced a single-color frame; retrying." >&2
+    sleep 1
+  fi
+done
 
-signal_stats="$(ffmpeg -hide_banner -loglevel error -i "$output_png" -vf "signalstats,metadata=print:file=-" -frames:v 1 -f null -)"
-y_min="$(printf '%s\n' "$signal_stats" | awk -F= '/lavfi.signalstats.YMIN=/{ print $2; exit }')"
-y_max="$(printf '%s\n' "$signal_stats" | awk -F= '/lavfi.signalstats.YMAX=/{ print $2; exit }')"
-if [ -z "$y_min" ] || [ -z "$y_max" ]; then
-  echo "GUI screenshot pixel statistics were not produced." >&2
-  exit 1
-fi
-
-if [ "$y_min" = "$y_max" ]; then
-  echo "GUI screenshot appears to be a single-color frame." >&2
-  exit 1
-fi
-
-echo "Captured desktop GUI screenshot: $output_png"
+echo "GUI screenshot appears to be a single-color frame." >&2
+echo "All $capture_attempts screenshot capture attempt(s) were single-color frames." >&2
+exit 1
