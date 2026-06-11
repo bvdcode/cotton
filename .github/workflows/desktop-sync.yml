@@ -76,7 +76,7 @@ jobs:
           temp_dir="$(mktemp -d)"
           self_test_timeout=120s
           trap 'rm -rf "$temp_dir"' EXIT
-          eval "$(gnome-keyring-daemon --start --components=secrets)"
+          . src/Cotton.Sync.Desktop/Packaging/linux/start-secret-service.sh
           src/Cotton.Sync.Desktop/Packaging/linux/verify-checksums.sh \
             src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64
           timeout "$self_test_timeout" src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64/Cotton.Sync.Desktop --self-test --data-dir "$temp_dir"
@@ -86,7 +86,7 @@ jobs:
         run: |
           xvfb-run -a -s "-screen 0 1024x768x24" \
             dbus-run-session -- bash -euo pipefail <<'EOF'
-          eval "$(gnome-keyring-daemon --start --components=secrets)"
+          . src/Cotton.Sync.Desktop/Packaging/linux/start-secret-service.sh
           src/Cotton.Sync.Desktop/Packaging/linux/smoke-gui-screenshot-matrix.sh \
             src/Cotton.Sync.Desktop/bin/Release/net10.0/publish/linux-x64/Cotton.Sync.Desktop \
             .
@@ -124,7 +124,7 @@ jobs:
           mkdir -p "$extract_dir" "$data_dir"
           tar -xzf cotton-sync-desktop-linux-x64-${{ steps.gitversion.outputs.SemVer }}.tar.gz -C "$extract_dir"
           src/Cotton.Sync.Desktop/Packaging/linux/verify-checksums.sh "$extract_dir"
-          eval "$(gnome-keyring-daemon --start --components=secrets)"
+          . src/Cotton.Sync.Desktop/Packaging/linux/start-secret-service.sh
           timeout "$self_test_timeout" "$extract_dir/Cotton.Sync.Desktop" --self-test --data-dir "$data_dir"
           src/Cotton.Sync.Desktop/Packaging/linux/smoke-diagnostics-export.sh \
             "$extract_dir/Cotton.Sync.Desktop" \
@@ -146,7 +146,7 @@ jobs:
           test -f "$extract_dir/usr/share/icons/hicolor/192x192/apps/cotton-sync.png"
           test -L "$extract_dir/usr/bin/cotton-sync"
           src/Cotton.Sync.Desktop/Packaging/linux/verify-checksums.sh "$extract_dir/opt/cotton-sync"
-          eval "$(gnome-keyring-daemon --start --components=secrets)"
+          . src/Cotton.Sync.Desktop/Packaging/linux/start-secret-service.sh
           timeout "$self_test_timeout" "$extract_dir/opt/cotton-sync/Cotton.Sync.Desktop" --self-test --data-dir "$data_dir"
           EOF
 
@@ -175,7 +175,7 @@ jobs:
           temp_dir="$(mktemp -d)"
           self_test_timeout=120s
           trap 'rm -rf "$temp_dir"' EXIT
-          eval "$(gnome-keyring-daemon --start --components=secrets)"
+          . src/Cotton.Sync.Desktop/Packaging/linux/start-secret-service.sh
           timeout "$self_test_timeout" /opt/cotton-sync/Cotton.Sync.Desktop --self-test --data-dir "$temp_dir"
           src/Cotton.Sync.Desktop/Packaging/linux/smoke-diagnostics-export.sh \
             /opt/cotton-sync/Cotton.Sync.Desktop \
@@ -224,7 +224,7 @@ jobs:
           temp_dir="$(mktemp -d)"
           self_test_timeout=120s
           trap 'rm -rf "$temp_dir"' EXIT
-          eval "$(gnome-keyring-daemon --start --components=secrets)"
+          . src/Cotton.Sync.Desktop/Packaging/linux/start-secret-service.sh
           timeout "$self_test_timeout" /opt/cotton-sync/Cotton.Sync.Desktop --self-test --data-dir "$temp_dir"
           src/Cotton.Sync.Desktop/Packaging/linux/smoke-diagnostics-export.sh \
             /opt/cotton-sync/Cotton.Sync.Desktop \
