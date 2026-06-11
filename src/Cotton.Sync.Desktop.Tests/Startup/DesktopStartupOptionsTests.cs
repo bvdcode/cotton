@@ -91,6 +91,14 @@ namespace Cotton.Sync.Desktop.Tests.Startup
         }
 
         [Test]
+        public void Parse_LoadsVersionFlag()
+        {
+            DesktopStartupOptions options = DesktopStartupOptions.Parse(["--version"]);
+
+            Assert.That(options.PrintVersion, Is.True);
+        }
+
+        [Test]
         public void Parse_LoadsVisualSmokeScenario()
         {
             DesktopStartupOptions options = DesktopStartupOptions.Parse(

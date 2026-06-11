@@ -49,6 +49,12 @@ namespace Cotton.Sync.Cli
             }
 
             string command = args[0];
+            if (IsVersion(command))
+            {
+                await output.WriteLineAsync(SyncCliAppVersion.Current).ConfigureAwait(false);
+                return 0;
+            }
+
             if (string.Equals(command, AuthBrowserCommand, StringComparison.OrdinalIgnoreCase))
             {
                 return await RunAuthBrowserAsync(args.Skip(1).ToArray(), output, error, httpClient, cancellationToken)
@@ -283,6 +289,13 @@ namespace Cotton.Sync.Cli
             return string.Equals(value, "--help", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(value, "-h", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(value, "help", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsVersion(string value)
+        {
+            return string.Equals(value, "--version", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(value, "-v", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(value, "version", StringComparison.OrdinalIgnoreCase);
         }
 
         private static Task WriteHelpAsync(TextWriter writer)

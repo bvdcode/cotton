@@ -167,6 +167,22 @@ namespace Cotton.Sync.Cli.Tests
         }
 
         [Test]
+        public async Task RunAsync_PrintsVersionForVersionFlag()
+        {
+            using var output = new StringWriter();
+            using var error = new StringWriter();
+
+            int exitCode = await SyncCliCommandRunner.RunAsync(["--version"], output, error);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(0));
+                Assert.That(output.ToString().Trim(), Is.EqualTo(SyncCliAppVersion.Current));
+                Assert.That(error.ToString(), Is.Empty);
+            });
+        }
+
+        [Test]
         public async Task AuthBrowser_ReturnsFailureWhenApprovalTimesOut()
         {
             var handler = new AppCodeAuthServerHandler(alwaysPending: true);

@@ -5,6 +5,7 @@ using Avalonia;
 using Cotton.Sync.Desktop.Composition;
 using Cotton.Sync.Desktop.Diagnostics;
 using Cotton.Sync.Desktop.Platform;
+using Cotton.Sync.Desktop.Shell;
 using Cotton.Sync.Desktop.Startup;
 
 namespace Cotton.Sync.Desktop
@@ -15,6 +16,12 @@ namespace Cotton.Sync.Desktop
         public static int Main(string[] args)
         {
             DesktopStartupOptions startupOptions = DesktopStartupOptions.Parse(args);
+            if (startupOptions.PrintVersion)
+            {
+                Console.Out.WriteLine(DesktopAppVersion.Current);
+                return 0;
+            }
+
             DesktopAppPaths paths = DesktopStartupPathResolver.Resolve(startupOptions);
             DesktopTraceLogging.Install(paths);
             DesktopUnhandledExceptionReporter.Install();

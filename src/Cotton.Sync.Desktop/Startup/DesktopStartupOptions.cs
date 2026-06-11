@@ -12,6 +12,7 @@ namespace Cotton.Sync.Desktop.Startup
             bool startMinimizedToTray,
             bool runSelfTest,
             bool exportDiagnostics,
+            bool printVersion,
             DesktopVisualSmokeScenario? visualSmokeScenario)
         {
             ServerUrl = serverUrl;
@@ -20,10 +21,11 @@ namespace Cotton.Sync.Desktop.Startup
             StartMinimizedToTray = startMinimizedToTray;
             RunSelfTest = runSelfTest;
             ExportDiagnostics = exportDiagnostics;
+            PrintVersion = printVersion;
             VisualSmokeScenario = visualSmokeScenario;
         }
 
-        public static DesktopStartupOptions Empty { get; } = new(null, null, null, false, false, false, null);
+        public static DesktopStartupOptions Empty { get; } = new(null, null, null, false, false, false, false, null);
 
         public Uri? ServerUrl { get; }
 
@@ -36,6 +38,8 @@ namespace Cotton.Sync.Desktop.Startup
         public bool RunSelfTest { get; }
 
         public bool ExportDiagnostics { get; }
+
+        public bool PrintVersion { get; }
 
         public DesktopVisualSmokeScenario? VisualSmokeScenario { get; }
 
@@ -53,6 +57,9 @@ namespace Cotton.Sync.Desktop.Startup
                 || HasFlag(args, "--smoke-test");
             bool exportDiagnostics = HasFlag(args, "--export-diagnostics")
                 || HasFlag(args, "--diagnostics");
+            bool printVersion = HasFlag(args, "--version")
+                || HasFlag(args, "-v")
+                || HasFlag(args, "version");
             return new DesktopStartupOptions(
                 DesktopServerUrl.NormalizeOptional(serverUrl),
                 NormalizeOptional(username),
@@ -60,6 +67,7 @@ namespace Cotton.Sync.Desktop.Startup
                 startMinimizedToTray,
                 runSelfTest,
                 exportDiagnostics,
+                printVersion,
                 ParseVisualSmokeScenario(visualSmokeScenario));
         }
 
