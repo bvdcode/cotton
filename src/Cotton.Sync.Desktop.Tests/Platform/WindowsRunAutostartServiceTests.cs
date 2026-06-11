@@ -79,6 +79,18 @@ namespace Cotton.Sync.Desktop.Tests.Platform
         }
 
         [Test]
+        public void ToWindowsRunCommandLine_AlwaysQuotesExecutablePath()
+        {
+            var command = new AutostartLaunchCommand(
+                @"C:\Cotton\Cotton.Sync.Desktop.exe",
+                ["--start-minimized"]);
+
+            Assert.That(
+                command.ToWindowsRunCommandLine(),
+                Is.EqualTo("\"C:\\Cotton\\Cotton.Sync.Desktop.exe\" --start-minimized"));
+        }
+
+        [Test]
         public async Task SetEnabledAsync_WritesLaunchCommandToRunRegistry()
         {
             var registry = new FakeWindowsRunRegistry();

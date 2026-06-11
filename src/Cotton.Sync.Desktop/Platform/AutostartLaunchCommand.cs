@@ -87,7 +87,7 @@ namespace Cotton.Sync.Desktop.Platform
         {
             return string.Join(
                 " ",
-                new[] { QuoteWindowsCommandLineArgument(ExecutablePath) }.Concat(Arguments.Select(QuoteWindowsCommandLineArgument)));
+                new[] { QuoteWindowsExecutableArgument(ExecutablePath) }.Concat(Arguments.Select(QuoteWindowsCommandLineArgument)));
         }
 
         private static bool IsDotnetHost(string? processPath)
@@ -176,7 +176,12 @@ namespace Cotton.Sync.Desktop.Platform
 
         private static string QuoteWindowsCommandLineArgument(string value)
         {
-            if (!value.Any(static character => char.IsWhiteSpace(character) || character is '"'))
+            return QuoteWindowsCommandLineArgument(value, forceQuote: false);
+        }
+
+        private static string QuoteWindowsCommandLineArgument(string value, bool forceQuote)
+        {
+            if (!forceQuote && !value.Any(static character => char.IsWhiteSpace(character) || character is '"'))
             {
                 return value;
             }
@@ -208,6 +213,16 @@ namespace Cotton.Sync.Desktop.Platform
             builder.Append('\\', backslashes * 2);
             builder.Append('"');
             return builder.ToString();
+        }
+
+        private static string QuoteWindowsExecutableArgument(string value)
+        {
+            if (value.StartsWith("\"", StringComparison.Ordinal) && value.EndsWith("\"", StringComparison.Ordinal))
+            {
+                return value;
+            }
+
+            return QuoteWindowsCommandLineArgument(value, forceQuote: true);
         }
     }
 }
