@@ -7,6 +7,7 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Models.Enums;
+using Cotton.Server.Auth;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Layouts;
@@ -29,6 +30,7 @@ using EasyExtensions.Mediator;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -767,6 +769,7 @@ namespace Cotton.Server.Controllers
         /// Creates shared folder archive download link.
         /// </summary>
         [AllowAnonymous]
+        [EnableRateLimiting(AuthRateLimitPolicies.PublicShareArchive)]
         [HttpPost("shared/{token}/archives/download-link")]
         public async Task<IActionResult> CreateSharedArchiveDownloadLink(
             [FromRoute] string token,
@@ -794,6 +797,7 @@ namespace Cotton.Server.Controllers
                 new CreateArchiveDownloadLinkRequest
                 {
                     NodeIds = [targetNodeId],
+                    EnforcePublicShareLimits = true,
                 },
                 cancellationToken);
 
@@ -892,12 +896,17 @@ namespace Cotton.Server.Controllers
             Response.Headers.ContentEncoding = "identity";
             Response.Headers.CacheControl = "private, no-store, no-transform";
             var entityTag = FileETags.CreateContentEntityTag(nodeFile);
+            bool requestedInline = !download;
+            FileResponseSecurity.ApplyFileResponseHeaders(Response, nodeFile.FileManifest.ContentType, requestedInline);
 
             var lastModified = new DateTimeOffset(nodeFile.CreatedAt);
             return File(
                 stream,
-                nodeFile.FileManifest.ContentType,
-                fileDownloadName: download ? nodeFile.Name : null,
+                FileResponseSecurity.ResolveContentTypeForResponse(nodeFile.FileManifest.ContentType, requestedInline),
+                fileDownloadName: FileResponseSecurity.ResolveFileDownloadName(
+                    nodeFile.Name,
+                    requestedInline,
+                    nodeFile.FileManifest.ContentType),
                 lastModified: lastModified,
                 entityTag: entityTag,
                 enableRangeProcessing: true);

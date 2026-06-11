@@ -9,6 +9,7 @@ using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.AspNetCore.Exceptions;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 

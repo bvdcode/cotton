@@ -84,15 +84,18 @@ namespace Cotton.Server.Controllers
                 case "html":
                     return Content(result.HtmlContent ?? string.Empty, "text/html; charset=utf-8");
                 case "head":
+                    bool headRequestedInline = result.Inline == true;
+                    FileResponseSecurity.ApplyFileResponseHeaders(Response, result.ContentType, headRequestedInline);
                     Response.Headers.ContentEncoding = "identity";
                     Response.Headers.CacheControl = "private, no-store, no-transform";
-                    Response.ContentType = result.ContentType;
+                    Response.ContentType = FileResponseSecurity.ResolveContentTypeForResponse(result.ContentType, headRequestedInline);
                     Response.ContentLength = result.ContentLength;
                     if (!string.IsNullOrWhiteSpace(result.EntityTag))
                     {
                         Response.Headers.ETag = result.EntityTag;
                     }
-                    var cd = new ContentDispositionHeaderValue(result.Inline == true ? "inline" : "attachment")
+                    var cd = new ContentDispositionHeaderValue(
+                        FileResponseSecurity.ResolveContentDispositionType(result.ContentType, headRequestedInline))
                     {
                         FileNameStar = result.FileName,
                         FileName = result.FileName,
@@ -100,6 +103,8 @@ namespace Cotton.Server.Controllers
                     Response.Headers[HeaderNames.ContentDisposition] = cd.ToString();
                     return new EmptyResult();
                 case "stream":
+                    bool streamRequestedInline = string.IsNullOrWhiteSpace(result.DownloadName);
+                    FileResponseSecurity.ApplyFileResponseHeaders(Response, result.ContentType, streamRequestedInline);
                     Response.Headers.ContentEncoding = "identity";
                     Response.Headers.CacheControl = "private, no-store, no-transform";
                     if (result.DeleteAfterUse && result.DeleteTokenId.HasValue)
@@ -115,10 +120,14 @@ namespace Cotton.Server.Controllers
                             }
                         });
                     }
+                    string streamFileName = result.FileName ?? result.DownloadName ?? "download";
+                    string? streamDownloadName = streamRequestedInline
+                        ? FileResponseSecurity.ResolveFileDownloadName(streamFileName, requestedInline: true, result.ContentType)
+                        : result.DownloadName;
                     return File(
                         result.FileStream!,
-                        result.ContentType!,
-                        fileDownloadName: result.DownloadName,
+                        FileResponseSecurity.ResolveContentTypeForResponse(result.ContentType, streamRequestedInline),
+                        fileDownloadName: streamDownloadName,
                         lastModified: result.LastModified,
                         entityTag: result.EntityTagValue!,
                         enableRangeProcessing: true);
@@ -431,8 +440,7 @@ namespace Cotton.Server.Controllers
 
             if (!string.IsNullOrWhiteSpace(customToken))
             {
-                bool exists = await _dbContext.DownloadTokens
-                    .AnyAsync(x => x.Token == customToken);
+                bool exists = await ShareTokenExistsAsync(customToken);
                 if (exists)
                 {
                     return this.ApiConflict("The custom token is already in use. Please choose a different one.");
@@ -460,12 +468,34 @@ namespace Cotton.Server.Controllers
                 ExpiresAt = DateTime.UtcNow.AddMinutes(expireAfterMinutes),
                 Token = !string.IsNullOrWhiteSpace(customToken)
                     ? customToken
-                    : StringHelpers.CreateRandomString(DefaultSharedFileTokenLength),
+                    : await CreateUniqueFileShareTokenAsync(DefaultSharedFileTokenLength),
             };
             await _dbContext.DownloadTokens.AddAsync(newToken);
             await _dbContext.SaveChangesAsync();
             string link = Routes.V1.Files + $"/{nodeFileId}/download?token={newToken.Token}";
             return Ok(link);
+        }
+
+        private async Task<string> CreateUniqueFileShareTokenAsync(int length)
+        {
+            const int maxAttempts = 8;
+
+            for (int attempt = 0; attempt < maxAttempts; attempt++)
+            {
+                string candidate = StringHelpers.CreateRandomString(length);
+                if (!await ShareTokenExistsAsync(candidate))
+                {
+                    return candidate;
+                }
+            }
+
+            throw new InvalidOperationException("Unable to generate a unique share token.");
+        }
+
+        private async Task<bool> ShareTokenExistsAsync(string token)
+        {
+            return await _dbContext.DownloadTokens.AnyAsync(x => x.Token == token)
+                || await _dbContext.NodeShareTokens.AnyAsync(x => x.Token == token);
         }
 
         /// <summary>
@@ -585,8 +615,7 @@ namespace Cotton.Server.Controllers
             Guid userId)
         {
             List<Chunk> chunks = await _fileManifestService.GetChunksAsync([.. request.ChunkHashes], userId);
-            return await _dbContext.FileManifests
-                .FirstOrDefaultAsync(x => x.ComputedContentHash == proposedHash || x.ProposedContentHash == proposedHash)
+            return await _fileManifestService.GetReusableOwnedManifestAsync(proposedHash, userId)
                 ?? await _fileManifestService.CreateNewFileManifestAsync(
                     chunks,
                     request.Name,
@@ -793,11 +822,16 @@ namespace Cotton.Server.Controllers
             Response.Headers.ContentEncoding = "identity";
             Response.Headers.CacheControl = "private, no-store, no-transform";
             EntityTagHeaderValue entityTag = FileETags.CreateContentEntityTag(nodeFile);
+            bool requestedInline = !download;
+            FileResponseSecurity.ApplyFileResponseHeaders(Response, nodeFile.FileManifest.ContentType, requestedInline);
 
             return File(
                 stream,
-                nodeFile.FileManifest.ContentType,
-                fileDownloadName: download ? nodeFile.Name : null,
+                FileResponseSecurity.ResolveContentTypeForResponse(nodeFile.FileManifest.ContentType, requestedInline),
+                fileDownloadName: FileResponseSecurity.ResolveFileDownloadName(
+                    nodeFile.Name,
+                    requestedInline,
+                    nodeFile.FileManifest.ContentType),
                 lastModified: new DateTimeOffset(nodeFile.CreatedAt),
                 entityTag: entityTag,
                 enableRangeProcessing: true);

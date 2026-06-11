@@ -41,6 +41,9 @@ public sealed class ArchiveDownloadService(
         var uniquifier = new ArchivePathUniquifier();
         var entries = new List<ArchiveDownloadEntry>();
         var addedFileIds = new HashSet<Guid>();
+        ArchiveLimitTracker? limits = request.EnforcePublicShareLimits
+            ? ArchiveLimitTracker.ForPublicShare()
+            : null;
 
         if (fileIds.Length > 0)
         {
@@ -53,7 +56,17 @@ public sealed class ArchiveDownloadService(
             foreach (NodeFile file in OrderByRequestedIds(files, fileIds, x => x.Id))
             {
                 _fileGraphIntegrity.RequireValidContent(_dbContext, file, "archive.selected-file");
-                AddFileEntry(entries, addedFileIds, uniquifier, file, file.Name);
+                CreateArchiveDownloadLinkResult? limitError = AddFileEntry(
+                    entries,
+                    addedFileIds,
+                    uniquifier,
+                    limits,
+                    file,
+                    file.Name);
+                if (limitError is not null)
+                {
+                    return limitError;
+                }
             }
         }
 
@@ -72,15 +85,26 @@ public sealed class ArchiveDownloadService(
             foreach (Node folder in OrderByRequestedIds(folders, nodeIds, x => x.Id))
             {
                 string folderPath = uniquifier.AddDirectory(folder.Name).TrimEnd('/');
+                CreateArchiveDownloadLinkResult? limitError = limits?.TryAddDirectory();
+                if (limitError is not null)
+                {
+                    return limitError;
+                }
+
                 entries.Add(new ArchiveDownloadDirectoryEntry(folderPath + "/"));
-                await AddFolderEntriesAsync(
+                limitError = await AddFolderEntriesAsync(
                     entries,
                     addedFileIds,
                     uniquifier,
+                    limits,
                     folder.Id,
                     folderPath,
                     userId,
                     cancellationToken);
+                if (limitError is not null)
+                {
+                    return limitError;
+                }
             }
         }
 
@@ -103,10 +127,11 @@ public sealed class ArchiveDownloadService(
         });
     }
 
-    private async Task AddFolderEntriesAsync(
+    private async Task<CreateArchiveDownloadLinkResult?> AddFolderEntriesAsync(
         List<ArchiveDownloadEntry> entries,
         HashSet<Guid> addedFileIds,
         ArchivePathUniquifier uniquifier,
+        ArchiveLimitTracker? limits,
         Guid rootFolderId,
         string rootPath,
         Guid userId,
@@ -121,57 +146,80 @@ public sealed class ArchiveDownloadService(
         {
             Guid[] parentIds = [.. currentLevel.Keys];
 
-            List<NodeFile> files = await _dbContext.NodeFiles
+            IQueryable<NodeFile> filesQuery = _dbContext.NodeFiles
                 .Where(x => parentIds.Contains(x.NodeId) && x.OwnerId == userId && x.Node.Type == NodeType.Default)
                 .Include(x => x.Node)
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
                 .ThenInclude(x => x.Chunk)
                 .OrderBy(x => x.Name)
-                .AsSplitQuery()
-                .ToListAsync(cancellationToken);
+                .AsSplitQuery();
+            filesQuery = ApplyLimitProbe(filesQuery, limits);
+            List<NodeFile> files = await filesQuery.ToListAsync(cancellationToken);
 
             foreach (NodeFile file in files)
             {
                 _fileGraphIntegrity.RequireValidContent(_dbContext, file, "archive.folder-file");
                 string parentPath = currentLevel[file.NodeId];
-                AddFileEntry(
+                CreateArchiveDownloadLinkResult? limitError = AddFileEntry(
                     entries,
                     addedFileIds,
                     uniquifier,
+                    limits,
                     file,
                     ArchivePathUniquifier.Combine(parentPath, file.Name));
+                if (limitError is not null)
+                {
+                    return limitError;
+                }
             }
 
-            List<Node> childFolders = await _dbContext.Nodes
+            IQueryable<Node> childFoldersQuery = _dbContext.Nodes
                 .AsNoTracking()
                 .Where(x => x.ParentId.HasValue && parentIds.Contains(x.ParentId.Value) && x.OwnerId == userId && x.Type == NodeType.Default)
-                .OrderBy(x => x.Name)
-                .ToListAsync(cancellationToken);
+                .OrderBy(x => x.Name);
+            childFoldersQuery = ApplyLimitProbe(childFoldersQuery, limits);
+            List<Node> childFolders = await childFoldersQuery.ToListAsync(cancellationToken);
 
             var nextLevel = new Dictionary<Guid, string>();
             foreach (Node child in childFolders)
             {
                 string parentPath = currentLevel[child.ParentId!.Value];
                 string childPath = uniquifier.AddDirectory(ArchivePathUniquifier.Combine(parentPath, child.Name)).TrimEnd('/');
+                CreateArchiveDownloadLinkResult? limitError = limits?.TryAddDirectory();
+                if (limitError is not null)
+                {
+                    return limitError;
+                }
+
                 entries.Add(new ArchiveDownloadDirectoryEntry(childPath + "/"));
                 nextLevel[child.Id] = childPath;
             }
 
             currentLevel = nextLevel;
         }
+
+        return null;
     }
 
-    private static void AddFileEntry(
+    private static CreateArchiveDownloadLinkResult? AddFileEntry(
         List<ArchiveDownloadEntry> entries,
         HashSet<Guid> addedFileIds,
         ArchivePathUniquifier uniquifier,
+        ArchiveLimitTracker? limits,
         NodeFile file,
         string path)
     {
         if (!addedFileIds.Add(file.Id))
         {
-            return;
+            return null;
+        }
+
+        CreateArchiveDownloadLinkResult? limitError = limits?.TryAddFile();
+        if (limitError is not null)
+        {
+            addedFileIds.Remove(file.Id);
+            return limitError;
         }
 
         string archivePath = uniquifier.AddFile(path);
@@ -180,6 +228,7 @@ public sealed class ArchiveDownloadService(
             file.FileManifest.SizeBytes,
             file.FileManifest.FileManifestChunks.GetChunkHashes(),
             file.FileManifest.FileManifestChunks.GetChunkLengths()));
+        return null;
     }
 
     private async Task<List<NodeFile>> LoadFilesAsync(
@@ -195,6 +244,13 @@ public sealed class ArchiveDownloadService(
             .ThenInclude(x => x.Chunk)
             .AsSplitQuery()
             .ToListAsync(cancellationToken);
+    }
+
+    private static IQueryable<T> ApplyLimitProbe<T>(IQueryable<T> query, ArchiveLimitTracker? limits)
+    {
+        return limits is null
+            ? query
+            : query.Take(limits.RemainingEntries + 1);
     }
 
     private static Guid[] DistinctNonEmpty(IReadOnlyList<Guid>? ids)
@@ -246,6 +302,42 @@ public sealed class ArchiveDownloadService(
         }
 
         return normalized + ".zip";
+    }
+
+    private sealed class ArchiveLimitTracker(int maxEntries)
+    {
+        private const int PublicShareMaxEntries = 5_000;
+
+        private int _entryCount;
+
+        public int RemainingEntries => Math.Max(0, maxEntries - _entryCount);
+
+        public static ArchiveLimitTracker ForPublicShare()
+        {
+            return new ArchiveLimitTracker(PublicShareMaxEntries);
+        }
+
+        public CreateArchiveDownloadLinkResult? TryAddDirectory()
+        {
+            return TryAddEntry();
+        }
+
+        public CreateArchiveDownloadLinkResult? TryAddFile()
+        {
+            return TryAddEntry();
+        }
+
+        private CreateArchiveDownloadLinkResult? TryAddEntry()
+        {
+            if (_entryCount + 1 > maxEntries)
+            {
+                return CreateArchiveDownloadLinkResult.BadRequest(
+                    $"Shared folder archive is limited to {maxEntries} entries.");
+            }
+
+            _entryCount++;
+            return null;
+        }
     }
 }
 
