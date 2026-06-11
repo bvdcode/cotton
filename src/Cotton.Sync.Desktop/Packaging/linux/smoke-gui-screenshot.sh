@@ -23,7 +23,6 @@ fi
 command -v ffmpeg >/dev/null
 command -v ffprobe >/dev/null
 command -v xprop >/dev/null
-command -v xwd >/dev/null
 command -v xwininfo >/dev/null
 
 output_dir="$(dirname "$output_png")"
@@ -31,7 +30,6 @@ mkdir -p "$output_dir"
 
 data_dir="$(mktemp -d)"
 log_file="$output_png.log"
-xwd_file="$output_png.xwd"
 app_pid=""
 
 cleanup() {
@@ -40,7 +38,6 @@ cleanup() {
     wait "$app_pid" >/dev/null 2>&1 || true
   fi
 
-  rm -f "$xwd_file"
   rm -rf "$data_dir"
 }
 
@@ -86,6 +83,17 @@ get_window_size() {
     }'
 }
 
+get_window_origin() {
+  xwininfo -id "$1" 2>/dev/null | awk '
+    /Absolute upper-left X:/ { x = $4 }
+    /Absolute upper-left Y:/ { y = $4 }
+    END {
+      if (x != "" && y != "") {
+        print x "," y
+      }
+    }'
+}
+
 resize_app_window_if_requested() {
   local requested_size="${COTTON_SYNC_SCREENSHOT_WINDOW_SIZE:-}"
   if [ -z "$requested_size" ]; then
@@ -125,13 +133,21 @@ if [ -z "$capture_size" ]; then
   echo "Could not detect desktop app window size." >&2
   exit 1
 fi
+capture_origin="$(get_window_origin "$app_window_id")"
+if [ -z "$capture_origin" ]; then
+  cat "$log_file" >&2 || true
+  echo "Could not detect desktop app window origin." >&2
+  exit 1
+fi
 
-xwd -silent -id "$app_window_id" -out "$xwd_file"
 ffmpeg \
   -y \
   -hide_banner \
   -loglevel error \
-  -i "$xwd_file" \
+  -f x11grab \
+  -video_size "$capture_size" \
+  -i "${DISPLAY}+${capture_origin}" \
+  -frames:v 1 \
   "$output_png"
 
 if ! kill -0 "$app_pid" >/dev/null 2>&1; then
