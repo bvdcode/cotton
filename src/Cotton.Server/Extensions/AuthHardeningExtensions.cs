@@ -67,6 +67,22 @@ namespace Cotton.Server.Extensions
                             Window = TimeSpan.FromMinutes(1),
                         });
                 });
+                options.AddPolicy(AuthRateLimitPolicies.PublicShareArchive, httpContext =>
+                {
+                    string token = httpContext.Request.RouteValues.TryGetValue("token", out object? routeToken)
+                        ? routeToken?.ToString() ?? "unknown"
+                        : "unknown";
+                    string partitionKey = $"{GetRemoteAddressPartition(httpContext)}:{token}";
+                    return RateLimitPartition.GetFixedWindowLimiter(
+                        partitionKey,
+                        _ => new FixedWindowRateLimiterOptions
+                        {
+                            AutoReplenishment = true,
+                            PermitLimit = 5,
+                            QueueLimit = 0,
+                            Window = TimeSpan.FromMinutes(1),
+                        });
+                });
             });
             return services;
         }

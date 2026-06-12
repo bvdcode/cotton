@@ -45,6 +45,9 @@ public sealed class WebDavBasicAuthenticationHandler(
     /// </summary>
     public const string SchemeName = "WebDavBasic";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan FailedAttemptWindow = TimeSpan.FromMinutes(1);
+    private const int FailedAttemptLimit = 10;
+    private const string RateLimitedContextItemKey = "__cotton_webdav_basic_rate_limited";
 
     private IPAddress GetRequestIpAddress()
     {
@@ -73,6 +76,12 @@ public sealed class WebDavBasicAuthenticationHandler(
             return cachedResult;
         }
 
+        var rateLimitResult = TryRejectRateLimitedCredentials(username);
+        if (rateLimitResult is not null)
+        {
+            return rateLimitResult;
+        }
+
         Logger.LogDebug("WebDAV auth: cache miss for username '{Username}'.", username);
 
         var user = await dbContext.Users
@@ -80,6 +89,7 @@ public sealed class WebDavBasicAuthenticationHandler(
         if (user is null)
         {
             Logger.LogInformation("WebDAV auth: user '{Username}' not found.", username);
+            RecordAuthenticationFailure(username);
             return AuthenticateResult.Fail("Invalid username or token.");
         }
 
@@ -92,6 +102,7 @@ public sealed class WebDavBasicAuthenticationHandler(
         }
 
         cache.Set(cacheKey, user.Id, CacheTtl);
+        ClearAuthenticationFailures(username);
 
         Logger.LogDebug("WebDAV auth: authentication successful for user '{Username}' ({UserId}).", user.Username, user.Id);
 
@@ -101,6 +112,12 @@ public sealed class WebDavBasicAuthenticationHandler(
     /// <inheritdoc />
     protected override Task HandleChallengeAsync(AuthenticationProperties properties)
     {
+        if (Context.Items.ContainsKey(RateLimitedContextItemKey))
+        {
+            Response.StatusCode = StatusCodes.Status429TooManyRequests;
+            return Task.CompletedTask;
+        }
+
         Response.Headers.WWWAuthenticate = "Basic realm=\"Cotton WebDAV\", charset=\"UTF-8\"";
         return base.HandleChallengeAsync(properties);
     }
@@ -229,6 +246,7 @@ public sealed class WebDavBasicAuthenticationHandler(
                 "WebDAV auth: stored WebDAV token hash is missing for user '{Username}' ({UserId}).",
                 user.Username,
                 user.Id);
+            RecordAuthenticationFailure(username);
             return AuthenticateResult.Fail("Invalid username or token.");
         }
 
@@ -236,6 +254,8 @@ public sealed class WebDavBasicAuthenticationHandler(
         {
             return null;
         }
+
+        RecordAuthenticationFailure(username);
 
         Logger.LogWarning(
             "WebDAV auth: invalid token for user '{Username}' ({UserId}). Remote IP: {RemoteIp}",
@@ -264,9 +284,68 @@ public sealed class WebDavBasicAuthenticationHandler(
         return AuthenticateResult.Fail("Invalid username or token.");
     }
 
+    private AuthenticateResult? TryRejectRateLimitedCredentials(string username)
+    {
+        var counter = GetFailureCounter(username);
+        if (counter is null || counter.Count < FailedAttemptLimit)
+        {
+            return null;
+        }
+
+        Context.Items[RateLimitedContextItemKey] = true;
+        Logger.LogWarning(
+            "WebDAV auth: rate limited username '{Username}' from remote IP {RemoteIp}.",
+            username,
+            Request.GetRemoteIPAddress());
+        return AuthenticateResult.Fail("Too many WebDAV authentication attempts.");
+    }
+
+    private FailureCounter? GetFailureCounter(string username)
+    {
+        string key = GetFailureCacheKey(username);
+        if (!cache.TryGetValue(key, out FailureCounter? counter))
+        {
+            return null;
+        }
+
+        if (counter!.ResetAt > DateTimeOffset.UtcNow)
+        {
+            return counter;
+        }
+
+        cache.Remove(key);
+        return null;
+    }
+
+    private void RecordAuthenticationFailure(string username)
+    {
+        string key = GetFailureCacheKey(username);
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        FailureCounter counter = GetFailureCounter(username) ?? new FailureCounter(0, now.Add(FailedAttemptWindow));
+        counter.Count++;
+        cache.Set(key, counter, counter.ResetAt);
+    }
+
+    private void ClearAuthenticationFailures(string username)
+    {
+        cache.Remove(GetFailureCacheKey(username));
+    }
+
+    private string GetFailureCacheKey(string username)
+    {
+        string normalizedUsername = username.Trim().ToLowerInvariant();
+        return $"webdav-basic-fail:{Request.GetRemoteIPAddress()}:{normalizedUsername}";
+    }
+
     private AuthenticateResult AuthenticateSuccess(Guid userId, string username)
     {
         var principal = CreatePrincipal(userId, username);
         return AuthenticateResult.Success(new AuthenticationTicket(principal, Scheme.Name));
+    }
+
+    private sealed class FailureCounter(int count, DateTimeOffset resetAt)
+    {
+        public int Count { get; set; } = count;
+        public DateTimeOffset ResetAt { get; } = resetAt;
     }
 }

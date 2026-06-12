@@ -333,9 +333,10 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var file = await UploadTextFileAsync(root!, "webdav-etag.txt", "webdav content");
         string quotedETag = $"\"{file.ETag}\"";
 
+        string webDavToken = await GetWebDavTokenAsync();
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Basic",
-            Convert.ToBase64String(Encoding.UTF8.GetBytes("testuser:testpassword")));
+            Convert.ToBase64String(Encoding.UTF8.GetBytes($"testuser:{webDavToken}")));
 
         var getResponse = await _client.GetAsync("/api/v1/webdav/webdav-etag.txt");
         using var headRequest = new HttpRequestMessage(HttpMethod.Head, "/api/v1/webdav/webdav-etag.txt");
@@ -352,6 +353,25 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
             Assert.That(propFindResponse.StatusCode, Is.EqualTo(HttpStatusCode.MultiStatus));
             Assert.That(propFindXml, Does.Contain(quotedETag));
         });
+    }
+
+    [Test]
+    public async Task WebDav_BasicAuth_Failures_AreRateLimited()
+    {
+        _ = await LoginAsync();
+
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Basic",
+            Convert.ToBase64String(Encoding.UTF8.GetBytes("testuser:wrong-webdav-token")));
+
+        for (int i = 0; i < 10; i++)
+        {
+            var failed = await _client.GetAsync("/api/v1/webdav");
+            Assert.That(failed.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        }
+
+        var limited = await _client.GetAsync("/api/v1/webdav");
+        Assert.That(limited.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
     }
 
     [Test]
@@ -378,6 +398,53 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
 
         var response = await _client.GetAsync($"/api/v1/files/{file.Id}/content");
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+    }
+
+    [Test]
+    public async Task Create_And_Update_From_Chunks_Reject_Foreign_Manifest_Hash()
+    {
+        var ownerToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ownerToken);
+
+        var ownerRoot = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(ownerRoot, Is.Not.Null);
+        var victimFile = await UploadTextFileAsync(ownerRoot!, "victim-secret.txt", "victim secret bytes");
+
+        var createUserResponse = await _client.PostAsJsonAsync("/api/v1/users", new
+        {
+            username = "manifestattacker",
+            password = "manifestpass",
+            role = UserRole.User,
+        });
+        createUserResponse.EnsureSuccessStatusCode();
+
+        _client.DefaultRequestHeaders.Authorization = null;
+        var attackerToken = await LoginAsync("manifestattacker", "manifestpass");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", attackerToken);
+
+        var attackerRoot = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(attackerRoot, Is.Not.Null);
+
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", new CreateFileFromChunksRequestDto
+        {
+            ChunkHashes = [],
+            Name = "stolen.txt",
+            ContentType = "text/plain",
+            Hash = victimFile.ContentHash,
+            NodeId = attackerRoot!.Id,
+        });
+        Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+        var attackerOwnFile = await UploadTextFileAsync(attackerRoot, "own.txt", "own bytes");
+        var updateResponse = await _client.PatchAsJsonAsync($"/api/v1/files/{attackerOwnFile.Id}/update-content", new CreateFileFromChunksRequestDto
+        {
+            ChunkHashes = [],
+            Name = attackerOwnFile.Name,
+            ContentType = "text/plain",
+            Hash = victimFile.ContentHash,
+            NodeId = attackerRoot.Id,
+        });
+        Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -967,6 +1034,70 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Share_Inline_Dangerous_Svg_Is_Forced_To_Attachment()
+    {
+        var authToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        const string svg = "<svg xmlns=\"http://www.w3.org/2000/svg\"><script>fetch('/api/v1/auth/refresh',{method:'POST'})</script></svg>";
+        byte[] content = Encoding.UTF8.GetBytes(svg);
+        string hash = Hasher.ToHexStringHash(Hasher.HashData(content));
+        var uploadResponse = await UploadRawChunkAsync(content, hash);
+        uploadResponse.EnsureSuccessStatusCode();
+
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", new CreateFileFromChunksRequestDto
+        {
+            ChunkHashes = [hash],
+            Name = "payload.svg",
+            ContentType = "image/svg+xml",
+            Hash = hash,
+            NodeId = root!.Id,
+        });
+        createResponse.EnsureSuccessStatusCode();
+        var file = await createResponse.Content.ReadFromJsonAsync<NodeFileManifestDto>();
+        Assert.That(file, Is.Not.Null);
+
+        var linkResponse = await _client.GetAsync($"/api/v1/files/{file!.Id}/download-link");
+        linkResponse.EnsureSuccessStatusCode();
+        string downloadLink = (await linkResponse.Content.ReadAsStringAsync()).Trim().Trim('"');
+        string shareToken = ExtractToken(downloadLink);
+
+        _client.DefaultRequestHeaders.Authorization = null;
+        var inlineResponse = await _client.GetAsync($"/s/{shareToken}?view=inline");
+        inlineResponse.EnsureSuccessStatusCode();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(inlineResponse.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/octet-stream"));
+            Assert.That(inlineResponse.Content.Headers.ContentDisposition?.DispositionType, Is.EqualTo("attachment"));
+            Assert.That(inlineResponse.Headers.TryGetValues("X-Content-Type-Options", out var values), Is.True);
+            Assert.That(values, Does.Contain("nosniff"));
+        });
+    }
+
+    [Test]
+    public async Task File_Custom_Share_Token_Cannot_Collide_With_Folder_Share_Token()
+    {
+        var authToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+        var folder = await CreateFolderAsync(root!.Id, "shared-folder");
+        var file = await UploadTextFileAsync(root, "shared-file.txt", "file body");
+
+        const string token = "shared-token-collision";
+        var folderShare = await _client.GetAsync($"/api/v1/layouts/nodes/{folder.Id}/share-link?customToken={token}");
+        folderShare.EnsureSuccessStatusCode();
+
+        var fileShare = await _client.GetAsync($"/api/v1/files/{file.Id}/download-link?customToken={token}");
+        Assert.That(fileShare.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+    }
+
+    [Test]
     public async Task File_Versions_List_Download_And_Restore_Previous_Content()
     {
         var token = await LoginAsync();
@@ -1379,5 +1510,12 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var login = await res.Content.ReadFromJsonAsync<TokenPairResponseDto>();
         Assert.That(login, Is.Not.Null);
         return login!.AccessToken;
+    }
+
+    private async Task<string> GetWebDavTokenAsync()
+    {
+        string token = await _client!.GetStringAsync("/api/v1/auth/webdav/token");
+        Assert.That(token, Is.Not.Empty);
+        return token;
     }
 }

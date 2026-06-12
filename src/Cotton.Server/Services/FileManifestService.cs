@@ -314,6 +314,52 @@ namespace Cotton.Server.Services
         }
 
         /// <summary>
+        /// Finds an existing manifest by content hash only when the requesting user owns every data chunk it references.
+        /// </summary>
+        public async Task<FileManifest?> GetReusableOwnedManifestAsync(
+            byte[] proposedContentHash,
+            Guid userId,
+            bool includeChunks = false,
+            CancellationToken cancellationToken = default)
+        {
+            IQueryable<FileManifest> query = _dbContext.FileManifests.AsQueryable();
+            if (includeChunks)
+            {
+                query = query.Include(x => x.FileManifestChunks);
+            }
+
+            FileManifest? fileManifest = await query
+                .FirstOrDefaultAsync(
+                    x => x.ComputedContentHash == proposedContentHash || x.ProposedContentHash == proposedContentHash,
+                    cancellationToken);
+            if (fileManifest is null)
+            {
+                return null;
+            }
+
+            bool ownsAllChunks = await UserOwnsManifestChunksAsync(fileManifest.Id, userId, cancellationToken);
+            if (!ownsAllChunks)
+            {
+                throw new BadRequestException("File content must be uploaded before it can be referenced.");
+            }
+
+            return fileManifest;
+        }
+
+        private async Task<bool> UserOwnsManifestChunksAsync(
+            Guid fileManifestId,
+            Guid userId,
+            CancellationToken cancellationToken)
+        {
+            bool hasForeignChunk = await _dbContext.FileManifestChunks
+                .Where(fmc => fmc.FileManifestId == fileManifestId)
+                .AnyAsync(fmc => !_dbContext.ChunkOwnerships
+                    .Any(co => co.OwnerId == userId && co.ChunkHash == fmc.ChunkHash), cancellationToken);
+
+            return !hasForeignChunk;
+        }
+
+        /// <summary>
         /// Creates new file manifest async.
         /// </summary>
         public async Task<FileManifest> CreateNewFileManifestAsync(

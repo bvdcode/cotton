@@ -234,6 +234,51 @@ public class LayoutAndFilesTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Shared_Archive_Download_Link_Enforces_Public_Entry_Limit()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var sharedRoot = await CreateNodeAsync(root!.Id, "huge-shared-root");
+        var sharedRootEntity = await DbContext.Nodes
+            .AsNoTracking()
+            .Select(x => new { x.Id, x.LayoutId, x.OwnerId })
+            .SingleAsync(x => x.Id == sharedRoot.Id);
+
+        await DbContext.Database.ExecuteSqlInterpolatedAsync($@"
+            INSERT INTO nodes (id, created_at, updated_at, owner_id, layout_id, parent_id, type, name, name_key, metadata)
+            SELECT
+                md5(i::text || {sharedRoot.Id.ToString()})::uuid,
+                NOW(),
+                NOW(),
+                {sharedRootEntity.OwnerId},
+                {sharedRootEntity.LayoutId},
+                {sharedRoot.Id},
+                {(int)NodeType.Default},
+                'child-' || lpad(i::text, 4, '0'),
+                'child-' || lpad(i::text, 4, '0'),
+                NULL
+            FROM generate_series(0, 4999) AS s(i)");
+
+        var shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{sharedRoot.Id}/share-link");
+        shareLinkRes.EnsureSuccessStatusCode();
+        string shareLink = (await shareLinkRes.Content.ReadAsStringAsync()).Trim('"');
+        string shareToken = shareLink.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
+
+        _client.DefaultRequestHeaders.Authorization = null;
+        var linkResponse = await _client.PostAsync(
+            $"/api/v1/layouts/shared/{shareToken}/archives/download-link?nodeId={sharedRoot.Id}",
+            null);
+
+        Assert.That(linkResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        string body = await linkResponse.Content.ReadAsStringAsync();
+        Assert.That(body, Does.Contain("limited to 5000 entries"));
+    }
+
+    [Test]
     public async Task Shared_Folder_Page_Contains_Social_Preview_Meta_Tags()
     {
         var token = await LoginAsync();

@@ -20,4 +20,8 @@ public sealed class CreateArchiveDownloadLinkRequest
     /// Gets or sets archive name.
     /// </summary>
     public string? ArchiveName { get; init; }
+    /// <summary>
+    /// Gets or sets a value indicating whether anonymous public-share limits should be enforced.
+    /// </summary>
+    public bool EnforcePublicShareLimits { get; init; }
 }
