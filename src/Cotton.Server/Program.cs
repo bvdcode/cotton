@@ -20,7 +20,6 @@ using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
 using EasyExtensions.Quartz.Extensions;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Options;
 
 namespace Cotton.Server
@@ -128,12 +127,6 @@ namespace Cotton.Server
                 .AddExceptionHandler()
                 .AddOptions<CottonEncryptionSettings>()
                 .Bind(builder.Configuration);
-            builder.Services.Configure<ForwardedHeadersOptions>(options =>
-            {
-                options.ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
-                options.KnownIPNetworks.Clear();
-                options.KnownProxies.Clear();
-            });
             builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CottonEncryptionSettings>>().Value);
             builder.Services.AddSingleton(masterKeyRuntimeState);
             builder.Services.AddSingleton(processHardeningStatus);
@@ -208,7 +201,6 @@ namespace Cotton.Server
             builder.Services.AddHostedService<AppVersionTrackerService>();
 
             var app = builder.Build();
-            app.UseForwardedHeaders();
             app.UseAuthHardening();
             app.UseDefaultFiles();
             app.MapStaticAssets();

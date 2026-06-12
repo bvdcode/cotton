@@ -3387,7 +3387,8 @@
     "request": {
       "version": "Version {{version}}",
       "versionWithDevice": "Version {{version}} auf {{deviceName}}",
-      "origin": "Anfrage von {{origin}}"
+      "origin": "Anfrage von {{origin}}",
+      "localOrigin": "diesem Gerät"
     },
     "access": {
       "title": "Diese Anwendung kann:",

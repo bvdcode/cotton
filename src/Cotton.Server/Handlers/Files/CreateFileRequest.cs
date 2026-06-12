@@ -174,14 +174,11 @@ namespace Cotton.Server.Handlers.Files
             byte[] proposedHash,
             CancellationToken ct)
         {
-            var query = _dbContext.FileManifests.AsQueryable();
-            if (request.Validate)
-            {
-                query = query.Include(x => x.FileManifestChunks);
-            }
-
-            var fileManifest = await query
-                .FirstOrDefaultAsync(x => x.ComputedContentHash == proposedHash || x.ProposedContentHash == proposedHash, ct);
+            var fileManifest = await _fileManifestService.GetReusableOwnedManifestAsync(
+                proposedHash,
+                request.UserId,
+                includeChunks: request.Validate,
+                ct);
             if (fileManifest is not null)
             {
                 await _fileManifestService.ClearGcSchedulesForManifestReferencesAsync(fileManifest.Id, ct);

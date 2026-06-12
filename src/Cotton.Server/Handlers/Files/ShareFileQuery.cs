@@ -6,6 +6,8 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
+using Cotton.Server.Helpers;
+using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Abstractions;
@@ -47,6 +49,7 @@ namespace Cotton.Server.Handlers.Files
         ISharedFileDownloadNotifier _sharedFileDownloadNotifier,
         IHttpContextAccessor _httpContextAccessor,
         IStoragePipeline _storage,
+        SettingsProvider _settings,
         IDatabaseIntegrityVerifier _integrity,
         FileGraphIntegrityVerifier _fileGraphIntegrity) : IRequestHandler<ShareFileQuery, ShareFileResult>
     {
@@ -63,7 +66,20 @@ namespace Cotton.Server.Handlers.Files
 
             DateTime now = DateTime.UtcNow;
             bool isHead = HttpMethods.IsHead(request.HttpRequest.Method);
-            string baseAppUrl = BuildBaseAppUrl(request.HttpRequest);
+            string baseAppUrl = await _settings.GetPublicBaseUrlAsync(ct);
+
+            if (viewMode.Value.IsHtml)
+            {
+                ShareFileResult? nodeShareResult = await TryBuildNodeShareRedirectResultAsync(
+                    request.Token,
+                    now,
+                    baseAppUrl,
+                    ct);
+                if (nodeShareResult is not null)
+                {
+                    return nodeShareResult;
+                }
+            }
 
             var downloadToken = await LoadDownloadTokenAsync(request.Token, now, viewMode.Value.IsHtml, isHead, ct);
             if (downloadToken is null)
@@ -104,6 +120,27 @@ namespace Cotton.Server.Handlers.Files
         {
             var query = BuildTokenQuery(token, now, includeChunks: !isHtml && !isHead);
             return await query.FirstOrDefaultAsync(cancellationToken: ct);
+        }
+
+        private async Task<ShareFileResult?> TryBuildNodeShareRedirectResultAsync(
+            string token,
+            DateTime now,
+            string baseAppUrl,
+            CancellationToken ct)
+        {
+            var nodeShareToken = await LoadNodeShareTokenAsync(token, now, ct);
+            if (nodeShareToken is null)
+            {
+                return null;
+            }
+
+            if (nodeShareToken.Node.Type != NodeType.Default)
+            {
+                return ShareFileResult.AsRedirect($"{baseAppUrl}/404");
+            }
+
+            _integrity.RequireValid(_dbContext, nodeShareToken, "share.node-token");
+            return BuildNodeShareRedirect(nodeShareToken, token, baseAppUrl);
         }
 
         private async Task<ShareFileResult> BuildMissingTokenResultAsync(
@@ -220,11 +257,6 @@ namespace Cotton.Server.Handlers.Files
             return (isHtml, isInlineFile);
         }
 
-        private static string BuildBaseAppUrl(HttpRequest httpRequest)
-        {
-            return $"{httpRequest.Scheme}://{httpRequest.Host}";
-        }
-
         private static bool IsInlineMetadataRangeProbe(HttpRequest httpRequest, bool inline)
         {
             if (!inline || !HttpMethods.IsGet(httpRequest.Method))
@@ -338,6 +370,7 @@ namespace Cotton.Server.Handlers.Files
             return ShareFileResult.AsStream(
                 stream: stream,
                 contentType: file.ContentType,
+                fileName: downloadToken.FileName,
                 downloadName: downloadName,
                 lastModified: lastModified,
                 entityTag: entityTag,
@@ -448,12 +481,13 @@ namespace Cotton.Server.Handlers.Files
         /// <summary>
         /// Converts the result to stream.
         /// </summary>
-        public static ShareFileResult AsStream(Stream stream, string contentType, string? downloadName, DateTimeOffset lastModified, EntityTagHeaderValue entityTag, bool deleteAfterUse, Guid deleteTokenId) =>
+        public static ShareFileResult AsStream(Stream stream, string contentType, string fileName, string? downloadName, DateTimeOffset lastModified, EntityTagHeaderValue entityTag, bool deleteAfterUse, Guid deleteTokenId) =>
             new()
             {
                 Kind = "stream",
                 FileStream = stream,
                 ContentType = contentType,
+                FileName = fileName,
                 DownloadName = downloadName,
                 LastModified = lastModified,
                 EntityTagValue = entityTag,

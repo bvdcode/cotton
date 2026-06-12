@@ -65,6 +65,7 @@ public sealed class ArchiveController(
         Response.ContentLength = ticket.SizeBytes;
         Response.Headers.ContentEncoding = "identity";
         Response.Headers.CacheControl = "private, no-store, no-transform";
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
         Response.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
         {
             FileNameStar = ticket.FileName,

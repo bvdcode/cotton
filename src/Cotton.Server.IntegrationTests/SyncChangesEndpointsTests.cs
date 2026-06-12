@@ -556,7 +556,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         NodeDto root = await GetRootAsync();
         long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
 
-        UseWebDavBasicAuth();
+        await UseWebDavBasicAuthAsync();
         using HttpResponseMessage putResponse = await SendWebDavPutAsync(
             "/api/v1/webdav/webdav-created-file.txt",
             "webdav-created-body");
@@ -582,7 +582,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         NodeDto root = await GetRootAsync();
         long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
 
-        UseWebDavBasicAuth();
+        await UseWebDavBasicAuthAsync();
         using HttpResponseMessage mkColResponse = await SendWebDavMkColAsync("/api/v1/webdav/webdav-created-folder");
         mkColResponse.EnsureSuccessStatusCode();
 
@@ -606,7 +606,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         NodeFileManifestDto file = await CreateFileAsync(root.Id, "webdav-move-source.txt", "webdav-move-body");
         long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
 
-        UseWebDavBasicAuth();
+        await UseWebDavBasicAuthAsync();
         using HttpResponseMessage moveResponse = await SendWebDavMoveAsync(
             "/api/v1/webdav/webdav-move-source.txt",
             "/api/v1/webdav/webdav-move-target.txt");
@@ -633,7 +633,7 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         NodeFileManifestDto file = await CreateFileAsync(root.Id, "webdav-copy-source.txt", "webdav-copy-body");
         long cursor = (await GetChangesAsync(since: 0, limit: 100)).NextCursor;
 
-        UseWebDavBasicAuth();
+        await UseWebDavBasicAuthAsync();
         using HttpResponseMessage copyResponse = await SendWebDavCopyAsync(
             "/api/v1/webdav/webdav-copy-source.txt",
             "/api/v1/webdav/webdav-copy-target.txt");
@@ -847,11 +847,13 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
     }
 
-    private void UseWebDavBasicAuth()
+    private async Task UseWebDavBasicAuthAsync()
     {
+        string webDavToken = await _client!.GetStringAsync("/api/v1/auth/webdav/token");
+        Assert.That(webDavToken, Is.Not.Empty);
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Basic",
-            Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Username}:{Password}")));
+            Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Username}:{webDavToken}")));
     }
 
     private async Task<HttpResponseMessage> SendWebDavPutAsync(string path, string body)

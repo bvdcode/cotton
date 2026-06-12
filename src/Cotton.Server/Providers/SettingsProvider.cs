@@ -111,6 +111,20 @@ namespace Cotton.Server.Providers
         }
 
         /// <summary>
+        /// Gets the canonical public base URL from persisted server settings.
+        /// </summary>
+        public async Task<string> GetPublicBaseUrlAsync(CancellationToken cancellationToken = default)
+        {
+            CottonServerSettings? settings = await LoadLatestSettingsAsync(asNoTracking: false, cancellationToken);
+            if (settings is null)
+            {
+                return defaultPublicBaseUrl;
+            }
+
+            return settings.PublicBaseUrl.TrimEnd('/');
+        }
+
+        /// <summary>
         /// Ensures server settings async.
         /// </summary>
         public async Task<CottonServerSettings> EnsureServerSettingsAsync(

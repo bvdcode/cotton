@@ -3400,7 +3400,8 @@
     "request": {
       "version": "版本 {{version}}",
       "versionWithDevice": "版本 {{version}}，设备 {{deviceName}}",
-      "origin": "请求来源 {{origin}}"
+      "origin": "请求来源 {{origin}}",
+      "localOrigin": "此设备"
     },
     "access": {
       "title": "此应用将能够：",

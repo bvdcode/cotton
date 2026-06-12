@@ -67,6 +67,17 @@ function renderActions(row: FileListRow): void {
 }
 
 describe("file list action column", () => {
+  it("reserves enough width for the full row action set", () => {
+    const column = createActionsColumn({
+      labels,
+      readOnly: false,
+      fileOperations,
+      folderOperations,
+    });
+
+    expect(column.minWidth).toBeGreaterThanOrEqual(220);
+  });
+
   it("shows share action for plain files", () => {
     renderActions(fileRow());
 
