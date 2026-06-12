@@ -617,7 +617,7 @@ export const createActionsColumn = (
 ): GridColDef<FileListRow> => ({
   field: "actions",
   headerName: options.labels.actionsTitle,
-  minWidth: 180,
+  minWidth: 220,
   sortable: false,
   align: "right",
   headerAlign: "right",

@@ -181,6 +181,21 @@ const SearchResultRowImpl = ({
 
         {row.kind === "file" && (
           <>
+            {!isDownloadOnly && (
+              <Tooltip title={t("actions.downloadFile")}>
+                <IconButton
+                  size="small"
+                  aria-label={t("actions.downloadFile")}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onDownloadFile(row);
+                  }}
+                  sx={{ flexShrink: 0 }}
+                >
+                  <Download fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
             <Tooltip title={t("actions.shareFile")}>
               <IconButton
                 size="small"
