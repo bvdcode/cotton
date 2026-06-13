@@ -706,6 +706,9 @@ namespace Cotton.Sync.Desktop.Tests.Packaging
                 Assert.That(workflow, Does.Contain("release-assets/CottonSync-Windows.zip"));
                 Assert.That(workflow, Does.Contain("release-assets/CottonSync-Linux.deb"));
                 Assert.That(workflow, Does.Contain("release-assets/CottonSync-Linux.tar.gz"));
+                Assert.That(workflow, Does.Contain("Delete stale desktop release assets"));
+                Assert.That(workflow, Does.Contain("gh release delete-asset \"$tag\" \"$asset_name\""));
+                Assert.That(workflow, Does.Contain("allowed_names=$'CottonSync-Linux.deb"));
                 Assert.That(workflow, Does.Contain("tag=\"desktop-sync-latest\""));
                 Assert.That(workflow, Does.Contain("DESKTOP_TAG: desktop-sync-latest"));
                 Assert.That(workflow, Does.Contain("desktop-release-manifest.json"));

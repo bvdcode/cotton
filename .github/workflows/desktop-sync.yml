@@ -732,6 +732,28 @@ jobs:
           DESKTOP_VERSION: ${{ needs.linux.outputs.Version }}
           DESKTOP_TAG: desktop-sync-latest
 
+      - name: Delete stale desktop release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ steps.release_metadata.outputs.tag }}"
+          if ! gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $tag does not exist yet; no stale assets to delete."
+            exit 0
+          fi
+
+          allowed_names=$'CottonSync-Linux.deb\nCottonSync-Linux.tar.gz\nCottonSync-Windows-Setup.exe\nCottonSync-Windows.tar.gz\nCottonSync-Windows.zip\ndesktop-release-manifest.json\nrelease-artifact-checksums.sha256'
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets \
+            --jq '.assets[].name' |
+            while IFS= read -r asset_name; do
+              if ! grep -Fxq "$asset_name" <<< "$allowed_names"; then
+                echo "Deleting stale desktop release asset: $asset_name"
+                gh release delete-asset "$tag" "$asset_name" --repo "$GITHUB_REPOSITORY" --yes
+              fi
+            done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Publish desktop GitHub Release
         uses: ncipollo/release-action@v1
         with:
