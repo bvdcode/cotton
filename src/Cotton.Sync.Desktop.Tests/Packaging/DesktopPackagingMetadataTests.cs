@@ -701,6 +701,11 @@ namespace Cotton.Sync.Desktop.Tests.Packaging
                 Assert.That(workflow, Does.Contain("Publish Desktop Sync Release"));
                 Assert.That(workflow, Does.Contain("contents: write"));
                 Assert.That(workflow, Does.Contain("refs/heads/feature/desktop-sync-client"));
+                Assert.That(workflow, Does.Contain("Normalize desktop release asset names"));
+                Assert.That(workflow, Does.Contain("release-assets/CottonSync-Windows-Setup.exe"));
+                Assert.That(workflow, Does.Contain("release-assets/CottonSync-Windows.zip"));
+                Assert.That(workflow, Does.Contain("release-assets/CottonSync-Linux.deb"));
+                Assert.That(workflow, Does.Contain("release-assets/CottonSync-Linux.tar.gz"));
                 Assert.That(workflow, Does.Contain("tag=\"desktop-sync-latest\""));
                 Assert.That(workflow, Does.Contain("DESKTOP_TAG: desktop-sync-latest"));
                 Assert.That(workflow, Does.Contain("desktop-release-manifest.json"));
@@ -710,6 +715,7 @@ namespace Cotton.Sync.Desktop.Tests.Packaging
                 Assert.That(workflow, Does.Contain("release_download_url = f\"{server_url}/{repository}/releases/download/{tag}\""));
                 Assert.That(workflow, Does.Contain("\"url\": f\"{release_download_url}/{path.name}\""));
                 Assert.That(workflow, Does.Contain("ncipollo/release-action@v1"));
+                Assert.That(workflow, Does.Contain("name: Cotton Sync Desktop"));
                 Assert.That(workflow, Does.Contain("artifacts: \"release-assets/*\""));
                 Assert.That(workflow, Does.Contain("artifactErrorsFailBuild: true"));
                 Assert.That(workflow, Does.Contain("allowUpdates: true"));

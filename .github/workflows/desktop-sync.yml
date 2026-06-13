@@ -649,6 +649,23 @@ jobs:
           name: release-artifact-checksums
           path: release-assets
 
+      - name: Normalize desktop release asset names
+        shell: bash
+        run: |
+          set -euo pipefail
+          mv release-assets/cotton-sync-desktop-linux-x64-*.deb release-assets/CottonSync-Linux.deb
+          mv release-assets/cotton-sync-desktop-linux-x64-*.tar.gz release-assets/CottonSync-Linux.tar.gz
+          mv release-assets/cotton-sync-desktop-win-x64-*-setup.exe release-assets/CottonSync-Windows-Setup.exe
+          mv release-assets/cotton-sync-desktop-win-x64-*.tar.gz release-assets/CottonSync-Windows.tar.gz
+          mv release-assets/cotton-sync-desktop-win-x64-*.zip release-assets/CottonSync-Windows.zip
+          (
+            cd release-assets
+            find . -maxdepth 1 -type f ! -name '*.sha256' -print0 |
+              sort -z |
+              xargs -0 -r sha256sum
+          ) > release-assets/release-artifact-checksums.sha256
+          cat release-assets/release-artifact-checksums.sha256
+
       - name: Prepare desktop release metadata
         id: release_metadata
         shell: bash
@@ -720,10 +737,12 @@ jobs:
         with:
           tag: ${{ steps.release_metadata.outputs.tag }}
           commit: ${{ github.sha }}
-          name: Cotton Sync ${{ needs.linux.outputs.Version }}
+          name: Cotton Sync Desktop
           body: |
-            Cotton Sync desktop client build from `${{ github.ref_name }}`.
+            Cotton Sync desktop client build.
 
+            Version: `${{ needs.linux.outputs.Version }}`
+            Branch: `${{ github.ref_name }}`
             Commit: `${{ github.sha }}`
           artifacts: "release-assets/*"
           artifactErrorsFailBuild: true
