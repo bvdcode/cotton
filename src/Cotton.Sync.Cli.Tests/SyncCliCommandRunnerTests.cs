@@ -888,6 +888,7 @@ namespace Cotton.Sync.Cli.Tests
                 Assert.That(text, Does.Contain("Approval URL: https://cotton.test/oauth/app-code/0190a000-0000-7000-8000-000000000022"));
                 Assert.That(text, Does.Contain("Open this URL in your browser to approve sign-in."));
                 Assert.That(text, Does.Contain("Waiting for browser approval..."));
+                Assert.That(text, Does.Contain("Browser approval completed. Starting sync..."));
                 Assert.That(text, Does.Contain("Cotton Sync one-shot run"));
                 Assert.That(text, Does.Contain("Uploaded hello-browser.txt"));
                 Assert.That(entry, Is.Not.Null);

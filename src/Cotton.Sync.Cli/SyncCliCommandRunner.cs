@@ -257,6 +257,11 @@ namespace Cotton.Sync.Cli
                         .ConfigureAwait(false)
                     : await SyncCliRuntimeFactory.CreateAsync(options, httpClient, cancellationToken)
                         .ConfigureAwait(false);
+                if (options.UseBrowserLogin)
+                {
+                    await output.WriteLineAsync("Browser approval completed. Starting sync...").ConfigureAwait(false);
+                }
+
                 pass = await SyncCliRuntimeFactory.RunSinglePassAsync(runtime, cancellationToken)
                     .ConfigureAwait(false);
             }
