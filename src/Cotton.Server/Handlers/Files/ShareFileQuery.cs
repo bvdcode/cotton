@@ -7,6 +7,7 @@ using Cotton.Database.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Helpers;
+using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Abstractions;
@@ -48,6 +49,7 @@ namespace Cotton.Server.Handlers.Files
         ISharedFileDownloadNotifier _sharedFileDownloadNotifier,
         IHttpContextAccessor _httpContextAccessor,
         IStoragePipeline _storage,
+        SettingsProvider _settings,
         IDatabaseIntegrityVerifier _integrity,
         FileGraphIntegrityVerifier _fileGraphIntegrity) : IRequestHandler<ShareFileQuery, ShareFileResult>
     {
@@ -64,7 +66,7 @@ namespace Cotton.Server.Handlers.Files
 
             DateTime now = DateTime.UtcNow;
             bool isHead = HttpMethods.IsHead(request.HttpRequest.Method);
-            string baseAppUrl = BuildBaseAppUrl(request.HttpRequest);
+            string baseAppUrl = await _settings.GetPublicBaseUrlAsync(ct);
 
             if (viewMode.Value.IsHtml)
             {
@@ -253,11 +255,6 @@ namespace Cotton.Server.Handlers.Files
             bool isHtml = mode == "page";
             bool isInlineFile = mode == "inline";
             return (isHtml, isInlineFile);
-        }
-
-        private static string BuildBaseAppUrl(HttpRequest httpRequest)
-        {
-            return RequestBaseUrlHelpers.GetBaseUrl(httpRequest);
         }
 
         private static bool IsInlineMetadataRangeProbe(HttpRequest httpRequest, bool inline)

@@ -284,6 +284,11 @@ public class LayoutAndFilesTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
+        var publicBaseUrlRes = await _client.PatchAsJsonAsync(
+            "/api/v1/server/settings/public-base-url",
+            "https://public.example");
+        publicBaseUrlRes.EnsureSuccessStatusCode();
+
         var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
@@ -309,7 +314,8 @@ public class LayoutAndFilesTests : IntegrationTestBase
         var html = await sharedPageRes.Content.ReadAsStringAsync();
         Assert.That(html, Does.Contain("<meta property=\"og:image\""));
         Assert.That(html, Does.Contain("<meta name=\"twitter:image\""));
-        Assert.That(html, Does.Contain("/assets/images/social-preview.jpg"));
+        Assert.That(html, Does.Contain("https://public.example/assets/images/social-preview.jpg"));
+        Assert.That(html, Does.Contain("https://public.example/share/"));
     }
 
     private async Task<NodeDto> CreateNodeAsync(Guid parentId, string name)
