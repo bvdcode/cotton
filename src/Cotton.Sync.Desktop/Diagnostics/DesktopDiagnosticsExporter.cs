@@ -87,7 +87,17 @@ namespace Cotton.Sync.Desktop.Diagnostics
 
             ZipArchiveEntry entry = archive.CreateEntry(LogEntryPrefix + entryName);
             await using Stream entryStream = entry.Open();
-            string logContent = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+            string logContent;
+            await using (var sourceStream = new FileStream(
+                sourcePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete))
+            {
+                using var reader = new StreamReader(sourceStream, Encoding.UTF8);
+                logContent = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             string redactedLog = DesktopSecretRedactor.Redact(logContent);
             await entryStream.WriteAsync(Encoding.UTF8.GetBytes(redactedLog), cancellationToken).ConfigureAwait(false);
         }

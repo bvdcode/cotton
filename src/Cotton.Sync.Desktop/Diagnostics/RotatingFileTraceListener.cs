@@ -63,8 +63,44 @@ namespace Cotton.Sync.Desktop.Diagnostics
             lock (_gate)
             {
                 Directory.CreateDirectory(System.IO.Path.GetDirectoryName(_path) ?? ".");
-                RotateIfNeeded(bytes.LongLength);
-                File.AppendAllText(_path, message, Encoding.UTF8);
+                TryRotate(bytes.LongLength);
+                TryAppend(message);
+            }
+        }
+
+        private void TryAppend(string message)
+        {
+            try
+            {
+                using var stream = new FileStream(
+                    _path,
+                    FileMode.Append,
+                    FileAccess.Write,
+                    FileShare.ReadWrite | FileShare.Delete);
+                using var writer = new StreamWriter(stream, Encoding.UTF8);
+                writer.Write(message);
+            }
+            catch (IOException)
+            {
+                // Logging must never bring down the desktop client when a
+                // second process is exporting diagnostics or probing self-test.
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+
+        private void TryRotate(long incomingBytes)
+        {
+            try
+            {
+                RotateIfNeeded(incomingBytes);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
             }
         }
 

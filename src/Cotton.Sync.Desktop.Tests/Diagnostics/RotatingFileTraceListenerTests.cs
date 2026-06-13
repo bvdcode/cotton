@@ -71,6 +71,16 @@ namespace Cotton.Sync.Desktop.Tests.Diagnostics
             });
         }
 
+        [Test]
+        public void WriteLine_DoesNotThrowWhenAnotherProcessLocksLogFile()
+        {
+            string path = LogPath();
+            using FileStream lockedLog = File.Open(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            using var listener = new RotatingFileTraceListener(path, maxFileSizeBytes: 1024);
+
+            Assert.DoesNotThrow(() => listener.WriteLine("sync started"));
+        }
+
         private string LogPath()
         {
             return Path.Combine(_tempDirectory, "cotton-sync.log");
