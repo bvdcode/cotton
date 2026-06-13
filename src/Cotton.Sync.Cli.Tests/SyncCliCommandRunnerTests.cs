@@ -699,6 +699,69 @@ namespace Cotton.Sync.Cli.Tests
         }
 
         [Test]
+        public async Task SyncOnce_ReturnsSupportableFailureWhenSyncPassTimesOut()
+        {
+            string localRoot = Path.Combine(_tempDirectory, "local-timeout");
+            Directory.CreateDirectory(localRoot);
+            string databasePath = Path.Combine(_tempDirectory, "sync-timeout-state.db");
+            Guid remoteRootId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            string syncPairId = Guid.NewGuid().ToString("D");
+            var handler = new SyncOnceDirectoryServerHandler(
+                remoteRootId,
+                "unused",
+                throwTimeoutOnChildren: true);
+            using var httpClient = new HttpClient(handler);
+            using var output = new StringWriter();
+            using var error = new StringWriter();
+
+            int exitCode = await SyncCliCommandRunner.RunAsync(
+                [
+                    "sync-once",
+                    "--server",
+                    "cotton.test",
+                    "--username",
+                    "testuser",
+                    "--password",
+                    "testpassword",
+                    "--local-root",
+                    localRoot,
+                    "--remote-root",
+                    remoteRootId.ToString("D"),
+                    "--sync-pair",
+                    syncPairId,
+                    "--database",
+                    databasePath,
+                ],
+                output,
+                error,
+                httpClient);
+
+            string errorText = error.ToString();
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(1));
+                Assert.That(output.ToString(), Is.Empty);
+                Assert.That(errorText, Does.Contain("sync-once failed."));
+                Assert.That(errorText, Does.Contain("Server: https://cotton.test/"));
+                Assert.That(errorText, Does.Contain("Local root: " + localRoot));
+                Assert.That(errorText, Does.Contain("Remote root: " + remoteRootId.ToString("D")));
+                Assert.That(errorText, Does.Contain("Sync pair: " + syncPairId));
+                Assert.That(errorText, Does.Contain("Database: " + databasePath));
+                Assert.That(errorText, Does.Contain("Error: The request was canceled due to the configured HttpClient.Timeout of 100 seconds elapsing."));
+                Assert.That(errorText, Does.Not.Contain("Unhandled exception"));
+                Assert.That(errorText, Does.Not.Contain(" at "));
+                Assert.That(errorText, Does.Not.Contain(".cs:line"));
+                Assert.That(handler.Requests.Select(static request => request.PathAndQuery), Is.EqualTo(new[]
+                {
+                    "/api/v1/auth/login",
+                    "/api/v1/layouts/nodes/" + remoteRootId.ToString("D"),
+                    "/api/v1/layouts/nodes/" + remoteRootId.ToString("D") + "/children?page=1&pageSize=100&depth=0",
+                    "/api/v1/auth/logout?refreshToken=refresh-token",
+                }));
+            });
+        }
+
+        [Test]
         public async Task StateSummary_PrintsEntryCountAndCursor()
         {
             string databasePath = Path.Combine(_tempDirectory, "sync-state.db");

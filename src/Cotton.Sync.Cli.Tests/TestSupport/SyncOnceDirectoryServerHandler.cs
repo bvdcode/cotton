@@ -14,11 +14,16 @@ namespace Cotton.Sync.Cli.Tests.TestSupport
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
         private readonly string _expectedRelativePath;
         private readonly Guid _remoteRootId;
+        private readonly bool _throwTimeoutOnChildren;
 
-        public SyncOnceDirectoryServerHandler(Guid remoteRootId, string expectedRelativePath)
+        public SyncOnceDirectoryServerHandler(
+            Guid remoteRootId,
+            string expectedRelativePath,
+            bool throwTimeoutOnChildren = false)
         {
             _remoteRootId = remoteRootId;
             _expectedRelativePath = expectedRelativePath;
+            _throwTimeoutOnChildren = throwTimeoutOnChildren;
         }
 
         public Guid CreatedDirectoryId { get; } = Guid.Parse("55555555-5555-5555-5555-555555555555");
@@ -74,6 +79,11 @@ namespace Cotton.Sync.Cli.Tests.TestSupport
             if (request.Method == HttpMethod.Get
                 && request.PathAndQuery == "/api/v1/layouts/nodes/" + _remoteRootId.ToString("D") + "/children?page=1&pageSize=100&depth=0")
             {
+                if (_throwTimeoutOnChildren)
+                {
+                    throw new TaskCanceledException("The request was canceled due to the configured HttpClient.Timeout of 100 seconds elapsing.");
+                }
+
                 return Json(HttpStatusCode.OK, new NodeContentDto
                 {
                     Id = _remoteRootId,

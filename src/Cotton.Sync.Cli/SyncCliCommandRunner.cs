@@ -300,6 +300,8 @@ namespace Cotton.Sync.Cli
             return exception is CottonApiException
                 or HttpRequestException
                 or IOException
+                or TimeoutException
+                or TaskCanceledException
                 or UnauthorizedAccessException
                 or SyncPathValidationException;
         }
