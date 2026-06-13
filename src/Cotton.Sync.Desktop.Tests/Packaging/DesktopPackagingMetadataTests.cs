@@ -691,6 +691,34 @@ namespace Cotton.Sync.Desktop.Tests.Packaging
             });
         }
 
+        [Test]
+        public void DesktopWorkflow_PublishesGitHubReleaseAssets()
+        {
+            string workflow = GetDesktopWorkflow();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(workflow, Does.Contain("Publish Desktop Sync Release"));
+                Assert.That(workflow, Does.Contain("contents: write"));
+                Assert.That(workflow, Does.Contain("refs/heads/feature/desktop-sync-client"));
+                Assert.That(workflow, Does.Contain("tag=\"desktop-sync-latest\""));
+                Assert.That(workflow, Does.Contain("DESKTOP_TAG: desktop-sync-latest"));
+                Assert.That(workflow, Does.Contain("desktop-release-manifest.json"));
+                Assert.That(workflow, Does.Contain("\"schemaVersion\": 1"));
+                Assert.That(workflow, Does.Contain("\"product\": \"Cotton Sync\""));
+                Assert.That(workflow, Does.Contain("\"releaseUrl\": release_url"));
+                Assert.That(workflow, Does.Contain("\"url\": f\"{release_url}/download/{path.name}\""));
+                Assert.That(workflow, Does.Contain("ncipollo/release-action@v1"));
+                Assert.That(workflow, Does.Contain("artifacts: \"release-assets/*\""));
+                Assert.That(workflow, Does.Contain("artifactErrorsFailBuild: true"));
+                Assert.That(workflow, Does.Contain("allowUpdates: true"));
+                Assert.That(workflow, Does.Contain("replacesArtifacts: true"));
+                Assert.That(workflow, Does.Contain("makeLatest: false"));
+                Assert.That(workflow, Does.Contain("prerelease: ${{ steps.release_metadata.outputs.prerelease }}"));
+                Assert.That(workflow, Does.Contain("Expected 6 desktop release files before manifest"));
+            });
+        }
+
         private static string? GetProperty(XElement propertyGroup, string name)
         {
             return propertyGroup.Element(name)?.Value;
