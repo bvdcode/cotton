@@ -2896,6 +2896,39 @@ namespace Cotton.Sync.Desktop.Tests.ViewModels
         }
 
         [Test]
+        public async Task ExportDiagnosticsCommand_RunsDuringBackgroundSyncProgress()
+        {
+            Guid syncPairId = Guid.NewGuid();
+            var controller = new FakeDesktopShellController(CreateSignedInSnapshot(CreatePair(syncPairId, "Documents", "Syncing")))
+            {
+                ExportDiagnosticsPath = "/home/vadim/.local/share/Cotton Sync/diagnostics/cotton-sync-diagnostics.zip",
+            };
+            using ShellViewModel viewModel = CreateViewModel(controller);
+            await viewModel.InitializeAsync();
+            controller.ReportRunProgress(new DesktopRunProgressSnapshot(
+                syncPairId,
+                SyncRunProgressStage.ReconcilingFiles,
+                FilesCompleted: 10,
+                FilesTotal: 100,
+                CurrentPath: "Reports/report.txt",
+                StartedAtUtc: new DateTime(2026, 6, 6, 9, 0, 0, DateTimeKind.Utc),
+                IsCompleted: false,
+                OccurredAtUtc: new DateTime(2026, 6, 6, 9, 0, 5, DateTimeKind.Utc)));
+
+            await ExecuteAsync(viewModel.ExportDiagnosticsCommand);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(controller.ExportDiagnosticsCalls, Is.EqualTo(1));
+                Assert.That(viewModel.HasCurrentRunProgress, Is.True);
+                Assert.That(viewModel.CurrentRunProgressTitle, Is.EqualTo("Documents"));
+                Assert.That(viewModel.HasLastDiagnosticsBundlePath, Is.True);
+                Assert.That(viewModel.LastDiagnosticsBundlePath, Is.EqualTo(controller.ExportDiagnosticsPath));
+                Assert.That(viewModel.Activities.First().Kind, Is.EqualTo("Diagnostics"));
+            });
+        }
+
+        [Test]
         public async Task ExportDiagnosticsCommand_ReportsFailureAsActionRequired()
         {
             var controller = new FakeDesktopShellController(CreateSignedInSnapshot())
