@@ -86,6 +86,19 @@ namespace Cotton.Sync.Desktop.Tests.Composition
             });
         }
 
+        [Test]
+        public void DesktopHttpClientFactory_DoesNotBypassCertificateValidation()
+        {
+            MethodInfo? createHandler = typeof(DesktopHttpClientFactory).GetMethod(
+                "CreateHandler",
+                BindingFlags.Static | BindingFlags.NonPublic);
+
+            using var handler = (SocketsHttpHandler)(createHandler?.Invoke(null, null)
+                ?? throw new InvalidOperationException("CreateHandler was not found."));
+
+            Assert.That(handler.SslOptions.RemoteCertificateValidationCallback, Is.Null);
+        }
+
         private static object GetPrivateFieldValue(object instance, string fieldName)
         {
             FieldInfo? field = instance.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);

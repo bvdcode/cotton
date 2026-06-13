@@ -2896,6 +2896,34 @@ namespace Cotton.Sync.Desktop.Tests.ViewModels
         }
 
         [Test]
+        public async Task ExportDiagnosticsCommand_ReportsFailureAsActionRequired()
+        {
+            var controller = new FakeDesktopShellController(CreateSignedInSnapshot())
+            {
+                ExportDiagnosticsException = new IOException("There is not enough space on the disk."),
+            };
+            using ShellViewModel viewModel = CreateViewModel(controller);
+            await viewModel.InitializeAsync();
+
+            await ExecuteAsync(viewModel.ExportDiagnosticsCommand);
+
+            ActivityRowViewModel activity = viewModel.Activities.First();
+            Assert.Multiple(() =>
+            {
+                Assert.That(controller.ExportDiagnosticsCalls, Is.EqualTo(1));
+                Assert.That(viewModel.GlobalStatus, Is.EqualTo("Action required"));
+                Assert.That(viewModel.HasActionRequired, Is.True);
+                Assert.That(
+                    viewModel.ActionRequiredMessage,
+                    Is.EqualTo("This computer does not have enough free disk space for sync. Free space and retry."));
+                Assert.That(viewModel.HasLastDiagnosticsBundlePath, Is.False);
+                Assert.That(viewModel.OpenDiagnosticsBundleFolderCommand.CanExecute(null), Is.False);
+                Assert.That(activity.Kind, Is.EqualTo("Error"));
+                Assert.That(activity.Details, Is.EqualTo(viewModel.ActionRequiredMessage));
+            });
+        }
+
+        [Test]
         public async Task ConflictActivity_AddsConflictRow()
         {
             Guid syncPairId = Guid.NewGuid();
@@ -4554,6 +4582,8 @@ namespace Cotton.Sync.Desktop.Tests.ViewModels
 
             public string ExportDiagnosticsPath { get; set; } = "/tmp/cotton-sync-diagnostics.zip";
 
+            public Exception? ExportDiagnosticsException { get; set; }
+
             public string? OpenedFolderPath { get; private set; }
 
             public Exception? SignInException { get; set; }
@@ -4869,6 +4899,11 @@ namespace Cotton.Sync.Desktop.Tests.ViewModels
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 ExportDiagnosticsCalls++;
+                if (ExportDiagnosticsException is not null)
+                {
+                    throw ExportDiagnosticsException;
+                }
+
                 return Task.FromResult(ExportDiagnosticsPath);
             }
 
