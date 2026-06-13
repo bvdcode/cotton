@@ -666,6 +666,7 @@ namespace Cotton.Sync.Desktop.Tests.Packaging
                 Assert.That(desktopWorkflow, Does.Contain("cotton-sync-desktop-win-x64-${{ steps.gitversion.outputs.SemVer }}.tar.gz"));
                 Assert.That(desktopWorkflow, Does.Contain("cotton-sync-desktop-win-x64-${{ steps.gitversion.outputs.SemVer }}.zip"));
                 Assert.That(desktopWorkflow, Does.Contain("cotton-sync-desktop-win-x64-${{ steps.gitversion.outputs.SemVer }}-setup.exe"));
+                Assert.That(desktopWorkflow, Does.Contain("cotton-sync-cli-win-x64-${{ steps.gitversion.outputs.SemVer }}.zip"));
                 Assert.That(dockerWorkflow, Does.Not.Contain("cotton-sync-desktop-linux-x64"));
                 Assert.That(dockerWorkflow, Does.Not.Contain("cotton-sync-desktop-win-x64"));
                 Assert.That(dockerWorkflow, Does.Not.Contain("Cotton.Sync.Desktop/Packaging"));
@@ -685,9 +686,30 @@ namespace Cotton.Sync.Desktop.Tests.Packaging
                 Assert.That(workflow, Does.Contain("name: desktop-linux-x64"));
                 Assert.That(workflow, Does.Contain("name: desktop-win-x64"));
                 Assert.That(workflow, Does.Contain("name: desktop-windows-installer"));
+                Assert.That(workflow, Does.Contain("name: sync-cli-windows-x64"));
                 Assert.That(workflow, Does.Contain("release-artifact-checksums.sha256"));
                 Assert.That(workflow, Does.Contain("name: release-artifact-checksums"));
-                Assert.That(workflow, Does.Contain("Expected 5 desktop release assets"));
+                Assert.That(workflow, Does.Contain("Expected 6 desktop release assets"));
+            });
+        }
+
+        [Test]
+        public void DesktopWorkflow_PublishesSyncCliWindowsArtifact()
+        {
+            string workflow = GetDesktopWorkflow();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(workflow, Does.Contain("cli-windows:"));
+                Assert.That(workflow, Does.Contain("Sync CLI Windows Package Smoke"));
+                Assert.That(workflow, Does.Contain("dotnet publish src/Cotton.Sync.Cli/Cotton.Sync.Cli.csproj"));
+                Assert.That(workflow, Does.Contain("Cotton.Sync.Cli.exe"));
+                Assert.That(workflow, Does.Contain("auth-browser"));
+                Assert.That(workflow, Does.Contain("state-summary"));
+                Assert.That(workflow, Does.Contain("sync-once"));
+                Assert.That(workflow, Does.Contain("sync-soak"));
+                Assert.That(workflow, Does.Contain("cotton-sync-cli-win-x64-${{ steps.gitversion.outputs.SemVer }}.zip"));
+                Assert.That(workflow, Does.Contain("CottonSync-CLI-Windows.zip"));
             });
         }
 
@@ -702,13 +724,14 @@ namespace Cotton.Sync.Desktop.Tests.Packaging
                 Assert.That(workflow, Does.Contain("contents: write"));
                 Assert.That(workflow, Does.Contain("refs/heads/feature/desktop-sync-client"));
                 Assert.That(workflow, Does.Contain("Normalize desktop release asset names"));
+                Assert.That(workflow, Does.Contain("release-assets/CottonSync-CLI-Windows.zip"));
                 Assert.That(workflow, Does.Contain("release-assets/CottonSync-Windows-Setup.exe"));
                 Assert.That(workflow, Does.Contain("release-assets/CottonSync-Windows.zip"));
                 Assert.That(workflow, Does.Contain("release-assets/CottonSync-Linux.deb"));
                 Assert.That(workflow, Does.Contain("release-assets/CottonSync-Linux.tar.gz"));
                 Assert.That(workflow, Does.Contain("Delete stale desktop release assets"));
                 Assert.That(workflow, Does.Contain("gh release delete-asset \"$tag\" \"$asset_name\""));
-                Assert.That(workflow, Does.Contain("allowed_names=$'CottonSync-Linux.deb"));
+                Assert.That(workflow, Does.Contain("allowed_names=$'CottonSync-CLI-Windows.zip"));
                 Assert.That(workflow, Does.Contain("tag=\"desktop-sync-latest\""));
                 Assert.That(workflow, Does.Contain("DESKTOP_TAG: desktop-sync-latest"));
                 Assert.That(workflow, Does.Contain("desktop-release-manifest.json"));
@@ -725,7 +748,7 @@ namespace Cotton.Sync.Desktop.Tests.Packaging
                 Assert.That(workflow, Does.Contain("replacesArtifacts: true"));
                 Assert.That(workflow, Does.Contain("makeLatest: false"));
                 Assert.That(workflow, Does.Contain("prerelease: ${{ steps.release_metadata.outputs.prerelease }}"));
-                Assert.That(workflow, Does.Contain("Expected 6 desktop release files before manifest"));
+                Assert.That(workflow, Does.Contain("Expected 7 desktop release files before manifest"));
             });
         }
 
