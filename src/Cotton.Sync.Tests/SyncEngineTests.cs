@@ -1439,6 +1439,92 @@ namespace Cotton.Sync.Tests
         }
 
         [Test]
+        public async Task RunOnceAsync_CliInterruptedUploadCanBeRecoveredByDesktopSurface()
+        {
+            const string relativePath = "cli-interrupted-upload.txt";
+            LocalFileSnapshot local = LocalFile(relativePath, "cli-local-before-crash");
+            var remoteFiles = new FakeRemoteFileSynchronizer();
+            var durableStore = new SqliteSyncStateStore(_databasePath);
+            var cliCrashStore = new FailingUpsertStateStore(durableStore);
+            SyncEngine cliRun = new(
+                new FakeLocalFileScanner(local),
+                new FakeRemoteTreeCrawler(EmptyRemoteTree()),
+                remoteFiles,
+                cliCrashStore);
+
+            InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(
+                async () => await cliRun.RunOnceAsync(Pair()));
+
+            NodeFileManifestDto uploaded = remoteFiles.Uploads.Single().ReturnedFile;
+            SyncEngine desktopRecoveryRun = new(
+                new FakeLocalFileScanner(local),
+                new FakeRemoteTreeCrawler(RemoteTree(uploaded)),
+                remoteFiles,
+                new SqliteSyncStateStore(_databasePath));
+            SyncRunResult result = await desktopRecoveryRun.RunOnceAsync(Pair());
+
+            SyncStateEntry? entry = await durableStore.GetAsync("pair-a", relativePath);
+            Assert.Multiple(() =>
+            {
+                Assert.That(exception, Is.Not.Null);
+                Assert.That(result.Activities, Is.Empty);
+                Assert.That(remoteFiles.Uploads, Has.Count.EqualTo(1));
+                Assert.That(entry, Is.Not.Null);
+                Assert.That(entry!.LocalContentHash, Is.EqualTo(local.ContentHash));
+                Assert.That(entry.RemoteContentHash, Is.EqualTo(uploaded.ContentHash));
+                Assert.That(entry.RemoteFileId, Is.EqualTo(uploaded.Id));
+            });
+        }
+
+        [Test]
+        public async Task RunOnceAsync_DesktopInterruptedDownloadCanBeRecoveredByCliSurface()
+        {
+            const string relativePath = "desktop-interrupted-download.txt";
+            byte[] remoteContent = Encoding.UTF8.GetBytes("remote content before desktop crash");
+            NodeFileManifestDto remote = RemoteFile(relativePath, Hash(remoteContent), sizeBytes: remoteContent.Length);
+            var remoteFiles = new FakeRemoteFileSynchronizer();
+            remoteFiles.Downloads[remote.Id] = remoteContent;
+            var durableStore = new SqliteSyncStateStore(_databasePath);
+            var desktopCrashStore = new FailingUpsertStateStore(durableStore);
+            SyncEngine desktopRun = new(
+                new FakeLocalFileScanner(),
+                new FakeRemoteTreeCrawler(RemoteTree(remote)),
+                remoteFiles,
+                desktopCrashStore);
+
+            InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(
+                async () => await desktopRun.RunOnceAsync(Pair()));
+
+            LocalFileSnapshot downloadedLocal = new()
+            {
+                RelativePath = relativePath,
+                FullPath = Path.Combine(_root, relativePath),
+                ContentHash = remote.ContentHash,
+                SizeBytes = remoteContent.Length,
+                LastWriteUtc = File.GetLastWriteTimeUtc(Path.Combine(_root, relativePath)),
+            };
+            SyncEngine cliRecoveryRun = new(
+                new FakeLocalFileScanner(downloadedLocal),
+                new FakeRemoteTreeCrawler(RemoteTree(remote)),
+                remoteFiles,
+                new SqliteSyncStateStore(_databasePath));
+            SyncRunResult result = await cliRecoveryRun.RunOnceAsync(Pair());
+
+            SyncStateEntry? entry = await durableStore.GetAsync("pair-a", relativePath);
+            Assert.Multiple(() =>
+            {
+                Assert.That(exception, Is.Not.Null);
+                Assert.That(File.ReadAllBytes(Path.Combine(_root, relativePath)), Is.EqualTo(remoteContent));
+                Assert.That(result.Activities, Is.Empty);
+                Assert.That(remoteFiles.Uploads, Is.Empty);
+                Assert.That(entry, Is.Not.Null);
+                Assert.That(entry!.LocalContentHash, Is.EqualTo(remote.ContentHash));
+                Assert.That(entry.RemoteContentHash, Is.EqualTo(remote.ContentHash));
+                Assert.That(entry.RemoteFileId, Is.EqualTo(remote.Id));
+            });
+        }
+
+        [Test]
         public async Task RunOnceAsync_RecoversAfterTransientUploadFailureWithoutStaleBaseline()
         {
             string relativePath = "network-drop-upload.txt";
