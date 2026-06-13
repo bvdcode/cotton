@@ -6,18 +6,18 @@ namespace Cotton.Sync.Desktop.Shell
     internal class DesktopWindowLifecyclePolicy
     {
         private readonly bool _canHideToTray;
-        private readonly bool _hideAfterSessionRestore;
+        private readonly bool _startMinimizedToTray;
         private bool _isQuitRequested;
 
-        public DesktopWindowLifecyclePolicy(bool hideAfterSessionRestore, bool canHideToTray)
+        public DesktopWindowLifecyclePolicy(bool startMinimizedToTray, bool canHideToTray)
         {
             _canHideToTray = canHideToTray;
-            _hideAfterSessionRestore = hideAfterSessionRestore && canHideToTray;
+            _startMinimizedToTray = startMinimizedToTray && canHideToTray;
         }
 
-        public bool ShouldHideAfterSessionRestore(bool isDashboardVisible)
+        public bool ShouldHideAfterStartup()
         {
-            return _hideAfterSessionRestore && isDashboardVisible;
+            return _startMinimizedToTray;
         }
 
         public DesktopWindowCloseAction ResolveCloseAction()

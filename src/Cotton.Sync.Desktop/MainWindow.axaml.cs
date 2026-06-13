@@ -46,15 +46,15 @@ namespace Cotton.Sync.Desktop
 
         internal MainWindow(
             IDesktopShellController controller,
-            bool hideAfterSessionRestore = false,
+            bool startMinimizedToTray = false,
             bool canHideToTray = false,
             DesktopVisualSmokeScenario? visualSmokeScenario = null)
         {
             ArgumentNullException.ThrowIfNull(controller);
-            _lifecyclePolicy = new DesktopWindowLifecyclePolicy(hideAfterSessionRestore, canHideToTray);
+            _lifecyclePolicy = new DesktopWindowLifecyclePolicy(startMinimizedToTray, canHideToTray);
             _visualSmokeScenario = visualSmokeScenario;
             InitializeComponent();
-            bool notifyOnSessionRestore = !hideAfterSessionRestore && visualSmokeScenario is null;
+            bool notifyOnSessionRestore = !startMinimizedToTray && visualSmokeScenario is null;
             var viewModel = new ShellViewModel(
                 controller,
                 new WindowLocalFolderPicker(this),
@@ -70,7 +70,7 @@ namespace Cotton.Sync.Desktop
                 CenterOnCurrentScreen();
                 await viewModel.InitializeAsync().ConfigureAwait(true);
                 await viewModel.ApplyVisualSmokeScenarioAsync(_visualSmokeScenario).ConfigureAwait(true);
-                if (_lifecyclePolicy.ShouldHideAfterSessionRestore(viewModel.IsDashboardVisible))
+                if (_lifecyclePolicy.ShouldHideAfterStartup())
                 {
                     Hide();
                 }

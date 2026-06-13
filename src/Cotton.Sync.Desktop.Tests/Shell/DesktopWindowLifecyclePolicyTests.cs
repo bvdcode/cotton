@@ -11,7 +11,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
         public void ResolveCloseAction_HidesToTrayWhenTrayLifecycleIsAvailable()
         {
             var policy = new DesktopWindowLifecyclePolicy(
-                hideAfterSessionRestore: false,
+                startMinimizedToTray: false,
                 canHideToTray: true);
 
             DesktopWindowCloseAction action = policy.ResolveCloseAction();
@@ -23,7 +23,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
         public void ResolveCloseAction_ClosesWhenTrayLifecycleIsUnavailable()
         {
             var policy = new DesktopWindowLifecyclePolicy(
-                hideAfterSessionRestore: false,
+                startMinimizedToTray: false,
                 canHideToTray: false);
 
             DesktopWindowCloseAction action = policy.ResolveCloseAction();
@@ -35,7 +35,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
         public void ResolveCloseAction_ClosesAfterExplicitQuitRequest()
         {
             var policy = new DesktopWindowLifecyclePolicy(
-                hideAfterSessionRestore: false,
+                startMinimizedToTray: false,
                 canHideToTray: true);
 
             policy.RequestQuit();
@@ -45,20 +45,23 @@ namespace Cotton.Sync.Desktop.Tests.Shell
         }
 
         [Test]
-        public void ShouldHideAfterSessionRestore_RequiresTrayLifecycleAndRestoredDashboard()
+        public void ShouldHideAfterStartup_RequiresTrayLifecycleOnly()
         {
             var supportedPolicy = new DesktopWindowLifecyclePolicy(
-                hideAfterSessionRestore: true,
+                startMinimizedToTray: true,
                 canHideToTray: true);
             var unsupportedPolicy = new DesktopWindowLifecyclePolicy(
-                hideAfterSessionRestore: true,
+                startMinimizedToTray: true,
                 canHideToTray: false);
+            var normalPolicy = new DesktopWindowLifecyclePolicy(
+                startMinimizedToTray: false,
+                canHideToTray: true);
 
             Assert.Multiple(() =>
             {
-                Assert.That(supportedPolicy.ShouldHideAfterSessionRestore(isDashboardVisible: true), Is.True);
-                Assert.That(supportedPolicy.ShouldHideAfterSessionRestore(isDashboardVisible: false), Is.False);
-                Assert.That(unsupportedPolicy.ShouldHideAfterSessionRestore(isDashboardVisible: true), Is.False);
+                Assert.That(supportedPolicy.ShouldHideAfterStartup(), Is.True);
+                Assert.That(unsupportedPolicy.ShouldHideAfterStartup(), Is.False);
+                Assert.That(normalPolicy.ShouldHideAfterStartup(), Is.False);
             });
         }
     }
