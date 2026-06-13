@@ -1211,6 +1211,31 @@ namespace Cotton.Sync.Tests
         }
 
         [Test]
+        public async Task RunOnceAsync_UploadsMixedUnicodeNamedLocalFileWithNormalizedBaseline()
+        {
+            const string localRelativePath = "Mixed/Cafe\u0301-\u05d3\u05d5\u05d7-\ud83d\udcc4.txt";
+            const string normalizedRelativePath = "Mixed/Caf\u00e9-\u05d3\u05d5\u05d7-\ud83d\udcc4.txt";
+            LocalFileSnapshot local = LocalFile(localRelativePath, "mixed-unicode-local-content");
+            var scanner = new FakeLocalFileScanner(local);
+            var remoteFiles = new FakeRemoteFileSynchronizer();
+            SyncEngine engine = CreateEngine(scanner, EmptyRemoteTree(), remoteFiles, out SqliteSyncStateStore stateStore);
+
+            SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+            SyncStateEntry? entry = await stateStore.GetAsync("pair-a", normalizedRelativePath);
+            Assert.Multiple(() =>
+            {
+                Assert.That(remoteFiles.Uploads, Has.Count.EqualTo(1));
+                Assert.That(remoteFiles.Uploads[0].RelativePath, Is.EqualTo(normalizedRelativePath));
+                Assert.That(result.Activities.Select(x => x.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
+                Assert.That(entry, Is.Not.Null);
+                Assert.That(entry!.RelativePath, Is.EqualTo(normalizedRelativePath));
+                Assert.That(entry.LocalContentHash, Is.EqualTo(local.ContentHash));
+                Assert.That(entry.RemoteContentHash, Is.EqualTo(local.ContentHash));
+            });
+        }
+
+        [Test]
         public async Task RunOnceAsync_DownloadsUnicodeNamedRemoteFileAndStoresBaseline()
         {
             const string relativePath = "Документы/設計-remote.txt";
@@ -1313,6 +1338,37 @@ namespace Cotton.Sync.Tests
         }
 
         [Test]
+        public async Task RunOnceAsync_RecoversAfterTransientUploadFailureWithoutStaleBaseline()
+        {
+            string relativePath = "network-drop-upload.txt";
+            LocalFileSnapshot local = LocalFile(relativePath, "local");
+            var scanner = new FakeLocalFileScanner(local);
+            var remoteFiles = new FakeRemoteFileSynchronizer();
+            remoteFiles.UploadFailureRelativePaths.Add(relativePath);
+            var stateStore = new SqliteSyncStateStore(_databasePath);
+            SyncEngine firstRun = new(scanner, new FakeRemoteTreeCrawler(EmptyRemoteTree()), remoteFiles, stateStore);
+
+            Assert.ThrowsAsync<HttpRequestException>(
+                async () => await firstRun.RunOnceAsync(Pair()));
+
+            SyncStateEntry? failedEntry = await stateStore.GetAsync("pair-a", relativePath);
+            remoteFiles.UploadFailureRelativePaths.Clear();
+            SyncEngine secondRun = new(scanner, new FakeRemoteTreeCrawler(EmptyRemoteTree()), remoteFiles, stateStore);
+            SyncRunResult result = await secondRun.RunOnceAsync(Pair());
+
+            SyncStateEntry? recoveredEntry = await stateStore.GetAsync("pair-a", relativePath);
+            Assert.Multiple(() =>
+            {
+                Assert.That(failedEntry, Is.Null);
+                Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
+                Assert.That(remoteFiles.Uploads, Has.Count.EqualTo(1));
+                Assert.That(recoveredEntry, Is.Not.Null);
+                Assert.That(recoveredEntry!.LocalContentHash, Is.EqualTo(local.ContentHash));
+                Assert.That(recoveredEntry.RemoteContentHash, Is.EqualTo(local.ContentHash));
+            });
+        }
+
+        [Test]
         public async Task RunOnceAsync_DownloadsRemoteChangeWhenLocalBaselineIsUnchanged()
         {
             string relativePath = "changed-down.txt";
@@ -1370,6 +1426,46 @@ namespace Cotton.Sync.Tests
                 Assert.That(entry, Is.Not.Null);
                 Assert.That(entry!.LocalContentHash, Is.EqualTo(local.ContentHash));
                 Assert.That(entry.RemoteContentHash, Is.EqualTo(local.ContentHash));
+            });
+        }
+
+        [Test]
+        public async Task RunOnceAsync_RecoversAfterTransientDownloadFailureWithoutStalePartial()
+        {
+            string relativePath = "network-drop-download.txt";
+            byte[] remoteContent = Encoding.UTF8.GetBytes("remote");
+            NodeFileManifestDto remote = RemoteFile(relativePath, Hash(remoteContent), sizeBytes: remoteContent.Length);
+            var remoteFiles = new FakeRemoteFileSynchronizer();
+            remoteFiles.DownloadFailureIds.Add(remote.Id);
+            remoteFiles.Downloads[remote.Id] = remoteContent;
+            var stateStore = new SqliteSyncStateStore(_databasePath);
+            SyncEngine firstRun = new(
+                new FakeLocalFileScanner(),
+                new FakeRemoteTreeCrawler(RemoteTree(remote)),
+                remoteFiles,
+                stateStore);
+
+            Assert.ThrowsAsync<InvalidOperationException>(
+                async () => await firstRun.RunOnceAsync(Pair()));
+
+            string localPath = Path.Combine(_root, relativePath);
+            SyncStateEntry? failedEntry = await stateStore.GetAsync("pair-a", relativePath);
+            remoteFiles.DownloadFailureIds.Clear();
+            SyncEngine secondRun = new(
+                new FakeLocalFileScanner(),
+                new FakeRemoteTreeCrawler(RemoteTree(remote)),
+                remoteFiles,
+                stateStore);
+            SyncRunResult result = await secondRun.RunOnceAsync(Pair());
+
+            SyncStateEntry? recoveredEntry = await stateStore.GetAsync("pair-a", relativePath);
+            Assert.Multiple(() =>
+            {
+                Assert.That(failedEntry, Is.Null);
+                Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Downloaded }));
+                Assert.That(File.ReadAllText(localPath), Is.EqualTo("remote"));
+                Assert.That(recoveredEntry, Is.Not.Null);
+                Assert.That(recoveredEntry!.RemoteFileId, Is.EqualTo(remote.Id));
             });
         }
 
@@ -2106,6 +2202,50 @@ namespace Cotton.Sync.Tests
             });
         }
 
+        [Test]
+        public async Task RunOnceAsync_DoesNotLeakStateAcrossSyncPairsSharingDatabaseAndRelativePath()
+        {
+            LocalFileSnapshot pairALocal = LocalFile("shared.txt", "pair-a-local");
+            var remoteFiles = new FakeRemoteFileSynchronizer();
+            var stateStore = new SqliteSyncStateStore(_databasePath);
+            await stateStore.InitializeAsync();
+            var pairBRemoteFileId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+            await stateStore.UpsertAsync(new SyncStateEntry
+            {
+                SyncPairId = "pair-b",
+                RelativePath = "shared.txt",
+                Kind = SyncEntryKind.File,
+                LocalContentHash = "pair-b-local-hash",
+                RemoteContentHash = "pair-b-remote-hash",
+                RemoteFileId = pairBRemoteFileId,
+                RemoteNodeId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
+                RemoteETag = "pair-b-etag",
+                SyncedAtUtc = new DateTime(2026, 6, 2, 13, 1, 0, DateTimeKind.Utc),
+            });
+            SyncEngine engine = new(
+                new FakeLocalFileScanner(pairALocal),
+                new FakeRemoteTreeCrawler(EmptyRemoteTree()),
+                remoteFiles,
+                stateStore);
+
+            SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+            SyncStateEntry? pairAEntry = await stateStore.GetAsync("pair-a", "shared.txt");
+            SyncStateEntry? pairBEntry = await stateStore.GetAsync("pair-b", "shared.txt");
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
+                Assert.That(remoteFiles.Uploads, Has.Count.EqualTo(1));
+                Assert.That(remoteFiles.Uploads[0].RelativePath, Is.EqualTo("shared.txt"));
+                Assert.That(pairAEntry, Is.Not.Null);
+                Assert.That(pairAEntry!.LocalContentHash, Is.EqualTo(pairALocal.ContentHash));
+                Assert.That(pairBEntry, Is.Not.Null);
+                Assert.That(pairBEntry!.LocalContentHash, Is.EqualTo("pair-b-local-hash"));
+                Assert.That(pairBEntry.RemoteContentHash, Is.EqualTo("pair-b-remote-hash"));
+                Assert.That(pairBEntry.RemoteFileId, Is.EqualTo(pairBRemoteFileId));
+            });
+        }
+
         private SyncEngine CreateEngine(
             ILocalFileScanner scanner,
             RemoteTreeSnapshot remoteTree,
@@ -2747,6 +2887,8 @@ namespace Cotton.Sync.Tests
 
             public HashSet<Guid> UploadFailureIds { get; } = [];
 
+            public HashSet<string> UploadFailureRelativePaths { get; } = [];
+
             public HashSet<Guid> DownloadFailureIds { get; } = [];
 
             public HashSet<Guid> DeleteFailureIds { get; } = [];
@@ -2775,6 +2917,14 @@ namespace Cotton.Sync.Tests
                 if (existingRemoteFile is not null && UploadFailureIds.Contains(existingRemoteFile.Id))
                 {
                     throw new InvalidOperationException("Remote upload failed.");
+                }
+
+                if (UploadFailureRelativePaths.Contains(relativePath, StringComparer.OrdinalIgnoreCase))
+                {
+                    throw new HttpRequestException(
+                        "Remote upload failed.",
+                        inner: null,
+                        HttpStatusCode.ServiceUnavailable);
                 }
 
                 UploadInputContentHashes.Add(localFile.ContentHash);

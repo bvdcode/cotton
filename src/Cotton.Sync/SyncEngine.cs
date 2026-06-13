@@ -1959,7 +1959,7 @@ namespace Cotton.Sync
             var result = new Dictionary<string, T>(PathComparer);
             foreach (T entry in entries)
             {
-                string relativePath = pathSelector(entry);
+                string relativePath = SyncPath.Normalize(pathSelector(entry));
                 if (SyncPathIgnoreRules.ShouldIgnore(relativePath))
                 {
                     continue;
@@ -1971,10 +1971,30 @@ namespace Cotton.Sync
                     throw new SyncPathCollisionException(pathSelector(existing), relativePath);
                 }
 
+                NormalizeSnapshotPath(entry, relativePath);
                 result[key] = entry;
             }
 
             return result;
+        }
+
+        private static void NormalizeSnapshotPath<T>(T entry, string relativePath)
+        {
+            switch (entry)
+            {
+                case LocalDirectorySnapshot directory:
+                    directory.RelativePath = relativePath;
+                    break;
+                case LocalFileSnapshot file:
+                    file.RelativePath = relativePath;
+                    break;
+                case RemoteDirectorySnapshot directory:
+                    directory.RelativePath = relativePath;
+                    break;
+                case RemoteFileSnapshot file:
+                    file.RelativePath = relativePath;
+                    break;
+            }
         }
 
         private static void ThrowIfPathKindCollisions<TLeft, TRight>(

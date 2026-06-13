@@ -224,6 +224,16 @@ namespace Cotton.Sync.Tests
         }
 
         [Test]
+        public async Task RunOnceAsync_UploadsThreeThousandSmallFilesWithinSmokeTarget()
+        {
+            await VerifyInitialUploadFileSetCompletesWithinSmokeTargetAsync(
+                "performance-upload-small-3k",
+                fileCount: 3_000,
+                smokeTarget: TimeSpan.FromSeconds(90),
+                managedHeapDeltaTargetBytes: 256L * MiB);
+        }
+
+        [Test]
         [Explicit("Release-scale smoke; run manually before release or on dedicated Windows performance verification.")]
         public async Task RunOnceAsync_UploadsTenThousandSmallFilesWithinManualSmokeTarget()
         {
