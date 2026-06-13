@@ -676,6 +676,7 @@ jobs:
           repository = os.environ["GITHUB_REPOSITORY"]
           server_url = os.environ["GITHUB_SERVER_URL"]
           release_url = f"{server_url}/{repository}/releases/tag/{tag}"
+          release_download_url = f"{server_url}/{repository}/releases/download/{tag}"
           assets_dir = Path("release-assets")
           assets = []
           for path in sorted(assets_dir.iterdir(), key=lambda item: item.name):
@@ -687,7 +688,7 @@ jobs:
                       "name": path.name,
                       "sha256": digest,
                       "sizeBytes": path.stat().st_size,
-                      "url": f"{release_url}/download/{path.name}",
+                      "url": f"{release_download_url}/{path.name}",
                   }
               )
 

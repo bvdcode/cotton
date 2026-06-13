@@ -707,7 +707,8 @@ namespace Cotton.Sync.Desktop.Tests.Packaging
                 Assert.That(workflow, Does.Contain("\"schemaVersion\": 1"));
                 Assert.That(workflow, Does.Contain("\"product\": \"Cotton Sync\""));
                 Assert.That(workflow, Does.Contain("\"releaseUrl\": release_url"));
-                Assert.That(workflow, Does.Contain("\"url\": f\"{release_url}/download/{path.name}\""));
+                Assert.That(workflow, Does.Contain("release_download_url = f\"{server_url}/{repository}/releases/download/{tag}\""));
+                Assert.That(workflow, Does.Contain("\"url\": f\"{release_download_url}/{path.name}\""));
                 Assert.That(workflow, Does.Contain("ncipollo/release-action@v1"));
                 Assert.That(workflow, Does.Contain("artifacts: \"release-assets/*\""));
                 Assert.That(workflow, Does.Contain("artifactErrorsFailBuild: true"));
