@@ -262,7 +262,11 @@ namespace Cotton.Sync.Cli
                     await output.WriteLineAsync("Browser approval completed. Starting sync...").ConfigureAwait(false);
                 }
 
-                pass = await SyncCliRuntimeFactory.RunSinglePassAsync(runtime, cancellationToken)
+                pass = await SyncCliRuntimeFactory
+                    .RunSinglePassAsync(
+                        runtime,
+                        new SyncRunOptions { RunProgress = new SyncCliRunProgressWriter(output) },
+                        cancellationToken)
                     .ConfigureAwait(false);
             }
             catch (AppCodeBrowserSignInException exception)

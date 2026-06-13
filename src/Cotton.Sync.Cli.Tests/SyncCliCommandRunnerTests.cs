@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Cotton.Auth;
+using Cotton.Sync;
 using Cotton.Sync.Cli;
 using Cotton.Sync.Cli.Tests.TestSupport;
 using Cotton.Sync.State;
@@ -758,6 +759,39 @@ namespace Cotton.Sync.Cli.Tests
                     "/api/v1/layouts/nodes/" + remoteRootId.ToString("D") + "/children?page=1&pageSize=100&depth=0",
                     "/api/v1/auth/logout?refreshToken=refresh-token",
                 }));
+            });
+        }
+
+        [Test]
+        public void SyncCliRunProgressWriter_SuppressesShortRunsAndWritesLongRunProgress()
+        {
+            var output = new StringWriter();
+            var writer = new SyncCliRunProgressWriter(output);
+            DateTime now = DateTime.UtcNow;
+            writer.Report(new SyncRunProgress(
+                SyncRunProgressStage.ScanningLocal,
+                filesCompleted: 0,
+                filesTotal: null,
+                currentPath: null,
+                startedAtUtc: now));
+
+            writer.Report(new SyncRunProgress(
+                SyncRunProgressStage.ReconcilingFiles,
+                filesCompleted: 125,
+                filesTotal: 10_000,
+                currentPath: "phase511-10k-small-upload/file-00125.txt",
+                startedAtUtc: now.AddSeconds(-30),
+                bytesCompleted: 2_560,
+                bytesTotal: 200_000));
+
+            string text = output.ToString();
+            Assert.Multiple(() =>
+            {
+                Assert.That(text, Does.Contain("Progress: reconciling files 125/10000 files"));
+                Assert.That(text, Does.Contain("2.500 KiB/195.312 KiB"));
+                Assert.That(text, Does.Contain("current: phase511-10k-small-upload/file-00125.txt"));
+                Assert.That(text, Does.Contain("elapsed: 00:00:30"));
+                Assert.That(text, Does.Not.Contain("scanning local"));
             });
         }
 

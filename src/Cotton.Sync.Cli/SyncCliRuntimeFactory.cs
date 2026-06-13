@@ -118,8 +118,17 @@ namespace Cotton.Sync.Cli
             SyncCliRuntime runtime,
             CancellationToken cancellationToken)
         {
+            return await RunSinglePassAsync(runtime, options: null, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        public static async Task<SyncCliPassResult> RunSinglePassAsync(
+            SyncCliRuntime runtime,
+            SyncRunOptions? options,
+            CancellationToken cancellationToken)
+        {
             SyncRunResult result = await runtime.Engine
-                .RunOnceAsync(runtime.SyncPair, cancellationToken: cancellationToken)
+                .RunOnceAsync(runtime.SyncPair, options, cancellationToken)
                 .ConfigureAwait(false);
             IReadOnlyList<SyncStateEntry> entries = await runtime.StateStore
                 .LoadPairAsync(runtime.SyncPair.SyncPairId, cancellationToken)
