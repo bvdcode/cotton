@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton.Sync.App.Auth;
 using System.Diagnostics;
 
 namespace Cotton.Sync.Cli
@@ -14,7 +15,11 @@ namespace Cotton.Sync.Cli
             HttpClient? injectedHttpClient,
             CancellationToken cancellationToken)
         {
-            SyncCliConnectionOptions? options = SyncCliOptionsReader.ReadConnectionOptions(args, error, "sync-soak");
+            SyncCliConnectionOptions? options = SyncCliOptionsReader.ReadConnectionOptions(
+                args,
+                error,
+                "sync-soak",
+                allowBrowserLogin: true);
             if (options is null)
             {
                 return 2;
@@ -54,15 +59,35 @@ namespace Cotton.Sync.Cli
 
             using HttpClient? ownedHttpClient = injectedHttpClient is null ? new HttpClient() : null;
             HttpClient httpClient = injectedHttpClient ?? ownedHttpClient!;
-            await using SyncCliRuntime runtime = await SyncCliRuntimeFactory.CreateAsync(options, httpClient, cancellationToken)
-                .ConfigureAwait(false);
-            if (secondClientOptions is null)
+            try
             {
+                await using SyncCliRuntime runtime = await CreateRuntimeAsync(options, httpClient, output, cancellationToken)
+                    .ConfigureAwait(false);
+                if (secondClientOptions is null)
+                {
+                    return await RunLoopAsync(
+                        options,
+                        runtime,
+                        secondClientOptions,
+                        null,
+                        output,
+                        iterations,
+                        durationSeconds,
+                        intervalSeconds ?? 30,
+                        normalizedProbeFile,
+                        cancellationToken).ConfigureAwait(false);
+                }
+
+                await using SyncCliRuntime secondRuntime = await CreateRuntimeAsync(
+                    secondClientOptions,
+                    httpClient,
+                    output,
+                    cancellationToken).ConfigureAwait(false);
                 return await RunLoopAsync(
                     options,
                     runtime,
                     secondClientOptions,
-                    null,
+                    secondRuntime,
                     output,
                     iterations,
                     durationSeconds,
@@ -70,20 +95,31 @@ namespace Cotton.Sync.Cli
                     normalizedProbeFile,
                     cancellationToken).ConfigureAwait(false);
             }
+            catch (AppCodeBrowserSignInException exception)
+            {
+                await error.WriteLineAsync(exception.Message).ConfigureAwait(false);
+                if (!string.IsNullOrWhiteSpace(exception.Error))
+                {
+                    await error.WriteLineAsync("Error: " + exception.Error).ConfigureAwait(false);
+                }
 
-            await using SyncCliRuntime secondRuntime = await SyncCliRuntimeFactory.CreateAsync(secondClientOptions, httpClient, cancellationToken)
-                .ConfigureAwait(false);
-            return await RunLoopAsync(
-                options,
-                runtime,
-                secondClientOptions,
-                secondRuntime,
-                output,
-                iterations,
-                durationSeconds,
-                intervalSeconds ?? 30,
-                normalizedProbeFile,
-                cancellationToken).ConfigureAwait(false);
+                return 1;
+            }
+        }
+
+        private static Task<SyncCliRuntime> CreateRuntimeAsync(
+            SyncCliConnectionOptions options,
+            HttpClient httpClient,
+            TextWriter output,
+            CancellationToken cancellationToken)
+        {
+            return options.UseBrowserLogin
+                ? SyncCliRuntimeFactory.CreateWithBrowserAuthAsync(
+                    options,
+                    httpClient,
+                    new SyncCliApprovalUrlWriter(output),
+                    cancellationToken)
+                : SyncCliRuntimeFactory.CreateAsync(options, httpClient, cancellationToken);
         }
 
         private static async Task<int> RunLoopAsync(

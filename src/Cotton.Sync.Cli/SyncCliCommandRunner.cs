@@ -396,6 +396,12 @@ namespace Cotton.Sync.Cli
                       [--second-local-root <path> --second-sync-pair <id>
                        --second-database <path>]
                       [--two-factor-code <code>]
+                  sync-soak --server <url-or-host> --browser-login --local-root <path>
+                      --remote-root <node-id> --sync-pair <id> --database <path>
+                      (--iterations <count> | --duration-seconds <seconds>)
+                      [--interval-seconds <seconds>] [--probe-file <relative-path>]
+                      [--second-local-root <path> --second-sync-pair <id>
+                       --second-database <path>]
                       Repeats full-mirror sync passes for one-client or two-client
                       release soak validation.
                 """);

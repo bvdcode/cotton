@@ -1208,6 +1208,74 @@ namespace Cotton.Sync.Cli.Tests
         }
 
         [Test]
+        public async Task SyncSoak_WithBrowserLoginRunsOneIterationAndPrintsSummary()
+        {
+            string localRoot = Path.Combine(_tempDirectory, "soak-browser-local");
+            Directory.CreateDirectory(localRoot);
+            const string relativePath = "soak-browser.txt";
+            byte[] content = Encoding.UTF8.GetBytes("hello from browser sync soak");
+            string localFilePath = Path.Combine(localRoot, relativePath);
+            File.WriteAllBytes(localFilePath, content);
+            File.SetLastWriteTimeUtc(localFilePath, new DateTime(2026, 6, 4, 12, 0, 0, DateTimeKind.Utc));
+            string contentHash = Convert.ToHexStringLower(SHA256.HashData(content));
+            string databasePath = Path.Combine(_tempDirectory, "sync-soak-browser-state.db");
+            string syncPairId = Guid.NewGuid().ToString("D");
+            Guid remoteRootId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var handler = new SyncOnceUploadServerHandler(
+                remoteRootId,
+                relativePath,
+                contentHash,
+                content,
+                allowAppCodeAuth: true);
+            using var httpClient = new HttpClient(handler);
+            using var output = new StringWriter();
+            using var error = new StringWriter();
+
+            int exitCode = await SyncCliCommandRunner.RunAsync(
+                [
+                    "sync-soak",
+                    "--server",
+                    "cotton.test",
+                    "--browser-login",
+                    "--local-root",
+                    localRoot,
+                    "--remote-root",
+                    remoteRootId.ToString("D"),
+                    "--sync-pair",
+                    syncPairId,
+                    "--database",
+                    databasePath,
+                    "--iterations",
+                    "1",
+                ],
+                output,
+                error,
+                httpClient);
+
+            var store = new SqliteSyncStateStore(databasePath);
+            SyncStateEntry? entry = await store.GetAsync(syncPairId, relativePath);
+            string text = output.ToString();
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(0));
+                Assert.That(error.ToString(), Is.Empty);
+                Assert.That(text, Does.Contain("Approval URL: https://cotton.test/oauth/app-code/0190a000-0000-7000-8000-000000000022"));
+                Assert.That(text, Does.Contain("Open this URL in your browser to approve sign-in."));
+                Assert.That(text, Does.Contain("Waiting for browser approval..."));
+                Assert.That(text, Does.Contain("Cotton Sync soak run"));
+                Assert.That(text, Does.Contain("Iteration 1: activities=1, stateEntries=1"));
+                Assert.That(text, Does.Contain("Final convergence activities: 0"));
+                Assert.That(text, Does.Contain("Final state entries: 1"));
+                Assert.That(text, Does.Contain("Converged: yes"));
+                Assert.That(entry, Is.Not.Null);
+                Assert.That(entry!.LocalContentHash, Is.EqualTo(contentHash));
+                Assert.That(entry.RemoteContentHash, Is.EqualTo(contentHash));
+                Assert.That(handler.Requests.Select(static request => request.PathAndQuery), Does.Contain("/api/v1/oauth/app-code/start"));
+                Assert.That(handler.Requests.Select(static request => request.PathAndQuery), Does.Contain("/api/v1/oauth/app-code/poll"));
+            });
+        }
+
+        [Test]
         public async Task SyncSoak_ReturnsFailureAndSummaryWhenSyncPassThrows()
         {
             string localRoot = Path.Combine(_tempDirectory, "soak-failing-local");
