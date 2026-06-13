@@ -1187,6 +1187,53 @@ namespace Cotton.Sync.Tests
         }
 
         [Test]
+        public async Task RunOnceAsync_PreservesBothDirectoryRenamesWhenLocalAndRemoteRenameDiverge()
+        {
+            const string oldPath = "Projects";
+            const string localRenamePath = "Projects Local";
+            const string remoteRenamePath = "Projects Remote";
+            Directory.CreateDirectory(Path.Combine(_root, localRenamePath));
+            RemoteDirectorySnapshot baselineRemoteDirectory = RemoteDirectory(oldPath);
+            RemoteDirectorySnapshot remoteRenamedDirectory = RemoteDirectory(remoteRenamePath);
+            RemoteTreeSnapshot remoteTree = EmptyRemoteTree();
+            remoteTree.Directories.Add(remoteRenamedDirectory);
+            var scanner = new FakeLocalFileScanner
+            {
+                Directories =
+                {
+                    LocalDirectory(localRenamePath),
+                },
+            };
+            var remoteDirectories = new FakeRemoteDirectorySynchronizer();
+            SyncEngine engine = CreateEngine(
+                scanner,
+                remoteTree,
+                new FakeRemoteFileSynchronizer(),
+                out SqliteSyncStateStore stateStore,
+                remoteDirectories);
+            await InsertDirectoryBaselineAsync(stateStore, oldPath, baselineRemoteDirectory.Node);
+
+            SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+            IReadOnlyList<SyncStateEntry> state = await stateStore.LoadPairAsync("pair-a");
+            SyncStateEntry? oldEntry = await stateStore.GetAsync("pair-a", oldPath);
+            Assert.Multiple(() =>
+            {
+                Assert.That(Directory.Exists(Path.Combine(_root, oldPath)), Is.False);
+                Assert.That(Directory.Exists(Path.Combine(_root, localRenamePath)), Is.True);
+                Assert.That(Directory.Exists(Path.Combine(_root, remoteRenamePath)), Is.True);
+                Assert.That(remoteDirectories.Deletes, Is.Empty);
+                Assert.That(remoteDirectories.Creates.Select(call => call.Name), Is.EqualTo(new[] { localRenamePath }));
+                Assert.That(oldEntry, Is.Null);
+                Assert.That(state.Select(entry => entry.RelativePath), Is.EqualTo(new[] { localRenamePath, remoteRenamePath }));
+                Assert.That(state.Single(entry => entry.RelativePath == localRenamePath).RemoteNodeId, Is.EqualTo(remoteDirectories.Creates[0].ReturnedNode.Id));
+                Assert.That(state.Single(entry => entry.RelativePath == remoteRenamePath).RemoteNodeId, Is.EqualTo(remoteRenamedDirectory.Node.Id));
+                Assert.That(result.RequiresUserAction, Is.False);
+                Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded, SyncActivityKind.Downloaded }));
+            });
+        }
+
+        [Test]
         public async Task RunOnceAsync_UploadsUnicodeNamedLocalFileAndStoresBaseline()
         {
             const string relativePath = "Документы/設計-notes.txt";

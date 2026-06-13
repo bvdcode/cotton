@@ -122,6 +122,10 @@ namespace Cotton.Sync
                 localDirectoriesByPath,
                 remoteDirectoriesByPath,
                 directoryStateByPath);
+            bool hasStaleDirectoryState = HasStaleDirectoryState(
+                localDirectoriesByPath,
+                remoteDirectoriesByPath,
+                directoryStateByPath);
             DirectoryContentIndex localDirectoryContentIndex = hasLocalDirectoryDeleteCandidates
                 ? DirectoryContentIndex.Create(localDirectoriesByPath.Keys, localByPath.Keys)
                 : DirectoryContentIndex.Empty;
@@ -140,7 +144,7 @@ namespace Cotton.Sync
                 localDirectoryContentIndex,
                 remoteDirectoryContentIndex);
 
-            if (hasLocalDirectoryDeleteCandidates || hasRemoteDirectoryDeleteCandidates)
+            if (hasLocalDirectoryDeleteCandidates || hasRemoteDirectoryDeleteCandidates || hasStaleDirectoryState)
             {
                 await ReconcileDirectoryDeletesAsync(
                     syncPair,
@@ -1839,6 +1843,22 @@ namespace Cotton.Sync
                 }
 
                 if (!localDirectoriesByPath.ContainsKey(state.Key) && remoteDirectoriesByPath.ContainsKey(state.Key))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasStaleDirectoryState(
+            IReadOnlyDictionary<string, LocalDirectorySnapshot> localDirectoriesByPath,
+            IReadOnlyDictionary<string, RemoteDirectorySnapshot> remoteDirectoriesByPath,
+            IReadOnlyDictionary<string, SyncStateEntry> directoryStateByPath)
+        {
+            foreach (KeyValuePair<string, SyncStateEntry> state in directoryStateByPath)
+            {
+                if (!localDirectoriesByPath.ContainsKey(state.Key) && !remoteDirectoriesByPath.ContainsKey(state.Key))
                 {
                     return true;
                 }
