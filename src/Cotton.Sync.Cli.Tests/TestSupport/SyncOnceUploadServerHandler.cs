@@ -19,9 +19,13 @@ namespace Cotton.Sync.Cli.Tests.TestSupport
         private readonly string _expectedRelativePath;
         private readonly bool _exposeCreatedFileInChildren;
         private readonly bool _allowAppCodeAuth;
+        private readonly bool _expireAccessTokenBeforeChunkExists;
         private readonly Guid _ownerId = Guid.Parse("22222222-2222-2222-2222-222222222222");
         private readonly Guid _remoteRootId;
+        private int _appCodeStartNetworkFailuresRemaining;
         private bool _fileCreated;
+        private bool _chunkExistsExpiredOnce;
+        private bool _refreshed;
 
         public SyncOnceUploadServerHandler(
             Guid remoteRootId,
@@ -29,7 +33,9 @@ namespace Cotton.Sync.Cli.Tests.TestSupport
             string expectedContentHash,
             byte[] expectedContent,
             bool exposeCreatedFileInChildren = true,
-            bool allowAppCodeAuth = false)
+            bool allowAppCodeAuth = false,
+            bool expireAccessTokenBeforeChunkExists = false,
+            int appCodeStartNetworkFailuresBeforeSuccess = 0)
         {
             _remoteRootId = remoteRootId;
             _expectedRelativePath = expectedRelativePath;
@@ -37,6 +43,8 @@ namespace Cotton.Sync.Cli.Tests.TestSupport
             _expectedContent = expectedContent;
             _exposeCreatedFileInChildren = exposeCreatedFileInChildren;
             _allowAppCodeAuth = allowAppCodeAuth;
+            _expireAccessTokenBeforeChunkExists = expireAccessTokenBeforeChunkExists;
+            _appCodeStartNetworkFailuresRemaining = appCodeStartNetworkFailuresBeforeSuccess;
         }
 
         public Guid CreatedFileId { get; } = Guid.Parse("33333333-3333-3333-3333-333333333333");
@@ -73,10 +81,26 @@ namespace Cotton.Sync.Cli.Tests.TestSupport
                 });
             }
 
+            if (request.Method == HttpMethod.Post && request.PathAndQuery == "/api/v1/auth/refresh?refreshToken=refresh-token")
+            {
+                _refreshed = true;
+                return Json(HttpStatusCode.OK, new TokenPairDto
+                {
+                    AccessToken = "refreshed-access-token",
+                    RefreshToken = "refreshed-refresh-token",
+                });
+            }
+
             if (_allowAppCodeAuth
                 && request.Method == HttpMethod.Post
                 && request.PathAndQuery == "/api/v1/oauth/app-code/start")
             {
+                if (_appCodeStartNetworkFailuresRemaining > 0)
+                {
+                    _appCodeStartNetworkFailuresRemaining--;
+                    throw new HttpRequestException("Firewall blocked app-code start.");
+                }
+
                 return Json(HttpStatusCode.OK, new
                 {
                     approvalId = "0190a000-0000-7000-8000-000000000022",
@@ -116,7 +140,22 @@ namespace Cotton.Sync.Cli.Tests.TestSupport
                 return new HttpResponseMessage(HttpStatusCode.NoContent);
             }
 
-            Assert.That(request.AuthorizationParameter, Is.EqualTo("access-token"));
+            if (request.Method == HttpMethod.Post && request.PathAndQuery == "/api/v1/auth/logout?refreshToken=refreshed-refresh-token")
+            {
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            }
+
+            if (_expireAccessTokenBeforeChunkExists
+                && !_chunkExistsExpiredOnce
+                && request.Method == HttpMethod.Get
+                && request.PathAndQuery == "/api/v1/chunks/" + _expectedContentHash + "/exists")
+            {
+                Assert.That(request.AuthorizationParameter, Is.EqualTo("access-token"));
+                _chunkExistsExpiredOnce = true;
+                return Text(HttpStatusCode.Unauthorized, "expired access token");
+            }
+
+            Assert.That(request.AuthorizationParameter, Is.EqualTo(_refreshed ? "refreshed-access-token" : "access-token"));
 
             if (request.Method == HttpMethod.Get && request.PathAndQuery == "/api/v1/layouts/nodes/" + _remoteRootId.ToString("D"))
             {

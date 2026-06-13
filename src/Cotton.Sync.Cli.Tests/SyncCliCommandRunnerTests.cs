@@ -738,10 +738,14 @@ namespace Cotton.Sync.Cli.Tests
                 httpClient);
 
             string errorText = error.ToString();
+            string outputText = output.ToString();
             Assert.Multiple(() =>
             {
                 Assert.That(exitCode, Is.EqualTo(1));
-                Assert.That(output.ToString(), Is.Empty);
+                Assert.That(outputText, Does.Contain("Transient sync failure: The request was canceled due to the configured HttpClient.Timeout of 100 seconds elapsing."));
+                Assert.That(outputText, Does.Contain("Retrying attempt 2 of 3 after 1s."));
+                Assert.That(outputText, Does.Contain("Retrying attempt 3 of 3 after 2s."));
+                Assert.That(outputText, Does.Not.Contain("Cotton Sync one-shot run"));
                 Assert.That(errorText, Does.Contain("sync-once failed."));
                 Assert.That(errorText, Does.Contain("Server: https://cotton.test/"));
                 Assert.That(errorText, Does.Contain("Local root: " + localRoot));
@@ -757,6 +761,77 @@ namespace Cotton.Sync.Cli.Tests
                     "/api/v1/auth/login",
                     "/api/v1/layouts/nodes/" + remoteRootId.ToString("D"),
                     "/api/v1/layouts/nodes/" + remoteRootId.ToString("D") + "/children?page=1&pageSize=100&depth=0",
+                    "/api/v1/layouts/nodes/" + remoteRootId.ToString("D"),
+                    "/api/v1/layouts/nodes/" + remoteRootId.ToString("D") + "/children?page=1&pageSize=100&depth=0",
+                    "/api/v1/layouts/nodes/" + remoteRootId.ToString("D"),
+                    "/api/v1/layouts/nodes/" + remoteRootId.ToString("D") + "/children?page=1&pageSize=100&depth=0",
+                    "/api/v1/auth/logout?refreshToken=refresh-token",
+                }));
+            });
+        }
+
+        [Test]
+        public async Task SyncOnce_RetriesTransientTimeoutAndPersistsDirectoryBaseline()
+        {
+            string localRoot = Path.Combine(_tempDirectory, "local-transient-timeout");
+            const string relativePath = "Projects";
+            Directory.CreateDirectory(Path.Combine(localRoot, relativePath));
+            string databasePath = Path.Combine(_tempDirectory, "sync-transient-timeout-state.db");
+            string syncPairId = Guid.NewGuid().ToString("D");
+            Guid remoteRootId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var handler = new SyncOnceDirectoryServerHandler(
+                remoteRootId,
+                relativePath,
+                childrenTimeoutsBeforeSuccess: 1);
+            using var httpClient = new HttpClient(handler);
+            using var output = new StringWriter();
+            using var error = new StringWriter();
+
+            int exitCode = await SyncCliCommandRunner.RunAsync(
+                [
+                    "sync-once",
+                    "--server",
+                    "cotton.test",
+                    "--username",
+                    "testuser",
+                    "--password",
+                    "testpassword",
+                    "--local-root",
+                    localRoot,
+                    "--remote-root",
+                    remoteRootId.ToString("D"),
+                    "--sync-pair",
+                    syncPairId,
+                    "--database",
+                    databasePath,
+                ],
+                output,
+                error,
+                httpClient);
+
+            var store = new SqliteSyncStateStore(databasePath);
+            SyncStateEntry? entry = await store.GetAsync(syncPairId, relativePath);
+            string text = output.ToString();
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(0));
+                Assert.That(error.ToString(), Is.Empty);
+                Assert.That(text, Does.Contain("Transient sync failure: The request was canceled due to the configured HttpClient.Timeout of 100 seconds elapsing."));
+                Assert.That(text, Does.Contain("Retrying attempt 2 of 3 after 1s."));
+                Assert.That(text, Does.Contain("Cotton Sync one-shot run"));
+                Assert.That(text, Does.Contain("Uploaded Projects - Created remote folder."));
+                Assert.That(text, Does.Contain("State entries: 1"));
+                Assert.That(entry, Is.Not.Null);
+                Assert.That(entry!.Kind, Is.EqualTo(SyncEntryKind.Directory));
+                Assert.That(entry.RemoteNodeId, Is.EqualTo(handler.CreatedDirectoryId));
+                Assert.That(handler.Requests.Select(static request => request.PathAndQuery), Is.EqualTo(new[]
+                {
+                    "/api/v1/auth/login",
+                    "/api/v1/layouts/nodes/" + remoteRootId.ToString("D"),
+                    "/api/v1/layouts/nodes/" + remoteRootId.ToString("D") + "/children?page=1&pageSize=100&depth=0",
+                    "/api/v1/layouts/nodes/" + remoteRootId.ToString("D"),
+                    "/api/v1/layouts/nodes/" + remoteRootId.ToString("D") + "/children?page=1&pageSize=100&depth=0",
+                    "/api/v1/layouts/nodes",
                     "/api/v1/auth/logout?refreshToken=refresh-token",
                 }));
             });
@@ -934,6 +1009,82 @@ namespace Cotton.Sync.Cli.Tests
         }
 
         [Test]
+        public async Task SyncOnce_RefreshesTokenAndRetriesWhenAuthorizedSyncRequestReturnsUnauthorized()
+        {
+            string localRoot = Path.Combine(_tempDirectory, "local-refresh");
+            Directory.CreateDirectory(localRoot);
+            const string relativePath = "refresh.txt";
+            byte[] content = Encoding.UTF8.GetBytes("hello after refresh");
+            string localFilePath = Path.Combine(localRoot, relativePath);
+            File.WriteAllBytes(localFilePath, content);
+            string contentHash = Convert.ToHexStringLower(SHA256.HashData(content));
+            string databasePath = Path.Combine(_tempDirectory, "sync-state-refresh.db");
+            string syncPairId = Guid.NewGuid().ToString("D");
+            Guid remoteRootId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var handler = new SyncOnceUploadServerHandler(
+                remoteRootId,
+                relativePath,
+                contentHash,
+                content,
+                expireAccessTokenBeforeChunkExists: true);
+            using var httpClient = new HttpClient(handler);
+            using var output = new StringWriter();
+            using var error = new StringWriter();
+
+            int exitCode = await SyncCliCommandRunner.RunAsync(
+                [
+                    "sync-once",
+                    "--server",
+                    "cotton.test",
+                    "--username",
+                    "testuser",
+                    "--password",
+                    "testpassword",
+                    "--local-root",
+                    localRoot,
+                    "--remote-root",
+                    remoteRootId.ToString("D"),
+                    "--sync-pair",
+                    syncPairId,
+                    "--database",
+                    databasePath,
+                ],
+                output,
+                error,
+                httpClient);
+
+            var store = new SqliteSyncStateStore(databasePath);
+            SyncStateEntry? entry = await store.GetAsync(syncPairId, relativePath);
+            string chunkExistsPath = "/api/v1/chunks/" + contentHash + "/exists";
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(0));
+                Assert.That(error.ToString(), Is.Empty);
+                Assert.That(output.ToString(), Does.Contain("Uploaded refresh.txt"));
+                Assert.That(entry, Is.Not.Null);
+                Assert.That(entry!.LocalContentHash, Is.EqualTo(contentHash));
+                Assert.That(handler.Requests.Select(static request => request.PathAndQuery), Is.EqualTo(new[]
+                {
+                    "/api/v1/auth/login",
+                    "/api/v1/layouts/nodes/11111111-1111-1111-1111-111111111111",
+                    "/api/v1/layouts/nodes/11111111-1111-1111-1111-111111111111/children?page=1&pageSize=100&depth=0",
+                    "/api/v1/settings",
+                    chunkExistsPath,
+                    "/api/v1/auth/refresh?refreshToken=refresh-token",
+                    chunkExistsPath,
+                    "/api/v1/chunks/raw?hash=" + contentHash,
+                    "/api/v1/files/from-chunks",
+                    "/api/v1/auth/logout?refreshToken=refreshed-refresh-token",
+                }));
+                Assert.That(
+                    handler.Requests
+                        .Where(request => request.PathAndQuery == chunkExistsPath)
+                        .Select(static request => request.AuthorizationParameter),
+                    Is.EqualTo(new[] { "access-token", "refreshed-access-token" }));
+            });
+        }
+
+        [Test]
         public async Task SyncOnce_WithBrowserLoginUploadsLocalFileAndPersistsBaseline()
         {
             string localRoot = Path.Combine(_tempDirectory, "local-browser");
@@ -992,6 +1143,82 @@ namespace Cotton.Sync.Cli.Tests
                 Assert.That(entry!.LocalContentHash, Is.EqualTo(contentHash));
                 Assert.That(handler.Requests.Select(static request => request.PathAndQuery), Is.EqualTo(new[]
                 {
+                    "/api/v1/oauth/app-code/start",
+                    "/api/v1/oauth/app-code/poll",
+                    "/api/v1/auth/me",
+                    "/api/v1/layouts/nodes/11111111-1111-1111-1111-111111111111",
+                    "/api/v1/layouts/nodes/11111111-1111-1111-1111-111111111111/children?page=1&pageSize=100&depth=0",
+                    "/api/v1/settings",
+                    "/api/v1/chunks/" + contentHash + "/exists",
+                    "/api/v1/chunks/raw?hash=" + contentHash,
+                    "/api/v1/files/from-chunks",
+                    "/api/v1/auth/logout?refreshToken=refresh-token",
+                }));
+            });
+        }
+
+        [Test]
+        public async Task SyncOnce_WithBrowserLoginRetriesNetworkUnavailableStartAndUploadsLocalFile()
+        {
+            string localRoot = Path.Combine(_tempDirectory, "local-browser-network-retry");
+            Directory.CreateDirectory(localRoot);
+            const string relativePath = "hello-browser-retry.txt";
+            byte[] content = Encoding.UTF8.GetBytes("hello after browser network retry");
+            string localFilePath = Path.Combine(localRoot, relativePath);
+            File.WriteAllBytes(localFilePath, content);
+            string contentHash = Convert.ToHexStringLower(SHA256.HashData(content));
+            string databasePath = Path.Combine(_tempDirectory, "sync-state-browser-network-retry.db");
+            string syncPairId = Guid.NewGuid().ToString("D");
+            Guid remoteRootId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var handler = new SyncOnceUploadServerHandler(
+                remoteRootId,
+                relativePath,
+                contentHash,
+                content,
+                allowAppCodeAuth: true,
+                appCodeStartNetworkFailuresBeforeSuccess: 3);
+            using var httpClient = new HttpClient(handler);
+            using var output = new StringWriter();
+            using var error = new StringWriter();
+
+            int exitCode = await SyncCliCommandRunner.RunAsync(
+                [
+                    "sync-once",
+                    "--server",
+                    "cotton.test",
+                    "--browser-login",
+                    "--local-root",
+                    localRoot,
+                    "--remote-root",
+                    remoteRootId.ToString("D"),
+                    "--sync-pair",
+                    syncPairId,
+                    "--database",
+                    databasePath,
+                ],
+                output,
+                error,
+                httpClient);
+
+            var store = new SqliteSyncStateStore(databasePath);
+            SyncStateEntry? entry = await store.GetAsync(syncPairId, relativePath);
+            string text = output.ToString();
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(0));
+                Assert.That(error.ToString(), Is.Empty);
+                Assert.That(text, Does.Contain("Transient sync failure: Browser sign-in could not contact the server. Check network or firewall access and retry."));
+                Assert.That(text, Does.Contain("Retrying attempt 2 of 3 after 1s."));
+                Assert.That(text, Does.Contain("Approval URL: https://cotton.test/oauth/app-code/0190a000-0000-7000-8000-000000000022"));
+                Assert.That(text, Does.Contain("Browser approval completed. Starting sync..."));
+                Assert.That(text, Does.Contain("Uploaded hello-browser-retry.txt"));
+                Assert.That(entry, Is.Not.Null);
+                Assert.That(entry!.LocalContentHash, Is.EqualTo(contentHash));
+                Assert.That(handler.Requests.Select(static request => request.PathAndQuery), Is.EqualTo(new[]
+                {
+                    "/api/v1/oauth/app-code/start",
+                    "/api/v1/oauth/app-code/start",
+                    "/api/v1/oauth/app-code/start",
                     "/api/v1/oauth/app-code/start",
                     "/api/v1/oauth/app-code/poll",
                     "/api/v1/auth/me",

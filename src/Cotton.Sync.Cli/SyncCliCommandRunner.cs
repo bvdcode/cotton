@@ -18,6 +18,9 @@ namespace Cotton.Sync.Cli
         private const string StateSummaryCommand = "state-summary";
         private const string SyncOnceCommand = "sync-once";
         private const string SyncSoakCommand = "sync-soak";
+        private const int SyncOnceMaxTransientAttempts = 3;
+        private static readonly TimeSpan SyncOnceInitialRetryDelay = TimeSpan.FromSeconds(1);
+        private static readonly TimeSpan SyncOnceMaxRetryDelay = TimeSpan.FromSeconds(15);
 
         /// <summary>
         /// Runs a CLI command and returns the process exit code.
@@ -244,30 +247,12 @@ namespace Cotton.Sync.Cli
 
             using HttpClient? ownedHttpClient = injectedHttpClient is null ? new HttpClient() : null;
             HttpClient httpClient = injectedHttpClient ?? ownedHttpClient!;
-            SyncCliPassResult pass;
             try
             {
-                await using SyncCliRuntime runtime = options.UseBrowserLogin
-                    ? await SyncCliRuntimeFactory
-                        .CreateWithBrowserAuthAsync(
-                            options,
-                            httpClient,
-                            new SyncCliApprovalUrlWriter(output),
-                            cancellationToken)
-                        .ConfigureAwait(false)
-                    : await SyncCliRuntimeFactory.CreateAsync(options, httpClient, cancellationToken)
-                        .ConfigureAwait(false);
-                if (options.UseBrowserLogin)
-                {
-                    await output.WriteLineAsync("Browser approval completed. Starting sync...").ConfigureAwait(false);
-                }
-
-                pass = await SyncCliRuntimeFactory
-                    .RunSinglePassAsync(
-                        runtime,
-                        new SyncRunOptions { RunProgress = new SyncCliRunProgressWriter(output) },
-                        cancellationToken)
+                SyncCliPassResult pass = await RunSyncOnceWithRetryAsync(options, output, httpClient, cancellationToken)
                     .ConfigureAwait(false);
+                await WriteSyncOnceSuccessAsync(output, options, pass).ConfigureAwait(false);
+                return 0;
             }
             catch (AppCodeBrowserSignInException exception)
             {
@@ -284,7 +269,127 @@ namespace Cotton.Sync.Cli
                 await WriteSyncOnceFailureAsync(error, options, exception).ConfigureAwait(false);
                 return 1;
             }
+        }
 
+        private static async Task<SyncCliPassResult> RunSyncOnceWithRetryAsync(
+            SyncCliConnectionOptions options,
+            TextWriter output,
+            HttpClient httpClient,
+            CancellationToken cancellationToken)
+        {
+            await using SyncCliRuntime runtime = await CreateSyncCliRuntimeWithRetryAsync(
+                    options,
+                    output,
+                    httpClient,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (options.UseBrowserLogin)
+            {
+                await output.WriteLineAsync("Browser approval completed. Starting sync...").ConfigureAwait(false);
+            }
+
+            return await RunSyncOncePassWithRetryAsync(runtime, output, cancellationToken).ConfigureAwait(false);
+        }
+
+        private static async Task<SyncCliRuntime> CreateSyncCliRuntimeWithRetryAsync(
+            SyncCliConnectionOptions options,
+            TextWriter output,
+            HttpClient httpClient,
+            CancellationToken cancellationToken)
+        {
+            for (int attempt = 1; attempt <= SyncOnceMaxTransientAttempts; attempt++)
+            {
+                try
+                {
+                    return options.UseBrowserLogin
+                        ? await SyncCliRuntimeFactory
+                            .CreateWithBrowserAuthAsync(
+                                options,
+                                httpClient,
+                                new SyncCliApprovalUrlWriter(output),
+                                cancellationToken)
+                            .ConfigureAwait(false)
+                        : await SyncCliRuntimeFactory.CreateAsync(options, httpClient, cancellationToken)
+                            .ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (AppCodeBrowserSignInException exception)
+                    when (IsRetriableBrowserSignInException(exception) && attempt < SyncOnceMaxTransientAttempts)
+                {
+                    await WriteSyncOnceRetryAsync(output, exception, attempt, cancellationToken).ConfigureAwait(false);
+                }
+                catch (AppCodeBrowserSignInException)
+                {
+                    throw;
+                }
+                catch (Exception exception) when (IsRetriableSyncOnceException(exception) && attempt < SyncOnceMaxTransientAttempts)
+                {
+                    await WriteSyncOnceRetryAsync(output, exception, attempt, cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            throw new InvalidOperationException("sync-once runtime retry attempts were exhausted.");
+        }
+
+        private static async Task<SyncCliPassResult> RunSyncOncePassWithRetryAsync(
+            SyncCliRuntime runtime,
+            TextWriter output,
+            CancellationToken cancellationToken)
+        {
+            for (int attempt = 1; attempt <= SyncOnceMaxTransientAttempts; attempt++)
+            {
+                try
+                {
+                    return await SyncCliRuntimeFactory
+                        .RunSinglePassAsync(
+                            runtime,
+                            new SyncRunOptions { RunProgress = new SyncCliRunProgressWriter(output) },
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception exception) when (IsRetriableSyncOnceException(exception) && attempt < SyncOnceMaxTransientAttempts)
+                {
+                    await WriteSyncOnceRetryAsync(output, exception, attempt, cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            throw new InvalidOperationException("sync-once pass retry attempts were exhausted.");
+        }
+
+        private static async Task WriteSyncOnceRetryAsync(
+            TextWriter output,
+            Exception exception,
+            int completedAttempts,
+            CancellationToken cancellationToken)
+        {
+            TimeSpan delay = GetSyncOnceRetryDelay(completedAttempts);
+            await output
+                .WriteLineAsync(
+                    "Transient sync failure: "
+                    + FormatSyncOnceFailure(exception)
+                    + " Retrying attempt "
+                    + (completedAttempts + 1).ToStringInvariant()
+                    + " of "
+                    + SyncOnceMaxTransientAttempts.ToStringInvariant()
+                    + " after "
+                    + FormatRetryDelay(delay)
+                    + ".")
+                .ConfigureAwait(false);
+            await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+        }
+
+        private static async Task WriteSyncOnceSuccessAsync(
+            TextWriter output,
+            SyncCliConnectionOptions options,
+            SyncCliPassResult pass)
+        {
             await output.WriteLineAsync("Cotton Sync one-shot run").ConfigureAwait(false);
             await output.WriteLineAsync("Sync pair: " + options.SyncPairId).ConfigureAwait(false);
             await output.WriteLineAsync("Activities: " + pass.Result.Activities.Count.ToStringInvariant()).ConfigureAwait(false);
@@ -296,7 +401,6 @@ namespace Cotton.Sync.Cli
             }
 
             await output.WriteLineAsync("State entries: " + pass.StateEntries.Count.ToStringInvariant()).ConfigureAwait(false);
-            return 0;
         }
 
         private static bool IsSupportableSyncOnceException(Exception exception)
@@ -308,6 +412,47 @@ namespace Cotton.Sync.Cli
                 or TaskCanceledException
                 or UnauthorizedAccessException
                 or SyncPathValidationException;
+        }
+
+        private static bool IsRetriableSyncOnceException(Exception exception)
+        {
+            return exception switch
+            {
+                CottonApiException apiException => IsTransientStatusCode(apiException.StatusCode),
+                HttpRequestException requestException => IsTransientStatusCode(requestException.StatusCode),
+                TimeoutException => true,
+                TaskCanceledException => true,
+                _ => false,
+            };
+        }
+
+        private static bool IsRetriableBrowserSignInException(AppCodeBrowserSignInException exception)
+        {
+            return string.Equals(exception.Error, "network_unavailable", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static TimeSpan GetSyncOnceRetryDelay(int completedAttempts)
+        {
+            if (SyncOnceInitialRetryDelay == TimeSpan.Zero || SyncOnceMaxRetryDelay == TimeSpan.Zero)
+            {
+                return TimeSpan.Zero;
+            }
+
+            double multiplier = Math.Pow(2, Math.Max(0, completedAttempts - 1));
+            double milliseconds = Math.Min(
+                SyncOnceInitialRetryDelay.TotalMilliseconds * multiplier,
+                SyncOnceMaxRetryDelay.TotalMilliseconds);
+            return TimeSpan.FromMilliseconds(milliseconds);
+        }
+
+        private static string FormatRetryDelay(TimeSpan delay)
+        {
+            if (delay.TotalMilliseconds < 1000)
+            {
+                return delay.TotalMilliseconds.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + "ms";
+            }
+
+            return delay.TotalSeconds.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "s";
         }
 
         private static async Task WriteSyncOnceFailureAsync(
@@ -348,6 +493,17 @@ namespace Cotton.Sync.Cli
             }
 
             return CleanSingleLine(exception.Message);
+        }
+
+        private static bool IsTransientStatusCode(HttpStatusCode? statusCode)
+        {
+            return statusCode is null
+                or HttpStatusCode.RequestTimeout
+                or HttpStatusCode.TooManyRequests
+                or HttpStatusCode.InternalServerError
+                or HttpStatusCode.BadGateway
+                or HttpStatusCode.ServiceUnavailable
+                or HttpStatusCode.GatewayTimeout;
         }
 
         private static string CleanSingleLine(string? message)

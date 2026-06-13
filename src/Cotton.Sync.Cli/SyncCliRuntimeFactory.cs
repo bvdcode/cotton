@@ -87,7 +87,7 @@ namespace Cotton.Sync.Cli
                 new CottonSdkOptions
                 {
                     BaseAddress = options.ServerUri,
-                    RefreshOnUnauthorized = false,
+                    RefreshOnUnauthorized = true,
                     UserAgent = "CottonSyncCli",
                     DeviceName = "Cotton Sync CLI",
                 });
