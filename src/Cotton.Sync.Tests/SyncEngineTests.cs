@@ -1385,6 +1385,60 @@ namespace Cotton.Sync.Tests
         }
 
         [Test]
+        public async Task RunOnceAsync_ReusesSharedStateAcrossSequentialClientSurfaces()
+        {
+            const string relativePath = "sequential-surface.txt";
+            LocalFileSnapshot local = LocalFile(relativePath, "desktop-local");
+            var remoteFiles = new FakeRemoteFileSynchronizer();
+            var desktopStateStore = new SqliteSyncStateStore(_databasePath);
+            SyncEngine desktopRun = new(
+                new FakeLocalFileScanner(local),
+                new FakeRemoteTreeCrawler(EmptyRemoteTree()),
+                remoteFiles,
+                desktopStateStore);
+
+            SyncRunResult firstResult = await desktopRun.RunOnceAsync(Pair());
+
+            NodeFileManifestDto uploaded = remoteFiles.Uploads.Single().ReturnedFile;
+            var cliStateStore = new SqliteSyncStateStore(_databasePath);
+            SyncEngine cliRun = new(
+                new FakeLocalFileScanner(local),
+                new FakeRemoteTreeCrawler(RemoteTree(uploaded)),
+                remoteFiles,
+                cliStateStore);
+            SyncRunResult secondResult = await cliRun.RunOnceAsync(Pair());
+
+            byte[] remoteUpdateContent = Encoding.UTF8.GetBytes("remote-after-cli");
+            NodeFileManifestDto remoteUpdate = RemoteFile(
+                relativePath,
+                Hash(remoteUpdateContent),
+                uploaded.Id,
+                remoteUpdateContent.Length);
+            remoteFiles.Downloads[uploaded.Id] = remoteUpdateContent;
+            var restartedDesktopStateStore = new SqliteSyncStateStore(_databasePath);
+            SyncEngine restartedDesktopRun = new(
+                new FakeLocalFileScanner(local),
+                new FakeRemoteTreeCrawler(RemoteTree(remoteUpdate)),
+                remoteFiles,
+                restartedDesktopStateStore);
+            SyncRunResult thirdResult = await restartedDesktopRun.RunOnceAsync(Pair());
+
+            SyncStateEntry? entry = await restartedDesktopStateStore.GetAsync("pair-a", relativePath);
+            Assert.Multiple(() =>
+            {
+                Assert.That(firstResult.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
+                Assert.That(secondResult.Activities, Is.Empty);
+                Assert.That(thirdResult.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Downloaded }));
+                Assert.That(File.ReadAllText(Path.Combine(_root, relativePath)), Is.EqualTo("remote-after-cli"));
+                Assert.That(remoteFiles.Uploads, Has.Count.EqualTo(1));
+                Assert.That(entry, Is.Not.Null);
+                Assert.That(entry!.LocalContentHash, Is.EqualTo(remoteUpdate.ContentHash));
+                Assert.That(entry.RemoteContentHash, Is.EqualTo(remoteUpdate.ContentHash));
+                Assert.That(entry.RemoteFileId, Is.EqualTo(uploaded.Id));
+            });
+        }
+
+        [Test]
         public async Task RunOnceAsync_RecoversAfterTransientUploadFailureWithoutStaleBaseline()
         {
             string relativePath = "network-drop-upload.txt";
