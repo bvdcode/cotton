@@ -41,6 +41,9 @@ namespace Cotton.Sync.Desktop.Shell
         private const string LocalFileUnavailableMessage =
             "Cotton Sync cannot read one of the local files yet. Close the app using it or wait for it to finish saving, then retry sync.";
 
+        private const string LocalSyncFolderMissingMessage =
+            "Cotton Sync cannot find the local sync folder. Restore or reconnect the folder, then retry sync.";
+
         private const string LocalSyncStateDatabaseUnavailableMessage =
             "Local sync state database is unavailable. Run diagnostics and restart Cotton Sync.";
 
@@ -98,6 +101,11 @@ namespace Cotton.Sync.Desktop.Shell
             if (exception is LocalFileUnavailableException unavailableException)
             {
                 return CreateLocalFileUnavailableMessage(unavailableException.RelativePath);
+            }
+
+            if (exception is DirectoryNotFoundException && LooksLikeLocalSyncFolderMissing(exception.Message))
+            {
+                return LocalSyncFolderMissingMessage;
             }
 
             if (exception is IOException && LooksLikeDiskFull(exception.Message))
@@ -177,6 +185,11 @@ namespace Cotton.Sync.Desktop.Shell
             if (LooksLikeLocalFileUnavailable(message))
             {
                 return CreateLocalFileUnavailableMessage(ExtractSingleQuotedPath(message));
+            }
+
+            if (LooksLikeLocalSyncFolderMissing(message))
+            {
+                return LocalSyncFolderMissingMessage;
             }
 
             if (LooksLikeLocalSyncStateDatabaseUnavailable(message))
@@ -391,6 +404,13 @@ namespace Cotton.Sync.Desktop.Shell
         {
             return message.Contains("local file", StringComparison.OrdinalIgnoreCase)
                 && message.Contains("could not be scanned safely", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool LooksLikeLocalSyncFolderMissing(string message)
+        {
+            return message.Contains("local root does not exist", StringComparison.OrdinalIgnoreCase)
+                || (message.Contains("local sync root", StringComparison.OrdinalIgnoreCase)
+                    && message.Contains("does not exist", StringComparison.OrdinalIgnoreCase));
         }
 
         private static bool LooksLikeLocalSyncStateDatabaseUnavailable(string message)

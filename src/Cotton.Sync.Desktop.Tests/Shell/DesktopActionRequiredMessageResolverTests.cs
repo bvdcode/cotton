@@ -311,6 +311,19 @@ namespace Cotton.Sync.Desktop.Tests.Shell
         }
 
         [Test]
+        public void FromException_ExplainsMissingLocalSyncFolder()
+        {
+            var exception = new DirectoryNotFoundException(
+                "Local root does not exist: C:\\Users\\QA\\Cotton.");
+
+            string message = DesktopActionRequiredMessageResolver.FromException(exception);
+
+            Assert.That(
+                message,
+                Is.EqualTo("Cotton Sync cannot find the local sync folder. Restore or reconnect the folder, then retry sync."));
+        }
+
+        [Test]
         public void FromException_ExplainsRemoteQuotaExceeded()
         {
             var exception = new CottonApiException(

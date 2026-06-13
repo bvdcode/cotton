@@ -252,6 +252,39 @@ namespace Cotton.Sync.Desktop.Tests.Shell
         }
 
         [Test]
+        public async Task RunSelfTestAsync_ReportsMissingLocalRootAsReadableFailure()
+        {
+            DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
+            string missingLocalRoot = Path.Combine(_tempDirectory, "DeletedDocuments");
+            var syncPairStore = new SqliteSyncPairSettingsStore(paths.AppDatabasePath);
+            await syncPairStore.InitializeAsync();
+            await syncPairStore.UpsertAsync(new SyncPairSettings
+            {
+                Id = Guid.NewGuid(),
+                DisplayName = "Documents",
+                LocalRootPath = missingLocalRoot,
+                RemoteRootNodeId = Guid.NewGuid(),
+                RemoteDisplayPath = "/Documents",
+                IsEnabled = true,
+                Mode = SyncPairMode.FullMirror,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow,
+            });
+            using DesktopShellController controller = CreateController(paths, syncPairStore);
+
+            DesktopSelfTestSnapshot result = await controller.RunSelfTestAsync();
+
+            DesktopSelfTestItemSnapshot localRoot =
+                result.Items.Single(static item => item.Name == "Local root: Documents");
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.Passed, Is.False);
+                Assert.That(localRoot.Passed, Is.False);
+                Assert.That(localRoot.Details, Is.EqualTo("Cotton Sync cannot find the local sync folder. Restore or reconnect the folder, then retry sync."));
+            });
+        }
+
+        [Test]
         public async Task LoadAsync_IncludesDiagnosticsFieldsForSyncPairs()
         {
             DesktopAppPaths paths = DesktopAppPaths.CreateForDataDirectory(_tempDirectory);
