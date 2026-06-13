@@ -640,6 +640,65 @@ namespace Cotton.Sync.Cli.Tests
         }
 
         [Test]
+        public async Task SyncOnce_RemoteRootNotFoundReturnsSupportableErrorWithoutStackTrace()
+        {
+            string localRoot = Path.Combine(_tempDirectory, "missing-remote-root-local");
+            Directory.CreateDirectory(localRoot);
+            File.WriteAllText(Path.Combine(localRoot, "file.txt"), "content");
+            string databasePath = Path.Combine(_tempDirectory, "missing-remote-root-state.db");
+            Guid remoteRootId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var handler = new RemoteRootNotFoundServerHandler(remoteRootId);
+            using var httpClient = new HttpClient(handler);
+            using var output = new StringWriter();
+            using var error = new StringWriter();
+
+            int exitCode = await SyncCliCommandRunner.RunAsync(
+                [
+                    "sync-once",
+                    "--server",
+                    "cotton.test",
+                    "--username",
+                    "testuser",
+                    "--password",
+                    "testpassword",
+                    "--local-root",
+                    localRoot,
+                    "--remote-root",
+                    remoteRootId.ToString("D"),
+                    "--sync-pair",
+                    "pair",
+                    "--database",
+                    databasePath,
+                ],
+                output,
+                error,
+                httpClient);
+
+            string errorText = error.ToString();
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(1));
+                Assert.That(output.ToString(), Is.Empty);
+                Assert.That(errorText, Does.Contain("sync-once failed."));
+                Assert.That(errorText, Does.Contain("Server: https://cotton.test/"));
+                Assert.That(errorText, Does.Contain("Local root: " + localRoot));
+                Assert.That(errorText, Does.Contain("Remote root: " + remoteRootId.ToString("D")));
+                Assert.That(errorText, Does.Contain("Sync pair: pair"));
+                Assert.That(errorText, Does.Contain("Database: " + databasePath));
+                Assert.That(errorText, Does.Contain("Error: Cotton API returned 404 NotFound."));
+                Assert.That(errorText, Does.Not.Contain(" at "));
+                Assert.That(errorText, Does.Not.Contain("RemoteTreeCrawler"));
+                Assert.That(errorText, Does.Not.Contain(".cs:line"));
+                Assert.That(handler.Requests.Select(static request => request.PathAndQuery), Is.EqualTo(new[]
+                {
+                    "/api/v1/auth/login",
+                    "/api/v1/layouts/nodes/" + remoteRootId.ToString("D"),
+                    "/api/v1/auth/logout?refreshToken=refresh-token",
+                }));
+            });
+        }
+
+        [Test]
         public async Task StateSummary_PrintsEntryCountAndCursor()
         {
             string databasePath = Path.Combine(_tempDirectory, "sync-state.db");
@@ -704,10 +763,12 @@ namespace Cotton.Sync.Cli.Tests
             });
         }
 
-        [Test]
-        public async Task SyncOnce_UploadsLocalFileAndPersistsBaseline()
+        [TestCase("local", TestName = "SyncOnce_UploadsLocalFileAndPersistsBaseline")]
+        [TestCase("local path with spaces", TestName = "SyncOnce_UploadsLocalFileFromRootPathWithSpacesAndPersistsBaseline")]
+        [TestCase("локальный sync root", TestName = "SyncOnce_UploadsLocalFileFromUnicodeRootPathAndPersistsBaseline")]
+        public async Task SyncOnce_UploadsLocalFileAndPersistsBaseline(string localRootName)
         {
-            string localRoot = Path.Combine(_tempDirectory, "local");
+            string localRoot = Path.Combine(_tempDirectory, localRootName);
             Directory.CreateDirectory(localRoot);
             const string relativePath = "hello.txt";
             byte[] content = Encoding.UTF8.GetBytes("hello from sync cli");
@@ -1639,6 +1700,75 @@ namespace Cotton.Sync.Cli.Tests
             return document.RootElement.TryGetProperty(propertyName, out JsonElement property)
                 ? property.GetString()
                 : null;
+        }
+
+        private class RemoteRootNotFoundServerHandler : HttpMessageHandler
+        {
+            private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+            private readonly Guid _remoteRootId;
+
+            public RemoteRootNotFoundServerHandler(Guid remoteRootId)
+            {
+                _remoteRootId = remoteRootId;
+            }
+
+            public List<HttpRequestSnapshot> Requests { get; } = [];
+
+            protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            {
+                byte[] rawBody = request.Content is null
+                    ? []
+                    : await request.Content.ReadAsByteArrayAsync(cancellationToken);
+                string body = Encoding.UTF8.GetString(rawBody);
+                var snapshot = new HttpRequestSnapshot(
+                    request.Method,
+                    request.RequestUri?.PathAndQuery ?? string.Empty,
+                    request.Headers.Authorization?.Parameter,
+                    body,
+                    rawBody);
+                Requests.Add(snapshot);
+
+                if (snapshot.Method == HttpMethod.Post && snapshot.PathAndQuery == "/api/v1/auth/login")
+                {
+                    return Json(HttpStatusCode.OK, new TokenPairDto
+                    {
+                        AccessToken = "access-token",
+                        RefreshToken = "refresh-token",
+                    });
+                }
+
+                if (snapshot.Method == HttpMethod.Get
+                    && snapshot.PathAndQuery == "/api/v1/layouts/nodes/" + _remoteRootId.ToString("D"))
+                {
+                    Assert.That(snapshot.AuthorizationParameter, Is.EqualTo("access-token"));
+                    return Json(HttpStatusCode.NotFound, new
+                    {
+                        success = false,
+                        message = "Remote folder was not found.",
+                    });
+                }
+
+                if (snapshot.Method == HttpMethod.Post && snapshot.PathAndQuery == "/api/v1/auth/logout?refreshToken=refresh-token")
+                {
+                    return new HttpResponseMessage(HttpStatusCode.NoContent);
+                }
+
+                return new HttpResponseMessage(HttpStatusCode.NotFound)
+                {
+                    Content = new StringContent("Unexpected request: " + snapshot.PathAndQuery),
+                };
+            }
+
+            private static HttpResponseMessage Json(HttpStatusCode statusCode, object payload)
+            {
+                return new HttpResponseMessage(statusCode)
+                {
+                    Content = new StringContent(
+                        JsonSerializer.Serialize(payload, JsonOptions),
+                        Encoding.UTF8,
+                        "application/json"),
+                };
+            }
         }
 
     }

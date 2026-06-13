@@ -5,6 +5,7 @@ using Cotton.Sdk;
 using Cotton.Sdk.Auth;
 using Cotton.Sync.App.Auth;
 using Cotton.Sync.State;
+using System.Net;
 
 namespace Cotton.Sync.Cli
 {
@@ -269,6 +270,11 @@ namespace Cotton.Sync.Cli
 
                 return 1;
             }
+            catch (Exception exception) when (IsSupportableSyncOnceException(exception))
+            {
+                await WriteSyncOnceFailureAsync(error, options, exception).ConfigureAwait(false);
+                return 1;
+            }
 
             await output.WriteLineAsync("Cotton Sync one-shot run").ConfigureAwait(false);
             await output.WriteLineAsync("Sync pair: " + options.SyncPairId).ConfigureAwait(false);
@@ -282,6 +288,69 @@ namespace Cotton.Sync.Cli
 
             await output.WriteLineAsync("State entries: " + pass.StateEntries.Count.ToStringInvariant()).ConfigureAwait(false);
             return 0;
+        }
+
+        private static bool IsSupportableSyncOnceException(Exception exception)
+        {
+            return exception is CottonApiException
+                or HttpRequestException
+                or IOException
+                or UnauthorizedAccessException
+                or SyncPathValidationException;
+        }
+
+        private static async Task WriteSyncOnceFailureAsync(
+            TextWriter error,
+            SyncCliConnectionOptions options,
+            Exception exception)
+        {
+            await error.WriteLineAsync("sync-once failed.").ConfigureAwait(false);
+            await error.WriteLineAsync("Server: " + options.ServerUri).ConfigureAwait(false);
+            await error.WriteLineAsync("Local root: " + options.LocalRoot).ConfigureAwait(false);
+            await error.WriteLineAsync("Remote root: " + options.RemoteRootNodeId).ConfigureAwait(false);
+            await error.WriteLineAsync("Sync pair: " + options.SyncPairId).ConfigureAwait(false);
+            await error.WriteLineAsync("Database: " + options.DatabasePath).ConfigureAwait(false);
+            await error.WriteLineAsync("Error: " + FormatSyncOnceFailure(exception)).ConfigureAwait(false);
+        }
+
+        private static string FormatSyncOnceFailure(Exception exception)
+        {
+            if (exception is CottonApiException apiException)
+            {
+                HttpStatusCode apiStatusCode = apiException.StatusCode.GetValueOrDefault();
+                return "Cotton API returned "
+                    + ((int)apiStatusCode).ToStringInvariant()
+                    + " "
+                    + apiStatusCode
+                    + ". "
+                    + CleanSingleLine(apiException.Message);
+            }
+
+            if (exception is HttpRequestException httpException && httpException.StatusCode is HttpStatusCode statusCode)
+            {
+                return "HTTP request failed with "
+                    + ((int)statusCode).ToStringInvariant()
+                    + " "
+                    + statusCode
+                    + ". "
+                    + CleanSingleLine(httpException.Message);
+            }
+
+            return CleanSingleLine(exception.Message);
+        }
+
+        private static string CleanSingleLine(string? message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return "Operation could not be completed.";
+            }
+
+            return message
+                .Replace(Environment.NewLine, " ", StringComparison.Ordinal)
+                .Replace('\r', ' ')
+                .Replace('\n', ' ')
+                .Trim();
         }
 
         private static bool IsHelp(string value)
