@@ -452,6 +452,12 @@ namespace Cotton.Sync.App.Runners
         {
             return exception switch
             {
+                CottonApiException apiException when apiException.StatusCode == HttpStatusCode.Unauthorized
+                    => "Session expired. Sign in again to continue syncing.",
+                CottonApiException apiException when apiException.StatusCode == HttpStatusCode.Forbidden
+                    => "Cotton Cloud denied access to this sync folder. Check account permissions and sign in again if needed.",
+                CottonApiException apiException when apiException.StatusCode == HttpStatusCode.Conflict
+                    => "Cotton Cloud reported a conflict while syncing. Review conflicts and retry.",
                 CottonApiException apiException when IsQuotaExceededStatus(apiException.StatusCode)
                     => "Remote storage quota exceeded. Free space in Cotton Cloud or choose a smaller sync folder.",
                 CottonApiException apiException when apiException.StatusCode == HttpStatusCode.RequestEntityTooLarge

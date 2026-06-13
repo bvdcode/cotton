@@ -6,6 +6,7 @@ using Cotton.Sync.App.Status;
 using Cotton.Sync.App.SyncPairs;
 using Cotton.Sdk;
 using Cotton.Sync.Local;
+using Microsoft.Extensions.Logging;
 
 namespace Cotton.Sync.App.Tests.Runners
 {
@@ -368,14 +369,15 @@ namespace Cotton.Sync.App.Tests.Runners
             });
         }
 
-        [Test]
-        public async Task SyncNowAsync_RetriesTransientNetworkFailureAndReturnsIdleOnRecovery()
+        [TestCase(System.Net.HttpStatusCode.InternalServerError)]
+        [TestCase(System.Net.HttpStatusCode.ServiceUnavailable)]
+        public async Task SyncNowAsync_RetriesTransientServerFailureAndReturnsIdleOnRecovery(System.Net.HttpStatusCode statusCode)
         {
             var work = new FakeSyncPairWork
             {
                 Failures =
                 [
-                    new HttpRequestException("server unavailable", null, System.Net.HttpStatusCode.ServiceUnavailable),
+                    new HttpRequestException("server unavailable", null, statusCode),
                 ],
             };
             SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true), work, NoDelayRetryOptions());
@@ -386,6 +388,65 @@ namespace Cotton.Sync.App.Tests.Runners
             {
                 Assert.That(work.RunCount, Is.EqualTo(2));
                 Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Idle));
+            });
+        }
+
+        [Test]
+        public async Task SyncNowAsync_RetriesRateLimitAndReturnsIdleOnRecovery()
+        {
+            var work = new FakeSyncPairWork
+            {
+                Failures =
+                [
+                    new HttpRequestException("rate limited", null, System.Net.HttpStatusCode.TooManyRequests),
+                ],
+            };
+            SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true), work, NoDelayRetryOptions());
+
+            await runner.SyncNowAsync();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(work.RunCount, Is.EqualTo(2));
+                Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Idle));
+            });
+        }
+
+        [TestCase(
+            System.Net.HttpStatusCode.Unauthorized,
+            "Session expired. Sign in again to continue syncing.",
+            TestName = "SyncNowAsync_ReportsExpiredSessionAsActionRequiredMessage")]
+        [TestCase(
+            System.Net.HttpStatusCode.Forbidden,
+            "Cotton Cloud denied access to this sync folder. Check account permissions and sign in again if needed.",
+            TestName = "SyncNowAsync_ReportsForbiddenServerResponseAsActionRequiredMessage")]
+        [TestCase(
+            System.Net.HttpStatusCode.Conflict,
+            "Cotton Cloud reported a conflict while syncing. Review conflicts and retry.",
+            TestName = "SyncNowAsync_ReportsServerConflictAsActionRequiredMessage")]
+        public void SyncNowAsync_ReportsNonRetriableServerResponseAsActionRequiredMessage(
+            System.Net.HttpStatusCode statusCode,
+            string expected)
+        {
+            var work = new FakeSyncPairWork
+            {
+                Failure = new CottonApiException(
+                    statusCode,
+                    "{\"success\":false,\"message\":\"server rejected sync\"}",
+                    "Cotton API request failed with status " + (int)statusCode + "."),
+            };
+            SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true), work, NoDelayRetryOptions());
+
+            CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(
+                async () => await runner.SyncNowAsync());
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exception, Is.Not.Null);
+                Assert.That(work.RunCount, Is.EqualTo(1));
+                Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Error));
+                Assert.That(runner.Status.LastError, Is.EqualTo(expected));
+                Assert.That(runner.Status.CurrentOperation, Is.EqualTo("Action required: " + expected));
             });
         }
 
@@ -494,6 +555,51 @@ namespace Cotton.Sync.App.Tests.Runners
         }
 
         [Test]
+        public async Task SyncNowAsync_ReturnsFromOfflineToIdleWhenNetworkRecovers()
+        {
+            var work = new FakeSyncPairWork
+            {
+                Failures =
+                [
+                    new HttpRequestException("network down"),
+                    new HttpRequestException("network down"),
+                ],
+            };
+            SyncPairRunner runner = CreateRunner(CreatePair(isEnabled: true), work, NoDelayRetryOptions(maxAttempts: 2));
+
+            Assert.ThrowsAsync<HttpRequestException>(
+                async () => await runner.SyncNowAsync());
+            await runner.SyncNowAsync();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(work.RunCount, Is.EqualTo(3));
+                Assert.That(runner.Status.State, Is.EqualTo(SyncPairRunState.Idle));
+                Assert.That(runner.Status.CurrentOperation, Is.Null);
+                Assert.That(runner.Status.LastError, Is.Null);
+                Assert.That(runner.Status.LastSuccessfulSyncAtUtc, Is.Not.Null);
+            });
+        }
+
+        [Test]
+        public void SyncNowAsync_FailureLogIncludesSyncPairId()
+        {
+            SyncPairSettings syncPair = CreatePair(isEnabled: true);
+            var logger = new RecordingLogger<SyncPairRunner>();
+            SyncPairRunner runner = CreateRunner(
+                syncPair,
+                new FakeSyncPairWork { Failure = new InvalidOperationException("sync failed") },
+                logger: logger);
+
+            Assert.ThrowsAsync<InvalidOperationException>(
+                async () => await runner.SyncNowAsync());
+
+            Assert.That(
+                logger.Entries.Select(entry => entry.Message),
+                Has.Some.Contains(syncPair.Id.ToString()));
+        }
+
+        [Test]
         public async Task SyncNowAsync_CoalescesOverlappingRequestsIntoOneQueuedRun()
         {
             var work = new BlockingSyncPairWork();
@@ -516,9 +622,10 @@ namespace Cotton.Sync.App.Tests.Runners
         private static SyncPairRunner CreateRunner(
             SyncPairSettings syncPair,
             ISyncPairWork? work = null,
-            SyncPairRunnerRetryOptions? retryOptions = null)
+            SyncPairRunnerRetryOptions? retryOptions = null,
+            ILogger<SyncPairRunner>? logger = null)
         {
-            return new SyncPairRunner(syncPair, work ?? new FakeSyncPairWork(), retryOptions);
+            return new SyncPairRunner(syncPair, work ?? new FakeSyncPairWork(), retryOptions, logger);
         }
 
         private static SyncPairRunnerRetryOptions NoDelayRetryOptions(int maxAttempts = 3)
@@ -582,6 +689,32 @@ namespace Cotton.Sync.App.Tests.Runners
                 }
 
                 return Task.CompletedTask;
+            }
+        }
+
+        private class RecordingLogger<T> : ILogger<T>
+        {
+            public List<(LogLevel Level, string Message)> Entries { get; } = [];
+
+            public IDisposable? BeginScope<TState>(TState state)
+                where TState : notnull
+            {
+                return null;
+            }
+
+            public bool IsEnabled(LogLevel logLevel)
+            {
+                return true;
+            }
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+                Entries.Add((logLevel, formatter(state, exception)));
             }
         }
 

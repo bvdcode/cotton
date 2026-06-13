@@ -444,6 +444,36 @@ namespace Cotton.Sync.App.Tests.SyncApplication
         }
 
         [Test]
+        public async Task StartSyncAsync_RestoresPersistedGlobalPauseAfterAppRestart()
+        {
+            var store = new InMemorySyncPairSettingsStore();
+            var preferences = new FakeAppPreferencesStore();
+            var firstSupervisor = new FakeSyncSupervisor();
+            SyncApplicationService first = CreateService(
+                store,
+                preferences: preferences,
+                supervisor: firstSupervisor);
+            await first.StartSyncAsync();
+            await first.PauseAllAsync();
+            var secondSupervisor = new FakeSyncSupervisor();
+            SyncApplicationService second = CreateService(
+                store,
+                preferences: preferences,
+                supervisor: secondSupervisor);
+
+            await second.StartSyncAsync();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(preferences.Preferences.IsSyncPaused, Is.True);
+                Assert.That(preferences.SaveCallCount, Is.EqualTo(1));
+                Assert.That(firstSupervisor.PauseAllCallCount, Is.EqualTo(1));
+                Assert.That(secondSupervisor.StartCallCount, Is.EqualTo(1));
+                Assert.That(secondSupervisor.LastStartPaused, Is.True);
+            });
+        }
+
+        [Test]
         public async Task SaveSyncPairAsync_DoesNotRestartSyncComponentsWhenValidationFails()
         {
             var store = new InMemorySyncPairSettingsStore();
@@ -708,6 +738,92 @@ namespace Cotton.Sync.App.Tests.SyncApplication
                 Assert.That(prerequisites.CallCount, Is.EqualTo(1));
                 Assert.That(saved, Is.Not.Null);
                 Assert.That(saved!.IsEnabled, Is.False);
+            });
+        }
+
+        [Test]
+        public async Task SaveSyncPairAsync_EnablesDisabledPairAndRestartsSyncComponentsWhenCoreIsRunning()
+        {
+            var store = new InMemorySyncPairSettingsStore();
+            SyncPairSettings syncPair = CreatePair("/home/user/Cotton");
+            syncPair.IsEnabled = false;
+            await store.UpsertAsync(syncPair);
+            var prerequisites = new FakeSyncPairPrerequisiteValidator([]);
+            var supervisor = new FakeSyncSupervisor();
+            var localChanges = new FakeLocalChangeSyncCoordinator();
+            var remoteChanges = new FakeRemoteChangeSyncCoordinator();
+            var periodicSync = new FakePeriodicSyncCoordinator();
+            SyncApplicationService service = CreateService(
+                store,
+                prerequisites,
+                supervisor: supervisor,
+                localChanges: localChanges,
+                remoteChanges: remoteChanges,
+                periodicSync: periodicSync);
+            await service.StartSyncAsync();
+            SyncPairSettings enabled = CopySyncPair(syncPair);
+            enabled.IsEnabled = true;
+
+            SyncPairSaveResult result = await service.SaveSyncPairAsync(enabled);
+
+            SyncPairSettings? saved = await store.GetAsync(syncPair.Id);
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.IsSaved, Is.True);
+                Assert.That(prerequisites.CallCount, Is.EqualTo(1));
+                Assert.That(saved, Is.Not.Null);
+                Assert.That(saved!.IsEnabled, Is.True);
+                Assert.That(supervisor.StopCallCount, Is.EqualTo(1));
+                Assert.That(localChanges.StopCallCount, Is.EqualTo(1));
+                Assert.That(remoteChanges.StopCallCount, Is.EqualTo(1));
+                Assert.That(periodicSync.StopCallCount, Is.EqualTo(1));
+                Assert.That(supervisor.StartCallCount, Is.EqualTo(2));
+                Assert.That(localChanges.StartCallCount, Is.EqualTo(2));
+                Assert.That(remoteChanges.StartCallCount, Is.EqualTo(2));
+                Assert.That(periodicSync.StartCallCount, Is.EqualTo(2));
+            });
+        }
+
+        [Test]
+        public async Task SaveSyncPairAsync_EnablesDisabledPairAndReappliesGlobalPauseWhenCoreIsRunning()
+        {
+            var store = new InMemorySyncPairSettingsStore();
+            SyncPairSettings syncPair = CreatePair("/home/user/Cotton");
+            syncPair.IsEnabled = false;
+            await store.UpsertAsync(syncPair);
+            var prerequisites = new FakeSyncPairPrerequisiteValidator([]);
+            var supervisor = new FakeSyncSupervisor();
+            var localChanges = new FakeLocalChangeSyncCoordinator();
+            var remoteChanges = new FakeRemoteChangeSyncCoordinator();
+            var periodicSync = new FakePeriodicSyncCoordinator();
+            SyncApplicationService service = CreateService(
+                store,
+                prerequisites,
+                supervisor: supervisor,
+                localChanges: localChanges,
+                remoteChanges: remoteChanges,
+                periodicSync: periodicSync);
+            await service.StartSyncAsync();
+            await service.PauseAllAsync();
+            SyncPairSettings enabled = CopySyncPair(syncPair);
+            enabled.IsEnabled = true;
+
+            SyncPairSaveResult result = await service.SaveSyncPairAsync(enabled);
+
+            SyncPairSettings? saved = await store.GetAsync(syncPair.Id);
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.IsSaved, Is.True);
+                Assert.That(prerequisites.CallCount, Is.EqualTo(1));
+                Assert.That(saved, Is.Not.Null);
+                Assert.That(saved!.IsEnabled, Is.True);
+                Assert.That(supervisor.StopCallCount, Is.EqualTo(1));
+                Assert.That(supervisor.StartCallCount, Is.EqualTo(2));
+                Assert.That(supervisor.PauseAllCallCount, Is.EqualTo(1));
+                Assert.That(supervisor.LastStartPaused, Is.True);
+                Assert.That(localChanges.StartCallCount, Is.EqualTo(2));
+                Assert.That(remoteChanges.StartCallCount, Is.EqualTo(2));
+                Assert.That(periodicSync.StartCallCount, Is.EqualTo(2));
             });
         }
 
