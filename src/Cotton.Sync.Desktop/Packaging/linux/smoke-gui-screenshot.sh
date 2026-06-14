@@ -50,9 +50,14 @@ find_app_window_id() {
       printf '%s\n' "$window_id"
       return 0
     fi
-  done < <(xwininfo -root -tree 2>/dev/null | awk '/"Cotton Sync"/ { print $1 }')
+  done < <(xwininfo -root -tree 2>/dev/null | awk '/^[[:space:]]*0x[0-9a-fA-F]+/ { print $1 }')
 
   return 1
+}
+
+dump_window_tree() {
+  echo "X11 window tree at failure:" >&2
+  xwininfo -root -tree 2>/dev/null | sed -n '1,160p' >&2 || true
 }
 
 wait_for_app_window() {
@@ -68,6 +73,7 @@ wait_for_app_window() {
   done
 
   cat "$log_file" >&2 || true
+  dump_window_tree
   echo "Desktop app window was not found for process $app_pid." >&2
   exit 1
 }

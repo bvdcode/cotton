@@ -178,6 +178,10 @@ namespace Cotton.Sync.Desktop.Tests.Packaging
                 Assert.That(smokeScript, Does.Contain("\"$app_executable\" --data-dir \"$data_dir\" \"$@\""));
                 Assert.That(smokeScript, Does.Contain("xprop -id \"$window_id\" _NET_WM_PID"));
                 Assert.That(smokeScript, Does.Contain("xwininfo -root -tree"));
+                Assert.That(smokeScript, Does.Contain("0x[0-9a-fA-F]+"));
+                Assert.That(smokeScript, Does.Not.Contain("awk '/\"Cotton Sync\"/"));
+                Assert.That(smokeScript, Does.Contain("dump_window_tree()"));
+                Assert.That(smokeScript, Does.Contain("X11 window tree at failure:"));
                 Assert.That(smokeScript, Does.Contain("Desktop app window was not found for process"));
                 Assert.That(smokeScript, Does.Contain("get_window_size()"));
                 Assert.That(smokeScript, Does.Contain("Could not detect desktop app window size."));
