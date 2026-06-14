@@ -559,7 +559,7 @@ namespace Cotton.Sync.Local
                     filePath,
                     FileMode.Open,
                     FileAccess.Read,
-                    FileShare.Read,
+                    FileShare.ReadWrite | FileShare.Delete,
                     bufferSize: HashBufferSize,
                     FileOptions.Asynchronous | FileOptions.SequentialScan);
                 using IncrementalHash hasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);

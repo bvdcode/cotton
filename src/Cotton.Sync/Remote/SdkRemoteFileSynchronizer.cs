@@ -189,7 +189,7 @@ namespace Cotton.Sync.Remote
                     filePath,
                     FileMode.Open,
                     FileAccess.Read,
-                    FileShare.Read,
+                    FileShare.ReadWrite | FileShare.Delete,
                     bufferSize: Math.Min(chunkSize, 1024 * 128),
                     FileOptions.Asynchronous | FileOptions.SequentialScan);
                 while (true)

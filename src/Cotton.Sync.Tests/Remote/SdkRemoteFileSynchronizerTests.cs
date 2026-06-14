@@ -251,6 +251,38 @@ namespace Cotton.Sync.Tests.Remote
         }
 
         [Test]
+        public async Task UploadFileAsync_AllowsConcurrentWriterWhileReadingLocalFile()
+        {
+            byte[] bytes = Encoding.UTF8.GetBytes("abcdefgh");
+            LocalFileSnapshot local = WriteLocalFile("Docs/concurrent.txt", bytes);
+            local.ContentHash = string.Empty;
+            var client = new FakeCottonCloudClient(chunkSizeBytes: 4);
+            string firstChunkHash = Hash(Encoding.UTF8.GetBytes("abcd"));
+            client.ChunksClient.BlockUpload(firstChunkHash);
+            var synchronizer = new SdkRemoteFileSynchronizer(
+                client,
+                new SdkRemoteFileSynchronizerOptions { MaxConcurrentChunkUploads = 1 });
+
+            Task<NodeFileManifestDto> upload = synchronizer.UploadFileAsync(_rootNodeId, local.RelativePath, local);
+            await client.ChunksClient.WaitForUploadAttemptAsync(firstChunkHash).ConfigureAwait(false);
+
+            Assert.DoesNotThrow(() =>
+            {
+                using FileStream writer = new(
+                    local.FullPath,
+                    FileMode.Open,
+                    FileAccess.Write,
+                    FileShare.ReadWrite | FileShare.Delete);
+                writer.SetLength(0);
+                byte[] replacement = Encoding.UTF8.GetBytes("WXYZabcd");
+                writer.Write(replacement, 0, replacement.Length);
+            });
+
+            client.ChunksClient.ReleaseUpload(firstChunkHash);
+            await upload.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        }
+
+        [Test]
         public void Constructor_RejectsInvalidChunkUploadConcurrency()
         {
             var client = new FakeCottonCloudClient(chunkSizeBytes: 4);
@@ -455,6 +487,7 @@ namespace Cotton.Sync.Tests.Remote
         {
             private readonly object _gate = new();
             private readonly Dictionary<string, TaskCompletionSource> _blockedUploads = new(StringComparer.OrdinalIgnoreCase);
+            private readonly Dictionary<string, TaskCompletionSource> _blockedUploadAttempts = new(StringComparer.OrdinalIgnoreCase);
             private int _activeOperations;
 
             public HashSet<string> ExistingHashes { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -472,7 +505,24 @@ namespace Cotton.Sync.Tests.Remote
                 lock (_gate)
                 {
                     _blockedUploads[hash] = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                    _blockedUploadAttempts[hash] = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                 }
+            }
+
+            public async Task WaitForUploadAttemptAsync(string hash)
+            {
+                TaskCompletionSource? attempt;
+                lock (_gate)
+                {
+                    _blockedUploadAttempts.TryGetValue(hash, out attempt);
+                }
+
+                if (attempt is null)
+                {
+                    throw new InvalidOperationException("No blocked upload was registered for " + hash + ".");
+                }
+
+                await attempt.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
             }
 
             public void ReleaseUpload(string hash)
@@ -542,13 +592,16 @@ namespace Cotton.Sync.Tests.Remote
             private async Task WaitForUploadReleaseAsync(string hash, CancellationToken cancellationToken)
             {
                 TaskCompletionSource? block;
+                TaskCompletionSource? attempt;
                 lock (_gate)
                 {
                     _blockedUploads.TryGetValue(hash, out block);
+                    _blockedUploadAttempts.TryGetValue(hash, out attempt);
                 }
 
                 if (block is not null)
                 {
+                    attempt?.TrySetResult();
                     await block.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
                 }
             }
