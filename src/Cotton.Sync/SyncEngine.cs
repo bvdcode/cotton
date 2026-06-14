@@ -976,6 +976,11 @@ namespace Cotton.Sync
                     cancellationToken).ConfigureAwait(false);
                 return;
             }
+            catch (LocalFileUnavailableException exception)
+            {
+                Report(result, options, SyncActivityKind.Skipped, relativePath, exception.Reason);
+                return;
+            }
 
             string localContentHash = ResolveUploadedLocalContentHash(local, uploaded);
             local.ContentHash = localContentHash;

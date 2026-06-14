@@ -1556,6 +1556,37 @@ namespace Cotton.Sync.Tests
         }
 
         [Test]
+        public async Task RunOnceAsync_SkipsChangedLocalFileDuringUploadAndContinuesPass()
+        {
+            LocalFileSnapshot volatileLocal = LocalFile("hot/volatile.txt", "first local content");
+            LocalFileSnapshot stableLocal = LocalFile("hot/stable.txt", "stable local content");
+            var scanner = new FakeLocalFileScanner(volatileLocal, stableLocal);
+            var remoteFiles = new FakeRemoteFileSynchronizer();
+            remoteFiles.LocalUnavailableUploadRelativePaths.Add(volatileLocal.RelativePath);
+            SyncEngine engine = CreateEngine(scanner, EmptyRemoteTree(), remoteFiles, out SqliteSyncStateStore stateStore);
+
+            SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+            SyncStateEntry? volatileEntry = await stateStore.GetAsync("pair-a", volatileLocal.RelativePath);
+            SyncStateEntry? stableEntry = await stateStore.GetAsync("pair-a", stableLocal.RelativePath);
+            SyncActivity volatileActivity = result.Activities.Single(activity => activity.RelativePath == volatileLocal.RelativePath);
+            SyncActivity stableActivity = result.Activities.Single(activity => activity.RelativePath == stableLocal.RelativePath);
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.Activities, Has.Count.EqualTo(2));
+                Assert.That(volatileActivity.Kind, Is.EqualTo(SyncActivityKind.Skipped));
+                Assert.That(volatileActivity.RequiresUserAction, Is.False);
+                Assert.That(volatileActivity.Details, Does.Contain("changed during upload"));
+                Assert.That(stableActivity.Kind, Is.EqualTo(SyncActivityKind.Uploaded));
+                Assert.That(remoteFiles.Uploads.Select(static upload => upload.RelativePath), Is.EqualTo(new[] { stableLocal.RelativePath }));
+                Assert.That(volatileEntry, Is.Null);
+                Assert.That(stableEntry, Is.Not.Null);
+                Assert.That(stableEntry!.LocalContentHash, Is.EqualTo(stableLocal.ContentHash));
+                Assert.That(stableEntry.RemoteContentHash, Is.EqualTo(stableLocal.ContentHash));
+            });
+        }
+
+        [Test]
         public async Task RunOnceAsync_UploadsAccumulatedLocalChangesAfterTransientUploadFailure()
         {
             LocalFileSnapshot first = LocalFile("offline/first.txt", "first offline local content");
@@ -3162,6 +3193,8 @@ namespace Cotton.Sync.Tests
 
             public HashSet<Guid> PreconditionFailedDeleteIds { get; } = [];
 
+            public HashSet<string> LocalUnavailableUploadRelativePaths { get; } = new(StringComparer.OrdinalIgnoreCase);
+
             public string? EmptyLocalHashUploadContentHash { get; set; }
 
             public Task<NodeFileManifestDto> UploadFileAsync(
@@ -3190,6 +3223,14 @@ namespace Cotton.Sync.Tests
                         "Remote upload failed.",
                         inner: null,
                         HttpStatusCode.ServiceUnavailable);
+                }
+
+                if (LocalUnavailableUploadRelativePaths.Contains(relativePath))
+                {
+                    throw new LocalFileUnavailableException(
+                        relativePath,
+                        localFile.FullPath,
+                        "the file changed during upload.");
                 }
 
                 UploadInputContentHashes.Add(localFile.ContentHash);
