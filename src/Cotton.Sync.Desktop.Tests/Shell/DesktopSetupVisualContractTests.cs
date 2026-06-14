@@ -375,6 +375,34 @@ namespace Cotton.Sync.Desktop.Tests.Shell
         }
 
         [Test]
+        public void TruncatedDynamicValuesExposeFullValueTooltips()
+        {
+            string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(mainWindowXaml, Does.Contain("Text=\"{Binding ServerUrl}\""));
+                Assert.That(mainWindowXaml, Does.Contain("ToolTip.Tip=\"{Binding ServerUrl}\""));
+                Assert.That(mainWindowXaml, Does.Contain("Text=\"{Binding StatusCardDetailText}\""));
+                Assert.That(mainWindowXaml, Does.Contain("ToolTip.Tip=\"{Binding StatusCardDetailText}\""));
+                Assert.That(mainWindowXaml, Does.Contain("Text=\"{Binding CurrentWorkProgressDetails}\""));
+                Assert.That(mainWindowXaml, Does.Contain("ToolTip.Tip=\"{Binding CurrentWorkProgressDetails}\""));
+                Assert.That(mainWindowXaml, Does.Contain("Text=\"{Binding CurrentWorkProgressSecondaryDetails}\""));
+                Assert.That(mainWindowXaml, Does.Contain("ToolTip.Tip=\"{Binding CurrentWorkProgressSecondaryDetails}\""));
+                Assert.That(mainWindowXaml, Does.Contain("Text=\"{Binding Message}\""));
+                Assert.That(mainWindowXaml, Does.Contain("ToolTip.Tip=\"{Binding Message}\""));
+                Assert.That(mainWindowXaml, Does.Contain("Text=\"{Binding CurrentOperation}\""));
+                Assert.That(mainWindowXaml, Does.Contain("ToolTip.Tip=\"{Binding CurrentOperation}\""));
+                Assert.That(mainWindowXaml, Does.Contain("Text=\"{Binding RemoteBrowserPath}\""));
+                Assert.That(mainWindowXaml, Does.Contain("ToolTip.Tip=\"{Binding RemoteBrowserPath}\""));
+                Assert.That(mainWindowXaml, Does.Contain("Text=\"{Binding Details}\""));
+                Assert.That(mainWindowXaml, Does.Contain("ToolTip.Tip=\"{Binding Details}\""));
+                Assert.That(mainWindowXaml, Does.Contain("Text=\"{Binding Value}\""));
+                Assert.That(mainWindowXaml, Does.Contain("ToolTip.Tip=\"{Binding Value}\""));
+            });
+        }
+
+        [Test]
         public void CloseIconButtons_UseMaterialCloseIcon()
         {
             string mainWindowXaml = File.ReadAllText(GetDesktopFilePath("MainWindow.axaml"));

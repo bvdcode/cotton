@@ -238,6 +238,7 @@
               </Border>
               <TextBlock Grid.Column="1"
                          Text="{Binding ServerUrl}"
+                         ToolTip.Tip="{Binding ServerUrl}"
                          FontSize="12"
                          FontWeight="SemiBold"
                          TextTrimming="CharacterEllipsis"
@@ -319,10 +320,12 @@
                 <TextBlock Text="{Binding StatusCardTitle}"
                            FontSize="15"
                            FontWeight="SemiBold"
+                           ToolTip.Tip="{Binding StatusCardTitle}"
                            TextTrimming="CharacterEllipsis" />
                 <TextBlock Text="{Binding StatusCardDetailText}"
                            Classes="secondary"
                            FontSize="12"
+                           ToolTip.Tip="{Binding StatusCardDetailText}"
                            TextTrimming="CharacterEllipsis"
                            IsVisible="{Binding HasStatusCardDetail}" />
               </StackPanel>
@@ -343,6 +346,7 @@
                            FontSize="13"
                            FontWeight="SemiBold"
                            VerticalAlignment="Top"
+                           ToolTip.Tip="{Binding CurrentWorkProgressTitle}"
                            TextTrimming="CharacterEllipsis" />
                 <StackPanel Grid.Column="1"
                             Spacing="1"
@@ -356,6 +360,7 @@
                              MinHeight="15"
                              HorizontalAlignment="Right"
                              TextAlignment="Right"
+                             ToolTip.Tip="{Binding CurrentWorkProgressHeaderSizeDetails}"
                              TextTrimming="CharacterEllipsis" />
                   <TextBlock Text="{Binding CurrentWorkProgressHeaderRateDetails}"
                              Classes="secondary"
@@ -363,6 +368,7 @@
                              MinHeight="15"
                              HorizontalAlignment="Right"
                              TextAlignment="Right"
+                             ToolTip.Tip="{Binding CurrentWorkProgressHeaderRateDetails}"
                              TextTrimming="CharacterEllipsis" />
                 </StackPanel>
               </Grid>
@@ -371,12 +377,14 @@
                          Classes="secondary"
                          FontSize="12"
                          MinHeight="16"
+                         ToolTip.Tip="{Binding CurrentWorkProgressDetails}"
                          TextTrimming="CharacterEllipsis" />
               <TextBlock Grid.Row="2"
                          Text="{Binding CurrentWorkProgressSecondaryDetails}"
                          Classes="secondary"
                          FontSize="12"
                          MinHeight="16"
+                         ToolTip.Tip="{Binding CurrentWorkProgressSecondaryDetails}"
                          TextTrimming="CharacterEllipsis" />
               <ProgressBar Grid.Row="3"
                            Height="4"
@@ -458,11 +466,13 @@
                       <TextBlock Text="{Binding Title}"
                                  FontSize="13"
                                  FontWeight="SemiBold"
+                                 ToolTip.Tip="{Binding Title}"
                                  TextTrimming="CharacterEllipsis" />
                       <TextBlock Grid.Row="1"
                                  Text="{Binding Message}"
                                  Classes="secondary"
                                  FontSize="12"
+                                 ToolTip.Tip="{Binding Message}"
                                  TextTrimming="CharacterEllipsis" />
                     </Grid>
                   </Border>
@@ -519,12 +529,14 @@
                                  Text="{Binding Path}"
                                  FontSize="12"
                                  FontWeight="SemiBold"
+                                 ToolTip.Tip="{Binding Path}"
                                  TextTrimming="CharacterEllipsis" />
                       <TextBlock Grid.Row="1"
                                  Grid.Column="1"
                                  Text="{Binding Details}"
                                  Classes="secondary"
                                  FontSize="11"
+                                 ToolTip.Tip="{Binding Details}"
                                  TextTrimming="CharacterEllipsis" />
                       <Button Grid.Column="2"
                               Grid.RowSpan="2"
@@ -648,12 +660,14 @@
                               <TextBlock Grid.Column="1"
                                          Text="{Binding DisplayName}"
                                          FontWeight="SemiBold"
+                                         ToolTip.Tip="{Binding DisplayName}"
                                          TextTrimming="CharacterEllipsis" />
                             </Grid>
                             <TextBlock Grid.Row="1"
                                        Text="{Binding CurrentOperation}"
                                        FontSize="12"
                                        FontWeight="SemiBold"
+                                       ToolTip.Tip="{Binding CurrentOperation}"
                                        TextTrimming="CharacterEllipsis"
                                        IsVisible="{Binding HasCurrentOperation}" />
                             <ProgressBar Grid.Row="2"
@@ -1044,6 +1058,7 @@
                         </Button>
                         <TextBlock Grid.Column="1"
                                    Text="{Binding RemoteBrowserPath}"
+                                   ToolTip.Tip="{Binding RemoteBrowserPath}"
                                    TextTrimming="CharacterEllipsis"
                                    VerticalAlignment="Center" />
                         <Button Grid.Column="2"
@@ -1130,6 +1145,7 @@
                                                             Foreground="{DynamicResource CottonTextSecondaryBrush}" />
                                 <TextBlock Grid.Column="1"
                                            Text="{Binding Name}"
+                                           ToolTip.Tip="{Binding Path}"
                                            TextTrimming="CharacterEllipsis"
                                            VerticalAlignment="Center" />
                               </Grid>
@@ -1429,6 +1445,7 @@
                               <TextBlock Text="{Binding Name}"
                                          FontSize="12"
                                          FontWeight="SemiBold"
+                                         ToolTip.Tip="{Binding Name}"
                                          TextTrimming="CharacterEllipsis" />
                               <TextBlock Grid.Column="1"
                                          Text="{Binding ResultText}"
@@ -1441,6 +1458,7 @@
                                          Text="{Binding Details}"
                                          Classes="secondary"
                                          FontSize="11"
+                                         ToolTip.Tip="{Binding Details}"
                                          TextTrimming="CharacterEllipsis" />
                             </Grid>
                           </DataTemplate>
@@ -1459,10 +1477,12 @@
                               <TextBlock Text="{Binding Label}"
                                          Classes="secondary"
                                          FontSize="11"
+                                         ToolTip.Tip="{Binding Label}"
                                          TextTrimming="CharacterEllipsis" />
                               <TextBlock Grid.Column="1"
                                          Text="{Binding Value}"
                                          FontSize="11"
+                                         ToolTip.Tip="{Binding Value}"
                                          TextTrimming="CharacterEllipsis" />
                             </Grid>
                           </DataTemplate>
