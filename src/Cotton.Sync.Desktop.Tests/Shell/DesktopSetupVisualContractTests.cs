@@ -305,6 +305,7 @@ namespace Cotton.Sync.Desktop.Tests.Shell
                 Assert.That(settingsOverlay, Does.Contain("RowDefinitions=\"Auto,*\""));
                 Assert.That(settingsOverlay, Does.Contain("<TabControl Grid.Row=\"1\""));
                 Assert.That(settingsOverlay, Does.Contain("Classes=\"settingsTabs\""));
+                Assert.That(settingsOverlay, Does.Contain("KeyboardNavigation.TabNavigation=\"Continue\""));
                 Assert.That(settingsOverlay, Does.Contain("SelectedIndex=\"{Binding SelectedSettingsTabIndex}\""));
                 Assert.That(settingsOverlay, Does.Not.Contain("<Border Width=\"372\""));
                 Assert.That(settingsOverlay, Does.Not.Contain("MaxHeight=\"432\""));
@@ -459,10 +460,18 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             {
                 Assert.That(settingsOverlay, Does.Contain("Text=\"Account, startup, preferences, diagnostics\""));
                 Assert.That(settingsOverlay, Does.Not.Contain("Text=\"Account, startup, and diagnostics\""));
-                Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Account\">"));
-                Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Startup\">"));
-                Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Preferences\">"));
-                Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Diagnostics\">"));
+                Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Account\""));
+                Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Startup\""));
+                Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Preferences\""));
+                Assert.That(settingsOverlay, Does.Contain("<TabItem Header=\"Diagnostics\""));
+                Assert.That(settingsOverlay, Does.Contain("AutomationProperties.Name=\"Account settings\""));
+                Assert.That(settingsOverlay, Does.Contain("AutomationProperties.Name=\"Startup settings\""));
+                Assert.That(settingsOverlay, Does.Contain("AutomationProperties.Name=\"Preferences settings\""));
+                Assert.That(settingsOverlay, Does.Contain("AutomationProperties.Name=\"Diagnostics settings\""));
+                Assert.That(settingsOverlay, Does.Contain("TabIndex=\"0\""));
+                Assert.That(settingsOverlay, Does.Contain("TabIndex=\"1\""));
+                Assert.That(settingsOverlay, Does.Contain("TabIndex=\"2\""));
+                Assert.That(settingsOverlay, Does.Contain("TabIndex=\"3\""));
                 Assert.That(settingsOverlay, Does.Not.Contain("Header=\"Start\""));
                 Assert.That(settingsOverlay, Does.Not.Contain("Header=\"Prefs\""));
                 Assert.That(settingsOverlay, Does.Not.Contain("Header=\"Diag\""));
@@ -497,8 +506,8 @@ namespace Cotton.Sync.Desktop.Tests.Shell
                 "</Window>");
             string accountTab = GetSlice(
                 settingsOverlay,
-                "<TabItem Header=\"Account\">",
-                "<TabItem Header=\"Startup\">");
+                "<TabItem Header=\"Account\"",
+                "<TabItem Header=\"Startup\"");
 
             Assert.Multiple(() =>
             {

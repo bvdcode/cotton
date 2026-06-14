@@ -1265,8 +1265,13 @@
             <TabControl Grid.Row="1"
                         Classes="settingsTabs"
                         FontSize="13"
+                        KeyboardNavigation.TabNavigation="Continue"
                         SelectedIndex="{Binding SelectedSettingsTabIndex}">
-              <TabItem Header="Account">
+              <TabItem Header="Account"
+                       AutomationProperties.Name="Account settings"
+                       Focusable="True"
+                       IsTabStop="True"
+                       TabIndex="0">
                 <StackPanel Margin="0,10,0,0"
                             Spacing="14">
                   <StackPanel Spacing="3">
@@ -1330,7 +1335,11 @@
                 </StackPanel>
               </TabItem>
 
-              <TabItem Header="Startup">
+              <TabItem Header="Startup"
+                       AutomationProperties.Name="Startup settings"
+                       Focusable="True"
+                       IsTabStop="True"
+                       TabIndex="1">
                 <StackPanel Margin="0,10,0,0"
                             Spacing="7">
                   <CheckBox Content="Launch on startup"
@@ -1348,7 +1357,11 @@
                 </StackPanel>
               </TabItem>
 
-              <TabItem Header="Preferences">
+              <TabItem Header="Preferences"
+                       AutomationProperties.Name="Preferences settings"
+                       Focusable="True"
+                       IsTabStop="True"
+                       TabIndex="2">
                 <StackPanel Margin="0,10,0,0"
                             Spacing="14">
                   <StackPanel Spacing="6">
@@ -1378,7 +1391,11 @@
                 </StackPanel>
               </TabItem>
 
-              <TabItem Header="Diagnostics">
+              <TabItem Header="Diagnostics"
+                       AutomationProperties.Name="Diagnostics settings"
+                       Focusable="True"
+                       IsTabStop="True"
+                       TabIndex="3">
                 <ScrollViewer Margin="0,10,0,0"
                               VerticalScrollBarVisibility="Auto">
                   <StackPanel Spacing="8">
