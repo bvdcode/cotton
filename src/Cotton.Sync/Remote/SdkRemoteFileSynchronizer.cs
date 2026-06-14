@@ -125,6 +125,35 @@ namespace Cotton.Sync.Remote
         }
 
         /// <inheritdoc />
+        public async Task<NodeFileManifestDto> MoveFileAsync(
+            Guid rootNodeId,
+            string relativePath,
+            NodeFileManifestDto existingRemoteFile,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(existingRemoteFile);
+            string normalizedPath = SyncPath.Normalize(relativePath);
+            Guid parentNodeId = await EnsureParentNodeAsync(rootNodeId, normalizedPath, cancellationToken).ConfigureAwait(false);
+            string targetName = Path.GetFileName(normalizedPath);
+            NodeFileManifestDto current = existingRemoteFile;
+            if (current.NodeId != parentNodeId)
+            {
+                current = await _client.Files
+                    .MoveAsync(current.Id, parentNodeId, current.ETag, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            if (!string.Equals(current.Name, targetName, StringComparison.Ordinal))
+            {
+                current = await _client.Files
+                    .RenameAsync(current.Id, targetName, current.ETag, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            return current;
+        }
+
+        /// <inheritdoc />
         public async Task DownloadFileAsync(
             Guid nodeFileId,
             string relativePath,

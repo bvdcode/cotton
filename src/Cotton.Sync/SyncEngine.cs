@@ -114,6 +114,15 @@ namespace Cotton.Sync
             await EnsureLocalContentHashesForStateFilesAsync(localByPath, stateByPath, options, startedAtUtc, cancellationToken)
                 .ConfigureAwait(false);
 
+            await CoalesceLocalFileMovesAsync(
+                syncPair,
+                options,
+                result,
+                localByPath,
+                remoteByPath,
+                stateByPath,
+                cancellationToken).ConfigureAwait(false);
+
             bool hasLocalDirectoryDeleteCandidates = HasLocalDirectoryDeleteCandidates(
                 localDirectoriesByPath,
                 remoteDirectoriesByPath,
@@ -945,6 +954,195 @@ namespace Cotton.Sync
             }
 
             await PreserveConflictAsync(syncPair, options, result, relativePath, local, remote?.File, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task CoalesceLocalFileMovesAsync(
+            SyncPair syncPair,
+            SyncRunOptions options,
+            SyncRunResult result,
+            IReadOnlyDictionary<string, LocalFileSnapshot> localByPath,
+            IDictionary<string, RemoteFileSnapshot> remoteByPath,
+            IDictionary<string, SyncStateEntry> stateByPath,
+            CancellationToken cancellationToken)
+        {
+            List<KeyValuePair<string, SyncStateEntry>> moveSources = FindLocalMoveSources(localByPath, remoteByPath, stateByPath);
+            if (moveSources.Count == 0)
+            {
+                return;
+            }
+
+            Dictionary<MoveCandidateKey, Queue<LocalFileSnapshot>> candidates =
+                await BuildLocalMoveCandidateBucketsAsync(localByPath, remoteByPath, stateByPath, options, cancellationToken)
+                    .ConfigureAwait(false);
+            if (candidates.Count == 0)
+            {
+                return;
+            }
+
+            foreach (KeyValuePair<string, SyncStateEntry> source in moveSources)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!remoteByPath.TryGetValue(source.Key, out RemoteFileSnapshot? remote)
+                    || string.IsNullOrWhiteSpace(source.Value.LocalContentHash)
+                    || !source.Value.LocalSizeBytes.HasValue)
+                {
+                    continue;
+                }
+
+                var candidateKey = new MoveCandidateKey(source.Value.LocalContentHash, source.Value.LocalSizeBytes.Value);
+                if (!candidates.TryGetValue(candidateKey, out Queue<LocalFileSnapshot>? bucket)
+                    || !TryDequeueCurrentCandidate(bucket, remoteByPath, stateByPath, out LocalFileSnapshot? local))
+                {
+                    continue;
+                }
+
+                await MoveRemoteFileAsync(
+                    syncPair,
+                    options,
+                    result,
+                    source.Key,
+                    source.Value,
+                    local,
+                    remote,
+                    remoteByPath,
+                    stateByPath,
+                    cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        private static List<KeyValuePair<string, SyncStateEntry>> FindLocalMoveSources(
+            IReadOnlyDictionary<string, LocalFileSnapshot> localByPath,
+            IDictionary<string, RemoteFileSnapshot> remoteByPath,
+            IDictionary<string, SyncStateEntry> stateByPath)
+        {
+            var result = new List<KeyValuePair<string, SyncStateEntry>>();
+            foreach (KeyValuePair<string, SyncStateEntry> state in stateByPath)
+            {
+                if (state.Value.Kind != SyncEntryKind.File
+                    || string.IsNullOrWhiteSpace(state.Value.LocalContentHash)
+                    || !state.Value.LocalSizeBytes.HasValue
+                    || localByPath.ContainsKey(state.Key)
+                    || !remoteByPath.TryGetValue(state.Key, out RemoteFileSnapshot? remote)
+                    || !RemoteMatchesBaseline(remote.File, state.Value))
+                {
+                    continue;
+                }
+
+                result.Add(state);
+            }
+
+            return result;
+        }
+
+        private async Task<Dictionary<MoveCandidateKey, Queue<LocalFileSnapshot>>> BuildLocalMoveCandidateBucketsAsync(
+            IReadOnlyDictionary<string, LocalFileSnapshot> localByPath,
+            IDictionary<string, RemoteFileSnapshot> remoteByPath,
+            IDictionary<string, SyncStateEntry> stateByPath,
+            SyncRunOptions options,
+            CancellationToken cancellationToken)
+        {
+            var candidates = new Dictionary<MoveCandidateKey, Queue<LocalFileSnapshot>>();
+            foreach (KeyValuePair<string, LocalFileSnapshot> local in localByPath)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (stateByPath.ContainsKey(local.Key) || remoteByPath.ContainsKey(local.Key))
+                {
+                    continue;
+                }
+
+                await EnsureLocalContentHashAsync(local.Value, options, cancellationToken).ConfigureAwait(false);
+                if (string.IsNullOrWhiteSpace(local.Value.ContentHash))
+                {
+                    continue;
+                }
+
+                var candidateKey = new MoveCandidateKey(local.Value.ContentHash, local.Value.SizeBytes);
+                if (!candidates.TryGetValue(candidateKey, out Queue<LocalFileSnapshot>? bucket))
+                {
+                    bucket = new Queue<LocalFileSnapshot>();
+                    candidates[candidateKey] = bucket;
+                }
+
+                bucket.Enqueue(local.Value);
+            }
+
+            return candidates;
+        }
+
+        private static bool TryDequeueCurrentCandidate(
+            Queue<LocalFileSnapshot> bucket,
+            IDictionary<string, RemoteFileSnapshot> remoteByPath,
+            IDictionary<string, SyncStateEntry> stateByPath,
+            out LocalFileSnapshot local)
+        {
+            while (bucket.Count > 0)
+            {
+                LocalFileSnapshot candidate = bucket.Dequeue();
+                string key = SyncPath.ToKey(candidate.RelativePath);
+                if (!remoteByPath.ContainsKey(key) && !stateByPath.ContainsKey(key))
+                {
+                    local = candidate;
+                    return true;
+                }
+            }
+
+            local = null!;
+            return false;
+        }
+
+        private async Task MoveRemoteFileAsync(
+            SyncPair syncPair,
+            SyncRunOptions options,
+            SyncRunResult result,
+            string sourceKey,
+            SyncStateEntry sourceState,
+            LocalFileSnapshot local,
+            RemoteFileSnapshot remote,
+            IDictionary<string, RemoteFileSnapshot> remoteByPath,
+            IDictionary<string, SyncStateEntry> stateByPath,
+            CancellationToken cancellationToken)
+        {
+            string sourcePath = sourceState.RelativePath;
+            string targetPath = local.RelativePath;
+            NodeFileManifestDto moved;
+            try
+            {
+                moved = await _remoteFiles
+                    .MoveFileAsync(syncPair.RemoteRootNodeId, targetPath, remote.File, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (HttpRequestException exception) when (IsRemotePreconditionFailed(exception))
+            {
+                NodeFileManifestDto? latestRemoteFile = await FindLatestRemoteFileAsync(syncPair, sourcePath, cancellationToken).ConfigureAwait(false);
+                if (latestRemoteFile is null)
+                {
+                    remoteByPath.Remove(sourceKey);
+                }
+                else
+                {
+                    remoteByPath[sourceKey] = new RemoteFileSnapshot
+                    {
+                        RelativePath = sourcePath,
+                        File = latestRemoteFile,
+                    };
+                }
+
+                return;
+            }
+
+            string targetKey = SyncPath.ToKey(targetPath);
+            remoteByPath.Remove(sourceKey);
+            remoteByPath[targetKey] = new RemoteFileSnapshot
+            {
+                RelativePath = targetPath,
+                File = moved,
+            };
+            stateByPath.Remove(sourceKey);
+            SyncStateEntry targetState = BuildBaseline(syncPair, targetPath, local.ContentHash, local.LastWriteUtc, local.SizeBytes, moved);
+            stateByPath[targetKey] = targetState;
+            await _stateStore.DeleteAsync(syncPair.SyncPairId, sourcePath, cancellationToken).ConfigureAwait(false);
+            await _stateStore.UpsertAsync(targetState, cancellationToken).ConfigureAwait(false);
+            Report(result, options, SyncActivityKind.Moved, targetPath, "Moved from " + sourcePath + ".");
         }
 
         private async Task UploadAsync(
@@ -2363,6 +2561,8 @@ namespace Cotton.Sync
 
             throw new InvalidOperationException("Uploaded file manifest does not include a content hash.");
         }
+
+        private readonly record struct MoveCandidateKey(string ContentHash, long SizeBytes);
 
         private static void ReportRunProgress(
             SyncRunOptions options,

@@ -27,6 +27,15 @@ namespace Cotton.Sync.Remote
         Task DownloadFileAsync(Guid nodeFileId, Stream destination, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Moves and/or renames an existing remote file entry to the supplied relative path.
+        /// </summary>
+        Task<NodeFileManifestDto> MoveFileAsync(
+            Guid rootNodeId,
+            string relativePath,
+            NodeFileManifestDto existingRemoteFile,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Deletes a remote file entry.
         /// </summary>
         Task DeleteFileAsync(

@@ -311,6 +311,118 @@ namespace Cotton.Sync.Tests
         }
 
         [Test]
+        public async Task RunOnceAsync_MovesRemoteFileWhenLocalPathChangesWithoutContentChange()
+        {
+            string oldPath = "Project/old-name.txt";
+            string newPath = "Project/new-name.txt";
+            string content = "same-content";
+            WriteFile(newPath, content);
+            LocalFileSnapshot local = LocalFile(newPath, content);
+            NodeFileManifestDto oldRemote = RemoteFile(oldPath, local.ContentHash, sizeBytes: local.SizeBytes);
+            var remoteFiles = new FakeRemoteFileSynchronizer();
+            SyncEngine engine = CreateEngine(
+                new FakeLocalFileScanner(local),
+                RemoteTree(oldRemote),
+                remoteFiles,
+                out SqliteSyncStateStore stateStore);
+            await InsertBaselineAsync(stateStore, oldPath, local.ContentHash, oldRemote, local.SizeBytes);
+
+            SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+            SyncStateEntry? oldEntry = await stateStore.GetAsync("pair-a", oldPath);
+            SyncStateEntry? newEntry = await stateStore.GetAsync("pair-a", newPath);
+            Assert.Multiple(() =>
+            {
+                Assert.That(remoteFiles.Moves.Select(move => move.RelativePath), Is.EqualTo(new[] { newPath }));
+                Assert.That(remoteFiles.Moves[0].ExistingRemoteFile.Id, Is.EqualTo(oldRemote.Id));
+                Assert.That(remoteFiles.Uploads, Is.Empty);
+                Assert.That(remoteFiles.Deletes, Is.Empty);
+                Assert.That(result.RequiresUserAction, Is.False);
+                Assert.That(result.Activities.Select(activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Moved }));
+                Assert.That(result.Activities.Select(activity => activity.RelativePath), Is.EqualTo(new[] { newPath }));
+                Assert.That(oldEntry, Is.Null);
+                Assert.That(newEntry, Is.Not.Null);
+                Assert.That(newEntry!.RemoteFileId, Is.EqualTo(oldRemote.Id));
+                Assert.That(newEntry.LocalContentHash, Is.EqualTo(local.ContentHash));
+                Assert.That(newEntry.LocalSizeBytes, Is.EqualTo(local.SizeBytes));
+            });
+        }
+
+        [Test]
+        public async Task RunOnceAsync_LocalMovesDoNotTripRemoteMassDeleteGuard()
+        {
+            LocalFileSnapshot firstLocal = LocalFile("moved-a.txt", "content-a");
+            LocalFileSnapshot secondLocal = LocalFile("moved-b.txt", "content-b");
+            NodeFileManifestDto firstRemote = RemoteFile("a.txt", firstLocal.ContentHash, sizeBytes: firstLocal.SizeBytes);
+            NodeFileManifestDto secondRemote = RemoteFile("b.txt", secondLocal.ContentHash, sizeBytes: secondLocal.SizeBytes);
+            var remoteFiles = new FakeRemoteFileSynchronizer();
+            SyncEngine engine = CreateEngine(
+                new FakeLocalFileScanner(firstLocal, secondLocal),
+                RemoteTree(firstRemote, secondRemote),
+                remoteFiles,
+                out SqliteSyncStateStore stateStore);
+            await InsertBaselineAsync(stateStore, "a.txt", firstLocal.ContentHash, firstRemote, firstLocal.SizeBytes);
+            await InsertBaselineAsync(stateStore, "b.txt", secondLocal.ContentHash, secondRemote, secondLocal.SizeBytes);
+
+            SyncRunResult result = await engine.RunOnceAsync(Pair(), new SyncRunOptions { MaximumRemoteDeletesPerRun = 1 });
+
+            SyncStateEntry? firstOldEntry = await stateStore.GetAsync("pair-a", "a.txt");
+            SyncStateEntry? secondOldEntry = await stateStore.GetAsync("pair-a", "b.txt");
+            SyncStateEntry? firstNewEntry = await stateStore.GetAsync("pair-a", "moved-a.txt");
+            SyncStateEntry? secondNewEntry = await stateStore.GetAsync("pair-a", "moved-b.txt");
+            Assert.Multiple(() =>
+            {
+                Assert.That(remoteFiles.Moves.Select(move => move.RelativePath), Is.EquivalentTo(new[] { "moved-a.txt", "moved-b.txt" }));
+                Assert.That(remoteFiles.Uploads, Is.Empty);
+                Assert.That(remoteFiles.Deletes, Is.Empty);
+                Assert.That(result.RequiresUserAction, Is.False);
+                Assert.That(result.Activities.Select(activity => activity.Kind), Is.All.EqualTo(SyncActivityKind.Moved));
+                Assert.That(firstOldEntry, Is.Null);
+                Assert.That(secondOldEntry, Is.Null);
+                Assert.That(firstNewEntry, Is.Not.Null);
+                Assert.That(secondNewEntry, Is.Not.Null);
+            });
+        }
+
+        [Test]
+        public async Task RunOnceAsync_MovePreconditionFailureFallsBackToConflictAndUploadWithoutDeletingRemote()
+        {
+            string oldPath = "Project/old-name.txt";
+            string newPath = "Project/new-name.txt";
+            string localContent = "same-content";
+            WriteFile(newPath, localContent);
+            LocalFileSnapshot local = LocalFile(newPath, localContent);
+            Guid remoteId = Guid.NewGuid();
+            NodeFileManifestDto oldRemote = RemoteFile(oldPath, local.ContentHash, remoteId, local.SizeBytes);
+            byte[] latestRemoteContent = Encoding.UTF8.GetBytes("remote-changed");
+            NodeFileManifestDto latestRemote = RemoteFile(oldPath, Hash(latestRemoteContent), remoteId, latestRemoteContent.Length);
+            var remoteFiles = new FakeRemoteFileSynchronizer();
+            remoteFiles.PreconditionFailedMoveIds.Add(remoteId);
+            remoteFiles.Downloads[remoteId] = latestRemoteContent;
+            SyncEngine engine = CreateEngine(
+                new FakeLocalFileScanner(local),
+                remoteFiles,
+                out SqliteSyncStateStore stateStore,
+                RemoteTree(oldRemote),
+                RemoteTree(latestRemote));
+            await InsertBaselineAsync(stateStore, oldPath, local.ContentHash, oldRemote, local.SizeBytes);
+
+            SyncRunResult result = await engine.RunOnceAsync(Pair());
+
+            SyncStateEntry? oldEntry = await stateStore.GetAsync("pair-a", oldPath);
+            SyncStateEntry? newEntry = await stateStore.GetAsync("pair-a", newPath);
+            Assert.Multiple(() =>
+            {
+                Assert.That(remoteFiles.Deletes, Is.Empty);
+                Assert.That(remoteFiles.Uploads.Select(upload => upload.RelativePath), Is.EqualTo(new[] { newPath }));
+                Assert.That(File.ReadAllText(Path.Combine(_root, oldPath.Replace('/', Path.DirectorySeparatorChar))), Is.EqualTo("remote-changed"));
+                Assert.That(result.Activities.Select(activity => activity.Kind), Is.EquivalentTo(new[] { SyncActivityKind.Conflict, SyncActivityKind.Uploaded }));
+                Assert.That(oldEntry, Is.Not.Null);
+                Assert.That(newEntry, Is.Not.Null);
+            });
+        }
+
+        [Test]
         public async Task RunOnceAsync_HashesMetadataSnapshotWhenBaselineNeedsComparison()
         {
             const string baselineHash = "precomputed-content-hash";
@@ -2636,7 +2748,8 @@ namespace Cotton.Sync.Tests
             SqliteSyncStateStore stateStore,
             string relativePath,
             string localContentHash,
-            NodeFileManifestDto remoteFile)
+            NodeFileManifestDto remoteFile,
+            long? localSizeBytes = null)
         {
             await stateStore.InitializeAsync();
             await stateStore.UpsertAsync(new SyncStateEntry
@@ -2646,6 +2759,7 @@ namespace Cotton.Sync.Tests
                 Kind = SyncEntryKind.File,
                 LocalContentHash = localContentHash,
                 LocalLastWriteUtc = new DateTime(2026, 6, 2, 13, 0, 0, DateTimeKind.Utc),
+                LocalSizeBytes = localSizeBytes,
                 RemoteNodeId = remoteFile.NodeId,
                 RemoteFileId = remoteFile.Id,
                 RemoteContentHash = remoteFile.ContentHash,
@@ -3207,6 +3321,8 @@ namespace Cotton.Sync.Tests
         {
             public List<UploadCall> Uploads { get; } = [];
 
+            public List<MoveCall> Moves { get; } = [];
+
             public List<string> UploadInputContentHashes { get; } = [];
 
             public List<(Guid NodeFileId, bool SkipTrash, string? ExpectedETag)> Deletes { get; } = [];
@@ -3224,6 +3340,8 @@ namespace Cotton.Sync.Tests
             public HashSet<Guid> PreconditionFailedUploadIds { get; } = [];
 
             public HashSet<Guid> PreconditionFailedDeleteIds { get; } = [];
+
+            public HashSet<Guid> PreconditionFailedMoveIds { get; } = [];
 
             public HashSet<string> LocalUnavailableUploadRelativePaths { get; } = new(StringComparer.OrdinalIgnoreCase);
 
@@ -3289,6 +3407,41 @@ namespace Cotton.Sync.Tests
                 };
                 Uploads.Add(new UploadCall(rootNodeId, relativePath, localFile, existingRemoteFile, returned));
                 return Task.FromResult(returned);
+            }
+
+            public Task<NodeFileManifestDto> MoveFileAsync(
+                Guid rootNodeId,
+                string relativePath,
+                NodeFileManifestDto existingRemoteFile,
+                CancellationToken cancellationToken = default)
+            {
+                if (PreconditionFailedMoveIds.Contains(existingRemoteFile.Id))
+                {
+                    throw new HttpRequestException(
+                        "Remote file changed before move.",
+                        inner: null,
+                        HttpStatusCode.PreconditionFailed);
+                }
+
+                string normalizedPath = relativePath.Replace('\\', '/');
+                NodeFileManifestDto moved = new()
+                {
+                    Id = existingRemoteFile.Id,
+                    NodeId = rootNodeId,
+                    FileManifestId = existingRemoteFile.FileManifestId,
+                    OriginalNodeFileId = existingRemoteFile.OriginalNodeFileId,
+                    OwnerId = existingRemoteFile.OwnerId,
+                    Name = normalizedPath.Split('/')[^1],
+                    ContentType = existingRemoteFile.ContentType,
+                    SizeBytes = existingRemoteFile.SizeBytes,
+                    ContentHash = existingRemoteFile.ContentHash,
+                    ETag = existingRemoteFile.ETag,
+                    CreatedAt = existingRemoteFile.CreatedAt,
+                    UpdatedAt = new DateTime(2026, 6, 2, 14, 0, 0, DateTimeKind.Utc),
+                    Metadata = new Dictionary<string, string> { ["relativePath"] = normalizedPath },
+                };
+                Moves.Add(new MoveCall(rootNodeId, normalizedPath, existingRemoteFile, moved));
+                return Task.FromResult(moved);
             }
 
             public Task DownloadFileAsync(Guid nodeFileId, Stream destination, CancellationToken cancellationToken = default)
@@ -3361,6 +3514,12 @@ namespace Cotton.Sync.Tests
             string RelativePath,
             LocalFileSnapshot LocalFile,
             NodeFileManifestDto? ExistingRemoteFile,
+            NodeFileManifestDto ReturnedFile);
+
+        private record MoveCall(
+            Guid RootNodeId,
+            string RelativePath,
+            NodeFileManifestDto ExistingRemoteFile,
             NodeFileManifestDto ReturnedFile);
 
         private abstract class DelegatingStateStore : ISyncStateStore

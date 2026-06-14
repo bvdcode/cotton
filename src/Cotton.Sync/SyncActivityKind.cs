@@ -42,5 +42,10 @@ namespace Cotton.Sync
         /// A requested action was deliberately skipped by a safety guard.
         /// </summary>
         Skipped = 6,
+
+        /// <summary>
+        /// A baseline-known file was moved or renamed without re-uploading content.
+        /// </summary>
+        Moved = 7,
     }
 }

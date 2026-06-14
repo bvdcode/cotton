@@ -46,6 +46,7 @@ namespace Cotton.Sync.App.Runners
             {
                 CoreSyncActivityKind.Uploaded => "Uploaded",
                 CoreSyncActivityKind.Downloaded => "Downloaded",
+                CoreSyncActivityKind.Moved => "Moved",
                 CoreSyncActivityKind.DeletedLocal => "Deleted local copy",
                 CoreSyncActivityKind.DeletedRemote => "Deleted remote copy",
                 CoreSyncActivityKind.Conflict => "Created conflict copy",

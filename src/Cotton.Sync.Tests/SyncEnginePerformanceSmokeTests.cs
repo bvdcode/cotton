@@ -866,6 +866,8 @@ namespace Cotton.Sync.Tests
 
             public int DeleteCalls { get; private set; }
 
+            public int MoveCalls { get; private set; }
+
             public Task<NodeFileManifestDto> UploadFileAsync(
                 Guid rootNodeId,
                 string relativePath,
@@ -892,6 +894,16 @@ namespace Cotton.Sync.Tests
                 DeleteCalls++;
                 throw new InvalidOperationException("No-op performance smoke must not delete files.");
             }
+
+            public Task<NodeFileManifestDto> MoveFileAsync(
+                Guid rootNodeId,
+                string relativePath,
+                NodeFileManifestDto existingRemoteFile,
+                CancellationToken cancellationToken = default)
+            {
+                MoveCalls++;
+                throw new InvalidOperationException("No-op performance smoke must not move files.");
+            }
         }
 
         private class RecordingRemoteFileSynchronizer : IRemoteFileSynchronizer
@@ -909,6 +921,8 @@ namespace Cotton.Sync.Tests
             public int DownloadCalls { get; private set; }
 
             public int DeleteCalls { get; private set; }
+
+            public int MoveCalls { get; private set; }
 
             public async Task<NodeFileManifestDto> UploadFileAsync(
                 Guid rootNodeId,
@@ -952,6 +966,16 @@ namespace Cotton.Sync.Tests
             {
                 DeleteCalls++;
                 throw new InvalidOperationException("Initial upload performance smoke must not delete files.");
+            }
+
+            public Task<NodeFileManifestDto> MoveFileAsync(
+                Guid rootNodeId,
+                string relativePath,
+                NodeFileManifestDto existingRemoteFile,
+                CancellationToken cancellationToken = default)
+            {
+                MoveCalls++;
+                throw new InvalidOperationException("Initial upload performance smoke must not move files.");
             }
         }
 

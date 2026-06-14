@@ -104,6 +104,38 @@ namespace Cotton.Sync.App.Tests.Runners
         }
 
         [Test]
+        public async Task RunOnceAsync_PublishesCoreMoveActivities()
+        {
+            Guid syncPairId = Guid.NewGuid();
+            var engine = new FakeSyncEngine
+            {
+                ActivityToReport = new CoreSyncActivity
+                {
+                    Kind = CoreSyncActivityKind.Moved,
+                    RelativePath = "Documents/new-name.txt",
+                    Details = "Moved from Documents/old-name.txt.",
+                },
+            };
+            var publisher = new InMemoryAppActivityPublisher();
+            var observer = new RecordingObserver<AppSyncActivity>();
+            using IDisposable subscription = publisher.Subscribe(observer);
+            var work = new SyncEnginePairWork(engine, publisher);
+            SyncPairSettings syncPair = CreateSyncPair(syncPairId);
+
+            await work.RunOnceAsync(syncPair);
+
+            AppSyncActivity activity = observer.Values.Single();
+            Assert.Multiple(() =>
+            {
+                Assert.That(activity.SyncPairId, Is.EqualTo(syncPairId));
+                Assert.That(activity.Type, Is.EqualTo(SyncActivityKind.Moved));
+                Assert.That(activity.ItemPath, Is.EqualTo("Documents/new-name.txt"));
+                Assert.That(activity.Message, Does.Contain("Moved Documents/new-name.txt"));
+                Assert.That(activity.Message, Does.Contain("Moved from Documents/old-name.txt."));
+            });
+        }
+
+        [Test]
         public async Task RunOnceAsync_PublishesCoreTransferProgress()
         {
             Guid syncPairId = Guid.NewGuid();

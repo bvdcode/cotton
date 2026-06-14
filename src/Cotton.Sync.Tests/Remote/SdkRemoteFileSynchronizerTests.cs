@@ -118,6 +118,34 @@ namespace Cotton.Sync.Tests.Remote
         }
 
         [Test]
+        public async Task MoveFileAsync_MovesToExistingParentAndRenamesWithFreshETags()
+        {
+            Guid docsId = Guid.NewGuid();
+            Guid reportsId = Guid.NewGuid();
+            var client = new FakeCottonCloudClient(chunkSizeBytes: 1024);
+            client.NodesClient.Children[_rootNodeId] = [Node(docsId, _rootNodeId, "Docs")];
+            client.NodesClient.Children[docsId] = [Node(reportsId, docsId, "Reports")];
+            NodeFileManifestDto existing = RemoteFile("old.txt", HashText("same"));
+            existing.NodeId = _rootNodeId;
+            existing.ETag = "sha256-original";
+            client.FilesClient.Files[existing.Id] = existing;
+            var synchronizer = new SdkRemoteFileSynchronizer(client);
+
+            NodeFileManifestDto moved = await synchronizer.MoveFileAsync(_rootNodeId, "Docs/Reports/new.txt", existing);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(client.NodesClient.CreatedNodes, Is.Empty);
+                Assert.That(client.FilesClient.MoveRequests, Is.EqualTo(new[] { (existing.Id, reportsId, "sha256-original") }));
+                Assert.That(client.FilesClient.RenameRequests, Is.EqualTo(new[] { (existing.Id, "new.txt", "sha256-moved-1") }));
+                Assert.That(moved.Id, Is.EqualTo(existing.Id));
+                Assert.That(moved.NodeId, Is.EqualTo(reportsId));
+                Assert.That(moved.Name, Is.EqualTo("new.txt"));
+                Assert.That(moved.ETag, Is.EqualTo("sha256-renamed-1"));
+            });
+        }
+
+        [Test]
         public async Task UploadFileAsync_UploadsEmptyFileAsEmptyChunk()
         {
             LocalFileSnapshot local = WriteLocalFile("empty.bin", []);
@@ -631,9 +659,15 @@ namespace Cotton.Sync.Tests.Remote
 
         private class FakeFileClient : ICottonFileClient
         {
+            public Dictionary<Guid, NodeFileManifestDto> Files { get; } = [];
+
             public List<CreateFileFromChunksRequestDto> CreateRequests { get; } = [];
 
             public List<(Guid NodeFileId, CreateFileFromChunksRequestDto Request, string? ExpectedETag)> UpdateRequests { get; } = [];
+
+            public List<(Guid NodeFileId, Guid ParentId, string? ExpectedETag)> MoveRequests { get; } = [];
+
+            public List<(Guid NodeFileId, string Name, string? ExpectedETag)> RenameRequests { get; } = [];
 
             public List<(Guid NodeFileId, bool SkipTrash, string? ExpectedETag)> Deletes { get; } = [];
 
@@ -644,7 +678,9 @@ namespace Cotton.Sync.Tests.Remote
                 CancellationToken cancellationToken = default)
             {
                 CreateRequests.Add(request);
-                return Task.FromResult(FileFromRequest(Guid.NewGuid(), request));
+                NodeFileManifestDto created = FileFromRequest(Guid.NewGuid(), request);
+                Files[created.Id] = created;
+                return Task.FromResult(created);
             }
 
             public Task<NodeFileManifestDto> UpdateContentAsync(
@@ -654,7 +690,9 @@ namespace Cotton.Sync.Tests.Remote
                 CancellationToken cancellationToken = default)
             {
                 UpdateRequests.Add((nodeFileId, request, expectedETag));
-                return Task.FromResult(FileFromRequest(nodeFileId, request));
+                NodeFileManifestDto updated = FileFromRequest(nodeFileId, request);
+                Files[nodeFileId] = updated;
+                return Task.FromResult(updated);
             }
 
             public Task<NodeFileManifestDto> MoveAsync(
@@ -663,7 +701,12 @@ namespace Cotton.Sync.Tests.Remote
                 string? expectedETag = null,
                 CancellationToken cancellationToken = default)
             {
-                throw new NotSupportedException();
+                MoveRequests.Add((nodeFileId, parentId, expectedETag));
+                NodeFileManifestDto moved = CloneFile(Files[nodeFileId]);
+                moved.NodeId = parentId;
+                moved.ETag = "sha256-moved-" + MoveRequests.Count;
+                Files[nodeFileId] = moved;
+                return Task.FromResult(moved);
             }
 
             public Task<NodeFileManifestDto> RenameAsync(
@@ -672,7 +715,12 @@ namespace Cotton.Sync.Tests.Remote
                 string? expectedETag = null,
                 CancellationToken cancellationToken = default)
             {
-                throw new NotSupportedException();
+                RenameRequests.Add((nodeFileId, name, expectedETag));
+                NodeFileManifestDto renamed = CloneFile(Files[nodeFileId]);
+                renamed.Name = name;
+                renamed.ETag = "sha256-renamed-" + RenameRequests.Count;
+                Files[nodeFileId] = renamed;
+                return Task.FromResult(renamed);
             }
 
             public Task<NodeFileManifestDto> UpdateMetadataAsync(
@@ -731,6 +779,28 @@ namespace Cotton.Sync.Tests.Remote
                     ContentType = request.ContentType,
                     ContentHash = request.Hash,
                     ETag = "sha256-" + request.Hash,
+                };
+            }
+
+            private static NodeFileManifestDto CloneFile(NodeFileManifestDto source)
+            {
+                return new NodeFileManifestDto
+                {
+                    Id = source.Id,
+                    NodeId = source.NodeId,
+                    FileManifestId = source.FileManifestId,
+                    OriginalNodeFileId = source.OriginalNodeFileId,
+                    OwnerId = source.OwnerId,
+                    Name = source.Name,
+                    ContentType = source.ContentType,
+                    SizeBytes = source.SizeBytes,
+                    ContentHash = source.ContentHash,
+                    ETag = source.ETag,
+                    CreatedAt = source.CreatedAt,
+                    UpdatedAt = source.UpdatedAt,
+                    Metadata = source.Metadata is null
+                        ? []
+                        : new Dictionary<string, string>(source.Metadata, StringComparer.Ordinal),
                 };
             }
         }
