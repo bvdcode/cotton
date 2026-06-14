@@ -91,12 +91,13 @@ namespace Cotton.Sync.Desktop
 
         internal void ShowShell()
         {
-            Show();
+            _lifecyclePolicy.RequestShow();
             if (WindowState == WindowState.Minimized)
             {
                 WindowState = WindowState.Normal;
             }
 
+            Show();
             Activate();
         }
 

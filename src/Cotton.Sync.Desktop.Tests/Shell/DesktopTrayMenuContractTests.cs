@@ -56,6 +56,21 @@ namespace Cotton.Sync.Desktop.Tests.Shell
             });
         }
 
+        [Test]
+        public void TrayMenu_DispatchesWindowActionsToAvaloniaUiThread()
+        {
+            string trayController = File.ReadAllText(GetDesktopShellFilePath("DesktopTrayController.cs"));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(trayController, Does.Contain("using Avalonia.Threading;"));
+                Assert.That(trayController, Does.Contain("RunOnUiThread(action)"));
+                Assert.That(trayController, Does.Contain("RunOnUiThread(ShowWindow)"));
+                Assert.That(trayController, Does.Contain("Dispatcher.UIThread.CheckAccess()"));
+                Assert.That(trayController, Does.Contain("Dispatcher.UIThread.Post(action)"));
+            });
+        }
+
         private static string GetDesktopShellFilePath(string fileName)
         {
             string directory = TestContext.CurrentContext.TestDirectory;

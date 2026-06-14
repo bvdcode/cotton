@@ -64,5 +64,17 @@ namespace Cotton.Sync.Desktop.Tests.Shell
                 Assert.That(normalPolicy.ShouldHideAfterStartup(), Is.False);
             });
         }
+
+        [Test]
+        public void ShouldHideAfterStartup_DoesNotHideAfterExplicitShowRequest()
+        {
+            var policy = new DesktopWindowLifecyclePolicy(
+                startMinimizedToTray: true,
+                canHideToTray: true);
+
+            policy.RequestShow();
+
+            Assert.That(policy.ShouldHideAfterStartup(), Is.False);
+        }
     }
 }

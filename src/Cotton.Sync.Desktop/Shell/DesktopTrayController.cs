@@ -5,6 +5,7 @@ using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using Cotton.Sync.Desktop.Platform;
 using Cotton.Sync.Desktop.ViewModels;
 
@@ -57,8 +58,19 @@ namespace Cotton.Sync.Desktop.Shell
         private static NativeMenuItem CreateMenuItem(string header, Action action)
         {
             var item = new NativeMenuItem(header);
-            item.Click += (_, _) => action();
+            item.Click += (_, _) => RunOnUiThread(action);
             return item;
+        }
+
+        private static void RunOnUiThread(Action action)
+        {
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                action();
+                return;
+            }
+
+            Dispatcher.UIThread.Post(action);
         }
 
         private TrayIcon CreateTrayIcon()
@@ -77,7 +89,7 @@ namespace Cotton.Sync.Desktop.Shell
                 IsVisible = true,
                 Menu = new NativeMenu(),
             };
-            trayIcon.Clicked += (_, _) => ShowWindow();
+            trayIcon.Clicked += (_, _) => RunOnUiThread(ShowWindow);
             return trayIcon;
         }
 
