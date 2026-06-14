@@ -498,8 +498,12 @@ namespace Cotton.Sync
                         local.RelativePath,
                         startedAtUtc,
                         ref lastReportedAtUtc);
-                    await EnsureLocalContentHashForBaselineComparisonAsync(local, state.Value, options, cancellationToken)
-                        .ConfigureAwait(false);
+                    if (!ShouldDeferLocalUpload(local, options, out _))
+                    {
+                        await EnsureLocalContentHashForBaselineComparisonAsync(local, state.Value, options, cancellationToken)
+                            .ConfigureAwait(false);
+                    }
+
                     filesCompleted++;
                     ReportItemRunProgress(
                         options,
@@ -952,6 +956,12 @@ namespace Cotton.Sync
             NodeFileManifestDto? existingRemoteFile,
             CancellationToken cancellationToken)
         {
+            if (ShouldDeferLocalUpload(local, options, out TimeSpan remainingQuietTime))
+            {
+                ReportDeferredLocalUpload(result, options, relativePath, remainingQuietTime);
+                return;
+            }
+
             NodeFileManifestDto uploaded;
             try
             {
@@ -979,6 +989,7 @@ namespace Cotton.Sync
             catch (LocalFileUnavailableException exception)
             {
                 Report(result, options, SyncActivityKind.Skipped, relativePath, exception.Reason);
+                result.RecordDeferredLocalPath(relativePath);
                 return;
             }
 
@@ -1388,6 +1399,13 @@ namespace Cotton.Sync
         private static void ValidateOptions(SyncRunOptions options)
         {
             ArgumentNullException.ThrowIfNull(options.Scope);
+            if (options.MinimumLocalUploadAge < TimeSpan.Zero)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(options),
+                    "Minimum local upload age cannot be negative.");
+            }
+
             if (options.MaximumLocalDeletesPerRun < 0)
             {
                 throw new ArgumentOutOfRangeException(
@@ -1965,6 +1983,7 @@ namespace Cotton.Sync
             {
                 Scope = SyncRunScope.Full,
                 DeleteRemotePermanently = options.DeleteRemotePermanently,
+                MinimumLocalUploadAge = options.MinimumLocalUploadAge,
                 MaximumLocalDeletesPerRun = options.MaximumLocalDeletesPerRun,
                 MaximumRemoteDeletesPerRun = options.MaximumRemoteDeletesPerRun,
                 MaximumStoredResultActivities = options.MaximumStoredResultActivities,
@@ -1972,6 +1991,53 @@ namespace Cotton.Sync
                 TransferProgress = options.TransferProgress,
                 RunProgress = options.RunProgress,
             };
+        }
+
+        private static bool ShouldDeferLocalUpload(
+            LocalFileSnapshot local,
+            SyncRunOptions options,
+            out TimeSpan remainingQuietTime)
+        {
+            remainingQuietTime = TimeSpan.Zero;
+            if (options.MinimumLocalUploadAge <= TimeSpan.Zero)
+            {
+                return false;
+            }
+
+            DateTime nowUtc = DateTime.UtcNow;
+            TimeSpan age = nowUtc - local.LastWriteUtc.ToUniversalTime();
+            if (age >= options.MinimumLocalUploadAge)
+            {
+                return false;
+            }
+
+            remainingQuietTime = options.MinimumLocalUploadAge - age;
+            return true;
+        }
+
+        private static void ReportDeferredLocalUpload(
+            SyncRunResult result,
+            SyncRunOptions options,
+            string relativePath,
+            TimeSpan remainingQuietTime)
+        {
+            result.RecordDeferredLocalPath(relativePath);
+            string details = "Local file is still changing; retry after "
+                + FormatQuietTime(remainingQuietTime)
+                + " quiet window.";
+            Report(result, options, SyncActivityKind.Skipped, relativePath, details);
+        }
+
+        private static string FormatQuietTime(TimeSpan value)
+        {
+            if (value.TotalMilliseconds < 1000)
+            {
+                return Math.Ceiling(value.TotalMilliseconds).ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    + "ms";
+            }
+
+            return value.TotalSeconds.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)
+                + "s";
         }
 
         private static bool IsRemotePreconditionFailed(HttpRequestException exception)

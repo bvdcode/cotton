@@ -1502,7 +1502,7 @@ namespace Cotton.Sync.Cli.Tests
                 Assert.That(exitCode, Is.EqualTo(0));
                 Assert.That(error.ToString(), Is.Empty);
                 Assert.That(text, Does.Contain("Cotton Sync soak run"));
-                Assert.That(text, Does.Contain("Iteration 1: activities=1, stateEntries=1"));
+                Assert.That(text, Does.Contain("Iteration 1: activities=1, deferredLocalPaths=0, stateEntries=1"));
                 Assert.That(text, Does.Contain("elapsedSeconds="));
                 Assert.That(text, Does.Contain("Elapsed seconds:"));
                 Assert.That(text, Does.Contain("CPU seconds:"));
@@ -1588,7 +1588,7 @@ namespace Cotton.Sync.Cli.Tests
                 Assert.That(text, Does.Contain("Open this URL in your browser to approve sign-in."));
                 Assert.That(text, Does.Contain("Waiting for browser approval..."));
                 Assert.That(text, Does.Contain("Cotton Sync soak run"));
-                Assert.That(text, Does.Contain("Iteration 1: activities=1, stateEntries=1"));
+                Assert.That(text, Does.Contain("Iteration 1: activities=1, deferredLocalPaths=0, stateEntries=1"));
                 Assert.That(text, Does.Contain("Final convergence activities: 0"));
                 Assert.That(text, Does.Contain("Final state entries: 1"));
                 Assert.That(text, Does.Contain("Converged: yes"));
@@ -1679,7 +1679,7 @@ namespace Cotton.Sync.Cli.Tests
         }
 
         [Test]
-        public async Task SyncSoak_ReturnsFailureWhenFinalConvergenceStillHasActivities()
+        public async Task SyncSoak_RetriesFinalConvergenceUntilNoActivities()
         {
             string localRoot = Path.Combine(_tempDirectory, "soak-non-converged-local");
             Directory.CreateDirectory(localRoot);
@@ -1729,13 +1729,13 @@ namespace Cotton.Sync.Cli.Tests
             string text = output.ToString();
             Assert.Multiple(() =>
             {
-                Assert.That(exitCode, Is.EqualTo(1));
+                Assert.That(exitCode, Is.EqualTo(0));
                 Assert.That(error.ToString(), Is.Empty);
-                Assert.That(text, Does.Contain("Iteration 1: activities=1, stateEntries=1"));
-                Assert.That(text, Does.Contain("Final convergence activities: 1"));
+                Assert.That(text, Does.Contain("Iteration 1: activities=1, deferredLocalPaths=0, stateEntries=1"));
+                Assert.That(text, Does.Contain("Final convergence activities: 0"));
                 Assert.That(text, Does.Contain("Sync errors: 0"));
-                Assert.That(text, Does.Contain("Converged: no"));
-                Assert.That(text, Does.Contain("Failures: 1"));
+                Assert.That(text, Does.Contain("Converged: yes"));
+                Assert.That(text, Does.Contain("Failures: 0"));
             });
         }
 
@@ -1807,7 +1807,7 @@ namespace Cotton.Sync.Cli.Tests
                 Assert.That(text, Does.Contain("Second sync pair: " + secondSyncPairId));
                 Assert.That(
                     text,
-                    Does.Contain("Iteration 1: clientAActivities=1, clientBActivities=1, clientAStateEntries=1, clientBStateEntries=1"));
+                    Does.Contain("Iteration 1: clientAActivities=1, clientADeferredLocalPaths=0, clientBActivities=1, clientBDeferredLocalPaths=0, clientAStateEntries=1, clientBStateEntries=1"));
                 Assert.That(text, Does.Contain("Total activities: 2"));
                 Assert.That(text, Does.Contain("Final convergence activities: 0"));
                 Assert.That(text, Does.Contain("Final state entries: 2"));

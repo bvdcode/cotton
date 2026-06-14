@@ -22,6 +22,12 @@ namespace Cotton.Sync
         public bool DeleteRemotePermanently { get; set; }
 
         /// <summary>
+        /// Gets or sets how old a local file's last write timestamp must be before upload starts.
+        /// Background clients can use this to coalesce write storms and avoid uploading transient intermediate content.
+        /// </summary>
+        public TimeSpan MinimumLocalUploadAge { get; set; } = TimeSpan.Zero;
+
+        /// <summary>
         /// Gets or sets the maximum number of local files that can be removed in one sync pass.
         /// </summary>
         public int MaximumLocalDeletesPerRun { get; set; } = DefaultMaximumDeletesPerRun;

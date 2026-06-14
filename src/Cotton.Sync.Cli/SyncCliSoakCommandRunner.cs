@@ -2,12 +2,16 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Sync.App.Auth;
+using Cotton.Sync;
 using System.Diagnostics;
 
 namespace Cotton.Sync.Cli
 {
     internal static class SyncCliSoakCommandRunner
     {
+        private const int MaxFinalConvergencePasses = 6;
+        private static readonly TimeSpan SoakMinimumLocalUploadAge = TimeSpan.FromSeconds(3);
+
         public static async Task<int> RunAsync(
             IReadOnlyList<string> args,
             TextWriter output,
@@ -174,12 +178,12 @@ namespace Cotton.Sync.Cli
                     }
 
                     SyncCliPassResult pass = await SyncCliRuntimeFactory
-                        .RunSinglePassAsync(runtime, cancellationToken)
+                        .RunSinglePassAsync(runtime, CreateSoakRunOptions(), cancellationToken)
                         .ConfigureAwait(false);
                     SyncCliPassResult? secondPass = secondRuntime is null
                         ? null
                         : await SyncCliRuntimeFactory
-                            .RunSinglePassAsync(secondRuntime, cancellationToken)
+                            .RunSinglePassAsync(secondRuntime, CreateSoakRunOptions(), cancellationToken)
                             .ConfigureAwait(false);
                     TimeSpan iterationElapsed = Stopwatch.GetElapsedTime(iterationStartedTimestamp);
                     totalIterationElapsed += iterationElapsed;
@@ -202,13 +206,11 @@ namespace Cotton.Sync.Cli
                     await Task.Delay(GetNextSoakDelay(intervalSeconds, stopAtUtc), cancellationToken).ConfigureAwait(false);
                 }
 
-                SyncCliPassResult convergencePass = await SyncCliRuntimeFactory
-                    .RunSinglePassAsync(runtime, cancellationToken)
+                SyncCliPassResult convergencePass = await RunFinalConvergenceAsync(runtime, cancellationToken)
                     .ConfigureAwait(false);
                 SyncCliPassResult? secondConvergencePass = secondRuntime is null
                     ? null
-                    : await SyncCliRuntimeFactory
-                        .RunSinglePassAsync(secondRuntime, cancellationToken)
+                    : await RunFinalConvergenceAsync(secondRuntime, cancellationToken)
                         .ConfigureAwait(false);
                 peakWorkingSetBytes = Math.Max(peakWorkingSetBytes, GetWorkingSetBytes(process));
                 peakManagedMemoryBytes = Math.Max(peakManagedMemoryBytes, GC.GetTotalMemory(forceFullCollection: false));
@@ -241,6 +243,43 @@ namespace Cotton.Sync.Cli
                 finalConvergenceActivities,
                 finalStateEntries).ConfigureAwait(false);
             return syncErrors == 0 && finalConvergenceActivities == 0 ? 0 : 1;
+        }
+
+        private static async Task<SyncCliPassResult> RunFinalConvergenceAsync(
+            SyncCliRuntime runtime,
+            CancellationToken cancellationToken)
+        {
+            SyncCliPassResult? lastPass = null;
+            for (int pass = 1; pass <= MaxFinalConvergencePasses; pass++)
+            {
+                lastPass = await SyncCliRuntimeFactory
+                    .RunSinglePassAsync(runtime, CreateSoakRunOptions(), cancellationToken)
+                    .ConfigureAwait(false);
+                if (lastPass.Result.Activities.Count == 0 && !lastPass.Result.HasDeferredLocalPaths)
+                {
+                    return lastPass;
+                }
+
+                if (pass >= MaxFinalConvergencePasses)
+                {
+                    break;
+                }
+
+                if (lastPass.Result.HasDeferredLocalPaths)
+                {
+                    await Task.Delay(SoakMinimumLocalUploadAge, cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            return lastPass ?? throw new InvalidOperationException("Final convergence pass did not run.");
+        }
+
+        private static SyncRunOptions CreateSoakRunOptions()
+        {
+            return new SyncRunOptions
+            {
+                MinimumLocalUploadAge = SoakMinimumLocalUploadAge,
+            };
         }
 
         private static SyncCliConnectionOptions? ReadSecondClientOptions(
@@ -392,6 +431,7 @@ namespace Cotton.Sync.Cli
                     .WriteLineAsync(
                         "Iteration " + iteration.ToStringInvariant()
                         + ": activities=" + pass.Result.Activities.Count.ToStringInvariant()
+                        + ", deferredLocalPaths=" + pass.Result.DeferredLocalPaths.Count.ToStringInvariant()
                         + ", stateEntries=" + pass.StateEntries.Count.ToStringInvariant()
                         + metrics)
                     .ConfigureAwait(false);
@@ -400,12 +440,14 @@ namespace Cotton.Sync.Cli
 
             await output
                 .WriteLineAsync(
-                    "Iteration " + iteration.ToStringInvariant()
-                    + ": clientAActivities=" + pass.Result.Activities.Count.ToStringInvariant()
-                    + ", clientBActivities=" + secondPass.Result.Activities.Count.ToStringInvariant()
-                    + ", clientAStateEntries=" + pass.StateEntries.Count.ToStringInvariant()
-                    + ", clientBStateEntries=" + secondPass.StateEntries.Count.ToStringInvariant()
-                    + metrics)
+                        "Iteration " + iteration.ToStringInvariant()
+                        + ": clientAActivities=" + pass.Result.Activities.Count.ToStringInvariant()
+                        + ", clientADeferredLocalPaths=" + pass.Result.DeferredLocalPaths.Count.ToStringInvariant()
+                        + ", clientBActivities=" + secondPass.Result.Activities.Count.ToStringInvariant()
+                        + ", clientBDeferredLocalPaths=" + secondPass.Result.DeferredLocalPaths.Count.ToStringInvariant()
+                        + ", clientAStateEntries=" + pass.StateEntries.Count.ToStringInvariant()
+                        + ", clientBStateEntries=" + secondPass.StateEntries.Count.ToStringInvariant()
+                        + metrics)
                 .ConfigureAwait(false);
         }
 

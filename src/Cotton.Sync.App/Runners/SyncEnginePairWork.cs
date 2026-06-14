@@ -17,6 +17,7 @@ namespace Cotton.Sync.App.Runners
     /// </summary>
     public class SyncEnginePairWork : ISyncPairWork
     {
+        private static readonly TimeSpan BackgroundMinimumLocalUploadAge = TimeSpan.FromSeconds(2);
         private readonly IAppActivityPublisher? _activityPublisher;
         private readonly IAppTransferProgressPublisher? _progressPublisher;
         private readonly IAppRunProgressPublisher? _runProgressPublisher;
@@ -68,6 +69,7 @@ namespace Cotton.Sync.App.Runners
                 Scope = request.IsFull
                     ? CoreSyncRunScope.Full
                     : CoreSyncRunScope.ForLocalChangedPaths(request.LocalChangedPaths),
+                MinimumLocalUploadAge = BackgroundMinimumLocalUploadAge,
                 ActivityProgress = _activityPublisher is null ? null : new AppActivityProgressReporter(syncPair.Id, _activityPublisher),
                 TransferProgress = _progressPublisher is null ? null : new AppTransferProgressReporter(syncPair.Id, _progressPublisher),
                 RunProgress = _runProgressPublisher is null ? null : new AppRunProgressReporter(syncPair.Id, _runProgressPublisher),

@@ -37,5 +37,20 @@ namespace Cotton.Sync.Tests
                 Assert.That(result.ActionRequiredMessage, Is.EqualTo("Conflict needs review."));
             });
         }
+
+        [Test]
+        public void RecordDeferredLocalPath_NormalizesAndDeduplicatesPaths()
+        {
+            var result = new SyncRunResult();
+
+            result.RecordDeferredLocalPath("Hot/File.txt");
+            result.RecordDeferredLocalPath("hot\\file.txt");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.HasDeferredLocalPaths, Is.True);
+                Assert.That(result.DeferredLocalPaths, Is.EqualTo(new[] { "Hot/File.txt" }));
+            });
+        }
     }
 }

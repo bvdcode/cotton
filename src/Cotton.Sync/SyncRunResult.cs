@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton.Sync.State;
+
 namespace Cotton.Sync
 {
     /// <summary>
@@ -9,6 +11,8 @@ namespace Cotton.Sync
     public class SyncRunResult
     {
         private string? _actionRequiredMessage;
+        private readonly HashSet<string> _deferredLocalPathKeys = new(StringComparer.OrdinalIgnoreCase);
+        private readonly List<string> _deferredLocalPaths = [];
         private bool _requiresUserAction;
         private int _totalActivityCount;
 
@@ -26,6 +30,16 @@ namespace Cotton.Sync
         /// Gets a value indicating whether the retained activity list was capped.
         /// </summary>
         public bool IsActivityListTruncated { get; private set; }
+
+        /// <summary>
+        /// Gets local paths that were intentionally deferred because they were still changing or too fresh to upload safely.
+        /// </summary>
+        public IReadOnlyList<string> DeferredLocalPaths => _deferredLocalPaths;
+
+        /// <summary>
+        /// Gets a value indicating whether this pass left local changes for a later quiet-window pass.
+        /// </summary>
+        public bool HasDeferredLocalPaths => _deferredLocalPaths.Count > 0;
 
         /// <summary>
         /// Gets a value indicating whether the pass stopped on a condition that needs user review.
@@ -60,6 +74,24 @@ namespace Cotton.Sync
             }
 
             IsActivityListTruncated = true;
+        }
+
+        /// <summary>
+        /// Records a local path that should be retried after a quiet interval.
+        /// </summary>
+        public void RecordDeferredLocalPath(string relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(relativePath))
+            {
+                return;
+            }
+
+            string normalized = SyncPath.Normalize(relativePath);
+            string key = SyncPath.ToKey(normalized);
+            if (_deferredLocalPathKeys.Add(key))
+            {
+                _deferredLocalPaths.Add(normalized);
+            }
         }
     }
 }

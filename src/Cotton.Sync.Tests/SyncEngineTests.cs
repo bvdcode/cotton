@@ -1577,12 +1577,44 @@ namespace Cotton.Sync.Tests
                 Assert.That(volatileActivity.Kind, Is.EqualTo(SyncActivityKind.Skipped));
                 Assert.That(volatileActivity.RequiresUserAction, Is.False);
                 Assert.That(volatileActivity.Details, Does.Contain("changed during upload"));
+                Assert.That(result.DeferredLocalPaths, Is.EqualTo(new[] { volatileLocal.RelativePath }));
                 Assert.That(stableActivity.Kind, Is.EqualTo(SyncActivityKind.Uploaded));
                 Assert.That(remoteFiles.Uploads.Select(static upload => upload.RelativePath), Is.EqualTo(new[] { stableLocal.RelativePath }));
                 Assert.That(volatileEntry, Is.Null);
                 Assert.That(stableEntry, Is.Not.Null);
                 Assert.That(stableEntry!.LocalContentHash, Is.EqualTo(stableLocal.ContentHash));
                 Assert.That(stableEntry.RemoteContentHash, Is.EqualTo(stableLocal.ContentHash));
+            });
+        }
+
+        [Test]
+        public async Task RunOnceAsync_DefersFreshLocalUploadUntilQuietWindow()
+        {
+            LocalFileSnapshot freshLocal = LocalFile("hot/fresh.txt", "fresh local content");
+            freshLocal.LastWriteUtc = DateTime.UtcNow;
+            var scanner = new FakeLocalFileScanner(freshLocal);
+            var remoteFiles = new FakeRemoteFileSynchronizer();
+            SyncEngine engine = CreateEngine(scanner, EmptyRemoteTree(), remoteFiles, out SqliteSyncStateStore stateStore);
+            var options = new SyncRunOptions { MinimumLocalUploadAge = TimeSpan.FromMinutes(5) };
+
+            SyncRunResult firstResult = await engine.RunOnceAsync(Pair(), options);
+            SyncStateEntry? deferredEntry = await stateStore.GetAsync("pair-a", freshLocal.RelativePath);
+            freshLocal.LastWriteUtc = DateTime.UtcNow.AddMinutes(-10);
+            SyncRunResult secondResult = await engine.RunOnceAsync(Pair(), options);
+
+            SyncStateEntry? uploadedEntry = await stateStore.GetAsync("pair-a", freshLocal.RelativePath);
+            Assert.Multiple(() =>
+            {
+                Assert.That(firstResult.Activities.Select(static activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Skipped }));
+                Assert.That(firstResult.DeferredLocalPaths, Is.EqualTo(new[] { freshLocal.RelativePath }));
+                Assert.That(firstResult.Activities.Single().Details, Does.Contain("quiet window"));
+                Assert.That(deferredEntry, Is.Null);
+                Assert.That(secondResult.Activities.Select(static activity => activity.Kind), Is.EqualTo(new[] { SyncActivityKind.Uploaded }));
+                Assert.That(secondResult.HasDeferredLocalPaths, Is.False);
+                Assert.That(remoteFiles.Uploads.Select(static upload => upload.RelativePath), Is.EqualTo(new[] { freshLocal.RelativePath }));
+                Assert.That(uploadedEntry, Is.Not.Null);
+                Assert.That(uploadedEntry!.LocalContentHash, Is.EqualTo(freshLocal.ContentHash));
+                Assert.That(uploadedEntry.RemoteContentHash, Is.EqualTo(freshLocal.ContentHash));
             });
         }
 
