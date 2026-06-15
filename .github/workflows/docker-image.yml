@@ -137,14 +137,17 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Restore NuGet package project
-        run: dotnet restore src/Cotton.Shared/Cotton.csproj
+      - name: Restore SDK package projects
+        run: dotnet restore src/Cotton.Sdk/Cotton.Sdk.csproj
 
-      - name: Build NuGet package project
-        run: dotnet build src/Cotton.Shared/Cotton.csproj --configuration Release --no-restore
+      - name: Build SDK package projects
+        run: dotnet build src/Cotton.Sdk/Cotton.Sdk.csproj --configuration Release --no-restore
 
-      - name: Pack NuGet package
+      - name: Pack shared NuGet package
         run: dotnet pack src/Cotton.Shared/Cotton.csproj --configuration Release --no-build --output nupkg -p:Version='${{ steps.gitversion.outputs.SemVer }}'
+
+      - name: Pack SDK NuGet package
+        run: dotnet pack src/Cotton.Sdk/Cotton.Sdk.csproj --configuration Release --no-build --output nupkg -p:Version='${{ steps.gitversion.outputs.SemVer }}'
 
       - name: Upload NuGet package artifact
         uses: actions/upload-artifact@v5
