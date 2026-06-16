@@ -194,7 +194,10 @@ internal sealed class CottonHttpTransport
         Stream destination,
         bool authorize,
         IProgress<long>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<string, string>? headers = null,
+        HttpStatusCode? expectedStatusCode = null,
+        Action<HttpResponseMessage>? validateResponse = null)
     {
         ArgumentNullException.ThrowIfNull(destination);
         using HttpResponseMessage response = await SendAsync(
@@ -202,9 +205,23 @@ internal sealed class CottonHttpTransport
             path,
             body: null,
             authorize: authorize,
-            headers: null,
+            headers: headers,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        await EnsureSuccessAsync(response, HttpMethod.Get, path, cancellationToken).ConfigureAwait(false);
+        if (expectedStatusCode.HasValue)
+        {
+            await EnsureExpectedStatusAsync(
+                response,
+                HttpMethod.Get,
+                path,
+                expectedStatusCode.Value,
+                cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            await EnsureSuccessAsync(response, HttpMethod.Get, path, cancellationToken).ConfigureAwait(false);
+        }
+
+        validateResponse?.Invoke(response);
         await using Stream source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         byte[] buffer = new byte[64 * 1024];
         long total = 0;
@@ -220,6 +237,32 @@ internal sealed class CottonHttpTransport
             total += read;
             progress?.Report(total);
         }
+    }
+
+    private static async Task EnsureExpectedStatusAsync(
+        HttpResponseMessage response,
+        HttpMethod method,
+        string path,
+        HttpStatusCode expectedStatusCode,
+        CancellationToken cancellationToken)
+    {
+        if (response.StatusCode == expectedStatusCode)
+        {
+            return;
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            await EnsureSuccessAsync(response, method, path, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        throw new CottonApiException(
+            response.StatusCode,
+            null,
+            $"Cotton API request {FormatRequestLabel(method, path)} returned unexpected status "
+            + $"{(int)response.StatusCode} ({response.StatusCode}); expected "
+            + $"{(int)expectedStatusCode} ({expectedStatusCode}).");
     }
 
     public static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken cancellationToken)

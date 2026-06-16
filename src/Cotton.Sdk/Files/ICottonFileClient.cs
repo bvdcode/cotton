@@ -70,4 +70,24 @@ public interface ICottonFileClient
     /// Downloads owned file content through bearer-token authentication.
     /// </summary>
     Task DownloadContentAsync(Guid nodeFileId, Stream destination, bool download = false, IProgress<long>? progress = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Downloads a byte range of owned file content through bearer-token authentication.
+    /// </summary>
+    Task DownloadContentRangeAsync(
+        Guid nodeFileId,
+        Stream destination,
+        long offset,
+        long length,
+        string? expectedETag = null,
+        IProgress<long>? progress = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the immutable content manifest and ordered chunk metadata for an owned file.
+    /// </summary>
+    Task<FileContentManifestDto> GetContentManifestAsync(
+        Guid nodeFileId,
+        string? expectedETag = null,
+        CancellationToken cancellationToken = default);
 }

@@ -508,7 +508,39 @@ namespace Cotton.Server.Controllers
             [FromQuery] bool download = false)
         {
             Guid userId = User.GetUserId();
-            NodeFile? nodeFile = await _dbContext.NodeFiles
+            NodeFile? nodeFile = await LoadOwnedDefaultNodeFileWithContentAsync(nodeFileId, userId);
+            if (nodeFile is null)
+            {
+                return CottonResult.NotFound("Node file not found");
+            }
+
+            _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "file.content");
+            EnsureContentETagPrecondition(nodeFile, "File content changed before download.");
+            return ServeFileDownload(nodeFile, download);
+        }
+
+        /// <summary>
+        /// Gets an owned file content manifest with ordered verification chunks.
+        /// </summary>
+        [Authorize]
+        [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/content-manifest")]
+        public async Task<IActionResult> GetOwnedFileContentManifest([FromRoute] Guid nodeFileId)
+        {
+            Guid userId = User.GetUserId();
+            NodeFile? nodeFile = await LoadOwnedDefaultNodeFileWithContentAsync(nodeFileId, userId);
+            if (nodeFile is null)
+            {
+                return CottonResult.NotFound("Node file not found");
+            }
+
+            _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "file.content-manifest");
+            EnsureContentETagPrecondition(nodeFile, "File content changed before manifest fetch.");
+            return Ok(CreateContentManifestDto(nodeFile));
+        }
+
+        private Task<NodeFile?> LoadOwnedDefaultNodeFileWithContentAsync(Guid nodeFileId, Guid userId)
+        {
+            return _dbContext.NodeFiles
                 .Include(x => x.Node)
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
@@ -517,13 +549,14 @@ namespace Cotton.Server.Controllers
                     x.Id == nodeFileId &&
                     x.OwnerId == userId &&
                     x.Node.Type == NodeType.Default);
-            if (nodeFile is null)
-            {
-                return CottonResult.NotFound("Node file not found");
-            }
+        }
 
-            _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "file.content");
-            return ServeFileDownload(nodeFile, download);
+        private void EnsureContentETagPrecondition(NodeFile nodeFile, string message)
+        {
+            if (!FileETags.MatchesIfMatchHeader(FileETags.ReadIfMatch(Request), nodeFile))
+            {
+                throw new FilePreconditionFailedException<NodeFile>(message);
+            }
         }
 
         /// <summary>
@@ -835,6 +868,65 @@ namespace Cotton.Server.Controllers
                 lastModified: new DateTimeOffset(nodeFile.CreatedAt),
                 entityTag: entityTag,
                 enableRangeProcessing: true);
+        }
+
+        private static FileContentManifestDto CreateContentManifestDto(NodeFile nodeFile)
+        {
+            FileManifest manifest = nodeFile.FileManifest;
+            List<FileManifestChunk> orderedChunks = [.. manifest.FileManifestChunks.OrderBy(x => x.ChunkOrder)];
+            var chunkDtos = new List<FileContentManifestChunkDto>(orderedChunks.Count);
+            long offset = 0;
+
+            foreach (FileManifestChunk manifestChunk in orderedChunks)
+            {
+                string chunkHash = Hasher.ToHexStringHash(manifestChunk.ChunkHash);
+                long length = manifestChunk.Chunk.PlainSizeBytes;
+                chunkDtos.Add(new FileContentManifestChunkDto
+                {
+                    Index = manifestChunk.ChunkOrder,
+                    Offset = offset,
+                    Length = length,
+                    Hash = chunkHash,
+                    ChunkId = chunkHash,
+                });
+
+                offset = checked(offset + length);
+            }
+
+            return new FileContentManifestDto
+            {
+                NodeFileId = nodeFile.Id,
+                FileManifestId = manifest.Id,
+                ContentHash = Hasher.ToHexStringHash(manifest.ProposedContentHash),
+                ETag = FileETags.GetContentETag(manifest),
+                SizeBytes = manifest.SizeBytes,
+                ChunkSizeBytes = ResolveNominalChunkSizeBytes(chunkDtos),
+                Chunks = chunkDtos,
+            };
+        }
+
+        private static long? ResolveNominalChunkSizeBytes(IReadOnlyList<FileContentManifestChunkDto> chunks)
+        {
+            if (chunks.Count == 0)
+            {
+                return 0;
+            }
+
+            if (chunks.Count == 1)
+            {
+                return chunks[0].Length;
+            }
+
+            long firstChunkLength = chunks[0].Length;
+            for (int i = 0; i < chunks.Count - 1; i++)
+            {
+                if (chunks[i].Length != firstChunkLength)
+                {
+                    return null;
+                }
+            }
+
+            return firstChunkLength;
         }
 
         private void RegisterDeleteAfterUse(DownloadToken downloadToken)

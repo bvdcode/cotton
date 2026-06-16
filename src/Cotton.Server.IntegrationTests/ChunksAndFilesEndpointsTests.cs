@@ -318,7 +318,87 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var range = await _client.SendAsync(rangeRequest);
         Assert.That(range.StatusCode, Is.EqualTo(HttpStatusCode.PartialContent));
         byte[] rangeBytes = await range.Content.ReadAsByteArrayAsync();
-        Assert.That(Encoding.UTF8.GetString(rangeBytes), Is.EqualTo("4567"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(Encoding.UTF8.GetString(rangeBytes), Is.EqualTo("4567"));
+            Assert.That(range.Content.Headers.ContentRange?.From, Is.EqualTo(4));
+            Assert.That(range.Content.Headers.ContentRange?.To, Is.EqualTo(7));
+            Assert.That(range.Content.Headers.ContentRange?.Length, Is.EqualTo(16));
+            Assert.That(range.Headers.AcceptRanges, Does.Contain("bytes"));
+        });
+    }
+
+    [Test]
+    public async Task Download_Owned_File_Content_Rejects_Stale_IfMatch()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var file = await UploadTextFileAsync(root!, "stale-range.txt", "0123456789abcdef");
+
+        using var rangeRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/files/{file.Id}/content");
+        rangeRequest.Headers.Range = new RangeHeaderValue(4, 7);
+        rangeRequest.Headers.IfMatch.Add(new EntityTagHeaderValue("\"sha256-stale\""));
+        var response = await _client.SendAsync(rangeRequest);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.PreconditionFailed));
+    }
+
+    [Test]
+    public async Task Get_Content_Manifest_Returns_Ordered_Chunk_Verification_Metadata()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        byte[] firstChunk = Encoding.UTF8.GetBytes("0123");
+        byte[] secondChunk = Encoding.UTF8.GetBytes("456");
+        string firstChunkHash = Hasher.ToHexStringHash(Hasher.HashData(firstChunk));
+        string secondChunkHash = Hasher.ToHexStringHash(Hasher.HashData(secondChunk));
+        (await UploadRawChunkAsync(firstChunk, firstChunkHash)).EnsureSuccessStatusCode();
+        (await UploadRawChunkAsync(secondChunk, secondChunkHash)).EnsureSuccessStatusCode();
+
+        byte[] fullContent = [.. firstChunk, .. secondChunk];
+        string fullHash = Hasher.ToHexStringHash(Hasher.HashData(fullContent));
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", new CreateFileFromChunksRequestDto
+        {
+            ChunkHashes = [firstChunkHash, secondChunkHash],
+            Name = "manifest-range.txt",
+            ContentType = "text/plain",
+            Hash = fullHash,
+            NodeId = root!.Id,
+            Validate = true,
+        });
+        createResponse.EnsureSuccessStatusCode();
+        var created = await createResponse.Content.ReadFromJsonAsync<NodeFileManifestDto>();
+        Assert.That(created, Is.Not.Null);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/files/{created!.Id}/content-manifest");
+        request.Headers.IfMatch.Add(new EntityTagHeaderValue($"\"{created.ETag}\""));
+        var manifestResponse = await _client.SendAsync(request);
+        manifestResponse.EnsureSuccessStatusCode();
+        var manifest = await manifestResponse.Content.ReadFromJsonAsync<FileContentManifestDto>();
+
+        Assert.That(manifest, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(manifest!.NodeFileId, Is.EqualTo(created.Id));
+            Assert.That(manifest.FileManifestId, Is.EqualTo(created.FileManifestId));
+            Assert.That(manifest.ContentHash, Is.EqualTo(fullHash));
+            Assert.That(manifest.ETag, Is.EqualTo(created.ETag));
+            Assert.That(manifest.SizeBytes, Is.EqualTo(7));
+            Assert.That(manifest.ChunkSizeBytes, Is.EqualTo(4));
+            Assert.That(manifest.Chunks.Select(x => x.Index), Is.EqualTo(new[] { 0, 1 }));
+            Assert.That(manifest.Chunks.Select(x => x.Offset), Is.EqualTo(new long[] { 0, 4 }));
+            Assert.That(manifest.Chunks.Select(x => x.Length), Is.EqualTo(new long[] { 4, 3 }));
+            Assert.That(manifest.Chunks.Select(x => x.Hash), Is.EqualTo(new[] { firstChunkHash, secondChunkHash }));
+            Assert.That(manifest.Chunks.Select(x => x.ChunkId), Is.EqualTo(new[] { firstChunkHash, secondChunkHash }));
+        });
     }
 
     [Test]
