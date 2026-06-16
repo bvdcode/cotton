@@ -248,7 +248,7 @@ public sealed class CottonFileClient : ICottonFileClient
         return headers;
     }
 
-    private static void ValidateRangeResponse(
+    private static long ValidateRangeResponse(
         HttpResponseMessage response,
         long offset,
         long length,
@@ -286,6 +286,8 @@ public sealed class CottonFileClient : ICottonFileClient
                 throw CreateInvalidRangeResponseException(response, "response ETag does not match expected ETag");
             }
         }
+
+        return receivedLength;
     }
 
     private static CottonApiException CreateInvalidRangeResponseException(HttpResponseMessage response, string reason)

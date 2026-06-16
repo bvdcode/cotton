@@ -326,6 +326,38 @@ public sealed class CottonFileAndChunkClientTests
     }
 
     [Test]
+    public async Task DownloadContentRangeAsync_RejectsChunkedPartialResponseWithExtraBytes()
+    {
+        var handler = new QueuedHttpMessageHandler();
+        handler.Enqueue(_ =>
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.PartialContent)
+            {
+                Content = new ByteArrayContent(Encoding.UTF8.GetBytes("4567x")),
+            };
+            response.Content.Headers.ContentRange = new ContentRangeHeaderValue(4, 7, 16);
+            response.Content.Headers.ContentLength = null;
+            return response;
+        });
+        var client = await CreateAuthorizedClientAsync(handler);
+        using var destination = new MemoryStream();
+
+        CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(async () =>
+            await client.Files.DownloadContentRangeAsync(
+                Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                destination,
+                offset: 4,
+                length: 4));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception, Is.Not.Null);
+            Assert.That(exception!.Message, Does.Contain("more bytes than expected"));
+            Assert.That(Encoding.UTF8.GetString(destination.ToArray()), Is.EqualTo("4567"));
+        });
+    }
+
+    [Test]
     public async Task DownloadContentRangeAsync_ValidatesArguments()
     {
         var client = await CreateAuthorizedClientAsync(new QueuedHttpMessageHandler());
