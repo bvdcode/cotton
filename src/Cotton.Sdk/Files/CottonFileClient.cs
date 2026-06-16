@@ -4,6 +4,7 @@
 using Cotton;
 using Cotton.Files;
 using Cotton.Sdk.Internal;
+using System.Net;
 
 namespace Cotton.Sdk.Files;
 
@@ -161,6 +162,53 @@ public sealed class CottonFileClient : ICottonFileClient
         return _transport.DownloadAsync(path, destination, authorize: true, progress, cancellationToken);
     }
 
+    /// <summary>
+    /// Downloads a byte range of owned file content through bearer-token authentication.
+    /// </summary>
+    public Task DownloadContentRangeAsync(
+        Guid nodeFileId,
+        Stream destination,
+        long offset,
+        long length,
+        string? expectedETag = null,
+        IProgress<long>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(offset);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
+        if (length - 1 > long.MaxValue - offset)
+        {
+            throw new ArgumentOutOfRangeException(nameof(length), length, "Range end exceeds Int64.MaxValue.");
+        }
+
+        string path = $"{Routes.V1.Files}/{nodeFileId}/content?download=false";
+        IReadOnlyDictionary<string, string> headers = CreateRangeDownloadHeaders(offset, length, expectedETag);
+        return _transport.DownloadAsync(
+            path,
+            destination,
+            authorize: true,
+            progress,
+            cancellationToken,
+            headers,
+            expectedStatusCode: HttpStatusCode.PartialContent,
+            validateResponse: response => ValidateRangeResponse(response, offset, length, expectedETag));
+    }
+
+    /// <summary>
+    /// Gets the immutable content manifest and ordered chunk metadata for an owned file.
+    /// </summary>
+    public Task<FileContentManifestDto> GetContentManifestAsync(
+        Guid nodeFileId,
+        string? expectedETag = null,
+        CancellationToken cancellationToken = default)
+    {
+        return _transport.SendJsonAsync<FileContentManifestDto>(
+            HttpMethod.Get,
+            $"{Routes.V1.Files}/{nodeFileId}/content-manifest",
+            headers: CreateIfMatchHeader(expectedETag),
+            cancellationToken: cancellationToken);
+    }
+
     private static IReadOnlyDictionary<string, string>? CreateIfMatchHeader(string? expectedETag)
     {
         if (string.IsNullOrWhiteSpace(expectedETag))
@@ -176,5 +224,88 @@ public sealed class CottonFileClient : ICottonFileClient
         {
             [IfMatchHeaderName] = headerValue,
         };
+    }
+
+    private static IReadOnlyDictionary<string, string> CreateRangeDownloadHeaders(
+        long offset,
+        long length,
+        string? expectedETag)
+    {
+        var headers = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["Range"] = $"bytes={offset}-{offset + length - 1}",
+        };
+
+        IReadOnlyDictionary<string, string>? ifMatchHeader = CreateIfMatchHeader(expectedETag);
+        if (ifMatchHeader is not null)
+        {
+            foreach (KeyValuePair<string, string> header in ifMatchHeader)
+            {
+                headers[header.Key] = header.Value;
+            }
+        }
+
+        return headers;
+    }
+
+    private static long ValidateRangeResponse(
+        HttpResponseMessage response,
+        long offset,
+        long length,
+        string? expectedETag)
+    {
+        var contentRange = response.Content.Headers.ContentRange
+            ?? throw CreateInvalidRangeResponseException(response, "missing Content-Range header");
+        if (!string.Equals(contentRange.Unit, "bytes", StringComparison.OrdinalIgnoreCase)
+            || contentRange.From != offset
+            || !contentRange.To.HasValue)
+        {
+            throw CreateInvalidRangeResponseException(response, $"unexpected Content-Range '{contentRange}'");
+        }
+
+        long receivedLength = contentRange.To.Value - contentRange.From!.Value + 1;
+        if (receivedLength <= 0 || receivedLength > length)
+        {
+            throw CreateInvalidRangeResponseException(response, $"unexpected range length {receivedLength}");
+        }
+
+        if (response.Content.Headers.ContentLength.HasValue
+            && response.Content.Headers.ContentLength.Value != receivedLength)
+        {
+            throw CreateInvalidRangeResponseException(
+                response,
+                $"Content-Length {response.Content.Headers.ContentLength.Value} does not match Content-Range length {receivedLength}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(expectedETag) && expectedETag.Trim() != "*")
+        {
+            string? responseETag = response.Headers.ETag?.Tag;
+            if (string.IsNullOrWhiteSpace(responseETag)
+                || !string.Equals(NormalizeETag(responseETag), NormalizeETag(expectedETag), StringComparison.Ordinal))
+            {
+                throw CreateInvalidRangeResponseException(response, "response ETag does not match expected ETag");
+            }
+        }
+
+        return receivedLength;
+    }
+
+    private static CottonApiException CreateInvalidRangeResponseException(HttpResponseMessage response, string reason)
+    {
+        return new CottonApiException(
+            response.StatusCode,
+            null,
+            $"Cotton API range download returned an invalid response: {reason}.");
+    }
+
+    private static string NormalizeETag(string value)
+    {
+        string normalized = value.Trim();
+        if (normalized.StartsWith("W/", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized[2..].Trim();
+        }
+
+        return normalized.Trim('"');
     }
 }

@@ -311,23 +311,23 @@ namespace Cotton.Server.Handlers.Files
 
             return $"""
                 <!doctype html>
-                <html lang=\"en\">
+                <html lang="en">
                 <head>
-                  <meta charset=\"utf-8\">
+                  <meta charset="utf-8">
                   <title>{WebUtility.HtmlEncode(fileName)} - Cotton Cloud</title>
-                  <meta http-equiv=\"refresh\" content=\"0;url={WebUtility.HtmlEncode(appShareUrl)}\" />
-                  <link rel=\"canonical\" href=\"{WebUtility.HtmlEncode(canonicalUrl)}\" />
-                  <meta property=\"og:site_name\" content=\"Cotton Cloud\" />
-                  <meta property=\"og:title\" content=\"{WebUtility.HtmlEncode(fileName)}\" />
-                  <meta property=\"og:description\" content=\"Shared via Cotton Cloud\" />
-                  <meta property=\"og:type\" content=\"website\" />
-                  <meta property=\"og:url\" content=\"{WebUtility.HtmlEncode(canonicalUrl)}\" />
+                  <meta http-equiv="refresh" content="0;url={WebUtility.HtmlEncode(appShareUrl)}" />
+                  <link rel="canonical" href="{WebUtility.HtmlEncode(canonicalUrl)}" />
+                  <meta property="og:site_name" content="Cotton Cloud" />
+                  <meta property="og:title" content="{WebUtility.HtmlEncode(fileName)}" />
+                  <meta property="og:description" content="Shared via Cotton Cloud" />
+                  <meta property="og:type" content="website" />
+                  <meta property="og:url" content="{WebUtility.HtmlEncode(canonicalUrl)}" />
                   {previewTag}
-                  <meta name=\"twitter:card\" content=\"summary_large_image\" />
+                  <meta name="twitter:card" content="summary_large_image" />
                 </head>
                 <body>
                   <noscript>
-                    <p><a href=\"{WebUtility.HtmlEncode(appShareUrl)}\">Continue</a></p>
+                    <p><a href="{WebUtility.HtmlEncode(appShareUrl)}">Continue</a></p>
                   </noscript>
                   <script>
                     window.location.replace({JsonSerializer.Serialize(appShareUrl)});
