@@ -312,8 +312,14 @@ public class LayoutAndFilesTests : IntegrationTestBase
         Assert.That(sharedPageRes.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/html"));
 
         var html = await sharedPageRes.Content.ReadAsStringAsync();
+        Assert.That(html, Does.Not.Contain("\\\""));
+        Assert.That(html, Does.Contain("<html lang=\"en\">"));
+        Assert.That(html, Does.Contain("<meta charset=\"utf-8\">"));
+        Assert.That(html, Does.Contain("<meta http-equiv=\"refresh\""));
+        Assert.That(html, Does.Contain("<link rel=\"canonical\""));
         Assert.That(html, Does.Contain("<meta property=\"og:image\""));
         Assert.That(html, Does.Contain("<meta name=\"twitter:image\""));
+        Assert.That(html, Does.Contain("<meta name=\"twitter:card\" content=\"summary_large_image\""));
         Assert.That(html, Does.Contain("https://public.example/assets/images/social-preview.jpg"));
         Assert.That(html, Does.Contain("https://public.example/share/"));
     }
