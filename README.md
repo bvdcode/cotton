@@ -4,7 +4,6 @@
 [![Release](https://badgen.net/github/release/bvdcode/cotton?label=version)](https://github.com/bvdcode/cotton/releases)
 [![Docker Pulls](https://badgen.net/docker/pulls/bvdcode/cotton?icon=docker&label=pulls)](https://hub.docker.com/r/bvdcode/cotton)
 [![Docker Image Size](https://badgen.net/docker/size/bvdcode/cotton?icon=docker&label=size)](https://hub.docker.com/r/bvdcode/cotton)
-[![Github last-commit](https://img.shields.io/github/last-commit/bvdcode/cotton)](https://github.com/bvdcode/cotton/commits/main/)
 
 > **[Using Cotton? Say hi here!](https://github.com/bvdcode/cotton/discussions/3)**  
 > Live demo: [app.cottoncloud.dev](https://app.cottoncloud.dev/login?demo=true) - opens with per-browser generated demo credentials; public instances can also create an account from any credentials you enter.
