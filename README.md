@@ -17,10 +17,10 @@
 **All managed .NET/C#** core with content-addressed storage, streaming AES-GCM crypto, and a UI designed for real day-to-day use.
 
 <p>
-  <a href="https://play.google.com/apps/testing/dev.cottoncloud.app"><img alt="Join Cotton Cloud testing on Google Play" src="https://img.shields.io/badge/Google%20Play-Testing-202124?style=for-the-badge&logo=googleplay&logoColor=white&labelColor=202124"></a>
-  <a href="https://github.com/bvdcode/cotton-mobile/releases/latest/download/CottonCloud-Android.apk"><img alt="Download Cotton Cloud Android APK from GitHub releases" src="https://img.shields.io/badge/Android%20APK-Release-202124?style=for-the-badge&logo=android&logoColor=white&labelColor=202124"></a>
-  <a href="https://github.com/bvdcode/cotton-sync-client/releases/latest/download/CottonSync-Windows-Setup.exe"><img alt="Download Cotton Sync Windows installer" src="https://img.shields.io/badge/Windows-Installer-202124?style=for-the-badge&logo=windows11&logoColor=white&labelColor=202124"></a>
-  <a href="https://github.com/bvdcode/cotton-sync-client/releases/latest/download/CottonSync-Linux.deb"><img alt="Download Cotton Sync Linux DEB package" src="https://img.shields.io/badge/Linux-DEB%20package-202124?style=for-the-badge&logo=linux&logoColor=white&labelColor=202124"></a>
+  <a href="https://play.google.com/apps/testing/dev.cottoncloud.app"><img alt="Google Play" src="https://img.shields.io/static/v1?style=for-the-badge&label=&message=Google%20Play&color=01875F&logo=googleplay&logoColor=white"></a>
+  <a href="https://github.com/bvdcode/cotton-mobile/releases/latest/download/CottonCloud-Android.apk"><img alt="APK" src="https://img.shields.io/static/v1?style=for-the-badge&label=&message=APK&color=2E7D32&logo=android&logoColor=white"></a>
+  <a href="https://github.com/bvdcode/cotton-sync-client/releases/latest/download/CottonSync-Windows-Setup.exe"><img alt="Windows" src="https://img.shields.io/static/v1?style=for-the-badge&label=&message=Windows&color=0078D4&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHBhdGggZmlsbD0iI2ZmZiIgZD0iTTMsMTJWNi43NUw5LDUuNDNWMTEuOTFMMywxMk0yMCwzVjExLjc1TDEwLDExLjlWNS4yMUwyMCwzTTMsMTNMOSwxMy4wOVYxOS45TDMsMTguNzVWMTNNMjAsMTMuMjVWMjJMMTAsMjAuMDlWMTMuMUwyMCwxMy4yNVoiLz48L3N2Zz4%3D"></a>
+  <a href="https://github.com/bvdcode/cotton-sync-client/releases/latest/download/CottonSync-Linux.deb"><img alt="Linux" src="https://img.shields.io/static/v1?style=for-the-badge&label=&message=Linux&color=A81D33&logo=debian&logoColor=white"></a>
 </p>
 
 </div>
