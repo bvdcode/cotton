@@ -17,6 +17,13 @@
 
 **All managed .NET/C#** core with content-addressed storage, streaming AES-GCM crypto, and a UI designed for real day-to-day use.
 
+<p>
+  <a href="https://play.google.com/apps/testing/dev.cottoncloud.app"><img alt="Get Cotton Cloud on Google Play" src="https://img.shields.io/badge/Google%20Play-Get%20the%20app-414141?style=for-the-badge&logo=googleplay&logoColor=white"></a>
+  <a href="https://nightly.link/bvdcode/cotton-mobile/actions/runs/27664083211/cotton-mobile-signed-android.zip"><img alt="Download Cotton Cloud APK from GitHub" src="https://img.shields.io/badge/GitHub-APK%20download-181717?style=for-the-badge&logo=github&logoColor=white"></a>
+  <a href="https://github.com/bvdcode/cotton-sync-client/releases/latest/download/CottonSync-Windows-Setup.exe"><img alt="Download Cotton Sync for Windows" src="https://img.shields.io/badge/Windows-Download-0078D4?style=for-the-badge&logo=windows&logoColor=white"></a>
+  <a href="https://github.com/bvdcode/cotton-sync-client/releases/latest/download/CottonSync-Linux.deb"><img alt="Download Cotton Sync for Linux" src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black"></a>
+</p>
+
 </div>
 
 <img width="1692" height="929" alt="image" src="https://github.com/user-attachments/assets/5b19843d-1e8f-4a67-ac36-60c6053bf367" />
