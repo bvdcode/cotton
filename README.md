@@ -17,10 +17,10 @@
 **All managed .NET/C#** core with content-addressed storage, streaming AES-GCM crypto, and a UI designed for real day-to-day use.
 
 <p>
-  <a href="https://play.google.com/apps/testing/dev.cottoncloud.app"><img alt="Get Cotton Cloud on Google Play" src="https://img.shields.io/badge/Google%20Play-Get%20the%20app-414141?style=for-the-badge&logo=googleplay&logoColor=white"></a>
-  <a href="https://github.com/bvdcode/cotton-mobile/releases/latest/download/CottonCloud-Android.apk"><img alt="Download Cotton Cloud APK from GitHub" src="https://img.shields.io/badge/GitHub-APK%20download-181717?style=for-the-badge&logo=github&logoColor=white"></a>
-  <a href="https://github.com/bvdcode/cotton-sync-client/releases/latest/download/CottonSync-Windows-Setup.exe"><img alt="Download Cotton Sync for Windows" src="https://img.shields.io/badge/Windows-Download-0078D4?style=for-the-badge&logo=windows&logoColor=white"></a>
-  <a href="https://github.com/bvdcode/cotton-sync-client/releases/latest/download/CottonSync-Linux.deb"><img alt="Download Cotton Sync for Linux" src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black"></a>
+  <a href="https://play.google.com/apps/testing/dev.cottoncloud.app"><img alt="Join Cotton Cloud testing on Google Play" src="https://img.shields.io/badge/Google%20Play-Testing-202124?style=for-the-badge&logo=googleplay&logoColor=white&labelColor=202124"></a>
+  <a href="https://github.com/bvdcode/cotton-mobile/releases/latest/download/CottonCloud-Android.apk"><img alt="Download Cotton Cloud Android APK from GitHub releases" src="https://img.shields.io/badge/Android%20APK-GitHub%20release-202124?style=for-the-badge&logo=android&logoColor=white&labelColor=202124"></a>
+  <a href="https://github.com/bvdcode/cotton-sync-client/releases/latest/download/CottonSync-Windows-Setup.exe"><img alt="Download Cotton Sync Windows installer" src="https://img.shields.io/badge/Windows-Installer-202124?style=for-the-badge&logo=windows11&logoColor=white&labelColor=202124"></a>
+  <a href="https://github.com/bvdcode/cotton-sync-client/releases/latest/download/CottonSync-Linux.deb"><img alt="Download Cotton Sync Linux DEB package" src="https://img.shields.io/badge/Linux-DEB%20package-202124?style=for-the-badge&logo=linux&logoColor=white&labelColor=202124"></a>
 </p>
 
 </div>
