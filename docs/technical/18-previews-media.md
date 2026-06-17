@@ -79,7 +79,7 @@ The `Version` property on each generator is the staleness key: when a generator'
 | Generator | `Version` |
 |---|---|
 | `ImagePreviewGenerator` | 2 |
-| `AudioPreviewGenerator` | 2 |
+| `AudioPreviewGenerator` | 3 |
 | `VideoPreviewGenerator` | 1 |
 | `SvgPreviewGenerator` | 1 |
 | `HeicPreviewGenerator` | 1 |
@@ -151,7 +151,7 @@ When `_perf.IsUploading()` (the injected `PerfTracker`) reports an active upload
 
 **AudioPreviewGenerator** — Calls `FfmpegBinary.EnsureAvailableAsync()` and requires a seekable stream (throws `InvalidOperationException` otherwise). It wraps the stream in a `RangeStreamServer` and:
 1. Tries `ExtractCoverArtAsync` — runs ffmpeg `-an -sn -dn -frames:v 1 -f image2pipe -vcodec png pipe:1` against the loopback URL to pull embedded album art to a PNG (15 s timeout, kills the process tree on timeout).
-2. If no cover art, falls back to `GenerateWaveformPreviewWebPAsync`: decodes the audio to 8 kHz mono signed-16-bit PCM via ffmpeg (`-ac 1 -ar 8000 -f s16le pipe:1`, 15 s timeout), buckets samples into `Clamp(size/10, 8, 20)` bars, computes per-bar RMS with a `pow(rms, 0.55)` perceptual curve, normalizes, applies edge tapering, and draws rounded green bars (`PreviewColorPalette.AccentGreen*`) on a transparent canvas.
+2. If no cover art, falls back to `GenerateWaveformPreviewWebPAsync`: decodes the audio to a low-rate 400 Hz mono signed-16-bit PCM envelope via ffmpeg (`-vn -sn -dn -ac 1 -ar 400 -f s16le pipe:1`, 120 s timeout), buckets samples into `Clamp(size/10, 8, 20)` bars, computes per-bar RMS with a `pow(rms, 0.55)` perceptual curve, normalizes, applies edge tapering, and draws rounded green bars (`PreviewColorPalette.AccentGreen*`) on a transparent canvas.
 3. Cover-art PNG (when found) is downscaled+encoded through `ImagePreviewGenerator`.
 
 If both paths fail it throws an `InvalidOperationException` wrapping both errors in an `AggregateException`. Supported types include `audio/mpeg`, `audio/mp3`, `audio/flac`, `audio/x-flac`, `audio/ogg`, `audio/wav`, `audio/x-wav`, `audio/aac`, `audio/mp4`, `audio/x-m4a`, `audio/opus`, `audio/webm`, `audio/aiff`, `audio/x-aiff`.
@@ -438,7 +438,7 @@ In `HlsSegmentByToken`, the destination is a `TeeStream` wrapping both `Response
 
 ## Concurrency, failure modes & security considerations
 
-- **External-process containment**: every ffmpeg/ffprobe/f3d invocation has an explicit timeout (15 s cover art / waveform / duration probe, 30 s video frame, 20 s f3d render, 60 s default ffprobe; segment transcode is bound by `HttpContext.RequestAborted`) and kills the entire process tree on timeout or cancellation. stderr is captured and surfaced in exception messages and logs.
+- **External-process containment**: every ffmpeg/ffprobe/f3d invocation has an explicit timeout (15 s audio cover art / duration probe, 120 s audio waveform, 30 s video frame, 20 s f3d render, 60 s default ffprobe; segment transcode is bound by `HttpContext.RequestAborted`) and kills the entire process tree on timeout or cancellation. stderr is captured and surfaced in exception messages and logs.
 - **Loopback exposure**: `RangeStreamServer` binds to `127.0.0.1` only and gates each request on an exact path (404 on mismatch) plus a random per-server token (403 on mismatch), so a co-located local process cannot read the decrypted stream by guessing the port.
 - **Decrypted bytes in flight**: the source stream decrypts chunks in memory as ffmpeg reads them; no plaintext temp file of the original media is written. The exceptions are 3D rendering (the model is written to `cotton-model-<guid>.<ext>` for f3d, cleaned up in a `finally`) and `VideoPreviewGenerator`, which writes a temp file only for the `-dump_attachment` cover-art probe.
 - **Backpressure / load**: `PreviewController._previewGate` caps concurrent preview serving at 8; `GeneratePreviewJob` throttles after 1000 items (250 ms each) and yields to active uploads; `FfmpegBinary.DownloadGate` serializes the one-time binary download; `HlsSegmentCache` bounds memory at 512 MiB by default.
