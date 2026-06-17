@@ -16,8 +16,12 @@ namespace Cotton.Previews
     /// </summary>
     public class AudioPreviewGenerator : IPreviewGenerator
     {
+        private const int CoverArtExtractionTimeoutSeconds = 15;
+        private const int WaveformExtractionTimeoutSeconds = 120;
+        private const int WaveformSampleRateHz = 400;
+
         /// <inheritdoc />
-        public int Version => 2;
+        public int Version => 3;
 
         /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes =>
@@ -88,7 +92,6 @@ namespace Cotton.Previews
         private static async Task<byte[]> GenerateWaveformPreviewWebPAsync(Uri url, int size)
         {
             short[] samples = await DecodePcm16MonoAsync(url).ConfigureAwait(false);
-
             int bars = Math.Clamp(size / 10, 8, 20);
             float[] amplitudes = BuildAmplitudes(samples, bars);
 
@@ -145,9 +148,10 @@ namespace Cotton.Previews
         private static async Task<short[]> DecodePcm16MonoAsync(Uri url)
         {
             var args =
-                "-hide_banner -loglevel error " +
+                "-hide_banner -loglevel error -nostdin " +
                 $"-i \"{url}\" " +
-                "-ac 1 -ar 8000 " +
+                "-vn -sn -dn " +
+                $"-ac 1 -ar {WaveformSampleRateHz} " +
                 "-f s16le pipe:1";
 
             var startInfo = new ProcessStartInfo
@@ -170,7 +174,7 @@ namespace Cotton.Previews
             var copyOutputTask = process.StandardOutput.BaseStream.CopyToAsync(outputMs);
             var errorTask = process.StandardError.ReadToEndAsync();
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(WaveformExtractionTimeoutSeconds));
             try
             {
                 await Task.WhenAll(copyOutputTask, process.WaitForExitAsync(cts.Token)).ConfigureAwait(false);
@@ -178,7 +182,7 @@ namespace Cotton.Previews
             catch
             {
                 try { process.Kill(true); } catch { }
-                throw new InvalidOperationException("ffmpeg waveform extraction timed out.");
+                throw new InvalidOperationException($"ffmpeg waveform extraction timed out after {WaveformExtractionTimeoutSeconds} seconds.");
             }
 
             var stderr = await errorTask.ConfigureAwait(false);
@@ -253,7 +257,7 @@ namespace Cotton.Previews
         private static async Task<byte[]> ExtractCoverArtAsync(Uri url)
         {
             var args =
-                "-hide_banner -loglevel error " +
+                "-hide_banner -loglevel error -nostdin " +
                 $"-i \"{url}\" " +
                 "-an -sn -dn " +
                 "-frames:v 1 " +
@@ -280,7 +284,7 @@ namespace Cotton.Previews
             var copyOutputTask = stdout.CopyToAsync(outputMs);
             var errorTask = process.StandardError.ReadToEndAsync();
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(CoverArtExtractionTimeoutSeconds));
             try
             {
                 await Task.WhenAll(copyOutputTask, process.WaitForExitAsync(cts.Token)).ConfigureAwait(false);
@@ -288,7 +292,7 @@ namespace Cotton.Previews
             catch
             {
                 try { process.Kill(true); } catch { }
-                throw new InvalidOperationException("ffmpeg audio cover art extraction timed out.");
+                throw new InvalidOperationException($"ffmpeg audio cover art extraction timed out after {CoverArtExtractionTimeoutSeconds} seconds.");
             }
 
             var stderr = await errorTask.ConfigureAwait(false);
