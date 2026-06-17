@@ -18,7 +18,7 @@
 
 <p>
   <a href="https://play.google.com/apps/testing/dev.cottoncloud.app"><img alt="Join Cotton Cloud testing on Google Play" src="https://img.shields.io/badge/Google%20Play-Testing-202124?style=for-the-badge&logo=googleplay&logoColor=white&labelColor=202124"></a>
-  <a href="https://github.com/bvdcode/cotton-mobile/releases/latest/download/CottonCloud-Android.apk"><img alt="Download Cotton Cloud Android APK from GitHub releases" src="https://img.shields.io/badge/Android%20APK-GitHub%20release-202124?style=for-the-badge&logo=android&logoColor=white&labelColor=202124"></a>
+  <a href="https://github.com/bvdcode/cotton-mobile/releases/latest/download/CottonCloud-Android.apk"><img alt="Download Cotton Cloud Android APK from GitHub releases" src="https://img.shields.io/badge/Android%20APK-Release-202124?style=for-the-badge&logo=android&logoColor=white&labelColor=202124"></a>
   <a href="https://github.com/bvdcode/cotton-sync-client/releases/latest/download/CottonSync-Windows-Setup.exe"><img alt="Download Cotton Sync Windows installer" src="https://img.shields.io/badge/Windows-Installer-202124?style=for-the-badge&logo=windows11&logoColor=white&labelColor=202124"></a>
   <a href="https://github.com/bvdcode/cotton-sync-client/releases/latest/download/CottonSync-Linux.deb"><img alt="Download Cotton Sync Linux DEB package" src="https://img.shields.io/badge/Linux-DEB%20package-202124?style=for-the-badge&logo=linux&logoColor=white&labelColor=202124"></a>
 </p>
