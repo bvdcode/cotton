@@ -2,25 +2,28 @@
 [![CI](https://github.com/bvdcode/cotton/actions/workflows/docker-image.yml/badge.svg)](https://github.com/bvdcode/cotton/actions)
 [![CodeFactor](https://www.codefactor.io/repository/github/bvdcode/cotton/badge)](https://www.codefactor.io/repository/github/bvdcode/cotton)
 [![Release](https://badgen.net/github/release/bvdcode/cotton?label=version)](https://github.com/bvdcode/cotton/releases)
-[![Docker Pulls](https://badgen.net/docker/pulls/bvdcode/cotton?icon=docker&label=pulls)](https://hub.docker.com/r/bvdcode/cotton)
-[![Docker Image Size](https://badgen.net/docker/size/bvdcode/cotton?icon=docker&label=size)](https://hub.docker.com/r/bvdcode/cotton)
-
-> **[Using Cotton? Say hi here!](https://github.com/bvdcode/cotton/discussions/3)**  
-> Live demo: [app.cottoncloud.dev](https://app.cottoncloud.dev/login?demo=true) - opens with per-browser generated demo credentials; public instances can also create an account from any credentials you enter.
+[![Docker Pulls](https://badgen.net/docker/pulls/bvdcode/cotton?icon=docker&label=docker%20pulls)](https://hub.docker.com/r/bvdcode/cotton)
 
 <div align="center">
 
 # Cotton Cloud
 
-### Self-hosted file cloud built to stay fast, rollback-friendly, and operationally safe
+### Self-hosted file cloud for fast, predictable day-to-day storage
 
-**All managed .NET/C#** core with content-addressed storage, streaming AES-GCM crypto, and a UI designed for real day-to-day use.
+A storage server with desktop/mobile clients, content-addressed files, streaming AES-GCM encryption, and a clean UI for real use.
 
 <p>
+  <a href="#quick-start"><img alt="Docker" src="https://img.shields.io/static/v1?style=for-the-badge&label=&message=Docker&color=2496ED&logo=docker&logoColor=white"></a>
   <a href="https://play.google.com/apps/testing/dev.cottoncloud.app"><img alt="Google Play" src="https://img.shields.io/static/v1?style=for-the-badge&label=&message=Google%20Play&color=01875F&logo=googleplay&logoColor=white"></a>
   <a href="https://github.com/bvdcode/cotton-mobile/releases/latest/download/CottonCloud-Android.apk"><img alt="APK" src="https://img.shields.io/static/v1?style=for-the-badge&label=&message=APK&color=2E7D32&logo=android&logoColor=white"></a>
   <a href="https://github.com/bvdcode/cotton-sync-client/releases/latest/download/CottonSync-Windows-Setup.exe"><img alt="Windows" src="https://img.shields.io/static/v1?style=for-the-badge&label=&message=Windows&color=0078D4&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHBhdGggZmlsbD0iI2ZmZiIgZD0iTTMsMTJWNi43NUw5LDUuNDNWMTEuOTFMMywxMk0yMCwzVjExLjc1TDEwLDExLjlWNS4yMUwyMCwzTTMsMTNMOSwxMy4wOVYxOS45TDMsMTguNzVWMTNNMjAsMTMuMjVWMjJMMTAsMjAuMDlWMTMuMUwyMCwxMy4yNVoiLz48L3N2Zz4%3D"></a>
   <a href="https://github.com/bvdcode/cotton-sync-client/releases/latest/download/CottonSync-Linux.deb"><img alt="Linux" src="https://img.shields.io/static/v1?style=for-the-badge&label=&message=Linux&color=A81D33&logo=debian&logoColor=white"></a>
+</p>
+
+<p>
+  <a href="https://app.cottoncloud.dev/login?demo=true"><strong>Live demo</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://github.com/bvdcode/cotton/discussions/3">Using Cotton? Say hi</a>
 </p>
 
 </div>
