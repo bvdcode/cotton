@@ -33,6 +33,7 @@ import {
   buildBugReportUrl,
   initializeBugReportConsoleCapture,
 } from "./bugReportPrefill";
+import { UserMenuAppDownloads } from "./UserMenuAppDownloads";
 
 const STORAGE_QUOTA_STALE_TIME_MS = 60_000;
 const storageQuotaProgressSx = {
@@ -314,9 +315,19 @@ export const UserMenu = () => {
           </Box>
         )}
 
-        {serverSettings?.version && <Divider />}
-        {serverSettings?.version && (
-          <Box px={2} py={0.25}>
+        <Divider />
+        <Box
+          px={2}
+          py={0.5}
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: serverSettings?.version ? "space-between" : "center",
+            gap: 1.5,
+          }}
+        >
+          <UserMenuAppDownloads onOpenLink={handleClose} />
+          {serverSettings?.version && (
             <Link
               href="https://cottoncloud.dev"
               underline="none"
@@ -326,6 +337,7 @@ export const UserMenu = () => {
                 py: 0.25,
                 color: "text.secondary",
                 textAlign: "center",
+                whiteSpace: "nowrap",
                 "&:hover": {
                   color: "primary.main",
                 },
@@ -339,8 +351,8 @@ export const UserMenu = () => {
                 {serverSettings.version}
               </Typography>
             </Link>
-          </Box>
-        )}
+          )}
+        </Box>
       </Menu>
     </>
   );
