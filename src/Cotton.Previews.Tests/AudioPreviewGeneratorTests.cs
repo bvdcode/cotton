@@ -3,12 +3,23 @@
 
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.Buffers.Binary;
 using System.Text;
 
 namespace Cotton.Previews.Tests;
 
 public class AudioPreviewGeneratorTests
 {
+    private const int LargeAudioPreviewThresholdBytes = 50 * 1024 * 1024;
+
+    [Test]
+    public void Version_ForcesReprocessingAfterWaveformTimeoutIncrease()
+    {
+        var generator = new AudioPreviewGenerator();
+
+        Assert.That(generator.Version, Is.EqualTo(3));
+    }
+
     [Test]
     public async Task GeneratePreviewWebPAsync_WavWithoutCover_FallsBackToWaveform_AndWritesArtifact()
     {
@@ -29,6 +40,30 @@ public class AudioPreviewGeneratorTests
         await File.WriteAllBytesAsync(artifactPath, preview);
 
         TestContext.Progress.WriteLine($"Audio waveform preview artifact: {artifactPath}");
+    }
+
+    [Test]
+    public async Task GeneratePreviewWebPAsync_LargeWavWithoutCover_GeneratesWaveformPreview_AndWritesArtifact()
+    {
+        var generator = new AudioPreviewGenerator();
+        byte[] wavBytes = CreateLargePcm16MonoWavBytes(minimumSizeBytes: LargeAudioPreviewThresholdBytes + (1024 * 1024));
+        using var stream = new MemoryStream(wavBytes);
+
+        byte[] preview = await generator.GeneratePreviewWebPAsync(stream, size: 200);
+
+        AssertWebpSignature(preview);
+        using var image = Image.Load<Rgba32>(preview);
+        Assert.That(Math.Max(image.Width, image.Height), Is.LessThanOrEqualTo(200));
+        Assert.That(CountNonTransparentPixels(image), Is.GreaterThan(0));
+
+        string artifactsDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts");
+        Directory.CreateDirectory(artifactsDirectory);
+
+        string artifactPath = Path.Combine(artifactsDirectory, "audio-waveform-preview-large.webp");
+        await File.WriteAllBytesAsync(artifactPath, preview);
+
+        TestContext.Progress.WriteLine($"Large audio bytes: {wavBytes.Length:N0}");
+        TestContext.Progress.WriteLine($"Large audio waveform preview artifact: {artifactPath}");
     }
 
     [Test]
@@ -108,6 +143,74 @@ public class AudioPreviewGeneratorTests
 
         writer.Flush();
         return ms.ToArray();
+    }
+
+    private static byte[] CreateLargePcm16MonoWavBytes(int minimumSizeBytes)
+    {
+        const int sampleRate = 8000;
+        int dataSize = AlignToEven(minimumSizeBytes - 44);
+        int totalSamples = dataSize / sizeof(short);
+
+        using var ms = new MemoryStream(44 + dataSize);
+        WritePcm16MonoWavHeader(ms, sampleRate, dataSize);
+
+        byte[] data = new byte[dataSize];
+        for (int i = 0; i < totalSamples; i++)
+        {
+            double position = (double)i / totalSamples;
+            double envelope = 0.15 + (0.85 * Math.Abs(Math.Sin(position * Math.PI * 6)));
+            short sample = ((i / 8) % 2 == 0 ? short.MaxValue : short.MinValue);
+            BinaryPrimitives.WriteInt16LittleEndian(
+                data.AsSpan(i * sizeof(short), sizeof(short)),
+                (short)(sample * envelope));
+        }
+
+        ms.Write(data);
+        return ms.ToArray();
+    }
+
+    private static int AlignToEven(int value) => value % 2 == 0 ? value : value + 1;
+
+    private static void WritePcm16MonoWavHeader(Stream stream, int sampleRate, int dataSize)
+    {
+        using var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true);
+
+        writer.Write(Encoding.ASCII.GetBytes("RIFF"));
+        writer.Write(36 + dataSize);
+        writer.Write(Encoding.ASCII.GetBytes("WAVE"));
+
+        writer.Write(Encoding.ASCII.GetBytes("fmt "));
+        writer.Write(16);
+        writer.Write((short)1);
+        writer.Write((short)1);
+        writer.Write(sampleRate);
+        writer.Write(sampleRate * sizeof(short));
+        writer.Write((short)sizeof(short));
+        writer.Write((short)16);
+
+        writer.Write(Encoding.ASCII.GetBytes("data"));
+        writer.Write(dataSize);
+    }
+
+    private static int CountNonTransparentPixels(Image<Rgba32> image)
+    {
+        int count = 0;
+        image.ProcessPixelRows(accessor =>
+        {
+            for (int y = 0; y < accessor.Height; y++)
+            {
+                Span<Rgba32> row = accessor.GetRowSpan(y);
+                for (int x = 0; x < row.Length; x++)
+                {
+                    if (row[x].A > 0)
+                    {
+                        count++;
+                    }
+                }
+            }
+        });
+
+        return count;
     }
 
     private static void AssertWebpSignature(byte[] imageBytes)
