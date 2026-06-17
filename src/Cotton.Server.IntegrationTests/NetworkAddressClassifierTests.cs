@@ -22,6 +22,7 @@ public class NetworkAddressClassifierTests
     [TestCase("169.254.10.20")]
     [TestCase("127.0.0.1")]
     [TestCase("::1")]
+    [TestCase("::ffff:127.0.0.1")]
     [TestCase("fe80::1")]
     [TestCase("fd12:3456:789a::1")]
     [TestCase("::ffff:192.168.1.10")]

@@ -3406,7 +3406,8 @@
     "request": {
       "version": "Версія {{version}}",
       "versionWithDevice": "Версія {{version}} на {{deviceName}}",
-      "origin": "Запит від {{origin}}"
+      "origin": "Запит від {{origin}}",
+      "localOrigin": "цього пристрою"
     },
     "access": {
       "title": "Цей застосунок зможе:",

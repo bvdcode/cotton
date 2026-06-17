@@ -16,5 +16,9 @@ namespace Cotton.Server.Auth
         /// Defines the refresh.
         /// </summary>
         public const string Refresh = "auth.refresh";
+        /// <summary>
+        /// Defines the anonymous public share archive policy.
+        /// </summary>
+        public const string PublicShareArchive = "public-share.archive";
     }
 }

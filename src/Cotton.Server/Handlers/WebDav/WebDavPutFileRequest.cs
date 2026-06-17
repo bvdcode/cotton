@@ -137,6 +137,7 @@ public class WebDavPutFileRequestHandler(
         var fileManifest = await GetOrCreateFileManifestAsync(
             chunks: content!.Chunks,
             fileHash: content.FileHash,
+            userId: request.UserId,
             resourceName: target.ResourceName,
             contentType: contentType,
             ct);
@@ -351,12 +352,12 @@ public class WebDavPutFileRequestHandler(
     private async Task<FileManifest> GetOrCreateFileManifestAsync(
         List<Chunk> chunks,
         byte[] fileHash,
+        Guid userId,
         string resourceName,
         string contentType,
         CancellationToken ct)
     {
-        var fileManifest = await _dbContext.FileManifests
-            .FirstOrDefaultAsync(f => f.ProposedContentHash == fileHash || f.ComputedContentHash == fileHash, ct);
+        var fileManifest = await _fileManifestService.GetReusableOwnedManifestAsync(fileHash, userId, cancellationToken: ct);
 
         if (fileManifest is not null)
         {

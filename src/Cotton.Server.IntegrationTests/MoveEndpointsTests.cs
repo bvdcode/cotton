@@ -566,9 +566,7 @@ public class MoveEndpointsTests : IntegrationTestBase
         var root = await GetRootAsync();
         var target = await CreateFolderAsync(root.Id, "webdav-race");
 
-        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Basic",
-            Convert.ToBase64String(Encoding.UTF8.GetBytes("testuser:testpassword")));
+        await UseWebDavBasicAuthAsync(_client!);
 
         var putFile = SendWebDavPutAsync(_client!, "/api/v1/webdav/webdav-race/thing", "webdav-put-race");
         var mkcol = SendWebDavMkColAsync(_client!, "/api/v1/webdav/webdav-race/thing");
@@ -616,9 +614,7 @@ public class MoveEndpointsTests : IntegrationTestBase
         var file = await CreateFileViaClientAsync(client, src.Id, "doc.txt", "webdav-fail-notify");
 
         // Switch to WebDAV basic auth for the MOVE request.
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Basic",
-            Convert.ToBase64String(Encoding.UTF8.GetBytes("testuser:testpassword")));
+        await UseWebDavBasicAuthAsync(client);
 
         using var moveRequest = new HttpRequestMessage(new HttpMethod("MOVE"), "/api/v1/webdav/src/doc.txt");
         moveRequest.Headers.Add("Destination", "/api/v1/webdav/dst/doc.txt");
@@ -664,9 +660,7 @@ public class MoveEndpointsTests : IntegrationTestBase
         var file = await CreateFileViaClientAsync(client, fileParent.Id, "doc.txt", "webdav-delete-file");
         var folder = await CreateFolderViaClientAsync(client, root.Id, "delete-folder-parent");
 
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Basic",
-            Convert.ToBase64String(Encoding.UTF8.GetBytes("testuser:testpassword")));
+        await UseWebDavBasicAuthAsync(client);
 
         using var deleteFileRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/webdav/delete-file-parent/doc.txt");
         var deleteFileResponse = await client.SendAsync(deleteFileRequest);
@@ -772,6 +766,15 @@ public class MoveEndpointsTests : IntegrationTestBase
         res.EnsureSuccessStatusCode();
         var login = await res.Content.ReadFromJsonAsync<TokenPairResponseDto>();
         return login!.AccessToken;
+    }
+
+    private static async Task UseWebDavBasicAuthAsync(HttpClient client)
+    {
+        string webDavToken = await client.GetStringAsync("/api/v1/auth/webdav/token");
+        Assert.That(webDavToken, Is.Not.Empty);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Basic",
+            Convert.ToBase64String(Encoding.UTF8.GetBytes($"testuser:{webDavToken}")));
     }
 
     private async Task<NodeDto> GetRootAsync()

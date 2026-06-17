@@ -3186,15 +3186,16 @@
     "request": {
       "version": "Version {{version}}",
       "versionWithDevice": "Version {{version}} on {{deviceName}}",
-      "origin": "Request from {{origin}}"
+      "origin": "Request from {{origin}}",
+      "localOrigin": "this device"
     },
     "access": {
-      "title": "This application will be able to:",
+      "title": "If you allow, this application can:",
       "bullets": {
-        "files": "Access your Cotton Cloud files and folders.",
+        "files": "Manage all Cotton Cloud files and folders your account can access.",
         "content": "Upload, download, rename, move, and delete content.",
-        "profile": "Read basic account profile information.",
-        "session": "Stay signed in until you revoke the application session."
+        "profile": "Use your account permissions, including admin access if you have it.",
+        "session": "Receive a refresh token and stay signed in until you revoke the app session."
       }
     },
     "actions": {

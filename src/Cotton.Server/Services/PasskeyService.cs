@@ -4,11 +4,11 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Providers;
 using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.AspNetCore.Exceptions;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
-using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -20,8 +20,8 @@ namespace Cotton.Server.Services
     /// </summary>
     public class PasskeyService(
         CottonDbContext _dbContext,
-        IHttpContextAccessor _httpContextAccessor,
         IMemoryCache _cache,
+        SettingsProvider _settings,
         IDatabaseIntegrityVerifier _integrity)
     {
         private static readonly TimeSpan OptionsLifetime = TimeSpan.FromMinutes(5);
@@ -70,7 +70,8 @@ namespace Cotton.Server.Services
                 .Select(x => new { x.CredentialId, x.Transports })
                 .ToListAsync(ct);
 
-            var options = CreateFido2().RequestNewCredential(new RequestNewCredentialParams
+            var fido = await CreateFido2Async(ct);
+            var options = fido.RequestNewCredential(new RequestNewCredentialParams
             {
                 User = new Fido2User
                 {
@@ -118,7 +119,7 @@ namespace Cotton.Server.Services
 
             _cache.Remove(RegistrationCacheKey(request.RequestId));
             var attestation = ToAttestationResponse(request.Credential);
-            var fido = CreateFido2();
+            var fido = await CreateFido2Async(ct);
             RegisteredPublicKeyCredential result;
             try
             {
@@ -192,7 +193,8 @@ namespace Cotton.Server.Services
                 }
             }
 
-            var options = CreateFido2().GetAssertionOptions(new GetAssertionOptionsParams
+            var fido = await CreateFido2Async(ct);
+            var options = fido.GetAssertionOptions(new GetAssertionOptionsParams
             {
                 AllowedCredentials = allowedCredentials,
                 UserVerification = UserVerificationRequirement.Required
@@ -239,7 +241,7 @@ namespace Cotton.Server.Services
                 throw new UnauthorizedAccessException("Passkey credential does not belong to the requested user");
             }
 
-            var fido = CreateFido2();
+            var fido = await CreateFido2Async(ct);
             VerifyAssertionResult result;
             try
             {
@@ -322,23 +324,14 @@ namespace Cotton.Server.Services
             };
         }
 
-        private Fido2 CreateFido2()
+        private async Task<Fido2> CreateFido2Async(CancellationToken ct)
         {
-            var request = _httpContextAccessor.HttpContext?.Request
-                ?? throw new InvalidOperationException("Passkeys require an active HTTP request");
-
-            if (!request.Host.HasValue)
-            {
-                throw new InvalidOperationException("Passkeys require a request host");
-            }
-
-            string origin = UriHelper
-                .BuildAbsolute(request.Scheme, request.Host)
-                .TrimEnd('/');
+            var publicBaseUri = new Uri(await _settings.GetPublicBaseUrlAsync(ct), UriKind.Absolute);
+            string origin = publicBaseUri.GetLeftPart(UriPartial.Authority);
 
             return new Fido2(new Fido2Configuration
             {
-                ServerDomain = request.Host.Host,
+                ServerDomain = publicBaseUri.Host,
                 ServerName = Constants.ProductName,
                 Origins = new HashSet<string> { origin },
                 Timeout = 60_000,

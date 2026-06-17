@@ -13,7 +13,6 @@ using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Models.Enums;
-using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
@@ -29,7 +28,6 @@ public sealed class OidcAuthenticationService(
     CottonDbContext _dbContext,
     OidcDiscoveryService _discovery,
     SettingsProvider _settings,
-    IHttpContextAccessor _httpContextAccessor,
     IPasswordHashService _hasher,
     DefaultUserContentSeeder _defaultUserContentSeeder,
     AuthSessionIssuer _sessionIssuer,
@@ -87,7 +85,7 @@ public sealed class OidcAuthenticationService(
         }
 
         OpenIdConnectConfiguration configuration = await _discovery.GetConfigurationAsync(loginState.Provider, ct);
-        string redirectUri = BuildRedirectUri();
+        string redirectUri = await BuildRedirectUriAsync(ct);
         OidcTokenResponse tokenResponse = await _discovery.ExchangeCodeAsync(
             configuration,
             loginState.Provider,
@@ -172,7 +170,7 @@ public sealed class OidcAuthenticationService(
         string state = CreateOpaqueValue();
         string codeVerifier = CreateOpaqueValue();
         string nonce = CreateOpaqueValue();
-        string redirectUri = BuildRedirectUri();
+        string redirectUri = await BuildRedirectUriAsync(ct);
         var loginState = new OidcLoginState
         {
             ProviderId = provider.Id,
@@ -525,23 +523,10 @@ public sealed class OidcAuthenticationService(
         return values.Select(x => x?.Trim()).FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
     }
 
-    private string BuildRedirectUri()
+    private async Task<string> BuildRedirectUriAsync(CancellationToken ct)
     {
-        string baseUrl = ResolvePublicBaseUrl();
+        string baseUrl = await _settings.GetPublicBaseUrlAsync(ct);
         return $"{baseUrl}{Routes.V1.Auth}/oidc/callback";
-    }
-
-    private string ResolvePublicBaseUrl()
-    {
-        string configured = _settings.GetServerSettings().PublicBaseUrl.TrimEnd('/');
-        if (!string.Equals(configured, "http://localhost", StringComparison.OrdinalIgnoreCase))
-        {
-            return configured;
-        }
-
-        HttpRequest request = _httpContextAccessor.HttpContext?.Request
-            ?? throw new InvalidOperationException("HTTP request is required for OIDC redirects.");
-        return $"{request.Scheme}://{request.Host.Value}".TrimEnd('/');
     }
 
     private static string NormalizeReturnUrl(string? returnUrl)

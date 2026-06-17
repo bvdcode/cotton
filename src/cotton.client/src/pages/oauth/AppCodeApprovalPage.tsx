@@ -27,6 +27,7 @@ import {
 } from "../../shared/api/appCodeApi";
 import { getApiErrorMessage } from "../../shared/api/httpClient";
 import { AuthActionShell } from "../../shared/ui/AuthActionShell";
+import { formatAppCodeOrigin } from "./appCodeOrigin";
 
 type ViewState =
   | { kind: "loading" }
@@ -195,6 +196,10 @@ const ApprovalState = ({
   onDeny,
 }: ApprovalStateProps) => {
   const { t } = useTranslation("appCodeApproval");
+  const origin = formatAppCodeOrigin(
+    details.origin,
+    t("request.localOrigin"),
+  );
 
   return (
     <Stack spacing={3} sx={{ mt: 3 }}>
@@ -214,7 +219,7 @@ const ApprovalState = ({
             : t("request.version", { version: details.applicationVersion })}
         </Typography>
         <Typography color="text.secondary">
-          {t("request.origin", { origin: details.origin })}
+          {t("request.origin", { origin })}
         </Typography>
       </Stack>
 
