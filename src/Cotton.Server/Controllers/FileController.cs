@@ -69,9 +69,10 @@ namespace Cotton.Server.Controllers
         [HttpHead("/s/{token}")]
         public async Task<IActionResult> Share(
             [FromRoute] string token,
-            [FromQuery] string? view = null)
+            [FromQuery] string? view = null,
+            [FromQuery] bool preview = false)
         {
-            var result = await _mediator.Send(new ShareFileQuery(token, view, Request));
+            var result = await _mediator.Send(new ShareFileQuery(token, view, preview, Request));
 
             switch (result.Kind)
             {

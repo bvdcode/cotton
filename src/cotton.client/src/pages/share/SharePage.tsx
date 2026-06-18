@@ -105,6 +105,11 @@ export const SharePage: React.FC = () => {
     return shareLinks.buildTokenDownloadUrl(token, "download");
   }, [token, targetKind]);
 
+  const previewUrl = React.useMemo(() => {
+    if (!token || targetKind !== "file") return null;
+    return shareLinks.buildTokenPreviewUrl(token);
+  }, [token, targetKind]);
+
   const shareUrl = React.useMemo(() => {
     if (!token) return null;
     return shareLinks.buildShareUrl(token);
@@ -340,6 +345,7 @@ export const SharePage: React.FC = () => {
               title={title}
               inlineUrl={viewState.inlineUrl}
               downloadUrl={downloadUrl}
+              previewUrl={previewUrl}
               fileName={fileName}
               contentType={contentType}
               contentLength={contentLength}

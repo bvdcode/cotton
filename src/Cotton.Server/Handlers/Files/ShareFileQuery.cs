@@ -13,6 +13,7 @@ using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
+using EasyExtensions.Helpers;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +26,7 @@ namespace Cotton.Server.Handlers.Files
     /// <summary>
     /// Represents a share file query sent through the mediator pipeline.
     /// </summary>
-    public class ShareFileQuery(string token, string? view, HttpRequest httpRequest) : IRequest<ShareFileResult>
+    public class ShareFileQuery(string token, string? view, bool preview, HttpRequest httpRequest) : IRequest<ShareFileResult>
     {
         /// <summary>
         /// Gets the opaque token.
@@ -35,6 +36,10 @@ namespace Cotton.Server.Handlers.Files
         /// Gets the view.
         /// </summary>
         public string? View { get; } = view;
+        /// <summary>
+        /// Gets whether the request should serve the generated large preview when available.
+        /// </summary>
+        public bool Preview { get; } = preview;
         /// <summary>
         /// Gets the http request.
         /// </summary>
@@ -67,6 +72,7 @@ namespace Cotton.Server.Handlers.Files
             DateTime now = DateTime.UtcNow;
             bool isHead = HttpMethods.IsHead(request.HttpRequest.Method);
             string baseAppUrl = await _settings.GetPublicBaseUrlAsync(ct);
+            bool requestsPreview = RequestsInlinePreview(request, viewMode.Value);
 
             if (viewMode.Value.IsHtml)
             {
@@ -81,14 +87,15 @@ namespace Cotton.Server.Handlers.Files
                 }
             }
 
-            var downloadToken = await LoadDownloadTokenAsync(request.Token, now, viewMode.Value.IsHtml, isHead, ct);
+            bool includeChunks = !viewMode.Value.IsHtml && !isHead && !requestsPreview;
+            var downloadToken = await LoadDownloadTokenAsync(request.Token, now, includeChunks, ct);
             if (downloadToken is null)
             {
                 return await BuildMissingTokenResultAsync(request.Token, now, viewMode.Value.IsHtml, baseAppUrl, ct);
             }
 
             _integrity.RequireValid(_dbContext, downloadToken, "share.download-token");
-            if (viewMode.Value.IsHtml || isHead)
+            if (viewMode.Value.IsHtml || isHead || requestsPreview)
             {
                 _fileGraphIntegrity.RequireValidMetadata(_dbContext, downloadToken.NodeFile, "share.file-metadata");
             }
@@ -114,11 +121,10 @@ namespace Cotton.Server.Handlers.Files
         private async Task<DownloadToken?> LoadDownloadTokenAsync(
             string token,
             DateTime now,
-            bool isHtml,
-            bool isHead,
+            bool includeChunks,
             CancellationToken ct)
         {
-            var query = BuildTokenQuery(token, now, includeChunks: !isHtml && !isHead);
+            var query = BuildTokenQuery(token, now, includeChunks);
             return await query.FirstOrDefaultAsync(cancellationToken: ct);
         }
 
@@ -207,6 +213,11 @@ namespace Cotton.Server.Handlers.Files
                 return BuildFileRedirect(downloadToken, file, request.Token, baseAppUrl);
             }
 
+            if (RequestsInlinePreview(request, viewMode))
+            {
+                return CreatePreviewStreamResult(downloadToken, file);
+            }
+
             var entityTag = CreateEntityTag(file);
             if (isHead)
             {
@@ -257,6 +268,11 @@ namespace Cotton.Server.Handlers.Files
             return (isHtml, isInlineFile);
         }
 
+        private static bool RequestsInlinePreview(
+            ShareFileQuery request,
+            (bool IsHtml, bool IsInlineFile) viewMode) =>
+            request.Preview && viewMode.IsInlineFile && HttpMethods.IsGet(request.HttpRequest.Method);
+
         private static bool IsInlineMetadataRangeProbe(HttpRequest httpRequest, bool inline)
         {
             if (!inline || !HttpMethods.IsGet(httpRequest.Method))
@@ -293,6 +309,28 @@ namespace Cotton.Server.Handlers.Files
         private static EntityTagHeaderValue CreateEntityTag(FileManifest file)
         {
             return FileETags.CreateContentEntityTag(file);
+        }
+
+        private ShareFileResult CreatePreviewStreamResult(DownloadToken downloadToken, FileManifest file)
+        {
+            if (file.LargeFilePreviewHash is null)
+            {
+                return ShareFileResult.AsNotFound("Preview not found");
+            }
+
+            string previewHashHex = Hasher.ToHexStringHash(file.LargeFilePreviewHash);
+            var entityTag = new EntityTagHeaderValue($"\"sha256-{previewHashHex}\"");
+            Stream previewStream = _storage.GetBlobStream([previewHashHex]);
+
+            return ShareFileResult.AsStream(
+                stream: previewStream,
+                contentType: "image/webp",
+                fileName: downloadToken.FileName,
+                downloadName: null,
+                lastModified: new DateTimeOffset(downloadToken.CreatedAt),
+                entityTag: entityTag,
+                deleteAfterUse: false,
+                deleteTokenId: downloadToken.Id);
         }
 
         private static string BuildRedirectHtml(string baseAppUrl,

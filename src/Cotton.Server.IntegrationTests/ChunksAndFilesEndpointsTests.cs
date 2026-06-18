@@ -8,12 +8,14 @@ using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using Cotton.Storage.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using NUnit.Framework;
 using System.IO.Compression;
@@ -1114,6 +1116,49 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Share_InlinePreview_ServesLargePreview_WithoutConsuming_DeleteAfterUse_Token()
+    {
+        var authToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var file = await UploadTextFileAsync(root!, "shared-apk.apk", "apk payload");
+        byte[] previewBytes = CreateWebpSignatureBytes("shared preview");
+        byte[] previewHash = Hasher.HashData(previewBytes);
+        await StoreLargePreviewAsync(file.Id, previewHash, previewBytes);
+
+        var linkResponse = await _client.GetAsync($"/api/v1/files/{file.Id}/download-link?deleteAfterUse=true");
+        linkResponse.EnsureSuccessStatusCode();
+        string downloadLink = (await linkResponse.Content.ReadAsStringAsync()).Trim().Trim('"');
+        string shareToken = ExtractToken(downloadLink);
+
+        _client.DefaultRequestHeaders.Authorization = null;
+        var previewResponse = await _client.GetAsync($"/s/{shareToken}?view=inline&preview=true");
+        previewResponse.EnsureSuccessStatusCode();
+        byte[] servedPreview = await previewResponse.Content.ReadAsByteArrayAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(previewResponse.Content.Headers.ContentType?.MediaType, Is.EqualTo("image/webp"));
+            Assert.That(previewResponse.Content.Headers.ContentDisposition?.DispositionType, Is.Not.EqualTo("attachment"));
+            Assert.That(servedPreview, Is.EqualTo(previewBytes));
+        });
+
+        DbContext.ChangeTracker.Clear();
+        bool existsAfterPreview = await DbContext.DownloadTokens.AnyAsync(x => x.Token == shareToken);
+        Assert.That(existsAfterPreview, Is.True);
+
+        var downloadResponse = await _client.GetAsync($"/s/{shareToken}?view=download");
+        downloadResponse.EnsureSuccessStatusCode();
+        _ = await downloadResponse.Content.ReadAsByteArrayAsync();
+
+        bool existsAfterDownload = await WaitForDownloadTokenAsync(shareToken, expectedExists: false);
+        Assert.That(existsAfterDownload, Is.False);
+    }
+
+    [Test]
     public async Task Share_Inline_Dangerous_Svg_Is_Forced_To_Attachment()
     {
         var authToken = await LoginAsync();
@@ -1544,6 +1589,36 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var file = list!.Files.SingleOrDefault(x => x.Name == name);
         Assert.That(file, Is.Not.Null);
         return file!;
+    }
+
+    private async Task StoreLargePreviewAsync(Guid nodeFileId, byte[] previewHash, byte[] previewBytes)
+    {
+        string previewStorageKey = Hasher.ToHexStringHash(previewHash);
+        await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+        var storage = scope.ServiceProvider.GetRequiredService<IStoragePipeline>();
+        await storage.WriteAsync(previewStorageKey, new MemoryStream(previewBytes));
+
+        Guid manifestId = await DbContext.NodeFiles
+            .Where(x => x.Id == nodeFileId)
+            .Select(x => x.FileManifestId)
+            .SingleAsync();
+        int updated = await DbContext.FileManifests
+            .Where(x => x.Id == manifestId)
+            .ExecuteUpdateAsync(s => s.SetProperty(
+                x => x.LargeFilePreviewHash,
+                previewHash));
+        Assert.That(updated, Is.EqualTo(1));
+    }
+
+    private static byte[] CreateWebpSignatureBytes(string payload)
+    {
+        byte[] payloadBytes = Encoding.UTF8.GetBytes(payload);
+        byte[] bytes = new byte[12 + payloadBytes.Length];
+        Encoding.ASCII.GetBytes("RIFF").CopyTo(bytes, 0);
+        BitConverter.GetBytes(bytes.Length - 8).CopyTo(bytes, 4);
+        Encoding.ASCII.GetBytes("WEBP").CopyTo(bytes, 8);
+        payloadBytes.CopyTo(bytes, 12);
+        return bytes;
     }
 
     private static string ExtractToken(string downloadLink)
