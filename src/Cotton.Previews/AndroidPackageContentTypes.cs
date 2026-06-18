@@ -24,6 +24,10 @@ namespace Cotton.Previews
         public const string Xapk = "application/vnd.android.xapk";
         /// <summary>Legacy XAPK MIME type emitted by some clients.</summary>
         public const string XapkLegacy = "application/x-android-xapk";
+        /// <summary>Canonical MIME type for APKMirror package archives.</summary>
+        public const string Apkm = "application/vnd.android.apkm";
+        /// <summary>Legacy APKMirror package MIME type emitted by some clients.</summary>
+        public const string ApkmLegacy = "application/x-apkm";
 
         /// <summary>Gets every Android package MIME type that Cotton recognizes for previews.</summary>
         public static readonly string[] All =
@@ -36,6 +40,8 @@ namespace Cotton.Previews
             ApksLegacy,
             Xapk,
             XapkLegacy,
+            Apkm,
+            ApkmLegacy,
         ];
     }
 }

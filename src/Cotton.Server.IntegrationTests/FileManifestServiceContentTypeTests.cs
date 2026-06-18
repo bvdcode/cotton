@@ -43,6 +43,7 @@ public class FileManifestServiceContentTypeTests
     [TestCase("APP_1.aab", "application/octet-stream", "application/vnd.android.bundle")]
     [TestCase("APP_1.apks", "application/zip", "application/vnd.android.apks")]
     [TestCase("APP_1.xapk", "application/zip", "application/vnd.android.xapk")]
+    [TestCase("APP_1.apkm", "application/zip", "application/vnd.android.apkm")]
     [TestCase("IMG_1.png", "application/octet-stream", "image/png")]
     public void ResolveContentType_OctetStreamOrEmpty_UsesExtensionFallback(
         string fileName,
@@ -70,6 +71,8 @@ public class FileManifestServiceContentTypeTests
     [TestCase("application/x-android-app-bundle", "application/vnd.android.bundle")]
     [TestCase("application/x-android-apks", "application/vnd.android.apks")]
     [TestCase("application/x-xapk", "application/vnd.android.xapk")]
+    [TestCase("application/x-apkm", "application/vnd.android.apkm")]
+    [TestCase("application/vnd.apkm", "application/vnd.android.apkm")]
     [TestCase("text/plain; charset=utf-8", "text/plain")]
     [TestCase("APPLICATION/OCTET-STREAM", "application/octet-stream")]
     public void ResolveContentType_NormalizesAliases_AndParameters(string contentType, string expectedContentType)
@@ -100,6 +103,7 @@ public class FileManifestServiceContentTypeTests
     [TestCase("bundle.aab", true)]
     [TestCase("bundle.apks", true)]
     [TestCase("bundle.xapk", true)]
+    [TestCase("bundle.apkm", true)]
     [TestCase("Program.cs", true)]
     [TestCase("Dockerfile", true)]
     [TestCase("archive.zip", false)]

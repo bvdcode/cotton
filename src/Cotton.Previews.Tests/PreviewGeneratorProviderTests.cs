@@ -23,6 +23,7 @@ public class PreviewGeneratorProviderTests
     [TestCase("application/vnd.android.bundle", typeof(AndroidPackagePreviewGenerator))]
     [TestCase("application/vnd.android.apks", typeof(AndroidPackagePreviewGenerator))]
     [TestCase("application/vnd.android.xapk", typeof(AndroidPackagePreviewGenerator))]
+    [TestCase("application/vnd.android.apkm", typeof(AndroidPackagePreviewGenerator))]
     [TestCase("image/png", typeof(ImagePreviewGenerator))]
     public void GetGeneratorByContentType_KnownTypes_ReturnsExpectedGenerator(string contentType, Type expectedType)
     {
@@ -74,6 +75,7 @@ public class PreviewGeneratorProviderTests
             Assert.That(mimeTypes, Does.Contain("application/vnd.android.bundle"));
             Assert.That(mimeTypes, Does.Contain("application/vnd.android.apks"));
             Assert.That(mimeTypes, Does.Contain("application/vnd.android.xapk"));
+            Assert.That(mimeTypes, Does.Contain("application/vnd.android.apkm"));
             Assert.That(mimeTypes, Does.Contain("model/stl"));
             Assert.That(mimeTypes, Does.Contain("application/sla"));
             Assert.That(mimeTypes, Does.Contain("application/vnd.ms-pki.stl"));

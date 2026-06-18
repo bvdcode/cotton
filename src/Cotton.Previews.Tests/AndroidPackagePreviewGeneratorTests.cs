@@ -74,6 +74,31 @@ public class AndroidPackagePreviewGeneratorTests
     }
 
     [Test]
+    public async Task GeneratePreviewWebPAsync_ObfuscatedExtensionlessResource_ExtractsDecodeableIcon()
+    {
+        byte[] source = CreateZipBytes(entries =>
+        {
+            entries["res/-6.xml"] = Encoding.UTF8.GetBytes("<compiled-placeholder />");
+            entries["res/kh"] = CreateSolidPngBytes(1280, 720, new Rgba32(20, 20, 20));
+            entries["res/yG"] = CreateSolidPngBytes(128, 128, new Rgba32(230, 80, 30));
+        });
+
+        using var stream = new MemoryStream(source);
+        byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 96);
+
+        AssertWebpSignature(preview);
+        using Image<Rgba32> image = Image.Load<Rgba32>(preview);
+        Rgba32 center = image[image.Width / 2, image.Height / 2];
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(center.R, Is.GreaterThan(170));
+            Assert.That(center.G, Is.InRange(40, 130));
+            Assert.That(center.B, Is.LessThan(90));
+        }
+    }
+
+    [Test]
     public async Task GeneratePreviewWebPAsync_NoRasterIcon_ReturnsFallbackWebp()
     {
         byte[] source = CreateZipBytes(entries =>
@@ -83,6 +108,24 @@ public class AndroidPackagePreviewGeneratorTests
         });
 
         using var stream = new MemoryStream(source);
+        byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 96);
+
+        AssertWebpSignature(preview);
+        using Image<Rgba32> image = Image.Load<Rgba32>(preview);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(image.Width, Is.EqualTo(96));
+            Assert.That(image.Height, Is.EqualTo(96));
+        }
+    }
+
+    [Test]
+    public async Task GeneratePreviewWebPAsync_MalformedPackage_ReturnsFallbackWebp()
+    {
+        byte[] source = Encoding.UTF8.GetBytes("this is not a zip archive");
+        using var stream = new MemoryStream(source);
+
         byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 96);
 
         AssertWebpSignature(preview);

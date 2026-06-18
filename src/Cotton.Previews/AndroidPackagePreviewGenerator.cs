@@ -60,54 +60,83 @@ namespace Cotton.Previews
 
         private static async Task<byte[]?> TryExtractIconBytesAsync(Stream stream, int depth)
         {
-            using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: true);
-
-            foreach (ZipArchiveEntry iconEntry in SelectIconEntries(archive))
+            ZipArchive archive;
+            try
             {
-                byte[]? iconBytes = await TryReadEntryBytesAsync(iconEntry, MaxIconBytes).ConfigureAwait(false);
-                if (iconBytes is null)
-                {
-                    continue;
-                }
-
-                if (CanDecodeImage(iconBytes))
-                {
-                    return iconBytes;
-                }
+                archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: true);
             }
-
-            if (depth >= MaxNestedDepth)
+            catch (InvalidDataException)
             {
                 return null;
             }
 
-            foreach (ZipArchiveEntry nestedPackageEntry in SelectNestedPackageEntries(archive))
+            using (archive)
             {
-                byte[]? nestedBytes = await TryReadEntryBytesAsync(nestedPackageEntry, MaxNestedPackageBytes).ConfigureAwait(false);
-                if (nestedBytes is null)
+                IconBytesCandidate? bestIcon = null;
+                foreach (IconEntryCandidate iconEntry in SelectIconEntries(archive))
                 {
-                    continue;
+                    byte[]? iconBytes = await TryReadEntryBytesAsync(iconEntry.Entry, MaxIconBytes).ConfigureAwait(false);
+                    if (iconBytes is null)
+                    {
+                        continue;
+                    }
+
+                    (int Width, int Height)? dimensions = TryIdentifyImageDimensions(iconBytes);
+                    if (dimensions is null)
+                    {
+                        continue;
+                    }
+
+                    int score = iconEntry.Score + ScoreImageDimensions(dimensions.Value.Width, dimensions.Value.Height);
+                    if (score <= 0)
+                    {
+                        continue;
+                    }
+
+                    if (bestIcon is null || score > bestIcon.Score)
+                    {
+                        bestIcon = new IconBytesCandidate(iconBytes, score);
+                    }
                 }
 
-                using var nestedStream = new MemoryStream(nestedBytes, writable: false);
-                byte[]? nestedIcon = await TryExtractIconBytesAsync(nestedStream, depth + 1).ConfigureAwait(false);
-                if (nestedIcon is not null)
+                if (bestIcon is not null)
                 {
-                    return nestedIcon;
+                    return bestIcon.Bytes;
                 }
+
+                if (depth >= MaxNestedDepth)
+                {
+                    return null;
+                }
+
+                foreach (ZipArchiveEntry nestedPackageEntry in SelectNestedPackageEntries(archive))
+                {
+                    byte[]? nestedBytes = await TryReadEntryBytesAsync(nestedPackageEntry, MaxNestedPackageBytes).ConfigureAwait(false);
+                    if (nestedBytes is null)
+                    {
+                        continue;
+                    }
+
+                    using var nestedStream = new MemoryStream(nestedBytes, writable: false);
+                    byte[]? nestedIcon = await TryExtractIconBytesAsync(nestedStream, depth + 1).ConfigureAwait(false);
+                    if (nestedIcon is not null)
+                    {
+                        return nestedIcon;
+                    }
+                }
+
+                return null;
             }
-
-            return null;
         }
 
-        private static IEnumerable<ZipArchiveEntry> SelectIconEntries(ZipArchive archive)
+        private static IEnumerable<IconEntryCandidate> SelectIconEntries(ZipArchive archive)
         {
             return archive.Entries
                 .Take(MaxEntriesToInspect)
                 .Select(entry => new { Entry = entry, Score = ScoreIconEntry(entry) })
                 .Where(candidate => candidate.Score > 0)
                 .OrderByDescending(candidate => candidate.Score)
-                .Select(candidate => candidate.Entry);
+                .Select(candidate => new IconEntryCandidate(candidate.Entry, candidate.Score));
         }
 
         private static IEnumerable<ZipArchiveEntry> SelectNestedPackageEntries(ZipArchive archive)
@@ -130,24 +159,43 @@ namespace Cotton.Previews
 
             string path = NormalizeEntryPath(entry.FullName);
             string extension = Path.GetExtension(path);
-            if (extension is not ".png" and not ".webp" and not ".jpg" and not ".jpeg")
+            if (path.EndsWith(".9.png", StringComparison.Ordinal))
+            {
+                return 0;
+            }
+
+            bool isKnownRasterExtension = extension is ".png" or ".webp" or ".jpg" or ".jpeg";
+            bool isExtensionless = string.IsNullOrEmpty(extension);
+            bool inResourceTree = path.StartsWith("res/", StringComparison.Ordinal) || path.Contains("/res/", StringComparison.Ordinal);
+            if (!isKnownRasterExtension && !(isExtensionless && inResourceTree))
             {
                 return 0;
             }
 
             string fileName = Path.GetFileNameWithoutExtension(path);
-            bool inAndroidResources = path.StartsWith("res/mipmap", StringComparison.Ordinal)
+            bool inNamedAndroidResourceDirectory = path.StartsWith("res/mipmap", StringComparison.Ordinal)
                 || path.StartsWith("res/drawable", StringComparison.Ordinal)
                 || path.Contains("/res/mipmap", StringComparison.Ordinal)
                 || path.Contains("/res/drawable", StringComparison.Ordinal);
             bool rootManifestIcon = !path.Contains('/', StringComparison.Ordinal)
                 && (fileName is "icon" or "app_icon" or "logo" || fileName.Contains("launcher", StringComparison.Ordinal));
-            if (!inAndroidResources && !rootManifestIcon)
+            if (!inNamedAndroidResourceDirectory && !inResourceTree && !rootManifestIcon)
             {
                 return 0;
             }
 
-            int score = inAndroidResources ? 1_000 : 500;
+            int score = rootManifestIcon ? 500 : 0;
+            if (inNamedAndroidResourceDirectory)
+            {
+                score += 1_000;
+            }
+            else if (inResourceTree)
+            {
+                // Some optimized APKs obfuscate resources to extensionless paths like res/yG.
+                // They can still be real PNG/WebP app icons, so try them after named resources.
+                score += 2_000;
+            }
+
             if (path.Contains("/mipmap", StringComparison.Ordinal) || path.StartsWith("res/mipmap", StringComparison.Ordinal))
             {
                 score += 8_000;
@@ -159,7 +207,7 @@ namespace Cotton.Previews
 
             score += ScoreIconName(fileName);
             score += ScoreDensity(path);
-            score += extension is ".png" or ".webp" ? 200 : 50;
+            score += extension is ".png" or ".webp" ? 200 : isExtensionless ? 100 : 50;
             score += (int)Math.Min(entry.Length / 1024, 512);
             return score;
         }
@@ -311,16 +359,67 @@ namespace Cotton.Previews
             }
         }
 
-        private static bool CanDecodeImage(byte[] imageBytes)
+        private static (int Width, int Height)? TryIdentifyImageDimensions(byte[] imageBytes)
         {
             try
             {
-                return Image.Identify(imageBytes) is not null;
+                var info = Image.Identify(imageBytes);
+                return info is null ? null : (info.Width, info.Height);
             }
             catch
             {
-                return false;
+                return null;
             }
+        }
+
+        private static int ScoreImageDimensions(int width, int height)
+        {
+            if (width <= 0 || height <= 0)
+            {
+                return -20_000;
+            }
+
+            int minSide = Math.Min(width, height);
+            int maxSide = Math.Max(width, height);
+            double aspectRatio = maxSide / (double)minSide;
+
+            int score = 0;
+            if (aspectRatio <= 1.15)
+            {
+                score += 10_000;
+            }
+            else if (aspectRatio <= 1.33)
+            {
+                score += 4_000;
+            }
+            else
+            {
+                score -= 12_000;
+            }
+
+            if (maxSide >= 192)
+            {
+                score += 1_500;
+            }
+            else if (maxSide >= 96)
+            {
+                score += 1_000;
+            }
+            else if (maxSide >= 48)
+            {
+                score += 500;
+            }
+            else
+            {
+                score -= 500;
+            }
+
+            if (maxSide > 2048)
+            {
+                score -= 4_000;
+            }
+
+            return score;
         }
 
         private static async Task<byte[]> RenderIconPreviewAsync(byte[] iconBytes, int size)
@@ -405,5 +504,9 @@ namespace Cotton.Previews
 
         private static string NormalizeEntryPath(string path) =>
             path.Replace('\\', '/').TrimStart('/').ToLowerInvariant();
+
+        private sealed record IconEntryCandidate(ZipArchiveEntry Entry, int Score);
+
+        private sealed record IconBytesCandidate(byte[] Bytes, int Score);
     }
 }

@@ -65,6 +65,7 @@ namespace Cotton.Server.Services
                 [".aab"] = AndroidPackageContentTypes.AndroidAppBundle,
                 [".apks"] = AndroidPackageContentTypes.Apks,
                 [".xapk"] = AndroidPackageContentTypes.Xapk,
+                [".apkm"] = AndroidPackageContentTypes.Apkm,
             };
 
         private static readonly IReadOnlySet<string> sourceTextExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -282,7 +283,7 @@ namespace Cotton.Server.Services
 
         private static bool ShouldForceExtensionContentType(string extension)
         {
-            return extension is ".stl" or ".obj" or ".3mf" or ".apk" or ".aab" or ".apks" or ".xapk";
+            return extension is ".stl" or ".obj" or ".3mf" or ".apk" or ".aab" or ".apks" or ".xapk" or ".apkm";
         }
 
         private static string NormalizeContentType(string? contentType)
@@ -314,6 +315,9 @@ namespace Cotton.Server.Services
                 "application/x-apks" => AndroidPackageContentTypes.Apks,
                 AndroidPackageContentTypes.XapkLegacy => AndroidPackageContentTypes.Xapk,
                 "application/x-xapk" => AndroidPackageContentTypes.Xapk,
+                AndroidPackageContentTypes.ApkmLegacy => AndroidPackageContentTypes.Apkm,
+                "application/vnd.apkm" => AndroidPackageContentTypes.Apkm,
+                "application/apkm" => AndroidPackageContentTypes.Apkm,
                 _ => normalized,
             };
         }
