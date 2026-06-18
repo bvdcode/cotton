@@ -26,6 +26,7 @@ namespace Cotton.Previews
             new AudioPreviewGenerator(),
             new VideoPreviewGenerator(),
             new SvgPreviewGenerator(),
+            new AndroidPackagePreviewGenerator(),
             new ImagePreviewGenerator(),
         ];
 

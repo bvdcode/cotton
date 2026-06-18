@@ -60,6 +60,11 @@ namespace Cotton.Server.Services
                 [".stl"] = "model/stl",
                 [".obj"] = "model/obj",
                 [".3mf"] = "model/3mf",
+
+                [".apk"] = AndroidPackageContentTypes.Apk,
+                [".aab"] = AndroidPackageContentTypes.AndroidAppBundle,
+                [".apks"] = AndroidPackageContentTypes.Apks,
+                [".xapk"] = AndroidPackageContentTypes.Xapk,
             };
 
         private static readonly IReadOnlySet<string> sourceTextExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -143,6 +148,9 @@ namespace Cotton.Server.Services
 
         /// <summary>Regex pattern matching filenames that Cotton treats as source-code text previews.</summary>
         public static string SourceTextFileNameRegexPattern { get; } = BuildSourceTextFileNameRegexPattern();
+
+        /// <summary>Regex pattern matching legacy octet-stream filenames that Cotton can normalize for previews.</summary>
+        public static string PreviewableFileNameRegexPattern { get; } = BuildPreviewableFileNameRegexPattern();
 
         /// <summary>
         /// Resolves content type.
@@ -260,9 +268,21 @@ namespace Cotton.Server.Services
             return $"^(?:dockerfile(?:\\..*)?|\\.dockerignore|.+\\.(?:{string.Join("|", extensions)}))$";
         }
 
+        private static string BuildPreviewableFileNameRegexPattern()
+        {
+            var extensions = sourceTextExtensions
+                .Concat(extensionContentTypeOverrides.Keys)
+                .Select(extension => Regex.Escape(extension.TrimStart('.')))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(extension => extension.Length)
+                .ThenBy(extension => extension, StringComparer.Ordinal);
+
+            return $"^(?:dockerfile(?:\\..*)?|\\.dockerignore|.+\\.(?:{string.Join("|", extensions)}))$";
+        }
+
         private static bool ShouldForceExtensionContentType(string extension)
         {
-            return extension is ".stl" or ".obj" or ".3mf";
+            return extension is ".stl" or ".obj" or ".3mf" or ".apk" or ".aab" or ".apks" or ".xapk";
         }
 
         private static string NormalizeContentType(string? contentType)
@@ -285,6 +305,15 @@ namespace Cotton.Server.Services
                 "audio/x-flac" => "audio/flac",
                 "audio/x-wav" => "audio/wav",
                 "application/vnd.ms-pki.stl" => "model/stl",
+                "application/apk" => AndroidPackageContentTypes.Apk,
+                "application/x-apk" => AndroidPackageContentTypes.Apk,
+                "application/vnd.android.package" => AndroidPackageContentTypes.Apk,
+                AndroidPackageContentTypes.ApkLegacy => AndroidPackageContentTypes.Apk,
+                AndroidPackageContentTypes.AndroidAppBundleLegacy => AndroidPackageContentTypes.AndroidAppBundle,
+                AndroidPackageContentTypes.ApksLegacy => AndroidPackageContentTypes.Apks,
+                "application/x-apks" => AndroidPackageContentTypes.Apks,
+                AndroidPackageContentTypes.XapkLegacy => AndroidPackageContentTypes.Xapk,
+                "application/x-xapk" => AndroidPackageContentTypes.Xapk,
                 _ => normalized,
             };
         }

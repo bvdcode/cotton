@@ -49,7 +49,7 @@ namespace Cotton.Server.Jobs
             var generatorVersionsByContentType = PreviewGeneratorProvider.GetGeneratorVersionsByContentType();
             CancellationToken cancellationToken = context?.CancellationToken ?? CancellationToken.None;
 
-            await NormalizeLegacySourceTextContentTypesAsync(allSupportedMimeTypes, cancellationToken);
+            await NormalizeLegacyPreviewableContentTypesAsync(allSupportedMimeTypes, cancellationToken);
 
             HashSet<Guid> queuedOrProcessedItemIds = [];
             List<FileManifest> itemsToProcess = await LoadNextPreviewItemsAsync(
@@ -445,7 +445,7 @@ namespace Cotton.Server.Jobs
             await Task.Delay(waitTimeSeconds * 1000, cancellationToken);
         }
 
-        private async Task NormalizeLegacySourceTextContentTypesAsync(
+        private async Task NormalizeLegacyPreviewableContentTypesAsync(
             IReadOnlyCollection<string> supportedContentTypes,
             CancellationToken cancellationToken)
         {
@@ -456,7 +456,7 @@ namespace Cotton.Server.Jobs
                         || m.ContentType == string.Empty) &&
                     m.NodeFiles.Any(nf => Regex.IsMatch(
                         nf.Name,
-                        FileManifestService.SourceTextFileNameRegexPattern,
+                        FileManifestService.PreviewableFileNameRegexPattern,
                         RegexOptions.IgnoreCase)))
                 .OrderBy(m => m.CreatedAt)
                 .Take(MaxItemsPerRun)
@@ -465,7 +465,10 @@ namespace Cotton.Server.Jobs
             int updated = 0;
             foreach (var manifest in manifests)
             {
-                string? fileName = manifest.NodeFiles.FirstOrDefault(nodeFile => FileManifestService.IsSourceTextFileName(nodeFile.Name))?.Name;
+                string? fileName = manifest.NodeFiles.FirstOrDefault(nodeFile => Regex.IsMatch(
+                    nodeFile.Name,
+                    FileManifestService.PreviewableFileNameRegexPattern,
+                    RegexOptions.IgnoreCase))?.Name;
                 if (string.IsNullOrWhiteSpace(fileName))
                 {
                     continue;
@@ -484,7 +487,7 @@ namespace Cotton.Server.Jobs
             if (updated > 0)
             {
                 await _dbContext.SaveChangesAsync(cancellationToken);
-                _logger.LogInformation("Normalized {Count} legacy source-text file manifest content types before preview generation.", updated);
+                _logger.LogInformation("Normalized {Count} legacy file manifest content types before preview generation.", updated);
             }
         }
 
