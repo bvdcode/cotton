@@ -98,8 +98,6 @@ export const AdminNotificationsSettingsPage = () => {
         setLoadError(t("notificationsSettings.errors.loadFailed"));
         setModeStatus("idle");
         setSmtpStatus("idle");
-      } finally {
-        // handled by explicit statuses
       }
     };
 

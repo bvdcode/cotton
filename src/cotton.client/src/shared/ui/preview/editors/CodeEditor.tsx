@@ -11,15 +11,6 @@ import { useTheme } from "@mui/material/styles";
 import type { IEditorProps } from "./types";
 import { detectMonacoLanguageFromFileName } from "../../../utils/languageDetection";
 
-/**
- * Detect programming language from file extension
- * Open/Closed Principle: Easy to extend with new mappings
- * Based on Monaco Editor supported languages
- */
-function detectLanguage(fileName: string): string {
-  return detectMonacoLanguageFromFileName(fileName);
-}
-
 export const CodeEditor: React.FC<IEditorProps> = ({
   value,
   onChange,
@@ -28,7 +19,7 @@ export const CodeEditor: React.FC<IEditorProps> = ({
   language: languageOverride,
 }) => {
   const theme = useTheme();
-  const language = languageOverride || detectLanguage(fileName);
+  const language = languageOverride || detectMonacoLanguageFromFileName(fileName);
   const monacoTheme = theme.palette.mode === 'dark' ? 'vs-dark' : 'vs-light';
 
   return (

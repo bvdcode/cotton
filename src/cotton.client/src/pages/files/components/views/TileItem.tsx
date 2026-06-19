@@ -404,13 +404,13 @@ const useFileIconContainerSx = (
   const typeInfo = getFileTypeInfo(file.name, file.contentType, {
     requiresVideoTranscoding: file.requiresVideoTranscoding ?? false,
   });
-  const previewUrl = typeof getFileIcon(
+  const hasPreviewUrl = typeof getFileIcon(
     file.previewHashEncryptedHex ?? null,
     file.name,
     file.contentType,
   ) === "string";
 
-  if (!previewUrl || !isDarkMode) {
+  if (!hasPreviewUrl || !isDarkMode) {
     return undefined;
   }
 
