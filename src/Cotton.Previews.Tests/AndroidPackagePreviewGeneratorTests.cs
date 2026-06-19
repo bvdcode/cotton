@@ -19,9 +19,9 @@ public class AndroidPackagePreviewGeneratorTests
     }
 
     [Test]
-    public void Version_ForcesReprocessingAfterDeclaredIconSelectionChange()
+    public void Version_ForcesReprocessingAfterDeclaredIconFallbackChange()
     {
-        Assert.That(_generator.Version, Is.EqualTo(3));
+        Assert.That(_generator.Version, Is.EqualTo(4));
     }
 
     [Test]
@@ -83,7 +83,7 @@ public class AndroidPackagePreviewGeneratorTests
     }
 
     [Test]
-    public async Task GeneratePreviewWebPAsync_ApkWithDeclaredApplicationIconWithoutRaster_DoesNotUseUnrelatedRaster()
+    public async Task GeneratePreviewWebPAsync_ApkWithDeclaredApplicationIconWithoutRaster_FallsBackToExplicitLauncherRaster()
     {
         const uint iconResourceId = 0x7F010000;
         byte[] source = CreateZipBytes(entries =>
@@ -105,7 +105,37 @@ public class AndroidPackagePreviewGeneratorTests
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(center.G, Is.GreaterThan(140));
+            Assert.That(center.R, Is.GreaterThan(170));
+            Assert.That(center.G, Is.LessThan(90));
+            Assert.That(center.B, Is.LessThan(90));
+        }
+    }
+
+    [Test]
+    public async Task GeneratePreviewWebPAsync_ApkWithDeclaredApplicationIconWithoutRaster_IgnoresUnrelatedRaster()
+    {
+        const uint iconResourceId = 0x7F010000;
+        byte[] source = CreateZipBytes(entries =>
+        {
+            entries["AndroidManifest.xml"] = CreateBinaryManifestWithApplicationIcon(iconResourceId);
+            entries["resources.arsc"] = CreateResourceTableWithIconPaths(
+                iconResourceId,
+                ("res/declared.xml", 0xFFFE));
+            entries["res/declared.xml"] = Encoding.UTF8.GetBytes("<adaptive-icon />");
+            entries["res/drawable/splash.png"] = CreateSolidPngBytes(192, 192, new Rgba32(230, 30, 30));
+        });
+
+        using var stream = new MemoryStream(source);
+        byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 96);
+
+        AssertWebpSignature(preview);
+        using Image<Rgba32> image = Image.Load<Rgba32>(preview);
+        Rgba32 center = image[image.Width / 2, image.Height / 2];
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(center.R, Is.LessThan(170));
+            Assert.That(center.G, Is.GreaterThan(120));
             Assert.That(center.B, Is.LessThan(130));
         }
     }

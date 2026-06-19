@@ -23,7 +23,7 @@ namespace Cotton.Previews
         private const int MaxNestedDepth = 1;
 
         /// <inheritdoc />
-        public int Version => 3;
+        public int Version => 4;
 
         /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes => AndroidPackageContentTypes.All;
@@ -81,41 +81,17 @@ namespace Cotton.Previews
                     return declaredIcon;
                 }
 
+                byte[]? scannedIcon = await TryScanIconEntriesAsync(
+                    archive,
+                    requireExplicitIconName: foundDeclaredIcon).ConfigureAwait(false);
+                if (scannedIcon is not null)
+                {
+                    return scannedIcon;
+                }
+
                 if (foundDeclaredIcon)
                 {
                     return null;
-                }
-
-                IconBytesCandidate? bestIcon = null;
-                foreach (IconEntryCandidate iconEntry in SelectIconEntries(archive))
-                {
-                    byte[]? iconBytes = await TryReadEntryBytesAsync(iconEntry.Entry, MaxIconBytes).ConfigureAwait(false);
-                    if (iconBytes is null)
-                    {
-                        continue;
-                    }
-
-                    (int Width, int Height)? dimensions = TryIdentifyImageDimensions(iconBytes);
-                    if (dimensions is null)
-                    {
-                        continue;
-                    }
-
-                    int score = iconEntry.Score + ScoreImageDimensions(dimensions.Value.Width, dimensions.Value.Height);
-                    if (score <= 0)
-                    {
-                        continue;
-                    }
-
-                    if (bestIcon is null || score > bestIcon.Score)
-                    {
-                        bestIcon = new IconBytesCandidate(iconBytes, score);
-                    }
-                }
-
-                if (bestIcon is not null)
-                {
-                    return bestIcon.Bytes;
                 }
 
                 if (depth >= MaxNestedDepth)
@@ -332,11 +308,47 @@ namespace Cotton.Previews
             canvas.Mutate(x => x.DrawImage(layer, new Point(left, top), 1f));
         }
 
-        private static IEnumerable<IconEntryCandidate> SelectIconEntries(ZipArchive archive)
+        private static async Task<byte[]?> TryScanIconEntriesAsync(
+            ZipArchive archive,
+            bool requireExplicitIconName)
+        {
+            IconBytesCandidate? bestIcon = null;
+            foreach (IconEntryCandidate iconEntry in SelectIconEntries(archive, requireExplicitIconName))
+            {
+                byte[]? iconBytes = await TryReadEntryBytesAsync(iconEntry.Entry, MaxIconBytes).ConfigureAwait(false);
+                if (iconBytes is null)
+                {
+                    continue;
+                }
+
+                (int Width, int Height)? dimensions = TryIdentifyImageDimensions(iconBytes);
+                if (dimensions is null)
+                {
+                    continue;
+                }
+
+                int score = iconEntry.Score + ScoreImageDimensions(dimensions.Value.Width, dimensions.Value.Height);
+                if (score <= 0)
+                {
+                    continue;
+                }
+
+                if (bestIcon is null || score > bestIcon.Score)
+                {
+                    bestIcon = new IconBytesCandidate(iconBytes, score);
+                }
+            }
+
+            return bestIcon?.Bytes;
+        }
+
+        private static IEnumerable<IconEntryCandidate> SelectIconEntries(
+            ZipArchive archive,
+            bool requireExplicitIconName)
         {
             return archive.Entries
                 .Take(MaxEntriesToInspect)
-                .Select(entry => new { Entry = entry, Score = ScoreIconEntry(entry) })
+                .Select(entry => new { Entry = entry, Score = ScoreIconEntry(entry, requireExplicitIconName) })
                 .Where(candidate => candidate.Score > 0)
                 .OrderByDescending(candidate => candidate.Score)
                 .Select(candidate => new IconEntryCandidate(candidate.Entry, candidate.Score));
@@ -353,7 +365,9 @@ namespace Cotton.Previews
                 .Select(candidate => candidate.Entry);
         }
 
-        private static int ScoreIconEntry(ZipArchiveEntry entry)
+        private static int ScoreIconEntry(
+            ZipArchiveEntry entry,
+            bool requireExplicitIconName)
         {
             if (entry.Length <= 0 || entry.Length > MaxIconBytes)
             {
@@ -376,12 +390,18 @@ namespace Cotton.Previews
             }
 
             string fileName = Path.GetFileNameWithoutExtension(path);
+            bool hasExplicitIconName = IsExplicitAppIconName(fileName);
+            if (requireExplicitIconName && !hasExplicitIconName)
+            {
+                return 0;
+            }
+
             bool inNamedAndroidResourceDirectory = path.StartsWith("res/mipmap", StringComparison.Ordinal)
                 || path.StartsWith("res/drawable", StringComparison.Ordinal)
                 || path.Contains("/res/mipmap", StringComparison.Ordinal)
                 || path.Contains("/res/drawable", StringComparison.Ordinal);
             bool rootManifestIcon = !path.Contains('/', StringComparison.Ordinal)
-                && (fileName is "icon" or "app_icon" or "logo" || fileName.Contains("launcher", StringComparison.Ordinal));
+                && hasExplicitIconName;
             if (!inNamedAndroidResourceDirectory && !inResourceTree && !rootManifestIcon)
             {
                 return 0;
@@ -624,6 +644,13 @@ namespace Cotton.Previews
 
             return score;
         }
+
+        private static bool IsExplicitAppIconName(string fileName) =>
+            fileName.Contains("ic_launcher", StringComparison.Ordinal)
+            || fileName.Contains("launcher", StringComparison.Ordinal)
+            || fileName is "icon" or "app_icon" or "logo"
+            || fileName.EndsWith("_icon", StringComparison.Ordinal)
+            || fileName.Contains("logo", StringComparison.Ordinal);
 
         private static int ScorePreviewFit(int width, int height, int previewSize)
         {
