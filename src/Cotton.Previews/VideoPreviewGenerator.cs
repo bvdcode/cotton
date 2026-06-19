@@ -24,8 +24,10 @@ namespace Cotton.Previews
             "video/quicktime",
             "video/x-quicktime",
             "video/mkv",
+            "video/msvideo",
             "video/x-msvideo",
             "video/vnd.avi",
+            "video/matroska",
             "video/x-matroska",
         ];
 
