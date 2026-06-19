@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Files;
+using Cotton.Database;
 using Cotton.Nodes;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
@@ -1609,14 +1610,17 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     {
         await StorePreviewBytesAsync(previewHash, previewBytes);
 
-        Guid manifestId = await DbContext.NodeFiles
+        await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+
+        Guid manifestId = await dbContext.NodeFiles
             .Where(x => x.Id == nodeFileId)
             .Select(x => x.FileManifestId)
             .SingleAsync();
 
-        var manifest = await DbContext.FileManifests.SingleAsync(x => x.Id == manifestId);
+        var manifest = await dbContext.FileManifests.SingleAsync(x => x.Id == manifestId);
         manifest.SmallFilePreviewHash = previewHash;
-        await DbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
     }
 
     private async Task StorePreviewBytesAsync(byte[] previewHash, byte[] previewBytes)
