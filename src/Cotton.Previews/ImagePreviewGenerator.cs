@@ -1,8 +1,7 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
@@ -15,10 +14,6 @@ namespace Cotton.Previews
     {
         /// <inheritdoc />
         public int Version => 3;
-        /// <summary>WebP quality used for small image previews.</summary>
-        public const int SmallPreviewQuality = 75;
-        /// <summary>WebP quality used for large image previews.</summary>
-        public const int LargePreviewQuality = 85;
 
         /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes =>
@@ -32,9 +27,6 @@ namespace Cotton.Previews
                 stream.Position = 0;
             }
 
-            int mid = (PreviewGeneratorProvider.DefaultSmallPreviewSize + PreviewGeneratorProvider.DefaultLargePreviewSize) / 2;
-            int quality = size > mid ? LargePreviewQuality : SmallPreviewQuality;
-
             using Image<Rgba32> image = Image.Load<Rgba32>(stream);
             image.Mutate(x => x.AutoOrient());
             if (image.Width > size || image.Height > size)
@@ -47,15 +39,7 @@ namespace Cotton.Previews
             }
             using var outputStream = new MemoryStream();
 
-            // Force lossy (VP8). Without an explicit FileFormat, ImageSharp mirrors the
-            // decoded source format, so lossless sources (PNG video frames, PNG uploads)
-            // produce lossless VP8L previews that social crawlers (e.g. Telegram) cannot
-            // decode, leaving link previews with text but no image.
-            await image.SaveAsWebpAsync(outputStream, new WebpEncoder
-            {
-                Quality = quality,
-                FileFormat = WebpFileFormatType.Lossy
-            });
+            await image.SaveAsWebpAsync(outputStream, PreviewImageEncoder.Create(size));
             return outputStream.ToArray();
         }
     }
