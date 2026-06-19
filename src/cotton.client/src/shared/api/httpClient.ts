@@ -270,7 +270,6 @@ export const refreshAccessToken = async (
   }
 };
 
-// Create axios instance
 export const httpClient = axios.create({
   baseURL: "/api/v1",
   timeout: 60000,
@@ -354,7 +353,6 @@ httpClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Check if 401 and not already retrying
     if (error.response?.status === 401 && !originalRequest._retry) {
       // Don't retry on auth endpoints themselves
       const url = originalRequest.url || "";

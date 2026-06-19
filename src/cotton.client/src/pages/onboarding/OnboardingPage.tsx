@@ -53,7 +53,6 @@ export function OnboardingPage() {
         },
       }}
     >
-      {/* Animated background blobs */}
       <Box
         sx={{
           position: "absolute",
@@ -97,7 +96,6 @@ export function OnboardingPage() {
           px: 3,
         }}
       >
-        {/* Logo/Title */}
         <Typography
           variant="h2"
           sx={{
@@ -192,7 +190,6 @@ export function OnboardingPage() {
           ))}
         </Stack>
 
-        {/* Skip button */}
         <Button
           variant="contained"
           size="large"

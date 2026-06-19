@@ -16,8 +16,6 @@ type BuiltStep = {
   isValid: () => boolean;
 };
 
-const skippedStepKeys = new Set<string>();
-
 const answerMatchesCondition = (
   answer: JsonValue | undefined,
   expected: string,
@@ -32,8 +30,7 @@ export function useSetupSteps(
   updateFormField: (stepKey: string, fieldKey: string, value: string | boolean) => void,
 ) {
   const { t } = useTranslation();
-  
-  // Helper function to check if requirement is met and get required option label and question
+
   const checkRequires = useCallback((requires?: string): { met: boolean; requiredLabel?: string; questionTitle?: string } => {
     if (!requires) return { met: true };
     
@@ -63,8 +60,7 @@ export function useSetupSteps(
     
     return { met };
   }, [answers]);
-  
-  // Helper function to check if option should be disabled based on answers
+
   const checkDisabled = useCallback((disabledIfAny?: string[]) => {
     if (!disabledIfAny || disabledIfAny.length === 0) {
       return { disabled: false, reasons: [] };
@@ -100,10 +96,6 @@ export function useSetupSteps(
     const steps: BuiltStep[] = [];
 
     for (const def of setupStepDefinitions) {
-      if (skippedStepKeys.has(def.key)) {
-        continue;
-      }
-
       // Check if step should be shown based on requires
       if (def.requires) {
         const [reqKey, reqValue] = def.requires.split(":");

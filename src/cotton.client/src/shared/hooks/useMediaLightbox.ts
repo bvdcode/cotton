@@ -71,7 +71,6 @@ export const useMediaLightbox = (
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  // Build media items for lightbox (images and videos only)
   const mediaItems = useMemo<MediaItem[]>(() => {
     return sortedFiles
       .map((file) => ({
@@ -136,7 +135,6 @@ export const useMediaLightbox = (
     return await filesApi.getDownloadLink(fileId, 60 * 24);
   }, []);
 
-  // Handler to open media lightbox
   const handleMediaClick = useCallback(
     (fileId: string) => {
       const mediaIndex = mediaItems.findIndex((item) => item.id === fileId);
