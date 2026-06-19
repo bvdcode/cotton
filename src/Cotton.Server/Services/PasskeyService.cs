@@ -16,7 +16,7 @@ using Microsoft.Extensions.Caching.Memory;
 namespace Cotton.Server.Services
 {
     /// <summary>
-    /// Coordinates passkey.
+    /// Coordinates WebAuthn passkey registration and assertion flows, including credential persistence and lifecycle management.
     /// </summary>
     public class PasskeyService(
         CottonDbContext _dbContext,
