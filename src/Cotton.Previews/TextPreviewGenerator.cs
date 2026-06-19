@@ -108,7 +108,7 @@ namespace Cotton.Previews
             }));
 
             using var ms = new MemoryStream();
-            await output.SaveAsWebpAsync(ms).ConfigureAwait(false);
+            await output.SaveAsWebpAsync(ms, PreviewImageEncoder.Create(size)).ConfigureAwait(false);
             return ms.ToArray();
         }
 

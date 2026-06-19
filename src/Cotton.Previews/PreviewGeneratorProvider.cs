@@ -13,7 +13,7 @@ namespace Cotton.Previews
         /// <summary>Default size in pixels for small previews.</summary>
         public const int DefaultSmallPreviewSize = 200;
         /// <summary>Default size in pixels for large previews.</summary>
-        public const int DefaultLargePreviewSize = 2000;
+        public const int DefaultLargePreviewSize = 2560;
 
         private static readonly IPreviewGenerator[] Generators =
         [

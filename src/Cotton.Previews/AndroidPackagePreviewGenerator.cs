@@ -2,7 +2,6 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System.IO.Compression;
@@ -23,7 +22,7 @@ namespace Cotton.Previews
         private const int MaxNestedDepth = 1;
 
         /// <inheritdoc />
-        public int Version => 4;
+        public int Version => 5;
 
         /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes => AndroidPackageContentTypes.All;
@@ -675,9 +674,7 @@ namespace Cotton.Previews
             }
 
             using var output = new MemoryStream();
-            await image.SaveAsWebpAsync(
-                output,
-                new WebpEncoder { FileFormat = WebpFileFormatType.Lossless, Quality = 75 }).ConfigureAwait(false);
+            await image.SaveAsWebpAsync(output, PreviewImageEncoder.Create(size)).ConfigureAwait(false);
             return output.ToArray();
         }
 
@@ -703,9 +700,7 @@ namespace Cotton.Previews
             }));
 
             using var stream = new MemoryStream();
-            await output.SaveAsWebpAsync(
-                stream,
-                new WebpEncoder { FileFormat = WebpFileFormatType.Lossless, Quality = 75 }).ConfigureAwait(false);
+            await output.SaveAsWebpAsync(stream, PreviewImageEncoder.Create(size)).ConfigureAwait(false);
             return stream.ToArray();
         }
 

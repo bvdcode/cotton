@@ -29,6 +29,17 @@ namespace Cotton.Previews
 
             using Image<Rgba32> image = Image.Load<Rgba32>(stream);
             image.Mutate(x => x.AutoOrient());
+            return await EncodeMaxResizedWebpAsync(image, size);
+        }
+
+        /// <summary>
+        /// Downscales the image to fit <paramref name="size"/> on its longest edge (only when
+        /// larger) and encodes it to WebP through the shared <see cref="PreviewImageEncoder"/>.
+        /// In-memory producers (e.g. PDF page rendering) call this directly with their already
+        /// decoded image so it is encoded exactly once, without a format round-trip.
+        /// </summary>
+        public static async Task<byte[]> EncodeMaxResizedWebpAsync(Image image, int size)
+        {
             if (image.Width > size || image.Height > size)
             {
                 image.Mutate(x => x.Resize(new ResizeOptions
@@ -37,8 +48,8 @@ namespace Cotton.Previews
                     Mode = ResizeMode.Max
                 }));
             }
-            using var outputStream = new MemoryStream();
 
+            using var outputStream = new MemoryStream();
             await image.SaveAsWebpAsync(outputStream, PreviewImageEncoder.Create(size));
             return outputStream.ToArray();
         }
