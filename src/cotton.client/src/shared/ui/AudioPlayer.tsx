@@ -259,35 +259,6 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     }
   }, [effectivePlaylist, onTrackChange, safeIndex, shuffleEnabled]);
 
-  const handleEnded = React.useCallback(() => {
-    if (shuffleEnabled && shuffleOrderRef.current) {
-      const order = shuffleOrderRef.current;
-      const pos = shufflePosRef.current;
-      const nextPos = pos + 1 < order.length ? pos + 1 : pos;
-      if (nextPos === pos) {
-        return;
-      }
-
-      shufflePosRef.current = nextPos;
-      const nextIndex = order[nextPos] ?? 0;
-      const nextItem = effectivePlaylist[nextIndex];
-      if (nextItem) {
-        onTrackChange?.(nextItem);
-      }
-      return;
-    }
-
-    const nextIndex = safeIndex + 1 < effectivePlaylist.length ? safeIndex + 1 : safeIndex;
-    if (nextIndex === safeIndex) {
-      return;
-    }
-
-    const nextItem = effectivePlaylist[nextIndex];
-    if (nextItem) {
-      onTrackChange?.(nextItem);
-    }
-  }, [effectivePlaylist, onTrackChange, safeIndex, shuffleEnabled]);
-
   const mediaSessionTrack = React.useMemo(
     () => buildAudioMediaSessionTrack(currentItem),
     [currentItem],
@@ -374,7 +345,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         showJumpControls={false}
         onClickPrevious={hasPlaylist ? handlePrevious : undefined}
         onClickNext={hasPlaylist ? handleNext : undefined}
-        onEnded={handleEnded}
+        onEnded={handleNext}
         preload="metadata"
         customAdditionalControls={
           onToggleShuffle
