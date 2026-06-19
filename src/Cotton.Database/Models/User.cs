@@ -175,6 +175,11 @@ namespace Cotton.Database.Models
         public virtual ICollection<Notification> Notifications { get; set; } = [];
 
         /// <summary>
+        /// Mobile push device tokens registered by the user.
+        /// </summary>
+        public virtual ICollection<PushDeviceToken> PushDeviceTokens { get; set; } = [];
+
+        /// <summary>
         /// Visible file entries stored by the server.
         /// </summary>
         public virtual ICollection<NodeFile> NodeFiles { get; set; } = [];

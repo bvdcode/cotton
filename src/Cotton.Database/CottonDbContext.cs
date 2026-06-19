@@ -65,6 +65,11 @@ namespace Cotton.Database
         public DbSet<Notification> Notifications => Set<Notification>();
 
         /// <summary>
+        /// Registered mobile push device tokens.
+        /// </summary>
+        public DbSet<PushDeviceToken> PushDeviceTokens => Set<PushDeviceToken>();
+
+        /// <summary>
         /// Immutable file-content manifests.
         /// </summary>
         public DbSet<FileManifest> FileManifests => Set<FileManifest>();
