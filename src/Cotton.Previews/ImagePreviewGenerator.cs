@@ -14,11 +14,11 @@ namespace Cotton.Previews
     public class ImagePreviewGenerator : IPreviewGenerator
     {
         /// <inheritdoc />
-        public int Version => 2;
+        public int Version => 3;
         /// <summary>WebP quality used for small image previews.</summary>
         public const int SmallPreviewQuality = 75;
         /// <summary>WebP quality used for large image previews.</summary>
-        public const int LargePreviewQuality = 82;
+        public const int LargePreviewQuality = 85;
 
         /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes =>
@@ -47,7 +47,15 @@ namespace Cotton.Previews
             }
             using var outputStream = new MemoryStream();
 
-            await image.SaveAsWebpAsync(outputStream, new WebpEncoder { Quality = quality });
+            // Force lossy (VP8). Without an explicit FileFormat, ImageSharp mirrors the
+            // decoded source format, so lossless sources (PNG video frames, PNG uploads)
+            // produce lossless VP8L previews that social crawlers (e.g. Telegram) cannot
+            // decode, leaving link previews with text but no image.
+            await image.SaveAsWebpAsync(outputStream, new WebpEncoder
+            {
+                Quality = quality,
+                FileFormat = WebpFileFormatType.Lossy
+            });
             return outputStream.ToArray();
         }
     }
