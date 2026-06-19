@@ -1613,12 +1613,10 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
             .Where(x => x.Id == nodeFileId)
             .Select(x => x.FileManifestId)
             .SingleAsync();
-        int updated = await DbContext.FileManifests
-            .Where(x => x.Id == manifestId)
-            .ExecuteUpdateAsync(s => s.SetProperty(
-                x => x.SmallFilePreviewHash,
-                previewHash));
-        Assert.That(updated, Is.EqualTo(1));
+
+        var manifest = await DbContext.FileManifests.SingleAsync(x => x.Id == manifestId);
+        manifest.SmallFilePreviewHash = previewHash;
+        await DbContext.SaveChangesAsync();
     }
 
     private async Task StorePreviewBytesAsync(byte[] previewHash, byte[] previewBytes)
