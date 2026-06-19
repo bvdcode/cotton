@@ -19,12 +19,6 @@ public class AndroidPackagePreviewGeneratorTests
     }
 
     [Test]
-    public void Version_ForcesReprocessingAfterResourceTableScoringChange()
-    {
-        Assert.That(_generator.Version, Is.EqualTo(2));
-    }
-
-    [Test]
     public async Task GeneratePreviewWebPAsync_ApkWithLauncherIcons_UsesBestLauncherIcon()
     {
         byte[] source = CreateZipBytes(entries =>

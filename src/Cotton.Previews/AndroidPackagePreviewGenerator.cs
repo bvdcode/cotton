@@ -6,7 +6,6 @@ using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System.IO.Compression;
-using System.Text;
 
 namespace Cotton.Previews
 {
@@ -19,16 +18,7 @@ namespace Cotton.Previews
         private const long MaxIconBytes = 12L * 1024 * 1024;
         private const long MaxNestedPackageBytes = 192L * 1024 * 1024;
         private const long MaxNonSeekablePackageBytes = 192L * 1024 * 1024;
-        private const long MaxResourceTableBytes = 32L * 1024 * 1024;
         private const int MaxNestedDepth = 1;
-        private const ushort ResStringPoolType = 0x0001;
-        private const ushort ResTableType = 0x0002;
-        private const ushort ResTablePackageType = 0x0200;
-        private const ushort ResTableTypeType = 0x0201;
-        private const ushort ResourceEntryFlagComplex = 0x0001;
-        private const uint ResourceEntryNoEntry = 0xFFFFFFFF;
-        private const byte ResValueDataTypeString = 0x03;
-        private const int StringPoolUtf8Flag = 0x00000100;
 
         /// <inheritdoc />
         public int Version => 2;
@@ -82,10 +72,8 @@ namespace Cotton.Previews
 
             using (archive)
             {
-                IReadOnlyDictionary<string, int> resourcePathScores =
-                    await ReadResourcePathScoresAsync(archive).ConfigureAwait(false);
                 IconBytesCandidate? bestIcon = null;
-                foreach (IconEntryCandidate iconEntry in SelectIconEntries(archive, resourcePathScores))
+                foreach (IconEntryCandidate iconEntry in SelectIconEntries(archive))
                 {
                     byte[]? iconBytes = await TryReadEntryBytesAsync(iconEntry.Entry, MaxIconBytes).ConfigureAwait(false);
                     if (iconBytes is null)
@@ -141,13 +129,11 @@ namespace Cotton.Previews
             }
         }
 
-        private static IEnumerable<IconEntryCandidate> SelectIconEntries(
-            ZipArchive archive,
-            IReadOnlyDictionary<string, int> resourcePathScores)
+        private static IEnumerable<IconEntryCandidate> SelectIconEntries(ZipArchive archive)
         {
             return archive.Entries
                 .Take(MaxEntriesToInspect)
-                .Select(entry => new { Entry = entry, Score = ScoreIconEntry(entry, resourcePathScores) })
+                .Select(entry => new { Entry = entry, Score = ScoreIconEntry(entry) })
                 .Where(candidate => candidate.Score > 0)
                 .OrderByDescending(candidate => candidate.Score)
                 .Select(candidate => new IconEntryCandidate(candidate.Entry, candidate.Score));
@@ -164,260 +150,7 @@ namespace Cotton.Previews
                 .Select(candidate => candidate.Entry);
         }
 
-        private static async Task<IReadOnlyDictionary<string, int>> ReadResourcePathScoresAsync(ZipArchive archive)
-        {
-            ZipArchiveEntry? resourceTableEntry = archive.GetEntry("resources.arsc");
-            if (resourceTableEntry is null)
-            {
-                return new Dictionary<string, int>(StringComparer.Ordinal);
-            }
-
-            byte[]? resourceTableBytes = await TryReadEntryBytesAsync(resourceTableEntry, MaxResourceTableBytes)
-                .ConfigureAwait(false);
-            return resourceTableBytes is null
-                ? new Dictionary<string, int>(StringComparer.Ordinal)
-                : ReadResourcePathScores(resourceTableBytes);
-        }
-
-        private static IReadOnlyDictionary<string, int> ReadResourcePathScores(byte[] resourceTableBytes)
-        {
-            var scores = new Dictionary<string, int>(StringComparer.Ordinal);
-            if (!HasRange(resourceTableBytes, 0, 12) || ReadUInt16(resourceTableBytes, 0) != ResTableType)
-            {
-                return scores;
-            }
-
-            int tableHeaderSize = ReadUInt16(resourceTableBytes, 2);
-            int tableSize = ClampChunkSize(resourceTableBytes, 0);
-            if (tableSize == 0 || tableHeaderSize <= 0 || tableHeaderSize >= tableSize)
-            {
-                return scores;
-            }
-
-            int offset = tableHeaderSize;
-            string[] globalStrings = [];
-            if (HasRange(resourceTableBytes, offset, 8) && ReadUInt16(resourceTableBytes, offset) == ResStringPoolType)
-            {
-                globalStrings = ReadStringPool(resourceTableBytes, offset, out int stringPoolSize);
-                offset += stringPoolSize;
-            }
-
-            while (HasRange(resourceTableBytes, offset, 8) && offset < tableSize)
-            {
-                ushort chunkType = ReadUInt16(resourceTableBytes, offset);
-                int chunkSize = ClampChunkSize(resourceTableBytes, offset);
-                if (chunkSize == 0)
-                {
-                    break;
-                }
-
-                if (chunkType == ResTablePackageType)
-                {
-                    AddPackageResourcePathScores(resourceTableBytes, offset, chunkSize, globalStrings, scores);
-                }
-
-                offset += chunkSize;
-            }
-
-            return scores;
-        }
-
-        private static void AddPackageResourcePathScores(
-            byte[] resourceTableBytes,
-            int packageOffset,
-            int packageSize,
-            IReadOnlyList<string> globalStrings,
-            Dictionary<string, int> scores)
-        {
-            if (!HasRange(resourceTableBytes, packageOffset, 284))
-            {
-                return;
-            }
-
-            int packageHeaderSize = ReadUInt16(resourceTableBytes, packageOffset + 2);
-            int packageEnd = packageOffset + packageSize;
-            int typeStringsOffset = (int)ReadUInt32(resourceTableBytes, packageOffset + 268);
-            int keyStringsOffset = (int)ReadUInt32(resourceTableBytes, packageOffset + 276);
-            if (packageHeaderSize <= 0 || packageHeaderSize > packageSize)
-            {
-                return;
-            }
-
-            string[] typeStrings = ReadStringPool(resourceTableBytes, packageOffset + typeStringsOffset, out _);
-            string[] keyStrings = ReadStringPool(resourceTableBytes, packageOffset + keyStringsOffset, out _);
-
-            int offset = packageOffset + packageHeaderSize;
-            while (HasRange(resourceTableBytes, offset, 8) && offset < packageEnd)
-            {
-                ushort chunkType = ReadUInt16(resourceTableBytes, offset);
-                int chunkSize = ClampChunkSize(resourceTableBytes, offset);
-                if (chunkSize == 0)
-                {
-                    break;
-                }
-
-                if (chunkType == ResTableTypeType)
-                {
-                    AddTypeResourcePathScores(resourceTableBytes, offset, typeStrings, keyStrings, globalStrings, scores);
-                }
-
-                offset += chunkSize;
-            }
-        }
-
-        private static void AddTypeResourcePathScores(
-            byte[] resourceTableBytes,
-            int typeOffset,
-            IReadOnlyList<string> typeStrings,
-            IReadOnlyList<string> keyStrings,
-            IReadOnlyList<string> globalStrings,
-            Dictionary<string, int> scores)
-        {
-            if (!HasRange(resourceTableBytes, typeOffset, 20))
-            {
-                return;
-            }
-
-            int headerSize = ReadUInt16(resourceTableBytes, typeOffset + 2);
-            int chunkSize = ClampChunkSize(resourceTableBytes, typeOffset);
-            int typeId = resourceTableBytes[typeOffset + 8];
-            int entryCount = (int)ReadUInt32(resourceTableBytes, typeOffset + 12);
-            int entriesStart = (int)ReadUInt32(resourceTableBytes, typeOffset + 16);
-            if (chunkSize == 0
-                || headerSize <= 0
-                || headerSize > chunkSize
-                || entriesStart <= 0
-                || entriesStart > chunkSize
-                || entryCount < 0
-                || typeId <= 0
-                || typeId > typeStrings.Count)
-            {
-                return;
-            }
-
-            string typeName = typeStrings[typeId - 1];
-            if (typeName is not ("mipmap" or "drawable"))
-            {
-                return;
-            }
-
-            int offsetsStart = typeOffset + headerSize;
-            int entriesBase = typeOffset + entriesStart;
-            if (!HasRange(resourceTableBytes, offsetsStart, entryCount * sizeof(uint)))
-            {
-                return;
-            }
-
-            for (int entryIndex = 0; entryIndex < entryCount; entryIndex++)
-            {
-                uint entryOffset = ReadUInt32(resourceTableBytes, offsetsStart + (entryIndex * sizeof(uint)));
-                if (entryOffset == ResourceEntryNoEntry)
-                {
-                    continue;
-                }
-
-                int entryPosition = entriesBase + (int)entryOffset;
-                if (!HasRange(resourceTableBytes, entryPosition, 16))
-                {
-                    continue;
-                }
-
-                int entrySize = ReadUInt16(resourceTableBytes, entryPosition);
-                ushort flags = ReadUInt16(resourceTableBytes, entryPosition + 2);
-                int keyIndex = (int)ReadUInt32(resourceTableBytes, entryPosition + 4);
-                int valuePosition = entryPosition + entrySize;
-                if ((flags & ResourceEntryFlagComplex) != 0
-                    || keyIndex < 0
-                    || keyIndex >= keyStrings.Count
-                    || !HasRange(resourceTableBytes, valuePosition, 8))
-                {
-                    continue;
-                }
-
-                byte dataType = resourceTableBytes[valuePosition + 3];
-                int stringIndex = (int)ReadUInt32(resourceTableBytes, valuePosition + 4);
-                if (dataType != ResValueDataTypeString || stringIndex < 0 || stringIndex >= globalStrings.Count)
-                {
-                    continue;
-                }
-
-                string path = NormalizeEntryPath(globalStrings[stringIndex]);
-                int score = ScoreAndroidResourceReference(typeName, keyStrings[keyIndex], path);
-                if (score <= 0)
-                {
-                    continue;
-                }
-
-                scores[path] = scores.TryGetValue(path, out int existingScore)
-                    ? Math.Max(existingScore, score)
-                    : score;
-            }
-        }
-
-        private static int ScoreAndroidResourceReference(string typeName, string keyName, string path)
-        {
-            if (!IsRasterResourcePath(path))
-            {
-                return 0;
-            }
-
-            string normalizedKey = keyName.ToLowerInvariant();
-            int score = typeName == "mipmap" ? 50_000 : 15_000;
-            if (normalizedKey is "ic_launcher" or "ic_app" or "app_icon" or "icon")
-            {
-                score += 50_000;
-            }
-            else if (normalizedKey.Contains("launcher", StringComparison.Ordinal))
-            {
-                score += 42_000;
-            }
-            else if (normalizedKey.StartsWith("ic_app", StringComparison.Ordinal))
-            {
-                score += 35_000;
-            }
-            else if (normalizedKey.Contains("icon", StringComparison.Ordinal))
-            {
-                score += 20_000;
-            }
-            else if (typeName == "mipmap")
-            {
-                score += 5_000;
-            }
-            else
-            {
-                return 0;
-            }
-
-            if (normalizedKey.Contains("settings", StringComparison.Ordinal))
-            {
-                score -= 30_000;
-            }
-
-            if (normalizedKey.Contains("notification", StringComparison.Ordinal))
-            {
-                score -= 50_000;
-            }
-
-            if (normalizedKey.Contains("splash", StringComparison.Ordinal))
-            {
-                score -= 40_000;
-            }
-
-            if (normalizedKey.Contains("background", StringComparison.Ordinal))
-            {
-                score -= 30_000;
-            }
-
-            return Math.Max(0, score);
-        }
-
-        private static bool IsRasterResourcePath(string path)
-        {
-            string extension = Path.GetExtension(path);
-            return extension is ".png" or ".webp" or ".jpg" or ".jpeg";
-        }
-
-        private static int ScoreIconEntry(ZipArchiveEntry entry, IReadOnlyDictionary<string, int> resourcePathScores)
+        private static int ScoreIconEntry(ZipArchiveEntry entry)
         {
             if (entry.Length <= 0 || entry.Length > MaxIconBytes)
             {
@@ -452,11 +185,6 @@ namespace Cotton.Previews
             }
 
             int score = rootManifestIcon ? 500 : 0;
-            if (resourcePathScores.TryGetValue(path, out int resourceScore))
-            {
-                score += resourceScore;
-            }
-
             if (inNamedAndroidResourceDirectory)
             {
                 score += 1_000;
@@ -773,151 +501,6 @@ namespace Cotton.Previews
                 }
             });
         }
-
-        private static string[] ReadStringPool(byte[] data, int chunkOffset, out int chunkSize)
-        {
-            chunkSize = 0;
-            if (!HasRange(data, chunkOffset, 28) || ReadUInt16(data, chunkOffset) != ResStringPoolType)
-            {
-                return [];
-            }
-
-            int headerSize = ReadUInt16(data, chunkOffset + 2);
-            chunkSize = ClampChunkSize(data, chunkOffset);
-            if (chunkSize == 0 || headerSize <= 0)
-            {
-                return [];
-            }
-
-            int stringCount = (int)ReadUInt32(data, chunkOffset + 8);
-            int flags = (int)ReadUInt32(data, chunkOffset + 20);
-            int stringsStart = (int)ReadUInt32(data, chunkOffset + 24);
-            int offsetsStart = chunkOffset + headerSize;
-            if (stringCount < 0 || !HasRange(data, offsetsStart, stringCount * sizeof(uint)))
-            {
-                return [];
-            }
-
-            var strings = new string[stringCount];
-            bool isUtf8 = (flags & StringPoolUtf8Flag) != 0;
-            int stringsBase = chunkOffset + stringsStart;
-            int chunkEnd = chunkOffset + chunkSize;
-            for (int i = 0; i < stringCount; i++)
-            {
-                int stringOffset = stringsBase + (int)ReadUInt32(data, offsetsStart + (i * sizeof(uint)));
-                strings[i] = ReadStringPoolString(data, stringOffset, chunkEnd, isUtf8);
-            }
-
-            return strings;
-        }
-
-        private static string ReadStringPoolString(byte[] data, int offset, int limit, bool isUtf8)
-        {
-            if (offset < 0 || offset >= limit || offset >= data.Length)
-            {
-                return string.Empty;
-            }
-
-            int current = offset;
-            if (isUtf8)
-            {
-                if (!TryReadStringPoolUtf8Length(data, ref current, limit, out _)
-                    || !TryReadStringPoolUtf8Length(data, ref current, limit, out int byteLength)
-                    || byteLength < 0
-                    || current > limit - byteLength
-                    || current > data.Length - byteLength)
-                {
-                    return string.Empty;
-                }
-
-                return Encoding.UTF8.GetString(data, current, byteLength);
-            }
-
-            if (!TryReadStringPoolUtf16Length(data, ref current, limit, out int charLength)
-                || charLength < 0
-                || charLength > (limit - current) / sizeof(char)
-                || charLength > (data.Length - current) / sizeof(char))
-            {
-                return string.Empty;
-            }
-
-            return Encoding.Unicode.GetString(data, current, charLength * sizeof(char));
-        }
-
-        private static bool TryReadStringPoolUtf8Length(byte[] data, ref int offset, int limit, out int length)
-        {
-            length = 0;
-            if (offset >= limit || offset >= data.Length)
-            {
-                return false;
-            }
-
-            int first = data[offset++];
-            if ((first & 0x80) == 0)
-            {
-                length = first;
-                return true;
-            }
-
-            if (offset >= limit || offset >= data.Length)
-            {
-                return false;
-            }
-
-            length = ((first & 0x7F) << 8) | data[offset++];
-            return true;
-        }
-
-        private static bool TryReadStringPoolUtf16Length(byte[] data, ref int offset, int limit, out int length)
-        {
-            length = 0;
-            if (!HasRange(data, offset, sizeof(ushort)) || offset > limit - sizeof(ushort))
-            {
-                return false;
-            }
-
-            int first = ReadUInt16(data, offset);
-            offset += sizeof(ushort);
-            if ((first & 0x8000) == 0)
-            {
-                length = first;
-                return true;
-            }
-
-            if (!HasRange(data, offset, sizeof(ushort)) || offset > limit - sizeof(ushort))
-            {
-                return false;
-            }
-
-            length = ((first & 0x7FFF) << 16) | ReadUInt16(data, offset);
-            offset += sizeof(ushort);
-            return true;
-        }
-
-        private static int ClampChunkSize(byte[] data, int offset)
-        {
-            if (!HasRange(data, offset, 8))
-            {
-                return 0;
-            }
-
-            uint chunkSize = ReadUInt32(data, offset + 4);
-            return chunkSize == 0 || chunkSize > int.MaxValue || chunkSize > data.Length - offset
-                ? 0
-                : (int)chunkSize;
-        }
-
-        private static bool HasRange(byte[] data, int offset, int length) =>
-            offset >= 0 && length >= 0 && offset <= data.Length - length;
-
-        private static ushort ReadUInt16(byte[] data, int offset) =>
-            (ushort)(data[offset] | (data[offset + 1] << 8));
-
-        private static uint ReadUInt32(byte[] data, int offset) =>
-            (uint)(data[offset]
-                | (data[offset + 1] << 8)
-                | (data[offset + 2] << 16)
-                | (data[offset + 3] << 24));
 
         private static string NormalizeEntryPath(string path) =>
             path.Replace('\\', '/').TrimStart('/').ToLowerInvariant();
