@@ -1116,7 +1116,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task Share_InlinePreview_ServesLargePreview_WithoutConsuming_DeleteAfterUse_Token()
+    public async Task Share_InlinePreview_ServesSmallPreview_WithoutConsuming_DeleteAfterUse_Token()
     {
         var authToken = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -1127,7 +1127,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var file = await UploadTextFileAsync(root!, "shared-apk.apk", "apk payload");
         byte[] previewBytes = CreateWebpSignatureBytes("shared preview");
         byte[] previewHash = Hasher.HashData(previewBytes);
-        await StoreLargePreviewAsync(file.Id, previewHash, previewBytes);
+        await StoreSmallPreviewAsync(file.Id, previewHash, previewBytes);
 
         var linkResponse = await _client.GetAsync($"/api/v1/files/{file.Id}/download-link?deleteAfterUse=true");
         linkResponse.EnsureSuccessStatusCode();
@@ -1591,12 +1591,9 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         return file!;
     }
 
-    private async Task StoreLargePreviewAsync(Guid nodeFileId, byte[] previewHash, byte[] previewBytes)
+    private async Task StoreSmallPreviewAsync(Guid nodeFileId, byte[] previewHash, byte[] previewBytes)
     {
-        string previewStorageKey = Hasher.ToHexStringHash(previewHash);
-        await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
-        var storage = scope.ServiceProvider.GetRequiredService<IStoragePipeline>();
-        await storage.WriteAsync(previewStorageKey, new MemoryStream(previewBytes));
+        await StorePreviewBytesAsync(previewHash, previewBytes);
 
         Guid manifestId = await DbContext.NodeFiles
             .Where(x => x.Id == nodeFileId)
@@ -1605,9 +1602,17 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         int updated = await DbContext.FileManifests
             .Where(x => x.Id == manifestId)
             .ExecuteUpdateAsync(s => s.SetProperty(
-                x => x.LargeFilePreviewHash,
+                x => x.SmallFilePreviewHash,
                 previewHash));
         Assert.That(updated, Is.EqualTo(1));
+    }
+
+    private async Task StorePreviewBytesAsync(byte[] previewHash, byte[] previewBytes)
+    {
+        string previewStorageKey = Hasher.ToHexStringHash(previewHash);
+        await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+        var storage = scope.ServiceProvider.GetRequiredService<IStoragePipeline>();
+        await storage.WriteAsync(previewStorageKey, new MemoryStream(previewBytes));
     }
 
     private static byte[] CreateWebpSignatureBytes(string payload)

@@ -313,12 +313,12 @@ namespace Cotton.Server.Handlers.Files
 
         private ShareFileResult CreatePreviewStreamResult(DownloadToken downloadToken, FileManifest file)
         {
-            if (file.LargeFilePreviewHash is null)
+            if (file.SmallFilePreviewHash is null)
             {
                 return ShareFileResult.AsNotFound("Preview not found");
             }
 
-            string previewHashHex = Hasher.ToHexStringHash(file.LargeFilePreviewHash);
+            string previewHashHex = Hasher.ToHexStringHash(file.SmallFilePreviewHash);
             var entityTag = new EntityTagHeaderValue($"\"sha256-{previewHashHex}\"");
             Stream previewStream = _storage.GetBlobStream([previewHashHex]);
 
