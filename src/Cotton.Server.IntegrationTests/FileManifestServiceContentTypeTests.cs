@@ -38,12 +38,18 @@ public class FileManifestServiceContentTypeTests
     [TestCase("MODEL_2.stl", "text/plain", "model/stl")]
     [TestCase("MODEL_2.obj", "application/json", "model/obj")]
     [TestCase("MODEL_2.3mf", "application/zip", "model/3mf")]
+    [TestCase("MODEL_3.STL", "text/plain", "model/stl")]
     [TestCase("APP_1.apk", "application/octet-stream", "application/vnd.android.package-archive")]
     [TestCase("APP_2.apk", "application/zip", "application/vnd.android.package-archive")]
+    [TestCase("APP_3.APK", "application/zip", "application/vnd.android.package-archive")]
     [TestCase("APP_1.aab", "application/octet-stream", "application/vnd.android.bundle")]
+    [TestCase("APP_2.AAB", "application/zip", "application/vnd.android.bundle")]
     [TestCase("APP_1.apks", "application/zip", "application/vnd.android.apks")]
+    [TestCase("APP_2.APKS", "application/zip", "application/vnd.android.apks")]
     [TestCase("APP_1.xapk", "application/zip", "application/vnd.android.xapk")]
+    [TestCase("APP_2.XAPK", "application/zip", "application/vnd.android.xapk")]
     [TestCase("APP_1.apkm", "application/zip", "application/vnd.android.apkm")]
+    [TestCase("APP_2.APKM", "application/zip", "application/vnd.android.apkm")]
     [TestCase("IMG_1.png", "application/octet-stream", "image/png")]
     public void ResolveContentType_OctetStreamOrEmpty_UsesExtensionFallback(
         string fileName,

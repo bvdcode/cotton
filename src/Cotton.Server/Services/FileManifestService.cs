@@ -168,7 +168,7 @@ namespace Cotton.Server.Services
 
         private static string? ResolveOverriddenContentType(string? fileName, string normalizedContentType)
         {
-            string extension = Path.GetExtension(fileName ?? string.Empty);
+            string extension = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
             if (!string.IsNullOrWhiteSpace(extension)
                 && extensionContentTypeOverrides.TryGetValue(extension, out string? overriddenContentType)
                 && (ShouldForceExtensionContentType(extension)
