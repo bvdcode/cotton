@@ -13,6 +13,7 @@ using Cotton.Server.Models.Notifications;
 using Cotton.Server.Providers;
 using EasyExtensions.AspNetCore.Exceptions;
 using Mapster;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.SignalR;
 using System.Net;
 using System.Net.Mail;
@@ -324,8 +325,13 @@ namespace Cotton.Server.Services
             };
             await _dbContext.Notifications.AddAsync(notification);
             await _dbContext.SaveChangesAsync();
+            Dictionary<string, string>? userPreferences = await _dbContext.Users
+                .AsNoTracking()
+                .Where(x => x.Id == userId)
+                .Select(x => x.Preferences)
+                .FirstOrDefaultAsync();
             PushNotificationPayloadPlan pushPayloadPlan =
-                PushNotificationPayloadPlanner.Create(notification);
+                PushNotificationPayloadPlanner.Create(notification, userPreferences);
             if (pushPayloadPlan.IsEligible)
             {
                 _logger.LogDebug(

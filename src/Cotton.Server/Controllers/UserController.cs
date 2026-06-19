@@ -7,6 +7,7 @@ using Cotton.Database.Models;
 using Cotton.Server.Handlers.Users;
 using Cotton.Server.Hubs;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Models.Notifications;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
 using EasyExtensions;
@@ -82,6 +83,56 @@ namespace Cotton.Server.Controllers
                 foundUser.Preferences,
                 cancellationToken);
             return Ok(foundUser.Preferences);
+        }
+
+        /// <summary>
+        /// Gets current-user push notification preferences.
+        /// </summary>
+        [Authorize]
+        [HttpGet("me/preferences/push-notifications")]
+        public async Task<IActionResult> GetPushNotificationPreferences(CancellationToken cancellationToken)
+        {
+            Guid userId = User.GetUserId();
+            var foundUser = await _dbContext.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == userId, cancellationToken)
+                    ?? throw new EntityNotFoundException<User>();
+            PushNotificationPreferenceSnapshot snapshot =
+                PushNotificationPreferencePolicy.Resolve(foundUser.Preferences);
+
+            return Ok(PushNotificationPreferencePolicy.ToDto(snapshot));
+        }
+
+        /// <summary>
+        /// Updates current-user push notification preferences.
+        /// </summary>
+        [Authorize]
+        [HttpPatch("me/preferences/push-notifications")]
+        public async Task<IActionResult> UpdatePushNotificationPreferences(
+            [FromBody] UpdatePushNotificationPreferencesRequestDto request,
+            [FromQuery] string? token,
+            CancellationToken cancellationToken)
+        {
+            Guid userId = User.GetUserId();
+            var foundUser = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId, cancellationToken)
+                ?? throw new EntityNotFoundException<User>();
+            PushNotificationPreferenceSnapshot current =
+                PushNotificationPreferencePolicy.Resolve(foundUser.Preferences);
+            PushNotificationPreferenceSnapshot updated = current.With(
+                request.SharedFile,
+                request.AccessRequest,
+                request.CommentMention,
+                request.SecuritySession);
+
+            PushNotificationPreferencePolicy.Apply(foundUser.Preferences, updated);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            await _hubContext.Clients.User(userId.ToString()).SendAsync(
+                "PreferencesUpdated",
+                token ?? string.Empty,
+                foundUser.Preferences,
+                cancellationToken);
+
+            return Ok(PushNotificationPreferencePolicy.ToDto(updated));
         }
 
         /// <summary>

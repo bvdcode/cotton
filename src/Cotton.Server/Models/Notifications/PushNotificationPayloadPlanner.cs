@@ -16,7 +16,9 @@ namespace Cotton.Server.Models.Notifications
         /// <summary>
         /// Builds a payload plan for the supplied notification.
         /// </summary>
-        public static PushNotificationPayloadPlan Create(Notification notification)
+        public static PushNotificationPayloadPlan Create(
+            Notification notification,
+            IReadOnlyDictionary<string, string>? userPreferences)
         {
             ArgumentNullException.ThrowIfNull(notification);
 
@@ -30,6 +32,13 @@ namespace Cotton.Server.Models.Notifications
             if (notification.Id == Guid.Empty)
             {
                 return PushNotificationPayloadPlan.NotEligible("Notification id is required for remote push.");
+            }
+
+            PushNotificationPreferenceSnapshot preferences =
+                PushNotificationPreferencePolicy.Resolve(userPreferences);
+            if (!preferences.IsEnabled(category.Value))
+            {
+                return PushNotificationPayloadPlan.NotEligible("User push notification preference is disabled.");
             }
 
             Dictionary<string, string> data = new(StringComparer.Ordinal)
