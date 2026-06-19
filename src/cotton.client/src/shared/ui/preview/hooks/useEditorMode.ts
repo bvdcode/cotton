@@ -15,8 +15,7 @@ import { isCodePreviewFileName, isDockerfileName } from "../../../utils/codeFile
 
 /**
  * Detect initial editor mode based on content and filename
- * Strategy Pattern: Different detection strategies for different content types
- * 
+ *
  * @param content - File content
  * @param fileName - File name with extension
  * @param fileSize - File size in bytes (optional, for size-based detection)
@@ -102,8 +101,8 @@ interface UseEditorModeResult {
 }
 
 /**
- * Hook for managing editor mode with localStorage persistence
- * 
+ * Hook for managing editor mode with persisted preferences
+ *
  * @param options - Configuration options
  * @returns Current mode and setter function
  */

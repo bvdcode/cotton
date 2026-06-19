@@ -1,8 +1,5 @@
 import type { NodeDto } from "../../../shared/api/layoutsApi";
 
-/**
- * Build breadcrumbs from ancestors and current node
- */
 export const buildBreadcrumbs = (
   ancestors: NodeDto[],
   currentNode: NodeDto | null,
@@ -12,9 +9,6 @@ export const buildBreadcrumbs = (
   return chain.map((n) => ({ id: n.id, name: n.name }));
 };
 
-/**
- * Calculate folder statistics
- */
 export const calculateFolderStats = (
   nodes: Array<{ id: string }> | undefined,
   files: Array<{ sizeBytes?: number }> | undefined,

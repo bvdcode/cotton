@@ -118,7 +118,6 @@ export interface ListViewColumnFlex {
 
 /**
  * Interface for file list view components.
- * Follows the Interface Segregation Principle (ISP) - defines minimal required contract.
  */
 export interface IFileListView {
   /**

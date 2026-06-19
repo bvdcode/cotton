@@ -1,9 +1,5 @@
 /**
- * Editor Factory Component
- * 
- * Factory Pattern: Creates appropriate editor based on mode
- * Open/Closed Principle: Easy to add new editor types
- * Dependency Inversion: Depends on IEditorProps abstraction
+ * Renders the appropriate editor component for the given editor mode.
  */
 
 import { lazy, Suspense } from "react";

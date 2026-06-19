@@ -1,10 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 
 /**
- * Hook for tracking user activity with auto-hide functionality
- * 
- * Single Responsibility: Only handles activity detection and state
- * 
+ * Hook for tracking user activity with auto-hide functionality.
+ *
  * @param timeout - Milliseconds of inactivity before hiding (default: 2500ms)
  * @returns isActive - Whether user is currently active
  */

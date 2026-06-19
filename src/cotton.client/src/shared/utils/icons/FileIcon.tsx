@@ -52,7 +52,6 @@ export function getFileIcon(
   contentType?: string | null,
   options?: FileIconOptions,
 ): IconResult {
-  // Strategy 1: Use server-generated preview if available
   if (previewHash) {
     return getPreviewImageUrl(previewHash);
   }
@@ -78,10 +77,6 @@ export function getFileIcon(
   });
 }
 
-/**
- * Extract file extension from filename
- * Single Responsibility: Extension extraction logic
- */
 function extractExtension(fileName: string): string {
   return fileName.toLowerCase().split(".").pop() || "";
 }

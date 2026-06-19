@@ -5,12 +5,7 @@ import { ListView } from "./ListView";
 import type { IFileListView } from "@shared/types/FileListViewTypes";
 
 /**
- * FileListViewFactory
- * 
- * Factory component that creates the appropriate view component based on the layout type.
- * Implements the Factory Pattern and Open/Closed Principle (OCP):
- * - Open for extension: New view types can be added easily
- * - Closed for modification: Existing code doesn't need to change when adding new views
+ * Renders the appropriate file list view component based on the layout type.
  */
 interface FileListViewFactoryProps extends IFileListView {
   layoutType: InterfaceLayoutType;

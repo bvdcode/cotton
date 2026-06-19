@@ -91,9 +91,6 @@ const mapUserResponse = (response: UserInfoResponse): User => {
 };
 
 export const authApi = {
-  /**
-   * Login with username/password
-   */
   login: async (credentials: LoginRequest): Promise<string> => {
     const response = await httpClient.post<LoginResponse>(
       "auth/login",
@@ -121,9 +118,6 @@ export const authApi = {
     return mapUserResponse(response.data);
   },
 
-  /**
-   * Logout - clear token
-   */
   logout: async (): Promise<void> => {
     clearAccessToken();
     await httpClient.post("auth/logout");
