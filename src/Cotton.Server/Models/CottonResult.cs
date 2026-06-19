@@ -34,7 +34,7 @@ namespace Cotton.Server.Models
         public HttpStatusCode StatusCode { get; set; }
 
         /// <summary>
-        /// Executes with message code.
+        /// Sets the message code and returns this instance.
         /// </summary>
         public CottonResult WithMessageCode(string messageCode)
         {

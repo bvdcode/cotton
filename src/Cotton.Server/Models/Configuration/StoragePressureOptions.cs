@@ -9,7 +9,7 @@ namespace Cotton.Server.Models.Configuration;
 public sealed class StoragePressureOptions
 {
     /// <summary>
-    /// Enables d.
+    /// Gets or sets a value indicating whether storage pressure monitoring is enabled.
     /// </summary>
     public bool Enabled { get; set; } = true;
     /// <summary>

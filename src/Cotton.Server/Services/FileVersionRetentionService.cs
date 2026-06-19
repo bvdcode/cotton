@@ -21,7 +21,8 @@ public sealed class FileVersionRetentionService(
     private const int OptimalHistoricalVersionCount = 10;
 
     /// <summary>
-    /// Applies .
+    /// Prunes historical versions of the given lineage down to the configured
+    /// retention limit and returns the total number of bytes removed.
     /// </summary>
     public async Task<long> ApplyAsync(
         Guid userId,

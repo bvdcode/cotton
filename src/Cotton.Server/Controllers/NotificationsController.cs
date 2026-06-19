@@ -30,7 +30,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> TestNotification()
         {
             Guid userId = User.GetUserId();
-            await _notifications.SendNotificationAsync(userId, "Test Notification", "Such a beautiful notification!");
+            await _notifications.SendNotificationAsync(userId, "Test Notification", "This is a test notification.");
             return Ok();
         }
 

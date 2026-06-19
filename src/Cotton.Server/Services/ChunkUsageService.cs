@@ -56,7 +56,7 @@ namespace Cotton.Server.Services
         }
 
         /// <summary>
-        /// Indicates whether database references async.
+        /// Returns true if the chunk is referenced by any database row.
         /// </summary>
         public async Task<bool> HasDatabaseReferencesAsync(byte[] chunkHash, CancellationToken ct)
         {

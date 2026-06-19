@@ -9,7 +9,7 @@ namespace Cotton.Server.Abstractions
     public interface IPostgresDumpService
     {
         /// <summary>
-        /// Gets or sets the value.
+        /// Dumps the database to the specified file.
         /// </summary>
         Task DumpToFileAsync(string outputFilePath, CancellationToken cancellationToken = default);
         /// <summary>

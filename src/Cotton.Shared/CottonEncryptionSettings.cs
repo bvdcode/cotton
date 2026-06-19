@@ -14,7 +14,7 @@ namespace Cotton
     public class CottonEncryptionSettings
     {
         /// <summary>
-        /// Gets or sets the pepper seasoning used in the recipe.
+        /// Gets or sets the secret pepper appended to inputs before hashing.
         /// </summary>
         public string Pepper { get; set; } = string.Empty;
 

@@ -133,9 +133,6 @@ export const PdfPreview = ({ source, fileName, fileSizeBytes }: PdfPreviewProps)
     };
   }, [blobUrl, cacheKey, isTooLarge, pdfBlob, shouldUsePdfJs, source, t]);
 
-  // Cleanup blob URLs when component unmounts (but keep in cache for re-opening)
-  // Note: We don't revoke cached URLs to allow reopening without re-download
-
   useEffect(() => {
     if (isTooLarge) return;
     if (!shouldUsePdfJs || !pdfBlob) return;

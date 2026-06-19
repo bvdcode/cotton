@@ -25,11 +25,8 @@ const safeClearPersisted = (clearStorage: () => void | Promise<void>): void => {
 };
 
 /**
- * Clears all user-scoped client caches when auth identity changes.
- *
- * IMPORTANT:
- * - Clears in-memory caches (Zustand stores)
- * - Clears persisted caches (zustand persist) to prevent cross-user data leak
+ * Clears all user-scoped client caches (in-memory and persisted) when auth
+ * identity changes to prevent cross-user data leak.
  */
 export const resetUserScopedStores = (nextUserId: string | null): void => {
   if (nextUserId === null) {

@@ -46,7 +46,7 @@ namespace Cotton.Server.Handlers.Files
         /// </summary>
         public string ContentType { get; set; } = null!;
         /// <summary>
-        /// Indicates whether h.
+        /// Gets or sets the proposed file content hash.
         /// </summary>
         public string Hash { get; set; } = null!;
         /// <summary>

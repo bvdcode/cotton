@@ -37,7 +37,7 @@ public record WebDavResolveResult
     /// </summary>
     public bool Found { get; init; }
     /// <summary>
-    /// Indicates whether collection.
+    /// True when the resolved resource is a collection (directory).
     /// </summary>
     public bool IsCollection { get; init; }
     /// <summary>

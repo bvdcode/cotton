@@ -10,7 +10,7 @@ import { shareLinkAction } from "./shareLinkAction";
 
 /**
  * Builds a formatted share text for a file.
- * Uses a localized invitation message followed by the URL.
+ * Uses a localized invitation message.
  */
 const buildShareMessage = (
   fileName: string,
@@ -22,8 +22,6 @@ const buildShareMessage = (
  * Extracts a share token from the download URL,
  * builds a share page URL, and tries Web Share API
  * with a formatted message. Falls back to clipboard.
- *
- * Deduplicated from FilesPage, TrashPage, SearchPage.
  */
 export const shareFile = async (
   nodeFileId: string,

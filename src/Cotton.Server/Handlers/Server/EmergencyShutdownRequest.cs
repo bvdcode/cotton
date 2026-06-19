@@ -7,7 +7,7 @@ using EasyExtensions.Mediator.Contracts;
 namespace Cotton.Server.Handlers.Server
 {
     /// <summary>
-    /// Represents the emergency shutdown request request payload accepted by the API.
+    /// Represents the emergency shutdown request payload accepted by the API.
     /// </summary>
     public class EmergencyShutdownRequest : IRequest
     {

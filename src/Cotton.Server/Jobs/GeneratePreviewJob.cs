@@ -236,9 +236,7 @@ namespace Cotton.Server.Jobs
         {
             foreach (var nodeFile in item.NodeFiles)
             {
-                // Minor vulnerability:
-                // Even if cross-user deduplication is disabled, this event could reveal to a user who already had the file that someone else had the file,
-                // because the preview hash will be reset and regenerated, preventing the second user from discovering that the first user had the file.
+                // Note: a regenerated preview hash can leak that another user already had this file even when cross-user dedup is disabled.
                 await _hubContext.Clients
                     .User(nodeFile.OwnerId.ToString())
                     .SendAsync("PreviewGenerated", nodeFile.NodeId, nodeFile.Id, item.GetPreviewHashEncryptedHex(), cancellationToken);
@@ -254,7 +252,6 @@ namespace Cotton.Server.Jobs
 
             if (processed > UnthrottledItemsCount)
             {
-                // TODO: Move to settings or autoconfig
                 await Task.Delay(ThrottleDelayMs, cancellationToken);
             }
         }

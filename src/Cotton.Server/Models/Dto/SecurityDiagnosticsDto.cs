@@ -92,7 +92,7 @@ namespace Cotton.Server.Models.Dto
     public sealed class DotNetDiagnosticsDto
     {
         /// <summary>
-        /// Disables d.
+        /// Gets a value indicating whether .NET runtime diagnostics are disabled.
         /// </summary>
         public bool Disabled { get; init; }
         /// <summary>

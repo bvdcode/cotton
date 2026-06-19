@@ -15,7 +15,7 @@ namespace Cotton.Server.Services
     public interface IMasterKeyCompatibilityProbe
     {
         /// <summary>
-        /// Validates .
+        /// Validates that the supplied master key is compatible with any existing encrypted Cotton data.
         /// </summary>
         Task<MasterKeyCompatibilityResult> ValidateAsync(
             CottonEncryptionSettings encryptionSettings,
@@ -188,7 +188,7 @@ namespace Cotton.Server.Services
 
             if (_storage is IStorageBackendUsesEncryptedConfiguration)
             {
-                return EvaluateFailedProbe(databaseProbe) ?? EvaluateMissingStorageProbe(mode);
+                return EvaluateFailedProbe(databaseProbe) ?? EvaluateMissingEvidence(mode);
             }
 
             ProbeValidationState storageProbe = await ValidateStorageChunkProbeAsync(connection, cipher, cancellationToken);
@@ -214,16 +214,6 @@ namespace Cotton.Server.Services
                     existingDataFound: true,
                     evidenceFound: true)
                 : null;
-
-        private MasterKeyCompatibilityResult EvaluateMissingStorageProbe(MasterKeyCompatibilityMode mode)
-        {
-            return mode == MasterKeyCompatibilityMode.RequireEvidenceForExistingData
-                ? MasterKeyCompatibilityResult.Fail(
-                    "Existing Cotton data was found, but no encrypted data could be used to verify the submitted master key. Start Cotton once with COTTON_MASTER_KEY set to the original master key so it can seed the master-key sentinel safely.",
-                    existingDataFound: true,
-                    evidenceFound: false)
-                : CompatibleWithoutEvidence();
-        }
 
         private MasterKeyCompatibilityResult EvaluateMissingEvidence(MasterKeyCompatibilityMode mode)
         {

@@ -5,7 +5,6 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Topology.Abstractions;
-using Cotton.Validators;
 using EasyExtensions.Helpers;
 using Microsoft.EntityFrameworkCore;
 
@@ -41,7 +40,6 @@ namespace Cotton.Topology
                     .FirstOrDefaultAsync();
                 if (currentNode == null)
                 {
-                    NameValidator.TryNormalizeAndValidate(nodeType.ToString(), out string normalized, out _);
                     Node newNode = new()
                     {
                         Type = nodeType,

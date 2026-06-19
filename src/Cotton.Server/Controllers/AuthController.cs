@@ -589,7 +589,7 @@ namespace Cotton.Server.Controllers
         }
 
         /// <summary>
-        /// Clears the cached value so it will be resolved again.
+        /// Completes the password reset flow using a reset token.
         /// </summary>
         [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
         [HttpPost("reset-password")]

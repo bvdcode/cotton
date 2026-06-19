@@ -18,7 +18,7 @@ public class WebDavPathResolver(
     ILayoutNavigator _navigator) : IWebDavPathResolver
 {
     /// <summary>
-    /// Gets or sets the default node type.
+    /// The default node type used when resolving WebDAV paths.
     /// </summary>
     public const NodeType DefaultNodeType = NodeType.Default;
     /// <summary>

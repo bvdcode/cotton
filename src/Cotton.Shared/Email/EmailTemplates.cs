@@ -47,7 +47,7 @@ namespace Cotton.Email
 </html>";
 
         private const string ShellOpenEmailConfirmationEn =
-            @"<!DOCTYPE html
+            @"<!DOCTYPE html>
 <html lang=""en"">
 <head>
   <meta charset=""utf-8"" />
@@ -92,7 +92,7 @@ namespace Cotton.Email
 ";
 
         private const string ShellOpenEmailConfirmationRu =
-            @"<!DOCTYPE html
+            @"<!DOCTYPE html>
 <html lang=""ru"">
 <head>
   <meta charset=""utf-8"" />
@@ -138,7 +138,7 @@ namespace Cotton.Email
 ";
 
         private const string ShellOpenPasswordResetEn =
-            @"<!DOCTYPE html
+            @"<!DOCTYPE html>
 <html lang=""en"">
 <head>
   <meta charset=""utf-8"" />
@@ -189,7 +189,7 @@ namespace Cotton.Email
 ";
 
         private const string ShellOpenPasswordResetRu =
-            @"<!DOCTYPE html
+            @"<!DOCTYPE html>
 <html lang=""ru"">
 <head>
   <meta charset=""utf-8"" />

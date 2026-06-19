@@ -17,7 +17,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Cotton.Server.Handlers.WebDav;
 
 /// <summary>
-/// Command for WebDAV MOVE/COPY operation
+/// Command for WebDAV MOVE operation
 /// </summary>
 public record WebDavMoveRequest(
     Guid UserId,

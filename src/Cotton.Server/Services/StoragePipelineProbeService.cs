@@ -11,14 +11,14 @@ using System.Security.Cryptography;
 namespace Cotton.Server.Services
 {
     /// <summary>
-    /// Measures the active storage pipeline with a tiny synthetic blob, without touching user files.
+    /// Measures the active storage pipeline with a synthetic 64 MiB blob, without touching user files.
     /// </summary>
     public sealed class StoragePipelineProbeService(
         IStoragePipeline _storage,
         ILogger<StoragePipelineProbeService> _logger)
     {
         /// <summary>
-        /// Size of the synthetic payload. Keep this small: telemetry runs on user instances.
+        /// Size of the synthetic probe payload (64 MiB), large enough to produce stable throughput measurements.
         /// </summary>
         public const int PayloadSizeBytes = 64 * 1024 * 1024;
 

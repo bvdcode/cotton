@@ -23,7 +23,7 @@ import { settingsApi } from "../../shared/api/settingsApi";
 import { setupStepDefinitions } from "./setupQuestions.tsx";
 import { isJsonObject, type JsonValue } from "../../shared/types/json";
 import { useSetupStatusStore } from "../../shared/store/setupStatusStore";
-// Helper function to convert keys to values for server
+
 function convertAnswersToValues(
   answers: Record<string, JsonValue>,
 ): Record<string, JsonValue> {
@@ -174,7 +174,6 @@ export function SetupWizardPage() {
   const [loading, setLoading] = useState(false);
   const prefetchedStepKeysRef = useRef<Set<string>>(new Set());
 
-  // Generic answers storage
   const [answers, setAnswers] = useState<Record<string, JsonValue>>({});
 
   const updateAnswer = useCallback((key: string, value: JsonValue) => {
