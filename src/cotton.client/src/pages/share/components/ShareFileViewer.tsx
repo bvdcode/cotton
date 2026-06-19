@@ -227,19 +227,17 @@ const ShareEncryptedFileNotice: React.FC<ShareEncryptedFileNoticeProps> = ({
 interface ShareUnsupportedViewerProps {
   fileName: string | null;
   contentType: string | null;
-  contentLength: number | null;
   previewUrl: string | null;
 }
 
 const ShareUnsupportedViewer: React.FC<ShareUnsupportedViewerProps> = ({
   fileName,
   contentType,
-  contentLength,
   previewUrl,
 }) => {
   const { t } = useTranslation(["share"]);
   const [failedPreviewUrl, setFailedPreviewUrl] = React.useState<string | null>(null);
-  const canShowPreview = Boolean(previewUrl) && failedPreviewUrl !== previewUrl;
+  const hasSmallPreviewIcon = Boolean(previewUrl) && failedPreviewUrl !== previewUrl;
   const fallbackIcon = React.useMemo(
     () => getFileIcon(null, fileName ?? "", contentType),
     [contentType, fileName],
@@ -261,13 +259,13 @@ const ShareUnsupportedViewer: React.FC<ShareUnsupportedViewerProps> = ({
         alignItems="center"
         justifyContent="center"
         sx={{
-          width: { xs: 112, sm: 144 },
-          height: { xs: 112, sm: 144 },
-          "& > svg": { width: 80, height: 80 },
+          width: { xs: 72, sm: 88 },
+          height: { xs: 72, sm: 88 },
+          "& > svg": { width: { xs: 64, sm: 80 }, height: { xs: 64, sm: 80 } },
           color: "text.secondary",
         }}
       >
-        {canShowPreview ? (
+        {hasSmallPreviewIcon ? (
           <Box
             component="img"
             src={previewUrl ?? undefined}
@@ -285,55 +283,23 @@ const ShareUnsupportedViewer: React.FC<ShareUnsupportedViewerProps> = ({
         )}
       </Box>
 
-      {(fileName || contentLength !== null) && (
-        <Box
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          flexWrap="wrap"
-          columnGap={1.25}
-          rowGap={0.5}
-          maxWidth="min(760px, 100%)"
-          textAlign="center"
+      {fileName && (
+        <Typography
+          color="text.primary"
+          variant="h6"
+          align="center"
+          sx={{
+            maxWidth: "min(760px, 100%)",
+            overflowWrap: "anywhere",
+          }}
         >
-          {fileName && (
-            <Typography
-              color="text.primary"
-              variant="h6"
-              sx={{ overflowWrap: "anywhere" }}
-            >
-              {fileName}
-            </Typography>
-          )}
-
-          {fileName && contentLength !== null && (
-            <Box
-              aria-hidden="true"
-              sx={{
-                width: "1px",
-                height: 18,
-                bgcolor: "divider",
-              }}
-            />
-          )}
-
-          {contentLength !== null && (
-            <Typography
-              color="text.secondary"
-              variant="body2"
-              sx={{ whiteSpace: "nowrap" }}
-            >
-              {formatBytes(contentLength)}
-            </Typography>
-          )}
-        </Box>
-      )}
-
-      {!canShowPreview && (
-        <Typography color="text.secondary">
-          {t("unsupported", { ns: "share" })}
+          {fileName}
         </Typography>
       )}
+
+      <Typography color="text.secondary">
+        {t("unsupported", { ns: "share" })}
+      </Typography>
     </Box>
   );
 };
@@ -425,7 +391,6 @@ export const ShareFileViewer: React.FC<ShareFileViewerProps> = ({
     <ShareUnsupportedViewer
       fileName={fileName}
       contentType={contentType}
-      contentLength={contentLength}
       previewUrl={previewUrl}
     />
   );
