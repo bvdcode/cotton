@@ -16,7 +16,8 @@ namespace Cotton.Server.Services
         CottonDbContext dbContext,
         ProcessHardeningStatus hardeningStatus,
         MasterKeyRuntimeState masterKeyRuntimeState,
-        DatabaseIntegrityDiagnosticsService databaseIntegrityDiagnostics)
+        DatabaseIntegrityDiagnosticsService databaseIntegrityDiagnostics,
+        TempDirectoryProbe tempDirectoryProbe)
     {
         /// <summary>
         /// Gets snapshot async.
@@ -31,6 +32,7 @@ namespace Cotton.Server.Services
             bool dotnetDiagnosticsDisabled = IsZero(dotnetEnableDiagnostics) || IsZero(comPlusEnableDiagnostics);
             bool isContainer = IsContainer();
             bool isPublicInstance = Constants.IsPublicInstance;
+            TempDirectoryProbeResult tempDirectory = tempDirectoryProbe.Probe();
             LinuxContainerSecuritySnapshot containerSecurity = LinuxContainerSecurity.Snapshot(isContainer);
             AdminTotpDiagnosticsDto adminTotp = await GetAdminTotpDiagnosticsAsync(cancellationToken);
             DatabaseIntegrityDiagnosticsDto databaseIntegrity = await databaseIntegrityDiagnostics
@@ -82,7 +84,8 @@ namespace Cotton.Server.Services
                 linuxProcess,
                 linuxContainer,
                 adminTotp,
-                databaseIntegrity);
+                databaseIntegrity,
+                tempDirectory);
 
             return new SecurityDiagnosticsDto
             {
@@ -93,6 +96,9 @@ namespace Cotton.Server.Services
                 IsPublicInstance = isPublicInstance,
                 MasterKeyEnvironmentVariableWasConfigured = masterKeyRuntimeState.EnvironmentVariableWasConfigured,
                 MasterKeyEnvironmentVariablePresentInProcess = masterKeyRuntimeState.EnvironmentVariablePresentAfterResolution,
+                TempDirectoryPath = tempDirectory.TempPath,
+                TempDirectoryWritable = tempDirectory.Writable,
+                TempDirectoryError = tempDirectory.Error,
                 DotNetDiagnostics = dotnetDiagnostics,
                 LinuxProcess = linuxProcess,
                 LinuxContainer = linuxContainer,
@@ -127,18 +133,44 @@ namespace Cotton.Server.Services
             LinuxProcessSecurityDto linuxProcess,
             LinuxContainerSecurityDto linuxContainer,
             AdminTotpDiagnosticsDto adminTotp,
-            DatabaseIntegrityDiagnosticsDto databaseIntegrity)
+            DatabaseIntegrityDiagnosticsDto databaseIntegrity,
+            TempDirectoryProbeResult tempDirectory)
         {
             var warnings = new List<SecurityDiagnosticWarningDto>();
             AddPublicInstanceWarning(warnings, isPublicInstance);
             AddMasterKeyWarning(warnings, masterKey);
             AddAdminTotpWarning(warnings, adminTotp);
             AddDotNetDiagnosticsWarning(warnings, dotnetDiagnostics);
+            AddTempDirectoryWarning(warnings, tempDirectory);
             AddLinuxProcessWarnings(warnings, isContainer, linuxProcess);
             AddLinuxContainerWarnings(warnings, isContainer, linuxProcess, linuxContainer);
             AddHardeningWarning(warnings, linuxProcess);
             AddDatabaseIntegrityWarnings(warnings, databaseIntegrity);
             return warnings;
+        }
+
+        private static void AddTempDirectoryWarning(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            TempDirectoryProbeResult tempDirectory)
+        {
+            if (tempDirectory.Writable)
+            {
+                return;
+            }
+
+            string tempPath = string.IsNullOrWhiteSpace(tempDirectory.TempPath)
+                ? "unknown path"
+                : tempDirectory.TempPath;
+            string error = string.IsNullOrWhiteSpace(tempDirectory.Error)
+                ? string.Empty
+                : $" Error: {tempDirectory.Error}";
+
+            warnings.Add(new SecurityDiagnosticWarningDto
+            {
+                Code = "temp-directory-not-writable",
+                Severity = "critical",
+                Message = $"Cotton cannot write to the OS temp directory ({tempPath}). Database dumps/restores, S3 upload spooling, and preview tooling require writable scratch space. Mount a writable /tmp when using read_only: true, or bind-mount a fast writable disk at /tmp.{error}",
+            });
         }
 
         private static void AddDatabaseIntegrityWarnings(
@@ -362,7 +394,7 @@ namespace Cotton.Server.Services
             {
                 Code = "root-filesystem-writable",
                 Severity = "info",
-                Message = "The container root filesystem is writable. Set read_only: true and mount only the required data directories as writable volumes.",
+                Message = "The container root filesystem is writable. Set read_only: true, keep /app/files as the persistent writable data volume, and mount writable scratch storage at /tmp.",
             });
         }
 

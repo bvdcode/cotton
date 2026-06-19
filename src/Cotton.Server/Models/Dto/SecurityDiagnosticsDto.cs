@@ -45,6 +45,18 @@ namespace Cotton.Server.Models.Dto
         /// </summary>
         public bool MasterKeyEnvironmentVariablePresentInProcess { get; init; }
         /// <summary>
+        /// Gets OS temp directory path.
+        /// </summary>
+        public string TempDirectoryPath { get; init; } = string.Empty;
+        /// <summary>
+        /// Indicates whether OS temp directory is writable.
+        /// </summary>
+        public bool TempDirectoryWritable { get; init; }
+        /// <summary>
+        /// Gets OS temp directory write error.
+        /// </summary>
+        public string? TempDirectoryError { get; init; }
+        /// <summary>
         /// Gets or sets dot net diagnostics.
         /// </summary>
         public DotNetDiagnosticsDto DotNetDiagnostics { get; init; } = new();

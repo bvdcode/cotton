@@ -277,12 +277,13 @@ Each row below is a real warning code from `SecurityDiagnosticsService` with the
 | `master-key-from-environment` | warning | `MasterKeyRuntimeState.EnvironmentVariableWasConfigured` (key came from env) | Prefer browser `/unlock`; keep the key in a password manager, not in deployment metadata. |
 | `admins-without-2fa` | warning | Any admin lacks `IsTotpEnabled` (`AdminsWithoutTotp > 0`) | Enable TOTP for every admin account. |
 | `dotnet-diagnostics-enabled` | warning | Neither `DOTNET_EnableDiagnostics` nor `COMPlus_EnableDiagnostics` equals `0` | Set `DOTNET_EnableDiagnostics=0` (image default). |
+| `temp-directory-not-writable` | **critical** | `Path.GetTempPath()` cannot create/write/delete a probe file | Mount writable scratch storage at `/tmp`. With `read_only: true`, use `tmpfs: ["/tmp"]` or bind-mount a fast writable disk at `/tmp`. |
 | `process-dumpable` | warning | `prctl(PR_GET_DUMPABLE)` != 0 (Linux only) | Set `COTTON_PROCESS_HARDENING=true` (image default) so `PR_SET_DUMPABLE=0` is requested. |
 | `sys-ptrace-capability` | **critical** | `CAP_SYS_PTRACE` (cap bit 19) effective in `/proc/self/status` `CapEff` | Drop `SYS_PTRACE`; avoid `--privileged`; use `cap_drop: [ALL]`. |
 | `new-privileges-allowed` | warning (container) / info | `NoNewPrivs` == 0 | Add `security_opt: ["no-new-privileges:true"]`. |
 | `seccomp-disabled` | warning | `Seccomp` mode == 0 | Keep Docker's default seccomp profile; never `seccomp=unconfined` in prod. |
 | `running-as-root` | info | effective uid == 0 (`geteuid`) | Run as a dedicated non-root uid (the image already drops to `app`/1654). |
-| `root-filesystem-writable` | info | container `/` mount lacks the `ro` option | `read_only: true` + writable volume only for `/app/files`. |
+| `root-filesystem-writable` | info | container `/` mount lacks the `ro` option | `read_only: true` + writable `/app/files` data volume + writable scratch storage at `/tmp`. |
 | `docker-socket-mounted` | **critical** | `docker.sock` mounted/visible in `/proc/self/mountinfo` or on disk | Remove the socket mount — it is effectively host-root from the web process. |
 | `host-pid-namespace` | **critical** | `/proc/1/cmdline` looks like host init (`systemd`/`/sbin/init`/`init`) | Remove `pid: host`. |
 | `mandatory-access-control-unconfined` | warning | No enforcing AppArmor/SELinux detected (or AppArmor `unconfined`, or SELinux permissive) | Use Docker's default AppArmor, a custom profile, or an enforcing SELinux context. |
@@ -290,7 +291,7 @@ Each row below is a real warning code from `SecurityDiagnosticsService` with the
 | `process-hardening-failed` | warning | Hardening requested but `prctl` failed (`HardeningRequested && !HardeningApplied`) | Investigate the recorded errno; ensure Linux + permitted `prctl`. |
 | `db-integrity-unsigned-rows` | **critical** | `UnsignedProtectedRows > 0` (protected rows lack valid integrity signatures) | Restore affected rows from backup or run the required transition version before upgrading. |
 
-The Linux process warnings (`process-dumpable`, `sys-ptrace-capability`, `new-privileges-allowed`, `seccomp-disabled`, `running-as-root`) are only evaluated on Linux. Container-only warnings (`root-filesystem-writable`, `docker-socket-mounted`, `host-pid-namespace`, MAC) are emitted only when `IsContainer()` is true; the core-dump warning is evaluated on any Linux host. `CAP_SYS_PTRACE` is read from the `CapEff` hex mask in `/proc/self/status` by testing bit 19.
+The temp-directory check is evaluated on every host because database dumps/restores, S3 upload spooling, and preview tooling all depend on the OS temp directory. The Linux process warnings (`process-dumpable`, `sys-ptrace-capability`, `new-privileges-allowed`, `seccomp-disabled`, `running-as-root`) are only evaluated on Linux. Container-only warnings (`root-filesystem-writable`, `docker-socket-mounted`, `host-pid-namespace`, MAC) are emitted only when `IsContainer()` is true; the core-dump warning is evaluated on any Linux host. `CAP_SYS_PTRACE` is read from the `CapEff` hex mask in `/proc/self/status` by testing bit 19.
 
 ### Recommended hardened deployment
 
@@ -328,7 +329,7 @@ services:
       # Omit COTTON_MASTER_KEY -> unlock via /unlock after restart (best default)
 ```
 
-With `read_only: true`, give Cotton writable space for its temp work: `/app/files/tmp` lives on the data volume, but the dump/restore code and the S3 upload buffer use the OS temp dir (`Path.GetTempPath()` / `Path.GetTempFileName()`), so mount a writable `tmpfs` at `/tmp`. Do **not** mount the Docker socket, do **not** use `pid: host`, and do **not** disable seccomp. Pre-own the volume (`chown -R 1654:1654 /data/cotton`) and optionally set `COTTON_PERMISSION_FIX=never` so the entrypoint does no ownership pass on a read-only-friendly setup.
+With `read_only: true`, give Cotton writable space for its temp work: `/app/files/tmp` lives on the data volume, but the dump/restore code and the S3 upload buffer use the OS temp dir (`Path.GetTempPath()` / `Path.GetTempFileName()`). Mount writable scratch storage at `/tmp`; `tmpfs: ["/tmp"]` is the simple option, and a bind mount from a fast writable disk to `/tmp` is also valid. Do **not** mount the Docker socket, do **not** use `pid: host`, and do **not** disable seccomp. Pre-own the volume (`chown -R 1654:1654 /data/cotton`) and optionally set `COTTON_PERMISSION_FIX=never` so the entrypoint does no ownership pass on a read-only-friendly setup.
 
 > Important boundary (per README): if an attacker can run code inside the Cotton process, these flags cannot hide the in-memory master key from that process. They defend against accidental dumps, diagnostics surfaces, and over-privileged neighbors — not against in-process code execution.
 

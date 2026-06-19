@@ -3,7 +3,7 @@
 
 namespace Cotton.Server.Services.Startup
 {
-    internal interface IStartupTransitionValidator
+    internal interface IStartupPreflightValidator
     {
         Task<StartupBlocker?> ValidateAsync(CancellationToken cancellationToken);
     }

@@ -75,7 +75,7 @@ The result is clamped to a floor of 0: `Math.Max(0, 10 - penalty)`. `MaxSecurity
 
 ### Warning vectors
 
-`BuildWarnings` invokes a fixed sequence of detectors in this order: public-instance, master-key, admin-TOTP, .NET diagnostics, Linux-process group (`AddLinuxProcessWarnings`), Linux-container group (`AddLinuxContainerWarnings`), hardening-failure, and database-integrity. Each detector emits at most one `SecurityDiagnosticWarningDto { Code, Severity, Message }`. The complete catalog:
+`BuildWarnings` invokes a fixed sequence of detectors in this order: public-instance, master-key, admin-TOTP, .NET diagnostics, temp-directory, Linux-process group (`AddLinuxProcessWarnings`), Linux-container group (`AddLinuxContainerWarnings`), hardening-failure, and database-integrity. Each detector emits at most one `SecurityDiagnosticWarningDto { Code, Severity, Message }`. The complete catalog:
 
 | Code | Severity | Trigger condition | Notes |
 |---|---|---|---|
@@ -83,12 +83,13 @@ The result is clamped to a floor of 0: `Math.Max(0, 10 - penalty)`. `MaxSecurity
 | `master-key-from-environment` | warning | `MasterKeyRuntimeState.EnvironmentVariableWasConfigured` | Key came from `COTTON_MASTER_KEY`; container metadata may still expose it. |
 | `admins-without-2fa` | warning | `AdminTotpDiagnosticsDto.AdminsWithoutTotp > 0` | Message reads "N of M admin accounts do not have 2FA enabled." |
 | `dotnet-diagnostics-enabled` | warning | `.NET` diagnostics **not** disabled | See OR semantics below. |
+| `temp-directory-not-writable` | **critical** | `Path.GetTempPath()` cannot create/write/delete a probe file | Blocks startup too; mount writable scratch storage at `/tmp` (`tmpfs` or a fast-disk bind mount). |
 | `process-dumpable` | warning | `LinuxProcessSecurityDto.Dumpable != 0` (Linux only) | Recommends `COTTON_PROCESS_HARDENING=true`. |
 | `sys-ptrace-capability` | **critical** | `HasSysPtraceCapability == true` (Linux only) | `CAP_SYS_PTRACE` effective. Skipped when the value is `null` (unparseable `CapEff`). |
 | `new-privileges-allowed` | warning if container, else info | `NoNewPrivileges == 0` (Linux only) | Recommends `no-new-privileges:true`. |
 | `seccomp-disabled` | warning | `SeccompMode == 0` (Linux only) | Avoid `seccomp=unconfined`. |
 | `running-as-root` | info | `RunningAsRoot == true` (Linux only) | `euid == 0`. |
-| `root-filesystem-writable` | info | container AND `RootFilesystemReadOnly == false` | Recommends `read_only: true`. |
+| `root-filesystem-writable` | info | container AND `RootFilesystemReadOnly == false` | Recommends `read_only: true` plus writable `/app/files` and writable `/tmp`. |
 | `docker-socket-mounted` | **critical** | container AND `DockerSocketMounted` | Effectively host-root from the web process. |
 | `host-pid-namespace` | **critical** | container AND `HostPidNamespaceLikely == true` | Remove `pid: host`. |
 | `mandatory-access-control-unconfined` | warning | container AND no enforcing AppArmor/SELinux detected | See MAC logic below. |
@@ -98,6 +99,7 @@ The result is clamped to a floor of 0: `Math.Max(0, 10 - penalty)`. `MaxSecurity
 
 Important guards:
 
+- The temp-directory check runs on every platform because it validates the active OS temp path, not a Linux-only hardening signal.
 - All Linux process warnings (`AddLinuxProcessWarnings`: dumpable, ptrace, no-new-privileges, seccomp, root) and all container warnings (`AddLinuxContainerWarnings`) are skipped entirely unless `OperatingSystem.IsLinux()`. On Windows/macOS those vectors never fire and the corresponding fields are `null`.
 - The four container-only checks (`root-filesystem-writable`, `docker-socket-mounted`, `host-pid-namespace`, `mandatory-access-control-unconfined`) require `isContainer == true`. The core-dump check (`AddCoreDumpLimitWarning`) runs on any Linux host regardless of `isContainer`.
 - The ptrace check uses `HasSysPtraceCapability != true` to decide skipping, so a `null` (unknown) value never raises the critical warning.
@@ -288,7 +290,7 @@ flowchart LR
 
 - **Internet → HTTP edge.** Untrusted input crosses into the app through controllers. The validators canonicalize/reject names and usernames; auth hardening (`AuthHardeningExtensions`) gates authenticated state with per-remote-IP fixed-window rate limiting — `AuthRateLimitPolicies.Interactive` at 10 requests/minute and `AuthRateLimitPolicies.Refresh` at 60 requests/minute, both rejecting with HTTP 429 — plus JWT validation and session-token revocation (`OnTokenValidated`). The `public-instance` flag widens this boundary (anyone can create an account) and is surfaced as a warning.
 - **App process ↔ in-memory secret.** The most sensitive asset is the master key in process memory. The app defends it directly only via `PR_SET_DUMPABLE=0`; everything else that could read process memory (ptrace, `/proc/<pid>/mem`, core dumps, .NET diagnostics endpoints, debugger attach) is detected and reported, with critical severity for the worst escalation paths (`CAP_SYS_PTRACE`, Docker socket, host PID namespace).
-- **App ↔ container/host runtime (operator-controlled).** The runtime is *trusted to be configured correctly* but the app cannot enforce it, so the diagnostics layer treats it as a thing to be **measured and reported**: seccomp, MAC confinement, no-new-privileges, read-only rootfs, non-root UID, core-dump limits, and namespace/socket isolation. The README is explicit that aggressive runtime hardening (custom seccomp/AppArmor, `read_only: true`, `kernel.yama.ptrace_scope`, TPM/HSM/KMS, encrypted swap) is an expert second pass that can break volume permissions, debugging, previews, or restores, so the app ships the cheap defaults and leaves the rest opt-in.
+- **App ↔ container/host runtime (operator-controlled).** The runtime is *trusted to be configured correctly* but the app cannot enforce it, so the diagnostics layer treats it as a thing to be **measured and reported**: writable OS temp, seccomp, MAC confinement, no-new-privileges, read-only rootfs, non-root UID, core-dump limits, and namespace/socket isolation. With `read_only: true`, `/tmp` must still be mounted as writable scratch storage; either a `tmpfs` mount or a bind mount from a fast writable disk is valid. The README is explicit that aggressive runtime hardening (custom seccomp/AppArmor, `kernel.yama.ptrace_scope`, TPM/HSM/KMS, encrypted swap) is an expert second pass that can break volume permissions, debugging, previews, or restores, so the app ships the cheap defaults and leaves the rest opt-in.
 - **App ↔ database.** Protected rows carry integrity signatures verified at security-sensitive reads; the diagnostics layer reports unsigned or stale protected rows (`db-integrity-unsigned-rows`, critical), and startup transition validation blocks unsafe version jumps before normal traffic is served. See the *Database Integrity* section.
 
 ## Related sections

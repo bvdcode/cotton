@@ -97,7 +97,10 @@ namespace Cotton.Server.Extensions
         /// </summary>
         public static IServiceCollection AddStartupValidation(this IServiceCollection services)
         {
-            services.AddScoped<IStartupTransitionValidator, StartupTransitionValidator>();
+            services.AddSingleton<TempDirectoryProbe>();
+            services.AddScoped<IStartupPreflightValidator, StartupPreflightValidator>();
+            services.AddScoped<IStartupCheck, TempDirectoryStartupCheck>();
+            services.AddScoped<IStartupCheck, StartupTransitionValidator>();
             return services;
         }
 

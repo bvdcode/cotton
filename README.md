@@ -192,7 +192,7 @@ Cotton also exposes an admin-only security diagnostics page (`/admin/security`) 
 GET /api/v1/server/security/status
 ```
 
-It reports process/container hardening signals — .NET diagnostics state, Linux dumpability, effective UID, `no-new-privileges`, seccomp mode, `CAP_SYS_PTRACE`, read-only rootfs, Docker socket exposure, likely host PID namespace, core dump settings, AppArmor/SELinux confinement, whether the key came from env or browser unlock, public/demo mode, database-integrity signature coverage, and how many admins still lack 2FA — and turns them into a 0–10 score with human-readable threat vectors. It is intentionally an operator check, not a public healthcheck.
+It reports process/container hardening signals — writable OS temp, .NET diagnostics state, Linux dumpability, effective UID, `no-new-privileges`, seccomp mode, `CAP_SYS_PTRACE`, read-only rootfs, Docker socket exposure, likely host PID namespace, core dump settings, AppArmor/SELinux confinement, whether the key came from env or browser unlock, public/demo mode, database-integrity signature coverage, and how many admins still lack 2FA — and turns them into a 0–10 score with human-readable threat vectors. It is intentionally an operator check, not a public healthcheck.
 
 ### Paranoia Mode
 
@@ -210,6 +210,7 @@ A stricter Docker Compose service can add host/container hardening without chang
 services:
   cotton:
     image: bvdcode/cotton:latest
+    read_only: true
     cap_drop:
       - ALL
     security_opt:
@@ -217,13 +218,17 @@ services:
     pids_limit: 256
     ulimits:
       core: 0
+    tmpfs:
+      - /tmp
     environment:
       DOTNET_EnableDiagnostics: "0"
       COMPlus_EnableDiagnostics: "0"
       COTTON_PROCESS_HARDENING: "true"
 ```
 
-Extra hardening (`read_only: true`, custom seccomp/AppArmor, encrypted swap, `kernel.yama.ptrace_scope`, TPM/HSM/KMS, a separate key-agent) can be valuable but is expert territory and can break volume permissions, previews, or restore if applied blindly. The honest boundary: if an attacker can execute code inside the Cotton process, software flags cannot fully hide the in-memory key — these settings mostly protect against accidental dumps, diagnostics surfaces, and over-privileged neighbors.
+With `read_only: true`, `/tmp` must remain writable because database dump/restore, S3 upload spooling, and preview tooling use the OS temp directory. `tmpfs: ["/tmp"]` is the simple Compose option; binding a fast writable disk at `/tmp` is valid too.
+
+Extra hardening (custom seccomp/AppArmor, encrypted swap, `kernel.yama.ptrace_scope`, TPM/HSM/KMS, a separate key-agent) can be valuable but is expert territory and can break volume permissions, previews, or restore if applied blindly. The honest boundary: if an attacker can execute code inside the Cotton process, software flags cannot fully hide the in-memory key — these settings mostly protect against accidental dumps, diagnostics surfaces, and over-privileged neighbors.
 
 See **[docs/technical/22-security-hardening.md](docs/technical/22-security-hardening.md)** and **[docs/technical/08-master-key-bootstrap.md](docs/technical/08-master-key-bootstrap.md)** for the full model.
 

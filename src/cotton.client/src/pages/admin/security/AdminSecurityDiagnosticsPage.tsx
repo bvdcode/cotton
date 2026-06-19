@@ -43,6 +43,7 @@ const knownThreatVectorCodes = new Set([
   "running-as-root",
   "process-hardening-failed",
   "db-integrity-unsigned-rows",
+  "temp-directory-not-writable",
   "root-filesystem-writable",
   "docker-socket-mounted",
   "host-pid-namespace",
@@ -497,6 +498,7 @@ const getPassedCheckCodes = (d: SecurityDiagnosticsDto): string[] => {
       d.adminTotp.adminCount > 0 && d.adminTotp.adminsWithoutTotp === 0,
     ],
     ["dotnet-diagnostics-enabled", d.dotNetDiagnostics.disabled === true],
+    ["temp-directory-not-writable", d.tempDirectoryWritable === true],
     ["process-hardening-failed", lp.hardeningApplied === true],
     ["process-dumpable", lp.dumpable === 0],
     ["sys-ptrace-capability", lp.hasSysPtraceCapability === false],
@@ -860,6 +862,22 @@ const RuntimeDiagnosticsSection = ({
       label={t("securityDiagnostics.fields.container")}
       value={yesNo(diagnostics.isContainer, t)}
     />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.tempDirectoryPath")}
+      value={formatNullable(diagnostics.tempDirectoryPath, t)}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.tempDirectoryWritable")}
+      value={yesNo(diagnostics.tempDirectoryWritable, t)}
+      color={diagnostics.tempDirectoryWritable ? "success" : "error"}
+    />
+    {diagnostics.tempDirectoryError && (
+      <DiagnosticsRow
+        label={t("securityDiagnostics.fields.tempDirectoryError")}
+        value={diagnostics.tempDirectoryError}
+        color="error"
+      />
+    )}
     <DiagnosticsRow
       label={t("securityDiagnostics.fields.euid")}
       value={formatNullable(diagnostics.linuxProcess.effectiveUserId, t)}

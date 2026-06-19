@@ -172,6 +172,9 @@ export interface SecurityDiagnosticsDto {
   masterKeySource: string;
   masterKeyEnvironmentVariableWasConfigured: boolean;
   masterKeyEnvironmentVariablePresentInProcess: boolean;
+  tempDirectoryPath: string;
+  tempDirectoryWritable: boolean;
+  tempDirectoryError: string | null;
   dotNetDiagnostics: DotNetDiagnosticsDto;
   linuxProcess: LinuxProcessSecurityDto;
   linuxContainer: LinuxContainerSecurityDto;

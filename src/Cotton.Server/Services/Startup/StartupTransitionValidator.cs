@@ -13,7 +13,7 @@ namespace Cotton.Server.Services.Startup
 {
     internal class StartupTransitionValidator(
         CottonDbContext _dbContext,
-        ILogger<StartupTransitionValidator> _logger) : IStartupTransitionValidator
+        ILogger<StartupTransitionValidator> _logger) : IStartupCheck
     {
         public async Task<StartupBlocker?> ValidateAsync(CancellationToken cancellationToken)
         {

@@ -21,9 +21,7 @@ export const RecentFileItem: React.FC<RecentFileItemProps> = ({ file, t }) => {
         file.name,
         file.contentType,
         {
-          extensionLabelMaxLength: 3,
-          hideLongExtensionLabel: true,
-          hideInvalidExtensionLabel: true,
+          hideExtensionLabel: true,
         },
       ),
     [file.previewHashEncryptedHex, file.name, file.contentType],

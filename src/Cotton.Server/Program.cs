@@ -203,7 +203,7 @@ namespace Cotton.Server
             builder.Services.AddHostedService<AppVersionTrackerService>();
 
             var app = builder.Build();
-            StartupBlocker? startupBlocker = await ValidateStartupTransitionsAsync(app);
+            StartupBlocker? startupBlocker = await ValidateStartupAsync(app);
             if (startupBlocker is not null)
             {
                 await app.DisposeAsync();
@@ -231,10 +231,10 @@ namespace Cotton.Server
             await app.RunAsync();
         }
 
-        private static async Task<StartupBlocker?> ValidateStartupTransitionsAsync(WebApplication app)
+        private static async Task<StartupBlocker?> ValidateStartupAsync(WebApplication app)
         {
             using IServiceScope scope = app.Services.CreateScope();
-            var validator = scope.ServiceProvider.GetRequiredService<IStartupTransitionValidator>();
+            var validator = scope.ServiceProvider.GetRequiredService<IStartupPreflightValidator>();
             return await validator.ValidateAsync(CancellationToken.None);
         }
     }
