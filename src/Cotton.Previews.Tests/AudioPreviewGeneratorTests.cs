@@ -17,7 +17,7 @@ public class AudioPreviewGeneratorTests
     {
         var generator = new AudioPreviewGenerator();
 
-        Assert.That(generator.Version, Is.EqualTo(3));
+        Assert.That(generator.Version, Is.EqualTo(4));
     }
 
     [Test]

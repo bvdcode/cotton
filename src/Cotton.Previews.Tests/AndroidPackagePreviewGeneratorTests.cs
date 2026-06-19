@@ -21,7 +21,7 @@ public class AndroidPackagePreviewGeneratorTests
     [Test]
     public void Version_ForcesReprocessingAfterDeclaredIconFallbackChange()
     {
-        Assert.That(_generator.Version, Is.EqualTo(4));
+        Assert.That(_generator.Version, Is.EqualTo(5));
     }
 
     [Test]
