@@ -8,7 +8,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity;
 /// </summary>
 public interface IDatabaseIntegrityDescriptorRegistry
 {
-    /// <summary>Gets all registered descriptors in deterministic order for diagnostics and bridge backfill.</summary>
+    /// <summary>Gets all registered descriptors in deterministic order for diagnostics.</summary>
     IReadOnlyCollection<IDatabaseIntegrityDescriptor> All { get; }
 
     /// <summary>Attempts to find the descriptor that protects the supplied EF entity type.</summary>

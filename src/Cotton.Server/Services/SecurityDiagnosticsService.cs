@@ -151,21 +151,9 @@ namespace Cotton.Server.Services
                 {
                     Code = "db-integrity-unsigned-rows",
                     Severity = "critical",
-                    Message = $"{databaseIntegrity.UnsignedProtectedRows} protected database rows are missing valid integrity signatures. Run the bridge release backfill before trusting this instance.",
+                    Message = $"{databaseIntegrity.UnsignedProtectedRows} protected database rows are missing valid integrity signatures. Restore the affected rows from a trusted backup or run the required transition version before upgrading.",
                 });
             }
-
-            if (!databaseIntegrity.BridgeBackfillEnabled)
-            {
-                return;
-            }
-
-            warnings.Add(new SecurityDiagnosticWarningDto
-            {
-                Code = "db-integrity-bridge-mode",
-                Severity = "warning",
-                Message = "Database integrity bridge mode is enabled for this upgrade window. Existing rows are being signed automatically on startup. Disable bridge mode after the upgrade window so missing or invalid signatures become hard failures.",
-            });
         }
 
         private static void AddPublicInstanceWarning(

@@ -9,7 +9,7 @@ This is *tamper evidence*, not tamper prevention. It does not stop someone with 
 The subsystem is split across two assemblies:
 
 - `Cotton.Database/Integrity/` holds the minimal, EF-facing contract: the shadow-column names (`DatabaseIntegrityColumns`) and the save-time signer interface (`IDatabaseIntegrityChangeSigner`). The database project deliberately knows *nothing* about which fields are protected or how the key is derived — it only knows that two shadow columns exist and that "someone" signs pending changes before save.
-- `Cotton.Server/Services/DatabaseIntegrity/` holds the full implementation: descriptors (per-entity policy), the canonical writer, the key provider, the protector (the actual HMAC), the save-time signer, the read-time verifier, the file-graph verifier, the rollout bridge, failure reporting, and diagnostics.
+- `Cotton.Server/Services/DatabaseIntegrity/` holds the full implementation: descriptors (per-entity policy), the canonical writer, the key provider, the protector (the actual HMAC), the save-time signer, the read-time verifier, the file-graph verifier, failure reporting, and diagnostics.
 
 Two metadata columns are added to every protected table. Their names are centralized in `src/Cotton.Database/Integrity/DatabaseIntegrityColumns.cs`:
 
@@ -20,7 +20,7 @@ Two metadata columns are added to every protected table. Their names are central
 | `VersionColumn` | `integrity_version` | DB column (PostgreSQL `integer`, nullable) |
 | `MacColumn` | `integrity_mac` | DB column (PostgreSQL `bytea`, nullable) |
 
-Both are mapped as **EF shadow properties** (no CLR property on the entity), so they never appear in DTOs and cannot be accidentally set by domain code. Both are **nullable**, which is what makes the rollout bridge and legacy-row tolerance possible (see *Bridge mode — backfilling legacy rows* below).
+Both are mapped as **EF shadow properties** (no CLR property on the entity), so they never appear in DTOs and cannot be accidentally set by domain code. Both remain nullable at the database layer for migration compatibility and diagnostics, but strict runtime verification treats missing metadata on a protected row as an integrity failure.
 
 ```mermaid
 flowchart LR
@@ -60,15 +60,15 @@ flowchart LR
 | `DatabaseIntegrityChangeSigner` | `src/Cotton.Server/Services/DatabaseIntegrity/DatabaseIntegrityChangeSigner.cs` | scoped | Signs Added/Modified protected entities at save |
 | `DatabaseIntegrityVerifier` | `src/Cotton.Server/Services/DatabaseIntegrity/DatabaseIntegrityVerifier.cs` | scoped | Verifies one tracked entity at a read boundary |
 | `FileGraphIntegrityVerifier` | `src/Cotton.Server/Services/DatabaseIntegrity/FileGraphIntegrityVerifier.cs` | scoped | Verifies the file metadata/content graph |
-| `DatabaseIntegrityBridgeBackfillService` | `src/Cotton.Server/Services/DatabaseIntegrity/DatabaseIntegrityBridgeBackfillService.cs` | scoped | Signs legacy/unsigned rows at startup |
 | `DatabaseIntegrityFailureReporter` | `src/Cotton.Server/Services/DatabaseIntegrity/DatabaseIntegrityFailureReporter.cs` | singleton + hosted | Async, deduped admin notifications |
 | `NullDatabaseIntegrityFailureReporter` | `src/Cotton.Server/Services/DatabaseIntegrity/NullDatabaseIntegrityFailureReporter.cs` | singleton | No-op fallback reporter |
 | `DatabaseIntegrityFailure` | `src/Cotton.Server/Services/DatabaseIntegrity/DatabaseIntegrityFailure.cs` | record | Immutable failure event |
 | `DatabaseIntegrityException` | `src/Cotton.Server/Services/DatabaseIntegrity/DatabaseIntegrityException.cs` | exception | Thrown when a row fails verification |
 | `DatabaseIntegrityDiagnosticsService` | `src/Cotton.Server/Services/DatabaseIntegrity/DatabaseIntegrityDiagnosticsService.cs` | scoped | Coverage/rollout counts for security check-up |
-| `DatabaseIntegrityApplicationExtensions` | `src/Cotton.Server/Extensions/DatabaseIntegrityApplicationExtensions.cs` | — | Runs the bridge backfill during startup |
+| `StartupTransitionValidator` | `src/Cotton.Server/Services/Startup/StartupTransitionValidator.cs` | scoped | Blocks unsafe version jumps before the app starts serving |
+| `StartupBlockedServer` | `src/Cotton.Server/Services/Startup/StartupBlockedServer.cs` | static | Serves the SPA and startup status endpoint when startup is blocked |
 
-DI registration lives in `AddDatabaseIntegrity()` in `src/Cotton.Server/Extensions/ServiceCollectionExtensions.cs`, called from `src/Cotton.Server/Program.cs` (line 199). Note the lifetimes: the key provider, protector, registry, and all 14 descriptors are **singletons** (stateless or holding the immutable key); the signer, verifier, bridge, diagnostics, and `FileGraphIntegrityVerifier` are **scoped** (they touch the per-request `CottonDbContext`). The failure reporter is registered once as a concrete singleton (`DatabaseIntegrityFailureReporter`), re-exposed as `IDatabaseIntegrityFailureReporter` resolving to the same instance, and registered a third time via `AddHostedService` so its background drain loop runs.
+DI registration lives in `AddDatabaseIntegrity()` in `src/Cotton.Server/Extensions/ServiceCollectionExtensions.cs`, called from `src/Cotton.Server/Program.cs`. Note the lifetimes: the key provider, protector, registry, and all descriptors are **singletons** (stateless or holding the immutable key); the signer, verifier, diagnostics, and `FileGraphIntegrityVerifier` are **scoped** (they touch the per-request `CottonDbContext`). The failure reporter is registered once as a concrete singleton (`DatabaseIntegrityFailureReporter`), re-exposed as `IDatabaseIntegrityFailureReporter` resolving to the same instance, and registered a third time via `AddHostedService` so its background drain loop runs.
 
 ## The descriptor model
 
@@ -229,7 +229,7 @@ Signing only guarantees Cotton never *writes* an unsigned change. Read-time veri
 1. Resolves the descriptor; if none, returns (the entity is unprotected — a no-op).
 2. Requires the entity to be **tracked** (not `Detached`) — the MAC/version live in EF shadow properties on the tracked entry, so a detached DTO-like instance has no metadata to check. A detached entity throws `InvalidOperationException`.
 3. Reads `IntegrityMac` and `IntegrityVersion` from the tracked entry.
-4. **Legacy tolerance:** if either is `null`, it logs at Debug and *allows* the row. This is the rollout-window allowance so old, not-yet-backfilled rows do not brick authentication during the transition (see *Bridge mode — backfilling legacy rows*).
+4. If either value is `null`, it logs Error and calls `Fail`. Strict releases do not trust unsigned protected rows.
 5. If the stored version ≠ the descriptor's `SchemaVersion`, it logs Error and calls `Fail`.
 6. If `_protector.Verify` returns false, it logs Error and calls `Fail`.
 
@@ -244,9 +244,7 @@ sequenceDiagram
     participant FR as FailureReporter
     H->>V: RequireValid(ctx, entity, "auth.login")
     V->>Ctx: read IntegrityMac / IntegrityVersion (shadow)
-    alt mac or version null (legacy row)
-        V-->>H: allow (log debug)
-    else version mismatch OR mac invalid
+    alt mac null OR version null OR version mismatch OR mac invalid
         V->>FR: Report(DatabaseIntegrityFailure)
         V-->>H: throw DatabaseIntegrityException
     else valid
@@ -302,39 +300,25 @@ Callers of the file-graph verifier:
 
 As the class remarks note, folder *listing* does not walk every child signature — verification happens only when Cotton actually opens a specific file, archive entry, preview, or stream.
 
-## Bridge mode — backfilling legacy rows
+## Startup transition guard
 
-Integrity was added to an existing product, so deployed databases contain rows that predate the `integrity_*` columns (the columns are nullable and start `NULL`). The bridge is the one-release migration that signs those rows on startup so they become trusted.
+Strict integrity releases do not sign unsigned legacy rows at startup. They expect the transition release to have already run long enough to create trustworthy signatures. `StartupTransitionValidator` runs before the normal app starts serving and evaluates code-defined rules against the recorded application version history in `app_versions`.
 
-`DatabaseIntegrityApplicationExtensions.ApplyDatabaseIntegrityBridgeBackfillAsync` is awaited from `Program.cs` (line 220) immediately after `app.ApplyMigrations<CottonDbContext>()` (line 219) and before the app starts serving (`await app.RunAsync()` on line 228). It creates a scope and calls `IDatabaseIntegrityBridgeBackfillService.BackfillUnsignedPhaseOneRowsAsync`.
+The current rule blocks stable `0.5.0` and newer unless the database has evidence of a prior `0.4.33` run below `0.5.0`. This keeps clean installs available, avoids applying the stable rule to prerelease builds such as `0.5.0-alpha.*`, and gives operators a direct message instead of letting the first protected read fail later.
 
-`DatabaseIntegrityBridgeBackfillService.BackfillUnsignedPhaseOneRowsAsync`:
-
-1. Computes a `BridgeState`: across all descriptors, counts **missing** rows (MAC `NULL` *or* version `NULL`) and **stale** rows (both non-null, but version ≠ descriptor `SchemaVersion`).
-2. If there are no missing and no stale rows → returns `0` (nothing to do).
-3. If there are any **stale** rows → throws `InvalidOperationException`. This is a hard stop: a non-null-but-wrong version means the signed payload format is known to have changed, and re-signing would *bless* whatever is currently in the row (possibly tampered data). Cotton refuses rather than silently re-sign existing metadata.
-4. Otherwise it opens a transaction and, for each descriptor, batches through unsigned rows (`BatchSize = 250`): for each row it computes the MAC via the protector and writes `integrity_version` + `integrity_mac` with a parameterized raw `UPDATE` keyed on the entity's primary key, asserting exactly one row is updated (otherwise `InvalidOperationException`). After each batch the change tracker is cleared. It logs a Warning per entity type and commits.
-
-The raw-SQL update path (rather than EF `Update` + `SaveChanges`) is used to set only the two shadow columns without re-validating or re-touching the entity, and it resolves real column/table names through the EF model (`Model.FindEntityType`, `FindPrimaryKey`, `StoreObjectIdentifier.Table`, `IProperty.GetColumnName`), quoting identifiers for PostgreSQL (double-quote escaping via `QuoteIdentifier`). Generic `Set<TEntity>()` queries are reached via reflected open generic methods (`LoadUnsignedBatchCoreAsync<TEntity>`, `CountMissingRowsCoreAsync<TEntity>`, `CountStaleRowsCoreAsync<TEntity>`) because descriptors are discovered at runtime.
-
-Note the asymmetry in what counts as "load a batch to sign": `LoadUnsignedBatchCoreAsync` selects rows where MAC is `NULL` **or** version ≠ `SchemaVersion`. But because step 3 already hard-stops when any stale (non-null/wrong-version) rows exist, in practice the bridge only ever signs genuinely missing rows; the version predicate in the loader is a belt-and-braces filter.
+When a rule blocks startup, Cotton disposes the normal host and starts `StartupBlockedServer`. That server serves the SPA, exposes `GET /api/v1/startup/status`, returns HTTP 503 for other API calls, and lets the frontend show the rule-provided title, message, current version, required version range, and last recorded database version.
 
 ```mermaid
 flowchart TD
-    Start[Startup: ApplyDatabaseIntegrityBridgeBackfillAsync] --> Count[Count missing + stale rows per descriptor]
-    Count --> None{none?}
-    None -- yes --> Done[return 0]
-    None -- no --> Stale{any stale - wrong version?}
-    Stale -- yes --> Throw[throw InvalidOperationException - refuse to re-sign, possible tampering]
-    Stale -- no --> Tx[open transaction]
-    Tx --> Loop[for each descriptor: batch 250 unsigned rows]
-    Loop --> Sign[Sign row, raw UPDATE integrity_version + integrity_mac]
-    Sign --> More{more rows?}
-    More -- yes --> Loop
-    More -- no --> Commit[commit + log warning]
+    Start[Startup] --> Validate[Validate startup transition rules]
+    Validate --> Clean{clean database?}
+    Clean -- yes --> Run[run normal app]
+    Clean -- no --> Required{required prior version found?}
+    Required -- yes --> Run
+    Required -- no --> Block[start blocked server]
+    Block --> Status[GET /api/v1/startup/status]
+    Status --> Spa[frontend blocked screen]
 ```
-
-There is **no configuration flag** that toggles bridge mode or integrity overall in the current code. `AddDatabaseIntegrity()` is unconditional in `Program.cs`, the bridge backfill is always invoked at startup, and `DatabaseIntegrityDiagnosticsService` hardcodes `Enabled = true` and `BridgeBackfillEnabled = true`. The "disable bridge mode after the upgrade window" guidance surfaced in the security check-up (and the README) describes the *intended* operational lifecycle, but as of this code there is no switch to disable it — see *Non-obvious design decisions and gotchas* below.
 
 ## Failure handling and admin notification
 
@@ -360,11 +344,11 @@ When a read boundary (or the save-time original-state check, or the file-graph v
 | Field | Value in current code |
 |---|---|
 | `Enabled` | `true` (hardcoded) |
-| `BridgeBackfillEnabled` | `true` (hardcoded) |
+| `BridgeBackfillEnabled` | `false` (hardcoded) |
 | `ProtectedEntityTypes` | `_descriptors.All.Count` (14) |
 | `UnsignedProtectedRows` | summed unsigned/mis-versioned row count |
 
-`SecurityDiagnosticsService` (`src/Cotton.Server/Services/SecurityDiagnosticsService.cs`) consumes this via `AddDatabaseIntegrityWarnings` and emits two warnings: a **critical** `db-integrity-unsigned-rows` warning when `UnsignedProtectedRows > 0` (message: "… protected database rows are missing valid integrity signatures. Run the bridge release backfill before trusting this instance."), and a **warning**-level `db-integrity-bridge-mode` whenever `BridgeBackfillEnabled` is true (which, given the hardcoding, is always shown) advising operators to disable bridge mode after the upgrade window.
+`SecurityDiagnosticsService` (`src/Cotton.Server/Services/SecurityDiagnosticsService.cs`) consumes this via `AddDatabaseIntegrityWarnings` and emits a **critical** `db-integrity-unsigned-rows` warning when `UnsignedProtectedRows > 0`. Operators should restore the affected rows from a trusted backup or run the required transition version before upgrading.
 
 ## Schema and migrations
 
@@ -383,8 +367,8 @@ Each migration's `Down` drops both columns from the same tables.
 - **Key lifetime / disposal.** The integrity key lives only in process memory and is zeroed on `Dispose`. The protector and key provider are singletons, so the key is derived once per process. Rotating the master key would invalidate every existing MAC (they would all fail verification), so master-key rotation requires re-signing — there is no MAC re-keying path in this subsystem today.
 - **Constant-time comparison.** `Verify` uses `CryptographicOperations.FixedTimeEquals`, avoiding MAC-comparison timing oracles. Payload and recomputed-MAC buffers are zeroed after use.
 - **Temporary-key guard.** Signing before EF assigns a real primary key would create an unverifiable MAC; the signer hard-throws `InvalidOperationException` instead, surfacing programming errors (e.g. signing a graph with unassigned ids) rather than silent corruption.
-- **Original-state laundering protection.** On `Modified`, the signer re-verifies the *original* row before overwriting it (boundary `save.original-state`). Without this, an attacker could tamper with a row directly and then trigger any benign update to re-sign it with a valid MAC. This check is skipped only when the original row carried no MAC/version at all (a legacy row).
-- **Legacy-row tolerance is a deliberate, time-bounded weakness.** Both the read verifier (null MAC/version → allow) and the bridge (sign missing rows) accept unsigned rows during the rollout window. Until the bridge backfills (or while the allowance stands), a freshly inserted row written *outside* Cotton with `NULL` integrity columns would be *trusted* at read time. The security check-up flags this via `db-integrity-unsigned-rows`. Operators should confirm zero unsigned protected rows after upgrading.
+- **Original-state laundering protection.** On `Modified`, the signer re-verifies the *original* row before overwriting it (boundary `save.original-state`). Without this, an attacker could tamper with a row directly and then trigger any benign update to re-sign it with a valid MAC.
+- **Unsigned rows are hard failures.** The read verifier and save-time original-state check reject missing MAC/version metadata on protected rows. The security check-up flags unsigned or stale protected rows via `db-integrity-unsigned-rows` so operators can fix the database before users hit protected read paths.
 - **DateTime precision.** Signing truncates to microseconds to match PostgreSQL; any code that compares or rounds timestamps differently could otherwise cause spurious verification failures.
 - **Notification queue saturation.** Under a flood of failures the bounded channel drops notifications (logged at Error), but enforcement is unaffected because the request already failed. The 6-hour dedupe prevents a single tampered hot row from drowning the queue.
 - **Structural-only attacks.** Per-row MACs do not protect relationships; `FileGraphIntegrityVerifier` adds explicit structural checks (FK consistency, dense zero-based chunk ordering, hash and total-size agreement) precisely to close that gap on the content-serving path.
@@ -393,10 +377,9 @@ Each migration's `Down` drops both columns from the same tables.
 ## Non-obvious design decisions and gotchas
 
 - **`EntityName` is a stable descriptor identifier, not the EF table name.** It happens to match the EF table names today, but it is signed payload data and changing it would invalidate every MAC for that entity.
-- **Schema version vs. format magic are different versions.** `Cotton.DbIntegrity.Row.v1` is the canonical-writer format marker; each descriptor's `SchemaVersion` is the per-entity protected-field-set version (e.g. `server_settings` is at 2). Bumping a descriptor's `SchemaVersion` is the correct way to evolve its field set, and old rows at the previous version become *stale* — which the bridge refuses to auto-resign and the verifier rejects.
-- **No global enable/disable or bridge toggle exists in code.** Despite the security-check-up message and README language about disabling bridge mode after the upgrade window, `AddDatabaseIntegrity()` and the startup backfill are unconditional and the diagnostics flags are hardcoded `true`. Treat "disable bridge mode" as forward-looking operational guidance, not a current setting. This is a **README/diagnostics-vs-code discrepancy** worth noting for operators.
+- **Schema version vs. format magic are different versions.** `Cotton.DbIntegrity.Row.v1` is the canonical-writer format marker; each descriptor's `SchemaVersion` is the per-entity protected-field-set version (e.g. `server_settings` is at 2). Bumping a descriptor's `SchemaVersion` is the correct way to evolve its field set, and old rows at the previous version become *stale* — the verifier rejects them.
+- **No global enable/disable or bridge toggle exists in code.** `AddDatabaseIntegrity()` is unconditional in `Program.cs`, and startup transition rules are code-defined rather than operator-configurable.
 - **The signer is an optional DB-layer dependency.** `CottonDbContext` works without it (null-conditional call). Any non-server consumer of the context (migrations tooling, certain tests) will *not* sign — which is fine for those paths but means signing is a property of the server composition, not the context itself.
-- **Bridge uses raw parameterized SQL,** resolving column/table names from the EF model and quoting identifiers, to update only the two shadow columns without materializing or re-validating the entity through normal save. It asserts that each `UPDATE` affects exactly one row.
 - **`Chunk` keys on its content hash,** not a GUID, because chunks are content-addressed; this is the only descriptor whose entity key is non-GUID (`Hasher.ToHexStringHash(Chunk.Hash)`).
 - **`ExtendedRefreshToken` is not a `Cotton.Database.Models` type.** It is the `EasyExtensions.EntityFrameworkCore.Database` refresh-token base type, mapped to the `refresh_tokens` table; its descriptor still treats it like any other protected entity.
 

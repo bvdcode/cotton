@@ -1393,8 +1393,8 @@
     },
     "server": {
       "location": {
-        "localNetwork": "\u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e\u0457 \u043c\u0435\u0440\u0435\u0436\u0456",
-        "unknown": "\u043d\u0435\u0432\u0456\u0434\u043e\u043c\u043e\u0433\u043e \u043c\u0456\u0441\u0446\u044f"
+        "localNetwork": "локальної мережі",
+        "unknown": "невідомого місця"
       },
       "failedLoginAttempt": {
         "title": "Невдала спроба входу",
@@ -3234,7 +3234,6 @@
         "running-as-root": "Віддалене виконання коду відбуватиметься від імені root у контейнері, що збільшує шкоду для змонтованих томів і допоміжних процесів.",
         "process-hardening-failed": "Cotton запитав захищення процесу, але процес усе одно запустився без очікуваного захисту від дампів чи ptrace.",
         "db-integrity-unsigned-rows": "Unsigned protected rows can be modified directly in PostgreSQL without Cotton detecting the tampering at read boundaries.",
-        "db-integrity-bridge-mode": "During the bridge window, missing signatures are tolerated so existing installations can be signed. Leaving it on permanently weakens the database tamper boundary.",
         "root-filesystem-writable": "A writable container root filesystem gives exploited code more places to drop tools, alter runtime files, or persist until the container is recreated.",
         "docker-socket-mounted": "The Docker socket lets code inside the web container create privileged containers, mount host paths, and take over the host.",
         "host-pid-namespace": "Sharing the host PID namespace exposes host processes through procfs and makes process-memory attacks easier to aim.",
@@ -3259,8 +3258,7 @@
         "seccomp-disabled": "Run with a seccomp profile enabled (avoid seccomp=unconfined) to restrict the syscalls available to the process.",
         "running-as-root": "Run the container as a non-root user; the official image runs as the unprivileged app user by default.",
         "process-hardening-failed": "Process hardening was requested but could not be applied — check the container capabilities/permissions and the startup logs.",
-        "db-integrity-unsigned-rows": "Let the database-integrity bridge backfill finish signing legacy rows (keep the instance running), then disable bridge mode.",
-        "db-integrity-bridge-mode": "Bridge mode is a transitional database-integrity migration state managed by Cotton itself. It is finalized by upgrading to the Cotton release that completes the integrity migration — there is no operator action to take.",
+        "db-integrity-unsigned-rows": "Restore the affected rows from a trusted backup or run the required transition version before upgrading.",
         "root-filesystem-writable": "Run the container with a read-only root filesystem (read_only: true) and mount only the storage volume as writable.",
         "docker-socket-mounted": "Do not mount the Docker socket (/var/run/docker.sock) into the container.",
         "host-pid-namespace": "Do not share the host PID namespace (avoid pid: host) so the process cannot observe other host processes.",
@@ -3462,5 +3460,20 @@
     "copyKey": "Скопіювати ключ",
     "copied": "Скопійовано",
     "copyFailed": "Не вдалося скопіювати ключ"
+  },
+  "startup": {
+    "checking": {
+      "title": "Checking startup requirements",
+      "caption": "Cotton is validating this server before opening the app."
+    },
+    "caption": "Cotton cannot finish startup until this requirement is resolved.",
+    "fallbackTitle": "Startup blocked",
+    "fallbackMessage": "Cotton cannot start until the required maintenance step is completed.",
+    "fields": {
+      "currentVersion": "Current version",
+      "requiredVersion": "Required version",
+      "requiredVersionRange": "Required previous version",
+      "lastRecordedVersion": "Last recorded version"
+    }
   }
 }

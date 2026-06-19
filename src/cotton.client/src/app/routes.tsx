@@ -15,6 +15,7 @@ import { AppLayout, PublicLayout } from "./layouts";
 import { Folder, Home, Delete } from "@mui/icons-material";
 import { SetupGate } from "../features/settings/SetupGate";
 import { unlockApi, type UnlockStatusResponse } from "../shared/api/unlockApi";
+import { startupApi, type StartupStatusResponse } from "../shared/api/startupApi";
 
 const FilesPage = lazy(() =>
   import("../pages/files").then((module) => ({ default: module.FilesPage })),
@@ -145,6 +146,11 @@ const SetupWizardPage = lazy(() =>
     default: module.SetupWizardPage,
   })),
 );
+const StartupBlockedPage = lazy(() =>
+  import("../pages/startup/StartupBlockedPage").then((module) => ({
+    default: module.StartupBlockedPage,
+  })),
+);
 
 const withRouteSuspense = (element: JSX.Element) => (
   <Suspense fallback={<Loader />}>{element}</Suspense>
@@ -183,8 +189,13 @@ const publicRoutes: RouteConfig[] = [
 ];
 
 export function AppRoutes() {
-  const { t } = useTranslation(["login", "unlock"]);
+  const { t } = useTranslation(["login", "unlock", "startup"]);
   const location = useLocation();
+  const [startupStatus, setStartupStatus] =
+    useState<StartupStatusResponse | null>(null);
+  const [startupCheckState, setStartupCheckState] = useState<
+    "checking" | "ready" | "blocked"
+  >("checking");
   const [lockStatus, setLockStatus] = useState<UnlockStatusResponse | null>(null);
   const [lockCheckState, setLockCheckState] = useState<
     "checking" | "locked" | "unlocked"
@@ -199,6 +210,31 @@ export function AppRoutes() {
   } = useAuth();
 
   useEffect(() => {
+    let cancelled = false;
+
+    startupApi
+      .getStatus()
+      .then((status) => {
+        if (cancelled) return;
+        setStartupStatus(status);
+        setStartupCheckState(status.blocked ? "blocked" : "ready");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setStartupStatus(null);
+        setStartupCheckState("ready");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (startupCheckState !== "ready") {
+      return;
+    }
+
     let cancelled = false;
 
     unlockApi
@@ -217,7 +253,7 @@ export function AppRoutes() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [startupCheckState]);
 
   const isPublicRoute = publicRoutes.some((route) =>
     Boolean(
@@ -233,6 +269,31 @@ export function AppRoutes() {
     if (isPublicRoute) return;
     ensureAuth();
   }, [ensureAuth, isPublicRoute, lockCheckState]);
+
+  if (startupCheckState === "checking") {
+    return (
+      <Loader
+        overlay={true}
+        title={t("checking.title", { ns: "startup" })}
+        caption={t("checking.caption", { ns: "startup" })}
+      />
+    );
+  }
+
+  if (startupCheckState === "blocked") {
+    return (
+      <Routes>
+        <Route element={<PublicLayout />}>
+          <Route
+            path="*"
+            element={withRouteSuspense(
+              <StartupBlockedPage blocker={startupStatus?.blocker ?? null} />,
+            )}
+          />
+        </Route>
+      </Routes>
+    );
+  }
 
   if (lockCheckState === "checking") {
     return (

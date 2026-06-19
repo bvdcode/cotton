@@ -109,11 +109,10 @@ public string GetScopedPointerStorageKey()
 
 ## How it works — startup auto-restore
 
-Auto-restore is wired in `src/Cotton.Server/Program.cs`, after `app.MapControllers()` / `MapFallbackToFile`, after migrations and the database-integrity backfill, inside a service scope, executed **synchronously** before SignalR hub mapping and `app.RunAsync()`:
+Auto-restore is wired in `src/Cotton.Server/Program.cs`, after startup transition validation, after `app.MapControllers()` / `MapFallbackToFile`, after migrations, inside a service scope, executed **synchronously** before SignalR hub mapping and `app.RunAsync()`:
 
 ```csharp
 app.ApplyMigrations<CottonDbContext>();
-await app.ApplyDatabaseIntegrityBridgeBackfillAsync();
 using (IServiceScope scope = app.Services.CreateScope())
 {
     var autoRestore = scope.ServiceProvider.GetRequiredService<IDatabaseAutoRestoreService>();

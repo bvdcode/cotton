@@ -3142,7 +3142,6 @@
         "running-as-root": "RCE будет выполняться как root внутри контейнера, что увеличивает ущерб для примонтированных volume и вспомогательных процессов.",
         "process-hardening-failed": "Cotton запросил hardening процесса, но процесс стартовал без ожидаемой защиты от dump или ptrace.",
         "db-integrity-unsigned-rows": "Неподписанные защищённые строки можно изменить напрямую в PostgreSQL так, что Cotton не обнаружит подмену на границах чтения.",
-        "db-integrity-bridge-mode": "Во время bridge-окна отсутствующие подписи допускаются, чтобы существующие установки успели подписаться. Если оставить этот режим навсегда, граница защиты от подмены БД будет слабее.",
         "root-filesystem-writable": "Writable rootfs даёт скомпрометированному коду больше мест, куда можно положить инструменты, изменить runtime-файлы или пережить часть жизненного цикла контейнера.",
         "docker-socket-mounted": "Docker socket позволяет коду внутри web-контейнера создавать привилегированные контейнеры, монтировать host paths и фактически захватить host.",
         "host-pid-namespace": "Общий host PID namespace открывает host-процессы через procfs и упрощает атаки на память процессов.",
@@ -3167,8 +3166,7 @@
         "seccomp-disabled": "Run with a seccomp profile enabled (avoid seccomp=unconfined) to restrict the syscalls available to the process.",
         "running-as-root": "Run the container as a non-root user; the official image runs as the unprivileged app user by default.",
         "process-hardening-failed": "Process hardening was requested but could not be applied — check the container capabilities/permissions and the startup logs.",
-        "db-integrity-unsigned-rows": "Let the database-integrity bridge backfill finish signing legacy rows (keep the instance running), then disable bridge mode.",
-        "db-integrity-bridge-mode": "Bridge mode is a transitional database-integrity migration state managed by Cotton itself. It is finalized by upgrading to the Cotton release that completes the integrity migration — there is no operator action to take.",
+        "db-integrity-unsigned-rows": "Restore the affected rows from a trusted backup or run the required transition version before upgrading.",
         "root-filesystem-writable": "Run the container with a read-only root filesystem (read_only: true) and mount only the storage volume as writable.",
         "docker-socket-mounted": "Do not mount the Docker socket (/var/run/docker.sock) into the container.",
         "host-pid-namespace": "Do not share the host PID namespace (avoid pid: host) so the process cannot observe other host processes.",
@@ -3495,8 +3493,8 @@
     },
     "server": {
       "location": {
-        "localNetwork": "\u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e\u0439 \u0441\u0435\u0442\u0438",
-        "unknown": "\u043d\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043d\u043e\u0433\u043e \u043c\u0435\u0441\u0442\u043e\u043f\u043e\u043b\u043e\u0436\u0435\u043d\u0438\u044f"
+        "localNetwork": "локальной сети",
+        "unknown": "неизвестного местоположения"
       },
       "failedLoginAttempt": {
         "title": "Неудачная попытка входа",
@@ -3680,5 +3678,20 @@
     "copyKey": "Скопировать ключ",
     "copied": "Скопировано",
     "copyFailed": "Не удалось скопировать ключ"
+  },
+  "startup": {
+    "checking": {
+      "title": "Checking startup requirements",
+      "caption": "Cotton is validating this server before opening the app."
+    },
+    "caption": "Cotton cannot finish startup until this requirement is resolved.",
+    "fallbackTitle": "Startup blocked",
+    "fallbackMessage": "Cotton cannot start until the required maintenance step is completed.",
+    "fields": {
+      "currentVersion": "Current version",
+      "requiredVersion": "Required version",
+      "requiredVersionRange": "Required previous version",
+      "lastRecordedVersion": "Last recorded version"
+    }
   }
 }

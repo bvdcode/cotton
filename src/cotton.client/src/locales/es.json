@@ -1386,7 +1386,7 @@
     "server": {
       "location": {
         "localNetwork": "la red local",
-        "unknown": "una ubicaci\u00f3n desconocida"
+        "unknown": "una ubicación desconocida"
       },
       "failedLoginAttempt": {
         "title": "Intento de inicio de sesión fallido",
@@ -3012,7 +3012,6 @@
         "running-as-root": "Una RCE se ejecutaría como root dentro del contenedor, aumentando el daño contra volúmenes montados y procesos auxiliares.",
         "process-hardening-failed": "Cotton pidió endurecimiento del proceso, pero el proceso arrancó sin la protección esperada contra dump o ptrace.",
         "db-integrity-unsigned-rows": "Unsigned protected rows can be modified directly in PostgreSQL without Cotton detecting the tampering at read boundaries.",
-        "db-integrity-bridge-mode": "During the bridge window, missing signatures are tolerated so existing installations can be signed. Leaving it on permanently weakens the database tamper boundary.",
         "root-filesystem-writable": "A writable container root filesystem gives exploited code more places to drop tools, alter runtime files, or persist until the container is recreated.",
         "docker-socket-mounted": "The Docker socket lets code inside the web container create privileged containers, mount host paths, and take over the host.",
         "host-pid-namespace": "Sharing the host PID namespace exposes host processes through procfs and makes process-memory attacks easier to aim.",
@@ -3037,8 +3036,7 @@
         "seccomp-disabled": "Run with a seccomp profile enabled (avoid seccomp=unconfined) to restrict the syscalls available to the process.",
         "running-as-root": "Run the container as a non-root user; the official image runs as the unprivileged app user by default.",
         "process-hardening-failed": "Process hardening was requested but could not be applied — check the container capabilities/permissions and the startup logs.",
-        "db-integrity-unsigned-rows": "Let the database-integrity bridge backfill finish signing legacy rows (keep the instance running), then disable bridge mode.",
-        "db-integrity-bridge-mode": "Bridge mode is a transitional database-integrity migration state managed by Cotton itself. It is finalized by upgrading to the Cotton release that completes the integrity migration — there is no operator action to take.",
+        "db-integrity-unsigned-rows": "Restore the affected rows from a trusted backup or run the required transition version before upgrading.",
         "root-filesystem-writable": "Run the container with a read-only root filesystem (read_only: true) and mount only the storage volume as writable.",
         "docker-socket-mounted": "Do not mount the Docker socket (/var/run/docker.sock) into the container.",
         "host-pid-namespace": "Do not share the host PID namespace (avoid pid: host) so the process cannot observe other host processes.",
@@ -3446,5 +3444,20 @@
     "copyKey": "Copiar clave",
     "copied": "Copiado",
     "copyFailed": "No se pudo copiar la clave"
+  },
+  "startup": {
+    "checking": {
+      "title": "Checking startup requirements",
+      "caption": "Cotton is validating this server before opening the app."
+    },
+    "caption": "Cotton cannot finish startup until this requirement is resolved.",
+    "fallbackTitle": "Startup blocked",
+    "fallbackMessage": "Cotton cannot start until the required maintenance step is completed.",
+    "fields": {
+      "currentVersion": "Current version",
+      "requiredVersion": "Required version",
+      "requiredVersionRange": "Required previous version",
+      "lastRecordedVersion": "Last recorded version"
+    }
   }
 }

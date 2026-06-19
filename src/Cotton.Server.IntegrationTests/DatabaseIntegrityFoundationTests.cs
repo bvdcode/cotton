@@ -3,6 +3,7 @@
 
 using Cotton.Autoconfig.Extensions;
 using Cotton.Database;
+using Cotton.Database.Integrity;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Services.DatabaseIntegrity;
@@ -11,6 +12,7 @@ using EasyExtensions.EntityFrameworkCore.Database;
 using EasyExtensions.Models.Enums;
 using NUnit.Framework;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -128,6 +130,75 @@ public sealed class DatabaseIntegrityFoundationTests
         byte[] secondMac = secondProtector.Sign(entity, descriptor);
 
         Assert.That(firstMac, Is.Not.EqualTo(secondMac));
+    }
+
+    [Test]
+    public void Verifier_AcceptsSignedProtectedEntity()
+    {
+        var protector = CreateProtector();
+        var descriptor = new UserIntegrityDescriptor();
+        var user = CreateUser();
+
+        using var dbContext = CreateDbContext();
+        dbContext.Users.Add(user);
+        var signer = new DatabaseIntegrityChangeSigner(
+            protector,
+            new DatabaseIntegrityDescriptorRegistry([descriptor]),
+            NullDatabaseIntegrityFailureReporter.Instance);
+        signer.SignPendingChanges(dbContext);
+        var verifier = CreateVerifier(protector, descriptor);
+
+        Assert.DoesNotThrow(() => verifier.RequireValid(dbContext, user, "test.signed"));
+    }
+
+    [Test]
+    public void Verifier_RejectsUnsignedProtectedEntity()
+    {
+        var protector = CreateProtector();
+        var descriptor = new UserIntegrityDescriptor();
+        var user = CreateUser();
+
+        using var dbContext = CreateDbContext();
+        dbContext.Attach(user);
+        var verifier = CreateVerifier(protector, descriptor);
+
+        Assert.Throws<DatabaseIntegrityException>(() =>
+            verifier.RequireValid(dbContext, user, "test.unsigned"));
+    }
+
+    [Test]
+    public void ChangeSigner_RejectsModifiedEntityWhenOriginalMacDoesNotMatch()
+    {
+        var protector = CreateProtector();
+        var descriptor = new UserIntegrityDescriptor();
+        var tamperedUser = CreateUser();
+        byte[] originalMac = protector.Sign(tamperedUser, descriptor);
+        tamperedUser.Role = UserRole.Admin;
+
+        using var dbContext = CreateDbContext();
+        var entry = dbContext.Attach(tamperedUser);
+        entry.State = EntityState.Unchanged;
+        entry.Property(DatabaseIntegrityColumns.VersionProperty).OriginalValue = descriptor.SchemaVersion;
+        entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue = descriptor.SchemaVersion;
+        entry.Property(DatabaseIntegrityColumns.MacProperty).OriginalValue = originalMac;
+        entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue = originalMac;
+
+        tamperedUser.FirstName = "Legitimate edit";
+        dbContext.ChangeTracker.DetectChanges();
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(entry.State, Is.EqualTo(EntityState.Modified));
+            Assert.That(entry.OriginalValues[nameof(User.Role)], Is.EqualTo(UserRole.Admin));
+            Assert.That(
+                protector.Verify(entry.OriginalValues.ToObject(), descriptor, originalMac),
+                Is.False);
+        }
+        var signer = new DatabaseIntegrityChangeSigner(
+            protector,
+            new DatabaseIntegrityDescriptorRegistry([descriptor]),
+            NullDatabaseIntegrityFailureReporter.Instance);
+
+        Assert.Throws<DatabaseIntegrityException>(() => signer.SignPendingChanges(dbContext));
     }
 
     [Test]
@@ -435,6 +506,38 @@ public sealed class DatabaseIntegrityFoundationTests
     {
         var settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(rootMasterKey);
         return new DatabaseIntegrityProtector(new DatabaseIntegrityKeyProvider(settings));
+    }
+
+    private static CottonDbContext CreateDbContext()
+    {
+        var options = new DbContextOptionsBuilder<CottonDbContext>()
+            .UseNpgsql("Host=localhost;Database=cotton_dev;Username=postgres;Password=postgres")
+            .Options;
+        return new CottonDbContext(options);
+    }
+
+    private static DatabaseIntegrityVerifier CreateVerifier(
+        IDatabaseIntegrityProtector protector,
+        IDatabaseIntegrityDescriptor descriptor)
+    {
+        return new DatabaseIntegrityVerifier(
+            protector,
+            new DatabaseIntegrityDescriptorRegistry([descriptor]),
+            NullDatabaseIntegrityFailureReporter.Instance,
+            NullLogger<DatabaseIntegrityVerifier>.Instance);
+    }
+
+    private static User CreateUser()
+    {
+        return new User
+        {
+            Username = "alice",
+            PasswordPhc = "password",
+            WebDavTokenPhc = "webdav",
+            Role = UserRole.User,
+            Email = "alice@example.test",
+            IsEmailVerified = true
+        };
     }
 
     private static IntegrityTestEntity CreateEntity()

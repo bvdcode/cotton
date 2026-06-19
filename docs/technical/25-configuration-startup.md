@@ -272,13 +272,15 @@ flowchart TD
     K --> L[DI graph: Mediator, Quartz, MemoryCache, SignalR, services, EF DbContext, controllers, AddStreamCipher/AddDatabaseIntegrity/AddChunkServices/AddLayout*/AddWebDav*/AddJwt]
     L --> M[AddAuthHardening + AddHostedService AppVersionTrackerService]
     M --> N[builder.Build]
-    N --> O[Pipeline: UseForwardedHeaders, UseAuthHardening, UseDefaultFiles, MapStaticAssets, UseAuthentication/Authorization/ExceptionHandler, MapControllers, MapFallbackToFile]
-    O --> P[ApplyMigrations CottonDbContext]
-    P --> Q[ApplyDatabaseIntegrityBridgeBackfillAsync]
-    Q --> R[scope: DatabaseAutoRestore.TryRestoreIfEmptyAsync GetAwaiter GetResult]
-    R --> S[same scope: SettingsProvider.GetServerSettings prime cache]
-    S --> T[MapHub EventHub]
-    T --> U[app.RunAsync]
+    N --> O[Validate startup transition rules]
+    O --> P{blocked?}
+    P -- yes --> Q[StartupBlockedServer: SPA + startup/status]
+    P -- no --> R[Pipeline: UseForwardedHeaders, UseAuthHardening, UseDefaultFiles, MapStaticAssets, UseAuthentication/Authorization/ExceptionHandler, MapStartupStatusEndpoint, MapControllers, MapFallbackToFile]
+    R --> S[ApplyMigrations CottonDbContext]
+    S --> T[scope: DatabaseAutoRestore.TryRestoreIfEmptyAsync GetAwaiter GetResult]
+    T --> U[same scope: SettingsProvider.GetServerSettings prime cache]
+    U --> V[MapHub EventHub]
+    V --> W[app.RunAsync]
 ```
 
 ### Step-by-step
@@ -295,9 +297,9 @@ flowchart TD
    - Options binding: `HlsSegmentCacheOptions` ← `HlsSegmentCache` section; `StoragePressureOptions` ← `StoragePressure` section.
    - The large fluent block registers Mediator (`AddMediator`), Quartz jobs (`AddQuartzJobs`), `AddMemoryCache`, SignalR, the HTTP context accessor, and the full service graph (settings, security diagnostics, storage probe, passkey/OIDC/auth, backup/restore, archive/zip, storage-pressure guard, default-user seeder, the storage pipeline processors `CryptoProcessor` + `CompressionProcessor` and `FileStoragePipeline`, the EF `CottonDbContext` via `AddPostgresDbContext` with `UseLazyLoadingProxies = false`, layout services, the PBKDF2 password hash service via `AddPbkdf2PasswordHashService`, controllers). It then chains the project extension methods `AddStreamCipher`, `AddDatabaseIntegrity`, `AddChunkServices`, `AddLayoutPathServices`, `AddLayoutSearchServices`, `AddWebDavServices`, and `AddWebDavAuth` (all defined in `src/Cotton.Server/Extensions/ServiceCollectionExtensions.cs`), and finally `AddJwt` (from the external EasyExtensions packages; `AddPbkdf2PasswordHashService` is likewise external).
    - `builder.Services.AddAuthHardening()` registers the rate limiter and the session-revocation JWT validation hook; `AddHostedService<AppVersionTrackerService>()` registers the background version tracker.
-5. **Middleware pipeline** (order is significant): `UseForwardedHeaders` → `UseAuthHardening` → `UseDefaultFiles` → `MapStaticAssets` → `UseAuthentication` → `UseAuthorization` → `UseExceptionHandler` → `MapControllers` → `MapFallbackToFile("/index.html")` (SPA fallback).
-6. **`ApplyMigrations<CottonDbContext>()`** — migrate-on-startup; EF migrations are applied automatically every boot.
-7. **`ApplyDatabaseIntegrityBridgeBackfillAsync()`** (`src/Cotton.Server/Extensions/DatabaseIntegrityApplicationExtensions.cs`) — in a fresh scope, resolves `IDatabaseIntegrityBridgeBackfillService` and calls `BackfillUnsignedPhaseOneRowsAsync` to sign unsigned phase-one rows. See the *Database Integrity* section.
+5. **Startup transition validation** — `IStartupTransitionValidator` checks code-defined version rules against `app_versions`. If a required transition release is missing, the normal host is disposed and `StartupBlockedServer` serves the SPA plus `GET /api/v1/startup/status`; other API calls return HTTP 503.
+6. **Middleware pipeline** (order is significant): `UseForwardedHeaders` → `UseAuthHardening` → `UseDefaultFiles` → `MapStaticAssets` → `UseAuthentication` → `UseAuthorization` → `UseExceptionHandler` → `MapStartupStatusEndpoint` → `MapControllers` → `MapFallbackToFile("/index.html")` (SPA fallback).
+7. **`ApplyMigrations<CottonDbContext>()`** — migrate-on-startup; EF migrations are applied automatically every boot.
 8. **Restore-if-empty** — in a fresh `IServiceScope`, `IDatabaseAutoRestoreService.TryRestoreIfEmptyAsync()` is awaited synchronously (`GetAwaiter().GetResult()`).
 9. **Prime the settings cache** — still in that scope, `SettingsProvider.GetServerSettings()` is called once to warm the static cache (and, when settings exist, to verify their integrity).
 10. **`MapHub<EventHub>(Routes.V1.EventHub)`** (`/api/v1/hub/events`) then **`app.RunAsync()`**.
@@ -343,4 +345,4 @@ flowchart TD
 
 ## Related sections
 
-See the *Cryptography Engine* section (key derivation, `AesGcmStreamCipher`, `[Encrypted]` columns), the *Database Integrity* section (`RequireValid`, bridge backfill, integrity descriptors), the *Storage Pipeline & Backends* section (`IStoragePipeline`, `CryptoProcessor`/`CompressionProcessor`, S3 vs local backends), the *Background Jobs (Quartz)* section (job triggers including `CollectPerformanceJob`, `GarbageCollectorJob`, and the database dump job), the *Authentication & Sessions* section (JWT, rate limiting, session revocation, initial-admin bootstrap), and the *Telemetry & Cotton Bridge* section (telemetry-gated Cloud modes).
+See the *Cryptography Engine* section (key derivation, `AesGcmStreamCipher`, `[Encrypted]` columns), the *Database Integrity* section (`RequireValid`, strict signatures, integrity descriptors, startup transition guard), the *Storage Pipeline & Backends* section (`IStoragePipeline`, `CryptoProcessor`/`CompressionProcessor`, S3 vs local backends), the *Background Jobs (Quartz)* section (job triggers including `CollectPerformanceJob`, `GarbageCollectorJob`, and the database dump job), the *Authentication & Sessions* section (JWT, rate limiting, session revocation, initial-admin bootstrap), and the *Telemetry & Cotton Bridge* section (telemetry-gated Cloud modes).

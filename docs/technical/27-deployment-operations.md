@@ -9,7 +9,7 @@ Cotton ships as a single ASP.NET Core process (`Cotton.Server`) that serves both
 Startup is a two-phase process driven entirely from `src/Cotton.Server/Program.cs`:
 
 1. **Master-key resolution.** Before the main application is built, Cotton resolves the runtime encryption settings either from the `COTTON_MASTER_KEY` environment variable or, if that is absent, from an interactive `/unlock` mini-web-server. The process clock is pinned to UTC and Linux process hardening (`PR_SET_DUMPABLE=0`) is requested *before* key resolution.
-2. **Application run.** The full web app is built (`RunApplicationAsync`), EF migrations are applied, the database-integrity bridge backfill runs, optional auto-restore runs, server settings are warmed, the SignalR hub is mapped, and finally `app.RunAsync()` is awaited.
+2. **Application run.** The full web app is built (`RunApplicationAsync`), startup transition rules are validated, EF migrations are applied, optional auto-restore runs, server settings are warmed, the SignalR hub is mapped, and finally `app.RunAsync()` is awaited.
 
 ```mermaid
 flowchart TD
@@ -21,11 +21,13 @@ flowchart TD
     E --> G[RunApplicationAsync]
     F --> G
     G --> H[Build WebApplication + AddCottonOptions]
-    H --> I[ApplyMigrations CottonDbContext]
-    I --> J[ApplyDatabaseIntegrityBridgeBackfillAsync]
-    J --> K[DatabaseAutoRestoreService.TryRestoreIfEmptyAsync]
-    K --> L[Warm SettingsProvider + Map EventHub]
-    L --> M[app.RunAsync]
+    H --> I[Validate startup transition rules]
+    I --> J{blocked?}
+    J -- yes --> K[StartupBlockedServer]
+    J -- no --> L[ApplyMigrations CottonDbContext]
+    L --> M[DatabaseAutoRestoreService.TryRestoreIfEmptyAsync]
+    M --> N[Warm SettingsProvider + Map EventHub]
+    N --> O[app.RunAsync]
 ```
 
 Note that the hardening call (`LinuxProcessHardening.ApplyFromEnvironment`) happens at the very top of `Main`, before any key material is resolved, so the dump-protection request is in effect by the time the master key is in memory.
@@ -236,7 +238,7 @@ PATCH /api/v1/server/database-backup/trigger
 
 ### Auto-restore for empty instances
 
-`DatabaseAutoRestoreService.TryRestoreIfEmptyAsync` runs during startup (`Program.RunApplicationAsync`, after migrations and bridge backfill). It is a no-op unless `COTTON_RESTORE_DATABASE_IF_EMPTY` parses (via `bool.TryParse`) to `true`.
+`DatabaseAutoRestoreService.TryRestoreIfEmptyAsync` runs during startup (`Program.RunApplicationAsync`, after startup transition validation and migrations). It is a no-op unless `COTTON_RESTORE_DATABASE_IF_EMPTY` parses (via `bool.TryParse`) to `true`.
 
 "Empty" means either no rows in `__EFMigrationsHistory`, **or** no rows in both `users` and `server_settings`. When empty, it:
 
@@ -286,8 +288,7 @@ Each row below is a real warning code from `SecurityDiagnosticsService` with the
 | `mandatory-access-control-unconfined` | warning | No enforcing AppArmor/SELinux detected (or AppArmor `unconfined`, or SELinux permissive) | Use Docker's default AppArmor, a custom profile, or an enforcing SELinux context. |
 | `core-dumps-enabled` | warning | Core soft limit not disabled (`!= 0`) **and** process still dumpable | Set `ulimit core=0` and keep `COTTON_PROCESS_HARDENING=true`. |
 | `process-hardening-failed` | warning | Hardening requested but `prctl` failed (`HardeningRequested && !HardeningApplied`) | Investigate the recorded errno; ensure Linux + permitted `prctl`. |
-| `db-integrity-unsigned-rows` | **critical** | `UnsignedProtectedRows > 0` (protected rows lack valid integrity signatures) | Run the bridge release backfill before trusting the instance. |
-| `db-integrity-bridge-mode` | warning | `BridgeBackfillEnabled` (integrity bridge backfill is enabled) | Disable bridge mode after the upgrade window so bad signatures become hard failures. |
+| `db-integrity-unsigned-rows` | **critical** | `UnsignedProtectedRows > 0` (protected rows lack valid integrity signatures) | Restore affected rows from backup or run the required transition version before upgrading. |
 
 The Linux process warnings (`process-dumpable`, `sys-ptrace-capability`, `new-privileges-allowed`, `seccomp-disabled`, `running-as-root`) are only evaluated on Linux. Container-only warnings (`root-filesystem-writable`, `docker-socket-mounted`, `host-pid-namespace`, MAC) are emitted only when `IsContainer()` is true; the core-dump warning is evaluated on any Linux host. `CAP_SYS_PTRACE` is read from the `CapEff` hex mask in `/proc/self/status` by testing bit 19.
 
@@ -376,7 +377,7 @@ Setting `COTTON_PUBLIC_INSTANCE=true` flips `Constants.IsPublicInstance` (evalua
 ## Upgrade behavior
 
 - **Auto-migrate on startup.** `Program.cs` calls `app.ApplyMigrations<CottonDbContext>()` before serving, so pulling a newer image and restarting applies pending EF migrations automatically. Take a backup (or rely on the backup job) before upgrading.
-- **DB-integrity bridge backfill.** `app.ApplyDatabaseIntegrityBridgeBackfillAsync()` (`src/Cotton.Server/Extensions/DatabaseIntegrityApplicationExtensions.cs`) runs at startup to sign legacy unsigned rows during an upgrade window. While bridge mode is on, the security check warns (`db-integrity-bridge-mode`); disable it after the window so invalid/missing signatures become hard failures.
+- **DB-integrity startup transition guard.** Strict releases validate recorded `AppVersion` history before serving normal traffic. A release such as `0.5.0+` can require evidence that a transition release (for example `0.4.33`) already ran; if not, Cotton serves the startup-blocked SPA and `GET /api/v1/startup/status` instead of starting the normal API.
 - **App version tracking.** `AppVersionTrackerService` (a hosted `BackgroundService`) records the running version (`AppVersion` rows), warns on downgrades (an unsupported scenario), and — unless disabled via `AppVersionTracker:ReleaseCheckEnabled=false` or the `Testing`/`IntegrationTests` environments — checks `https://api.github.com/repos/bvdcode/cotton/releases/latest` ~45 s after start and notifies admins (Medium priority) when a newer non-draft/non-prerelease release exists. The image build stamps `APP_VERSION` (a `BUILD_VERSION` build arg sourced from GitVersion's SemVer in CI).
 - **Image tags.** `:latest` and `:<semver>` are published from `main`; `:dev` from `develop` (see CI under `.github/workflows`). Pin a specific SemVer tag for reproducible upgrades.
 - **JWT signing key is regenerated every boot.** `ConfigurationBuilderExtensions.AddCottonOptions` sets `JwtSettings:Key` to a fresh random 32-char string (`StringHelpers.CreateRandomString(DefaultKeyLength)`) on each start (the value in `appsettings.Development.json` is dev-only). Consequence: every restart/upgrade invalidates outstanding access tokens (JWTs), so active users must re-authenticate; refresh tokens persist in the database and clients re-issue access tokens against them.

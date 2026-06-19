@@ -114,7 +114,7 @@ A file should not become an opaque blob you are afraid to touch once it enters t
 
 - **Restore-friendly delete.** Unreferenced chunks/manifests are scheduled, re-checked before deletion, and left alone if they become live again. Ingest waits out an in-flight GC of the same chunk instead of racing it.
 - **Active integrity.** Manifest hashes are recomputed after upload (mismatch → notification), and storage consistency is re-checked against the real backend in the background (missing/unreadable data → user/admin notification).
-- **Database integrity signatures.** Protected rows (users, passkeys, refresh/download/share tokens, server settings, nodes, node files, manifests, manifest chunks, chunks) are signed with key material derived from the master key and verified at read boundaries; bridge mode signs legacy rows at startup.
+- **Database integrity signatures.** Protected rows (users, passkeys, refresh/download/share tokens, server settings, nodes, node files, manifests, manifest chunks, chunks) are signed with key material derived from the master key and verified at read boundaries; strict releases refuse unsigned or mismatched protected rows.
 - **Storage pressure guard.** On filesystem backends, crossing the configured free-space reserve returns HTTP 507 and raises a throttled admin notification instead of running the disk to zero.
 - **Logical quotas.** Per-user quotas are cached and upload-aware, checked before visible file creation/update and WebDAV PUT.
 - **Load-aware maintenance.** Background jobs (previews, manifest hashing, token/temp cleanup, consistency checks, backups) pace themselves around active uploads and quiet-hour windows.
@@ -192,7 +192,7 @@ Cotton also exposes an admin-only security diagnostics page (`/admin/security`) 
 GET /api/v1/server/security/status
 ```
 
-It reports process/container hardening signals — .NET diagnostics state, Linux dumpability, effective UID, `no-new-privileges`, seccomp mode, `CAP_SYS_PTRACE`, read-only rootfs, Docker socket exposure, likely host PID namespace, core dump settings, AppArmor/SELinux confinement, whether the key came from env or browser unlock, public/demo mode, database-integrity bridge state, and how many admins still lack 2FA — and turns them into a 0–10 score with human-readable threat vectors. It is intentionally an operator check, not a public healthcheck.
+It reports process/container hardening signals — .NET diagnostics state, Linux dumpability, effective UID, `no-new-privileges`, seccomp mode, `CAP_SYS_PTRACE`, read-only rootfs, Docker socket exposure, likely host PID namespace, core dump settings, AppArmor/SELinux confinement, whether the key came from env or browser unlock, public/demo mode, database-integrity signature coverage, and how many admins still lack 2FA — and turns them into a 0–10 score with human-readable threat vectors. It is intentionally an operator check, not a public healthcheck.
 
 ### Paranoia Mode
 

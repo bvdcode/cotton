@@ -43,16 +43,12 @@ const knownThreatVectorCodes = new Set([
   "running-as-root",
   "process-hardening-failed",
   "db-integrity-unsigned-rows",
-  "db-integrity-bridge-mode",
   "root-filesystem-writable",
   "docker-socket-mounted",
   "host-pid-namespace",
   "mandatory-access-control-unconfined",
   "core-dumps-enabled",
 ]);
-
-// Warnings whose remediation is not an operator action (managed by Cotton itself).
-const noUserFixCodes = new Set(["db-integrity-bridge-mode"]);
 
 interface SecurityLevel {
   title: string;
@@ -472,23 +468,12 @@ const SecurityRiskCard = ({ warning, t }: SecurityRiskCardProps) => {
               bgcolor: "action.hover",
             }}
           >
-            {noUserFixCodes.has(warning.code) ? (
-              <InfoOutlinedIcon
-                fontSize="small"
-                sx={{ color: "text.secondary", mt: 0.25, flexShrink: 0 }}
-              />
-            ) : (
-              <BuildOutlinedIcon
-                fontSize="small"
-                sx={{ color: "text.secondary", mt: 0.25, flexShrink: 0 }}
-              />
-            )}
+            <BuildOutlinedIcon
+              fontSize="small"
+              sx={{ color: "text.secondary", mt: 0.25, flexShrink: 0 }}
+            />
             <RiskLabeledBlock
-              label={t(
-                noUserFixCodes.has(warning.code)
-                  ? "securityDiagnostics.labels.note"
-                  : "securityDiagnostics.labels.howToFix",
-              )}
+              label={t("securityDiagnostics.labels.howToFix")}
               text={fix}
             />
           </Box>

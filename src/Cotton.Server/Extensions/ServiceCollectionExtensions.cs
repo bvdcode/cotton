@@ -9,6 +9,7 @@ using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Server.Services.Search;
 using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
+using Cotton.Server.Services.Startup;
 using Cotton.Server.Services.WebDav;
 using EasyExtensions.Abstractions;
 using Microsoft.AspNetCore.Authentication;
@@ -66,14 +67,12 @@ namespace Cotton.Server.Extensions
             services.AddSingleton<IDatabaseIntegrityDescriptorRegistry, DatabaseIntegrityDescriptorRegistry>();
             services.AddScoped<IDatabaseIntegrityChangeSigner, DatabaseIntegrityChangeSigner>();
             services.AddScoped<IDatabaseIntegrityVerifier, DatabaseIntegrityVerifier>();
-            services.AddScoped<IDatabaseIntegrityBridgeBackfillService, DatabaseIntegrityBridgeBackfillService>();
             services.AddScoped<DatabaseIntegrityDiagnosticsService>();
             services.AddScoped<FileGraphIntegrityVerifier>();
             services.AddSingleton<DatabaseIntegrityFailureReporter>();
             services.AddSingleton<IDatabaseIntegrityFailureReporter>(sp =>
                 sp.GetRequiredService<DatabaseIntegrityFailureReporter>());
             services.AddHostedService(sp => sp.GetRequiredService<DatabaseIntegrityFailureReporter>());
-            services.AddHostedService<DatabaseIntegrityBridgeBackfillHostedService>();
 
             services.AddSingleton<IDatabaseIntegrityDescriptor, UserIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, UserPasskeyCredentialIntegrityDescriptor>();
@@ -90,6 +89,15 @@ namespace Cotton.Server.Extensions
             services.AddSingleton<IDatabaseIntegrityDescriptor, FileManifestChunkIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, ChunkIntegrityDescriptor>();
 
+            return services;
+        }
+
+        /// <summary>
+        /// Registers startup validation services.
+        /// </summary>
+        public static IServiceCollection AddStartupValidation(this IServiceCollection services)
+        {
+            services.AddScoped<IStartupTransitionValidator, StartupTransitionValidator>();
             return services;
         }
 
