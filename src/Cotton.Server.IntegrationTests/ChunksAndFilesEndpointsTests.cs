@@ -1135,6 +1135,20 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         string shareToken = ExtractToken(downloadLink);
 
         _client.DefaultRequestHeaders.Authorization = null;
+        using var previewHeadRequest = new HttpRequestMessage(HttpMethod.Head, $"/s/{shareToken}?view=inline&preview=true");
+        var previewHeadResponse = await _client.SendAsync(previewHeadRequest);
+        previewHeadResponse.EnsureSuccessStatusCode();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(previewHeadResponse.Content.Headers.ContentType?.MediaType, Is.EqualTo("image/webp"));
+            Assert.That(previewHeadResponse.Content.Headers.ContentDisposition?.DispositionType, Is.Not.EqualTo("attachment"));
+        });
+
+        DbContext.ChangeTracker.Clear();
+        bool existsAfterPreviewHead = await DbContext.DownloadTokens.AnyAsync(x => x.Token == shareToken);
+        Assert.That(existsAfterPreviewHead, Is.True);
+
         var previewResponse = await _client.GetAsync($"/s/{shareToken}?view=inline&preview=true");
         previewResponse.EnsureSuccessStatusCode();
         byte[] servedPreview = await previewResponse.Content.ReadAsByteArrayAsync();

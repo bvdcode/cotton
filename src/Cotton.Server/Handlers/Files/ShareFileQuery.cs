@@ -37,7 +37,7 @@ namespace Cotton.Server.Handlers.Files
         /// </summary>
         public string? View { get; } = view;
         /// <summary>
-        /// Gets whether the request should serve the generated large preview when available.
+        /// Gets whether the request should serve the generated small preview when available.
         /// </summary>
         public bool Preview { get; } = preview;
         /// <summary>
@@ -271,7 +271,9 @@ namespace Cotton.Server.Handlers.Files
         private static bool RequestsInlinePreview(
             ShareFileQuery request,
             (bool IsHtml, bool IsInlineFile) viewMode) =>
-            request.Preview && viewMode.IsInlineFile && HttpMethods.IsGet(request.HttpRequest.Method);
+            request.Preview
+            && viewMode.IsInlineFile
+            && (HttpMethods.IsGet(request.HttpRequest.Method) || HttpMethods.IsHead(request.HttpRequest.Method));
 
         private static bool IsInlineMetadataRangeProbe(HttpRequest httpRequest, bool inline)
         {
