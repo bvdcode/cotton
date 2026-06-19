@@ -310,7 +310,7 @@ namespace Cotton.Server.Jobs
                 .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType));
 
             var itemsToProcessQuery = processableItemsQuery
-                .Where(fm => fm.SmallFilePreviewHash == null)
+                .Where(fm => fm.SmallFilePreviewHash == null || fm.SmallFilePreviewHashEncrypted == null)
                 .Where(fm => fm.PreviewGenerationError == null);
 
             foreach (var versionGroup in generatorVersionsByContentType.GroupBy(x => x.Value))
