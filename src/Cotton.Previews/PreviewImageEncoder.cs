@@ -11,8 +11,9 @@ namespace Cotton.Previews
     /// lossy/lossless policy and quality settings live in one place.
     /// </summary>
     /// <remarks>
-    /// Generators backed by other codecs (HEIC via MagicScaler, SVG via SkiaSharp)
-    /// encode through their own libraries and also emit lossy WebP.
+    /// SVG previews encode through SkiaSharp (lossy) and do not use this type; every
+    /// other generator, including HEIC (decoded via libheif into an ImageSharp image),
+    /// routes here.
     /// </remarks>
     public static class PreviewImageEncoder
     {
