@@ -72,6 +72,22 @@ public class ImagePreviewGeneratorTests
         });
     }
 
+    [Test]
+    public async Task GeneratePreviewWebPAsync_PngSource_ProducesLossyWebp_NotVp8l()
+    {
+        // A PNG (lossless) source must not yield a lossless VP8L preview: social
+        // crawlers such as Telegram's link-preview bot cannot decode VP8L, which
+        // leaves shared links showing text but no image.
+        byte[] source = CreateGradientPngBytes(width: 640, height: 360);
+        using var stream = new MemoryStream(source);
+
+        byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 200);
+
+        AssertWebpSignature(preview);
+        string format = Encoding.ASCII.GetString(preview, 12, 4);
+        Assert.That(format, Is.Not.EqualTo("VP8L"), "Preview must be lossy WebP, not lossless VP8L.");
+    }
+
     private static byte[] CreateGradientPngBytes(int width, int height)
     {
         using var image = new Image<Rgba32>(width, height);
