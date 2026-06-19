@@ -9,6 +9,7 @@ using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Hubs;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Models.Notifications;
 using Cotton.Server.Providers;
 using EasyExtensions.AspNetCore.Exceptions;
 using Mapster;
@@ -308,16 +309,30 @@ namespace Cotton.Server.Services
             NotificationPriority priority = NotificationPriority.None,
             Dictionary<string, string>? metadata = null)
         {
+            Dictionary<string, string> notificationMetadata = metadata is null
+                ? []
+                : new Dictionary<string, string>(metadata);
+            PushNotificationEventCategoryResolver.Enrich(notificationMetadata);
+
             Notification notification = new()
             {
                 Title = title,
                 UserId = userId,
                 Content = content,
                 Priority = priority,
-                Metadata = metadata ?? []
+                Metadata = notificationMetadata
             };
             await _dbContext.Notifications.AddAsync(notification);
             await _dbContext.SaveChangesAsync();
+            PushNotificationPayloadPlan pushPayloadPlan =
+                PushNotificationPayloadPlanner.Create(notification);
+            if (pushPayloadPlan.IsEligible)
+            {
+                _logger.LogDebug(
+                    "Prepared remote push payload plan for notification {NotificationId} in category {Category}.",
+                    notification.Id,
+                    pushPayloadPlan.Category);
+            }
             await _hubContext.Clients.User(userId.ToString()).SendAsync(
                 EventHub.NotificationMethod,
                 notification.Adapt<NotificationDto>());
