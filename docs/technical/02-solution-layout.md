@@ -116,9 +116,8 @@ Versions below are exactly as pinned in the `.csproj` files. Note the minor vers
 | `ZstdSharp.Port` | 0.8.8 | Storage, Benchmark | Managed Zstandard compression (no native code). |
 | `K4os.Compression.LZ4.Streams` | 1.3.8 | Storage | LZ4 streaming compression. |
 | `Docnet.Core` | 2.6.0 | Previews | PDF rasterization for PDF previews. |
-| `PhotoSauce.MagicScaler` | 0.15.0 | Previews | High-performance image resizing. |
-| `PhotoSauce.NativeCodecs.Libheif` | 1.19.5-preview1 | Previews | HEIC decoding. |
-| `PhotoSauce.NativeCodecs.Libwebp` | 1.4.0-preview1 | Previews | WebP decoding. |
+| `LibHeifSharp` | 3.2.0 | Previews | Managed libheif binding for HEIC/HEIF decoding. |
+| `LibHeif.Native` | 1.15.1 | Previews | Native libheif binaries (win-x64 + linux-x64). |
 | `SixLabors.ImageSharp` | 4.0.0 | Previews, Previews.Tests | Image processing. **Licensed** — see *Directory.Build.props* below. |
 | `SixLabors.ImageSharp.Drawing` | 3.0.0 | Previews | Vector drawing on images. |
 | `SixLabors.Fonts` | 3.0.0 | Previews | Font rendering. |
