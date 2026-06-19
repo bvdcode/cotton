@@ -16,12 +16,14 @@ namespace Cotton.Previews
     {
         private const int MaxEntriesToInspect = 20_000;
         private const long MaxIconBytes = 12L * 1024 * 1024;
+        private const long MaxManifestBytes = 8L * 1024 * 1024;
         private const long MaxNestedPackageBytes = 192L * 1024 * 1024;
         private const long MaxNonSeekablePackageBytes = 192L * 1024 * 1024;
+        private const long MaxResourceTableBytes = 32L * 1024 * 1024;
         private const int MaxNestedDepth = 1;
 
         /// <inheritdoc />
-        public int Version => 2;
+        public int Version => 3;
 
         /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes => AndroidPackageContentTypes.All;
@@ -39,7 +41,7 @@ namespace Cotton.Previews
                 archiveStream.Position = 0;
             }
 
-            byte[]? iconBytes = await TryExtractIconBytesAsync(archiveStream, depth: 0).ConfigureAwait(false);
+            byte[]? iconBytes = await TryExtractIconBytesAsync(archiveStream, depth: 0, size).ConfigureAwait(false);
             return iconBytes is null
                 ? await CreateFallbackPreviewAsync(size).ConfigureAwait(false)
                 : await RenderIconPreviewAsync(iconBytes, size).ConfigureAwait(false);
@@ -58,7 +60,7 @@ namespace Cotton.Previews
             return copy;
         }
 
-        private static async Task<byte[]?> TryExtractIconBytesAsync(Stream stream, int depth)
+        private static async Task<byte[]?> TryExtractIconBytesAsync(Stream stream, int depth, int previewSize)
         {
             ZipArchive archive;
             try
@@ -72,6 +74,18 @@ namespace Cotton.Previews
 
             using (archive)
             {
+                (bool foundDeclaredIcon, byte[]? declaredIcon) =
+                    await TryExtractDeclaredIconBytesAsync(archive, previewSize).ConfigureAwait(false);
+                if (declaredIcon is not null)
+                {
+                    return declaredIcon;
+                }
+
+                if (foundDeclaredIcon)
+                {
+                    return null;
+                }
+
                 IconBytesCandidate? bestIcon = null;
                 foreach (IconEntryCandidate iconEntry in SelectIconEntries(archive))
                 {
@@ -118,7 +132,8 @@ namespace Cotton.Previews
                     }
 
                     using var nestedStream = new MemoryStream(nestedBytes, writable: false);
-                    byte[]? nestedIcon = await TryExtractIconBytesAsync(nestedStream, depth + 1).ConfigureAwait(false);
+                    byte[]? nestedIcon = await TryExtractIconBytesAsync(nestedStream, depth + 1, previewSize)
+                        .ConfigureAwait(false);
                     if (nestedIcon is not null)
                     {
                         return nestedIcon;
@@ -127,6 +142,194 @@ namespace Cotton.Previews
 
                 return null;
             }
+        }
+
+        private static async Task<(bool FoundDeclaredIcon, byte[]? Bytes)> TryExtractDeclaredIconBytesAsync(
+            ZipArchive archive,
+            int previewSize)
+        {
+            ZipArchiveEntry? manifestEntry = archive.GetEntry("AndroidManifest.xml");
+            if (manifestEntry is null)
+            {
+                return (false, null);
+            }
+
+            byte[]? manifestBytes = await TryReadEntryBytesAsync(manifestEntry, MaxManifestBytes).ConfigureAwait(false);
+            if (manifestBytes is null
+                || !AndroidBinaryXmlApplicationIconReader.TryReadApplicationIconResourceId(
+                    manifestBytes,
+                    out uint iconResourceId))
+            {
+                return (false, null);
+            }
+
+            ZipArchiveEntry? resourceTableEntry = archive.GetEntry("resources.arsc");
+            if (resourceTableEntry is null)
+            {
+                return (true, null);
+            }
+
+            byte[]? resourceTableBytes = await TryReadEntryBytesAsync(resourceTableEntry, MaxResourceTableBytes)
+                .ConfigureAwait(false);
+            if (resourceTableBytes is null)
+            {
+                return (true, null);
+            }
+
+            IReadOnlyList<AndroidResourcePathCandidate> iconPaths =
+                AndroidResourceTableIconReader.ReadIconResourcePaths(resourceTableBytes, iconResourceId);
+            byte[]? iconBytes = await TryReadBestResourceImageBytesAsync(archive, iconPaths, previewSize)
+                .ConfigureAwait(false);
+            if (iconBytes is not null)
+            {
+                return (true, iconBytes);
+            }
+
+            byte[]? adaptiveIconBytes = await TryExtractAdaptiveIconBytesAsync(
+                archive,
+                resourceTableBytes,
+                iconResourceId,
+                previewSize).ConfigureAwait(false);
+            return (true, adaptiveIconBytes);
+        }
+
+        private static async Task<byte[]?> TryExtractAdaptiveIconBytesAsync(
+            ZipArchive archive,
+            byte[] resourceTableBytes,
+            uint iconResourceId,
+            int previewSize)
+        {
+            IReadOnlyList<AndroidResourcePathCandidate> xmlPaths =
+                AndroidResourceTableIconReader.ReadXmlResourcePaths(resourceTableBytes, iconResourceId);
+            foreach (AndroidResourcePathCandidate xmlPath in xmlPaths)
+            {
+                ZipArchiveEntry? xmlEntry = archive.GetEntry(xmlPath.Path);
+                if (xmlEntry is null)
+                {
+                    continue;
+                }
+
+                byte[]? xmlBytes = await TryReadEntryBytesAsync(xmlEntry, MaxManifestBytes).ConfigureAwait(false);
+                if (xmlBytes is null
+                    || !AndroidAdaptiveIconXmlReader.TryReadLayerResourceIds(
+                        xmlBytes,
+                        out uint? backgroundResourceId,
+                        out uint? foregroundResourceId)
+                    || !foregroundResourceId.HasValue)
+                {
+                    continue;
+                }
+
+                IReadOnlyList<AndroidResourcePathCandidate> foregroundPaths =
+                    AndroidResourceTableIconReader.ReadIconResourcePaths(
+                        resourceTableBytes,
+                        foregroundResourceId.Value);
+                byte[]? foregroundBytes = await TryReadBestResourceImageBytesAsync(archive, foregroundPaths, previewSize)
+                    .ConfigureAwait(false);
+                if (foregroundBytes is null)
+                {
+                    continue;
+                }
+
+                byte[]? backgroundBytes = null;
+                if (backgroundResourceId.HasValue)
+                {
+                    IReadOnlyList<AndroidResourcePathCandidate> backgroundPaths =
+                        AndroidResourceTableIconReader.ReadIconResourcePaths(
+                            resourceTableBytes,
+                            backgroundResourceId.Value);
+                    backgroundBytes = await TryReadBestResourceImageBytesAsync(archive, backgroundPaths, previewSize)
+                        .ConfigureAwait(false);
+                }
+
+                return await RenderAdaptiveIconPngBytesAsync(backgroundBytes, foregroundBytes)
+                    .ConfigureAwait(false);
+            }
+
+            return null;
+        }
+
+        private static async Task<byte[]?> TryReadBestResourceImageBytesAsync(
+            ZipArchive archive,
+            IReadOnlyList<AndroidResourcePathCandidate> iconPaths,
+            int previewSize)
+        {
+            IconBytesCandidate? bestIcon = null;
+            foreach (AndroidResourcePathCandidate iconPath in iconPaths)
+            {
+                ZipArchiveEntry? iconEntry = archive.GetEntry(iconPath.Path);
+                if (iconEntry is null)
+                {
+                    continue;
+                }
+
+                byte[]? iconBytes = await TryReadEntryBytesAsync(iconEntry, MaxIconBytes).ConfigureAwait(false);
+                if (iconBytes is null)
+                {
+                    continue;
+                }
+
+                (int Width, int Height)? dimensions = TryIdentifyImageDimensions(iconBytes);
+                if (dimensions is null)
+                {
+                    continue;
+                }
+
+                int score = iconPath.Score
+                    + ScoreImageDimensions(dimensions.Value.Width, dimensions.Value.Height)
+                    + ScorePreviewFit(dimensions.Value.Width, dimensions.Value.Height, previewSize);
+                if (score <= 0)
+                {
+                    continue;
+                }
+
+                if (bestIcon is null || score > bestIcon.Score)
+                {
+                    bestIcon = new IconBytesCandidate(iconBytes, score);
+                }
+            }
+
+            return bestIcon?.Bytes;
+        }
+
+        private static async Task<byte[]> RenderAdaptiveIconPngBytesAsync(
+            byte[]? backgroundBytes,
+            byte[] foregroundBytes)
+        {
+            using Image<Rgba32>? background = backgroundBytes is null ? null : Image.Load<Rgba32>(backgroundBytes);
+            using Image<Rgba32> foreground = Image.Load<Rgba32>(foregroundBytes);
+            int canvasSize = Math.Max(foreground.Width, foreground.Height);
+            if (background is not null)
+            {
+                canvasSize = Math.Max(canvasSize, Math.Max(background.Width, background.Height));
+            }
+
+            canvasSize = Math.Max(canvasSize, PreviewGeneratorProvider.DefaultSmallPreviewSize);
+            using var canvas = new Image<Rgba32>(canvasSize, canvasSize, new Rgba32(0, 0, 0, 0));
+            if (background is not null)
+            {
+                DrawCenteredLayer(canvas, background);
+            }
+
+            DrawCenteredLayer(canvas, foreground);
+
+            using var output = new MemoryStream();
+            await canvas.SaveAsPngAsync(output).ConfigureAwait(false);
+            return output.ToArray();
+        }
+
+        private static void DrawCenteredLayer(Image<Rgba32> canvas, Image<Rgba32> source)
+        {
+            using Image<Rgba32> layer = source.Clone(x => x.Resize(new ResizeOptions
+            {
+                Size = new Size(canvas.Width, canvas.Height),
+                Mode = ResizeMode.Max,
+                Sampler = KnownResamplers.Lanczos3,
+                PremultiplyAlpha = true,
+            }));
+            int left = (canvas.Width - layer.Width) / 2;
+            int top = (canvas.Height - layer.Height) / 2;
+            canvas.Mutate(x => x.DrawImage(layer, new Point(left, top), 1f));
         }
 
         private static IEnumerable<IconEntryCandidate> SelectIconEntries(ZipArchive archive)
@@ -422,6 +625,13 @@ namespace Cotton.Previews
             return score;
         }
 
+        private static int ScorePreviewFit(int width, int height, int previewSize)
+        {
+            int maxSide = Math.Max(width, height);
+            int delta = Math.Abs(maxSide - previewSize);
+            return Math.Max(0, 6_000 - (delta * 80));
+        }
+
         private static async Task<byte[]> RenderIconPreviewAsync(byte[] iconBytes, int size)
         {
             using Image<Rgba32> image = Image.Load<Rgba32>(iconBytes);
@@ -433,11 +643,14 @@ namespace Cotton.Previews
                 {
                     Size = new Size(size, size),
                     Mode = ResizeMode.Max,
+                    PremultiplyAlpha = true,
                 }));
             }
 
             using var output = new MemoryStream();
-            await image.SaveAsWebpAsync(output, new WebpEncoder { Quality = 82 }).ConfigureAwait(false);
+            await image.SaveAsWebpAsync(
+                output,
+                new WebpEncoder { FileFormat = WebpFileFormatType.Lossless, Quality = 75 }).ConfigureAwait(false);
             return output.ToArray();
         }
 
@@ -459,10 +672,13 @@ namespace Cotton.Previews
                 Size = new Size(size, size),
                 Mode = ResizeMode.Max,
                 Sampler = KnownResamplers.Lanczos3,
+                PremultiplyAlpha = true,
             }));
 
             using var stream = new MemoryStream();
-            await output.SaveAsWebpAsync(stream, new WebpEncoder { Quality = 82 }).ConfigureAwait(false);
+            await output.SaveAsWebpAsync(
+                stream,
+                new WebpEncoder { FileFormat = WebpFileFormatType.Lossless, Quality = 75 }).ConfigureAwait(false);
             return stream.ToArray();
         }
 
