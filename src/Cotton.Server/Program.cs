@@ -124,6 +124,10 @@ namespace Cotton.Server
                 client.Timeout = TimeSpan.FromSeconds(10);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("Cotton/1.0");
             });
+            builder.Services.AddHttpClient<IPushNotificationDeliveryService, FirebaseCloudMessagingPushNotificationDeliveryService>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(15);
+            });
             builder.Services
                 .AddExceptionHandler()
                 .AddOptions<CottonEncryptionSettings>()

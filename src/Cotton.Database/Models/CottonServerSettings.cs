@@ -196,6 +196,12 @@ namespace Cotton.Database.Models
         public string? OidcIssuer { get; set; }
 
         /// <summary>
+        /// Firebase Cloud Messaging project identifier used for Android push delivery.
+        /// </summary>
+        [Column("fcm_project_id")]
+        public string? FcmProjectId { get; set; }
+
+        /// <summary>
         /// Encrypted token used to access Cotton Bridge services.
         /// </summary>
         [Encrypted]
@@ -222,6 +228,13 @@ namespace Cotton.Database.Models
         [Encrypted]
         [Column("smtp_password_encrypted")]
         public string? SmtpPasswordEncrypted { get; set; }
+
+        /// <summary>
+        /// Encrypted Firebase Cloud Messaging service account JSON.
+        /// </summary>
+        [Encrypted]
+        [Column("fcm_service_account_json_encrypted")]
+        public string? FcmServiceAccountJsonEncrypted { get; set; }
 
         /// <summary>
         /// Configured geolocation lookup mode.

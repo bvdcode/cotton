@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using System.Linq.Expressions;
 using System.Net.Mail;
+using System.Text.Json;
 
 namespace Cotton.Server.Providers
 {
@@ -565,6 +566,29 @@ namespace Cotton.Server.Providers
         }
 
         /// <summary>
+        /// Validates Firebase Cloud Messaging config.
+        /// </summary>
+        public string? ValidateFirebaseCloudMessagingConfig(FirebaseCloudMessagingConfig? config)
+        {
+            if (config is null)
+            {
+                return "Firebase Cloud Messaging settings must be provided.";
+            }
+
+            if (string.IsNullOrWhiteSpace(config.ProjectId))
+            {
+                return "Firebase Cloud Messaging project ID must be provided.";
+            }
+
+            if (string.IsNullOrWhiteSpace(config.ServiceAccountJson))
+            {
+                return "Firebase Cloud Messaging service account JSON must be provided.";
+            }
+
+            return ValidateFirebaseCloudMessagingServiceAccountJson(config.ServiceAccountJson);
+        }
+
+        /// <summary>
         /// Validates default user storage quota bytes.
         /// </summary>
         public string? ValidateDefaultUserStorageQuotaBytes(long? quotaBytes)
@@ -719,6 +743,49 @@ namespace Cotton.Server.Providers
 
             normalized = trimmed;
             return true;
+        }
+
+        private static string? ValidateFirebaseCloudMessagingServiceAccountJson(string serviceAccountJson)
+        {
+            try
+            {
+                using JsonDocument document = JsonDocument.Parse(serviceAccountJson);
+                JsonElement root = document.RootElement;
+                if (root.ValueKind != JsonValueKind.Object)
+                {
+                    return "Firebase Cloud Messaging service account JSON must be a JSON object.";
+                }
+
+                if (!HasRequiredJsonString(root, "client_email"))
+                {
+                    return "Firebase Cloud Messaging service account JSON must include client_email.";
+                }
+
+                if (!HasRequiredJsonString(root, "private_key"))
+                {
+                    return "Firebase Cloud Messaging service account JSON must include private_key.";
+                }
+
+                if (root.TryGetProperty("type", out JsonElement type)
+                    && type.ValueKind == JsonValueKind.String
+                    && !string.Equals(type.GetString(), "service_account", StringComparison.Ordinal))
+                {
+                    return "Firebase Cloud Messaging service account JSON must describe a service_account.";
+                }
+
+                return null;
+            }
+            catch (JsonException)
+            {
+                return "Firebase Cloud Messaging service account JSON must be valid JSON.";
+            }
+        }
+
+        private static bool HasRequiredJsonString(JsonElement root, string propertyName)
+        {
+            return root.TryGetProperty(propertyName, out JsonElement value)
+                && value.ValueKind == JsonValueKind.String
+                && !string.IsNullOrWhiteSpace(value.GetString());
         }
 
         private async Task<CottonServerSettings?> LoadLatestSettingsAsync(

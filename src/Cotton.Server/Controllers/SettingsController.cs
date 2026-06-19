@@ -746,6 +746,42 @@ namespace Cotton.Server.Controllers
             return Ok(emailConfig);
         }
 
+        /// <summary>
+        /// Sets Firebase Cloud Messaging config.
+        /// </summary>
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPatch("firebase-cloud-messaging-config")]
+        public async Task<IActionResult> SetFirebaseCloudMessagingConfig(
+            [FromBody] FirebaseCloudMessagingConfig config,
+            CancellationToken cancellationToken)
+        {
+            await EnsureSettingsAsync(cancellationToken);
+            ThrowIfInvalid(_settings.ValidateFirebaseCloudMessagingConfig(config));
+            await _settings.UpdateSettingsAsync(settings =>
+            {
+                settings.FcmProjectId = config.ProjectId.Trim();
+                settings.FcmServiceAccountJsonEncrypted = config.ServiceAccountJson.Trim();
+            }, GetFallbackPublicBaseUrl(), cancellationToken);
+            return NoContent();
+        }
+
+        /// <summary>
+        /// Gets Firebase Cloud Messaging config.
+        /// </summary>
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet("firebase-cloud-messaging-config")]
+        public IActionResult GetFirebaseCloudMessagingConfig()
+        {
+            var settings = _settings.GetServerSettings();
+            var config = new FirebaseCloudMessagingConfig
+            {
+                ProjectId = settings.FcmProjectId ?? string.Empty,
+                ServiceAccountJson = string.Empty,
+                HasServiceAccountJson = !string.IsNullOrWhiteSpace(settings.FcmServiceAccountJsonEncrypted),
+            };
+            return Ok(config);
+        }
+
         private async Task EnsureSettingsAsync(CancellationToken cancellationToken)
         {
             await _settings.EnsureServerSettingsAsync(GetFallbackPublicBaseUrl(), cancellationToken);

@@ -30,6 +30,7 @@ namespace Cotton.Server.Services
         SettingsProvider _settingsProvider,
         CottonPublicEmailProvider _publicEmailProvider,
         ILogger<CottonNotifications> _logger,
+        IPushNotificationDeliveryService _pushDeliveryService,
         IHubContext<EventHub> _hubContext) : INotificationsProvider
     {
         /// <summary>
@@ -330,18 +331,81 @@ namespace Cotton.Server.Services
                 .Where(x => x.Id == userId)
                 .Select(x => x.Preferences)
                 .FirstOrDefaultAsync();
+            await _hubContext.Clients.User(userId.ToString()).SendAsync(
+                EventHub.NotificationMethod,
+                notification.Adapt<NotificationDto>());
+
             PushNotificationPayloadPlan pushPayloadPlan =
                 PushNotificationPayloadPlanner.Create(notification, userPreferences);
             if (pushPayloadPlan.IsEligible)
             {
-                _logger.LogDebug(
-                    "Prepared remote push payload plan for notification {NotificationId} in category {Category}.",
-                    notification.Id,
-                    pushPayloadPlan.Category);
+                await SendRemotePushAsync(userId, notification.Id, pushPayloadPlan);
             }
-            await _hubContext.Clients.User(userId.ToString()).SendAsync(
-                EventHub.NotificationMethod,
-                notification.Adapt<NotificationDto>());
+        }
+
+        private async Task SendRemotePushAsync(
+            Guid userId,
+            Guid notificationId,
+            PushNotificationPayloadPlan pushPayloadPlan)
+        {
+            List<PushDeviceToken> deviceTokens = await _dbContext.PushDeviceTokens
+                .Where(x => x.UserId == userId
+                    && x.Provider == PushDeviceTokenProvider.FirebaseCloudMessaging
+                    && x.Platform == PushDeviceTokenPlatform.Android
+                    && x.RevokedAt == null)
+                .ToListAsync();
+
+            if (deviceTokens.Count == 0)
+            {
+                _logger.LogDebug(
+                    "No active Android FCM tokens are registered for notification {NotificationId}.",
+                    notificationId);
+                return;
+            }
+
+            DateTime revokedAt = DateTime.UtcNow;
+            int sentCount = 0;
+            int invalidCount = 0;
+            int skippedCount = 0;
+            foreach (PushDeviceToken deviceToken in deviceTokens)
+            {
+                PushNotificationDeliveryResult result = await _pushDeliveryService.SendAsync(
+                    new PushNotificationDeliveryRequest(deviceToken.Token, pushPayloadPlan),
+                    CancellationToken.None);
+
+                switch (result.Status)
+                {
+                    case PushNotificationDeliveryStatus.Sent:
+                        sentCount++;
+                        break;
+                    case PushNotificationDeliveryStatus.InvalidToken:
+                        deviceToken.RevokedAt = revokedAt;
+                        invalidCount++;
+                        break;
+                    case PushNotificationDeliveryStatus.NotConfigured:
+                        skippedCount++;
+                        break;
+                    default:
+                        _logger.LogWarning(
+                            "Remote push delivery for notification {NotificationId} returned {Status} with provider error {ErrorCode}.",
+                            notificationId,
+                            result.Status,
+                            result.ErrorCode);
+                        break;
+                }
+            }
+
+            if (invalidCount > 0)
+            {
+                await _dbContext.SaveChangesAsync();
+            }
+
+            _logger.LogDebug(
+                "Remote push fanout for notification {NotificationId}: {SentCount} sent, {InvalidCount} invalid, {SkippedCount} skipped.",
+                notificationId,
+                sentCount,
+                invalidCount,
+                skippedCount);
         }
     }
 }

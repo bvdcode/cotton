@@ -17,6 +17,7 @@
 		<PackageReference Include="EasyExtensions.Clients" Version="3.0.67" />
 		<PackageReference Include="EasyExtensions.Mediator" Version="3.0.66" />
 		<PackageReference Include="Fido2" Version="4.0.1" />
+		<PackageReference Include="Google.Apis.Auth" Version="1.75.0" />
 		<PackageReference Include="Microsoft.AspNetCore.SpaProxy">
 			<Version>10.0.8</Version>
 		</PackageReference>

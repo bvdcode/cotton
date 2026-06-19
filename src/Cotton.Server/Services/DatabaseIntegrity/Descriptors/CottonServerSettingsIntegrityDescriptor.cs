@@ -19,7 +19,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
         public override string EntityName => "server_settings";
 
         /// <inheritdoc />
-        public override int SchemaVersion => 2;
+        public override int SchemaVersion => 3;
 
         /// <inheritdoc />
         public override string GetEntityKey(CottonServerSettings entity)
@@ -67,6 +67,10 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
             writer.WriteStringField(nameof(entity.OidcClientId), entity.OidcClientId);
             writer.WriteStringField(nameof(entity.OidcIssuer), entity.OidcIssuer);
             writer.WriteStringField(nameof(entity.OidcClientSecretEncrypted), entity.OidcClientSecretEncrypted);
+            writer.WriteStringField(nameof(entity.FcmProjectId), entity.FcmProjectId);
+            writer.WriteStringField(
+                nameof(entity.FcmServiceAccountJsonEncrypted),
+                entity.FcmServiceAccountJsonEncrypted);
             writer.WriteInt32Field(nameof(entity.TotpMaxFailedAttempts), entity.TotpMaxFailedAttempts);
             writer.WriteInt32Field(nameof(entity.GeoIpLookupMode), (int)entity.GeoIpLookupMode);
             writer.WriteStringField(nameof(entity.CustomGeoIpLookupUrl), entity.CustomGeoIpLookupUrl);
