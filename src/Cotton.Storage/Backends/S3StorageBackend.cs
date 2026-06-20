@@ -6,6 +6,7 @@ using Amazon.S3.Model;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Helpers;
 using Cotton.Storage.Streams;
+using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Mime;
 
@@ -14,7 +15,7 @@ namespace Cotton.Storage.Backends
     /// <summary>
     /// S3-compatible backend that stores opaque Cotton chunks as bucket objects.
     /// </summary>
-    public class S3StorageBackend(IS3Provider _s3Provider) : IStorageBackend, IStorageBackendUsesEncryptedConfiguration
+    public class S3StorageBackend(IS3Provider _s3Provider, ILogger<S3StorageBackend>? _logger = null) : IStorageBackend, IStorageBackendUsesEncryptedConfiguration
     {
         private const int WriteBufferSize = 2 * 1024 * 1024;
 
@@ -156,7 +157,10 @@ namespace Cotton.Storage.Backends
                 {
                     File.Delete(tmpPath);
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "Failed to delete temp file {Path}", tmpPath);
+                }
             }
         }
 

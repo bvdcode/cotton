@@ -6,7 +6,7 @@ using Microsoft.Extensions.Caching.Memory;
 namespace Cotton.Server.Services.WebDav;
 
 /// <summary>
-/// Supports WebDAV web dav auth cache behavior.
+/// Supports WebDAV authentication cache behavior.
 /// </summary>
 public sealed class WebDavAuthCache(IMemoryCache cache)
 {

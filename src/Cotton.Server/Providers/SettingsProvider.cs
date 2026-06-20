@@ -492,7 +492,7 @@ namespace Cotton.Server.Providers
                 string content = await reader.ReadToEndAsync();
                 if (content != "test")
                 {
-                    throw new Exception("S3 read access validation failed: content mismatch.");
+                    throw new InvalidOperationException("S3 read access validation failed: content mismatch.");
                 }
             }
 
@@ -504,11 +504,11 @@ namespace Cotton.Server.Providers
             });
             if (listResponse.HttpStatusCode != System.Net.HttpStatusCode.OK)
             {
-                throw new Exception("S3 list access validation failed: " + listResponse.HttpStatusCode);
+                throw new InvalidOperationException("S3 list access validation failed: " + listResponse.HttpStatusCode);
             }
             if (listResponse.KeyCount <= 0)
             {
-                throw new Exception("S3 list access validation failed: bucket is empty or inaccessible.");
+                throw new InvalidOperationException("S3 list access validation failed: bucket is empty or inaccessible.");
             }
 
             // clean up the test object

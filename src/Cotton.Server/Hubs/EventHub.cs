@@ -10,7 +10,7 @@ using System.Security.Claims;
 namespace Cotton.Server.Hubs
 {
     /// <summary>
-    /// Publishes realtime event events to connected clients.
+    /// Publishes realtime events to connected clients.
     /// </summary>
     [Authorize]
     public class EventHub : Hub

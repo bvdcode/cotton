@@ -10,7 +10,7 @@ using Quartz;
 namespace Cotton.Server.Handlers.Server
 {
     /// <summary>
-    /// Represents the trigger database backup request request payload accepted by the API.
+    /// Represents the trigger database backup request payload accepted by the API.
     /// </summary>
     public class TriggerDatabaseBackupRequest : IRequest
     {

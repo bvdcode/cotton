@@ -190,7 +190,7 @@ namespace Cotton.Server.Jobs
             return Path.Combine(directory, $"db-{startedAtUtc:yyyyMMdd-HHmmss}-{backupId}.dump");
         }
 
-        private static void TryDeleteDumpFile(string dumpPath)
+        private void TryDeleteDumpFile(string dumpPath)
         {
             try
             {
@@ -199,8 +199,13 @@ namespace Cotton.Server.Jobs
                     File.Delete(dumpPath);
                 }
             }
-            catch
+            catch (IOException ex)
             {
+                _logger.LogWarning(ex, "Failed to delete temporary database dump file {DumpPath}.", dumpPath);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete temporary database dump file {DumpPath}.", dumpPath);
             }
         }
 

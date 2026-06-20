@@ -17,7 +17,7 @@ namespace Cotton.Server.Services
         private static readonly TimeSpan FirstUnlockWindow = TimeSpan.FromMinutes(Constants.AdminAutocreateMinutesDelay);
 
         /// <summary>
-        /// Waits for for unlock.
+        /// Waits for the master key unlock to complete.
         /// </summary>
         public static async Task<CottonEncryptionSettings> WaitForUnlockAsync(string[] args)
         {

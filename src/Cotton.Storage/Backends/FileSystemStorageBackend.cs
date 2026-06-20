@@ -153,7 +153,7 @@ namespace Cotton.Storage.Backends
         }
 
         /// <inheritdoc />
-        public async Task<Stream> ReadAsync(string uid)
+        public Task<Stream> ReadAsync(string uid)
         {
             var (_, _, fileName) = StorageKeyHelper.GetSegments(uid);
             string dirPath = GetFolderByUid(uid);
@@ -169,7 +169,7 @@ namespace Cotton.Storage.Backends
                 Access = FileAccess.Read,
                 Options = FileOptions.Asynchronous | FileOptions.SequentialScan
             };
-            return new FileStream(filePath, fso);
+            return Task.FromResult<Stream>(new FileStream(filePath, fso));
         }
 
         /// <inheritdoc />
@@ -284,7 +284,6 @@ namespace Cotton.Storage.Backends
                 string uid = p1 + p2 + fileName;
 
                 yield return uid;
-                await Task.CompletedTask;
             }
         }
     }

@@ -232,7 +232,7 @@ namespace Cotton.Server.Models.Dto
     public sealed class DatabaseIntegrityDiagnosticsDto
     {
         /// <summary>
-        /// Enables d.
+        /// Gets a value indicating whether database integrity protection is enabled.
         /// </summary>
         public bool Enabled { get; init; }
         /// <summary>

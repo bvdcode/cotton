@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using EasyExtensions.Quartz.Attributes;
+using Microsoft.EntityFrameworkCore;
 using Quartz;
 
 namespace Cotton.Server.Jobs
@@ -25,15 +26,15 @@ namespace Cotton.Server.Jobs
             await Task.Delay(600_000); // Wait for 10 minutes for the server to start up and stabilize
 
             var cutoffDate = DateTime.UtcNow - RetentionPeriod;
-            var tokensToRefresh = _dbContext.RefreshTokens
+            var tokensToRefresh = await _dbContext.RefreshTokens
                 .Where(rt => rt.RevokedAt == null)
                 .Where(rt => rt.CreatedAt < cutoffDate)
-                .ToList();
+                .ToListAsync(context.CancellationToken);
             foreach (var token in tokensToRefresh)
             {
                 token.RevokedAt = DateTime.UtcNow;
             }
-            await _dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync(context.CancellationToken);
             _logger.LogInformation("Revoked {Count} refresh tokens older than {CutoffDate}", tokensToRefresh.Count, cutoffDate);
         }
     }

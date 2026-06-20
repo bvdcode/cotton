@@ -30,11 +30,11 @@ public sealed class StoragePressureOptions
     public int AdminNotificationCooldownMinutes { get; set; } = 60;
 
     /// <summary>
-    /// Checks interval.
+    /// Gets the interval between storage pressure checks.
     /// </summary>
     public TimeSpan CheckInterval => TimeSpan.FromSeconds(Math.Clamp(CheckIntervalSeconds, 1, 300));
     /// <summary>
-    /// Executes admin notification cooldown.
+    /// Gets the minimum delay between admin notifications.
     /// </summary>
     public TimeSpan AdminNotificationCooldown => TimeSpan.FromMinutes(Math.Clamp(AdminNotificationCooldownMinutes, 1, 24 * 60));
 

@@ -204,7 +204,7 @@ namespace Cotton.Server.Handlers.Nodes
             Guid targetParentId,
             Guid userId,
             string nameKey,
-            Cotton.Database.Models.Enums.NodeType nodeType,
+            NodeType nodeType,
             Guid movingNodeId,
             CancellationToken ct)
         {
