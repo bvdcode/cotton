@@ -67,7 +67,7 @@ namespace Cotton.Crypto
         private readonly long _pipePauseWriterThresholdBytes;
         private readonly long _pipeResumeWriterThresholdBytes;
         private static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Shared;
-        private readonly int ConcurrencyLevel = Math.Min(4, Environment.ProcessorCount);
+        private readonly int _concurrencyLevel = Math.Min(4, Environment.ProcessorCount);
 
         /// <summary>
         /// Initializes a new instance of the AesGcmStreamCipher class using the specified master key and configuration
@@ -140,9 +140,9 @@ namespace Cotton.Crypto
                 {
                     throw new ArgumentOutOfRangeException(nameof(threads), $"Threads must be between 1 and {_maxThreads} (CPU * {_threadsMultiplier}).");
                 }
-                ConcurrencyLevel = threads.Value;
+                _concurrencyLevel = threads.Value;
             }
-            ConcurrencyLevel = Math.Clamp(ConcurrencyLevel, 1, _maxThreads);
+            _concurrencyLevel = Math.Clamp(_concurrencyLevel, 1, _maxThreads);
         }
 
         private int ComputeEffectiveWindowCap(int chunkSize)
@@ -214,7 +214,7 @@ namespace Cotton.Crypto
                     BufferPool.Return(headerBuf, clearArray: false);
                 }
 
-                var enc = new EncryptionPipeline(input, output, fileKey, fileNoncePrefix, chunkSize, ConcurrencyLevel, _keyId, NonceSize, TagSize, effectiveWindowCap, BufferPool);
+                var enc = new EncryptionPipeline(input, output, fileKey, fileNoncePrefix, chunkSize, _concurrencyLevel, _keyId, NonceSize, TagSize, effectiveWindowCap, BufferPool);
                 await enc.RunAsync(ct).ConfigureAwait(false);
             }
             finally
@@ -272,7 +272,7 @@ namespace Cotton.Crypto
                     byte[] aad = AesGcmStreamFormat.BuildKeyAad(header.KeyId, header.NoncePrefix, header.Nonce, header.TotalPlaintextLength, NonceSize, TagSize, KeySize, header.FormatVersion);
                     gcm.Decrypt(header.Nonce, header.EncryptedKey, tagSpan, fileKey.AsSpan(0, KeySize), associatedData: aad);
                 }
-                var dec = new DecryptionPipeline(input, output, fileKey, header.NoncePrefix, ConcurrencyLevel, _keyId, NonceSize, TagSize, MaxChunkSize, effectiveWindowCap, header.TotalPlaintextLength, _strictLengthCheck, header.FormatVersion, BufferPool);
+                var dec = new DecryptionPipeline(input, output, fileKey, header.NoncePrefix, _concurrencyLevel, _keyId, NonceSize, TagSize, MaxChunkSize, effectiveWindowCap, header.TotalPlaintextLength, _strictLengthCheck, header.FormatVersion, BufferPool);
                 await dec.RunAsync(ct).ConfigureAwait(false);
             }
             finally
