@@ -34,7 +34,7 @@ namespace Cotton.Server.Extensions
         }
 
         /// <summary>
-        /// Registers web dav services services.
+        /// Registers WebDAV services.
         /// </summary>
         public static IServiceCollection AddWebDavServices(this IServiceCollection services)
         {
@@ -43,7 +43,7 @@ namespace Cotton.Server.Extensions
         }
 
         /// <summary>
-        /// Registers chunk services services.
+        /// Registers chunk services.
         /// </summary>
         public static IServiceCollection AddChunkServices(this IServiceCollection services)
         {
@@ -105,7 +105,7 @@ namespace Cotton.Server.Extensions
         }
 
         /// <summary>
-        /// Registers layout path services services.
+        /// Registers layout path services.
         /// </summary>
         public static IServiceCollection AddLayoutPathServices(this IServiceCollection services)
         {

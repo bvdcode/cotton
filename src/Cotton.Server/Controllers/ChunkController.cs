@@ -65,8 +65,6 @@ namespace Cotton.Server.Controllers
         [RequestSizeLimit(AesGcmStreamCipher.MaxChunkSize + ushort.MaxValue)]
         public async Task<IActionResult> UploadChunk([FromForm] IFormFile file, [FromForm] string hash)
         {
-            // TODO: Stream upload without IFormFile, validating the hash on-the-fly.
-
             if (file == null)
             {
                 return CottonResult.BadRequest("No file uploaded.");

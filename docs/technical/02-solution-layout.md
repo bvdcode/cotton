@@ -222,7 +222,7 @@ A self-contained, compile-time HTML email subsystem (no Razor, no file I/O):
 
 The project has **no NuGet or project references** — it is a pure string/formatting library, deliberately decoupled so it can be referenced cheaply by the server.
 
-> README/code note: The README says *"UI localization currently includes English, Russian, Spanish, and German"* (`README.md` line 260). This understates the **frontend**, which ships locale JSON for `cs, de, en, es, fr, it, nl, pl, pt, ru, uk, zh` (see `src/cotton.client/src/locales/` and `languageDisplayNames.ts`). Conversely, the **backend** is narrower: the `Language` enum and `Cotton.Localization` only cover English and Russian (and `NotificationTemplates` is English-only). The two localization layers have different coverage.
+> Localization-coverage note: The two localization layers have different coverage. The **frontend** ships locale JSON for `cs, de, en, es, fr, it, nl, pl, pt, ru, uk, zh` (12 locales; see `src/cotton.client/src/locales/` and `languageDisplayNames.ts`). The **backend** is narrower: the `Language` enum and `Cotton.Localization` only cover English and Russian (and `NotificationTemplates` is English-only).
 
 ## Build configuration
 
@@ -330,7 +330,7 @@ Runs against a `postgres:17` service container (`postgres`/`postgres`/`postgres`
 | File | Contents / notable points |
 |---|---|
 | `LICENSE` | **MIT License**, "Copyright (c) 2025 Vadim Belov \| bvdcode \| belov.us". |
-| `COPYRIGHT` | States the project is *"licensed under the GNU Affero General Public License version 3.0, SPDX identifier: MIT."* This sentence is **internally contradictory** (AGPL-3.0 text vs `MIT` SPDX id). The `LICENSE` file, the per-file SPDX headers (`MIT`), and every `<PackageLicenseExpression>MIT</PackageLicenseExpression>` all say **MIT**, so MIT is the operative license; the AGPL phrasing in `COPYRIGHT` appears to be a stray error. |
+| `COPYRIGHT` | States the project is licensed under the **MIT License**, SPDX identifier `MIT`, consistent with the `LICENSE` file, the per-file SPDX headers (`MIT`), and every `<PackageLicenseExpression>MIT</PackageLicenseExpression>`. (An earlier revision carried contradictory AGPL-3.0 phrasing alongside the `MIT` SPDX id; that has been corrected to MIT throughout.) |
 | `SECURITY.md` | Report vulnerabilities to `cotton@belov.us` (no GitHub issues); response within 7 days; no public PoCs before a coordinated release. |
 | `CONTRIBUTING.md` | Contributions licensed under MIT; **DCO** required (`Signed-off-by: Real Name <email>` on every commit); declares **frozen areas** — *Crypto, Storage streams, Manifests* (bugfixes only, with tests + bench); a PR must not regress benches by >1%. |
 | `CODEOWNERS` | `/ @bvdcode` — the entire tree is owned by the single maintainer. |
