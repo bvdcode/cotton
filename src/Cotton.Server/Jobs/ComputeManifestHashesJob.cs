@@ -44,9 +44,10 @@ namespace Cotton.Server.Jobs
             }
 
             var unprocessedManifests = await _dbContext.FileManifests
-                .Take(MaxItemsPerRun)
-                .Include(fm => fm.FileManifestChunks)
                 .Where(fm => fm.ComputedContentHash == null)
+                .Include(fm => fm.FileManifestChunks)
+                .OrderBy(fm => fm.Id)
+                .Take(MaxItemsPerRun)
                 .ToListAsync(context.CancellationToken);
 
             foreach (var manifest in unprocessedManifests)

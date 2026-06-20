@@ -69,7 +69,6 @@ public static class LayoutSearchCriteriaBuilder
                 return new LayoutSearchToken(
                     NameKey: x,
                     ContainsPattern: $"%{escapedToken}%",
-                    PrefixPattern: $"{escapedToken}%",
                     HasLetters: x.Any(char.IsLetter));
             })
             .ToArray();

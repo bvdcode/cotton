@@ -35,7 +35,7 @@ namespace Cotton.Crypto.Helpers
         /// <param name="input">The input stream containing the data to hash. The stream must be readable and positioned at the start of the
         /// data to hash.</param>
         /// <returns>A lowercase hexadecimal string representing the hash of the input data.</returns>
-        [Obsolete("Use Cotton.Crypto.Hashing.HashingExtensions.ComputeHashToHex extension method instead.")]
+        [Obsolete("Compute the SHA-256 hash directly (e.g. SHA256.HashData / IncrementalHash) and format it with Convert.ToHexStringLower instead.")]
         public static string HashToHex(Stream input)
         {
             using var sha256 = System.Security.Cryptography.SHA256.Create();

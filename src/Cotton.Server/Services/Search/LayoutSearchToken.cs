@@ -9,5 +9,4 @@ namespace Cotton.Server.Services.Search;
 public sealed record LayoutSearchToken(
     string NameKey,
     string ContainsPattern,
-    string PrefixPattern,
     bool HasLetters);
