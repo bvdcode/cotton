@@ -21,7 +21,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Cotton.Server.Handlers.Users
 {
     /// <summary>
-    /// Represents the update current user request request payload accepted by the API.
+    /// Represents the update current user request payload accepted by the API.
     /// </summary>
     public class UpdateCurrentUserRequest(
         Guid userId,

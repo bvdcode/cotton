@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Cotton.Server.Handlers.Users
 {
     /// <summary>
-    /// Represents the send password reset request request payload accepted by the API.
+    /// Represents the send password reset request payload accepted by the API.
     /// </summary>
     public class SendPasswordResetRequest(string usernameOrEmail, HttpRequest httpRequest) : IRequest
     {
