@@ -12,7 +12,7 @@ using EasyExtensions.Mediator.Contracts;
 namespace Cotton.Server.Handlers.Users
 {
     /// <summary>
-    /// Represents the change password request request payload accepted by the API.
+    /// Represents the change password request payload accepted by the API.
     /// </summary>
     public class ChangePasswordRequest(Guid userId, string oldPassword, string newPassword) : IRequest
     {

@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Cotton.Server.Handlers.Users
 {
     /// <summary>
-    /// Represents the confirm email verification request request payload accepted by the API.
+    /// Represents the confirm email verification request payload accepted by the API.
     /// </summary>
     public class ConfirmEmailVerificationRequest(string token) : IRequest
     {
