@@ -48,7 +48,7 @@ public class ChunkIngestService(
         await WaitForGarbageCollectionAsync(storageKey, ct);
 
         var settings = _settingsProvider.GetServerSettings();
-        var chunk = await _layouts.FindChunkAsync(chunkHash);
+        var chunk = await _layouts.FindChunkAsync(chunkHash, ct);
         bool existsInStorage = await _storage.ExistsAsync(storageKey);
 
         Chunk? reusedChunk = await TryReuseDeduplicatedChunkAsync(

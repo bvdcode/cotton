@@ -85,7 +85,7 @@ namespace Cotton.Server.Handlers.Files
         /// </summary>
         public async Task<NodeFileManifestDto> Handle(CreateFileRequest request, CancellationToken cancellationToken)
         {
-            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId);
+            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId, cancellationToken);
 
             // Resolve once before expensive manifest/hash work so invalid targets fail fast.
             // The target is re-read inside the layout lock before the namespace write.

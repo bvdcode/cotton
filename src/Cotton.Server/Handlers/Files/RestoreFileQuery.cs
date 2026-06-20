@@ -115,7 +115,7 @@ namespace Cotton.Server.Handlers.Files
             IDbContextTransaction tx,
             CancellationToken ct)
         {
-            var trashRoot = await _layouts.GetUserTrashRootAsync(userId);
+            var trashRoot = await _layouts.GetUserTrashRootAsync(userId, ct);
             if (wrapper.Type == NodeType.Trash && wrapper.ParentId == trashRoot.Id)
             {
                 return null;

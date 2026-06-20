@@ -43,21 +43,21 @@ namespace Cotton.Server.Jobs
                 return;
             }
 
-            var unprocessedManifests = _dbContext.FileManifests
+            var unprocessedManifests = await _dbContext.FileManifests
                 .Take(MaxItemsPerRun)
                 .Include(fm => fm.FileManifestChunks)
                 .Where(fm => fm.ComputedContentHash == null)
-                .ToList();
+                .ToListAsync(context.CancellationToken);
 
             foreach (var manifest in unprocessedManifests)
             {
                 if (_perf.IsPreviewGenerating() || _perf.IsUploading())
                 {
-                    await Task.Delay(60_000);
+                    await Task.Delay(60_000, context.CancellationToken);
                 }
                 else
                 {
-                    await Task.Delay(250);
+                    await Task.Delay(250, context.CancellationToken);
                 }
 
                 _logger.LogInformation("Computing hash for manifest {ManifestId}", manifest.Id);
@@ -71,7 +71,7 @@ namespace Cotton.Server.Jobs
                 if (computedContentHash.SequenceEqual(manifest.ProposedContentHash))
                 {
                     manifest.ComputedContentHash = computedContentHash;
-                    await _dbContext.SaveChangesAsync();
+                    await _dbContext.SaveChangesAsync(context.CancellationToken);
                     _logger.LogInformation("Hash match for manifest {ManifestId}: {Hash}",
                         manifest.Id, Hasher.ToHexStringHash(manifest.ComputedContentHash));
                 }
@@ -83,7 +83,7 @@ namespace Cotton.Server.Jobs
                         Hasher.ToHexStringHash(manifest.ProposedContentHash));
                     var relatedFiles = await _dbContext.NodeFiles
                         .Where(nf => nf.FileManifestId == manifest.Id)
-                        .ToListAsync();
+                        .ToListAsync(context.CancellationToken);
 
                     // send notification for each related file
                     foreach (var file in relatedFiles)

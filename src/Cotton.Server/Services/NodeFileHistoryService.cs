@@ -33,7 +33,7 @@ public class NodeFileHistoryService(
 
         if (shouldSaveVersion)
         {
-            var trashNode = await _layouts.CreateTrashItemAsync(userId);
+            var trashNode = await _layouts.CreateTrashItemAsync(userId, ct);
 
             var versionFile = new NodeFile
             {
