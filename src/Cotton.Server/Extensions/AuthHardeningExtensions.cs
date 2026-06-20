@@ -16,6 +16,9 @@ namespace Cotton.Server.Extensions
     /// </summary>
     public static class AuthHardeningExtensions
     {
+        private const string RobotsTagHeader = "X-Robots-Tag";
+        private const string RobotsNoIndexValue = "noindex";
+
         /// <summary>
         /// Registers auth hardening services.
         /// </summary>
@@ -33,7 +36,23 @@ namespace Cotton.Server.Extensions
         /// </summary>
         public static IApplicationBuilder UseAuthHardening(this IApplicationBuilder app)
         {
-            return app.UseRateLimiter();
+            return app
+                .UseSearchEngineExclusion()
+                .UseRateLimiter();
+        }
+
+        private static IApplicationBuilder UseSearchEngineExclusion(this IApplicationBuilder app)
+        {
+            return app.Use((context, next) =>
+            {
+                context.Response.OnStarting(static state =>
+                {
+                    var response = (HttpResponse)state;
+                    response.Headers[RobotsTagHeader] = RobotsNoIndexValue;
+                    return Task.CompletedTask;
+                }, context.Response);
+                return next();
+            });
         }
 
         private static IServiceCollection AddAuthRateLimiting(this IServiceCollection services)

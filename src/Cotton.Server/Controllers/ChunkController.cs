@@ -18,6 +18,7 @@ namespace Cotton.Server.Controllers
     /// <summary>
     /// Exposes HTTP endpoints for chunk operations.
     /// </summary>
+    [ApiController]
     public class ChunkController(
         PerfTracker _perf,
         CottonDbContext _dbContext,
