@@ -70,7 +70,7 @@ The provider exposes `GetGeneratorByContentType`, `GetAllSupportedMimeTypes`, an
 | Constant | Value | Meaning |
 |---|---|---|
 | `DefaultSmallPreviewSize` | `200` | Small preview edge (px). |
-| `DefaultLargePreviewSize` | `2000` | Large preview edge (px). |
+| `DefaultLargePreviewSize` | `2560` | Large preview edge (px). |
 | `DefaultGeneratorVersion` | `0` | Version assumed for files with no matching generator. |
 
 The `Version` property on each generator is the staleness key: when a generator's `Version` is bumped, `GeneratePreviewJob` re-runs it for all matching manifests whose stored `PreviewGeneratorVersion` differs (see *The scheduled GeneratePreviewJob* below). Current versions are taken directly from each generator's `Version` property:

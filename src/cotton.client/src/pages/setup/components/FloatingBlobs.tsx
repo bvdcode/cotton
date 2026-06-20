@@ -1,4 +1,5 @@
 import { Box, alpha } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 
 export function FloatingBlobs() {
   return (
@@ -18,7 +19,7 @@ export function FloatingBlobs() {
         sx={{
           top: "-10%",
           left: "-5%",
-          background: (theme: { palette: { primary: { main: string } } }) =>
+          background: (theme: Theme) =>
             `radial-gradient(ellipse, ${alpha(theme.palette.primary.main, 0.4)}, transparent 70%)`,
           animation: "floatA 25s ease-in-out infinite",
         }}
@@ -29,7 +30,7 @@ export function FloatingBlobs() {
         sx={{
           bottom: "-15%",
           right: "-10%",
-          background: (theme: { palette: { secondary: { main: string } } }) =>
+          background: (theme: Theme) =>
             `radial-gradient(circle, ${alpha(theme.palette.secondary.main, 0.35)}, transparent 65%)`,
           animation: "floatB 30s ease-in-out infinite",
         }}
@@ -40,7 +41,7 @@ export function FloatingBlobs() {
         sx={{
           top: "50%",
           right: "-8%",
-          background: (theme: { palette: { primary: { main: string } } }) =>
+          background: (theme: Theme) =>
             `radial-gradient(ellipse, ${alpha(theme.palette.primary.main, 0.28)}, transparent 68%)`,
           animation: "floatC 28s ease-in-out infinite",
         }}
@@ -51,7 +52,7 @@ export function FloatingBlobs() {
         sx={{
           top: "70%",
           left: "10%",
-          background: (theme: { palette: { secondary: { main: string } } }) =>
+          background: (theme: Theme) =>
             `radial-gradient(circle, ${alpha(theme.palette.secondary.main, 0.25)}, transparent 72%)`,
           animation: "floatD 32s ease-in-out infinite",
         }}
@@ -68,7 +69,7 @@ function Blob({ size, shape, sx }: { size: number; shape: "circle" | "ellipse"; 
         position: "absolute",
         width: size,
         height: isEllipse ? size * 0.65 : size,
-        borderRadius: isEllipse ? "50%" : "50%",
+        borderRadius: "50%",
         filter: "blur(50px)",
         opacity: 0.75,
         ...sx,
