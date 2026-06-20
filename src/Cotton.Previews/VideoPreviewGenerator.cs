@@ -43,7 +43,7 @@ namespace Cotton.Previews
                 throw new InvalidOperationException("Video preview generation requires a seekable stream.");
             }
 
-            try { stream.Seek(0, SeekOrigin.Begin); } catch { }
+            stream.Seek(0, SeekOrigin.Begin);
 
             byte[] imageBytes;
             await using (var server = new RangeStreamServer(stream))

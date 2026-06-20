@@ -102,7 +102,7 @@ flowchart TD
   H --> I[EnsureChunkExistsAsync]
   I --> J[Set SmallFilePreviewHash + Encrypted + Version, clear error]
   J --> K{Image / Heic / Svg?}
-  K -->|yes| L[GetBlobStream + size=2000 -> store -> LargeFilePreviewHash]
+  K -->|yes| L[GetBlobStream + size=2560 -> store -> LargeFilePreviewHash]
   K -->|no| M[SaveChangesAsync]
   L --> M
   M --> N[SignalR PreviewGenerated to each NodeFile.OwnerId]
@@ -136,7 +136,7 @@ When `_perf.IsUploading()` (the injected `PerfTracker`) reports an active upload
 
 ### Individual generators
 
-**ImagePreviewGenerator** — Loads via `Image.Load<Rgba32>`, applies `AutoOrient()` (honours EXIF orientation), and resizes with `ResizeMode.Max` only if the image exceeds `size`. WebP quality is size-dependent: it compares `size` against the midpoint of the small/large defaults (`(200 + 2000) / 2 = 1100`) and uses `LargePreviewQuality = 82` when `size > mid`, else `SmallPreviewQuality = 75`. This generator is reused internally by the audio, video, and STL/3MF generators to do the final downscale+encode.
+**ImagePreviewGenerator** — Loads via `Image.Load<Rgba32>`, applies `AutoOrient()` (honours EXIF orientation), and resizes with `ResizeMode.Max` only if the image exceeds `size`. WebP quality is size-dependent: it compares `size` against the midpoint of the small/large defaults (`(200 + 2560) / 2 = 1380`) and uses `LargePreviewQuality = 85` when `size > mid`, else `SmallPreviewQuality = 75`. This generator is reused internally by the audio, video, and STL/3MF generators to do the final downscale+encode.
 
 **SvgPreviewGenerator** — Buffers the input, sniffs the gzip magic bytes (`0x1F 0x8B`) and transparently decompresses `.svgz`. Renders with `SKSvg`/Svg.Skia onto an RGBA premultiplied Skia surface, scaled to fit `size` while preserving aspect ratio, on a transparent background, then encodes WebP at a fixed quality of 90. Throws `InvalidOperationException` if `svg.Picture` is null or the `CullRect` has non-positive dimensions.
 
@@ -155,7 +155,7 @@ When `_perf.IsUploading()` (the injected `PerfTracker`) reports an active upload
 
 If both paths fail it throws an `InvalidOperationException` wrapping both errors in an `AggregateException`. Supported types include `audio/mpeg`, `audio/mp3`, `audio/flac`, `audio/x-flac`, `audio/ogg`, `audio/wav`, `audio/x-wav`, `audio/aac`, `audio/mp4`, `audio/x-m4a`, `audio/opus`, `audio/webm`, `audio/aiff`, `audio/x-aiff`.
 
-**VideoPreviewGenerator** — Calls `FfmpegBinary.EnsureAvailableAsync()`, requires a seekable stream, and wraps it in a `RangeStreamServer`. It first tries `TryExtractCoverArtAsync` (`-dump_attachment:t:0 <tempfile> -i <url> -y`, 15 s timeout) to extract an *attached* cover image (e.g. MKV cover art) to a temp file. If none, it probes duration via `FfmpegBinary.TryGetDurationSecondsAsync` (15 s), computes a mid-duration seek (`ComputeSeekSeconds`: `duration * 0.5`, clamped to `[0.5, duration - 0.5]`, or 0 when duration is unknown/non-positive), and runs ffmpeg `[-ss <t>] -i <url> -frames:v 1 -an -sn -dn -f image2pipe -vcodec png pipe:1` (30 s timeout) to capture one frame. The PNG is then downscaled+encoded through `ImagePreviewGenerator`. Supported video MIME types: `video/mp4`, `video/webm`, `video/ogg`, `video/avi`, `video/mov`, `video/quicktime`, `video/x-quicktime`, `video/mkv`, `video/x-msvideo`, `video/vnd.avi`, `video/x-matroska`.
+**VideoPreviewGenerator** — Calls `FfmpegBinary.EnsureAvailableAsync()`, requires a seekable stream, and wraps it in a `RangeStreamServer`. It first tries `TryExtractCoverArtAsync` (`-dump_attachment:t:0 <tempfile> -i <url> -y`, 15 s timeout) to extract an *attached* cover image (e.g. MKV cover art) to a temp file. If none, it probes duration via `FfmpegBinary.TryGetDurationSecondsAsync` (15 s), computes a mid-duration seek (`ComputeSeekSeconds`: `duration * 0.5`, clamped to `[0.5, duration - 0.5]`, or 0 when duration is unknown/non-positive), and runs ffmpeg `[-ss <t>] -i <url> -frames:v 1 -an -sn -dn -f image2pipe -vcodec png pipe:1` (30 s timeout) to capture one frame. The PNG is then downscaled+encoded through `ImagePreviewGenerator`. Supported video MIME types: `video/mp4`, `video/webm`, `video/ogg`, `video/avi`, `video/mov`, `video/quicktime`, `video/x-quicktime`, `video/mkv`, `video/msvideo`, `video/x-msvideo`, `video/vnd.avi`, `video/matroska`, `video/x-matroska`.
 
 **StlThumbPreviewGenerator** — Despite the class name (historically "stl-thumb"), it renders via **f3d**. Three variants are registered: `.stl` (`model/stl`, `application/sla`, `application/vnd.ms-pki.stl`), `.obj` (`model/obj`), and `.3mf` (`model/3mf`, `application/vnd.ms-package.3dmanufacturing-3dmodel+xml`). Flow:
 

@@ -309,7 +309,7 @@ public class WebDavController(
     /// </summary>
     [AcceptVerbs("UNLOCK")]
     [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
-    public IActionResult HandleUnlockAsync(string? path)
+    public IActionResult HandleUnlock(string? path)
     {
         var userId = User.GetUserId();
         path ??= string.Empty;

@@ -996,7 +996,7 @@ namespace Cotton.Server.Controllers
             };
 
             Response.Headers.CacheControl = "private, no-store, no-transform";
-            HonourDeleteAfterUse(lookup.DownloadToken!);
+            RegisterDeleteAfterUse(lookup.DownloadToken!);
             return Content(
                 HlsManifestBuilder.BuildMaster(variants),
                 HlsManifestBuilder.ContentType,
@@ -1028,7 +1028,7 @@ namespace Cotton.Server.Controllers
                     + $"/{nodeFileId}/hls/seg-{segmentIndex}.ts?token={encodedToken}&quality={qualityName}");
 
             Response.Headers.CacheControl = "private, no-store, no-transform";
-            HonourDeleteAfterUse(lookup.DownloadToken!);
+            RegisterDeleteAfterUse(lookup.DownloadToken!);
             return Content(manifest, HlsManifestBuilder.ContentType, System.Text.Encoding.UTF8);
         }
 
@@ -1065,7 +1065,7 @@ namespace Cotton.Server.Controllers
                 return CottonResult.NotFound("Segment index out of range.");
             }
 
-            HonourDeleteAfterUse(lookup.DownloadToken!);
+            RegisterDeleteAfterUse(lookup.DownloadToken!);
 
             HlsRendition rendition = HlsRenditionProfile.Parse(quality);
             string qualityName = rendition.ToString().ToLowerInvariant();
@@ -1191,20 +1191,6 @@ namespace Cotton.Server.Controllers
             };
 
             return _storage.GetBlobStream(uids, context);
-        }
-
-        private void HonourDeleteAfterUse(DownloadToken downloadToken)
-        {
-            if (!downloadToken.DeleteAfterUse)
-            {
-                return;
-            }
-
-            Response.OnCompleted(async () =>
-            {
-                _dbContext.DownloadTokens.Remove(downloadToken);
-                await _dbContext.SaveChangesAsync();
-            });
         }
 
         private async Task<MediaProbeInfo?> ProbeMediaAsync(NodeFile nodeFile)

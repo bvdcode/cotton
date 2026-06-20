@@ -54,7 +54,7 @@ namespace Cotton.Previews
                 throw new InvalidOperationException("Audio preview generation requires a seekable stream.");
             }
 
-            try { stream.Seek(0, SeekOrigin.Begin); } catch { }
+            stream.Seek(0, SeekOrigin.Begin);
 
             byte[]? imageBytes = null;
             Exception? coverArtException = null;

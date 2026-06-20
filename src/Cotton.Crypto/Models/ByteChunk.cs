@@ -24,7 +24,7 @@ namespace Cotton.Crypto.Models
         public byte[] Buffer { get; } = buffer ?? throw new ArgumentNullException(nameof(buffer));
 
         /// <summary>
-        /// Gets the number of elements contained in the collection.
+        /// Number of valid bytes in <see cref="Buffer"/>.
         /// </summary>
         public int Length { get; } = length;
     }

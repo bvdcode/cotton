@@ -101,11 +101,11 @@ Frontend (`src/cotton.client/package.json`), built with **Vite** (`vite ^8.0.13`
 | Routing | React Router | `react-router-dom ^7.10.1` |
 | Large-list virtualization | react-virtuoso | `^4.18.1` |
 | Chunk hashing | hash-wasm (in a Web Worker) | `^4.12.0` |
-| i18n | i18next / react-i18next | `i18next ^26.2.0` (EN/RU/ES/DE, parity-checked in CI) |
+| i18n | i18next / react-i18next | `i18next ^26.2.0` (12 frontend locales: cs, de, en, es, fr, it, nl, pl, pt, ru, uk, zh — parity-checked in CI; backend notifications cover EN/RU) |
 | PWA | vite-plugin-pwa | `^1.2.0` |
 | Previews | pdfjs-dist, hls.js, three / @react-three, heic2any, monaco-editor | various |
 
-> README/code discrepancy — crypto provenance. The README's "Cryptography & Performance" and "Repo Map" sections state crypto is "powered by **EasyExtensions.Crypto** (NuGet)". In the shipped code the runtime cipher is the **in-repo `Cotton.Crypto` project** (`src/Cotton.Crypto/AesGcmStreamCipher.cs`, `src/Cotton.Crypto/KeyDerivation.cs`), registered through `AddStreamCipher()` (`src/Cotton.Server/Extensions/ServiceCollectionExtensions.cs`) and constructed by `StreamCipherFactory` (`src/Cotton.Server/Services/StreamCipherFactory.cs`). The `EasyExtensions.Crypto` NuGet package appears only in the test project `Cotton.Crypto.Tests` for legacy-format interop, and a code comment in `src/Cotton.Crypto/Internals/FormatConstants.cs` notes the older `CTN1` format "was emitted by EasyExtensions.Crypto before authenticated stream terminators existed". The runtime crypto has been migrated in-tree; the README's Repo Map also omits the `Cotton.Crypto` project entirely. See the *Cryptography Engine* section for the authoritative description.
+> Crypto provenance. The runtime cipher is the **in-repo `Cotton.Crypto` project** (`src/Cotton.Crypto/AesGcmStreamCipher.cs`, `src/Cotton.Crypto/KeyDerivation.cs`), registered through `AddStreamCipher()` (`src/Cotton.Server/Extensions/ServiceCollectionExtensions.cs`) and constructed by `StreamCipherFactory` (`src/Cotton.Server/Services/StreamCipherFactory.cs`). The `EasyExtensions.Crypto` NuGet package is referenced only by the test project `Cotton.Crypto.Tests` for legacy-format (`CTN1`) interop — a code comment in `src/Cotton.Crypto/Internals/FormatConstants.cs` notes the older `CTN1` format "was emitted by EasyExtensions.Crypto before authenticated stream terminators existed"; the current format is `CTN2`. See the *Cryptography Engine* section for the authoritative description.
 
 ## Major Subsystems
 
