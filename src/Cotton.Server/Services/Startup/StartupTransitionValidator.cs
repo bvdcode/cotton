@@ -54,9 +54,10 @@ namespace Cotton.Server.Services.Startup
             }
 
             string? lastRecordedVersion = versionHistory.FirstOrDefault()?.Version;
+            DateTime utcNow = DateTime.UtcNow;
             foreach (StartupTransitionRule rule in activeRules)
             {
-                if (versionHistory.Any(version => rule.IsSatisfiedBy(version.Version)))
+                if (versionHistory.Any(version => rule.IsSatisfiedBy(version.Version, version.CreatedAt, utcNow)))
                 {
                     continue;
                 }

@@ -14,6 +14,8 @@ namespace Cotton.Previews
     /// </summary>
     public class HeicPreviewGenerator : IPreviewGenerator
     {
+        private const int Rgba32BytesPerPixel = 4;
+
         /// <inheritdoc />
         public int Version => 2;
 
@@ -54,11 +56,13 @@ namespace Cotton.Previews
             int height = decoded.Height;
             HeifPlaneData plane = decoded.GetPlane(HeifChannel.Interleaved);
 
-            int rowBytes = width * 4;
-            byte[] pixels = new byte[rowBytes * height];
+            int rowBytes = checked(width * Rgba32BytesPerPixel);
+            byte[] pixels = new byte[checked(rowBytes * height)];
             for (int y = 0; y < height; y++)
             {
-                Marshal.Copy(IntPtr.Add(plane.Scan0, y * plane.Stride), pixels, y * rowBytes, rowBytes);
+                int sourceOffset = checked(y * plane.Stride);
+                int targetOffset = checked(y * rowBytes);
+                Marshal.Copy(IntPtr.Add(plane.Scan0, sourceOffset), pixels, targetOffset, rowBytes);
             }
 
             return Image.LoadPixelData<Rgba32>(pixels, width, height);

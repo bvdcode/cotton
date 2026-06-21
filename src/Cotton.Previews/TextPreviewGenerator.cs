@@ -29,6 +29,8 @@ namespace Cotton.Previews
         ];
 
         private const int MaxCharsToRead = 24_000;
+        private const int MaxLinesToRender = 64;
+        private const int MaxLineChars = 512;
         private const float PaddingRatio = 0.06f;
         private const float FontSizeRatio = 0.045f;
 
@@ -67,17 +69,10 @@ namespace Cotton.Previews
                 text = sb.ToString();
             }
 
-            if (string.IsNullOrWhiteSpace(text))
+            string rawText = text;
+            if (string.IsNullOrWhiteSpace(rawText))
             {
-                text = "(empty file)";
-            }
-
-            text = text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
-
-            const int maxChars = 4000;
-            if (text.Length > maxChars)
-            {
-                text = text[..maxChars] + "\n…";
+                rawText = "(empty file)";
             }
 
             int renderSize = Math.Max(size * 4, 512);
@@ -86,6 +81,10 @@ namespace Cotton.Previews
             float paddingTop = padding * 1.3f;
             float fontSize = Math.Max(10f, renderSize * FontSizeRatio);
             var font = _fontFamily.CreateFont(fontSize, FontStyle.Regular);
+            float wrapWidth = renderSize - (padding * 2);
+            float maxHeight = renderSize - paddingTop - padding;
+            float lineAdvance = fontSize * 1.25f;
+            text = PrepareAndLayout(rawText, font, wrapWidth, maxHeight, lineAdvance);
 
             canvas.Mutate(ctx =>
             {
@@ -110,12 +109,190 @@ namespace Cotton.Previews
             return ms.ToArray();
         }
 
+        private static string PrepareAndLayout(
+            string rawText,
+            Font font,
+            float wrapWidth,
+            float maxHeight,
+            float lineAdvance)
+        {
+            if (string.IsNullOrWhiteSpace(rawText))
+            {
+                return string.Empty;
+            }
+
+            string normalized = NormalizeText(rawText);
+            if (LooksBinary(rawText, normalized))
+            {
+                return string.Empty;
+            }
+
+            normalized = LimitLogicalLines(normalized, MaxLinesToRender);
+            normalized = LimitLineWidth(normalized, MaxLineChars);
+            return LayoutTextMonospace(normalized, font, wrapWidth, maxHeight, lineAdvance);
+        }
+
         private static FontFamily LoadFontFamily()
         {
             byte[] bytes = StaticFonts.GetFontBytes(StaticFontName.Consola);
             var collection = new FontCollection();
             using var fontStream = new MemoryStream(bytes, writable: false);
             return collection.Add(fontStream);
+        }
+
+        private static bool LooksBinary(string raw, string normalized)
+        {
+            if (raw.Length == 0)
+            {
+                return false;
+            }
+
+            int dropped = raw.Length - normalized.Length;
+            return dropped > (raw.Length / 4);
+        }
+
+        private static string LayoutTextMonospace(
+            string text,
+            Font font,
+            float wrapWidth,
+            float maxHeight,
+            float lineAdvance)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return string.Empty;
+            }
+
+            var measure = TextMeasurer.MeasureAdvance("M", new TextOptions(font));
+            float charWidth = Math.Max(1f, measure.Width);
+
+            int cols = Math.Max(1, (int)Math.Floor(wrapWidth / charWidth));
+            int rows = Math.Max(1, (int)Math.Floor(maxHeight / Math.Max(1f, lineAdvance)));
+            string rawLines = text
+                .Replace("\r\n", "\n", StringComparison.Ordinal)
+                .Replace('\r', '\n');
+
+            var sb = new System.Text.StringBuilder();
+            int producedRows = 0;
+            int i = 0;
+            while (i < rawLines.Length && producedRows < rows)
+            {
+                int nextNl = rawLines.IndexOf('\n', i);
+                string line = nextNl < 0 ? rawLines[i..] : rawLines[i..nextNl];
+
+                int pos = 0;
+                while (pos < line.Length && producedRows < rows)
+                {
+                    int take = Math.Min(cols, line.Length - pos);
+                    sb.Append(line.AsSpan(pos, take));
+                    pos += take;
+                    producedRows++;
+                    if (producedRows < rows)
+                    {
+                        sb.Append('\n');
+                    }
+                }
+
+                i = nextNl < 0 ? rawLines.Length : nextNl + 1;
+                if (nextNl >= 0 && producedRows < rows && (sb.Length == 0 || sb[^1] != '\n'))
+                {
+                    sb.Append('\n');
+                    producedRows++;
+                }
+            }
+
+            return sb.ToString().TrimEnd();
+        }
+
+        private static string NormalizeText(string text)
+        {
+            Span<char> tmp = text.ToCharArray();
+            int w = 0;
+
+            for (int i = 0; i < tmp.Length; i++)
+            {
+                char c = tmp[i];
+                if (c == '\0')
+                {
+                    continue;
+                }
+
+                if (c == '\r' || c == '\n' || c == '\t')
+                {
+                    tmp[w++] = c;
+                    continue;
+                }
+
+                if (char.IsControl(c))
+                {
+                    continue;
+                }
+
+                tmp[w++] = c;
+            }
+
+            return new string(tmp[..w]);
+        }
+
+        private static string LimitLineWidth(string text, int maxCharsPerLine)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return text;
+            }
+
+            var sb = new System.Text.StringBuilder(text.Length);
+            int current = 0;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (c == '\n')
+                {
+                    sb.Append(c);
+                    current = 0;
+                    continue;
+                }
+
+                if (current >= maxCharsPerLine)
+                {
+                    if (sb.Length > 0 && sb[^1] != '\n')
+                    {
+                        sb.Append("…\n");
+                    }
+                    current = 0;
+                    continue;
+                }
+
+                sb.Append(c);
+                current++;
+            }
+
+            return sb.ToString();
+        }
+
+        private static string LimitLogicalLines(string text, int maxLines)
+        {
+            int lines = 0;
+            int idx = 0;
+
+            while (idx < text.Length && lines < maxLines)
+            {
+                int next = text.IndexOf('\n', idx);
+                if (next < 0)
+                {
+                    idx = text.Length;
+                    break;
+                }
+                lines++;
+                idx = next + 1;
+            }
+
+            if (idx >= text.Length)
+            {
+                return text;
+            }
+
+            return text[..idx].TrimEnd() + "\n…";
         }
     }
 }

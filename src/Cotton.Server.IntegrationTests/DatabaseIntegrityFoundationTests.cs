@@ -172,12 +172,14 @@ public sealed class DatabaseIntegrityFoundationTests
         var protector = CreateProtector();
         var descriptor = new UserIntegrityDescriptor();
         var tamperedUser = CreateUser();
-        byte[] originalMac = protector.Sign(tamperedUser, descriptor);
-        tamperedUser.Role = UserRole.Admin;
 
         using var dbContext = CreateDbContext();
         var entry = dbContext.Attach(tamperedUser);
         entry.State = EntityState.Unchanged;
+        byte[] originalMac = protector.Sign(tamperedUser, descriptor);
+        tamperedUser.Role = UserRole.Admin;
+        entry.Property(nameof(User.Role)).OriginalValue = UserRole.Admin;
+        entry.Property(nameof(User.Role)).CurrentValue = UserRole.Admin;
         entry.Property(DatabaseIntegrityColumns.VersionProperty).OriginalValue = descriptor.SchemaVersion;
         entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue = descriptor.SchemaVersion;
         entry.Property(DatabaseIntegrityColumns.MacProperty).OriginalValue = originalMac;
@@ -199,6 +201,40 @@ public sealed class DatabaseIntegrityFoundationTests
             NullDatabaseIntegrityFailureReporter.Instance);
 
         Assert.Throws<DatabaseIntegrityException>(() => signer.SignPendingChanges(dbContext));
+    }
+
+    [Test]
+    public void ChangeSigner_AcceptsModifiedEntityWhenOriginalMacMatches()
+    {
+        var protector = CreateProtector();
+        var descriptor = new UserIntegrityDescriptor();
+        var user = CreateUser();
+
+        using var dbContext = CreateDbContext();
+        var entry = dbContext.Attach(user);
+        entry.State = EntityState.Unchanged;
+        byte[] originalMac = protector.Sign(user, descriptor);
+        entry.Property(DatabaseIntegrityColumns.VersionProperty).OriginalValue = descriptor.SchemaVersion;
+        entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue = descriptor.SchemaVersion;
+        entry.Property(DatabaseIntegrityColumns.MacProperty).OriginalValue = originalMac;
+        entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue = originalMac;
+
+        user.Email = "alice.changed@example.test";
+        dbContext.ChangeTracker.DetectChanges();
+        var signer = new DatabaseIntegrityChangeSigner(
+            protector,
+            new DatabaseIntegrityDescriptorRegistry([descriptor]),
+            NullDatabaseIntegrityFailureReporter.Instance);
+
+        Assert.DoesNotThrow(() => signer.SignPendingChanges(dbContext));
+
+        byte[] newMac = (byte[])entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue!;
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(newMac, Is.Not.EqualTo(originalMac));
+            Assert.That(protector.Verify(user, descriptor, newMac), Is.True);
+            Assert.That(protector.Verify(user, descriptor, originalMac), Is.False);
+        }
     }
 
     [Test]

@@ -125,6 +125,21 @@ namespace Cotton.Previews.Tests
         }
 
         [Test]
+        public async Task GeneratePreviewWebPAsync_BinaryLikeText_RendersBlankImage()
+        {
+            byte[] binaryLikeContent = Enumerable.Range(0, 4096)
+                .Select(index => index % 2 == 0 ? (byte)0 : (byte)1)
+                .ToArray();
+            using var stream = new MemoryStream(binaryLikeContent);
+
+            byte[] webpData = await _generator.GeneratePreviewWebPAsync(stream, size: 256);
+
+            using var image = Image.Load<Rgba32>(webpData);
+            bool hasNonWhitePixels = HasNonWhitePixels(image);
+            Assert.That(hasNonWhitePixels, Is.False, "Binary-like text should not render control characters");
+        }
+
+        [Test]
         public async Task GeneratePreviewWebPAsync_SingleCharacter_RendersCorrectly()
         {
             // Arrange

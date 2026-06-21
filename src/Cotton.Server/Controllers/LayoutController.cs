@@ -1028,7 +1028,14 @@ namespace Cotton.Server.Controllers
                 return null;
             }
 
-            _integrity.RequireValid(_dbContext, node, boundary);
+            try
+            {
+                _integrity.RequireValid(_dbContext, node, boundary);
+            }
+            catch (DatabaseIntegrityException)
+            {
+                return null;
+            }
             return node;
         }
 

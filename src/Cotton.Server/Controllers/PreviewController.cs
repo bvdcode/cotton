@@ -41,7 +41,8 @@ namespace Cotton.Server.Controllers
                 // so a token that decrypts to a valid hash was necessarily issued by this server;
                 // that is sufficient to serve a public preview blob without a database round-trip.
                 // Only preview/avatar hashes are ever encrypted with this key, so there is no other
-                // ciphertext that could be replayed here. Keep this path off the hot database path.
+                // ciphertext that could be replayed here. Stale tokens remain readable until storage
+                // GC removes their blob; keep this path off the hot database path.
                 if (!TryParsePreviewToken(previewHashEncryptedHex, out PreviewToken token))
                 {
                     return this.ApiNotFound("Preview image not found.");

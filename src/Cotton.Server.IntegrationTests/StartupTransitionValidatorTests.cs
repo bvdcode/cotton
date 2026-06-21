@@ -79,11 +79,28 @@ namespace Cotton.Server.IntegrationTests
         public async Task ValidateAsync_AllowsStableUpgradeWithRequiredTransitionVersion()
         {
             SetCurrentVersion("0.5.0");
-            await MigrateAndRecordVersionAsync("0.4.33");
+            await MigrateAndRecordVersionAsync("0.4.33", DateTime.UtcNow.AddHours(-25));
 
             StartupBlocker? blocker = await CreateValidator().ValidateAsync(CancellationToken.None);
 
             Assert.That(blocker, Is.Null);
+        }
+
+        [Test]
+        public async Task ValidateAsync_BlocksStableUpgradeWhenRequiredTransitionVersionIsTooRecent()
+        {
+            SetCurrentVersion("0.5.0");
+            await MigrateAndRecordVersionAsync("0.4.33", DateTime.UtcNow.AddHours(-23));
+
+            StartupBlocker? blocker = await CreateValidator().ValidateAsync(CancellationToken.None);
+
+            Assert.That(blocker, Is.Not.Null);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(blocker!.Kind, Is.EqualTo("version-transition-required"));
+                Assert.That(blocker.RequiredVersion, Is.EqualTo("0.4.33"));
+                Assert.That(blocker.LastRecordedVersion, Is.EqualTo("0.4.33"));
+            }
         }
 
         [Test]
@@ -97,13 +114,18 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(blocker, Is.Null);
         }
 
-        private async Task MigrateAndRecordVersionAsync(string version)
+        private async Task MigrateAndRecordVersionAsync(string version, DateTime? createdAt = null)
         {
             await DbContext.Database.MigrateAsync();
-            DbContext.AppVersions.Add(new AppVersion
+            AppVersion appVersion = new()
             {
                 Version = version,
-            });
+            };
+            DbContext.AppVersions.Add(appVersion);
+            if (createdAt.HasValue)
+            {
+                DbContext.Entry(appVersion).Property(nameof(AppVersion.CreatedAt)).CurrentValue = createdAt.Value;
+            }
             await DbContext.SaveChangesAsync();
             DbContext.ChangeTracker.Clear();
         }

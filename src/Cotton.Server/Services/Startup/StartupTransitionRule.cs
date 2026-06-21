@@ -9,6 +9,7 @@ namespace Cotton.Server.Services.Startup
         string _targetMinimumVersion,
         string _requiredMinimumVersion,
         string _requiredMaximumExclusiveVersion,
+        TimeSpan _requiredRunDuration,
         string _title,
         string _message)
     {
@@ -19,10 +20,11 @@ namespace Cotton.Server.Services.Startup
             return SemanticVersionComparer.IsGreaterThanOrEqual(currentVersion, _targetMinimumVersion);
         }
 
-        public bool IsSatisfiedBy(string recordedVersion)
+        public bool IsSatisfiedBy(string recordedVersion, DateTime recordedAt, DateTime utcNow)
         {
             return SemanticVersionComparer.IsGreaterThanOrEqual(recordedVersion, _requiredMinimumVersion)
-                && SemanticVersionComparer.IsLessThan(recordedVersion, _requiredMaximumExclusiveVersion);
+                && SemanticVersionComparer.IsLessThan(recordedVersion, _requiredMaximumExclusiveVersion)
+                && recordedAt <= utcNow.Subtract(_requiredRunDuration);
         }
 
         public StartupBlocker CreateBlocker(
