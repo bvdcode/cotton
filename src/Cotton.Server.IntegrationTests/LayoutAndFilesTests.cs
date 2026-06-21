@@ -187,7 +187,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
         var response = await _client.GetAsync(
             $"/api/v1/layouts/shared/{shareToken}/children?nodeId={outsideChild.Id}");
 
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
