@@ -80,7 +80,7 @@ namespace Cotton.Server.Services
         /// </summary>
         public static string ToHexStringHash(byte[] hash)
         {
-            return Convert.ToHexString(hash).ToLowerInvariant();
+            return Convert.ToHexStringLower(hash);
         }
 
         /// <summary>
