@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using System.Buffers.Binary;
 using System.Text;
 
 namespace Cotton.Previews
@@ -83,13 +84,10 @@ namespace Cotton.Previews
             offset >= 0 && length >= 0 && offset <= data.Length - length;
 
         public static ushort ReadUInt16(byte[] data, int offset) =>
-            (ushort)(data[offset] | (data[offset + 1] << 8));
+            BinaryPrimitives.ReadUInt16LittleEndian(data.AsSpan(offset, sizeof(ushort)));
 
         public static uint ReadUInt32(byte[] data, int offset) =>
-            (uint)(data[offset]
-                | (data[offset + 1] << 8)
-                | (data[offset + 2] << 16)
-                | (data[offset + 3] << 24));
+            BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(offset, sizeof(uint)));
 
         private static string ReadStringPoolString(byte[] data, int offset, int limit, bool isUtf8)
         {

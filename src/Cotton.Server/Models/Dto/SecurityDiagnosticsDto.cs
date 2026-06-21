@@ -236,10 +236,6 @@ namespace Cotton.Server.Models.Dto
         /// </summary>
         public bool Enabled { get; init; }
         /// <summary>
-        /// Gets a value indicating whether legacy integrity bridge mode is enabled.
-        /// </summary>
-        public bool BridgeBackfillEnabled { get; init; }
-        /// <summary>
         /// Gets or sets protected entity types.
         /// </summary>
         public int ProtectedEntityTypes { get; init; }

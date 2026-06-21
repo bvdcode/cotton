@@ -83,7 +83,13 @@ namespace Cotton.Server.Jobs
                         Hasher.ToHexStringHash(computedContentHash),
                         Hasher.ToHexStringHash(manifest.ProposedContentHash));
                     var relatedFiles = await _dbContext.NodeFiles
+                        .AsNoTracking()
                         .Where(nf => nf.FileManifestId == manifest.Id)
+                        .Select(nf => new
+                        {
+                            nf.OwnerId,
+                            nf.Name,
+                        })
                         .ToListAsync(context.CancellationToken);
 
                     // send notification for each related file

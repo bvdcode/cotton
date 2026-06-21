@@ -43,7 +43,6 @@ public sealed class DatabaseIntegrityDiagnosticsService(
         return new DatabaseIntegrityDiagnosticsDto
         {
             Enabled = true,
-            BridgeBackfillEnabled = false,
             ProtectedEntityTypes = _descriptors.All.Count,
             UnsignedProtectedRows = unsignedRows,
         };

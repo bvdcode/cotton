@@ -21,51 +21,51 @@ namespace Cotton.Server.Services
         /// </summary>
         public const string DefaultContentType = "application/octet-stream";
         private static readonly FileExtensionContentTypeProvider fileExtensionContentTypeProvider = new();
-        private static readonly IReadOnlyDictionary<string, string> extensionContentTypeOverrides =
-            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        private static readonly IReadOnlyDictionary<string, (string ContentType, bool ForceContentType)> extensionContentTypeOverrides =
+            new Dictionary<string, (string ContentType, bool ForceContentType)>(StringComparer.OrdinalIgnoreCase)
             {
-                [".heic"] = "image/heic",
-                [".heif"] = "image/heif",
-                [".heics"] = "image/heic-sequence",
-                [".heifs"] = "image/heif-sequence",
-                [".hif"] = "image/heif",
-                [".hifc"] = "image/heif-sequence",
-                [".avifs"] = "image/avif-sequence",
+                [".heic"] = Override("image/heic"),
+                [".heif"] = Override("image/heif"),
+                [".heics"] = Override("image/heic-sequence"),
+                [".heifs"] = Override("image/heif-sequence"),
+                [".hif"] = Override("image/heif"),
+                [".hifc"] = Override("image/heif-sequence"),
+                [".avifs"] = Override("image/avif-sequence"),
 
-                [".mov"] = "video/quicktime",
-                [".qt"] = "video/quicktime",
-                [".mkv"] = "video/x-matroska",
-                [".avi"] = "video/x-msvideo",
-                [".mka"] = "audio/x-matroska",
+                [".mov"] = Override("video/quicktime"),
+                [".qt"] = Override("video/quicktime"),
+                [".mkv"] = Override("video/x-matroska"),
+                [".avi"] = Override("video/x-msvideo"),
+                [".mka"] = Override("audio/x-matroska"),
 
-                [".opus"] = "audio/opus",
-                [".flac"] = "audio/flac",
-                [".oga"] = "audio/ogg",
-                [".weba"] = "audio/webm",
-                [".aac"] = "audio/aac",
-                [".m4b"] = "audio/mp4",
-                [".m4p"] = "audio/mp4",
-                [".m4r"] = "audio/mp4",
+                [".opus"] = Override("audio/opus"),
+                [".flac"] = Override("audio/flac"),
+                [".oga"] = Override("audio/ogg"),
+                [".weba"] = Override("audio/webm"),
+                [".aac"] = Override("audio/aac"),
+                [".m4b"] = Override("audio/mp4"),
+                [".m4p"] = Override("audio/mp4"),
+                [".m4r"] = Override("audio/mp4"),
 
-                [".md"] = "text/markdown",
-                [".markdown"] = "text/markdown",
-                [".cs"] = "text/plain",
-                [".csx"] = "text/plain",
-                [".lrc"] = "text/plain",
-                [".srt"] = "text/plain",
+                [".md"] = Override("text/markdown"),
+                [".markdown"] = Override("text/markdown"),
+                [".cs"] = Override("text/plain"),
+                [".csx"] = Override("text/plain"),
+                [".lrc"] = Override("text/plain"),
+                [".srt"] = Override("text/plain"),
 
-                [".svg"] = "image/svg+xml",
-                [".svgz"] = "image/svg+xml",
+                [".svg"] = Override("image/svg+xml"),
+                [".svgz"] = Override("image/svg+xml"),
 
-                [".stl"] = "model/stl",
-                [".obj"] = "model/obj",
-                [".3mf"] = "model/3mf",
+                [".stl"] = Override("model/stl", forceContentType: true),
+                [".obj"] = Override("model/obj", forceContentType: true),
+                [".3mf"] = Override("model/3mf", forceContentType: true),
 
-                [".apk"] = AndroidPackageContentTypes.Apk,
-                [".aab"] = AndroidPackageContentTypes.AndroidAppBundle,
-                [".apks"] = AndroidPackageContentTypes.Apks,
-                [".xapk"] = AndroidPackageContentTypes.Xapk,
-                [".apkm"] = AndroidPackageContentTypes.Apkm,
+                [".apk"] = Override(AndroidPackageContentTypes.Apk, forceContentType: true),
+                [".aab"] = Override(AndroidPackageContentTypes.AndroidAppBundle, forceContentType: true),
+                [".apks"] = Override(AndroidPackageContentTypes.Apks, forceContentType: true),
+                [".xapk"] = Override(AndroidPackageContentTypes.Xapk, forceContentType: true),
+                [".apkm"] = Override(AndroidPackageContentTypes.Apkm, forceContentType: true),
             };
 
         private static readonly IReadOnlySet<string> sourceTextExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -170,16 +170,21 @@ namespace Cotton.Server.Services
         {
             string extension = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
             if (!string.IsNullOrWhiteSpace(extension)
-                && extensionContentTypeOverrides.TryGetValue(extension, out string? overriddenContentType)
-                && (ShouldForceExtensionContentType(extension)
+                && extensionContentTypeOverrides.TryGetValue(extension, out var overrideMetadata)
+                && (overrideMetadata.ForceContentType
                     || string.IsNullOrWhiteSpace(normalizedContentType)
                     || string.Equals(normalizedContentType, DefaultContentType, StringComparison.OrdinalIgnoreCase)))
             {
-                return overriddenContentType;
+                return overrideMetadata.ContentType;
             }
 
             return null;
         }
+
+        private static (string ContentType, bool ForceContentType) Override(
+            string contentType,
+            bool forceContentType = false) =>
+            (contentType, forceContentType);
 
         private static string? ResolveProvidedContentType(string? fileName, string normalizedContentType)
         {
@@ -279,11 +284,6 @@ namespace Cotton.Server.Services
                 .ThenBy(extension => extension, StringComparer.Ordinal);
 
             return $"^(?:dockerfile(?:\\..*)?|\\.dockerignore|.+\\.(?:{string.Join("|", extensions)}))$";
-        }
-
-        private static bool ShouldForceExtensionContentType(string extension)
-        {
-            return extension is ".stl" or ".obj" or ".3mf" or ".apk" or ".aab" or ".apks" or ".xapk" or ".apkm";
         }
 
         private static string NormalizeContentType(string? contentType)

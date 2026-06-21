@@ -15,20 +15,13 @@ namespace Cotton.Server.Extensions
         {
             endpoints.MapGet(StatusPath, (HttpContext context) =>
             {
-                DisableCaching(context);
+                context.Response.ApplyNoStoreHeaders();
                 return blocker is null
                     ? Results.Ok(StartupStatusResponse.Ready())
                     : Results.Ok(StartupStatusResponse.BlockedBy(blocker));
             });
 
             return endpoints;
-        }
-
-        public static void DisableCaching(HttpContext context)
-        {
-            context.Response.Headers.CacheControl = "no-store, no-cache, max-age=0";
-            context.Response.Headers.Pragma = "no-cache";
-            context.Response.Headers.Expires = "0";
         }
     }
 }

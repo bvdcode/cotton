@@ -134,7 +134,6 @@ export interface AdminTotpDiagnosticsDto {
 
 export interface DatabaseIntegrityDiagnosticsDto {
   enabled: boolean;
-  bridgeBackfillEnabled: boolean;
   protectedEntityTypes: number;
   unsignedProtectedRows: number;
 }

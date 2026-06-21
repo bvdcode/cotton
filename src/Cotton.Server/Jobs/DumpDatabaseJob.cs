@@ -199,11 +199,7 @@ namespace Cotton.Server.Jobs
                     File.Delete(dumpPath);
                 }
             }
-            catch (IOException ex)
-            {
-                _logger.LogWarning(ex, "Failed to delete temporary database dump file {DumpPath}.", dumpPath);
-            }
-            catch (UnauthorizedAccessException ex)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 _logger.LogWarning(ex, "Failed to delete temporary database dump file {DumpPath}.", dumpPath);
             }

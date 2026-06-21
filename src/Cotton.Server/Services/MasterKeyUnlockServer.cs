@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Autoconfig.Extensions;
+using Cotton.Server.Extensions;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -51,7 +52,7 @@ namespace Cotton.Server.Services
 
             app.MapGet(UnlockApiBase + "/status", async (HttpContext context) =>
             {
-                DisableCaching(context);
+                context.Response.ApplyNoStoreHeaders();
                 bool requiresBootstrapToken = await RequiresBootstrapTokenAsync(
                     environment,
                     context.RequestAborted);
@@ -61,12 +62,12 @@ namespace Cotton.Server.Services
             });
             app.MapGet(UnlockApiBase + "/key", (HttpContext context) =>
             {
-                DisableCaching(context);
+                context.Response.ApplyNoStoreHeaders();
                 return Results.Text(GenerateRootMasterKey(), "text/plain; charset=utf-8");
             });
             app.MapPost(UnlockApiBase, async (HttpContext context) =>
             {
-                DisableCaching(context);
+                context.Response.ApplyNoStoreHeaders();
                 SubmittedUnlockRequest submitted = await ReadSubmittedUnlockRequestAsync(context);
                 IResult? bootstrapError = await ValidateBootstrapTokenAsync(
                     environment,
@@ -145,18 +146,11 @@ namespace Cotton.Server.Services
 
         private static async Task WriteLockedApiResponseAsync(HttpContext context)
         {
-            DisableCaching(context);
+            context.Response.ApplyNoStoreHeaders();
             context.Response.StatusCode = StatusCodes.Status423Locked;
             await context.Response.WriteAsJsonAsync(
                 new LockedApiResponse(true, "Cotton is locked until the master key is provided."),
                 cancellationToken: context.RequestAborted);
-        }
-
-        private static void DisableCaching(HttpContext context)
-        {
-            context.Response.Headers.CacheControl = "no-store, no-cache, max-age=0";
-            context.Response.Headers.Pragma = "no-cache";
-            context.Response.Headers.Expires = "0";
         }
 
         private static async Task CompleteUnlockAsync(

@@ -37,7 +37,7 @@ namespace Cotton.Server.Services.Startup
 
                 if (IsApiRequest(context.Request))
                 {
-                    StartupStatusEndpointExtensions.DisableCaching(context);
+                    context.Response.ApplyNoStoreHeaders();
                     context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
                     await context.Response.WriteAsJsonAsync(
                         StartupStatusResponse.BlockedBy(blocker),
