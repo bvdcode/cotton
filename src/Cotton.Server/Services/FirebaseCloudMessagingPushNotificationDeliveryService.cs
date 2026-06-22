@@ -25,6 +25,7 @@ namespace Cotton.Server.Services
         private const string SharesChannelId = "cotton.shares";
         private const string SecurityChannelId = "cotton.security";
         private const string UnregisteredErrorCode = "UNREGISTERED";
+        private const string FirebaseFcmErrorType = "type.googleapis.com/google.firebase.fcm.v1.FcmError";
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
         /// <inheritdoc />
@@ -219,12 +220,49 @@ namespace Cotton.Server.Services
 
         private static string? ReadProviderErrorCode(string responseBody)
         {
-            return ReadProviderErrorProperty(responseBody, "status");
+            return ReadFcmErrorCode(responseBody) ?? ReadProviderErrorProperty(responseBody, "status");
         }
 
         private static string? ReadProviderErrorMessage(string responseBody)
         {
             return ReadProviderErrorProperty(responseBody, "message");
+        }
+
+        private static string? ReadFcmErrorCode(string responseBody)
+        {
+            try
+            {
+                using JsonDocument document = JsonDocument.Parse(responseBody);
+                JsonElement root = document.RootElement;
+                if (!root.TryGetProperty("error", out JsonElement error)
+                    || error.ValueKind != JsonValueKind.Object
+                    || !error.TryGetProperty("details", out JsonElement details)
+                    || details.ValueKind != JsonValueKind.Array)
+                {
+                    return null;
+                }
+
+                foreach (JsonElement detail in details.EnumerateArray())
+                {
+                    if (detail.ValueKind != JsonValueKind.Object
+                        || !detail.TryGetProperty("@type", out JsonElement type)
+                        || type.ValueKind != JsonValueKind.String
+                        || !string.Equals(type.GetString(), FirebaseFcmErrorType, StringComparison.Ordinal)
+                        || !detail.TryGetProperty("errorCode", out JsonElement errorCode)
+                        || errorCode.ValueKind != JsonValueKind.String)
+                    {
+                        continue;
+                    }
+
+                    return errorCode.GetString();
+                }
+
+                return null;
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
         }
 
         private static string? ReadProviderErrorProperty(string responseBody, string propertyName)

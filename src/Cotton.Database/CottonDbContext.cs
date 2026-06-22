@@ -178,6 +178,7 @@ namespace Cotton.Database
             ConfigureIntegrityShadowProperties<UserExternalIdentity>(modelBuilder);
             ConfigureIntegrityShadowProperties<OidcLoginState>(modelBuilder);
             ConfigureIntegrityShadowProperties<ExtendedRefreshToken>(modelBuilder);
+            ConfigureIntegrityShadowProperties<PushDeviceToken>(modelBuilder);
             ConfigureIntegrityShadowProperties<DownloadToken>(modelBuilder);
             ConfigureIntegrityShadowProperties<NodeShareToken>(modelBuilder);
             ConfigureIntegrityShadowProperties<CottonServerSettings>(modelBuilder);

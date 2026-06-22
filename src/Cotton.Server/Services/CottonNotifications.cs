@@ -11,6 +11,7 @@ using Cotton.Server.Hubs;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Notifications;
 using Cotton.Server.Providers;
+using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.AspNetCore.Exceptions;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
@@ -31,6 +32,7 @@ namespace Cotton.Server.Services
         CottonPublicEmailProvider _publicEmailProvider,
         ILogger<CottonNotifications> _logger,
         IPushNotificationDeliveryService _pushDeliveryService,
+        IDatabaseIntegrityVerifier _integrity,
         IHubContext<EventHub> _hubContext) : INotificationsProvider
     {
         /// <summary>
@@ -369,6 +371,8 @@ namespace Cotton.Server.Services
             int skippedCount = 0;
             foreach (PushDeviceToken deviceToken in deviceTokens)
             {
+                _integrity.RequireValid(_dbContext, deviceToken, "push.device-token");
+
                 PushNotificationDeliveryResult result = await _pushDeliveryService.SendAsync(
                     new PushNotificationDeliveryRequest(deviceToken.Token, pushPayloadPlan),
                     CancellationToken.None);
