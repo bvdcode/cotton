@@ -37,14 +37,14 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
     private TestAppFactory? _factory;
     private HttpClient? _client;
 
-    private sealed record FixtureUpload(
+    private record FixtureUpload(
         Guid NodeFileId,
         string FileName,
         string ContentType,
         int SourceLength,
         bool ExpectLargePreview);
 
-    private sealed record FileManifestPreviewState(
+    private record FileManifestPreviewState(
         Guid Id,
         byte[]? SmallFilePreviewHash,
         byte[]? SmallFilePreviewHashEncrypted,

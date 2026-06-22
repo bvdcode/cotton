@@ -206,7 +206,7 @@ namespace Cotton.Server.Handlers.WebDav
                 : source.NodeFile?.NodeId;
         }
 
-        private sealed record PreLockSourceOutcome(Guid? LayoutId, WebDavMoveResult? Failure)
+        private record PreLockSourceOutcome(Guid? LayoutId, WebDavMoveResult? Failure)
         {
             /// <summary>
             /// Creates a successful operation result.
@@ -218,7 +218,7 @@ namespace Cotton.Server.Handlers.WebDav
             public static PreLockSourceOutcome Failed(WebDavMoveResult failure) => new(null, failure);
         }
 
-        private sealed record LockedMoveOutcome(
+        private record LockedMoveOutcome(
             WebDavResolveResult? Source,
             WebDavParentResult? DestinationParent,
             bool Created,

@@ -67,7 +67,7 @@ public class NetworkAddressClassifierTests
         });
     }
 
-    private sealed class RecordingGeoLookupService : IGeoLookupService
+    private class RecordingGeoLookupService : IGeoLookupService
     {
         public int LookupCount { get; private set; }
 
@@ -88,7 +88,7 @@ public class NetworkAddressClassifierTests
         }
     }
 
-    private sealed class RecordingNotificationsProvider : INotificationsProvider
+    private class RecordingNotificationsProvider : INotificationsProvider
     {
         public List<SentNotification> Sent { get; } = [];
 
@@ -124,7 +124,7 @@ public class NetworkAddressClassifierTests
         }
     }
 
-    private sealed record SentNotification(
+    private record SentNotification(
         Guid UserId,
         string Title,
         string? Content,

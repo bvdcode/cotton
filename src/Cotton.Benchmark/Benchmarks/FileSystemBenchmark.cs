@@ -12,7 +12,7 @@ namespace Cotton.Benchmark.Benchmarks
     /// <summary>
     /// Benchmark for filesystem backend disk I/O throughput.
     /// </summary>
-    public sealed class FileSystemBenchmark(BenchmarkConfiguration configuration) : BenchmarkBase(configuration)
+    public class FileSystemBenchmark(BenchmarkConfiguration configuration) : BenchmarkBase(configuration)
     {
         private readonly byte[] _testData = TestDataGenerator.GenerateMixedData(configuration.DataSizeBytes);
         private readonly FileSystemStorageBackend _backend = new(NullLogger<FileSystemStorageBackend>.Instance);

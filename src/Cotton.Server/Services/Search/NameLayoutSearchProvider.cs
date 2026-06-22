@@ -11,7 +11,7 @@ namespace Cotton.Server.Services.Search
     /// <summary>
     /// Searches layout items by their normalized display names and identifiers.
     /// </summary>
-    public sealed class NameLayoutSearchProvider(CottonDbContext _dbContext) : ILayoutSearchProvider
+    public class NameLayoutSearchProvider(CottonDbContext _dbContext) : ILayoutSearchProvider
     {
         /// <inheritdoc />
         public int Priority => 0;

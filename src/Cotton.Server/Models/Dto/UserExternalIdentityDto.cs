@@ -6,7 +6,7 @@ using EasyExtensions.Models.Dto;
 namespace Cotton.Server.Models.Dto
 {
     /// <summary>External OpenID Connect identity linked to the current user.</summary>
-    public sealed class UserExternalIdentityDto : BaseDto<Guid>
+    public class UserExternalIdentityDto : BaseDto<Guid>
     {
         /// <summary>Provider id.</summary>
         public Guid ProviderId { get; set; }

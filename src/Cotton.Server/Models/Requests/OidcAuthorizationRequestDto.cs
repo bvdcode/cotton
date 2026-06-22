@@ -4,7 +4,7 @@
 namespace Cotton.Server.Models.Requests
 {
     /// <summary>Request used to create an OpenID Connect authorization URL.</summary>
-    public sealed class OidcAuthorizationRequestDto
+    public class OidcAuthorizationRequestDto
     {
         /// <summary>Application return URL after the OIDC callback completes.</summary>
         public string? ReturnUrl { get; set; }

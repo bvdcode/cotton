@@ -6,7 +6,7 @@ using System.Globalization;
 
 namespace Cotton.Benchmark.Regression
 {
-    internal sealed class BenchmarkRunDocument
+    internal class BenchmarkRunDocument
     {
         public int SchemaVersion { get; init; } = 1;
 
@@ -43,7 +43,7 @@ namespace Cotton.Benchmark.Regression
         }
     }
 
-    internal sealed class BenchmarkResultSnapshot
+    internal class BenchmarkResultSnapshot
     {
         public string Name { get; init; } = string.Empty;
 

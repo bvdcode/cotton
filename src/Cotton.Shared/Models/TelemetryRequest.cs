@@ -54,7 +54,7 @@ namespace Cotton.Models
     /// <summary>
     /// Describes a small end-to-end storage pipeline probe collected during opt-in telemetry.
     /// </summary>
-    public sealed class StoragePipelineProbeResult
+    public class StoragePipelineProbeResult
     {
         /// <summary>
         /// Gets or sets when the probe finished.
@@ -85,7 +85,7 @@ namespace Cotton.Models
     /// <summary>
     /// Describes one storage pipeline probe iteration.
     /// </summary>
-    public sealed class StoragePipelineProbeIteration
+    public class StoragePipelineProbeIteration
     {
         /// <summary>
         /// Gets or sets whether this iteration was used only to warm the pipeline.

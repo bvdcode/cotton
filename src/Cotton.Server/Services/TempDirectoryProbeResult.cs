@@ -6,7 +6,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Represents an OS temp directory writability probe result.
     /// </summary>
-    public sealed class TempDirectoryProbeResult
+    public class TempDirectoryProbeResult
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="TempDirectoryProbeResult"/> class.

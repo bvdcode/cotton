@@ -289,7 +289,7 @@ namespace Cotton.Server.Handlers.Nodes
             ConflictName = name,
         };
 
-        private sealed record TopLevelTrashWrapperOutcome(Node? Wrapper, RestoreOutcomeDto? Failure)
+        private record TopLevelTrashWrapperOutcome(Node? Wrapper, RestoreOutcomeDto? Failure)
         {
             /// <summary>
             /// Creates a successful operation result.
@@ -301,7 +301,7 @@ namespace Cotton.Server.Handlers.Nodes
             public static TopLevelTrashWrapperOutcome NotRestorable(string reason) => new(null, RestoreNodeQueryHandler.NotRestorable(reason));
         }
 
-        private sealed record RestoreParentOutcome(
+        private record RestoreParentOutcome(
             Node? Parent,
             IReadOnlyList<Node> CreatedParents,
             RestoreOutcomeDto? Failure)

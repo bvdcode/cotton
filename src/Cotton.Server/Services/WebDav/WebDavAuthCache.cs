@@ -8,7 +8,7 @@ namespace Cotton.Server.Services.WebDav
     /// <summary>
     /// Supports WebDAV authentication cache behavior.
     /// </summary>
-    public sealed class WebDavAuthCache(IMemoryCache cache)
+    public class WebDavAuthCache(IMemoryCache cache)
     {
         private const string UsernameVersionPrefix = "webdav-basic:ver:";
         private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(1);

@@ -6,7 +6,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Represents master key runtime state.
     /// </summary>
-    public sealed record MasterKeyRuntimeState(
+    public record MasterKeyRuntimeState(
         string Source,
         bool EnvironmentVariableWasConfigured,
         bool EnvironmentVariablePresentAfterResolution)

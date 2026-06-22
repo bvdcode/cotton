@@ -10,7 +10,7 @@ namespace Cotton.Previews
     /// <summary>
     /// Generates previews for SVG documents.
     /// </summary>
-    public sealed class SvgPreviewGenerator : IPreviewGenerator
+    public class SvgPreviewGenerator : IPreviewGenerator
     {
         /// <inheritdoc />
         public int Version => 1;

@@ -9,7 +9,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Reads the runtime Zstandard compression level from server settings.
     /// </summary>
-    public sealed class SettingsCompressionLevelProvider(SettingsProvider settings) : ICompressionLevelProvider
+    public class SettingsCompressionLevelProvider(SettingsProvider settings) : ICompressionLevelProvider
     {
         /// <inheritdoc />
         public int Level => settings.GetServerSettings().CompressionLevel;

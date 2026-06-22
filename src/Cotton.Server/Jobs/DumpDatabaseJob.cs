@@ -211,7 +211,7 @@ namespace Cotton.Server.Jobs
             return string.IsNullOrWhiteSpace(value) ? fallbackValue : value;
         }
 
-        private sealed record DumpUploadResult(
+        private record DumpUploadResult(
             long DumpSizeBytes,
             int ChunkSizeBytes,
             string DumpContentHash,

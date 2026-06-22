@@ -11,7 +11,7 @@ namespace Cotton.Previews
     /// <summary>
     /// Media metadata extracted by ffprobe for preview and playback planning.
     /// </summary>
-    public sealed record MediaProbeInfo(double? DurationSeconds, string? VideoCodec, string? AudioCodec);
+    public record MediaProbeInfo(double? DurationSeconds, string? VideoCodec, string? AudioCodec);
 
     /// <summary>
     /// Locates ffmpeg/ffprobe binaries used by preview generation and downloads them to a writable cache only when needed.

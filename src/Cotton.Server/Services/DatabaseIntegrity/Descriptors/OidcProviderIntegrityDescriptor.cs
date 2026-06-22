@@ -8,7 +8,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// <summary>
     /// Describes OIDC provider settings protected against direct database tampering.
     /// </summary>
-    public sealed class OidcProviderIntegrityDescriptor : DatabaseIntegrityDescriptor<OidcProvider>
+    public class OidcProviderIntegrityDescriptor : DatabaseIntegrityDescriptor<OidcProvider>
     {
         /// <inheritdoc />
         public override string EntityName => "oidc_providers";

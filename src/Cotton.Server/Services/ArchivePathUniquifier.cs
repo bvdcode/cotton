@@ -3,7 +3,7 @@
 
 namespace Cotton.Server.Services
 {
-    internal sealed class ArchivePathUniquifier
+    internal class ArchivePathUniquifier
     {
         private readonly HashSet<string> _occupied = new(StringComparer.OrdinalIgnoreCase);
 

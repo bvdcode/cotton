@@ -23,7 +23,7 @@ namespace Cotton.Server.Auth
     /// <summary>
     /// Represents web dav basic authentication handler.
     /// </summary>
-    public sealed class WebDavBasicAuthenticationHandler(
+    public class WebDavBasicAuthenticationHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,
         UrlEncoder encoder,
@@ -343,7 +343,7 @@ namespace Cotton.Server.Auth
             return AuthenticateResult.Success(new AuthenticationTicket(principal, Scheme.Name));
         }
 
-        private sealed class FailureCounter(int count, DateTimeOffset resetAt)
+        private class FailureCounter(int count, DateTimeOffset resetAt)
         {
             public int Count { get; set; } = count;
             public DateTimeOffset ResetAt { get; } = resetAt;

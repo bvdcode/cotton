@@ -11,7 +11,7 @@ namespace Cotton.Sdk.Files;
 /// <summary>
 /// Provides Cotton file operations used by synchronization clients.
 /// </summary>
-public sealed class CottonFileClient : ICottonFileClient
+public class CottonFileClient : ICottonFileClient
 {
     private const string IfMatchHeaderName = "If-Match";
 

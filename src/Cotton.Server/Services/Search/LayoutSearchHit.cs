@@ -6,7 +6,7 @@ namespace Cotton.Server.Services.Search
     /// <summary>
     /// Represents a ranked search hit projected by a layout search provider.
     /// </summary>
-    public sealed class LayoutSearchHit
+    public class LayoutSearchHit
     {
         /// <summary>Gets or sets the hit kind.</summary>
         public LayoutSearchHitKind Kind { get; set; }

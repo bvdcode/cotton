@@ -10,7 +10,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Coordinates download token expiration.
     /// </summary>
-    public sealed class DownloadTokenExpirationService(CottonDbContext _dbContext)
+    public class DownloadTokenExpirationService(CottonDbContext _dbContext)
     {
         private const int BatchSize = 1_000;
 

@@ -869,7 +869,7 @@ public class MoveEndpointsTests : IntegrationTestBase
         => _client!.PatchAsJsonAsync($"/api/v1/layouts/nodes/{nodeId}/move", new MoveNodeRequestDto { ParentId = parentId });
 }
 
-internal sealed class ThrowingEventNotificationService : IEventNotificationService
+internal class ThrowingEventNotificationService : IEventNotificationService
 {
     public Task NotifyFileCreatedAsync(Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
     public Task NotifyFileUpdatedAsync(Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
@@ -882,7 +882,7 @@ internal sealed class ThrowingEventNotificationService : IEventNotificationServi
     public Task NotifyNodeRenamedAsync(Guid nodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
 }
 
-internal sealed class WebDavDeleteEventRecorder
+internal class WebDavDeleteEventRecorder
 {
     public Guid? FileDeletedNodeFileId { get; set; }
     public Guid? FileDeletedParentNodeId { get; set; }
@@ -890,7 +890,7 @@ internal sealed class WebDavDeleteEventRecorder
     public Guid? NodeDeletedParentNodeId { get; set; }
 }
 
-internal sealed class RecordingWebDavDeleteEventNotificationService(
+internal class RecordingWebDavDeleteEventNotificationService(
     WebDavDeleteEventRecorder recorder) : IEventNotificationService
 {
     public Task NotifyFileCreatedAsync(Guid nodeFileId, CancellationToken ct = default) => Task.CompletedTask;

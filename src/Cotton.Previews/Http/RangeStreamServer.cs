@@ -9,7 +9,7 @@ namespace Cotton.Previews.Http
     /// <summary>
     /// Temporary local HTTP range server used by ffmpeg tools that require URL-based seeking.
     /// </summary>
-    public sealed class RangeStreamServer : IAsyncDisposable
+    public class RangeStreamServer : IAsyncDisposable
     {
         private readonly record struct ByteRange(long Start, long EndInclusive)
         {

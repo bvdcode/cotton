@@ -12,7 +12,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Coordinates file version retention.
     /// </summary>
-    public sealed class FileVersionRetentionService(
+    public class FileVersionRetentionService(
         CottonDbContext _dbContext,
         SettingsProvider _settingsProvider,
         FileVersionStorageService _storage)

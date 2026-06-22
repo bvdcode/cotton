@@ -6,7 +6,7 @@ using NUnit.Framework;
 
 namespace Cotton.Server.IntegrationTests.Helpers;
 
-public sealed class NUnitLoggerProvider : ILoggerProvider
+public class NUnitLoggerProvider : ILoggerProvider
 {
     public ILogger CreateLogger(string categoryName) => new NUnitLogger(categoryName);
     public void Dispose() { }
@@ -34,7 +34,7 @@ public sealed class NUnitLoggerProvider : ILoggerProvider
             }
         }
 
-        private sealed class NullScope : IDisposable
+        private class NullScope : IDisposable
         {
             public static readonly NullScope Instance = new();
             public void Dispose() { }

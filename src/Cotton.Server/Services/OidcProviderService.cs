@@ -15,7 +15,7 @@ using System.Text.RegularExpressions;
 namespace Cotton.Server.Services
 {
     /// <summary>Manages administrator-configured OpenID Connect providers.</summary>
-    public sealed partial class OidcProviderService(
+    public partial class OidcProviderService(
         CottonDbContext _dbContext,
         IDatabaseIntegrityVerifier _integrity)
     {
@@ -285,7 +285,7 @@ namespace Cotton.Server.Services
             return slug;
         }
 
-        private sealed record NormalizedProviderInput(
+        private record NormalizedProviderInput(
             string Name,
             string? Slug,
             string Issuer,

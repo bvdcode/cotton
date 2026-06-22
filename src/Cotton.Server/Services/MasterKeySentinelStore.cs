@@ -12,7 +12,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Stores master key sentinel state.
     /// </summary>
-    public sealed class MasterKeySentinelStore
+    public class MasterKeySentinelStore
     {
         /// <summary>
         /// Defines the sentinel logical key.
@@ -279,7 +279,7 @@ namespace Cotton.Server.Services
                 or InvalidDataException
                 or JsonException;
 
-        private sealed record MasterKeySentinelPayload(
+        private record MasterKeySentinelPayload(
             int SchemaVersion,
             string Purpose,
             DateTimeOffset CreatedAtUtc,
@@ -304,7 +304,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Represents the result of master key sentinel.
     /// </summary>
-    public sealed record MasterKeySentinelResult(bool Success, bool Created, bool Repaired, string? Error)
+    public record MasterKeySentinelResult(bool Success, bool Created, bool Repaired, string? Error)
     {
         /// <summary>
         /// Creates a successful compatibility probe result.

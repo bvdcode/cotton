@@ -29,7 +29,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Provides a ZIP entry path, fixed uncompressed length, and deferred stream opener.
     /// </summary>
-    public sealed record StoredZipSourceEntry(
+    public record StoredZipSourceEntry(
         string Path,
         long SizeBytes,
         bool IsDirectory,
@@ -38,7 +38,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Writes uncompressed UTF-8 ZIP archives directly to a response stream with a deterministic Content-Length.
     /// </summary>
-    public sealed class StoredZipArchiveWriter
+    public class StoredZipArchiveWriter
     {
         private const ushort Utf8Flag = 1 << 11;
         private const ushort DataDescriptorFlag = 1 << 3;
@@ -485,14 +485,14 @@ namespace Cotton.Server.Services
             return value >= UInt32Max;
         }
 
-        private sealed record ZipPlan(
+        private record ZipPlan(
             ZipEntryPlan[] Entries,
             long CentralDirectoryOffset,
             long CentralDirectoryLength,
             bool NeedsZip64End,
             long TotalLength);
 
-        private sealed record ZipEntryPlan(
+        private record ZipEntryPlan(
             string Path,
             byte[] PathBytes,
             long SizeBytes,
@@ -506,6 +506,6 @@ namespace Cotton.Server.Services
             public long CentralExtraLength { get; init; }
         }
 
-        private sealed record WrittenZipEntry(ZipEntryPlan Plan, uint Crc32);
+        private record WrittenZipEntry(ZipEntryPlan Plan, uint Crc32);
     }
 }

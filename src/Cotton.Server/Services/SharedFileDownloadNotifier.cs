@@ -12,7 +12,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Represents shared file download notifier.
     /// </summary>
-    public sealed class SharedFileDownloadNotifier(
+    public class SharedFileDownloadNotifier(
         IMemoryCache _cache,
         INotificationsProvider _notifications,
         IGeoLookupService _geoLookup) : ISharedFileDownloadNotifier

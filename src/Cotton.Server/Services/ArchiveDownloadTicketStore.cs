@@ -9,7 +9,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Stores archive download ticket state.
     /// </summary>
-    public sealed class ArchiveDownloadTicketStore(IMemoryCache _cache)
+    public class ArchiveDownloadTicketStore(IMemoryCache _cache)
     {
         private static readonly TimeSpan Lifetime = TimeSpan.FromHours(1);
         private const string CacheKeyPrefix = "archive-download:";
@@ -49,7 +49,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Represents archive download ticket.
     /// </summary>
-    public sealed record ArchiveDownloadTicket(
+    public record ArchiveDownloadTicket(
         string FileName,
         long SizeBytes,
         int EntryCount,
@@ -63,7 +63,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Describes a archive download directory entry.
     /// </summary>
-    public sealed record ArchiveDownloadDirectoryEntry : ArchiveDownloadEntry
+    public record ArchiveDownloadDirectoryEntry : ArchiveDownloadEntry
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ArchiveDownloadDirectoryEntry"/> type.
@@ -77,7 +77,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Describes a archive download file entry.
     /// </summary>
-    public sealed record ArchiveDownloadFileEntry : ArchiveDownloadEntry
+    public record ArchiveDownloadFileEntry : ArchiveDownloadEntry
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ArchiveDownloadFileEntry"/> type.

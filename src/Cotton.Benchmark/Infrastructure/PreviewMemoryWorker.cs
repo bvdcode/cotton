@@ -8,7 +8,7 @@ using System.Text.Json;
 
 namespace Cotton.Benchmark.Infrastructure
 {
-    internal sealed class PreviewMemoryWorkerResult
+    internal class PreviewMemoryWorkerResult
     {
         public bool Succeeded { get; init; }
 

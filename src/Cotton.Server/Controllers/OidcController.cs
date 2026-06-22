@@ -19,7 +19,7 @@ namespace Cotton.Server.Controllers
     /// <summary>Exposes OpenID Connect provider and sign-in endpoints.</summary>
     [ApiController]
     [Route(Routes.V1.Auth + "/oidc")]
-    public sealed class OidcController(
+    public class OidcController(
         OidcProviderService _providers,
         OidcAuthenticationService _auth) : ControllerBase
     {

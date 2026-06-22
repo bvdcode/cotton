@@ -5,7 +5,7 @@ using Cotton.Server.Services;
 
 namespace Cotton.Server.Services.Startup
 {
-    internal sealed class TempDirectoryStartupCheck(
+    internal class TempDirectoryStartupCheck(
         TempDirectoryProbe _probe,
         ILogger<TempDirectoryStartupCheck> _logger) : IStartupCheck
     {

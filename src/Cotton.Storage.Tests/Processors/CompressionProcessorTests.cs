@@ -282,7 +282,7 @@ namespace Cotton.Storage.Tests.Processors
             return Encoding.UTF8.GetBytes(builder.ToString());
         }
 
-        private sealed class TestCompressionLevelProvider : ICompressionLevelProvider
+        private class TestCompressionLevelProvider : ICompressionLevelProvider
         {
             public int Level { get; private set; } = CompressionProcessor.DefaultCompressionLevel;
 

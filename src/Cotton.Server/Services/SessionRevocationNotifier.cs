@@ -10,7 +10,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Propagates revoked auth sessions to access-token validation and realtime clients.
     /// </summary>
-    public sealed class SessionRevocationNotifier(
+    public class SessionRevocationNotifier(
         SessionAccessTokenRevocationStore _sessionRevocations,
         ITokenProvider _tokens,
         IHubContext<EventHub> _eventHub)

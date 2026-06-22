@@ -253,9 +253,9 @@ namespace Cotton.Server.Services
                 : normalized;
         }
 
-        private sealed record LatestRelease(string Version, string Url, string? Notes);
+        private record LatestRelease(string Version, string Url, string? Notes);
 
-        private sealed record GitHubReleaseResponse(
+        private record GitHubReleaseResponse(
             [property: JsonPropertyName("tag_name")] string? TagName,
             [property: JsonPropertyName("html_url")] string? HtmlUrl,
             [property: JsonPropertyName("body")] string? Body,

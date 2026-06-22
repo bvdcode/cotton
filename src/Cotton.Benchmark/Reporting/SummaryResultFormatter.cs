@@ -9,7 +9,7 @@ namespace Cotton.Benchmark.Reporting
     /// <summary>
     /// Formats benchmark results in a compact summary format.
     /// </summary>
-    public sealed class SummaryResultFormatter : IResultFormatter
+    public class SummaryResultFormatter : IResultFormatter
     {
         /// <inheritdoc/>
         public string Format(IBenchmarkResult result)

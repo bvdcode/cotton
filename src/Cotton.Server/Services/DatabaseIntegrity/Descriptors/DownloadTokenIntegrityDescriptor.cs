@@ -12,7 +12,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// The MAC binds the token to its target file, creator, expiry, and consume-on-use behavior. Display filename metadata is
     /// excluded because changing it cannot grant access to a different file.
     /// </remarks>
-    public sealed class DownloadTokenIntegrityDescriptor : DatabaseIntegrityDescriptor<DownloadToken>
+    public class DownloadTokenIntegrityDescriptor : DatabaseIntegrityDescriptor<DownloadToken>
     {
         /// <inheritdoc />
         public override string EntityName => "download_tokens";

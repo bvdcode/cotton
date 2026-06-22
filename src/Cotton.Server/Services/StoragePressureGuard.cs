@@ -23,7 +23,7 @@ namespace Cotton.Server.Services
     /// reservations subtract from the cached available space immediately, so a burst of chunks cannot all
     /// pass against the same stale disk snapshot.
     /// </remarks>
-    public sealed class StoragePressureGuard(
+    public class StoragePressureGuard(
         IStorageBackendProvider _backendProvider,
         CottonDbContext _dbContext,
         INotificationsProvider _notifications,
@@ -238,7 +238,7 @@ namespace Cotton.Server.Services
         }
     }
 
-    internal sealed class CapacityCacheEntry(StorageCapacitySnapshot? snapshot)
+    internal class CapacityCacheEntry(StorageCapacitySnapshot? snapshot)
     {
         /// <summary>
         /// Gets the snapshot.
@@ -269,7 +269,7 @@ namespace Cotton.Server.Services
         }
     }
 
-    internal sealed class StoragePressureReservation : IDisposable
+    internal class StoragePressureReservation : IDisposable
     {
         /// <summary>
         /// Creates an empty storage pressure reservation.
@@ -316,7 +316,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Represents storage pressure snapshot.
     /// </summary>
-    public sealed record StoragePressureSnapshot(
+    public record StoragePressureSnapshot(
         StorageCapacitySnapshot Capacity,
         long IncomingBytes,
         long RequiredFreeBytes,
@@ -325,7 +325,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Represents storage pressure exception.
     /// </summary>
-    public sealed class StoragePressureException(StoragePressureSnapshot pressure)
+    public class StoragePressureException(StoragePressureSnapshot pressure)
         : InvalidOperationException(BuildMessage(pressure))
     {
         /// <summary>

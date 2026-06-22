@@ -94,7 +94,7 @@ public class AesGcmStreamCipherInteropTests
             .Select(index => (byte)(0x10 + index))
             .ToArray();
 
-    private sealed class ScriptedRandomNumberGenerator(params byte[][] chunks)
+    private class ScriptedRandomNumberGenerator(params byte[][] chunks)
         : RandomNumberGenerator
     {
         private readonly Queue<byte[]> _chunks = new(chunks.Select(chunk => chunk.ToArray()));

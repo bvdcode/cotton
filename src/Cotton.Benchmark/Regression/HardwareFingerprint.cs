@@ -7,14 +7,14 @@ using Microsoft.Win32;
 
 namespace Cotton.Benchmark.Regression
 {
-    internal sealed class HardwareFingerprint
+    internal class HardwareFingerprint
     {
         public string Key { get; init; } = string.Empty;
 
         public IReadOnlyDictionary<string, string> Properties { get; init; } = new Dictionary<string, string>();
     }
 
-    internal sealed class HardwareFingerprintProvider
+    internal class HardwareFingerprintProvider
     {
         public HardwareFingerprint Create()
         {

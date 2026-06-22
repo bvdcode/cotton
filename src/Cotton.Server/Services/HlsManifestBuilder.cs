@@ -23,7 +23,7 @@ namespace Cotton.Server.Services
         /// <summary>
         /// Represents hls manifest plan.
         /// </summary>
-        public sealed record HlsManifestPlan(int SegmentCount, double LastSegmentSeconds)
+        public record HlsManifestPlan(int SegmentCount, double LastSegmentSeconds)
         {
             /// <summary>
             /// Gets the planned duration of a segment.
@@ -35,7 +35,7 @@ namespace Cotton.Server.Services
         /// <summary>
         /// Represents hls variant.
         /// </summary>
-        public sealed record HlsVariant(
+        public record HlsVariant(
             string Name,
             int BandwidthBitsPerSecond,
             int Width,

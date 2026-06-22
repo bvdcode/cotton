@@ -5,7 +5,7 @@ using Cotton.Sdk.Realtime;
 
 namespace Cotton.Sdk.Tests;
 
-public sealed class CottonRealtimeClientTests
+public class CottonRealtimeClientTests
 {
     [Test]
     public void CreateUri_UsesApiV1EventHubRoute()

@@ -9,7 +9,7 @@ namespace Cotton.Benchmark.Reporting
     /// <summary>
     /// Formats benchmark results as a table.
     /// </summary>
-    public sealed class TableResultFormatter : IResultFormatter
+    public class TableResultFormatter : IResultFormatter
     {
         private const int NameWidth = 35;
         private const int ValueWidth = 25;

@@ -3,7 +3,7 @@
 
 namespace Cotton.Crypto.Tests.TestUtils
 {
-    internal sealed class ThrowingWriteStream(long throwAfterBytes) : Stream
+    internal class ThrowingWriteStream(long throwAfterBytes) : Stream
     {
         private long _written;
 

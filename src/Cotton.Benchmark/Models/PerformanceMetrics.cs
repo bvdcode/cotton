@@ -6,7 +6,7 @@ namespace Cotton.Benchmark.Models
     /// <summary>
     /// Represents performance metrics for a benchmark run.
     /// </summary>
-    public sealed class PerformanceMetrics
+    public class PerformanceMetrics
     {
         /// <summary>
         /// Total bytes processed.

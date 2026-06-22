@@ -237,9 +237,9 @@ namespace Cotton.Server.Handlers.Server
                 .ToListAsync(cancellationToken);
         }
 
-        private sealed record TimelineRange(DateTime StartUtc, DateTime EndUtc);
+        private record TimelineRange(DateTime StartUtc, DateTime EndUtc);
 
-        private sealed class HourlyGcAggregate
+        private class HourlyGcAggregate
         {
             /// <summary>
             /// Gets or sets the year.

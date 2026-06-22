@@ -13,7 +13,7 @@ namespace Cotton.Topology;
 /// <summary>
 /// EF-backed implementation of path resolution for typed Cotton layout trees.
 /// </summary>
-public sealed class LayoutNavigator(
+public class LayoutNavigator(
     CottonDbContext _dbContext,
     ILayoutService _layouts) : ILayoutNavigator
 {

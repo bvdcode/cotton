@@ -10,7 +10,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Coordinates refresh token revocation.
     /// </summary>
-    public sealed class RefreshTokenRevocationService(CottonDbContext _dbContext)
+    public class RefreshTokenRevocationService(CottonDbContext _dbContext)
     {
         private const int BatchSize = 1_000;
 
@@ -84,7 +84,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Describes refresh-token revocation work completed by a revocation service call.
     /// </summary>
-    public sealed record RefreshTokenRevocationResult(
+    public record RefreshTokenRevocationResult(
         int RevokedTokens,
         IReadOnlyList<string> SessionIds);
 }

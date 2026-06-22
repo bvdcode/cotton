@@ -6,7 +6,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// <summary>
     /// Immutable lookup table for database-integrity descriptors.
     /// </summary>
-    public sealed class DatabaseIntegrityDescriptorRegistry : IDatabaseIntegrityDescriptorRegistry
+    public class DatabaseIntegrityDescriptorRegistry : IDatabaseIntegrityDescriptorRegistry
     {
         private readonly IReadOnlyDictionary<Type, IDatabaseIntegrityDescriptor> _descriptors;
 

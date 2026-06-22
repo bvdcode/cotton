@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cotton.Sdk.Tests.Fakes;
 
-internal sealed class RecordingLoggerFactory : ILoggerFactory
+internal class RecordingLoggerFactory : ILoggerFactory
 {
     public List<RecordingLogEntry> Entries { get; } = [];
 
@@ -23,13 +23,13 @@ internal sealed class RecordingLoggerFactory : ILoggerFactory
     }
 }
 
-internal sealed record RecordingLogEntry(
+internal record RecordingLogEntry(
     string CategoryName,
     LogLevel Level,
     string Message,
     Exception? Exception);
 
-internal sealed class RecordingLogger : ILogger
+internal class RecordingLogger : ILogger
 {
     private readonly string _categoryName;
     private readonly List<RecordingLogEntry> _entries;
@@ -61,7 +61,7 @@ internal sealed class RecordingLogger : ILogger
         _entries.Add(new RecordingLogEntry(_categoryName, logLevel, formatter(state, exception), exception));
     }
 
-    private sealed class NullScope : IDisposable
+    private class NullScope : IDisposable
     {
         public static readonly NullScope Instance = new();
 

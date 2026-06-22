@@ -8,7 +8,7 @@ namespace Cotton.Benchmark.Infrastructure;
 /// <summary>
 /// Supplies a deterministic Zstandard level so benchmark profiles measure the configured pipeline.
 /// </summary>
-internal sealed class FixedCompressionLevelProvider(int level) : ICompressionLevelProvider
+internal class FixedCompressionLevelProvider(int level) : ICompressionLevelProvider
 {
     /// <inheritdoc />
     public int Level { get; } = level;

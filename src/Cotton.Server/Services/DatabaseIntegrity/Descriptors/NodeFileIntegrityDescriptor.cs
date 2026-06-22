@@ -8,7 +8,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// <summary>
     /// Describes the file-entry row that binds a user-visible name and node location to immutable file content.
     /// </summary>
-    public sealed class NodeFileIntegrityDescriptor : DatabaseIntegrityDescriptor<NodeFile>
+    public class NodeFileIntegrityDescriptor : DatabaseIntegrityDescriptor<NodeFile>
     {
         /// <inheritdoc />
         public override string EntityName => "node_files";

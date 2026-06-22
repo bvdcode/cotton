@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Server.IntegrationTests;
 
-public sealed class DatabaseIntegrityFoundationTests
+public class DatabaseIntegrityFoundationTests
 {
     [Test]
     public void CanonicalWriter_SortsDictionaryKeys()
@@ -594,7 +594,7 @@ public sealed class DatabaseIntegrityFoundationTests
         };
     }
 
-    private sealed class NoopDatabaseIntegrityVerifier : IDatabaseIntegrityVerifier
+    private class NoopDatabaseIntegrityVerifier : IDatabaseIntegrityVerifier
     {
         public void RequireValid<TEntity>(CottonDbContext dbContext, TEntity entity, string boundary)
             where TEntity : class
@@ -602,7 +602,7 @@ public sealed class DatabaseIntegrityFoundationTests
         }
     }
 
-    private sealed record IntegrityTestEntity
+    private record IntegrityTestEntity
     {
         public Guid Id { get; init; }
         public Guid? OwnerId { get; init; }
@@ -614,7 +614,7 @@ public sealed class DatabaseIntegrityFoundationTests
         public Dictionary<string, string>? Metadata { get; init; }
     }
 
-    private sealed class IntegrityTestEntityDescriptor : DatabaseIntegrityDescriptor<IntegrityTestEntity>
+    private class IntegrityTestEntityDescriptor : DatabaseIntegrityDescriptor<IntegrityTestEntity>
     {
         public override string EntityName => "test_entity";
         public override int SchemaVersion => 1;

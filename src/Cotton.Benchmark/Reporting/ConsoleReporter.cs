@@ -8,7 +8,7 @@ namespace Cotton.Benchmark.Reporting
     /// <summary>
     /// Reports benchmark results to the console.
     /// </summary>
-    public sealed class ConsoleReporter(IResultFormatter formatter) : IReporter
+    public class ConsoleReporter(IResultFormatter formatter) : IReporter
     {
         private readonly IResultFormatter _formatter = formatter ?? throw new ArgumentNullException(nameof(formatter));
 

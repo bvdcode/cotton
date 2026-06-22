@@ -13,7 +13,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// The GC schedule is intentionally excluded: it is mutable housekeeping state and does not affect the bytes a reader
     /// receives. File download verification checks chunk references and sizes through the manifest graph instead.
     /// </remarks>
-    public sealed class ChunkIntegrityDescriptor : DatabaseIntegrityDescriptor<Chunk>
+    public class ChunkIntegrityDescriptor : DatabaseIntegrityDescriptor<Chunk>
     {
         /// <inheritdoc />
         public override string EntityName => "chunks";

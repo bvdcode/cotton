@@ -9,7 +9,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Captures Linux container boundary signals that affect Cotton secret exposure.
     /// </summary>
-    public sealed record LinuxContainerSecuritySnapshot(
+    public record LinuxContainerSecuritySnapshot(
         bool? RootFilesystemReadOnly,
         bool DockerSocketMounted,
         bool? HostPidNamespaceLikely,
@@ -296,12 +296,12 @@ namespace Cotton.Server.Services
             };
         }
 
-        private sealed record LinuxMountInfoEntry(
+        private record LinuxMountInfoEntry(
             string MountPoint,
             IReadOnlyList<string> Options,
             string MountSource);
 
-        private sealed record CoreLimitSnapshot(string? SoftLimit, string? HardLimit)
+        private record CoreLimitSnapshot(string? SoftLimit, string? HardLimit)
         {
             public static CoreLimitSnapshot Empty { get; } = new(null, null);
         }

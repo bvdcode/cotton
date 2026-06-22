@@ -6,7 +6,7 @@ namespace Cotton.Server.Services.Search
     /// <summary>
     /// Represents one normalized text token and its search patterns.
     /// </summary>
-    public sealed record LayoutSearchToken(
+    public record LayoutSearchToken(
         string NameKey,
         string ContainsPattern,
         bool HasLetters);

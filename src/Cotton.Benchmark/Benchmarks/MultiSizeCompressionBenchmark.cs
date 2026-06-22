@@ -11,7 +11,7 @@ namespace Cotton.Benchmark.Benchmarks
     /// <summary>
     /// Direct ZstdSharp compression sweep across multiple compression levels.
     /// </summary>
-    public sealed class MultiSizeCompressionBenchmark(BenchmarkConfiguration configuration) : BenchmarkBase(configuration)
+    public class MultiSizeCompressionBenchmark(BenchmarkConfiguration configuration) : BenchmarkBase(configuration)
     {
         private readonly byte[] _testData = TestDataGenerator.GenerateCompressibleText(configuration.DataSizeBytes);
         private readonly int[] _levels = [1, 2, 3, 4, 5];

@@ -9,7 +9,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Reports process hardening status.
     /// </summary>
-    public sealed record ProcessHardeningStatus(
+    public record ProcessHardeningStatus(
         bool Requested,
         bool Applied,
         string? Error,
@@ -158,7 +158,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Reports linux proc status.
     /// </summary>
-    public sealed record LinuxProcStatus(
+    public record LinuxProcStatus(
         int? NoNewPrivileges,
         int? SeccompMode,
         int? SeccompFilters,

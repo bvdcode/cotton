@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace Cotton.Benchmark.Regression
 {
-    internal sealed class GitRevisionProvider
+    internal class GitRevisionProvider
     {
         public string GetCurrentRevision()
         {

@@ -5,7 +5,7 @@ namespace Cotton.Crypto.Tests.TestUtils
 {
     // A seekable stream that reports a given Length but returns EOF immediately (no data).
     // Useful to validate header fields for huge files without generating payload.
-    internal sealed class SeekableSyntheticReadStream(long length) : Stream
+    internal class SeekableSyntheticReadStream(long length) : Stream
     {
         private readonly long _length = length;
 

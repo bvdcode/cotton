@@ -48,7 +48,7 @@ namespace Cotton.Storage.Processors
             return _cipher.EncryptAsync(stream, _chunkSizeProvider.ChunkSizeBytes);
         }
 
-        private sealed class StaticEncryptionChunkSizeProvider(int chunkSizeBytes) : IEncryptionChunkSizeProvider
+        private class StaticEncryptionChunkSizeProvider(int chunkSizeBytes) : IEncryptionChunkSizeProvider
         {
             public int ChunkSizeBytes { get; } = chunkSizeBytes;
         }

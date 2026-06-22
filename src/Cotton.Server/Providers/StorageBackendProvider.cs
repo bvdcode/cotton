@@ -31,7 +31,7 @@ namespace Cotton.Server.Providers
     /// <summary>
     /// Caches storage backend type state.
     /// </summary>
-    public sealed class StorageBackendTypeCache : IStorageBackendTypeCache
+    public class StorageBackendTypeCache : IStorageBackendTypeCache
     {
         private int _hasValue;
         private StorageType _value;

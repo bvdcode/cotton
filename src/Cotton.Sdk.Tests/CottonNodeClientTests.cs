@@ -9,7 +9,7 @@ using Cotton.Sdk.Tests.Fakes;
 
 namespace Cotton.Sdk.Tests;
 
-public sealed class CottonNodeClientTests
+public class CottonNodeClientTests
 {
     [Test]
     public async Task ResolveAsync_EncodesPathAndDeserializesNode()

@@ -13,7 +13,7 @@ namespace Cotton.Benchmark.Benchmarks
     /// <summary>
     /// Measures memory required by real raster preview generation on large decoded images.
     /// </summary>
-    internal sealed class ImagePreviewMemoryBenchmark(BenchmarkConfiguration configuration, BenchmarkProfile profile) : IBenchmark
+    internal class ImagePreviewMemoryBenchmark(BenchmarkConfiguration configuration, BenchmarkProfile profile) : IBenchmark
     {
         private static readonly TimeSpan WorkerMemorySampleInterval = TimeSpan.FromMilliseconds(10);
         private readonly BmpImageSpec _imageSpec = CreateImageSpec(profile);
@@ -284,7 +284,7 @@ namespace Cotton.Benchmark.Benchmarks
             }
         }
 
-        private sealed record WorkerObservation(
+        private record WorkerObservation(
             int ExitCode,
             long MaxWorkingSetBytes,
             string StandardOutput,

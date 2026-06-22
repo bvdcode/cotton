@@ -12,7 +12,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// The MAC prevents a database-only edit from retargeting a public link, extending its lifetime, or changing the user who
     /// created the share.
     /// </remarks>
-    public sealed class NodeShareTokenIntegrityDescriptor : DatabaseIntegrityDescriptor<NodeShareToken>
+    public class NodeShareTokenIntegrityDescriptor : DatabaseIntegrityDescriptor<NodeShareToken>
     {
         /// <inheritdoc />
         public override string EntityName => "node_share_tokens";

@@ -6,7 +6,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// <summary>
     /// No-op integrity failure reporter used when notifications are intentionally unavailable.
     /// </summary>
-    public sealed class NullDatabaseIntegrityFailureReporter : IDatabaseIntegrityFailureReporter
+    public class NullDatabaseIntegrityFailureReporter : IDatabaseIntegrityFailureReporter
     {
         /// <summary>Gets the singleton no-op reporter instance.</summary>
         public static readonly NullDatabaseIntegrityFailureReporter Instance = new();

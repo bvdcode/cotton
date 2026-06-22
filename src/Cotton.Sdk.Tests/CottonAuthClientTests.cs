@@ -9,7 +9,7 @@ using Cotton.Sdk.Tests.Fakes;
 
 namespace Cotton.Sdk.Tests;
 
-public sealed class CottonAuthClientTests
+public class CottonAuthClientTests
 {
     [Test]
     public async Task LoginAsync_PostsCredentialsAndStoresTokenPair()

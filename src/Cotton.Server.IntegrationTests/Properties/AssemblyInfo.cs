@@ -9,7 +9,7 @@ using NUnit.Framework;
 [assembly: LevelOfParallelism(1)]
 
 [SetUpFixture]
-public sealed class IntegrationTestAssemblySetup
+public class IntegrationTestAssemblySetup
 {
     private string? _previousReloadConfigOnChange;
 

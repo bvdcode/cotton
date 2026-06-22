@@ -8,7 +8,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// <summary>
     /// Describes node fields that determine where a file entry is visible and which logical tree owns it.
     /// </summary>
-    public sealed class NodeIntegrityDescriptor : DatabaseIntegrityDescriptor<Node>
+    public class NodeIntegrityDescriptor : DatabaseIntegrityDescriptor<Node>
     {
         /// <inheritdoc />
         public override string EntityName => "nodes";

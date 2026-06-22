@@ -11,7 +11,7 @@ namespace Cotton.Previews
     /// <summary>
     /// Generates previews for PDF documents.
     /// </summary>
-    public sealed class PdfPreviewGenerator : IPreviewGenerator
+    public class PdfPreviewGenerator : IPreviewGenerator
     {
         /// <inheritdoc />
         public int Version => 0;

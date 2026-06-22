@@ -10,7 +10,7 @@ namespace Cotton.Sdk.Sync;
 /// <summary>
 /// Provides durable synchronization feed operations.
 /// </summary>
-public sealed class CottonSyncClient : ICottonSyncClient
+public class CottonSyncClient : ICottonSyncClient
 {
     private readonly CottonHttpTransport _transport;
 

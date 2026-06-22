@@ -6,7 +6,7 @@ namespace Cotton.Server.Services.Search
     /// <summary>
     /// Represents normalized query data shared by layout search providers.
     /// </summary>
-    public sealed record LayoutSearchCriteria(
+    public record LayoutSearchCriteria(
         string NameKey,
         string ContainsPattern,
         string PrefixPattern,

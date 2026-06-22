@@ -14,7 +14,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Coordinates geo lookup.
     /// </summary>
-    public sealed class GeoLookupService(SettingsProvider _settings) : IGeoLookupService
+    public class GeoLookupService(SettingsProvider _settings) : IGeoLookupService
     {
         private const string GoogleDnsIpAddress = "8.8.8.8";
         private static readonly GeoIpClient CottonBridgeGeoIpClient = new(global::Cotton.Constants.CottonBridgeGeoIpLookupUrl);
@@ -301,7 +301,7 @@ namespace Cotton.Server.Services
             return 0;
         }
 
-        private sealed class GeoFieldMatch
+        private class GeoFieldMatch
         {
             /// <summary>
             /// Gets or sets the country.
@@ -365,10 +365,10 @@ namespace Cotton.Server.Services
             }
         }
 
-        private sealed record CustomLookupAttemptResult(
+        private record CustomLookupAttemptResult(
             GeoLookupResult? Result,
             string? Error);
 
-        private sealed record CustomLookupTestInput(string Value, string Label);
+        private record CustomLookupTestInput(string Value, string Label);
     }
 }

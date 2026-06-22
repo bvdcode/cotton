@@ -11,7 +11,7 @@ namespace Cotton.Previews
     /// <summary>
     /// Extracts lightweight previews for Android package archives.
     /// </summary>
-    public sealed class AndroidPackagePreviewGenerator : IPreviewGenerator
+    public class AndroidPackagePreviewGenerator : IPreviewGenerator
     {
         private const int MaxEntriesToInspect = 20_000;
         private const long MaxIconBytes = 12L * 1024 * 1024;
@@ -743,8 +743,8 @@ namespace Cotton.Previews
         private static string NormalizeEntryPath(string path) =>
             path.Replace('\\', '/').TrimStart('/').ToLowerInvariant();
 
-        private sealed record IconEntryCandidate(ZipArchiveEntry Entry, int Score);
+        private record IconEntryCandidate(ZipArchiveEntry Entry, int Score);
 
-        private sealed record IconBytesCandidate(byte[] Bytes, int Score);
+        private record IconBytesCandidate(byte[] Bytes, int Score);
     }
 }

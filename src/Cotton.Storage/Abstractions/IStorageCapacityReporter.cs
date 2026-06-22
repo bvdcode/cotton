@@ -15,7 +15,7 @@ public interface IStorageCapacityReporter
 /// <summary>
 /// Free-space snapshot returned by a storage backend.
 /// </summary>
-public sealed record StorageCapacitySnapshot(
+public record StorageCapacitySnapshot(
     string Backend,
     string RootPath,
     long TotalBytes,

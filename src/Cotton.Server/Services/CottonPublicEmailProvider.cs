@@ -114,7 +114,7 @@ namespace Cotton.Server.Services
             _ => "English",
         };
 
-        private sealed class CottonBridgeEmailRequest
+        private class CottonBridgeEmailRequest
         {
             /// <summary>
             /// Gets or sets the template.

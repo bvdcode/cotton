@@ -200,7 +200,7 @@ namespace Cotton.Server.IntegrationTests
         private IStorageBackend CreateStorageBackend() =>
             new FileSystemStorageBackend(NullLogger<FileSystemStorageBackend>.Instance, _storageBasePath);
 
-        private sealed class ThrowingEncryptedConfigurationStorageBackend : IStorageBackend, IStorageBackendUsesEncryptedConfiguration
+        private class ThrowingEncryptedConfigurationStorageBackend : IStorageBackend, IStorageBackendUsesEncryptedConfiguration
         {
             public void CleanupTempFiles(TimeSpan ttl) => throw StorageTouched();
             public Task<bool> DeleteAsync(string uid) => throw StorageTouched();

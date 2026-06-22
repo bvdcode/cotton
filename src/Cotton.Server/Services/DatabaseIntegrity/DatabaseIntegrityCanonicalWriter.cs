@@ -14,7 +14,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// carry an explicit presence byte, and dictionaries are key-sorted. That keeps signatures stable across machines,
     /// database providers, and JSON serializer changes.
     /// </remarks>
-    public sealed class DatabaseIntegrityCanonicalWriter
+    public class DatabaseIntegrityCanonicalWriter
     {
         private static readonly byte[] FormatMagic = Encoding.ASCII.GetBytes("Cotton.DbIntegrity.Row.v1");
         private readonly MemoryStream _stream = new();

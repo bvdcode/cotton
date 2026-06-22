@@ -241,7 +241,7 @@ namespace Cotton.Server.Handlers.Nodes
             };
         }
 
-        private sealed class TrashChildPageEntry
+        private class TrashChildPageEntry
         {
             public Guid Id { get; init; }
 

@@ -4,7 +4,7 @@
 namespace Cotton.Server.Models.Dto
 {
     /// <summary>OIDC authorization URL returned to the browser.</summary>
-    public sealed class OidcAuthorizationUrlDto
+    public class OidcAuthorizationUrlDto
     {
         /// <summary>Provider authorization URL.</summary>
         public string AuthorizationUrl { get; set; } = string.Empty;

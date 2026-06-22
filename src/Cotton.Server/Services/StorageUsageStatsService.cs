@@ -12,7 +12,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Calculates storage usage statistics for administrative diagnostics.
     /// </summary>
-    public sealed class StorageUsageStatsService(
+    public class StorageUsageStatsService(
         CottonDbContext _dbContext,
         SettingsProvider _settings,
         ChunkUsageService _chunkUsage)
@@ -146,20 +146,20 @@ namespace Cotton.Server.Services
                 ?? new PendingGcStats();
         }
 
-        private sealed class LogicalChunkReference
+        private class LogicalChunkReference
         {
             public byte[] ChunkHash { get; init; } = null!;
             public long RefCount { get; init; }
         }
 
-        private sealed class TotalChunkStats
+        private class TotalChunkStats
         {
             public long UniqueChunkCount { get; init; }
             public long UniquePlainSizeBytes { get; init; }
             public long UniqueStoredSizeBytes { get; init; }
         }
 
-        private sealed class ReferencedChunkStats
+        private class ReferencedChunkStats
         {
             public long UniqueChunkCount { get; init; }
             public long UniquePlainSizeBytes { get; init; }
@@ -169,7 +169,7 @@ namespace Cotton.Server.Services
             public long DeduplicatedUniqueChunkCount { get; init; }
         }
 
-        private sealed class PendingGcStats
+        private class PendingGcStats
         {
             public long ChunkCount { get; init; }
             public long StoredSizeBytes { get; init; }

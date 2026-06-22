@@ -11,7 +11,7 @@ namespace Cotton.Sdk.Nodes;
 /// <summary>
 /// Provides Cotton node and folder operations used by synchronization clients.
 /// </summary>
-public sealed class CottonNodeClient : ICottonNodeClient
+public class CottonNodeClient : ICottonNodeClient
 {
     private readonly CottonHttpTransport _transport;
 

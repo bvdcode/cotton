@@ -407,7 +407,7 @@ public class GarbageCollectorJobTests : IntegrationTestBase
         settingsProviderType.GetField("_serverHasUsersCache", flags)?.SetValue(null, null);
     }
 
-    private sealed class StaticBackupManifestService(ResolvedBackupManifest? _latestBackup) : IDatabaseBackupManifestService
+    private class StaticBackupManifestService(ResolvedBackupManifest? _latestBackup) : IDatabaseBackupManifestService
     {
         public Task<ResolvedBackupManifest?> TryGetLatestManifestAsync(CancellationToken cancellationToken = default)
         {
@@ -415,7 +415,7 @@ public class GarbageCollectorJobTests : IntegrationTestBase
         }
     }
 
-    private sealed class NoopNotificationsProvider : INotificationsProvider
+    private class NoopNotificationsProvider : INotificationsProvider
     {
         public Task<bool> SendEmailAsync(
             Guid userId,

@@ -9,7 +9,7 @@ namespace Cotton.Benchmark.Infrastructure
     /// <summary>
     /// Orchestrates the execution of benchmarks.
     /// </summary>
-    public sealed class BenchmarkRunner(ILogger<BenchmarkRunner> logger) : IBenchmarkRunner
+    public class BenchmarkRunner(ILogger<BenchmarkRunner> logger) : IBenchmarkRunner
     {
         private readonly ILogger<BenchmarkRunner> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 

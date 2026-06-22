@@ -422,7 +422,7 @@ namespace Cotton.Server.Handlers.Files
     /// <summary>
     /// Represents the result of share file.
     /// </summary>
-    public sealed record ShareFileResult
+    public record ShareFileResult
     {
         /// <summary>
         /// Gets or sets the kind.

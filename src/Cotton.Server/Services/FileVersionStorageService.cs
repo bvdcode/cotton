@@ -11,7 +11,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Coordinates file version storage.
     /// </summary>
-    public sealed class FileVersionStorageService(CottonDbContext _dbContext)
+    public class FileVersionStorageService(CottonDbContext _dbContext)
     {
         /// <summary>
         /// Deletes historical versions async.

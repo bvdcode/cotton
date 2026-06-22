@@ -10,7 +10,7 @@ namespace Cotton.Database;
 /// <summary>
 /// Creates <see cref="CottonDbContext"/> for EF tooling without booting the server host.
 /// </summary>
-public sealed class CottonDbContextDesignTimeFactory : IDesignTimeDbContextFactory<CottonDbContext>
+public class CottonDbContextDesignTimeFactory : IDesignTimeDbContextFactory<CottonDbContext>
 {
     /// <inheritdoc />
     public CottonDbContext CreateDbContext(string[] args)

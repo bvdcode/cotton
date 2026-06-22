@@ -10,7 +10,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// <param name="EntityKey">Stable row key written into the canonical payload.</param>
     /// <param name="Boundary">Human-readable read boundary where verification failed.</param>
     /// <param name="DetectedAtUtc">UTC timestamp when the failure was detected.</param>
-    public sealed record DatabaseIntegrityFailure(
+    public record DatabaseIntegrityFailure(
         string EntityName,
         string EntityKey,
         string Boundary,

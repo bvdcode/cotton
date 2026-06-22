@@ -41,8 +41,8 @@ public class StartupLifecycleChainTests : IntegrationTestBase
     {
     }
 
-    private sealed record IsServerInitializedResponse(bool IsServerInitialized);
-    private sealed record ProblemDetailsResponse(string? Type, string? Title, int? Status, string? Detail, string? Instance);
+    private record IsServerInitializedResponse(bool IsServerInitialized);
+    private record ProblemDetailsResponse(string? Type, string? Title, int? Status, string? Detail, string? Instance);
 
     [SetUp]
     public void SetUp()

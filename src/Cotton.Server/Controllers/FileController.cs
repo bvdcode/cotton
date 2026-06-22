@@ -1132,7 +1132,7 @@ namespace Cotton.Server.Controllers
             return new EmptyResult();
         }
 
-        private sealed record TranscodableLookup(
+        private record TranscodableLookup(
             NodeFile? NodeFile,
             DownloadToken? DownloadToken,
             IActionResult? Failure);

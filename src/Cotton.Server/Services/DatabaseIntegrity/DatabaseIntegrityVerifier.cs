@@ -9,7 +9,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// <summary>
     /// Verifies protected entities at security-sensitive read boundaries.
     /// </summary>
-    public sealed class DatabaseIntegrityVerifier(
+    public class DatabaseIntegrityVerifier(
         IDatabaseIntegrityProtector _protector,
         IDatabaseIntegrityDescriptorRegistry _descriptors,
         IDatabaseIntegrityFailureReporter _failures,

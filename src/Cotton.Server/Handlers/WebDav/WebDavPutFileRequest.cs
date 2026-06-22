@@ -99,14 +99,14 @@ namespace Cotton.Server.Handlers.WebDav
         ILogger<WebDavPutFileRequestHandler> _logger)
         : IRequestHandler<WebDavPutFileRequest, WebDavPutFileResult>
     {
-        private sealed record PutTarget(
+        private record PutTarget(
             WebDavResolveResult Existing,
             WebDavParentResult Parent,
             string ResourceName,
             string NameKey,
             bool Created);
 
-        private sealed record PutContent(List<Chunk> Chunks, byte[] FileHash, long TotalBytes);
+        private record PutContent(List<Chunk> Chunks, byte[] FileHash, long TotalBytes);
 
         private static WebDavPutFileResult Fail(WebDavPutFileError error) => new(false, false, error);
 

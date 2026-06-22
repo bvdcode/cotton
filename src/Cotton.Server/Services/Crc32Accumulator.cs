@@ -3,7 +3,7 @@
 
 namespace Cotton.Server.Services
 {
-    internal sealed class Crc32Accumulator
+    internal class Crc32Accumulator
     {
         private static readonly uint[] Table = BuildTable();
         private uint _state = 0xFFFFFFFFu;

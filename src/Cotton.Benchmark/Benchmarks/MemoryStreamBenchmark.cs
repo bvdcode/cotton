@@ -9,7 +9,7 @@ namespace Cotton.Benchmark.Benchmarks
     /// <summary>
     /// Benchmark for memory allocation and stream operations.
     /// </summary>
-    public sealed class MemoryStreamBenchmark(BenchmarkConfiguration configuration) : BenchmarkBase(configuration)
+    public class MemoryStreamBenchmark(BenchmarkConfiguration configuration) : BenchmarkBase(configuration)
     {
         private readonly byte[] _testData = GenerateTestData(configuration.DataSizeBytes);
 

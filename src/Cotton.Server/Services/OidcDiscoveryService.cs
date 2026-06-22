@@ -12,7 +12,7 @@ using System.Text.Json.Serialization;
 namespace Cotton.Server.Services
 {
     /// <summary>Fetches OpenID Connect discovery, tokens, and user-info documents.</summary>
-    public sealed class OidcDiscoveryService(HttpClient _httpClient)
+    public class OidcDiscoveryService(HttpClient _httpClient)
     {
         /// <summary>Named HTTP client used for OIDC provider calls.</summary>
         public const string HttpClientName = "Cotton.Oidc";
@@ -150,7 +150,7 @@ namespace Cotton.Server.Services
     }
 
     /// <summary>OIDC token endpoint response fields used by Cotton.</summary>
-    public sealed class OidcTokenResponse
+    public class OidcTokenResponse
     {
         /// <summary>Provider ID token.</summary>
         [JsonPropertyName("id_token")]
@@ -161,7 +161,7 @@ namespace Cotton.Server.Services
     }
 
     /// <summary>Normalized provider user-info claims.</summary>
-    public sealed record OidcUserInfoClaims(
+    public record OidcUserInfoClaims(
         string? Subject,
         string? Email,
         bool? EmailVerified,

@@ -3,7 +3,7 @@
 
 namespace Cotton.Benchmark.Models
 {
-    internal sealed class BenchmarkOptions
+    internal class BenchmarkOptions
     {
         public BenchmarkMode Mode { get; init; } = BenchmarkMode.Machine;
 

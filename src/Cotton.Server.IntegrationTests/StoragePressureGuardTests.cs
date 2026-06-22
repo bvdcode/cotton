@@ -167,12 +167,12 @@ public class StoragePressureGuardTests : IntegrationTestBase
         };
     }
 
-    private sealed class StaticStorageBackendProvider(IStorageBackend backend) : IStorageBackendProvider
+    private class StaticStorageBackendProvider(IStorageBackend backend) : IStorageBackendProvider
     {
         public IStorageBackend GetBackend() => backend;
     }
 
-    private sealed class ReportingBackend(StorageCapacitySnapshot snapshot) : StorageBackendStub, IStorageCapacityReporter
+    private class ReportingBackend(StorageCapacitySnapshot snapshot) : StorageBackendStub, IStorageCapacityReporter
     {
         public int SnapshotReads { get; private set; }
 
@@ -183,7 +183,7 @@ public class StoragePressureGuardTests : IntegrationTestBase
         }
     }
 
-    private sealed class NonReportingBackend : StorageBackendStub;
+    private class NonReportingBackend : StorageBackendStub;
 
     private abstract class StorageBackendStub : IStorageBackend
     {
@@ -196,7 +196,7 @@ public class StoragePressureGuardTests : IntegrationTestBase
         public IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default) => throw new NotImplementedException();
     }
 
-    private sealed class RecordingNotificationsProvider : INotificationsProvider
+    private class RecordingNotificationsProvider : INotificationsProvider
     {
         public List<SentNotification> Sent { get; } = [];
 
@@ -231,7 +231,7 @@ public class StoragePressureGuardTests : IntegrationTestBase
         }
     }
 
-    private sealed record SentNotification(
+    private record SentNotification(
         Guid UserId,
         string Title,
         string? Content,

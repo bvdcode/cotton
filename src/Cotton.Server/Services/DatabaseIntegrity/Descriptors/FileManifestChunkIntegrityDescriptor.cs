@@ -8,7 +8,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// <summary>
     /// Describes one ordered manifest-to-chunk mapping row.
     /// </summary>
-    public sealed class FileManifestChunkIntegrityDescriptor : DatabaseIntegrityDescriptor<FileManifestChunk>
+    public class FileManifestChunkIntegrityDescriptor : DatabaseIntegrityDescriptor<FileManifestChunk>
     {
         /// <inheritdoc />
         public override string EntityName => "file_manifest_chunks";

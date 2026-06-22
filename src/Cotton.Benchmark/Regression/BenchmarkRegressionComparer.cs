@@ -5,14 +5,14 @@ using System.Globalization;
 
 namespace Cotton.Benchmark.Regression
 {
-    internal sealed class BenchmarkComparisonResult
+    internal class BenchmarkComparisonResult
     {
         public bool Passed { get; init; }
 
         public IReadOnlyList<string> Messages { get; init; } = [];
     }
 
-    internal sealed class BenchmarkRegressionComparer
+    internal class BenchmarkRegressionComparer
     {
         private const double DurationRegressionRatio = 1.20;
         private const double DurationRegressionGraceMs = 10;
@@ -22,7 +22,7 @@ namespace Cotton.Benchmark.Regression
         private const double MinimumDurationForThroughputGateMs = 100;
         private const int MinimumIterationsForPercentileGate = 5;
 
-        private sealed record RegressionTolerance(
+        private record RegressionTolerance(
             double DurationRatio,
             double DurationGraceMs,
             double MemoryGraceBytes,

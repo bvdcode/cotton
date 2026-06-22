@@ -13,7 +13,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Measures the active storage pipeline with a synthetic 64 MiB blob, without touching user files.
     /// </summary>
-    public sealed class StoragePipelineProbeService(
+    public class StoragePipelineProbeService(
         IStoragePipeline _storage,
         ILogger<StoragePipelineProbeService> _logger)
     {

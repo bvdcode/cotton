@@ -10,7 +10,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Configures hls segment cache.
     /// </summary>
-    public sealed class HlsSegmentCacheOptions
+    public class HlsSegmentCacheOptions
     {
         /// <summary>
         /// Gets or sets the size limit bytes.
@@ -21,7 +21,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Caches hls segment state.
     /// </summary>
-    public sealed class HlsSegmentCache : IDisposable
+    public class HlsSegmentCache : IDisposable
     {
         private readonly MemoryCache _cache;
         private readonly long _sizeLimit;

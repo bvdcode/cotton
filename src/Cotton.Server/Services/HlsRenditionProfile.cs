@@ -39,7 +39,7 @@ namespace Cotton.Server.Services
         /// <summary>
         /// Represents encoder plan.
         /// </summary>
-        public sealed record EncoderPlan(string VideoCodecArgs, string AudioCodecArgs, bool IsStreamCopy)
+        public record EncoderPlan(string VideoCodecArgs, string AudioCodecArgs, bool IsStreamCopy)
         {
             /// <summary>
             /// Gets the combined args.

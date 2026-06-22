@@ -12,7 +12,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// A database-only attacker must not be able to move a session to another user, restore a revoked session, or flip the
     /// authentication type/trust flag without knowing the integrity key.
     /// </remarks>
-    public sealed class ExtendedRefreshTokenIntegrityDescriptor : DatabaseIntegrityDescriptor<ExtendedRefreshToken>
+    public class ExtendedRefreshTokenIntegrityDescriptor : DatabaseIntegrityDescriptor<ExtendedRefreshToken>
     {
         /// <inheritdoc />
         public override string EntityName => "refresh_tokens";

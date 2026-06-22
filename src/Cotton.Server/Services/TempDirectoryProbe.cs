@@ -8,7 +8,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Probes the active OS temp directory for writable scratch-file support.
     /// </summary>
-    public sealed class TempDirectoryProbe
+    public class TempDirectoryProbe
     {
         private readonly Func<string> _getTempPath;
 

@@ -13,7 +13,7 @@ namespace Cotton.Benchmark.Benchmarks
     /// <summary>
     /// Benchmark for Cotton.Storage AES-GCM decryption throughput.
     /// </summary>
-    public sealed class DecryptionBenchmark : BenchmarkBase, IDisposable
+    public class DecryptionBenchmark : BenchmarkBase, IDisposable
     {
         private readonly byte[] _encryptedData;
         private readonly int _originalSize;

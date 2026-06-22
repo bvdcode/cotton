@@ -9,7 +9,7 @@ namespace Cotton.Server.Services.Search
     /// <summary>
     /// Placeholder vector search provider that defines when vector search is eligible.
     /// </summary>
-    public sealed class NoOpVectorLayoutSearchProvider(CottonDbContext _dbContext) : ILayoutSearchProvider
+    public class NoOpVectorLayoutSearchProvider(CottonDbContext _dbContext) : ILayoutSearchProvider
     {
         /// <inheritdoc />
         public int Priority => 100;

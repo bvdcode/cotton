@@ -8,7 +8,7 @@ namespace Cotton.Sdk.Auth;
 /// <summary>
 /// Stores Cotton tokens in memory for tests and short-lived processes.
 /// </summary>
-public sealed class InMemoryCottonTokenStore : ICottonTokenStore
+public class InMemoryCottonTokenStore : ICottonTokenStore
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private TokenPairDto? _tokens;

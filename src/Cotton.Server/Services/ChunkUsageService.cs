@@ -12,7 +12,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Coordinates chunk usage.
     /// </summary>
-    public sealed class ChunkUsageService(
+    public class ChunkUsageService(
         CottonDbContext _dbContext,
         IStoragePipeline _storage,
         IDatabaseBackupManifestService _backupManifestService,

@@ -19,7 +19,7 @@ namespace Cotton.Server.Controllers
     /// </summary>
     [ApiController]
     [Route(Routes.V1.Archives)]
-    public sealed class ArchiveController(
+    public class ArchiveController(
         ArchiveDownloadService _archives,
         ArchiveDownloadTicketStore _tickets,
         StoredZipArchiveWriter _zipWriter,

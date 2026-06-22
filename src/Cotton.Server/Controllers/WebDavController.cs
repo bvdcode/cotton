@@ -27,7 +27,7 @@ namespace Cotton.Server.Controllers
         private const string WebDavRoute = "/api/v1/webdav/";
         private static readonly string WebDavPrefix = WebDavRoute.TrimEnd(WebDavPathResolver.PathSeparator);
 
-        private sealed record WebDavLock(
+        private record WebDavLock(
             Guid UserId,
             string Path,
             string Token,

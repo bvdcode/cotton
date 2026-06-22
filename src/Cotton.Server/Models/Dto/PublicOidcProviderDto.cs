@@ -4,7 +4,7 @@
 namespace Cotton.Server.Models.Dto
 {
     /// <summary>Public provider option shown on the login page.</summary>
-    public sealed class PublicOidcProviderDto
+    public class PublicOidcProviderDto
     {
         /// <summary>Provider display name.</summary>
         public string Name { get; set; } = null!;

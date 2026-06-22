@@ -8,7 +8,7 @@ using NUnit.Framework;
 
 namespace Cotton.Server.IntegrationTests;
 
-public sealed class StoragePipelineProbeServiceTests
+public class StoragePipelineProbeServiceTests
 {
     [Test]
     public async Task RunAsync_UsesWarmupThenMeasuredIteration_AndDeletesTemporaryBlobs()

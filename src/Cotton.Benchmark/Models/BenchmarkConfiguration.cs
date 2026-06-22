@@ -6,7 +6,7 @@ namespace Cotton.Benchmark.Models
     /// <summary>
     /// Configuration for benchmark execution.
     /// </summary>
-    public sealed class BenchmarkConfiguration
+    public class BenchmarkConfiguration
     {
         /// <summary>
         /// Number of warmup iterations before actual measurement.

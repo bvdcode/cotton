@@ -6,7 +6,7 @@ namespace Cotton.Server.Models.Dto
     /// <summary>
     /// Represents the archive download link API payload.
     /// </summary>
-    public sealed class ArchiveDownloadLinkDto
+    public class ArchiveDownloadLinkDto
     {
         /// <summary>
         /// Gets or sets url.

@@ -6,7 +6,7 @@ namespace Cotton.Server.Models.Dto
     /// <summary>
     /// Represents the security diagnostics API payload.
     /// </summary>
-    public sealed class SecurityDiagnosticsDto
+    public class SecurityDiagnosticsDto
     {
         /// <summary>
         /// Gets or sets operating system.
@@ -89,7 +89,7 @@ namespace Cotton.Server.Models.Dto
     /// <summary>
     /// Represents the dot net diagnostics API payload.
     /// </summary>
-    public sealed class DotNetDiagnosticsDto
+    public class DotNetDiagnosticsDto
     {
         /// <summary>
         /// Gets a value indicating whether .NET runtime diagnostics are disabled.
@@ -108,7 +108,7 @@ namespace Cotton.Server.Models.Dto
     /// <summary>
     /// Represents the linux process security API payload.
     /// </summary>
-    public sealed class LinuxProcessSecurityDto
+    public class LinuxProcessSecurityDto
     {
         /// <summary>
         /// Gets or sets hardening requested.
@@ -159,7 +159,7 @@ namespace Cotton.Server.Models.Dto
     /// <summary>
     /// Represents Linux container boundary diagnostics.
     /// </summary>
-    public sealed class LinuxContainerSecurityDto
+    public class LinuxContainerSecurityDto
     {
         /// <summary>
         /// Indicates whether the container root filesystem is mounted read-only.
@@ -210,7 +210,7 @@ namespace Cotton.Server.Models.Dto
     /// <summary>
     /// Represents the admin totp diagnostics API payload.
     /// </summary>
-    public sealed class AdminTotpDiagnosticsDto
+    public class AdminTotpDiagnosticsDto
     {
         /// <summary>
         /// Gets or sets admin count.
@@ -229,7 +229,7 @@ namespace Cotton.Server.Models.Dto
     /// <summary>
     /// Represents the database integrity diagnostics API payload.
     /// </summary>
-    public sealed class DatabaseIntegrityDiagnosticsDto
+    public class DatabaseIntegrityDiagnosticsDto
     {
         /// <summary>
         /// Gets a value indicating whether database integrity protection is enabled.
@@ -248,7 +248,7 @@ namespace Cotton.Server.Models.Dto
     /// <summary>
     /// Represents CPU feature diagnostics.
     /// </summary>
-    public sealed class CpuFeatureDiagnosticsDto
+    public class CpuFeatureDiagnosticsDto
     {
         /// <summary>
         /// Gets process architecture.
@@ -315,7 +315,7 @@ namespace Cotton.Server.Models.Dto
     /// <summary>
     /// Represents availability of a single CPU feature.
     /// </summary>
-    public sealed class CpuFeatureAvailabilityDto
+    public class CpuFeatureAvailabilityDto
     {
         /// <summary>
         /// Gets the runtime intrinsic support status, when applicable.
@@ -330,7 +330,7 @@ namespace Cotton.Server.Models.Dto
     /// <summary>
     /// Represents the security diagnostic warning API payload.
     /// </summary>
-    public sealed class SecurityDiagnosticWarningDto
+    public class SecurityDiagnosticWarningDto
     {
         /// <summary>
         /// Gets or sets code.

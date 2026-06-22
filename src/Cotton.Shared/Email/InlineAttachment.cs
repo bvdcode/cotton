@@ -7,7 +7,7 @@ namespace Cotton.Email
     /// Represents an inline (CID-referenced) attachment for an HTML email.
     /// The HTML body references it via <c>cid:{ContentId}</c>.
     /// </summary>
-    public sealed class InlineAttachment
+    public class InlineAttachment
     {
         /// <summary>
         /// Content-ID referenced in the HTML body (without angle brackets).

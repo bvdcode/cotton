@@ -11,7 +11,7 @@ namespace Cotton.Benchmark.Benchmarks
     /// <summary>
     /// Benchmark for Cotton.Storage decompression throughput.
     /// </summary>
-    public sealed class DecompressionBenchmark : BenchmarkBase
+    public class DecompressionBenchmark : BenchmarkBase
     {
         private readonly byte[] _compressedData;
         private readonly int _originalSize;

@@ -7,7 +7,7 @@ using EasyExtensions.Models.Enums;
 namespace Cotton.Server.Models.Dto
 {
     /// <summary>Administrator-visible OpenID Connect provider settings.</summary>
-    public sealed class OidcProviderDto : BaseDto<Guid>
+    public class OidcProviderDto : BaseDto<Guid>
     {
         /// <summary>Human-readable provider name.</summary>
         public string Name { get; set; } = null!;

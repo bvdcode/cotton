@@ -6,7 +6,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Captures the moment the main ASP.NET application starts accepting its bootstrap window.
     /// </summary>
-    public sealed class ApplicationStartupClock(DateTimeOffset startedAtUtc)
+    public class ApplicationStartupClock(DateTimeOffset startedAtUtc)
     {
         /// <summary>
         /// Gets the started at utc.

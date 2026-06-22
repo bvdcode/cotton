@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace Cotton.Benchmark.Regression
 {
-    internal sealed class BenchmarkArtifactStore(string baselineDirectory, string resultsDirectory)
+    internal class BenchmarkArtifactStore(string baselineDirectory, string resultsDirectory)
     {
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
         {

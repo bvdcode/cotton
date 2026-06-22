@@ -12,7 +12,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Coordinates security diagnostics.
     /// </summary>
-    public sealed class SecurityDiagnosticsService(
+    public class SecurityDiagnosticsService(
         CottonDbContext dbContext,
         ProcessHardeningStatus hardeningStatus,
         MasterKeyRuntimeState masterKeyRuntimeState,

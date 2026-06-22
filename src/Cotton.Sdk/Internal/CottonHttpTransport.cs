@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cotton.Sdk.Internal;
 
-internal sealed class CottonHttpTransport
+internal class CottonHttpTransport
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private const int ResponsePreviewLength = 180;

@@ -282,10 +282,10 @@ namespace Cotton.Server.Services
             }
         }
 
-        private sealed record UnlockRequest(string? MasterKey, string? BootstrapToken);
-        private sealed record SubmittedUnlockRequest(string? MasterKey, string? BootstrapToken);
-        private sealed record UnlockStatusResponse(bool RequiresBootstrapToken, DateTimeOffset? FirstUnlockExpiresAtUtc);
-        private sealed record UnlockResponse(bool Ok, string Message);
-        private sealed record LockedApiResponse(bool Locked, string Message);
+        private record UnlockRequest(string? MasterKey, string? BootstrapToken);
+        private record SubmittedUnlockRequest(string? MasterKey, string? BootstrapToken);
+        private record UnlockStatusResponse(bool RequiresBootstrapToken, DateTimeOffset? FirstUnlockExpiresAtUtc);
+        private record UnlockResponse(bool Ok, string Message);
+        private record LockedApiResponse(bool Locked, string Message);
     }
 }

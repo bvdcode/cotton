@@ -6,7 +6,7 @@ namespace Cotton.Sdk.Realtime;
 /// <summary>
 /// Represents one realtime event received from the Cotton event hub.
 /// </summary>
-public sealed class CottonRealtimeEvent
+public class CottonRealtimeEvent
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="CottonRealtimeEvent" /> class.

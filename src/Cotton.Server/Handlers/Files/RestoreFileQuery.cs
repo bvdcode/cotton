@@ -254,7 +254,7 @@ namespace Cotton.Server.Handlers.Files
             ConflictName = conflictName,
         };
 
-        private sealed record RestoreParentOutcome(
+        private record RestoreParentOutcome(
             Node? Parent,
             IReadOnlyList<Node> CreatedParents,
             RestoreOutcomeDto? Failure);

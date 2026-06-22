@@ -189,7 +189,7 @@ namespace Cotton.Server.IntegrationTests
                 new FileSystemStorageBackend(NullLogger<FileSystemStorageBackend>.Instance, _storageBasePath),
                 compatibilityProbe);
 
-        private sealed class ThrowingEncryptedConfigurationStorageBackend : IStorageBackend, IStorageBackendUsesEncryptedConfiguration
+        private class ThrowingEncryptedConfigurationStorageBackend : IStorageBackend, IStorageBackendUsesEncryptedConfiguration
         {
             public void CleanupTempFiles(TimeSpan ttl) => throw StorageTouched();
             public Task<bool> DeleteAsync(string uid) => throw StorageTouched();
@@ -203,7 +203,7 @@ namespace Cotton.Server.IntegrationTests
                 new("Encrypted configuration storage should not be touched before compatibility proof.");
         }
 
-        private sealed class DelegateCompatibilityProbe(
+        private class DelegateCompatibilityProbe(
             Func<CottonEncryptionSettings, MasterKeyCompatibilityMode, MasterKeyCompatibilityResult> _validate)
             : IMasterKeyCompatibilityProbe
         {

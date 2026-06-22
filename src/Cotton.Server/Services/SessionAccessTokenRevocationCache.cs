@@ -8,7 +8,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Caches session access token revocation state.
     /// </summary>
-    public sealed class SessionAccessTokenRevocationCache : IDisposable
+    public class SessionAccessTokenRevocationCache : IDisposable
     {
         private const long EntrySize = 1;
         private const long MaxEntries = 1_000_000;

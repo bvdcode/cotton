@@ -26,7 +26,7 @@ namespace Cotton.Server.Services
     /// That keeps ownership, storage cleanup, quota accounting, and download authorization on the same
     /// domain model as regular files. The first historical row is treated as the immutable original.
     /// </remarks>
-    public sealed class FileVersionService(
+    public class FileVersionService(
         CottonDbContext _dbContext,
         NodeFileHistoryService _history,
         FileVersionRetentionService _retention,

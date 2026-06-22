@@ -16,7 +16,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Coordinates archive download.
     /// </summary>
-    public sealed class ArchiveDownloadService(
+    public class ArchiveDownloadService(
         CottonDbContext _dbContext,
         ArchiveDownloadTicketStore _tickets,
         FileGraphIntegrityVerifier _fileGraphIntegrity)
@@ -304,7 +304,7 @@ namespace Cotton.Server.Services
             return normalized + ".zip";
         }
 
-        private sealed class ArchiveLimitTracker(int maxEntries)
+        private class ArchiveLimitTracker(int maxEntries)
         {
             private const int PublicShareMaxEntries = 5_000;
 
@@ -334,7 +334,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Represents the result of create archive download link.
     /// </summary>
-    public sealed class CreateArchiveDownloadLinkResult
+    public class CreateArchiveDownloadLinkResult
     {
         private CreateArchiveDownloadLinkResult(ArchiveDownloadLinkDto? link, string? error, int statusCode)
         {

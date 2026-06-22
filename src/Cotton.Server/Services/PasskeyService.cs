@@ -464,12 +464,12 @@ namespace Cotton.Server.Services
             return value >= uint.MaxValue ? uint.MaxValue : (uint)value;
         }
 
-        private sealed record RegistrationState(
+        private record RegistrationState(
             Guid UserId,
             string Name,
             CredentialCreateOptions Options);
 
-        private sealed record AssertionState(
+        private record AssertionState(
             Guid? ScopedUserId,
             AssertionOptions Options);
     }

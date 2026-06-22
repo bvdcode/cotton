@@ -8,7 +8,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// <summary>
     /// Describes short-lived OIDC login state fields protected against direct database tampering.
     /// </summary>
-    public sealed class OidcLoginStateIntegrityDescriptor : DatabaseIntegrityDescriptor<OidcLoginState>
+    public class OidcLoginStateIntegrityDescriptor : DatabaseIntegrityDescriptor<OidcLoginState>
     {
         /// <inheritdoc />
         public override string EntityName => "oidc_login_states";

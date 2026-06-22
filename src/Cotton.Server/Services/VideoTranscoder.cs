@@ -11,7 +11,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Represents video transcoder.
     /// </summary>
-    public sealed class VideoTranscoder(ILogger<VideoTranscoder> logger)
+    public class VideoTranscoder(ILogger<VideoTranscoder> logger)
     {
         /// <summary>
         /// Defines the segment content type.

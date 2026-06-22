@@ -11,7 +11,7 @@ namespace Cotton.Benchmark.Benchmarks
     /// <summary>
     /// Benchmark for comparing Zstd compression levels by throughput and compression ratio.
     /// </summary>
-    public sealed class CompressionLevelsBenchmark(BenchmarkConfiguration configuration) : BenchmarkBase(configuration)
+    public class CompressionLevelsBenchmark(BenchmarkConfiguration configuration) : BenchmarkBase(configuration)
     {
         private readonly byte[] _testData = TestDataGenerator.GenerateCompressibleText(configuration.DataSizeBytes);
 
@@ -181,7 +181,7 @@ namespace Cotton.Benchmark.Benchmarks
             };
         }
 
-        private sealed class LevelResult
+        private class LevelResult
         {
             public required int Level { get; init; }
             public required double ThroughputMBps { get; init; }

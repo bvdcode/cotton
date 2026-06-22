@@ -8,7 +8,7 @@ namespace Cotton.Benchmark.Models
     /// <summary>
     /// Represents the result of a benchmark execution.
     /// </summary>
-    public sealed class BenchmarkResult : IBenchmarkResult
+    public class BenchmarkResult : IBenchmarkResult
     {
         /// <inheritdoc/>
         public string BenchmarkName { get; init; } = string.Empty;

@@ -11,7 +11,7 @@ using Cotton.Sdk.Tests.Fakes;
 
 namespace Cotton.Sdk.Tests;
 
-public sealed class CottonFileAndChunkClientTests
+public class CottonFileAndChunkClientTests
 {
     private const string IfMatchHeaderName = "If-Match";
 
@@ -413,7 +413,7 @@ public sealed class CottonFileAndChunkClientTests
     }
 
 
-    private sealed class RecordingProgress : IProgress<long>
+    private class RecordingProgress : IProgress<long>
     {
         public List<long> Values { get; } = [];
 

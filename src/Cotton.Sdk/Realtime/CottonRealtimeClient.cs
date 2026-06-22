@@ -10,7 +10,7 @@ namespace Cotton.Sdk.Realtime;
 /// <summary>
 /// Connects to the Cotton SignalR event hub.
 /// </summary>
-public sealed class CottonRealtimeClient : ICottonRealtimeClient
+public class CottonRealtimeClient : ICottonRealtimeClient
 {
     private readonly HubConnection _connection;
 

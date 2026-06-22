@@ -15,7 +15,7 @@ namespace Cotton.Benchmark.Benchmarks
     /// <summary>
     /// Benchmark for the storage pipeline processing chain.
     /// </summary>
-    public sealed class PipelineBenchmark : BenchmarkBase, IDisposable
+    public class PipelineBenchmark : BenchmarkBase, IDisposable
     {
         private readonly byte[] _testData;
         private readonly FileStoragePipeline _pipeline;

@@ -218,6 +218,6 @@ namespace Cotton.Server.Services
             }
         }
 
-        private sealed record DbSettings(string Host, ushort Port, string Database, string Username, string Password);
+        private record DbSettings(string Host, ushort Port, string Database, string Username, string Password);
     }
 }

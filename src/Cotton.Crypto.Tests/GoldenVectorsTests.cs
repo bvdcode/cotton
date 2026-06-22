@@ -124,7 +124,7 @@ public class GoldenVectorsTests
         return Convert.FromHexString(value);
     }
 
-    private sealed record SharedContainerVectors(
+    private record SharedContainerVectors(
         byte[] MasterKey,
         byte[] Plaintext,
         byte[] FileKey,
@@ -133,7 +133,7 @@ public class GoldenVectorsTests
         int Ctn2ChunkSize,
         byte[] Ctn2SingleChunk);
 
-    private sealed class SequenceRandomNumberGenerator : RandomNumberGenerator
+    private class SequenceRandomNumberGenerator : RandomNumberGenerator
     {
         private readonly byte[] _bytes;
         private int _offset;
@@ -165,7 +165,7 @@ public class GoldenVectorsTests
         }
     }
 
-    private sealed class DeterministicRng(ulong seed) : RandomNumberGenerator
+    private class DeterministicRng(ulong seed) : RandomNumberGenerator
     {
         public override void GetBytes(byte[] data)
         {

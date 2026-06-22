@@ -14,7 +14,7 @@ namespace Cotton.Server.Services.Search
     /// <summary>
     /// Coordinates layout search providers and shapes the API result payload.
     /// </summary>
-    public sealed class LayoutSearchService(
+    public class LayoutSearchService(
         CottonDbContext _dbContext,
         IEnumerable<ILayoutSearchProvider> _providers) : ILayoutSearchService
     {

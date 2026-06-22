@@ -6,7 +6,7 @@ namespace Cotton.Server.Models.Dto
     /// <summary>
     /// Represents a successful custom GeoIP resolver test payload.
     /// </summary>
-    public sealed class CustomGeoLookupTestResultDto
+    public class CustomGeoLookupTestResultDto
     {
         /// <summary>
         /// Gets or sets tested input label.

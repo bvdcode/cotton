@@ -192,7 +192,7 @@ namespace Cotton.Server.Handlers.WebDav
             return newNode;
         }
 
-        private sealed record WebDavMkColParent(WebDavParentResult? Result, WebDavMkColResult? Failure);
+        private record WebDavMkColParent(WebDavParentResult? Result, WebDavMkColResult? Failure);
 
         private WebDavMkColResult? ValidateResourceName(string resourceName)
         {

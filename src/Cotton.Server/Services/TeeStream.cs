@@ -3,7 +3,7 @@
 
 namespace Cotton.Server.Services
 {
-    internal sealed class TeeStream(Stream primary, Stream secondary) : Stream
+    internal class TeeStream(Stream primary, Stream secondary) : Stream
     {
         public override bool CanRead => false;
         public override bool CanSeek => false;

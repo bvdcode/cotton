@@ -22,7 +22,7 @@ using System.Text;
 namespace Cotton.Server.IntegrationTests;
 
 [NonParallelizable]
-public sealed class RawChunkUploadThroughputTests : IntegrationTestBase
+public class RawChunkUploadThroughputTests : IntegrationTestBase
 {
     private const int MiB = 1024 * 1024;
     private const int WarmupChunks = 1;
@@ -184,5 +184,5 @@ public sealed class RawChunkUploadThroughputTests : IntegrationTestBase
         settingsProviderType.GetField("_serverHasUsersCache", flags)?.SetValue(null, null);
     }
 
-    private sealed record ChunkPayload(byte[] Bytes, string Hash);
+    private record ChunkPayload(byte[] Bytes, string Hash);
 }

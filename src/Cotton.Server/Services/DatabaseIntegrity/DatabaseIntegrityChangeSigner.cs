@@ -14,7 +14,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// The signer lives in the database layer boundary rather than in individual handlers so every normal write path is
     /// covered consistently.
     /// </remarks>
-    public sealed class DatabaseIntegrityChangeSigner : IDatabaseIntegrityChangeSigner
+    public class DatabaseIntegrityChangeSigner : IDatabaseIntegrityChangeSigner
     {
         private readonly IDatabaseIntegrityProtector _protector;
         private readonly IDatabaseIntegrityDescriptorRegistry _descriptors;

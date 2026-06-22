@@ -8,7 +8,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// <summary>
     /// Describes external identity links protected against direct database tampering.
     /// </summary>
-    public sealed class UserExternalIdentityIntegrityDescriptor : DatabaseIntegrityDescriptor<UserExternalIdentity>
+    public class UserExternalIdentityIntegrityDescriptor : DatabaseIntegrityDescriptor<UserExternalIdentity>
     {
         /// <inheritdoc />
         public override string EntityName => "user_external_identities";

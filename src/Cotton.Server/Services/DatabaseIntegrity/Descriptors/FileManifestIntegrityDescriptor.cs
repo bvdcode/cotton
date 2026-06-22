@@ -8,7 +8,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// <summary>
     /// Describes immutable file-content metadata that must match the chunks served to a reader.
     /// </summary>
-    public sealed class FileManifestIntegrityDescriptor : DatabaseIntegrityDescriptor<FileManifest>
+    public class FileManifestIntegrityDescriptor : DatabaseIntegrityDescriptor<FileManifest>
     {
         /// <inheritdoc />
         public override string EntityName => "file_manifests";

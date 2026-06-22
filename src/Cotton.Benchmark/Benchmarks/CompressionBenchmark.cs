@@ -11,7 +11,7 @@ namespace Cotton.Benchmark.Benchmarks
     /// <summary>
     /// Benchmark for Cotton.Storage compression throughput.
     /// </summary>
-    public sealed class CompressionBenchmark(BenchmarkConfiguration configuration) : BenchmarkBase(configuration)
+    public class CompressionBenchmark(BenchmarkConfiguration configuration) : BenchmarkBase(configuration)
     {
         private readonly byte[] _testData = TestDataGenerator.GenerateCompressibleText(configuration.DataSizeBytes);
         private readonly CompressionProcessor _processor = new(new FixedCompressionLevelProvider(configuration.CompressionLevel));

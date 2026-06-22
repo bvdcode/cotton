@@ -6,7 +6,7 @@ namespace Cotton.Sdk;
 /// <summary>
 /// Configures a Cotton SDK client instance.
 /// </summary>
-public sealed class CottonSdkOptions
+public class CottonSdkOptions
 {
     /// <summary>
     /// Gets or sets the Cotton server base address.

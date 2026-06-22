@@ -10,7 +10,7 @@ using NUnit.Framework;
 
 namespace Cotton.Server.IntegrationTests;
 
-public sealed class LayoutSearchServiceTests
+public class LayoutSearchServiceTests
 {
     [Test]
     public void BuildCriteria_SplitsFileNameTermsForOrderIndependentSearch()

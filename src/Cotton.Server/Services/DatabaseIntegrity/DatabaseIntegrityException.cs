@@ -6,7 +6,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// <summary>
     /// Exception thrown when a protected database row does not match its integrity metadata.
     /// </summary>
-    public sealed class DatabaseIntegrityException : Exception
+    public class DatabaseIntegrityException : Exception
     {
         /// <summary>Initializes a failure for the protected entity and row key that failed verification.</summary>
         public DatabaseIntegrityException(string entityName, string entityKey)

@@ -97,7 +97,7 @@ namespace Cotton.Server.Services
             return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
         }
 
-        private sealed record StartupStorageSettings(
+        private record StartupStorageSettings(
             StorageType StorageType,
             string? S3EndpointUrl,
             string? S3Region,
@@ -114,7 +114,7 @@ namespace Cotton.Server.Services
                 S3BucketName: null);
         }
 
-        private sealed class StaticS3Provider : IS3Provider
+        private class StaticS3Provider : IS3Provider
         {
             private readonly string _endpointUrl;
             private readonly string _region;

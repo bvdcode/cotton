@@ -21,7 +21,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// bounded in-memory queue and deduplicated. If the queue is full, the protected operation still fails and the drop is
     /// logged loudly for operators.
     /// </remarks>
-    public sealed class DatabaseIntegrityFailureReporter(
+    public class DatabaseIntegrityFailureReporter(
         IServiceScopeFactory _scopeFactory,
         ILogger<DatabaseIntegrityFailureReporter> _logger) : BackgroundService, IDatabaseIntegrityFailureReporter
     {

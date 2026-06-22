@@ -219,7 +219,7 @@ namespace Cotton.Server.Handlers.WebDav
             }
         }
 
-        private sealed record PreLockCopyOutcome(Guid? LayoutId, WebDavCopyResult? Failure)
+        private record PreLockCopyOutcome(Guid? LayoutId, WebDavCopyResult? Failure)
         {
             /// <summary>
             /// Creates a successful operation result.
@@ -231,7 +231,7 @@ namespace Cotton.Server.Handlers.WebDav
             public static PreLockCopyOutcome Failed(WebDavCopyResult failure) => new(null, failure);
         }
 
-        private sealed record LockedCopyOutcome(
+        private record LockedCopyOutcome(
             WebDavResolveResult? Source,
             WebDavParentResult? DestinationParent,
             bool Created,
@@ -251,7 +251,7 @@ namespace Cotton.Server.Handlers.WebDav
             public static LockedCopyOutcome Failed(WebDavCopyResult failure) => new(null, null, false, failure);
         }
 
-        private sealed record CopyOperationOutcome(
+        private record CopyOperationOutcome(
             Guid? NodeId,
             Guid? NodeFileId,
             long AddedBytes,

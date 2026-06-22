@@ -8,7 +8,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// <summary>
     /// Computes and verifies row integrity MACs over descriptor-produced canonical payloads.
     /// </summary>
-    public sealed class DatabaseIntegrityProtector(IDatabaseIntegrityKeyProvider keyProvider) : IDatabaseIntegrityProtector
+    public class DatabaseIntegrityProtector(IDatabaseIntegrityKeyProvider keyProvider) : IDatabaseIntegrityProtector
     {
         /// <inheritdoc />
         public byte[] Sign(object entity, IDatabaseIntegrityDescriptor descriptor)

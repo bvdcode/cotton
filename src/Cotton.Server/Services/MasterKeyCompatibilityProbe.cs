@@ -41,7 +41,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Represents the result of master key compatibility.
     /// </summary>
-    public sealed record MasterKeyCompatibilityResult(
+    public record MasterKeyCompatibilityResult(
         bool Success,
         bool ExistingDataFound,
         bool EvidenceFound,
@@ -66,7 +66,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Represents master key compatibility probe.
     /// </summary>
-    public sealed class MasterKeyCompatibilityProbe : IMasterKeyCompatibilityProbe
+    public class MasterKeyCompatibilityProbe : IMasterKeyCompatibilityProbe
     {
         private static readonly string[] CottonDataTables =
         [
@@ -483,7 +483,7 @@ namespace Cotton.Server.Services
             FailedCandidates
         }
 
-        private sealed record EncryptedColumnProbe(
+        private record EncryptedColumnProbe(
             string TableName,
             string ColumnName,
             EncryptedColumnKind Kind);

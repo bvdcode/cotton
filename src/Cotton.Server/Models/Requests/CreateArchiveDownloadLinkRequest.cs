@@ -6,7 +6,7 @@ namespace Cotton.Server.Models.Requests
     /// <summary>
     /// Represents the create archive download link request payload accepted by the API.
     /// </summary>
-    public sealed class CreateArchiveDownloadLinkRequest
+    public class CreateArchiveDownloadLinkRequest
     {
         /// <summary>
         /// Gets or sets file ids.

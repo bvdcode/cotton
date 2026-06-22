@@ -299,8 +299,8 @@ namespace Cotton.Server.Handlers.Users
                 : _crypto.Encrypt(update.Hash);
         }
 
-        private sealed record UsernameUpdate(string? NormalizedUsername, bool Changed);
+        private record UsernameUpdate(string? NormalizedUsername, bool Changed);
 
-        private sealed record AvatarUpdate(byte[]? Hash, bool Changed);
+        private record AvatarUpdate(byte[]? Hash, bool Changed);
     }
 }

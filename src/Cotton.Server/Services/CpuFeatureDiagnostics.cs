@@ -132,7 +132,7 @@ namespace Cotton.Server.Services
             }
         }
 
-        private sealed record LinuxCpuInfo(
+        private record LinuxCpuInfo(
             string? VendorId,
             string? ModelName,
             IReadOnlyList<string> Flags,

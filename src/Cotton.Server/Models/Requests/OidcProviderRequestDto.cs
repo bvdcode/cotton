@@ -6,7 +6,7 @@ using EasyExtensions.Models.Enums;
 namespace Cotton.Server.Models.Requests
 {
     /// <summary>Request used to create or update an OpenID Connect provider.</summary>
-    public sealed class OidcProviderRequestDto
+    public class OidcProviderRequestDto
     {
         /// <summary>Human-readable provider name.</summary>
         public string Name { get; set; } = string.Empty;

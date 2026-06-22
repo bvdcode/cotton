@@ -12,7 +12,7 @@ using System.Buffers;
 namespace Cotton.Server.Services
 {
     /// <summary>Imports external OIDC profile pictures into the normal Cotton avatar pipeline.</summary>
-    public sealed class OidcAvatarImportService(
+    public class OidcAvatarImportService(
         HttpClient _httpClient,
         IChunkIngestService _chunkIngest,
         IStreamCipher _crypto,

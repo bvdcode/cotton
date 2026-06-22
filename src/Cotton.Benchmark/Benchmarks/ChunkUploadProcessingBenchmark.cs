@@ -29,7 +29,7 @@ namespace Cotton.Benchmark.Benchmarks
     /// <summary>
     /// Measures the CPU-bound server chunk upload path as one operation.
     /// </summary>
-    public sealed class ChunkUploadProcessingBenchmark : BenchmarkBase, IDisposable
+    public class ChunkUploadProcessingBenchmark : BenchmarkBase, IDisposable
     {
         private readonly byte[] _testData;
         private readonly string _dataType;

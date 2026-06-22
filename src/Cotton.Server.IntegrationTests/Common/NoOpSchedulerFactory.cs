@@ -6,7 +6,7 @@ using System.Reflection;
 
 namespace Cotton.Server.IntegrationTests.Common;
 
-internal sealed class NoOpSchedulerFactory : ISchedulerFactory
+internal class NoOpSchedulerFactory : ISchedulerFactory
 {
     private readonly IScheduler _scheduler =
         DispatchProxy.Create<IScheduler, SchedulerDispatchProxy>();

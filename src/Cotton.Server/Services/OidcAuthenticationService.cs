@@ -24,7 +24,7 @@ using System.Security.Cryptography;
 namespace Cotton.Server.Services
 {
     /// <summary>Runs OpenID Connect sign-in and account-linking flows.</summary>
-    public sealed class OidcAuthenticationService(
+    public class OidcAuthenticationService(
         CottonDbContext _dbContext,
         OidcDiscoveryService _discovery,
         SettingsProvider _settings,
@@ -609,7 +609,7 @@ namespace Cotton.Server.Services
                 .ExecuteDeleteAsync(ct);
         }
 
-        private sealed record OidcIdentityClaims(
+        private record OidcIdentityClaims(
             string Issuer,
             string Subject,
             string? Email,

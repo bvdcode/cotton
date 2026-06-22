@@ -17,7 +17,7 @@ namespace Cotton.Sdk;
 /// <summary>
 /// Provides typed access to Cotton Cloud APIs.
 /// </summary>
-public sealed class CottonCloudClient : ICottonCloudClient
+public class CottonCloudClient : ICottonCloudClient
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="CottonCloudClient" /> class.

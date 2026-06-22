@@ -114,7 +114,7 @@ namespace Cotton.Storage.Processors
             return Task.FromResult<Stream>(readerStream);
         }
 
-        private sealed class StaticCompressionLevelProvider(int level) : ICompressionLevelProvider
+        private class StaticCompressionLevelProvider(int level) : ICompressionLevelProvider
         {
             public int Level { get; } = level;
         }

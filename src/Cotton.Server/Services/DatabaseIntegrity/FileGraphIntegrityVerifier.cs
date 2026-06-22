@@ -13,7 +13,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// Listing large folders intentionally does not walk every child signature. This verifier is used at trust
     /// boundaries where Cotton opens a specific file, archive entry, preview, or stream.
     /// </remarks>
-    public sealed class FileGraphIntegrityVerifier(
+    public class FileGraphIntegrityVerifier(
         IDatabaseIntegrityVerifier _integrity,
         IDatabaseIntegrityFailureReporter _failures)
     {

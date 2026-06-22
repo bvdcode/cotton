@@ -8,7 +8,7 @@ namespace Cotton.Sdk;
 /// <summary>
 /// Represents a non-success HTTP response returned by the Cotton API.
 /// </summary>
-public sealed class CottonApiException : HttpRequestException
+public class CottonApiException : HttpRequestException
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="CottonApiException" /> class.

@@ -27,7 +27,7 @@ using System.Text;
 namespace Cotton.Server.Services
 {
     /// <summary>Issues Cotton access and refresh sessions after an authentication factor succeeds.</summary>
-    public sealed class AuthSessionIssuer(
+    public class AuthSessionIssuer(
         CottonDbContext _dbContext,
         ITokenProvider _tokens,
         SettingsProvider _settings,

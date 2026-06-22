@@ -13,7 +13,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// These settings decide where encrypted chunks live, which external identity/storage providers are trusted, and what
     /// defaults new users receive. A database-only attacker changing them should trip the security check-up immediately.
     /// </remarks>
-    public sealed class CottonServerSettingsIntegrityDescriptor : DatabaseIntegrityDescriptor<CottonServerSettings>
+    public class CottonServerSettingsIntegrityDescriptor : DatabaseIntegrityDescriptor<CottonServerSettings>
     {
         /// <inheritdoc />
         public override string EntityName => "server_settings";

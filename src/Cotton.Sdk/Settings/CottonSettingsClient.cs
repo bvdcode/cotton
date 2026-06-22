@@ -10,7 +10,7 @@ namespace Cotton.Sdk.Settings;
 /// <summary>
 /// Provides client-visible Cotton server settings.
 /// </summary>
-public sealed class CottonSettingsClient : ICottonSettingsClient
+public class CottonSettingsClient : ICottonSettingsClient
 {
     private readonly CottonHttpTransport _transport;
 

@@ -11,7 +11,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Stores session access token revocation state.
     /// </summary>
-    public sealed class SessionAccessTokenRevocationStore(
+    public class SessionAccessTokenRevocationStore(
         CottonDbContext _dbContext,
         SessionAccessTokenRevocationCache _cache,
         IDatabaseIntegrityVerifier _integrity)

@@ -9,7 +9,7 @@ namespace Cotton.Sdk.Chunks;
 /// <summary>
 /// Provides chunk upload and deduplication operations.
 /// </summary>
-public sealed class CottonChunkClient : ICottonChunkClient
+public class CottonChunkClient : ICottonChunkClient
 {
     private readonly CottonHttpTransport _transport;
 

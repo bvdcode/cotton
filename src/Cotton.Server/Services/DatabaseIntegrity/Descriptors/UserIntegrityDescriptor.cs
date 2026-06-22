@@ -12,7 +12,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// This descriptor protects fields that can grant access, recover access, or elevate privileges. Cosmetic profile fields
     /// are intentionally excluded so an avatar or display-name edit does not rotate the account security MAC.
     /// </remarks>
-    public sealed class UserIntegrityDescriptor : DatabaseIntegrityDescriptor<User>
+    public class UserIntegrityDescriptor : DatabaseIntegrityDescriptor<User>
     {
         /// <inheritdoc />
         public override string EntityName => "users";

@@ -17,7 +17,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// administrative screens can contain tens of thousands of rows; integrity verification stays on security-sensitive
     /// read boundaries where the application is about to trust a protected row.
     /// </remarks>
-    public sealed class DatabaseIntegrityDiagnosticsService(
+    public class DatabaseIntegrityDiagnosticsService(
         CottonDbContext _dbContext,
         IDatabaseIntegrityDescriptorRegistry _descriptors)
     {

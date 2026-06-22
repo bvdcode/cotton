@@ -12,11 +12,11 @@ using System.Threading.Tasks;
 
 namespace Cotton.Crypto.Internals.Pipelines
 {
-    internal sealed class DecryptionPipeline(Stream input, Stream output,
+    internal class DecryptionPipeline(Stream input, Stream output,
         byte[] fileKey, uint noncePrefix, int threads, int keyId, int nonceSize,
         int tagSize, int maxChunkSize, int windowCap, long expectedTotal, bool strictLength, int formatVersion, ArrayPool<byte> pool)
     {
-        private sealed class ReorderWriter
+        private class ReorderWriter
         {
             private readonly Stream _output;
             private readonly BufferScope _scope;
