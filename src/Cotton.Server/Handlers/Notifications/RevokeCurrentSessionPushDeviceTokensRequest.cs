@@ -47,7 +47,7 @@ namespace Cotton.Server.Handlers.Notifications
             }
 
             DateTime revokedAt = DateTime.UtcNow;
-            int revokedTokens = await _pushDeviceTokenRevocations.RevokeSessionAsync(
+            int revokedTokens = await _pushDeviceTokenRevocations.RevokeSessionTokensAsync(
                 request.UserId,
                 request.SessionId,
                 revokedAt,

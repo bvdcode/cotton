@@ -25,17 +25,25 @@ namespace Cotton.Server.Services
             DateTime revokedAt,
             CancellationToken cancellationToken)
         {
-            RefreshTokenRevocationResult revocation = await RevokeAsync(
+            RefreshTokenRevocationResult result = await RevokeAsync(
                 _dbContext.RefreshTokens
                     .Where(x => x.UserId == userId && x.SessionId == sessionId && x.RevokedAt == null),
                 revokedAt,
                 cancellationToken);
-            int revokedPushTokens = await _pushDeviceTokenRevocations.RevokeSessionAsync(
+            int revokedPushDeviceTokens = await _pushDeviceTokenRevocations.RevokeSessionTokensAsync(
                 userId,
                 sessionId,
                 revokedAt,
                 cancellationToken);
-            return revocation with { RevokedPushDeviceTokens = revokedPushTokens };
+
+            IReadOnlyList<string> sessionIds = result.SessionIds.Contains(sessionId, StringComparer.Ordinal)
+                ? result.SessionIds
+                : [.. result.SessionIds, sessionId];
+            return result with
+            {
+                SessionIds = sessionIds,
+                RevokedPushDeviceTokens = revokedPushDeviceTokens
+            };
         }
 
         /// <summary>
@@ -46,16 +54,20 @@ namespace Cotton.Server.Services
             DateTime revokedAt,
             CancellationToken cancellationToken)
         {
-            RefreshTokenRevocationResult revocation = await RevokeAsync(
+            RefreshTokenRevocationResult result = await RevokeAsync(
                 _dbContext.RefreshTokens
                     .Where(x => x.UserId == userId && x.RevokedAt == null),
                 revokedAt,
                 cancellationToken);
-            int revokedPushTokens = await _pushDeviceTokenRevocations.RevokeUserTokensAsync(
+            int revokedPushDeviceTokens = await _pushDeviceTokenRevocations.RevokeUserTokensAsync(
                 userId,
                 revokedAt,
                 cancellationToken);
-            return revocation with { RevokedPushDeviceTokens = revokedPushTokens };
+
+            return result with
+            {
+                RevokedPushDeviceTokens = revokedPushDeviceTokens
+            };
         }
 
         private async Task<RefreshTokenRevocationResult> RevokeAsync(
@@ -74,7 +86,10 @@ namespace Cotton.Server.Services
                     .ToListAsync(cancellationToken);
                 if (tokens.Count == 0)
                 {
-                    return new RefreshTokenRevocationResult(revoked, sessionIds, 0);
+                    return new RefreshTokenRevocationResult(
+                        revoked,
+                        sessionIds,
+                        RevokedPushDeviceTokens: 0);
                 }
 
                 foreach (ExtendedRefreshToken token in tokens)

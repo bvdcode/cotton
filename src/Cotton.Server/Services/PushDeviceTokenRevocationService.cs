@@ -8,14 +8,16 @@ using Microsoft.EntityFrameworkCore;
 namespace Cotton.Server.Services
 {
     /// <summary>
-    /// Coordinates server-side push device token revocation.
+    /// Coordinates push device token revocation for auth session lifecycle events.
     /// </summary>
     public class PushDeviceTokenRevocationService(CottonDbContext _dbContext)
     {
+        private const int BatchSize = 1_000;
+
         /// <summary>
-        /// Revokes active push device tokens registered by a single auth session.
+        /// Revokes active push device tokens registered by one user session.
         /// </summary>
-        public Task<int> RevokeSessionAsync(
+        public Task<int> RevokeSessionTokensAsync(
             Guid userId,
             string sessionId,
             DateTime revokedAt,
@@ -31,7 +33,7 @@ namespace Cotton.Server.Services
         }
 
         /// <summary>
-        /// Revokes every active push device token owned by the user.
+        /// Revokes all active push device tokens owned by the user.
         /// </summary>
         public Task<int> RevokeUserTokensAsync(
             Guid userId,
@@ -45,16 +47,32 @@ namespace Cotton.Server.Services
                 cancellationToken);
         }
 
-        private static Task<int> RevokeAsync(
+        private async Task<int> RevokeAsync(
             IQueryable<PushDeviceToken> query,
             DateTime revokedAt,
             CancellationToken cancellationToken)
         {
-            return query.ExecuteUpdateAsync(
-                setters => setters
-                    .SetProperty(token => token.RevokedAt, revokedAt)
-                    .SetProperty(token => token.UpdatedAt, revokedAt),
-                cancellationToken);
+            int revoked = 0;
+            while (true)
+            {
+                List<PushDeviceToken> tokens = await query
+                    .OrderBy(x => x.Id)
+                    .Take(BatchSize)
+                    .ToListAsync(cancellationToken);
+                if (tokens.Count == 0)
+                {
+                    return revoked;
+                }
+
+                foreach (PushDeviceToken token in tokens)
+                {
+                    token.RevokedAt = revokedAt;
+                }
+
+                revoked += tokens.Count;
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                _dbContext.ChangeTracker.Clear();
+            }
         }
     }
 }
