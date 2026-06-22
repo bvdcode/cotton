@@ -15,10 +15,17 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
         IDatabaseIntegrityDescriptorVersionSet
     {
         private static readonly IReadOnlyCollection<IDatabaseIntegrityDescriptor> LegacyDescriptorVersions =
-            [new CottonServerSettingsLegacyIntegrityDescriptor()];
+            [
+                new CottonServerSettingsV2IntegrityDescriptor(),
+                new CottonServerSettingsPipelineV1IntegrityDescriptor(),
+                new CottonServerSettingsInitialV1IntegrityDescriptor(),
+            ];
 
         /// <inheritdoc />
         public override int SchemaVersion => 3;
+
+        /// <inheritdoc />
+        protected override bool IncludeCompressionLevel => true;
 
         /// <inheritdoc />
         protected override bool IncludeFirebaseCloudMessagingFields => true;

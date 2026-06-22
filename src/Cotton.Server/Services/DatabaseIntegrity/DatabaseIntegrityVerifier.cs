@@ -50,11 +50,13 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             object? macValue = entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue;
             if (versionValue is not int version
                 || macValue is not byte[] mac
-                || !DatabaseIntegrityDescriptorVersions.TryResolve(
+                || !DatabaseIntegrityDescriptorVersions.TryVerify(
+                    entity,
                     descriptor,
                     version,
-                    out IDatabaseIntegrityDescriptor resolvedDescriptor)
-                || !_protector.Verify(entity, resolvedDescriptor, mac))
+                    mac,
+                    _protector,
+                    out _))
             {
                 ReportFailure(descriptor, entity, boundary);
                 _logger.LogError(

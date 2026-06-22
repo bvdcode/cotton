@@ -4,12 +4,15 @@
 namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
 {
     /// <summary>
-    /// Describes server settings rows signed before Firebase Cloud Messaging settings became part of the payload.
+    /// Describes server settings rows signed after compression settings and before Firebase Cloud Messaging settings.
     /// </summary>
-    public class CottonServerSettingsLegacyIntegrityDescriptor : CottonServerSettingsIntegrityDescriptorBase
+    public class CottonServerSettingsV2IntegrityDescriptor : CottonServerSettingsIntegrityDescriptorBase
     {
         /// <inheritdoc />
         public override int SchemaVersion => 2;
+
+        /// <inheritdoc />
+        protected override bool IncludeCompressionLevel => true;
 
         /// <inheritdoc />
         protected override bool IncludeFirebaseCloudMessagingFields => false;

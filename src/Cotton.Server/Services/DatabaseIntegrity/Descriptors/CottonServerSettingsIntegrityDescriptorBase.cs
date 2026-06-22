@@ -16,6 +16,11 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
         public override string EntityName => "server_settings";
 
         /// <summary>
+        /// Gets a value indicating whether compression settings participate in the canonical payload.
+        /// </summary>
+        protected abstract bool IncludeCompressionLevel { get; }
+
+        /// <summary>
         /// Gets a value indicating whether Firebase Cloud Messaging settings participate in the canonical payload.
         /// </summary>
         protected abstract bool IncludeFirebaseCloudMessagingFields { get; }
@@ -34,7 +39,11 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
             writer.WriteStringField(nameof(entity.PublicBaseUrl), entity.PublicBaseUrl);
             writer.WriteInt32Field(nameof(entity.EncryptionThreads), entity.EncryptionThreads);
             writer.WriteInt32Field(nameof(entity.CipherChunkSizeBytes), entity.CipherChunkSizeBytes);
-            writer.WriteInt32Field(nameof(entity.CompressionLevel), entity.CompressionLevel);
+            if (IncludeCompressionLevel)
+            {
+                writer.WriteInt32Field(nameof(entity.CompressionLevel), entity.CompressionLevel);
+            }
+
             writer.WriteInt32Field(nameof(entity.MaxChunkSizeBytes), entity.MaxChunkSizeBytes);
             writer.WriteInt32Field(nameof(entity.SessionTimeoutHours), entity.SessionTimeoutHours);
             writer.WriteBooleanField(nameof(entity.TelemetryEnabled), entity.TelemetryEnabled);

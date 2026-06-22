@@ -9,31 +9,29 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     public static class DatabaseIntegrityDescriptorVersions
     {
         /// <summary>
-        /// Tries to resolve the descriptor schema that matches stored row metadata.
+        /// Tries to verify an entity with the descriptor schemas accepted for the stored row metadata.
         /// </summary>
-        public static bool TryResolve(
+        public static bool TryVerify(
+            object entity,
             IDatabaseIntegrityDescriptor currentDescriptor,
             int schemaVersion,
+            byte[] mac,
+            IDatabaseIntegrityProtector protector,
             out IDatabaseIntegrityDescriptor resolvedDescriptor)
         {
+            ArgumentNullException.ThrowIfNull(entity);
             ArgumentNullException.ThrowIfNull(currentDescriptor);
+            ArgumentNullException.ThrowIfNull(mac);
+            ArgumentNullException.ThrowIfNull(protector);
 
-            if (currentDescriptor.SchemaVersion == schemaVersion)
+            foreach (IDatabaseIntegrityDescriptor descriptor in EnumerateCandidateDescriptors(
+                currentDescriptor,
+                schemaVersion))
             {
-                resolvedDescriptor = currentDescriptor;
-                return true;
-            }
-
-            if (currentDescriptor is IDatabaseIntegrityDescriptorVersionSet versionSet)
-            {
-                foreach (IDatabaseIntegrityDescriptor legacyDescriptor in versionSet.LegacyDescriptors)
+                if (protector.Verify(entity, descriptor, mac))
                 {
-                    ValidateLegacyDescriptor(currentDescriptor, legacyDescriptor);
-                    if (legacyDescriptor.SchemaVersion == schemaVersion)
-                    {
-                        resolvedDescriptor = legacyDescriptor;
-                        return true;
-                    }
+                    resolvedDescriptor = descriptor;
+                    return true;
                 }
             }
 
@@ -59,6 +57,30 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             }
 
             return [.. versions.Distinct()];
+        }
+
+        private static IEnumerable<IDatabaseIntegrityDescriptor> EnumerateCandidateDescriptors(
+            IDatabaseIntegrityDescriptor currentDescriptor,
+            int schemaVersion)
+        {
+            if (currentDescriptor.SchemaVersion == schemaVersion)
+            {
+                yield return currentDescriptor;
+            }
+
+            if (currentDescriptor is not IDatabaseIntegrityDescriptorVersionSet versionSet)
+            {
+                yield break;
+            }
+
+            foreach (IDatabaseIntegrityDescriptor legacyDescriptor in versionSet.LegacyDescriptors)
+            {
+                ValidateLegacyDescriptor(currentDescriptor, legacyDescriptor);
+                if (legacyDescriptor.SchemaVersion == schemaVersion)
+                {
+                    yield return legacyDescriptor;
+                }
+            }
         }
 
         private static void ValidateLegacyDescriptor(
