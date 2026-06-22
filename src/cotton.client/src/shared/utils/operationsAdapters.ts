@@ -5,9 +5,6 @@ import type {
 import type { FolderEncryptionPolicyState } from "@shared/crypto";
 import type { NodeDto } from "@shared/api/layoutsApi";
 
-/**
- * Build folder operations adapter from hook
- */
 export const buildFolderOperations = (
   folderOps: {
     renamingFolderId: string | null;
@@ -63,9 +60,6 @@ export const buildFolderOperations = (
   };
 };
 
-/**
- * Build file operations adapter from hook
- */
 export const buildFileOperations = (
   fileOps: {
     renamingFileId: string | null;

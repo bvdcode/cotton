@@ -9,7 +9,7 @@ namespace Cotton.Server.Models.Dto
     public class EmailConfig
     {
         /// <summary>
-        /// Gets or sets the normalized username.
+        /// Gets the SMTP account username.
         /// </summary>
         public string Username { get; init; } = null!;
         /// <summary>

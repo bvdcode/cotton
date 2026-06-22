@@ -1,10 +1,3 @@
-/**
- * Editors Module Exports
- * 
- * Centralized export point for all editor-related components and types
- * Interface Segregation: Clean, organized API surface
- */
-
 export { PlainTextEditor } from './PlainTextEditor';
 export { MarkdownEditor } from './MarkdownEditor';
 export { CodeEditor } from './CodeEditor';

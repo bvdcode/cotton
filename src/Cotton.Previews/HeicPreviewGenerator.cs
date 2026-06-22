@@ -1,17 +1,23 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using PhotoSauce.MagicScaler;
+using LibHeifSharp;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using System.Runtime.InteropServices;
 
 namespace Cotton.Previews
 {
     /// <summary>
-    /// Generates previews for HEIC and HEIF image formats.
+    /// Generates previews for HEIC and HEIF images by decoding with libheif into an
+    /// ImageSharp image, then encoding through the shared <see cref="PreviewImageEncoder"/>.
     /// </summary>
     public class HeicPreviewGenerator : IPreviewGenerator
     {
+        private const int Rgba32BytesPerPixel = 4;
+
         /// <inheritdoc />
-        public int Version => 1;
+        public int Version => 2;
 
         /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes =>
@@ -23,29 +29,43 @@ namespace Cotton.Previews
         ];
 
         /// <inheritdoc />
-        public Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
+        public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
         {
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
-            PreviewCodecBootstrap.EnsureInitialized();
 
+            using Image<Rgba32> image = DecodeToImage(stream);
+            return await ImagePreviewGenerator.EncodeMaxResizedWebpAsync(image, size);
+        }
+
+        private static Image<Rgba32> DecodeToImage(Stream stream)
+        {
             if (stream.CanSeek)
             {
                 stream.Position = 0;
             }
 
-            using var outputStream = new MemoryStream();
-            var settings = new ProcessImageSettings
+            using var buffer = new MemoryStream();
+            stream.CopyTo(buffer);
+
+            using var context = new HeifContext(buffer.ToArray());
+            using HeifImageHandle handle = context.GetPrimaryImageHandle();
+            using HeifImage decoded = handle.Decode(HeifColorspace.Rgb, HeifChroma.InterleavedRgba32);
+
+            int width = decoded.Width;
+            int height = decoded.Height;
+            HeifPlaneData plane = decoded.GetPlane(HeifChannel.Interleaved);
+
+            int rowBytes = checked(width * Rgba32BytesPerPixel);
+            byte[] pixels = new byte[checked(rowBytes * height)];
+            for (int y = 0; y < height; y++)
             {
-                Width = size,
-                Height = size,
-                ResizeMode = CropScaleMode.Max
-            };
+                int sourceOffset = checked(y * plane.Stride);
+                int targetOffset = checked(y * rowBytes);
+                Marshal.Copy(IntPtr.Add(plane.Scan0, sourceOffset), pixels, targetOffset, rowBytes);
+            }
 
-            settings.TrySetEncoderFormat(ImageMimeTypes.Webp);
-            MagicImageProcessor.ProcessImage(stream, outputStream, settings);
-
-            return Task.FromResult(outputStream.ToArray());
+            return Image.LoadPixelData<Rgba32>(pixels, width, height);
         }
     }
 }

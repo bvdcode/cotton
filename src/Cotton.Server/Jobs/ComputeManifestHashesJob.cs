@@ -43,21 +43,22 @@ namespace Cotton.Server.Jobs
                 return;
             }
 
-            var unprocessedManifests = _dbContext.FileManifests
-                .Take(MaxItemsPerRun)
-                .Include(fm => fm.FileManifestChunks)
+            var unprocessedManifests = await _dbContext.FileManifests
                 .Where(fm => fm.ComputedContentHash == null)
-                .ToList();
+                .Include(fm => fm.FileManifestChunks)
+                .OrderBy(fm => fm.Id)
+                .Take(MaxItemsPerRun)
+                .ToListAsync(context.CancellationToken);
 
             foreach (var manifest in unprocessedManifests)
             {
                 if (_perf.IsPreviewGenerating() || _perf.IsUploading())
                 {
-                    await Task.Delay(60_000);
+                    await Task.Delay(60_000, context.CancellationToken);
                 }
                 else
                 {
-                    await Task.Delay(250);
+                    await Task.Delay(250, context.CancellationToken);
                 }
 
                 _logger.LogInformation("Computing hash for manifest {ManifestId}", manifest.Id);
@@ -71,7 +72,7 @@ namespace Cotton.Server.Jobs
                 if (computedContentHash.SequenceEqual(manifest.ProposedContentHash))
                 {
                     manifest.ComputedContentHash = computedContentHash;
-                    await _dbContext.SaveChangesAsync();
+                    await _dbContext.SaveChangesAsync(context.CancellationToken);
                     _logger.LogInformation("Hash match for manifest {ManifestId}: {Hash}",
                         manifest.Id, Hasher.ToHexStringHash(manifest.ComputedContentHash));
                 }
@@ -82,8 +83,14 @@ namespace Cotton.Server.Jobs
                         Hasher.ToHexStringHash(computedContentHash),
                         Hasher.ToHexStringHash(manifest.ProposedContentHash));
                     var relatedFiles = await _dbContext.NodeFiles
+                        .AsNoTracking()
                         .Where(nf => nf.FileManifestId == manifest.Id)
-                        .ToListAsync();
+                        .Select(nf => new
+                        {
+                            nf.OwnerId,
+                            nf.Name,
+                        })
+                        .ToListAsync(context.CancellationToken);
 
                     // send notification for each related file
                     foreach (var file in relatedFiles)

@@ -102,7 +102,7 @@ namespace Cotton.Server.Handlers.Nodes
                     originalParentPath);
             }
 
-            Node trashItem = await _layouts.CreateTrashItemAsync(command.UserId);
+            Node trashItem = await _layouts.CreateTrashItemAsync(command.UserId, ct);
             _syncChanges.StageFolderChange(SyncChangeKind.FolderDeleted, node, node.ParentId.Value);
             node.SetParent(trashItem, NodeType.Trash);
 

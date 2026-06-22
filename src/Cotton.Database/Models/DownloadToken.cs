@@ -40,7 +40,7 @@ namespace Cotton.Database.Models
         [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual User CreatedByUser { get; set; } = null!;
 
-        /// <summary>Represents the NodeFile value for this model.</summary>
+        /// <summary>Navigation property for the file entry this token authorizes downloading.</summary>
         [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual NodeFile NodeFile { get; set; } = null!;
     }

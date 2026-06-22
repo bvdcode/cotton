@@ -9,6 +9,7 @@ using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Server.Services.Search;
 using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
+using Cotton.Server.Services.Startup;
 using Cotton.Server.Services.WebDav;
 using EasyExtensions.Abstractions;
 using Microsoft.AspNetCore.Authentication;
@@ -33,7 +34,7 @@ namespace Cotton.Server.Extensions
         }
 
         /// <summary>
-        /// Registers web dav services services.
+        /// Registers WebDAV services.
         /// </summary>
         public static IServiceCollection AddWebDavServices(this IServiceCollection services)
         {
@@ -42,7 +43,7 @@ namespace Cotton.Server.Extensions
         }
 
         /// <summary>
-        /// Registers chunk services services.
+        /// Registers chunk services.
         /// </summary>
         public static IServiceCollection AddChunkServices(this IServiceCollection services)
         {
@@ -66,14 +67,12 @@ namespace Cotton.Server.Extensions
             services.AddSingleton<IDatabaseIntegrityDescriptorRegistry, DatabaseIntegrityDescriptorRegistry>();
             services.AddScoped<IDatabaseIntegrityChangeSigner, DatabaseIntegrityChangeSigner>();
             services.AddScoped<IDatabaseIntegrityVerifier, DatabaseIntegrityVerifier>();
-            services.AddScoped<IDatabaseIntegrityBridgeBackfillService, DatabaseIntegrityBridgeBackfillService>();
             services.AddScoped<DatabaseIntegrityDiagnosticsService>();
             services.AddScoped<FileGraphIntegrityVerifier>();
             services.AddSingleton<DatabaseIntegrityFailureReporter>();
             services.AddSingleton<IDatabaseIntegrityFailureReporter>(sp =>
                 sp.GetRequiredService<DatabaseIntegrityFailureReporter>());
             services.AddHostedService(sp => sp.GetRequiredService<DatabaseIntegrityFailureReporter>());
-            services.AddHostedService<DatabaseIntegrityBridgeBackfillHostedService>();
 
             services.AddSingleton<IDatabaseIntegrityDescriptor, UserIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, UserPasskeyCredentialIntegrityDescriptor>();
@@ -94,7 +93,19 @@ namespace Cotton.Server.Extensions
         }
 
         /// <summary>
-        /// Registers layout path services services.
+        /// Registers startup validation services.
+        /// </summary>
+        public static IServiceCollection AddStartupValidation(this IServiceCollection services)
+        {
+            services.AddSingleton<TempDirectoryProbe>();
+            services.AddScoped<IStartupPreflightValidator, StartupPreflightValidator>();
+            services.AddScoped<IStartupCheck, TempDirectoryStartupCheck>();
+            services.AddScoped<IStartupCheck, StartupTransitionValidator>();
+            return services;
+        }
+
+        /// <summary>
+        /// Registers layout path services.
         /// </summary>
         public static IServiceCollection AddLayoutPathServices(this IServiceCollection services)
         {

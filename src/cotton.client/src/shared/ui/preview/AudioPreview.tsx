@@ -19,7 +19,7 @@ const EXPIRE_AFTER_MINUTES = 60 * 24;
 
 const buildInlineAudioUrl = (downloadLink: string): string => {
   const url = new URL(downloadLink, window.location.origin);
-  // Backend supports inline for at least PDFs; try the same flag for audio.
+  // Request inline delivery via download=false.
   url.searchParams.set("download", "false");
   return url.toString();
 };

@@ -19,7 +19,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Cotton.Server.Handlers.Users
 {
     /// <summary>
-    /// Represents the admin create user request request payload accepted by the API.
+    /// Represents the admin create user request payload accepted by the API.
     /// </summary>
     public class AdminCreateUserRequest(string username, string? email, string? password, UserRole role) : IRequest<UserDto>
     {

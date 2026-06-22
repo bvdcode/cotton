@@ -85,7 +85,7 @@ public sealed class ArchiveDownloadService(
             foreach (Node folder in OrderByRequestedIds(folders, nodeIds, x => x.Id))
             {
                 string folderPath = uniquifier.AddDirectory(folder.Name).TrimEnd('/');
-                CreateArchiveDownloadLinkResult? limitError = limits?.TryAddDirectory();
+                CreateArchiveDownloadLinkResult? limitError = limits?.TryAddEntry();
                 if (limitError is not null)
                 {
                     return limitError;
@@ -186,7 +186,7 @@ public sealed class ArchiveDownloadService(
             {
                 string parentPath = currentLevel[child.ParentId!.Value];
                 string childPath = uniquifier.AddDirectory(ArchivePathUniquifier.Combine(parentPath, child.Name)).TrimEnd('/');
-                CreateArchiveDownloadLinkResult? limitError = limits?.TryAddDirectory();
+                CreateArchiveDownloadLinkResult? limitError = limits?.TryAddEntry();
                 if (limitError is not null)
                 {
                     return limitError;
@@ -215,7 +215,7 @@ public sealed class ArchiveDownloadService(
             return null;
         }
 
-        CreateArchiveDownloadLinkResult? limitError = limits?.TryAddFile();
+        CreateArchiveDownloadLinkResult? limitError = limits?.TryAddEntry();
         if (limitError is not null)
         {
             addedFileIds.Remove(file.Id);
@@ -317,17 +317,7 @@ public sealed class ArchiveDownloadService(
             return new ArchiveLimitTracker(PublicShareMaxEntries);
         }
 
-        public CreateArchiveDownloadLinkResult? TryAddDirectory()
-        {
-            return TryAddEntry();
-        }
-
-        public CreateArchiveDownloadLinkResult? TryAddFile()
-        {
-            return TryAddEntry();
-        }
-
-        private CreateArchiveDownloadLinkResult? TryAddEntry()
+        public CreateArchiveDownloadLinkResult? TryAddEntry()
         {
             if (_entryCount + 1 > maxEntries)
             {

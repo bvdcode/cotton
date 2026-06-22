@@ -30,7 +30,6 @@ namespace Cotton.Server.Jobs
 
             var backend = _backendProvider.GetBackend();
             backend.CleanupTempFiles(_ttl);
-            return;
         }
     }
 }

@@ -23,7 +23,7 @@ namespace Cotton.Server.Providers
         /// </summary>
         bool TryGet(out StorageType type);
         /// <summary>
-        /// Gets or sets the value.
+        /// Clears the cached value.
         /// </summary>
         void Reset();
     }

@@ -91,7 +91,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> GetWebDavToken()
         {
             var userId = User.GetUserId();
-            var user = _dbContext.Users.Find(userId)
+            var user = await _dbContext.Users.FindAsync(userId)
                 ?? throw new EntityNotFoundException<User>();
             _integrity.RequireValid(_dbContext, user, "auth.webdav-token");
             string token = StringHelpers.CreateRandomString(WebDavTokenLength);
@@ -589,7 +589,7 @@ namespace Cotton.Server.Controllers
         }
 
         /// <summary>
-        /// Clears the cached value so it will be resolved again.
+        /// Completes the password reset flow using a reset token.
         /// </summary>
         [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
         [HttpPost("reset-password")]

@@ -134,7 +134,6 @@ export interface AdminTotpDiagnosticsDto {
 
 export interface DatabaseIntegrityDiagnosticsDto {
   enabled: boolean;
-  bridgeBackfillEnabled: boolean;
   protectedEntityTypes: number;
   unsignedProtectedRows: number;
 }
@@ -172,6 +171,9 @@ export interface SecurityDiagnosticsDto {
   masterKeySource: string;
   masterKeyEnvironmentVariableWasConfigured: boolean;
   masterKeyEnvironmentVariablePresentInProcess: boolean;
+  tempDirectoryPath: string;
+  tempDirectoryWritable: boolean;
+  tempDirectoryError: string | null;
   dotNetDiagnostics: DotNetDiagnosticsDto;
   linuxProcess: LinuxProcessSecurityDto;
   linuxContainer: LinuxContainerSecurityDto;

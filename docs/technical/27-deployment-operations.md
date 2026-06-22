@@ -9,7 +9,7 @@ Cotton ships as a single ASP.NET Core process (`Cotton.Server`) that serves both
 Startup is a two-phase process driven entirely from `src/Cotton.Server/Program.cs`:
 
 1. **Master-key resolution.** Before the main application is built, Cotton resolves the runtime encryption settings either from the `COTTON_MASTER_KEY` environment variable or, if that is absent, from an interactive `/unlock` mini-web-server. The process clock is pinned to UTC and Linux process hardening (`PR_SET_DUMPABLE=0`) is requested *before* key resolution.
-2. **Application run.** The full web app is built (`RunApplicationAsync`), EF migrations are applied, the database-integrity bridge backfill runs, optional auto-restore runs, server settings are warmed, the SignalR hub is mapped, and finally `app.RunAsync()` is awaited.
+2. **Application run.** The full web app is built (`RunApplicationAsync`), startup transition rules are validated, EF migrations are applied, optional auto-restore runs, server settings are warmed, the SignalR hub is mapped, and finally `app.RunAsync()` is awaited.
 
 ```mermaid
 flowchart TD
@@ -21,11 +21,13 @@ flowchart TD
     E --> G[RunApplicationAsync]
     F --> G
     G --> H[Build WebApplication + AddCottonOptions]
-    H --> I[ApplyMigrations CottonDbContext]
-    I --> J[ApplyDatabaseIntegrityBridgeBackfillAsync]
-    J --> K[DatabaseAutoRestoreService.TryRestoreIfEmptyAsync]
-    K --> L[Warm SettingsProvider + Map EventHub]
-    L --> M[app.RunAsync]
+    H --> I[Validate startup transition rules]
+    I --> J{blocked?}
+    J -- yes --> K[StartupBlockedServer]
+    J -- no --> L[ApplyMigrations CottonDbContext]
+    L --> M[DatabaseAutoRestoreService.TryRestoreIfEmptyAsync]
+    M --> N[Warm SettingsProvider + Map EventHub]
+    N --> O[app.RunAsync]
 ```
 
 Note that the hardening call (`LinuxProcessHardening.ApplyFromEnvironment`) happens at the very top of `Main`, before any key material is resolved, so the dump-protection request is in effect by the time the master key is in memory.
@@ -236,7 +238,7 @@ PATCH /api/v1/server/database-backup/trigger
 
 ### Auto-restore for empty instances
 
-`DatabaseAutoRestoreService.TryRestoreIfEmptyAsync` runs during startup (`Program.RunApplicationAsync`, after migrations and bridge backfill). It is a no-op unless `COTTON_RESTORE_DATABASE_IF_EMPTY` parses (via `bool.TryParse`) to `true`.
+`DatabaseAutoRestoreService.TryRestoreIfEmptyAsync` runs during startup (`Program.RunApplicationAsync`, after startup transition validation and migrations). It is a no-op unless `COTTON_RESTORE_DATABASE_IF_EMPTY` parses (via `bool.TryParse`) to `true`.
 
 "Empty" means either no rows in `__EFMigrationsHistory`, **or** no rows in both `users` and `server_settings`. When empty, it:
 
@@ -275,21 +277,21 @@ Each row below is a real warning code from `SecurityDiagnosticsService` with the
 | `master-key-from-environment` | warning | `MasterKeyRuntimeState.EnvironmentVariableWasConfigured` (key came from env) | Prefer browser `/unlock`; keep the key in a password manager, not in deployment metadata. |
 | `admins-without-2fa` | warning | Any admin lacks `IsTotpEnabled` (`AdminsWithoutTotp > 0`) | Enable TOTP for every admin account. |
 | `dotnet-diagnostics-enabled` | warning | Neither `DOTNET_EnableDiagnostics` nor `COMPlus_EnableDiagnostics` equals `0` | Set `DOTNET_EnableDiagnostics=0` (image default). |
+| `temp-directory-not-writable` | **critical** | `Path.GetTempPath()` cannot create/write/delete a probe file | Mount writable scratch storage at `/tmp`. With `read_only: true`, use `tmpfs: ["/tmp"]` or bind-mount a fast writable disk at `/tmp`. |
 | `process-dumpable` | warning | `prctl(PR_GET_DUMPABLE)` != 0 (Linux only) | Set `COTTON_PROCESS_HARDENING=true` (image default) so `PR_SET_DUMPABLE=0` is requested. |
 | `sys-ptrace-capability` | **critical** | `CAP_SYS_PTRACE` (cap bit 19) effective in `/proc/self/status` `CapEff` | Drop `SYS_PTRACE`; avoid `--privileged`; use `cap_drop: [ALL]`. |
 | `new-privileges-allowed` | warning (container) / info | `NoNewPrivs` == 0 | Add `security_opt: ["no-new-privileges:true"]`. |
 | `seccomp-disabled` | warning | `Seccomp` mode == 0 | Keep Docker's default seccomp profile; never `seccomp=unconfined` in prod. |
 | `running-as-root` | info | effective uid == 0 (`geteuid`) | Run as a dedicated non-root uid (the image already drops to `app`/1654). |
-| `root-filesystem-writable` | info | container `/` mount lacks the `ro` option | `read_only: true` + writable volume only for `/app/files`. |
+| `root-filesystem-writable` | info | container `/` mount lacks the `ro` option | `read_only: true` + writable `/app/files` data volume + writable scratch storage at `/tmp`. |
 | `docker-socket-mounted` | **critical** | `docker.sock` mounted/visible in `/proc/self/mountinfo` or on disk | Remove the socket mount — it is effectively host-root from the web process. |
 | `host-pid-namespace` | **critical** | `/proc/1/cmdline` looks like host init (`systemd`/`/sbin/init`/`init`) | Remove `pid: host`. |
 | `mandatory-access-control-unconfined` | warning | No enforcing AppArmor/SELinux detected (or AppArmor `unconfined`, or SELinux permissive) | Use Docker's default AppArmor, a custom profile, or an enforcing SELinux context. |
 | `core-dumps-enabled` | warning | Core soft limit not disabled (`!= 0`) **and** process still dumpable | Set `ulimit core=0` and keep `COTTON_PROCESS_HARDENING=true`. |
 | `process-hardening-failed` | warning | Hardening requested but `prctl` failed (`HardeningRequested && !HardeningApplied`) | Investigate the recorded errno; ensure Linux + permitted `prctl`. |
-| `db-integrity-unsigned-rows` | **critical** | `UnsignedProtectedRows > 0` (protected rows lack valid integrity signatures) | Run the bridge release backfill before trusting the instance. |
-| `db-integrity-bridge-mode` | warning | `BridgeBackfillEnabled` (integrity bridge backfill is enabled) | Disable bridge mode after the upgrade window so bad signatures become hard failures. |
+| `db-integrity-unsigned-rows` | **critical** | `UnsignedProtectedRows > 0` (protected rows lack valid integrity signatures) | Restore affected rows from backup or run the required transition version before upgrading. |
 
-The Linux process warnings (`process-dumpable`, `sys-ptrace-capability`, `new-privileges-allowed`, `seccomp-disabled`, `running-as-root`) are only evaluated on Linux. Container-only warnings (`root-filesystem-writable`, `docker-socket-mounted`, `host-pid-namespace`, MAC) are emitted only when `IsContainer()` is true; the core-dump warning is evaluated on any Linux host. `CAP_SYS_PTRACE` is read from the `CapEff` hex mask in `/proc/self/status` by testing bit 19.
+The temp-directory check is evaluated on every host because database dumps/restores, S3 upload spooling, and preview tooling all depend on the OS temp directory. The Linux process warnings (`process-dumpable`, `sys-ptrace-capability`, `new-privileges-allowed`, `seccomp-disabled`, `running-as-root`) are only evaluated on Linux. Container-only warnings (`root-filesystem-writable`, `docker-socket-mounted`, `host-pid-namespace`, MAC) are emitted only when `IsContainer()` is true; the core-dump warning is evaluated on any Linux host. `CAP_SYS_PTRACE` is read from the `CapEff` hex mask in `/proc/self/status` by testing bit 19.
 
 ### Recommended hardened deployment
 
@@ -327,7 +329,7 @@ services:
       # Omit COTTON_MASTER_KEY -> unlock via /unlock after restart (best default)
 ```
 
-With `read_only: true`, give Cotton writable space for its temp work: `/app/files/tmp` lives on the data volume, but the dump/restore code and the S3 upload buffer use the OS temp dir (`Path.GetTempPath()` / `Path.GetTempFileName()`), so mount a writable `tmpfs` at `/tmp`. Do **not** mount the Docker socket, do **not** use `pid: host`, and do **not** disable seccomp. Pre-own the volume (`chown -R 1654:1654 /data/cotton`) and optionally set `COTTON_PERMISSION_FIX=never` so the entrypoint does no ownership pass on a read-only-friendly setup.
+With `read_only: true`, give Cotton writable space for its temp work: `/app/files/tmp` lives on the data volume, but the dump/restore code and the S3 upload buffer use the OS temp dir (`Path.GetTempPath()` / `Path.GetTempFileName()`). Mount writable scratch storage at `/tmp`; `tmpfs: ["/tmp"]` is the simple option, and a bind mount from a fast writable disk to `/tmp` is also valid. Do **not** mount the Docker socket, do **not** use `pid: host`, and do **not** disable seccomp. Pre-own the volume (`chown -R 1654:1654 /data/cotton`) and optionally set `COTTON_PERMISSION_FIX=never` so the entrypoint does no ownership pass on a read-only-friendly setup.
 
 > Important boundary (per README): if an attacker can run code inside the Cotton process, these flags cannot hide the in-memory master key from that process. They defend against accidental dumps, diagnostics surfaces, and over-privileged neighbors — not against in-process code execution.
 
@@ -376,7 +378,7 @@ Setting `COTTON_PUBLIC_INSTANCE=true` flips `Constants.IsPublicInstance` (evalua
 ## Upgrade behavior
 
 - **Auto-migrate on startup.** `Program.cs` calls `app.ApplyMigrations<CottonDbContext>()` before serving, so pulling a newer image and restarting applies pending EF migrations automatically. Take a backup (or rely on the backup job) before upgrading.
-- **DB-integrity bridge backfill.** `app.ApplyDatabaseIntegrityBridgeBackfillAsync()` (`src/Cotton.Server/Extensions/DatabaseIntegrityApplicationExtensions.cs`) runs at startup to sign legacy unsigned rows during an upgrade window. While bridge mode is on, the security check warns (`db-integrity-bridge-mode`); disable it after the window so invalid/missing signatures become hard failures.
+- **DB-integrity startup transition guard.** Strict releases validate recorded `AppVersion` history before serving normal traffic. A release such as `0.5.0+` can require evidence that a transition release (for example `0.4.33`) already ran; if not, Cotton serves the startup-blocked SPA and `GET /api/v1/startup/status` instead of starting the normal API.
 - **App version tracking.** `AppVersionTrackerService` (a hosted `BackgroundService`) records the running version (`AppVersion` rows), warns on downgrades (an unsupported scenario), and — unless disabled via `AppVersionTracker:ReleaseCheckEnabled=false` or the `Testing`/`IntegrationTests` environments — checks `https://api.github.com/repos/bvdcode/cotton/releases/latest` ~45 s after start and notifies admins (Medium priority) when a newer non-draft/non-prerelease release exists. The image build stamps `APP_VERSION` (a `BUILD_VERSION` build arg sourced from GitVersion's SemVer in CI).
 - **Image tags.** `:latest` and `:<semver>` are published from `main`; `:dev` from `develop` (see CI under `.github/workflows`). Pin a specific SemVer tag for reproducible upgrades.
 - **JWT signing key is regenerated every boot.** `ConfigurationBuilderExtensions.AddCottonOptions` sets `JwtSettings:Key` to a fresh random 32-char string (`StringHelpers.CreateRandomString(DefaultKeyLength)`) on each start (the value in `appsettings.Development.json` is dev-only). Consequence: every restart/upgrade invalidates outstanding access tokens (JWTs), so active users must re-authenticate; refresh tokens persist in the database and clients re-issue access tokens against them.

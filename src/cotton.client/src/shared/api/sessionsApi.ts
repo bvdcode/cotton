@@ -16,18 +16,12 @@ export interface SessionDto {
 }
 
 export const sessionsApi = {
-  /**
-   * Get all active sessions for the current user
-   */
   getSessions: async (): Promise<SessionDto[]> => {
     const response = await httpClient.get<SessionDto[]>("auth/sessions");
     return response.data;
   },
 
-  /**
-   * Revoke a specific session
-   */
   revokeSession: async (sessionId: string): Promise<void> => {
-    await httpClient.delete(`/auth/sessions/${sessionId}`);
+    await httpClient.delete(`auth/sessions/${sessionId}`);
   },
 };

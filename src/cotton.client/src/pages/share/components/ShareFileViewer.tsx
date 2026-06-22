@@ -1,16 +1,8 @@
 import * as React from "react";
 import { Box, Container, Stack, Typography } from "@mui/material";
-import {
-  Description,
-  Image as ImageIcon,
-  InsertDriveFile,
-  LockOutlined,
-  Movie,
-  PictureAsPdf,
-  ViewInAr,
-} from "@mui/icons-material";
+import { LockOutlined } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
-import { getFileTypeInfo, type FileType } from "@shared/utils/fileTypes";
+import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import { MediaLightbox, ModelPreview, PdfPreview } from "@shared/ui/preview";
 import type { MediaItem } from "@shared/types/mediaLightbox";
@@ -18,6 +10,7 @@ import {
   selectGallerySmoothTransitions,
   useUserPreferencesStore,
 } from "../../../shared/store/userPreferencesStore";
+import { getFileIcon } from "@shared/utils/icons";
 import { ReadOnlyTextViewer } from "./ReadOnlyTextViewer";
 
 interface ShareFileViewerProps {
@@ -25,28 +18,12 @@ interface ShareFileViewerProps {
   title: string;
   inlineUrl: string;
   downloadUrl: string | null;
+  previewUrl: string | null;
   fileName: string | null;
   contentType: string | null;
   contentLength: number | null;
   textContent: string | null;
   encryptedContainer: boolean;
-}
-
-function getFallbackIcon(fileType: FileType) {
-  switch (fileType) {
-    case "pdf":
-      return <PictureAsPdf />;
-    case "image":
-      return <ImageIcon />;
-    case "video":
-      return <Movie />;
-    case "text":
-      return <Description />;
-    case "model":
-      return <ViewInAr />;
-    default:
-      return <InsertDriveFile />;
-  }
 }
 
 interface ShareMediaViewerProps {
@@ -248,19 +225,23 @@ const ShareEncryptedFileNotice: React.FC<ShareEncryptedFileNoticeProps> = ({
 };
 
 interface ShareUnsupportedViewerProps {
-  fileType: FileType;
   fileName: string | null;
   contentType: string | null;
-  contentLength: number | null;
+  previewUrl: string | null;
 }
 
 const ShareUnsupportedViewer: React.FC<ShareUnsupportedViewerProps> = ({
-  fileType,
   fileName,
   contentType,
-  contentLength,
+  previewUrl,
 }) => {
   const { t } = useTranslation(["share"]);
+  const [failedPreviewUrl, setFailedPreviewUrl] = React.useState<string | null>(null);
+  const hasSmallPreviewIcon = Boolean(previewUrl) && failedPreviewUrl !== previewUrl;
+  const fallbackIcon = React.useMemo(
+    () => getFileIcon(null, fileName ?? "", contentType),
+    [contentType, fileName],
+  );
 
   return (
     <Box
@@ -271,18 +252,35 @@ const ShareUnsupportedViewer: React.FC<ShareUnsupportedViewerProps> = ({
       alignItems="center"
       justifyContent="center"
       p={2}
-      gap={1}
+      gap={2}
     >
       <Box
         display="flex"
         alignItems="center"
         justifyContent="center"
         sx={{
-          "& > svg": { width: 80, height: 80 },
+          width: { xs: 72, sm: 88 },
+          height: { xs: 72, sm: 88 },
+          "& > svg": { width: { xs: 64, sm: 80 }, height: { xs: 64, sm: 80 } },
           color: "text.secondary",
         }}
       >
-        {getFallbackIcon(fileType)}
+        {hasSmallPreviewIcon ? (
+          <Box
+            component="img"
+            src={previewUrl ?? undefined}
+            alt=""
+            onError={() => setFailedPreviewUrl(previewUrl)}
+            sx={{
+              width: "100%",
+              height: "100%",
+              display: "block",
+              objectFit: "contain",
+            }}
+          />
+        ) : (
+          fallbackIcon
+        )}
       </Box>
 
       {fileName && (
@@ -290,25 +288,16 @@ const ShareUnsupportedViewer: React.FC<ShareUnsupportedViewerProps> = ({
           color="text.primary"
           variant="h6"
           align="center"
-          sx={{ mt: 2 }}
+          sx={{
+            maxWidth: "min(760px, 100%)",
+            overflowWrap: "anywhere",
+          }}
         >
           {fileName}
         </Typography>
       )}
 
-      {contentLength !== null && (
-        <Typography color="text.secondary" variant="body2">
-          {formatBytes(contentLength)}
-        </Typography>
-      )}
-
-      {contentType && (
-        <Typography color="text.secondary" variant="caption">
-          {contentType}
-        </Typography>
-      )}
-
-      <Typography color="text.secondary" sx={{ mt: 1 }}>
+      <Typography color="text.secondary">
         {t("unsupported", { ns: "share" })}
       </Typography>
     </Box>
@@ -320,6 +309,7 @@ export const ShareFileViewer: React.FC<ShareFileViewerProps> = ({
   title,
   inlineUrl,
   downloadUrl,
+  previewUrl,
   fileName,
   contentType,
   contentLength,
@@ -399,10 +389,9 @@ export const ShareFileViewer: React.FC<ShareFileViewerProps> = ({
 
   return (
     <ShareUnsupportedViewer
-      fileType={fileTypeInfo.type}
       fileName={fileName}
       contentType={contentType}
-      contentLength={contentLength}
+      previewUrl={previewUrl}
     />
   );
 };

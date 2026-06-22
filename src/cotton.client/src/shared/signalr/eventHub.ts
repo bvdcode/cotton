@@ -151,23 +151,22 @@ class EventHubService {
       this.listeners.set(method, new Set());
     }
     const set = this.listeners.get(method)!;
-    const wrapped = callback;
-    const isFirstRegistration = !set.has(wrapped);
-    set.add(wrapped);
+    const isFirstRegistration = !set.has(callback);
+    set.add(callback);
 
     // SignalR allows registering handlers before and during connection start.
     // If we only register when state === Connected, we can miss attaching
     // handlers during the Connecting window and never receive events.
     if (this.connection && isFirstRegistration) {
-      this.connection.on(method, wrapped);
+      this.connection.on(method, callback);
     }
 
     return () => {
-      set.delete(wrapped);
+      set.delete(callback);
       if (set.size === 0) {
         this.listeners.delete(method);
       }
-      this.connection?.off(method, wrapped);
+      this.connection?.off(method, callback);
     };
   }
 

@@ -210,7 +210,7 @@ namespace Cotton.Server.Services
             return Path.Combine(directory, $"restore-{backupId}.dump");
         }
 
-        private static void TryDeleteDumpFile(string dumpPath)
+        private void TryDeleteDumpFile(string dumpPath)
         {
             try
             {
@@ -219,8 +219,9 @@ namespace Cotton.Server.Services
                     File.Delete(dumpPath);
                 }
             }
-            catch
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
+                logger.LogWarning(ex, "Failed to delete temporary database restore dump file at {DumpPath}.", dumpPath);
             }
         }
 

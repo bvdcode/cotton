@@ -24,6 +24,22 @@ public static class SemanticVersionComparer
             && TryParse(currentVersion, out var current)
             && Compare(candidate, current) > 0;
 
+    /// <summary>
+    /// Indicates whether the left version is greater than or equal to the right version.
+    /// </summary>
+    public static bool IsGreaterThanOrEqual(string leftVersion, string rightVersion)
+        => TryParse(leftVersion, out var left)
+            && TryParse(rightVersion, out var right)
+            && Compare(left, right) >= 0;
+
+    /// <summary>
+    /// Indicates whether the left version is lower than the right version.
+    /// </summary>
+    public static bool IsLessThan(string leftVersion, string rightVersion)
+        => TryParse(leftVersion, out var left)
+            && TryParse(rightVersion, out var right)
+            && Compare(left, right) < 0;
+
     private static bool TryParse(string value, out ParsedVersion parsed)
     {
         parsed = default;

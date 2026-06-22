@@ -116,9 +116,8 @@ Versions below are exactly as pinned in the `.csproj` files. Note the minor vers
 | `ZstdSharp.Port` | 0.8.8 | Storage, Benchmark | Managed Zstandard compression (no native code). |
 | `K4os.Compression.LZ4.Streams` | 1.3.8 | Storage | LZ4 streaming compression. |
 | `Docnet.Core` | 2.6.0 | Previews | PDF rasterization for PDF previews. |
-| `PhotoSauce.MagicScaler` | 0.15.0 | Previews | High-performance image resizing. |
-| `PhotoSauce.NativeCodecs.Libheif` | 1.19.5-preview1 | Previews | HEIC decoding. |
-| `PhotoSauce.NativeCodecs.Libwebp` | 1.4.0-preview1 | Previews | WebP decoding. |
+| `LibHeifSharp` | 3.2.0 | Previews | Managed libheif binding for HEIC/HEIF decoding. |
+| `LibHeif.Native` | 1.15.1 | Previews | Native libheif binaries (win-x64 + linux-x64). |
 | `SixLabors.ImageSharp` | 4.0.0 | Previews, Previews.Tests | Image processing. **Licensed** — see *Directory.Build.props* below. |
 | `SixLabors.ImageSharp.Drawing` | 3.0.0 | Previews | Vector drawing on images. |
 | `SixLabors.Fonts` | 3.0.0 | Previews | Font rendering. |
@@ -128,7 +127,7 @@ Versions below are exactly as pinned in the `.csproj` files. Note the minor vers
 | `Microsoft.Extensions.DependencyInjection` / `.Logging` / `.Logging.Console` | 10.0.8 | Benchmark | DI + console logging host for the benchmark console app. |
 | `Microsoft.SourceLink.GitHub` | 10.0.300 | Shared | Source Link for the published NuGet symbols. |
 
-> README/code note: The README's *Tech Stack* and *Cryptography* sections (e.g. `README.md` lines 479, 653, 665, 792) state the crypto engine is *"powered by EasyExtensions.Crypto (NuGet)"* and reference paths like `EasyExtensions.Crypto/AesGcmStreamCipher.cs`. In the actual code the cipher is implemented **in-repo** in `Cotton.Crypto` (`src/Cotton.Crypto/AesGcmStreamCipher.cs`); `Cotton.Crypto.csproj` references only `EasyExtensions` (3.0.65), and the `EasyExtensions.Crypto` package appears **only** in `Cotton.Crypto.Tests.csproj`. The code itself records that `EasyExtensions.Crypto` is the *legacy* origin of the `CTN1` stream format — the current format is `CTN2` (see `LegacyMagicBytes => "CTN1"u8` / `CurrentMagicBytes => "CTN2"u8` and the comment in `src/Cotton.Crypto/Internals/FormatConstants.cs`). Treat the in-repo `Cotton.Crypto` project as the source of truth; see the *Cryptography Engine* section for details. (`FFMpegCore`, mentioned in some section briefs, is **not** referenced by any `.csproj` — FFmpeg integration is via `Xabe.FFmpeg`.)
+> Crypto provenance note: The cipher is implemented **in-repo** in `Cotton.Crypto` (`src/Cotton.Crypto/AesGcmStreamCipher.cs`); `Cotton.Crypto.csproj` references only `EasyExtensions` (3.0.65), and the `EasyExtensions.Crypto` package appears **only** in `Cotton.Crypto.Tests.csproj`. The code itself records that `EasyExtensions.Crypto` is the *legacy* origin of the `CTN1` stream format — the current format is `CTN2` (see `LegacyMagicBytes => "CTN1"u8` / `CurrentMagicBytes => "CTN2"u8` and the comment in `src/Cotton.Crypto/Internals/FormatConstants.cs`). FFmpeg integration is via `Xabe.FFmpeg` (no `FFMpegCore` reference exists in any `.csproj`). See the *Cryptography Engine* section for details.
 
 ## The plugin abstraction
 
@@ -223,7 +222,7 @@ A self-contained, compile-time HTML email subsystem (no Razor, no file I/O):
 
 The project has **no NuGet or project references** — it is a pure string/formatting library, deliberately decoupled so it can be referenced cheaply by the server.
 
-> README/code note: The README says *"UI localization currently includes English, Russian, Spanish, and German"* (`README.md` line 260). This understates the **frontend**, which ships locale JSON for `cs, de, en, es, fr, it, nl, pl, pt, ru, uk, zh` (see `src/cotton.client/src/locales/` and `languageDisplayNames.ts`). Conversely, the **backend** is narrower: the `Language` enum and `Cotton.Localization` only cover English and Russian (and `NotificationTemplates` is English-only). The two localization layers have different coverage.
+> Localization-coverage note: The two localization layers have different coverage. The **frontend** ships locale JSON for `cs, de, en, es, fr, it, nl, pl, pt, ru, uk, zh` (12 locales; see `src/cotton.client/src/locales/` and `languageDisplayNames.ts`). The **backend** is narrower: the `Language` enum and `Cotton.Localization` only cover English and Russian (and `NotificationTemplates` is English-only).
 
 ## Build configuration
 
@@ -331,7 +330,7 @@ Runs against a `postgres:17` service container (`postgres`/`postgres`/`postgres`
 | File | Contents / notable points |
 |---|---|
 | `LICENSE` | **MIT License**, "Copyright (c) 2025 Vadim Belov \| bvdcode \| belov.us". |
-| `COPYRIGHT` | States the project is *"licensed under the GNU Affero General Public License version 3.0, SPDX identifier: MIT."* This sentence is **internally contradictory** (AGPL-3.0 text vs `MIT` SPDX id). The `LICENSE` file, the per-file SPDX headers (`MIT`), and every `<PackageLicenseExpression>MIT</PackageLicenseExpression>` all say **MIT**, so MIT is the operative license; the AGPL phrasing in `COPYRIGHT` appears to be a stray error. |
+| `COPYRIGHT` | States the project is licensed under the **MIT License**, SPDX identifier `MIT`, consistent with the `LICENSE` file, the per-file SPDX headers (`MIT`), and every `<PackageLicenseExpression>MIT</PackageLicenseExpression>`. (An earlier revision carried contradictory AGPL-3.0 phrasing alongside the `MIT` SPDX id; that has been corrected to MIT throughout.) |
 | `SECURITY.md` | Report vulnerabilities to `cotton@belov.us` (no GitHub issues); response within 7 days; no public PoCs before a coordinated release. |
 | `CONTRIBUTING.md` | Contributions licensed under MIT; **DCO** required (`Signed-off-by: Real Name <email>` on every commit); declares **frozen areas** — *Crypto, Storage streams, Manifests* (bugfixes only, with tests + bench); a PR must not regress benches by >1%. |
 | `CODEOWNERS` | `/ @bvdcode` — the entire tree is owned by the single maintainer. |

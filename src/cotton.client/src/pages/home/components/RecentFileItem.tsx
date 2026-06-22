@@ -12,6 +12,7 @@ interface RecentFileItemProps {
 }
 
 const PREVIEW_SIZE = 40;
+const PREVIEW_ICON_SIZE = 28;
 
 export const RecentFileItem: React.FC<RecentFileItemProps> = ({ file, t }) => {
   const icon = React.useMemo(
@@ -21,9 +22,7 @@ export const RecentFileItem: React.FC<RecentFileItemProps> = ({ file, t }) => {
         file.name,
         file.contentType,
         {
-          extensionLabelMaxLength: 3,
-          hideLongExtensionLabel: true,
-          hideInvalidExtensionLabel: true,
+          hideExtensionLabel: true,
         },
       ),
     [file.previewHashEncryptedHex, file.name, file.contentType],
@@ -48,6 +47,7 @@ export const RecentFileItem: React.FC<RecentFileItemProps> = ({ file, t }) => {
         justifyContent="center"
         overflow="hidden"
         borderRadius={1}
+        sx={{ "& > svg": { fontSize: PREVIEW_ICON_SIZE } }}
       >
         {isPreviewUrl ? (
           <Box

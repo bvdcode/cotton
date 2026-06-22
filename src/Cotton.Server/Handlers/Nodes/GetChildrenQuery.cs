@@ -62,7 +62,7 @@ namespace Cotton.Server.Handlers.Nodes
         /// </summary>
         public async Task<NodeContentDto> Handle(GetChildrenQuery request, CancellationToken ct)
         {
-            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId);
+            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId, ct);
             var parentNode = await _dbContext.Nodes
                 .AsNoTracking()
                 .Where(x => x.Id == request.NodeId

@@ -18,7 +18,7 @@ namespace Cotton.Benchmark.Reporting
 
             if (result.IsSuccess)
             {
-                sb.Append($"[?] {result.BenchmarkName,-40} ");
+                sb.Append($"[+] {result.BenchmarkName,-40} ");
 
                 if (result.Metrics.TryGetValue("AvgThroughputMBps", out var throughput))
                 {
@@ -31,7 +31,7 @@ namespace Cotton.Benchmark.Reporting
             }
             else
             {
-                sb.Append($"[?] {result.BenchmarkName,-40} FAILED: {result.ErrorMessage}");
+                sb.Append($"[x] {result.BenchmarkName,-40} FAILED: {result.ErrorMessage}");
             }
 
             return sb.ToString();
@@ -43,14 +43,14 @@ namespace Cotton.Benchmark.Reporting
             var sb = new StringBuilder();
             sb.AppendLine();
             sb.AppendLine("Summary:");
-            sb.AppendLine(new string('?', 70));
+            sb.AppendLine(new string('-', 70));
 
             foreach (var result in results)
             {
                 sb.AppendLine(Format(result));
             }
 
-            sb.AppendLine(new string('?', 70));
+            sb.AppendLine(new string('-', 70));
 
             var successCount = results.Count(r => r.IsSuccess);
             var failureCount = results.Count(r => !r.IsSuccess);

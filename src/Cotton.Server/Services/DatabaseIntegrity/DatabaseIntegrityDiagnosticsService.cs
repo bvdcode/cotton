@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Database.Integrity;
@@ -10,7 +10,7 @@ using System.Reflection;
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
 /// <summary>
-/// Builds the security check-up snapshot for database integrity coverage and rollout state.
+/// Builds the security check-up snapshot for database integrity coverage.
 /// </summary>
 /// <remarks>
 /// The diagnostics path intentionally counts metadata state instead of recomputing every row MAC. Large folders and
@@ -43,7 +43,6 @@ public sealed class DatabaseIntegrityDiagnosticsService(
         return new DatabaseIntegrityDiagnosticsDto
         {
             Enabled = true,
-            BridgeBackfillEnabled = true,
             ProtectedEntityTypes = _descriptors.All.Count,
             UnsignedProtectedRows = unsignedRows,
         };

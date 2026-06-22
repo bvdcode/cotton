@@ -171,7 +171,7 @@ public class TrashRestoreCoordinator(
 
     private async Task<ParentResolution> CreateMissingParentsAsync(Guid userId, string originalParentPath, CancellationToken ct)
     {
-        var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
+        var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, ct);
         var (_, current) = await _navigator.GetLayoutAndRootAsync(userId, NodeType.Default, ct);
 
         if (string.IsNullOrWhiteSpace(originalParentPath))

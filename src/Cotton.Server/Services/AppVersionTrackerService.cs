@@ -26,7 +26,7 @@ public class AppVersionTrackerService(
     ILogger<AppVersionTrackerService> _logger) : BackgroundService
 {
     /// <summary>
-    /// Defines the git hub http client name.
+    /// Defines the GitHub http client name.
     /// </summary>
     public const string GitHubHttpClientName = "Cotton.GitHub";
 

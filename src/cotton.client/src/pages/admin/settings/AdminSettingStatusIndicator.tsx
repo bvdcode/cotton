@@ -1,6 +1,7 @@
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import { Box, CircularProgress } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import type { SaveStatus } from "./useAutoSavedSetting";
 
 type AdminSettingStatusIndicatorProps = {
@@ -26,7 +27,7 @@ export const AdminSettingStatusIndicator = ({
 
     {status === "saved" && (
       <CheckCircleOutlineIcon
-        sx={{
+        sx={(theme) => ({
           fontSize: 18,
           color: "success.main",
           animation:
@@ -47,13 +48,13 @@ export const AdminSettingStatusIndicator = ({
           },
           "@keyframes adminSettingSavedGlow": {
             "0%, 100%": {
-              filter: "drop-shadow(0 0 0 rgba(46, 125, 50, 0))",
+              filter: `drop-shadow(0 0 0 ${alpha(theme.palette.success.main, 0)})`,
             },
             "45%": {
-              filter: "drop-shadow(0 0 5px rgba(46, 125, 50, 0.45))",
+              filter: `drop-shadow(0 0 5px ${alpha(theme.palette.success.main, 0.45)})`,
             },
           },
-        }}
+        })}
       />
     )}
 

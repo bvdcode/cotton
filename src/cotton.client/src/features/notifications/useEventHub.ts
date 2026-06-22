@@ -11,7 +11,7 @@ import { useAuth } from "../auth";
 
 const playNotificationSound = () => {
   try {
-    const audio = new Audio("/assets/sounds/notification-3.mp3");
+    const audio = new Audio("/assets/sounds/notification-6.m4a");
     audio.volume = 0.5;
     audio.play().catch(() => {
       // audio playback may fail due to browser autoplay policy

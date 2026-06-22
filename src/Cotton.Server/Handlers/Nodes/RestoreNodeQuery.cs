@@ -141,7 +141,7 @@ namespace Cotton.Server.Handlers.Nodes
             }
 
             var wrapper = await LoadWrapperAsync(request.UserId, node.ParentId, ct);
-            var trashRoot = await _layouts.GetUserTrashRootAsync(request.UserId);
+            var trashRoot = await _layouts.GetUserTrashRootAsync(request.UserId, ct);
             if (wrapper is null || wrapper.ParentId != trashRoot.Id)
             {
                 return TopLevelTrashWrapperOutcome.NotRestorable("Item can only be restored from the top level of trash.");

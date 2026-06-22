@@ -50,8 +50,6 @@ const HoverMarqueeText = ({
   const [animate, setAnimate] = useState(false);
 
   const durationSeconds = useMemo(() => {
-    // Keep it slow and readable; tune by distance.
-    // ~40px/s with bounds.
     const seconds = distancePx > 0 ? distancePx / 40 : 0;
     return Math.max(4, Math.min(14, seconds));
   }, [distancePx]);
@@ -98,7 +96,6 @@ const HoverMarqueeText = ({
     };
   }, []);
 
-  // React to cardHovered prop changes
   useEffect(() => {
     if (hoverTimerRef.current) {
       window.clearTimeout(hoverTimerRef.current);

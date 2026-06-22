@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Database.Integrity;
@@ -7,12 +7,8 @@ using Cotton.Database.Integrity;
 namespace Cotton.Server.Services.DatabaseIntegrity;
 
 /// <summary>
-/// Bypasses protected-entity verification during the bridge repair window.
+/// Verifies protected entities at security-sensitive read boundaries.
 /// </summary>
-/// <remarks>
-/// This release treats the current database state as canonical and lets the background bridge repair re-sign every
-/// protected row. The next strict release must restore hard read-time verification.
-/// </remarks>
 public sealed class DatabaseIntegrityVerifier(
     IDatabaseIntegrityProtector _protector,
     IDatabaseIntegrityDescriptorRegistry _descriptors,
@@ -29,16 +25,53 @@ public sealed class DatabaseIntegrityVerifier(
         ArgumentNullException.ThrowIfNull(dbContext);
         ArgumentNullException.ThrowIfNull(entity);
         ArgumentException.ThrowIfNullOrWhiteSpace(boundary);
-        _ = _protector;
-        _ = _failures;
 
-        if (_descriptors.TryGet(entity.GetType(), out IDatabaseIntegrityDescriptor descriptor))
+        if (!_descriptors.TryGet(entity.GetType(), out IDatabaseIntegrityDescriptor descriptor))
         {
-            _logger.LogTrace(
-                "Database integrity verification is disabled for bridge repair; allowing {EntityName} {EntityKey} at {Boundary}.",
+            return;
+        }
+
+        var entry = dbContext.Entry(entity);
+        if (entry.State == Microsoft.EntityFrameworkCore.EntityState.Detached)
+        {
+            throw new InvalidOperationException(
+                $"Cannot verify detached protected entity {descriptor.EntityName} at {boundary}.");
+        }
+
+        if (entry.Metadata.FindProperty(DatabaseIntegrityColumns.VersionProperty) is null
+            || entry.Metadata.FindProperty(DatabaseIntegrityColumns.MacProperty) is null)
+        {
+            throw new InvalidOperationException(
+                $"Protected entity {descriptor.EntityName} is missing integrity shadow properties.");
+        }
+
+        object? versionValue = entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue;
+        object? macValue = entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue;
+        if (versionValue is not int version
+            || macValue is not byte[] mac
+            || version != descriptor.SchemaVersion
+            || !_protector.Verify(entity, descriptor, mac))
+        {
+            ReportFailure(descriptor, entity, boundary);
+            _logger.LogError(
+                "Database integrity verification failed for {EntityName} {EntityKey} at {Boundary}.",
                 descriptor.EntityName,
                 descriptor.GetEntityKey(entity),
                 boundary);
+            throw new DatabaseIntegrityException(descriptor.EntityName, descriptor.GetEntityKey(entity));
         }
+    }
+
+    private void ReportFailure<TEntity>(
+        IDatabaseIntegrityDescriptor descriptor,
+        TEntity entity,
+        string boundary)
+        where TEntity : class
+    {
+        _failures.Report(new DatabaseIntegrityFailure(
+            descriptor.EntityName,
+            descriptor.GetEntityKey(entity),
+            boundary,
+            DateTime.UtcNow));
     }
 }

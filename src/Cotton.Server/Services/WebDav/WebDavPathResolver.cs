@@ -18,7 +18,7 @@ public class WebDavPathResolver(
     ILayoutNavigator _navigator) : IWebDavPathResolver
 {
     /// <summary>
-    /// Gets or sets the default node type.
+    /// The default node type used when resolving WebDAV paths.
     /// </summary>
     public const NodeType DefaultNodeType = NodeType.Default;
     /// <summary>
@@ -76,7 +76,7 @@ public class WebDavPathResolver(
         var lastName = parts[^1];
         var lastNameKey = NameValidator.NormalizeAndGetNameKey(lastName);
 
-        var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
+        var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, ct);
 
         // Try to find as node first
         var childNode = await _dbContext.Nodes

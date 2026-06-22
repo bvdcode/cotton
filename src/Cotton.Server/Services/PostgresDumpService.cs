@@ -199,7 +199,7 @@ namespace Cotton.Server.Services
             return value;
         }
 
-        private static void TryKillProcess(Process process)
+        private void TryKillProcess(Process process)
         {
             try
             {
@@ -208,8 +208,13 @@ namespace Cotton.Server.Services
                     process.Kill(entireProcessTree: true);
                 }
             }
-            catch
+            catch (InvalidOperationException ex)
             {
+                _logger.LogWarning(ex, "Failed to kill database process; it may have already exited.");
+            }
+            catch (System.ComponentModel.Win32Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to kill database process.");
             }
         }
 

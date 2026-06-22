@@ -45,6 +45,18 @@ namespace Cotton.Server.Models.Dto
         /// </summary>
         public bool MasterKeyEnvironmentVariablePresentInProcess { get; init; }
         /// <summary>
+        /// Gets OS temp directory path.
+        /// </summary>
+        public string TempDirectoryPath { get; init; } = string.Empty;
+        /// <summary>
+        /// Indicates whether OS temp directory is writable.
+        /// </summary>
+        public bool TempDirectoryWritable { get; init; }
+        /// <summary>
+        /// Gets OS temp directory write error.
+        /// </summary>
+        public string? TempDirectoryError { get; init; }
+        /// <summary>
         /// Gets or sets dot net diagnostics.
         /// </summary>
         public DotNetDiagnosticsDto DotNetDiagnostics { get; init; } = new();
@@ -80,7 +92,7 @@ namespace Cotton.Server.Models.Dto
     public sealed class DotNetDiagnosticsDto
     {
         /// <summary>
-        /// Disables d.
+        /// Gets a value indicating whether .NET runtime diagnostics are disabled.
         /// </summary>
         public bool Disabled { get; init; }
         /// <summary>
@@ -220,13 +232,9 @@ namespace Cotton.Server.Models.Dto
     public sealed class DatabaseIntegrityDiagnosticsDto
     {
         /// <summary>
-        /// Enables d.
+        /// Gets a value indicating whether database integrity protection is enabled.
         /// </summary>
         public bool Enabled { get; init; }
-        /// <summary>
-        /// Gets or sets bridge backfill enabled.
-        /// </summary>
-        public bool BridgeBackfillEnabled { get; init; }
         /// <summary>
         /// Gets or sets protected entity types.
         /// </summary>

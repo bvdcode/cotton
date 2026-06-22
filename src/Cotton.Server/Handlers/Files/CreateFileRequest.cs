@@ -46,7 +46,7 @@ namespace Cotton.Server.Handlers.Files
         /// </summary>
         public string ContentType { get; set; } = null!;
         /// <summary>
-        /// Indicates whether h.
+        /// Gets or sets the proposed file content hash.
         /// </summary>
         public string Hash { get; set; } = null!;
         /// <summary>
@@ -85,7 +85,7 @@ namespace Cotton.Server.Handlers.Files
         /// </summary>
         public async Task<NodeFileManifestDto> Handle(CreateFileRequest request, CancellationToken cancellationToken)
         {
-            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId);
+            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId, cancellationToken);
 
             // Resolve once before expensive manifest/hash work so invalid targets fail fast.
             // The target is re-read inside the layout lock before the namespace write.
@@ -185,8 +185,11 @@ namespace Cotton.Server.Handlers.Files
 
                 var settings = _settingsProvider.GetServerSettings();
                 if (!settings.AllowCrossUserDeduplication
-                    && (fileManifest.SmallFilePreviewHashEncrypted is not null || fileManifest.PreviewGenerationError is not null))
+                    && (fileManifest.SmallFilePreviewHash is not null
+                        || fileManifest.SmallFilePreviewHashEncrypted is not null
+                        || fileManifest.PreviewGenerationError is not null))
                 {
+                    fileManifest.SmallFilePreviewHash = null;
                     fileManifest.SmallFilePreviewHashEncrypted = null;
                     fileManifest.PreviewGenerationError = null;
                     await _dbContext.SaveChangesAsync(ct);

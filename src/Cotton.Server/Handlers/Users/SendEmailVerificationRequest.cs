@@ -15,7 +15,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Cotton.Server.Handlers.Users
 {
     /// <summary>
-    /// Represents the send email verification request request payload accepted by the API.
+    /// Represents the send email verification request payload accepted by the API.
     /// </summary>
     public class SendEmailVerificationRequest(Guid userId) : IRequest
     {

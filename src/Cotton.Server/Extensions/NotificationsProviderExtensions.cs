@@ -61,7 +61,7 @@ namespace Cotton.Server.Extensions
         private static bool HasKnownDevice(string deviceName)
         {
             return !string.IsNullOrWhiteSpace(deviceName)
-                && !string.Equals(deviceName, "Unknown", StringComparison.OrdinalIgnoreCase);
+                && !string.Equals(deviceName, UnknownGeoLabel, StringComparison.OrdinalIgnoreCase);
         }
 
         private static string NormalizeGeoField(string? value)

@@ -1,3 +1,5 @@
+"""Orchestrator that runs the simple/advanced/mega chart generators on demand."""
+
 import os
 import sys
 import argparse

@@ -55,4 +55,9 @@ export const shareLinks = {
     const viewParam = view ? `?view=${view}` : "";
     return `/s/${encoded}${viewParam}`;
   },
+
+  buildTokenPreviewUrl: (token: string): string => {
+    const encoded = encodeURIComponent(token);
+    return `/s/${encoded}?view=inline&preview=true`;
+  },
 } as const;

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Nodes;
 using System.Text.Json.Serialization;
@@ -13,22 +13,22 @@ namespace Cotton.Files
     public enum RestoreStatus
     {
         /// <summary>
-        /// Represents the restored option.
+        /// The node was successfully restored to its original location.
         /// </summary>
         Restored = 0,
 
         /// <summary>
-        /// Represents the parent missing option.
+        /// The original parent folder no longer exists, so the node could not be restored in place.
         /// </summary>
         ParentMissing = 1,
 
         /// <summary>
-        /// Represents the conflict option.
+        /// A node with the same name already exists at the target location.
         /// </summary>
         Conflict = 2,
 
         /// <summary>
-        /// Represents the not restorable option.
+        /// The node is not eligible for restore.
         /// </summary>
         NotRestorable = 3,
     }
@@ -56,27 +56,27 @@ namespace Cotton.Files
     public class RestoreOutcomeDto
     {
         /// <summary>
-        /// Gets or sets status.
+        /// Outcome of the restore attempt.
         /// </summary>
         public RestoreStatus Status { get; set; }
 
         /// <summary>
-        /// Gets or sets original parent path.
+        /// Path of the original parent folder, when the outcome relates to its location.
         /// </summary>
         public string? OriginalParentPath { get; set; }
 
         /// <summary>
-        /// Gets or sets missing path.
+        /// Path of the parent that is missing, when <see cref="Status"/> is <see cref="RestoreStatus.ParentMissing"/>.
         /// </summary>
         public string? MissingPath { get; set; }
 
         /// <summary>
-        /// Gets or sets conflict kind.
+        /// Kind of the conflicting node, when <see cref="Status"/> is <see cref="RestoreStatus.Conflict"/>.
         /// </summary>
         public RestoreConflictKind? ConflictKind { get; set; }
 
         /// <summary>
-        /// Gets or sets conflict name.
+        /// Name of the conflicting node, when <see cref="Status"/> is <see cref="RestoreStatus.Conflict"/>.
         /// </summary>
         public string? ConflictName { get; set; }
 
@@ -91,7 +91,7 @@ namespace Cotton.Files
         public NodeFileManifestDto? RestoredFile { get; set; }
 
         /// <summary>
-        /// Gets or sets reason.
+        /// Human-readable explanation of why the restore did not fully succeed, when applicable.
         /// </summary>
         public string? Reason { get; set; }
     }

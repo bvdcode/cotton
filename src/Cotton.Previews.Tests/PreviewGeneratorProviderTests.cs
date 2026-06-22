@@ -19,6 +19,11 @@ public class PreviewGeneratorProviderTests
     [TestCase("video/vnd.avi", typeof(VideoPreviewGenerator))]
     [TestCase("audio/mpeg", typeof(AudioPreviewGenerator))]
     [TestCase("image/svg+xml", typeof(SvgPreviewGenerator))]
+    [TestCase("application/vnd.android.package-archive", typeof(AndroidPackagePreviewGenerator))]
+    [TestCase("application/vnd.android.bundle", typeof(AndroidPackagePreviewGenerator))]
+    [TestCase("application/vnd.android.apks", typeof(AndroidPackagePreviewGenerator))]
+    [TestCase("application/vnd.android.xapk", typeof(AndroidPackagePreviewGenerator))]
+    [TestCase("application/vnd.android.apkm", typeof(AndroidPackagePreviewGenerator))]
     [TestCase("image/png", typeof(ImagePreviewGenerator))]
     public void GetGeneratorByContentType_KnownTypes_ReturnsExpectedGenerator(string contentType, Type expectedType)
     {
@@ -66,6 +71,11 @@ public class PreviewGeneratorProviderTests
             Assert.That(mimeTypes, Does.Contain("audio/mpeg"));
             Assert.That(mimeTypes, Does.Contain("video/mp4"));
             Assert.That(mimeTypes, Does.Contain("video/vnd.avi"));
+            Assert.That(mimeTypes, Does.Contain("application/vnd.android.package-archive"));
+            Assert.That(mimeTypes, Does.Contain("application/vnd.android.bundle"));
+            Assert.That(mimeTypes, Does.Contain("application/vnd.android.apks"));
+            Assert.That(mimeTypes, Does.Contain("application/vnd.android.xapk"));
+            Assert.That(mimeTypes, Does.Contain("application/vnd.android.apkm"));
             Assert.That(mimeTypes, Does.Contain("model/stl"));
             Assert.That(mimeTypes, Does.Contain("application/sla"));
             Assert.That(mimeTypes, Does.Contain("application/vnd.ms-pki.stl"));
@@ -84,7 +94,7 @@ public class PreviewGeneratorProviderTests
         using (Assert.EnterMultipleScope())
         {
             Assert.That(PreviewGeneratorProvider.DefaultSmallPreviewSize, Is.EqualTo(200));
-            Assert.That(PreviewGeneratorProvider.DefaultLargePreviewSize, Is.EqualTo(2000));
+            Assert.That(PreviewGeneratorProvider.DefaultLargePreviewSize, Is.EqualTo(2560));
             Assert.That(PreviewGeneratorProvider.DefaultLargePreviewSize, Is.GreaterThan(PreviewGeneratorProvider.DefaultSmallPreviewSize));
         }
     }

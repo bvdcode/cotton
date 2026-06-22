@@ -383,7 +383,7 @@ namespace Cotton.Server.Controllers
             }
 
             Guid userId = User.GetUserId();
-            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
+            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, HttpContext.RequestAborted);
             var preLockParentNode = await _dbContext.Nodes
                 .AsNoTracking()
                 .Where(x => x.Id == request.ParentId
@@ -464,7 +464,7 @@ namespace Cotton.Server.Controllers
             [FromQuery] NodeType nodeType = NodeType.Default)
         {
             Guid userId = User.GetUserId();
-            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
+            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, HttpContext.RequestAborted);
 
             var nodesQuery = _dbContext.Nodes
                 .AsNoTracking()
@@ -1028,7 +1028,14 @@ namespace Cotton.Server.Controllers
                 return null;
             }
 
-            _integrity.RequireValid(_dbContext, node, boundary);
+            try
+            {
+                _integrity.RequireValid(_dbContext, node, boundary);
+            }
+            catch (DatabaseIntegrityException)
+            {
+                return null;
+            }
             return node;
         }
 

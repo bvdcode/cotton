@@ -10,7 +10,7 @@ using System.Security.Claims;
 namespace Cotton.Server.Hubs
 {
     /// <summary>
-    /// Publishes realtime event events to connected clients.
+    /// Publishes realtime events to connected clients.
     /// </summary>
     [Authorize]
     public class EventHub : Hub
@@ -35,9 +35,14 @@ namespace Cotton.Server.Hubs
         /// <inheritdoc />
         public override async Task OnConnectedAsync()
         {
+            if (Context.User == null)
+            {
+                Context.Abort();
+                return;
+            }
             Guid userId = Context.User.GetUserId();
-            string? sessionId = Context.User?.FindFirstValue(JwtRegisteredClaimNames.Sid)
-                ?? Context.User?.FindFirstValue(ClaimTypes.Sid);
+            string? sessionId = Context.User.FindFirstValue(JwtRegisteredClaimNames.Sid)
+                ?? Context.User.FindFirstValue(ClaimTypes.Sid);
             if (string.IsNullOrWhiteSpace(sessionId))
             {
                 Context.Abort();

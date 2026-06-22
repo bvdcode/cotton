@@ -49,7 +49,7 @@ namespace Cotton.Server.Jobs
             var generatorVersionsByContentType = PreviewGeneratorProvider.GetGeneratorVersionsByContentType();
             CancellationToken cancellationToken = context?.CancellationToken ?? CancellationToken.None;
 
-            await NormalizeLegacySourceTextContentTypesAsync(allSupportedMimeTypes, cancellationToken);
+            await NormalizeLegacyPreviewableContentTypesAsync(allSupportedMimeTypes, cancellationToken);
 
             HashSet<Guid> queuedOrProcessedItemIds = [];
             List<FileManifest> itemsToProcess = await LoadNextPreviewItemsAsync(
@@ -236,9 +236,7 @@ namespace Cotton.Server.Jobs
         {
             foreach (var nodeFile in item.NodeFiles)
             {
-                // Minor vulnerability:
-                // Even if cross-user deduplication is disabled, this event could reveal to a user who already had the file that someone else had the file,
-                // because the preview hash will be reset and regenerated, preventing the second user from discovering that the first user had the file.
+                // Note: a regenerated preview hash can leak that another user already had this file even when cross-user dedup is disabled.
                 await _hubContext.Clients
                     .User(nodeFile.OwnerId.ToString())
                     .SendAsync("PreviewGenerated", nodeFile.NodeId, nodeFile.Id, item.GetPreviewHashEncryptedHex(), cancellationToken);
@@ -254,7 +252,6 @@ namespace Cotton.Server.Jobs
 
             if (processed > UnthrottledItemsCount)
             {
-                // TODO: Move to settings or autoconfig
                 await Task.Delay(ThrottleDelayMs, cancellationToken);
             }
         }
@@ -310,7 +307,7 @@ namespace Cotton.Server.Jobs
                 .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType));
 
             var itemsToProcessQuery = processableItemsQuery
-                .Where(fm => fm.SmallFilePreviewHash == null)
+                .Where(fm => fm.SmallFilePreviewHash == null || fm.SmallFilePreviewHashEncrypted == null)
                 .Where(fm => fm.PreviewGenerationError == null);
 
             foreach (var versionGroup in generatorVersionsByContentType.GroupBy(x => x.Value))
@@ -445,7 +442,7 @@ namespace Cotton.Server.Jobs
             await Task.Delay(waitTimeSeconds * 1000, cancellationToken);
         }
 
-        private async Task NormalizeLegacySourceTextContentTypesAsync(
+        private async Task NormalizeLegacyPreviewableContentTypesAsync(
             IReadOnlyCollection<string> supportedContentTypes,
             CancellationToken cancellationToken)
         {
@@ -456,7 +453,7 @@ namespace Cotton.Server.Jobs
                         || m.ContentType == string.Empty) &&
                     m.NodeFiles.Any(nf => Regex.IsMatch(
                         nf.Name,
-                        FileManifestService.SourceTextFileNameRegexPattern,
+                        FileManifestService.PreviewableFileNameRegexPattern,
                         RegexOptions.IgnoreCase)))
                 .OrderBy(m => m.CreatedAt)
                 .Take(MaxItemsPerRun)
@@ -465,7 +462,10 @@ namespace Cotton.Server.Jobs
             int updated = 0;
             foreach (var manifest in manifests)
             {
-                string? fileName = manifest.NodeFiles.FirstOrDefault(nodeFile => FileManifestService.IsSourceTextFileName(nodeFile.Name))?.Name;
+                string? fileName = manifest.NodeFiles.FirstOrDefault(nodeFile => Regex.IsMatch(
+                    nodeFile.Name,
+                    FileManifestService.PreviewableFileNameRegexPattern,
+                    RegexOptions.IgnoreCase))?.Name;
                 if (string.IsNullOrWhiteSpace(fileName))
                 {
                     continue;
@@ -484,7 +484,7 @@ namespace Cotton.Server.Jobs
             if (updated > 0)
             {
                 await _dbContext.SaveChangesAsync(cancellationToken);
-                _logger.LogInformation("Normalized {Count} legacy source-text file manifest content types before preview generation.", updated);
+                _logger.LogInformation("Normalized {Count} legacy file manifest content types before preview generation.", updated);
             }
         }
 

@@ -75,7 +75,7 @@ The result is clamped to a floor of 0: `Math.Max(0, 10 - penalty)`. `MaxSecurity
 
 ### Warning vectors
 
-`BuildWarnings` invokes a fixed sequence of detectors in this order: public-instance, master-key, admin-TOTP, .NET diagnostics, Linux-process group (`AddLinuxProcessWarnings`), Linux-container group (`AddLinuxContainerWarnings`), hardening-failure, and database-integrity. Each detector emits at most one `SecurityDiagnosticWarningDto { Code, Severity, Message }`. The complete catalog:
+`BuildWarnings` invokes a fixed sequence of detectors in this order: public-instance, master-key, admin-TOTP, .NET diagnostics, temp-directory, Linux-process group (`AddLinuxProcessWarnings`), Linux-container group (`AddLinuxContainerWarnings`), hardening-failure, and database-integrity. Each detector emits at most one `SecurityDiagnosticWarningDto { Code, Severity, Message }`. The complete catalog:
 
 | Code | Severity | Trigger condition | Notes |
 |---|---|---|---|
@@ -83,22 +83,23 @@ The result is clamped to a floor of 0: `Math.Max(0, 10 - penalty)`. `MaxSecurity
 | `master-key-from-environment` | warning | `MasterKeyRuntimeState.EnvironmentVariableWasConfigured` | Key came from `COTTON_MASTER_KEY`; container metadata may still expose it. |
 | `admins-without-2fa` | warning | `AdminTotpDiagnosticsDto.AdminsWithoutTotp > 0` | Message reads "N of M admin accounts do not have 2FA enabled." |
 | `dotnet-diagnostics-enabled` | warning | `.NET` diagnostics **not** disabled | See OR semantics below. |
+| `temp-directory-not-writable` | **critical** | `Path.GetTempPath()` cannot create/write/delete a probe file | Blocks startup too; mount writable scratch storage at `/tmp` (`tmpfs` or a fast-disk bind mount). |
 | `process-dumpable` | warning | `LinuxProcessSecurityDto.Dumpable != 0` (Linux only) | Recommends `COTTON_PROCESS_HARDENING=true`. |
 | `sys-ptrace-capability` | **critical** | `HasSysPtraceCapability == true` (Linux only) | `CAP_SYS_PTRACE` effective. Skipped when the value is `null` (unparseable `CapEff`). |
 | `new-privileges-allowed` | warning if container, else info | `NoNewPrivileges == 0` (Linux only) | Recommends `no-new-privileges:true`. |
 | `seccomp-disabled` | warning | `SeccompMode == 0` (Linux only) | Avoid `seccomp=unconfined`. |
 | `running-as-root` | info | `RunningAsRoot == true` (Linux only) | `euid == 0`. |
-| `root-filesystem-writable` | info | container AND `RootFilesystemReadOnly == false` | Recommends `read_only: true`. |
+| `root-filesystem-writable` | info | container AND `RootFilesystemReadOnly == false` | Recommends `read_only: true` plus writable `/app/files` and writable `/tmp`. |
 | `docker-socket-mounted` | **critical** | container AND `DockerSocketMounted` | Effectively host-root from the web process. |
 | `host-pid-namespace` | **critical** | container AND `HostPidNamespaceLikely == true` | Remove `pid: host`. |
 | `mandatory-access-control-unconfined` | warning | container AND no enforcing AppArmor/SELinux detected | See MAC logic below. |
 | `core-dumps-enabled` | warning | `CoreDumpSoftLimitDisabled == false` AND `Dumpable != 0` (Linux only) | Set `ulimit core=0`. Runs on any Linux host, not only containers. |
 | `process-hardening-failed` | warning | `HardeningRequested && !HardeningApplied` | Message is `HardeningError` when present, else a generic fallback. |
-| `db-integrity-unsigned-rows` | **critical** | `UnsignedProtectedRows > 0` | Run the bridge release backfill first. |
-| `db-integrity-bridge-mode` | warning | `BridgeBackfillEnabled` is true | See bridge-mode caveat below. |
+| `db-integrity-unsigned-rows` | **critical** | `UnsignedProtectedRows > 0` | Restore affected rows from backup or run the required transition version before upgrading. |
 
 Important guards:
 
+- The temp-directory check runs on every platform because it validates the active OS temp path, not a Linux-only hardening signal.
 - All Linux process warnings (`AddLinuxProcessWarnings`: dumpable, ptrace, no-new-privileges, seccomp, root) and all container warnings (`AddLinuxContainerWarnings`) are skipped entirely unless `OperatingSystem.IsLinux()`. On Windows/macOS those vectors never fire and the corresponding fields are `null`.
 - The four container-only checks (`root-filesystem-writable`, `docker-socket-mounted`, `host-pid-namespace`, `mandatory-access-control-unconfined`) require `isContainer == true`. The core-dump check (`AddCoreDumpLimitWarning`) runs on any Linux host regardless of `isContainer`.
 - The ptrace check uses `HasSysPtraceCapability != true` to decide skipping, so a `null` (unknown) value never raises the critical warning.
@@ -111,9 +112,9 @@ Important guards:
 
 `AddMandatoryAccessControlWarning` reads the single value `/proc/self/attr/current` (captured once by `LinuxContainerSecurity.Snapshot`). `LinuxContainerSecurity` classifies it: a value containing a `:` is treated as an SELinux context (`SelinuxContext`), otherwise as an AppArmor profile name (`AppArmorProfile`). The warning is **suppressed** only when all three hold: a MAC profile is present (`AppArmorProfile` or `SelinuxContext` non-empty), the AppArmor profile does not start with `unconfined` (case-insensitive), and SELinux is not permissive (`SelinuxEnforcing != false`). SELinux enforcing state comes from `/sys/fs/selinux/enforce` (`0` → false, `1` → true, anything else → null).
 
-#### Database-integrity bridge mode caveat
+#### Database-integrity strict mode
 
-`DatabaseIntegrityDiagnosticsService.GetSnapshotAsync` returns a DTO with `Enabled = true` and **`BridgeBackfillEnabled = true` hardcoded**. Because `AddDatabaseIntegrityWarnings` emits `db-integrity-bridge-mode` whenever `BridgeBackfillEnabled` is true, that warning is effectively **always present** in the current code — it is not gated on a config flag. The accompanying message tells operators to "Disable bridge mode after the upgrade window," but there is no runtime switch in this code that flips `BridgeBackfillEnabled` to false; the startup bridge (`DatabaseIntegrityApplicationExtensions.ApplyDatabaseIntegrityBridgeBackfillAsync` → `IDatabaseIntegrityBridgeBackfillService.BackfillUnsignedPhaseOneRowsAsync`, invoked unconditionally from `Program.cs` after `ApplyMigrations`) always runs. `UnsignedProtectedRows` is a live count, summed across every registered descriptor, of protected rows whose MAC property (`IntegrityMac` column, `DatabaseIntegrityColumns.MacProperty`) is null or whose version property (`IntegrityVersion`, `DatabaseIntegrityColumns.VersionProperty`) differs from the descriptor `SchemaVersion`. `ProtectedEntityTypes` is the count of descriptors in `IDatabaseIntegrityDescriptorRegistry.All` (currently 14). See the *Database Integrity* section for the signing model.
+`DatabaseIntegrityDiagnosticsService.GetSnapshotAsync` returns a DTO with `Enabled = true` and **`BridgeBackfillEnabled = false` hardcoded**. `UnsignedProtectedRows` is a live count, summed across every registered descriptor, of protected rows whose MAC property (`IntegrityMac` column, `DatabaseIntegrityColumns.MacProperty`) is null or whose version property (`IntegrityVersion`, `DatabaseIntegrityColumns.VersionProperty`) differs from the descriptor `SchemaVersion`. Those rows are hard failures at read boundaries and during save-time original-state verification. `ProtectedEntityTypes` is the count of descriptors in `IDatabaseIntegrityDescriptorRegistry.All` (currently 14). See the *Database Integrity* section for the signing model and the startup transition guard that blocks unsafe upgrades before normal traffic is served.
 
 ### SecurityDiagnosticsDto shape
 
@@ -249,7 +250,7 @@ That regex encodes: must **start with a lowercase latin letter**; subsequent cha
 - **Snapshot is read-only and per-request.** `SecurityDiagnosticsService` is scoped, takes a `CancellationToken`, performs two read-only `CountAsync` queries for admin TOTP plus one `CountAsync` per protected entity descriptor for unsigned rows, and otherwise reads procfs/sysfs/env. It mutates no state, so concurrent admin requests are safe. The integrity row counts run a `CountAsync` per protected entity type, each an index/table scan on large tables — acceptable for an admin screen but not a hot path. The service's remarks note it intentionally counts metadata rather than recomputing every row MAC.
 - **Degraded signals are "unknown", not errors.** Every procfs/sysfs read in `LinuxContainerSecurity` swallows `IOException`/`UnauthorizedAccessException` and returns null; the UI renders those as the localized "unknown" value. A read-only or restricted `/proc` (good hardening) therefore lowers visibility, not availability.
 - **Hardening is best-effort and observable.** If `prctl` fails (e.g. unusual kernel, missing libc symbol), the process still starts; the failure surfaces as `process-hardening-failed`. The `Dumpable` field in diagnostics falls back to `hardeningStatus.DumpableAfter` when a live `TryGetDumpable()` read returns null.
-- **Score is monotonic in warning count/severity only.** It cannot exceed 10 or drop below 0. Because `db-integrity-bridge-mode` is currently always emitted, a freshly hardened private instance starts at most at **8/10** (one always-on `warning` = −2) unless that detector changes — operators should not read 10/10 as the practical ceiling today.
+- **Score is monotonic in warning count/severity only.** It cannot exceed 10 or drop below 0. There is no always-on database-integrity bridge warning in strict releases; a clean hardened private instance can reach 10/10 when all measured checks pass.
 - **Validator throw vs. boolean.** `NameValidator.NormalizeAndGetNameKey` re-validates and throws `ArgumentException` on invalid input; callers that derive a `NameKey` validate first (handlers call `TryNormalizeAndValidate` before deriving the key). The boolean overloads (`IsValidName`, `IsValid`) never throw.
 
 ## Security considerations & non-obvious design decisions
@@ -289,13 +290,13 @@ flowchart LR
 
 - **Internet → HTTP edge.** Untrusted input crosses into the app through controllers. The validators canonicalize/reject names and usernames; auth hardening (`AuthHardeningExtensions`) gates authenticated state with per-remote-IP fixed-window rate limiting — `AuthRateLimitPolicies.Interactive` at 10 requests/minute and `AuthRateLimitPolicies.Refresh` at 60 requests/minute, both rejecting with HTTP 429 — plus JWT validation and session-token revocation (`OnTokenValidated`). The `public-instance` flag widens this boundary (anyone can create an account) and is surfaced as a warning.
 - **App process ↔ in-memory secret.** The most sensitive asset is the master key in process memory. The app defends it directly only via `PR_SET_DUMPABLE=0`; everything else that could read process memory (ptrace, `/proc/<pid>/mem`, core dumps, .NET diagnostics endpoints, debugger attach) is detected and reported, with critical severity for the worst escalation paths (`CAP_SYS_PTRACE`, Docker socket, host PID namespace).
-- **App ↔ container/host runtime (operator-controlled).** The runtime is *trusted to be configured correctly* but the app cannot enforce it, so the diagnostics layer treats it as a thing to be **measured and reported**: seccomp, MAC confinement, no-new-privileges, read-only rootfs, non-root UID, core-dump limits, and namespace/socket isolation. The README is explicit that aggressive runtime hardening (custom seccomp/AppArmor, `read_only: true`, `kernel.yama.ptrace_scope`, TPM/HSM/KMS, encrypted swap) is an expert second pass that can break volume permissions, debugging, previews, or restores, so the app ships the cheap defaults and leaves the rest opt-in.
-- **App ↔ database.** Protected rows carry integrity signatures verified at security-sensitive reads; the diagnostics layer reports unsigned rows (`db-integrity-unsigned-rows`, critical) and bridge-mode state (`db-integrity-bridge-mode`, warning) so an operator knows whether the instance can be trusted yet. See the *Database Integrity* section.
+- **App ↔ container/host runtime (operator-controlled).** The runtime is *trusted to be configured correctly* but the app cannot enforce it, so the diagnostics layer treats it as a thing to be **measured and reported**: writable OS temp, seccomp, MAC confinement, no-new-privileges, read-only rootfs, non-root UID, core-dump limits, and namespace/socket isolation. With `read_only: true`, `/tmp` must still be mounted as writable scratch storage; either a `tmpfs` mount or a bind mount from a fast writable disk is valid. The README is explicit that aggressive runtime hardening (custom seccomp/AppArmor, `kernel.yama.ptrace_scope`, TPM/HSM/KMS, encrypted swap) is an expert second pass that can break volume permissions, debugging, previews, or restores, so the app ships the cheap defaults and leaves the rest opt-in.
+- **App ↔ database.** Protected rows carry integrity signatures verified at security-sensitive reads; the diagnostics layer reports unsigned or stale protected rows (`db-integrity-unsigned-rows`, critical), and startup transition validation blocks unsafe version jumps before normal traffic is served. See the *Database Integrity* section.
 
 ## Related sections
 
 - *Master Key & Unlock* — full master-key lifecycle, env scrubbing (`ClearMasterKeyEnvironmentVariable`), `MasterKeyRuntimeState`, and the unlock server.
-- *Database Integrity* — row MAC signing, descriptors, the verifier, and the startup bridge backfill (`BackfillUnsignedPhaseOneRowsAsync`) referenced by the integrity warnings.
+- *Database Integrity* — row MAC signing, descriptors, the verifier, strict unsigned-row handling, and startup transition validation.
 - *Authentication & Sessions* — JWT, TOTP/2FA, passkeys, rate limiting, and session revocation (`AuthHardeningExtensions`).
 - *Cryptography Engine* — key derivation (`ConfigurationBuilderExtensions`) that consumes the master key the hardening layer protects.
 - *Storage Topology & Layouts* — how `NameKey` is used for collision-safe navigation and sibling uniqueness.

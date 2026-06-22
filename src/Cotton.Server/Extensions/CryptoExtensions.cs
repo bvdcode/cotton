@@ -29,7 +29,7 @@ namespace Cotton.Server.Extensions
             DateTime expireAt = DateTime.Parse(expireAtStr, null, System.Globalization.DateTimeStyles.AdjustToUniversal);
             if (DateTime.UtcNow > expireAt)
             {
-                throw new Exception("Token has expired.");
+                throw new InvalidOperationException("Token has expired.");
             }
             return Convert.FromHexString(hashStr);
         }
@@ -44,7 +44,7 @@ namespace Cotton.Server.Extensions
             string hashStr = Hasher.ToHexStringHash(hash);
             string container = $"{hashStr}|{expireAt:R}";
             byte[] encrypted = crypto.EncryptString(container);
-            return Convert.ToHexString(encrypted).ToLower();
+            return Convert.ToHexString(encrypted).ToLowerInvariant();
         }
     }
 }

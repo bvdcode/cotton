@@ -21,7 +21,7 @@ namespace Cotton.Previews
         private const int WaveformSampleRateHz = 400;
 
         /// <inheritdoc />
-        public int Version => 3;
+        public int Version => 4;
 
         /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes =>
@@ -54,7 +54,7 @@ namespace Cotton.Previews
                 throw new InvalidOperationException("Audio preview generation requires a seekable stream.");
             }
 
-            try { stream.Seek(0, SeekOrigin.Begin); } catch { }
+            stream.Seek(0, SeekOrigin.Begin);
 
             byte[]? imageBytes = null;
             Exception? coverArtException = null;
@@ -141,7 +141,7 @@ namespace Cotton.Previews
             });
 
             await using var output = new MemoryStream();
-            await image.SaveAsWebpAsync(output).ConfigureAwait(false);
+            await image.SaveAsWebpAsync(output, PreviewImageEncoder.Create(size)).ConfigureAwait(false);
             return output.ToArray();
         }
 

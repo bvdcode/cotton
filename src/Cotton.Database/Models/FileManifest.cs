@@ -52,7 +52,7 @@ namespace Cotton.Database.Models
 
         /// <summary>Preview generator version used for the current previews.</summary>
         [Column("preview_generator_version")]
-        public int PreviewGeneratorVersion { get; set; } = 0;
+        public int PreviewGeneratorVersion { get; set; }
 
         /// <summary>Returns the row-scoped encrypted small-preview token as lowercase text.</summary>
         public string? GetPreviewHashEncryptedHex()

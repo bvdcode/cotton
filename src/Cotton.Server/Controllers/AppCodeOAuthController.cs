@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Database.Models;
@@ -166,7 +166,6 @@ public class AppCodeOAuthController(
             };
             state.Status = AppCodeRequestStatus.Approved;
             state.ApprovedAt = DateTime.UtcNow;
-            state.ApprovedUserId = userId;
 
             await SendApprovedNotificationAsync(userId, state);
             state.Completion.TrySetResult();
@@ -520,8 +519,6 @@ public class AppCodeOAuthController(
         public TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public AppCodeRequestStatus Status { get; set; }
-
-        public Guid? ApprovedUserId { get; set; }
 
         public DateTime? ApprovedAt { get; set; }
 

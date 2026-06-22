@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Integrity;
 using Microsoft.EntityFrameworkCore;
@@ -12,13 +12,13 @@ namespace Cotton.Server.Services.DatabaseIntegrity;
 /// </summary>
 /// <remarks>
 /// The signer lives in the database layer boundary rather than in individual handlers so every normal write path is
-/// covered consistently. During the bridge repair window, existing row MACs are not trusted or rejected; the background
-/// repair pass re-signs the current database state.
+/// covered consistently.
 /// </remarks>
 public sealed class DatabaseIntegrityChangeSigner : IDatabaseIntegrityChangeSigner
 {
     private readonly IDatabaseIntegrityProtector _protector;
     private readonly IDatabaseIntegrityDescriptorRegistry _descriptors;
+    private readonly IDatabaseIntegrityFailureReporter _failures;
 
     /// <summary>Initializes a new save-time integrity signer.</summary>
     public DatabaseIntegrityChangeSigner(
@@ -28,13 +28,18 @@ public sealed class DatabaseIntegrityChangeSigner : IDatabaseIntegrityChangeSign
     {
         _protector = protector;
         _descriptors = descriptors;
-        _ = failures;
+        _failures = failures ?? NullDatabaseIntegrityFailureReporter.Instance;
     }
 
     /// <inheritdoc />
     public void SignPendingChanges(DbContext dbContext)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
+
+        if (dbContext.ChangeTracker.AutoDetectChangesEnabled)
+        {
+            dbContext.ChangeTracker.DetectChanges();
+        }
 
         foreach (EntityEntry entry in dbContext.ChangeTracker.Entries())
         {
@@ -56,6 +61,10 @@ public sealed class DatabaseIntegrityChangeSigner : IDatabaseIntegrityChangeSign
             // The primary key participates in the signed payload, so signing a temporary EF key would create
             // a MAC that cannot verify after SaveChanges assigns the real key.
             EnsureStablePrimaryKey(entry, descriptor);
+            if (entry.State == EntityState.Modified)
+            {
+                RequireOriginalStateValid(entry, descriptor);
+            }
 
             byte[] mac = _protector.Sign(entry.Entity, descriptor);
             entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue = descriptor.SchemaVersion;
@@ -83,5 +92,27 @@ public sealed class DatabaseIntegrityChangeSigner : IDatabaseIntegrityChangeSign
             throw new InvalidOperationException(
                 $"Cannot sign {descriptor.EntityName} while its primary key is temporary.");
         }
+    }
+
+    private void RequireOriginalStateValid(EntityEntry entry, IDatabaseIntegrityDescriptor descriptor)
+    {
+        object? versionValue = entry.Property(DatabaseIntegrityColumns.VersionProperty).OriginalValue;
+        object? macValue = entry.Property(DatabaseIntegrityColumns.MacProperty).OriginalValue;
+        object originalEntity = entry.OriginalValues.ToObject();
+        if (versionValue is int version
+            && macValue is byte[] mac
+            && version == descriptor.SchemaVersion
+            && _protector.Verify(originalEntity, descriptor, mac))
+        {
+            return;
+        }
+
+        string entityKey = descriptor.GetEntityKey(originalEntity);
+        _failures.Report(new DatabaseIntegrityFailure(
+            descriptor.EntityName,
+            entityKey,
+            "save.original-state",
+            DateTime.UtcNow));
+        throw new DatabaseIntegrityException(descriptor.EntityName, entityKey);
     }
 }

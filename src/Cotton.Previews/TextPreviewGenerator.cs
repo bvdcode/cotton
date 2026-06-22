@@ -69,17 +69,10 @@ namespace Cotton.Previews
                 text = sb.ToString();
             }
 
-            if (string.IsNullOrWhiteSpace(text))
+            string rawText = text;
+            if (string.IsNullOrWhiteSpace(rawText))
             {
-                text = "(empty file)";
-            }
-
-            text = text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
-
-            const int maxChars = 4000;
-            if (text.Length > maxChars)
-            {
-                text = text[..maxChars] + "\n…";
+                rawText = "(empty file)";
             }
 
             int renderSize = Math.Max(size * 4, 512);
@@ -88,6 +81,10 @@ namespace Cotton.Previews
             float paddingTop = padding * 1.3f;
             float fontSize = Math.Max(10f, renderSize * FontSizeRatio);
             var font = _fontFamily.CreateFont(fontSize, FontStyle.Regular);
+            float wrapWidth = renderSize - (padding * 2);
+            float maxHeight = renderSize - paddingTop - padding;
+            float lineAdvance = fontSize * 1.25f;
+            text = PrepareAndLayout(rawText, font, wrapWidth, maxHeight, lineAdvance);
 
             canvas.Mutate(ctx =>
             {
@@ -108,7 +105,7 @@ namespace Cotton.Previews
             }));
 
             using var ms = new MemoryStream();
-            await output.SaveAsWebpAsync(ms).ConfigureAwait(false);
+            await output.SaveAsWebpAsync(ms, PreviewImageEncoder.Create(size)).ConfigureAwait(false);
             return ms.ToArray();
         }
 
@@ -124,15 +121,12 @@ namespace Cotton.Previews
                 return string.Empty;
             }
 
-            // Detect binary BEFORE normalization/truncation so we don't lose the signal.
-            // If it's binary-like, return empty preview (caller draws blank canvas).
-            var normalizedForDetection = NormalizeText(rawText);
-            if (LooksBinary(rawText, normalizedForDetection))
+            string normalized = NormalizeText(rawText);
+            if (LooksBinary(rawText, normalized))
             {
                 return string.Empty;
             }
 
-            string normalized = normalizedForDetection;
             normalized = LimitLogicalLines(normalized, MaxLinesToRender);
             normalized = LimitLineWidth(normalized, MaxLineChars);
             return LayoutTextMonospace(normalized, font, wrapWidth, maxHeight, lineAdvance);
@@ -146,30 +140,6 @@ namespace Cotton.Previews
             return collection.Add(fontStream);
         }
 
-        private static string ReadSomeText(Stream stream, int maxChars)
-        {
-            using var reader = new StreamReader(stream, detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: true);
-
-            char[] buffer = new char[Math.Min(maxChars, 4096)];
-            int total = 0;
-            var sb = new System.Text.StringBuilder();
-
-            while (total < maxChars)
-            {
-                int want = Math.Min(buffer.Length, maxChars - total);
-                int read = reader.Read(buffer, 0, want);
-                if (read <= 0)
-                {
-                    break;
-                }
-
-                sb.Append(buffer, 0, read);
-                total += read;
-            }
-
-            return sb.Length == 0 ? string.Empty : sb.ToString();
-        }
-
         private static bool LooksBinary(string raw, string normalized)
         {
             if (raw.Length == 0)
@@ -177,8 +147,6 @@ namespace Cotton.Previews
                 return false;
             }
 
-            // Heuristic: if we dropped a lot of characters (NUL/control), treat as binary.
-            // This avoids rendering empty previews for binary blobs mislabeled as text.
             int dropped = raw.Length - normalized.Length;
             return dropped > (raw.Length / 4);
         }
@@ -195,15 +163,12 @@ namespace Cotton.Previews
                 return string.Empty;
             }
 
-            // Use a single glyph measure as a character cell width.
-            // For a monospaced font (Consolas) this is stable and fast.
-            var m = TextMeasurer.MeasureAdvance("M", new TextOptions(font));
-            float charWidth = Math.Max(1f, m.Width);
+            var measure = TextMeasurer.MeasureAdvance("M", new TextOptions(font));
+            float charWidth = Math.Max(1f, measure.Width);
 
             int cols = Math.Max(1, (int)Math.Floor(wrapWidth / charWidth));
             int rows = Math.Max(1, (int)Math.Floor(maxHeight / Math.Max(1f, lineAdvance)));
-
-            var rawLines = text
+            string rawLines = text
                 .Replace("\r\n", "\n", StringComparison.Ordinal)
                 .Replace('\r', '\n');
 
@@ -290,7 +255,6 @@ namespace Cotton.Previews
 
                 if (current >= maxCharsPerLine)
                 {
-                    // Avoid huge single-line payloads (minified json/xml) that make measuring unreliable
                     if (sb.Length > 0 && sb[^1] != '\n')
                     {
                         sb.Append("…\n");
@@ -329,53 +293,6 @@ namespace Cotton.Previews
             }
 
             return text[..idx].TrimEnd() + "\n…";
-        }
-
-        private static string ClipTextToFitHeight(string text, TextOptions options, float maxHeight)
-        {
-            var size = TextMeasurer.MeasureAdvance(text, options);
-            if (size.Height <= maxHeight)
-            {
-                return text;
-            }
-
-            const int minKeep = 64;
-            if (text.Length <= minKeep)
-            {
-                return text.TrimEnd() + "\n…";
-            }
-
-            int lo = 0;
-            int hi = text.Length;
-
-            while (lo + 1 < hi)
-            {
-                int mid = (lo + hi) / 2;
-                int cut = Math.Max(minKeep, mid);
-                if (cut >= hi)
-                {
-                    cut = hi - 1;
-                }
-                if (cut <= lo)
-                {
-                    break;
-                }
-
-                string candidate = text[..cut].TrimEnd() + "\n…";
-                var s = TextMeasurer.MeasureAdvance(candidate, options);
-
-                if (s.Height <= maxHeight)
-                {
-                    lo = cut;
-                }
-                else
-                {
-                    hi = cut;
-                }
-            }
-
-            int finalLen = Math.Clamp(lo, minKeep, text.Length);
-            return text[..finalLen].TrimEnd() + "\n…";
         }
     }
 }

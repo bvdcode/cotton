@@ -9,7 +9,7 @@ namespace Cotton.Server.Abstractions
     public interface ISharedFileDownloadNotifier
     {
         /// <summary>
-        /// Notifies connected clients that once occurred.
+        /// Notifies connected clients that a shared-file download occurred.
         /// </summary>
         Task NotifyOnceAsync(Guid ownerId, Guid tokenId, string fileName, HttpContext httpContext, CancellationToken ct);
     }

@@ -33,9 +33,6 @@ interface EditUserDialogProps {
   onClose: () => void;
 }
 
-/**
- * Dialog for editing an existing user's profile.
- */
 export const EditUserDialog: React.FC<EditUserDialogProps> = ({
   open,
   user,
@@ -122,6 +119,7 @@ const EditUserDialogContent: React.FC<EditUserDialogContentProps> = ({
             fullWidth
             autoComplete="off"
             error={Boolean(usernameError)}
+            disabled={saving}
           />
           <TextField
             label={t("users.create.email")}
@@ -130,6 +128,7 @@ const EditUserDialogContent: React.FC<EditUserDialogContentProps> = ({
             onChange={(e) => setEmail(e.target.value)}
             fullWidth
             autoComplete="email"
+            disabled={saving}
           />
           <UserRoleSelect
             labelId="admin-edit-user-role-label"
@@ -159,7 +158,7 @@ const EditUserDialogContent: React.FC<EditUserDialogContentProps> = ({
         >
           {saving ? (
             <Stack direction="row" spacing={1} alignItems="center">
-              <CircularProgress size={16} />
+              <CircularProgress size={16} color="inherit" />
               <span>{t("users.edit.saving")}</span>
             </Stack>
           ) : (

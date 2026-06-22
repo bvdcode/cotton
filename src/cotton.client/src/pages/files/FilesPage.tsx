@@ -507,7 +507,6 @@ export const FilesPage: React.FC = () => {
     [ancestors, currentNode],
   );
 
-  const effectiveContent = content;
   const activeCurrentNode = getActiveCurrentNode(nodeId, currentNode);
   const activeAncestors = useMemo(
     () => (activeCurrentNode ? ancestors : []),
@@ -526,7 +525,7 @@ export const FilesPage: React.FC = () => {
     [activeAncestors, activeCurrentNode],
   );
   const getChildFolderEncryptionPolicyState = React.useCallback(
-    (folder: NonNullable<typeof effectiveContent>["nodes"][number]) =>
+    (folder: NonNullable<typeof content>["nodes"][number]) =>
       getFolderEncryptionPolicyState(folder, childFolderEncryptionAncestors),
     [childFolderEncryptionAncestors],
   );
@@ -603,7 +602,7 @@ export const FilesPage: React.FC = () => {
   const folderEncryptionActions = useFolderClientEncryptionActions({
     nodeId,
     currentNode,
-    content: effectiveContent,
+    content,
     folderPolicyEnabled: currentFolderEncryptionPolicy.effectiveEnabled,
     onToast: showToast,
   });
@@ -896,13 +895,13 @@ export const FilesPage: React.FC = () => {
   );
 
   const stats = useMemo(
-    () => calculateFolderStats(effectiveContent?.nodes, effectiveContent?.files),
-    [effectiveContent?.files, effectiveContent?.nodes],
+    () => calculateFolderStats(content?.nodes, content?.files),
+    [content?.files, content?.nodes],
   );
 
   const goToFolder = React.useCallback(
     (folderId: string) => {
-      const targetFolder = effectiveContent?.nodes?.find(
+      const targetFolder = content?.nodes?.find(
         (folder) => folder.id === folderId,
       );
       const requiresUnlock =
@@ -931,7 +930,7 @@ export const FilesPage: React.FC = () => {
     [
       clientEncryptionEnvelope,
       childFolderEncryptionAncestors,
-      effectiveContent?.nodes,
+      content?.nodes,
       isVaultUnlocked,
       navigate,
       showToast,
@@ -1063,7 +1062,6 @@ export const FilesPage: React.FC = () => {
     }
   }, [currentNode?.name, fileSelection, showToast, t, tiles]);
 
-  // Build folder operations adapter
   const folderOperations = buildFolderOperations(
     folderOps,
     goToFolder,
@@ -1088,7 +1086,6 @@ export const FilesPage: React.FC = () => {
     }
   }, [nodeId]);
 
-  // Build file operations adapter
   const fileOperations = buildFileOperations(fileOps, {
     onDownload: handleDownloadFile,
     onVersions: handleOpenVersions,
@@ -1251,8 +1248,6 @@ export const FilesPage: React.FC = () => {
       selectedIds: fileSelection.selectedIds,
       onToggleItem: handleToggleItem,
       moveSupport,
-      pagination:
-        undefined,
     }),
     [
       content,
@@ -1281,7 +1276,7 @@ export const FilesPage: React.FC = () => {
     activeUnlockPrompt,
     clientEncryptionEnvelope,
   );
-  const shouldRenderFileList = shouldRenderFilesList(error, effectiveContent);
+  const shouldRenderFileList = shouldRenderFilesList(error, content);
 
   const refreshCurrentNodeContent = React.useCallback(() => {
     if (nodeId) {

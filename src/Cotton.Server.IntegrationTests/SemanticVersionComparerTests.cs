@@ -25,4 +25,16 @@ public class SemanticVersionComparerTests
     {
         Assert.That(SemanticVersionComparer.IsDowngrade("0.4.0", "0.4.1"), Is.True);
     }
+
+    [Test]
+    public void IsGreaterThanOrEqual_TreatsPrereleaseAsLowerThanStableTarget()
+    {
+        Assert.That(SemanticVersionComparer.IsGreaterThanOrEqual("0.5.0-alpha.482", "0.5.0"), Is.False);
+    }
+
+    [Test]
+    public void IsLessThan_DetectsStableUpperBound()
+    {
+        Assert.That(SemanticVersionComparer.IsLessThan("0.4.33", "0.5.0"), Is.True);
+    }
 }

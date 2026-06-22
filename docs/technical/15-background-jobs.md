@@ -10,7 +10,7 @@ Background jobs in Cotton fall into a few categories:
 - **Deferred content work**: `GeneratePreviewJob`, `ComputeManifestHashesJob` — work that is too expensive to do inline on the upload path.
 - **Retention**: `DownloadTokenRetentionJob`, `RefreshTokenRetentionJob` — prune/expire security tokens.
 - **Backup**: `DumpDatabaseJob` — periodic logical PostgreSQL dump stored as content-addressed chunks.
-- **Idempotent backfills** that ride along as periodic jobs: `FixMimeTypesJob`, `BackfillChunkStoredSizeJob`.
+- **Idempotent backfills / migrations** that ride along as periodic jobs: `FixMimeTypesJob`, `BackfillChunkStoredSizeJob`, `BackfillNullMetadataJob` (temporary), and `SyncChangeRetentionJob` (sync-log pruning).
 - **Housekeeping / telemetry**: `ClearTempFolderJob`, `CollectPerformanceJob`.
 
 Several jobs are also *fired on demand* in response to user actions or admin requests (uploads trigger preview/hash jobs; an admin endpoint triggers GC; a backup endpoint triggers the dump). Those triggers reuse the same registered `JobDetail`, so on-demand runs honor the same concurrency rules as scheduled runs.
@@ -110,6 +110,8 @@ Cadences below are the literal `[JobTrigger]` arguments. "Internal start delay" 
 | `ClearTempFolderJob` | `[JobTrigger(hours: 36)]` | 7 min | Delete storage-backend temp files older than 1 hour | storage backend temp dir |
 | `FixMimeTypesJob` | `[JobTrigger(days: 1)]` | 2 min | Backfill/repair `ContentType` for default/empty manifests | `FileManifests.ContentType` |
 | `BackfillChunkStoredSizeJob` | `[JobTrigger(days: 1)]` | none | Backfill `StoredSizeBytes` for chunks with non-positive value | `Chunks.StoredSizeBytes` |
+| `BackfillNullMetadataJob` | `[JobTrigger(days: 1)]` | none | Backfill legacy `null` metadata dictionaries to empty `{}` on nodes/node-files | `Nodes.Metadata`, `NodeFiles.Metadata` |
+| `SyncChangeRetentionJob` | `[JobTrigger(days: 1)]` | none | Prune `SyncChanges` older than 365 days (keeps the newest per owner) | `SyncChanges` (delete) |
 | `CollectPerformanceJob` | `[JobTrigger(days: 1)]` | 6 min | Send telemetry + optional storage-pipeline probe to Cotton Bridge | none (outbound HTTP POST only) |
 
 > Note: only `GarbageCollectorJob` and `GeneratePreviewJob` carry the extra Quartz `[DisallowConcurrentExecution]` marker; all other jobs are non-concurrent purely through the `[JobTrigger]` registration default.
@@ -226,9 +228,21 @@ An idempotent backfill that repairs `FileManifest.ContentType` for manifests stu
 
 ### BackfillChunkStoredSizeJob
 
-`src/Cotton.Server/Jobs/BackfillChunkStoredSizeJob.cs` — `[JobTrigger(days: 1)]`. Injects `CottonDbContext`, `IStoragePipeline`, `ILogger`. This is the one running maintenance job the README's "background jobs" list does not name.
+`src/Cotton.Server/Jobs/BackfillChunkStoredSizeJob.cs` — `[JobTrigger(days: 1)]`. Injects `CottonDbContext`, `IStoragePipeline`, `ILogger`. It is one of several backfill/migration jobs the README's "background jobs" list does not name (see also `BackfillNullMetadataJob` and `SyncChangeRetentionJob`).
 
 An idempotent backfill that fills in `Chunk.StoredSizeBytes` for chunks created before that column was tracked (value `<= 0`). It loops over `Chunks` where `StoredSizeBytes <= 0` ordered by `Hash` in batches of `BatchSize` (1000), querying actual size from `IStoragePipeline.GetSizeAsync`. It writes the size only when `> 0` or when the key is the canonical zero hash (`Hasher.ZeroHashHexString`), so a chunk genuinely missing from storage is left at `<= 0` (and is retried) rather than recorded as size 0. Saves per batch, respects `context.CancellationToken`. The loop exits when no more chunks need backfill. `StoredSizeBytes` feeds storage-usage accounting; see the *Storage Pipeline* and *Quotas* sections.
+
+### BackfillNullMetadataJob
+
+`src/Cotton.Server/Jobs/BackfillNullMetadataJob.cs` — `[JobTrigger(days: 1)]`. Injects `CottonDbContext`, `ILogger`. No internal start delay.
+
+An idempotent, **temporary** migration job (its source carries a "remove this job after the null metadata cleanup has rolled out" note) that converts legacy `null` `Metadata` dictionaries into empty ones (`[]`). It backfills `Nodes` and then `NodeFiles` separately: each pass loops over rows where `Metadata == null` ordered by `Id` in batches of `BatchSize` (1000), assigns an empty dictionary, saves per batch, and clears the change tracker (`ChangeTracker.Clear()`) between batches to bound memory; both passes respect `context.CancellationToken`. Once all rows have a non-null metadata dictionary it is a no-op. Logs the total nodes and node-files updated.
+
+### SyncChangeRetentionJob
+
+`src/Cotton.Server/Jobs/SyncChangeRetentionJob.cs` — `[JobTrigger(days: 1)]`. Injects `CottonDbContext`, `ILogger`. No internal start delay.
+
+Prunes the sync-change log used by the delta-sync API. `RetentionPeriod` is `TimeSpan.FromDays(365)`. It `ExecuteDeleteAsync`-deletes `SyncChanges` older than the 365-day cutoff, **but only those that are superseded** — the predicate keeps, per `OwnerId`, the newest expired change (a row is deleted only when another expired change with the same owner and a higher `Id` exists), so the latest pre-cutoff sync state per owner is retained. Logs the deleted count when non-zero. See the *Sync & Delta API* section.
 
 ### CollectPerformanceJob
 
@@ -267,10 +281,10 @@ This job writes nothing to the database or storage — it only emits an outbound
 ## Non-obvious design decisions & gotchas
 
 - The "`[DisallowConcurrentExecution]` is included by `[JobTrigger]`" behavior is real but indirect: it is the attribute's `disallowConcurrentExecution = true` default, applied at registration via `.DisallowConcurrentExecution(...)`, not the Quartz class marker. Removing the explicit markers from GC/Preview would not change runtime behavior.
-- `FixMimeTypesJob` and `BackfillChunkStoredSizeJob` are effectively one-time migrations implemented as daily jobs; once converged they are cheap no-ops. They are left in place so newly-imported or legacy rows are continuously self-healing.
+- `FixMimeTypesJob`, `BackfillChunkStoredSizeJob`, and `BackfillNullMetadataJob` are effectively one-time migrations implemented as daily jobs; once converged they are cheap no-ops. `FixMimeTypesJob` and `BackfillChunkStoredSizeJob` are left in place so newly-imported or legacy rows are continuously self-healing, while `BackfillNullMetadataJob` is explicitly marked temporary (to be removed once the cleanup has rolled out to all deployed databases).
 - `RefreshTokenRetentionJob` caps tokens by **creation age**, not idle age — long-lived sessions are forcibly rotated at 30 days. `DownloadTokenRetentionJob` keeps expired tokens for an extra 30 days before deleting them (grace window) and never deletes tokens with a null `ExpiresAt`.
 - `GarbageCollectorJob._isFirstRun` and `CurrentlyDeletingChunks` are `static`, so their state is per-process and shared across all (non-concurrent) runs in that process.
-- The README's "Background jobs are built into normal operation" list — preview generation, manifest hashing, token cleanup, temp cleanup, performance collection, MIME fixes, and storage consistency checks — matches implemented jobs. The README does **not** name `BackfillChunkStoredSizeJob` or `DumpDatabaseJob` in that list (the dump/backup job and GC are described separately), and it does not mention the deferred GC scheduling delays, which the code makes precise.
+- The README's "Background jobs are built into normal operation" list — preview generation, manifest hashing, token cleanup, temp cleanup, performance collection, MIME fixes, and storage consistency checks — matches implemented jobs. The README does **not** name the migration/maintenance jobs `BackfillChunkStoredSizeJob`, `BackfillNullMetadataJob`, `SyncChangeRetentionJob`, or `DumpDatabaseJob` in that list (the dump/backup job and GC are described separately), and it does not mention the deferred GC scheduling delays, which the code makes precise.
 
 ## Related sections
 

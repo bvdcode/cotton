@@ -11,7 +11,7 @@ Two distinct outputs are produced from uploaded content:
 - **Thumbnail previews** — square WebP images at two sizes (small/large), generated asynchronously by a background job (`GeneratePreviewJob`) and served by `PreviewController`. Used for grid icons, the media lightbox, audio cover art, document thumbnails, and 3D-model thumbnails.
 - **Adaptive video playback** — HLS (HTTP Live Streaming) master/media playlists and on-demand transcoded MPEG-TS segments, served by `FileController`, for video formats a browser cannot play natively.
 
-The thumbnail pipeline is "managed-first": image, SVG, HEIC, PDF, and text previews run entirely inside .NET via SixLabors.ImageSharp, SkiaSharp/Svg.Skia, PhotoSauce.MagicScaler (libheif/libwebp), and Docnet (a MuPDF wrapper). Only three media categories shell out to external native tools: audio/video previews and HLS use **ffmpeg/ffprobe** (via the `Xabe.FFmpeg` / `Xabe.FFmpeg.Downloader` v6.0.2 packages for resolution/auto-download), and 3D-model thumbnails use **f3d** (optionally under **Xvfb** for headless rendering).
+The thumbnail pipeline is "managed-first": image, SVG, HEIC, PDF, and text previews run entirely inside .NET via SixLabors.ImageSharp, SkiaSharp/Svg.Skia, libheif (via LibHeifSharp), and Docnet (a MuPDF wrapper). Only three media categories shell out to external native tools: audio/video previews and HLS use **ffmpeg/ffprobe** (via the `Xabe.FFmpeg` / `Xabe.FFmpeg.Downloader` v6.0.2 packages for resolution/auto-download), and 3D-model thumbnails use **f3d** (optionally under **Xvfb** for headless rendering).
 
 ## Key components & responsibilities
 
@@ -23,14 +23,13 @@ The thumbnail pipeline is "managed-first": image, SVG, HEIC, PDF, and text previ
 | `PreviewGeneratorProvider` | `src/Cotton.Previews/PreviewGeneratorProvider.cs` | Static registry; maps MIME type → generator; exposes size/version constants. |
 | `ImagePreviewGenerator` | `src/Cotton.Previews/ImagePreviewGenerator.cs` | Raster images via ImageSharp; auto-orient, resize, WebP encode. |
 | `SvgPreviewGenerator` | `src/Cotton.Previews/SvgPreviewGenerator.cs` | SVG (incl. gzip-compressed `.svgz`) via SkiaSharp/Svg.Skia. |
-| `HeicPreviewGenerator` | `src/Cotton.Previews/HeicPreviewGenerator.cs` | HEIC/HEIF via PhotoSauce MagicScaler + libheif. |
+| `HeicPreviewGenerator` | `src/Cotton.Previews/HeicPreviewGenerator.cs` | HEIC/HEIF decoded via LibHeifSharp (libheif) into an ImageSharp image, encoded through the shared `PreviewImageEncoder`. |
 | `TextPreviewGenerator` | `src/Cotton.Previews/TextPreviewGenerator.cs` | Text/code rendered to a canvas with an embedded Consolas font. |
 | `PdfPreviewGenerator` | `src/Cotton.Previews/PdfPreviewGenerator.cs` | First PDF page via Docnet (`DocLib.Instance`) at 150 DPI. |
 | `AudioPreviewGenerator` | `src/Cotton.Previews/AudioPreviewGenerator.cs` | Embedded cover art (ffmpeg) → fallback synthesized waveform. |
 | `VideoPreviewGenerator` | `src/Cotton.Previews/VideoPreviewGenerator.cs` | Attached cover art, else a frame at mid-duration (ffmpeg). |
 | `StlThumbPreviewGenerator` | `src/Cotton.Previews/StlThumbPreviewGenerator.cs` | STL/OBJ/3MF via f3d; 3MF embedded thumbnails first. |
 | `FfmpegBinary` | `src/Cotton.Previews/FfmpegBinary.cs` | Resolves/auto-downloads ffmpeg+ffprobe; ffprobe metadata helpers. |
-| `PreviewCodecBootstrap` | `src/Cotton.Previews/PreviewCodecBootstrap.cs` | One-time MagicScaler codec registration + libheif security limits. |
 | `PreviewColorPalette` | `src/Cotton.Previews/PreviewColorPalette.cs` | The brand accent green (`#96BE02`) in hex/RGB/byte/f3d forms. |
 | `RangeStreamServer` | `src/Cotton.Previews/Http/RangeStreamServer.cs` | Loopback HTTP server exposing a seekable stream to ffmpeg via `Range`. |
 | `MediaProbeInfo` | `src/Cotton.Previews/FfmpegBinary.cs` | Record `(double? DurationSeconds, string? VideoCodec, string? AudioCodec)`. |
@@ -71,21 +70,21 @@ The provider exposes `GetGeneratorByContentType`, `GetAllSupportedMimeTypes`, an
 | Constant | Value | Meaning |
 |---|---|---|
 | `DefaultSmallPreviewSize` | `200` | Small preview edge (px). |
-| `DefaultLargePreviewSize` | `2000` | Large preview edge (px). |
+| `DefaultLargePreviewSize` | `2560` | Large preview edge (px). |
 | `DefaultGeneratorVersion` | `0` | Version assumed for files with no matching generator. |
 
 The `Version` property on each generator is the staleness key: when a generator's `Version` is bumped, `GeneratePreviewJob` re-runs it for all matching manifests whose stored `PreviewGeneratorVersion` differs (see *The scheduled GeneratePreviewJob* below). Current versions are taken directly from each generator's `Version` property:
 
 | Generator | `Version` |
 |---|---|
-| `ImagePreviewGenerator` | 2 |
-| `AudioPreviewGenerator` | 3 |
-| `VideoPreviewGenerator` | 1 |
+| `ImagePreviewGenerator` | 3 |
+| `AudioPreviewGenerator` | 4 |
+| `VideoPreviewGenerator` | 2 |
 | `SvgPreviewGenerator` | 1 |
-| `HeicPreviewGenerator` | 1 |
+| `HeicPreviewGenerator` | 2 |
 | `PdfPreviewGenerator` | 0 |
 | `TextPreviewGenerator` | 0 |
-| `StlThumbPreviewGenerator` | 8 |
+| `StlThumbPreviewGenerator` | 9 |
 
 ### The scheduled GeneratePreviewJob
 
@@ -103,7 +102,7 @@ flowchart TD
   H --> I[EnsureChunkExistsAsync]
   I --> J[Set SmallFilePreviewHash + Encrypted + Version, clear error]
   J --> K{Image / Heic / Svg?}
-  K -->|yes| L[GetBlobStream + size=2000 -> store -> LargeFilePreviewHash]
+  K -->|yes| L[GetBlobStream + size=2560 -> store -> LargeFilePreviewHash]
   K -->|no| M[SaveChangesAsync]
   L --> M
   M --> N[SignalR PreviewGenerated to each NodeFile.OwnerId]
@@ -118,7 +117,7 @@ Key behaviors in `Execute`:
 - **Source stream**: `_storage.GetBlobStream(uids, pipelineContext)` where `pipelineContext` carries `FileSizeBytes = item.SizeBytes` and `ChunkLengths = item.FileManifestChunks.GetChunkLengths()` (a `Dictionary<string, long>` keyed by chunk hash). `uids` come from `item.FileManifestChunks.GetChunkHashes()` (both helpers live in `src/Cotton.Server/Extensions/FileManifestExtensions.cs`). Supplying `ChunkLengths` is what makes the resulting `ConcatenatedReadStream` *seekable*, which the audio/video/STL generators require.
 - **Storage of the result**: the WebP bytes are SHA-256 hashed (`Hasher.HashData`), written to storage under the lowercase hex hash (`Hasher.ToHexStringHash`), and a `Chunk` row is created/repaired by `EnsureChunkExistsAsync`. The plain hash is stored in `SmallFilePreviewHash` and an encrypted copy in `SmallFilePreviewHashEncrypted` (`_crypto.Encrypt(hash)`); `PreviewGenerationError` is cleared and `PreviewGeneratorVersion` is set to `generator.Version`.
 - **`EnsureChunkExistsAsync`**: for a new hash it adds a `Chunk` with `PlainSizeBytes` = the WebP byte length, `StoredSizeBytes` = `_storage.GetSizeAsync(storageKey)`, and `CompressionAlgorithm = CompressionProcessor.Algorithm` (i.e. `CompressionAlgorithm.Zstd`). For an existing chunk it revives it from GC (`GCScheduledAfter = null`) and back-fills `PlainSizeBytes`/`StoredSizeBytes` only when they are `<= 0`.
-- **Large preview**: generated only when the generator is `ImagePreviewGenerator`, `HeicPreviewGenerator`, or `SvgPreviewGenerator`, at `DefaultLargePreviewSize = 2000`, stored into `LargeFilePreviewHash`. The large variant intentionally has **no** encrypted-hash column.
+- **Large preview**: generated only when the generator is `ImagePreviewGenerator`, `HeicPreviewGenerator`, or `SvgPreviewGenerator`, at `DefaultLargePreviewSize = 2560`, stored into `LargeFilePreviewHash`. The large variant intentionally has **no** encrypted-hash column.
 - **Notification**: after `SaveChangesAsync`, for each `NodeFile` of the manifest a SignalR event is pushed to that node-file's owner: `_hubContext.Clients.User(nodeFile.OwnerId.ToString()).SendAsync("PreviewGenerated", nodeFile.NodeId, nodeFile.Id, item.GetPreviewHashEncryptedHex(), …)`.
 - **Failure handling**: a generator exception (other than caller cancellation) is caught, `ex.Message` is written to `PreviewGenerationError`, `PreviewGeneratorVersion` is set to `generator.Version`, and the row is saved — which excludes it from future runs until its generator version changes. A null generator logs a warning and `DetachPreviewItem`s the row without persisting an error.
 
@@ -137,11 +136,11 @@ When `_perf.IsUploading()` (the injected `PerfTracker`) reports an active upload
 
 ### Individual generators
 
-**ImagePreviewGenerator** — Loads via `Image.Load<Rgba32>`, applies `AutoOrient()` (honours EXIF orientation), and resizes with `ResizeMode.Max` only if the image exceeds `size`. WebP quality is size-dependent: it compares `size` against the midpoint of the small/large defaults (`(200 + 2000) / 2 = 1100`) and uses `LargePreviewQuality = 82` when `size > mid`, else `SmallPreviewQuality = 75`. This generator is reused internally by the audio, video, and STL/3MF generators to do the final downscale+encode.
+**ImagePreviewGenerator** — Loads via `Image.Load<Rgba32>`, applies `AutoOrient()` (honours EXIF orientation), and resizes with `ResizeMode.Max` only if the image exceeds `size`. WebP quality is size-dependent: it compares `size` against the midpoint of the small/large defaults (`(200 + 2560) / 2 = 1380`) and uses `LargePreviewQuality = 85` when `size > mid`, else `SmallPreviewQuality = 75`. This generator is reused internally by the audio, video, and STL/3MF generators to do the final downscale+encode.
 
 **SvgPreviewGenerator** — Buffers the input, sniffs the gzip magic bytes (`0x1F 0x8B`) and transparently decompresses `.svgz`. Renders with `SKSvg`/Svg.Skia onto an RGBA premultiplied Skia surface, scaled to fit `size` while preserving aspect ratio, on a transparent background, then encodes WebP at a fixed quality of 90. Throws `InvalidOperationException` if `svg.Picture` is null or the `CullRect` has non-positive dimensions.
 
-**HeicPreviewGenerator** — Calls `PreviewCodecBootstrap.EnsureInitialized()`, then uses `MagicImageProcessor.ProcessImage` with `ProcessImageSettings { Width = size, Height = size, ResizeMode = CropScaleMode.Max }` and `TrySetEncoderFormat(ImageMimeTypes.Webp)`. Supports `image/heic`, `image/heic-sequence`, `image/heif`, `image/heif-sequence`.
+**HeicPreviewGenerator** — Decodes the primary image with `LibHeifSharp` (`HeifContext` → `GetPrimaryImageHandle` → `Decode(HeifColorspace.Rgb, HeifChroma.InterleavedRgba32)`), copies the interleaved pixels into an ImageSharp `Image<Rgba32>`, then resizes and encodes through the shared `ImagePreviewGenerator.EncodeMaxResizedWebpAsync` (and thus `PreviewImageEncoder`). Native `libheif` is provided by the `LibHeif.Native` package (win-x64 + linux-x64); no separate codec registration step is needed. Supports `image/heic`, `image/heic-sequence`, `image/heif`, `image/heif-sequence`.
 
 **PdfPreviewGenerator** — Reads all bytes, opens via the in-process Docnet native library `DocLib.Instance` at 150×150 DPI, renders page index 0 to a BGRA buffer, wraps it in an ImageSharp `Image<Bgra32>`, resizes (`ResizeMode.Max`), and saves WebP. Throws `InvalidOperationException("PDF has no pages.")` when the page count is `<= 0`. Only `application/pdf` is supported. (Docnet wraps MuPDF, but this is the in-process native library — not an external MuPDF binary.)
 
@@ -156,7 +155,7 @@ When `_perf.IsUploading()` (the injected `PerfTracker`) reports an active upload
 
 If both paths fail it throws an `InvalidOperationException` wrapping both errors in an `AggregateException`. Supported types include `audio/mpeg`, `audio/mp3`, `audio/flac`, `audio/x-flac`, `audio/ogg`, `audio/wav`, `audio/x-wav`, `audio/aac`, `audio/mp4`, `audio/x-m4a`, `audio/opus`, `audio/webm`, `audio/aiff`, `audio/x-aiff`.
 
-**VideoPreviewGenerator** — Calls `FfmpegBinary.EnsureAvailableAsync()`, requires a seekable stream, and wraps it in a `RangeStreamServer`. It first tries `TryExtractCoverArtAsync` (`-dump_attachment:t:0 <tempfile> -i <url> -y`, 15 s timeout) to extract an *attached* cover image (e.g. MKV cover art) to a temp file. If none, it probes duration via `FfmpegBinary.TryGetDurationSecondsAsync` (15 s), computes a mid-duration seek (`ComputeSeekSeconds`: `duration * 0.5`, clamped to `[0.5, duration - 0.5]`, or 0 when duration is unknown/non-positive), and runs ffmpeg `[-ss <t>] -i <url> -frames:v 1 -an -sn -dn -f image2pipe -vcodec png pipe:1` (30 s timeout) to capture one frame. The PNG is then downscaled+encoded through `ImagePreviewGenerator`. Supported video MIME types: `video/mp4`, `video/webm`, `video/ogg`, `video/avi`, `video/mov`, `video/quicktime`, `video/x-quicktime`, `video/mkv`, `video/x-msvideo`, `video/vnd.avi`, `video/x-matroska`.
+**VideoPreviewGenerator** — Calls `FfmpegBinary.EnsureAvailableAsync()`, requires a seekable stream, and wraps it in a `RangeStreamServer`. It first tries `TryExtractCoverArtAsync` (`-dump_attachment:t:0 <tempfile> -i <url> -y`, 15 s timeout) to extract an *attached* cover image (e.g. MKV cover art) to a temp file. If none, it probes duration via `FfmpegBinary.TryGetDurationSecondsAsync` (15 s), computes a mid-duration seek (`ComputeSeekSeconds`: `duration * 0.5`, clamped to `[0.5, duration - 0.5]`, or 0 when duration is unknown/non-positive), and runs ffmpeg `[-ss <t>] -i <url> -frames:v 1 -an -sn -dn -f image2pipe -vcodec png pipe:1` (30 s timeout) to capture one frame. The PNG is then downscaled+encoded through `ImagePreviewGenerator`. Supported video MIME types: `video/mp4`, `video/webm`, `video/ogg`, `video/avi`, `video/mov`, `video/quicktime`, `video/x-quicktime`, `video/mkv`, `video/msvideo`, `video/x-msvideo`, `video/vnd.avi`, `video/matroska`, `video/x-matroska`.
 
 **StlThumbPreviewGenerator** — Despite the class name (historically "stl-thumb"), it renders via **f3d**. Three variants are registered: `.stl` (`model/stl`, `application/sla`, `application/vnd.ms-pki.stl`), `.obj` (`model/obj`), and `.3mf` (`model/3mf`, `application/vnd.ms-package.3dmanufacturing-3dmodel+xml`). Flow:
 
@@ -188,7 +187,7 @@ If neither env var nor `PATH` resolves a binary, the download directory defaults
 
 Both helpers route through `RunFfprobeAsync`, which calls `EnsureAvailableAsync` first and applies a default 60 s timeout (`WaitForProcessAsync`), killing the process tree (`Kill(entireProcessTree: true)`) on timeout and returning `null` on non-zero exit.
 
-`PreviewCodecBootstrap.EnsureInitialized()` (called by `HeicPreviewGenerator`) runs once (guarded by `Interlocked.Exchange`), registers libheif + libwebp with PhotoSauce's `CodecManager` (`UseLibheif`/`UseLibwebp`), and raises libheif's `max_memory_block_size` global security limit to at least 1 GiB (`MinHeifMaxMemoryBlockSizeBytes = 1024^3`) via a tiny `DllImport("heif")` probe of `heif_get_global_security_limits`, tolerating `DllNotFoundException`/`EntryPointNotFoundException` so the absence of libheif degrades gracefully.
+HEIC/HEIF decoding uses `LibHeifSharp` over the native `libheif` shipped by the `LibHeif.Native` package (win-x64 + linux-x64); no codec-registration bootstrap is required. If the native library is unavailable the decode throws and the job records a `PreviewGenerationError` rather than crashing.
 
 ## The RangeStreamServer HTTP shim
 

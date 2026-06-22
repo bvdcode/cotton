@@ -15,7 +15,7 @@ namespace Cotton.Server.Handlers.Users
     public class AdminGetUsersQuery : IRequest<IEnumerable<AdminUserDto>>
     { 
         /// <summary>
-        /// Gets or sets the calculate storage usage.
+        /// When true, computes per-user storage usage.
         /// </summary>
         public bool CalculateStorageUsage { get; set; }
     }

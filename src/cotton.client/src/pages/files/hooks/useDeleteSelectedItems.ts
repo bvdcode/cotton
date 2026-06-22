@@ -12,12 +12,14 @@ type TranslationFn = (
   },
 ) => string;
 
-type ConfirmFn = (args: {
-  title: string;
-  description: string;
-  confirmationText: string;
-  cancellationText: string;
-} & typeof destructiveConfirmOptions) => Promise<{ confirmed: boolean }>;
+type ConfirmFn = (
+  args: {
+    title: string;
+    description: string;
+    confirmationText: string;
+    cancellationText: string;
+  } & typeof destructiveConfirmOptions,
+) => Promise<{ confirmed: boolean }>;
 
 interface UseDeleteSelectedItemsArgs {
   nodeId: string | null;
@@ -66,14 +68,11 @@ export const useDeleteSelectedItems = ({
 
     if (!result.confirmed) return;
 
-    let hadError = false;
-
     for (const tile of selectedTiles) {
       if (tile.kind === "folder") {
         try {
           await deleteFolder(tile.node.id, nodeId);
         } catch (error) {
-          hadError = true;
           console.error("Failed to delete selected folder", error);
         }
         continue;
@@ -83,17 +82,11 @@ export const useDeleteSelectedItems = ({
         optimisticDeleteFile(nodeId, tile.file.id);
         await filesApi.deleteFile(tile.file.id);
       } catch (error) {
-        hadError = true;
         console.error("Failed to delete selected file", error);
       }
     }
 
     fileSelection.deselectAll();
-
-    if (hadError) {
-      reloadCurrentNode();
-      return;
-    }
 
     reloadCurrentNode();
   }, [

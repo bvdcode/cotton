@@ -79,7 +79,7 @@ type ModelPreviewControls = ReturnType<typeof useModelPreviewControls>;
 
 /**
  * Shared file preview modal component
- * Displays PDF or Text preview based on file type
+ * Displays PDF, Text, or Model preview based on file type
  */
 export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   isOpen,

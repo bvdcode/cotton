@@ -12,7 +12,7 @@ namespace Cotton.Previews
     public class VideoPreviewGenerator : IPreviewGenerator
     {
         /// <inheritdoc />
-        public int Version => 1;
+        public int Version => 2;
         /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes =>
         [
@@ -24,8 +24,10 @@ namespace Cotton.Previews
             "video/quicktime",
             "video/x-quicktime",
             "video/mkv",
+            "video/msvideo",
             "video/x-msvideo",
             "video/vnd.avi",
+            "video/matroska",
             "video/x-matroska",
         ];
 
@@ -41,7 +43,7 @@ namespace Cotton.Previews
                 throw new InvalidOperationException("Video preview generation requires a seekable stream.");
             }
 
-            try { stream.Seek(0, SeekOrigin.Begin); } catch { }
+            stream.Seek(0, SeekOrigin.Begin);
 
             byte[] imageBytes;
             await using (var server = new RangeStreamServer(stream))

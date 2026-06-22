@@ -24,8 +24,8 @@ public class LayoutPathResolver(
     /// </summary>
     public async Task<(Layout Layout, Node Root)> GetLayoutAndRootAsync(Guid userId, NodeType nodeType, CancellationToken ct = default)
     {
-        var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
-        var root = await _layouts.GetOrCreateRootNodeAsync(layout.Id, userId, nodeType);
+        var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, ct);
+        var root = await _layouts.GetOrCreateRootNodeAsync(layout.Id, userId, nodeType, ct);
         return (layout, root);
     }
 

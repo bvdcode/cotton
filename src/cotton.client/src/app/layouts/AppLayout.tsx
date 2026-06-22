@@ -168,10 +168,7 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
         maxWidth={false}
         sx={(theme) => ({
           pt: 0,
-          pb: {
-            xs: `calc(${theme.spacing(1)} + var(--audio-player-bar-offset, 0px))`,
-            sm: 1,
-          },
+          pb: `calc(${theme.spacing(1)} + var(--audio-player-bar-offset, 0px))`,
           px: { xs: 1, sm: 1 },
           flexGrow: 1,
           minHeight: 0,

@@ -5,7 +5,6 @@ using Docnet.Core;
 using Docnet.Core.Models;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 
 namespace Cotton.Previews
 {
@@ -43,14 +42,7 @@ namespace Cotton.Previews
             // BGRA (4 bytes per pixel)
             byte[] bgra = pageReader.GetImage();
             using Image<Bgra32> image = Image.LoadPixelData<Bgra32>(bgra, width, height);
-            image.Mutate(x => x.Resize(new ResizeOptions
-            {
-                Size = new Size(size, size),
-                Mode = ResizeMode.Max
-            }));
-            using var output = new MemoryStream();
-            await image.SaveAsWebpAsync(output).ConfigureAwait(false);
-            return output.ToArray();
+            return await ImagePreviewGenerator.EncodeMaxResizedWebpAsync(image, size).ConfigureAwait(false);
         }
 
         private static async Task<byte[]> ReadAllBytesAsync(Stream stream)

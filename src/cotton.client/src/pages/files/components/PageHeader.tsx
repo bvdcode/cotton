@@ -342,9 +342,6 @@ const buildStatsSummary = (
   return parts.join(t("stats.separator", { ns: statsNamespace }));
 };
 
-/**
- * Shared sticky header for file/folder pages
- */
 export const PageHeader: React.FC<PageHeaderProps> = ({
   loading,
   breadcrumbs,

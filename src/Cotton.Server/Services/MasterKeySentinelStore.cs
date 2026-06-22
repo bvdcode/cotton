@@ -19,7 +19,7 @@ namespace Cotton.Server.Services
         /// </summary>
         public const string SentinelLogicalKey = "cotton.master-key.sentinel.v1";
         /// <summary>
-        /// Executes sentinel storage key.
+        /// Gets the hashed storage key under which the sentinel is persisted.
         /// </summary>
         public static readonly string SentinelStorageKey = Hasher.ToHexStringHash(
             Hasher.HashData(Encoding.UTF8.GetBytes(SentinelLogicalKey)));

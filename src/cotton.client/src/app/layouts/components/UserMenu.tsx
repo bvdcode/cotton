@@ -59,7 +59,7 @@ const getStorageQuotaPercent = (
 const getStorageQuotaColor = (
   percent: number | null,
 ): "primary" | "warning" | "error" => {
-  if (percent === null || percent >= 100) {
+  if (percent === null) {
     return "primary";
   }
 

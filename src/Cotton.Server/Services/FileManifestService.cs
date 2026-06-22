@@ -21,45 +21,51 @@ namespace Cotton.Server.Services
         /// </summary>
         public const string DefaultContentType = "application/octet-stream";
         private static readonly FileExtensionContentTypeProvider fileExtensionContentTypeProvider = new();
-        private static readonly IReadOnlyDictionary<string, string> extensionContentTypeOverrides =
-            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        private static readonly IReadOnlyDictionary<string, (string ContentType, bool ForceContentType)> extensionContentTypeOverrides =
+            new Dictionary<string, (string ContentType, bool ForceContentType)>(StringComparer.OrdinalIgnoreCase)
             {
-                [".heic"] = "image/heic",
-                [".heif"] = "image/heif",
-                [".heics"] = "image/heic-sequence",
-                [".heifs"] = "image/heif-sequence",
-                [".hif"] = "image/heif",
-                [".hifc"] = "image/heif-sequence",
-                [".avifs"] = "image/avif-sequence",
+                [".heic"] = Override("image/heic"),
+                [".heif"] = Override("image/heif"),
+                [".heics"] = Override("image/heic-sequence"),
+                [".heifs"] = Override("image/heif-sequence"),
+                [".hif"] = Override("image/heif"),
+                [".hifc"] = Override("image/heif-sequence"),
+                [".avifs"] = Override("image/avif-sequence"),
 
-                [".mov"] = "video/quicktime",
-                [".qt"] = "video/quicktime",
-                [".mkv"] = "video/x-matroska",
-                [".avi"] = "video/x-msvideo",
-                [".mka"] = "audio/x-matroska",
+                [".mov"] = Override("video/quicktime"),
+                [".qt"] = Override("video/quicktime"),
+                [".mkv"] = Override("video/x-matroska"),
+                [".avi"] = Override("video/x-msvideo"),
+                [".mka"] = Override("audio/x-matroska"),
 
-                [".opus"] = "audio/opus",
-                [".flac"] = "audio/flac",
-                [".oga"] = "audio/ogg",
-                [".weba"] = "audio/webm",
-                [".aac"] = "audio/aac",
-                [".m4b"] = "audio/mp4",
-                [".m4p"] = "audio/mp4",
-                [".m4r"] = "audio/mp4",
+                [".opus"] = Override("audio/opus"),
+                [".flac"] = Override("audio/flac"),
+                [".oga"] = Override("audio/ogg"),
+                [".weba"] = Override("audio/webm"),
+                [".aac"] = Override("audio/aac"),
+                [".m4b"] = Override("audio/mp4"),
+                [".m4p"] = Override("audio/mp4"),
+                [".m4r"] = Override("audio/mp4"),
 
-                [".md"] = "text/markdown",
-                [".markdown"] = "text/markdown",
-                [".cs"] = "text/plain",
-                [".csx"] = "text/plain",
-                [".lrc"] = "text/plain",
-                [".srt"] = "text/plain",
+                [".md"] = Override("text/markdown"),
+                [".markdown"] = Override("text/markdown"),
+                [".cs"] = Override("text/plain"),
+                [".csx"] = Override("text/plain"),
+                [".lrc"] = Override("text/plain"),
+                [".srt"] = Override("text/plain"),
 
-                [".svg"] = "image/svg+xml",
-                [".svgz"] = "image/svg+xml",
+                [".svg"] = Override("image/svg+xml"),
+                [".svgz"] = Override("image/svg+xml"),
 
-                [".stl"] = "model/stl",
-                [".obj"] = "model/obj",
-                [".3mf"] = "model/3mf",
+                [".stl"] = Override("model/stl", forceContentType: true),
+                [".obj"] = Override("model/obj", forceContentType: true),
+                [".3mf"] = Override("model/3mf", forceContentType: true),
+
+                [".apk"] = Override(AndroidPackageContentTypes.Apk, forceContentType: true),
+                [".aab"] = Override(AndroidPackageContentTypes.AndroidAppBundle, forceContentType: true),
+                [".apks"] = Override(AndroidPackageContentTypes.Apks, forceContentType: true),
+                [".xapk"] = Override(AndroidPackageContentTypes.Xapk, forceContentType: true),
+                [".apkm"] = Override(AndroidPackageContentTypes.Apkm, forceContentType: true),
             };
 
         private static readonly IReadOnlySet<string> sourceTextExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -144,6 +150,9 @@ namespace Cotton.Server.Services
         /// <summary>Regex pattern matching filenames that Cotton treats as source-code text previews.</summary>
         public static string SourceTextFileNameRegexPattern { get; } = BuildSourceTextFileNameRegexPattern();
 
+        /// <summary>Regex pattern matching legacy octet-stream filenames that Cotton can normalize for previews.</summary>
+        public static string PreviewableFileNameRegexPattern { get; } = BuildPreviewableFileNameRegexPattern();
+
         /// <summary>
         /// Resolves content type.
         /// </summary>
@@ -159,18 +168,23 @@ namespace Cotton.Server.Services
 
         private static string? ResolveOverriddenContentType(string? fileName, string normalizedContentType)
         {
-            string extension = Path.GetExtension(fileName ?? string.Empty);
+            string extension = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
             if (!string.IsNullOrWhiteSpace(extension)
-                && extensionContentTypeOverrides.TryGetValue(extension, out string? overriddenContentType)
-                && (ShouldForceExtensionContentType(extension)
+                && extensionContentTypeOverrides.TryGetValue(extension, out var overrideMetadata)
+                && (overrideMetadata.ForceContentType
                     || string.IsNullOrWhiteSpace(normalizedContentType)
                     || string.Equals(normalizedContentType, DefaultContentType, StringComparison.OrdinalIgnoreCase)))
             {
-                return overriddenContentType;
+                return overrideMetadata.ContentType;
             }
 
             return null;
         }
+
+        private static (string ContentType, bool ForceContentType) Override(
+            string contentType,
+            bool forceContentType = false) =>
+            (contentType, forceContentType);
 
         private static string? ResolveProvidedContentType(string? fileName, string normalizedContentType)
         {
@@ -260,9 +274,16 @@ namespace Cotton.Server.Services
             return $"^(?:dockerfile(?:\\..*)?|\\.dockerignore|.+\\.(?:{string.Join("|", extensions)}))$";
         }
 
-        private static bool ShouldForceExtensionContentType(string extension)
+        private static string BuildPreviewableFileNameRegexPattern()
         {
-            return extension is ".stl" or ".obj" or ".3mf";
+            var extensions = sourceTextExtensions
+                .Concat(extensionContentTypeOverrides.Keys)
+                .Select(extension => Regex.Escape(extension.TrimStart('.')))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(extension => extension.Length)
+                .ThenBy(extension => extension, StringComparer.Ordinal);
+
+            return $"^(?:dockerfile(?:\\..*)?|\\.dockerignore|.+\\.(?:{string.Join("|", extensions)}))$";
         }
 
         private static string NormalizeContentType(string? contentType)
@@ -280,11 +301,25 @@ namespace Cotton.Server.Services
                 "video/vnd.avi" => "video/x-msvideo",
                 "video/avi" => "video/x-msvideo",
                 "video/msvideo" => "video/x-msvideo",
+                "video/matroska" => "video/x-matroska",
                 "image/x-heic" => "image/heic",
                 "image/x-heif" => "image/heif",
                 "audio/x-flac" => "audio/flac",
                 "audio/x-wav" => "audio/wav",
+                "audio/matroska" => "audio/x-matroska",
                 "application/vnd.ms-pki.stl" => "model/stl",
+                "application/apk" => AndroidPackageContentTypes.Apk,
+                "application/x-apk" => AndroidPackageContentTypes.Apk,
+                "application/vnd.android.package" => AndroidPackageContentTypes.Apk,
+                AndroidPackageContentTypes.ApkLegacy => AndroidPackageContentTypes.Apk,
+                AndroidPackageContentTypes.AndroidAppBundleLegacy => AndroidPackageContentTypes.AndroidAppBundle,
+                AndroidPackageContentTypes.ApksLegacy => AndroidPackageContentTypes.Apks,
+                "application/x-apks" => AndroidPackageContentTypes.Apks,
+                AndroidPackageContentTypes.XapkLegacy => AndroidPackageContentTypes.Xapk,
+                "application/x-xapk" => AndroidPackageContentTypes.Xapk,
+                AndroidPackageContentTypes.ApkmLegacy => AndroidPackageContentTypes.Apkm,
+                "application/vnd.apkm" => AndroidPackageContentTypes.Apkm,
+                "application/apkm" => AndroidPackageContentTypes.Apkm,
                 _ => normalized,
             };
         }

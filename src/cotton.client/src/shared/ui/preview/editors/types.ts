@@ -1,10 +1,5 @@
 /**
- * Editor Types and Interfaces
- * 
- * Following SOLID principles:
- * - Single Responsibility: Each type represents one concept
- * - Open/Closed: Easy to extend with new editor modes
- * - Interface Segregation: Minimal, focused interfaces
+ * Editor types and interfaces for text content preview.
  */
 
 /**

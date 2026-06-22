@@ -68,7 +68,7 @@ namespace Cotton.Server.Services
         }
 
         /// <summary>
-        /// Indicates whether h data async.
+        /// Computes the SHA-256 hash of the stream asynchronously.
         /// </summary>
         public static async Task<byte[]> HashDataAsync(Stream stream)
         {
@@ -80,7 +80,7 @@ namespace Cotton.Server.Services
         /// </summary>
         public static string ToHexStringHash(byte[] hash)
         {
-            return Convert.ToHexString(hash).ToLowerInvariant();
+            return Convert.ToHexStringLower(hash);
         }
 
         /// <summary>
@@ -103,10 +103,6 @@ namespace Cotton.Server.Services
             if (!HexStringRegex().IsMatch(hexString))
             {
                 throw new ArgumentException("Hex string contains invalid characters.", nameof(hexString));
-            }
-            if (hexString.Length > 128)
-            {
-                throw new ArgumentException("Hex string is too long.", nameof(hexString));
             }
             return Convert.FromHexString(hexString);
         }

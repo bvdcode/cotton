@@ -13,28 +13,28 @@ namespace Cotton.Server.Models
     public class CottonResult : IActionResult
     {
         /// <summary>
-        /// Gets or sets the success.
+        /// Gets or sets a value indicating whether the operation succeeded.
         /// </summary>
         public bool Success { get; set; }
         /// <summary>
-        /// Gets or sets the response message.
+        /// Gets or sets the human-readable response message.
         /// </summary>
         public string Message { get; set; } = string.Empty;
         /// <summary>
-        /// Gets or sets the data.
+        /// Gets or sets the payload returned to the client.
         /// </summary>
         public object? Data { get; set; }
         /// <summary>
-        /// Gets or sets the message code.
+        /// Gets or sets the machine-readable message code.
         /// </summary>
         public string? MessageCode { get; set; }
         /// <summary>
-        /// Gets or sets the status code.
+        /// Gets or sets the HTTP status code of the response.
         /// </summary>
         public HttpStatusCode StatusCode { get; set; }
 
         /// <summary>
-        /// Executes with message code.
+        /// Sets the message code and returns this instance.
         /// </summary>
         public CottonResult WithMessageCode(string messageCode)
         {

@@ -1,8 +1,7 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
@@ -14,11 +13,7 @@ namespace Cotton.Previews
     public class ImagePreviewGenerator : IPreviewGenerator
     {
         /// <inheritdoc />
-        public int Version => 2;
-        /// <summary>WebP quality used for small image previews.</summary>
-        public const int SmallPreviewQuality = 75;
-        /// <summary>WebP quality used for large image previews.</summary>
-        public const int LargePreviewQuality = 82;
+        public int Version => 3;
 
         /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes =>
@@ -32,11 +27,19 @@ namespace Cotton.Previews
                 stream.Position = 0;
             }
 
-            int mid = (PreviewGeneratorProvider.DefaultSmallPreviewSize + PreviewGeneratorProvider.DefaultLargePreviewSize) / 2;
-            int quality = size > mid ? LargePreviewQuality : SmallPreviewQuality;
-
             using Image<Rgba32> image = Image.Load<Rgba32>(stream);
             image.Mutate(x => x.AutoOrient());
+            return await EncodeMaxResizedWebpAsync(image, size);
+        }
+
+        /// <summary>
+        /// Downscales the image to fit <paramref name="size"/> on its longest edge (only when
+        /// larger) and encodes it to WebP through the shared <see cref="PreviewImageEncoder"/>.
+        /// In-memory producers (e.g. PDF page rendering) call this directly with their already
+        /// decoded image so it is encoded exactly once, without a format round-trip.
+        /// </summary>
+        public static async Task<byte[]> EncodeMaxResizedWebpAsync(Image image, int size)
+        {
             if (image.Width > size || image.Height > size)
             {
                 image.Mutate(x => x.Resize(new ResizeOptions
@@ -45,9 +48,9 @@ namespace Cotton.Previews
                     Mode = ResizeMode.Max
                 }));
             }
-            using var outputStream = new MemoryStream();
 
-            await image.SaveAsWebpAsync(outputStream, new WebpEncoder { Quality = quality });
+            using var outputStream = new MemoryStream();
+            await image.SaveAsWebpAsync(outputStream, PreviewImageEncoder.Create(size));
             return outputStream.ToArray();
         }
     }

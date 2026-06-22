@@ -17,7 +17,7 @@ namespace Cotton.Database.Models
         [Column("file_manifest_id")]
         public Guid FileManifestId { get; set; }
 
-        /// <summary>Represents the ChunkOrder value for this model.</summary>
+        /// <summary>Zero-based position of this chunk within the manifest's ordered chunk sequence.</summary>
         [Column("chunk_order")]
         public int ChunkOrder { get; set; } // 0..N-1
 

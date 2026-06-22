@@ -10,6 +10,7 @@ using Cotton.Server.Mappings;
 using Cotton.Server.Models.Configuration;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using Cotton.Server.Services.Startup;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
@@ -191,6 +192,7 @@ namespace Cotton.Server
                 .AddControllers().Services
                 .AddStreamCipher()
                 .AddDatabaseIntegrity()
+                .AddStartupValidation()
                 .AddChunkServices()
                 .AddLayoutPathServices()
                 .AddLayoutSearchServices()
@@ -201,12 +203,21 @@ namespace Cotton.Server
             builder.Services.AddHostedService<AppVersionTrackerService>();
 
             var app = builder.Build();
+            StartupBlocker? startupBlocker = await ValidateStartupAsync(app);
+            if (startupBlocker is not null)
+            {
+                await app.DisposeAsync();
+                await StartupBlockedServer.RunAsync(args, startupBlocker);
+                return;
+            }
+
             app.UseAuthHardening();
             app.UseDefaultFiles();
             app.MapStaticAssets();
             app.UseAuthentication()
                 .UseAuthorization()
                 .UseExceptionHandler();
+            app.MapStartupStatusEndpoint(null);
             app.MapControllers();
             app.MapFallbackToFile("/index.html");
             app.ApplyMigrations<CottonDbContext>();
@@ -218,6 +229,13 @@ namespace Cotton.Server
             }
             app.MapHub<EventHub>(Routes.V1.EventHub);
             await app.RunAsync();
+        }
+
+        private static async Task<StartupBlocker?> ValidateStartupAsync(WebApplication app)
+        {
+            using IServiceScope scope = app.Services.CreateScope();
+            var validator = scope.ServiceProvider.GetRequiredService<IStartupPreflightValidator>();
+            return await validator.ValidateAsync(CancellationToken.None);
         }
     }
 }

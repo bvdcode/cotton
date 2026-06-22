@@ -12,7 +12,6 @@ export function detectMonacoLanguageFromFileName(fileName: string): string {
   }
 
   const languageMap: Record<string, string> = {
-    // Rich IntelliSense languages
     ts: "typescript",
     tsx: "typescript",
     js: "javascript",
@@ -28,7 +27,6 @@ export function detectMonacoLanguageFromFileName(fileName: string): string {
     scss: "scss",
     sass: "scss",
 
-    // Basic syntax colorization languages
     xml: "xml",
     svg: "xml",
     php: "php",
@@ -73,7 +71,6 @@ export function detectMonacoLanguageFromFileName(fileName: string): string {
     m: "objective-c",
     mm: "objective-c",
 
-    // Additional common languages (may have varying Monaco support)
     go: "go",
     rs: "rust",
     swift: "swift",

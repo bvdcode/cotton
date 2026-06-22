@@ -43,16 +43,13 @@ const knownThreatVectorCodes = new Set([
   "running-as-root",
   "process-hardening-failed",
   "db-integrity-unsigned-rows",
-  "db-integrity-bridge-mode",
+  "temp-directory-not-writable",
   "root-filesystem-writable",
   "docker-socket-mounted",
   "host-pid-namespace",
   "mandatory-access-control-unconfined",
   "core-dumps-enabled",
 ]);
-
-// Warnings whose remediation is not an operator action (managed by Cotton itself).
-const noUserFixCodes = new Set(["db-integrity-bridge-mode"]);
 
 interface SecurityLevel {
   title: string;
@@ -472,23 +469,12 @@ const SecurityRiskCard = ({ warning, t }: SecurityRiskCardProps) => {
               bgcolor: "action.hover",
             }}
           >
-            {noUserFixCodes.has(warning.code) ? (
-              <InfoOutlinedIcon
-                fontSize="small"
-                sx={{ color: "text.secondary", mt: 0.25, flexShrink: 0 }}
-              />
-            ) : (
-              <BuildOutlinedIcon
-                fontSize="small"
-                sx={{ color: "text.secondary", mt: 0.25, flexShrink: 0 }}
-              />
-            )}
+            <BuildOutlinedIcon
+              fontSize="small"
+              sx={{ color: "text.secondary", mt: 0.25, flexShrink: 0 }}
+            />
             <RiskLabeledBlock
-              label={t(
-                noUserFixCodes.has(warning.code)
-                  ? "securityDiagnostics.labels.note"
-                  : "securityDiagnostics.labels.howToFix",
-              )}
+              label={t("securityDiagnostics.labels.howToFix")}
               text={fix}
             />
           </Box>
@@ -512,6 +498,7 @@ const getPassedCheckCodes = (d: SecurityDiagnosticsDto): string[] => {
       d.adminTotp.adminCount > 0 && d.adminTotp.adminsWithoutTotp === 0,
     ],
     ["dotnet-diagnostics-enabled", d.dotNetDiagnostics.disabled === true],
+    ["temp-directory-not-writable", d.tempDirectoryWritable === true],
     ["process-hardening-failed", lp.hardeningApplied === true],
     ["process-dumpable", lp.dumpable === 0],
     ["sys-ptrace-capability", lp.hasSysPtraceCapability === false],
@@ -875,6 +862,22 @@ const RuntimeDiagnosticsSection = ({
       label={t("securityDiagnostics.fields.container")}
       value={yesNo(diagnostics.isContainer, t)}
     />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.tempDirectoryPath")}
+      value={formatNullable(diagnostics.tempDirectoryPath, t)}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.fields.tempDirectoryWritable")}
+      value={yesNo(diagnostics.tempDirectoryWritable, t)}
+      color={diagnostics.tempDirectoryWritable ? "success" : "error"}
+    />
+    {diagnostics.tempDirectoryError && (
+      <DiagnosticsRow
+        label={t("securityDiagnostics.fields.tempDirectoryError")}
+        value={diagnostics.tempDirectoryError}
+        color="error"
+      />
+    )}
     <DiagnosticsRow
       label={t("securityDiagnostics.fields.euid")}
       value={formatNullable(diagnostics.linuxProcess.effectiveUserId, t)}

@@ -272,13 +272,15 @@ flowchart TD
     K --> L[DI graph: Mediator, Quartz, MemoryCache, SignalR, services, EF DbContext, controllers, AddStreamCipher/AddDatabaseIntegrity/AddChunkServices/AddLayout*/AddWebDav*/AddJwt]
     L --> M[AddAuthHardening + AddHostedService AppVersionTrackerService]
     M --> N[builder.Build]
-    N --> O[Pipeline: UseForwardedHeaders, UseAuthHardening, UseDefaultFiles, MapStaticAssets, UseAuthentication/Authorization/ExceptionHandler, MapControllers, MapFallbackToFile]
-    O --> P[ApplyMigrations CottonDbContext]
-    P --> Q[ApplyDatabaseIntegrityBridgeBackfillAsync]
-    Q --> R[scope: DatabaseAutoRestore.TryRestoreIfEmptyAsync GetAwaiter GetResult]
-    R --> S[same scope: SettingsProvider.GetServerSettings prime cache]
-    S --> T[MapHub EventHub]
-    T --> U[app.RunAsync]
+    N --> O[Validate startup transition rules]
+    O --> P{blocked?}
+    P -- yes --> Q[StartupBlockedServer: SPA + startup/status]
+    P -- no --> R[Pipeline: UseForwardedHeaders, UseAuthHardening, UseDefaultFiles, MapStaticAssets, UseAuthentication/Authorization/ExceptionHandler, MapStartupStatusEndpoint, MapControllers, MapFallbackToFile]
+    R --> S[ApplyMigrations CottonDbContext]
+    S --> T[scope: DatabaseAutoRestore.TryRestoreIfEmptyAsync GetAwaiter GetResult]
+    T --> U[same scope: SettingsProvider.GetServerSettings prime cache]
+    U --> V[MapHub EventHub]
+    V --> W[app.RunAsync]
 ```
 
 ### Step-by-step
@@ -295,9 +297,9 @@ flowchart TD
    - Options binding: `HlsSegmentCacheOptions` ← `HlsSegmentCache` section; `StoragePressureOptions` ← `StoragePressure` section.
    - The large fluent block registers Mediator (`AddMediator`), Quartz jobs (`AddQuartzJobs`), `AddMemoryCache`, SignalR, the HTTP context accessor, and the full service graph (settings, security diagnostics, storage probe, passkey/OIDC/auth, backup/restore, archive/zip, storage-pressure guard, default-user seeder, the storage pipeline processors `CryptoProcessor` + `CompressionProcessor` and `FileStoragePipeline`, the EF `CottonDbContext` via `AddPostgresDbContext` with `UseLazyLoadingProxies = false`, layout services, the PBKDF2 password hash service via `AddPbkdf2PasswordHashService`, controllers). It then chains the project extension methods `AddStreamCipher`, `AddDatabaseIntegrity`, `AddChunkServices`, `AddLayoutPathServices`, `AddLayoutSearchServices`, `AddWebDavServices`, and `AddWebDavAuth` (all defined in `src/Cotton.Server/Extensions/ServiceCollectionExtensions.cs`), and finally `AddJwt` (from the external EasyExtensions packages; `AddPbkdf2PasswordHashService` is likewise external).
    - `builder.Services.AddAuthHardening()` registers the rate limiter and the session-revocation JWT validation hook; `AddHostedService<AppVersionTrackerService>()` registers the background version tracker.
-5. **Middleware pipeline** (order is significant): `UseForwardedHeaders` → `UseAuthHardening` → `UseDefaultFiles` → `MapStaticAssets` → `UseAuthentication` → `UseAuthorization` → `UseExceptionHandler` → `MapControllers` → `MapFallbackToFile("/index.html")` (SPA fallback).
-6. **`ApplyMigrations<CottonDbContext>()`** — migrate-on-startup; EF migrations are applied automatically every boot.
-7. **`ApplyDatabaseIntegrityBridgeBackfillAsync()`** (`src/Cotton.Server/Extensions/DatabaseIntegrityApplicationExtensions.cs`) — in a fresh scope, resolves `IDatabaseIntegrityBridgeBackfillService` and calls `BackfillUnsignedPhaseOneRowsAsync` to sign unsigned phase-one rows. See the *Database Integrity* section.
+5. **Startup preflight validation** — `IStartupPreflightValidator` runs ordered `IStartupCheck` implementations before normal traffic, migrations, restore, and jobs. The temp-directory check first verifies that `Path.GetTempPath()` can create/write/delete a probe file; if it cannot, Cotton blocks startup and instructs the operator to mount writable scratch storage at `/tmp` (`tmpfs` or a fast-disk bind mount). The version-transition check then validates code-defined rules against `app_versions`. If any check returns a blocker, the normal host is disposed and `StartupBlockedServer` serves the SPA plus `GET /api/v1/startup/status`; other API calls return HTTP 503.
+6. **Middleware pipeline** (order is significant): `UseForwardedHeaders` → `UseAuthHardening` → `UseDefaultFiles` → `MapStaticAssets` → `UseAuthentication` → `UseAuthorization` → `UseExceptionHandler` → `MapStartupStatusEndpoint` → `MapControllers` → `MapFallbackToFile("/index.html")` (SPA fallback).
+7. **`ApplyMigrations<CottonDbContext>()`** — migrate-on-startup; EF migrations are applied automatically every boot.
 8. **Restore-if-empty** — in a fresh `IServiceScope`, `IDatabaseAutoRestoreService.TryRestoreIfEmptyAsync()` is awaited synchronously (`GetAwaiter().GetResult()`).
 9. **Prime the settings cache** — still in that scope, `SettingsProvider.GetServerSettings()` is called once to warm the static cache (and, when settings exist, to verify their integrity).
 10. **`MapHub<EventHub>(Routes.V1.EventHub)`** (`/api/v1/hub/events`) then **`app.RunAsync()`**.
@@ -313,6 +315,7 @@ flowchart TD
 | Service | File | Role |
 | --- | --- | --- |
 | `ApplicationStartupClock` | `Services/ApplicationStartupClock.cs` | Singleton capturing `StartedAtUtc`; exposes `Uptime`. `AuthController` uses `_startupClock.Uptime.TotalMinutes > Constants.AdminAutocreateMinutesDelay` (5 min) to decide whether the initial-admin bootstrap window is still open. |
+| `IStartupPreflightValidator` / `IStartupCheck` | `Services/Startup/*.cs` | Ordered preflight checks that may return `StartupBlocker` before the normal app starts. Current checks validate OS temp writability first, then version-transition requirements. |
 | `AppVersionTrackerService` | `Services/AppVersionTrackerService.cs` | Hosted `BackgroundService`. After a 45 s startup delay it records the running version (`APP_VERSION`) into `app_versions`, then (unless in a `Testing`/`IntegrationTests` environment or `AppVersionTracker:ReleaseCheckEnabled=false`) GETs GitHub `repos/bvdcode/cotton/releases/latest` and notifies admins of newer non-draft, non-prerelease releases. Logs a warning on a detected downgrade (`SemanticVersionComparer.IsDowngrade`). |
 | `StoragePipelineProbeService` | `Services/StoragePipelineProbeService.cs` | Scoped service that pushes a 64 MiB (`PayloadSizeBytes`) synthetic random blob through the *real* storage pipeline (one warmup + one measured iteration), verifying the read-back SHA-256 with `FixedTimeEquals`, then deletes the probe blob. Serialized by a static `ProbeLock`. Invoked by `CollectPerformanceJob`, not at boot. |
 | `DefaultUserContentSeeder` | `Services/DefaultUserContentSeeder.cs` | Scoped service; entry point `SeedAsync(userId, ct)`. When `DefaultUserTemplateNodeId` is set and the template node exists (`NodeType.Default`), recursively copies the template's folders and files (referencing the same `FileManifestId`, i.e. zero re-upload) into a new user's default layout inside a single transaction (via an EF execution strategy). Called from guest signup (`AuthController`), admin user creation (`AdminCreateUserRequest` handler), and OIDC login (`OidcAuthenticationService`). |
@@ -326,6 +329,7 @@ flowchart TD
 - **JWT key per restart.** A fresh `JwtSettings:Key` per boot means every restart logs everyone out — intentional, but operators should expect it.
 - **Forwarded headers trust.** `KnownProxies`/`KnownIPNetworks` are cleared, so the server unconditionally trusts `X-Forwarded-Proto`/`X-Forwarded-Host`. Cotton must be deployed behind a trusted reverse proxy that strips client-supplied forwarded headers.
 - **Migrate-on-startup.** `ApplyMigrations` runs on every boot; concurrent instances against one database can race on migrations and should not start simultaneously against an unmigrated schema.
+- **Writable OS temp is mandatory.** Startup is blocked when the OS temp directory cannot accept a probe file. With a read-only container root filesystem, mount writable scratch storage at `/tmp`; a `tmpfs` mount and a fast-disk bind mount are both valid.
 - **Synchronous restore.** `TryRestoreIfEmptyAsync().GetAwaiter().GetResult()` blocks startup; a hang or failure here blocks the whole server from accepting traffic. Restore is also strictly opt-in via `COTTON_RESTORE_DATABASE_IF_EMPTY`.
 - **First-table-missing tolerance.** Many provider/probe queries swallow `UndefinedTable`/`InvalidCatalogName` so the pre-migration boot does not crash; this is correct but means errors during early boot can look like "uninitialized" rather than "broken".
 - **Process hardening is best-effort.** A failed `prctl` is reported via `ProcessHardeningStatus.Error` and surfaced in `GET /api/v1/server/security/status`, but does not stop startup.
@@ -343,4 +347,4 @@ flowchart TD
 
 ## Related sections
 
-See the *Cryptography Engine* section (key derivation, `AesGcmStreamCipher`, `[Encrypted]` columns), the *Database Integrity* section (`RequireValid`, bridge backfill, integrity descriptors), the *Storage Pipeline & Backends* section (`IStoragePipeline`, `CryptoProcessor`/`CompressionProcessor`, S3 vs local backends), the *Background Jobs (Quartz)* section (job triggers including `CollectPerformanceJob`, `GarbageCollectorJob`, and the database dump job), the *Authentication & Sessions* section (JWT, rate limiting, session revocation, initial-admin bootstrap), and the *Telemetry & Cotton Bridge* section (telemetry-gated Cloud modes).
+See the *Cryptography Engine* section (key derivation, `AesGcmStreamCipher`, `[Encrypted]` columns), the *Database Integrity* section (`RequireValid`, strict signatures, integrity descriptors, startup transition guard), the *Storage Pipeline & Backends* section (`IStoragePipeline`, `CryptoProcessor`/`CompressionProcessor`, S3 vs local backends), the *Background Jobs (Quartz)* section (job triggers including `CollectPerformanceJob`, `GarbageCollectorJob`, and the database dump job), the *Authentication & Sessions* section (JWT, rate limiting, session revocation, initial-admin bootstrap), and the *Telemetry & Cotton Bridge* section (telemetry-gated Cloud modes).

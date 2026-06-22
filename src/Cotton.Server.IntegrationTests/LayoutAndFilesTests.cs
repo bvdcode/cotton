@@ -162,7 +162,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task Shared_Children_Allows_Tampered_Ancestor_Path_DuringIntegrityBridge()
+    public async Task Shared_Children_Rejects_Tampered_Ancestor_Path_WithStrictIntegrity()
     {
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -187,7 +187,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
         var response = await _client.GetAsync(
             $"/api/v1/layouts/shared/{shareToken}/children?nodeId={outsideChild.Id}");
 
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
