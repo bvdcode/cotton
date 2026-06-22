@@ -271,6 +271,48 @@ describe("updateFileInCache", () => {
   });
 });
 
+describe("upsertFileInCache", () => {
+  it("appends uploaded files to cached parent content", () => {
+    seedParent("parent-1", [], [makeFile("f1", "old.txt")]);
+    const uploaded = makeFile("f2", "new.txt");
+
+    const updated = useNodesStore.getState().upsertFileInCache("parent-1", uploaded);
+
+    expect(updated).toBe(true);
+    expect(
+      useNodesStore.getState().contentByNodeId["parent-1"]?.files.map((f) => f.id),
+    ).toEqual(["f1", "f2"]);
+    expect(useNodesStore.getState().lastUpdatedByNodeId["parent-1"]).toEqual(
+      expect.any(Number),
+    );
+  });
+
+  it("replaces existing uploaded files in cached parent content", () => {
+    seedParent("parent-1", [], [makeFile("f1", "old.txt")]);
+    const uploaded = makeFile("f1", "fresh.txt", {
+      contentType: "image/jpeg",
+    });
+
+    const updated = useNodesStore.getState().upsertFileInCache("parent-1", uploaded);
+
+    expect(updated).toBe(true);
+    expect(
+      useNodesStore.getState().contentByNodeId["parent-1"]?.files,
+    ).toEqual([uploaded]);
+  });
+
+  it("keeps cache unchanged when the parent content is not cached", () => {
+    const before = useNodesStore.getState().contentByNodeId;
+
+    const updated = useNodesStore
+      .getState()
+      .upsertFileInCache("nowhere", makeFile("f1", "new.txt"));
+
+    expect(updated).toBe(false);
+    expect(useNodesStore.getState().contentByNodeId).toBe(before);
+  });
+});
+
 describe("optimisticSetFilePreviewHash", () => {
   it("updates only the matching file", () => {
     seedParent("parent-1", [], [

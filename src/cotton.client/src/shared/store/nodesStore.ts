@@ -35,6 +35,10 @@ type NodesState = {
     parentNodeId: string,
     file: NodeContentDto["files"][number],
   ) => void;
+  upsertFileInCache: (
+    parentNodeId: string,
+    file: NodeContentDto["files"][number],
+  ) => boolean;
   optimisticRenameFile: (parentNodeId: string, fileId: string, newName: string) => void;
   optimisticSetFilePreviewHash: (
     parentNodeId: string,
@@ -361,6 +365,35 @@ export const useNodesStore = create<NodesState>()(
             },
           };
         });
+      },
+
+      upsertFileInCache: (parentNodeId, file) => {
+        let updated = false;
+        set((prev) => {
+          const existing = prev.contentByNodeId[parentNodeId];
+          if (!existing) return {};
+
+          updated = true;
+          const hasFile = existing.files.some((item) => item.id === file.id);
+          const files = hasFile
+            ? existing.files.map((item) => item.id === file.id ? file : item)
+            : [...existing.files, file];
+
+          return {
+            contentByNodeId: {
+              ...prev.contentByNodeId,
+              [parentNodeId]: {
+                ...existing,
+                files,
+              },
+            },
+            lastUpdatedByNodeId: {
+              ...prev.lastUpdatedByNodeId,
+              [parentNodeId]: Date.now(),
+            },
+          };
+        });
+        return updated;
       },
 
       optimisticRenameFile: (parentNodeId, fileId, newName) => {

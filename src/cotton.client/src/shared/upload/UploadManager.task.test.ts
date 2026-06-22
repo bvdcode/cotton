@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getCachedServerSettings: vi.fn(() => ({
@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
     quotaBytes: null,
     availableBytes: null,
   })),
+  refreshNodeContent: vi.fn(() => Promise.resolve()),
   uploadFileToNode: vi.fn(),
 }));
 
@@ -23,13 +24,69 @@ vi.mock("../api/storageQuotaApi", () => ({
   },
 }));
 
+vi.mock("../store/nodesActions", () => ({
+  refreshNodeContent: mocks.refreshNodeContent,
+}));
+
 vi.mock("./uploadFileToNode", () => ({
   uploadFileToNode: mocks.uploadFileToNode,
 }));
 
+import type { NodeContentDto, NodeFileManifestDto } from "../api/nodesApi";
+import { queryClient } from "../api/queries/queryClient";
+import { queryKeys } from "../api/queries/queryKeys";
+import { useNodesStore } from "../store/nodesStore";
 import { UploadManager } from "./UploadManager";
 
 let manager: UploadManager | null = null;
+
+const resetNodesStore = () => {
+  useNodesStore.setState({
+    cacheOwnerUserId: null,
+    rootNodeId: null,
+    currentNode: null,
+    ancestors: [],
+    contentByNodeId: {},
+    ancestorsByNodeId: {},
+    loading: false,
+    error: null,
+    lastUpdatedByNodeId: {},
+  });
+};
+
+const makeFileDto = (
+  id: string,
+  name: string,
+  overrides: Partial<NodeFileManifestDto> = {},
+): NodeFileManifestDto => ({
+  id,
+  createdAt: "",
+  updatedAt: "",
+  nodeId: "node-1",
+  ownerId: "user-1",
+  name,
+  contentType: "text/plain",
+  sizeBytes: 0,
+  metadata: {},
+  ...overrides,
+});
+
+const seedParent = (nodeId: string, files: NodeFileManifestDto[]) => {
+  const content: NodeContentDto = {
+    id: nodeId,
+    createdAt: "",
+    updatedAt: "",
+    nodes: [],
+    files,
+  };
+  useNodesStore.setState((prev) => ({
+    ...prev,
+    contentByNodeId: {
+      ...prev.contentByNodeId,
+      [nodeId]: content,
+    },
+  }));
+};
 
 const createManager = () => {
   manager = new UploadManager();
@@ -37,18 +94,30 @@ const createManager = () => {
 };
 
 describe("UploadManager task facade", () => {
+  beforeEach(() => {
+    queryClient.clear();
+    resetNodesStore();
+    sessionStorage.clear();
+  });
+
   afterEach(() => {
     manager?.destroy();
     manager = null;
+    queryClient.clear();
+    resetNodesStore();
+    sessionStorage.clear();
+    mocks.getCachedServerSettings.mockReset();
     mocks.getCachedServerSettings.mockReturnValue({
       maxChunkSizeBytes: 1024,
       supportedHashAlgorithm: "sha256",
     });
+    mocks.getCurrentQuota.mockReset();
     mocks.getCurrentQuota.mockResolvedValue({
       usedBytes: 0,
       quotaBytes: null,
       availableBytes: null,
     });
+    mocks.refreshNodeContent.mockReset();
     mocks.uploadFileToNode.mockReset();
   });
 
@@ -192,6 +261,115 @@ describe("UploadManager task facade", () => {
     await waitFor(() => onFileUploaded.mock.calls.length > 0);
 
     expect(onFileUploaded).toHaveBeenCalledWith(uploadedFile);
+  });
+
+  it("uses a fresh cached quota snapshot without fetching before upload", async () => {
+    const taskManager = createManager();
+    queryClient.setQueryData(queryKeys.storageQuota.current(), {
+      usedBytes: 0,
+      quotaBytes: 100,
+      availableBytes: 100,
+    });
+    mocks.uploadFileToNode.mockResolvedValue(undefined);
+
+    taskManager.enqueue(
+      [new File(["12345"], "paper.txt")],
+      "node-1",
+      "Library",
+    );
+
+    await waitFor(() => mocks.uploadFileToNode.mock.calls.length > 0);
+
+    expect(mocks.getCurrentQuota).not.toHaveBeenCalled();
+  });
+
+  it("updates the cached quota snapshot after committed uploads", async () => {
+    const taskManager = createManager();
+    queryClient.setQueryData(queryKeys.storageQuota.current(), {
+      usedBytes: 10,
+      quotaBytes: 100,
+      availableBytes: 90,
+    });
+    mocks.uploadFileToNode.mockResolvedValue(undefined);
+
+    taskManager.enqueue(
+      [new File(["12345"], "paper.txt")],
+      "node-1",
+      "Library",
+    );
+
+    await waitFor(() => taskManager.getSnapshot().tasks[0]?.status === "completed");
+
+    expect(queryClient.getQueryData(queryKeys.storageQuota.current())).toEqual({
+      usedBytes: 15,
+      quotaBytes: 100,
+      availableBytes: 85,
+    });
+  });
+
+  it("does not refetch quota while draining one upload batch", async () => {
+    const dateNow = vi.spyOn(Date, "now");
+    let now = 1_000_000;
+    dateNow.mockImplementation(() => now);
+    const taskManager = createManager();
+    let finishFirstUpload!: () => void;
+    const firstUploadFinished = new Promise<void>((resolve) => {
+      finishFirstUpload = resolve;
+    });
+    mocks.uploadFileToNode
+      .mockImplementationOnce(async () => {
+        await firstUploadFinished;
+      })
+      .mockResolvedValue(undefined);
+
+    try {
+      taskManager.enqueue(
+        [
+          new File(["a"], "a.txt"),
+          new File(["b"], "b.txt"),
+        ],
+        "node-1",
+        "Library",
+      );
+
+      await waitFor(() => mocks.uploadFileToNode.mock.calls.length === 1);
+      expect(mocks.getCurrentQuota).toHaveBeenCalledTimes(1);
+
+      now += 31 * 60 * 1000;
+      finishFirstUpload();
+
+      await waitFor(() => mocks.uploadFileToNode.mock.calls.length === 2);
+
+      expect(mocks.getCurrentQuota).toHaveBeenCalledTimes(1);
+    } finally {
+      dateNow.mockRestore();
+    }
+  });
+
+  it("updates cached parent content instead of refreshing after upload", async () => {
+    const taskManager = createManager();
+    queryClient.setQueryData(queryKeys.storageQuota.current(), {
+      usedBytes: 0,
+      quotaBytes: null,
+      availableBytes: null,
+    });
+    const uploadedFile = makeFileDto("file-1", "paper.txt");
+    seedParent("node-1", []);
+    mocks.uploadFileToNode.mockResolvedValue(uploadedFile);
+
+    taskManager.enqueue(
+      [new File(["paper"], "paper.txt")],
+      "node-1",
+      "Library",
+    );
+
+    await waitFor(() => taskManager.getSnapshot().tasks[0]?.status === "completed");
+    await new Promise((resolve) => setTimeout(resolve, 350));
+
+    expect(useNodesStore.getState().contentByNodeId["node-1"]?.files).toEqual([
+      uploadedFile,
+    ]);
+    expect(mocks.refreshNodeContent).not.toHaveBeenCalled();
   });
 
   it("keeps committed uploads completed when completion listeners fail", async () => {

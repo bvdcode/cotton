@@ -1,6 +1,9 @@
 import type { Guid } from "../api/layoutsApi";
 import type { NodeFileManifestDto } from "../api/nodesApi";
+import { queryClient } from "../api/queries/queryClient";
+import { queryKeys } from "../api/queries/queryKeys";
 import { refreshNodeContent } from "../store/nodesActions";
+import { useNodesStore } from "../store/nodesStore";
 import { getCachedServerSettings } from "../api/queries/serverSettings";
 import { storageQuotaApi, type UserStorageQuotaDto } from "../api/storageQuotaApi";
 import { ClientEncryptionSizeLimitError, NoKeyError } from "../crypto";
@@ -94,7 +97,7 @@ const normalizeUploadQueueEntries = (
 const MAX_FINISHED_TASKS = 10000;
 const FINISHED_TASK_TTL_MS = 30 * 60 * 1000;
 const PRUNE_INTERVAL_MS = 5 * 60 * 1000;
-const QUOTA_SNAPSHOT_TTL_MS = 30 * 1000;
+const QUOTA_SNAPSHOT_TTL_MS = 30 * 60 * 1000;
 const FINISHED_TASK_STATUSES = new Set<AppTaskStatus>(["completed", "failed"]);
 
 export class UploadManager {
@@ -123,6 +126,7 @@ export class UploadManager {
   private quotaSnapshot: UserStorageQuotaDto | null = null;
   private quotaSnapshotLoadedAt = 0;
   private quotaRefreshInFlight: Promise<void> | null = null;
+  private quotaRefreshRequiredForCurrentBatch = false;
   private pendingQuotaBytes = 0;
 
   private overallBytesTotal = 0;
@@ -274,13 +278,16 @@ export class UploadManager {
     options?: EnqueueOptions,
   ) {
     const list = normalizeUploadQueueEntries(files);
+    const startsNewBatch = !this.hasActiveTasks();
 
-    if (!this.hasActiveTasks()) {
+    if (startsNewBatch) {
       this.overallBytesTotal = 0;
       this.overallBytesUploaded = 0;
       this.overallBytesTransferredForSpeed = 0;
       this.overallEstimator.reset();
       this.fileConcurrency.reset();
+      this.syncQuotaSnapshotFromQueryCache();
+      this.quotaRefreshRequiredForCurrentBatch = this.isQuotaSnapshotExpired();
     }
 
     for (const file of list) {
@@ -484,7 +491,44 @@ export class UploadManager {
   }
 
   private shouldRefreshQuotaSnapshot(): boolean {
-    return Date.now() - this.quotaSnapshotLoadedAt >= QUOTA_SNAPSHOT_TTL_MS;
+    if (!this.quotaRefreshRequiredForCurrentBatch) {
+      return false;
+    }
+
+    this.syncQuotaSnapshotFromQueryCache();
+    if (!this.isQuotaSnapshotExpired()) {
+      this.quotaRefreshRequiredForCurrentBatch = false;
+      return false;
+    }
+
+    return true;
+  }
+
+  private isQuotaSnapshotExpired(): boolean {
+    return this.quotaSnapshotLoadedAt === 0 ||
+      Date.now() - this.quotaSnapshotLoadedAt >= QUOTA_SNAPSHOT_TTL_MS;
+  }
+
+  private syncQuotaSnapshotFromQueryCache(): void {
+    const queryState = queryClient.getQueryState<UserStorageQuotaDto>(
+      queryKeys.storageQuota.current(),
+    );
+    if (!queryState?.data) {
+      return;
+    }
+
+    if (queryState.dataUpdatedAt <= this.quotaSnapshotLoadedAt) {
+      return;
+    }
+
+    this.quotaSnapshot = queryState.data;
+    this.quotaSnapshotLoadedAt = queryState.dataUpdatedAt;
+  }
+
+  private setQuotaSnapshot(quota: UserStorageQuotaDto): void {
+    this.quotaSnapshot = quota;
+    this.quotaSnapshotLoadedAt = Date.now();
+    queryClient.setQueryData(queryKeys.storageQuota.current(), quota);
   }
 
   private refreshQuotaSnapshot(): void {
@@ -495,14 +539,14 @@ export class UploadManager {
     this.quotaRefreshInFlight = storageQuotaApi
       .getCurrent()
       .then((quota) => {
-        this.quotaSnapshot = quota;
-        this.quotaSnapshotLoadedAt = Date.now();
+        this.setQuotaSnapshot(quota);
       })
       .catch(() => {
         this.quotaSnapshot = null;
         this.quotaSnapshotLoadedAt = Date.now();
       })
       .finally(() => {
+        this.quotaRefreshRequiredForCurrentBatch = false;
         this.quotaRefreshInFlight = null;
         this.pump();
       });
@@ -541,13 +585,13 @@ export class UploadManager {
     task._quotaReservationBytes = undefined;
     this.pendingQuotaBytes = Math.max(0, this.pendingQuotaBytes - reservationBytes);
     if (committed && this.quotaSnapshot) {
-      this.quotaSnapshot = {
+      this.setQuotaSnapshot({
         ...this.quotaSnapshot,
         usedBytes: this.quotaSnapshot.usedBytes + reservationBytes,
         availableBytes: this.quotaSnapshot.availableBytes === null
           ? null
           : Math.max(0, this.quotaSnapshot.availableBytes - reservationBytes),
-      };
+      });
     }
   }
 
@@ -697,7 +741,11 @@ export class UploadManager {
           },
         });
 
+        let uploadedFileCached = false;
         if (uploadedFile) {
+          uploadedFileCached = useNodesStore
+            .getState()
+            .upsertFileInCache(task.nodeId, uploadedFile);
           try {
             task._onFileUploaded?.(uploadedFile);
           } catch (listenerError) {
@@ -725,7 +773,9 @@ export class UploadManager {
         });
         this.emit();
 
-        this.scheduleNodeRefresh(task.nodeId);
+        if (!uploadedFileCached) {
+          this.scheduleNodeRefresh(task.nodeId);
+        }
       } catch (e) {
         this.releaseQuotaReservation(task, false);
         if (encryptionTaskRef.current && !encryptionTaskFinished) {
@@ -797,6 +847,17 @@ export class UploadManager {
     if (this.pruneIntervalId) {
       clearInterval(this.pruneIntervalId);
       this.pruneIntervalId = null;
+    }
+    if (this.refreshTimeout) {
+      clearTimeout(this.refreshTimeout);
+      this.refreshTimeout = null;
+      this.refreshNodeIds.clear();
+    }
+    for (const task of this.tasks) {
+      if (task._laneProbeTimeout) {
+        clearTimeout(task._laneProbeTimeout);
+        task._laneProbeTimeout = undefined;
+      }
     }
     globalHashWorkerPool.destroy();
   }
