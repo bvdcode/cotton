@@ -44,18 +44,27 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.BadRequest("Invalid hash format.");
             }
-            Guid userId = User.GetUserId();
-            ChunkOwnership? chunkOwnership = await _dbContext.ChunkOwnerships
-                .FirstOrDefaultAsync(co =>
-                    co.ChunkHash == hashBytes &&
-                    co.OwnerId == userId);
-            if (chunkOwnership is null)
-            {
-                return Ok(false);
-            }
-
-            bool existsInStorage = await _storage.ExistsAsync(hash);
+            string storageKey = Hasher.ToHexStringHash(hashBytes);
+            bool existsInStorage = _settings.GetServerSettings().AllowCrossUserDeduplication
+                ? await CrossUserVisibleChunkExistsAsync(hashBytes, storageKey)
+                : await OwnedChunkExistsAsync(hashBytes, storageKey, User.GetUserId());
             return Ok(existsInStorage);
+        }
+
+        private async Task<bool> CrossUserVisibleChunkExistsAsync(byte[] hashBytes, string storageKey)
+        {
+            bool chunkExists = await _dbContext.Chunks
+                .AsNoTracking()
+                .AnyAsync(chunk => chunk.Hash == hashBytes);
+            return chunkExists && await _storage.ExistsAsync(storageKey);
+        }
+
+        private async Task<bool> OwnedChunkExistsAsync(byte[] hashBytes, string storageKey, Guid userId)
+        {
+            bool ownershipExists = await _dbContext.ChunkOwnerships
+                .AsNoTracking()
+                .AnyAsync(co => co.ChunkHash == hashBytes && co.OwnerId == userId);
+            return ownershipExists && await _storage.ExistsAsync(storageKey);
         }
 
         /// <summary>

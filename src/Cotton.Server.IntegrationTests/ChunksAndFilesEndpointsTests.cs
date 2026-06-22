@@ -562,6 +562,47 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Chunk_Exists_Honors_CrossUser_Deduplication_Setting()
+    {
+        string adminToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+
+        byte[] content = Encoding.UTF8.GetBytes("cross-user dedup probe");
+        string chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
+        using HttpResponseMessage uploadResponse = await UploadRawChunkAsync(content, chunkHashLower);
+        uploadResponse.EnsureSuccessStatusCode();
+
+        using HttpResponseMessage disableResponse = await _client.PatchAsJsonAsync(
+            "/api/v1/server/settings/allow-cross-user-deduplication",
+            false);
+        disableResponse.EnsureSuccessStatusCode();
+
+        HttpResponseMessage createUserResponse = await _client.PostAsJsonAsync("/api/v1/users", new
+        {
+            username = "dedupreader",
+            password = "deduppass",
+            role = UserRole.User,
+        });
+        createUserResponse.EnsureSuccessStatusCode();
+
+        _client.DefaultRequestHeaders.Authorization = null;
+        string otherToken = await LoginAsync("dedupreader", "deduppass");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", otherToken);
+        bool visibleWhenDisabled = await _client.GetFromJsonAsync<bool>($"/api/v1/chunks/{chunkHashLower}/exists");
+        Assert.That(visibleWhenDisabled, Is.False);
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        using HttpResponseMessage enableResponse = await _client.PatchAsJsonAsync(
+            "/api/v1/server/settings/allow-cross-user-deduplication",
+            true);
+        enableResponse.EnsureSuccessStatusCode();
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", otherToken);
+        bool visibleWhenEnabled = await _client.GetFromJsonAsync<bool>($"/api/v1/chunks/{chunkHashLower}/exists");
+        Assert.That(visibleWhenEnabled, Is.True);
+    }
+
+    [Test]
     public async Task Create_And_Update_File_Reject_When_Default_User_Quota_Is_Exceeded()
     {
         var token = await LoginAsync();
