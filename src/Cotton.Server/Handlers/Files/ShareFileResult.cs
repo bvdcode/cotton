@@ -32,10 +32,12 @@ namespace Cotton.Server.Handlers.Files
         /// Gets or sets the kind.
         /// </summary>
         public string Kind { get; init; } = "";
+
         /// <summary>
         /// Gets or sets the redirect url.
         /// </summary>
         public string? RedirectUrl { get; init; }
+
         /// <summary>
         /// Gets or sets the html content.
         /// </summary>
@@ -45,18 +47,22 @@ namespace Cotton.Server.Handlers.Files
         /// Gets or sets the response content type.
         /// </summary>
         public string? ContentType { get; init; }
+
         /// <summary>
         /// Gets or sets the response content length in bytes.
         /// </summary>
         public long? ContentLength { get; init; }
+
         /// <summary>
         /// Gets or sets the entity tag.
         /// </summary>
         public string? EntityTag { get; init; }
+
         /// <summary>
         /// Gets or sets the file name shown to clients.
         /// </summary>
         public string? FileName { get; init; }
+
         /// <summary>
         /// Gets or sets the inline.
         /// </summary>
@@ -66,22 +72,27 @@ namespace Cotton.Server.Handlers.Files
         /// Gets or sets the file stream.
         /// </summary>
         public Stream? FileStream { get; init; }
+
         /// <summary>
         /// Gets or sets the download name.
         /// </summary>
         public string? DownloadName { get; init; }
+
         /// <summary>
         /// Gets or sets the last modified.
         /// </summary>
         public DateTimeOffset? LastModified { get; init; }
+
         /// <summary>
         /// Gets or sets the entity tag value.
         /// </summary>
         public EntityTagHeaderValue? EntityTagValue { get; init; }
+
         /// <summary>
         /// Deletes after use.
         /// </summary>
         public bool DeleteAfterUse { get; init; }
+
         /// <summary>
         /// Deletes token id.
         /// </summary>
@@ -96,18 +107,22 @@ namespace Cotton.Server.Handlers.Files
         /// Converts the result to bad request.
         /// </summary>
         public static ShareFileResult AsBadRequest(string message) => new() { Kind = "badRequest", ErrorMessage = message };
+
         /// <summary>
         /// Converts the result to not found.
         /// </summary>
         public static ShareFileResult AsNotFound(string message) => new() { Kind = "notFound", ErrorMessage = message };
+
         /// <summary>
         /// Converts the result to redirect.
         /// </summary>
         public static ShareFileResult AsRedirect(string url) => new() { Kind = "redirect", RedirectUrl = url };
+
         /// <summary>
         /// Converts the result to html.
         /// </summary>
         public static ShareFileResult AsHtml(string html) => new() { Kind = "html", HtmlContent = html };
+
         /// <summary>
         /// Converts the result to head.
         /// </summary>

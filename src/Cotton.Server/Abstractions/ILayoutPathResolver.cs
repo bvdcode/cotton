@@ -15,6 +15,7 @@ namespace Cotton.Server.Abstractions
         /// Gets layout and root.
         /// </summary>
         Task<(Layout Layout, Node Root)> GetLayoutAndRootAsync(Guid userId, NodeType nodeType, CancellationToken ct = default);
+
         /// <summary>
         /// Resolves node by path.
         /// </summary>

@@ -69,14 +69,17 @@ namespace Cotton.Server.Controllers
         /// Gets or sets the web dav token length.
         /// </summary>
         public const int WebDavTokenLength = 32;
+
         /// <summary>
         /// Gets or sets the refresh token length.
         /// </summary>
         public const int RefreshTokenLength = 32;
+
         /// <summary>
         /// Defines the cookie access token key.
         /// </summary>
         public const string CookieAccessTokenKey = "access_token";
+
         /// <summary>
         /// Defines the cookie refresh token key.
         /// </summary>

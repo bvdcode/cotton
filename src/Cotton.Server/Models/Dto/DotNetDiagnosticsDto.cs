@@ -4,20 +4,22 @@
 namespace Cotton.Server.Models.Dto
 {
     /// <summary>
-    /// Represents the dot net diagnostics API payload.
+    /// .NET runtime diagnostics posture (whether diagnostic ports and tracing are disabled).
     /// </summary>
     public class DotNetDiagnosticsDto
     {
         /// <summary>
-        /// Gets a value indicating whether .NET runtime diagnostics are disabled.
+        /// Whether .NET runtime diagnostics (diagnostic IPC port, EventPipe) are disabled.
         /// </summary>
         public bool Disabled { get; init; }
+
         /// <summary>
-        /// Gets or sets dot net enable diagnostics.
+        /// Value of the DOTNET_EnableDiagnostics environment variable, or null if unset.
         /// </summary>
         public string? DotNetEnableDiagnostics { get; init; }
+
         /// <summary>
-        /// Gets or sets com plus enable diagnostics.
+        /// Value of the legacy COMPlus_EnableDiagnostics environment variable, or null if unset.
         /// </summary>
         public string? ComPlusEnableDiagnostics { get; init; }
     }

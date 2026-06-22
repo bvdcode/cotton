@@ -13,19 +13,29 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// </remarks>
     public interface IDatabaseIntegrityDescriptor
     {
-        /// <summary>Gets the EF entity type handled by this descriptor.</summary>
+        /// <summary>
+        /// Gets the EF entity type handled by this descriptor.
+        /// </summary>
         Type EntityType { get; }
 
-        /// <summary>Gets the stable table-like name written into the signed payload and diagnostics.</summary>
+        /// <summary>
+        /// Gets the stable table-like name written into the signed payload and diagnostics.
+        /// </summary>
         string EntityName { get; }
 
-        /// <summary>Gets the descriptor schema version expected in the row metadata.</summary>
+        /// <summary>
+        /// Gets the descriptor schema version expected in the row metadata.
+        /// </summary>
         int SchemaVersion { get; }
 
-        /// <summary>Gets the stable row key written into the signed payload and failure reports.</summary>
+        /// <summary>
+        /// Gets the stable row key written into the signed payload and failure reports.
+        /// </summary>
         string GetEntityKey(object entity);
 
-        /// <summary>Builds the canonical binary payload that will be MACed for the entity.</summary>
+        /// <summary>
+        /// Builds the canonical binary payload that will be MACed for the entity.
+        /// </summary>
         byte[] BuildCanonicalPayload(object entity);
     }
 
@@ -35,10 +45,14 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// <typeparam name="T">The EF entity type represented by the descriptor.</typeparam>
     public interface IDatabaseIntegrityDescriptor<in T> : IDatabaseIntegrityDescriptor
     {
-        /// <summary>Gets the stable row key written into the signed payload and failure reports.</summary>
+        /// <summary>
+        /// Gets the stable row key written into the signed payload and failure reports.
+        /// </summary>
         string GetEntityKey(T entity);
 
-        /// <summary>Writes the security-sensitive domain fields for the entity in deterministic order.</summary>
+        /// <summary>
+        /// Writes the security-sensitive domain fields for the entity in deterministic order.
+        /// </summary>
         void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, T entity);
     }
 }

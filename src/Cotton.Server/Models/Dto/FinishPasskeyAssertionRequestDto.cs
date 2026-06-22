@@ -14,10 +14,12 @@ namespace Cotton.Server.Models.Dto
         /// Gets or sets the server-issued passkey ceremony request identifier.
         /// </summary>
         public string RequestId { get; set; } = null!;
+
         /// <summary>
-        /// Gets or sets trust device.
+        /// Whether to remember this device and issue a longer-lived session.
         /// </summary>
         public bool TrustDevice { get; set; }
+
         /// <summary>
         /// Gets or sets the WebAuthn credential payload returned by the browser.
         /// </summary>

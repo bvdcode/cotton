@@ -32,14 +32,17 @@ namespace Cotton.Server.Handlers.Files
         /// Gets the opaque token.
         /// </summary>
         public string Token { get; } = token;
+
         /// <summary>
         /// Gets the view.
         /// </summary>
         public string? View { get; } = view;
+
         /// <summary>
         /// Gets whether the request should serve the generated small preview when available.
         /// </summary>
         public bool Preview { get; } = preview;
+
         /// <summary>
         /// Gets the http request.
         /// </summary>

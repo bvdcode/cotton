@@ -25,14 +25,17 @@ namespace Cotton.Server.Handlers.Files
         /// Gets the owning user identifier.
         /// </summary>
         public Guid UserId { get; } = userId;
+
         /// <summary>
         /// Gets the file entry identifier.
         /// </summary>
         public Guid NodeFileId { get; } = nodeFileId;
+
         /// <summary>
         /// Gets whether deletion bypasses trash and permanently removes the resource.
         /// </summary>
         public bool SkipTrash { get; } = skipTrash;
+
         /// <summary>
         /// Gets the optional expected file content ETag.
         /// </summary>

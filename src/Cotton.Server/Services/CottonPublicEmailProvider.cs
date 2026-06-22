@@ -121,22 +121,27 @@ namespace Cotton.Server.Services
             /// Gets or sets the template.
             /// </summary>
             public string Template { get; set; } = null!;
+
             /// <summary>
             /// Gets or sets the instance id.
             /// </summary>
             public Guid InstanceId { get; set; }
+
             /// <summary>
             /// Gets or sets the server URL.
             /// </summary>
             public string ServerUrl { get; set; } = null!;
+
             /// <summary>
             /// Gets or sets the recipient email.
             /// </summary>
             public string RecipientEmail { get; set; } = null!;
+
             /// <summary>
             /// Gets or sets the recipient name.
             /// </summary>
             public string RecipientName { get; set; } = null!;
+
             /// <summary>
             /// Gets or sets the language.
             /// </summary>

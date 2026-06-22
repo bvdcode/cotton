@@ -8,7 +8,9 @@ namespace Cotton.Storage.Abstractions
     /// </summary>
     public interface IStorageBackendProvider
     {
-        /// <summary>Returns the backend used for the current operation.</summary>
+        /// <summary>
+        /// Returns the backend used for the current operation.
+        /// </summary>
         IStorageBackend GetBackend();
     }
 }

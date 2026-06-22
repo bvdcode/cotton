@@ -10,7 +10,9 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     {
         private readonly IReadOnlyDictionary<Type, IDatabaseIntegrityDescriptor> _descriptors;
 
-        /// <summary>Initializes the registry from dependency-injected descriptors.</summary>
+        /// <summary>
+        /// Initializes the registry from dependency-injected descriptors.
+        /// </summary>
         public DatabaseIntegrityDescriptorRegistry(IEnumerable<IDatabaseIntegrityDescriptor> descriptors)
         {
             _descriptors = descriptors.ToDictionary(x => x.EntityType);

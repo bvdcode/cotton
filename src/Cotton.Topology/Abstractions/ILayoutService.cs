@@ -11,15 +11,29 @@ namespace Cotton.Topology.Abstractions
     /// </summary>
     public interface ILayoutService
     {
-        /// <summary>Creates an isolated trash container node for a deleted item.</summary>
+        /// <summary>
+        /// Creates an isolated trash container node for a deleted item.
+        /// </summary>
         Task<Node> CreateTrashItemAsync(Guid userId, CancellationToken ct = default);
-        /// <summary>Finds a stored chunk by hash.</summary>
+
+        /// <summary>
+        /// Finds a stored chunk by hash.
+        /// </summary>
         Task<Chunk?> FindChunkAsync(byte[] hash, CancellationToken ct = default);
-        /// <summary>Returns the active layout for a user, creating one when needed.</summary>
+
+        /// <summary>
+        /// Returns the active layout for a user, creating one when needed.
+        /// </summary>
         Task<Layout> GetOrCreateLatestUserLayoutAsync(Guid ownerId, CancellationToken ct = default);
-        /// <summary>Returns the root node for a typed tree, creating one when needed.</summary>
+
+        /// <summary>
+        /// Returns the root node for a typed tree, creating one when needed.
+        /// </summary>
         Task<Node> GetOrCreateRootNodeAsync(Guid layoutId, Guid ownerId, NodeType nodeType, CancellationToken ct = default);
-        /// <summary>Returns the user trash root node.</summary>
+
+        /// <summary>
+        /// Returns the user trash root node.
+        /// </summary>
         Task<Node> GetUserTrashRootAsync(Guid ownerId, CancellationToken ct = default);
     }
 }

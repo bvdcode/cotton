@@ -147,10 +147,14 @@ namespace Cotton.Server.Services
             ".svelte",
         };
 
-        /// <summary>Regex pattern matching filenames that Cotton treats as source-code text previews.</summary>
+        /// <summary>
+        /// Regex pattern matching filenames that Cotton treats as source-code text previews.
+        /// </summary>
         public static string SourceTextFileNameRegexPattern { get; } = BuildSourceTextFileNameRegexPattern();
 
-        /// <summary>Regex pattern matching legacy octet-stream filenames that Cotton can normalize for previews.</summary>
+        /// <summary>
+        /// Regex pattern matching legacy octet-stream filenames that Cotton can normalize for previews.
+        /// </summary>
         public static string PreviewableFileNameRegexPattern { get; } = BuildPreviewableFileNameRegexPattern();
 
         /// <summary>
@@ -222,7 +226,9 @@ namespace Cotton.Server.Services
                 ? DefaultContentType
                 : normalizedContentType;
 
-        /// <summary>Returns true when the filename should be treated as source-code text for preview generation.</summary>
+        /// <summary>
+        /// Returns true when the filename should be treated as source-code text for preview generation.
+        /// </summary>
         public static bool IsSourceTextFileName(string? fileName)
         {
             if (string.IsNullOrWhiteSpace(fileName))

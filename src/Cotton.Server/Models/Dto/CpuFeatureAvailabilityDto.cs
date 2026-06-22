@@ -12,6 +12,7 @@ namespace Cotton.Server.Models.Dto
         /// Gets the runtime intrinsic support status, when applicable.
         /// </summary>
         public bool? RuntimeSupported { get; init; }
+
         /// <summary>
         /// Gets Linux procfs flag presence, when available.
         /// </summary>

@@ -12,14 +12,17 @@ namespace Cotton.Server.Models.Dto
         /// Gets or sets url.
         /// </summary>
         public string Url { get; init; } = string.Empty;
+
         /// <summary>
         /// Gets or sets file name.
         /// </summary>
         public string FileName { get; init; } = string.Empty;
+
         /// <summary>
         /// Gets or sets size bytes.
         /// </summary>
         public long SizeBytes { get; init; }
+
         /// <summary>
         /// Gets or sets entry count.
         /// </summary>

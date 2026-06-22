@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Models;
@@ -16,21 +16,27 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace Cotton.Server.Controllers
 {
-    /// <summary>Exposes OpenID Connect provider and sign-in endpoints.</summary>
+    /// <summary>
+    /// Exposes OpenID Connect provider and sign-in endpoints.
+    /// </summary>
     [ApiController]
     [Route(Routes.V1.Auth + "/oidc")]
     public class OidcController(
         OidcProviderService _providers,
         OidcAuthenticationService _auth) : ControllerBase
     {
-        /// <summary>Lists enabled providers for the login page.</summary>
+        /// <summary>
+        /// Lists enabled providers for the login page.
+        /// </summary>
         [HttpGet("providers")]
         public async Task<IActionResult> GetPublicProviders(CancellationToken cancellationToken)
         {
             return Ok(await _providers.ListPublicAsync(cancellationToken));
         }
 
-        /// <summary>Lists all providers for administrators.</summary>
+        /// <summary>
+        /// Lists all providers for administrators.
+        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("providers/admin")]
         public async Task<IActionResult> GetAdminProviders(CancellationToken cancellationToken)
@@ -38,7 +44,9 @@ namespace Cotton.Server.Controllers
             return Ok(await _providers.ListAdminAsync(cancellationToken));
         }
 
-        /// <summary>Creates a provider.</summary>
+        /// <summary>
+        /// Creates a provider.
+        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPost("providers")]
         public async Task<IActionResult> CreateProvider(
@@ -48,7 +56,9 @@ namespace Cotton.Server.Controllers
             return Ok(await _providers.CreateAsync(request, cancellationToken));
         }
 
-        /// <summary>Updates a provider.</summary>
+        /// <summary>
+        /// Updates a provider.
+        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPut("providers/{providerId:guid}")]
         public async Task<IActionResult> UpdateProvider(
@@ -59,7 +69,9 @@ namespace Cotton.Server.Controllers
             return Ok(await _providers.UpdateAsync(providerId, request, cancellationToken));
         }
 
-        /// <summary>Deletes a provider.</summary>
+        /// <summary>
+        /// Deletes a provider.
+        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpDelete("providers/{providerId:guid}")]
         public async Task<IActionResult> DeleteProvider(
@@ -70,7 +82,9 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>Creates a sign-in authorization URL for a provider.</summary>
+        /// <summary>
+        /// Creates a sign-in authorization URL for a provider.
+        /// </summary>
         [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
         [HttpPost("start/{providerSlug}/authorization-url")]
         public async Task<ActionResult<OidcAuthorizationUrlDto>> CreateSignInAuthorizationUrl(
@@ -86,7 +100,9 @@ namespace Cotton.Server.Controllers
             return Ok(new OidcAuthorizationUrlDto { AuthorizationUrl = authorizationUrl });
         }
 
-        /// <summary>Creates an account-linking authorization URL for a provider.</summary>
+        /// <summary>
+        /// Creates an account-linking authorization URL for a provider.
+        /// </summary>
         [Authorize]
         [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
         [HttpPost("link/{providerSlug}/authorization-url")]
@@ -103,7 +119,9 @@ namespace Cotton.Server.Controllers
             return Ok(new OidcAuthorizationUrlDto { AuthorizationUrl = authorizationUrl });
         }
 
-        /// <summary>Completes an OIDC authorization-code callback.</summary>
+        /// <summary>
+        /// Completes an OIDC authorization-code callback.
+        /// </summary>
         [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
         [HttpGet("callback")]
         public async Task<IActionResult> Callback(
@@ -129,7 +147,9 @@ namespace Cotton.Server.Controllers
             return Redirect(returnUrl);
         }
 
-        /// <summary>Lists provider links for the current user.</summary>
+        /// <summary>
+        /// Lists provider links for the current user.
+        /// </summary>
         [Authorize]
         [HttpGet("links")]
         public async Task<IActionResult> GetLinks(CancellationToken cancellationToken)
@@ -137,7 +157,9 @@ namespace Cotton.Server.Controllers
             return Ok(await _auth.ListLinkedAsync(User.GetUserId(), cancellationToken));
         }
 
-        /// <summary>Unlinks a provider from the current user.</summary>
+        /// <summary>
+        /// Unlinks a provider from the current user.
+        /// </summary>
         [Authorize]
         [HttpDelete("links/{identityId:guid}")]
         public async Task<IActionResult> Unlink(

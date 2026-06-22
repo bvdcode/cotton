@@ -30,14 +30,17 @@ namespace Cotton.Server.Handlers.Nodes
         /// Gets the owning user identifier.
         /// </summary>
         public Guid UserId { get; } = userId;
+
         /// <summary>
         /// Gets the node identifier.
         /// </summary>
         public Guid NodeId { get; } = nodeId;
+
         /// <summary>
         /// Creates missing parents.
         /// </summary>
         public bool CreateMissingParents { get; } = createMissingParents;
+
         /// <summary>
         /// Gets whether restore should move an existing conflicting item to trash.
         /// </summary>
@@ -295,6 +298,7 @@ namespace Cotton.Server.Handlers.Nodes
             /// Creates a successful operation result.
             /// </summary>
             public static TopLevelTrashWrapperOutcome Success(Node wrapper) => new(wrapper, null);
+
             /// <summary>
             /// Executes not restorable.
             /// </summary>
@@ -311,6 +315,7 @@ namespace Cotton.Server.Handlers.Nodes
             /// </summary>
             public static RestoreParentOutcome Success(Node parent, IReadOnlyList<Node> createdParents) =>
                 new(parent, createdParents, null);
+
             /// <summary>
             /// Creates a failed operation result.
             /// </summary>

@@ -12,6 +12,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     {
         /// <inheritdoc />
         public override string EntityName => "file_manifests";
+
         /// <inheritdoc />
         public override int SchemaVersion => 1;
 

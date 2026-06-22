@@ -17,10 +17,12 @@ namespace Cotton.Server.Models.Dto
         /// Gets or sets total unique chunk count.
         /// </summary>
         public long TotalUniqueChunkCount { get; init; }
+
         /// <summary>
         /// Gets or sets total unique chunk plain size bytes.
         /// </summary>
         public long TotalUniqueChunkPlainSizeBytes { get; init; }
+
         /// <summary>
         /// Gets or sets total unique chunk stored size bytes.
         /// </summary>
@@ -30,10 +32,12 @@ namespace Cotton.Server.Models.Dto
         /// Gets or sets referenced unique chunk count.
         /// </summary>
         public long ReferencedUniqueChunkCount { get; init; }
+
         /// <summary>
         /// Gets or sets referenced unique chunk plain size bytes.
         /// </summary>
         public long ReferencedUniqueChunkPlainSizeBytes { get; init; }
+
         /// <summary>
         /// Gets or sets referenced unique chunk stored size bytes.
         /// </summary>
@@ -43,6 +47,7 @@ namespace Cotton.Server.Models.Dto
         /// Gets or sets referenced logical chunk count.
         /// </summary>
         public long ReferencedLogicalChunkCount { get; init; }
+
         /// <summary>
         /// Gets or sets referenced logical plain size bytes.
         /// </summary>
@@ -52,10 +57,12 @@ namespace Cotton.Server.Models.Dto
         /// Gets or sets deduplicated unique chunk count.
         /// </summary>
         public long DeduplicatedUniqueChunkCount { get; init; }
+
         /// <summary>
         /// Gets or sets dedup saved bytes.
         /// </summary>
         public long DedupSavedBytes { get; init; }
+
         /// <summary>
         /// Gets or sets compression saved bytes.
         /// </summary>
@@ -65,6 +72,7 @@ namespace Cotton.Server.Models.Dto
         /// Gets or sets pending gc chunk count.
         /// </summary>
         public long PendingGcChunkCount { get; init; }
+
         /// <summary>
         /// Gets or sets pending gc stored size bytes.
         /// </summary>
@@ -74,6 +82,7 @@ namespace Cotton.Server.Models.Dto
         /// Gets or sets overdue gc chunk count.
         /// </summary>
         public long OverdueGcChunkCount { get; init; }
+
         /// <summary>
         /// Gets or sets overdue gc stored size bytes.
         /// </summary>

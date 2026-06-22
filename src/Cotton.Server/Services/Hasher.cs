@@ -6,10 +6,8 @@ using System.Security.Cryptography;
 namespace Cotton.Server.Services
 {
     /// <summary>
-    /// Provides static methods and constants for computing SHA-256 hashes of data.
+    /// Static helpers and constants for computing SHA-256 hashes. All members are thread-safe.
     /// </summary>
-    /// <remarks>The Hasher class offers a simple interface for generating SHA-256 hashes from byte arrays or
-    /// streams. All members are thread-safe and can be used concurrently across multiple threads.</remarks>
     public partial class Hasher
     {
         /// <summary>
@@ -23,16 +21,13 @@ namespace Cotton.Server.Services
         public static HashAlgorithmName SupportedHashAlgorithmName => HashAlgorithmName.SHA256;
 
         /// <summary>
-        /// Specifies the size, in bytes, of the hash output.
+        /// SHA-256 hash size in bytes.
         /// </summary>
         public const int HashSizeInBytes = 32;
 
         /// <summary>
-        /// Represents the hexadecimal string of the SHA-256 hash for an empty input, commonly used as a baseline value
-        /// in cryptographic operations.
+        /// SHA-256 hash of empty input, as a lowercase hex string.
         /// </summary>
-        /// <remarks>This constant is typically used to indicate a zero or empty hash value in hashing
-        /// algorithms and protocols, ensuring consistency across different implementations.</remarks>
         public const string ZeroHashHexString = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
         /// <summary>
@@ -76,7 +71,7 @@ namespace Cotton.Server.Services
         }
 
         /// <summary>
-        /// Executes to hex string hash.
+        /// Converts a hash to its lowercase hex string representation.
         /// </summary>
         public static string ToHexStringHash(byte[] hash)
         {
@@ -84,8 +79,9 @@ namespace Cotton.Server.Services
         }
 
         /// <summary>
-        /// Executes from hex string hash.
+        /// Parses a hex string into a hash, validating its length and characters.
         /// </summary>
+        /// <exception cref="ArgumentException">The string is empty, has an odd or wrong length, or contains non-hex characters.</exception>
         public static byte[] FromHexStringHash(string hexString)
         {
             if (string.IsNullOrWhiteSpace(hexString))
@@ -108,7 +104,7 @@ namespace Cotton.Server.Services
         }
 
         /// <summary>
-        /// Indicates whether valid hash.
+        /// Returns true if the string is a valid hex-encoded SHA-256 hash.
         /// </summary>
         public static bool IsValidHash(string hash)
         {

@@ -28,10 +28,12 @@ namespace Cotton.Server.Handlers.Nodes
         /// Gets or sets the node identifier.
         /// </summary>
         public Guid NodeId { get; set; }
+
         /// <summary>
         /// Gets or sets the parent folder identifier.
         /// </summary>
         public Guid ParentId { get; set; }
+
         /// <summary>
         /// Gets or sets the owning user identifier.
         /// </summary>

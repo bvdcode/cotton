@@ -18,11 +18,17 @@ namespace Cotton.Benchmark.Benchmarks
     /// </summary>
     public enum ChunkUploadDataProfile
     {
-        /// <summary>Log/document-like data that Zstandard can compress aggressively.</summary>
+        /// <summary>
+        /// Log/document-like data that Zstandard can compress aggressively.
+        /// </summary>
         CompressibleText,
-        /// <summary>Half patterned and half pseudo-random data.</summary>
+        /// <summary>
+        /// Half patterned and half pseudo-random data.
+        /// </summary>
         MixedContent,
-        /// <summary>Random binary data, similar to already-compressed media or archives.</summary>
+        /// <summary>
+        /// Random binary data, similar to already-compressed media or archives.
+        /// </summary>
         RandomBinary
     }
 
@@ -38,7 +44,9 @@ namespace Cotton.Benchmark.Benchmarks
         private readonly InMemoryStorageBackend _backend;
         private int _uidCounter;
 
-        /// <summary>Initializes the benchmark with the same processors used by server chunk storage.</summary>
+        /// <summary>
+        /// Initializes the benchmark with the same processors used by server chunk storage.
+        /// </summary>
         public ChunkUploadProcessingBenchmark(BenchmarkConfiguration configuration, ChunkUploadDataProfile profile)
             : base(configuration)
         {

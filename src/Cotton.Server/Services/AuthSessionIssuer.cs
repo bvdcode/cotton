@@ -26,7 +26,9 @@ using System.Text;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>Issues Cotton access and refresh sessions after an authentication factor succeeds.</summary>
+    /// <summary>
+    /// Issues Cotton access and refresh sessions after an authentication factor succeeds.
+    /// </summary>
     public class AuthSessionIssuer(
         CottonDbContext _dbContext,
         ITokenProvider _tokens,
@@ -38,7 +40,9 @@ namespace Cotton.Server.Services
         private const string UnknownGeoLabel = "Unknown";
         private const string DemoGeoLabel = "Demo";
 
-        /// <summary>Creates a refresh cookie and returns the API token response.</summary>
+        /// <summary>
+        /// Creates a refresh cookie and returns the API token response.
+        /// </summary>
         public async Task<TokenPairResponseDto> SignInAsync(
             User user,
             bool trustDevice,
@@ -65,7 +69,9 @@ namespace Cotton.Server.Services
             };
         }
 
-        /// <summary>Creates a signed JWT access token for an existing session id.</summary>
+        /// <summary>
+        /// Creates a signed JWT access token for an existing session id.
+        /// </summary>
         public string CreateAccessToken(User user, string sessionId)
         {
             return _tokens.CreateToken(x =>
@@ -78,7 +84,9 @@ namespace Cotton.Server.Services
             });
         }
 
-        /// <summary>Creates a stored refresh-token row and returns its plaintext token value.</summary>
+        /// <summary>
+        /// Creates a stored refresh-token row and returns its plaintext token value.
+        /// </summary>
         public async Task<(ExtendedRefreshToken DbToken, string RefreshToken)> CreateRefreshTokenAsync(
             User user,
             bool trustDevice,
@@ -109,7 +117,9 @@ namespace Cotton.Server.Services
             return (dbToken, refreshToken);
         }
 
-        /// <summary>Adds the refresh token to the current response cookies.</summary>
+        /// <summary>
+        /// Adds the refresh token to the current response cookies.
+        /// </summary>
         public void AddRefreshTokenToCookies(string refreshToken, bool trustDevice)
         {
             const int yearHours = 24 * 365;
@@ -123,7 +133,9 @@ namespace Cotton.Server.Services
             });
         }
 
-        /// <summary>Hashes a plaintext refresh token for storage and lookup.</summary>
+        /// <summary>
+        /// Hashes a plaintext refresh token for storage and lookup.
+        /// </summary>
         public static string HashRefreshToken(string refreshToken)
         {
             return Hasher.ToHexStringHash(Hasher.HashData(Encoding.UTF8.GetBytes(refreshToken)));

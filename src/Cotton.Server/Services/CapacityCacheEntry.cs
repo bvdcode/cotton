@@ -21,6 +21,7 @@ namespace Cotton.Server.Services
         /// Gets the snapshot.
         /// </summary>
         public StorageCapacitySnapshot? Snapshot { get; } = snapshot;
+
         /// <summary>
         /// Gets or sets the reserved bytes.
         /// </summary>

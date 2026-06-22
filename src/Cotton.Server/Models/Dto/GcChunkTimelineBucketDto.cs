@@ -12,10 +12,12 @@ namespace Cotton.Server.Models.Dto
         /// Gets or sets bucket start utc.
         /// </summary>
         public DateTime BucketStartUtc { get; init; }
+
         /// <summary>
         /// Gets or sets chunk count.
         /// </summary>
         public long ChunkCount { get; init; }
+
         /// <summary>
         /// Gets or sets size bytes.
         /// </summary>

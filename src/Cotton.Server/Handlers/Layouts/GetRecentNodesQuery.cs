@@ -21,10 +21,12 @@ namespace Cotton.Server.Handlers.Layouts
         /// Gets the count.
         /// </summary>
         public int Count { get; } = count;
+
         /// <summary>
         /// Gets the owning user identifier.
         /// </summary>
         public Guid UserId { get; } = userId;
+
         /// <summary>
         /// Gets the layout identifier.
         /// </summary>

@@ -15,6 +15,7 @@ namespace Cotton.Server.Services
         /// The target duration of an HLS segment, in seconds.
         /// </summary>
         public const double SegmentDurationSeconds = 6.0;
+
         /// <summary>
         /// Defines the content type.
         /// </summary>

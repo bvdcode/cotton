@@ -22,6 +22,7 @@ namespace Cotton.Server.Handlers.Users
         /// Gets the username or email.
         /// </summary>
         public string UsernameOrEmail { get; } = usernameOrEmail;
+
         /// <summary>
         /// Gets the http request.
         /// </summary>

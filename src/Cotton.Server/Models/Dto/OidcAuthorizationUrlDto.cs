@@ -1,12 +1,16 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 namespace Cotton.Server.Models.Dto
 {
-    /// <summary>OIDC authorization URL returned to the browser.</summary>
+    /// <summary>
+    /// OIDC authorization URL returned to the browser.
+    /// </summary>
     public class OidcAuthorizationUrlDto
     {
-        /// <summary>Provider authorization URL.</summary>
+        /// <summary>
+        /// Provider authorization URL.
+        /// </summary>
         public string AuthorizationUrl { get; set; } = string.Empty;
     }
 }

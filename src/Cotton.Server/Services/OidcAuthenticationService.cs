@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
@@ -23,7 +23,9 @@ using System.Security.Cryptography;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>Runs OpenID Connect sign-in and account-linking flows.</summary>
+    /// <summary>
+    /// Runs OpenID Connect sign-in and account-linking flows.
+    /// </summary>
     public class OidcAuthenticationService(
         CottonDbContext _dbContext,
         OidcDiscoveryService _discovery,
@@ -38,7 +40,9 @@ namespace Cotton.Server.Services
         private static readonly TimeSpan ClockSkew = TimeSpan.FromMinutes(2);
         private const string CodeChallengeMethod = "S256";
 
-        /// <summary>Starts a sign-in flow and returns the provider authorization URL.</summary>
+        /// <summary>
+        /// Starts a sign-in flow and returns the provider authorization URL.
+        /// </summary>
         public Task<string> BeginSignInAsync(
             string providerSlug,
             string? returnUrl,
@@ -48,7 +52,9 @@ namespace Cotton.Server.Services
             return BeginAsync(providerSlug, returnUrl, trustDevice, linkUserId: null, ct);
         }
 
-        /// <summary>Starts an account-linking flow and returns the provider authorization URL.</summary>
+        /// <summary>
+        /// Starts an account-linking flow and returns the provider authorization URL.
+        /// </summary>
         public Task<string> BeginLinkAsync(
             Guid userId,
             string providerSlug,
@@ -58,7 +64,9 @@ namespace Cotton.Server.Services
             return BeginAsync(providerSlug, returnUrl, trustDevice: false, userId, ct);
         }
 
-        /// <summary>Completes an authorization callback and returns an application return URL.</summary>
+        /// <summary>
+        /// Completes an authorization callback and returns an application return URL.
+        /// </summary>
         public async Task<string> CompleteCallbackAsync(
             string state,
             string code,
@@ -122,7 +130,9 @@ namespace Cotton.Server.Services
             return loginState.ReturnUrl;
         }
 
-        /// <summary>Lists external identities linked to a user.</summary>
+        /// <summary>
+        /// Lists external identities linked to a user.
+        /// </summary>
         public async Task<IReadOnlyList<UserExternalIdentityDto>> ListLinkedAsync(Guid userId, CancellationToken ct)
         {
             List<UserExternalIdentity> identities = await _dbContext.UserExternalIdentities
@@ -140,7 +150,9 @@ namespace Cotton.Server.Services
             return identities.Select(ToDto).ToArray();
         }
 
-        /// <summary>Unlinks an external identity from the current user.</summary>
+        /// <summary>
+        /// Unlinks an external identity from the current user.
+        /// </summary>
         public async Task UnlinkAsync(Guid userId, Guid identityId, CancellationToken ct)
         {
             UserExternalIdentity identity = await _dbContext.UserExternalIdentities

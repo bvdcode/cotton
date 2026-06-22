@@ -4,20 +4,22 @@
 namespace Cotton.Server.Models.Dto
 {
     /// <summary>
-    /// Represents the database integrity diagnostics API payload.
+    /// Database integrity protection diagnostics.
     /// </summary>
     public class DatabaseIntegrityDiagnosticsDto
     {
         /// <summary>
-        /// Gets a value indicating whether database integrity protection is enabled.
+        /// Whether database integrity protection is enabled.
         /// </summary>
         public bool Enabled { get; init; }
+
         /// <summary>
-        /// Gets or sets protected entity types.
+        /// Number of entity types covered by integrity protection.
         /// </summary>
         public int ProtectedEntityTypes { get; init; }
+
         /// <summary>
-        /// Gets or sets unsigned protected rows.
+        /// Number of protected rows that are missing an integrity signature.
         /// </summary>
         public int UnsignedProtectedRows { get; init; }
     }

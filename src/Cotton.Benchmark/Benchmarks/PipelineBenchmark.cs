@@ -21,7 +21,9 @@ namespace Cotton.Benchmark.Benchmarks
         private readonly FileStoragePipeline _pipeline;
         private readonly AesGcmStreamCipher _cipher;
 
-        /// <summary>Initializes the benchmark with a fixed measurement configuration.</summary>
+        /// <summary>
+        /// Initializes the benchmark with a fixed measurement configuration.
+        /// </summary>
         public PipelineBenchmark(BenchmarkConfiguration configuration)
             : base(configuration)
         {

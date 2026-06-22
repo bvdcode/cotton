@@ -8,11 +8,19 @@ namespace Cotton.Storage.Pipelines
     /// </summary>
     public class PipelineContext
     {
-        /// <summary>Gets or sets the plaintext file size when the caller already knows it.</summary>
+        /// <summary>
+        /// Gets or sets the plaintext file size when the caller already knows it.
+        /// </summary>
         public long? FileSizeBytes { get; set; }
-        /// <summary>Gets or sets whether processors may keep small transformed blobs in memory.</summary>
+
+        /// <summary>
+        /// Gets or sets whether processors may keep small transformed blobs in memory.
+        /// </summary>
         public bool StoreInMemoryCache { get; set; }
-        /// <summary>Gets or sets known chunk lengths keyed by storage UID.</summary>
+
+        /// <summary>
+        /// Gets or sets known chunk lengths keyed by storage UID.
+        /// </summary>
         public Dictionary<string, long>? ChunkLengths { get; set; }
     }
 }

@@ -10,7 +10,9 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// </summary>
     public interface IDatabaseIntegrityKeyProvider
     {
-        /// <summary>Creates a new disposable HMAC instance for one signing or verification operation.</summary>
+        /// <summary>
+        /// Creates a new disposable HMAC instance for one signing or verification operation.
+        /// </summary>
         HMACSHA256 CreateHmac();
     }
 }

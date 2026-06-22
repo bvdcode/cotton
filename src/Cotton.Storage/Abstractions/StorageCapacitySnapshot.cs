@@ -12,7 +12,9 @@ namespace Cotton.Storage.Abstractions
         long TotalBytes,
         long AvailableBytes)
     {
-        /// <summary>Gets available storage as a percentage of total capacity.</summary>
+        /// <summary>
+        /// Gets available storage as a percentage of total capacity.
+        /// </summary>
         public double AvailablePercent => TotalBytes <= 0
             ? 100d
             : AvailableBytes * 100d / TotalBytes;

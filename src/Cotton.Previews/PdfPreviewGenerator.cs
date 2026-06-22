@@ -16,6 +16,7 @@ namespace Cotton.Previews
     {
         /// <inheritdoc />
         public int Version => 0;
+
         /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes => ["application/pdf"];
         private static readonly DocLib _docLib = DocLib.Instance;

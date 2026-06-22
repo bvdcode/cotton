@@ -29,6 +29,7 @@ namespace Cotton.Server.Services
         /// Gets the chunk hashes.
         /// </summary>
         public IReadOnlyList<string> ChunkHashes { get; }
+
         /// <summary>
         /// Gets chunk plaintext lengths keyed by chunk hash for deterministic archive streaming.
         /// </summary>

@@ -16,6 +16,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     {
         /// <inheritdoc />
         public override string EntityName => "user_passkey_credentials";
+
         /// <inheritdoc />
         public override int SchemaVersion => 1;
 

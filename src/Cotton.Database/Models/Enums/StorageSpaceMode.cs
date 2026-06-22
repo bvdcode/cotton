@@ -3,14 +3,22 @@
 
 namespace Cotton.Database.Models.Enums
 {
-    /// <summary>Describes how aggressively Cotton should treat storage capacity.</summary>
+    /// <summary>
+    /// Describes how aggressively Cotton should treat storage capacity.
+    /// </summary>
     public enum StorageSpaceMode
     {
-        /// <summary>Prefer the normal storage policy.</summary>
+        /// <summary>
+        /// Prefer the normal storage policy.
+        /// </summary>
         Optimal = 0,
-        /// <summary>Treat storage as limited.</summary>
+        /// <summary>
+        /// Treat storage as limited.
+        /// </summary>
         Limited = 1,
-        /// <summary>Treat storage as effectively unlimited.</summary>
+        /// <summary>
+        /// Treat storage as effectively unlimited.
+        /// </summary>
         Unlimited = 2,
     }
 }

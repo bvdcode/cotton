@@ -12,7 +12,9 @@ namespace Cotton.Storage.Helpers
     /// </summary>
     public static class S3CompatibilityFactory
     {
-        /// <summary>Builds an Amazon S3 config suitable for path-style S3-compatible providers.</summary>
+        /// <summary>
+        /// Builds an Amazon S3 config suitable for path-style S3-compatible providers.
+        /// </summary>
         public static AmazonS3Config BuildConfig(
             string endpoint,
             string region,
@@ -32,7 +34,9 @@ namespace Cotton.Storage.Helpers
             };
         }
 
-        /// <summary>Builds an S3 client from explicit endpoint credentials.</summary>
+        /// <summary>
+        /// Builds an S3 client from explicit endpoint credentials.
+        /// </summary>
         public static AmazonS3Client BuildClient(
             string endpoint,
             string region,
@@ -46,14 +50,18 @@ namespace Cotton.Storage.Helpers
             return new AmazonS3Client(credentials, config);
         }
 
-        /// <summary>Disables chunked transfer encoding for file-backed uploads.</summary>
+        /// <summary>
+        /// Disables chunked transfer encoding for file-backed uploads.
+        /// </summary>
         public static PutObjectRequest WithFileBodyCompatibility(this PutObjectRequest request)
         {
             request.UseChunkEncoding = false;
             return request;
         }
 
-        /// <summary>Disables request features that are not accepted by some S3-compatible providers for memory-backed uploads.</summary>
+        /// <summary>
+        /// Disables request features that are not accepted by some S3-compatible providers for memory-backed uploads.
+        /// </summary>
         public static PutObjectRequest WithInMemoryBodyCompatibility(this PutObjectRequest request)
         {
             request.UseChunkEncoding = false;

@@ -27,26 +27,32 @@ namespace Cotton.Server.Handlers.Users
         /// Gets the username.
         /// </summary>
         public string Username { get; } = username;
+
         /// <summary>
         /// Gets the user email address.
         /// </summary>
         public string? Email { get; } = email;
+
         /// <summary>
         /// Gets the password submitted by the client.
         /// </summary>
         public string? Password { get; } = password;
+
         /// <summary>
         /// Gets or sets the user first name.
         /// </summary>
         public string? FirstName { get; set; }
+
         /// <summary>
         /// Gets or sets the user last name.
         /// </summary>
         public string? LastName { get; set; }
+
         /// <summary>
         /// Gets the role.
         /// </summary>
         public UserRole Role { get; } = role;
+
         /// <summary>
         /// Gets or sets the birth date.
         /// </summary>

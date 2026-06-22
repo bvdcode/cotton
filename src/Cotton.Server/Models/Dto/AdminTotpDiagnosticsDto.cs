@@ -4,20 +4,22 @@
 namespace Cotton.Server.Models.Dto
 {
     /// <summary>
-    /// Represents the admin totp diagnostics API payload.
+    /// Administrator TOTP (two-factor authentication) coverage diagnostics.
     /// </summary>
     public class AdminTotpDiagnosticsDto
     {
         /// <summary>
-        /// Gets or sets admin count.
+        /// Total number of administrator accounts.
         /// </summary>
         public int AdminCount { get; init; }
+
         /// <summary>
-        /// Gets or sets admins with totp.
+        /// Number of administrators with TOTP enabled.
         /// </summary>
         public int AdminsWithTotp { get; init; }
+
         /// <summary>
-        /// Gets or sets admins without totp.
+        /// Number of administrators without TOTP enabled.
         /// </summary>
         public int AdminsWithoutTotp { get; init; }
     }

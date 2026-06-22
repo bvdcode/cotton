@@ -29,14 +29,17 @@ namespace Cotton.Server.Handlers.Files
         /// Gets the owning user identifier.
         /// </summary>
         public Guid UserId { get; } = userId;
+
         /// <summary>
         /// Gets the file entry identifier.
         /// </summary>
         public Guid NodeFileId { get; } = nodeFileId;
+
         /// <summary>
         /// Creates missing parents.
         /// </summary>
         public bool CreateMissingParents { get; } = createMissingParents;
+
         /// <summary>
         /// Gets whether restore should move an existing conflicting item to trash.
         /// </summary>

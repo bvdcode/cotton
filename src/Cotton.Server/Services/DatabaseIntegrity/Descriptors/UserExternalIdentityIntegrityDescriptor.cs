@@ -12,6 +12,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     {
         /// <inheritdoc />
         public override string EntityName => "user_external_identities";
+
         /// <inheritdoc />
         public override int SchemaVersion => 1;
 

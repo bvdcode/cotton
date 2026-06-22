@@ -8,17 +8,23 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cotton.Database.Models
 {
-    /// <summary>Represents a named file entry inside a node and points to immutable file content.</summary>
+    /// <summary>
+    /// Represents a named file entry inside a node and points to immutable file content.
+    /// </summary>
     [Table("node_files")]
     [Index(nameof(NodeId), nameof(NameKey))]
     [Index(nameof(FileManifestId), nameof(NodeId))]
     public class NodeFile : BaseOwnedEntity<Guid>
     {
-        /// <summary>Identifier of the immutable file manifest referenced by this row.</summary>
+        /// <summary>
+        /// Identifier of the immutable file manifest referenced by this row.
+        /// </summary>
         [Column("file_manifest_id")]
         public Guid FileManifestId { get; set; }
 
-        /// <summary>Identifier of the node referenced by this row.</summary>
+        /// <summary>
+        /// Identifier of the node referenced by this row.
+        /// </summary>
         [Column("node_id")]
         public Guid NodeId { get; set; }
 
@@ -42,11 +48,15 @@ namespace Cotton.Database.Models
         [Column("name_key", TypeName = "citext")]
         public string NameKey { get; private set; } = null!;
 
-        /// <summary>Extensible metadata associated with this row.</summary>
+        /// <summary>
+        /// Extensible metadata associated with this row.
+        /// </summary>
         [Column("metadata")]
         public Dictionary<string, string>? Metadata { get; set; } = [];
 
-        /// <summary>Validates and assigns the display name and lookup key together.</summary>
+        /// <summary>
+        /// Validates and assigns the display name and lookup key together.
+        /// </summary>
         public void SetName(string input)
         {
             bool isValid = NameValidator.TryNormalizeAndValidate(input, out string normalized, out string error);
@@ -58,15 +68,21 @@ namespace Cotton.Database.Models
             NameKey = NameValidator.GetNameKey(normalized);
         }
 
-        /// <summary>Navigation property for immutable file content.</summary>
+        /// <summary>
+        /// Navigation property for immutable file content.
+        /// </summary>
         [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual FileManifest FileManifest { get; set; } = null!;
 
-        /// <summary>Navigation property for the referenced node.</summary>
+        /// <summary>
+        /// Navigation property for the referenced node.
+        /// </summary>
         [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual Node Node { get; set; } = null!;
 
-        /// <summary>Temporary direct-download token rows.</summary>
+        /// <summary>
+        /// Temporary direct-download token rows.
+        /// </summary>
         public virtual ICollection<DownloadToken> DownloadTokens { get; set; } = [];
     }
 }

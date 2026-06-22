@@ -23,6 +23,7 @@ namespace Cotton.Server.Handlers.Users
         /// Gets the opaque token.
         /// </summary>
         public string Token { get; } = token;
+
         /// <summary>
         /// Gets the new password.
         /// </summary>

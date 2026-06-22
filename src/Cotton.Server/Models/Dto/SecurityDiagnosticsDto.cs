@@ -4,84 +4,103 @@
 namespace Cotton.Server.Models.Dto
 {
     /// <summary>
-    /// Represents the security diagnostics API payload.
+    /// Aggregated server security posture returned by the diagnostics API.
     /// </summary>
     public class SecurityDiagnosticsDto
     {
         /// <summary>
-        /// Gets or sets operating system.
+        /// Operating system description the server is running on.
         /// </summary>
         public string OperatingSystem { get; init; } = string.Empty;
+
         /// <summary>
-        /// Indicates whether linux.
+        /// Whether the server is running on Linux.
         /// </summary>
         public bool IsLinux { get; init; }
+
         /// <summary>
-        /// Indicates whether container.
+        /// Whether the server appears to be running inside a container.
         /// </summary>
         public bool IsContainer { get; init; }
+
         /// <summary>
-        /// Indicates whether public instance.
+        /// Whether this instance is configured as publicly reachable.
         /// </summary>
         public bool IsPublicInstance { get; init; }
+
         /// <summary>
-        /// Gets or sets security score.
+        /// Computed security score, out of <see cref="MaxSecurityScore"/>.
         /// </summary>
         public int SecurityScore { get; init; }
+
         /// <summary>
-        /// Gets or sets max security score.
+        /// Maximum attainable security score.
         /// </summary>
         public int MaxSecurityScore { get; init; } = 10;
+
         /// <summary>
-        /// Gets or sets master key source.
+        /// Where the master key was loaded from (e.g. environment variable, file, unlock server).
         /// </summary>
         public string MasterKeySource { get; init; } = string.Empty;
+
         /// <summary>
-        /// Gets or sets master key environment variable was configured.
+        /// Whether the master-key environment variable was configured at startup.
         /// </summary>
         public bool MasterKeyEnvironmentVariableWasConfigured { get; init; }
+
         /// <summary>
-        /// Gets or sets master key environment variable present in process.
+        /// Whether the master-key environment variable is still present in the running process
+        /// (it should be cleared after the key is loaded).
         /// </summary>
         public bool MasterKeyEnvironmentVariablePresentInProcess { get; init; }
+
         /// <summary>
-        /// Gets OS temp directory path.
+        /// Path of the OS temporary directory.
         /// </summary>
         public string TempDirectoryPath { get; init; } = string.Empty;
+
         /// <summary>
-        /// Indicates whether OS temp directory is writable.
+        /// Whether the OS temporary directory is writable by the process.
         /// </summary>
         public bool TempDirectoryWritable { get; init; }
+
         /// <summary>
-        /// Gets OS temp directory write error.
+        /// Error encountered while probing the temporary directory, or null if none.
         /// </summary>
         public string? TempDirectoryError { get; init; }
+
         /// <summary>
-        /// Gets or sets dot net diagnostics.
+        /// .NET runtime diagnostics posture.
         /// </summary>
         public DotNetDiagnosticsDto DotNetDiagnostics { get; init; } = new();
+
         /// <summary>
-        /// Gets or sets linux process.
+        /// Linux process security posture.
         /// </summary>
         public LinuxProcessSecurityDto LinuxProcess { get; init; } = new();
+
         /// <summary>
-        /// Gets Linux container boundary diagnostics.
+        /// Linux container boundary diagnostics.
         /// </summary>
         public LinuxContainerSecurityDto LinuxContainer { get; init; } = new();
+
         /// <summary>
-        /// Gets or sets admin totp.
+        /// Administrator TOTP (two-factor) coverage.
         /// </summary>
         public AdminTotpDiagnosticsDto AdminTotp { get; init; } = new();
+
         /// <summary>
-        /// Gets or sets database integrity.
+        /// Database integrity protection status.
         /// </summary>
         public DatabaseIntegrityDiagnosticsDto DatabaseIntegrity { get; init; } = new();
+
         /// <summary>
-        /// Gets CPU crypto and memory-encryption feature diagnostics.
+        /// CPU crypto and memory-encryption feature diagnostics.
         /// </summary>
         public CpuFeatureDiagnosticsDto CpuFeatures { get; init; } = new();
+
         /// <summary>
-        /// Gets or sets warnings.
+        /// Security warnings raised while collecting diagnostics.
         /// </summary>
         public IReadOnlyList<SecurityDiagnosticWarningDto> Warnings { get; init; } = [];
     }

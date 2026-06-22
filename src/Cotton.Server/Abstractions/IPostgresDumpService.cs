@@ -12,6 +12,7 @@ namespace Cotton.Server.Abstractions
         /// Dumps the database to the specified file.
         /// </summary>
         Task DumpToFileAsync(string outputFilePath, CancellationToken cancellationToken = default);
+
         /// <summary>
         /// Restores from file.
         /// </summary>

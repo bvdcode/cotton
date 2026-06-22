@@ -12,25 +12,39 @@ namespace Cotton.Sync
     /// </summary>
     public class SyncChangeDto : BaseDto<long>
     {
-        /// <summary>Mutation kind.</summary>
+        /// <summary>
+        /// Mutation kind.
+        /// </summary>
         public SyncChangeKind Kind { get; set; }
 
-        /// <summary>Layout tree that contains the changed entity.</summary>
+        /// <summary>
+        /// Layout tree that contains the changed entity.
+        /// </summary>
         public Guid LayoutId { get; set; }
 
-        /// <summary>Changed file or folder identifier. The mutation kind determines the entity type.</summary>
+        /// <summary>
+        /// Changed file or folder identifier. The mutation kind determines the entity type.
+        /// </summary>
         public Guid ItemId { get; set; }
 
-        /// <summary>Parent folder identifier after the mutation, or before deletion.</summary>
+        /// <summary>
+        /// Parent folder identifier after the mutation, or before deletion.
+        /// </summary>
         public Guid ParentNodeId { get; set; }
 
-        /// <summary>Previous parent folder identifier for move events.</summary>
+        /// <summary>
+        /// Previous parent folder identifier for move events.
+        /// </summary>
         public Guid? PreviousParentNodeId { get; set; }
 
-        /// <summary>Immutable file manifest identifier for file content-bearing mutations.</summary>
+        /// <summary>
+        /// Immutable file manifest identifier for file content-bearing mutations.
+        /// </summary>
         public Guid? FileManifestId { get; set; }
 
-        /// <summary>Display name captured at the time of the mutation.</summary>
+        /// <summary>
+        /// Display name captured at the time of the mutation.
+        /// </summary>
         public string Name { get; set; } = string.Empty;
     }
 }

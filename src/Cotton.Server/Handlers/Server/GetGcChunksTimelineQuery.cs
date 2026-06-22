@@ -26,14 +26,17 @@ namespace Cotton.Server.Handlers.Server
         /// Gets the from utc.
         /// </summary>
         public DateTime? FromUtc { get; } = fromUtc;
+
         /// <summary>
         /// Gets the to utc.
         /// </summary>
         public DateTime? ToUtc { get; } = toUtc;
+
         /// <summary>
         /// Gets the S3 bucket name.
         /// </summary>
         public string Bucket { get; } = bucket;
+
         /// <summary>
         /// Gets the timezone id.
         /// </summary>
@@ -245,22 +248,27 @@ namespace Cotton.Server.Handlers.Server
             /// Gets or sets the year.
             /// </summary>
             public int Year { get; init; }
+
             /// <summary>
             /// Gets or sets the month.
             /// </summary>
             public int Month { get; init; }
+
             /// <summary>
             /// Gets or sets the day.
             /// </summary>
             public int Day { get; init; }
+
             /// <summary>
             /// Gets or sets the hour.
             /// </summary>
             public int Hour { get; init; }
+
             /// <summary>
             /// Gets or sets the chunk count.
             /// </summary>
             public long ChunkCount { get; init; }
+
             /// <summary>
             /// Gets or sets the size in bytes.
             /// </summary>

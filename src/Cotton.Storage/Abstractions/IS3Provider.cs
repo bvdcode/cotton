@@ -10,9 +10,14 @@ namespace Cotton.Storage.Abstractions
     /// </summary>
     public interface IS3Provider
     {
-        /// <summary>Returns the target bucket name.</summary>
+        /// <summary>
+        /// Returns the target bucket name.
+        /// </summary>
         string GetBucketName();
-        /// <summary>Creates or returns an S3-compatible client for the active storage settings.</summary>
+
+        /// <summary>
+        /// Creates or returns an S3-compatible client for the active storage settings.
+        /// </summary>
         IAmazonS3 GetS3Client();
     }
 }

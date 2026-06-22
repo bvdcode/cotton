@@ -17,6 +17,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     {
         /// <inheritdoc />
         public override string EntityName => "chunks";
+
         /// <inheritdoc />
         public override int SchemaVersion => 1;
 

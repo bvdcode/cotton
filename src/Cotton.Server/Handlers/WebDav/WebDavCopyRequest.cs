@@ -185,6 +185,7 @@ namespace Cotton.Server.Handlers.WebDav
             /// Creates a successful operation result.
             /// </summary>
             public static PreLockCopyOutcome Success(Guid layoutId) => new(layoutId, null);
+
             /// <summary>
             /// Creates a failed operation result.
             /// </summary>

@@ -12,6 +12,7 @@ namespace Cotton.Server.Models
         /// Gets or sets the secret base32.
         /// </summary>
         public string SecretBase32 { get; set; } = null!;
+
         /// <summary>
         /// Gets or sets the otp auth URI.
         /// </summary>

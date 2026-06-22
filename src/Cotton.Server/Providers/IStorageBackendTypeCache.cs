@@ -14,14 +14,17 @@ namespace Cotton.Server.Providers
         /// Gets value.
         /// </summary>
         StorageType Get();
+
         /// <summary>
         /// Sets value.
         /// </summary>
         void Set(StorageType type);
+
         /// <summary>
         /// Attempts to get value.
         /// </summary>
         bool TryGet(out StorageType type);
+
         /// <summary>
         /// Clears the cached value.
         /// </summary>

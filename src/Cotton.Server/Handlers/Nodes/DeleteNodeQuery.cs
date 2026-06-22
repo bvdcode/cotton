@@ -25,10 +25,12 @@ namespace Cotton.Server.Handlers.Nodes
         /// Gets the owning user identifier.
         /// </summary>
         public Guid UserId { get; } = userId;
+
         /// <summary>
         /// Gets the node identifier.
         /// </summary>
         public Guid NodeId { get; } = nodeId;
+
         /// <summary>
         /// Gets whether deletion bypasses trash and permanently removes the resource.
         /// </summary>

@@ -191,6 +191,7 @@ namespace Cotton.Server.Services
                 _usedBytesByUser[userId] = usedBytes + safeAdditionalBytes;
             }
         }
+
         /// <summary>
         /// Records logical bytes added in the in-memory cache.
         /// </summary>

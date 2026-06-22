@@ -22,6 +22,7 @@ namespace Cotton.Server.Services.WebDav
         /// The default node type used when resolving WebDAV paths.
         /// </summary>
         public const NodeType DefaultNodeType = NodeType.Default;
+
         /// <summary>
         /// Gets or sets the path separator.
         /// </summary>

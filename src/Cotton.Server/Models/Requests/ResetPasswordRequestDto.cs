@@ -12,6 +12,7 @@ namespace Cotton.Server.Models.Requests
         /// Gets or sets the opaque token submitted by the client.
         /// </summary>
         public string Token { get; set; } = null!;
+
         /// <summary>
         /// Gets or sets new password.
         /// </summary>

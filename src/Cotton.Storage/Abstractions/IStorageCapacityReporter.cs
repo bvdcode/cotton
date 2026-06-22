@@ -8,7 +8,9 @@ namespace Cotton.Storage.Abstractions
     /// </summary>
     public interface IStorageCapacityReporter
     {
-        /// <summary>Returns a point-in-time capacity snapshot.</summary>
+        /// <summary>
+        /// Returns a point-in-time capacity snapshot.
+        /// </summary>
         StorageCapacitySnapshot GetCapacitySnapshot();
     }
 }

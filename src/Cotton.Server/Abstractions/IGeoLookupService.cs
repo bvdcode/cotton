@@ -15,6 +15,7 @@ namespace Cotton.Server.Abstractions
         /// Attempts to lookup.
         /// </summary>
         Task<GeoLookupResult?> TryLookupAsync(IPAddress ipAddress, CancellationToken cancellationToken = default);
+
         /// <summary>
         /// Tests a custom lookup resolver.
         /// </summary>

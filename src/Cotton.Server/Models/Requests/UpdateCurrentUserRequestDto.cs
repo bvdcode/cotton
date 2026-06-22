@@ -12,22 +12,27 @@ namespace Cotton.Server.Models.Requests
         /// Gets or sets the email address.
         /// </summary>
         public string? Email { get; set; }
+
         /// <summary>
         /// Gets or sets the normalized username.
         /// </summary>
         public string? Username { get; set; }
+
         /// <summary>
         /// Gets or sets first name.
         /// </summary>
         public string? FirstName { get; set; }
+
         /// <summary>
         /// Gets or sets last name.
         /// </summary>
         public string? LastName { get; set; }
+
         /// <summary>
         /// Gets or sets birth date.
         /// </summary>
         public DateOnly? BirthDate { get; set; }
+
         /// <summary>
         /// Gets or sets avatar hash.
         /// </summary>

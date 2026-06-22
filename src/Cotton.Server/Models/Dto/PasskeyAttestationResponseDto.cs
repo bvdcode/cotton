@@ -6,16 +6,17 @@ using Fido2NetLib;
 namespace Cotton.Server.Models.Dto
 {
     /// <summary>
-    /// Represents the passkey attestation response API payload.
+    /// Authenticator response from a WebAuthn registration (attestation) ceremony.
     /// </summary>
     public class PasskeyAttestationResponseDto
     {
         /// <summary>
-        /// Gets or sets attestation object.
+        /// Base64url-encoded CBOR attestation object containing the new credential's public key.
         /// </summary>
         public string AttestationObject { get; set; } = null!;
+
         /// <summary>
-        /// Gets or sets client data json.
+        /// Base64url-encoded client data JSON that the authenticator signed over.
         /// </summary>
         public string ClientDataJson { get; set; } = null!;
     }

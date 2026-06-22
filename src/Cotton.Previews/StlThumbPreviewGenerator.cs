@@ -15,6 +15,7 @@ namespace Cotton.Previews
     {
         /// <inheritdoc />
         public int Version => 9;
+
         /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes => _supportedContentTypes;
 
@@ -22,7 +23,9 @@ namespace Cotton.Previews
         private readonly string[] _supportedContentTypes;
         private const string ThreeMfExtension = ".3mf";
 
-        /// <summary>Initializes the STL generator variant.</summary>
+        /// <summary>
+        /// Initializes the STL generator variant.
+        /// </summary>
         public StlThumbPreviewGenerator()
             : this(".stl", ["model/stl", "application/sla", "application/vnd.ms-pki.stl"])
         {
@@ -37,13 +40,17 @@ namespace Cotton.Previews
             _supportedContentTypes = supportedContentTypes;
         }
 
-        /// <summary>Creates a generator variant for OBJ models.</summary>
+        /// <summary>
+        /// Creates a generator variant for OBJ models.
+        /// </summary>
         public static StlThumbPreviewGenerator CreateObjGenerator()
         {
             return new StlThumbPreviewGenerator(".obj", ["model/obj"]);
         }
 
-        /// <summary>Creates a generator variant for 3MF models.</summary>
+        /// <summary>
+        /// Creates a generator variant for 3MF models.
+        /// </summary>
         public static StlThumbPreviewGenerator CreateThreeMfGenerator()
         {
             return new StlThumbPreviewGenerator(

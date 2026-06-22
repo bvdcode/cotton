@@ -14,14 +14,17 @@ namespace Cotton.Server.Services.WebDav
         /// Gets or sets whether the WebDAV resource was found.
         /// </summary>
         public bool Found { get; init; }
+
         /// <summary>
         /// True when the resolved resource is a collection (directory).
         /// </summary>
         public bool IsCollection { get; init; }
+
         /// <summary>
         /// Gets or sets the node.
         /// </summary>
         public Node? Node { get; init; }
+
         /// <summary>
         /// Gets or sets the node file.
         /// </summary>

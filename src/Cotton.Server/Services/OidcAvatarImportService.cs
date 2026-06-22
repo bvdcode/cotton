@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Models;
@@ -11,19 +11,25 @@ using System.Buffers;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>Imports external OIDC profile pictures into the normal Cotton avatar pipeline.</summary>
+    /// <summary>
+    /// Imports external OIDC profile pictures into the normal Cotton avatar pipeline.
+    /// </summary>
     public class OidcAvatarImportService(
         HttpClient _httpClient,
         IChunkIngestService _chunkIngest,
         IStreamCipher _crypto,
         ILogger<OidcAvatarImportService> _logger)
     {
-        /// <summary>Maximum external avatar response size accepted for import.</summary>
+        /// <summary>
+        /// Maximum external avatar response size accepted for import.
+        /// </summary>
         public const int MaxAvatarBytes = 5 * 1024 * 1024;
 
         private static readonly ImagePreviewGenerator _avatarGenerator = new();
 
-        /// <summary>Imports the provider avatar when the user does not already have one.</summary>
+        /// <summary>
+        /// Imports the provider avatar when the user does not already have one.
+        /// </summary>
         public async Task TryImportMissingAvatarAsync(
             User user,
             string? pictureUrl,

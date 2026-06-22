@@ -28,14 +28,17 @@ namespace Cotton.Server.Handlers.Files
         /// Gets or sets the file entry identifier.
         /// </summary>
         public Guid NodeFileId { get; set; }
+
         /// <summary>
         /// Gets or sets the parent folder identifier.
         /// </summary>
         public Guid ParentId { get; set; }
+
         /// <summary>
         /// Gets or sets the owning user identifier.
         /// </summary>
         public Guid UserId { get; set; }
+
         /// <summary>
         /// Gets or sets the optional expected file content ETag.
         /// </summary>

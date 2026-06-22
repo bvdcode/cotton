@@ -21,10 +21,12 @@ namespace Cotton.Server.Handlers.Users
         /// Gets the owning user identifier.
         /// </summary>
         public Guid UserId { get; } = userId;
+
         /// <summary>
         /// Gets the old password.
         /// </summary>
         public string OldPassword { get; } = oldPassword;
+
         /// <summary>
         /// Gets the new password.
         /// </summary>

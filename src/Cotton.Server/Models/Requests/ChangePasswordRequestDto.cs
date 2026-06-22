@@ -12,6 +12,7 @@ namespace Cotton.Server.Models.Requests
         /// Gets or sets old password.
         /// </summary>
         public string OldPassword { get; set; } = null!;
+
         /// <summary>
         /// Gets or sets new password.
         /// </summary>

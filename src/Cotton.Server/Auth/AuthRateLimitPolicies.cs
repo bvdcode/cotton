@@ -12,10 +12,12 @@ namespace Cotton.Server.Auth
         /// Defines the interactive.
         /// </summary>
         public const string Interactive = "auth.interactive";
+
         /// <summary>
         /// Defines the refresh.
         /// </summary>
         public const string Refresh = "auth.refresh";
+
         /// <summary>
         /// Defines the anonymous public share archive policy.
         /// </summary>

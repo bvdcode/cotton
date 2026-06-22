@@ -17,14 +17,26 @@ namespace Cotton.Storage.Processors
     {
         private readonly ICompressionLevelProvider _compressionLevelProvider;
 
-        /// <summary>Default Zstandard compression level used for stored blobs.</summary>
+        /// <summary>
+        /// Default Zstandard compression level used for stored blobs.
+        /// </summary>
         public const int DefaultCompressionLevel = 1;
-        /// <summary>Minimum Zstandard compression level supported by the bundled ZstdSharp build.</summary>
+
+        /// <summary>
+        /// Minimum Zstandard compression level supported by the bundled ZstdSharp build.
+        /// </summary>
         public static readonly int MinCompressionLevel = Compressor.MinCompressionLevel;
-        /// <summary>Maximum Zstandard compression level supported by the bundled ZstdSharp build.</summary>
+
+        /// <summary>
+        /// Maximum Zstandard compression level supported by the bundled ZstdSharp build.
+        /// </summary>
         public static readonly int MaxCompressionLevel = Compressor.MaxCompressionLevel;
-        /// <summary>Compression algorithm used by this processor.</summary>
+
+        /// <summary>
+        /// Compression algorithm used by this processor.
+        /// </summary>
         public const CompressionAlgorithm Algorithm = CompressionAlgorithm.Zstd;
+
         /// <inheritdoc />
         public int Priority => 10000;
         private const int CompressBufferSize = 1 * 1024 * 1024;

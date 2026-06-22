@@ -31,7 +31,9 @@ namespace Cotton.Server.Services.DatabaseIntegrity
                 nameof(DatabaseIntegrityDiagnosticsService),
                 nameof(CountUnsignedRowsCoreAsync));
 
-        /// <summary>Returns counts of protected rows, missing metadata, and unsupported integrity versions.</summary>
+        /// <summary>
+        /// Returns counts of protected rows, missing metadata, and unsupported integrity versions.
+        /// </summary>
         public async Task<DatabaseIntegrityDiagnosticsDto> GetSnapshotAsync(CancellationToken cancellationToken)
         {
             int unsignedRows = 0;

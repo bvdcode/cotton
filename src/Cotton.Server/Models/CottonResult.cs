@@ -16,18 +16,22 @@ namespace Cotton.Server.Models
         /// Gets or sets a value indicating whether the operation succeeded.
         /// </summary>
         public bool Success { get; set; }
+
         /// <summary>
         /// Gets or sets the human-readable response message.
         /// </summary>
         public string Message { get; set; } = string.Empty;
+
         /// <summary>
         /// Gets or sets the payload returned to the client.
         /// </summary>
         public object? Data { get; set; }
+
         /// <summary>
         /// Gets or sets the machine-readable message code.
         /// </summary>
         public string? MessageCode { get; set; }
+
         /// <summary>
         /// Gets or sets the HTTP status code of the response.
         /// </summary>

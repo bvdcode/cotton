@@ -10,6 +10,8 @@ namespace Cotton.Database.Integrity;
 /// </summary>
 public interface IDatabaseIntegrityChangeSigner
 {
-    /// <summary>Signs all pending Added and Modified protected entities in the supplied context.</summary>
+    /// <summary>
+    /// Signs all pending Added and Modified protected entities in the supplied context.
+    /// </summary>
     void SignPendingChanges(DbContext dbContext);
 }

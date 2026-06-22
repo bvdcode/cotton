@@ -8,10 +8,14 @@ namespace Cotton.Server.Services.Search
     /// </summary>
     public enum LayoutSearchHitKind
     {
-        /// <summary>A folder-like node hit.</summary>
+        /// <summary>
+        /// A folder-like node hit.
+        /// </summary>
         Node = 0,
 
-        /// <summary>A visible file entry hit.</summary>
+        /// <summary>
+        /// A visible file entry hit.
+        /// </summary>
         File = 1,
     }
 }

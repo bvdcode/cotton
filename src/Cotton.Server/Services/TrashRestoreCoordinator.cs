@@ -30,6 +30,7 @@ namespace Cotton.Server.Services
         /// <param name="Name">The conflicting resource display name.</param>
         /// <param name="Id">The conflicting resource identifier.</param>
         public readonly record struct ConflictInfo(RestoreConflictKind Kind, string Name, Guid Id);
+
         /// <summary>
         /// Describes the resolved restore parent or why the stored path could not be used.
         /// </summary>

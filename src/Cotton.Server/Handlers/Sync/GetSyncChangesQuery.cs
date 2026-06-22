@@ -21,10 +21,12 @@ namespace Cotton.Server.Handlers.Sync
         /// Gets the owning user identifier.
         /// </summary>
         public Guid UserId { get; } = userId;
+
         /// <summary>
         /// Gets the exclusive cursor lower bound.
         /// </summary>
         public long SinceCursor { get; } = sinceCursor;
+
         /// <summary>
         /// Gets the maximum number of changes to return.
         /// </summary>

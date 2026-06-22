@@ -18,6 +18,7 @@ namespace Cotton.Server.Services
         /// Defines the sentinel logical key.
         /// </summary>
         public const string SentinelLogicalKey = "cotton.master-key.sentinel.v1";
+
         /// <summary>
         /// Gets the hashed storage key under which the sentinel is persisted.
         /// </summary>

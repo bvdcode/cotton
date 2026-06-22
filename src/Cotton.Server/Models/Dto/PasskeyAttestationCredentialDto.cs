@@ -6,28 +6,32 @@ using Fido2NetLib;
 namespace Cotton.Server.Models.Dto
 {
     /// <summary>
-    /// Represents the passkey attestation credential API payload.
+    /// Public-key credential returned by the browser after a WebAuthn registration ceremony.
     /// </summary>
     public class PasskeyAttestationCredentialDto
     {
         /// <summary>
-        /// Gets or sets the identifier.
+        /// Credential id (base64url).
         /// </summary>
         public string Id { get; set; } = null!;
+
         /// <summary>
-        /// Gets or sets raw id.
+        /// Raw credential id (base64url).
         /// </summary>
         public string RawId { get; set; } = null!;
+
         /// <summary>
-        /// Gets or sets type.
+        /// Credential type; always "public-key".
         /// </summary>
         public string Type { get; set; } = null!;
+
         /// <summary>
-        /// Gets or sets the authenticator transports reported by the browser.
+        /// Authenticator transports reported by the browser.
         /// </summary>
         public string[] Transports { get; set; } = [];
+
         /// <summary>
-        /// Gets or sets response.
+        /// Authenticator attestation response carrying the credential public key.
         /// </summary>
         public PasskeyAttestationResponseDto Response { get; set; } = null!;
     }

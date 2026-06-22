@@ -14,18 +14,22 @@ namespace Cotton.Server.Models.Dto
         /// Gets or sets node id.
         /// </summary>
         public Guid NodeId { get; set; }
+
         /// <summary>
         /// Gets or sets the display name.
         /// </summary>
         public string Name { get; set; } = null!;
+
         /// <summary>
         /// Gets or sets content type.
         /// </summary>
         public string ContentType { get; set; } = null!;
+
         /// <summary>
         /// Gets or sets size bytes.
         /// </summary>
         public long SizeBytes { get; set; }
+
         /// <summary>
         /// Gets or sets preview hash encrypted hex.
         /// </summary>

@@ -241,11 +241,8 @@ namespace Cotton.Email
 ";
 
         /// <summary>
-        /// Represents the HTML template for the email confirmation message sent to users upon registration.
+        /// English email-confirmation HTML template. Placeholders: {{recipient_name}}, {{confirmation_url}}, {{year}}.
         /// </summary>
-        /// <remarks>This template includes placeholders for the recipient's name and confirmation URL,
-        /// which should be replaced with actual values when sending the email. The design is responsive and styled for
-        /// a clean presentation across devices.</remarks>
         public const string EmailConfirmationEn =
             ShellOpenEmailConfirmationEn
             + CommonHeader
@@ -254,13 +251,8 @@ namespace Cotton.Email
             + CommonShellClose;
 
         /// <summary>
-        /// Represents the HTML template for the Russian-language email confirmation message sent to users after
-        /// registration.
+        /// Russian email-confirmation HTML template. Placeholders: {{recipient_name}}, {{confirmation_url}}, {{year}}.
         /// </summary>
-        /// <remarks>This template includes placeholders for the recipient's name and confirmation URL,
-        /// which must be replaced with actual values before sending. The message provides instructions for confirming
-        /// the email address and includes a fallback link for manual copying. Intended for use in automated email
-        /// workflows.</remarks>
         public const string EmailConfirmationRu =
             ShellOpenEmailConfirmationRu
             + CommonHeader
@@ -269,7 +261,7 @@ namespace Cotton.Email
             + CommonShellClose;
 
         /// <summary>
-        /// Contains the HTML template for the password reset email in English.
+        /// English password-reset HTML template. Placeholders: {{recipient_name}}, {{reset_url}}, {{year}}.
         /// </summary>
         public const string PasswordResetEn =
             ShellOpenPasswordResetEn
@@ -279,11 +271,8 @@ namespace Cotton.Email
             + CommonShellClose;
 
         /// <summary>
-        /// Contains the HTML template for the password reset email in Russian.
+        /// Russian password-reset HTML template. Placeholders: {{recipient_name}}, {{reset_url}}, {{year}}.
         /// </summary>
-        /// <remarks>This constant string is used to generate a password reset email, which includes a
-        /// link for the user to reset their password. The placeholders {{recipient_name}} and {{reset_url}} should be
-        /// replaced with the actual recipient's name and the password reset link, respectively.</remarks>
         public const string PasswordResetRu =
             ShellOpenPasswordResetRu
             + CommonHeader

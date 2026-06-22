@@ -12,18 +12,22 @@ namespace Cotton.Server.Models.Configuration
         /// Gets or sets a value indicating whether storage pressure monitoring is enabled.
         /// </summary>
         public bool Enabled { get; set; } = true;
+
         /// <summary>
         /// Gets or sets the min free percent.
         /// </summary>
         public int MinFreePercent { get; set; } = 5;
+
         /// <summary>
         /// Gets or sets the min free bytes.
         /// </summary>
         public long MinFreeBytes { get; set; } = 512L * 1024 * 1024;
+
         /// <summary>
         /// Gets or sets the check interval seconds.
         /// </summary>
         public int CheckIntervalSeconds { get; set; } = 10;
+
         /// <summary>
         /// Gets or sets the admin notification cooldown minutes.
         /// </summary>
@@ -33,6 +37,7 @@ namespace Cotton.Server.Models.Configuration
         /// Gets the interval between storage pressure checks.
         /// </summary>
         public TimeSpan CheckInterval => TimeSpan.FromSeconds(Math.Clamp(CheckIntervalSeconds, 1, 300));
+
         /// <summary>
         /// Gets the minimum delay between admin notifications.
         /// </summary>

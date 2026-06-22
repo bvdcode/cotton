@@ -16,6 +16,7 @@ namespace Cotton.Server.Services
         /// Gets or sets the operation status.
         /// </summary>
         public string Status { get; set; } = null!;
+
         /// <summary>
         /// Gets or sets the checks.
         /// </summary>

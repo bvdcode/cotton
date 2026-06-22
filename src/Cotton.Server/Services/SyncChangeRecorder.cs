@@ -8,7 +8,9 @@ using Cotton.Server.Abstractions;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>Stages durable sync feed rows without performing database I/O by itself.</summary>
+    /// <summary>
+    /// Stages durable sync feed rows without performing database I/O by itself.
+    /// </summary>
     public class SyncChangeRecorder(CottonDbContext _dbContext) : ISyncChangeRecorder
     {
         /// <inheritdoc />

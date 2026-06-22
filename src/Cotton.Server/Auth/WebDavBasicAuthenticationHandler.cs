@@ -40,6 +40,7 @@ namespace Cotton.Server.Auth
         /// Defines the policy name.
         /// </summary>
         public const string PolicyName = "WebDav";
+
         /// <summary>
         /// Defines the scheme name.
         /// </summary>

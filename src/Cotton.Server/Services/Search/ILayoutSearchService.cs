@@ -10,7 +10,9 @@ namespace Cotton.Server.Services.Search
     /// </summary>
     public interface ILayoutSearchService
     {
-        /// <summary>Searches a layout and returns the API result payload.</summary>
+        /// <summary>
+        /// Searches a layout and returns the API result payload.
+        /// </summary>
         Task<SearchLayoutsResultDto> SearchAsync(LayoutSearchRequest request, CancellationToken cancellationToken);
     }
 }

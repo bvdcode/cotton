@@ -8,7 +8,9 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// </summary>
     public interface IDatabaseIntegrityFailureReporter
     {
-        /// <summary>Queues or records a detected integrity failure for administrator visibility.</summary>
+        /// <summary>
+        /// Queues or records a detected integrity failure for administrator visibility.
+        /// </summary>
         void Report(DatabaseIntegrityFailure failure);
     }
 }

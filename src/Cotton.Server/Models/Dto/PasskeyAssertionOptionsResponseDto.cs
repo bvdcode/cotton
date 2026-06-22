@@ -14,6 +14,7 @@ namespace Cotton.Server.Models.Dto
         /// Gets or sets the server-issued passkey ceremony request identifier.
         /// </summary>
         public string RequestId { get; set; } = null!;
+
         /// <summary>
         /// Gets or sets the WebAuthn options returned to the browser.
         /// </summary>

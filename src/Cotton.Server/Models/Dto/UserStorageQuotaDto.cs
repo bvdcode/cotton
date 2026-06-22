@@ -12,10 +12,12 @@ namespace Cotton.Server.Models.Dto
         /// Gets or sets used bytes.
         /// </summary>
         public long UsedBytes { get; set; }
+
         /// <summary>
         /// Gets or sets quota bytes.
         /// </summary>
         public long? QuotaBytes { get; set; }
+
         /// <summary>
         /// Gets or sets available bytes.
         /// </summary>

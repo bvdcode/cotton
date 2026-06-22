@@ -19,6 +19,7 @@ namespace Cotton.Server.Hubs
         /// Defines the notification method.
         /// </summary>
         public const string NotificationMethod = "OnNotificationReceived";
+
         /// <summary>
         /// Defines the session revoked method.
         /// </summary>

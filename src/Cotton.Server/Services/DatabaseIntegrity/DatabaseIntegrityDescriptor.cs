@@ -15,8 +15,10 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     {
         /// <inheritdoc />
         public Type EntityType => typeof(T);
+
         /// <inheritdoc />
         public abstract string EntityName { get; }
+
         /// <inheritdoc />
         public abstract int SchemaVersion { get; }
 

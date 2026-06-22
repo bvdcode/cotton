@@ -13,6 +13,7 @@ namespace Cotton.Previews
     {
         /// <inheritdoc />
         public int Version => 2;
+
         /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes =>
         [

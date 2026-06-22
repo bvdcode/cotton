@@ -11,14 +11,20 @@ using System.Text.Json.Serialization;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>Fetches OpenID Connect discovery, tokens, and user-info documents.</summary>
+    /// <summary>
+    /// Fetches OpenID Connect discovery, tokens, and user-info documents.
+    /// </summary>
     public class OidcDiscoveryService(HttpClient _httpClient)
     {
-        /// <summary>Named HTTP client used for OIDC provider calls.</summary>
+        /// <summary>
+        /// Named HTTP client used for OIDC provider calls.
+        /// </summary>
         public const string HttpClientName = "Cotton.Oidc";
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-        /// <summary>Loads the provider discovery document.</summary>
+        /// <summary>
+        /// Loads the provider discovery document.
+        /// </summary>
         public async Task<OpenIdConnectConfiguration> GetConfigurationAsync(
             OidcProvider provider,
             CancellationToken ct)
@@ -39,7 +45,9 @@ namespace Cotton.Server.Services
             }
         }
 
-        /// <summary>Exchanges an authorization code for provider tokens.</summary>
+        /// <summary>
+        /// Exchanges an authorization code for provider tokens.
+        /// </summary>
         public async Task<OidcTokenResponse> ExchangeCodeAsync(
             OpenIdConnectConfiguration configuration,
             OidcProvider provider,
@@ -86,7 +94,9 @@ namespace Cotton.Server.Services
             return tokenResponse;
         }
 
-        /// <summary>Loads optional user-info claims when the provider exposes an endpoint.</summary>
+        /// <summary>
+        /// Loads optional user-info claims when the provider exposes an endpoint.
+        /// </summary>
         public async Task<OidcUserInfoClaims?> TryGetUserInfoAsync(
             OpenIdConnectConfiguration configuration,
             string? accessToken,

@@ -14,9 +14,13 @@ namespace Cotton.Validators
         private static readonly System.Buffers.SearchValues<char> _forbiddenAscii = System.Buffers.SearchValues.Create("/\\<>:\"|?*\0");
 
         // Policy
-        /// <summary>Maximum UTF-8 byte length of one path segment.</summary>
+        /// <summary>
+        /// Maximum UTF-8 byte length of one path segment.
+        /// </summary>
         public const int MaxSegmentBytes = 255;     // segment (name) in UTF-8
-        /// <summary>Maximum user-perceived characters allowed in one path segment.</summary>
+        /// <summary>
+        /// Maximum user-perceived characters allowed in one path segment.
+        /// </summary>
         public const int MaxGraphemes = 255;     // to prevent abuse with combining characters
 
         // Frequently abused zero-width/format characters
@@ -192,7 +196,9 @@ namespace Cotton.Validators
             return ReservedBaseNamesCI.Contains(up);
         }
 
-        /// <summary>Normalizes, validates, and folds a name into its case/diacritic-insensitive lookup key.</summary>
+        /// <summary>
+        /// Normalizes, validates, and folds a name into its case/diacritic-insensitive lookup key.
+        /// </summary>
         public static string NormalizeAndGetNameKey(string normalized)
         {
             bool isValid = TryNormalizeAndValidate(normalized, out string norm, out string error);
@@ -203,7 +209,9 @@ namespace Cotton.Validators
             return GetNameKey(norm);
         }
 
-        /// <summary>Folds an already-normalized name into its case/diacritic-insensitive lookup key.</summary>
+        /// <summary>
+        /// Folds an already-normalized name into its case/diacritic-insensitive lookup key.
+        /// </summary>
         public static string GetNameKey(string normalized)
         {
             var sb = new StringBuilder();

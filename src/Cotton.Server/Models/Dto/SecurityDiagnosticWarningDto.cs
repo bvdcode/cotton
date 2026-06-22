@@ -4,20 +4,22 @@
 namespace Cotton.Server.Models.Dto
 {
     /// <summary>
-    /// Represents the security diagnostic warning API payload.
+    /// A single security warning raised while collecting diagnostics.
     /// </summary>
     public class SecurityDiagnosticWarningDto
     {
         /// <summary>
-        /// Gets or sets code.
+        /// Stable code identifying the warning.
         /// </summary>
         public string Code { get; init; } = string.Empty;
+
         /// <summary>
-        /// Gets or sets severity.
+        /// Warning severity (e.g. info, warning, critical).
         /// </summary>
         public string Severity { get; init; } = string.Empty;
+
         /// <summary>
-        /// Gets or sets message.
+        /// Human-readable description of the warning.
         /// </summary>
         public string Message { get; init; } = string.Empty;
     }

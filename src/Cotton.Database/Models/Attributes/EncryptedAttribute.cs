@@ -3,7 +3,9 @@
 
 namespace Cotton.Database.Models.Attributes
 {
-    /// <summary>Marks string properties that are encrypted through the EF value converter.</summary>
+    /// <summary>
+    /// Marks string properties that are encrypted through the EF value converter.
+    /// </summary>
     [AttributeUsage(AttributeTargets.Property)]
     public class EncryptedAttribute : Attribute
     {

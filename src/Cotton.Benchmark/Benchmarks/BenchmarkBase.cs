@@ -12,7 +12,9 @@ namespace Cotton.Benchmark.Benchmarks
     /// </summary>
     public abstract class BenchmarkBase(BenchmarkConfiguration configuration) : IBenchmark
     {
-        /// <summary>Benchmark configuration shared by warmup and measured iterations.</summary>
+        /// <summary>
+        /// Benchmark configuration shared by warmup and measured iterations.
+        /// </summary>
         protected readonly BenchmarkConfiguration _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
         /// <inheritdoc/>

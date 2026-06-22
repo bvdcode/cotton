@@ -16,10 +16,12 @@ namespace Cotton.Server.Services
         /// Gets or sets the name.
         /// </summary>
         public string Name { get; set; } = null!;
+
         /// <summary>
         /// Gets or sets the operation status.
         /// </summary>
         public string Status { get; set; } = null!;
+
         /// <summary>
         /// Gets or sets the description.
         /// </summary>

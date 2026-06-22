@@ -26,10 +26,14 @@ namespace Cotton.Previews.Http
         private readonly ILogger? _logger;
         private readonly string _serverId;
 
-        /// <summary>Gets the loopback URL that serves the supplied stream.</summary>
+        /// <summary>
+        /// Gets the loopback URL that serves the supplied stream.
+        /// </summary>
         public Uri Url { get; }
 
-        /// <summary>Starts a loopback range server for the supplied seekable stream.</summary>
+        /// <summary>
+        /// Starts a loopback range server for the supplied seekable stream.
+        /// </summary>
         public RangeStreamServer(Stream seekableStream, ILogger? logger = null)
         {
             if (!seekableStream.CanSeek)

@@ -27,22 +27,27 @@ namespace Cotton.Server.Handlers.Nodes
         /// Gets the owning user identifier.
         /// </summary>
         public Guid UserId { get; } = userId;
+
         /// <summary>
         /// Gets the node identifier.
         /// </summary>
         public Guid NodeId { get; } = nodeId;
+
         /// <summary>
         /// Gets the node type.
         /// </summary>
         public NodeType NodeType { get; } = nodeType;
+
         /// <summary>
         /// Gets the page.
         /// </summary>
         public int Page { get; } = page;
+
         /// <summary>
         /// Gets the page size.
         /// </summary>
         public int PageSize { get; } = pageSize;
+
         /// <summary>
         /// Gets the depth.
         /// </summary>

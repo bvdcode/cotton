@@ -12,18 +12,22 @@ namespace Cotton.Server.Models.Dto
         /// Gets or sets access key.
         /// </summary>
         public string AccessKey { get; init; } = null!;
+
         /// <summary>
         /// Gets or sets secret key.
         /// </summary>
         public string SecretKey { get; init; } = null!;
+
         /// <summary>
         /// Gets or sets endpoint.
         /// </summary>
         public string Endpoint { get; init; } = null!;
+
         /// <summary>
         /// Gets or sets region.
         /// </summary>
         public string Region { get; init; } = null!;
+
         /// <summary>
         /// Gets or sets bucket.
         /// </summary>

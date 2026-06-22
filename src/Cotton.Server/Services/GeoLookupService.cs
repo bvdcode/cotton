@@ -309,10 +309,12 @@ namespace Cotton.Server.Services
             /// Gets or sets the country.
             /// </summary>
             public string? Country { get; set; }
+
             /// <summary>
             /// Gets or sets the region.
             /// </summary>
             public string? Region { get; set; }
+
             /// <summary>
             /// Gets or sets the city.
             /// </summary>

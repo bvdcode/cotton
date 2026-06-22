@@ -29,10 +29,12 @@ namespace Cotton.Server.Services
         /// Gets the link.
         /// </summary>
         public ArchiveDownloadLinkDto? Link { get; }
+
         /// <summary>
         /// Gets the error.
         /// </summary>
         public string? Error { get; }
+
         /// <summary>
         /// Gets the status code.
         /// </summary>
@@ -42,10 +44,12 @@ namespace Cotton.Server.Services
         /// Creates a successful operation result.
         /// </summary>
         public static CreateArchiveDownloadLinkResult Success(ArchiveDownloadLinkDto link) => new(link, null, StatusCodes.Status200OK);
+
         /// <summary>
         /// Creates a bad request result.
         /// </summary>
         public static CreateArchiveDownloadLinkResult BadRequest(string error) => new(null, error, StatusCodes.Status400BadRequest);
+
         /// <summary>
         /// Creates a not-found result.
         /// </summary>

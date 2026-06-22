@@ -31,30 +31,37 @@ namespace Cotton.Server.Handlers.Users
         /// Gets the owning user identifier.
         /// </summary>
         public Guid UserId { get; } = userId;
+
         /// <summary>
         /// Gets the administrator user identifier.
         /// </summary>
         public Guid AdminUserId { get; } = initiatorUserId;
+
         /// <summary>
         /// Gets the username.
         /// </summary>
         public string Username { get; } = username;
+
         /// <summary>
         /// Gets the user email address.
         /// </summary>
         public string? Email { get; } = email;
+
         /// <summary>
         /// Gets the role.
         /// </summary>
         public UserRole Role { get; } = role;
+
         /// <summary>
         /// Gets the user first name.
         /// </summary>
         public string? FirstName { get; } = firstName;
+
         /// <summary>
         /// Gets the user last name.
         /// </summary>
         public string? LastName { get; } = lastName;
+
         /// <summary>
         /// Gets the birth date.
         /// </summary>
