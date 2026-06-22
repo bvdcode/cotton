@@ -24,5 +24,10 @@ namespace Cotton.Server.Abstractions
         /// Stores a chunk from a stream when no caller-provided hash is available.
         /// </summary>
         Task<Chunk> UpsertChunkAsync(Guid userId, Stream stream, long length, CancellationToken ct = default);
+
+        /// <summary>
+        /// Records ownership for an already stored cross-user deduplicated chunk.
+        /// </summary>
+        Task<Chunk> ReuseExistingChunkAsync(Guid userId, byte[] chunkHash, CancellationToken ct = default);
     }
 }

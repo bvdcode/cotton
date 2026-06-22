@@ -10,6 +10,7 @@ using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
 using Cotton.Topology.Abstractions;
+using EasyExtensions.AspNetCore.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Npgsql;
@@ -75,6 +76,35 @@ namespace Cotton.Server.Services
 
             await EnsureOwnershipAsync(chunkHash, userId, ct);
             return await SaveChunkUpsertAsync(chunk, chunkHash, storageKey, userId, ct);
+        }
+
+        /// <summary>
+        /// Records ownership for an already stored cross-user deduplicated chunk.
+        /// </summary>
+        public async Task<Chunk> ReuseExistingChunkAsync(Guid userId, byte[] chunkHash, CancellationToken ct = default)
+        {
+            ArgumentNullException.ThrowIfNull(chunkHash);
+            if (chunkHash.Length != SHA256.HashSizeInBytes)
+            {
+                throw new ArgumentException("Chunk hash must be a SHA-256 digest.", nameof(chunkHash));
+            }
+
+            CottonServerSettings settings = _settingsProvider.GetServerSettings();
+            if (!settings.AllowCrossUserDeduplication)
+            {
+                throw new EntityNotFoundException(nameof(Chunk));
+            }
+
+            string storageKey = Hasher.ToHexStringHash(chunkHash);
+            await WaitForGarbageCollectionAsync(storageKey, ct);
+
+            Chunk? chunk = await _layouts.FindChunkAsync(chunkHash, ct);
+            if (chunk is null || !await _storage.ExistsAsync(storageKey))
+            {
+                throw new EntityNotFoundException(nameof(Chunk));
+            }
+
+            return await ReuseLoadedDeduplicatedChunkAsync(chunk, storageKey, chunkHash, userId, ct);
         }
 
         private async Task<Chunk> SaveChunkUpsertAsync(
@@ -180,10 +210,19 @@ namespace Cotton.Server.Services
                 return null;
             }
 
+            return await ReuseLoadedDeduplicatedChunkAsync(chunk, storageKey, chunkHash, userId, ct);
+        }
+
+        private async Task<Chunk> ReuseLoadedDeduplicatedChunkAsync(
+            Chunk chunk,
+            string storageKey,
+            byte[] chunkHash,
+            Guid userId,
+            CancellationToken ct)
+        {
             await RefreshStoredChunkMetadataAsync(chunk, storageKey);
             await EnsureOwnershipAsync(chunkHash, userId, ct);
-            await _dbContext.SaveChangesAsync(ct);
-            return chunk;
+            return await SaveChunkUpsertAsync(chunk, chunkHash, storageKey, userId, ct);
         }
 
         private async Task RefreshStoredChunkMetadataAsync(Chunk chunk, string storageKey)

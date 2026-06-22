@@ -603,6 +603,76 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Create_File_From_Chunks_Reuses_CrossUser_Deduplicated_Chunk()
+    {
+        string adminToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+
+        byte[] content = Encoding.UTF8.GetBytes("cross-user create from deduplicated chunk");
+        string chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
+        using HttpResponseMessage uploadResponse = await UploadRawChunkAsync(content, chunkHashLower);
+        uploadResponse.EnsureSuccessStatusCode();
+
+        using HttpResponseMessage disableResponse = await _client.PatchAsJsonAsync(
+            "/api/v1/server/settings/allow-cross-user-deduplication",
+            false);
+        disableResponse.EnsureSuccessStatusCode();
+
+        using HttpResponseMessage createUserResponse = await _client.PostAsJsonAsync("/api/v1/users", new
+        {
+            username = "dedupcreator",
+            password = "deduppass",
+            role = UserRole.User,
+        });
+        createUserResponse.EnsureSuccessStatusCode();
+
+        _client.DefaultRequestHeaders.Authorization = null;
+        string otherToken = await LoginAsync("dedupcreator", "deduppass");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", otherToken);
+
+        NodeDto? otherRoot = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(otherRoot, Is.Not.Null);
+
+        CreateFileFromChunksRequestDto request = new()
+        {
+            ChunkHashes = [chunkHashLower],
+            Name = "cross-dedup.txt",
+            ContentType = "text/plain",
+            Hash = chunkHashLower,
+            NodeId = otherRoot!.Id,
+            Validate = true,
+        };
+
+        using HttpResponseMessage blockedResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", request);
+        Assert.That(blockedResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        using HttpResponseMessage enableResponse = await _client.PatchAsJsonAsync(
+            "/api/v1/server/settings/allow-cross-user-deduplication",
+            true);
+        enableResponse.EnsureSuccessStatusCode();
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", otherToken);
+        bool visibleWhenEnabled = await _client.GetFromJsonAsync<bool>($"/api/v1/chunks/{chunkHashLower}/exists");
+        Assert.That(visibleWhenEnabled, Is.True);
+
+        using HttpResponseMessage createResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", request);
+        createResponse.EnsureSuccessStatusCode();
+        NodeFileManifestDto? created = await createResponse.Content.ReadFromJsonAsync<NodeFileManifestDto>();
+        Assert.That(created, Is.Not.Null);
+
+        using HttpResponseMessage contentResponse = await _client.GetAsync($"/api/v1/files/{created!.Id}/content");
+        contentResponse.EnsureSuccessStatusCode();
+        byte[] downloaded = await contentResponse.Content.ReadAsByteArrayAsync();
+        Assert.That(downloaded, Is.EqualTo(content));
+
+        DbContext.ChangeTracker.Clear();
+        byte[] chunkHash = Hasher.FromHexStringHash(chunkHashLower);
+        int ownershipCount = await DbContext.ChunkOwnerships.CountAsync(x => x.ChunkHash == chunkHash);
+        Assert.That(ownershipCount, Is.EqualTo(2));
+    }
+
+    [Test]
     public async Task Create_And_Update_File_Reject_When_Default_User_Quota_Is_Exceeded()
     {
         var token = await LoginAsync();

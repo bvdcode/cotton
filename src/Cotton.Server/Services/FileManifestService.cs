@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Previews;
+using Cotton.Server.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +15,9 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Coordinates file manifest.
     /// </summary>
-    public class FileManifestService(CottonDbContext _dbContext)
+    public class FileManifestService(
+        CottonDbContext _dbContext,
+        IChunkIngestService _chunkIngest)
     {
         /// <summary>
         /// Defines the default content type.
@@ -341,14 +344,20 @@ namespace Cotton.Server.Services
                 .Where(c => _dbContext.ChunkOwnerships.Any(co => co.ChunkHash == c.Hash && co.OwnerId == userId))
                 .ToListAsync(cancellationToken);
 
-            var chunkMap = ownedChunks.ToDictionary(c => Hasher.ToHexStringHash(c.Hash), StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, Chunk> chunkMap = ownedChunks.ToDictionary(
+                c => Hasher.ToHexStringHash(c.Hash),
+                StringComparer.OrdinalIgnoreCase);
+
             List<Chunk> result = [];
-            foreach (var hash in chunkHashes)
+            for (int i = 0; i < chunkHashes.Length; i++)
             {
-                if (!chunkMap.TryGetValue(hash, out Chunk? chunk))
+                string normalizedHash = Hasher.ToHexStringHash(normalizedHashes[i]);
+                if (!chunkMap.TryGetValue(normalizedHash, out Chunk? chunk))
                 {
-                    throw new EntityNotFoundException(nameof(Chunk));
+                    chunk = await _chunkIngest.ReuseExistingChunkAsync(userId, normalizedHashes[i], cancellationToken);
+                    chunkMap[normalizedHash] = chunk;
                 }
+
                 result.Add(chunk);
             }
             return result;
