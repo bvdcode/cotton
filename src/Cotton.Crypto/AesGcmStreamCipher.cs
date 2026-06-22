@@ -66,6 +66,11 @@ namespace Cotton.Crypto
         private readonly int _concurrencyLevel = Math.Min(4, Environment.ProcessorCount);
 
         /// <summary>
+        /// Gets the effective maximum concurrency level used by chunk processing.
+        /// </summary>
+        public int ConcurrencyLevel => _concurrencyLevel;
+
+        /// <summary>
         /// Initializes a new instance of the AesGcmStreamCipher class using the specified master key and configuration
         /// options.
         /// </summary>

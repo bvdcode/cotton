@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Auth;
+using Cotton.Crypto;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Providers;
@@ -242,9 +243,9 @@ public class ServerEndpointsTests : IntegrationTestBase
     {
         using IServiceScope scope = _factory!.Services.CreateScope();
         IStreamCipher cipher = scope.ServiceProvider.GetRequiredService<IStreamCipher>();
-        FieldInfo? field = cipher.GetType().GetField("ConcurrencyLevel", BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.That(field, Is.Not.Null);
-        return (int)field!.GetValue(cipher)!;
+        Assert.That(cipher, Is.TypeOf<AesGcmStreamCipher>());
+
+        return ((AesGcmStreamCipher)cipher).ConcurrencyLevel;
     }
 
     private async Task<string> LoginAsync()
