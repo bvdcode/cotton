@@ -17,17 +17,6 @@ namespace Cotton.Server.Handlers.WebDav
         string Path) : IRequest<WebDavHeadResult>;
 
     /// <summary>
-    /// Result of WebDAV HEAD operation
-    /// </summary>
-    public record WebDavHeadResult(
-        bool Found,
-        bool IsCollection,
-        string? ContentType = null,
-        long ContentLength = 0,
-        DateTimeOffset? LastModified = null,
-        string? ETag = null);
-
-    /// <summary>
     /// Handler for WebDAV HEAD operation
     /// </summary>
     public class WebDavHeadQueryHandler(

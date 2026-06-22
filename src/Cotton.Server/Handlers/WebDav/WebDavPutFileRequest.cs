@@ -35,54 +35,6 @@ namespace Cotton.Server.Handlers.WebDav
         long? ContentLength = null) : IRequest<WebDavPutFileResult>;
 
     /// <summary>
-    /// Result of WebDAV PUT operation
-    /// </summary>
-    public record WebDavPutFileResult(
-        bool Success,
-        bool Created,
-        WebDavPutFileError? Error = null,
-        Guid? NodeFileId = null);
-
-    /// <summary>
-    /// Lists the supported web dav put file error values.
-    /// </summary>
-    public enum WebDavPutFileError
-    {
-        /// <summary>
-        /// Represents the parent not found option.
-        /// </summary>
-        ParentNotFound,
-        /// <summary>
-        /// Represents the is collection option.
-        /// </summary>
-        IsCollection,
-        /// <summary>
-        /// Represents the invalid name option.
-        /// </summary>
-        InvalidName,
-        /// <summary>
-        /// Represents the conflict option.
-        /// </summary>
-        Conflict,
-        /// <summary>
-        /// Represents the precondition failed option.
-        /// </summary>
-        PreconditionFailed,
-        /// <summary>
-        /// Represents the upload aborted option.
-        /// </summary>
-        UploadAborted,
-        /// <summary>
-        /// Represents the quota exceeded option.
-        /// </summary>
-        QuotaExceeded,
-        /// <summary>
-        /// Represents the storage pressure option.
-        /// </summary>
-        StoragePressure
-    }
-
-    /// <summary>
     /// Handler for WebDAV PUT operation with streaming chunk processing.
     /// Processes large files without loading them entirely into memory.
     /// </summary>

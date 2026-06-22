@@ -4,11 +4,6 @@
 namespace Cotton.Server.Models.DatabaseBackup
 {
     /// <summary>
-    /// Describes backup chunk information.
-    /// </summary>
-    public record BackupChunkInfo(int Order, string StorageKey, int SizeBytes);
-
-    /// <summary>
     /// Describes a backup manifest.
     /// </summary>
     public record BackupManifest(
@@ -27,22 +22,4 @@ namespace Cotton.Server.Models.DatabaseBackup
         int ChunkCount,
         TimeSpan Elapsed,
         IReadOnlyList<BackupChunkInfo> Chunks);
-
-    /// <summary>
-    /// Points to the active backup manifest.
-    /// </summary>
-    public record BackupManifestPointer(
-        int SchemaVersion,
-        string LogicalKey,
-        DateTime UpdatedAtUtc,
-        string LatestManifestStorageKey,
-        string LatestBackupId);
-
-    /// <summary>
-    /// Describes a resolved backup manifest.
-    /// </summary>
-    public record ResolvedBackupManifest(
-        string ManifestStorageKey,
-        BackupManifestPointer Pointer,
-        BackupManifest Manifest);
 }

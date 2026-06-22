@@ -10,60 +10,6 @@ using System.Security.Cryptography;
 namespace Cotton.Server.Services
 {
     /// <summary>
-    /// Defines the master key compatibility probe contract used by the server runtime.
-    /// </summary>
-    public interface IMasterKeyCompatibilityProbe
-    {
-        /// <summary>
-        /// Validates that the supplied master key is compatible with any existing encrypted Cotton data.
-        /// </summary>
-        Task<MasterKeyCompatibilityResult> ValidateAsync(
-            CottonEncryptionSettings encryptionSettings,
-            MasterKeyCompatibilityMode mode,
-            CancellationToken cancellationToken = default);
-    }
-
-    /// <summary>
-    /// Lists the supported master key compatibility mode values.
-    /// </summary>
-    public enum MasterKeyCompatibilityMode
-    {
-        /// <summary>
-        /// Represents the allow missing evidence option.
-        /// </summary>
-        AllowMissingEvidence,
-        /// <summary>
-        /// Represents the require evidence for existing data option.
-        /// </summary>
-        RequireEvidenceForExistingData
-    }
-
-    /// <summary>
-    /// Represents the result of master key compatibility.
-    /// </summary>
-    public record MasterKeyCompatibilityResult(
-        bool Success,
-        bool ExistingDataFound,
-        bool EvidenceFound,
-        string? Error)
-    {
-        /// <summary>
-        /// Creates a successful master-key compatibility result.
-        /// </summary>
-        public static MasterKeyCompatibilityResult Compatible(bool existingDataFound, bool evidenceFound) =>
-            new(true, existingDataFound, evidenceFound, null);
-
-        /// <summary>
-        /// Creates a failed compatibility probe result.
-        /// </summary>
-        public static MasterKeyCompatibilityResult Fail(
-            string error,
-            bool existingDataFound = true,
-            bool evidenceFound = false) =>
-            new(false, existingDataFound, evidenceFound, error);
-    }
-
-    /// <summary>
     /// Represents master key compatibility probe.
     /// </summary>
     public class MasterKeyCompatibilityProbe : IMasterKeyCompatibilityProbe

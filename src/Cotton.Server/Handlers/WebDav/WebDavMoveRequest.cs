@@ -28,47 +28,6 @@ namespace Cotton.Server.Handlers.WebDav
         bool Overwrite = false) : IRequest<WebDavMoveResult>;
 
     /// <summary>
-    /// Result of WebDAV MOVE operation
-    /// </summary>
-    public record WebDavMoveResult(
-        bool Success,
-        bool Created,
-        WebDavMoveError? Error = null,
-        Guid? MovedNodeId = null,
-        Guid? MovedNodeFileId = null);
-
-    /// <summary>
-    /// Lists the supported web dav move error values.
-    /// </summary>
-    public enum WebDavMoveError
-    {
-        /// <summary>
-        /// Represents the source not found option.
-        /// </summary>
-        SourceNotFound,
-        /// <summary>
-        /// Represents the destination parent not found option.
-        /// </summary>
-        DestinationParentNotFound,
-        /// <summary>
-        /// Represents the destination exists option.
-        /// </summary>
-        DestinationExists,
-        /// <summary>
-        /// Represents the invalid name option.
-        /// </summary>
-        InvalidName,
-        /// <summary>
-        /// Represents the cannot move root option.
-        /// </summary>
-        CannotMoveRoot,
-        /// <summary>
-        /// Represents the cannot move into descendant option.
-        /// </summary>
-        CannotMoveIntoDescendant
-    }
-
-    /// <summary>
     /// Handler for WebDAV MOVE operation
     /// </summary>
     public class WebDavMoveRequestHandler(

@@ -23,19 +23,6 @@ namespace Cotton.Server.Handlers.WebDav
         string Path) : IRequest<WebDavGetFileResult>;
 
     /// <summary>
-    /// Result of WebDAV GET operation
-    /// </summary>
-    public record WebDavGetFileResult(
-        bool Found,
-        bool IsCollection,
-        Stream? Content = null,
-        string? ContentType = null,
-        long ContentLength = 0,
-        string? FileName = null,
-        DateTimeOffset? LastModified = null,
-        string? ETag = null);
-
-    /// <summary>
     /// Handler for WebDAV GET operation
     /// </summary>
     public class WebDavGetFileQueryHandler(

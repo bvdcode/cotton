@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Models;
@@ -148,26 +148,4 @@ namespace Cotton.Server.Services
             };
         }
     }
-
-    /// <summary>OIDC token endpoint response fields used by Cotton.</summary>
-    public class OidcTokenResponse
-    {
-        /// <summary>Provider ID token.</summary>
-        [JsonPropertyName("id_token")]
-        public string IdToken { get; set; } = string.Empty;
-        /// <summary>Provider access token for user-info.</summary>
-        [JsonPropertyName("access_token")]
-        public string? AccessToken { get; set; }
-    }
-
-    /// <summary>Normalized provider user-info claims.</summary>
-    public record OidcUserInfoClaims(
-        string? Subject,
-        string? Email,
-        bool? EmailVerified,
-        string? Name,
-        string? GivenName,
-        string? FamilyName,
-        string? Picture,
-        string? PreferredUsername);
 }

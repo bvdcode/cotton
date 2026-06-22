@@ -6,29 +6,6 @@ using System.Globalization;
 namespace Cotton.Server.Services
 {
     /// <summary>
-    /// Lists the supported hls rendition values.
-    /// </summary>
-    public enum HlsRendition
-    {
-        /// <summary>
-        /// Represents the source option.
-        /// </summary>
-        Source,
-        /// <summary>
-        /// Represents the high option.
-        /// </summary>
-        High,
-        /// <summary>
-        /// Represents the medium option.
-        /// </summary>
-        Medium,
-        /// <summary>
-        /// Represents the low option.
-        /// </summary>
-        Low,
-    }
-
-    /// <summary>
     /// Represents hls rendition profile.
     /// </summary>
     public static class HlsRenditionProfile

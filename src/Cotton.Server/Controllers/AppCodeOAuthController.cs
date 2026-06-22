@@ -29,7 +29,6 @@ using System.Text;
 
 namespace Cotton.Server.Controllers
 {
-
 /// <summary>
 /// Exposes in-memory app-code authorization endpoints for desktop and native applications.
 /// </summary>

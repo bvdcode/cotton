@@ -285,36 +285,4 @@ namespace Cotton.Server.Services
             DateTimeOffset CreatedAtUtc,
             string Nonce);
     }
-
-    /// <summary>
-    /// Lists the supported master key sentinel initialization mode values.
-    /// </summary>
-    public enum MasterKeySentinelInitializationMode
-    {
-        /// <summary>
-        /// Represents the trust provided key when no probe option.
-        /// </summary>
-        TrustProvidedKeyWhenNoProbe,
-        /// <summary>
-        /// Represents the require compatibility evidence for existing data option.
-        /// </summary>
-        RequireCompatibilityEvidenceForExistingData
-    }
-
-    /// <summary>
-    /// Represents the result of master key sentinel.
-    /// </summary>
-    public record MasterKeySentinelResult(bool Success, bool Created, bool Repaired, string? Error)
-    {
-        /// <summary>
-        /// Creates a successful compatibility probe result.
-        /// </summary>
-        public static MasterKeySentinelResult Ok(bool created, bool repaired = false) =>
-            new(true, created, repaired, null);
-
-        /// <summary>
-        /// Executes fail.
-        /// </summary>
-        public static MasterKeySentinelResult Fail(string error) => new(false, false, false, error);
-    }
 }

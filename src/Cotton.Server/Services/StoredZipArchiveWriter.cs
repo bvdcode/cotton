@@ -8,34 +8,6 @@ using System.Text;
 namespace Cotton.Server.Services
 {
     /// <summary>
-    /// Describes an archive entry whose final byte length is known before the response starts.
-    /// </summary>
-    public interface IStoredZipEntry
-    {
-        /// <summary>
-        /// Gets the ZIP entry path using forward slashes.
-        /// </summary>
-        string Path { get; }
-        /// <summary>
-        /// Gets the uncompressed entry size in bytes.
-        /// </summary>
-        long SizeBytes { get; }
-        /// <summary>
-        /// Indicates whether the ZIP entry represents a directory marker.
-        /// </summary>
-        bool IsDirectory { get; }
-    }
-
-    /// <summary>
-    /// Provides a ZIP entry path, fixed uncompressed length, and deferred stream opener.
-    /// </summary>
-    public record StoredZipSourceEntry(
-        string Path,
-        long SizeBytes,
-        bool IsDirectory,
-        Func<CancellationToken, ValueTask<Stream>> OpenReadAsync) : IStoredZipEntry;
-
-    /// <summary>
     /// Writes uncompressed UTF-8 ZIP archives directly to a response stream with a deterministic Content-Length.
     /// </summary>
     public class StoredZipArchiveWriter

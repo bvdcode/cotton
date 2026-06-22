@@ -26,46 +26,4 @@ namespace Cotton.Server.Services.WebDav
         /// </summary>
         Task<WebDavParentResult> GetParentNodeAsync(Guid userId, string path, CancellationToken ct = default);
     }
-
-    /// <summary>
-    /// Result of resolving a WebDAV path
-    /// </summary>
-    public record WebDavResolveResult
-    {
-        /// <summary>
-        /// Gets or sets whether the WebDAV resource was found.
-        /// </summary>
-        public bool Found { get; init; }
-        /// <summary>
-        /// True when the resolved resource is a collection (directory).
-        /// </summary>
-        public bool IsCollection { get; init; }
-        /// <summary>
-        /// Gets or sets the node.
-        /// </summary>
-        public Node? Node { get; init; }
-        /// <summary>
-        /// Gets or sets the node file.
-        /// </summary>
-        public NodeFile? NodeFile { get; init; }
-    }
-
-    /// <summary>
-    /// Result of getting parent node for a path
-    /// </summary>
-    public record WebDavParentResult
-    {
-        /// <summary>
-        /// Gets or sets whether the WebDAV resource was found.
-        /// </summary>
-        public bool Found { get; init; }
-        /// <summary>
-        /// Gets or sets the resolved WebDAV parent node.
-        /// </summary>
-        public Node? ParentNode { get; init; }
-        /// <summary>
-        /// Gets or sets the final WebDAV path segment.
-        /// </summary>
-        public string? ResourceName { get; init; }
-    }
 }

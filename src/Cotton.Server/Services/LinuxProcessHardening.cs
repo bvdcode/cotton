@@ -7,15 +7,6 @@ using System.Runtime.InteropServices;
 namespace Cotton.Server.Services
 {
     /// <summary>
-    /// Reports process hardening status.
-    /// </summary>
-    public record ProcessHardeningStatus(
-        bool Requested,
-        bool Applied,
-        string? Error,
-        int? DumpableAfter);
-
-    /// <summary>
     /// Represents linux process hardening.
     /// </summary>
     public static class LinuxProcessHardening
@@ -153,21 +144,5 @@ namespace Cotton.Server.Services
 
             return (capEff & (1UL << capability)) != 0;
         }
-    }
-
-    /// <summary>
-    /// Reports linux proc status.
-    /// </summary>
-    public record LinuxProcStatus(
-        int? NoNewPrivileges,
-        int? SeccompMode,
-        int? SeccompFilters,
-        string? EffectiveCapabilitiesHex,
-        bool? HasSysPtraceCapability)
-    {
-        /// <summary>
-        /// Creates an empty value object.
-        /// </summary>
-        public static LinuxProcStatus Empty { get; } = new(null, null, null, null, null);
     }
 }

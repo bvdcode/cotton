@@ -22,15 +22,6 @@ namespace Cotton.Server.Handlers.WebDav
         bool SkipTrash = false) : IRequest<WebDavDeleteResult>;
 
     /// <summary>
-    /// Result of WebDAV DELETE operation
-    /// </summary>
-    public record WebDavDeleteResult(
-        bool Success,
-        bool NotFound = false,
-        Guid? DeletedNodeId = null,
-        Guid? DeletedNodeFileId = null);
-
-    /// <summary>
     /// Handler for WebDAV DELETE operation
     /// </summary>
     public class WebDavDeleteRequestHandler(

@@ -22,13 +22,6 @@ namespace Cotton.Server.Handlers.WebDav
         int Depth = 1) : IRequest<WebDavPropFindResult>;
 
     /// <summary>
-    /// Result of WebDAV PROPFIND operation
-    /// </summary>
-    public record WebDavPropFindResult(
-        bool Found,
-        string? XmlResponse);
-
-    /// <summary>
     /// Handler for WebDAV PROPFIND operation
     /// </summary>
     public class WebDavPropFindQueryHandler(
