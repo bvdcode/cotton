@@ -2,3 +2,8 @@
 
 # CA1873: Avoid potentially expensive logging
 dotnet_diagnostic.CA1873.severity = none
+
+# Namespaces must be block-scoped (parenthesized), never file-scoped.
+csharp_style_namespace_declarations = block_scoped:warning
+dotnet_diagnostic.IDE0160.severity = warning
+dotnet_diagnostic.IDE0161.severity = none
